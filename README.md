@@ -61,7 +61,7 @@ Execute the following commands:\
 
 ##### Creating the initial identifying public key.
 
-To start operating as a simple node in the network, you'd run the first four initialiation commands (cf. "Initialization of a simple node") then you'd run `-K` to create your initial public key identifying you in the network. To this public key you can receive transactions as well as generate and send them from this public key. 
+To start operating as a simple node in the network, you'd run the first four initialiation commands (cf. "Initialization of a simple node") then you'd run `-K` to create your initial public key identifying you in the network. To this public key you can receive transactions as well as generate and send them from this public key.
 
 
 ##### Creating a second public key.
@@ -76,19 +76,19 @@ In the case you want to check the public keys you generated overtime, you'd run 
 
 ##### Generating a transaction and sending it to another participant (public key)
 
-After you've created enough public keys, you may want to act as an active member of the network and, say, send transactions. 
+After you've created enough public keys, you may want to act as an active member of the network and, say, send transactions.
 To send a transaction, you'd need to run `-S amount:to:from:currency` where `amount` stands for the amount intended to be send, `to` stands for the public key of the receiver, `from` stands for your chosen public key, and `currency` stands for the currency intended to be used.\
 Your transaction still needs to be validated before it reaches the receives, so it is automatically propagated to the pending pool. Then you'd wait till your transaction is validated, i.e. included in a block.
 
 
 ##### Generating a test transaction or unlimited number of test transactions
 
-In the case you want to test this functionality, you'd run `-G qTx` where `qTx` stands for the chosen number of transactions or `-F` for an unlimited number of transactions and check the results. 
+In the case you want to test this functionality, you'd run `-G qTx` where `qTx` stands for the chosen number of transactions or `-F` for an unlimited number of transactions and check the results.
 
 
 ##### Checking the balance of a public key
 
-In the case you want to know the balance of a public key, you'd run `-B publicKey` where `publicKey` stands for the chosen public key. 
+In the case you want to know the balance of a public key, you'd run `-B publicKey` where `publicKey` stands for the chosen public key.
 
 
 ### Testing
