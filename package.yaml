@@ -1,0 +1,136 @@
+name:                Node
+version:             0.1.0.7
+github:              "Enecuum/Node"
+license:             BSD3
+author:              "Dmitriy Pavlyuk"
+maintainer:          "al.lastor@enecuum.com"
+copyright:           "2018  Enecuum"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:
+    Структура программы состоит из нескольких потоков в каждом из
+    которых выполняется своя функция. Цикл жизни каждой такой функции очень
+    прост. Она считывает сообщение из потока и в зависимости от его содержания
+    и значения переданных ей переменных она производит какие-то действия. В
+    литературе такую сущность называют актором.
+
+    Следует выделить такие акторы как центральный, серверный, клиентский.
+
+    Серверный отвечает за приём сообщений от незнакомых нод.
+
+    Клиентский - за присоединение к серверному актору ещё незнакомой ноды.
+
+    Центральный актор отвечает за хранение состояния ноды и приём решений,
+    обработку внешних команд и ответ на них.
+
+dependencies:
+- base >= 4.7 && < 5
+- bytestring
+- fgl
+- time-units
+- network
+- websockets
+- aeson
+- cereal
+- mtl
+- cryptonite
+- base16-bytestring
+- base58-bytestring
+- arithmoi
+- directory
+- filepath
+- microlens
+- microlens-mtl
+- extra
+- time
+- clock
+- containers
+- random
+- free
+- iproute
+- memory
+- do-list
+- transformers
+- template-haskell
+- async
+- bimap
+- random-shuffle
+- split
+
+library:
+  source-dirs: src
+  ghc-options:
+  - -threaded
+  - -rtsopts
+  - -with-rtsopts=-N
+  - -Wall
+  - -O2
+
+executables:
+  BootNode-exe:
+    main:                Main.hs
+    source-dirs:         app/BootNode
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -Wall
+    - -O2
+    dependencies:
+    - Node
+
+  SimpleNode-exe:
+    main:                Main.hs
+    source-dirs:         app/SimpleNode
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -Wall
+    - -O2
+    dependencies:
+    - Node
+  MakeConfigBootNode-exe:
+    main:                Main.hs
+    source-dirs:         app/MakeConfigBootNode
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -Wall
+    - -O2
+    dependencies:
+    - Node
+  MakeConfigSimpleNode-exe:
+    main:                Main.hs
+    source-dirs:         app/MakeConfigSimpleNode
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -Wall
+    - -O2
+    dependencies:
+    - Node
+
+tests:
+  Node-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -O2
+    - -with-rtsopts=-N
+    dependencies:
+    - Node
