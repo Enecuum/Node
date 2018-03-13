@@ -4,6 +4,7 @@ module PoA (
   )  where
 
 import              System.Clock
+import              Data.Hex
 import qualified    Data.Serialize as S
 import              Control.Monad (forM_, void)
 import              Network.Socket.ByteString(sendAllTo)
@@ -41,6 +42,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aSendPort = runServer (read aRecivePor
     \aMsg aSockAddr _ -> do
         let aDecodeMsg = S.decode aMsg
         whenLeft aRecivePort aDecodeMsg
+        putStrLn $ "PaA msg: " ++ (show $ hex $ aMsg)
         whenRight aDecodeMsg $ \case
             HashMsgTransactionsRequest num -> do
                 loging (aRecivePort) $ "Recived HashMsgTransactionsRequest " ++ show num

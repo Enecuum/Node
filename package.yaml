@@ -66,6 +66,7 @@ dependencies:
 - bimap
 - random-shuffle
 - split
+- hex
 
 library:
   source-dirs: src
