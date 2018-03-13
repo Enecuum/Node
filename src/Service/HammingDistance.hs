@@ -97,15 +97,14 @@ makeNodeList aN aNodeIds = do
         return $ aNode
 
 dataState :: [TestNode] -> [B.ByteString] -> IO ()
-dataState aNodeList aNodeData = do
-
+dataState aNodeList aNodeData =
     print $ length <$> do
-        aNode <- aNodeList
-        pure  $ do
-            let d = nodeD aNode
-            aData <- aNodeData
-            guard $ simpleDistance (testNodeId aNode) aData < d
-            return True
+    aNode <- aNodeList
+    pure  $ do
+        let d = nodeD aNode
+        aData <- aNodeData
+        guard $ simpleDistance (testNodeId aNode) aData < d
+        return True
 
 testNet2 :: IO ()
 testNet2 = do
@@ -134,7 +133,7 @@ testNet3 = do
         sizeOfBuff   = 100
         aNumOfNode   = 100
         aNumOfBlocks = 1000
-    forM_ aBlocks $ \aBlock -> do
+    forM_ aBlocks $ \aBlock ->
         if any (aBlock `elem`)
             ((\aId -> take sizeOfBuff $ sortOn (simpleDistance aId) aBlocks) <$> aNodes)
         then putStrLn $ "Ok. "

@@ -29,4 +29,4 @@ mkSkel (e:es) (x,y) = do
   if a == 0
   then do lift $ tell [e]
           mkSkel es (x,y)
-  else do mkSkel es (x,y)
+  else mkSkel es (x,y)
