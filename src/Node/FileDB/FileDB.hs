@@ -48,7 +48,18 @@ deleteDataFromFile aFilePath aElem = do
 -}
 
 addDataToFile :: Show a => FilePath -> a -> IO ()
-addDataToFile aFilePath aData = appendFile aFilePath $ show aData ++ "\n"
+addDataToFile aFilePath aData = do
+    aOk1 <- try $ appendFile aFilePath $ show aData ++ "\n"
+    case aOk1 of
+        Right _ -> pure ()
+        Left _ -> do
+            aOk2 <- try $ writeFile aFilePath $ show aData ++ "\n"
+            case aOk2 of
+                Right _                   -> pure ()
+                Left (_ :: SomeException) -> do
+                    createDirectory "./data"
+                    writeFile aFilePath $ show aData ++ "\n"
+
 
 writeDataToFile :: Show a => FilePath -> [a] -> IO ()
 writeDataToFile aFilePath aElems = do
