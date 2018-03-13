@@ -49,15 +49,15 @@ servePoA aRecivePort aNodeId ch aRecvChan aSendPort = runServer (read aRecivePor
                 loging aRecivePort $ "Recived MBlock \n" ++ show mb
                 writeChan ch $ BlockMadeMsg mb
   where
-    recvTx aSockAddr aNum = do
+    recvTx aSockAddr aNum =
         runClient (sockAddrToHostAddress aSockAddr) (read aSendPort) $
-            \aHandle -> forM_ [1..aNum] $ \_  -> do
-                aTransaction <- readChan aRecvChan
-                metric $ add
-                    ("net.node." ++ show (toInteger aNodeId) ++ ".pending.amount")
-                    (-1 :: Integer)
-                loging aRecivePort $  "sendTransaction to poa " ++ show aTransaction
-                sendTransaction aHandle aTransaction
+        \aHandle -> forM_ [1..aNum] $ \_  -> do
+            aTransaction <- readChan aRecvChan
+            metric $ add
+                ("net.node." ++ show (toInteger aNodeId) ++ ".pending.amount")
+                (-1 :: Integer)
+            loging aRecivePort $  "sendTransaction to poa " ++ show aTransaction
+            sendTransaction aHandle aTransaction
 
 -- | Send one transaction.
 sendTransaction :: ClientHandle -> Transaction -> IO ()
