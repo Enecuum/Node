@@ -4,7 +4,6 @@ import                  Node.Crypto
 import                  Data.Serialize
 import                  Data.Maybe
 import                  Data.Word
-import                  Control.Monad
 import                  Network.Socket
 import qualified        Data.ByteString.Lazy      as B
 import qualified        Data.ByteArray            as BA
@@ -37,15 +36,15 @@ main :: IO ()
 main = testNet3
 
 testSuit2 = do
-    -- управляющие каналы
+    -- control channels
     exitChan    <- newChan
     answerChan  <- newChan
-    -- запускаем бут ноды
-    bootNodesList <- forM [1] $ \i -> do
+    -- start boot nodes
+    bootNodesList <- forM [1] $ \i ->
         startNode ("./data/bootNodeConfigs/bootInitData"<> show i <>".bin")
-            exitChan answerChan managerBootNode $ \ch _ _ -> do
-                metronomeS 10000 (writeChan ch checkBroadcastNodes)
-                metronomeS 9000000 (writeChan ch deleteDeadSouls)
+        exitChan answerChan managerBootNode $ \ch _ _ -> do
+            metronomeS 10000 (writeChan ch checkBroadcastNodes)
+            metronomeS 9000000 (writeChan ch deleteDeadSouls)
 
     putStrLn "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 
@@ -58,7 +57,7 @@ testSuit2 = do
                 metronomeS 300000 (writeChan ch deleteOldestMsg)
                 metronomeS 10000000 (writeChan ch deleteDeadSouls)
                 metronomeS 3000000 $ writeChan ch deleteOldestVacantPositions
-    -- запускаем бродкаст ноды
+    -- start broadcast nodes 
     broadcastNodeList <-forM [1] $ \i -> do
         threadDelay 1000000
         putStrLn $ "Start bro " <> show i
@@ -97,7 +96,7 @@ testSuit2 = do
                 void $ forkIO $ servePoA (show (1900 + i)) ch (show (2300 + i))
                 void $ forkIO $ txReceiver (show (2000 + i)) ch
 
-    -- Информация для проверки коннектов внутри сети
+    -- Information for check connection inside network
     metronome 1000000 $ do
         print "!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!"
         forM_ broadcastNodeList $ \ch -> do
@@ -115,7 +114,7 @@ testSuit2 = do
 -}
     void $ readChan exitChan
 
--- Урезал большую часть тестов, ибо их по факту нужно писть заново
+-- Tests need to be rewritten
 testSuit1 = do
     (privateNumber1, publicPoint1) <- genKayPair curve
     (publicKey, privateKey)         <- generate curve

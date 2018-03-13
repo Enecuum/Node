@@ -19,11 +19,11 @@ getBalance key transactions = sum $ map getAmount transactions
 
 countBalance :: PublicKey -> IO Amount
 countBalance key = do
-    ts <- readTransactions =<< getTransactionFilePath -- add choosing of files
+    ts <- readTransactions =<< getTransactionFilePath
     return $ getBalance key ts
 
 readTransactions :: String -> IO [Transaction]
 readTransactions fileName = do
     mblocks <-  readHashMsgFromFile fileName
     let ts =  [trs | (Microblock _ _ trs) <- mblocks]
-    return $ mconcat ts                                                                                                                                                                    
+    return $ mconcat ts
