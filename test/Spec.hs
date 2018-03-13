@@ -28,13 +28,9 @@ import                  Control.Concurrent.Chan
 import                  Control.Concurrent.Async
 
 import                  CLI.CLI
-<<<<<<< HEAD
-import                  PoA
-import                  Service.HammingDistance
-=======
+
 import                  Service.HammingDistance
 import                  PoA
->>>>>>> d9eb408c75cffd45bbc2606041663a92b7630499
 
 
 main :: IO ()
