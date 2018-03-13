@@ -108,8 +108,7 @@ makeNodeList aN aNodeIds = do
         return $ aNode
 
 dataState :: [TestNode] -> [B.ByteString] -> IO ()
-dataState aNodeList aNodeData = do
-
+dataState aNodeList aNodeData =
     print $ length <$> do
         aNode <- aNodeList
         pure  $ do
@@ -117,7 +116,7 @@ dataState aNodeList aNodeData = do
             aData <- aNodeData
             guard $ simpleDistance (testNodeId aNode) aData < d
             return True
-{-
+
 testNet2 :: IO ()
 testNet2 = do
     aNodeIdFile   <- B.readFile "./data/keys/genKeyFile0.bin"

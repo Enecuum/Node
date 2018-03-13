@@ -1,12 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
-{-# LANGUAGE DeriveGeneric, LambdaCase #-}
 
 
 module CLI.CLI (
     control,
     Trans(..),
-    -- для тестовой сетки
+    -- for TestNet
     generateTransactionsForever
   ) where
 
@@ -19,14 +18,13 @@ import Control.Monad (forever, forM, replicateM)
 import Data.Time.Units (Millisecond, subTime, getCPUTimeWithUnit)
 
 import Service.Types.PublicPrivateKeyPair
-import Node.Node.Types
 import Service.Types
 import Service.System.Directory (getTime, getKeyFilePath)
 import Service.Metrics
 import System.Random
 import Data.Graph.Inductive
 import CLI.Balance (countBalance)
-import Node.Node.Types (ManagerMiningMsgBase, newTransaction)
+import Node.Node.Types (ManagerMiningMsg, ManagerMiningMsgBase, newTransaction)
 import CLI.TransactionsDAG
 
 
@@ -74,7 +72,7 @@ control ch = do
       where header = "Usage: eneqm-control [OPTION...] "
 
 dispatch :: [Flag] -> Chan ManagerMiningMsgBase -> IO ()
-dispatch flags ch = do
+dispatch flags ch =
     case flags of
         (Key : _)               -> getKey ch
         (GenerateNTransactions qTx: _) -> generateNTransactions qTx ch
@@ -88,11 +86,11 @@ dispatch flags ch = do
 showPublicKey :: IO ()
 showPublicKey = do
   pairs <- getSavedPublicKey
-  mapM_ (putStrLn . show . fst) pairs
+  mapM_ (print . fst) pairs
 
 getSavedPublicKey :: IO [(PublicKey, PrivateKey)]
 getSavedPublicKey = do
-  keyFileContent <- getKeyFilePath >>= (\keyFileName -> readFile keyFileName)
+  keyFileContent <- getKeyFilePath >>= readFile
   let rawKeys = lines keyFileContent
   let keys = map (splitOn ":") rawKeys
   let pairs = map (\x -> (,) (read (x !! 0) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
@@ -101,13 +99,13 @@ getSavedPublicKey = do
 
 sendTrans :: Trans -> Chan ManagerMiningMsgBase -> IO ()
 sendTrans trans ch = do
-  let moneyAmount = (CLI.CLI.amount trans) :: Amount
+  let moneyAmount = CLI.CLI.amount trans :: Amount
   let receiverPubKey = read (recipientPubKey trans) :: PublicKey
   let ownerPubKey = read (senderPubKey trans) :: PublicKey
   timePoint <- getTime
   keyPairs <- getSavedPublicKey
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
-  case (Data.Map.lookup ownerPubKey mapPubPriv) of
+  case Data.Map.lookup ownerPubKey mapPubPriv of
     Nothing -> putStrLn "You don't own that public key"
     Just ownerPrivKey -> do
       sign  <- getSignature ownerPrivKey moneyAmount
@@ -141,11 +139,11 @@ getBalance rawKey = do
   result  <- countBalance $ parseKey rawKey
   endTime <- getCPUTimeWithUnit :: IO Millisecond
   metric $ timing "cl.ld.time" (subTime endTime stTime)
-  putStrLn (show result)
+  print result
 
 parseKey :: String -> PublicKey
 -- parseKey rawKey = fromJust $ Data.Map.lookup rawKey keyAliases
-parseKey rawKey = (read rawKey :: PublicKey)
+parseKey rawKey = read rawKey :: PublicKey
 
 
 
@@ -163,7 +161,7 @@ generateNTransactions qTx ch = do
           writeChan ch $ newTransaction x
           sendMetrics x
         ) tx
-  putStrLn ("Transactions are created")
+  putStrLn "Transactions are created"
 
 
 generateTransactionsForever :: ManagerMiningMsg a => Chan a -> IO b
