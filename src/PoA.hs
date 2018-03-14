@@ -42,11 +42,9 @@ servePoA ::
     -> IO ()
 servePoA aRecivePort aNodeId ch aRecvChan aSendPort = runServer (read aRecivePort) $
     \aMsg aSockAddr _ -> do
+        loging (aRecivePort) $ "PaA msg: " ++ (show $ hex $ aMsg)
         let aDecodeMsg = S.decode aMsg
         whenLeft aRecivePort aDecodeMsg
-        when (isLeft aDecodeMsg) $
-            loging (aRecivePort) $ "PaA msg: " ++ (show $ hex $ aMsg)
-
         whenRight aDecodeMsg $ \case
             HashMsgTransactionsRequest num -> do
                 loging (aRecivePort) $ "Recived HashMsgTransactionsRequest " ++ show num
