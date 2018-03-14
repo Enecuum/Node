@@ -52,7 +52,7 @@ addDataToFile aFilePath aData = do
     aOk1 <- try $ appendFile aFilePath $ show aData ++ "\n"
     case aOk1 of
         Right _ -> pure ()
-        Left _ -> do
+        Left (_ :: SomeException) -> do
             aOk2 <- try $ writeFile aFilePath $ show aData ++ "\n"
             case aOk2 of
                 Right _                   -> pure ()
