@@ -4,6 +4,7 @@ module Service.HammingDistance where
 import qualified    Data.ByteString as B
 import              Data.Bits
 import              Node.Crypto
+import              Data.Word
 import              Data.Serialize
 import              Control.Monad
 import              Data.List.Extra
@@ -39,13 +40,25 @@ instance {-# OVERLAPS #-} Distancable B.ByteString B.ByteString where
 
         aLengthDiverse :: Int
         aLengthDiverse = 8 * abs ((B.length a) - (B.length b))
+class SimpleDistance a where
+    simpleDistance :: a -> a -> Word64
 
 
-simpleDistance :: B.ByteString -> B.ByteString -> Int
-simpleDistance a b = sum $ zipWith (\x y -> abs (x - y)) (toHash a) (toHash b)
-  where
-    toHash :: B.ByteString -> [Int]
-    toHash s = fromEnum <$> (B.unpack s)
+instance SimpleDistance [Word64] where
+    {-# INLINE simpleDistance #-}
+    simpleDistance a b = maximum $ zipWith dist a b
+      where
+        {-# INLINE dist #-}
+        dist :: Word64 -> Word64 -> Word64
+        dist x y = let d = x - y in min d (-d)
+
+instance SimpleDistance B.ByteString where
+    simpleDistance a b = simpleDistance (toHash a) (toHash b)
+
+toHash :: B.ByteString -> [Word64]
+toHash s = case runGet (forM [1..8 :: Int] $ \_ -> getWord64be) s of
+    Right x -> x
+    _ -> error "toHash"
 
 --------------------------------------------------------------------------------
 
@@ -62,27 +75,27 @@ testNet1 = do
     putStrLn "file 2"
     let Right (aNodeIds  :: [B.ByteString]) = decode aNodeIdFile
         Right (aNodeData :: [B.ByteString]) = decode aNodeDataFile
-    print $ minimum $ [simpleDistance a b| b <- take 30 $ aNodeIds, a <- take 1000 $aNodeData, a /= b]
-    print $ maximum $ [simpleDistance a b| b <- take 30 $ aNodeIds, a <- take 1000 $aNodeData, a /= b]
-    print $ length <$> filter (< 5500) <$> [[simpleDistance a b | a <- take 30000 $ aNodeData, a /= b]| b <- take 200 $ aNodeIds]
+    print $ minimum $ [simpleDistance a b| b <- take 30 $ toHash <$> aNodeIds, a <- take 1000 $ toHash <$> aNodeData, a /= b]
+    print $ maximum $ [simpleDistance a b| b <- take 30 $ toHash <$> aNodeIds, a <- take 1000 $ toHash <$> aNodeData, a /= b]
+    print $ length <$> filter (< 118) <$> [[simpleDistance a b | a <- take 30000 $ toHash <$> aNodeData, a /= b]| b <- take 200 $ toHash <$> aNodeIds]
     --print $ maximum $ length <$> filter (< 6000) <$> [[simpleDistance a b | a <- take 1000 $ aNodeData, a /= b]| b <- take 30 $ aNodeIds]
-{-
+
 genKeyFile :: IO ()
 genKeyFile = forM_ [0..99] $ \i -> do
     let keys = cryptoHash <$> [i*100000+1..100000+i*100000 :: Int]
     B.writeFile ("./data/keys/genKeyFile" ++ show i ++".bin") (encode keys)
     putStrLn $ "File: " ++ show i ++ " is writed."
--}
 
 
-nodeD :: TestNode -> Int
+
+nodeD :: TestNode -> Word64
 nodeD aNode = sum (simpleDistance (testNodeId aNode) <$> testNodeIds aNode)
 
 
 electNodeIds :: [B.ByteString] -> B.ByteString -> IO [B.ByteString]
 electNodeIds aList aId = do
     aListShuffled <- shuffleM aList
-    let randList = filter (aId /=) $ take 101 aListShuffled
+    let randList = filter (aId /=) $ take 200 aListShuffled
     return $ take 1 $ sortOn (simpleDistance aId) randList
 
 
@@ -91,21 +104,20 @@ makeNodeList aN aNodeIds = do
     let takedNodes = take aN aNodeIds
     forM takedNodes $ \aId -> do
         aElNodeIds <- electNodeIds takedNodes aId
-        putStrLn $ "a node " ++ show aId ++ " is made."
         let aNode = TestNode aId aElNodeIds
-        putStrLn $ "a node d = " ++ show (nodeD aNode)
         return $ aNode
 
 dataState :: [TestNode] -> [B.ByteString] -> IO ()
 dataState aNodeList aNodeData =
     print $ length <$> do
-    aNode <- aNodeList
-    pure  $ do
-        let d = nodeD aNode
-        aData <- aNodeData
-        guard $ simpleDistance (testNodeId aNode) aData < d
-        return True
+        aNode <- aNodeList
+        pure  $ do
+            let d = nodeD aNode
+            aData <- aNodeData
+            guard $ simpleDistance (testNodeId aNode) aData < d
+            return True
 
+{-
 testNet2 :: IO ()
 testNet2 = do
     aNodeIdFile   <- B.readFile "./data/keys/genKeyFile0.bin"
@@ -114,11 +126,11 @@ testNet2 = do
     putStrLn "file 2"
     let Right (aNodeIds  :: [B.ByteString]) = decode aNodeIdFile
         Right (aNodeData :: [B.ByteString]) = decode aNodeDataFile
-        aNumOfNode = 1000
+        aNumOfNode = 300
     aTestNet <- makeNodeList aNumOfNode aNodeIds
     print $ sum (nodeD <$> aTestNet) `div` aNumOfNode
     dataState aTestNet (take 300 $ aNodeData)
-
+-}
 
 testNet3 :: IO ()
 testNet3 = do
@@ -128,12 +140,12 @@ testNet3 = do
     putStrLn "file 2"
     let Right (aNodeIds  :: [B.ByteString]) = decode aNodeIdFile
         Right (aNodeData :: [B.ByteString]) = decode aNodeDataFile
-        aBlocks = take aNumOfBlocks aNodeData
-        aNodes  = take aNumOfNode aNodeIds
+        aBlocks = take aNumOfBlocks $ toHash <$> aNodeData
+        aNodes  = take aNumOfNode   $ toHash <$> aNodeIds
         sizeOfBuff   = 100
         aNumOfNode   = 100
-        aNumOfBlocks = 1000
-    forM_ aBlocks $ \aBlock ->
+        aNumOfBlocks = 10000
+    forM_ aBlocks $ \aBlock -> do
         if any (aBlock `elem`)
             ((\aId -> take sizeOfBuff $ sortOn (simpleDistance aId) aBlocks) <$> aNodes)
         then putStrLn $ "Ok. "

@@ -27,6 +27,7 @@ import                  Control.Concurrent.Chan
 import                  Control.Concurrent.Async
 
 import                  CLI.CLI
+
 import                  Service.HammingDistance
 import                  PoA
 

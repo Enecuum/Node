@@ -4,8 +4,9 @@ module PoA (
   )  where
 
 import              System.Clock
+import              Data.Hex
 import qualified    Data.Serialize as S
-import              Control.Monad (forM_, void)
+import              Control.Monad (forM_, void, when)
 import              Network.Socket.ByteString(sendAllTo)
 import              Service.Network.Base
 import              Service.Network.UDP.Client
@@ -29,6 +30,8 @@ whenLeft :: (Show a, Show b) => String -> Either a b -> IO ()
 whenLeft aPath aMsg@(Left _) = loging aPath $ show aMsg
 whenLeft _ _ = pure ()
 
+isLeft (Left _) = True
+isLeft _        = False
 
 servePoA ::
     String
@@ -39,6 +42,7 @@ servePoA ::
     -> IO ()
 servePoA aRecivePort aNodeId ch aRecvChan aSendPort = runServer (read aRecivePort) $
     \aMsg aSockAddr _ -> do
+        loging (aRecivePort) $ "PaA msg: " ++ (show $ hex $ aMsg)
         let aDecodeMsg = S.decode aMsg
         whenLeft aRecivePort aDecodeMsg
         whenRight aDecodeMsg $ \case
