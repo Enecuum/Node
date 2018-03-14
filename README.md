@@ -49,13 +49,46 @@ Execute the following commands:\
 
 | Command shortcut | Full command | Description |
 |---------|--------|---------|
-| -V, -? | --version | show version number |
-| -K | --get-public-key | get public key |
-| -G qTx | --generate-n-transactions=qTx | Generate N Transactions |
-| -F | --generate-transactions | Generate Transactions forever |
-| -M | --show-my-keys | show my public keys |
-| -B publicKey | --get-balance=publicKey | get balance for public key |
+| -V, -? | --version | Show version number |
+| -K | --get-public-key | Create new public key |
+| -G qTx | --generate-n-transactions=qTx | Generate N transactions |
+| -F | --generate-transactions | Generate transactions forever |
+| -M | --show-my-keys | Show my public keys |
+| -B publicKey | --get-balance=publicKey | Get balance for public key |
 | -S amount:to:from:currency | --send-money-to-from=amount:to:from:currency | send money to wallet from wallet (ENQ | ETH | DASH | BTC) |
+
+#### Use Cases
+
+##### Creating the initial identifying public key.
+
+To start operating as a simple node in the network, you'd run the first four initialiation commands (cf. "Initialization of a simple node") then you'd run `-K` to create your initial public key identifying you in the network. To this public key you can receive transactions as well as generate and send them from this public key. 
+
+
+##### Creating a second public key.
+
+You can create a large number of public keys for a single node. Let's say you want to generate and use a second public key as the address to (one of) your wallet(s). In this case , you'd run the initial four commands to initialize a node (cf. "Initialization of a simple node"), then run `-K ` to create your initial public key and then run `-K` again to create a second public key intended to be used as your wallet address (for this node). Then you'd be able to run send and receive payments form and to through the second public address using it a wallet.
+
+
+##### Checking your public keys
+
+In the case you want to check the public keys you generated overtime, you'd run `--show-my-keys`.
+
+
+##### Generating a transaction and sending it to another participant (public key)
+
+After you've created enough public keys, you may want to act as an active member of the network and, say, send transactions. 
+To send a transaction, you'd need to run `-S amount:to:from:currency` where `amount` stands for the amount intended to be send, `to` stands for the public key of the receiver, `from` stands for your chosen public key, and `currency` stands for the currency intended to be used.\
+Your transaction still needs to be validated before it reaches the receives, so it is automatically propagated to the pending pool. Then you'd wait till your transaction is validated, i.e. included in a block.
+
+
+##### Generating a test transaction or unlimited number of test transactions
+
+In the case you want to test this functionality, you'd run `-G qTx` where `qTx` stands for the chosen number of transactions or `-F` for an unlimited number of transactions and check the results. 
+
+
+##### Checking the balance of a public key
+
+In the case you want to know the balance of a public key, you'd run `-B publicKey` where `publicKey` stands for the chosen public key. 
 
 
 ### Testing
