@@ -28,19 +28,17 @@ data TxChanMsg = NewTx Transaction
                | GenTxNum Int
                | GenTxUnlim
 
-data LedgerChanMsg = LedgerRequest  PublicKey
-                   | LedgerResponse Amount
-
 
 control :: String -> Chan ManagerMiningMsgBase -> IO ()
 control portNum ch = runServer (read portNum) $ \aMsg addr aSocket -> do
     txChan     <- newChan
-    ledgerChan <- newChan
+    ledgerRespChan <- newChan
+    ledgerReqChan <- newChan
     forkIO $ txWait txChan ch
-    forkIO $ ledgerWait ledgerChan 
-    runRpc txChan ledgerChan addr aSocket aMsg
+    forkIO $ ledgerWait ledgerReqChan ledgerRespChan
+    runRpc txChan ledgerReqChan ledgerRespChan addr aSocket aMsg
       where
-        runRpc txChan ledgerChan addr aSocket aMsg = do
+        runRpc txChan ledgerReqChan ledgerRespChan addr aSocket aMsg = do
           response <- call methods (fromStrict aMsg)
           sendAllTo aSocket (toStrict $ fromMaybe "" response) addr
             where
@@ -65,8 +63,8 @@ control portNum ch = runServer (read portNum) $ \aMsg addr aSocket -> do
                 where
                   f :: PublicKey -> RpcResult IO Amount
                   f key = do
-                    liftIO $ writeChan ledgerChan $ LedgerRequest key
-                    (LedgerResponse resp) <- liftIO $ readChan ledgerChan
+                    liftIO $ writeChan ledgerReqChan key
+                    resp <- liftIO $ readChan ledgerRespChan
                     return resp
 
 
@@ -81,15 +79,15 @@ txWait recvCh mngCh = do
     txWait recvCh mngCh
 
 
-ledgerWait :: Chan LedgerChanMsg -> IO ()
-ledgerWait ch = do
-    (LedgerRequest key) <- readChan ch
+ledgerWait :: Chan PublicKey -> Chan Amount -> IO ()
+ledgerWait chReq chResp = do
+    key <- readChan chReq
     stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
     result  <- countBalance key
     endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
     metric $ timing "cl.ld.time" (subTime stTime endTime)
-    writeChan ch $ LedgerResponse result
-    ledgerWait ch
+    writeChan chResp result
+    ledgerWait chReq chResp
 
 
 
