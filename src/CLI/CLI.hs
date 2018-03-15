@@ -1,149 +1,95 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
 
+module CLI.CLI (control) where
 
-module CLI.CLI (
-    control,
-    Trans(..),
-    -- for TestNet
-    generateTransactionsForever
-  ) where
-
-import System.Console.GetOpt
-import Data.List.Split (splitOn)
-import Data.Map (fromList, lookup, Map)
+import Network.JsonRpc.Server
+import Network.Socket.ByteString (sendAllTo)
+import Service.Network.UDP.Server
+import Control.Monad (forever, replicateM, forM)
+import Control.Monad.IO.Class
+import Control.Concurrent (threadDelay, forkIO)
 import Control.Concurrent.Chan
-import Control.Concurrent
-import Control.Monad (forever, forM, replicateM)
-import Data.Time.Units (Millisecond, subTime, getCPUTimeWithUnit)
+import Data.ByteString.Lazy (fromStrict, toStrict)
+import Data.Time.Units
+import Data.Graph.Inductive (labEdges)
+import Data.Maybe (fromMaybe)
+import System.Random (randomRIO)
 
-import Service.Types.PublicPrivateKeyPair
-import Service.Types
-import Service.System.Directory (getTime, getKeyFilePath)
-import Service.Metrics
-import System.Random
-import Data.Graph.Inductive
-import CLI.Balance (countBalance)
-import Node.Node.Types (ManagerMiningMsg, ManagerMiningMsgBase, newTransaction)
+import CLI.Balance
 import CLI.TransactionsDAG
+import Node.Node.Types
+import Service.Types
+import Service.Types.SerializeJSON ()
+import Service.Types.PublicPrivateKeyPair
+import Service.System.Directory
+import Service.Metrics
+
+data TxChanMsg = NewTx Transaction 
+               | GenTxNum Int
+               | GenTxUnlim
+
+data LedgerChanMsg = LedgerRequest  PublicKey
+                   | LedgerResponse Amount
 
 
-type QuantityTx = Int
-type PubKey = String
-data Trans = Trans {
-        amount :: Amount
-      , recipientPubKey :: PubKey
-      , senderPubKey :: PubKey
-      , currency :: CryptoCurrency
-      } deriving (Eq, Show)
+control :: String -> Chan ManagerMiningMsgBase -> IO ()
+control portNum ch = runServer (read portNum) $ \aMsg addr aSocket -> do
+    txChan     <- newChan
+    ledgerChan <- newChan
+    forkIO $ txWait txChan ch
+    forkIO $ ledgerWait ledgerChan 
+    runRpc txChan ledgerChan addr aSocket aMsg
+      where
+        runRpc txChan ledgerChan addr aSocket aMsg = do
+          response <- call methods (fromStrict aMsg)
+          sendAllTo aSocket (toStrict $ fromMaybe "" response) addr
+            where
+              methods = [createTx , createNTx, createUnlimTx, balanceReq ]
+
+              createTx = toMethod "new_tx" f (Required "x" :+: ())
+                where
+                  f :: Transaction -> RpcResult IO ()
+                  f tx = liftIO $ writeChan txChan $ NewTx tx
+
+              createNTx = toMethod "gen_n_tx" f (Required "x" :+: ())
+                where
+                  f :: Int -> RpcResult IO ()
+                  f num = liftIO $ writeChan txChan $ GenTxNum num
+
+              createUnlimTx = toMethod "gen_unlim_tx" f ()
+                where
+                  f :: RpcResult IO ()
+                  f = liftIO $ writeChan txChan GenTxUnlim
+
+              balanceReq = toMethod "get_balance" f (Required "x" :+: ())
+                where
+                  f :: PublicKey -> RpcResult IO Amount
+                  f key = do
+                    liftIO $ writeChan ledgerChan $ LedgerRequest key
+                    (LedgerResponse resp) <- liftIO $ readChan ledgerChan
+                    return resp
 
 
-instance Read Trans where
-    readsPrec _ value =
-        case splitOn ":" value of
-             [f1, f2, f3, f4] ->
-                 [(Trans (read f1) f2 f3 (read f4), [])]
-             x -> error $ "Invalid number of fields in input: " ++ show x
 
-data Flag = Version  | Key | ShowKey | Balance PubKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever deriving (Eq, Show)
-
-
-
-
-options :: [OptDescr Flag]
-options = [
-    Option ['V', '?'] ["version"] (NoArg Version) "show version number"
-  , Option ['K'] ["get-public-key"] (NoArg Key) "get public key"
-  , Option ['G'] ["generate-n-transactions"] (ReqArg (GenerateNTransactions . read) "qTx") "Generate N Transactions"
-  , Option ['F'] ["generate-transactions"] (NoArg GenerateTransactionsForever) "Generate Transactions forever"
-  , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
-  , Option ['B'] ["get-balance"] (ReqArg Balance "publicKey") "get balance for public key"
-  , Option ['S'] ["send-money-to-from"] (ReqArg (Send . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
-  ]
+txWait :: Chan TxChanMsg -> Chan ManagerMiningMsgBase -> IO ()
+txWait recvCh mngCh = do
+    msg <- readChan recvCh
+    case msg of
+      NewTx tx       -> writeChan mngCh $ newTransaction tx
+      GenTxNum num   -> generateNTransactions num   mngCh
+      GenTxUnlim     -> generateTransactionsForever mngCh
+    txWait recvCh mngCh
 
 
-control :: Chan ManagerMiningMsgBase -> IO ()
-control ch = do
-    argv <- splitOn " " <$> getLine
-    case getOpt Permute options argv of
-        (flags, _, []) -> dispatch flags ch
-        (_, _, err)  -> ioError (userError (concat err ++ usageInfo header options))
-    control ch
-      where header = "Usage: eneqm-control [OPTION...] "
-
-dispatch :: [Flag] -> Chan ManagerMiningMsgBase -> IO ()
-dispatch flags ch =
-    case flags of
-        (Key : _)               -> getKey ch
-        (GenerateNTransactions qTx: _) -> generateNTransactions qTx ch
-        (GenerateTransactionsForever: _) -> generateTransactionsForever ch
-        (Send tx : _)           -> sendTrans tx ch
-        (Version : _)           -> printVersion flags
-        (ShowKey : _)           -> showPublicKey
-        (Balance aPublicKey : _) -> getBalance aPublicKey
-        _                       -> printVersion flags
-
-showPublicKey :: IO ()
-showPublicKey = do
-  pairs <- getSavedPublicKey
-  mapM_ (print . fst) pairs
-
-getSavedPublicKey :: IO [(PublicKey, PrivateKey)]
-getSavedPublicKey = do
-  keyFileContent <- getKeyFilePath >>= readFile
-  let rawKeys = lines keyFileContent
-  let keys = map (splitOn ":") rawKeys
-  let pairs = map (\x -> (,) (read (x !! 0) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
-  return pairs
-
-
-sendTrans :: Trans -> Chan ManagerMiningMsgBase -> IO ()
-sendTrans trans ch = do
-  let moneyAmount = CLI.CLI.amount trans :: Amount
-  let receiverPubKey = read (recipientPubKey trans) :: PublicKey
-  let ownerPubKey = read (senderPubKey trans) :: PublicKey
-  timePoint <- getTime
-  keyPairs <- getSavedPublicKey
-  let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
-  case Data.Map.lookup ownerPubKey mapPubPriv of
-    Nothing -> putStrLn "You don't own that public key"
-    Just ownerPrivKey -> do
-      sign  <- getSignature ownerPrivKey moneyAmount
-      let tx  = WithSignature (WithTime timePoint (SendAmountFromKeyToKey ownerPubKey receiverPubKey moneyAmount)) sign
-      writeChan ch $ newTransaction tx
-      sendMetrics tx
-      putStrLn ("Transaction done! " ++ show trans )
-
-printVersion :: (Show a) => [a] -> IO ()
-printVersion _ = putStrLn ("--" ++ "1.0.0" ++ "--")
-
-getKey :: Chan ManagerMiningMsgBase -> IO ()
-getKey ch = do
-  (KeyPair aPublicKey aPrivateKey) <- generateNewRandomAnonymousKeyPair
-  timePoint <- getTime
-  let initialAmount = 0
-  let keyInitialTransaction = WithTime timePoint (RegisterPublicKey aPublicKey initialAmount)
-  writeChan ch $ newTransaction keyInitialTransaction
-  sendMetrics keyInitialTransaction
-  getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
-  putStrLn ("Public Key " ++ show aPublicKey ++ " was created")
-
--- keyAliases :: Map String PublicKey
--- keyAliases = fromList [("main",(read "B0AahQxTCgHLuixT3RYAmYbZSgNg7WV3Qw5zLhMvM1NAc4" :: PublicKey))
---                    ,("favourite",(read "B0G6kCgWt5jkM5o1HmfaA1FRLwThK86AiCNw79pru5Edpo" :: PublicKey))
---                    ,("in-case",(read "B0hrpSs3GegLVF6RJVa252xuwNXPSPoPoaQNFempm3ZiA" :: PublicKey))]
-
-getBalance :: String -> IO ()
-getBalance rawKey = do
-  stTime  <- getCPUTimeWithUnit :: IO Millisecond
-  result  <- countBalance $ parseKey rawKey
-  endTime <- getCPUTimeWithUnit :: IO Millisecond
-  metric $ timing "cl.ld.time" (subTime endTime stTime)
-  print result
-
-parseKey :: String -> PublicKey
--- parseKey rawKey = fromJust $ Data.Map.lookup rawKey keyAliases
-parseKey rawKey = read rawKey :: PublicKey
+ledgerWait :: Chan LedgerChanMsg -> IO ()
+ledgerWait ch = do
+    (LedgerRequest key) <- readChan ch
+    stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
+    result  <- countBalance key
+    endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
+    metric $ timing "cl.ld.time" (subTime stTime endTime)
+    writeChan ch $ LedgerResponse result
+    ledgerWait ch
 
 
 
