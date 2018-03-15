@@ -67,6 +67,9 @@ dependencies:
 - random-shuffle
 - split
 - hex
+- json-rpc-client
+- json-rpc-server
+- time-out
 
 library:
   source-dirs: src
@@ -119,6 +122,14 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -Wall
+    - -O2
+    dependencies:
+    - Node
+  LightClient-exe:
+    main:                Main.hs
+    source-dirs:         app/LightClient
+    ghc-options:
     - -Wall
     - -O2
     dependencies:

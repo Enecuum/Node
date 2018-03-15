@@ -3,7 +3,9 @@ module Service.Network.UDP.Client (
     ClientHandle(..),
     runClient,
     PortNumber(..),
-    HostAddress
+    HostAddress,
+    openConnect,
+    closeConnect
   ) where
 
 import Network.Socket
@@ -18,6 +20,8 @@ data ClientHandle = ClientHandle {
 class Hosts a where
     openConnect :: a -> PortNumber -> IO ClientHandle
 
+closeConnect :: ClientHandle -> IO ()
+closeConnect = close . clientSocket 
 
 -- | Run a UDP client.
 runClient :: Hosts a => a -> PortNumber -> (ClientHandle -> IO ()) -> IO ()

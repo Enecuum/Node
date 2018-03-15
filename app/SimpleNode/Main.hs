@@ -23,10 +23,6 @@ main = do
             metronomeS 1000000 (writeChan ch deleteOldestMsg)
             metronomeS 10000000 (writeChan ch deleteDeadSouls)
             metronomeS 3000000 $ writeChan ch deleteOldestVacantPositions
-            idmain <- myThreadId
-            print idmain
-            idpoa <- forkIO $ servePoA  "1554" aMyNodeId ch aChan "1556"
-            print idpoa
-            idcli <- forkIO $ control ch
-            print idcli
+            void $ forkIO $ servePoA  "1554" aMyNodeId ch aChan "1556"
+            void $ forkIO $ control "1555" ch
     void $ readChan aExitChan
