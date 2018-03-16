@@ -4,6 +4,7 @@
 module Service.Types.SerializeJSON where
 
 import              Data.Aeson
+import              Data.Aeson.Types (typeMismatch)
 import qualified "cryptonite"   Crypto.PubKey.ECC.ECDSA     as ECDSA
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
@@ -23,16 +24,17 @@ instance FromJSON ECDSA.Signature where
  parseJSON (Object v) =
     ECDSA.Signature <$> v .: "sign_r"
                     <*> v .: "sign_s"
-
+ parseJSON inv        = typeMismatch "Signature" inv
+ 
 instance ToJSON Transaction where
-    toJSON trans = object $ toJSONList trans
+    toJSON trans = object $ txToJSON trans
         where
-        toJSONList (WithTime time trans)                       = [ "time" .= time ] ++ toJSONList trans
-        toJSONList (WithSignature trans sign)                  = toJSONList trans ++ [ "signature" .= sign ]
-        toJSONList (RegisterPublicKey key balance)             = [ "public_key" .= key, "start_balance" .= balance]
-        toJSONList (SendAmountFromKeyToKey own rec amount)     = [ "owner_key" .= own,
-                                                                   "receiver_key" .= rec,
-                                                                   "amount" .= amount]
+        txToJSON (WithTime time tx)                        = [ "time" .= time ] ++ txToJSON tx
+        txToJSON (WithSignature tx sign)                   = txToJSON tx ++ [ "signature" .= sign ]
+        txToJSON (RegisterPublicKey key balance)           = [ "public_key" .= key, "start_balance" .= balance]
+        txToJSON (SendAmountFromKeyToKey own rec amount)   = [ "owner_key" .= own,
+                                                               "receiver_key" .= rec,
+                                                               "amount" .= amount]
 
 instance FromJSON Transaction where
     parseJSON (Object o) = do
@@ -54,16 +56,5 @@ instance FromJSON Transaction where
                    appTime  _ trans       = trans
                    appSign (Just s) trans = WithSignature trans s
                    appSign  _ trans       = trans
+    parseJSON inv         = typeMismatch "Transaction" inv
 
-
--- test.txt contains toJSON timejson :
---let timejson = WithTime 0.00001 (WithSignature (SendAmountFromKeyToKey   2 3 13.33) 42)
-
-
--- main :: IO ()
--- main = do
---       r <- B.readFile "test.txt"
---       let result = decodeStrict r :: Maybe Transaction
---       LC.putStrLn $ case result of
---           Nothing -> "fail"
---           Just a  -> encode a

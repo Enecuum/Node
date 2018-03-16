@@ -10,9 +10,7 @@ module LightClient.RPC (
 
 import Network.JsonRpc.Client
 import qualified Data.ByteString.Lazy as B
-import Control.Applicative ((<$>), (<*>))
-import Control.Monad (replicateM, void, forM, forM_)
-import Control.Monad.Except (runExceptT, liftIO)
+import Control.Monad (void)
 import Network.Socket.ByteString (sendAllTo, recv)
 
 import Control.Timeout (timeout)
