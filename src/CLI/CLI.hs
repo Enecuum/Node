@@ -47,7 +47,9 @@ control portNum ch = runServer (read portNum) $ \aMsg addr aSocket -> do
               createTx = toMethod "new_tx" f (Required "x" :+: ())
                 where
                   f :: Transaction -> RpcResult IO ()
-                  f tx = liftIO $ writeChan txChan $ NewTx tx
+                  f tx = liftIO $ do
+                      sendMetrics tx
+                      writeChan txChan $ NewTx tx
 
               createNTx = toMethod "gen_n_tx" f (Required "x" :+: ())
                 where
@@ -62,9 +64,9 @@ control portNum ch = runServer (read portNum) $ \aMsg addr aSocket -> do
               balanceReq = toMethod "get_balance" f (Required "x" :+: ())
                 where
                   f :: PublicKey -> RpcResult IO Amount
-                  f key = do
-                    liftIO $ writeChan ledgerReqChan key
-                    resp <- liftIO $ readChan ledgerRespChan
+                  f key = liftIO $ do
+                    writeChan ledgerReqChan key
+                    resp <- readChan ledgerRespChan
                     return resp
 
 
