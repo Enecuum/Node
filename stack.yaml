@@ -1,0 +1,26 @@
+resolver: lts-10.7
+
+packages:
+- .
+
+extra-deps:
+- time-units-1.0.0
+- base58-bytestring-0.1.0
+
+
+
+build:
+  haddock-arguments:
+    haddock-args:
+    - "--odir=./docs"
+
+docker:
+  enable: true
+
+image:
+  container:
+    name: node
+    base: fpco/stack-run
+    # add:
+      # config: /app/config
+      # static: /app/static
