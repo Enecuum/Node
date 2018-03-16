@@ -6,7 +6,7 @@ module PoA (
 import              System.Clock
 import              Data.Hex
 import qualified    Data.Serialize as S
-import              Control.Monad (forM_, void, when)
+import              Control.Monad (forM_, void)
 import              Network.Socket.ByteString(sendAllTo)
 import              Service.Network.Base
 import              Service.Network.UDP.Client
@@ -29,9 +29,6 @@ loging aPath aString = do
 whenLeft :: (Show a, Show b) => String -> Either a b -> IO ()
 whenLeft aPath aMsg@(Left _) = loging aPath $ show aMsg
 whenLeft _ _ = pure ()
-
-isLeft (Left _) = True
-isLeft _        = False
 
 servePoA ::
     String

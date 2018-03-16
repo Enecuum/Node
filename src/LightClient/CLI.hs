@@ -19,7 +19,6 @@ import Network.Socket (HostName, PortNumber)
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
 import Service.System.Directory (getTime, getKeyFilePath)
-import Service.Metrics
 import Service.Network.UDP.Client
 import LightClient.RPC
 
@@ -136,7 +135,6 @@ sendTrans ch trans = do
       sign  <- getSignature ownerPrivKey moneyAmount
       let tx  = WithSignature (WithTime timePoint (SendAmountFromKeyToKey ownerPubKey receiverPubKey moneyAmount)) sign
       result <- runExceptT $ newTx ch tx
---      sendMetrics tx
       case result of
         (Left err) -> putStrLn $ "Send transaction error: " ++ show err
         (Right _ ) -> putStrLn ("Transaction done: " ++ show trans)
@@ -151,31 +149,20 @@ getKey ch = do
   let initialAmount = 0
   let keyInitialTransaction = WithTime timePoint (RegisterPublicKey aPublicKey initialAmount)
   result <- runExceptT $ newTx ch keyInitialTransaction
---  sendMetrics keyInitialTransaction
   case result of
     (Left err) -> putStrLn $ "Key creation error: " ++ show err
     (Right _ ) -> do
            getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
            putStrLn ("Public Key " ++ show aPublicKey ++ " was created")
 
--- keyAliases :: Map String PublicKey
--- keyAliases = fromList [("main",(read "B0AahQxTCgHLuixT3RYAmYbZSgNg7WV3Qw5zLhMvM1NAc4" :: PublicKey))
---                    ,("favourite",(read "B0G6kCgWt5jkM5o1HmfaA1FRLwThK86AiCNw79pru5Edpo" :: PublicKey))
---                    ,("in-case",(read "B0hrpSs3GegLVF6RJVa252xuwNXPSPoPoaQNFempm3ZiA" :: PublicKey))]
-
 getBalance :: ClientHandle -> String -> IO ()
 getBalance ch rawKey = do
---  stTime  <- getCPUTimeWithUnit :: IO Millisecond
   result  <- runExceptT $ reqLedger ch $ parseKey rawKey
   case result of 
     (Left err) -> putStrLn $ "Get Balance error: " ++ show err
     (Right b ) -> putStrLn $ "Balance: " ++ show b
---  endTime <- getCPUTimeWithUnit :: IO Millisecond
---  metric $ timing "cl.ld.time" (subTime endTime stTime)
---  putStrLn (show result)
 
 parseKey :: String -> PublicKey
--- parseKey rawKey = fromJust $ Data.Map.lookup rawKey keyAliases
 parseKey rawKey = (read rawKey :: PublicKey)
 
 
@@ -195,28 +182,3 @@ generateTransactionsForever ch = do
     (Left err) -> putStrLn $ "generateTransactionsForever error: " ++ show err
     (Right _ ) -> putStrLn   "Transactions request was sent"
 
-
-
-{-                                forever $ do
-                                quantityOfWallets <- randomRIO (20,30)
-                                tx <- genTxDAG quantityOfWallets
-                                mapM_ (\x -> do
-                                            writeChan ch $ newTransaction x
-                                            sendMetrics x
-                                       ) tx
-                                threadDelay (10^(6 :: Int))
-                                putStrLn ("Bundle of " ++ show quantityOfWallets ++"Transactions was created")
--}
-
-sendMetrics :: Transaction -> IO ()
-sendMetrics (WithTime _ tx) = sendMetrics tx
-sendMetrics (WithSignature tx _) = sendMetrics tx
-sendMetrics (RegisterPublicKey k b) = do
-                           metric $ increment "cl.tx.count"
-                           metric $ set "cl.tx.wallet" k
-                           metric $ gauge "cl.tx.amount" b
-sendMetrics (SendAmountFromKeyToKey o r a) = do
-                           metric $ increment "cl.tx.count"
-                           metric $ set "cl.tx.wallet" o
-                           metric $ set "cl.tx.wallet" r
-                           metric $ gauge "cl.tx.amount" a
