@@ -81,8 +81,8 @@ After you've started a simple node, execute `stack exec LightClient-exe`.
 | -G qTx | --generate-n-transactions=qTx | Generate N transactions |
 | -F | --generate-transactions | Generate transactions forever |
 | -M | --show-my-keys | Show my public keys |
-| -B publicKey | --get-balance=publicKey | Get balance for public key |
-| -S amount:to:from:currency | --send-money-to-from=amount:to:from:currency | send money to wallet from wallet (ENQ | ETH | DASH | BTC) |
+| -B publicKey | --get-balance=publicKey | Get balance for a public key |
+| -S amount:to:from:currency | --send-money-to-from=amount:to:from:currency | Send currency from a public key to a public key (ENQ/ETH/DASH/BTC) |
 
 
 
