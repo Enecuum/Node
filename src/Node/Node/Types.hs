@@ -2,9 +2,8 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 
--- | Модуль придоставляет типы для хранения внутреннего состояния ноды и для
---   представления сообщений к ней. Ситуация осложняется тем, что разные ноды
---   используют взаимо пересекающиеся множества сообщений.
+-- | Module provides types for storing internal state of a node and messages.
+-- Different nodes use mutually overlapping set of messages
 module Node.Node.Types where
 
 

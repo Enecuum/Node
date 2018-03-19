@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveFunctor #-}
--- | Модуль предоставляет монаду позволяющую работать со списками выборов как
---   с данными.
+-- | Module provides a monad which allow to work with list of options as data
 module Service.Monad.Option (opt, runOption, Options) where
 
 import Control.Monad.Free

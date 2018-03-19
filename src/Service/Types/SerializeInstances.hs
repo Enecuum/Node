@@ -24,8 +24,8 @@ import "cryptonite" Crypto.PubKey.ECC.Types
 newtype CompactInteger = CompactInteger Integer
     deriving (Eq, Show, Enum, Num, Integral, Real, Ord, Bits, A.ToJSON, A.FromJSON)
 
--- первым числом кодируем и длину и знак, предполагаем, что у нас числа
--- не длинне чем те, которые можно впихнуть в 128 байт
+-- The first number encode length and sign, assuming that we don't have numbers
+-- longer that we can encode to 128 byte
 instance Serialize CompactInteger where
     put n = do
         let len :: Int8
@@ -75,7 +75,7 @@ instance Serialize Signature where
         CompactInteger b <- get
         return $ Signature a b
 
--- автоматически выводит сериализацию.
+-- automatically get serialization.
 deriving instance Generic PublicPoint
 deriving instance Generic PublicKey
 deriving instance Generic Curve
