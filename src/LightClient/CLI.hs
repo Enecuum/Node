@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 {-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
 {-# LANGUAGE DeriveGeneric, LambdaCase #-}
 
@@ -15,6 +15,7 @@ import Data.List.Split (splitOn)
 import Data.Map (fromList, lookup, Map)
 import Control.Monad.Except (runExceptT, liftIO)
 import Network.Socket (HostName, PortNumber)
+import Control.Exception
 
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
@@ -114,11 +115,16 @@ showPublicKey = do
 
 getSavedPublicKey :: IO [(PublicKey, PrivateKey)]
 getSavedPublicKey = do
-  keyFileContent <- getKeyFilePath >>= (\keyFileName -> readFile keyFileName)
-  let rawKeys = lines keyFileContent
-  let keys = map (splitOn ":") rawKeys
-  let pairs = map (\x -> (,) (read (x !! 0) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
-  return pairs
+  result <- try $ getKeyFilePath >>= (\keyFileName -> readFile keyFileName)
+  case result of 
+    Left ( _ :: SomeException) -> do 
+          putStrLn "There is no keys"
+          return []
+    Right keyFileContent       -> do
+          let rawKeys = lines keyFileContent
+          let keys = map (splitOn ":") rawKeys
+          let pairs = map (\x -> (,) (read (x !! 0) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
+          return pairs
 
 
 sendTrans :: ClientHandle -> Trans -> IO ()
