@@ -9,13 +9,35 @@ There are two types of nodes:
 * Boot nodes. They keep a list of arbitrary available connected nodes and give parts of that list on request to simple nodes connecting to the network.
 * Simple (basic) nodes receive transactions from clients and add them to the pending pool, give PoA nodes transactions from the pending pool, receive blocks from PoA nodes and propagate those blocks to other simple nodes, and calculate and send clients their balances. In the future it'll be used in the sharding implementation: data distribution management and fetching data on request.
 
-
 Node supports multithreading. Each thread has its own data and can read data from another thread, change its (self) state, propagate messages to other actors and create new actors. This way we avoid numerous problems normally assosiated with multithreading and can process events in parallel balancing the available resources.
 
 Node relies on actors. The central part of a node is the governing actor. It stores the main data, information about neighboring nodes and network status information. Other actors are reponsible for communication with the outside world processing incoming and outcoming messages.
 
+LightClient is a client allowing to connect to a node (local or remote), send transactions and calculate balance via the ledger.
 
 ## How to Use
+
+## In a Docker Container (Simple Node)
+
+### Prelimiary steps
+[Install docker]([https://docs.docker.com/install/linux/docker-ce/ubuntu/)
+
+Clone this repository and execute `stack build`.
+
+### Set permissions for the user and login as root if needed
+`sudo usermod -a -G docker $USER`
+`su $USER`
+
+### Build container with a node
+
+Execute `sudo stack image container` to build a container with a node in it. Add `--allow-different-user` at the end of the command in the case of permission problems.
+
+### Run the container locally
+
+Execute `docker run -it node` where 'node' stands for the pre-defined (in the stack.yaml) name of the node.
+
+
+## Without Docker (Boot and Simple Nodes)
 
 ### Preliminary steps
 Install Haskel stack\
