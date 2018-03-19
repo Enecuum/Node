@@ -15,7 +15,6 @@ import Data.Serialize as S
 import System.Directory
 
 
-
 readDataFile :: Read a => FilePath -> IO [a]
 readDataFile aFilePath = do
     aFileContent <- try $ unsafeReadDataFile aFilePath
@@ -60,16 +59,21 @@ addDataToFile aFilePath aData = do
                     createDirectory "./data"
                     writeFile aFilePath $ show aData ++ "\n"
 
-
+{-
 writeDataToFile :: Show a => FilePath -> [a] -> IO ()
 writeDataToFile aFilePath aElems = do
     writeFile aFilePath . unlines $ show <$> aElems
+-}
 
 readHashMsgFromFile :: String -> IO [Microblock]
 readHashMsgFromFile filename = do
-    aFileContent <- B.readFile filename
-    case S.decode aFileContent of
-        Right aMicroblocks  -> return aMicroblocks
-        Left aError         -> do
-            putStrLn $ "error " ++ show aError
-            return []
+    result <- try $ B.readFile filename
+    case result of
+        Right aFileContent          -> case S.decode aFileContent of
+                                           Right aMicroblocks  -> return aMicroblocks
+                                           Left aError         -> do
+                                               putStrLn $ "error " ++ show aError
+                                               return [] 
+        Left  ( _ :: SomeException) -> do 
+                                   putStrLn $ filename ++ "does not exist"
+                                   return []
