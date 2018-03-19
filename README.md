@@ -54,13 +54,14 @@ Execute the following commands to start a node:\
 `stack exec MakeConfigBootNode-exe`\
 `stack exec BootNode-exe`
 
-Set your own environment variables for testing a simple node:
+#### Initialization of a simple node
+
+Set your own environment variables for a simple node:
 * statsd defines the address (format is 0.0.0.0) to send statistical data to the defined port (format is 0000).
 * bootNodeList defines the address and port list of the boot nodes that can be asked for addresses of other nodes to connect to. Use the format [(NodeId, IP, port)] where IP is in the format [(0.0.0.0)] and the port is your chosen port.
 * export statsd - export statistical data to the statistical service to the defined IP address (format is 0.0.0.0)
 * export bootNodeList - use the format [(1,(2,3,4,5), 0000)] where 1 stands for the required nodeID, (2,3,4,5) stands for the IP address of the boot node, and 0000 stands for the port.
 
-#### Initialization of a simple node
 Execute the following commands:\
 `export bootNodeList="[(1, (2,3,4,5), 0000)]"`\
 `export statsd="0.0.0.0"`\
