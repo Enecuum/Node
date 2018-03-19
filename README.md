@@ -17,35 +17,35 @@ LightClient is a client allowing to connect to a node (local or remote), send tr
 
 ## How to Use
 
-## In a Docker Container (Simple Node)
+### In a Docker Container (Simple Node)
 
-### Prelimiary steps
-[Install docker]([https://docs.docker.com/install/linux/docker-ce/ubuntu/)
+#### Prelimiary steps
+[Install Docker](https://docs.docker.com/install/linux/docker-ce/ubuntu/)
 
 Clone this repository and execute `stack build`.
 
-### Set permissions for the user and login as root if needed
-`sudo usermod -a -G docker $USER`
+#### Set permissions for the user, and login as root if needed
+`sudo usermod -a -G docker $USER`\
 `su $USER`
 
-### Build container with a node
+#### Build container with a node
 
-Execute `sudo stack image container` to build a container with a node in it. Add `--allow-different-user` at the end of the command in the case of permission problems.
+Execute `stack image container` to build a container with a node in it. 
 
-### Run the container locally
+#### Run the container locally
 
 Execute `docker run -it node` where 'node' stands for the pre-defined (in the stack.yaml) name of the node.
 
 
-## Without Docker (Boot and Simple Nodes)
+### Without Docker (Boot and Simple Nodes)
 
-### Preliminary steps
+#### Preliminary steps
 Install Haskel stack\
 `curl -sSL https://get.haskellstack.org/ | sh`
 
 Clone this repository and execute `stack build`.
 
-### Configuration
+#### Configuration
 First time you start a node (boot or simple), it needs initial configuration.
 Starting should begin from boot nodes. Then simple nodes.
 
@@ -67,7 +67,11 @@ Execute the following commands:\
 `stack exec MakeConfigSimpleNode-exe`\
 `stack exec SimpleNode-exe`
 
-#### Available Commands
+#### Initialization of a light client
+
+After you've started a simple node, execute `stack exec LightClient-exe`.
+
+#### Available commands for a light client
 
 | Command shortcut | Full command | Description |
 |---------|--------|---------|
@@ -79,36 +83,38 @@ Execute the following commands:\
 | -B publicKey | --get-balance=publicKey | Get balance for public key |
 | -S amount:to:from:currency | --send-money-to-from=amount:to:from:currency | send money to wallet from wallet (ENQ | ETH | DASH | BTC) |
 
-#### Use Cases
 
-##### Creating the initial identifying public key.
+
+### Use Cases
+
+#### Creating the initial identifying public key.
 
 To start operating as a simple node in the network, you'd run the first four initialiation commands (cf. "Initialization of a simple node") then you'd run `-K` to create your initial public key identifying you in the network. To this public key you can receive transactions as well as generate and send them from this public key.
 
 
-##### Creating a second public key.
+#### Creating a second public key.
 
 You can create a large number of public keys for a single node. Let's say you want to generate and use a second public key as the address to (one of) your wallet(s). In this case , you'd run the initial four commands to initialize a node (cf. "Initialization of a simple node"), then run `-K ` to create your initial public key and then run `-K` again to create a second public key intended to be used as your wallet address (for this node). Then you'd be able to run send and receive payments form and to through the second public address using it a wallet.
 
 
-##### Checking your public keys
+#### Checking your public keys
 
 In the case you want to check the public keys you generated overtime, you'd run `--show-my-keys`.
 
 
-##### Generating a transaction and sending it to another participant (public key)
+#### Generating a transaction and sending it to another participant (public key)
 
 After you've created enough public keys, you may want to act as an active member of the network and, say, send transactions.
 To send a transaction, you'd need to run `-S amount:to:from:currency` where `amount` stands for the amount intended to be send, `to` stands for the public key of the receiver, `from` stands for your chosen public key, and `currency` stands for the currency intended to be used.\
 Your transaction still needs to be validated before it reaches the receives, so it is automatically propagated to the pending pool. Then you'd wait till your transaction is validated, i.e. included in a block.
 
 
-##### Generating a test transaction or unlimited number of test transactions
+#### Generating a test transaction or unlimited number of test transactions
 
 In the case you want to test this functionality, you'd run `-G qTx` where `qTx` stands for the chosen number of transactions or `-F` for an unlimited number of transactions and check the results.
 
 
-##### Checking the balance of a public key
+#### Checking the balance of a public key
 
 In the case you want to know the balance of a public key, you'd run `-B publicKey` where `publicKey` stands for the chosen public key.
 
