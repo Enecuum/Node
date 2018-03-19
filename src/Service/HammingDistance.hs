@@ -10,7 +10,7 @@ import              Control.Monad
 import              Data.List.Extra
 import              System.Random.Shuffle
 
--- побитовая свёртка
+-- bit fold
 class BitFoldable a where
     bitFold :: (b -> Bool -> b) -> b -> a -> b
 

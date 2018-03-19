@@ -148,12 +148,12 @@ generateNewRandomAnonymousKeyPair = do
     pure $ KeyPair (compressPublicKey pub) (PrivateKey256k1 $ ECDSA.private_d priv)
 
 
--- | Это более общая версия функции!!!
+-- | Previous version of function was replaced by more generic function
 getSignature :: (Serialize msg, MonadRandom m) => PrivateKey -> msg -> m ECDSA.Signature
 getSignature priv msg = ECDSA.sign (getPrivateKey priv) MD2 (encode msg)
 
 
--- | Это более общая версия функции!!!
+-- | Previous version of function was replaced by more generic function
 verifySiganture :: Serialize msg => PublicKey -> ECDSA.Signature -> msg -> Bool
 verifySiganture pub sign msg = ECDSA.verify MD2 pub' sign (encode msg)
   where pub' = getPublicKey $ uncompressPublicKey pub

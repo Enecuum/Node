@@ -286,7 +286,7 @@ answerToPackagedMsg
         whenJust encodedMsg $ \justEncodedMsg -> do
             loging aData $ "aBinaryMsg from " ++ show aId ++ ": "  ++ show justEncodedMsg
             let aMaybeDecodeMsg = decodePackage justEncodedMsg
-            whenLeft aData aMaybeDecodeMsg -- лог
+            whenLeft aData aMaybeDecodeMsg -- log
             whenRight aMaybeDecodeMsg $ \aDecodeMsg -> do
                 loging aData $ "aDecodeMsg: " ++ show aDecodeMsg
                 case aDecodeMsg of

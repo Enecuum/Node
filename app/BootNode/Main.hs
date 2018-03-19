@@ -1,4 +1,4 @@
--- бинарники бут ноды
+-- Boot node's binaries
 module Main where
 
 import              Control.Monad
