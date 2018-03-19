@@ -12,12 +12,13 @@ import              Network.Socket
 import              Node.Node.Types
 import              System.Environment
 import              Node.Data.Data
-
+import              Service.System.Directory (createFilesDirectory)
 
 
 makeFileConfig :: String -> NodeVariantRoles -> PortNumber -> IO ()
 makeFileConfig path aRoles aPort = do
     nConfig <- makeNewNodeConfig aPort
+    createFilesDirectory path
     B.writeFile path $ encode $ (execState $ do
         helloMsg.nodeVariantRoles   .= aRoles
         helloMsg.listenPort         .= aPort

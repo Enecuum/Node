@@ -21,7 +21,6 @@ import Node.Node.Types
 import Service.Types
 import Service.Types.SerializeJSON ()
 import Service.Types.PublicPrivateKeyPair
-import Service.System.Directory
 import Service.Metrics
 
 data TxChanMsg = NewTx Transaction 
@@ -34,8 +33,8 @@ control portNum ch = runServer (read portNum) $ \aMsg addr aSocket -> do
     txChan     <- newChan
     ledgerRespChan <- newChan
     ledgerReqChan <- newChan
-    forkIO $ txWait txChan ch
-    forkIO $ ledgerWait ledgerReqChan ledgerRespChan
+    _ <- forkIO $ txWait txChan ch
+    _ <- forkIO $ ledgerWait ledgerReqChan ledgerRespChan
     runRpc txChan ledgerReqChan ledgerRespChan addr aSocket aMsg
       where
         runRpc txChan ledgerReqChan ledgerRespChan addr aSocket aMsg = do
