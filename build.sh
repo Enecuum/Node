@@ -4,7 +4,7 @@ variable=$(grep -Pzo "\[Docker\]\n((.*\n)+)(\[.*\])?" configs/config.ini | awk -
 if ! [[ $variable ]]; then
 	variable="docker-node"
 fi
-sed  "s/\${node}/$variable/g" stack.yaml.template > stack.yaml
+sed  "s,\${node},$variable,g" stack.yaml.template > stack.yaml
 stack build
 stack image container
 echo  "Project was built in docker container $variable"
