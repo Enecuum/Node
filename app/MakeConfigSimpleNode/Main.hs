@@ -14,7 +14,7 @@ main = do
     case maybeConf of
       Nothing     -> return ()
       Just config -> do
-        maybePort <- getVar config "SimpleNode" "node_connection_port"
+        maybePort <- getVar config "MakeConfigSimpleNode" "port"
         case maybePort of
           Nothing   -> return ()
           Just port -> makeFileConfig "./data/miningInitData.bin" [BroadcastNode] ((read port)::PortNumber)

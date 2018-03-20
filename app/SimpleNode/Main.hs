@@ -37,6 +37,6 @@ main = do
                 Just poa_out <- getVar config "SimpleNode" "poa_out"
                 void $ forkIO $ servePoA poa_in  aMyNodeId ch aChan poa_out
 
-                Just rpc_port <- getVar config "RPC" "port"
+                Just rpc_port <- getVar config "SimpleNode" "rpc"
                 void $ forkIO $ control rpc_port ch
         void $ readChan aExitChan

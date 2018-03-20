@@ -14,7 +14,7 @@ main = do
     case maybeConf of
       Nothing     -> return ()
       Just config -> do 
-        maybePort <- getVar config "BootNode" "port"
+        maybePort <- getVar config "MakeConfigBootNode" "port"
         case maybePort of
           Nothing -> return () 
           Just port -> makeFileConfig "./data/bootInitData.bin" [BootNode] ((read port)::PortNumber)
