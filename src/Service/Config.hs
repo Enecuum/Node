@@ -11,7 +11,7 @@ import System.Directory
 
 
 defaultConfig :: FilePath
-defaultConfig = "config.ini"
+defaultConfig = "configs/config.ini"
 
 getIni :: FilePath -> IO (Maybe Ini)
 getIni path = do
