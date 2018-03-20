@@ -2,3 +2,4 @@
 data/*.txt
 Node.cabal
 *.swp
+stack.yaml
