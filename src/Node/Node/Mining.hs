@@ -132,20 +132,20 @@ miningNodeAnswerToInfoPing _ aMd _ aInfoPing = do
             sendInfoPingToNodes aMd aInfoPing
             processingOfInfoPing aMd aInfoPing
 
-acceptTransactionAndСonfirmation ::
+acceptTransactionAndConfirmation ::
     Transaction
     -> IORef ManagerNodeData
     -> IO ()
-acceptTransactionAndСonfirmation  aTransaction aMd = do
+acceptTransactionAndConfirmation  aTransaction aMd = do
     aData <- readIORef aMd
-    loging aData $ "acceptTransactionAndСonfirmation " ++ show aTransaction
+    loging aData $ "acceptTransactionAndConfirmation " ++ show aTransaction
     metric $ add
         ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount")
         (1 :: Integer)
     writeChan (aData^.transactions) aTransaction
-    aTransactionСonfirmation <- makeTransactionСonfirmation aTransaction
+    aTransactionConfirmation <- makeTransactionConfirmation aTransaction
         (aData^.myNodeId) (aData^.privateKey)
-    sendToNodes aData (makeInfoPing aTransactionСonfirmation)
+    sendToNodes aData (makeInfoPing aTransactionConfirmation)
 
 answerToSendRawData :: IORef ManagerNodeData
     -> ManagerMiningMsgBase
@@ -153,7 +153,7 @@ answerToSendRawData :: IORef ManagerNodeData
 answerToSendRawData aMd (SendRawData aMsg) = do
     metric $ increment "net.bl.count"
     sendRawDataToNodes aMd aMsg
-answerToSendRawData _ _ = error "answerToSendRawData: этого не могло случиться"
+answerToSendRawData _ _ = error "answerToSendRawData: something unexpected  has happened"
 
 answerToSendTargetedTransaction ::
     IORef ManagerNodeData
@@ -163,7 +163,7 @@ answerToSendTargetedTransaction aMd
     (SendTargetedTransaction aTransaction aNid) =
         sendInfoPingToNodes aMd $ NewTargetedTransaction aTransaction aNid
 answerToSendTargetedTransaction _ _ = error
-    "answerToSendTargetedTransaction: этого не могло быть."
+    "answerToSendTargetedTransaction: something unexpected  has happened."
 
 answerToSendIAmPublicator ::
     IORef ManagerNodeData
@@ -197,7 +197,7 @@ answerToNewTransaction aMd (NewTransaction aTransaction) = do
         (1 :: Integer)
     writeChan (aData^.transactions) aTransaction
 answerToNewTransaction _ _ = error
-    "answerToNewTransaction: этого не могло быть."
+    "answerToNewTransaction: something unexpected  has happened."
 
 
 answerToBlockMadeMsg :: ManagerMiningMsg msg =>
@@ -224,7 +224,7 @@ answerToSendTransactionToPublicator aMd (SendTransactionToPublicator aTransactio
     modifyIORef aMd (sendedTransctions %~ BI.insert aTime aTransaction)
     sendTransactionToRandomPublicator aMd aTransaction
 answerToSendTransactionToPublicator _ _ = error
-    "answerToSendTransactionToPublicator: так быть не могло"
+    "answerToSendTransactionToPublicator: something unexpected  has happened"
 
 
 verifyNewData :: ManagerData md =>
@@ -275,7 +275,7 @@ sendTransactionToRandomPublicator aMd aTransaction = do
     aData <- readIORef aMd
     if
         | PublicatorNode `elem` aData^.nodeConfig.nodeVariantRoles -> do
-            acceptTransactionAndСonfirmation aTransaction aMd
+            acceptTransactionAndConfirmation aTransaction aMd
         | aData^.publicators.to (not . S.null) -> do
             aPublicators <- shuffleM $ S.toList (aData^.publicators)
             sendInfoPingToNodes aMd $
@@ -296,7 +296,7 @@ processingOfInfoPing aMd aInfoPing = do
     case aInfoPing of
         NewTargetedTransaction aTransaction aNodeId
             | aData^.myNodeId.to ((==) aNodeId . toNodeId) ->
-                acceptTransactionAndСonfirmation aTransaction aMd
+                acceptTransactionAndConfirmation aTransaction aMd
         InfoPingRawPackage aMsg ->
             writeChan (aData^.answerChan) $ RawPackege aMsg
         NewTransactionInNet aTransaction -> do
@@ -311,7 +311,7 @@ processingOfInfoPing aMd aInfoPing = do
                     modifyIORef aMd $ vacantPositions %~ BI.insert aTime
                         (aNodeId, aIp, aPort)
                     addRecordToNodeListFile (aData^.myNodeId) aNodeId aIp aPort
-        TransactionСonfirmation aTransaction _ _ ->
+        TransactionConfirmation aTransaction _ _ ->
             modifyIORef aMd $ sendedTransctions %~ BI.deleteR aTransaction
         BlockMade aMicroblock -> do
             writeChan (aData^.microblockChan) aMicroblock

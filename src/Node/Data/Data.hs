@@ -98,7 +98,7 @@ data InfoPingPackage where
     NewTargetedTransaction  :: Transaction -> NodeId    -> InfoPingPackage
     RoamTransaction         :: Transaction              -> InfoPingPackage
     InfoPingRawPackage      :: B.ByteString               -> InfoPingPackage
-    TransactionСonfirmation ::
+    TransactionConfirmation ::
         Transaction
         -> NodeId
         -> Signature

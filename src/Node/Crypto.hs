@@ -8,14 +8,14 @@ module Node.Crypto (
     makeIPRequest,
     makeIHaveBroadcastConnects,
     makeInfoPingIAmPublicator,
-    makeTransactionСonfirmation,
+    makeTransactionConfirmation,
     getMsgPackage,
     verifyConnectingMsg,
     verifyByteString,
     verifyIPAnswer,
     verifyIHaveBroadcastConnects,
     verifyInfoPingIAmPublicator,
-    verifyTransactionСonfirmation,
+    verifyTransactionConfirmation,
     genKayPair,
     encrypt,
     cryptoHash,
@@ -68,10 +68,10 @@ makeIHaveBroadcastConnects aNumOfConnects aIp aPort (MyNodeId aNodeId) aPrivateK
     return $ IHaveBroadcastConnects aTime aNumOfConnects aIp aPort
         (NodeId aNodeId) aSignature
 
-makeTransactionСonfirmation :: MonadRandom m =>
+makeTransactionConfirmation :: MonadRandom m =>
     Transaction -> MyNodeId -> PrivateKey -> m InfoPingPackage
-makeTransactionСonfirmation aTransaction aNodeId aPrivateKey =
-    TransactionСonfirmation aTransaction (toNodeId aNodeId) <$>
+makeTransactionConfirmation aTransaction aNodeId aPrivateKey =
+    TransactionConfirmation aTransaction (toNodeId aNodeId) <$>
         signEncodeble aPrivateKey (aTransaction, toNodeId aNodeId)
 
 
@@ -115,12 +115,12 @@ verifyInfoPingIAmPublicator (IAmPublicator aTimeSpec aNodeId aSignature) =
 verifyInfoPingIAmPublicator _ =
     error "verifyInfoPingIAmPublicator: it is not a \"IAmPublicator\""
 
-verifyTransactionСonfirmation :: InfoPingPackage -> Bool
-verifyTransactionСonfirmation
-    (TransactionСonfirmation aTransaction aNodeId aSignature) =
+verifyTransactionConfirmation :: InfoPingPackage -> Bool
+verifyTransactionConfirmation
+    (TransactionConfirmation aTransaction aNodeId aSignature) =
     verifyEncodeble (idToKey aNodeId) aSignature (aTransaction, aNodeId)
-verifyTransactionСonfirmation _ =
-    error "verifyTransactionСonfirmation: it is not a \"TransactionСonfirmation\""
+verifyTransactionConfirmation _ =
+    error "verifyTransactionConfirmation: it is not a \"TransactionConfirmation\""
 
 
 verifyIHaveBroadcastConnects :: InfoPingPackage -> Bool
