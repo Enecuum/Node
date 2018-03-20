@@ -19,13 +19,21 @@ import Data.Serialize (encode)
 import Service.Network.UDP.Client
 import Service.Metrics.Statsd
 
-import System.Environment (getEnv)
+import Service.Config
 
 defaultHost :: IO String
-defaultHost = getEnv "statsd"
+defaultHost = do
+    maybeAddr <- getVar defaultConfig "Statsd" "addr"
+    case maybeAddr of
+      Nothing    -> return "127.0.0.1"
+      Just addr  -> return addr
 
 defaultPort :: IO PortNumber
-defaultPort = return 8125
+defaultPort = do
+    maybePort <- getVar defaultConfig "Statsd" "port"
+    case maybePort of
+      Nothing    -> return 8125
+      Just port  -> return $ (read port)
 
 sendMetric :: String -> ClientHandle -> IO ()
 sendMetric stat h = sendAllTo (clientSocket h)
