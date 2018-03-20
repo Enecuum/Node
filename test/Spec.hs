@@ -57,7 +57,7 @@ testSuit2 = do
                 metronomeS 300000 (writeChan ch deleteOldestMsg)
                 metronomeS 10000000 (writeChan ch deleteDeadSouls)
                 metronomeS 3000000 $ writeChan ch deleteOldestVacantPositions
-    -- start broadcast nodes 
+    -- start broadcast nodes
     broadcastNodeList <-forM [1] $ \i -> do
         threadDelay 1000000
         putStrLn $ "Start bro " <> show i
@@ -118,7 +118,7 @@ testSuit2 = do
 testSuit1 = do
     (privateNumber1, publicPoint1) <- genKayPair curve
     (publicKey, privateKey)         <- generate curve
-    сonnectingMsg                   <- makeConnectingMsg
+    connectingMsg                   <- makeConnectingMsg
         (toMyNodeId $ keyToId publicKey) publicPoint1 privateKey publicKey
-    unless (verifyConnectingMsg сonnectingMsg) $
+    unless (verifyConnectingMsg connectingMsg) $
         putStrLn "verifyConnectingMsg remoteConnectingMsg"

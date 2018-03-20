@@ -26,7 +26,7 @@ import Service.System.Directory (getTransactionFilePath)
 -- https://github.com/ethereum/wiki/wiki/%C3%90%CE%9EVp2p-Wire-Protocol
 -- https://www.stackage.org/haddock/lts-10.3/network-2.6.3.2/Network-Socket-ByteString.html
 
--- | Cтандартная функция для запуска ноды.
+-- | Standart function to launch a node.
 startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
     String
     -> Chan ExitMsg
