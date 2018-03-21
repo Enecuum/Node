@@ -5,13 +5,12 @@ module CLI.CLI (control) where
 import Network.JsonRpc.Server
 import Network.Socket.ByteString (sendAllTo)
 import Service.Network.UDP.Server
-import Control.Monad (forever, replicateM, forM)
+import Control.Monad (forever, replicateM)
 import Control.Monad.IO.Class
 import Control.Concurrent (threadDelay, forkIO)
 import Control.Concurrent.Chan
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.Time.Units
-import Data.Graph.Inductive (labEdges)
 import Data.Maybe (fromMaybe)
 import System.Random (randomRIO)
 
@@ -23,7 +22,7 @@ import Service.Types.SerializeJSON ()
 import Service.Types.PublicPrivateKeyPair
 import Service.Metrics
 
-data TxChanMsg = NewTx Transaction 
+data TxChanMsg = NewTx Transaction
                | GenTxNum Int
                | GenTxUnlim
 
@@ -92,16 +91,18 @@ ledgerWait chReq chResp = do
 
 
 
-genTxDAG :: Int -> IO [Transaction]
-genTxDAG n = do
-   keys <- replicateM n generateNewRandomAnonymousKeyPair
-   dag <- getTransactionDAG keys
-   forM (labEdges dag)  $ \(_, _, tr) -> return tr
+genNTx :: Int -> IO [Transaction]
+genNTx n = do
+   let quantityOfKeys = if qKeys <= 2 then 2 else qKeys
+                        where qKeys = div n 3
+   keys <- replicateM quantityOfKeys generateNewRandomAnonymousKeyPair
+   tx <- getTransactions keys n
+   return tx
 
 generateNTransactions :: ManagerMiningMsg a =>
     Int -> Chan a -> IO ()
 generateNTransactions qTx ch = do
-  tx <- genTxDAG qTx
+  tx <- genNTx qTx
   mapM_ (\x -> do
           writeChan ch $ newTransaction x
           sendMetrics x
@@ -111,14 +112,14 @@ generateNTransactions qTx ch = do
 
 generateTransactionsForever :: ManagerMiningMsg a => Chan a -> IO b
 generateTransactionsForever ch = forever $ do
-                                quantityOfWallets <- randomRIO (20,30)
-                                tx <- genTxDAG quantityOfWallets
+                                quantityOfTranscations <- randomRIO (20,30)
+                                tx <- genNTx quantityOfTranscations
                                 mapM_ (\x -> do
                                             writeChan ch $ newTransaction x
                                             sendMetrics x
                                        ) tx
                                 threadDelay (10^(6 :: Int))
-                                putStrLn ("Bundle of " ++ show quantityOfWallets ++"Transactions was created")
+                                putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
 
 sendMetrics :: Transaction -> IO ()
 sendMetrics (WithTime _ tx) = sendMetrics tx

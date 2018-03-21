@@ -1,21 +1,17 @@
 {-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module CLI.TransactionsDAG where --(transactionProcc, getTransactionDAG) where
+module CLI.TransactionsDAG where
 
 import Data.Graph.Inductive
 import Control.Monad (replicateM)
 import Service.Types.PublicPrivateKeyPair
--- import Skelet
--- import Data.Time.Clock (getCurrentTime, utctDayTime)
--- import System.CPUTime (getCPUTime)
 import System.Random
--- import GHC.Generics
 import Service.System.Directory (getTime)
 import Service.Types
 import CLI.Skelet (getSkeletDAG)
 
-
+type QuantityOfTransactions = Int
 
 getLabsNodes :: [LNode a] -> [a]
 getLabsNodes = map snd
@@ -27,33 +23,51 @@ getLabsEdges = map (\(_,_,l) -> l) . labEdges
 addLabels :: [((a, b1), (b2, b3))] -> [c] -> [(a, b2, c)]
 addLabels = zipWith (\((n1,_), (n2,_)) l -> (n1, n2, l))
 
-getTransactions :: [PublicKey] -> (Int, Int) -> IO [Transaction]
-getTransactions keys (x,y) = do
+getRegisterPublicKeyTransactions :: [PublicKey] -> (Int, Int) -> IO [Transaction]
+getRegisterPublicKeyTransactions keys (x,y) = do
   let n = length keys
   sums   <- replicateM n $ randomRIO (x,y)
   points <- replicateM n getTime
-  let res = [WithTime p (RegisterPublicKey k (fromIntegral s)) | p <- points, k <- keys, s <- sums]
+  let res = take n $ [WithTime p (RegisterPublicKey k (fromIntegral s)) | p <- points, k <- keys, s <- sums]
   return res
 
-getSignTransactions :: [LNode KeyPair] -> (Int, Int) -> IO [LEdge Transaction]
-getSignTransactions keys'ns (x,y) = do
+getSignTransactions :: Int -> [LNode KeyPair] -> (Int, Int) -> IO [Transaction] --[LEdge Transaction]
+getSignTransactions quantityOfTx keys'ns (x,y) = do
   let skel = getSkeletDAG keys'ns
   let n    = length skel
-  -- let n    = length keys'ns
   let keys = getLabsNodes keys'ns
   sums   <- replicateM n $ randomRIO (x,y)
   points <- replicateM n getTime
   signs  <- mapM (\(KeyPair _ priv, s) -> getSignature priv (fromIntegral s :: Amount)) (zip keys sums)
   let sts  = [WithSignature (WithTime p (SendAmountFromKeyToKey pub1 pub2 (fromIntegral aSum))) sign |
               p <- points, ( (_, (KeyPair pub1 _)), (_, (KeyPair pub2 _)) ) <- skel, aSum <- sums, sign <- signs]
-  return $ addLabels skel sts
+  return (take quantityOfTx sts)
 
-getTransactionDAG :: [KeyPair] -> IO DAG
-getTransactionDAG keys = do
-  let n       = length keys
+getTransactions :: [KeyPair] -> QuantityOfTransactions-> IO [Transaction] --IO DAG
+getTransactions keys quantityTx = do
+  let quantityRegistereKeyTx       = length keys
   let pubs    = map (\(KeyPair pub _) -> pub) keys
-  ts     <- getTransactions pubs (20,30) --keys (20,30)
-  let ns      = zip [1..n] ts
-  let keys'ns = zip [1..n] keys
-  es     <- getSignTransactions keys'ns (10,20)
-  return $ mkGraph ns es
+  registereKeyTx     <- getRegisterPublicKeyTransactions pubs (20,30)
+  let keys'ns = zip [1..quantityRegistereKeyTx] keys
+  let quantityBasicTx = quantityTx-quantityRegistereKeyTx
+  basicTx <- loopTransaction keys'ns quantityBasicTx
+  return ( registereKeyTx ++ basicTx)
+
+-- generate N transactions
+genNNTx :: Int -> IO [Transaction]
+genNNTx quantityOfTx = do
+   let ratioKeysToTx = 3
+   let quantityOfKeys = if qKeys < 2 then 2 else qKeys
+                        where qKeys = div quantityOfTx ratioKeysToTx
+   keys <- replicateM quantityOfKeys generateNewRandomAnonymousKeyPair
+   tx <- getTransactions keys quantityOfTx
+   return tx
+
+-- accumulate Transcations in acc until it satisfies required Quantity Of Transactions
+loopTransaction :: [LNode KeyPair] -> Int -> IO [Transaction]
+loopTransaction keys'ns requiredQuantityOfTransactions = loop []
+  where
+   loop acc = do
+     let amountRange = (10,20)
+     tx <- getSignTransactions requiredQuantityOfTransactions keys'ns amountRange
+     if (length acc >= requiredQuantityOfTransactions) then return acc else do { loop (tx ++ acc)}
