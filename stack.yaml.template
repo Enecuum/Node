@@ -23,7 +23,7 @@ docker:
 
 image:
   container:
-    name: node
+    name: ${node}
     base: fpco/stack-run
     # add:
       # config: /app/config

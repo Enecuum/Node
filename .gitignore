@@ -1,4 +1,6 @@
 .stack-work/*
-data/*.txt
+data/*
 Node.cabal
 *.swp
+stack.yaml
+configs/*
