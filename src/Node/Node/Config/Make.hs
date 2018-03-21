@@ -13,7 +13,7 @@ import              Node.Node.Types
 import              System.Environment
 import              Node.Data.Data
 import              Service.System.Directory (createFilesDirectory)
-
+import              Service.Config
 
 makeFileConfig :: String -> NodeVariantRoles -> PortNumber -> IO ()
 makeFileConfig path aRoles aPort = do
@@ -38,25 +38,29 @@ makeNodeConfigsForTestNets = do
 
 readBootNodeList :: IO BootNodeList
 readBootNodeList = do
-    try (B.readFile "./data/bootNodeList.bin") >>= \case
-        Right bootNodeList         -> case decode bootNodeList of
-            Right bootNodeData      -> pure bootNodeData
-            Left _                  -> pure []
-        Left (_ :: SomeException)   -> do
-            try (readFile "./data/bootNodeList.conf") >>= \case
-                Right bootNodeList -> do
-                    try (return $ read bootNodeList) >>= \case
-                        Right aList -> do
-                            toNormForm aList
-                        Left (_ :: SomeException) -> do
-                            return []
-                Left (_ :: SomeException) -> do
-                    aBootNodeListData <- try (getEnv "bootNodeList")
-                    case aBootNodeListData of
-                        Right bootNodeList -> do
-                            toNormForm $ read bootNodeList
-                        Left (_ :: SomeException) -> do
-                            return []
-   where
-     toNormForm aList = return $ (\(a,b,c) -> (NodeId a,tupleToHostAddress b, c))
-        <$> aList
+    maybeList <- getVar defaultConfig "Common" "bootNodeList"
+    case maybeList of
+      Just bootNodeList -> toNormForm $ read bootNodeList
+      Nothing           -> do
+        try (B.readFile "./data/bootNodeList.bin") >>= \case
+            Right bootNodeList         -> case decode bootNodeList of
+                Right bootNodeData      -> pure bootNodeData
+                Left _                  -> pure []
+            Left (_ :: SomeException)   -> do
+                try (readFile "./data/bootNodeList.conf") >>= \case
+                    Right bootNodeList -> do
+                        try (return $ read bootNodeList) >>= \case
+                            Right aList -> do
+                                toNormForm aList
+                            Left (_ :: SomeException) -> do
+                                return []
+                    Left (_ :: SomeException) -> do
+                        aBootNodeListData <- try (getEnv "bootNodeList")
+                        case aBootNodeListData of
+                            Right bootNodeList -> do
+                                toNormForm $ read bootNodeList
+                            Left (_ :: SomeException) -> do
+                                return []
+     where
+       toNormForm aList = return $ (\(a,b,c) -> (NodeId a,tupleToHostAddress b, c))
+          <$> aList
