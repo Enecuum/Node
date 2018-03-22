@@ -12,19 +12,18 @@ extra-deps:
 - base58-bytestring-0.1.0
 
 
-
 build:
   haddock-arguments:
     haddock-args:
     - "--odir=./docs"
 
-#docker:
-#  enable: true
+# docker:
+#   enable: true
 
-image:
-  container:
-    name: ${node}
-    base: fpco/stack-run
-    # add:
-      # config: /app/config
-      # static: /app/static
+# image:
+#   container:
+#     name: docker-node
+#     base: fpco/stack-run
+#     # add:
+#       # config: /app/config
+#       # static: /app/static
