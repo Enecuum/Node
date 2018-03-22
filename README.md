@@ -43,7 +43,7 @@ Create a custom config file or use the /configs/config.ini. Define values for th
 |---------|---------|
 | poa_in | Port for incoming requests to generate transactions and receiving microblocks |
 | poa_out | Port for for sending transactions and propagating microblocks to the network  |
-| rpc | Port for recomte procedure calls |
+| rpc | Port for remote procedure calls |
 
 * `[Common]` is the config section for common variables, and `bootNodeList=[(1, (127,0,0,1), 1666)]` are examples of node ID, address and port set as environment variables before running a simple node.
 
