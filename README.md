@@ -76,7 +76,7 @@ You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.ini` whe
 
 #### Initialization of a light client
 
-After you've started a simple node, execute `stack exec LightClient-exe`.
+Execute `stack exec LightClient-exe`.
 
 #### Available commands for a light client
 
@@ -116,7 +116,7 @@ You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.ini` whe
 
 #### Initialization of a light client
 
-After you've started a simple node, execute `stack exec LightClient-exe`.
+Execute `stack exec LightClient-exe`.
 
 #### Available commands for a light client
 
