@@ -18,8 +18,8 @@ build:
     haddock-args:
     - "--odir=./docs"
 
-docker:
-  enable: true
+#docker:
+#  enable: true
 
 image:
   container:
