@@ -22,51 +22,57 @@ LightClient is a client allowing to connect to a node (local or remote), send tr
 #### Prelimiary steps
 [Install Docker](https://docs.docker.com/install/linux/docker-ce/ubuntu/)
 
-Clone this repository and execute `stack build`.
+Execute `stack docker pull` to download the Docker image.
+
+Clone this repository.
 
 #### Set permissions for the user, and login as root if needed
 `sudo usermod -a -G docker $USER`\
 `su $USER`
 
+#### Set your own environment variables:
+Create a custom config file or use the /configs/config.ini. Define values for the variables:
+
+* `[MakeConfigBootNode]` is the initial config section for a boot node, and `port=1666` is an example port used for communication with the node.
+
+* `[MakeConfigSimpleNode]` is the initial config section for a simple node, and `port=1667` is an example port used for communication with the node.
+
+* `[SimpleNode]` is the main config section for a simple node, and `poa_in=1554` `poa_out=1556` `rpc=1555` are example ports used for communication with the node.
+
+| Variable | Description |
+|---------|---------|
+| poa_in | Port for incoming requests to generate transactions and receiving microblocks |
+| poa_out | Port for for sending transactions and propagating microblocks to the network  |
+| rpc | Port for recomte procedure calls |
+
+* `[Common]` is the config section for common variables, and `bootNodeList=[(1, (127,0,0,1), 1666)]` are examples of node ID, address and port set as environment variables before running a simple node.
+
+* `[Statsd]` is the config section for the statistical service, and addr `addr=127.0.0.1` and `port=8125` are the address of the service and port to send statistical data to.
+
+* `[Docker]` is the config section for the name of the node, and `name=node` is an example name of the Docker container to build.
+
 #### Build container with a node
 
-Execute `stack image container` to build a container with a node in it. 
+Execute `./build.sh` to build stack and a container with a node in it. 
 
 #### Run the container locally
 
-Execute `docker run -it node` where 'node' stands for the pre-defined (in the stack.yaml) name of the node.
-
-
-### Without Docker (Boot and Simple Nodes)
-
-#### Preliminary steps
-Install Haskel stack\
-`curl -sSL https://get.haskellstack.org/ | sh`
-
-Clone this repository and execute `stack build`.
-
-#### Configuration
-First time you start a node (boot or simple), it needs initial configuration.
-Starting should begin from boot nodes. Then simple nodes.
+Execute `docker run -it node` where 'node' stands for the name of the Docker image to run.
 
 #### Initialization of a boot node
 Execute the following commands to start a node:\
 `stack exec MakeConfigBootNode-exe`\
 `stack exec BootNode-exe`
 
+You can also use `stack exec MakeConfigBootNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used.
+
 #### Initialization of a simple node
 
-Set your own environment variables for a simple node:
-* statsd defines the address (format is 0.0.0.0) to send statistical data to the defined port (format is 0000).
-* bootNodeList defines the address and port list of the boot nodes that can be asked for addresses of other nodes to connect to. Use the format [(NodeId, IP, port)] where IP is in the format [(0.0.0.0)] and the port is your chosen port.
-* export statsd - export statistical data to the statistical service to the defined IP address (format is 0.0.0.0)
-* export bootNodeList - use the format [(1,(2,3,4,5), 0000)] where 1 stands for the required nodeID, (2,3,4,5) stands for the IP address of the boot node, and 0000 stands for the port.
-
 Execute the following commands:\
-`export bootNodeList="[(1, (2,3,4,5), 0000)]"`\
-`export statsd="0.0.0.0"`\
 `stack exec MakeConfigSimpleNode-exe`\
 `stack exec SimpleNode-exe`
+
+You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used. 
 
 #### Initialization of a light client
 
@@ -84,6 +90,45 @@ After you've started a simple node, execute `stack exec LightClient-exe`.
 | -B publicKey | --get-balance=publicKey | Get balance for a public key |
 | -S amount:to:from:currency | --send-money-to-from=amount:to:from:currency | Send currency from a public key to a public key (ENQ/ETH/DASH/BTC) |
 
+
+### Without Docker (Boot and Simple Nodes)
+
+#### Preliminary steps
+Install Haskel stack\
+`curl -sSL https://get.haskellstack.org/ | sh`
+
+Clone this repository and execute `stack build`.
+
+#### Initialization of a boot node
+Execute the following commands to start a node:\
+`stack exec MakeConfigBootNode-exe`\
+`stack exec BootNode-exe`
+
+You can also use `stack exec MakeConfigBootNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used.
+
+#### Initialization of a simple node
+
+Execute the following commands:\
+`stack exec MakeConfigSimpleNode-exe`\
+`stack exec SimpleNode-exe`
+
+You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used. 
+
+#### Initialization of a light client
+
+After you've started a simple node, execute `stack exec LightClient-exe`.
+
+#### Available commands for a light client
+
+| Command shortcut | Full command | Description |
+|---------|--------|---------|
+| -V, -? | --version | Show version number |
+| -K | --get-public-key | Create new public key |
+| -G qTx | --generate-n-transactions=qTx | Generate N transactions |
+| -F | --generate-transactions | Generate transactions forever |
+| -M | --show-my-keys | Show my public keys |
+| -B publicKey | --get-balance=publicKey | Get balance for a public key |
+| -S amount:to:from:currency | --send-money-to-from=amount:to:from:currency | Send currency from a public key to a public key (ENQ/ETH/DASH/BTC) |
 
 
 ### Use Cases
