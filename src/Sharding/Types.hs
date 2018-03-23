@@ -9,6 +9,15 @@ import              Data.Word
 import qualified    Data.ByteString     as B
 import qualified    Data.Set            as S
 
+
+-----------------------------------CONSTANTS------------------------------------------------------
+
+neighborsDistanseMemoryConstant :: Word64
+neighborsDistanseMemoryConstant = 6
+
+--------------------------------------------------------------------------------------------------
+
+
 type BlockHash = (Word64, Word64, Word64, Word64, Word64, Word64, Word64, Word64)
 
 data Block = Block BlockHash B.ByteString deriving (Ord, Eq, Show)
