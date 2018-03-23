@@ -21,6 +21,7 @@ import qualified    Data.Set            as S
 
 
 -- TODO Is it file or db like sqlite?
+-- TODO What am I do if my neighbors is a liars?
 loadMyBlockIndex :: IO (S.Set BlockHash)
 loadMyBlockIndex = undefined
 
@@ -44,6 +45,30 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
 
     return $ makeEmptyShardingNode aMyNeighbors aMyNodeId aMyPosition aMyBlocksIndex
 
+
+neighborPositions :: ShardingNode -> S.Set NodePosition
+neighborPositions = S.map neighborPosition . nodeNeighbors
+
+shiftIsNeed :: ShardingNode -> Bool
+shiftIsNeed aShardingNode = checkUnevenness
+    (nodePosition aShardingNode) (neighborPositions aShardingNode)
+
+
+shiftTheShardingNode ::
+        Chan ManagerMiningMsgBase
+    -> (ShardingNode ->  IO ())
+    ->  ShardingNode
+    ->  IO ()
+shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
+    let aNeighborPositions = neighborPositions aShardingNode
+        aMyNodePosition    = nodePosition aShardingNode
+        aNearestPositions  = S.fromList $
+            findNearestNeighborPositions aMyNodePosition aNeighborPositions
+        aNewPosition       = shiftToCenterOfMass aMyNodePosition aNearestPositions
+
+    aLoop aShardingNode {nodePosition = aNewPosition}
+
+
 --makeShardingNode :: MyNodeId -> Point -> IO ()
 makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition= do
     aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition
@@ -51,6 +76,11 @@ makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition= do
   where
     aLoop :: ShardingNode -> IO ()
     aLoop aShardingNode = readChan aChanRequest >>= \case
+        ShiftAction | shiftIsNeed aShardingNode ->
+            shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode
+
+
+             --NewPosiotionResponse
         _ -> undefined
 {-
 InitAction
@@ -62,6 +92,7 @@ InitAction
 ---
 |   CleanBlocksAction -- clean local blocks
 --- ShiftAction => NewPosiotionResponse
+|   NewBlockInNetAction         BlockHash Block
 |   ShiftAction
 |   TheNodeHaveNewCoordinates   NodeId NodePosition
 ---- NeighborListRequest => NeighborListAcceptAction

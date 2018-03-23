@@ -39,6 +39,7 @@ data ShardingNodeAction =
     |   BlockIndexAcceptAction      [BlockHash]
     |   BlocksAcceptAction          [(BlockHash, Block)]
     ---
+    |   NewBlockInNetAction         BlockHash Block
     |   CleanBlocksAction -- clean local blocks
     --- ShiftAction => NewPosiotionResponse
     |   ShiftAction
