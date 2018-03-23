@@ -24,8 +24,7 @@ data ShardingNode = ShardingNode {
 
 
 data Neighbor = Neighbor {
-        neighborDistance    :: Distance Point
-    ,   neighborPosition    :: NodePosition
+        neighborPosition    :: NodePosition
     ,   neighborId          :: NodeId
   }
   deriving (Show, Eq, Ord)
@@ -33,8 +32,8 @@ data Neighbor = Neighbor {
 
 data ShardingNodeAction =
     -- TODO think requestBlockIndex requestNeededBlocks, find position
-        InitAction
-    |   NewNodeInNetAction          NodeId Point
+    ---    InitAction
+        NewNodeInNetAction          NodeId NodePosition
     -- TODO create index for new node by NodeId
     |   BlockIndexCreateAction      NodeId
     |   BlockIndexAcceptAction      [BlockHash]
@@ -50,7 +49,7 @@ data ShardingNodeAction =
 
 
 data ShardingNodeRequestAndResponce =
-        IamAwakeRequst        NodeId Point -- broadcast for all network
+        IamAwakeRequst        MyNodeId MyNodePosition -- broadcast for all network
     ----
     |   BlockIndexRequest     [NodeId]    -- for neighbors
     |   BlockIndexResponse    NodeId [BlockHash]
@@ -64,3 +63,19 @@ data ShardingNodeRequestAndResponce =
 --
 hashToPoint :: BlockHash -> Point
 hashToPoint (x1, x2, _, _, _, _, _, _) = Point x1 x2
+
+
+makeEmptyShardingNode :: S.Set Neighbor ->  MyNodeId -> MyNodePosition -> S.Set BlockHash -> ShardingNode
+makeEmptyShardingNode aNeighbors aMyNodeId aMyPosition aMyBlockIndex = ShardingNode {
+        nodeNeighbors   = aNeighbors
+    ,   shardingNodeId  = aMyNodeId
+    ,   nodePosition    = aMyPosition
+    ,   nodeIndex       = aMyBlockIndex
+    ,   nodeDistance    = 1
+  }
+
+makeEmptyNeighbor :: NodePosition -> NodeId -> Neighbor
+makeEmptyNeighbor aPosition aNodeId = Neighbor {
+        neighborPosition    = aPosition
+    ,   neighborId          = aNodeId
+  }
