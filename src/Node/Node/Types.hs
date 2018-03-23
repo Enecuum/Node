@@ -9,6 +9,7 @@ module Node.Node.Types where
 
 import              Service.Types (Transaction, Microblock)
 import              Network.Socket
+import              Sharding.Types
 import              Node.Template.Constructor
 import              System.Clock
 import qualified    Data.Set                        as S

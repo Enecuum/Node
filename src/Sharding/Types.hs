@@ -60,7 +60,7 @@ data ShardingNodeRequestAndResponce =
     |   NewPosiotionResponse   MyNodePosition
     ---
     |   NeighborListRequest -- ask net level new neighbors
-
+  deriving (Show)
 --
 hashToPoint :: BlockHash -> Point
 hashToPoint (x1, x2, _, _, _, _, _, _) = Point x1 x2

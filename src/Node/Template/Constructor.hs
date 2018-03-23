@@ -57,6 +57,7 @@ managerMiningMsgListData = toList $ do
     "resendTransactionToPublicator" +: []
     "newBinaryData"                 +: [["BranchType"], ["B.ByteString"]]
     "newDataPackage"                +: [["BranchType"], ["B.ByteString"]]
+    "shardingNodeRequestOrResponce" +: [["ShardingNodeRequestAndResponce"]]
 
 managerBootNodeMsgListData :: [(Bool, String, [[String]])]
 managerBootNodeMsgListData = toList $ do
