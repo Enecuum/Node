@@ -18,7 +18,7 @@ import              Service.Timer
 import qualified    Data.Set            as S
 
 
-makeEmptyShardingNode :: MyNodeId -> MyPosition -> S.Set BlockHash -> ShardingNode
+makeEmptyShardingNode :: MyNodeId -> MyNodePosition -> S.Set BlockHash -> ShardingNode
 makeEmptyShardingNode aMyNodeId aMyPosition aMyBlockIndex = ShardingNode {
         nodeNeighbors   = S.empty
     ,   shardingNodeId  = aMyNodeId
@@ -31,7 +31,7 @@ loadMyBlockIndex :: IO (S.Set BlockHash)
 loadMyBlockIndex = undefined
 
 -- TODO Is it file or db like sqlite?
-loadInitInformation :: IO (S.Set Neighbor, MyPosition)
+loadInitInformation :: IO (S.Set Neighbor, MyNodePosition)
 loadInitInformation = undefined
 
 
@@ -52,7 +52,7 @@ makeShardingNode aMyNodeId aMyPoint aChanRequest = do
         _ -> undefined
 
 --------------------------------------------------------------------------------
-makeEmptyNeighbor :: Distance Point -> Position -> NodeId -> Neighbor
+makeEmptyNeighbor :: Distance Point -> NodePosition -> NodeId -> Neighbor
 makeEmptyNeighbor aDistance aPosition aNodeId = Neighbor {
         neighborDistance    = aDistance
     ,   neighborPosition    = aPosition
@@ -60,44 +60,44 @@ makeEmptyNeighbor aDistance aPosition aNodeId = Neighbor {
   }
 
 --------------------------------------------------------------------------------
-findNodeDomain :: ShardingNode -> Distance Point
-findNodeDomain aShardingNode = if
-    | length aNearestNeighbors < 4 -> maxBound
-    | otherwise                    ->
-        neighborDistance $ maximum aNearestNeighbors
+
+
+findNodeDomain :: MyNodePosition -> S.Set NodePosition -> Distance Point
+findNodeDomain aMyPosition aPositions = if
+    | length aNearestPoints < 4 -> maxBound
+    | otherwise                 ->
+        last . sort $ distanceTo aMyPosition <$> aNearestPoints
   where
-    aNearestNeighbors = findNearestNeighbors aShardingNode
+    aNearestPoints = findNearestNeighborPositions aMyPosition aPositions
 
 
-findNearestNeighbors :: ShardingNode -> [Neighbor]
-findNearestNeighbors aShardingNode = S.findMin <$>
-    filter (not .S.null) aSeparatedHeighbors
+findNearestNeighborPositions :: MyNodePosition -> S.Set NodePosition -> [NodePosition]
+findNearestNeighborPositions aMyNodePosition aPositions = head <$>
+     sortOn (distanceTo aMyNodePosition) <$> aFilteredPositions
   where
-    aSeparatedHeighbors :: [S.Set Neighbor]
-    aSeparatedHeighbors = aFilter <$> findSupportPoints aMyPosition
+    aFilteredPositions :: [[NodePosition]]
+    aFilteredPositions = S.toList <$> filter (not . S.null) aSeparatedPositions
 
-    MyPosition aMyPosition = nodePosition aShardingNode
-
-    aFilter :: Point -> S.Set Neighbor
-    aFilter aSupportPoint = S.filter
-        (\aNeighbor -> aDistanceToPoint aNeighbor aSupportPoint < fourthOfMaxBound)
-        (nodeNeighbors aShardingNode)
-
-    aDistanceToPoint :: Neighbor -> Point -> Distance Point
-    aDistanceToPoint aNeighbor aPoint = rhombusDistance aNeighborPosition aPoint
+    aSeparatedPositions :: [S.Set NodePosition]
+    aSeparatedPositions = aFilter <$> findSupportPoints aMyNodePositionPoint
       where
-        Position aNeighborPosition = neighborPosition aNeighbor
+        MyNodePosition aMyNodePositionPoint = aMyNodePosition
 
+    aFilter :: Point -> S.Set NodePosition
+    aFilter aSupportPoint = S.filter
+        (\aPosition -> distanceTo (NodePosition aSupportPoint) aPosition < fourthOfMaxBound)
+        aPositions
 
-checkUnevenness :: ShardingNode -> Bool
-checkUnevenness aShardingNode =
+checkUnevenness :: MyNodePosition -> S.Set NodePosition -> Bool
+checkUnevenness aMyNodePosition aPositions =
     minimum aDistances `div` 4 < maximum aDistances `div` 5
   where
-    aDistances = neighborDistance <$> findNearestNeighbors aShardingNode
+    aDistances = distanceTo aMyNodePosition <$>
+        findNearestNeighborPositions aMyNodePosition aPositions
 
 
-shiftToCenterOfMass :: ShardingNode -> MyPosition
-shiftToCenterOfMass aShardingNode = MyPosition $ Point aX1 aX2
+shiftToCenterOfMass :: ShardingNode -> MyNodePosition
+shiftToCenterOfMass aShardingNode = MyNodePosition $ Point aX1 aX2
   where
     aX1 = aFoonc (halfOfMaxBound - x1) xh1 xh2
     aX2 = aFoonc (halfOfMaxBound - x2) yh1 yh2
@@ -106,15 +106,15 @@ shiftToCenterOfMass aShardingNode = MyPosition $ Point aX1 aX2
         ((toInteger (aDiff + ah1) +
           toInteger (aDiff + ah2))`div`2) - aDiff
 
-    Position (Point xh1 _) = aFind (Point (x1 + fourthOfMaxBound) x2) distX1
-    Position (Point xh2 _) = aFind (Point (x1 - fourthOfMaxBound) x2) distX1
-    Position (Point _ yh1) = aFind (Point x1 (x2 + fourthOfMaxBound)) distX2
-    Position (Point _ yh2) = aFind (Point x1 (x2 - fourthOfMaxBound)) distX2
+    NodePosition (Point xh1 _) = aFind (Point (x1 + fourthOfMaxBound) x2) distX1
+    NodePosition (Point xh2 _) = aFind (Point (x1 - fourthOfMaxBound) x2) distX1
+    NodePosition (Point _ yh1) = aFind (Point x1 (x2 + fourthOfMaxBound)) distX2
+    NodePosition (Point _ yh2) = aFind (Point x1 (x2 - fourthOfMaxBound)) distX2
 
-    aFind :: Point -> (Point -> Point -> Word64) -> Position
+    aFind :: Point -> (Point -> Point -> Word64) -> NodePosition
     aFind a b = neighborPosition $ findSuportNeighbor aShardingNode a b
 
-    MyPosition (Point x1 x2) = nodePosition aShardingNode
+    MyNodePosition (Point x1 x2) = nodePosition aShardingNode
 
 
 findSuportNeighbor ::
@@ -126,15 +126,15 @@ findSuportNeighbor aShardingNode aSupportPoint aDist =
     head $ sortOn aDistanceToMe $
     filter (\aNeighbor -> aDistanceTo aNeighbor < fourthOfMaxBound) aNeighbors
   where
-    MyPosition aMyPosition = nodePosition aShardingNode
+    MyNodePosition aMyPosition = nodePosition aShardingNode
 
     aNeighbors :: [Neighbor]
     aNeighbors = S.elems $ nodeNeighbors aShardingNode
 
     aDistanceTo :: Neighbor -> Distance Point
-    aDistanceTo (neighborPosition -> Position aNeighborPosition) =
+    aDistanceTo (neighborPosition -> NodePosition aNeighborPosition) =
         rhombusDistance aNeighborPosition aSupportPoint
 
     aDistanceToMe :: Neighbor -> Distance Point
-    aDistanceToMe (neighborPosition -> Position aNeighborPosition) =
+    aDistanceToMe (neighborPosition -> NodePosition aNeighborPosition) =
         aDist aMyPosition aNeighborPosition

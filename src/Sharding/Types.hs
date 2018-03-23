@@ -10,15 +10,13 @@ import qualified    Data.ByteString     as B
 import qualified    Data.Set            as S
 
 type BlockHash = (Word64, Word64, Word64, Word64, Word64, Word64, Word64, Word64)
-newtype MyPosition = MyPosition Point deriving (Eq, Ord, Show)
-newtype Position   = Position Point deriving (Eq, Ord, Show)
 
 data Block = Block BlockHash B.ByteString deriving (Ord, Eq, Show)
 
 data ShardingNode = ShardingNode {
         nodeNeighbors           :: S.Set Neighbor
     ,   shardingNodeId          :: MyNodeId
-    ,   nodePosition            :: MyPosition
+    ,   nodePosition            :: MyNodePosition
     ,   nodeIndex               :: S.Set BlockHash
     ,   nodeDistance            :: Double -- think
   }
@@ -27,7 +25,7 @@ data ShardingNode = ShardingNode {
 
 data Neighbor = Neighbor {
         neighborDistance    :: Distance Point
-    ,   neighborPosition    :: Position
+    ,   neighborPosition    :: NodePosition
     ,   neighborId          :: NodeId
   }
   deriving (Show, Eq, Ord)
@@ -45,9 +43,9 @@ data ShardingNodeAction =
     |   CleanBlocksAction -- clean local blocks
     --- ShiftAction => NewPosiotionResponse
     |   ShiftAction
-    |   TheNodeHaveNewCoordinates   NodeId Position
+    |   TheNodeHaveNewCoordinates   NodeId NodePosition
     ---- NeighborListRequest => NeighborListAcceptAction
-    |   NeighborListAcceptAction   [(NodeId, Position)]
+    |   NeighborListAcceptAction   [(NodeId, NodePosition)]
     |   TheNodeIsDead               NodeId
 
 
@@ -59,7 +57,7 @@ data ShardingNodeRequestAndResponce =
     |   BlockListRequest      [BlockHash]
     |   BlockListResponse     NodeId [(BlockHash, Block)]
     --- ShiftAction => NewPosiotionResponse
-    |   NewPosiotionResponse   MyPosition
+    |   NewPosiotionResponse   MyNodePosition
     ---
     |   NeighborListRequest -- ask net level new neighbors
 
