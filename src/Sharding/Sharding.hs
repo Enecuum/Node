@@ -8,6 +8,7 @@ import              Sharding.Space.Points
 import              Sharding.Space.Shift
 import              Sharding.Types
 
+import              Node.Node.Types
 import              Control.Concurrent.Chan
 import              Data.List.Extra
 import              Control.Concurrent
@@ -19,15 +20,6 @@ import              Service.Timer
 import qualified    Data.Set            as S
 
 
-
-makeEmptyShardingNode :: MyNodeId -> MyNodePosition -> S.Set BlockHash -> ShardingNode
-makeEmptyShardingNode aMyNodeId aMyPosition aMyBlockIndex = ShardingNode {
-        nodeNeighbors   = S.empty
-    ,   shardingNodeId  = aMyNodeId
-    ,   nodePosition    = aMyPosition
-    ,   nodeIndex       = aMyBlockIndex
-  }
-
 -- TODO Is it file or db like sqlite?
 loadMyBlockIndex :: IO (S.Set BlockHash)
 loadMyBlockIndex = undefined
@@ -37,29 +29,47 @@ loadInitInformation :: IO (S.Set Neighbor, MyNodePosition)
 loadInitInformation = undefined
 
 
+sendToNetLevet :: Chan ManagerMiningMsgBase -> ShardingNodeRequestAndResponce -> IO ()
+sendToNetLevet aChan aMsg = writeChan aChan $ ShardingNodeRequestOrResponce aMsg
 
---makeShardingNode :: MyNodeId -> Point -> IO ()
-makeShardingNode aMyNodeId aMyPoint aChanRequest = do
+initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
+    sendToNetLevet aChanOfNetLevel $ IamAwakeRequst aMyNodeId aMyNodePosition
+
     aMyBlocksIndex <- loadMyBlockIndex
     (aMyNeighbors, aMyPosition) <- loadInitInformation
+
     metronome (10^8) $ do
         writeChan aChanRequest CleanBlocksAction
         writeChan aChanRequest ShiftAction
 
-    void $ forkIO $ aLoop
-        (makeEmptyShardingNode aMyNodeId aMyPoint aMyBlocksIndex)
+    return $ makeEmptyShardingNode aMyNeighbors aMyNodeId aMyPosition aMyBlocksIndex
+
+--makeShardingNode :: MyNodeId -> Point -> IO ()
+makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition= do
+    aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition
+    void $ forkIO $ aLoop aShardingNode
   where
     aLoop :: ShardingNode -> IO ()
     aLoop aShardingNode = readChan aChanRequest >>= \case
         _ -> undefined
+{-
+InitAction
+|   NewNodeInNetAction          NodeId Point
+-- TODO create index for new node by NodeId
+|   BlockIndexCreateAction      NodeId
+|   BlockIndexAcceptAction      [BlockHash]
+|   BlocksAcceptAction          [(BlockHash, Block)]
+---
+|   CleanBlocksAction -- clean local blocks
+--- ShiftAction => NewPosiotionResponse
+|   ShiftAction
+|   TheNodeHaveNewCoordinates   NodeId NodePosition
+---- NeighborListRequest => NeighborListAcceptAction
+|   NeighborListAcceptAction   [(NodeId, NodePosition)]
+|   TheNodeIsDead               NodeId
 
+-}
 --------------------------------------------------------------------------------
-makeEmptyNeighbor :: Distance Point -> NodePosition -> NodeId -> Neighbor
-makeEmptyNeighbor aDistance aPosition aNodeId = Neighbor {
-        neighborDistance    = aDistance
-    ,   neighborPosition    = aPosition
-    ,   neighborId          = aNodeId
-  }
 
 --------------------------TODO-TO-REMOVE-------------------------------------------
 findNodeDomain :: MyNodePosition -> S.Set NodePosition -> Distance Point
