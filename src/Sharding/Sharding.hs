@@ -60,13 +60,78 @@ shiftTheShardingNode ::
     ->  ShardingNode
     ->  IO ()
 shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
-    let aNeighborPositions = neighborPositions aShardingNode
+    let
+        aNeighborPositions :: S.Set NodePosition
+        aNeighborPositions = neighborPositions aShardingNode
+
+        aMyNodePosition :: MyNodePosition
         aMyNodePosition    = nodePosition aShardingNode
+
+        aNearestPositions :: S.Set NodePosition
         aNearestPositions  = S.fromList $
             findNearestNeighborPositions aMyNodePosition aNeighborPositions
+
+        aNewPosition :: MyNodePosition
         aNewPosition       = shiftToCenterOfMass aMyNodePosition aNearestPositions
 
+    sendToNetLevet aChanOfNetLevel $ NewPosiotionResponse aNewPosition
     aLoop aShardingNode {nodePosition = aNewPosition}
+
+{-
+TheNodeHaveNewCoordinates aNodeId aPoint
+    -- add new heighbor (or move exist) if it is close enough.
+    | toInteger (rhombusDistanceTo aPoint aNodeModel) < 4 * toInteger
+        (findNodeDomain aNodeModel) -> do
+        let aNewNodeHeighbors = S.filter
+                    (\h -> heighborId h /= aNodeId) (nodeHeighbors aNodeModel)
+        aLoop aNodeModel {
+            nodeHeighbors = S.insert
+                (Heighbor (rhombusDistanceTo aPoint aNodeModel) aPoint aNodeId)
+                aNewNodeHeighbors
+          }
+    -- delete the heighbor if he is long away.
+    | otherwise -> do
+        let aNewNodeHeighbors = S.filter
+                (\h -> heighborId h /= aNodeId) (nodeHeighbors aNodeModel)
+        aLoop aNodeModel{nodeHeighbors = aNewNodeHeighbors}
+-}
+{-
+isItMyOldNeighbor :: ShardingNode -> NodeId -> NodePosition -> Bool
+
+isItMyNewNeighbor :: ShardingNode -> NodeId -> NodePosition -> Bool
+isItMyNewNeighbor aShardingNode aNodeId aNodePosition = do
+
+
+doesHeLeftMyDistance :: ShardingNode -> NodeId -> NodePosition -> Bool
+-}
+
+deleteTheNeighbor :: NodeId -> ShardingNode -> ShardingNode
+deleteTheNeighbor aNodeId aShardingNode  = aShardingNode {
+    nodeNeighbors = aNewNodeNeighbors
+  }
+ where
+    aNewNodeNeighbors :: S.Set Neighbor
+    aNewNodeNeighbors = S.filter
+        (\n -> neighborId n /= aNodeId)
+        (nodeNeighbors aShardingNode)
+
+
+insertTheNeighbor :: NodeId -> NodePosition -> ShardingNode -> ShardingNode
+insertTheNeighbor aNodeId aNodePosition aShardingNode = aShardingNode {
+    nodeNeighbors =  S.insert (Neighbor aNodePosition aNodeId) $
+        nodeNeighbors aShardingNode
+  }
+
+
+findShardingNodeDomain :: ShardingNode -> Distance Point
+findShardingNodeDomain aShardingNode = findNodeDomain
+    (nodePosition aShardingNode)
+    (neighborPositions aShardingNode)
+
+
+isInNodeDomain :: ShardingNode -> NodePosition -> Bool
+isInNodeDomain aShardingNode aNodePosition =
+    distanceTo (nodePosition aShardingNode) aNodePosition `div` neighborsDistanseMemoryConstant < findShardingNodeDomain aShardingNode
 
 
 --makeShardingNode :: MyNodeId -> Point -> IO ()
@@ -79,11 +144,21 @@ makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition= do
         ShiftAction | shiftIsNeed aShardingNode ->
             shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode
 
+        TheNodeHaveNewCoordinates aNodeId aNodePosition
+            | isInNodeDomain aShardingNode aNodePosition -> aLoop
+                $ insertTheNeighbor aNodeId aNodePosition
+                $ deleteTheNeighbor aNodeId aShardingNode
+            | otherwise -> aLoop
+                $ deleteTheNeighbor aNodeId aShardingNode
 
-             --NewPosiotionResponse
+        TheNodeIsDead aNodeId -> aLoop
+            $ deleteTheNeighbor aNodeId aShardingNode
+
+        NewNodeInNetAction aNodeId aNodePosition -> aLoop
+            $ insertTheNeighbor aNodeId aNodePosition aShardingNode
+
         _ -> undefined
 {-
-InitAction
 |   NewNodeInNetAction          NodeId Point
 -- TODO create index for new node by NodeId
 |   BlockIndexCreateAction      NodeId
@@ -93,7 +168,7 @@ InitAction
 |   CleanBlocksAction -- clean local blocks
 --- ShiftAction => NewPosiotionResponse
 |   NewBlockInNetAction         BlockHash Block
-|   ShiftAction
+|   ShiftAction                                                     -- [+]
 |   TheNodeHaveNewCoordinates   NodeId NodePosition
 ---- NeighborListRequest => NeighborListAcceptAction
 |   NeighborListAcceptAction   [(NodeId, NodePosition)]
