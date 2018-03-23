@@ -4,13 +4,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiWayIf #-}
 
-module Sharding.Distance where
+module Sharding.Space.Distance where
 
 import Data.Word
-
--- * Points in the testing space
-data Point = Point !Word64 !Word64
-    deriving (Eq, Ord, Show)
+import Sharding.Space.Points
 
 -- | Point in the testing space.
 class Points point where
@@ -47,11 +44,3 @@ instance Points Point where
 
     {-# INLINE rhombusDistance #-}
     rhombusDistance (Point x1 y1) (Point x2 y2) = dist x1 x2 + dist y1 y2
-
-
-halfOfMaxBound :: (Bounded num, Num num, Integral num) => num
-halfOfMaxBound = maxBound `div` 2
-
-
-fourthOfMaxBound :: (Bounded num, Num num, Integral num) => num
-fourthOfMaxBound = maxBound `div` 4 + 1
