@@ -1,7 +1,6 @@
 {-# LANGUAGE GADTs, DeriveGeneric, TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-
 -- | Module provides types for storing internal state of a node and messages.
 -- Different nodes use mutually overlapping set of messages
 module Node.Node.Types where
