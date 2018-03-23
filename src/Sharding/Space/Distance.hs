@@ -2,6 +2,7 @@
 --   a multidimensional cube.
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE MultiWayIf #-}
 
 module Sharding.Space.Distance where
@@ -44,3 +45,21 @@ instance Points Point where
 
     {-# INLINE rhombusDistance #-}
     rhombusDistance (Point x1 y1) (Point x2 y2) = dist x1 x2 + dist y1 y2
+
+
+class DistanceTo a b where
+    distanceTo :: a -> b -> Distance Point
+
+
+instance DistanceTo MyNodePosition NodePosition where
+    distanceTo (MyNodePosition aMyNodePosition) (NodePosition aNodePosition) =
+        rhombusDistance aMyNodePosition aNodePosition
+
+
+instance DistanceTo NodePosition NodePosition where
+    distanceTo (NodePosition x1) (NodePosition x2) = rhombusDistance x1 x2
+
+
+instance DistanceTo MyNodePosition BlockPosition where
+    distanceTo (MyNodePosition aMyNodePosition) (BlockPosition aBlockPosition) =
+        distance aMyNodePosition aBlockPosition
