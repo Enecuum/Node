@@ -54,6 +54,7 @@ dependencies:
 - filepath
 - microlens
 - microlens-mtl
+- microlens-th
 - extra
 - time
 - clock

@@ -12,6 +12,7 @@ import              Node.Node.Types
 import              Control.Concurrent.Chan
 import              Data.List.Extra
 import              Control.Concurrent
+import              Lens.Micro
 import              Control.Monad
 import qualified    Data.ByteString     as B
 import              Data.Word
@@ -47,11 +48,11 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
 
 
 neighborPositions :: ShardingNode -> S.Set NodePosition
-neighborPositions = S.map neighborPosition . nodeNeighbors
+neighborPositions = S.map (^.neighborPosition) . (^.nodeNeighbors)
 
 shiftIsNeed :: ShardingNode -> Bool
 shiftIsNeed aShardingNode = checkUnevenness
-    (nodePosition aShardingNode) (neighborPositions aShardingNode)
+    (aShardingNode^.nodePosition) (neighborPositions aShardingNode)
 
 
 shiftTheShardingNode ::
@@ -65,7 +66,7 @@ shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
         aNeighborPositions = neighborPositions aShardingNode
 
         aMyNodePosition :: MyNodePosition
-        aMyNodePosition    = nodePosition aShardingNode
+        aMyNodePosition    = aShardingNode^.nodePosition
 
         aNearestPositions :: S.Set NodePosition
         aNearestPositions  = S.fromList $
@@ -75,63 +76,28 @@ shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
         aNewPosition       = shiftToCenterOfMass aMyNodePosition aNearestPositions
 
     sendToNetLevet aChanOfNetLevel $ NewPosiotionResponse aNewPosition
-    aLoop aShardingNode {nodePosition = aNewPosition}
+    aLoop $ aShardingNode & nodePosition .~ aNewPosition
 
-{-
-TheNodeHaveNewCoordinates aNodeId aPoint
-    -- add new heighbor (or move exist) if it is close enough.
-    | toInteger (rhombusDistanceTo aPoint aNodeModel) < 4 * toInteger
-        (findNodeDomain aNodeModel) -> do
-        let aNewNodeHeighbors = S.filter
-                    (\h -> heighborId h /= aNodeId) (nodeHeighbors aNodeModel)
-        aLoop aNodeModel {
-            nodeHeighbors = S.insert
-                (Heighbor (rhombusDistanceTo aPoint aNodeModel) aPoint aNodeId)
-                aNewNodeHeighbors
-          }
-    -- delete the heighbor if he is long away.
-    | otherwise -> do
-        let aNewNodeHeighbors = S.filter
-                (\h -> heighborId h /= aNodeId) (nodeHeighbors aNodeModel)
-        aLoop aNodeModel{nodeHeighbors = aNewNodeHeighbors}
--}
-{-
-isItMyOldNeighbor :: ShardingNode -> NodeId -> NodePosition -> Bool
-
-isItMyNewNeighbor :: ShardingNode -> NodeId -> NodePosition -> Bool
-isItMyNewNeighbor aShardingNode aNodeId aNodePosition = do
-
-
-doesHeLeftMyDistance :: ShardingNode -> NodeId -> NodePosition -> Bool
--}
 
 deleteTheNeighbor :: NodeId -> ShardingNode -> ShardingNode
-deleteTheNeighbor aNodeId aShardingNode  = aShardingNode {
-    nodeNeighbors = aNewNodeNeighbors
-  }
- where
-    aNewNodeNeighbors :: S.Set Neighbor
-    aNewNodeNeighbors = S.filter
-        (\n -> neighborId n /= aNodeId)
-        (nodeNeighbors aShardingNode)
+deleteTheNeighbor aNodeId aShardingNode =
+    aShardingNode & nodeNeighbors %~ S.filter (\n -> n^.neighborId /= aNodeId)
 
 
 insertTheNeighbor :: NodeId -> NodePosition -> ShardingNode -> ShardingNode
-insertTheNeighbor aNodeId aNodePosition aShardingNode = aShardingNode {
-    nodeNeighbors =  S.insert (Neighbor aNodePosition aNodeId) $
-        nodeNeighbors aShardingNode
-  }
+insertTheNeighbor aNodeId aNodePosition aShardingNode =
+    aShardingNode & nodeNeighbors %~ S.insert (Neighbor aNodePosition aNodeId)
 
 
 findShardingNodeDomain :: ShardingNode -> Distance Point
 findShardingNodeDomain aShardingNode = findNodeDomain
-    (nodePosition aShardingNode)
+    (aShardingNode^.nodePosition)
     (neighborPositions aShardingNode)
 
 
 isInNodeDomain :: ShardingNode -> NodePosition -> Bool
 isInNodeDomain aShardingNode aNodePosition =
-    distanceTo (nodePosition aShardingNode) aNodePosition `div` neighborsDistanseMemoryConstant < findShardingNodeDomain aShardingNode
+    distanceTo (aShardingNode^.nodePosition) aNodePosition `div` neighborsDistanseMemoryConstant < findShardingNodeDomain aShardingNode
 
 
 --makeShardingNode :: MyNodeId -> Point -> IO ()
