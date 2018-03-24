@@ -23,8 +23,8 @@ import qualified    Data.Set            as S
 
 -- TODO Is it file or db like sqlite?
 -- TODO What am I do if my neighbors is a liars?
-loadMyBlockIndex :: IO (S.Set BlockHash)
-loadMyBlockIndex = undefined
+loadMyShardIndex :: IO (S.Set ShardHash)
+loadMyShardIndex = undefined
 
 -- TODO Is it file or db like sqlite?
 loadInitInformation :: IO (S.Set Neighbor, MyNodePosition)
@@ -37,14 +37,14 @@ sendToNetLevet aChan aMsg = writeChan aChan $ ShardingNodeRequestOrResponce aMsg
 initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
     sendToNetLevet aChanOfNetLevel $ IamAwakeRequst aMyNodeId aMyNodePosition
 
-    aMyBlocksIndex <- loadMyBlockIndex
+    aMyShardsIndex <- loadMyShardIndex
     (aMyNeighbors, aMyPosition) <- loadInitInformation
 
     metronome (10^8) $ do
-        writeChan aChanRequest CleanBlocksAction
+        writeChan aChanRequest CleanShardsAction
         writeChan aChanRequest ShiftAction
 
-    return $ makeEmptyShardingNode aMyNeighbors aMyNodeId aMyPosition aMyBlocksIndex
+    return $ makeEmptyShardingNode aMyNeighbors aMyNodeId aMyPosition aMyShardsIndex
 
 
 neighborPositions :: ShardingNode -> S.Set NodePosition
@@ -127,13 +127,13 @@ makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition= do
 {-
 |   NewNodeInNetAction          NodeId Point
 -- TODO create index for new node by NodeId
-|   BlockIndexCreateAction      NodeId
-|   BlockIndexAcceptAction      [BlockHash]
-|   BlocksAcceptAction          [(BlockHash, Block)]
+|   ShardIndexCreateAction      NodeId
+|   ShardIndexAcceptAction      [ShardHash]
+|   ShardsAcceptAction          [(ShardHash, Shard)]
 ---
-|   CleanBlocksAction -- clean local blocks
+|   CleanShardsAction -- clean local Shards
 --- ShiftAction => NewPosiotionResponse
-|   NewBlockInNetAction         BlockHash Block
+|   NewShardInNetAction         ShardHash Shard
 |   ShiftAction                                                     -- [+]
 |   TheNodeHaveNewCoordinates   NodeId NodePosition
 ---- NeighborListRequest => NeighborListAcceptAction

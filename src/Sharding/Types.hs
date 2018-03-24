@@ -22,15 +22,15 @@ neighborsDistanseMemoryConstant = 6
 --------------------------------------------------------------------------------
 
 
-type BlockHash = (Word64, Word64, Word64, Word64, Word64, Word64, Word64, Word64)
+type ShardHash = (Word64, Word64, Word64, Word64, Word64, Word64, Word64, Word64)
 
-data Block = Block BlockHash B.ByteString deriving (Ord, Eq, Show)
+data Shard = Shard ShardHash B.ByteString deriving (Ord, Eq, Show)
 
 data ShardingNode = ShardingNode {
         _nodeNeighbors      :: S.Set Neighbor
     ,   _shardingNodeId     :: MyNodeId
     ,   _nodePosition       :: MyNodePosition
-    ,   _nodeIndex          :: S.Set BlockHash
+    ,   _nodeIndex          :: S.Set ShardHash
     ,   _nodeDistance       :: Double -- think
   }
   deriving (Show, Eq, Ord)
@@ -46,16 +46,16 @@ makeLenses ''ShardingNode
 makeLenses ''Neighbor
 
 data ShardingNodeAction =
-    -- TODO think requestBlockIndex requestNeededBlocks, find position
+    -- TODO think requestShardIndex requestNeededShards, find position
     ---    InitAction
         NewNodeInNetAction          NodeId NodePosition
     -- TODO create index for new node by NodeId
-    |   BlockIndexCreateAction      NodeId
-    |   BlockIndexAcceptAction      [BlockHash]
-    |   BlocksAcceptAction          [(BlockHash, Block)]
+    |   ShardIndexCreateAction      NodeId
+    |   ShardIndexAcceptAction      [ShardHash]
+    |   ShardsAcceptAction          [(ShardHash, Shard)]
     ---
-    |   NewBlockInNetAction         BlockHash Block
-    |   CleanBlocksAction -- clean local blocks
+    |   NewShardInNetAction         ShardHash Shard
+    |   CleanShardsAction -- clean local Shards
     --- ShiftAction => NewPosiotionResponse
     |   ShiftAction
     |   TheNodeHaveNewCoordinates   NodeId NodePosition
@@ -67,26 +67,26 @@ data ShardingNodeAction =
 data ShardingNodeRequestAndResponce =
         IamAwakeRequst        MyNodeId MyNodePosition -- broadcast for all network
     ----
-    |   BlockIndexRequest     [NodeId]    -- for neighbors
-    |   BlockIndexResponse    NodeId [BlockHash]
-    |   BlockListRequest      [BlockHash]
-    |   BlockListResponse     NodeId [(BlockHash, Block)]
+    |   ShardIndexRequest     [NodeId]    -- for neighbors
+    |   ShardIndexResponse    NodeId [ShardHash]
+    |   ShardListRequest      [ShardHash]
+    |   ShardListResponse     NodeId [(ShardHash, Shard)]
     --- ShiftAction => NewPosiotionResponse
     |   NewPosiotionResponse   MyNodePosition
     ---
     |   NeighborListRequest -- ask net level new neighbors
   deriving (Show)
 --
-hashToPoint :: BlockHash -> Point
+hashToPoint :: ShardHash -> Point
 hashToPoint (x1, x2, _, _, _, _, _, _) = Point x1 x2
 
 
-makeEmptyShardingNode :: S.Set Neighbor ->  MyNodeId -> MyNodePosition -> S.Set BlockHash -> ShardingNode
-makeEmptyShardingNode aNeighbors aMyNodeId aMyPosition aMyBlockIndex = ShardingNode {
+makeEmptyShardingNode :: S.Set Neighbor ->  MyNodeId -> MyNodePosition -> S.Set ShardHash -> ShardingNode
+makeEmptyShardingNode aNeighbors aMyNodeId aMyPosition aMyShardIndex = ShardingNode {
         _nodeNeighbors      = aNeighbors
     ,   _shardingNodeId     = aMyNodeId
     ,   _nodePosition       = aMyPosition
-    ,   _nodeIndex          = aMyBlockIndex
+    ,   _nodeIndex          = aMyShardIndex
     ,   _nodeDistance       = 1
   }
 
