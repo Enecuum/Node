@@ -8,7 +8,7 @@ data Point = Point !Word64 !Word64
 
 newtype MyNodePosition  = MyNodePosition Point deriving (Eq, Ord, Show)
 newtype NodePosition    = NodePosition Point deriving (Eq, Ord, Show)
-newtype BlockPosition   = BlockPosition Point deriving (Eq, Ord, Show)
+newtype ShardPosition   = ShardPosition Point deriving (Eq, Ord, Show)
 
 -- | Find the support points.
 {-# INLINE findSupportPoints #-}
