@@ -9,22 +9,10 @@ import              Node.Data.Data
 import              Lens.Micro.TH
 import              Sharding.Types.Shard
 import              Sharding.Space.Point
-import              Sharding.Space.Distance
 
 import              Data.Word
-import qualified    Data.ByteString     as B
 import qualified    Data.Set            as S
 
-
---------------------------------CONSTANTS---------------------------------------
-
-neighborsDistanseMemoryConstant :: Word64
-neighborsDistanseMemoryConstant = 6
-
-distanceNormalizedConstant :: Word64
-distanceNormalizedConstant = 1024
-
---------------------------------------------------------------------------------
 
 data ShardingNode = ShardingNode {
         _nodeNeighbors      :: S.Set Neighbor
@@ -94,3 +82,6 @@ makeEmptyNeighbor aPosition aNodeId = Neighbor {
         _neighborPosition   = aPosition
     ,   _neighborId         = aNodeId
   }
+
+neighborsMemoryDistanse :: Word64
+neighborsMemoryDistanse = 6
