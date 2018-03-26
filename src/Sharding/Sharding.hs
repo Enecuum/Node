@@ -98,7 +98,7 @@ findShardingNodeDomain aShardingNode = findNodeDomain
 
 isInNodeDomain :: ShardingNode -> NodePosition -> Bool
 isInNodeDomain aShardingNode aNodePosition =
-    distanceTo (aShardingNode^.nodePosition) aNodePosition `div` neighborsDistanseMemoryConstant < findShardingNodeDomain aShardingNode
+    distanceTo (aShardingNode^.nodePosition) aNodePosition `div` neighborsMemoryDistanse < findShardingNodeDomain aShardingNode
 
 
 addShardingIndex :: S.Set ShardHash ->  ShardingNode -> ShardingNode -- Is it one list or many?
@@ -121,8 +121,8 @@ createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = do
 
 checkShardIsInRadiusOfCapture :: NodePosition -> Distance Point-> ShardHash -> Bool
 checkShardIsInRadiusOfCapture aNodePosition aRadiusOfCapture aShardHashs =
-    aShardDistanceToPoint `div` (distanceNormalizedConstant + aShardCaptureDistance) <
-        aRadiusOfCapture `div` distanceNormalizedConstant
+    aShardDistanceToPoint `div` (distanceNormalizedCapture + aShardCaptureDistance) <
+        aRadiusOfCapture `div` distanceNormalizedCapture
   where
     aShardDistanceToPoint = distanceTo aNodePosition aShardHashs
     aShardCaptureDistance = shardCaptureDistance aShardHashs

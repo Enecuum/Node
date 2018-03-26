@@ -34,3 +34,7 @@ instance ShardCaptureDistance ShardType where
 instance DistanceTo NodePosition ShardHash where
     distanceTo (NodePosition aNodePosition) aShardHash =
         distance aNodePosition (hashToPoint aShardHash)
+
+
+distanceNormalizedCapture :: Word64
+distanceNormalizedCapture = 1024
