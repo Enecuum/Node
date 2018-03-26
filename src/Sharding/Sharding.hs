@@ -100,6 +100,15 @@ isInNodeDomain aShardingNode aNodePosition =
     distanceTo (aShardingNode^.nodePosition) aNodePosition `div` neighborsDistanseMemoryConstant < findShardingNodeDomain aShardingNode
 
 
+addShardingIndex :: [ShardHash] ->  ShardingNode -> ShardingNode -- Is it one list or many?
+addShardingIndex aShardIndex aShardingNode =
+    aShardingNode & nodeIndex .~ (S.union (aShardingNode^.nodeIndex)  $ S.fromList aShardIndex)
+
+
+createShardingIndex :: Chan ManagerMiningMsgBase -> (ShardingNode ->  IO ()) ->  ShardingNode -> NodeId ->  IO ()
+createShardingIndex aChanOfNetLevel aLoop aShardingNode aNodeId = undefined
+
+
 --makeShardingNode :: MyNodeId -> Point -> IO ()
 makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition= do
     aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition
@@ -122,6 +131,12 @@ makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition= do
 
         NewNodeInNetAction aNodeId aNodePosition -> aLoop
             $ insertTheNeighbor aNodeId aNodePosition aShardingNode
+
+        ShardIndexAcceptAction aShardHashs -> aLoop
+            $ addShardingIndex aShardHashs aShardingNode
+
+        ShardIndexCreateAction aNodeId ->
+            createShardingIndex aChanOfNetLevel aLoop aShardingNode aNodeId
 
         _ -> undefined
 {-
