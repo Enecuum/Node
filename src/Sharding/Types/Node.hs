@@ -8,7 +8,7 @@ import              Node.Data.Data
 
 import              Lens.Micro.TH
 import              Sharding.Types.Shard
-import              Sharding.Space.Points
+import              Sharding.Space.Point
 import              Sharding.Space.Distance
 
 import              Data.Word

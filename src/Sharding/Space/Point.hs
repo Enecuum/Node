@@ -1,4 +1,4 @@
-module Sharding.Space.Points where
+module Sharding.Space.Point where
 
 import Data.Word
 
