@@ -6,7 +6,8 @@ module Sharding.Sharding where
 import              Sharding.Space.Distance
 import              Sharding.Space.Points
 import              Sharding.Space.Shift
-import              Sharding.Types
+import              Sharding.Types.Shard
+import              Sharding.Types.Node
 
 import              Node.Node.Types
 import              Control.Concurrent.Chan
