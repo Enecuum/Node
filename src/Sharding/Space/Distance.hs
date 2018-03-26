@@ -60,8 +60,8 @@ instance DistanceTo NodePosition NodePosition where
     distanceTo (NodePosition x1) (NodePosition x2) = rhombusDistance x1 x2
 
 
-instance DistanceTo MyNodePosition DataFragmentPosition where
+instance DistanceTo MyNodePosition ShardPosition where
     distanceTo
         (MyNodePosition aMyNodePosition)
-        (DataFragmentPosition aDataFragmentPosition) =
-            distance aMyNodePosition aDataFragmentPosition
+        (ShardPosition aShardPosition) =
+            distance aMyNodePosition aShardPosition

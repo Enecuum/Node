@@ -100,17 +100,35 @@ isInNodeDomain aShardingNode aNodePosition =
     distanceTo (aShardingNode^.nodePosition) aNodePosition `div` neighborsDistanseMemoryConstant < findShardingNodeDomain aShardingNode
 
 
-addShardingIndex :: [ShardHash] ->  ShardingNode -> ShardingNode -- Is it one list or many?
+addShardingIndex :: S.Set ShardHash ->  ShardingNode -> ShardingNode -- Is it one list or many?
 addShardingIndex aShardIndex aShardingNode =
-    aShardingNode & nodeIndex .~ (S.union (aShardingNode^.nodeIndex)  $ S.fromList aShardIndex)
+    aShardingNode & nodeIndex %~ S.union aShardIndex
 
 
-createShardingIndex :: Chan ManagerMiningMsgBase -> (ShardingNode ->  IO ()) ->  ShardingNode -> NodeId ->  IO ()
-createShardingIndex aChanOfNetLevel aLoop aShardingNode aNodeId = undefined
+createShardingIndex :: Chan ManagerMiningMsgBase -> ShardingNode -> NodeId -> Word64 ->  IO ()
+createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = do
+    let maybeNeighbor = S.toList$ S.filter (\n -> n^.neighborId == aNodeId) $
+            aShardingNode^.nodeNeighbors
+    case maybeNeighbor of
+        [Neighbor aNeighborPosition _] -> do
+            let resultsShardingHash = S.filter
+                    (checkShardIsInRadiusOfCapture aNeighborPosition aRadiusOfCapture)
+                    (aShardingNode^.nodeIndex)
+            sendToNetLevet aChanOfNetLevel (ShardIndexResponse aNodeId $ S.toList resultsShardingHash)
+        _                      -> return ()
+
+
+checkShardIsInRadiusOfCapture :: NodePosition -> Distance Point-> ShardHash -> Bool
+checkShardIsInRadiusOfCapture aNodePosition aRadiusOfCapture aShardHashs =
+    aShardDistanceToPoint `div` (distanceNormalizedConstant + aShardCaptureDistance) <
+        aRadiusOfCapture `div` distanceNormalizedConstant
+  where
+    aShardDistanceToPoint = distanceTo aNodePosition aShardHashs
+    aShardCaptureDistance = shardCaptureDistance aShardHashs
 
 
 --makeShardingNode :: MyNodeId -> Point -> IO ()
-makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition= do
+makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition = do
     aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition
     void $ forkIO $ aLoop aShardingNode
   where
@@ -133,10 +151,11 @@ makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition= do
             $ insertTheNeighbor aNodeId aNodePosition aShardingNode
 
         ShardIndexAcceptAction aShardHashs -> aLoop
-            $ addShardingIndex aShardHashs aShardingNode
+            $ addShardingIndex (S.fromList aShardHashs) aShardingNode
 
-        ShardIndexCreateAction aNodeId ->
-            createShardingIndex aChanOfNetLevel aLoop aShardingNode aNodeId
+        ShardIndexCreateAction aNodeId aRadiusOfCapture -> do
+            createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture
+            aLoop aShardingNode
 
         _ -> undefined
 {-
