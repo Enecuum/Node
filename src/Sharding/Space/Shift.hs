@@ -1,6 +1,6 @@
 module Sharding.Space.Shift where
 
-import              Sharding.Space.Points
+import              Sharding.Space.Point
 import              Sharding.Space.Distance
 
 import              Data.List.Extra

@@ -8,7 +8,7 @@
 module Sharding.Space.Distance where
 
 import Data.Word
-import Sharding.Space.Points
+import Sharding.Space.Point
 
 -- | Point in the testing space.
 class Points point where

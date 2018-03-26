@@ -2,7 +2,7 @@
 module Sharding.Types.Shard where
 
 import              Sharding.Space.Distance
-import              Sharding.Space.Points
+import              Sharding.Space.Point
 import              Data.Word
 import qualified    Data.ByteString as B
 
