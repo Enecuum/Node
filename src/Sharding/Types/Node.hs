@@ -5,6 +5,7 @@ module Sharding.Types.Node where
 
 import              Node.Data.Data
 
+import              Sharding.ShardDB.ShardIndex
 import              Sharding.Types.Shard
 import              Sharding.Space.Point
 
@@ -17,7 +18,7 @@ data ShardingNode = ShardingNode {
         _nodeNeighbors      :: S.Set Neighbor
     ,   _shardingNodeId     :: MyNodeId
     ,   _nodePosition       :: MyNodePosition
-    ,   _nodeIndex          :: S.Set ShardHash
+    ,   _nodeIndex          :: ShardIndex
     ,   _nodeDistance       :: Word64 -- think
   }
   deriving (Show, Eq, Ord)
@@ -67,7 +68,7 @@ data ShardingNodeRequestAndResponce =
   deriving (Show)
 
 
-makeEmptyShardingNode :: S.Set Neighbor ->  MyNodeId -> MyNodePosition -> S.Set ShardHash -> ShardingNode
+makeEmptyShardingNode :: S.Set Neighbor ->  MyNodeId -> MyNodePosition -> ShardIndex -> ShardingNode
 makeEmptyShardingNode aNeighbors aMyNodeId aMyPosition aMyShardIndex = ShardingNode {
         _nodeNeighbors      = aNeighbors
     ,   _shardingNodeId     = aMyNodeId

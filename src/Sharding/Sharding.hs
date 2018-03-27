@@ -8,6 +8,7 @@ import              Sharding.Space.Point
 import              Sharding.Space.Shift
 import              Sharding.Types.Shard
 import              Sharding.Types.Node
+import              Sharding.ShardDB.ShardIndex
 
 import              Node.Node.Types
 import              Control.Concurrent.Chan
@@ -130,12 +131,14 @@ isInNodeDomain aShardingNode aNodePosition =
 
 
 addShardingIndex :: S.Set ShardHash ->  ShardingNode -> ShardingNode -- Is it one list or many?
-addShardingIndex aShardIndex aShardingNode =
-    aShardingNode & nodeIndex %~ S.union aShardIndex
+addShardingIndex aShardIndex aShardingNode = undefined
+    --aShardingNode & nodeIndex %~ S.union aShardIndex
 
 
 createShardingIndex :: Chan ManagerMiningMsgBase -> ShardingNode -> NodeId -> Word64 ->  IO ()
-createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = do
+createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = undefined
+{-
+ do
     let maybeNeighbor = S.toList$ S.filter (\n -> n^.neighborId == aNodeId) $
             aShardingNode^.nodeNeighbors
     case maybeNeighbor of
@@ -145,7 +148,7 @@ createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = do
                     (aShardingNode^.nodeIndex)
             sendToNetLevet aChanOfNetLevel (ShardIndexResponse aNodeId $ S.toList resultsShardingHash)
         _                      -> return ()
-
+-}
 ---- TODO after add db
 saveShard :: Shard -> (ShardingNode ->  IO ()) -> ShardingNode -> IO ()
 saveShard aShard aLoop aShardingNode = undefined
@@ -193,13 +196,6 @@ findNodeDomain aMyPosition aPositions = if
     aNearestPoints = findNearestNeighborPositions aMyPosition aPositions
 
 
-
--- TODO Is it file or db like sqlite?
--- TODO What am I do if my neighbors is a liars?
-loadMyShardIndex :: IO (S.Set ShardHash)
-loadMyShardIndex = undefined
-
-
 -- TODO Is it file or db like sqlite?
 loadInitInformation :: IO (S.Set Neighbor, MyNodePosition)
 loadInitInformation = undefined
@@ -229,7 +225,6 @@ shiftIsNeed aShardingNode = checkUnevenness
 sendToNetLevet :: Chan ManagerMiningMsgBase -> ShardingNodeRequestAndResponce -> IO ()
 sendToNetLevet aChan aMsg = writeChan aChan $ ShardingNodeRequestOrResponce aMsg
 
---
 
 mul :: Word64 -> Word64 -> Word64
 mul x y
