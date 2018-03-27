@@ -5,6 +5,8 @@ module Sharding.ShardDB.ShardIndex where
 import              Control.Exception
 import              Lens.Micro.TH
 import              Lens.Micro
+import              Lens.Micro.Mtl
+
 import              System.Clock
 import              Data.Serialize
 import qualified    Data.ByteString as B
@@ -32,7 +34,9 @@ data ShardLoadingIndex = ShardLoadingIndex [(ShardHash, Priority, TimeSpec)]
 data Priority          = Priority Int
   deriving (Show, Eq, Ord, Generic)
 
-data SpaceSnapshot     = SpaceSnapshot [(ShardHash, Distance Point)]
+data SpaceSnapshot     = SpaceSnapshot {
+    _shapshotHashes :: [(ShardHash, Distance Point)]
+  }
   deriving (Show, Eq, Ord, Generic)
 
 
@@ -50,13 +54,22 @@ instance Serialize ShardNeededIndex
 instance Serialize ShardLoadingIndex
 instance Serialize Priority
 
+makeLenses ''SpaceSnapshot
 makeLenses ''ShardExistIndex
 makeLenses ''ShardIndex
 
 
 addShardToIndex :: Shard -> MyNodePosition -> ShardIndex -> ShardIndex
-addShardToIndex aShard aMyPosition aShardIndex = aShardIndex &
-    shardExistIndex.baseSnapshots.ix 0 %~ addShardToSnapshot aShard aMyPosition
+addShardToIndex aShard aMyPosition aShardIndex = aShardIndex &~ do
+    zoom shardExistIndex $ do
+        lastSnapshot.shapshotHashes %= filter (\(h, _) -> h /= aHash)
+        zoom baseSnapshots $ do
+            ix 0                 %= addShardToSnapshot aShard aMyPosition
+            zoom _tail $ do
+                shapshotHashes %= filter (\(h, _) -> h /= aHash)
+
+  where
+    aHash = shardToHash aShard
 
 
 addShardToSnapshot :: Shard -> MyNodePosition -> SpaceSnapshot -> SpaceSnapshot
