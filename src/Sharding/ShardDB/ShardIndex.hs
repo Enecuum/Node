@@ -64,8 +64,8 @@ addShardToIndex aShard aMyPosition aShardIndex = aShardIndex &~ do
     zoom shardExistIndex $ do
         lastSnapshot.shapshotHashes %= filter (\(h, _) -> h /= aHash)
         zoom baseSnapshots $ do
-            ix 0                 %= addShardToSnapshot aShard aMyPosition
-            zoom _tail $ do
+            ix 0 %= addShardToSnapshot aShard aMyPosition
+            zoom (_tail.traversed) $ do
                 shapshotHashes %= filter (\(h, _) -> h /= aHash)
 
   where
