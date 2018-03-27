@@ -55,7 +55,14 @@ makeLenses ''ShardIndex
 
 
 addShardToIndex :: Shard -> MyNodePosition -> ShardIndex -> ShardIndex
-addShardToIndex aShard aMyPosition aShardIndex = undefined
+addShardToIndex aShard aMyPosition aShardIndex = aShardIndex &
+    shardExistIndex.baseSnapshots.ix 0 %~ addShardToSnapshot aShard aMyPosition
+
+
+addShardToSnapshot :: Shard -> MyNodePosition -> SpaceSnapshot -> SpaceSnapshot
+addShardToSnapshot aShard aMyNodePosition (SpaceSnapshot aListOfShard) =
+    SpaceSnapshot $
+        (shardToHash aShard, distanceTo aMyNodePosition aShard) : aListOfShard
 
 
 cleanShardIndex :: MyNodePosition -> Distance Point -> Int -> ShardIndex -> (ShardIndex, [ShardHash])
