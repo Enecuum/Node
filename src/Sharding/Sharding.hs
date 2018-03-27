@@ -20,6 +20,7 @@ import              Data.Word
 import              Node.Data.Data
 import              Service.Timer
 import qualified    Data.Set            as S
+import qualified    Data.Map            as M
 
 
 -- TODO Is it file or db like sqlite?
@@ -27,9 +28,15 @@ import qualified    Data.Set            as S
 loadMyShardIndex :: IO (S.Set ShardHash)
 loadMyShardIndex = undefined
 
+
 -- TODO Is it file or db like sqlite?
 loadInitInformation :: IO (S.Set Neighbor, MyNodePosition)
 loadInitInformation = undefined
+
+
+-- TODO Is it file or db like sqlite?
+loadShards :: IO (M.Map ShardHash Shard)
+loadShards = undefined
 
 
 sendToNetLevet :: Chan ManagerMiningMsgBase -> ShardingNodeRequestAndResponce -> IO ()
@@ -43,6 +50,8 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
 
     metronome (10^8) $ do
         writeChan aChanRequest CleanShardsAction
+
+    metronome (10^8) $ do
         writeChan aChanRequest ShiftAction
 
     return $ makeEmptyShardingNode aMyNeighbors aMyNodeId aMyPosition aMyShardsIndex
@@ -118,14 +127,48 @@ createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = do
             sendToNetLevet aChanOfNetLevel (ShardIndexResponse aNodeId $ S.toList resultsShardingHash)
         _                      -> return ()
 
+---- TODO after add db
+saveShard :: Shard -> (ShardingNode ->  IO ()) -> ShardingNode -> IO ()
+saveShard aShard aLoop aShardingNode = undefined
 
-checkShardIsInRadiusOfCapture :: NodePosition -> Distance Point-> ShardHash -> Bool
+
+checkShardIsInRadiusOfCaptureShardingNode :: ShardingNode -> ShardHash -> Bool
+checkShardIsInRadiusOfCaptureShardingNode aShardNode aShardHash =
+    checkShardIsInRadiusOfCapture
+        (toNodePosition $ aShardNode^.nodePosition)
+        (mul    (findShardingNodeDomain aShardNode)
+                (distanceNormalizedCapture + aShardNode^.nodeDistance))
+        aShardHash
+
+
+mul :: Word64 -> Word64 -> Word64
+mul x y
+    | aResult > toInteger (maxBound :: Word64) = maxBound
+    | otherwise = fromInteger aResult
+  where
+    aResult = (toInteger x * toInteger y) `div` distanceNormalizedCapture
+
+
+checkShardIsInRadiusOfCapture :: NodePosition -> Distance Point -> ShardHash -> Bool
 checkShardIsInRadiusOfCapture aNodePosition aRadiusOfCapture aShardHashs =
     aShardDistanceToPoint `div` (distanceNormalizedCapture + aShardCaptureDistance) <
         aRadiusOfCapture `div` distanceNormalizedCapture
   where
     aShardDistanceToPoint = distanceTo aNodePosition aShardHashs
     aShardCaptureDistance = shardCaptureDistance aShardHashs
+
+
+sendShardsToNode ::
+        ShardingNode
+    ->  NodeId
+    -> [ShardHash]
+    ->  Chan ManagerMiningMsgBase
+    ->  IO ()
+sendShardsToNode aShardingNode aNodeId aHashList aChanOfNetLevel = do
+    aShards <- loadShards
+    let aShardList = M.elems $
+            M.filterWithKey (\aHash _-> aHash `elem` aHashList) aShards
+    sendToNetLevet aChanOfNetLevel $ ShardListResponse aNodeId aShardList
 
 
 --makeShardingNode :: MyNodeId -> Point -> IO ()
@@ -158,23 +201,26 @@ makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition = do
             createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture
             aLoop aShardingNode
 
+        ShardAcceptAction aShard
+            | checkShardIsInRadiusOfCaptureShardingNode aShardingNode (shardToHash aShard) ->
+                saveShard aShard aLoop aShardingNode
+
+        NewShardInNetAction aShard
+            | checkShardIsInRadiusOfCaptureShardingNode aShardingNode (shardToHash aShard) ->
+                saveShard aShard aLoop aShardingNode
+
+        ShardListCreateAction aNodeId aHashList -> do
+            sendShardsToNode aShardingNode aNodeId aHashList aChanOfNetLevel
+            aLoop aShardingNode
+
+
+--        CleanShardsAction -> do
+
+
+
         _ -> undefined
 {-
-|   NewNodeInNetAction          NodeId Point
--- TODO create index for new node by NodeId
-|   ShardIndexCreateAction      NodeId
-|   ShardIndexAcceptAction      [ShardHash]
-|   ShardsAcceptAction          [(ShardHash, Shard)]
----
 |   CleanShardsAction -- clean local Shards
---- ShiftAction => NewPosiotionResponse
-|   NewShardInNetAction         ShardHash Shard
-|   ShiftAction                                                     -- [+]
-|   TheNodeHaveNewCoordinates   NodeId NodePosition
----- NeighborListRequest => NeighborListAcceptAction
-|   NeighborListAcceptAction   [(NodeId, NodePosition)]
-|   TheNodeIsDead               NodeId
-
 -}
 --------------------------------------------------------------------------------
 

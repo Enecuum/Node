@@ -3,13 +3,12 @@
 
 module Sharding.Types.Node where
 
-
 import              Node.Data.Data
 
-import              Lens.Micro.TH
 import              Sharding.Types.Shard
 import              Sharding.Space.Point
 
+import              Lens.Micro.TH
 import              Data.Word
 import qualified    Data.Set            as S
 
@@ -30,6 +29,7 @@ data Neighbor = Neighbor {
   }
   deriving (Show, Eq, Ord)
 
+
 makeLenses ''ShardingNode
 makeLenses ''Neighbor
 
@@ -41,15 +41,15 @@ data ShardingNodeAction =
     -- TODO create index for new node by NodeId
     |   ShardIndexCreateAction      NodeId Word64
     |   ShardIndexAcceptAction      [ShardHash]
-    |   ShardsAcceptAction          [(ShardHash, Shard)]
+    |   ShardListCreateAction       NodeId [ShardHash]
+    |   ShardAcceptAction           Shard
     ---
-    |   NewShardInNetAction         ShardHash Shard
+    |   NewShardInNetAction         Shard
     |   CleanShardsAction -- clean local Shards
     --- ShiftAction => NewPosiotionResponse
     |   ShiftAction
     |   TheNodeHaveNewCoordinates   NodeId NodePosition
     ---- NeighborListRequest => NeighborListAcceptAction
-    |   NeighborListAcceptAction   [(NodeId, NodePosition)]
     |   TheNodeIsDead               NodeId
 
 
@@ -59,13 +59,12 @@ data ShardingNodeRequestAndResponce =
     |   ShardIndexRequest     [NodeId]    -- for neighbors
     |   ShardIndexResponse    NodeId [ShardHash]
     |   ShardListRequest      [ShardHash]
-    |   ShardListResponse     NodeId [(ShardHash, Shard)]
+    |   ShardListResponse     NodeId [Shard]
     --- ShiftAction => NewPosiotionResponse
     |   NewPosiotionResponse   MyNodePosition
     ---
     |   NeighborListRequest -- ask net level new neighbors
   deriving (Show)
---
 
 
 makeEmptyShardingNode :: S.Set Neighbor ->  MyNodeId -> MyNodePosition -> S.Set ShardHash -> ShardingNode
@@ -77,11 +76,13 @@ makeEmptyShardingNode aNeighbors aMyNodeId aMyPosition aMyShardIndex = ShardingN
     ,   _nodeDistance       = 1
   }
 
+
 makeEmptyNeighbor :: NodePosition -> NodeId -> Neighbor
 makeEmptyNeighbor aPosition aNodeId = Neighbor {
         _neighborPosition   = aPosition
     ,   _neighborId         = aNodeId
   }
+
 
 neighborsMemoryDistanse :: Word64
 neighborsMemoryDistanse = 6

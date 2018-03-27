@@ -3,8 +3,13 @@ module Sharding.Types.Shard where
 
 import              Sharding.Space.Distance
 import              Sharding.Space.Point
+import              Node.Crypto
+
 import              Data.Word
+import              Data.Serialize
 import qualified    Data.ByteString as B
+
+
 
 
 data ShardHash = ShardHash ShardType Word64 Word64 Word64 Word64 Word64 Word64 Word64 Word64
@@ -35,6 +40,18 @@ instance DistanceTo NodePosition ShardHash where
     distanceTo (NodePosition aNodePosition) aShardHash =
         distance aNodePosition (hashToPoint aShardHash)
 
+instance DistanceTo MyNodePosition ShardHash where
+    distanceTo (MyNodePosition aNodePosition) aShardHash =
+        distance aNodePosition (hashToPoint aShardHash)
 
-distanceNormalizedCapture :: Word64
+shardToHash :: Shard -> ShardHash
+shardToHash (Shard aShardType aByteString) =
+    case decode $ cryptoHash aByteString of
+        Right (x1, x2, x3, x4, x5, x6, x7, x8) ->
+            ShardHash aShardType x1 x2 x3 x4 x5 x6 x7 x8
+        Left _                                 ->
+            error "Sharding.Types.Shard.shardToHash"
+
+
+distanceNormalizedCapture :: Num a => a
 distanceNormalizedCapture = 1024
