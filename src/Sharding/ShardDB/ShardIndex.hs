@@ -62,14 +62,15 @@ makeLenses ''ShardIndex
 addShardToIndex :: Shard -> MyNodePosition -> ShardIndex -> ShardIndex
 addShardToIndex aShard aMyPosition aShardIndex = aShardIndex &~ do
     zoom shardExistIndex $ do
-        lastSnapshot.shapshotHashes %= filter (\(h, _) -> h /= aHash)
+        lastSnapshot.shapshotHashes %= aFilter
         zoom baseSnapshots $ do
             ix 0 %= addShardToSnapshot aShard aMyPosition
             zoom (_tail.traversed) $ do
-                shapshotHashes %= filter (\(h, _) -> h /= aHash)
+                shapshotHashes %= aFilter
 
   where
-    aHash = shardToHash aShard
+    aHash   = shardToHash aShard
+    aFilter = filter (\(h, _) -> h /= aHash)
 
 
 addShardToSnapshot :: Shard -> MyNodePosition -> SpaceSnapshot -> SpaceSnapshot
