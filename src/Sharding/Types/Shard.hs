@@ -52,6 +52,10 @@ instance DistanceTo MyNodePosition ShardHash where
     distanceTo (MyNodePosition aNodePosition) aShardHash =
         distance aNodePosition (hashToPoint aShardHash)
 
+instance DistanceTo MyNodePosition Shard where
+    distanceTo (MyNodePosition aNodePosition) aShardHash =
+        distance aNodePosition (hashToPoint $ shardToHash aShardHash)
+
 shardToHash :: Shard -> ShardHash
 shardToHash (Shard aShardType aByteString) =
     case decode $ cryptoHash aByteString of

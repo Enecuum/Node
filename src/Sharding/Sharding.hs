@@ -9,6 +9,7 @@ import              Sharding.Space.Shift
 import              Sharding.Types.Shard
 import              Sharding.Types.Node
 import              Sharding.ShardDB.ShardIndex
+import              Sharding.ShardDB.ShardStore
 
 import              Node.Node.Types
 import              Control.Concurrent.Chan
@@ -56,11 +57,11 @@ makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition = do
 
         ShardAcceptAction aShard
             | checkShardIsInRadiusOfCaptureShardingNode aShardingNode (shardToHash aShard) ->
-                saveShard aShard aLoop aShardingNode
+                nodeSaveShard aShard aLoop aShardingNode
 
         NewShardInNetAction aShard
             | checkShardIsInRadiusOfCaptureShardingNode aShardingNode (shardToHash aShard) ->
-                saveShard aShard aLoop aShardingNode
+                nodeSaveShard aShard aLoop aShardingNode
 
         ShardListCreateAction aNodeId aHashList -> do
             sendShardsToNode aShardingNode aNodeId aHashList aChanOfNetLevel
@@ -150,8 +151,7 @@ createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = und
         _                      -> return ()
 -}
 ---- TODO after add db
-saveShard :: Shard -> (ShardingNode ->  IO ()) -> ShardingNode -> IO ()
-saveShard aShard aLoop aShardingNode = undefined
+
 
 
 checkShardIsInRadiusOfCaptureShardingNode :: ShardingNode -> ShardHash -> Bool
@@ -191,9 +191,8 @@ loadInitInformation :: IO (S.Set Neighbor, MyNodePosition)
 loadInitInformation = undefined
 
 
--- TODO Is it file or db like sqlite?
-loadShards :: IO (M.Map ShardHash Shard)
-loadShards = undefined
+nodeSaveShard :: Shard -> (ShardingNode ->  IO ()) -> ShardingNode -> IO ()
+nodeSaveShard aShard aLoop aShardingNode = undefined
 
 
 neighborPositions :: ShardingNode -> S.Set NodePosition
