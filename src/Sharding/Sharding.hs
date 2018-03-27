@@ -23,154 +23,6 @@ import qualified    Data.Set            as S
 import qualified    Data.Map            as M
 
 
--- TODO Is it file or db like sqlite?
--- TODO What am I do if my neighbors is a liars?
-loadMyShardIndex :: IO (S.Set ShardHash)
-loadMyShardIndex = undefined
-
-
--- TODO Is it file or db like sqlite?
-loadInitInformation :: IO (S.Set Neighbor, MyNodePosition)
-loadInitInformation = undefined
-
-
--- TODO Is it file or db like sqlite?
-loadShards :: IO (M.Map ShardHash Shard)
-loadShards = undefined
-
-
-sendToNetLevet :: Chan ManagerMiningMsgBase -> ShardingNodeRequestAndResponce -> IO ()
-sendToNetLevet aChan aMsg = writeChan aChan $ ShardingNodeRequestOrResponce aMsg
-
-initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
-    sendToNetLevet aChanOfNetLevel $ IamAwakeRequst aMyNodeId aMyNodePosition
-
-    aMyShardsIndex <- loadMyShardIndex
-    (aMyNeighbors, aMyPosition) <- loadInitInformation
-
-    metronome (10^8) $ do
-        writeChan aChanRequest CleanShardsAction
-
-    metronome (10^8) $ do
-        writeChan aChanRequest ShiftAction
-
-    return $ makeEmptyShardingNode aMyNeighbors aMyNodeId aMyPosition aMyShardsIndex
-
-
-neighborPositions :: ShardingNode -> S.Set NodePosition
-neighborPositions = S.map (^.neighborPosition) . (^.nodeNeighbors)
-
-shiftIsNeed :: ShardingNode -> Bool
-shiftIsNeed aShardingNode = checkUnevenness
-    (aShardingNode^.nodePosition) (neighborPositions aShardingNode)
-
-
-shiftTheShardingNode ::
-        Chan ManagerMiningMsgBase
-    -> (ShardingNode ->  IO ())
-    ->  ShardingNode
-    ->  IO ()
-shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
-    let
-        aNeighborPositions :: S.Set NodePosition
-        aNeighborPositions = neighborPositions aShardingNode
-
-        aMyNodePosition :: MyNodePosition
-        aMyNodePosition    = aShardingNode^.nodePosition
-
-        aNearestPositions :: S.Set NodePosition
-        aNearestPositions  = S.fromList $
-            findNearestNeighborPositions aMyNodePosition aNeighborPositions
-
-        aNewPosition :: MyNodePosition
-        aNewPosition       = shiftToCenterOfMass aMyNodePosition aNearestPositions
-
-    sendToNetLevet aChanOfNetLevel $ NewPosiotionResponse aNewPosition
-    aLoop $ aShardingNode & nodePosition .~ aNewPosition
-
-
-deleteTheNeighbor :: NodeId -> ShardingNode -> ShardingNode
-deleteTheNeighbor aNodeId aShardingNode =
-    aShardingNode & nodeNeighbors %~ S.filter (\n -> n^.neighborId /= aNodeId)
-
-
-insertTheNeighbor :: NodeId -> NodePosition -> ShardingNode -> ShardingNode
-insertTheNeighbor aNodeId aNodePosition aShardingNode =
-    aShardingNode & nodeNeighbors %~ S.insert (Neighbor aNodePosition aNodeId)
-
-
-findShardingNodeDomain :: ShardingNode -> Distance Point
-findShardingNodeDomain aShardingNode = findNodeDomain
-    (aShardingNode^.nodePosition)
-    (neighborPositions aShardingNode)
-
-
-isInNodeDomain :: ShardingNode -> NodePosition -> Bool
-isInNodeDomain aShardingNode aNodePosition =
-    distanceTo (aShardingNode^.nodePosition) aNodePosition `div` neighborsMemoryDistanse < findShardingNodeDomain aShardingNode
-
-
-addShardingIndex :: S.Set ShardHash ->  ShardingNode -> ShardingNode -- Is it one list or many?
-addShardingIndex aShardIndex aShardingNode =
-    aShardingNode & nodeIndex %~ S.union aShardIndex
-
-
-createShardingIndex :: Chan ManagerMiningMsgBase -> ShardingNode -> NodeId -> Word64 ->  IO ()
-createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = do
-    let maybeNeighbor = S.toList$ S.filter (\n -> n^.neighborId == aNodeId) $
-            aShardingNode^.nodeNeighbors
-    case maybeNeighbor of
-        [Neighbor aNeighborPosition _] -> do
-            let resultsShardingHash = S.filter
-                    (checkShardIsInRadiusOfCapture aNeighborPosition aRadiusOfCapture)
-                    (aShardingNode^.nodeIndex)
-            sendToNetLevet aChanOfNetLevel (ShardIndexResponse aNodeId $ S.toList resultsShardingHash)
-        _                      -> return ()
-
----- TODO after add db
-saveShard :: Shard -> (ShardingNode ->  IO ()) -> ShardingNode -> IO ()
-saveShard aShard aLoop aShardingNode = undefined
-
-
-checkShardIsInRadiusOfCaptureShardingNode :: ShardingNode -> ShardHash -> Bool
-checkShardIsInRadiusOfCaptureShardingNode aShardNode aShardHash =
-    checkShardIsInRadiusOfCapture
-        (toNodePosition $ aShardNode^.nodePosition)
-        (mul    (findShardingNodeDomain aShardNode)
-                (distanceNormalizedCapture + aShardNode^.nodeDistance))
-        aShardHash
-
-
-mul :: Word64 -> Word64 -> Word64
-mul x y
-    | aResult > toInteger (maxBound :: Word64) = maxBound
-    | otherwise = fromInteger aResult
-  where
-    aResult = (toInteger x * toInteger y) `div` distanceNormalizedCapture
-
-
-checkShardIsInRadiusOfCapture :: NodePosition -> Distance Point -> ShardHash -> Bool
-checkShardIsInRadiusOfCapture aNodePosition aRadiusOfCapture aShardHashs =
-    aShardDistanceToPoint `div` (distanceNormalizedCapture + aShardCaptureDistance) <
-        aRadiusOfCapture `div` distanceNormalizedCapture
-  where
-    aShardDistanceToPoint = distanceTo aNodePosition aShardHashs
-    aShardCaptureDistance = shardCaptureDistance aShardHashs
-
-
-sendShardsToNode ::
-        ShardingNode
-    ->  NodeId
-    -> [ShardHash]
-    ->  Chan ManagerMiningMsgBase
-    ->  IO ()
-sendShardsToNode aShardingNode aNodeId aHashList aChanOfNetLevel = do
-    aShards <- loadShards
-    let aShardList = M.elems $
-            M.filterWithKey (\aHash _-> aHash `elem` aHashList) aShards
-    sendToNetLevet aChanOfNetLevel $ ShardListResponse aNodeId aShardList
-
-
 --makeShardingNode :: MyNodeId -> Point -> IO ()
 makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition = do
     aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition
@@ -216,15 +68,122 @@ makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition = do
 
 --        CleanShardsAction -> do
 
-
-
         _ -> undefined
-{-
-|   CleanShardsAction -- clean local Shards
--}
---------------------------------------------------------------------------------
 
---------------------------TODO-TO-REMOVE-------------------------------------------
+
+
+--------------------------------------------------------------------------------
+--                              INTERNAL                                      --
+--------------------------------------------------------------------------------
+initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
+    sendToNetLevet aChanOfNetLevel $ IamAwakeRequst aMyNodeId aMyNodePosition
+
+    aMyShardsIndex <- loadMyShardIndex
+    (aMyNeighbors, aMyPosition) <- loadInitInformation
+
+    metronome (10^8) $ do
+        writeChan aChanRequest CleanShardsAction
+
+    metronome (10^8) $ do
+        writeChan aChanRequest ShiftAction
+
+    return $ makeEmptyShardingNode aMyNeighbors aMyNodeId aMyPosition aMyShardsIndex
+
+
+shiftTheShardingNode ::
+        Chan ManagerMiningMsgBase
+    -> (ShardingNode ->  IO ())
+    ->  ShardingNode
+    ->  IO ()
+shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
+    let
+        aNeighborPositions :: S.Set NodePosition
+        aNeighborPositions = neighborPositions aShardingNode
+
+        aMyNodePosition :: MyNodePosition
+        aMyNodePosition    = aShardingNode^.nodePosition
+
+        aNearestPositions :: S.Set NodePosition
+        aNearestPositions  = S.fromList $
+            findNearestNeighborPositions aMyNodePosition aNeighborPositions
+
+        aNewPosition :: MyNodePosition
+        aNewPosition       = shiftToCenterOfMass aMyNodePosition aNearestPositions
+
+    sendToNetLevet aChanOfNetLevel $ NewPosiotionResponse aNewPosition
+    aLoop $ aShardingNode & nodePosition .~ aNewPosition
+
+
+deleteTheNeighbor :: NodeId -> ShardingNode -> ShardingNode
+deleteTheNeighbor aNodeId aShardingNode =
+    aShardingNode & nodeNeighbors %~ S.filter (\n -> n^.neighborId /= aNodeId)
+
+
+insertTheNeighbor :: NodeId -> NodePosition -> ShardingNode -> ShardingNode
+insertTheNeighbor aNodeId aNodePosition aShardingNode =
+    aShardingNode & nodeNeighbors %~ S.insert (Neighbor aNodePosition aNodeId)
+
+
+isInNodeDomain :: ShardingNode -> NodePosition -> Bool
+isInNodeDomain aShardingNode aNodePosition =
+    distanceTo (aShardingNode^.nodePosition) aNodePosition `div` neighborsMemoryDistanse < findShardingNodeDomain aShardingNode
+
+
+addShardingIndex :: S.Set ShardHash ->  ShardingNode -> ShardingNode -- Is it one list or many?
+addShardingIndex aShardIndex aShardingNode =
+    aShardingNode & nodeIndex %~ S.union aShardIndex
+
+
+createShardingIndex :: Chan ManagerMiningMsgBase -> ShardingNode -> NodeId -> Word64 ->  IO ()
+createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = do
+    let maybeNeighbor = S.toList$ S.filter (\n -> n^.neighborId == aNodeId) $
+            aShardingNode^.nodeNeighbors
+    case maybeNeighbor of
+        [Neighbor aNeighborPosition _] -> do
+            let resultsShardingHash = S.filter
+                    (checkShardIsInRadiusOfCapture aNeighborPosition aRadiusOfCapture)
+                    (aShardingNode^.nodeIndex)
+            sendToNetLevet aChanOfNetLevel (ShardIndexResponse aNodeId $ S.toList resultsShardingHash)
+        _                      -> return ()
+
+---- TODO after add db
+saveShard :: Shard -> (ShardingNode ->  IO ()) -> ShardingNode -> IO ()
+saveShard aShard aLoop aShardingNode = undefined
+
+
+checkShardIsInRadiusOfCaptureShardingNode :: ShardingNode -> ShardHash -> Bool
+checkShardIsInRadiusOfCaptureShardingNode aShardNode aShardHash =
+    checkShardIsInRadiusOfCapture
+        (toNodePosition $ aShardNode^.nodePosition)
+        (mul    (findShardingNodeDomain aShardNode)
+                (distanceNormalizedCapture + aShardNode^.nodeDistance))
+        aShardHash
+
+
+
+checkShardIsInRadiusOfCapture :: NodePosition -> Distance Point -> ShardHash -> Bool
+checkShardIsInRadiusOfCapture aNodePosition aRadiusOfCapture aShardHashs =
+    aShardDistanceToPoint `div` (distanceNormalizedCapture + aShardCaptureDistance) <
+        aRadiusOfCapture `div` distanceNormalizedCapture
+  where
+    aShardDistanceToPoint = distanceTo aNodePosition aShardHashs
+    aShardCaptureDistance = shardCaptureDistance aShardHashs
+
+
+sendShardsToNode ::
+        ShardingNode
+    ->  NodeId
+    -> [ShardHash]
+    ->  Chan ManagerMiningMsgBase
+    ->  IO ()
+sendShardsToNode aShardingNode aNodeId aHashList aChanOfNetLevel = do
+    aShards <- loadShards
+    let aShardList = M.elems $
+            M.filterWithKey (\aHash _-> aHash `elem` aHashList) aShards
+    sendToNetLevet aChanOfNetLevel $ ShardListResponse aNodeId aShardList
+
+--------------------------------------------------------------------------------
+--------------------------TODO-TO-REMOVE----------------------------------------
 findNodeDomain :: MyNodePosition -> S.Set NodePosition -> Distance Point
 findNodeDomain aMyPosition aPositions = if
     | length aNearestPoints < 4 -> maxBound
@@ -232,3 +191,49 @@ findNodeDomain aMyPosition aPositions = if
         last . sort $ distanceTo aMyPosition <$> aNearestPoints
   where
     aNearestPoints = findNearestNeighborPositions aMyPosition aPositions
+
+
+
+-- TODO Is it file or db like sqlite?
+-- TODO What am I do if my neighbors is a liars?
+loadMyShardIndex :: IO (S.Set ShardHash)
+loadMyShardIndex = undefined
+
+
+-- TODO Is it file or db like sqlite?
+loadInitInformation :: IO (S.Set Neighbor, MyNodePosition)
+loadInitInformation = undefined
+
+
+-- TODO Is it file or db like sqlite?
+loadShards :: IO (M.Map ShardHash Shard)
+loadShards = undefined
+
+
+neighborPositions :: ShardingNode -> S.Set NodePosition
+neighborPositions = S.map (^.neighborPosition) . (^.nodeNeighbors)
+
+
+-- !!!! -> ????????????
+findShardingNodeDomain :: ShardingNode -> Distance Point
+findShardingNodeDomain aShardingNode = findNodeDomain
+    (aShardingNode^.nodePosition)
+    (neighborPositions aShardingNode)
+
+
+shiftIsNeed :: ShardingNode -> Bool
+shiftIsNeed aShardingNode = checkUnevenness
+    (aShardingNode^.nodePosition) (neighborPositions aShardingNode)
+
+
+sendToNetLevet :: Chan ManagerMiningMsgBase -> ShardingNodeRequestAndResponce -> IO ()
+sendToNetLevet aChan aMsg = writeChan aChan $ ShardingNodeRequestOrResponce aMsg
+
+--
+
+mul :: Word64 -> Word64 -> Word64
+mul x y
+    | aResult > toInteger (maxBound :: Word64) = maxBound
+    | otherwise = fromInteger aResult
+  where
+    aResult = (toInteger x * toInteger y) `div` distanceNormalizedCapture
