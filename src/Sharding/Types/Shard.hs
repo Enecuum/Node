@@ -63,3 +63,12 @@ shardToHash (Shard aShardType aByteString) =
 
 distanceNormalizedCapture :: Num a => a
 distanceNormalizedCapture = 1024
+
+
+checkShardIsInRadiusOfCapture :: NodePosition -> Distance Point -> ShardHash -> Bool
+checkShardIsInRadiusOfCapture aNodePosition aRadiusOfCapture aShardHashs =
+    aShardDistanceToPoint `div` (distanceNormalizedCapture + aShardCaptureDistance) <
+        aRadiusOfCapture `div` distanceNormalizedCapture
+  where
+    aShardDistanceToPoint = distanceTo aNodePosition aShardHashs
+    aShardCaptureDistance = shardCaptureDistance aShardHashs

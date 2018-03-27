@@ -4,10 +4,12 @@ module Sharding.ShardDB.ShardIndex where
 
 import              Control.Exception
 import              Lens.Micro.TH
+import              Lens.Micro
 import              System.Clock
 import              Data.Serialize
 import qualified    Data.ByteString as B
 import              Data.Monoid
+import              Data.List.Extra
 
 import qualified    Data.Set as S
 import              GHC.Generics
@@ -16,8 +18,10 @@ import              Sharding.Types.Shard
 import              Sharding.Space.Distance
 import              Sharding.Space.Point
 
-data ShardExistIndex   = ShardExistIndex [SpaceSnapshot] SpaceSnapshot
-  deriving (Show, Eq, Ord, Generic)
+data ShardExistIndex   = ShardExistIndex {
+      _baseSnapshots  :: [SpaceSnapshot]
+    , _lastSnapshot   :: SpaceSnapshot
+  } deriving (Show, Eq, Ord, Generic)
 
 data ShardNeededIndex  = ShardNeededIndex [ShardHash]
   deriving (Show, Eq, Ord, Generic)
@@ -46,7 +50,7 @@ instance Serialize ShardNeededIndex
 instance Serialize ShardLoadingIndex
 instance Serialize Priority
 
-
+makeLenses ''ShardExistIndex
 makeLenses ''ShardIndex
 
 
@@ -54,8 +58,40 @@ addShardToIndex :: Shard -> MyNodePosition -> ShardIndex -> ShardIndex
 addShardToIndex aShard aMyPosition aShardIndex = undefined
 
 
-cleanShardIndex :: MyNodePosition -> Distance Point -> Int -> ShardIndex -> ShardIndex
-cleanShardIndex aMyNodePosition aDistance aCount aShardIndex = undefined
+cleanShardIndex :: MyNodePosition -> Distance Point -> Int -> ShardIndex -> (ShardIndex, [ShardHash])
+cleanShardIndex  aMyNodePosition aRadiusOfCapture aCount aShardIndex = if
+    | aSizeOfIndex < aCount                         -> (aShardIndex, [])
+    | aSizeOfBaseIndex >= aCount                    -> (
+            aShardIndex & shardExistIndex.lastSnapshot .~ empty
+        ,   snapshotToListOfHash $ aShardIndex^.shardExistIndex.lastSnapshot)
+    | otherwise                                     -> (
+            aShardIndex & shardExistIndex.lastSnapshot .~ SpaceSnapshot aTaken
+        ,   fst <$> aDroped <> aFilterDeleted)
+  where
+    (aTaken, aDroped)            = splitAt (aCount - aSizeOfBaseIndex) aFiltered
+    (aFiltered , aFilterDeleted) = partition aCondition aListOfHashTheLastSnapshot
+
+    aCondition = checkShardIsInRadiusOfCapture
+        (toNodePosition aMyNodePosition)
+        aRadiusOfCapture.fst
+
+    SpaceSnapshot aListOfHashTheLastSnapshot    = aLastSnapshot
+    aLastSnapshot                               = aShardIndex^.shardExistIndex.lastSnapshot
+    aSizeOfIndex                                = sizeOfIndex aShardIndex
+    aSizeOfBaseIndex                            = aSizeOfIndex - sizeOfSnapshot aLastSnapshot
+
+
+snapshotToListOfHash :: SpaceSnapshot -> [ShardHash]
+snapshotToListOfHash (SpaceSnapshot aList) = fst <$> aList
+
+
+sizeOfIndex :: ShardIndex -> Int
+sizeOfIndex (ShardIndex (ShardExistIndex aSnapshotList aLastSnapshot) _ _) =
+    sum (sizeOfSnapshot <$> aSnapshotList) + sizeOfSnapshot aLastSnapshot
+
+
+sizeOfSnapshot :: SpaceSnapshot -> Int
+sizeOfSnapshot (SpaceSnapshot aSpaceSnapshots) = length aSpaceSnapshots
 
 class RecalcIndex a where
     recalcIndex :: MyNodePosition -> a -> a

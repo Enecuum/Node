@@ -163,16 +163,6 @@ checkShardIsInRadiusOfCaptureShardingNode aShardNode aShardHash =
         aShardHash
 
 
-
-checkShardIsInRadiusOfCapture :: NodePosition -> Distance Point -> ShardHash -> Bool
-checkShardIsInRadiusOfCapture aNodePosition aRadiusOfCapture aShardHashs =
-    aShardDistanceToPoint `div` (distanceNormalizedCapture + aShardCaptureDistance) <
-        aRadiusOfCapture `div` distanceNormalizedCapture
-  where
-    aShardDistanceToPoint = distanceTo aNodePosition aShardHashs
-    aShardCaptureDistance = shardCaptureDistance aShardHashs
-
-
 sendShardsToNode ::
         ShardingNode
     ->  NodeId
