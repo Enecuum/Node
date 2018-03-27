@@ -10,6 +10,9 @@ newtype MyNodePosition  = MyNodePosition Point deriving (Eq, Ord, Show)
 newtype NodePosition    = NodePosition Point deriving (Eq, Ord, Show)
 newtype ShardPosition   = ShardPosition Point deriving (Eq, Ord, Show)
 
+toNodePosition :: MyNodePosition -> NodePosition
+toNodePosition (MyNodePosition aPosition) = NodePosition aPosition
+
 -- | Find the support points.
 {-# INLINE findSupportPoints #-}
 findSupportPoints :: Point -> [Point]
