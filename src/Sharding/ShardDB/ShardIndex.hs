@@ -64,13 +64,10 @@ addShardToIndex aShard aMyPosition aShardIndex = aShardIndex &~ do
     zoom shardExistIndex $ do
         lastSnapshot.shapshotHashes %= aFilter
         zoom baseSnapshots $ do
-            ix 0 %= addShardToSnapshot aShard aMyPosition
-            zoom (_tail.traversed) $ do
-                shapshotHashes %= aFilter
-
+            _head %= addShardToSnapshot aShard aMyPosition
+            _tail.traversed.shapshotHashes %= aFilter
   where
-    aHash   = shardToHash aShard
-    aFilter = filter (\(h, _) -> h /= aHash)
+    aFilter = filter (\(h, _) -> h /= shardToHash aShard)
 
 
 addShardToSnapshot :: Shard -> MyNodePosition -> SpaceSnapshot -> SpaceSnapshot
@@ -182,7 +179,7 @@ instance Emptable ShardIndex where
     empty = ShardIndex empty empty empty
 
 instance Emptable ShardExistIndex where
-    empty = ShardExistIndex [] empty
+    empty = ShardExistIndex [empty] empty
 
 instance Emptable ShardLoadingIndex where
     empty = ShardLoadingIndex []
