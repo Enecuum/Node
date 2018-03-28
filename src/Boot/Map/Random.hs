@@ -11,6 +11,8 @@ module Boot.Map.Random (
 import              System.Random
 import              Control.Monad
 import              Data.Maybe
+import              Node.Data.NodeTypes
+import              Node.Data.NetPackage
 import qualified    Data.Map as M
 import              Node.Data.Data
 

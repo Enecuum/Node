@@ -14,6 +14,9 @@ import              System.Environment
 import              Node.Data.Data
 import              Service.System.Directory (createFilesDirectory)
 import              Service.Config
+import              Node.Data.NodeTypes
+import              Node.Data.NetMesseges
+
 
 makeFileConfig :: String -> NodeVariantRoles -> PortNumber -> IO ()
 makeFileConfig path aRoles aPort = do

@@ -28,9 +28,11 @@ import              Node.Node.Base
 import              Node.Node.Types
 import              Service.Monad.Option
 import              Node.Crypto
-import              Node.Data.Data
 import              Service.Metrics
 
+import              Node.Data.NodeTypes
+import              Node.Data.NetPackage
+import              Node.Data.NetMesseges
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
 managerMining ch aMd = forever $ do

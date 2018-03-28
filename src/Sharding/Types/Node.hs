@@ -4,6 +4,8 @@
 module Sharding.Types.Node where
 
 import              Node.Data.Data
+import              Node.Data.NodeTypes
+import              Node.Data.NetPackage
 
 import              Sharding.ShardDB.ShardIndex
 import              Sharding.Types.Shard

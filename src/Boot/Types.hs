@@ -15,6 +15,9 @@ import qualified    Data.Bimap                      as BI
 import qualified    Boot.Map.Random                 as RM
 import              Node.Node.Types
 
+import              Node.Data.NodeTypes
+import              Node.Data.NetPackage
+import              Node.Data.NetMesseges
 
 data NodeBootNodeData where
     NodeBootNodeData :: {

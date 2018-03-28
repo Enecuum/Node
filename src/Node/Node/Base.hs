@@ -38,6 +38,10 @@ import              Node.Crypto
 import              Node.Data.Data
 import              Node.FileDB.FileDB
 import              Node.Extra
+import              Node.Data.NodeTypes
+import              Node.Data.NetPackage
+import              Node.Data.NetMesseges
+
 
 loging :: NodeConfigClass aData => aData -> String -> IO ()
 loging aData aString = do
