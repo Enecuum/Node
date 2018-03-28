@@ -1,10 +1,15 @@
+{-# LANGUAGE DeriveGeneric #-}
 module Sharding.Space.Point where
 
-import Data.Word
+import              Data.Serialize
+import              Data.Word
+import              GHC.Generics
 
 -- * Points in the testing space
 data Point = Point !Word64 !Word64
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Show, Generic)
+
+instance Serialize Point
 
 newtype MyNodePosition  = MyNodePosition Point deriving (Eq, Ord, Show)
 newtype NodePosition    = NodePosition Point deriving (Eq, Ord, Show)

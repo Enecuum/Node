@@ -7,15 +7,12 @@ module Node.Crypto (
     makePackagedMsg,
     makeIPRequest,
     makeIHaveBroadcastConnects,
-    makeInfoPingIAmPublicator,
-    makeTransactionConfirmation,
+
     getMsgPackage,
     verifyConnectingMsg,
     verifyByteString,
     verifyIPAnswer,
     verifyIHaveBroadcastConnects,
-    verifyInfoPingIAmPublicator,
-    verifyTransactionConfirmation,
     genKayPair,
     encrypt,
     cryptoHash,
@@ -70,12 +67,6 @@ makeIHaveBroadcastConnects aNumOfConnects aIp aPort (MyNodeId aNodeId) aPrivateK
     return $ IHaveBroadcastConnects aTime aNumOfConnects aIp aPort
         (NodeId aNodeId) aSignature
 
-makeTransactionConfirmation :: MonadRandom m =>
-    Transaction -> MyNodeId -> PrivateKey -> m InfoPingPackage
-makeTransactionConfirmation aTransaction aNodeId aPrivateKey =
-    TransactionConfirmation aTransaction (toNodeId aNodeId) <$>
-        signEncodeble aPrivateKey (aTransaction, toNodeId aNodeId)
-
 
 makeIPRequest :: NodeId -> PrivateKey -> IO PingPackage
 makeIPRequest aNodeId aPrivateKey = do
@@ -83,12 +74,6 @@ makeIPRequest aNodeId aPrivateKey = do
     aSignature  <- signEncodeble aPrivateKey (aTime, aNodeId)
     pure $ IPRequest aTime aSignature
 
-
-makeInfoPingIAmPublicator :: MonadRandom m =>
-    MyNodeId -> TimeSpec -> PrivateKey -> m InfoPingPackage
-makeInfoPingIAmPublicator aNodeId aTimeSpec aPrivateKey = IAmPublicator
-    aTimeSpec (toNodeId aNodeId) <$> signEncodeble aPrivateKey
-        (aTimeSpec, toNodeId aNodeId)
 
 makePackagedMsg ::
     PackagedMsgStringEncoded -> StringKey -> CryptoFailable PackagedMsg
@@ -109,20 +94,6 @@ verifyConnectingMsg = \case
         verifyEncodeble aKey aSig (aPublicPoint, aId, aKey) &&
         keyToId aKey == aId
     _                               -> error "Crypto: verifyConnectingMsg"
-
-
-verifyInfoPingIAmPublicator :: InfoPingPackage -> Bool
-verifyInfoPingIAmPublicator (IAmPublicator aTimeSpec aNodeId aSignature) =
-    verifyEncodeble (idToKey aNodeId) aSignature (aTimeSpec, aNodeId)
-verifyInfoPingIAmPublicator _ =
-    error "verifyInfoPingIAmPublicator: it is not a \"IAmPublicator\""
-
-verifyTransactionConfirmation :: InfoPingPackage -> Bool
-verifyTransactionConfirmation
-    (TransactionConfirmation aTransaction aNodeId aSignature) =
-    verifyEncodeble (idToKey aNodeId) aSignature (aTransaction, aNodeId)
-verifyTransactionConfirmation _ =
-    error "verifyTransactionConfirmation: it is not a \"TransactionConfirmation\""
 
 
 verifyIHaveBroadcastConnects :: InfoPingPackage -> Bool
