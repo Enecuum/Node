@@ -10,6 +10,7 @@ extra-deps:
 - time-interval-0.1.1
 - time-units-1.0.0
 - base58-bytestring-0.1.0
+- HongoDB-0.0.1
 
 
 build:

@@ -170,10 +170,8 @@ sendShardsToNode ::
     ->  Chan ManagerMiningMsgBase
     ->  IO ()
 sendShardsToNode aShardingNode aNodeId aHashList aChanOfNetLevel = do
-    aShards <- loadShards
-    let aShardList = M.elems $
-            M.filterWithKey (\aHash _-> aHash `elem` aHashList) aShards
-    sendToNetLevet aChanOfNetLevel $ ShardListResponse aNodeId aShardList
+    aShards <- loadShards aHashList
+    sendToNetLevet aChanOfNetLevel $ ShardListResponse aNodeId aShards
 
 --------------------------------------------------------------------------------
 --------------------------TODO-TO-REMOVE----------------------------------------
