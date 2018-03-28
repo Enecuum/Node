@@ -137,7 +137,7 @@ answerToConnectivityQuery aChan aMd _ = do
             aIPRequest <- makeIPRequest
                 (keyToId $ aNode^.nPublicKey)
                 (aData^.privateKey)
-            sendToNode (makePingMsg aIPRequest) aNode
+            sendToNode (makePingPongMsg Ping aIPRequest) aNode
         | otherwise -> do
             aListOfConnects <- readRecordFromNodeListFile $ aData^.myNodeId
             if  | null aListOfConnects  -> do
@@ -326,7 +326,7 @@ answerToHelloMsg aMsg aId aMd = do
         pingTime        .= diffTimeSpec mark time
       ) aId
     whenJust (aId `M.lookup` (aData^.nodes)) $ \aNode -> do
-        sendToNode (makePingMsg BroadcastNodeListRequest) aNode
+        sendToNode (makePingPongMsg Ping BroadcastNodeListRequest) aNode
 
 
 answerToDisconnect :: ManagerData md => [Reason] -> NodeId -> IORef md -> IO ()
@@ -529,7 +529,7 @@ sendInfoPingToNodes aMd aInfoPing = do
     sendToNodes aData aMakeMsg
   where
     aMakeMsg :: StringKey -> CryptoFailable PackagedMsg
-    aMakeMsg aKey = makeInfoPing aInfoPing aKey
+    aMakeMsg aKey = makePingPongMsg InfoPing aInfoPing aKey
 
 
 sendToNodes :: ManagerData md =>

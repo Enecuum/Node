@@ -1,12 +1,10 @@
 {-# LANGUAGE ScopedTypeVariables, LambdaCase #-}
 module Node.Crypto (
     makeConnectingMsg,
-    makePingMsg,
-    makePongMsg,
-    makeInfoPing,
     makePackagedMsg,
     makeIPRequest,
     makeIHaveBroadcastConnects,
+    makePingPongMsg,
 
     getMsgPackage,
     verifyConnectingMsg,
@@ -44,14 +42,6 @@ makeConnectingMsg nId aPublicPoint aPrivateKey publicKey = do
     ConnectingMsg aPublicPoint (toNodeId nId) publicKey <$>
         signEncodeble aPrivateKey (aPublicPoint, toNodeId nId, publicKey)
 
-makePingMsg :: PingPackage -> StringKey -> CryptoFailable PackagedMsg
-makePingMsg = makePingPongMsg Ping
-
-makePongMsg :: PongPackage -> StringKey -> CryptoFailable PackagedMsg
-makePongMsg = makePingPongMsg Pong
-
-makeInfoPing :: InfoPingPackage -> StringKey -> CryptoFailable PackagedMsg
-makeInfoPing = makePingPongMsg InfoPing
 
 makeIHaveBroadcastConnects ::
     Int
