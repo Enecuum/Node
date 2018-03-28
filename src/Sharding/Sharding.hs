@@ -24,6 +24,10 @@ import              Service.Timer
 import qualified    Data.Set            as S
 import qualified    Data.Map            as M
 
+import              Node.Data.NodeTypes
+import              Node.Data.NetPackage
+import              Node.Data.NetMesseges
+
 
 --makeShardingNode :: MyNodeId -> Point -> IO ()
 makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition = do

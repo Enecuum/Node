@@ -24,6 +24,8 @@ module Node.Crypto (
 
 import              Service.Network.Base (HostAddress, PortNumber)
 import              Node.Data.Data
+import              Node.Data.NodeTypes
+import              Node.Data.NetPackage
 import              Service.Types
 import              System.Clock
 import              Crypto.Cipher.Types

@@ -18,6 +18,9 @@ import              Node.Crypto
 import              Node.Data.Data
 import              Service.Timer
 
+import              Node.Data.NodeTypes
+import              Node.Data.NetPackage
+import              Node.Data.NetMesseges
 
 managerBootNode :: Chan ManagerBootNodeMsgBase -> IORef NodeBootNodeData -> IO ()
 managerBootNode ch md = forever $ do

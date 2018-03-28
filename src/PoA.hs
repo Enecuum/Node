@@ -18,6 +18,7 @@ import              Service.Types
 import              Node.Extra
 
 import              Node.Data.Data
+import              Node.Data.NodeTypes
 
 loging :: String -> String -> IO ()
 loging aPath aString = do

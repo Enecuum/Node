@@ -6,6 +6,7 @@ import Network.Socket     (PortNumber)
 import Service.Config
 import Node.Node.Config.Make
 import Node.Data.Data
+import Node.Data.NodeTypes
 
 main :: IO ()
 main = do
@@ -13,8 +14,8 @@ main = do
     maybeConf <- findConfigFile args
     case maybeConf of
       Nothing     -> return ()
-      Just config -> do 
+      Just config -> do
         maybePort <- getVar config "MakeConfigBootNode" "port"
         case maybePort of
-          Nothing -> return () 
+          Nothing -> return ()
           Just port -> makeFileConfig "./data/bootInitData.bin" [BootNode] ((read port)::PortNumber)
