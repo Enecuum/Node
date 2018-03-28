@@ -105,7 +105,7 @@ miningNodeAnswerToPing _ aMd aNodeId aPing = do
     case aPing of
         IPRequest aTimeSpec aSignature -> whenJust (aNodeId `M.lookup` (aData^.nodes)) $
             \aNode -> sendToNode
-                (makePongMsg (IPAnswer (aNode^.nHostAddress) aTimeSpec aSignature))
+                (makePingPongMsg Pong (IPAnswer (aNode^.nHostAddress) aTimeSpec aSignature))
                 aNode
 
         BroadcastNodeListRequest -> whenJust (aNodeId `M.lookup` (aData^.nodes)) $
@@ -114,7 +114,7 @@ miningNodeAnswerToPing _ aMd aNodeId aPing = do
                 aListOfContacts    <- shuffleM $ map (\(a, b, c) -> (a, (b, c)))
                     aRawListOfContacts
                 sendToNode
-                    (makePongMsg (BroadcastNodeListAnswer $ take 5 aListOfContacts))
+                    (makePingPongMsg Pong (BroadcastNodeListAnswer $ take 5 aListOfContacts))
                     aNode
         _ -> return ()
 

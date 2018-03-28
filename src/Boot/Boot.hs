@@ -65,7 +65,7 @@ answerToCheckBroadcastNodes aMd aChan _ = do
     forM_ aNeededInBroadcastLis $ \aNodeId -> do
         aBroadcastNodeList <- aData^.broadcastNodes.to (RM.takeRandom 10)
         sendJustPackagedMsg $ makeMsg aNodeId aData $
-            makePongMsg $ BroadcastNodeListAnswer aBroadcastNodeList
+            makePingPongMsg Pong $ BroadcastNodeListAnswer aBroadcastNodeList
         whenJust (aNodeId `M.lookup` (aData^.nodes)) $ \aNode -> do
             timer 100000 $ do
                 sendExitMsgToNode aNode
