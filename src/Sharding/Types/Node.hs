@@ -8,7 +8,8 @@ import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 
 import              Sharding.ShardDB.ShardIndex
-import              Sharding.Types.Shard
+import              Sharding.Types.ShardTypes
+import              Sharding.Types.ShardLogic
 import              Sharding.Space.Point
 
 import              Lens.Micro.TH
@@ -58,8 +59,8 @@ data ShardingNodeAction =
 
 data ShardingNodeRequestAndResponce =
         IamAwakeRequst        MyNodeId MyNodePosition -- broadcast for all network
-    ----
-    |   ShardIndexRequest     [NodeId]    -- for neighbors
+    ---- TODO sending of ShardIndexRequest
+    |   ShardIndexRequest     Word64 [NodeId]    -- for neighbors
     |   ShardIndexResponse    NodeId [ShardHash]
     |   ShardListRequest      [ShardHash]
     |   ShardListResponse     NodeId [Shard]

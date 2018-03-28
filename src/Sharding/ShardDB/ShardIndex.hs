@@ -16,7 +16,8 @@ import              Data.List.Extra
 import qualified    Data.Set as S
 import              GHC.Generics
 
-import              Sharding.Types.Shard
+import              Sharding.Types.ShardTypes
+import              Sharding.Types.ShardLogic
 import              Sharding.Space.Distance
 import              Sharding.Space.Point
 

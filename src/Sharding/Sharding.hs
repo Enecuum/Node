@@ -6,7 +6,8 @@ module Sharding.Sharding where
 import              Sharding.Space.Distance
 import              Sharding.Space.Point
 import              Sharding.Space.Shift
-import              Sharding.Types.Shard
+import              Sharding.Types.ShardTypes
+import              Sharding.Types.ShardLogic
 import              Sharding.Types.Node
 import              Sharding.ShardDB.ShardIndex
 import              Sharding.ShardDB.ShardStore

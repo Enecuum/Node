@@ -15,7 +15,8 @@ import System.Directory
 import Node.Crypto
 
 import Sharding.Types.Node
-import Sharding.Types.Shard
+import Sharding.Types.ShardTypes
+import Sharding.Types.ShardLogic
 import Sharding.Space.Point
 import Sharding.Space.Distance
 

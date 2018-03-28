@@ -13,6 +13,8 @@ import              Crypto.PubKey.ECC.ECDSA (Signature(..))
 import              Crypto.PubKey.ECC.DH
 import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 import              Node.Data.NetMesseges
+import              Data.Word
+import              Sharding.Types.ShardTypes
 
 data PackagedMsg where
     ConnectingMsg       ::
@@ -26,12 +28,72 @@ data PackagedMsg where
 
 
 data Package where
-    Hello           :: HelloMsg          -> Package
-    Disconnect      :: [Reason]          -> Package
-    Ping            :: PingPackage       -> Package
-    Pong            :: PongPackage       -> Package
-    InfoPing        :: InfoPingPackage   -> Package
+    Hello                   :: HelloMsg                             -> Package
+    Disconnect              :: [Reason]                             -> Package
+    Ping                    :: PingPackage                          -> Package
+    Pong                    :: PongPackage                          -> Package
+    InfoPing                :: InfoPingPackage                      -> Package
+    Request                 :: RequestPackage                       -> Package
+    Answer                  :: AnswerPackage                        -> Package
+    ConfirmationOfRequest   :: ConfirmationOfRequestPackage         -> Package
   deriving (Eq, Generic, Show)
+
+
+data RequestPackage where
+    ShardIndexRequestPackage    :: NodeId   -> MyNodeId -> TimeSpec  -> Signature -> Word64    -> RequestPackage
+    ShardRequestAdressedPackage :: NodeId   -> MyNodeId -> TimeSpec  -> Signature -> ShardHash -> RequestPackage
+    ShardRequestPackage         :: MyNodeId -> TimeSpec -> Signature -> ShardHash              -> RequestPackage
+
+  deriving (Eq, Generic, Show)
+
+data AnswerPackage where
+    ShardIndexAnswerPackage ::
+            NodeId
+        ->  MyNodeId
+        ->  TimeSpec
+        ->  Signature
+        ->  Word64
+        -> [ShardHash]
+        ->  AnswerPackage
+    ShardAnswerPackage      :: MyNodeId -> TimeSpec -> ShardHash -> Shard -> AnswerPackage
+  deriving (Eq, Generic, Show)
+
+
+
+data ConfirmationOfRequestPackage where
+    ConfirmationOfRequestPackage :: ConfirmationOfRequestPackage
+  deriving (Eq, Generic, Show)
+
+{-
+data ShardingNodeRequestAndResponce =
+        IamAwakeRequst        MyNodeId MyNodePosition -- broadcast InfoPing
+    ----
+    |   ShardIndexResponse    NodeId [ShardHash]    --- AnswerPackag
+    |   ShardListResponse     NodeId [Shard]        --- AnswerPackage
+    --- ShiftAction => NewPosiotionResponse
+    |   NewPosiotionResponse   MyNodePosition
+    ---
+  deriving (Show)
+data ShardingNodeAction =
+
+        NewNodeInNetAction          NodeId NodePosition   --- infoPing ???
+
+    |   ShardIndexCreateAction      NodeId Word64
+    |   ShardIndexAcceptAction      [ShardHash]
+    |   ShardListCreateAction       NodeId [ShardHash]
+    |   ShardAcceptAction           Shard
+    ---
+    |   NewShardInNetAction         Shard
+    |   CleanShardsAction -- clean local Shards
+    --- ShiftAction => NewPosiotionResponse
+    |   ShiftAction
+    |   TheNodeHaveNewCoordinates   NodeId NodePosition
+    ---- NeighborListRequest => NeighborListAcceptAction
+    |   TheNodeIsDead               NodeId
+
+
+
+-}
 
 
 data Reason where
@@ -91,6 +153,10 @@ data InfoPingPackage where
   deriving (Generic, Eq, Show)
 
 
+
+instance Serialize RequestPackage
+instance Serialize AnswerPackage
+instance Serialize ConfirmationOfRequestPackage
 instance Serialize Package
 instance Serialize PackagedMsg
 instance Serialize PongPackage
