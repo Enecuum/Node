@@ -41,9 +41,9 @@ data Package where
 
 
 data RequestPackage where
-    ShardIndexRequestPackage    :: NodeId   -> MyNodeId -> TimeSpec  -> Signature -> Word64    -> RequestPackage
-    ShardRequestAdressedPackage :: NodeId   -> MyNodeId -> TimeSpec  -> Signature -> ShardHash -> RequestPackage
-    ShardRequestPackage         :: MyNodeId -> TimeSpec -> Signature -> ShardHash              -> RequestPackage
+    ShardIndexRequestPackage    :: NodeId   -> MyNodeId -> TimeSpec  -> Word64 -> Signature    -> RequestPackage
+    ShardRequestAdressedPackage :: NodeId   -> MyNodeId -> TimeSpec  -> ShardHash -> Signature -> RequestPackage
+    ShardRequestPackage         :: MyNodeId -> TimeSpec -> ShardHash -> Signature              -> RequestPackage
   deriving (Eq, Generic, Show)
 
 data AnswerPackage where
@@ -55,7 +55,7 @@ data AnswerPackage where
         ->  Word64
         -> [ShardHash]
         ->  AnswerPackage
-    ShardAnswerPackage      :: MyNodeId -> TimeSpec -> ShardHash -> Shard -> AnswerPackage
+    ShardAnswerPackage      :: MyNodeId -> TimeSpec -> ShardHash -> Shard -> Signature-> AnswerPackage
   deriving (Eq, Generic, Show)
 
 
