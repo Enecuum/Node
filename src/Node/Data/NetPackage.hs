@@ -15,6 +15,7 @@ import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 import              Node.Data.NetMesseges
 import              Data.Word
 import              Sharding.Types.ShardTypes
+import              Sharding.Space.Point as P
 
 data PackagedMsg where
     ConnectingMsg       ::
@@ -43,7 +44,6 @@ data RequestPackage where
     ShardIndexRequestPackage    :: NodeId   -> MyNodeId -> TimeSpec  -> Signature -> Word64    -> RequestPackage
     ShardRequestAdressedPackage :: NodeId   -> MyNodeId -> TimeSpec  -> Signature -> ShardHash -> RequestPackage
     ShardRequestPackage         :: MyNodeId -> TimeSpec -> Signature -> ShardHash              -> RequestPackage
-
   deriving (Eq, Generic, Show)
 
 data AnswerPackage where
@@ -65,28 +65,10 @@ data ConfirmationOfRequestPackage where
   deriving (Eq, Generic, Show)
 
 {-
-data ShardingNodeRequestAndResponce =
-        IamAwakeRequst        MyNodeId MyNodePosition -- broadcast InfoPing
-    ----
-    |   ShardIndexResponse    NodeId [ShardHash]    --- AnswerPackag
-    |   ShardListResponse     NodeId [Shard]        --- AnswerPackage
-    --- ShiftAction => NewPosiotionResponse
-    |   NewPosiotionResponse   MyNodePosition
-    ---
-  deriving (Show)
+
 data ShardingNodeAction =
 
-        NewNodeInNetAction          NodeId NodePosition   --- infoPing ???
 
-    |   ShardIndexCreateAction      NodeId Word64
-    |   ShardIndexAcceptAction      [ShardHash]
-    |   ShardListCreateAction       NodeId [ShardHash]
-    |   ShardAcceptAction           Shard
-    ---
-    |   NewShardInNetAction         Shard
-    |   CleanShardsAction -- clean local Shards
-    --- ShiftAction => NewPosiotionResponse
-    |   ShiftAction
     |   TheNodeHaveNewCoordinates   NodeId NodePosition
     ---- NeighborListRequest => NeighborListAcceptAction
     |   TheNodeIsDead               NodeId
@@ -127,21 +109,13 @@ data PongPackage where
   deriving (Eq, Generic, Show)
 
 data InfoPingPackage where
+    NewShardInNetMessage    :: Shard -> InfoPingPackage
+    TheNodeHavePosition     :: MyNodeId -> P.Point -> TimeSpec -> Signature -> InfoPingPackage
+    IamAwakeMessage         :: MyNodeId -> P.Point -> TimeSpec -> Signature -> InfoPingPackage
+    -- ?????
     BlockMade               :: Microblock               -> InfoPingPackage
     NewTransactionInNet     :: Transaction              -> InfoPingPackage
-    NewTargetedTransaction  :: Transaction -> NodeId    -> InfoPingPackage
-    RoamTransaction         :: Transaction              -> InfoPingPackage
-    InfoPingRawPackage      :: B.ByteString               -> InfoPingPackage
-    TransactionConfirmation ::
-        Transaction
-        -> NodeId
-        -> Signature
-        -> InfoPingPackage
-    IAmPublicator           ::
-        TimeSpec
-        -> NodeId
-        -> Signature
-        -> InfoPingPackage
+
     IHaveBroadcastConnects ::
         TimeSpec ->
         Int ->
@@ -151,7 +125,6 @@ data InfoPingPackage where
         Signature ->
         InfoPingPackage
   deriving (Generic, Eq, Show)
-
 
 
 instance Serialize RequestPackage

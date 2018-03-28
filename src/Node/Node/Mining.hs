@@ -53,11 +53,6 @@ managerMining ch aMd = forever $ do
         opt isInitDatagram              $ answerToSendInitDatagram ch aMd
         opt isBlockMadeMsg              $ answerToBlockMadeMsg aMd
         opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
-        opt isSendTargetedTransaction   $ answerToSendTargetedTransaction aMd
-        opt isSendIAmPublicator         $ answerToSendIAmPublicator aMd
-        opt isSendRawData               $ answerToSendRawData aMd
-        opt isResendTransactionToPublicator $ answerToResendTransactionToPublicator aMd
-        opt isSendTransactionToPublicator $ answerToSendTransactionToPublicator aMd
         opt isDeleteOldestVacantPositions $ answerToDeleteOldestVacantPositions aMd
 
 miningNodeAnswerClientIsDisconnected ::
@@ -72,7 +67,7 @@ miningNodeAnswerClientIsDisconnected aMd
                 modifyIORef aMd $ (nodes %~ M.delete aNodeId)
 miningNodeAnswerClientIsDisconnected _ _ = pure ()
 
-
+----TODO: MOVE TO ?????? --------------
 answerToDeleteOldestVacantPositions ::
     IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
 answerToDeleteOldestVacantPositions aMd _ = do
@@ -80,10 +75,12 @@ answerToDeleteOldestVacantPositions aMd _ = do
     modifyIORef aMd $ vacantPositions %~ BI.filter (\aTimeSpec _ ->
         diffTimeSpec aTime aTimeSpec > 3000000)
 
+----TODO: MOVE TO ?????? --------------
 answerToDeleteOldestMsg :: IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
 answerToDeleteOldestMsg aMd _ = do
     aTime <- getTime Realtime
     modifyIORef aMd $ hashMap %~ deleteOldest aTime
+
 
 miningNodeAnswerToPong :: PongAnswer ManagerNodeData ManagerMiningMsgBase
 miningNodeAnswerToPong _ aMd aId aPong = do
@@ -125,67 +122,11 @@ miningNodeAnswerToInfoPing :: InfoPingAnswer  ManagerNodeData ManagerMiningMsgBa
 miningNodeAnswerToInfoPing _ aMd _ aInfoPing = do
     aData <- readIORef aMd
     loging aData $ "miningNodeAnswerToInfoPing " ++ show aInfoPing
-    case aInfoPing of
-        RoamTransaction aTransaction -> sendTransactionToRandomPublicator
-            aMd aTransaction
+    when (notInIndex aData aInfoPing) $ do
+        addInIndex aInfoPing aMd
+        sendInfoPingToNodes aMd aInfoPing
+        processingOfInfoPing aMd aInfoPing
 
-        _ -> when (notInIndex aData aInfoPing) $ do
-            addInIndex aInfoPing aMd
-            sendInfoPingToNodes aMd aInfoPing
-            processingOfInfoPing aMd aInfoPing
-
-acceptTransactionAndConfirmation ::
-    Transaction
-    -> IORef ManagerNodeData
-    -> IO ()
-acceptTransactionAndConfirmation  aTransaction aMd = do
-    aData <- readIORef aMd
-    loging aData $ "acceptTransactionAndConfirmation " ++ show aTransaction
-    metric $ add
-        ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount")
-        (1 :: Integer)
-    writeChan (aData^.transactions) aTransaction
-    aTransactionConfirmation <- makeTransactionConfirmation aTransaction
-        (aData^.myNodeId) (aData^.privateKey)
-    sendToNodes aData (makeInfoPing aTransactionConfirmation)
-
-answerToSendRawData :: IORef ManagerNodeData
-    -> ManagerMiningMsgBase
-    -> IO ()
-answerToSendRawData aMd (SendRawData aMsg) = do
-    metric $ increment "net.bl.count"
-    sendRawDataToNodes aMd aMsg
-answerToSendRawData _ _ = error "answerToSendRawData: something unexpected  has happened"
-
-answerToSendTargetedTransaction ::
-    IORef ManagerNodeData
-    -> ManagerMiningMsgBase
-    -> IO ()
-answerToSendTargetedTransaction aMd
-    (SendTargetedTransaction aTransaction aNid) =
-        sendInfoPingToNodes aMd $ NewTargetedTransaction aTransaction aNid
-answerToSendTargetedTransaction _ _ = error
-    "answerToSendTargetedTransaction: something unexpected  has happened."
-
-answerToSendIAmPublicator ::
-    IORef ManagerNodeData
-    -> ManagerMiningMsgBase
-    -> IO ()
-answerToSendIAmPublicator aMd _ =  do
-    aData <- readIORef aMd
-    aTime <- getTime Realtime
-    infoPingIAmPublicator <- makeInfoPingIAmPublicator
-        (aData^.myNodeId) aTime (aData^.privateKey)
-    sendInfoPingToNodes aMd infoPingIAmPublicator
-
-answerToResendTransactionToPublicator ::
-    IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
-answerToResendTransactionToPublicator aMd _ = do
-    aData <- readIORef aMd
-    aTime <- getTime Realtime
-    let ((_, aTransaction), aNewMap) = BI.deleteFindMin $ aData^.sendedTransctions
-    modifyIORef aMd $ sendedTransctions .~ BI.insert aTime aTransaction aNewMap
-    sendTransactionToRandomPublicator aMd aTransaction
 
 answerToNewTransaction :: IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
 answerToNewTransaction aMd (NewTransaction aTransaction) = do
@@ -216,17 +157,6 @@ answerToBlockMadeMsg _ _ = pure ()
 
 deriving instance Ord Transaction
 deriving instance Ord Signature
-
-answerToSendTransactionToPublicator ::
-    IORef ManagerNodeData
-    -> ManagerMiningMsgBase
-    -> IO ()
-answerToSendTransactionToPublicator aMd (SendTransactionToPublicator aTransaction) = do
-    aTime <- getTime Realtime
-    modifyIORef aMd (sendedTransctions %~ BI.insert aTime aTransaction)
-    sendTransactionToRandomPublicator aMd aTransaction
-answerToSendTransactionToPublicator _ _ = error
-    "answerToSendTransactionToPublicator: something unexpected  has happened"
 
 
 verifyNewData :: ManagerData md =>
@@ -264,30 +194,6 @@ isBootNode aId aData = aId `elem`
     ((\(i, _, _) -> i) <$> (aData^.nodeBaseData.bootNodes))
 
 
-sendRawDataToNodes :: IORef ManagerNodeData -> B.ByteString -> IO ()
-sendRawDataToNodes aMd aMsg = do
-    aData <- readIORef aMd
-    addInIndex aMsg aMd
-    sendInfoPingToNodes aMd $ InfoPingRawPackage aMsg
-    writeChan (aData^.answerChan) (RawPackege aMsg)
-
-
-sendTransactionToRandomPublicator :: IORef ManagerNodeData -> Transaction -> IO ()
-sendTransactionToRandomPublicator aMd aTransaction = do
-    aData <- readIORef aMd
-    if
-        | PublicatorNode `elem` aData^.nodeConfig.nodeVariantRoles -> do
-            acceptTransactionAndConfirmation aTransaction aMd
-        | aData^.publicators.to (not . S.null) -> do
-            aPublicators <- shuffleM $ S.toList (aData^.publicators)
-            sendInfoPingToNodes aMd $
-                NewTargetedTransaction aTransaction $ head aPublicators
-        | otherwise -> do
-            let aNodes = drop 1 $ sortOn (^.pingTime) $ getNodes BroadcastNode aData
-            forM_ aNodes $ sendToNode $
-                (\aStringKey -> makeInfoPing
-                    (RoamTransaction aTransaction) aStringKey)
-
 eq :: MyNodeId -> NodeId -> Bool
 eq (MyNodeId aMyNodeId) (NodeId aNodeId) = aMyNodeId == aNodeId
 
@@ -296,11 +202,6 @@ processingOfInfoPing aMd aInfoPing = do
     aData <- readIORef aMd
     loging aData $ "Recived " ++ show aInfoPing
     case aInfoPing of
-        NewTargetedTransaction aTransaction aNodeId
-            | aData^.myNodeId.to ((==) aNodeId . toNodeId) ->
-                acceptTransactionAndConfirmation aTransaction aMd
-        InfoPingRawPackage aMsg ->
-            writeChan (aData^.answerChan) $ RawPackege aMsg
         NewTransactionInNet aTransaction -> do
             metric $ add
                 ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount")
@@ -313,8 +214,6 @@ processingOfInfoPing aMd aInfoPing = do
                     modifyIORef aMd $ vacantPositions %~ BI.insert aTime
                         (aNodeId, aIp, aPort)
                     addRecordToNodeListFile (aData^.myNodeId) aNodeId aIp aPort
-        TransactionConfirmation aTransaction _ _ ->
-            modifyIORef aMd $ sendedTransctions %~ BI.deleteR aTransaction
         BlockMade aMicroblock -> do
             writeChan (aData^.microblockChan) aMicroblock
         _ -> return ()
