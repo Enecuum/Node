@@ -92,20 +92,20 @@ verifyTheNodeHavePosition = \case
     _   -> False
 
 
-makeShardRequestPackage :: MyNodeId -> ShardHash -> PrivateKey -> IO RequestPackage
-makeShardRequestPackage aMyNodeId aShardHash aPrivateKey = do
+makeShardRequestPackage :: P.Point -> MyNodeId -> ShardHash -> PrivateKey -> IO RequestPackage
+makeShardRequestPackage aPoint aMyNodeId aShardHash aPrivateKey = do
       aTime       <- getTime Realtime
-      aSignature  <- signEncodeble aPrivateKey (aMyNodeId, aShardHash, aTime, "ShardRequestPackage")
-      pure $ ShardRequestPackage aMyNodeId aTime aShardHash aSignature
+      aSignature  <- signEncodeble aPrivateKey (aMyNodeId, aPoint, aShardHash, aTime, "ShardRequestPackage")
+      pure $ ShardRequestPackage aPoint aMyNodeId aTime aShardHash aSignature
 
 
 verifyShardRequestPackage :: RequestPackage -> Bool
 verifyShardRequestPackage = \case
-    ShardRequestPackage aMyNodeId aTime aShardHash aSignature ->
+    ShardRequestPackage aPoint aMyNodeId aTime aShardHash aSignature ->
         verifyEncodeble
             (idToKey $ toNodeId aMyNodeId)
             aSignature
-            (aMyNodeId, aShardHash, aTime, "ShardRequestPackage")
+            (aMyNodeId, aPoint, aShardHash, aTime, "ShardRequestPackage")
     _ -> False
 
 
@@ -136,36 +136,36 @@ verifyIamAwakeMessage = \case
     _ -> False
 
 
-makeShardIndexRequestPackage :: NodeId -> MyNodeId -> Word64  -> PrivateKey -> IO RequestPackage
-makeShardIndexRequestPackage aNodeId aMyNodeId aRadius aPrivateKey = do
+makeShardIndexRequestPackage :: P.Point -> NodeId -> MyNodeId -> Word64  -> PrivateKey -> IO RequestPackage
+makeShardIndexRequestPackage aPoint aNodeId aMyNodeId aRadius aPrivateKey = do
     aTime       <- getTime Realtime
-    aSignature  <- signEncodeble aPrivateKey (aNodeId, aMyNodeId, aRadius, aTime, "ShardIndexRequestPackage")
-    pure $ ShardIndexRequestPackage aNodeId aMyNodeId aTime aRadius aSignature
+    aSignature  <- signEncodeble aPrivateKey (aNodeId, aPoint, aMyNodeId, aRadius, aTime, "ShardIndexRequestPackage")
+    pure $ ShardIndexRequestPackage aNodeId aPoint aMyNodeId aTime aRadius aSignature
 
 
 verifyShardIndexRequestPackage :: RequestPackage -> Bool
 verifyShardIndexRequestPackage = \case
-    ShardIndexRequestPackage aNodeId aMyNodeId aRadius aTime aSignature ->
+    ShardIndexRequestPackage aNodeId aPoint aMyNodeId aRadius aTime aSignature ->
         verifyEncodeble
             (idToKey $ toNodeId aMyNodeId)
             aSignature
-            (aNodeId, aMyNodeId, aRadius, aTime, "ShardIndexRequestPackage")
+            (aNodeId, aPoint, aMyNodeId, aRadius, aTime, "ShardIndexRequestPackage")
     _ -> False
 
 
-makeShardRequestAdressedPackage :: NodeId -> MyNodeId -> ShardHash -> PrivateKey -> IO RequestPackage
-makeShardRequestAdressedPackage aNodeId aMyNodeId aShardHash aPrivateKey = do
+makeShardRequestAdressedPackage :: P.Point -> NodeId -> MyNodeId -> ShardHash -> PrivateKey -> IO RequestPackage
+makeShardRequestAdressedPackage aPoint aNodeId aMyNodeId aShardHash aPrivateKey = do
     aTime       <- getTime Realtime
-    aSignature  <- signEncodeble aPrivateKey (aNodeId, aMyNodeId, aShardHash, aTime, "ShardRequestAdressedPackage")
-    pure $ ShardRequestAdressedPackage aNodeId aMyNodeId aTime aShardHash aSignature
+    aSignature  <- signEncodeble aPrivateKey (aNodeId, aPoint, aMyNodeId, aShardHash, aTime, "ShardRequestAdressedPackage")
+    pure $ ShardRequestAdressedPackage aNodeId aPoint aMyNodeId aTime aShardHash aSignature
 
 verifyShardRequestAdressedPackage :: RequestPackage -> Bool
 verifyShardRequestAdressedPackage = \case
-    ShardRequestAdressedPackage aNodeId aMyNodeId aTime aShardHash aSignature ->
+    ShardRequestAdressedPackage aNodeId aPoint aMyNodeId aTime aShardHash aSignature ->
         verifyEncodeble
             (idToKey $ toNodeId aMyNodeId)
             aSignature
-            (aNodeId, aMyNodeId, aShardHash, aTime, "ShardRequestAdressedPackage")
+            (aNodeId, aPoint, aMyNodeId, aShardHash, aTime, "ShardRequestAdressedPackage")
     _ -> False
 --------------------------------------------------------------------------------
 
