@@ -68,7 +68,7 @@ verifyBroadcastRequest aBroadcastThing
             (aMyNodeId, aTimeSpec, aBroadcastThing)
 
 
-decryptChipred :: StringKey -> CipheredString -> Maybe CipheredString
+decryptChipred :: StringKey -> CipheredString -> Maybe Ciphered
 decryptChipred aSecretKey aChipredString = case decode <$> aDecryptedString of
     Just (Right aChipred) -> Just aChipred
     _                     -> Nothing

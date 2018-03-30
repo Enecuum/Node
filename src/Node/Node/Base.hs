@@ -249,58 +249,48 @@ answerToInitDatagram aMd
         _                               -> writeChan aInputChan SenderTerminate
 answerToInitDatagram _ _                =  pure ()
 
-{-
-answerToDatagramMsg :: (NetAction md, ManagerData md, ManagerMsg a) =>
+
+answerToDatagramMsg :: (ManagerData md, ManagerMsg a) =>
     t
     -> IORef md
     -> p
     -> a
     -> IO ()
 answerToDatagramMsg aChan aMd _
-    (toManagerMsg -> DatagramMsg aDatagramMsg aId) = case decode aDatagramMsg of
-        Right (conMsg @(ConnectingMsg aMsg _ _ _))
-            | verifyConnectingMsg conMsg -> answerToRemoteConnectingMsg aId aMsg aMd
-        Right aPackagedMsg -> answerToPackagedMsg aId aChan aPackagedMsg aMd
-        _                           -> pure ()
+    (toManagerMsg -> DatagramMsg aDatagramMsg aId) = do
+        whenRight (decode aDatagramMsg) $ \case
+            aPack @(Unciphered (ConnectingRequest aPublicPoint aId _))
+                | verifyConnectingRequest aPack
+                    -> answerToRemoteConnectingMsg (toNodeId aId) aPublicPoint aMd
+            Ciphered aCipheredString ->
+                answerToPackagedMsg aId aChan aCipheredString aMd
+            _                     -> pure ()
 answerToDatagramMsg _ _  _ _    =  pure ()
--}
-{-
-answerToPackagedMsg :: (NetAction md, ManagerData md) =>
-    NodeId
-    -> aChan
-    -> PackagedMsg
-    -> IORef md
-    -> IO ()
-answerToPackagedMsg
-    aId
-    aChan
-    aPackagedMsg@(PackagedMsg aEncriptedMsg)
-    aMd
-    = do
-        aData <- readIORef aMd
-        loging aData $ "answerToPackagedMsg: " ++ show aEncriptedMsg
-        let encodedMsg = do
-                key  <- nodeKey =<< (aId `M.lookup`(aData^.nodes))
-                maybeCryptoError $ getMsgPackage key aPackagedMsg
-        whenJust encodedMsg $ \justEncodedMsg -> do
-            loging aData $ "aBinaryMsg from " ++ show aId ++ ": "  ++ show justEncodedMsg
-            let aMaybeDecodeMsg = decodePackage justEncodedMsg
-            whenLeft aData aMaybeDecodeMsg -- log
-            whenRight aMaybeDecodeMsg $ \aDecodeMsg -> do
-                loging aData $ "aDecodeMsg: " ++ show aDecodeMsg
-                case aDecodeMsg of
-                    Hello      aMsg              -> answerToHelloMsg aMsg aId aMd
-                    Disconnect aMsg              -> answerToDisconnect aMsg aId aMd
-                    Ping p                       -> actionByPing             aChan aMd aId p
-                    Pong p                       -> actionByPong             aChan aMd aId p
-                    InfoPing p                   -> actionByInfoPing         aChan aMd aId p
-                    Request t aMsg               -> actionByRequest          aChan aMd aId t aMsg
-                    Answer  t aMsg               -> actionByAnswerMsg        aChan aMd aId t aMsg
-                    ConfirmationOfRequest t aMsg -> actionByConfirmRequest   aChan aMd aId t aMsg
+
+
+answerToPackagedMsg :: ManagerData md => NodeId -> aChan -> CipheredString -> IORef md -> IO ()
+answerToPackagedMsg aId aChan aChipredString aMd = do
+    aData <- readIORef aMd
+    loging aData $ "answerToPackagedMsg: " ++ show aChipredString
+    let aDecryptedPacage = do
+            key  <- nodeKey =<< (aId `M.lookup`(aData^.nodes))
+            decryptChipred key aChipredString
+    whenJust aDecryptedPacage $ \case
+        PackageTraceRoutingRequest aTraceRouting aRequestPackage ->
+            packageTraceRoutingAction aChan aMd aId aTraceRouting aRequestPackage
+        PackageTraceRoutingResponce aTraceRouting aResponcePackage ->
+            packageTraceRoutingAction2 aChan aMd aId aTraceRouting aResponcePackage
+        PackageRequest aRequestPackage ->
+            packageRequest aChan aMd aId aRequestPackage
+        BroadcastRequest aBroadcastSignature aBroadcastThing ->
+            aBroadcastAction aChan aMd aId aBroadcastSignature aBroadcastThing
 
 answerToPackagedMsg _ _ _  _ = return ()
--}
 
+packageTraceRoutingAction = undefined
+packageTraceRoutingAction2 = undefined
+packageRequest   = undefined
+aBroadcastAction = undefined
 -- aNodeType -> t -> IORef md -> NodeId -> [(NodeId, TimeSpec, Signature)] -> RequestPackage -> IO ()
 
 
