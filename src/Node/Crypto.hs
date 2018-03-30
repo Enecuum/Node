@@ -77,13 +77,6 @@ decryptChipred aSecretKey aChipredString = case decode <$> aDecryptedString of
         encrypt aSecretKey (toByteString aChipredString)
 
 
---------------------------------------------------------------------------------
-
-
-
-
-
-
 verifyByteString :: PublicKey -> Signature ->  ByteString -> Bool
 verifyByteString = verify SHA3_256
 
