@@ -236,20 +236,19 @@ answerToDisconnectNode aData (toManagerMsg -> DisconnectNode aId) = do
 
 answerToDisconnectNode _ _ = pure ()
 
-{-
+
 answerToInitDatagram :: (ManagerData md, ManagerMsg msg) =>
     IORef md -> msg -> IO ()
 answerToInitDatagram aMd
     (toManagerMsg -> InitDatagram aInputChan aHostAdress aDatagram) = do
-    modifyIORef aMd $
-        nodeConfig.helloMsg.nodeVariantRoles %~ lInsert BroadcastNode
+    modifyIORef aMd $ nodeConfig.helloMsg.nodeVariantRoles %~ lInsert BroadcastNode
     case decode aDatagram of
         Right (aPack @(Unciphered (ConnectingRequest aPublicPoint aId _)))
             | verifyConnectingRequest aPack ->
-                answerToInitiatorConnectingMsg aId aHostAdress aInputChan aMsg aMd
+                answerToInitiatorConnectingMsg (toNodeId aId) aHostAdress aInputChan aPublicPoint aMd
         _                               -> writeChan aInputChan SenderTerminate
 answerToInitDatagram _ _                =  pure ()
--}
+
 {-
 answerToDatagramMsg :: (NetAction md, ManagerData md, ManagerMsg a) =>
     t
@@ -309,36 +308,15 @@ whenLeft :: (Show a, Show b, NodeConfigClass aData) =>
                  aData -> Either a b -> IO ()
 whenLeft aData aMsg@(Left _) = loging aData $ show aMsg
 whenLeft _ _ = pure ()
-{-
-answerToHelloMsg :: ManagerData md => HelloMsg -> NodeId -> IORef md -> IO ()
-answerToHelloMsg aMsg aId aMd = do
-    aData <- readIORef aMd
-    loging aData "answerToHelloMsg"
-    case getStatus aId aData of
-        Just (NodeStatus Initiator Auth) -> sendHelloDatagram aId aMd
-        _                                -> pure ()
-    time  <- getTime Realtime
 
-    when (aId `M.member` (aData^.nodes)) $  do
-        loging aData $ "Connected: " ++ show (aData^.myNodeId) ++ " to " ++ show aId
-    modifyIORef aMd $ nodes %~ M.adjust (&~ do
-        mHelloMsg       .= Just aMsg
-        status          .= Active
 
-        mark <- use pingMark
-        pingTime        .= diffTimeSpec mark time
-      ) aId
-    whenJust (aId `M.lookup` (aData^.nodes)) $ \aNode -> do
-        sendToNode (makePingPongMsg Ping BroadcastNodeListRequest) aNode
--}
-{-
 answerToDisconnect :: ManagerData md => [Reason] -> NodeId -> IORef md -> IO ()
 answerToDisconnect _ aNodeId aMd = do
     aData <- readIORef aMd
     loging aData "answerToDisconnect"
     whenJust (aNodeId `M.lookup` (aData^.nodes)) sendExitMsgToNode
--}
-{-
+
+
 answerToInitiatorConnectingMsg :: (ManagerData md) =>
     NodeId -> HostAddress -> Chan MsgToSender  -> PublicPoint -> IORef md -> IO ()
 answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aMd = do
@@ -349,48 +327,32 @@ answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aMd = do
         writeChan aInputChan SenderTerminate
     else do
         loging aData $ "is accepted " ++ showHostAddress aHostAdress ++ " " ++ show aId
-        let initSoketAndSendMsg = do
-                modifyIORef aMd $ nodes %~ M.insert aId (makeNode aInputChan aId aHostAdress)
-                aNewData <- readIORef aMd
-                sendRemoteConnectDatagram
-                    (fromJust (aId `M.lookup` (aNewData^.nodes)) ^.chan) aNewData
-                modifyIORef aMd $ nodes %~ M.adjust (&~ do
-                    mPublicPoint    .= Just aPublicPoint
-                    mKey            .= Just (getKay (aNewData^.privateNumber) aPublicPoint)
-                    status          .= NodeStatus Initiator Auth
-                  ) aId
-        case getStatus aId aData of
-            Nothing       -> initSoketAndSendMsg
-            Just Noactive -> initSoketAndSendMsg
-            _             -> pure ()
--}
-{-
+        modifyIORef aMd $ nodes %~ M.insert aId (makeNode aInputChan aId aHostAdress)
+        aNewData <- readIORef aMd
+        sendRemoteConnectDatagram aInputChan aNewData
+        modifyIORef aMd $ nodes %~ M.adjust (&~ do
+            mKey            .= Just (getKay (aNewData^.privateNumber) aPublicPoint)
+            status          .= Active
+          ) aId
+
 answerToRemoteConnectingMsg :: ManagerData md =>
     NodeId -> PublicPoint -> IORef md -> IO ()
 answerToRemoteConnectingMsg aId aPublicPoint aMd = do
     aData <- readIORef aMd
     loging aData $ "answerToRemoteConnectingMsg from " ++ show aId
-    case getStatus aId aData of
-        Just (NodeStatus Remote Auth) -> do
-            time  <- getTime Realtime
-            modifyIORef aMd $ nodes %~ M.adjust (&~ do
-                mPublicPoint    .= Just aPublicPoint
-                mKey            .= Just (getKay (aData^.privateNumber) aPublicPoint)
-                status          .= NodeStatus Remote Auth
-                pingMark        .= time
-              ) aId
-            sendHelloDatagram aId aMd
-        _   -> pure ()
--}
-{-
+    modifyIORef aMd $ nodes %~ M.adjust (&~ do
+        mKey            .= Just (getKay (aData^.privateNumber) aPublicPoint)
+        status          .= Active
+      ) aId
+
+
 sendRemoteConnectDatagram ::
     ManagerData md => Chan MsgToSender -> md -> IO ()
 sendRemoteConnectDatagram aChan aData = do
     loging aData $ "sendRemoteConnectDatagram"
-    aMsg <- makeConnectingMsg (aData^.myNodeId)
-        (aData^.publicPoint) (aData^.privateKey)  (aData^.publicKey)
-    sendPackagedMsg aChan aMsg
--}
+    sendPackagedMsg aChan =<<  makeConnectingRequest
+        (aData^.myNodeId) (aData^.publicPoint) (aData^.privateKey)
+
 {-# DEPRECATED sendDatagramFunc "Use sendPackagedMsg" #-}
 sendDatagramFunc :: Chan MsgToSender -> B.ByteString -> IO ()
 sendDatagramFunc aChan aMsg = writeChan aChan $ MsgToSender aMsg
@@ -398,14 +360,7 @@ sendDatagramFunc aChan aMsg = writeChan aChan $ MsgToSender aMsg
 
 sendPackagedMsg :: Chan MsgToSender -> Package -> IO ()
 sendPackagedMsg aChan aMsg = sendDatagramFunc aChan $ encode aMsg
-{-
-sendHelloDatagram :: ManagerData md =>
-    NodeId -> IORef md -> IO ()
-sendHelloDatagram aId aMd = readIORef aMd >>= \aData -> do
-    loging aData $ "sendHelloDatagram to " ++ show aId
-    sendJustPackagedMsg $ makeMsg aId aData $ makePackagedMsg
-        (encodePackage $ Hello $ aData^.nodeConfig.helloMsg)
--}
+
 
 initSenderSocket :: (ManagerMsg a, ManagerData md) =>
     Chan a -> HostAddress -> PortNumber -> NodeId -> IORef md -> IO (Chan MsgToSender)
@@ -421,9 +376,6 @@ initSenderSocket aManagerChan aIp aPort aId aMd = do
     return aNodeChan
 
 
-
-
-
 initSender :: ManagerMsg a =>
     NodeId -> Chan a -> HostAddress -> PortNumber -> IO (Chan MsgToSender)
 initSender aId aChan aIp aPort = do
@@ -435,19 +387,13 @@ initSender aId aChan aIp aPort = do
                 `finally` (writeChan aChan $ clientIsDisconnected aId aInputChan)
     return aInputChan
 
-
-
-
 {-
 type PingAnswer a c = Chan c -> IORef a -> NodeId -> PingPackage -> IO ()
 type PongAnswer a c = Chan c -> IORef a -> NodeId -> PongPackage -> IO ()
 type InfoPingAnswer a c =
     Chan c -> IORef a -> NodeId -> InfoPingPackage -> IO ()
 -}
-{-
-answerToPong :: (ManagerData md, ManagerMsg msg) => PongAnswer md msg
-answerToPong _ _ _ _ = return ()
--}
+
 minusStatusNumber :: (NodeBaseDataClass a, NodeConfigClass a) =>
     IORef a -> NodeId -> IO ()
 minusStatusNumber aMd aId = do

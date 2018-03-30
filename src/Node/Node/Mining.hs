@@ -79,7 +79,7 @@ answerToDeleteOldestMsg aMd _ = do
     aTime <- getTime Realtime
     modifyIORef aMd $ hashMap %~ deleteOldest aTime
 
-
+{-
 instance NetAction ManagerNodeData where
 
     actionByPing _ aMd aNodeId aPing = do
@@ -130,6 +130,7 @@ instance NetAction ManagerNodeData where
         loging aData $ "miningNodeAnswerToInfoPing " ++ show aRequest
         when (notInIndex aData aRequest) $ do
             addInIndex aRequest aMd
+-}
 {-
             sendInfoPingToNodes aMd aInfoPing
             processingOfInfoPing aMd aInfoPing
@@ -143,7 +144,7 @@ class NetAction aNodeType where
     actionByConfirmRequest  :: ManagerData md => aNodeType -> ShardingAction t md ConfirmationOfRequestPackage
 
 -}
-
+{-
 
 answerToNewTransaction :: IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
 answerToNewTransaction aMd (NewTransaction aTransaction) = do
@@ -159,7 +160,8 @@ answerToNewTransaction aMd (NewTransaction aTransaction) = do
 answerToNewTransaction _ _ = error
     "answerToNewTransaction: something unexpected  has happened."
 
-
+-}
+{-
 answerToBlockMadeMsg :: ManagerMiningMsg msg =>
     IORef ManagerNodeData -> msg -> IO ()
 answerToBlockMadeMsg aMd (toManagerMiningMsg -> BlockMadeMsg aMicroblock) = do
@@ -172,8 +174,7 @@ answerToBlockMadeMsg aMd (toManagerMiningMsg -> BlockMadeMsg aMicroblock) = do
     writeChan (aData^.microblockChan) aMicroblock
 answerToBlockMadeMsg _ _ = pure ()
 
-deriving instance Ord Transaction
-deriving instance Ord Signature
+-}
 
 
 verifyNewData :: ManagerData md =>
@@ -214,6 +215,7 @@ isBootNode aId aData = aId `elem`
 eq :: MyNodeId -> NodeId -> Bool
 eq (MyNodeId aMyNodeId) (NodeId aNodeId) = aMyNodeId == aNodeId
 
+{-
 processingOfInfoPing :: IORef ManagerNodeData -> InfoPingPackage -> IO ()
 processingOfInfoPing aMd aInfoPing = do
     aData <- readIORef aMd
@@ -234,3 +236,4 @@ processingOfInfoPing aMd aInfoPing = do
         BlockMade aMicroblock -> do
             writeChan (aData^.microblockChan) aMicroblock
         _ -> return ()
+-}
