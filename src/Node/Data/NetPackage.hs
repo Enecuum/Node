@@ -25,7 +25,7 @@ data Package where
   deriving (Eq, Generic, Show)
 
 data Unciphered where
-    ConnectingRequest  :: PublicPoint -> NodeId -> Signature    -> Unciphered
+    ConnectingRequest  :: PublicPoint -> MyNodeId -> Signature  -> Unciphered
     DisconnectRequest  :: [Reason]                              -> Unciphered
     PingRequest        :: Unciphered
     PongResponce       :: HostAddress -> Unciphered
