@@ -1,6 +1,8 @@
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Service.Types.PublicPrivateKeyPair where
 
@@ -24,6 +26,7 @@ import              Math.NumberTheory.Moduli
 import Data.Int (Int64)
 type Amount = Int64
 
+deriving instance Ord Signature
 
 type Signature = ECDSA.Signature
 

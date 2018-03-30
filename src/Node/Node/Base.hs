@@ -41,6 +41,7 @@ import              Node.Extra
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Data.NetMesseges
+import              Node.Action.NetAction
 
 
 loging :: NodeConfigClass aData => aData -> String -> IO ()
@@ -246,40 +247,30 @@ answerToInitDatagram aMd
 answerToInitDatagram _ _                =  pure ()
 
 
-answerToDatagramMsg :: (ManagerData md, ManagerMsg a) =>
+answerToDatagramMsg :: (NetAction md, ManagerData md, ManagerMsg a) =>
     t
     -> IORef md
     -> p
-    -> (t -> IORef md -> NodeId -> PingPackage -> IO ())
-    -> (t -> IORef md -> NodeId -> PongPackage -> IO ())
-    -> (t -> IORef md -> NodeId -> InfoPingPackage -> IO())
     -> a
     -> IO ()
-answerToDatagramMsg aChan aMd _ aAnswerToPing aAnswerToPong aAnswerToInfoPing
+answerToDatagramMsg aChan aMd _
     (toManagerMsg -> DatagramMsg aDatagramMsg aId) = case decode aDatagramMsg of
         Right (conMsg @(ConnectingMsg aMsg _ _ _))
             | verifyConnectingMsg conMsg -> answerToRemoteConnectingMsg aId aMsg aMd
-        Right aPackagedMsg -> answerToPackagedMsg aId
-            aChan aPackagedMsg aAnswerToPing aAnswerToPong aAnswerToInfoPing aMd
+        Right aPackagedMsg -> answerToPackagedMsg aId aChan aPackagedMsg aMd
         _                           -> pure ()
-answerToDatagramMsg _ _ _ _ _ _ _    =  pure ()
+answerToDatagramMsg _ _  _ _    =  pure ()
 
-answerToPackagedMsg :: ManagerData md =>
+answerToPackagedMsg :: (NetAction md, ManagerData md) =>
     NodeId
-    -> t
+    -> aChan
     -> PackagedMsg
-    -> (t -> IORef md -> NodeId -> PingPackage -> IO ())
-    -> (t -> IORef md -> NodeId -> PongPackage -> IO ())
-    -> (t -> IORef md -> NodeId -> InfoPingPackage -> IO())
     -> IORef md
     -> IO ()
 answerToPackagedMsg
     aId
     aChan
     aPackagedMsg@(PackagedMsg aEncriptedMsg)
-    aAnswerToPing
-    aAnswerToPong
-    aAnswerToInfoPing
     aMd
     = do
         aData <- readIORef aMd
@@ -294,12 +285,19 @@ answerToPackagedMsg
             whenRight aMaybeDecodeMsg $ \aDecodeMsg -> do
                 loging aData $ "aDecodeMsg: " ++ show aDecodeMsg
                 case aDecodeMsg of
-                    Hello      aMsg      -> answerToHelloMsg aMsg aId aMd
-                    Disconnect aMsg      -> answerToDisconnect aMsg aId aMd
-                    Ping p               -> aAnswerToPing aChan aMd aId p
-                    Pong p               -> aAnswerToPong aChan aMd aId p
-                    InfoPing p           -> aAnswerToInfoPing aChan aMd aId p
-answerToPackagedMsg _ _ _ _ _ _ _ = return ()
+                    Hello      aMsg              -> answerToHelloMsg aMsg aId aMd
+                    Disconnect aMsg              -> answerToDisconnect aMsg aId aMd
+                    Ping p                       -> actionByPing             aChan aMd aId p
+                    Pong p                       -> actionByPong             aChan aMd aId p
+                    InfoPing p                   -> actionByInfoPing         aChan aMd aId p
+                    Request t aMsg               -> actionByRequest          aChan aMd aId t aMsg
+                    Answer  t aMsg               -> actionByAnswerMsg        aChan aMd aId t aMsg
+                    ConfirmationOfRequest t aMsg -> actionByConfirmRequest   aChan aMd aId t aMsg
+
+answerToPackagedMsg _ _ _  _ = return ()
+
+
+-- aNodeType -> t -> IORef md -> NodeId -> [(NodeId, TimeSpec, Signature)] -> RequestPackage -> IO ()
 
 
 whenLeft :: (Show a, Show b, NodeConfigClass aData) =>

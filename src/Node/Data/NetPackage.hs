@@ -16,40 +16,71 @@ import              Node.Data.NetMesseges
 import              Data.Word
 import              Sharding.Types.ShardTypes
 import              Sharding.Space.Point as P
-
-data PackagedMsg where
-    ConnectingMsg :: PublicPoint -> NodeId -> ECDSA.PublicKey -> Signature -> PackagedMsg
-    PackagedMsg         :: PackagedMsgStringEncoded -> PackagedMsg
-  deriving (Eq, Generic, Show)
+import              Sharding.Space.Distance
 
 
 data Package where
-    Hello                   :: HelloMsg                                 -> Package
-    Disconnect              :: [Reason]                                 -> Package
-    Ping                    :: PingPackage                              -> Package
-    Pong                    :: PongPackage                              -> Package
-    InfoPing                :: InfoPingPackage                          -> Package
-    Request                 :: [(NodeId, TimeSpec, Signature)] -> RequestPackage  -> Package
-    Answer                  :: [(NodeId, TimeSpec, Signature)] -> AnswerPackage                -> Package
-    ConfirmationOfRequest   :: [(NodeId, TimeSpec, Signature)] -> ConfirmationOfRequestPackage -> Package
+    Ciphered   :: CipheredString -> Package
+    Unciphered :: Unciphered     -> Package
+  deriving (Eq, Generic, Show)
+
+data Unciphered where
+    ConnectingRequest  :: PublicPoint -> NodeId -> Signature    -> Unciphered
+    DisconnectRequest  :: [Reason]                              -> Unciphered
+    PingRequest        :: Unciphered
+    PongResponce       :: Unciphered
+    IpRequest          :: Unciphered
+    IpResponse         :: HostAddress -> Unciphered
+  deriving (Eq, Generic, Show)
+
+
+data Ciphered where
+    PackageTraceRoutingRequest  :: TraceRouting         -> RequestPackage     -> Ciphered
+    PackageTraceRoutingResponce :: TraceRouting         -> ResponcePackage   -> Ciphered
+    PackageRequest              ::                         RequestPackage    -> Ciphered
+    BroadcastRequest            :: BroadcastSignature   -> BroadcastThing    -> Ciphered
   deriving (Eq, Generic, Show)
 
 
 data RequestPackage where
-    ShardIndexRequestPackage    :: NodeId   -> P.Point -> MyNodeId -> TimeSpec -> Word64    -> Signature  -> RequestPackage
-    ShardRequestAdressedPackage :: NodeId   -> P.Point -> MyNodeId -> TimeSpec -> ShardHash -> Signature  -> RequestPackage
-    ShardRequestPackage         ::             P.Point -> MyNodeId -> TimeSpec -> ShardHash -> Signature  -> RequestPackage
-  deriving (Eq, Generic, Show)
-
-data AnswerPackage where
-    ShardIndexAnswerPackage :: NodeId -> MyNodeId -> TimeSpec -> Word64 -> [ShardHash] -> Signature -> AnswerPackage
-    ShardAnswerPackage      ::           MyNodeId -> TimeSpec -> ShardHash -> Shard    -> Signature -> AnswerPackage
+    ShardIndexRequestPackage    :: P.Point -> Distance P.Point -> RequestPackage
+    ShardRequestPackage         :: ShardHash -> RequestPackage
+    BroadcastListRequest        :: RequestPackage
   deriving (Eq, Generic, Show)
 
 
-data ConfirmationOfRequestPackage where
-    ConfirmationOfRequestPackage :: ConfirmationOfRequestPackage
+data ResponcePackage where
+    ConfirmResponce         :: RequestPackage                 -> ResponcePackage
+    ShardIndexResponce      :: RequestPackage -> [ShardHash]  -> ResponcePackage
+    ShardResponce           :: RequestPackage -> Shard        -> ResponcePackage
+    BroadcastListResponce   :: RequestPackage -> [(NodeId, HostAddress, PortNumber)] -> ResponcePackage
   deriving (Eq, Generic, Show)
+
+
+data BroadcastSignature where
+    BroadcastSignature :: MyNodeId -> TimeSpec  -> Signature  -> BroadcastSignature
+  deriving (Eq, Ord, Show, Generic)
+
+data TraceRouting where
+      ToNode     :: MyNodeId -> NodeId ->  TimeSpec  -> Signature  -> TraceRouting
+      ToDirect   :: [(NodeId, TimeSpec, Signature)] -> P.Point    -> TraceRouting
+  deriving (Eq, Ord, Show, Generic)
+
+
+newtype CipheredString = CipheredString B.ByteString
+    deriving (Eq, Ord, Show, Serialize)
+
+
+data BroadcastThing where
+    BroadcastWarning      :: BroadcastWarning               -> BroadcastThing
+    BroadcastShard        :: Shard                          -> BroadcastThing
+--  BroadcastBlock        :: Block                          -> BroadcastThing
+    BroadcastTransaction  :: Transaction                    -> BroadcastThing
+    BroadcastPosition     :: MyNodeId           -> P.Point  -> BroadcastThing
+  deriving (Eq, Ord, Show, Generic)
+
+data BroadcastWarning = INeedNeighbors MyNodeId HostAddress BroadcastWarning
+  deriving (Eq, Ord, Show, Generic)
 
 data Reason where
     DisconnectRequsted          :: Reason
@@ -68,51 +99,22 @@ data Reason where
   deriving (Generic, Eq, Enum, Show)
 
 
-data PingPackage where
-    EmptyPing   :: PingPackage
-    BroadcastNodeListRequest :: PingPackage
-    IPRequest   :: TimeSpec -> Signature -> PingPackage
-  deriving (Eq, Generic, Show)
-
-
-data PongPackage where
-    EmptyPong               :: PongPackage
-    IPAnswer                :: HostAddress -> TimeSpec -> Signature -> PongPackage
-    BroadcastNodeListAnswer :: [(NodeId, (HostAddress, PortNumber))] -> PongPackage
-  deriving (Eq, Generic, Show)
-
-data InfoPingPackage where
-    NewShardInNetMessage    :: Shard -> InfoPingPackage
-    TheNodeHavePosition     :: MyNodeId -> P.Point -> TimeSpec -> Signature -> InfoPingPackage
-    IamAwakeMessage         :: MyNodeId -> P.Point -> TimeSpec -> Signature -> InfoPingPackage
-    -- ?????
-    BlockMade               :: Microblock               -> InfoPingPackage
-    NewTransactionInNet     :: Transaction              -> InfoPingPackage
-
-    IHaveBroadcastConnects ::
-        TimeSpec ->
-        Int ->
-        HostAddress ->
-        PortNumber ->
-        NodeId ->
-        Signature ->
-        InfoPingPackage
-  deriving (Generic, Eq, Show)
-
-
-instance Serialize RequestPackage
-instance Serialize AnswerPackage
-instance Serialize ConfirmationOfRequestPackage
-instance Serialize Package
-instance Serialize PackagedMsg
-instance Serialize PongPackage
-instance Serialize InfoPingPackage
-instance Serialize PingPackage
+--------------------------------------------------------------------------------
 instance Serialize Reason
+instance Serialize BroadcastThing
+instance Serialize TraceRouting
+instance Serialize BroadcastSignature
+instance Serialize ResponcePackage
+instance Serialize Ciphered
+instance Serialize Package
+instance Serialize Unciphered
+instance Serialize RequestPackage
+instance Serialize BroadcastWarning
 
+--------------------------------------------------------------------------------
 class IsByteString a where
-    toByteString    :: a -> B.ByteString
-    fromByteString  :: B.ByteString -> a
+      toByteString    :: a -> B.ByteString
+      fromByteString  :: B.ByteString -> a
 
 
 encodePackage :: (Serialize a, IsByteString b) => a -> b
@@ -122,20 +124,12 @@ decodePackage :: (Serialize a, IsByteString b) => b -> Either String a
 decodePackage = decode . toByteString
 
 
-newtype PackagedMsgStringEncoded = PackagedMsgStringEncoded B.ByteString
-    deriving (Eq, Ord, Show, Serialize)
+instance IsByteString CipheredString where
+    fromByteString a = CipheredString a
+    toByteString (CipheredString a) = a
 
-instance IsByteString PackagedMsgStringEncoded where
-    fromByteString a = PackagedMsgStringEncoded a
-    toByteString (PackagedMsgStringEncoded a) = a
 
 instance Serialize TimeSpec where
     put (TimeSpec a b) = put a *> put b
     get = TimeSpec <$> get <*> get
-
-
-
-
-
-
 --------
