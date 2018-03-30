@@ -18,65 +18,38 @@ import              Sharding.Types.ShardTypes
 import              Sharding.Space.Point as P
 
 data PackagedMsg where
-    ConnectingMsg       ::
-        PublicPoint ->
-        NodeId ->
-        ECDSA.PublicKey ->
-        Signature ->
-        PackagedMsg
+    ConnectingMsg :: PublicPoint -> NodeId -> ECDSA.PublicKey -> Signature -> PackagedMsg
     PackagedMsg         :: PackagedMsgStringEncoded -> PackagedMsg
   deriving (Eq, Generic, Show)
 
 
 data Package where
-    Hello                   :: HelloMsg                             -> Package
-    Disconnect              :: [Reason]                             -> Package
-    Ping                    :: PingPackage                          -> Package
-    Pong                    :: PongPackage                          -> Package
-    InfoPing                :: InfoPingPackage                      -> Package
-    Request                 :: RequestPackage                       -> Package
-    Answer                  :: AnswerPackage                        -> Package
-    ConfirmationOfRequest   :: ConfirmationOfRequestPackage         -> Package
+    Hello                   :: HelloMsg                                 -> Package
+    Disconnect              :: [Reason]                                 -> Package
+    Ping                    :: PingPackage                              -> Package
+    Pong                    :: PongPackage                              -> Package
+    InfoPing                :: InfoPingPackage                          -> Package
+    Request                 :: [(NodeId, TimeSpec, Signature)] -> RequestPackage  -> Package
+    Answer                  :: [(NodeId, TimeSpec, Signature)] -> AnswerPackage                -> Package
+    ConfirmationOfRequest   :: [(NodeId, TimeSpec, Signature)] -> ConfirmationOfRequestPackage -> Package
   deriving (Eq, Generic, Show)
 
 
 data RequestPackage where
-    ShardIndexRequestPackage    :: NodeId   -> MyNodeId -> TimeSpec  -> Word64 -> Signature    -> RequestPackage
-    ShardRequestAdressedPackage :: NodeId   -> MyNodeId -> TimeSpec  -> ShardHash -> Signature -> RequestPackage
-    ShardRequestPackage         :: MyNodeId -> TimeSpec -> ShardHash -> Signature              -> RequestPackage
+    ShardIndexRequestPackage    :: NodeId   -> P.Point -> MyNodeId -> TimeSpec -> Word64    -> Signature  -> RequestPackage
+    ShardRequestAdressedPackage :: NodeId   -> P.Point -> MyNodeId -> TimeSpec -> ShardHash -> Signature  -> RequestPackage
+    ShardRequestPackage         ::             P.Point -> MyNodeId -> TimeSpec -> ShardHash -> Signature  -> RequestPackage
   deriving (Eq, Generic, Show)
 
 data AnswerPackage where
-    ShardIndexAnswerPackage ::
-            NodeId
-        ->  MyNodeId
-        ->  TimeSpec
-        ->  Signature
-        ->  Word64
-        -> [ShardHash]
-        ->  AnswerPackage
-    ShardAnswerPackage      :: MyNodeId -> TimeSpec -> ShardHash -> Shard -> Signature-> AnswerPackage
+    ShardIndexAnswerPackage :: NodeId -> MyNodeId -> TimeSpec -> Word64 -> [ShardHash] -> Signature -> AnswerPackage
+    ShardAnswerPackage      ::           MyNodeId -> TimeSpec -> ShardHash -> Shard    -> Signature -> AnswerPackage
   deriving (Eq, Generic, Show)
-
 
 
 data ConfirmationOfRequestPackage where
     ConfirmationOfRequestPackage :: ConfirmationOfRequestPackage
   deriving (Eq, Generic, Show)
-
-{-
-
-data ShardingNodeAction =
-
-
-    |   TheNodeHaveNewCoordinates   NodeId NodePosition
-    ---- NeighborListRequest => NeighborListAcceptAction
-    |   TheNodeIsDead               NodeId
-
-
-
--}
-
 
 data Reason where
     DisconnectRequsted          :: Reason
