@@ -12,7 +12,7 @@ import              Crypto.PubKey.ECC.ECDSA (Signature(..))
 
 type PingPongAction t md r = t -> IORef md -> NodeId -> r -> IO ()
 type ShardingAction t md r = t -> IORef md -> NodeId -> [(NodeId, TimeSpec, Signature)] -> r -> IO ()
-
+{-
 class ManagerData md => NetAction md where
     actionByPing            :: PingPongAction t md PingPackage
     actionByPong            :: PingPongAction t md PongPackage
@@ -21,3 +21,4 @@ class ManagerData md => NetAction md where
     actionByRequest         :: ShardingAction t md RequestPackage
     actionByAnswerMsg       :: ShardingAction t md AnswerPackage
     actionByConfirmRequest  :: ShardingAction t md ConfirmationOfRequestPackage
+-}
