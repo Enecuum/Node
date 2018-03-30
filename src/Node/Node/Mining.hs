@@ -1,6 +1,7 @@
 {-# LANGUAGE
     OverloadedStrings,
     MultiWayIf,
+    MultiParamTypeClasses,
     ViewPatterns,
     StandaloneDeriving,
     TypeSynonymInstances #-}
@@ -33,6 +34,8 @@ import              Service.Metrics
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Data.NetMesseges
+import              Node.Action.NetAction
+
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
 managerMining ch aMd = forever $ do
@@ -42,12 +45,7 @@ managerMining ch aMd = forever $ do
 
         opt isInitDatagram          $ answerToInitDatagram aMd
         opt isDatagramMsg           $ answerToDatagramMsg ch aMd (mData^.myNodeId)
-            miningNodeAnswerToPing
-            miningNodeAnswerToPong
-            miningNodeAnswerToInfoPing
-
-        opt isClientIsDisconnected $
-                miningNodeAnswerClientIsDisconnected aMd
+        opt isClientIsDisconnected $ miningNodeAnswerClientIsDisconnected aMd
 
         opt isNewTransaction            $ answerToNewTransaction aMd
         opt isInitDatagram              $ answerToSendInitDatagram ch aMd
@@ -82,50 +80,69 @@ answerToDeleteOldestMsg aMd _ = do
     modifyIORef aMd $ hashMap %~ deleteOldest aTime
 
 
-miningNodeAnswerToPong :: PongAnswer ManagerNodeData ManagerMiningMsgBase
-miningNodeAnswerToPong _ aMd aId aPong = do
-    aData <- readIORef aMd
-    loging aData $ "miningNodeAnswerToPong " ++ show aPong
-    case aPong of
-        aIPAnswer@(IPAnswer aIp aTimeSpec _)
-            | verifyIPAnswer aId (aData^.publicKey) aIPAnswer -> do
-                aTime <- getTime Realtime
-                when (diffTimeSpec aTime aTimeSpec < 3000000000) $
-                    modifyIORef aMd $ nodeBaseData.hostAddress .~ Just aIp
+instance NetAction ManagerNodeData where
 
-        BroadcastNodeListAnswer aListAnswer ->
-            forM_ aListAnswer $ \(aNodeId, (aIp, aPort)) ->
-                addRecordToNodeListFile (aData^.myNodeId) aNodeId aIp aPort
-        _                                   -> pure ()
-
-miningNodeAnswerToPing ::  PingAnswer ManagerNodeData ManagerMiningMsgBase
-miningNodeAnswerToPing _ aMd aNodeId aPing = do
-    aData <- readIORef aMd
-    loging aData $ "miningNodeAnswerToPing" ++ show aPing
-    case aPing of
-        IPRequest aTimeSpec aSignature -> whenJust (aNodeId `M.lookup` (aData^.nodes)) $
-            \aNode -> sendToNode
-                (makePingPongMsg Pong (IPAnswer (aNode^.nHostAddress) aTimeSpec aSignature))
-                aNode
-
-        BroadcastNodeListRequest -> whenJust (aNodeId `M.lookup` (aData^.nodes)) $
-            \aNode -> do
-                aRawListOfContacts <- readRecordFromNodeListFile $ aData^.myNodeId
-                aListOfContacts    <- shuffleM $ map (\(a, b, c) -> (a, (b, c)))
-                    aRawListOfContacts
-                sendToNode
-                    (makePingPongMsg Pong (BroadcastNodeListAnswer $ take 5 aListOfContacts))
+    actionByPing _ aMd aNodeId aPing = do
+        aData <- readIORef aMd
+        loging aData $ "miningNodeAnswerToPing" ++ show aPing
+        case aPing of
+            IPRequest aTimeSpec aSignature -> whenJust (aNodeId `M.lookup` (aData^.nodes)) $
+                \aNode -> sendToNode
+                    (makePingPongMsg Pong (IPAnswer (aNode^.nHostAddress) aTimeSpec aSignature))
                     aNode
-        _ -> return ()
 
-miningNodeAnswerToInfoPing :: InfoPingAnswer  ManagerNodeData ManagerMiningMsgBase
-miningNodeAnswerToInfoPing _ aMd _ aInfoPing = do
-    aData <- readIORef aMd
-    loging aData $ "miningNodeAnswerToInfoPing " ++ show aInfoPing
-    when (notInIndex aData aInfoPing) $ do
-        addInIndex aInfoPing aMd
-        sendInfoPingToNodes aMd aInfoPing
-        processingOfInfoPing aMd aInfoPing
+            BroadcastNodeListRequest -> whenJust (aNodeId `M.lookup` (aData^.nodes)) $
+                \aNode -> do
+                    aRawListOfContacts <- readRecordFromNodeListFile $ aData^.myNodeId
+                    aListOfContacts    <- shuffleM $ map (\(a, b, c) -> (a, (b, c)))
+                        aRawListOfContacts
+                    sendToNode
+                        (makePingPongMsg Pong (BroadcastNodeListAnswer $ take 5 aListOfContacts))
+                        aNode
+            _ -> return ()
+
+    actionByPong _ aMd aId aPong = do
+        aData <- readIORef aMd
+        loging aData $ "miningNodeAnswerToPong " ++ show aPong
+        case aPong of
+            aIPAnswer@(IPAnswer aIp aTimeSpec _)
+                | verifyIPAnswer aId (aData^.publicKey) aIPAnswer -> do
+                    aTime <- getTime Realtime
+                    when (diffTimeSpec aTime aTimeSpec < 3000000000) $
+                        modifyIORef aMd $ nodeBaseData.hostAddress .~ Just aIp
+
+            BroadcastNodeListAnswer aListAnswer ->
+                forM_ aListAnswer $ \(aNodeId, (aIp, aPort)) ->
+                    addRecordToNodeListFile (aData^.myNodeId) aNodeId aIp aPort
+            _                                   -> pure ()
+    --
+
+    actionByInfoPing _ aMd _ aInfoPing = do
+        aData <- readIORef aMd
+        loging aData $ "miningNodeAnswerToInfoPing " ++ show aInfoPing
+        when (notInIndex aData aInfoPing) $ do
+            addInIndex aInfoPing aMd
+            sendInfoPingToNodes aMd aInfoPing
+            processingOfInfoPing aMd aInfoPing
+
+    actionByRequest _ aMd _ _ aRequest = do
+        aData <- readIORef aMd
+        loging aData $ "miningNodeAnswerToInfoPing " ++ show aRequest
+        when (notInIndex aData aRequest) $ do
+            addInIndex aRequest aMd
+{-
+            sendInfoPingToNodes aMd aInfoPing
+            processingOfInfoPing aMd aInfoPing
+-}
+
+{-
+class NetAction aNodeType where
+
+    actionByRequest         :: ManagerData md => aNodeType -> ShardingAction t md RequestPackage
+    actionByAnswerMsg       :: ManagerData md => aNodeType -> ShardingAction t md AnswerPackage
+    actionByConfirmRequest  :: ManagerData md => aNodeType -> ShardingAction t md ConfirmationOfRequestPackage
+
+-}
 
 
 answerToNewTransaction :: IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()

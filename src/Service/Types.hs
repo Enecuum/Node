@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
-{-# LANGUAGE DeriveGeneric, LambdaCase #-}
+{-# LANGUAGE DeriveGeneric, LambdaCase, StandaloneDeriving #-}
 module Service.Types where
 
 import              Data.Serialize
@@ -30,7 +30,8 @@ data Transaction = WithTime { time :: Time, transaction :: Transaction }
 --                 | AccumulatorsToInductors { owner :: PublicKey, amount :: Amount }
 --                 | InductorsToAccumulators { owner :: PublicKey, amount :: Amount }
 --                 | SendInductorsFromKeyToKey { owner :: PublicKey, receiver :: PublicKey, amount :: Amount }
-  deriving ( Generic, Show, Eq)
+  deriving ( Generic, Show, Eq, Ord)
+
 
 instance Serialize Transaction
 
