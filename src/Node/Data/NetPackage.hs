@@ -28,9 +28,7 @@ data Unciphered where
     ConnectingRequest  :: PublicPoint -> NodeId -> Signature    -> Unciphered
     DisconnectRequest  :: [Reason]                              -> Unciphered
     PingRequest        :: Unciphered
-    PongResponce       :: Unciphered
-    IpRequest          :: Unciphered
-    IpResponse         :: HostAddress -> Unciphered
+    PongResponce       :: HostAddress -> Unciphered
   deriving (Eq, Generic, Show)
 
 
