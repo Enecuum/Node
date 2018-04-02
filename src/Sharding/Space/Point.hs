@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric, GeneralizedNewtypeDeriving #-}
 module Sharding.Space.Point where
 
 import              Data.Serialize
@@ -11,9 +11,9 @@ data Point = Point !Word64 !Word64
 
 instance Serialize Point
 
-newtype MyNodePosition  = MyNodePosition Point deriving (Eq, Ord, Show)
-newtype NodePosition    = NodePosition Point deriving (Eq, Ord, Show)
-newtype ShardPosition   = ShardPosition Point deriving (Eq, Ord, Show)
+newtype MyNodePosition  = MyNodePosition Point deriving (Eq, Ord, Show, Serialize)
+newtype NodePosition    = NodePosition Point deriving (Eq, Ord, Show, Serialize)
+newtype ShardPosition   = ShardPosition Point deriving (Eq, Ord, Show, Serialize)
 
 toNodePosition :: MyNodePosition -> NodePosition
 toNodePosition (MyNodePosition aPosition) = NodePosition aPosition

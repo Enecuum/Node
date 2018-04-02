@@ -47,7 +47,6 @@ data RequestPackage where
 
 
 data ResponcePackage where
-    ConfirmResponce         :: RequestPackage                 -> ResponcePackage
     ShardIndexResponce      :: RequestPackage -> [ShardHash]  -> ResponcePackage
     ShardResponce           :: RequestPackage -> Shard        -> ResponcePackage
     BroadcastListResponce   :: RequestPackage -> [(NodeId, HostAddress, PortNumber)] -> ResponcePackage
@@ -60,7 +59,7 @@ data BroadcastSignature where
 
 data TraceRouting where
       ToNode     :: MyNodeId -> NodeId ->  TimeSpec  -> Signature  -> TraceRouting
-      ToDirect   :: [(NodeId, TimeSpec, Signature)] -> P.Point    -> TraceRouting
+      ToDirect   :: [(NodeId, TimeSpec, Signature)] -> P.Point     -> TraceRouting
   deriving (Eq, Ord, Show, Generic)
 
 
@@ -69,11 +68,11 @@ newtype CipheredString = CipheredString B.ByteString
 
 
 data BroadcastThing where
-    BroadcastWarning      :: BroadcastWarning               -> BroadcastThing
-    BroadcastShard        :: Shard                          -> BroadcastThing
---  BroadcastBlock        :: Block                          -> BroadcastThing
-    BroadcastTransaction  :: Transaction                    -> BroadcastThing
-    BroadcastPosition     :: MyNodeId           -> P.Point  -> BroadcastThing
+    BroadcastWarning      :: BroadcastWarning                   -> BroadcastThing
+    BroadcastShard        :: Shard                              -> BroadcastThing
+--  BroadcastBlock        :: Block                              -> BroadcastThing
+    BroadcastTransaction  :: Transaction                        -> BroadcastThing
+    BroadcastPosition     :: MyNodeId           -> NodePosition -> BroadcastThing
   deriving (Eq, Ord, Show, Generic)
 
 data BroadcastWarning = INeedNeighbors MyNodeId HostAddress
