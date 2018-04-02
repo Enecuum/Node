@@ -31,7 +31,7 @@ import              Node.Data.NetMesseges
 
 
 --makeShardingNode :: MyNodeId -> Point -> IO ()
-makeShardingNode aMyNodeId  aChanRequest aChanOfNetLevel aMyNodePosition = do
+makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
     aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition
     void $ forkIO $ aLoop aShardingNode
   where

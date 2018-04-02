@@ -69,20 +69,7 @@ baseNodeOpts aChan aMd aData = do
     opt isConnectivityQuery     $ answerToConnectivityQuery aChan aMd
     opt isSendDatagram          $ answerToSendDatagram      aMd
     opt isDisconnectNode        $ answerToDisconnectNode    aData
-    opt isStateRequest          $ answerToStateRequest      aData
     opt isDeleteDeadSouls       $ answerToDeleteDeadSouls   aData
-
-
-answerToStateRequest :: (ManagerData md, ManagerMsg msg) => md -> msg -> IO ()
-answerToStateRequest aMd _ = do
-    let aBroadcastNum = length $ filter (\aNode -> aNode^.status == Active) $
-            getNodes BroadcastNode aMd
-    writeChan (aMd^.answerChan) $ StateRequestAnswer
-        (aMd^.nodeConfig.nodeVariantRoles) (aMd^.myNodeId)
-
-        (aMd^.nodes.to (length . M.keys . M.filter (\a -> a^.status == Active)))
-        aBroadcastNum
-        (aMd^.nodes.to (length . M.keys))
 
 
 answerToSendDatagram :: (ManagerData md, ManagerMsg msg) =>
@@ -330,7 +317,7 @@ answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aMd = do
         writeChan aInputChan SenderTerminate
     else do
         loging aData $ "is accepted " ++ showHostAddress aHostAdress ++ " " ++ show aId
-        modifyIORef aMd $ nodes %~ M.insert aId (makeNode aInputChan aId aHostAdress)
+        modifyIORef aMd $ nodes %~ M.insert aId (makeNode aInputChan)
         aNewData <- readIORef aMd
         sendRemoteConnectDatagram aInputChan aNewData
         modifyIORef aMd $ nodes %~ M.adjust (&~ do
@@ -374,7 +361,7 @@ initSenderSocket aManagerChan aIp aPort aId aMd = do
     aNodeChan  <- initSender aId aManagerChan aIp aPort
     let fAlter = \case
           Just lNode    -> Just $ lNode & chan .~ aNodeChan
-          _             -> Just $ makeNode aNodeChan aId aIp
+          _             -> Just $ makeNode aNodeChan
     modifyIORef aMd (nodes %~ M.alter fAlter aId)
     return aNodeChan
 
@@ -429,31 +416,24 @@ class GetNodes a where
     getNodes :: ManagerData md => a -> md -> [Node]
 
 
-instance GetNodes NodeVariantRole where
-    getNodes aRole aData = filter (\n -> (do
-        aMsg <- n^.mHelloMsg
-        pure $ aRole `elem` aMsg^.nodeVariantRoles) == Just True) $
-            aData^.nodes.to M.elems
-
 instance GetNodes NodeStatus where
     getNodes aStatus aData = filter (\aNode -> aNode^.status == aStatus) $
         aData^.nodes.to M.elems
 
-{-
-sendInfoPingToNodes :: ManagerData md => IORef md -> InfoPingPackage -> IO ()
-sendInfoPingToNodes aMd aInfoPing = do
+
+sendBroadcastThingToNodes :: ManagerData md => IORef md -> BroadcastSignature -> BroadcastThing -> IO ()
+sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing = do
     aData <- readIORef aMd
     sendToNodes aData aMakeMsg
   where
     aMakeMsg :: StringKey -> CryptoFailable Package
-    aMakeMsg aKey = makePingPongMsg InfoPing aInfoPing aKey
--}
+    aMakeMsg = makeCipheredPackage
+        (BroadcastRequest aBroadcastSignature aBroadcastThing)
+
 
 sendToNodes :: ManagerData md =>
     md -> (StringKey -> CryptoFailable Package) -> IO ()
-sendToNodes aData aMakeMsg = do
-    forM_ (getNodes BroadcastNode aData <> getNodes SimpleNode aData)
-        (sendToNode aMakeMsg)
+sendToNodes aData aMakeMsg = forM_ (M.elems $ aData^.nodes) (sendToNode aMakeMsg)
 
 sendToNode :: (StringKey -> CryptoFailable Package) -> Node -> IO ()
 sendToNode aMakeMsg aNode = do
