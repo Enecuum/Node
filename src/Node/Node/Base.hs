@@ -207,7 +207,6 @@ sendInitDatagramFunc aManagerChan receiverIp receiverPort aId aMd = do
 
     aNodeChan <- initSenderSocket aManagerChan receiverIp receiverPort aId aMd
     sendPackagedMsg aNodeChan aMsg
-    modifyIORef aMd $ nodes %~ M.adjust (status .~ NodeStatus Remote Auth) aId
 
 
 answerToServerDead ::
@@ -263,7 +262,7 @@ answerToDatagramMsg _ _  _ _    =  pure ()
 
 
 class PackageTraceRoutingAction aManagerData aRequest where
-    makeAction :: aChan -> IORef aManagerData -> NodeId -> TraceRouting -> aRequest -> IO ()
+    makeAction                  :: aChan -> IORef aManagerData -> NodeId -> TraceRouting -> aRequest -> IO ()
 
 class BroadcastAction aManagerData where
     makeBroadcastAction :: aChan -> IORef aManagerData -> NodeId -> BroadcastSignature -> BroadcastThing -> IO ()

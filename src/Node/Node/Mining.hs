@@ -5,7 +5,9 @@
     MultiParamTypeClasses,
     ViewPatterns,
     StandaloneDeriving,
-    TypeSynonymInstances #-}
+    TypeSynonymInstances,
+    FlexibleContexts
+     #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Node.Node.Mining where
@@ -36,6 +38,7 @@ import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Data.NetMesseges
 import              Node.Action.NetAction
+import              Sharding.Types.Node
 
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
@@ -92,14 +95,63 @@ instance BroadcastAction ManagerNodeData where
 
 
 instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
-    makeAction _ md aNodeId aTraceRouting = \case
-        ConfirmResponce         aRequestPackage                 -> return ()
-        ShardIndexResponce      aRequestPackage aShardHashList  -> undefined
-        ShardResponce           aRequestPackage aShard          -> undefined
-        BroadcastListResponce   _ aBroadcastList                -> do
-            aData <- readIORef md
-            forM_ aBroadcastList $ \(aNodeId, aIp, aPort) -> do
-                addRecordToNodeListFile (aData^.myNodeId) aNodeId aIp aPort
+    makeAction _ md aNodeId aTraceRouting aResponcePackage = do
+        aData <- readIORef md
+        when (verifyResponce aTraceRouting aResponcePackage) $ if
+            | isItMyResponce aNodeId aTraceRouting  -> aProcessingOfAction aData
+            | otherwise                             -> aSendToNeighbor aData
+      where
+        verifyResponce _ _ = True -- TODO : add body
+        aProcessingOfAction aData = case aResponcePackage of
+            ShardIndexResponce      aRequestPackage aShardHashList  -> do
+                sendToShardingLvl aData $
+                    ShardIndexAcceptAction aShardHashList
+
+            ShardResponce           aRequestPackage aShard          -> do
+                sendToShardingLvl aData $ ShardAcceptAction aShard
+
+            BroadcastListResponce   _ aBroadcastList                -> do
+                forM_ aBroadcastList $ \(aNodeId, aIp, aPort) -> do
+                    addRecordToNodeListFile (aData^.myNodeId) aNodeId aIp aPort
+
+        aSendToNeighbor aData = case aTraceRouting of
+            ToDirect aTrace aPoint
+                | Just aNextNodeId <- lookupNextNode aTrace aData -> do
+                    let aNewTrace = dropWhile
+                            (\aElem -> aElem^._1 /= aNextNodeId)
+                            aTrace
+                    whenJust (aNextNodeId `M.lookup` (aData^.nodes)) $ \aNode ->
+                        sendToNode (makeCipheredPackage
+                            (PackageTraceRoutingResponce
+                                (ToDirect aNewTrace aPoint) aResponcePackage))
+                            aNode
+
+                | otherwise                             -> undefined
+                    --sendToPoint aPoint
+            _ -> return ()
+          where
+            lookupNextNode aTrace aData = if
+                | x:_ <- aIntersect aTrace -> Just x
+                | otherwise                -> Nothing
+              where
+                aIntersect aTrace = ((^._1) <$> aTrace) `intersect` aNeighborList
+                aNeighborList = M.keys (aData^.nodes)
+
+
+-- MyNodeId     List    Neighbors
+-- 1        [1,2,3,4]   2               [2,3,4]     -> 2
+-- 0        [1,2,3,4]   3               [3,4]       -> 3
+-- 0        [1,2,3,4]   [5,6]           [1,2,3,4]   -> 5  | 4 - 5 | < | 4 - 6 |
+-- 1        [1,2,3,4]   [5,6]           [2,3,4]     -> 5 (| 4 - 5 | < | 4 - 6 |)
+-- 3        [8,7,6,4]   [9,10]          -> X
+
+
+
+isItMyResponce :: NodeId -> TraceRouting -> Bool
+isItMyResponce aMyNodeId = \case
+    ToNode   aNodeId _ _ _          | toNodeId aNodeId == aMyNodeId  -> True
+    ToDirect (last -> (aNodeId, _, _)) _    | aNodeId == aMyNodeId   -> True
+    _                                                                -> False
 
 
 instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
@@ -256,16 +308,20 @@ processingOfBroadcastThing aMd aBroadcastThing = do
     case aBroadcastThing of
         BroadcastWarning      aBroadcastWarning -> case aBroadcastWarning of
             INeedNeighbors aMyNodeId aHostAddress   -> undefined
-        BroadcastShard        aShard            -> undefined
+        BroadcastShard        aShard            -> do
+            whenJust (aData^.shardingChan) $ \aChan ->
+                writeChan aChan $ NewShardInNetAction aShard
         BroadcastTransaction  aTransaction      ->
 {-
             metric $ add ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount") (1 :: Integer)
 -}
             writeChan (aData^.transactions) aTransaction
-        BroadcastPosition     aMyNodeId aPoint  -> undefined
+        BroadcastPosition     aMyNodeId aNodePosition  -> do
+            sendToShardingLvl aData $
+                TheNodeHaveNewCoordinates (toNodeId aMyNodeId) aNodePosition
 
-
-
+sendToShardingLvl aData aMsg = whenJust (aData^.shardingChan) $ \aChan ->
+    writeChan aChan aMsg
 
 
 {-

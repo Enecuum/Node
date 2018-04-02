@@ -87,30 +87,13 @@ derivativeMsgInstance "ManagerMiningMsg" "MsgToNodeManager" managerMiningMsgList
 data MsgToServer where
     KillMsg       :: MsgToServer
 
-data NodeStatus where
-    Active      :: NodeStatus
-    Noactive    :: NodeStatus
-    NodeStatus  :: NodeSide -> NodeVariantStatus -> NodeStatus
-  deriving (Show, Eq)
+data NodeStatus = Active | Noactive deriving (Show, Eq)
 
-data NodeSide where
-    Initiator   :: NodeSide
-    Remote      :: NodeSide
-  deriving (Show, Eq)
-
-data NodeVariantStatus where
-    Auth        :: NodeVariantStatus
-    AuthAck     :: NodeVariantStatus
-    HandSnack   :: NodeVariantStatus
-  deriving (Show, Eq)
-
-
-data Node where
-    Node :: {
-      nodeStatus            :: NodeStatus,
-      nodeKey               :: Maybe StringKey,
-      nodeChan              :: Chan MsgToSender
-  } -> Node
+data Node = Node {
+    nodeStatus  :: NodeStatus,
+    nodeKey     :: Maybe StringKey,
+    nodeChan    :: Chan MsgToSender
+  }
 
 
 data ManagerNodeData where
@@ -120,8 +103,8 @@ data ManagerNodeData where
         managerTransactions         :: Chan Transaction,
         managerHashMap              :: BI.Bimap TimeSpec B.ByteString,
         managerPublicators          :: S.Set NodeId,
-        managerSendedTransctions    :: BI.Bimap TimeSpec Transaction
-
+        managerSendedTransctions    :: BI.Bimap TimeSpec Transaction,
+        managerShardingChan         :: Maybe (Chan ShardingNodeAction)
   } -> ManagerNodeData
 
 type IdIpPort = (NodeId, HostAddress, PortNumber)
@@ -189,7 +172,7 @@ class ToManagerData a where
 instance ToManagerData ManagerNodeData where
     toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aList aNodeConfig = ManagerNodeData
         aNodeConfig (NodeBaseData aExitChan M.empty aList aAnswerChan BI.empty 0 Nothing aMicroblockChan)
-            aTransactionChan BI.empty S.empty BI.empty
+            aTransactionChan BI.empty S.empty BI.empty Nothing
 
 defaultHelloMsg :: HelloMsg
 defaultHelloMsg = HelloMsg (P2pVersion 0) (ClientId 0) 3000 (NodeId 0) []
@@ -240,10 +223,13 @@ lensInst "publicators" ["ManagerNodeData"] ["S.Set", "NodeId"]
 lensInst "sendedTransctions" ["ManagerNodeData"]
     ["BI.Bimap", "TimeSpec", "Transaction"] "managerSendedTransctions"
 
+type MaybeChan a = Maybe (Chan a)
+
+lensInst "shardingChan" ["ManagerNodeData"] ["MaybeChan", "ShardingNodeAction"] "managerShardingChan"
 
 makeNode :: Chan MsgToSender -> Node
 makeNode aChan = Node {
-    nodeStatus          = NodeStatus Remote Auth,
+    nodeStatus          = Noactive,
     nodeKey             = Nothing,
     nodeChan            = aChan
   }
