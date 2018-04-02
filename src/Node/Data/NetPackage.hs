@@ -33,9 +33,8 @@ data Unciphered where
 
 
 data Ciphered where
-    PackageTraceRoutingRequest  :: TraceRouting         -> RequestPackage     -> Ciphered
+    PackageTraceRoutingRequest  :: TraceRouting         -> RequestPackage    -> Ciphered
     PackageTraceRoutingResponce :: TraceRouting         -> ResponcePackage   -> Ciphered
-    PackageRequest              ::                         RequestPackage    -> Ciphered
     BroadcastRequest            :: BroadcastSignature   -> BroadcastThing    -> Ciphered
   deriving (Eq, Generic, Show)
 
