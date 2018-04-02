@@ -1,6 +1,7 @@
 {-# LANGUAGE
     OverloadedStrings,
     MultiWayIf,
+    LambdaCase,
     MultiParamTypeClasses,
     ViewPatterns,
     StandaloneDeriving,
@@ -47,9 +48,9 @@ managerMining ch aMd = forever $ do
         opt isDatagramMsg           $ answerToDatagramMsg ch aMd (mData^.myNodeId)
         opt isClientIsDisconnected $ miningNodeAnswerClientIsDisconnected aMd
 
-        opt isNewTransaction            $ answerToNewTransaction aMd
+--      opt isNewTransaction            $ answerToNewTransaction aMd
         opt isInitDatagram              $ answerToSendInitDatagram ch aMd
-        opt isBlockMadeMsg              $ answerToBlockMadeMsg aMd
+--      opt isBlockMadeMsg              $ answerToBlockMadeMsg aMd
         opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
         opt isDeleteOldestVacantPositions $ answerToDeleteOldestVacantPositions aMd
 
@@ -78,6 +79,47 @@ answerToDeleteOldestMsg :: IORef ManagerNodeData -> ManagerMiningMsgBase -> IO (
 answerToDeleteOldestMsg aMd _ = do
     aTime <- getTime Realtime
     modifyIORef aMd $ hashMap %~ deleteOldest aTime
+
+
+instance BroadcastAction ManagerNodeData where
+    makeBroadcastAction aChan aMd aNodeId aBroadcastSignature aBroadcastThing = do
+        aData <- readIORef aMd
+        loging aData $ "BroadcastAction ManagerNodeData" ++ show aBroadcastThing
+        when (notInIndex aData aBroadcastThing) $ do
+            addInIndex aBroadcastThing aMd
+            sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing
+            processingOfBroadcastThing aMd aBroadcastThing
+
+
+instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
+    makeAction _ md aNodeId aTraceRouting = \case
+        ConfirmResponce         aRequestPackage                 -> return ()
+        ShardIndexResponce      aRequestPackage aShardHashList  -> undefined
+        ShardResponce           aRequestPackage aShard          -> undefined
+        BroadcastListResponce   _ aBroadcastList                -> do
+            aData <- readIORef md
+            forM_ aBroadcastList $ \(aNodeId, aIp, aPort) -> do
+                addRecordToNodeListFile (aData^.myNodeId) aNodeId aIp aPort
+
+
+instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
+    makeAction _ md aNodeId aTraceRouting = \case
+        ShardIndexRequestPackage aPoint aDistance   -> undefined
+        ShardRequestPackage aShardHash              -> undefined
+        BroadcastListRequest                        -> do
+            aData <- readIORef md
+            whenJust (aNodeId `M.lookup` (aData^.nodes)) $ \aNode -> do
+                aRawListOfContacts <- readRecordFromNodeListFile $ aData^.myNodeId
+                aListOfContacts    <- shuffleM aRawListOfContacts
+                sendToNode
+                    (makeResponse aTraceRouting
+                        (BroadcastListResponce BroadcastListRequest
+                            (take 5 aListOfContacts)))
+                    aNode
+
+
+makeResponse aTraceRouting aResponse = makeCipheredPackage
+    (PackageTraceRoutingResponce aTraceRouting aResponse)
 
 {-
 instance NetAction ManagerNodeData where
@@ -177,15 +219,6 @@ answerToBlockMadeMsg _ _ = pure ()
 -}
 
 
-verifyNewData :: ManagerData md =>
-    ECDSA.Signature -> NodeId -> B.ByteString -> md -> Bool
-verifyNewData sig aNodeId bs aMd = if
-    | Just k <- key -> verifyByteString  k sig bs
-    | otherwise     -> False
-  where
-    key :: Maybe ECDSA.PublicKey
-    key = nodePublicKey <$> (aNodeId `M.lookup` (aMd^.nodes))
-
 isBrodcastNode :: ManagerNodeData -> Bool
 isBrodcastNode aData = aData^.nodeConfig.helloMsg.nodeVariantRoles.to
     (BroadcastNode `elem`)
@@ -215,17 +248,27 @@ isBootNode aId aData = aId `elem`
 eq :: MyNodeId -> NodeId -> Bool
 eq (MyNodeId aMyNodeId) (NodeId aNodeId) = aMyNodeId == aNodeId
 
-{-
-processingOfInfoPing :: IORef ManagerNodeData -> InfoPingPackage -> IO ()
-processingOfInfoPing aMd aInfoPing = do
+
+processingOfBroadcastThing :: IORef ManagerNodeData -> BroadcastThing -> IO ()
+processingOfBroadcastThing aMd aBroadcastThing = do
     aData <- readIORef aMd
-    loging aData $ "Recived " ++ show aInfoPing
-    case aInfoPing of
-        NewTransactionInNet aTransaction -> do
-            metric $ add
-                ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount")
-                (1 :: Integer)
+    loging aData $ "Recived " ++ show aBroadcastThing
+    case aBroadcastThing of
+        BroadcastWarning      aBroadcastWarning -> case aBroadcastWarning of
+            INeedNeighbors aMyNodeId aHostAddress   -> undefined
+        BroadcastShard        aShard            -> undefined
+        BroadcastTransaction  aTransaction      ->
+{-
+            metric $ add ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount") (1 :: Integer)
+-}
             writeChan (aData^.transactions) aTransaction
+        BroadcastPosition     aMyNodeId aPoint  -> undefined
+
+
+
+
+
+{-
         aMsg@(IHaveBroadcastConnects _ _ aIp aPort aNodeId _)
             | verifyIHaveBroadcastConnects aMsg ->
                 unless ((aData^.myNodeId) `eq` aNodeId) $ do
@@ -233,7 +276,7 @@ processingOfInfoPing aMd aInfoPing = do
                     modifyIORef aMd $ vacantPositions %~ BI.insert aTime
                         (aNodeId, aIp, aPort)
                     addRecordToNodeListFile (aData^.myNodeId) aNodeId aIp aPort
+
         BlockMade aMicroblock -> do
             writeChan (aData^.microblockChan) aMicroblock
-        _ -> return ()
 -}

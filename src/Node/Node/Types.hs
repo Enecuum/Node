@@ -34,6 +34,8 @@ import              GHC.Generics (Generic)
 import              Node.Crypto
 import              Node.Data.Data
 
+import              Sharding.Types.Node
+
 
 instance Show (Chan a) where
     show _ = "Chan"
@@ -107,14 +109,7 @@ data Node where
     Node :: {
       nodeStatus            :: NodeStatus,
       nodeKey               :: Maybe StringKey,
-      nodeChan              :: Chan MsgToSender,
-      nodeClientId          :: Maybe ClientId,
-      nodePublicKey         :: PublicKey,
-      nodePublicPoint       :: Maybe DH.PublicPoint,
-      nodeHelloMsg          :: Maybe HelloMsg,
-      nodeIP                :: HostAddress,
-      nodePingTime          :: TimeSpec,
-      nodePingMark          :: TimeSpec
+      nodeChan              :: Chan MsgToSender
   } -> Node
 
 
@@ -125,7 +120,7 @@ data ManagerNodeData where
         managerTransactions         :: Chan Transaction,
         managerHashMap              :: BI.Bimap TimeSpec B.ByteString,
         managerPublicators          :: S.Set NodeId,
-        managerSendedTransctions   :: BI.Bimap TimeSpec Transaction
+        managerSendedTransctions    :: BI.Bimap TimeSpec Transaction
 
   } -> ManagerNodeData
 
@@ -229,14 +224,8 @@ roles = nodeConfig.helloMsg.nodeVariantRoles
 
 lensInst "mKey"         ["Node"] ["Maybe", "StringKey"]         "nodeKey"
 lensInst "chan"         ["Node"] ["Chan", "MsgToSender"]        "nodeChan"
-lensInst "mClientId"    ["Node"] ["Maybe", "ClientId"]          "nodeClientId"
-lensInst "nPublicKey"    ["Node"] ["ECDSA.PublicKey"]            "nodePublicKey"
-lensInst "mPublicPoint" ["Node"] ["Maybe", "DH.PublicPoint"]    "nodePublicPoint"
-lensInst "mHelloMsg"    ["Node"] ["Maybe", "HelloMsg"]          "nodeHelloMsg"
 lensInst "status"       ["Node"] ["NodeStatus"]                 "nodeStatus"
-lensInst "pingTime"     ["Node"] ["TimeSpec"]                   "nodePingTime"
-lensInst "pingMark"     ["Node"] ["TimeSpec"]                   "nodePingMark"
-lensInst "nHostAddress"  ["Node"] ["HostAddress"]                "nodeIP"
+
 
 
 lensInst "transactions" ["ManagerNodeData"]
@@ -252,18 +241,11 @@ lensInst "sendedTransctions" ["ManagerNodeData"]
     ["BI.Bimap", "TimeSpec", "Transaction"] "managerSendedTransctions"
 
 
-makeNode :: Chan MsgToSender -> NodeId-> HostAddress -> Node
-makeNode aChan aNodeId aHostAddress = Node {
+makeNode :: Chan MsgToSender -> Node
+makeNode aChan = Node {
     nodeStatus          = NodeStatus Remote Auth,
     nodeKey             = Nothing,
-    nodeChan            = aChan,
-    nodeClientId        = Nothing,
-    nodePublicKey       = idToKey aNodeId,
-    nodePublicPoint     = Nothing,
-    nodeHelloMsg        = Nothing,
-    nodePingTime        = 0,
-    nodePingMark        = 0,
-    nodeIP              = aHostAddress
+    nodeChan            = aChan
   }
 
 

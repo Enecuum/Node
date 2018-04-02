@@ -76,7 +76,7 @@ data BroadcastThing where
     BroadcastPosition     :: MyNodeId           -> P.Point  -> BroadcastThing
   deriving (Eq, Ord, Show, Generic)
 
-data BroadcastWarning = INeedNeighbors MyNodeId HostAddress BroadcastWarning
+data BroadcastWarning = INeedNeighbors MyNodeId HostAddress
   deriving (Eq, Ord, Show, Generic)
 
 data Reason where
