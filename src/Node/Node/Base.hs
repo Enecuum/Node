@@ -2,7 +2,9 @@
     LambdaCase,
     ViewPatterns,
     MultiWayIf,
-    ScopedTypeVariables
+    ScopedTypeVariables,
+    MultiParamTypeClasses,
+    FlexibleContexts
   #-}
 
 module Node.Node.Base where
@@ -250,11 +252,16 @@ answerToInitDatagram aMd
 answerToInitDatagram _ _                =  pure ()
 
 
-answerToDatagramMsg :: (ManagerData md, ManagerMsg a) =>
-    t
+answerToDatagramMsg :: (
+    ManagerData md,
+    PackageTraceRoutingAction md RequestPackage,
+    PackageTraceRoutingAction md ResponcePackage,
+    BroadcastAction md,
+    ManagerMsg msg) =>
+    Chan msg
     -> IORef md
     -> p
-    -> a
+    -> msg
     -> IO ()
 answerToDatagramMsg aChan aMd _
     (toManagerMsg -> DatagramMsg aDatagramMsg aId) = do
@@ -268,7 +275,19 @@ answerToDatagramMsg aChan aMd _
 answerToDatagramMsg _ _  _ _    =  pure ()
 
 
-answerToPackagedMsg :: ManagerData md => NodeId -> aChan -> CipheredString -> IORef md -> IO ()
+class PackageTraceRoutingAction aManagerData aRequest where
+    makeAction :: aChan -> IORef aManagerData -> NodeId -> TraceRouting -> aRequest -> IO ()
+
+class BroadcastAction aManagerData where
+    makeBroadcastAction :: aChan -> IORef aManagerData -> NodeId -> BroadcastSignature -> BroadcastThing -> IO ()
+
+answerToPackagedMsg :: (
+    ManagerData md,
+    PackageTraceRoutingAction md RequestPackage,
+    PackageTraceRoutingAction md ResponcePackage,
+    BroadcastAction md) =>
+    NodeId -> aChan -> CipheredString -> IORef md -> IO ()
+
 answerToPackagedMsg aId aChan aChipredString aMd = do
     aData <- readIORef aMd
     loging aData $ "answerToPackagedMsg: " ++ show aChipredString
@@ -277,20 +296,14 @@ answerToPackagedMsg aId aChan aChipredString aMd = do
             decryptChipred key aChipredString
     whenJust aDecryptedPacage $ \case
         PackageTraceRoutingRequest aTraceRouting aRequestPackage ->
-            packageTraceRoutingAction aChan aMd aId aTraceRouting aRequestPackage
+            makeAction aChan aMd aId aTraceRouting aRequestPackage
         PackageTraceRoutingResponce aTraceRouting aResponcePackage ->
-            packageTraceRoutingAction2 aChan aMd aId aTraceRouting aResponcePackage
-        PackageRequest aRequestPackage ->
-            packageRequest aChan aMd aId aRequestPackage
+            makeAction aChan aMd aId aTraceRouting aResponcePackage
         BroadcastRequest aBroadcastSignature aBroadcastThing ->
-            aBroadcastAction aChan aMd aId aBroadcastSignature aBroadcastThing
-
+            makeBroadcastAction aChan aMd aId aBroadcastSignature aBroadcastThing
 answerToPackagedMsg _ _ _  _ = return ()
 
-packageTraceRoutingAction = undefined
-packageTraceRoutingAction2 = undefined
-packageRequest   = undefined
-aBroadcastAction = undefined
+
 -- aNodeType -> t -> IORef md -> NodeId -> [(NodeId, TimeSpec, Signature)] -> RequestPackage -> IO ()
 
 
