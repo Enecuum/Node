@@ -18,12 +18,14 @@ import              Sharding.Types.ShardTypes
 import              Sharding.Space.Point as P
 import              Sharding.Space.Distance
 
-
+-- | Data for resending from NetNode A to NetNode B.
 data Package where
     Ciphered   :: CipheredString -> Package
     Unciphered :: Unciphered     -> Package
   deriving (Eq, Generic, Show)
 
+
+-- | Unciphered data from NetNode A to NetNode B.
 data Unciphered where
     ConnectingRequest  :: PublicPoint -> MyNodeId -> Signature  -> Unciphered
     DisconnectRequest  :: [Reason]                              -> Unciphered
@@ -32,34 +34,65 @@ data Unciphered where
   deriving (Eq, Generic, Show)
 
 
+-- | Ciphered  data from NetNode A to NetNode B.
 data Ciphered where
     PackageTraceRoutingRequest  :: TraceRouting         -> RequestPackage    -> Ciphered
     PackageTraceRoutingResponce :: TraceRouting         -> ResponcePackage   -> Ciphered
-    BroadcastRequest            :: BroadcastSignature   -> BroadcastThing    -> Ciphered
+    BroadcastRequest            :: PackageSignature     -> BroadcastThing   -> Ciphered
   deriving (Eq, Generic, Show)
 
 
+-- | Request data from NetNode A to NetNode B.
 data RequestPackage where
-    ShardIndexRequestPackage    :: P.Point -> Distance P.Point -> RequestPackage
-    ShardRequestPackage         :: ShardHash -> RequestPackage
-    BroadcastListRequest        :: RequestPackage
+    RequestLogicLvlPackage  :: RequestLogicLvl  -> PackageSignature -> RequestPackage
+    RequestNetLvlPackage    :: RequestNetLvl    -> PackageSignature -> RequestPackage
+  deriving (Eq, Generic, Show)
+
+
+-- | Request logic information
+data RequestLogicLvl where
+    ShardIndexRequestPackage    :: P.Point   -> Distance P.Point  -> RequestLogicLvl
+    ShardRequestPackage         :: ShardHash                      -> RequestLogicLvl
+    NodePositionRequestPackage  ::                                   RequestLogicLvl
+  deriving (Eq, Generic, Show)
+
+
+-- | Request network information.
+data RequestNetLvl where
+    BroadcastListRequest    :: RequestNetLvl
+    HostAdressRequest       :: RequestNetLvl
+    IsYouBrodcast           :: RequestNetLvl
   deriving (Eq, Generic, Show)
 
 
 data ResponcePackage where
-    ShardIndexResponce      :: RequestPackage -> [ShardHash]  -> ResponcePackage
-    ShardResponce           :: RequestPackage -> Shard        -> ResponcePackage
-    BroadcastListResponce   :: RequestPackage -> [(NodeId, HostAddress, PortNumber)] -> ResponcePackage
+    ResponceNetLvlPackage   :: ResponceNetLvl   -> PackageSignature -> ResponcePackage
+    ResponceLogicLvlPackage :: ResponceLogicLvl -> PackageSignature -> ResponcePackage
   deriving (Eq, Generic, Show)
 
 
-data BroadcastSignature where
-    BroadcastSignature :: MyNodeId -> TimeSpec  -> Signature  -> BroadcastSignature
+data ResponceNetLvl where
+    BroadcastListResponce   :: [(NodeId, HostAddress, PortNumber)] -> ResponceNetLvl
+    HostAdressResponce      :: HostAddress -> ResponceNetLvl
+    IAmBroadcast            :: Bool -> ResponceNetLvl
+  deriving (Eq, Generic, Show)
+
+
+data ResponceLogicLvl where
+    ShardIndexResponce            :: [ShardHash]    -> ResponceLogicLvl
+    ShardResponce                 :: Shard          -> ResponceLogicLvl
+    NodePositionResponcePackage   :: MyNodePosition -> ResponceLogicLvl
+  deriving (Eq, Generic, Show)
+
+
+data PackageSignature where
+    PackageSignature :: MyNodeId -> TimeSpec  -> Signature  -> PackageSignature
   deriving (Eq, Ord, Show, Generic)
 
+
 data TraceRouting where
-      ToNode     :: MyNodeId -> NodeId ->  TimeSpec  -> Signature  -> TraceRouting
-      ToDirect   :: [(NodeId, TimeSpec, Signature)] -> P.Point     -> TraceRouting
+      ToNode     :: NodeId  ->  PackageSignature    -> TraceRouting
+      ToDirect   :: P.Point -> [PackageSignature]   -> TraceRouting
   deriving (Eq, Ord, Show, Generic)
 
 
@@ -99,13 +132,18 @@ data Reason where
 instance Serialize Reason
 instance Serialize BroadcastThing
 instance Serialize TraceRouting
-instance Serialize BroadcastSignature
+instance Serialize PackageSignature
 instance Serialize ResponcePackage
 instance Serialize Ciphered
 instance Serialize Package
 instance Serialize Unciphered
 instance Serialize RequestPackage
 instance Serialize BroadcastWarning
+
+instance Serialize ResponceNetLvl
+instance Serialize ResponceLogicLvl
+instance Serialize RequestNetLvl
+instance Serialize RequestLogicLvl
 
 --------------------------------------------------------------------------------
 class IsByteString a where
