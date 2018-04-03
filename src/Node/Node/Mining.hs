@@ -226,6 +226,51 @@ isItMyResponce aMyNodeId = \case
         | aNodeId == aMyNodeId          -> True
     _                                   -> False
 
+instance Processing (IORef ManagerNodeData) RequestLogicLvl where
+    processing aMd (PackageSignature (toNodeId -> aNodeId) _ _) aRequestLogicLvl = do
+        aData <- readIORef aMd
+        case aRequestLogicLvl of
+            ShardIndexRequestPackage _ aDistance -> sendToShardingLvl aData $
+                T.ShardIndexCreateAction aNodeId aDistance
+            ShardRequestPackage aShardHash -> sendToShardingLvl aData $
+                T.ShardListCreateAction aNodeId [aShardHash]
+            NodePositionRequestPackage ->
+                whenJust (aData^.myNodePosition) $ \aMyPosition ->
+                    whenJust (aNodeId `M.lookup` (aData^.nodes)) $
+                        sendToNode (makeRequest undefined undefined)
+
+{-
+        BroadcastListResponce aBroadcastList -> do
+            aData <- readIORef aMd
+            forM_ aBroadcastList $ \(aNodeId, aIp, aPort) -> do
+                addRecordToNodeListFile (aData^.myNodeId) aNodeId aIp aPort
+
+        HostAdressResponce    aHostAdress    -> return ()
+
+        IAmBroadcast          aBool          -> do
+            modifyIORef aMd $ nodes %~ M.adjust (isBroadcast .~ aBool) aNodeId
+--
+
+NewNodeInNetAction          NodeId NodePosition
+-- TODO create index for new node by NodeId
+|   ShardIndexCreateAction      NodeId Word64
+|   ShardIndexAcceptAction      [ShardHash]
+|   ShardListCreateAction       NodeId [ShardHash]
+|   ShardAcceptAction           Shard
+---
+|   NewShardInNetAction         Shard
+|   CleanShardsAction -- clean local Shards
+--- ShiftAction => NewPosiotionResponse
+|   ShiftAction
+|   TheNodeHaveNewCoordinates   NodeId NodePosition
+---- NeighborListRequest => NeighborListAcceptAction
+|   TheNodeIsDead               NodeId
+
+--
+
+NodePositionRequestPackage  ::                                     RequestLogicLvl
+-}
+
 ---------------TODO: fix True---------------------------------------------------
 instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
     makeAction _ md aNodeId aTraceRouting aRequestPackage = do
