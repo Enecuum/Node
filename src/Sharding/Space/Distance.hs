@@ -50,6 +50,9 @@ instance Points Point where
 class DistanceTo a b where
     distanceTo :: a -> b -> Distance Point
 
+instance DistanceTo MyNodePosition PointTo where
+    distanceTo (MyNodePosition aMyNodePosition) (PointTo point) =
+      rhombusDistance aMyNodePosition point
 
 instance DistanceTo MyNodePosition NodePosition where
     distanceTo (MyNodePosition aMyNodePosition) (NodePosition aNodePosition) =
