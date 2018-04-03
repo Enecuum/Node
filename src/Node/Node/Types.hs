@@ -35,7 +35,7 @@ import              Node.Crypto
 import              Node.Data.Data
 
 import              Sharding.Types.Node
-
+import              Sharding.Space.Point
 
 instance Show (Chan a) where
     show _ = "Chan"
@@ -90,9 +90,11 @@ data MsgToServer where
 data NodeStatus = Active | Noactive deriving (Show, Eq)
 
 data Node = Node {
-    nodeStatus  :: NodeStatus,
-    nodeKey     :: Maybe StringKey,
-    nodeChan    :: Chan MsgToSender
+    nodeStatus          :: NodeStatus,
+    nodeKey             :: Maybe StringKey,
+    nodeChan            :: Chan MsgToSender,
+    nodeNodePosition    :: Maybe NodePosition,
+    nodeIsBroadcast     :: Bool
   }
 
 
@@ -208,7 +210,8 @@ roles = nodeConfig.helloMsg.nodeVariantRoles
 lensInst "mKey"         ["Node"] ["Maybe", "StringKey"]         "nodeKey"
 lensInst "chan"         ["Node"] ["Chan", "MsgToSender"]        "nodeChan"
 lensInst "status"       ["Node"] ["NodeStatus"]                 "nodeStatus"
-
+lensInst "nodePosition" ["Node"] ["Maybe", "NodePosition"]      "nodeNodePosition"
+lensInst "isBroadcast"  ["Node"] ["Bool"]                       "nodeIsBroadcast"
 
 
 lensInst "transactions" ["ManagerNodeData"]
@@ -231,7 +234,9 @@ makeNode :: Chan MsgToSender -> Node
 makeNode aChan = Node {
     nodeStatus          = Noactive,
     nodeKey             = Nothing,
-    nodeChan            = aChan
+    nodeChan            = aChan,
+    nodeNodePosition    = Nothing,
+    nodeIsBroadcast     = False
   }
 
 

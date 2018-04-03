@@ -12,7 +12,7 @@ import              Sharding.Types.Node
 import              Sharding.ShardDB.ShardIndex
 import              Sharding.ShardDB.ShardStore
 
-import              Node.Node.Types
+import qualified    Node.Node.Types     as T
 import              Control.Concurrent.Chan
 import              Data.List.Extra
 import              Control.Concurrent
@@ -98,7 +98,7 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
 
 
 shiftTheShardingNode ::
-        Chan ManagerMiningMsgBase
+        Chan T.ManagerMiningMsgBase
     -> (ShardingNode ->  IO ())
     ->  ShardingNode
     ->  IO ()
@@ -141,7 +141,7 @@ addShardingIndex aShardIndex aShardingNode = undefined
     --aShardingNode & nodeIndex %~ S.union aShardIndex
 
 
-createShardingIndex :: Chan ManagerMiningMsgBase -> ShardingNode -> NodeId -> Word64 ->  IO ()
+createShardingIndex :: Chan T.ManagerMiningMsgBase -> ShardingNode -> NodeId -> Word64 ->  IO ()
 createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = undefined
 {-
  do
@@ -172,7 +172,7 @@ sendShardsToNode ::
         ShardingNode
     ->  NodeId
     -> [ShardHash]
-    ->  Chan ManagerMiningMsgBase
+    ->  Chan T.ManagerMiningMsgBase
     ->  IO ()
 sendShardsToNode aShardingNode aNodeId aHashList aChanOfNetLevel = do
     aShards <- loadShards aHashList
@@ -214,8 +214,8 @@ shiftIsNeed aShardingNode = checkUnevenness
     (aShardingNode^.nodePosition) (neighborPositions aShardingNode)
 
 
-sendToNetLevet :: Chan ManagerMiningMsgBase -> ShardingNodeRequestAndResponce -> IO ()
-sendToNetLevet aChan aMsg = writeChan aChan $ ShardingNodeRequestOrResponce aMsg
+sendToNetLevet :: Chan T.ManagerMiningMsgBase -> ShardingNodeRequestAndResponce -> IO ()
+sendToNetLevet aChan aMsg = writeChan aChan $ T.ShardingNodeRequestOrResponce aMsg
 
 
 mul :: Word64 -> Word64 -> Word64
