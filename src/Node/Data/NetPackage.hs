@@ -51,9 +51,9 @@ data RequestPackage where
 
 -- | Request logic information
 data RequestLogicLvl where
-    ShardIndexRequestPackage    :: P.Point   -> Distance P.Point  -> RequestLogicLvl
-    ShardRequestPackage         :: ShardHash                      -> RequestLogicLvl
-    NodePositionRequestPackage  ::                                   RequestLogicLvl
+    ShardIndexRequestPackage    :: P.PointFrom -> Distance P.Point  -> RequestLogicLvl
+    ShardRequestPackage         :: ShardHash                        -> RequestLogicLvl
+    NodePositionRequestPackage  ::                                     RequestLogicLvl
   deriving (Eq, Generic, Show)
 
 
@@ -91,8 +91,8 @@ data PackageSignature where
 
 
 data TraceRouting where
-      ToNode     :: NodeId  ->  PackageSignature    -> TraceRouting
-      ToDirect   :: P.Point -> [PackageSignature]   -> TraceRouting
+      ToNode     :: NodeId  ->             PackageSignature    -> TraceRouting
+      ToDirect   :: P.PointFrom -> P.PointTo -> [PackageSignature] -> TraceRouting
   deriving (Eq, Ord, Show, Generic)
 
 
