@@ -265,7 +265,7 @@ class PackageTraceRoutingAction aManagerData aRequest where
     makeAction                  :: aChan -> IORef aManagerData -> NodeId -> TraceRouting -> aRequest -> IO ()
 
 class BroadcastAction aManagerData where
-    makeBroadcastAction :: aChan -> IORef aManagerData -> NodeId -> BroadcastSignature -> BroadcastThing -> IO ()
+    makeBroadcastAction :: aChan -> IORef aManagerData -> NodeId -> PackageSignature -> BroadcastThing -> IO ()
 
 answerToPackagedMsg :: (
     ManagerData md,
@@ -420,7 +420,7 @@ instance GetNodes NodeStatus where
         aData^.nodes.to M.elems
 
 
-sendBroadcastThingToNodes :: ManagerData md => IORef md -> BroadcastSignature -> BroadcastThing -> IO ()
+sendBroadcastThingToNodes :: ManagerData md => IORef md -> PackageSignature -> BroadcastThing -> IO ()
 sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing = do
     aData <- readIORef aMd
     sendToNodes aData aMakeMsg

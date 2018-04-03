@@ -56,12 +56,12 @@ makeBroadcastRequest aBroadcastThing aPrivateKey aMyNodeId = do
     aTime       <- getTime Realtime
     aSignature  <- signEncodeble aPrivateKey (aMyNodeId, aTime, aBroadcastThing)
     pure $ BroadcastRequest
-        (BroadcastSignature aMyNodeId aTime aSignature)
+        (PackageSignature aMyNodeId aTime aSignature)
         aBroadcastThing
 
-verifyBroadcastRequest :: BroadcastThing -> BroadcastSignature -> Bool
+verifyBroadcastRequest :: BroadcastThing -> PackageSignature -> Bool
 verifyBroadcastRequest aBroadcastThing
-    (BroadcastSignature aMyNodeId aTimeSpec aSignature) =
+    (PackageSignature aMyNodeId aTimeSpec aSignature) =
         verifyEncodeble
             (idToKey $ toNodeId aMyNodeId)
             aSignature
