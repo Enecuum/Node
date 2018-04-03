@@ -167,18 +167,12 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
                                 aResponcePackage)
 
                 | otherwise -> do
-                    let closedToPointNeighbor = sortOn
-                            (\n -> distanceTo n aPointTo)
-                            $ M.elems $ aData^.nodes
-                    case closedToPointNeighbor of
-                        aNode:_ | Just aPosition <- aData^.myNodePosition,
-                                distanceTo aPosition aPointTo <
-                                distanceTo aNode aPointTo -> return ()
-                             | otherwise -> do
-                                 sendToNode
+                    case closedToPointNeighbor aData aPointTo of
+                        aNode:_ | amIClose aData aNode aPointTo -> return ()
+                                | otherwise -> sendToNode
                                     (makeResponse aTraceRouting aResponcePackage)
                                     aNode
-                        _                -> return ()
+                        _  -> return ()
 
             _ -> return ()
 
@@ -194,6 +188,15 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
 
             verifyNetLvlResponse _ _ _  = True
             verifyLogicLvlResponse _ _ _ = True
+
+closedToPointNeighbor aData aPointTo = sortOn
+    (\n -> distanceTo n aPointTo)
+        $ M.elems $ aData^.nodes
+
+amIClose aData aNode aPointTo = if
+    | Just aPosition <- aData^.myNodePosition,
+        distanceTo aPosition aPointTo < distanceTo aNode aPointTo -> True
+    | otherwise -> False
 
 
 signatureToNodeId :: PackageSignature -> NodeId
@@ -236,48 +239,37 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                 | True -> processing md aSignature aRequest
             RequestNetLvlPackage aRequest aSignature
                 | True -> processing md aSignature aRequest
-{-
-aSendToNeighbor aData = case aTraceRouting of
-    ToDirect aPoint aTrace
-        | Just aNextNodeId <- lookupNextNode aTrace aData -> do
-            let aNewTrace = traceDrop aNextNodeId aTrace
 
-            whenJust (aNextNodeId `M.lookup` (aData^.nodes)) $
-                sendToNode (makeResponse (ToDirect aPoint aNewTrace) aResponcePackage)
+        aSendToNeighbor aData = case aTraceRouting of
+            ToDirect aPointFrom aPointTo aSignatures ->
+                case closedToPointNeighbor aData aPointTo of
+                    aNode:_ | amIClose aData aNode aPointTo -> return ()
+                            | otherwise -> do
+                                aNewTrace <- addToTrace
+                                    aTraceRouting
+                                    aRequestPackage
+                                    (aData^.myNodeId)
+                                    (aData^.privateKey)
+                                sendToNode
+                                    (makeRequest aNewTrace aRequestPackage)
+                                    aNode
+                    _ -> return ()
+            _ -> return ()
 
-        | otherwise -> do
-            let closedToPointNeighbor = sortOn
-                    (\n -> distanceTo n aPoint)
-                    $ M.elems $ aData^.nodes
-            case closedToPointNeighbor of
-                aNode:_ | Just aPosition <- aData^.myNodePosition,
-                        distanceTo aPosition (NodePosition aPoint) <
-                        distanceTo aNode aPoint -> return ()
-                     | otherwise -> do
-                         sendToNode
-                            (makeResponse aTraceRouting aResponcePackage)
-                            aNode
-                _                -> return ()
 
-    _ -> return ()
-
-  where
-    lookupNextNode aTrace aData = if
-        | x:_ <- aIntersect aTrace -> Just x
-        | otherwise                -> Nothing
-      where
-        aIntersect aTrace =
-            (signatureToNodeId <$> aTrace) `intersect` aNeighborList
-
-        aNeighborList = M.keys (aData^.nodes)
-
-    verifyNetLvlResponse _ _ _  = True
-    verifyLogicLvlResponse _ _ _ = True
--}
+addToTrace :: TraceRouting -> RequestPackage -> MyNodeId -> ECDSA.PrivateKey -> IO TraceRouting
+addToTrace aTraceRouting aRequestPackage aMyNodeId aPrivateKey = do
+    aTime     <- getTime Realtime
+    aSignature <- signEncodeble aPrivateKey
+        (aTraceRouting, aRequestPackage, aMyNodeId, aTime)
+    let aPackageSignature = PackageSignature aMyNodeId aTime aSignature
+    case aTraceRouting of
+        ToDirect aPointFrom aPointTo aSignatures ->
+            return $ ToDirect aPointFrom aPointTo (aPackageSignature : aSignatures)
+        _ -> error "Node.Node.Mining.addToTrace: It is not ToDirect!"
 
         {-
-        ShardIndexRequestPackage aPoint aDistance   -> undefined
-        ShardRequestPackage aShardHash              -> undefined
+
         BroadcastListRequest                        -> do
             aData <- readIORef md
             whenJust (aNodeId `M.lookup` (aData^.nodes)) $ \aNode -> do
@@ -289,6 +281,9 @@ aSendToNeighbor aData = case aTraceRouting of
                             (take 5 aListOfContacts)))
                     aNode
 -}
+
+makeRequest aTraceRouting aRequest = makeCipheredPackage
+    (PackageTraceRoutingRequest aTraceRouting aRequest)
 
 makeResponse aTraceRouting aResponse = makeCipheredPackage
     (PackageTraceRoutingResponce aTraceRouting aResponse)
