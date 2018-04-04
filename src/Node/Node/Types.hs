@@ -107,7 +107,8 @@ data ManagerNodeData where
         managerPublicators          :: S.Set NodeId,
         managerSendedTransctions    :: BI.Bimap TimeSpec Transaction,
         managerShardingChan         :: Maybe (Chan ShardingNodeAction),
-        managerNodePosition         :: Maybe MyNodePosition
+        managerNodePosition         :: Maybe MyNodePosition,
+        managerIAmBroadcast         :: Bool
   } -> ManagerNodeData
 
 type IdIpPort = (NodeId, HostAddress, PortNumber)
@@ -175,7 +176,7 @@ class ToManagerData a where
 instance ToManagerData ManagerNodeData where
     toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aList aNodeConfig = ManagerNodeData
         aNodeConfig (NodeBaseData aExitChan M.empty aList aAnswerChan BI.empty 0 Nothing aMicroblockChan)
-            aTransactionChan BI.empty S.empty BI.empty Nothing Nothing
+            aTransactionChan BI.empty S.empty BI.empty Nothing Nothing False
 
 defaultHelloMsg :: HelloMsg
 defaultHelloMsg = HelloMsg (P2pVersion 0) (ClientId 0) 3000 (NodeId 0) []
@@ -231,6 +232,7 @@ type MaybeChan a = Maybe (Chan a)
 
 lensInst "shardingChan" ["ManagerNodeData"] ["MaybeChan", "ShardingNodeAction"] "managerShardingChan"
 lensInst "myNodePosition" ["ManagerNodeData"] ["Maybe", "MyNodePosition"] "managerNodePosition"
+lensInst "iAmBroadcast" ["ManagerNodeData"] ["Bool"] "managerIAmBroadcast"
 
 
 makeNode :: Chan MsgToSender -> Node

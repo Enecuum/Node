@@ -171,12 +171,12 @@ checkShardIsInRadiusOfCaptureShardingNode aShardNode aShardHash =
 sendShardsToNode ::
         ShardingNode
     ->  NodeId
-    -> [ShardHash]
+    ->  ShardHash
     ->  Chan ShardingNodeResponce
     ->  IO ()
 sendShardsToNode aShardingNode aNodeId aHashList aChanOfNetLevel = do
-    aShards <- loadShards aHashList
-    writeChan aChanOfNetLevel $ ShardListResponse aShards
+    [aShards] <- loadShards [aHashList]
+    writeChan aChanOfNetLevel $ ShardResponse aShards
 
 --------------------------------------------------------------------------------
 --------------------------TODO-TO-REMOVE----------------------------------------

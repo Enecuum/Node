@@ -47,7 +47,7 @@ data ShardingNodeAction =
     -- TODO create index for new node by NodeId
     |   ShardIndexAcceptAction      [ShardHash]
     |   ShardIndexCreateAction      (Chan ShardingNodeResponce) NodeId Word64
-    |   ShardListCreateAction       (Chan ShardingNodeResponce) NodeId [ShardHash]
+    |   ShardListCreateAction       (Chan ShardingNodeResponce) NodeId ShardHash
     |   ShardAcceptAction           Shard
     ---
     |   NewShardInNetAction         Shard
@@ -61,7 +61,7 @@ data ShardingNodeAction =
 
 data ShardingNodeResponce where
     ShardIndexResponse :: [ShardHash] -> ShardingNodeResponce
-    ShardListResponse  :: [Shard]     -> ShardingNodeResponce
+    ShardResponse  :: Shard       -> ShardingNodeResponce
   deriving (Show)
 
 
