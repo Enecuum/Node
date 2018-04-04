@@ -158,38 +158,16 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
             ResponceLogicLvlPackage aResponse aSignature | True ->
                 processing md aSignature aTraceRouting aResponse
 
-        aSendToNeighbor aData = case aTraceRouting of
-            ToDirect aPointFrom aPointTo aTrace
-                | Just aNextNodeId <- lookupNextNode aTrace aData -> do
-                    let aNewTrace = traceDrop aNextNodeId aTrace
+        aSendToNeighbor aData = do
+            let (aNode, aNewTrace) = getClosedNode aTraceRouting aData
+                aMaybePoints = case aTraceRouting of
+                    ToDirect aPointFrom aPointTo _
+                        -> Just (aPointFrom, aPointTo)
+                    _   -> Nothing
+            whenJust aMaybePoints $ \(aPointFrom, aPointTo) ->
+                whenJust aNode $ sendToNode (makeResponse
+                    (ToDirect aPointFrom aPointTo aNewTrace) aResponcePackage)
 
-                    whenJust (aNextNodeId `M.lookup` (aData^.nodes)) $
-                        sendToNode (makeResponse
-                            (ToDirect aPointFrom aPointTo aNewTrace)
-                                aResponcePackage)
-
-                | otherwise -> do
-                    case closedToPointNeighbor aData aPointTo of
-                        aNode:_ | amIClose aData aNode aPointTo -> return ()
-                                | otherwise -> sendToNode
-                                    (makeResponse aTraceRouting aResponcePackage)
-                                    aNode
-                        _  -> return ()
-
-            _ -> return ()
-
-          where
-            lookupNextNode aTrace aData = if
-                | x:_ <- aIntersect aTrace -> Just x
-                | otherwise                -> Nothing
-              where
-                aIntersect aTrace =
-                    (signatureToNodeId <$> aTrace) `intersect` aNeighborList
-
-                aNeighborList = M.keys (aData^.nodes)
-
-            verifyNetLvlResponse _ _ _  = True
-            verifyLogicLvlResponse _ _ _ = True
 
 closedToPointNeighbor aData aPointTo = sortOn
     (\n -> distanceTo n aPointTo)
@@ -201,8 +179,12 @@ amIClose aData aNode aPointTo = if
     | otherwise -> False
 
 
-sendToClosedNode :: TraceRouting -> PointFrom -> PointTo -> ManagerNodeData -> Node
-sendToClosedNode = undefined
+getClosedNodeByDirect :: ManagerNodeData -> Point -> Maybe Node
+getClosedNodeByDirect aData aPoint =
+    case closedToPointNeighbor aData aPoint of
+        aNode:_ | not $ amIClose aData aNode (fromPoint aPoint :: PointTo)
+                -> Just aNode
+        _       -> Nothing
 
 
 getClosedNode :: TraceRouting -> ManagerNodeData -> (Maybe Node, [PackageSignature])
@@ -211,11 +193,7 @@ getClosedNode aTraceRouting aData = case aTraceRouting of
         | Just aNextNodeId <- lookupNextNode aTrace aData -> do
             let aNewTrace = traceDrop aNextNodeId aTrace
             (aNextNodeId `M.lookup` (aData^.nodes), aNewTrace)
-        | otherwise -> case closedToPointNeighbor aData aPointTo of
-            aNode:_ | not $ amIClose aData aNode aPointTo
-                -> (Just aNode, cleanTrace aTrace)
-            _   -> (Nothing, aTrace)
-
+        | otherwise -> (getClosedNodeByDirect aData (toPoint aPointTo), aTrace)
     ToNode _ (PackageSignature (toNodeId -> aNodeId) _ _) ->
         (aNodeId `M.lookup` (aData^.nodes), [])
 
@@ -332,18 +310,14 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
 
         aSendToNeighbor aData = case aTraceRouting of
             ToDirect aPointFrom aPointTo aSignatures ->
-                case closedToPointNeighbor aData aPointTo of
-                    aNode:_ | amIClose aData aNode aPointTo -> return ()
-                            | otherwise -> do
-                                aNewTrace <- addToTrace
-                                    aTraceRouting
-                                    aRequestPackage
-                                    (aData^.myNodeId)
-                                    (aData^.privateKey)
-                                sendToNode
-                                    (makeRequest aNewTrace aRequestPackage)
-                                    aNode
-                    _ -> return ()
+                whenJust (getClosedNodeByDirect aData (toPoint aPointTo)) $
+                    \aNode -> do
+                        aNewTrace <- addToTrace
+                            aTraceRouting
+                            aRequestPackage
+                            (aData^.myNodeId)
+                            (aData^.privateKey)
+                        sendToNode (makeRequest aNewTrace aRequestPackage) aNode
             _ -> return ()
 
 
