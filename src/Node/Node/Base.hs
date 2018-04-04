@@ -149,6 +149,7 @@ connectTo :: ManagerMsg msg =>
     Chan msg -> Int -> [(NodeId, HostAddress, PortNumber)] -> IO ()
 connectTo aChan aBroadcastNum = connectToListOfConnect aChan aBroadcastNum
 {-
+  TODO answerToConnectivityQuery
 sendIHaveBroadcastConnects :: ManagerData md => IORef md -> HostAddress -> IO ()
 sendIHaveBroadcastConnects aMd aIp = do
     aData <- readIORef aMd
