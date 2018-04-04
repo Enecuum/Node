@@ -1,4 +1,11 @@
-{-# LANGUAGE GADTs, DeriveGeneric, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE
+        GADTs
+    ,   DeriveGeneric
+    ,   GeneralizedNewtypeDeriving
+    ,   TypeFamilies
+    ,   FlexibleInstances
+#-}
+
 module Node.Data.NetPackage where
 
 import Node.Data.NodeTypes
@@ -38,50 +45,56 @@ data Unciphered where
 data Ciphered where
     PackageTraceRoutingRequest  :: TraceRouting         -> RequestPackage    -> Ciphered
     PackageTraceRoutingResponce :: TraceRouting         -> ResponcePackage   -> Ciphered
-    BroadcastRequest            :: PackageSignature     -> BroadcastThing   -> Ciphered
+    BroadcastRequest            :: PackageSignature     -> BroadcastThing    -> Ciphered
   deriving (Eq, Generic, Show)
 
 
 -- | Request data from NetNode A to NetNode B.
 data RequestPackage where
-    RequestLogicLvlPackage  :: RequestLogicLvl  -> PackageSignature -> RequestPackage
-    RequestNetLvlPackage    :: RequestNetLvl    -> PackageSignature -> RequestPackage
+    RequestLogicLvlPackage  :: Request LogicLvl  -> PackageSignature -> RequestPackage
+    RequestNetLvlPackage    :: Request NetLvl    -> PackageSignature -> RequestPackage
   deriving (Eq, Generic, Show)
 
+data LogicLvl
+data NetLvl
+
+data family Request a :: *
 
 -- | Request logic information
-data RequestLogicLvl where
-    ShardIndexRequestPackage    :: P.PointFrom -> Distance P.Point  -> RequestLogicLvl
-    ShardRequestPackage         :: ShardHash                        -> RequestLogicLvl
-    NodePositionRequestPackage  ::                                     RequestLogicLvl
+data instance Request LogicLvl where
+    ShardIndexRequestPackage    :: P.PointFrom -> Distance P.Point  -> Request LogicLvl
+    ShardRequestPackage         :: ShardHash                        -> Request LogicLvl
+    NodePositionRequestPackage  ::                                     Request LogicLvl
   deriving (Eq, Generic, Show)
 
 
 -- | Request network information.
-data RequestNetLvl where
-    BroadcastListRequest    :: RequestNetLvl
-    HostAdressRequest       :: RequestNetLvl
-    IsYouBrodcast           :: RequestNetLvl
+data instance Request NetLvl where
+    BroadcastListRequest    :: Request NetLvl
+    HostAdressRequest       :: Request NetLvl
+    IsYouBrodcast           :: Request NetLvl
   deriving (Eq, Generic, Show)
+
+data family Responce a :: *
 
 
 data ResponcePackage where
-    ResponceNetLvlPackage   :: RequestPackage -> ResponceNetLvl   -> PackageSignature -> ResponcePackage
-    ResponceLogicLvlPackage :: RequestPackage -> ResponceLogicLvl -> PackageSignature -> ResponcePackage
+    ResponceNetLvlPackage   :: RequestPackage -> Responce NetLvl   -> PackageSignature -> ResponcePackage
+    ResponceLogicLvlPackage :: RequestPackage -> Responce LogicLvl -> PackageSignature -> ResponcePackage
   deriving (Eq, Generic, Show)
 
 
-data ResponceNetLvl where
-    BroadcastListResponce   :: [(NodeId, HostAddress, PortNumber)] -> ResponceNetLvl
-    HostAdressResponce      :: Maybe HostAddress -> ResponceNetLvl
-    IAmBroadcast            :: Bool -> ResponceNetLvl
+data instance Responce NetLvl where
+    BroadcastListResponce   :: [(NodeId, HostAddress, PortNumber)] -> Responce NetLvl
+    HostAdressResponce      :: Maybe HostAddress -> Responce NetLvl
+    IAmBroadcast            :: Bool -> Responce NetLvl
   deriving (Eq, Generic, Show)
 
 
-data ResponceLogicLvl where
-    ShardIndexResponce            :: [ShardHash]    -> ResponceLogicLvl
-    ShardResponce                 :: Shard          -> ResponceLogicLvl
-    NodePositionResponcePackage   :: MyNodePosition -> ResponceLogicLvl
+data instance Responce LogicLvl where
+    ShardIndexResponce            :: [ShardHash]    -> Responce LogicLvl
+    ShardResponce                 :: Shard          -> Responce LogicLvl
+    NodePositionResponcePackage   :: MyNodePosition -> Responce LogicLvl
   deriving (Eq, Generic, Show)
 
 
@@ -140,10 +153,10 @@ instance Serialize Unciphered
 instance Serialize RequestPackage
 instance Serialize BroadcastWarning
 
-instance Serialize ResponceNetLvl
-instance Serialize ResponceLogicLvl
-instance Serialize RequestNetLvl
-instance Serialize RequestLogicLvl
+instance Serialize (Responce NetLvl)
+instance Serialize (Responce LogicLvl)
+instance Serialize (Request  NetLvl)
+instance Serialize (Request  LogicLvl)
 
 --------------------------------------------------------------------------------
 class IsByteString a where

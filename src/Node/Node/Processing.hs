@@ -39,7 +39,7 @@ class Processing aNodeData aPackage where
         ->  IO ()
 
 
-instance Processing (IORef ManagerNodeData) ResponceNetLvl where
+instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
     processing aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
         BroadcastListResponce aBroadcastList -> do
             aData <- readIORef aMd
@@ -52,7 +52,7 @@ instance Processing (IORef ManagerNodeData) ResponceNetLvl where
             modifyIORef aMd $ nodes %~ M.adjust (isBroadcast .~ aBool) aNodeId
 
 
-instance Processing (IORef ManagerNodeData) ResponceLogicLvl where
+instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
     processing aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ aResponse = do
         aData <- readIORef aMd
         case aResponse of
@@ -63,12 +63,12 @@ instance Processing (IORef ManagerNodeData) ResponceLogicLvl where
                 sendToShardingLvl aData $ T.ShardAcceptAction aShard
 
 --
-instance Processing (IORef ManagerNodeData) RequestLogicLvl where
+instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
     processing aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting aRequestLogicLvl = do
         aData <- readIORef aMd
         let aRequestPackage = RequestLogicLvlPackage aRequestLogicLvl aSignature
 
-            aRequestToNetLvl :: (a -> ResponceLogicLvl) -> IO a -> IO ()
+            aRequestToNetLvl :: (a -> Responce LogicLvl) -> IO a -> IO ()
             aRequestToNetLvl = requestToNetLvl aData aTraceRouting aRequestPackage
 
         case aRequestLogicLvl of
@@ -98,7 +98,7 @@ instance Processing (IORef ManagerNodeData) RequestLogicLvl where
 
 
 
-instance Processing (IORef ManagerNodeData) RequestNetLvl where
+instance Processing (IORef ManagerNodeData) (Request NetLvl) where
     processing aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting aRequest = do
         aData <- readIORef aMd
         let aSendNetLvlResponse = sendNetLvlResponse
@@ -126,7 +126,7 @@ requestToNetLvl ::
         ManagerNodeData
     ->  TraceRouting
     ->  RequestPackage
-    -> (a -> ResponceLogicLvl)
+    -> (a -> Responce LogicLvl)
     ->  IO a
     ->  IO ()
 requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
