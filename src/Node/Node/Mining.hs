@@ -16,35 +16,26 @@ module Node.Node.Mining where
 
 import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 
-import qualified    Data.Set                        as S
 import qualified    Data.ByteString                 as B
 import qualified    Data.Map                        as M
 import qualified    Data.Bimap                      as BI
-import              Data.Maybe
-import              Service.Types.PublicPrivateKeyPair
-import              Data.List.Extra
-import              Service.Types
 import              System.Clock
-import              System.Random.Shuffle
 import              Data.IORef
 import              Data.Serialize
 import              Lens.Micro
 import              Control.Concurrent
-import              Control.Concurrent.Chan
 import              Control.Monad.Extra
 import              Node.Node.Base
 import              Node.Node.Types
 import              Service.Monad.Option
 import              Node.Crypto
-import              Service.Metrics
 
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Data.NetMesseges
-import              Node.Action.NetAction
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
-import              Sharding.Space.Distance
+import              Node.Node.Processing
 
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
@@ -99,36 +90,6 @@ instance BroadcastAction ManagerNodeData where
             sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing
             processingOfBroadcastThing aMd aBroadcastThing
 
-class Processing aNodeData aPackage where
-    processing ::
-            aNodeData
-        ->  PackageSignature
-        ->  TraceRouting
-        ->  aPackage
-        ->  IO ()
-
-
-instance Processing (IORef ManagerNodeData) ResponceNetLvl where
-    processing aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
-        BroadcastListResponce aBroadcastList -> do
-            aData <- readIORef aMd
-            forM_ aBroadcastList $ \(aNodeId, aIp, aPort) -> do
-                addRecordToNodeListFile (aData^.myNodeId) aNodeId aIp aPort
-
-        HostAdressResponce    aHostAdress    -> return ()
-
-        IAmBroadcast          aBool          -> do
-            modifyIORef aMd $ nodes %~ M.adjust (isBroadcast .~ aBool) aNodeId
-
-instance Processing (IORef ManagerNodeData) ResponceLogicLvl where
-    processing aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ aResponse = do
-        aData <- readIORef aMd
-        case aResponse of
-            ShardIndexResponce aShardHashList ->
-                sendToShardingLvl aData $ T.ShardIndexAcceptAction aShardHashList
-
-            ShardResponce      aShard         ->
-                sendToShardingLvl aData $ T.ShardAcceptAction aShard
 {-
 TODO verification
 class Verifycation a where
@@ -170,65 +131,6 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
                     (ToDirect aPointFrom aPointTo aNewTrace) aResponcePackage)
 
 
-closedToPointNeighbor aData aPointTo = sortOn
-    (\n -> distanceTo n aPointTo)
-        $ M.elems $ aData^.nodes
-
-amIClose aData aNode aPointTo = if
-    | Just aPosition <- aData^.myNodePosition,
-        distanceTo aPosition aPointTo < distanceTo aNode aPointTo -> True
-    | otherwise -> False
-
-
-getClosedNodeByDirect :: ManagerNodeData -> Point -> Maybe Node
-getClosedNodeByDirect aData aPoint =
-    case closedToPointNeighbor aData aPoint of
-        aNode:_ | not $ amIClose aData aNode (fromPoint aPoint :: PointTo)
-                -> Just aNode
-        _       -> Nothing
-
-
-getClosedNode :: TraceRouting -> ManagerNodeData -> (Maybe Node, [PackageSignature])
-getClosedNode aTraceRouting aData = case aTraceRouting of
-    ToDirect aPointFrom aPointTo aTrace
-        | Just aNextNodeId <- lookupNextNode aTrace aData -> do
-            let aNewTrace = traceDrop aNextNodeId aTrace
-            (aNextNodeId `M.lookup` (aData^.nodes), aNewTrace)
-        | otherwise -> (getClosedNodeByDirect aData (toPoint aPointTo), aTrace)
-    ToNode _ (PackageSignature (toNodeId -> aNodeId) _ _) ->
-        (aNodeId `M.lookup` (aData^.nodes), [])
-
-  where
-    cleanTrace aTrace = filter aPredicat $ dropWhile aPredicat aTrace
-      where
-        aPredicat (PackageSignature aNodeId _ _) = aData^.myNodeId /= aNodeId
-
-    lookupNextNode aTrace aData = if
-        | x:_ <- aIntersect aTrace -> Just x
-        | otherwise                -> Nothing
-      where
-        aIntersect aTrace = (signatureToNodeId <$> aTrace) `intersect` aNeighborList
-        aNeighborList     = M.keys (aData^.nodes)
-
-
-signatureToNodeId :: PackageSignature -> NodeId
-signatureToNodeId (PackageSignature (toNodeId -> aNodeId) _ _) = aNodeId
-
-
-instance DistanceTo Node Point where
-    distanceTo aNode aPoint = if
-        | Just aPosition <- aNode^.nodePosition ->
-            distanceTo aPosition  (NodePosition aPoint)
-        | otherwise                             -> maxBound
-
-instance DistanceTo Node PointTo where
-    distanceTo aNode aPoint = distanceTo aNode (toPoint aPoint)
-
-
-traceDrop aNextNodeId = dropWhile
-    (\(PackageSignature (toNodeId -> aId) _ _) -> aId /= aNextNodeId)
-
-
 isItMyResponce :: NodeId -> TraceRouting -> Bool
 isItMyResponce aMyNodeId = \case
     ToNode   _ (PackageSignature aNodeId _ _)
@@ -237,105 +139,6 @@ isItMyResponce aMyNodeId = \case
         | aNodeId == aMyNodeId          -> True
     _                                   -> False
 
-makeNewTraceRouting :: [PackageSignature] -> TraceRouting -> TraceRouting
-makeNewTraceRouting aSignatures = \case
-    ToDirect aPointFrom aPointTo _  -> ToDirect aPointFrom aPointTo aSignatures
-    aTraceRouting                   -> aTraceRouting
-
-instance Processing (IORef ManagerNodeData) RequestNetLvl where
-    processing aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting aRequest = do
-        aData <- readIORef aMd
-        let aSendNetLvlResponse = sendNetLvlResponse
-                aTraceRouting aData aRequest aSignature
-        case aRequest of
-            IsYouBrodcast -> aSendNetLvlResponse
-                (IAmBroadcast $ aData^.iAmBroadcast)
-
-            HostAdressRequest -> aSendNetLvlResponse
-                (HostAdressResponce $ aData^.hostAddress)
-
-            BroadcastListRequest -> do
-                -- TODO think about aBroadcastList
-                aBroadcastList <- readRecordFromNodeListFile $ aData^.myNodeId
-                aSendNetLvlResponse (BroadcastListResponce $ take 10 aBroadcastList)
-
-
-sendNetLvlResponse aTraceRouting aData aRequest aSignature aNetPackage = do
-    let (aNode, aTrace) = getClosedNode aTraceRouting aData
-        aRequestPackage = RequestNetLvlPackage aRequest aSignature
-
-    aResponsePackageSignature <- makePackageSignature aData aNetPackage
-    sendResponse aNode
-        (makeNewTraceRouting aTrace aTraceRouting)
-        (ResponceNetLvlPackage aRequestPackage aNetPackage aResponsePackageSignature)
-
-
-instance Processing (IORef ManagerNodeData) RequestLogicLvl where
-    processing aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting aRequestLogicLvl = do
-        aData <- readIORef aMd
-        let aRequestPackage = RequestLogicLvlPackage aRequestLogicLvl aSignature
-
-            aRequestToNetLvl :: (a -> ResponceLogicLvl) -> IO a -> IO ()
-            aRequestToNetLvl = requestToNetLvl aData aTraceRouting aRequestPackage
-
-        case aRequestLogicLvl of
-            ShardIndexRequestPackage _ aDistance ->
-                aRequestToNetLvl ShardIndexResponce $ do
-                    aChan <- newChan
-                    sendToShardingLvl aData $
-                        T.ShardIndexCreateAction aChan aNodeId aDistance
-                    T.ShardIndexResponse aShardIndex <- readChan aChan
-                    return aShardIndex
-
-            ShardRequestPackage aShardHash -> do
-                aRequestToNetLvl ShardResponce $ do
-                    aChan <- newChan
-                    sendToShardingLvl aData $
-                        T.ShardListCreateAction aChan aNodeId aShardHash
-                    T.ShardResponse aShard <- readChan aChan
-                    return aShard
-
-            NodePositionRequestPackage ->
-                aRequestToNetLvl NodePositionResponcePackage $ do
-                    aChan <- newChan
-                    sendToShardingLvl aData $
-                        T.NodePositionAction aChan aNodeId
-                    T.NodePositionResponse aMyNodePosition <- readChan aChan
-                    return aMyNodePosition
-
-
--- TODO  requestToNetLvl + sendNetLvlResponse
-requestToNetLvl ::
-        ManagerNodeData
-    ->  TraceRouting
-    ->  RequestPackage
-    -> (a -> ResponceLogicLvl)
-    ->  IO a
-    ->  IO ()
-requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
-    void $ forkIO $ do
-        aResultOfRequest <- aLogicRequest
-        let (aNode, aTrace) = getClosedNode aTraceRouting aData
-            aNetLevetPackage = aConstructor aResultOfRequest
-
-        aResponsePackageSignature <- makePackageSignature aData aNetLevetPackage
-        sendResponse aNode
-            (makeNewTraceRouting aTrace aTraceRouting)
-            (ResponceLogicLvlPackage aRequestPackage aNetLevetPackage aResponsePackageSignature)
-
-
-makePackageSignature aData aResponse = do
-    aTime <- getTime Realtime
-    let aNodeId = aData^.myNodeId
-    aResponceSignature <- signEncodeble
-        (aData^.privateKey) (aNodeId, aTime, aResponse)
-    return $ PackageSignature aNodeId aTime aResponceSignature
-
-sendResponse aNode aNewTraceRouting aPackageResponse = whenJust aNode $
-    sendToNode (makeResponse aNewTraceRouting aPackageResponse)
-
-makeResponse aTraceRouting aResponse = makeCipheredPackage
-    (PackageTraceRoutingResponce aTraceRouting aResponse)
 
 ---------------TODO: fix True---------------------------------------------------
 instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
@@ -459,7 +262,6 @@ processingOfBroadcastThing aMd aBroadcastThing = do
             sendToShardingLvl aData $
                 T.TheNodeHaveNewCoordinates (toNodeId aMyNodeId) aNodePosition
 
-sendToShardingLvl aData aMsg = whenJust (aData^.shardingChan) $ \aChan ->
-    writeChan aChan aMsg
+
 
 --------------------------------------------------------------------------------
