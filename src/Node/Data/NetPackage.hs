@@ -66,14 +66,14 @@ data RequestNetLvl where
 
 
 data ResponcePackage where
-    ResponceNetLvlPackage   :: ResponceNetLvl   -> PackageSignature -> ResponcePackage
-    ResponceLogicLvlPackage :: ResponceLogicLvl -> PackageSignature -> ResponcePackage
+    ResponceNetLvlPackage   :: RequestPackage -> ResponceNetLvl   -> PackageSignature -> ResponcePackage
+    ResponceLogicLvlPackage :: RequestPackage -> ResponceLogicLvl -> PackageSignature -> ResponcePackage
   deriving (Eq, Generic, Show)
 
 
 data ResponceNetLvl where
     BroadcastListResponce   :: [(NodeId, HostAddress, PortNumber)] -> ResponceNetLvl
-    HostAdressResponce      :: HostAddress -> ResponceNetLvl
+    HostAdressResponce      :: Maybe HostAddress -> ResponceNetLvl
     IAmBroadcast            :: Bool -> ResponceNetLvl
   deriving (Eq, Generic, Show)
 

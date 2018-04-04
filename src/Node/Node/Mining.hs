@@ -153,9 +153,9 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
       where
         verifyResponce _ _ = True -- TODO : add body
         aProcessingOfAction aData = case aResponcePackage of
-            ResponceNetLvlPackage aResponse aSignature | True ->
+            ResponceNetLvlPackage aRequest aResponse aSignature   | True ->
                 processing md aSignature aTraceRouting aResponse
-            ResponceLogicLvlPackage aResponse aSignature | True ->
+            ResponceLogicLvlPackage aRequest aResponse aSignature | True ->
                 processing md aSignature aTraceRouting aResponse
 
         aSendToNeighbor aData = do
@@ -237,31 +237,130 @@ isItMyResponce aMyNodeId = \case
         | aNodeId == aMyNodeId          -> True
     _                                   -> False
 
-instance Processing (IORef ManagerNodeData) RequestLogicLvl where
-    processing aMd (PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting aRequestLogicLvl= do
+makeNewTraceRouting :: [PackageSignature] -> TraceRouting -> TraceRouting
+makeNewTraceRouting aSignatures = \case
+    ToDirect aPointFrom aPointTo _  -> ToDirect aPointFrom aPointTo aSignatures
+    aTraceRouting                   -> aTraceRouting
+
+instance Processing (IORef ManagerNodeData) RequestNetLvl where
+    processing aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting aRequest = do
         aData <- readIORef aMd
+        let aSendNetLvlResponse = sendNetLvlResponse
+                aTraceRouting aData aRequest aSignature
+        case aRequest of
+            IsYouBrodcast -> aSendNetLvlResponse
+                (IAmBroadcast $ aData^.iAmBroadcast)
+
+            HostAdressRequest -> aSendNetLvlResponse
+                (HostAdressResponce $ aData^.hostAddress)
+
+            BroadcastListRequest -> do
+                -- TODO think about aBroadcastList
+                aBroadcastList <- readRecordFromNodeListFile $ aData^.myNodeId
+                aSendNetLvlResponse (BroadcastListResponce $ take 10 aBroadcastList)
+
+
+sendNetLvlResponse aTraceRouting aData aRequest aSignature aNetPackage = do
+    let (aNode, aTrace) = getClosedNode aTraceRouting aData
+        aRequestPackage = RequestNetLvlPackage aRequest aSignature
+
+    aResponsePackageSignature <- makePackageSignature aData aNetPackage
+    sendResponse aNode
+        (makeNewTraceRouting aTrace aTraceRouting)
+        (ResponceNetLvlPackage aRequestPackage aNetPackage aResponsePackageSignature)
+
+
+instance Processing (IORef ManagerNodeData) RequestLogicLvl where
+    processing aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting aRequestLogicLvl = do
+        aData <- readIORef aMd
+        let aRequestPackage = RequestLogicLvlPackage aRequestLogicLvl aSignature
+
+            aRequestToNetLvl :: (a -> ResponceLogicLvl) -> IO a -> IO ()
+            aRequestToNetLvl = requestToNetLvl aData aTraceRouting aRequestPackage
+
         case aRequestLogicLvl of
             ShardIndexRequestPackage _ aDistance ->
-                void $ forkIO $ do
+                aRequestToNetLvl ShardIndexResponce $ do
                     aChan <- newChan
-                    sendToShardingLvl aData $ T.ShardIndexCreateAction aChan aNodeId aDistance
-                    T.ShardIndexResponse aShardListHash <- readChan aChan
-                    whenJust (aNodeId `M.lookup` (aData^.nodes)) $
-                        sendToNode (makeRequest undefined undefined)
+                    sendToShardingLvl aData $
+                        T.ShardIndexCreateAction aChan aNodeId aDistance
+                    T.ShardIndexResponse aShardIndex <- readChan aChan
+                    return aShardIndex
 
-{-
-            ShardRequestPackage aShardHash -> sendToShardingLvl aData $
-                T.ShardListCreateAction aNodeId [aShardHash]
-                -}
-            NodePositionRequestPackage ->
+            ShardRequestPackage aShardHash -> do
+                aRequestToNetLvl ShardResponce $ do
+                    aChan <- newChan
+                    sendToShardingLvl aData $
+                        T.ShardListCreateAction aChan aNodeId aShardHash
+                    T.ShardResponse aShard <- readChan aChan
+                    return aShard
+
+            NodePositionRequestPackage ->  undefined -- TODO
+            {-
                 whenJust (aData^.myNodePosition) $ \aMyPosition ->
                     whenJust (aNodeId `M.lookup` (aData^.nodes)) $
                         sendToNode (makeRequest undefined undefined)
+-}
 
-                      ---  ShardIndexResponse :: NodeId -> [ShardHash] -> ShardingNodeResponce
-                      ---  ShardListResponse  :: NodeId -> [Shard]     -> ShardingNodeResponce
+requestToNetLvl ::
+        ManagerNodeData
+    ->  TraceRouting
+    ->  RequestPackage
+    -> (a -> ResponceLogicLvl)
+    ->  IO a
+    ->  IO ()
+requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
+    void $ forkIO $ do
+        aResultOfRequest <- aLogicRequest
+        let (aNode, aTrace) = getClosedNode aTraceRouting aData
+            aNetLevetPackage = aConstructor aResultOfRequest
+
+        aResponsePackageSignature <- makePackageSignature aData aNetLevetPackage
+        sendResponse aNode
+            (makeNewTraceRouting aTrace aTraceRouting)
+            (ResponceLogicLvlPackage aRequestPackage aNetLevetPackage aResponsePackageSignature)
 
 
+-- послать запрос логическому уровню
+-- считать ответ логического уровня
+-- сформировать подпись
+-- отправить ответ
+
+makePackageSignature aData aResponse = do
+    aTime <- getTime Realtime
+    let aNodeId = aData^.myNodeId
+    aResponceSignature <- signEncodeble
+        (aData^.privateKey) (aNodeId, aTime, aResponse)
+    return $ PackageSignature aNodeId aTime aResponceSignature
+
+sendResponse aNode aNewTraceRouting aPackageResponse = whenJust aNode $
+    sendToNode (makeResponse aNewTraceRouting aPackageResponse)
+{-
+where
+    aPackageResponse :: ResponcePackage
+    aPackageResponse = aConstructor
+        aRequestPackage aResponceLvl aResponsePackageSignature
+-}
+-- ResponceNetLvlPackage   :: RequestPackage -> ResponceNetLvl   -> PackageSignature -> ResponcePackage
+-- ResponceLogicLvlPackage :: RequestPackage -> ResponceLogicLvl -> PackageSignature -> ResponcePackage
+
+{-
+ShardIndexRequestPackage _ aDistance ->
+    void $ forkIO $ do
+        aChan <- newChan
+        sendToShardingLvl aData $ T.ShardIndexCreateAction aChan aNodeId aDistance
+        T.ShardIndexResponse aShardListHash <- readChan aChan
+        let (aNode, aTrace) = getClosedNode aTraceRouting aData
+            aRequestPackage = RequestLogicLvlPackage aRequestLogicLvl aSignature
+
+        aTime <- getTime Realtime
+        aResponceSignature <- signEncodeble (aData^.privateKey)
+            (aData^.myNodeId, aTime, aShardListHash)
+        let aResponsePackageSignature = PackageSignature (aData^.myNodeId) aTime aResponceSignature
+        whenJust aNode $ sendToNode
+            (makeResponse (makeNewTraceRouting aTrace aTraceRouting)
+                (ResponceLogicLvlPackage aRequestPackage (ShardIndexResponce aShardListHash) aResponsePackageSignature))
+-}
 {-
         BroadcastListResponce aBroadcastList -> do
             aData <- readIORef aMd
