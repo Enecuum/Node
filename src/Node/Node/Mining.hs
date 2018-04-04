@@ -130,6 +130,7 @@ instance Processing (IORef ManagerNodeData) ResponceLogicLvl where
             ShardResponce      aShard         ->
                 sendToShardingLvl aData $ T.ShardAcceptAction aShard
 {-
+TODO verification
 class Verifycation a where
     verifyPackage :: a -> Bool
 
@@ -224,7 +225,6 @@ instance DistanceTo Node PointTo where
     distanceTo aNode aPoint = distanceTo aNode (toPoint aPoint)
 
 
-
 traceDrop aNextNodeId = dropWhile
     (\(PackageSignature (toNodeId -> aId) _ _) -> aId /= aNextNodeId)
 
@@ -295,13 +295,16 @@ instance Processing (IORef ManagerNodeData) RequestLogicLvl where
                     T.ShardResponse aShard <- readChan aChan
                     return aShard
 
-            NodePositionRequestPackage ->  undefined -- TODO
-            {-
-                whenJust (aData^.myNodePosition) $ \aMyPosition ->
-                    whenJust (aNodeId `M.lookup` (aData^.nodes)) $
-                        sendToNode (makeRequest undefined undefined)
--}
+            NodePositionRequestPackage ->
+                aRequestToNetLvl NodePositionResponcePackage $ do
+                    aChan <- newChan
+                    sendToShardingLvl aData $
+                        T.NodePositionAction aChan aNodeId
+                    T.NodePositionResponse aMyNodePosition <- readChan aChan
+                    return aMyNodePosition
 
+
+-- TODO  requestToNetLvl + sendNetLvlResponse
 requestToNetLvl ::
         ManagerNodeData
     ->  TraceRouting
@@ -321,11 +324,6 @@ requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
             (ResponceLogicLvlPackage aRequestPackage aNetLevetPackage aResponsePackageSignature)
 
 
--- послать запрос логическому уровню
--- считать ответ логического уровня
--- сформировать подпись
--- отправить ответ
-
 makePackageSignature aData aResponse = do
     aTime <- getTime Realtime
     let aNodeId = aData^.myNodeId
@@ -335,63 +333,9 @@ makePackageSignature aData aResponse = do
 
 sendResponse aNode aNewTraceRouting aPackageResponse = whenJust aNode $
     sendToNode (makeResponse aNewTraceRouting aPackageResponse)
-{-
-where
-    aPackageResponse :: ResponcePackage
-    aPackageResponse = aConstructor
-        aRequestPackage aResponceLvl aResponsePackageSignature
--}
--- ResponceNetLvlPackage   :: RequestPackage -> ResponceNetLvl   -> PackageSignature -> ResponcePackage
--- ResponceLogicLvlPackage :: RequestPackage -> ResponceLogicLvl -> PackageSignature -> ResponcePackage
 
-{-
-ShardIndexRequestPackage _ aDistance ->
-    void $ forkIO $ do
-        aChan <- newChan
-        sendToShardingLvl aData $ T.ShardIndexCreateAction aChan aNodeId aDistance
-        T.ShardIndexResponse aShardListHash <- readChan aChan
-        let (aNode, aTrace) = getClosedNode aTraceRouting aData
-            aRequestPackage = RequestLogicLvlPackage aRequestLogicLvl aSignature
-
-        aTime <- getTime Realtime
-        aResponceSignature <- signEncodeble (aData^.privateKey)
-            (aData^.myNodeId, aTime, aShardListHash)
-        let aResponsePackageSignature = PackageSignature (aData^.myNodeId) aTime aResponceSignature
-        whenJust aNode $ sendToNode
-            (makeResponse (makeNewTraceRouting aTrace aTraceRouting)
-                (ResponceLogicLvlPackage aRequestPackage (ShardIndexResponce aShardListHash) aResponsePackageSignature))
--}
-{-
-        BroadcastListResponce aBroadcastList -> do
-            aData <- readIORef aMd
-            forM_ aBroadcastList $ \(aNodeId, aIp, aPort) -> do
-                addRecordToNodeListFile (aData^.myNodeId) aNodeId aIp aPort
-
-        HostAdressResponce    aHostAdress    -> return ()
-
-        IAmBroadcast          aBool          -> do
-            modifyIORef aMd $ nodes %~ M.adjust (isBroadcast .~ aBool) aNodeId
---
-
-NewNodeInNetAction          NodeId NodePosition
--- TODO create index for new node by NodeId
-|   ShardIndexCreateAction      NodeId Word64
-|   ShardIndexAcceptAction      [ShardHash]
-|   ShardListCreateAction       NodeId [ShardHash]
-|   ShardAcceptAction           Shard
----
-|   NewShardInNetAction         Shard
-|   CleanShardsAction -- clean local Shards
---- ShiftAction => NewPosiotionResponse
-|   ShiftAction
-|   TheNodeHaveNewCoordinates   NodeId NodePosition
----- NeighborListRequest => NeighborListAcceptAction
-|   TheNodeIsDead               NodeId
-
---
-
-NodePositionRequestPackage  ::                                     RequestLogicLvl
--}
+makeResponse aTraceRouting aResponse = makeCipheredPackage
+    (PackageTraceRoutingResponce aTraceRouting aResponse)
 
 ---------------TODO: fix True---------------------------------------------------
 instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
@@ -419,6 +363,9 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                         sendToNode (makeRequest aNewTrace aRequestPackage) aNode
             _ -> return ()
 
+makeRequest aTraceRouting aRequest = makeCipheredPackage
+    (PackageTraceRoutingRequest aTraceRouting aRequest)
+
 
 addToTrace :: TraceRouting -> RequestPackage -> MyNodeId -> ECDSA.PrivateKey -> IO TraceRouting
 addToTrace aTraceRouting aRequestPackage aMyNodeId aPrivateKey = do
@@ -431,93 +378,9 @@ addToTrace aTraceRouting aRequestPackage aMyNodeId aPrivateKey = do
             return $ ToDirect aPointFrom aPointTo (aPackageSignature : aSignatures)
         _ -> error "Node.Node.Mining.addToTrace: It is not ToDirect!"
 
-        {-
-
-        BroadcastListRequest                        -> do
-            aData <- readIORef md
-            whenJust (aNodeId `M.lookup` (aData^.nodes)) $ \aNode -> do
-                aRawListOfContacts <- readRecordFromNodeListFile $ aData^.myNodeId
-                aListOfContacts    <- shuffleM aRawListOfContacts
-                sendToNode
-                    (makeResponse aTraceRouting
-                        (BroadcastListResponce BroadcastListRequest
-                            (take 5 aListOfContacts)))
-                    aNode
--}
-
-makeRequest aTraceRouting aRequest = makeCipheredPackage
-    (PackageTraceRoutingRequest aTraceRouting aRequest)
-
-makeResponse aTraceRouting aResponse = makeCipheredPackage
-    (PackageTraceRoutingResponce aTraceRouting aResponse)
 
 {-
-instance NetAction ManagerNodeData where
-
-    actionByPing _ aMd aNodeId aPing = do
-        aData <- readIORef aMd
-        loging aData $ "miningNodeAnswerToPing" ++ show aPing
-        case aPing of
-            IPRequest aTimeSpec aSignature -> whenJust (aNodeId `M.lookup` (aData^.nodes)) $
-                \aNode -> sendToNode
-                    (makePingPongMsg Pong (IPAnswer (aNode^.nHostAddress) aTimeSpec aSignature))
-                    aNode
-
-            BroadcastNodeListRequest -> whenJust (aNodeId `M.lookup` (aData^.nodes)) $
-                \aNode -> do
-                    aRawListOfContacts <- readRecordFromNodeListFile $ aData^.myNodeId
-                    aListOfContacts    <- shuffleM $ map (\(a, b, c) -> (a, (b, c)))
-                        aRawListOfContacts
-                    sendToNode
-                        (makePingPongMsg Pong (BroadcastNodeListAnswer $ take 5 aListOfContacts))
-                        aNode
-            _ -> return ()
-
-    actionByPong _ aMd aId aPong = do
-        aData <- readIORef aMd
-        loging aData $ "miningNodeAnswerToPong " ++ show aPong
-        case aPong of
-            aIPAnswer@(IPAnswer aIp aTimeSpec _)
-                | verifyIPAnswer aId (aData^.publicKey) aIPAnswer -> do
-                    aTime <- getTime Realtime
-                    when (diffTimeSpec aTime aTimeSpec < 3000000000) $
-                        modifyIORef aMd $ nodeBaseData.hostAddress .~ Just aIp
-
-            BroadcastNodeListAnswer aListAnswer ->
-                forM_ aListAnswer $ \(aNodeId, (aIp, aPort)) ->
-                    addRecordToNodeListFile (aData^.myNodeId) aNodeId aIp aPort
-            _                                   -> pure ()
-    --
-
-    actionByInfoPing _ aMd _ aInfoPing = do
-        aData <- readIORef aMd
-        loging aData $ "miningNodeAnswerToInfoPing " ++ show aInfoPing
-        when (notInIndex aData aInfoPing) $ do
-            addInIndex aInfoPing aMd
-            sendInfoPingToNodes aMd aInfoPing
-            processingOfInfoPing aMd aInfoPing
-
-    actionByRequest _ aMd _ _ aRequest = do
-        aData <- readIORef aMd
-        loging aData $ "miningNodeAnswerToInfoPing " ++ show aRequest
-        when (notInIndex aData aRequest) $ do
-            addInIndex aRequest aMd
--}
-{-
-            sendInfoPingToNodes aMd aInfoPing
-            processingOfInfoPing aMd aInfoPing
--}
-
-{-
-class NetAction aNodeType where
-
-    actionByRequest         :: ManagerData md => aNodeType -> ShardingAction t md RequestPackage
-    actionByAnswerMsg       :: ManagerData md => aNodeType -> ShardingAction t md AnswerPackage
-    actionByConfirmRequest  :: ManagerData md => aNodeType -> ShardingAction t md ConfirmationOfRequestPackage
-
--}
-{-
-
+TODO init Broadcast
 answerToNewTransaction :: IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
 answerToNewTransaction aMd (NewTransaction aTransaction) = do
     metric $ increment "net.tx.count"
@@ -532,8 +395,6 @@ answerToNewTransaction aMd (NewTransaction aTransaction) = do
 answerToNewTransaction _ _ = error
     "answerToNewTransaction: something unexpected  has happened."
 
--}
-{-
 answerToBlockMadeMsg :: ManagerMiningMsg msg =>
     IORef ManagerNodeData -> msg -> IO ()
 answerToBlockMadeMsg aMd (toManagerMiningMsg -> BlockMadeMsg aMicroblock) = do
@@ -601,16 +462,4 @@ processingOfBroadcastThing aMd aBroadcastThing = do
 sendToShardingLvl aData aMsg = whenJust (aData^.shardingChan) $ \aChan ->
     writeChan aChan aMsg
 
-
-{-
-        aMsg@(IHaveBroadcastConnects _ _ aIp aPort aNodeId _)
-            | verifyIHaveBroadcastConnects aMsg ->
-                unless ((aData^.myNodeId) `eq` aNodeId) $ do
-                    aTime <- getTime Realtime
-                    modifyIORef aMd $ vacantPositions %~ BI.insert aTime
-                        (aNodeId, aIp, aPort)
-                    addRecordToNodeListFile (aData^.myNodeId) aNodeId aIp aPort
-
-        BlockMade aMicroblock -> do
-            writeChan (aData^.microblockChan) aMicroblock
--}
+--------------------------------------------------------------------------------

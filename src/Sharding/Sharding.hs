@@ -72,6 +72,9 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
             sendShardsToNode aShardingNode aNodeId aHashList aChan
             aLoop aShardingNode
 
+        NodePositionAction aChan aNodeId -> do
+            writeChan aChan $ NodePositionResponse (aShardingNode^.nodePosition)
+            aLoop aShardingNode
 
 --        CleanShardsAction -> do
 
