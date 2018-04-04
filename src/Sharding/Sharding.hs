@@ -56,8 +56,8 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
         ShardIndexAcceptAction aShardHashs -> aLoop
             $ addShardingIndex (S.fromList aShardHashs) aShardingNode
 
-        ShardIndexCreateAction aNodeId aRadiusOfCapture -> do
-            createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture
+        ShardIndexCreateAction aChan aNodeId aRadiusOfCapture -> do                         --- !!!!! TODO
+            createShardingIndex aChan aShardingNode aNodeId aRadiusOfCapture
             aLoop aShardingNode
 
         ShardAcceptAction aShard
@@ -68,8 +68,8 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
             | checkShardIsInRadiusOfCaptureShardingNode aShardingNode (shardToHash aShard) ->
                 nodeSaveShard aShard aLoop aShardingNode
 
-        ShardListCreateAction aNodeId aHashList -> do
-            sendShardsToNode aShardingNode aNodeId aHashList aChanOfNetLevel
+        ShardListCreateAction aChan aNodeId aHashList -> do
+            sendShardsToNode aShardingNode aNodeId aHashList aChan
             aLoop aShardingNode
 
 
@@ -117,7 +117,7 @@ shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
         aNewPosition :: MyNodePosition
         aNewPosition       = shiftToCenterOfMass aMyNodePosition aNearestPositions
 
-    sendToNetLevet aChanOfNetLevel $ NewPosiotionResponse aNewPosition
+    sendToNetLevet aChanOfNetLevel $ NewPosiotionMsg aNewPosition
     aLoop $ aShardingNode & nodePosition .~ aNewPosition
 
 
@@ -141,7 +141,7 @@ addShardingIndex aShardIndex aShardingNode = undefined
     --aShardingNode & nodeIndex %~ S.union aShardIndex
 
 
-createShardingIndex :: Chan T.ManagerMiningMsgBase -> ShardingNode -> NodeId -> Word64 ->  IO ()
+createShardingIndex :: Chan ShardingNodeResponce -> ShardingNode -> NodeId -> Word64 ->  IO ()
 createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = undefined
 {-
  do
@@ -172,11 +172,11 @@ sendShardsToNode ::
         ShardingNode
     ->  NodeId
     -> [ShardHash]
-    ->  Chan T.ManagerMiningMsgBase
+    ->  Chan ShardingNodeResponce
     ->  IO ()
 sendShardsToNode aShardingNode aNodeId aHashList aChanOfNetLevel = do
     aShards <- loadShards aHashList
-    sendToNetLevet aChanOfNetLevel $ ShardListResponse aNodeId aShards
+    writeChan aChanOfNetLevel $ ShardListResponse aShards
 
 --------------------------------------------------------------------------------
 --------------------------TODO-TO-REMOVE----------------------------------------
@@ -214,8 +214,8 @@ shiftIsNeed aShardingNode = checkUnevenness
     (aShardingNode^.nodePosition) (neighborPositions aShardingNode)
 
 
-sendToNetLevet :: Chan T.ManagerMiningMsgBase -> ShardingNodeRequestAndResponce -> IO ()
-sendToNetLevet aChan aMsg = writeChan aChan $ T.ShardingNodeRequestOrResponce aMsg
+sendToNetLevet :: Chan T.ManagerMiningMsgBase -> ShardingNodeRequestMsg -> IO ()
+sendToNetLevet aChan aMsg = writeChan aChan $ T.ShardingNodeRequestMsg aMsg
 
 
 mul :: Word64 -> Word64 -> Word64
