@@ -1,4 +1,11 @@
-{-# LANGUAGE DeriveGeneric, GeneralizedNewtypeDeriving, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE
+        DeriveGeneric
+    ,   GeneralizedNewtypeDeriving
+    ,   FlexibleInstances
+    ,   MultiParamTypeClasses
+    ,   ViewPatterns
+#-}
+
 module Sharding.Space.Point where
 
 import              Data.Serialize
@@ -11,11 +18,21 @@ data Point = Point !Word64 !Word64
 
 instance Serialize Point
 
-newtype MyNodePosition  = MyNodePosition Point deriving (Eq, Ord, Show, Serialize)
-newtype NodePosition    = NodePosition   Point deriving (Eq, Ord, Show, Serialize)
-newtype ShardPosition   = ShardPosition  Point deriving (Eq, Ord, Show, Serialize)
-newtype PointFrom       = PointFrom      Point deriving (Eq, Ord, Show, Serialize)
-newtype PointTo         = PointTo        Point deriving (Eq, Ord, Show, Serialize)
+newtype MyNodePosition  = MyNodePosition Point
+    deriving (Eq, Ord, Show, Positions, Serialize)
+
+newtype NodePosition    = NodePosition   Point
+    deriving (Eq, Ord, Show, Positions, Serialize)
+
+
+newtype ShardPosition   = ShardPosition  Point
+    deriving (Eq, Ord, Show, Positions, Serialize)
+
+newtype PointFrom       = PointFrom      Point
+    deriving (Eq, Ord, Show, Positions, Serialize)
+
+newtype PointTo         = PointTo        Point
+    deriving (Eq, Ord, Show, Positions, Serialize)
 
 class NodePositions a b where
     toNodePosition :: a -> b
@@ -23,34 +40,15 @@ class NodePositions a b where
 instance (Positions a, Positions b) => NodePositions a b where
     toNodePosition = fromPoint.toPoint
 
+
 class Positions points where
-    toPoint :: points -> Point
+    toPoint   :: points -> Point
     fromPoint :: Point -> points
 
+instance Positions Point where
+    toPoint  = id
+    fromPoint = id
 
-instance Positions MyNodePosition where
-    toPoint (MyNodePosition p) = p
-    fromPoint = MyNodePosition
-
-
-instance Positions NodePosition where
-    toPoint (NodePosition p) = p
-    fromPoint = NodePosition
-
-
-instance Positions ShardPosition where
-    toPoint (ShardPosition p) = p
-    fromPoint = ShardPosition
-
-
-instance Positions PointFrom where
-    toPoint (PointFrom p) = p
-    fromPoint = PointFrom
-
-
-instance Positions PointTo where
-    toPoint (PointTo p) = p
-    fromPoint = PointTo
 
 -- | Find the support points.
 {-# INLINE findSupportPoints #-}
