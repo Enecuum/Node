@@ -18,16 +18,11 @@ import              Data.List.Extra
 import              Control.Concurrent
 import              Lens.Micro
 import              Control.Monad
-import qualified    Data.ByteString     as B
 import              Data.Word
-import              Node.Data.Data
 import              Service.Timer
 import qualified    Data.Set            as S
-import qualified    Data.Map            as M
 
 import              Node.Data.NodeTypes
-import              Node.Data.NetPackage
-import              Node.Data.NetMesseges
 
 
 --makeShardingNode :: MyNodeId -> Point -> IO ()

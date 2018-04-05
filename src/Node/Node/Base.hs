@@ -10,7 +10,6 @@
 module Node.Node.Base where
 
 import qualified    Network.WebSockets                  as WS
-import              Service.Network.WebSockets.Server
 import              Service.Network.WebSockets.Client
 import              Service.Network.Base
 import              System.Clock
@@ -21,13 +20,9 @@ import              Crypto.Error
 import              Crypto.PubKey.ECC.ECDSA
 import qualified    Data.ByteString                 as B
 import qualified    Data.Map                        as M
-import qualified    Data.Bimap                      as BI
 import qualified    Data.Set                        as S
 import              Data.IORef
-import              Data.IP
 import              Data.Serialize
-import              Data.List.Extra
-import              Data.Maybe
 import              Data.Monoid
 import              Lens.Micro.Mtl
 import              Lens.Micro
@@ -44,7 +39,6 @@ import              Node.Extra
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Data.NetMesseges
-import              Node.Action.NetAction
 import              Node.Node.Base.Server
 
 
@@ -58,11 +52,14 @@ loging aData aString = do
         ("["++ show aTime ++ "] " ++ aString ++ "\n")
 
 
-baseNodeOpts :: (ManagerData md2, ManagerData md1, ManagerMsg msg) =>
-    Chan msg
-    -> IORef md1
-    -> md2
-    -> Options msg ()
+baseNodeOpts
+    ::  ManagerData md2
+    =>  ManagerData md1
+    =>  ManagerMsg msg
+    =>  Chan msg
+    ->  IORef md1
+    ->  md2
+    ->  Options msg ()
 baseNodeOpts aChan aMd aData = do
     opt isSendInitDatagram  $ answerToSendInitDatagram aChan aMd
     opt isServerIsDead          $
@@ -73,8 +70,12 @@ baseNodeOpts aChan aMd aData = do
     opt isDeleteDeadSouls       $ answerToDeleteDeadSouls   aData
 
 
-answerToSendDatagram :: (ManagerData md, ManagerMsg msg) =>
-    IORef md -> msg -> IO ()
+answerToSendDatagram
+    ::  ManagerData md
+    =>  ManagerMsg msg
+    =>  IORef md
+    ->  msg
+    ->  IO ()
 answerToSendDatagram aMd (toManagerMsg -> SendDatagram aMsg aId) = do
     aData <- readIORef aMd
     whenJust (aId `M.lookup`(aData^.nodes)) $
@@ -83,15 +84,20 @@ answerToSendDatagram _ _ = pure ()
 
 
 sendExitMsgToNode :: Node -> IO ()
-sendExitMsgToNode aNode = do
-    sendPackagedMsg (aNode^.chan) disconnectRequest
-    writeChan       (aNode^.chan) SenderTerminate
+sendExitMsgToNode ((^.chan) -> aChan) = do
+    sendPackagedMsg aChan disconnectRequest
+    writeChan       aChan SenderTerminate
 
 
-answerToDeleteDeadSouls :: (ManagerData md, ManagerMsg msg) => md -> msg -> IO ()
+answerToDeleteDeadSouls
+    ::  ManagerData md
+    =>  ManagerMsg msg
+    =>  md
+    ->  msg
+    ->  IO ()
 answerToDeleteDeadSouls aData _ = do
-    let aNodes = filter (\aNode -> aNode^.status /= Active) $ M.elems $ aData^.nodes
-    forM_ aNodes sendExitMsgToNode
+    let aNotIsActive aNode = aNode^.status /= Active
+    forM_ (M.filter aNotIsActive $ aData^.nodes) sendExitMsgToNode
 
 
 -- 1. 4 pings -> min
@@ -126,8 +132,13 @@ average = (average * count + newx) / (count + 1)
 S = sqrt (1/n * sum [(x i - a)^2| i <- [1..count] ])
 -}
 -- count * average  = total
-answerToConnectivityQuery :: (ManagerData md, ManagerMsg msg) =>
-        Chan msg -> IORef md -> msg -> IO ()
+answerToConnectivityQuery
+    ::  ManagerData md
+    =>  ManagerMsg msg
+    =>  Chan msg
+    ->  IORef md
+    ->  msg
+    ->  IO ()
 answerToConnectivityQuery aChan aMd _ = do
     aData <- readIORef aMd
     let aBroadcastNum  = M.size $ M.filter (^.isBroadcast) $ aData^.nodes
@@ -181,19 +192,27 @@ answerToConnectivityQuery aChan aMd _ = do
 
 
 
-connectToListOfConnect :: ManagerMsg msg =>
-    Chan msg -> Int -> [(NodeId, HostAddress, PortNumber)] -> IO ()
+connectToListOfConnect
+    ::  ManagerMsg msg
+    =>  Chan msg
+    ->  Int
+    ->  [(NodeId, HostAddress, PortNumber)]
+    ->  IO ()
 connectToListOfConnect aChan aNum aConnects = do
     aShuffledConnects <- shuffleM aConnects
     forM_ (take aNum aShuffledConnects) $ \(aNodeId, aIp, aPort) -> do
         writeChan aChan $ sendInitDatagram aIp aPort aNodeId
 
 connectToBootNode :: (ManagerMsg msg, ManagerData md) => Chan msg -> md -> IO ()
-connectToBootNode aChan aData =
-    connectToListOfConnect aChan 1 $ aData^.nodeBaseData.bootNodes
+connectToBootNode aChan ((^.nodeBaseData.bootNodes) -> aBootNodeList) =
+    connectToListOfConnect aChan 1 aBootNodeList
 
-connectTo :: ManagerMsg msg =>
-    Chan msg -> Int -> [(NodeId, HostAddress, PortNumber)] -> IO ()
+connectTo
+    ::  ManagerMsg msg
+    =>  Chan msg
+    ->  Int
+    ->  [(NodeId, HostAddress, PortNumber)]
+    ->  IO ()
 connectTo aChan aBroadcastNum = connectToListOfConnect aChan aBroadcastNum
 {-
   TODO answerToConnectivityQuery
@@ -214,17 +233,23 @@ sendIHaveBroadcastConnects aMd aIp = do
 iIsBroadcastNode :: ManagerData md => md -> Bool
 iIsBroadcastNode aData = BroadcastNode `elem` aData^.nodeConfig.helloMsg.nodeVariantRoles
 
-answerToClientDisconnected ::
-    (ManagerData md, ManagerMsg msg) =>
-    IORef md -> msg -> IO ()
+
+answerToClientDisconnected
+    ::  ManagerData md
+    =>  ManagerMsg msg
+    =>  IORef md
+    ->  msg
+    ->  IO ()
 answerToClientDisconnected aMd (toManagerMsg -> ClientIsDisconnected aId aChan) = do
     aData <- readIORef aMd
     whenJust (aId `M.lookup` (aData^.nodes)) $ \aNode -> do
         when (aNode^.chan == aChan) $ modifyIORef aMd (nodes %~ M.delete aId)
 answerToClientDisconnected _ _ = pure ()
 
-answerToSendInitDatagram :: (ManagerData md, ManagerMsg msg) =>
-    Chan msg
+answerToSendInitDatagram
+    :: ManagerData md
+    => ManagerMsg msg
+    => Chan msg
     -> IORef md
     -> msg
     -> IO ()
@@ -240,8 +265,15 @@ answerToSendInitDatagram
 
 answerToSendInitDatagram _ _ _ = pure ()
 
-sendInitDatagramFunc :: (ManagerMsg a, ManagerData md) =>
-    Chan a ->  HostAddress -> PortNumber -> NodeId -> IORef md -> IO ()
+sendInitDatagramFunc
+    ::  ManagerMsg a
+    =>  ManagerData md
+    =>  Chan a
+    ->  HostAddress
+    ->  PortNumber
+    ->  NodeId
+    ->  IORef md
+    ->  IO ()
 sendInitDatagramFunc aManagerChan receiverIp receiverPort aId aMd = do
     aData <- readIORef aMd
     loging aData $ "sendInitDatagramFunc: " ++
@@ -257,15 +289,21 @@ sendInitDatagramFunc aManagerChan receiverIp receiverPort aId aMd = do
     sendPackagedMsg aNodeChan aMsg
 
 
-answerToServerDead ::
-    ManagerMsg a => Chan a -> PortNumber ->  a -> IO ()
+answerToServerDead
+    ::  ManagerMsg a
+    =>  Chan a
+    ->  PortNumber
+    ->  a
+    ->  IO ()
 answerToServerDead aChan aPort _ =  void $ startServerActor aChan aPort
 
 
-answerToDisconnectNode :: (ManagerData md, ManagerMsg msg) =>
-    md
-    -> msg
-    -> IO ()
+answerToDisconnectNode
+    ::  ManagerData md
+    =>  ManagerMsg msg
+    =>  md
+    ->  msg
+    ->  IO ()
 answerToDisconnectNode aData (toManagerMsg -> DisconnectNode aId) = do
     loging aData "answerToDisconnectNode"
     whenJust (aId `M.lookup`(aData^.nodes)) $ sendExitMsgToNode
@@ -273,8 +311,12 @@ answerToDisconnectNode aData (toManagerMsg -> DisconnectNode aId) = do
 answerToDisconnectNode _ _ = pure ()
 
 
-answerToInitDatagram :: (ManagerData md, ManagerMsg msg) =>
-    IORef md -> msg -> IO ()
+answerToInitDatagram
+    ::  ManagerData md
+    =>  ManagerMsg msg
+    =>  IORef md
+    ->  msg
+    ->  IO ()
 answerToInitDatagram aMd
     (toManagerMsg -> InitDatagram aInputChan aHostAdress aDatagram) = do
     modifyIORef aMd $ nodeConfig.helloMsg.nodeVariantRoles %~ lInsert BroadcastNode
@@ -286,17 +328,17 @@ answerToInitDatagram aMd
 answerToInitDatagram _ _                =  pure ()
 
 
-answerToDatagramMsg :: (
-    ManagerData md,
-    PackageTraceRoutingAction md RequestPackage,
-    PackageTraceRoutingAction md ResponcePackage,
-    BroadcastAction md,
-    ManagerMsg msg) =>
-    Chan msg
-    -> IORef md
-    -> p
-    -> msg
-    -> IO ()
+answerToDatagramMsg
+    ::  ManagerData md
+    =>  PackageTraceRoutingAction md RequestPackage
+    =>  PackageTraceRoutingAction md ResponcePackage
+    =>  BroadcastAction md
+    =>  ManagerMsg msg
+    =>  Chan msg
+    ->  IORef md
+    ->  p
+    ->  msg
+    ->  IO ()
 answerToDatagramMsg aChan aMd _
     (toManagerMsg -> DatagramMsg aDatagramMsg aId) = do
         whenRight (decode aDatagramMsg) $ \case
@@ -314,11 +356,25 @@ sendPingMsgTo :: (ManagerData md, )
     --
 -}
 
+
 class PackageTraceRoutingAction aManagerData aRequest where
-    makeAction                  :: aChan -> IORef aManagerData -> NodeId -> TraceRouting -> aRequest -> IO ()
+    makeAction
+        ::  aChan
+        ->  IORef aManagerData
+        ->  NodeId
+        ->  TraceRouting
+        ->  aRequest
+        ->  IO ()
+
 
 class BroadcastAction aManagerData where
-    makeBroadcastAction :: aChan -> IORef aManagerData -> NodeId -> PackageSignature -> BroadcastThing -> IO ()
+    makeBroadcastAction
+        ::  aChan
+        ->  IORef aManagerData
+        ->  NodeId
+        ->  PackageSignature
+        ->  BroadcastThing
+        ->  IO ()
 
 answerToPackagedMsg :: (
     ManagerData md,
@@ -346,8 +402,13 @@ answerToPackagedMsg _ _ _  _ = return ()
 -- aNodeType -> t -> IORef md -> NodeId -> [(NodeId, TimeSpec, Signature)] -> RequestPackage -> IO ()
 
 
-whenLeft :: (Show a, Show b, NodeConfigClass aData) =>
-                 aData -> Either a b -> IO ()
+whenLeft
+    ::  Show a
+    =>  Show b
+    =>  NodeConfigClass aData
+    =>  aData
+    ->  Either a b
+    ->  IO ()
 whenLeft aData aMsg@(Left _) = loging aData $ show aMsg
 whenLeft _ _ = pure ()
 
@@ -359,8 +420,14 @@ answerToDisconnect _ aNodeId aMd = do
     whenJust (aNodeId `M.lookup` (aData^.nodes)) sendExitMsgToNode
 
 
-answerToInitiatorConnectingMsg :: (ManagerData md) =>
-    NodeId -> HostAddress -> Chan MsgToSender  -> PublicPoint -> IORef md -> IO ()
+answerToInitiatorConnectingMsg
+    ::  ManagerData md
+    =>  NodeId
+    ->  HostAddress
+    ->  Chan MsgToSender
+    ->  PublicPoint
+    ->  IORef md
+    ->  IO ()
 answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aMd = do
     aData <- readIORef aMd
     loging aData $ "answerToInitiatorConnectingMsg from " ++ showHostAddress aHostAdress ++ " " ++ show aId
@@ -377,8 +444,12 @@ answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aMd = do
             status          .= Active
           ) aId
 
-answerToRemoteConnectingMsg :: ManagerData md =>
-    NodeId -> PublicPoint -> IORef md -> IO ()
+answerToRemoteConnectingMsg
+    ::  ManagerData md
+    =>  NodeId
+    ->  PublicPoint
+    ->  IORef md
+    ->  IO ()
 answerToRemoteConnectingMsg aId aPublicPoint aMd = do
     aData <- readIORef aMd
     loging aData $ "answerToRemoteConnectingMsg from " ++ show aId
@@ -388,8 +459,7 @@ answerToRemoteConnectingMsg aId aPublicPoint aMd = do
       ) aId
 
 
-sendRemoteConnectDatagram ::
-    ManagerData md => Chan MsgToSender -> md -> IO ()
+sendRemoteConnectDatagram :: ManagerData md => Chan MsgToSender -> md -> IO ()
 sendRemoteConnectDatagram aChan aData = do
     loging aData $ "sendRemoteConnectDatagram"
     sendPackagedMsg aChan =<<  makeConnectingRequest
@@ -404,8 +474,15 @@ sendPackagedMsg :: Chan MsgToSender -> Package -> IO ()
 sendPackagedMsg aChan aMsg = sendDatagramFunc aChan $ encode aMsg
 
 
-initSenderSocket :: (ManagerMsg a, ManagerData md) =>
-    Chan a -> HostAddress -> PortNumber -> NodeId -> IORef md -> IO (Chan MsgToSender)
+initSenderSocket
+    ::  ManagerMsg a
+    =>  ManagerData md
+    =>  Chan a
+    ->  HostAddress
+    ->  PortNumber
+    ->  NodeId
+    ->  IORef md
+    ->  IO (Chan MsgToSender)
 initSenderSocket aManagerChan aIp aPort aId aMd = do
     aData <- readIORef aMd
     loging aData $ "initSenderSocket to " ++ showHostAddress aIp ++ ":"
@@ -418,8 +495,13 @@ initSenderSocket aManagerChan aIp aPort aId aMd = do
     return aNodeChan
 
 
-initSender :: ManagerMsg a =>
-    NodeId -> Chan a -> HostAddress -> PortNumber -> IO (Chan MsgToSender)
+initSender
+    ::  ManagerMsg a
+    =>  NodeId
+    ->  Chan a
+    ->  HostAddress
+    ->  PortNumber
+    ->  IO (Chan MsgToSender)
 initSender aId aChan aIp aPort = do
     aInputChan <- newChan
     void $ forkIO $ runClient
@@ -429,7 +511,12 @@ initSender aId aChan aIp aPort = do
                 `finally` (writeChan aChan $ clientIsDisconnected aId aInputChan)
     return aInputChan
 
-makePing :: ManagerMsg a => Chan a -> HostAddress -> PortNumber -> IO ()
+makePing
+    ::  ManagerMsg a
+    =>  Chan a
+    ->  HostAddress
+    ->  PortNumber
+    ->  IO ()
 makePing aChan aHostAdress aPortNumber = do
     void $ forkIO $ runClient
         (showHostAddress aHostAdress)
@@ -479,8 +566,12 @@ type InfoPingAnswer a c =
     Chan c -> IORef a -> NodeId -> InfoPingPackage -> IO ()
 -}
 
-minusStatusNumber :: (NodeBaseDataClass a, NodeConfigClass a) =>
-    IORef a -> NodeId -> IO ()
+minusStatusNumber
+    ::  NodeBaseDataClass a
+    =>  NodeConfigClass a
+    =>  IORef a
+    ->  NodeId
+    ->  IO ()
 minusStatusNumber aMd aId = do
     aData <- readIORef aMd
     whenJust (aId `M.lookup` (aData^.nodes)) $ \_ -> do
@@ -495,9 +586,12 @@ sendJustDatagram :: Maybe (Chan MsgToSender, PackagedMsg) -> IO ()
 sendJustDatagram = sendJustPackagedMsg
 -}
 
-makeMsg :: ManagerData s =>
-    NodeId -> s -> (StringKey -> CryptoFailable b) ->
-    Maybe (Chan MsgToSender, b)
+makeMsg
+    ::  ManagerData s
+    =>  NodeId
+    ->  s
+    ->  (StringKey -> CryptoFailable b)
+    ->  Maybe (Chan MsgToSender, b)
 makeMsg aId aData func = do
     aNode        <- aId `M.lookup` (aData^.nodes)
     packagedMsg  <- maybeCryptoError . func =<< aNode^.mKey
@@ -516,7 +610,12 @@ instance GetNodes NodeStatus where
         aData^.nodes.to M.elems
 
 
-sendBroadcastThingToNodes :: ManagerData md => IORef md -> PackageSignature -> BroadcastThing -> IO ()
+sendBroadcastThingToNodes
+    ::  ManagerData md
+    =>  IORef md
+    ->  PackageSignature
+    ->  BroadcastThing
+    ->  IO ()
 sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing = do
     aData <- readIORef aMd
     sendToNodes aData aMakeMsg
@@ -526,8 +625,11 @@ sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing = do
         (BroadcastRequest aBroadcastSignature aBroadcastThing)
 
 
-sendToNodes :: ManagerData md =>
-    md -> (StringKey -> CryptoFailable Package) -> IO ()
+sendToNodes
+    ::  ManagerData md
+    =>  md
+    ->  (StringKey -> CryptoFailable Package)
+    ->  IO ()
 sendToNodes aData aMakeMsg = forM_ (M.elems $ aData^.nodes) (sendToNode aMakeMsg)
 
 sendToNode :: (StringKey -> CryptoFailable Package) -> Node -> IO ()

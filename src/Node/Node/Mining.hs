@@ -56,8 +56,11 @@ managerMining ch aMd = forever $ do
         opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
         opt isDeleteOldestVacantPositions $ answerToDeleteOldestVacantPositions aMd
 
-miningNodeAnswerClientIsDisconnected ::
-    IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
+
+miningNodeAnswerClientIsDisconnected
+    ::  IORef ManagerNodeData
+    ->  ManagerMiningMsgBase
+    ->  IO ()
 miningNodeAnswerClientIsDisconnected aMd
     (toManagerMsg -> ClientIsDisconnected aNodeId aChan) = do
         aData <- readIORef aMd
@@ -69,15 +72,20 @@ miningNodeAnswerClientIsDisconnected aMd
 miningNodeAnswerClientIsDisconnected _ _ = pure ()
 
 ----TODO: MOVE TO ?????? --------------
-answerToDeleteOldestVacantPositions ::
-    IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
+answerToDeleteOldestVacantPositions
+    ::  IORef ManagerNodeData
+    ->  ManagerMiningMsgBase
+    ->  IO ()
 answerToDeleteOldestVacantPositions aMd _ = do
     aTime <- getTime Realtime
     modifyIORef aMd $ vacantPositions %~ BI.filter (\aTimeSpec _ ->
         diffTimeSpec aTime aTimeSpec > 3000000)
 
 ----TODO: MOVE TO ?????? --------------
-answerToDeleteOldestMsg :: IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
+answerToDeleteOldestMsg
+    ::  IORef ManagerNodeData
+    ->  ManagerMiningMsgBase
+    ->  IO ()
 answerToDeleteOldestMsg aMd _ = do
     aTime <- getTime Realtime
     modifyIORef aMd $ hashMap %~ deleteOldest aTime
@@ -168,8 +176,8 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                         sendToNode (makeRequest aNewTrace aRequestPackage) aNode
             _ -> return ()
 
-makeRequest ::
-        TraceRouting
+makeRequest
+    ::  TraceRouting
     ->  RequestPackage
     ->  Node.Data.Data.StringKey
     ->  CryptoFailable Package
@@ -177,7 +185,12 @@ makeRequest aTraceRouting aRequest = makeCipheredPackage
     (PackageTraceRoutingRequest aTraceRouting aRequest)
 
 
-addToTrace :: TraceRouting -> RequestPackage -> MyNodeId -> ECDSA.PrivateKey -> IO TraceRouting
+addToTrace
+    ::  TraceRouting
+    ->  RequestPackage
+    ->  MyNodeId
+    ->  ECDSA.PrivateKey
+    ->  IO TraceRouting
 addToTrace aTraceRouting aRequestPackage aMyNodeId aPrivateKey = do
     aTime     <- getTime Realtime
     aSignature <- signEncodeble aPrivateKey
@@ -233,10 +246,10 @@ addInIndex aMsg aMd = do
     aTime <- getTime Realtime
     modifyIORef aMd $ hashMap %~ BI.insert aTime (cryptoHash aMsg)
 
-deleteOldest ::
-    TimeSpec
-    -> BI.Bimap TimeSpec B.ByteString
-    -> BI.Bimap TimeSpec B.ByteString
+deleteOldest
+    ::  TimeSpec
+    ->  BI.Bimap TimeSpec B.ByteString
+    ->  BI.Bimap TimeSpec B.ByteString
 deleteOldest aTime = BI.filter
     (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs 3000000)
 

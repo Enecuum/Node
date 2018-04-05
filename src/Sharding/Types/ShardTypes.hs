@@ -4,7 +4,6 @@ module Sharding.Types.ShardTypes where
 import              Sharding.Space.Distance
 import              Sharding.Space.Point
 
-import              Data.Serialize
 import              GHC.Generics
 
 import              Data.Word

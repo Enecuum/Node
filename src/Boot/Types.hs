@@ -8,7 +8,6 @@ import              System.Clock
 import              Network.Socket
 import              Control.Concurrent.Chan
 import              Node.Template.Constructor
-import              Node.Data.Data
 import qualified    Data.Set                        as S
 import qualified    Data.ByteString                 as B
 import qualified    Data.Map                        as M
@@ -17,8 +16,6 @@ import qualified    Boot.Map.Random                 as RM
 import              Node.Node.Types
 
 import              Node.Data.NodeTypes
-import              Node.Data.NetPackage
-import              Node.Data.NetMesseges
 
 data NodeBootNodeData where
     NodeBootNodeData :: {

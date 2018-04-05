@@ -1,45 +1,24 @@
 {-# LANGUAGE
-    LambdaCase,
-    ViewPatterns,
-    MultiWayIf,
-    ScopedTypeVariables
-  #-}
+        LambdaCase
+    ,   ViewPatterns
+    ,   MultiWayIf
+    ,   ScopedTypeVariables
+#-}
 module Node.Node.Base.Server where
 
 import qualified    Network.WebSockets                  as WS
 import              Service.Network.WebSockets.Server
-import              Service.Network.WebSockets.Client
 import              Service.Network.Base
-import              System.Clock
-import              System.Random.Shuffle
 import              Control.Monad.State.Lazy
-import              Control.Monad.Extra
-import              Crypto.Error
-import              Crypto.PubKey.ECC.ECDSA
-import qualified    Data.ByteString                 as B
-import qualified    Data.Map                        as M
-import qualified    Data.Bimap                      as BI
-import qualified    Data.Set                        as S
-import              Data.IORef
 import              Data.Serialize
-import              Data.List.Extra
-import              Data.Maybe
-import              Data.Monoid
-import              Lens.Micro.Mtl
-import              Lens.Micro
 import              Control.Concurrent.Async
 import              Control.Concurrent.Chan
 import              Control.Concurrent
 import              Control.Exception
 import              Node.Node.Types
-import              Service.Monad.Option
 import              Node.Crypto
-import              Node.Data.Data
-import              Node.FileDB.FileDB
-import              Node.Extra
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
-import              Node.Data.NetMesseges
 
 startServerActor :: ManagerMsg a => Chan a -> PortNumber -> IO ()
 startServerActor aOutputChan aPort = do
@@ -54,21 +33,26 @@ startServerActor aOutputChan aPort = do
                             aInputChan <- newChan
                             writeChan aOutputChan $
                                 initDatagram aInputChan aHostAdress aMsg
-                            socketActor aHostAdress (toNodeId aId) aOutputChan aInputChan aConnect
+                            socketActor
+                                aHostAdress
+                                (toNodeId aId)
+                                aOutputChan
+                                aInputChan
+                                aConnect
                 Right (Unciphered PingRequest) -> do
                     WS.sendBinaryData aConnect $ encode $
                         PongResponce aHostAdress
                 _     -> pure ()
 
 
-socketActor ::
-    ManagerMsg a
-    => HostAddress
-    -> NodeId
-    -> Chan a
-    -> Chan MsgToSender
-    -> WS.Connection
-    -> IO ()
+socketActor
+    ::  ManagerMsg a
+    =>  HostAddress
+    ->  NodeId
+    ->  Chan a
+    ->  Chan MsgToSender
+    ->  WS.Connection
+    ->  IO ()
 socketActor _ aId aChan aInputChan aConnect = do
     (void $ race sender receiver) `finally`
         (writeChan aChan $ clientIsDisconnected aId aInputChan)

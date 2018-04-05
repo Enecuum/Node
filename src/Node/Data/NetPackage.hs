@@ -13,14 +13,11 @@ import Node.Data.NodeTypes
 import              Service.Network.Base (HostAddress, PortNumber)
 import              Data.Serialize
 import              Data.ByteString as B
-import              Service.Types (Transaction, Microblock(..))
+import              Service.Types (Transaction)
 import              GHC.Generics
 import              System.Clock
 import              Crypto.PubKey.ECC.ECDSA (Signature(..))
 import              Crypto.PubKey.ECC.DH
-import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
-import              Node.Data.NetMesseges
-import              Data.Word
 import              Sharding.Types.ShardTypes
 import              Sharding.Space.Point as P
 import              Sharding.Space.Distance
@@ -43,16 +40,18 @@ data Unciphered where
 
 -- | Ciphered  data from NetNode A to NetNode B.
 data Ciphered where
-    PackageTraceRoutingRequest  :: TraceRouting         -> RequestPackage    -> Ciphered
-    PackageTraceRoutingResponce :: TraceRouting         -> ResponcePackage   -> Ciphered
-    BroadcastRequest            :: PackageSignature     -> BroadcastThing    -> Ciphered
+    PackageTraceRoutingRequest  :: TraceRouting     -> RequestPackage   -> Ciphered
+    PackageTraceRoutingResponce :: TraceRouting     -> ResponcePackage  -> Ciphered
+    BroadcastRequest            :: PackageSignature -> BroadcastThing   -> Ciphered
   deriving (Eq, Generic, Show)
+
 
 -- | Request data from NetNode A to NetNode B.
 data RequestPackage where
     RequestLogicLvlPackage  :: Request LogicLvl  -> PackageSignature -> RequestPackage
     RequestNetLvlPackage    :: Request NetLvl    -> PackageSignature -> RequestPackage
   deriving (Eq, Generic, Show)
+
 
 
 data ResponcePackage where
@@ -86,17 +85,17 @@ data instance Request NetLvl where
 data family Responce a :: *
 
 data instance Responce NetLvl where
-    BroadcastListResponce   ::
-            NodeInfoList LogicLvl
+    BroadcastListResponce
+        ::  NodeInfoList LogicLvl
         ->  NodeInfoList NetLvl
         ->  Responce NetLvl
 
-    HostAdressResponce      ::
-            Maybe HostAddress
+    HostAdressResponce
+        ::  Maybe HostAddress
         ->  Responce NetLvl
 
-    IAmBroadcast            ::
-            Bool
+    IAmBroadcast
+        ::  Bool
         ->  Responce NetLvl
 
   deriving (Eq, Generic, Show)
