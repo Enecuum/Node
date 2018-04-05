@@ -1,10 +1,8 @@
 {-# LANGUAGE TemplateHaskell, DeriveGeneric, ScopedTypeVariables, MultiWayIf #-}
 module Sharding.ShardDB.ShardStore where
 
-import Data.Map as M
 import Data.Serialize
 import Data.ByteString as B
-import Data.String
 import Data.Hex
 import Control.Exception
 import Data.Monoid
@@ -13,12 +11,7 @@ import Control.Monad
 import System.Directory
 
 import Node.Crypto
-
-import Sharding.Types.Node
 import Sharding.Types.ShardTypes
-import Sharding.Types.ShardLogic
-import Sharding.Space.Point
-import Sharding.Space.Distance
 
 class ShardName a where
     shardsPath :: a -> String

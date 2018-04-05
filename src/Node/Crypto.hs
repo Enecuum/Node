@@ -5,8 +5,7 @@ import              Service.Network.Base (HostAddress, PortNumber)
 import              Node.Data.Data
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
-import              Data.Word
-import              Service.Types
+
 import              System.Clock
 import              Crypto.Error
 import              Crypto.Cipher.Types
@@ -19,8 +18,6 @@ import              Crypto.Cipher.AES   (AES256)
 import              Crypto.Error        (CryptoFailable(..))
 import              Data.ByteArray (unpack)
 
-import              Sharding.Space.Point as P
-import              Sharding.Types.ShardTypes
 
 import              Data.ByteString (ByteString, pack)
 import              Data.Serialize

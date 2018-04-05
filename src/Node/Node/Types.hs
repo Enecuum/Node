@@ -8,7 +8,6 @@ module Node.Node.Types where
 
 import              Service.Types (Transaction, Microblock)
 import              Network.Socket
-import              Service.Network.Base
 import              Sharding.Types.Node
 import              Node.Template.Constructor
 import              System.Clock
@@ -18,7 +17,6 @@ import qualified    Data.Map                        as M
 import qualified    Crypto.PubKey.ECC.DH            as DH
 
 import              Node.Data.NodeTypes
-import              Node.Data.NetPackage
 import              Node.Data.NetMesseges
 import              Node.Data.Lens
 
@@ -35,7 +33,6 @@ import              GHC.Generics (Generic)
 import              Node.Crypto
 import              Node.Data.Data
 
-import              Sharding.Types.Node
 import              Sharding.Space.Point
 
 instance Show (Chan a) where

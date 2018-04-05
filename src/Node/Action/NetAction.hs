@@ -1,8 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Node.Action.NetAction where
 
-import              Node.Node.Types
-import              Node.Data.NetPackage
 import              Node.Data.NodeTypes
 
 import              Data.IORef

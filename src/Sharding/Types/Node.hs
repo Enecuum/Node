@@ -3,13 +3,9 @@
 
 module Sharding.Types.Node where
 
-import              Node.Data.Data
 import              Node.Data.NodeTypes
-import              Node.Data.NetPackage
-
 import              Sharding.ShardDB.ShardIndex
 import              Sharding.Types.ShardTypes
-import              Sharding.Types.ShardLogic
 import              Sharding.Space.Point
 
 import              Control.Concurrent.Chan

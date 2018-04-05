@@ -11,7 +11,6 @@ import              Control.Exception
 import              Network.Socket
 import              Node.Node.Types
 import              System.Environment
-import              Node.Data.Data
 import              Service.System.Directory (createFilesDirectory)
 import              Service.Config
 import              Node.Data.NodeTypes

@@ -32,8 +32,8 @@ import              Node.Data.Data
 import              Crypto.Error
 
 class Processing aNodeData aPackage where
-    processing ::
-            aNodeData
+    processing
+        ::  aNodeData
         ->  PackageSignature
         ->  TraceRouting
         ->  aPackage
@@ -134,8 +134,8 @@ sendToShardingLvl aData aMsg = whenJust (aData^.shardingChan) $ \aChan ->
 
 
 -- TODO  requestToNetLvl + sendNetLvlResponse
-requestToNetLvl ::
-        ManagerNodeData
+requestToNetLvl
+    ::  ManagerNodeData
     ->  TraceRouting
     ->  RequestPackage
     -> (a -> Responce LogicLvl)
@@ -152,8 +152,8 @@ requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
             (makeNewTraceRouting aTrace aTraceRouting)
             (ResponceLogicLvlPackage aRequestPackage aNetLevetPackage aResponsePackageSignature)
 
-sendNetLvlResponse ::
-        TraceRouting
+sendNetLvlResponse
+    ::  TraceRouting
     ->  ManagerNodeData
     ->  Request NetLvl
     ->  PackageSignature
@@ -177,7 +177,10 @@ getClosedNodeByDirect aData aPoint =
         _       -> Nothing
 
 
-getClosedNode :: TraceRouting -> ManagerNodeData -> (Maybe Node, [PackageSignature])
+getClosedNode
+    ::  TraceRouting
+    ->  ManagerNodeData
+    ->  (Maybe Node, [PackageSignature])
 getClosedNode aTraceRouting aData = case aTraceRouting of
     ToDirect _ aPointTo aTrace
         | Just aNextNodeId <- lookupNextNode aTrace -> do
@@ -200,8 +203,8 @@ getClosedNode aTraceRouting aData = case aTraceRouting of
         aNeighborList   = M.keys (aData^.nodes)
 
 
-makePackageSignature ::
-        Serialize aPackage
+makePackageSignature
+    ::  Serialize aPackage
     =>  ManagerNodeData
     ->  aPackage
     ->  IO PackageSignature
@@ -209,7 +212,8 @@ makePackageSignature aData aResponse = do
     aTime <- getTime Realtime
     let aNodeId = aData^.myNodeId
     aResponceSignature <- signEncodeble
-        (aData^.privateKey) (aNodeId, aTime, aResponse)
+        (aData^.privateKey)
+        (aNodeId, aTime, aResponse)
     return $ PackageSignature aNodeId aTime aResponceSignature
 
 
@@ -224,18 +228,17 @@ makeNewTraceRouting aSignatures = \case
     aTraceRouting                   -> aTraceRouting
 
 
-closedToPointNeighbor ::
-        NodeBaseDataClass s
+closedToPointNeighbor
+    ::  NodeBaseDataClass s
     =>  DistanceTo Node b
     =>  s
     ->  b
     ->  [Node]
 closedToPointNeighbor aData aPointTo = sortOn
-    (\n -> distanceTo n aPointTo)
-        $ M.elems $ aData^.nodes
+    (\n -> distanceTo n aPointTo) $ M.elems $ aData^.nodes
 --
-amIClose ::
-        DistanceTo MyNodePosition aPointB
+amIClose
+    ::  DistanceTo MyNodePosition aPointB
     =>  DistanceTo aPointA aPointB
     =>  ManagerNodeData
     ->  aPointA
@@ -251,7 +254,11 @@ traceDrop aNextNodeId = dropWhile
     (\(PackageSignature (toNodeId -> aId) _ _) -> aId /= aNextNodeId)
 
 
-makeResponse :: TraceRouting -> ResponcePackage -> StringKey -> CryptoFailable Package
+makeResponse
+    ::  TraceRouting
+    ->  ResponcePackage
+    ->  StringKey
+    ->  CryptoFailable Package
 makeResponse aTraceRouting aResponse = makeCipheredPackage
     (PackageTraceRoutingResponce aTraceRouting aResponse)
 
