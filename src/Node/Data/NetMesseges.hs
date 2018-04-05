@@ -6,10 +6,10 @@ import              Data.Serialize
 import              Data.Word
 import              Lens.Micro
 
-import              Node.Data.Lens
 import              Service.Network.Base (HostAddress, PortNumber)
 import              Node.Template.Constructor
 import              Node.Data.NodeTypes
+import              Node.Data.Lens
 ---
 data HelloMsg where
     HelloMsg :: {

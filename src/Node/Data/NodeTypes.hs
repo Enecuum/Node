@@ -1,17 +1,18 @@
 {-# LANGUAGE GADTs, DeriveGeneric, GeneralizedNewtypeDeriving #-}
 module Node.Data.NodeTypes where
 
-import              Service.Network.Base (HostAddress, PortNumber)
+import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 import              GHC.Generics
 import              Data.Serialize
 import              Data.Word
+
+import              Service.Network.Base (HostAddress, PortNumber)
 import              Service.Types.PublicPrivateKeyPair (
-    uncompressPublicKey,
-    getPublicKey,
-    compressPublicKey,
-    PublicKey(..)
+        uncompressPublicKey
+    ,   getPublicKey
+    ,   compressPublicKey
+    ,   PublicKey(..)
   )
-import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 
 
 data NodeVariantRole where

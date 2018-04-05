@@ -10,12 +10,14 @@
 module Node.Node.Base where
 
 import qualified    Network.WebSockets                  as WS
-import              Service.Network.WebSockets.Client
-import              Service.Network.Base
 import              System.Clock
 import              System.Random.Shuffle
 import              Control.Monad.State.Lazy
 import              Control.Monad.Extra
+import              Control.Exception
+import              Control.Concurrent
+import              Control.Concurrent.Chan
+import              Control.Concurrent.Async
 import              Crypto.Error
 import              Crypto.PubKey.ECC.ECDSA
 import qualified    Data.ByteString                 as B
@@ -26,12 +28,11 @@ import              Data.Serialize
 import              Data.Monoid
 import              Lens.Micro.Mtl
 import              Lens.Micro
-import              Control.Concurrent.Async
-import              Control.Concurrent.Chan
-import              Control.Concurrent
-import              Control.Exception
-import              Node.Node.Types
+
+import              Service.Network.WebSockets.Client
+import              Service.Network.Base
 import              Service.Monad.Option
+import              Node.Node.Types
 import              Node.Crypto
 import              Node.Data.Data
 import              Node.FileDB.FileDB
