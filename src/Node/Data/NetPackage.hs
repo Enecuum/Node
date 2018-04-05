@@ -34,10 +34,10 @@ data Package where
 
 -- | Unciphered data from NetNode A to NetNode B.
 data Unciphered where
-    ConnectingRequest  :: PublicPoint -> MyNodeId -> Signature  -> Unciphered
-    DisconnectRequest  :: [Reason]                              -> Unciphered
-    PingRequest        :: Unciphered
-    PongResponce       :: HostAddress -> Unciphered
+    ConnectingRequest  :: PublicPoint -> MyNodeId -> Signature  ->  Unciphered
+    DisconnectRequest  :: [Reason]                              ->  Unciphered
+    PingRequest        ::                                           Unciphered
+    PongResponce       :: HostAddress                           ->  Unciphered
   deriving (Eq, Generic, Show)
 
 
@@ -48,12 +48,18 @@ data Ciphered where
     BroadcastRequest            :: PackageSignature     -> BroadcastThing    -> Ciphered
   deriving (Eq, Generic, Show)
 
-
 -- | Request data from NetNode A to NetNode B.
 data RequestPackage where
     RequestLogicLvlPackage  :: Request LogicLvl  -> PackageSignature -> RequestPackage
     RequestNetLvlPackage    :: Request NetLvl    -> PackageSignature -> RequestPackage
   deriving (Eq, Generic, Show)
+
+
+data ResponcePackage where
+    ResponceNetLvlPackage   :: RequestPackage -> Responce NetLvl   -> PackageSignature -> ResponcePackage
+    ResponceLogicLvlPackage :: RequestPackage -> Responce LogicLvl -> PackageSignature -> ResponcePackage
+  deriving (Eq, Generic, Show)
+
 
 data LogicLvl = LogicLvl
 data NetLvl   = NetLvl
@@ -77,11 +83,6 @@ data instance Request NetLvl where
 
 
 
-data ResponcePackage where
-    ResponceNetLvlPackage   :: RequestPackage -> Responce NetLvl   -> PackageSignature -> ResponcePackage
-    ResponceLogicLvlPackage :: RequestPackage -> Responce LogicLvl -> PackageSignature -> ResponcePackage
-  deriving (Eq, Generic, Show)
-
 data family Responce a :: *
 
 data instance Responce NetLvl where
@@ -100,11 +101,15 @@ data instance Responce NetLvl where
 
   deriving (Eq, Generic, Show)
 
-type family NodeInfoList a :: *
-type instance NodeInfoList LogicLvl = [(NodeId, NodePosition)]
-type instance NodeInfoList NetLvl   = [(NodeId, HostAddress, PortNumber)]
+data family NodeInfoList a :: *
 
+data instance NodeInfoList LogicLvl where
+    NodeInfoListLogicLvl :: [(NodeId, NodePosition)] ->  NodeInfoList LogicLvl
+  deriving (Eq, Generic, Show)
 
+data instance NodeInfoList NetLvl where
+    NodeInfoListNetLvl :: [(NodeId, HostAddress, PortNumber)] ->  NodeInfoList NetLvl
+  deriving (Eq, Generic, Show)
 
 data instance Responce LogicLvl where
     ShardIndexResponce            :: [ShardHash]    -> Responce LogicLvl
@@ -175,6 +180,10 @@ instance Serialize (Responce NetLvl)
 instance Serialize (Responce LogicLvl)
 instance Serialize (Request  NetLvl)
 instance Serialize (Request  LogicLvl)
+
+instance Serialize (NodeInfoList NetLvl)
+instance Serialize (NodeInfoList LogicLvl)
+
 
 --------------------------------------------------------------------------------
 class IsByteString a where

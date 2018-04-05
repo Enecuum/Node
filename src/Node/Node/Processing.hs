@@ -29,7 +29,6 @@ import              Sharding.Space.Point
 import              Sharding.Space.Distance
 
 
-
 class Processing aNodeData aPackage where
     processing ::
             aNodeData
@@ -41,9 +40,11 @@ class Processing aNodeData aPackage where
 
 instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
     processing aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
-        BroadcastListResponce _ aBroadcastList -> do
+        BroadcastListResponce aBroadcastListLogic aBroadcastList -> do
             aData <- readIORef aMd
-            addRecordsToNodeListFileNetLvl (aData^.myNodeId) aBroadcastList
+
+            addRecordsToNodeListFile (aData^.myNodeId) aBroadcastListLogic
+            addRecordsToNodeListFile (aData^.myNodeId) aBroadcastList
 
         HostAdressResponce    aHostAdress    -> return ()
 
@@ -61,6 +62,10 @@ instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
             ShardResponce      aShard         ->
                 sendToShardingLvl aData $ T.ShardAcceptAction aShard
 
+            NodePositionResponcePackage (toNodePosition -> aNodePosition) -> do
+                updateFile (aData^.myNodeId) (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
+                sendToShardingLvl aData $
+                    T.TheNodeHaveNewCoordinates aNodeId aNodePosition
 --
 instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
     processing aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting aRequestLogicLvl = do
@@ -111,8 +116,13 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
 
             BroadcastListRequest -> do
                 -- TODO think about aBroadcastList
-                aBroadcastList <- readRecordsFromNodeListFileNetLvl $ aData^.myNodeId
-                aSendNetLvlResponse (BroadcastListResponce [] $ take 10 aBroadcastList)
+                NodeInfoListNetLvl   aBroadcastList      <- readRecordsFromNodeListFile $ aData^.myNodeId
+                NodeInfoListLogicLvl aBroadcastListLogic <- readRecordsFromNodeListFile $ aData^.myNodeId
+                let aBroadcastListResponce = BroadcastListResponce
+                        (NodeInfoListLogicLvl $ take 10 aBroadcastListLogic)
+                        (NodeInfoListNetLvl   $ take 10 aBroadcastList)
+
+                aSendNetLvlResponse aBroadcastListResponce
 
 
 -- TODO
