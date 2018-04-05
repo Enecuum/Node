@@ -1,11 +1,25 @@
 {-# LANGUAGE TemplateHaskell, TupleSections #-}
 module Node.Template.Constructor (
-    managerMsgFuncList, managerMiningMsgList, managerBootNodeMsgList,
-    managerMsgFuncListFull, managerMiningMsgListFull, managerBootNodeMsgListFull,
-    managerMsgFuncListData, managerMiningMsgListData, managerBootNodeMsgListData,
-    nodeBaseDataList, nodeConfigList, helloMsgList,
-    genDataClass, genBazeDataInstance, dataConstruct, msgClass, baseMsgInstance,
-    derivativeMsgInstance, makeLensInstance', lensInst
+        managerMsgFuncList
+    ,   managerMiningMsgList
+    ,   managerBootNodeMsgList
+    ,   managerMsgFuncListFull
+    ,   managerMiningMsgListFull
+    ,   managerBootNodeMsgListFull
+    ,   managerMsgFuncListData
+    ,   managerMiningMsgListData
+    ,   managerBootNodeMsgListData
+    ,   nodeBaseDataList
+    ,   nodeConfigList
+    ,   helloMsgList
+    ,   genDataClass
+    ,   genBazeDataInstance
+    ,   dataConstruct
+    ,   msgClass
+    ,   baseMsgInstance
+    ,   derivativeMsgInstance
+    ,   makeLensInstance'
+    ,   lensInst
   ) where
 
 import Language.Haskell.TH

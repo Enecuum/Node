@@ -92,46 +92,43 @@ data Node = Node {
   }
 
 
-data ManagerNodeData where
-    ManagerNodeData :: {
-        managerNodeDataNodeConfig   :: NodeConfig,
-        managerNodeDataNodeBaseData :: NodeBaseData,
-        managerTransactions         :: Chan Transaction,
-        managerHashMap              :: BI.Bimap TimeSpec B.ByteString,
-        managerPublicators          :: S.Set NodeId,
-        managerSendedTransctions    :: BI.Bimap TimeSpec Transaction,
-        managerShardingChan         :: Maybe (Chan ShardingNodeAction),
-        managerNodePosition         :: Maybe MyNodePosition,
-        managerIAmBroadcast         :: Bool
-  } -> ManagerNodeData
+data ManagerNodeData = ManagerNodeData {
+    managerNodeDataNodeConfig   :: NodeConfig,
+    managerNodeDataNodeBaseData :: NodeBaseData,
+    managerTransactions         :: Chan Transaction,
+    managerHashMap              :: BI.Bimap TimeSpec B.ByteString,
+    managerPublicators          :: S.Set NodeId,
+    managerSendedTransctions    :: BI.Bimap TimeSpec Transaction,
+    managerShardingChan         :: Maybe (Chan ShardingNodeAction),
+    managerNodePosition         :: Maybe MyNodePosition,
+    managerIAmBroadcast         :: Bool
+  }
 
 type IdIpPort = (NodeId, HostAddress, PortNumber)
 type IpPort = (HostAddress, PortNumber)
 
-data NodeBaseData where
-    NodeBaseData :: {
-        nodeBaseDataExitChan            :: Chan ExitMsg,
-        nodeBaseDataNodes               :: M.Map NodeId Node,
-        nodeBaseDataBootNodes           :: BootNodeList,
-        nodeBaseDataAnswerChan          :: Chan Answer,
-        nodeBaseDataVacantPositions     :: BI.Bimap TimeSpec IdIpPort,
-        nodeBaseDataBroadcastNum        :: Int,
-        nodeBaseDataHostAddress         :: Maybe HostAddress,
-        nodeBaseDataMicroblockChan      :: Chan Microblock
-  } -> NodeBaseData
+data NodeBaseData = NodeBaseData {
+    nodeBaseDataExitChan            :: Chan ExitMsg,
+    nodeBaseDataNodes               :: M.Map NodeId Node,
+    nodeBaseDataBootNodes           :: BootNodeList,
+    nodeBaseDataAnswerChan          :: Chan Answer,
+    nodeBaseDataVacantPositions     :: BI.Bimap TimeSpec IdIpPort,
+    nodeBaseDataBroadcastNum        :: Int,
+    nodeBaseDataHostAddress         :: Maybe HostAddress,
+    nodeBaseDataMicroblockChan      :: Chan Microblock
+  }
 
 
 
-data NodeConfig where
-     NodeConfig :: {
-        nodeConfigPrivateNumber :: DH.PrivateNumber,
-        nodeConfigPublicPoint   :: DH.PublicPoint,
-        nodeConfigPrivateKey    :: PrivateKey,
-        nodeConfigPublicKey     :: PublicKey,
-        nodeConfigMyNodeId      :: MyNodeId,
-        nodeConfigHelloMsg      :: HelloMsg,
-        nodeConfigPortNumber    :: PortNumber
-  } -> NodeConfig
+data NodeConfig = NodeConfig {
+    nodeConfigPrivateNumber :: DH.PrivateNumber,
+    nodeConfigPublicPoint   :: DH.PublicPoint,
+    nodeConfigPrivateKey    :: PrivateKey,
+    nodeConfigPublicKey     :: PublicKey,
+    nodeConfigMyNodeId      :: MyNodeId,
+    nodeConfigHelloMsg      :: HelloMsg,
+    nodeConfigPortNumber    :: PortNumber
+  }
   deriving (Generic)
 
 
@@ -158,8 +155,8 @@ instance Serialize PrivateKey where
     put (PrivateKey a b)= put a >> put b
 
 class ToManagerData a where
-    toManagerData ::
-        Chan Transaction
+    toManagerData
+        :: Chan Transaction
         -> Chan Microblock
         -> Chan ExitMsg
         -> Chan Answer
@@ -186,8 +183,10 @@ makeNewNodeConfig aPort = do
         (toMyNodeId aId) (defaultHelloMsg & nodeId .~ aId) aPort
 
 
-emptyData :: (MonadRandom m, ToManagerData d) =>
-    PortNumber
+emptyData
+    :: MonadRandom m
+    => ToManagerData d
+    => PortNumber
     -> Chan Transaction
     -> Chan Microblock
     -> Chan ExitMsg

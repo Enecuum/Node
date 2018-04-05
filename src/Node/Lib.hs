@@ -10,16 +10,14 @@ import              Data.IORef
 
 import              Lens.Micro
 import              Service.Types
-import              Node.Data.Data
 
 
 import              Node.Data.NodeTypes
-import              Node.Data.NetPackage
-import              Node.Data.NetMesseges
 import Node.FileDB.FileDB
-import Node.Node.Base
 import Node.Node.Types
 import Node.Node.Config.Make
+
+import Node.Node.Base.Server
 
 import Service.System.Directory (getTransactionFilePath)
 
