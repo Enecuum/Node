@@ -29,6 +29,8 @@ import              Node.Node.Base
 import              Node.Node.Types
 import              Service.Monad.Option
 import              Node.Crypto
+import              Crypto.Error
+import              Node.Data.Data
 
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
@@ -82,7 +84,7 @@ answerToDeleteOldestMsg aMd _ = do
 
 
 instance BroadcastAction ManagerNodeData where
-    makeBroadcastAction aChan aMd aNodeId aBroadcastSignature aBroadcastThing = do
+    makeBroadcastAction _ aMd _ aBroadcastSignature aBroadcastThing = do
         aData <- readIORef aMd
         loging aData $ "BroadcastAction ManagerNodeData" ++ show aBroadcastThing
         when (notInIndex aData aBroadcastThing) $ do
@@ -110,14 +112,14 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
     makeAction _ md aNodeId aTraceRouting aResponcePackage = do
         aData <- readIORef md
         when (verifyResponce aTraceRouting aResponcePackage) $ if
-            | isItMyResponce aNodeId aTraceRouting  -> aProcessingOfAction aData
+            | isItMyResponce aNodeId aTraceRouting  -> aProcessingOfAction
             | otherwise                             -> aSendToNeighbor aData
       where
         verifyResponce _ _ = True -- TODO : add body
-        aProcessingOfAction aData = case aResponcePackage of
-            ResponceNetLvlPackage aRequest aResponse aSignature   | True ->
+        aProcessingOfAction = case aResponcePackage of
+            ResponceNetLvlPackage _ aResponse aSignature   | True ->
                 processing md aSignature aTraceRouting aResponse
-            ResponceLogicLvlPackage aRequest aResponse aSignature | True ->
+            ResponceLogicLvlPackage _ aResponse aSignature | True ->
                 processing md aSignature aTraceRouting aResponse
 
         aSendToNeighbor aData = do
@@ -142,20 +144,20 @@ isItMyResponce aMyNodeId = \case
 
 ---------------TODO: fix True---------------------------------------------------
 instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
-    makeAction _ md aNodeId aTraceRouting aRequestPackage = do
+    makeAction _ md _ aTraceRouting aRequestPackage = do
         aData <- readIORef md
         when True $ if
-            | True                                 -> aProcessingOfAction aData
+            | True                                 -> aProcessingOfAction
             | otherwise                            -> aSendToNeighbor aData
       where
-        aProcessingOfAction aData = case aRequestPackage of
+        aProcessingOfAction = case aRequestPackage of
             RequestLogicLvlPackage aRequest aSignature
                 | True -> processing md aSignature aTraceRouting aRequest
             RequestNetLvlPackage aRequest aSignature
                 | True -> processing md aSignature aTraceRouting aRequest
 
         aSendToNeighbor aData = case aTraceRouting of
-            ToDirect aPointFrom aPointTo aSignatures ->
+            ToDirect _ aPointTo _ ->
                 whenJust (getClosedNodeByDirect aData (toPoint aPointTo)) $
                     \aNode -> do
                         aNewTrace <- addToTrace
@@ -166,6 +168,11 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                         sendToNode (makeRequest aNewTrace aRequestPackage) aNode
             _ -> return ()
 
+makeRequest ::
+        TraceRouting
+    ->  RequestPackage
+    ->  Node.Data.Data.StringKey
+    ->  CryptoFailable Package
 makeRequest aTraceRouting aRequest = makeCipheredPackage
     (PackageTraceRoutingRequest aTraceRouting aRequest)
 
@@ -249,7 +256,7 @@ processingOfBroadcastThing aMd aBroadcastThing = do
     loging aData $ "Recived " ++ show aBroadcastThing
     case aBroadcastThing of
         BroadcastWarning      aBroadcastWarning -> case aBroadcastWarning of
-            INeedNeighbors aMyNodeId aHostAddress _  -> undefined
+            INeedNeighbors _ _ _  -> undefined
         BroadcastShard        aShard            -> do
             whenJust (aData^.shardingChan) $ \aChan ->
                 writeChan aChan $ T.NewShardInNetAction aShard
