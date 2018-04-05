@@ -4,6 +4,7 @@ module Boot.Types where
 
 import              Data.Monoid
 import              Lens.Micro
+import              System.Clock
 import              Network.Socket
 import              Control.Concurrent.Chan
 import              Node.Template.Constructor

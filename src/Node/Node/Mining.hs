@@ -259,6 +259,7 @@ processingOfBroadcastThing aMd aBroadcastThing = do
 -}
             writeChan (aData^.transactions) aTransaction
         BroadcastPosition     aMyNodeId aNodePosition  -> do
+            updateFile aMyNodeId (NodeInfoListLogicLvl [(toNodeId aMyNodeId, aNodePosition)])
             sendToShardingLvl aData $
                 T.TheNodeHaveNewCoordinates (toNodeId aMyNodeId) aNodePosition
 

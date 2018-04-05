@@ -33,6 +33,7 @@ managerBootNodeMsgListFull  = toPair <$> managerBootNodeMsgListData
 managerMsgFuncListData :: [(Bool, String, [[String]])]
 managerMsgFuncListData = toList $ do
     "stateRequest"          +: []
+    "pingRequestInfo"       +: [["HostAddress"], ["PortNumber"], ["TimeSpec"], ["HostAddress"]]
     "clientIsDisconnected"  +: [["NodeId"], ["Chan", "MsgToSender"]]
     "serverIsDead"          +: []
     "deleteDeadSouls"       +: []
