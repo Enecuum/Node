@@ -15,21 +15,22 @@ module Node.Node.Processing where
 import qualified    Data.Map                        as M
 import              Data.Serialize
 import              Data.List.Extra
-import              System.Clock
 import              Data.IORef
+import              System.Clock
 import              Lens.Micro
 import              Control.Concurrent
 import              Control.Monad.Extra
+import              Crypto.Error
+
 import              Node.Node.Base
 import              Node.Node.Types
 import              Node.Crypto
+import              Node.Data.Data
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Sharding.Space.Distance
-import              Node.Data.Data
-import              Crypto.Error
 
 class Processing aNodeData aPackage where
     processing

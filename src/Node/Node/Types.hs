@@ -5,35 +5,31 @@
 -- Different nodes use mutually overlapping set of messages
 module Node.Node.Types where
 
-
-import              Service.Types (Transaction, Microblock)
 import              Network.Socket
-import              Sharding.Types.Node
-import              Node.Template.Constructor
 import              System.Clock
 import qualified    Data.Set                        as S
 import qualified    Data.ByteString                 as B
-import qualified    Data.Map                        as M
-import qualified    Crypto.PubKey.ECC.DH            as DH
-
-import              Node.Data.NodeTypes
-import              Node.Data.NetMesseges
-import              Node.Data.Lens
-
 import qualified    Data.Bimap                      as BI
-import              Crypto.PubKey.ECC.ECDSA         as ECDSA
-import              Crypto.PubKey.ECC.Generate
-import              Crypto.Random.Types
 import              Data.Serialize
 import              Data.Monoid
+import qualified    Data.Map                        as M
+import qualified    Crypto.PubKey.ECC.DH            as DH
+import              GHC.Generics (Generic)
+import              Control.Concurrent.Chan
+import              Crypto.Random.Types
+import              Crypto.PubKey.ECC.ECDSA         as ECDSA
+import              Crypto.PubKey.ECC.Generate
 import              Lens.Micro
 
-import              Control.Concurrent.Chan
-import              GHC.Generics (Generic)
 import              Node.Crypto
 import              Node.Data.Data
-
+import              Node.Data.NetMesseges
+import              Node.Data.Lens
+import              Node.Data.NodeTypes
+import              Node.Template.Constructor
 import              Sharding.Space.Point
+import              Sharding.Types.Node
+import              Service.Types (Transaction, Microblock)
 
 instance Show (Chan a) where
     show _ = "Chan"

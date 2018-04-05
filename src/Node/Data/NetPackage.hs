@@ -10,14 +10,16 @@ module Node.Data.NetPackage where
 
 import Node.Data.NodeTypes
 
-import              Service.Network.Base (HostAddress, PortNumber)
 import              Data.Serialize
 import              Data.ByteString as B
-import              Service.Types (Transaction)
-import              GHC.Generics
 import              System.Clock
+import              GHC.Generics
 import              Crypto.PubKey.ECC.ECDSA (Signature(..))
 import              Crypto.PubKey.ECC.DH
+
+import              Service.Network.Base (HostAddress, PortNumber)
+import              Service.Types (Transaction)
+
 import              Sharding.Types.ShardTypes
 import              Sharding.Space.Point as P
 import              Sharding.Space.Distance
