@@ -1,11 +1,11 @@
 module Boot.Map.Random (
-    RandomMap (..),
-    empty,
-    insert,
-    delete,
-    Boot.Map.Random.lookup,
-    keys,
-    takeRandom
+        RandomMap (..)
+    ,   empty
+    ,   insert
+    ,   delete
+    ,   Boot.Map.Random.lookup
+    ,   keys
+    ,   takeRandom
   ) where
 
 import              System.Random
