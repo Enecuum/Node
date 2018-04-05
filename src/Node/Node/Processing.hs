@@ -41,10 +41,9 @@ class Processing aNodeData aPackage where
 
 instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
     processing aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
-        BroadcastListResponce aBroadcastList -> do
+        BroadcastListResponce _ aBroadcastList -> do
             aData <- readIORef aMd
-            forM_ aBroadcastList $ \(aNodeId, aIp, aPort) -> do
-                addRecordToNodeListFile (aData^.myNodeId) aNodeId aIp aPort
+            addRecordsToNodeListFileNetLvl (aData^.myNodeId) aBroadcastList
 
         HostAdressResponce    aHostAdress    -> return ()
 
@@ -112,8 +111,8 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
 
             BroadcastListRequest -> do
                 -- TODO think about aBroadcastList
-                aBroadcastList <- readRecordFromNodeListFile $ aData^.myNodeId
-                aSendNetLvlResponse (BroadcastListResponce $ take 10 aBroadcastList)
+                aBroadcastList <- readRecordsFromNodeListFileNetLvl $ aData^.myNodeId
+                aSendNetLvlResponse (BroadcastListResponce [] $ take 10 aBroadcastList)
 
 
 -- TODO
