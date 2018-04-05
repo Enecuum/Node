@@ -42,23 +42,50 @@ data Unciphered where
 
 -- | Ciphered  data from NetNode A to NetNode B.
 data Ciphered where
-    PackageTraceRoutingRequest  :: TraceRouting     -> RequestPackage   -> Ciphered
-    PackageTraceRoutingResponce :: TraceRouting     -> ResponcePackage  -> Ciphered
-    BroadcastRequest            :: PackageSignature -> BroadcastThing   -> Ciphered
+    PackageTraceRoutingRequest
+        ::  TraceRouting
+        ->  RequestPackage
+        ->  Ciphered
+
+    PackageTraceRoutingResponce
+        ::  TraceRouting
+        ->  ResponcePackage
+        ->  Ciphered
+
+    BroadcastRequest
+        ::  PackageSignature
+        ->  BroadcastThing
+        ->  Ciphered
   deriving (Eq, Generic, Show)
 
 
 -- | Request data from NetNode A to NetNode B.
 data RequestPackage where
-    RequestLogicLvlPackage  :: Request LogicLvl  -> PackageSignature -> RequestPackage
-    RequestNetLvlPackage    :: Request NetLvl    -> PackageSignature -> RequestPackage
+    RequestLogicLvlPackage
+        ::  Request LogicLvl
+        ->  PackageSignature
+        ->  RequestPackage
+
+    RequestNetLvlPackage
+        ::  Request NetLvl
+        ->  PackageSignature
+        ->  RequestPackage
   deriving (Eq, Generic, Show)
 
 
 
 data ResponcePackage where
-    ResponceNetLvlPackage   :: RequestPackage -> Responce NetLvl   -> PackageSignature -> ResponcePackage
-    ResponceLogicLvlPackage :: RequestPackage -> Responce LogicLvl -> PackageSignature -> ResponcePackage
+    ResponceNetLvlPackage
+        ::  RequestPackage
+        ->  Responce NetLvl
+        ->  PackageSignature
+        ->  ResponcePackage
+
+    ResponceLogicLvlPackage
+        ::  RequestPackage
+        ->  Responce LogicLvl
+        ->  PackageSignature
+        ->  ResponcePackage
   deriving (Eq, Generic, Show)
 
 
@@ -69,9 +96,13 @@ data family Request a :: *
 
 -- | Request logic information
 data instance Request LogicLvl where
-    ShardIndexRequestPackage    :: P.PointFrom -> Distance P.Point  -> Request LogicLvl
-    ShardRequestPackage         :: ShardHash                        -> Request LogicLvl
-    NodePositionRequestPackage  ::                                     Request LogicLvl
+    ShardIndexRequestPackage
+        ::  P.PointFrom
+        ->  Distance P.Point
+        ->  Request LogicLvl
+
+    ShardRequestPackage         :: ShardHash -> Request LogicLvl
+    NodePositionRequestPackage  :: Request LogicLvl
   deriving (Eq, Generic, Show)
 
 
@@ -81,7 +112,6 @@ data instance Request NetLvl where
     HostAdressRequest       :: Request NetLvl
     IsYouBrodcast           :: Request NetLvl
   deriving (Eq, Generic, Show)
-
 
 
 data family Responce a :: *
@@ -105,12 +135,18 @@ data instance Responce NetLvl where
 data family NodeInfoList a :: *
 
 data instance NodeInfoList LogicLvl where
-    NodeInfoListLogicLvl :: [(NodeId, NodePosition)] ->  NodeInfoList LogicLvl
+    NodeInfoListLogicLvl
+        ::  [(NodeId, NodePosition)]
+        ->  NodeInfoList LogicLvl
   deriving (Eq, Generic, Show)
 
+
 data instance NodeInfoList NetLvl where
-    NodeInfoListNetLvl :: [(NodeId, HostAddress, PortNumber)] ->  NodeInfoList NetLvl
+    NodeInfoListNetLvl
+        ::  [(NodeId, HostAddress, PortNumber)]
+        ->  NodeInfoList NetLvl
   deriving (Eq, Generic, Show)
+
 
 data instance Responce LogicLvl where
     ShardIndexResponce            :: [ShardHash]    -> Responce LogicLvl
@@ -125,8 +161,8 @@ data PackageSignature where
 
 
 data TraceRouting where
-      ToNode     :: NodeId  ->             PackageSignature    -> TraceRouting
-      ToDirect   :: P.PointFrom -> P.PointTo -> [PackageSignature] -> TraceRouting
+    ToNode   :: NodeId -> PackageSignature -> TraceRouting
+    ToDirect :: P.PointFrom -> P.PointTo -> [PackageSignature] -> TraceRouting
   deriving (Eq, Ord, Show, Generic)
 
 
@@ -135,11 +171,11 @@ newtype CipheredString = CipheredString B.ByteString
 
 
 data BroadcastThing where
-    BroadcastWarning      :: BroadcastWarning                   -> BroadcastThing
-    BroadcastShard        :: Shard                              -> BroadcastThing
---  BroadcastBlock        :: Block                              -> BroadcastThing
-    BroadcastTransaction  :: Transaction                        -> BroadcastThing
-    BroadcastPosition     :: MyNodeId           -> NodePosition -> BroadcastThing
+    BroadcastWarning      :: BroadcastWarning               -> BroadcastThing
+    BroadcastShard        :: Shard                          -> BroadcastThing
+--  BroadcastBlock        :: Block                          -> BroadcastThing
+    BroadcastTransaction  :: Transaction                    -> BroadcastThing
+    BroadcastPosition     :: MyNodeId       -> NodePosition -> BroadcastThing
   deriving (Eq, Ord, Show, Generic)
 
 data BroadcastWarning = INeedNeighbors MyNodeId HostAddress PortNumber
