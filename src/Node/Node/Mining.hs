@@ -249,7 +249,7 @@ processingOfBroadcastThing aMd aBroadcastThing = do
     loging aData $ "Recived " ++ show aBroadcastThing
     case aBroadcastThing of
         BroadcastWarning      aBroadcastWarning -> case aBroadcastWarning of
-            INeedNeighbors aMyNodeId aHostAddress   -> undefined
+            INeedNeighbors aMyNodeId aHostAddress _  -> undefined
         BroadcastShard        aShard            -> do
             whenJust (aData^.shardingChan) $ \aChan ->
                 writeChan aChan $ T.NewShardInNetAction aShard

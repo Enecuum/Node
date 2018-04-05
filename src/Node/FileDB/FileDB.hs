@@ -1,13 +1,14 @@
 {-#LANGUAGE ScopedTypeVariables#-}
 
 module Node.FileDB.FileDB (
-    addDataToFile,
-    readDataFile,
-    readHashMsgFromFile--,
-    --deleteDataFromFile
-  ) where
+        addDataToFile
+    ,   readDataFile
+    ,   readHashMsgFromFile
+    ,   writeDataToFile
+) where
 
 import Control.Exception
+import Control.Monad
 
 import qualified Data.ByteString as B
 import Service.Types
@@ -46,18 +47,29 @@ deleteDataFromFile aFilePath aElem = do
 
 -}
 
-addDataToFile :: Show a => FilePath -> a -> IO ()
-addDataToFile aFilePath aData = do
-    aOk1 <- try $ appendFile aFilePath $ show aData ++ "\n"
+writeDataToFile :: Show a => FilePath -> [a] -> IO ()
+writeDataToFile aFilePath aDataLis = do
+    let aWriteFile = writeFile aFilePath $ concat
+            [show aData ++ "\n" | aData <- aDataLis]
+    aOk1 <- try aWriteFile
     case aOk1 of
         Right _ -> pure ()
         Left (_ :: SomeException) -> do
-            aOk2 <- try $ writeFile aFilePath $ show aData ++ "\n"
+            aOk2 <- try aWriteFile
             case aOk2 of
                 Right _                   -> pure ()
                 Left (_ :: SomeException) -> do
                     createDirectory "./data"
-                    writeFile aFilePath $ show aData ++ "\n"
+                    aWriteFile
+
+
+addDataToFile :: Show a => FilePath -> [a] -> IO ()
+addDataToFile aFilePath aDataList = do
+    aOk1 <- try $ forM_ aDataList $ \aData ->
+        appendFile aFilePath $ show aData ++ "\n"
+    case aOk1 of
+        Right _ -> pure ()
+        Left (_ :: SomeException) -> writeDataToFile aFilePath aDataList
 
 {-
 writeDataToFile :: Show a => FilePath -> [a] -> IO ()
@@ -70,10 +82,10 @@ readHashMsgFromFile filename = do
     result <- try $ B.readFile filename
     case result of
         Right aFileContent          -> case S.decode aFileContent of
-                                           Right aMicroblocks  -> return aMicroblocks
-                                           Left aError         -> do
-                                               putStrLn $ "error " ++ show aError
-                                               return [] 
-        Left  ( _ :: SomeException) -> do 
-                                   putStrLn $ filename ++ "does not exist"
-                                   return []
+            Right aMicroblocks  -> return aMicroblocks
+            Left aError         -> do
+                putStrLn $ "error " ++ show aError
+                return []
+        Left  ( _ :: SomeException) -> do
+            putStrLn $ filename ++ "does not exist"
+            return []

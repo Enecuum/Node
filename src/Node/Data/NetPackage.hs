@@ -55,8 +55,8 @@ data RequestPackage where
     RequestNetLvlPackage    :: Request NetLvl    -> PackageSignature -> RequestPackage
   deriving (Eq, Generic, Show)
 
-data LogicLvl
-data NetLvl
+data LogicLvl = LogicLvl
+data NetLvl   = NetLvl
 
 data family Request a :: *
 
@@ -75,7 +75,6 @@ data instance Request NetLvl where
     IsYouBrodcast           :: Request NetLvl
   deriving (Eq, Generic, Show)
 
-data family Responce a :: *
 
 
 data ResponcePackage where
@@ -83,12 +82,28 @@ data ResponcePackage where
     ResponceLogicLvlPackage :: RequestPackage -> Responce LogicLvl -> PackageSignature -> ResponcePackage
   deriving (Eq, Generic, Show)
 
+data family Responce a :: *
 
 data instance Responce NetLvl where
-    BroadcastListResponce   :: [(NodeId, HostAddress, PortNumber)] -> Responce NetLvl
-    HostAdressResponce      :: Maybe HostAddress -> Responce NetLvl
-    IAmBroadcast            :: Bool -> Responce NetLvl
+    BroadcastListResponce   ::
+            NodeInfoList LogicLvl
+        ->  NodeInfoList NetLvl
+        ->  Responce NetLvl
+
+    HostAdressResponce      ::
+            Maybe HostAddress
+        ->  Responce NetLvl
+
+    IAmBroadcast            ::
+            Bool
+        ->  Responce NetLvl
+
   deriving (Eq, Generic, Show)
+
+type family NodeInfoList a :: *
+type instance NodeInfoList LogicLvl = [(NodeId, NodePosition)]
+type instance NodeInfoList NetLvl   = [(NodeId, HostAddress, PortNumber)]
+
 
 
 data instance Responce LogicLvl where
@@ -121,8 +136,11 @@ data BroadcastThing where
     BroadcastPosition     :: MyNodeId           -> NodePosition -> BroadcastThing
   deriving (Eq, Ord, Show, Generic)
 
-data BroadcastWarning = INeedNeighbors MyNodeId HostAddress
+data BroadcastWarning = INeedNeighbors MyNodeId HostAddress PortNumber
   deriving (Eq, Ord, Show, Generic)
+
+
+
 
 data Reason where
     DisconnectRequsted          :: Reason

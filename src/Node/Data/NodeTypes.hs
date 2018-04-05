@@ -26,9 +26,9 @@ type NodeVariantRoles = [NodeVariantRole]
 instance Serialize NodeVariantRole
 
 
-newtype NodeId     = NodeId     Integer deriving (Eq, Ord, Num, Enum, Show, Serialize, Real, Integral)
-newtype MyNodeId   = MyNodeId   Integer deriving (Eq, Ord, Num, Enum, Show, Serialize, Real, Integral)
-newtype ClientId   = ClientId   Word64  deriving (Eq, Ord, Num, Enum, Show, Serialize, Real, Integral)
+newtype NodeId     = NodeId     Integer deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)
+newtype MyNodeId   = MyNodeId   Integer deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)
+newtype ClientId   = ClientId   Word64  deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)
 
 type BootNodeList   = [(NodeId, HostAddress, PortNumber)]
 

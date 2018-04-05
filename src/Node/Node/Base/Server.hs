@@ -45,18 +45,22 @@ startServerActor :: ManagerMsg a => Chan a -> PortNumber -> IO ()
 startServerActor aOutputChan aPort = do
     void $ forkIO $ runServer 0 (fromEnum aPort) $
         \aHostAdress pending -> do
-            conn <- WS.acceptRequest pending
-            WS.forkPingThread conn 30
-            aMsg <- WS.receiveData conn
+            aConnect <- WS.acceptRequest pending
+            WS.forkPingThread aConnect 30
+            aMsg <- WS.receiveData aConnect
             case decode aMsg of
                 Right (conMsg@(Unciphered (ConnectingRequest _ aId _)))
                     | verifyConnectingRequest conMsg -> do
                             aInputChan <- newChan
                             writeChan aOutputChan $
                                 initDatagram aInputChan aHostAdress aMsg
-                            socketActor aHostAdress (toNodeId aId) aOutputChan aInputChan conn
+                            socketActor aHostAdress (toNodeId aId) aOutputChan aInputChan aConnect
+                Right (Unciphered PingRequest) -> do
+                    WS.sendBinaryData aConnect $ encode $
+                        PongResponce aHostAdress
                 _     -> pure ()
---
+
+
 socketActor ::
     ManagerMsg a
     => HostAddress

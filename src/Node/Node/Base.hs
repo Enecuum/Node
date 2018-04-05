@@ -1,11 +1,11 @@
 {-# LANGUAGE
-    LambdaCase,
-    ViewPatterns,
-    MultiWayIf,
-    ScopedTypeVariables,
-    MultiParamTypeClasses,
-    FlexibleContexts
-  #-}
+        LambdaCase
+    ,   ViewPatterns
+    ,   MultiWayIf
+    ,   ScopedTypeVariables
+    ,   MultiParamTypeClasses
+    ,   FlexibleContexts
+#-}
 
 module Node.Node.Base where
 
@@ -24,6 +24,7 @@ import qualified    Data.Map                        as M
 import qualified    Data.Bimap                      as BI
 import qualified    Data.Set                        as S
 import              Data.IORef
+import              Data.IP
 import              Data.Serialize
 import              Data.List.Extra
 import              Data.Maybe
@@ -92,11 +93,36 @@ answerToDeleteDeadSouls aData _ = do
     let aNodes = filter (\aNode -> aNode^.status /= Active) $ M.elems $ aData^.nodes
     forM_ aNodes sendExitMsgToNode
 
+-- нужно сконнектиться так, чтобы образовать сетку или что-то очень похожее.
+
+-- Знаем список бродкаст нод.
+--    => Коннектимся по списку.
+-- Не знаем списка бродкст нод.
+--    => Идём к бут ноде. (если ее нет или мы ее не знаем пишем сообщение об ошибке)
+
+--  x  x  x  x  x
+--           | / \
+--  x  x  x - x - x
+--            |   |
+--  x  x  x - o - x
+--            |ip, port, id, maybe position
+--  x  x  x   x   x
+-- (id, ip, port)
+-- (id, position)
+{-
+data BroadcastList = BroadcastList (NodeInfoList LogicLvl) (NodeInfoList NetLvl)
+
+type family NodeInfoList a :: *
+type instance NodeInfoList LogicLvl = [(NodeId, NodePosition)]
+type instance NodeInfoList NetLvl   = [(NodeId, HostAddress, PortNumber)]
+-}
+-- (id, ip, port, maybe position)
+-- актуально живых соседей.
+-- x - o
 
 answerToConnectivityQuery :: (ManagerData md, ManagerMsg msg) =>
         Chan msg -> IORef md -> msg -> IO ()
-answerToConnectivityQuery aChan aMd _ = do
-    undefined
+answerToConnectivityQuery aChan aMd _ = undefined
 {-
     aData <- readIORef aMd
     let aBroadcastNodes = getNodes BroadcastNode aData
@@ -106,34 +132,42 @@ answerToConnectivityQuery aChan aMd _ = do
     let aConnects = BI.elems $ aData^.vacantPositions
     if
         | aBroadcastNum > 4 -> do
-            let ns = drop 2 $ sortOn (^.pingTime) aBroadcastNodes
+            let ns = drop 2 aBroadcastNodes
             aShuffledNS <- shuffleM ns
             forM_ (drop 1 aShuffledNS) sendExitMsgToNode
 
         | aBroadcastNum > 1 || aConnectingNum /= 0 -> return ()
 
         | not $ iIsBroadcastNode aData -> do
-            aListOfConnects <- readRecordFromNodeListFile $ aData^.myNodeId
+            aListOfConnects <- readRecordsFromNodeListFile $ aData^.myNodeId
             if  | null $ aListOfConnects -> connectToBootNode aChan aData
                 | otherwise -> connectToListOfConnect
                     aChan (3 - aBroadcastNum) aListOfConnects
         | not $ null aConnects -> do
             connectTo aChan (3 - aBroadcastNum) aConnects
         | Just aIp <- aData^.nodeBaseData.hostAddress, aBroadcastNum > 0 -> do
-            sendIHaveBroadcastConnects aMd aIp
+            undefined
+            --sendIHaveBroadcastConnects aMd aIp
         | aBroadcastNum > 0 -> do
+            undefined
+
             let aNode = head aBroadcastNodes
             aIPRequest <- makeIPRequest
                 (keyToId $ aNode^.nPublicKey)
                 (aData^.privateKey)
             sendToNode (makePingPongMsg Ping aIPRequest) aNode
+
         | otherwise -> do
-            aListOfConnects <- readRecordFromNodeListFile $ aData^.myNodeId
+            aListOfConnects <- readRecordsFromNodeListFile $ aData^.myNodeId
             if  | null aListOfConnects  -> do
                     connectToBootNode aChan aData
                 | otherwise             -> do
                     connectToListOfConnect aChan 2 aListOfConnects
 -}
+
+
+
+
 connectToListOfConnect :: ManagerMsg msg =>
     Chan msg -> Int -> [(NodeId, HostAddress, PortNumber)] -> IO ()
 connectToListOfConnect aChan aNum aConnects = do
@@ -442,25 +476,77 @@ sendToNode aMakeMsg aNode = do
             sendPackagedMsg (aNode^.chan) aJustMsg
 
 
+{-
+type instance NodeInfoList LogicLvl = [(NodeId, NodePosition)]
+type instance NodeInfoList NetLvl   = [(NodeId, HostAddress, PortNumber)]
+-}
 
-readRecordFromNodeListFile :: MyNodeId -> IO [(NodeId, HostAddress, PortNumber)]
-readRecordFromNodeListFile (MyNodeId aMyNodeId) = do
+readRecordsFromNodeListFileNetLvl :: MyNodeId -> IO (NodeInfoList NetLvl)
+readRecordsFromNodeListFileNetLvl (MyNodeId aMyNodeId) = do
     aFileContent <- readDataFile $
         "./data/listOfConnects" ++ show aMyNodeId ++ ".txt"
     forM aFileContent $ \(aNodeId, aIp, aPort) ->
         return (NodeId aNodeId, aIp, aPort)
 
+saveRecordToNodeListFileNetLvl :: MyNodeId -> NodeInfoList NetLvl -> IO ()
+saveRecordToNodeListFileNetLvl aMyNodeId = writeDataToFile
+    ("./data/listOfConnects" ++ show aMyNodeId ++ ".txt")
 
-addRecordToNodeListFile :: MyNodeId -> NodeId -> HostAddress -> PortNumber -> IO ()
-addRecordToNodeListFile (MyNodeId aMyNodeId) (NodeId aNodeId) aIp aPort = do
-    unless (aMyNodeId == aNodeId) $ do
-        aFileContent <- readRecordFromNodeListFile (MyNodeId aMyNodeId)
-        unless ((NodeId aNodeId, aIp, aPort)`elem`aFileContent) $
-            addDataToFile
-                ("./data/listOfConnects" ++ show aMyNodeId ++ ".txt")
-                (aNodeId, aIp, aPort)
+
+addRecordsToNodeListFileNetLvl :: MyNodeId -> NodeInfoList NetLvl -> IO ()
+addRecordsToNodeListFileNetLvl aMyNodeId aRecords = do
+    aFileContent <- readRecordsFromNodeListFileNetLvl aMyNodeId
+    let aFilteredRecords = filter
+            (\a -> aNotInFile a && aNotIAm a) aFileContent
+        -- aNotInLocalHost a = a^._2 /= read "127.0.0.1"
+        aNotInFile      a = a `notElem` aFileContent
+        aNotIAm         a = toMyNodeId (a^._1) /= aMyNodeId
+
+    addDataToFile
+        ("./data/listOfConnects" ++ show aMyNodeId ++ ".txt")
+        aFilteredRecords
+
+deleteFromFileNetLvl :: MyNodeId -> NodeId      -> IO ()
+deleteFromFileNetLvl aMyNodeId aNodeId = do
+    aRecords :: NodeInfoList NetLvl <-readRecordsFromNodeListFileNetLvl aMyNodeId
+    let aFilteredRecords = filter (\a -> a^._1 /= aNodeId) aRecords
+    saveRecordToNodeListFileNetLvl aMyNodeId aFilteredRecords
+
+--
+readRecordsFromNodeListFileLogicLvl :: MyNodeId -> IO (NodeInfoList LogicLvl)
+readRecordsFromNodeListFileLogicLvl (MyNodeId aMyNodeId) = do
+    readDataFile $ "./data/listOfPositions" ++ show aMyNodeId ++ ".txt"
+
+saveRecordToNodeListFileLogicLvl    :: MyNodeId -> NodeInfoList LogicLvl   -> IO ()
+saveRecordToNodeListFileLogicLvl aMyNodeId = writeDataToFile
+    ("./data/listOfPositions" ++ show aMyNodeId ++ ".txt")
+
+
+addRecordsToNodeListFileLogicLvl    :: MyNodeId -> NodeInfoList LogicLvl   -> IO ()
+addRecordsToNodeListFileLogicLvl aMyNodeId aRecords = do
+    aFileContent  <- readRecordsFromNodeListFileLogicLvl aMyNodeId
+    let aFilteredRecords = filter
+            (\a -> aNotInFile a && aNotIAm a) aFileContent
+        aNotInFile      a = a `notElem` aFileContent
+        aNotIAm         a = toMyNodeId (a^._1) /= aMyNodeId
+
+    addDataToFile
+        ("./data/listOfPositions" ++ show aMyNodeId ++ ".txt")
+        aFilteredRecords
+
+deleteFromFileLogicLvl :: MyNodeId -> NodeId      -> IO ()
+deleteFromFileLogicLvl aMyNodeId aNodeId = do
+    aRecords :: NodeInfoList LogicLvl <- readRecordsFromNodeListFileLogicLvl aMyNodeId
+    let aFilteredRecords = filter (\a -> a^._1 /= aNodeId) aRecords
+    saveRecordToNodeListFileLogicLvl aMyNodeId aFilteredRecords
 
 
 lInsert :: NodeVariantRole -> [NodeVariantRole] -> [NodeVariantRole]
 lInsert _ [BootNode] = [BootNode]
 lInsert aElem aList  = S.toList . S.fromList $ aElem : aList
+
+
+
+
+
+--------------------------------------------------------------------------------

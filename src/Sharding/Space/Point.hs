@@ -14,28 +14,29 @@ import              GHC.Generics
 
 -- * Points in the testing space
 data Point = Point !Word64 !Word64
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Read, Generic)
 
 instance Serialize Point
 
 newtype MyNodePosition  = MyNodePosition Point
-    deriving (Eq, Ord, Show, Positions, Serialize)
+    deriving (Eq, Ord, Show, Read,Positions, Serialize)
 
 newtype NodePosition    = NodePosition   Point
-    deriving (Eq, Ord, Show, Positions, Serialize)
-
+    deriving (Eq, Ord, Show, Read,Positions, Serialize)
 
 newtype ShardPosition   = ShardPosition  Point
-    deriving (Eq, Ord, Show, Positions, Serialize)
+    deriving (Eq, Ord, Show, Read, Positions, Serialize)
 
 newtype PointFrom       = PointFrom      Point
-    deriving (Eq, Ord, Show, Positions, Serialize)
+    deriving (Eq, Ord, Show, Read, Positions, Serialize)
 
 newtype PointTo         = PointTo        Point
-    deriving (Eq, Ord, Show, Positions, Serialize)
+    deriving (Eq, Ord, Show, Read, Positions, Serialize)
+
 
 class NodePositions a b where
     toNodePosition :: a -> b
+
 
 instance (Positions a, Positions b) => NodePositions a b where
     toNodePosition = fromPoint.toPoint
