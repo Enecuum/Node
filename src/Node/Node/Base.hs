@@ -428,7 +428,8 @@ sendPingMsgTo :: (ManagerData md, )
 
 class PackageTraceRoutingAction aManagerData aRequest where
     makeAction
-        ::  aChan
+        ::  ManagerMsg msg
+        =>  Chan msg
         ->  IORef aManagerData
         ->  NodeId
         ->  TraceRouting
@@ -438,19 +439,25 @@ class PackageTraceRoutingAction aManagerData aRequest where
 
 class BroadcastAction aManagerData where
     makeBroadcastAction
-        ::  aChan
+        ::  ManagerMsg msg
+        =>  Chan msg
         ->  IORef aManagerData
         ->  NodeId
         ->  PackageSignature
         ->  BroadcastThing
         ->  IO ()
 
-answerToPackagedMsg :: (
-    ManagerData md,
-    PackageTraceRoutingAction md RequestPackage,
-    PackageTraceRoutingAction md ResponcePackage,
-    BroadcastAction md) =>
-    NodeId -> aChan -> CipheredString -> IORef md -> IO ()
+answerToPackagedMsg
+    ::  ManagerData md
+    =>  PackageTraceRoutingAction md RequestPackage
+    =>  PackageTraceRoutingAction md ResponcePackage
+    =>  BroadcastAction md
+    =>  ManagerMsg msg
+    =>  NodeId
+    ->  Chan msg
+    ->  CipheredString
+    ->  IORef md
+    ->  IO ()
 
 answerToPackagedMsg aId aChan aChipredString aMd = do
     aData <- readIORef aMd
