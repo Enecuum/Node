@@ -20,6 +20,7 @@ import              Crypto.Random.Types
 import              Crypto.PubKey.ECC.ECDSA         as ECDSA
 import              Crypto.PubKey.ECC.Generate
 import              Lens.Micro
+import              Lens.Micro.TH
 
 import              Node.Crypto
 import              Node.Data.Data
@@ -29,7 +30,7 @@ import              Node.Data.Lens
 import              Node.Data.NodeTypes
 import              Node.Template.Constructor
 import              Sharding.Space.Point
-import              Sharding.Types.Node
+import qualified    Sharding.Types.Node as N
 import              Service.Types (Transaction, Microblock)
 
 instance Show (Chan a) where
@@ -85,51 +86,64 @@ data MsgToServer where
 data NodeStatus = Active | Noactive deriving (Show, Eq)
 
 data Node = Node {
-    nodeStatus          :: NodeStatus,
-    nodeKey             :: Maybe StringKey,
-    nodeChan            :: Chan MsgToSender,
-    nodeNodePosition    :: Maybe NodePosition,
-    nodeIsBroadcast     :: Bool
+        _status          :: NodeStatus
+    ,   _mKey            :: Maybe StringKey
+    ,   _chan            :: Chan MsgToSender
+    ,   _nodePosition    :: Maybe NodePosition
+    ,   _nodePort        :: Maybe PortNumber
+    ,   _isBroadcast     :: Bool
   }
 
+makeLenses ''Node
 
 data ManagerNodeData = ManagerNodeData {
-    managerNodeDataNodeConfig   :: NodeConfig,
-    managerNodeDataNodeBaseData :: NodeBaseData,
-    managerTransactions         :: Chan Transaction,
-    managerHashMap              :: BI.Bimap TimeSpec B.ByteString,
-    managerPublicators          :: S.Set NodeId,
-    managerSendedTransctions    :: BI.Bimap TimeSpec Transaction,
-    managerIAmBroadcast         :: Bool
+        managerNodeDataNodeConfig   :: NodeConfig
+    ,   managerNodeDataNodeBaseData :: NodeBaseData
+    ,   managerTransactions         :: Chan Transaction
+    ,   managerHashMap              :: BI.Bimap TimeSpec B.ByteString
+    ,   managerPublicators          :: S.Set NodeId
+    ,   managerSendedTransctions    :: BI.Bimap TimeSpec Transaction
   }
 
 type IdIpPort = (NodeId, HostAddress, PortNumber)
 type IpPort = (HostAddress, PortNumber)
-type ShardingChan = Chan ShardingNodeAction
+type ShardingChan = Chan N.ShardingNodeAction
 type MaybeChan a = Maybe (Chan a)
 
 data NodeBaseData = NodeBaseData {
-    nodeBaseDataExitChan            :: Chan ExitMsg,
-    nodeBaseDataNodes               :: M.Map NodeId Node,
-    nodeBaseDataBootNodes           :: BootNodeList,
-    nodeBaseDataAnswerChan          :: Chan Answer,
-    nodeBaseDataVacantPositions     :: BI.Bimap TimeSpec IdIpPort,
-    nodeBaseDataBroadcastNum        :: Int,
-    nodeBaseDataHostAddress         :: Maybe HostAddress,
-    nodeBaseDataMicroblockChan      :: Chan Microblock,
-    nodeBaseDataMyNodePosition      :: Maybe MyNodePosition,
-    nodeBaseDataShardingChan        :: MaybeChan ShardingNodeAction
+        nodeBaseDataExitChan            :: Chan ExitMsg
+    ,   nodeBaseDataNodes               :: M.Map NodeId Node
+    ,   nodeBaseDataBootNodes           :: BootNodeList
+    ,   nodeBaseDataAnswerChan          :: Chan Answer
+    ,   nodeBaseDataVacantPositions     :: BI.Bimap TimeSpec IdIpPort
+    ,   nodeBaseDataBroadcastNum        :: Int
+    ,   nodeBaseDataHostAddress         :: Maybe HostAddress
+    ,   nodeBaseDataMicroblockChan      :: Chan Microblock
+    ,   nodeBaseDataMyNodePosition      :: Maybe MyNodePosition
+    ,   nodeBaseDataShardingChan        :: MaybeChan N.ShardingNodeAction
+    ,   nodeBaseDataIAmBroadcast        :: Bool
   }
 
+
+makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan = NodeBaseData
+    aExitChan
+    M.empty
+    aList
+    aAnswerChan
+    BI.empty
+    0
+    Nothing
+    aMicroblockChan
+    Nothing
+    Nothing
+    False
 
 
 data NodeConfig = NodeConfig {
     nodeConfigPrivateNumber :: DH.PrivateNumber,
     nodeConfigPublicPoint   :: DH.PublicPoint,
     nodeConfigPrivateKey    :: PrivateKey,
-    nodeConfigPublicKey     :: PublicKey,
     nodeConfigMyNodeId      :: MyNodeId,
-    nodeConfigHelloMsg      :: HelloMsg,
     nodeConfigPortNumber    :: PortNumber
   }
   deriving (Generic)
@@ -148,9 +162,9 @@ instance ManagerData ManagerNodeData
 
 
 mapM (uncurry makeLensInstance') [
-    ("helloMsg", "nodeConfig"),
-    ("nodeConfig", "managerNodeData"),
-    ("nodeBaseData", "managerNodeData")]
+        ("nodeConfig", "managerNodeData")
+    ,   ("nodeBaseData", "managerNodeData")
+    ]
 
 
 instance Serialize PrivateKey where
@@ -169,12 +183,8 @@ class ToManagerData a where
 
 instance ToManagerData ManagerNodeData where
     toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aList aNodeConfig = ManagerNodeData
-        aNodeConfig (NodeBaseData aExitChan M.empty aList aAnswerChan BI.empty 0 Nothing aMicroblockChan Nothing Nothing)
-            aTransactionChan BI.empty S.empty BI.empty False
-
-defaultHelloMsg :: HelloMsg
-defaultHelloMsg = HelloMsg (P2pVersion 0) (ClientId 0) 3000 (NodeId 0) []
-    [SimpleNode]
+        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan)
+            aTransactionChan BI.empty S.empty BI.empty
 
 
 makeNewNodeConfig :: MonadRandom m => PortNumber -> m NodeConfig
@@ -182,8 +192,7 @@ makeNewNodeConfig aPort = do
     (aPublicKey,     aPrivateKey)  <- generate curve
     (aPrivateNumber, aPublicPoint) <- genKayPair curve
     let aId = keyToId aPublicKey
-    pure $ NodeConfig aPrivateNumber aPublicPoint aPrivateKey aPublicKey
-        (toMyNodeId aId) (defaultHelloMsg & nodeId .~ aId) aPort
+    pure $ NodeConfig aPrivateNumber aPublicPoint aPrivateKey (toMyNodeId aId) aPort
 
 
 emptyData
@@ -215,17 +224,6 @@ makePackageSignature aData aResponse = do
     return $ PackageSignature aNodeId aTime aResponceSignature
 
 
-roles :: NodeConfigClass a => Lens' a NodeVariantRoles
-roles = nodeConfig.helloMsg.nodeVariantRoles
-
-
-lensInst "mKey"         ["Node"] ["Maybe", "StringKey"]         "nodeKey"
-lensInst "chan"         ["Node"] ["Chan", "MsgToSender"]        "nodeChan"
-lensInst "status"       ["Node"] ["NodeStatus"]                 "nodeStatus"
-lensInst "nodePosition" ["Node"] ["Maybe", "NodePosition"]      "nodeNodePosition"
-lensInst "isBroadcast"  ["Node"] ["Bool"]                       "nodeIsBroadcast"
-
-
 lensInst "transactions" ["ManagerNodeData"]
     ["Chan", "Transaction"] "managerTransactions"
 
@@ -240,16 +238,16 @@ lensInst "sendedTransctions" ["ManagerNodeData"]
 
 
 
-lensInst "iAmBroadcast" ["ManagerNodeData"] ["Bool"] "managerIAmBroadcast"
 
 
 makeNode :: Chan MsgToSender -> Node
 makeNode aChan = Node {
-    nodeStatus          = Noactive,
-    nodeKey             = Nothing,
-    nodeChan            = aChan,
-    nodeNodePosition    = Nothing,
-    nodeIsBroadcast     = False
+        _status         = Noactive
+    ,   _mKey           = Nothing
+    ,   _chan           = aChan
+    ,   _nodePosition   = Nothing
+    ,   _nodePort       = Nothing
+    ,   _isBroadcast    = False
   }
 
 

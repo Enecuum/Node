@@ -302,8 +302,6 @@ sendIHaveBroadcastConnects aMd aIp = do
         (aData^.nodeConfig.privateKey)
     sendInfoPingToNodes aMd aMsg
 -}
-iIsBroadcastNode :: ManagerData md => md -> Bool
-iIsBroadcastNode aData = BroadcastNode `elem` aData^.nodeConfig.helloMsg.nodeVariantRoles
 
 
 answerToClientDisconnected
@@ -388,7 +386,7 @@ answerToInitDatagram
     ->  IO ()
 answerToInitDatagram aMd
     (toManagerMsg -> InitDatagram aInputChan aHostAdress aDatagram) = do
-    modifyIORef aMd $ nodeConfig.helloMsg.nodeVariantRoles %~ lInsert BroadcastNode
+    modifyIORef aMd $ iAmBroadcast .~ True
     case decode aDatagram of
         Right (aPack @(Unciphered (ConnectingRequest aPublicPoint aId _)))
             | verifyConnectingRequest aPack ->
@@ -463,7 +461,7 @@ answerToPackagedMsg aId aChan aChipredString aMd = do
     aData <- readIORef aMd
     loging aData $ "answerToPackagedMsg: " ++ show aChipredString
     let aDecryptedPacage = do
-            key  <- nodeKey =<< (aId `M.lookup`(aData^.nodes))
+            key  <- _mKey =<< (aId `M.lookup`(aData^.nodes))
             decryptChipred key aChipredString
     whenJust aDecryptedPacage $ \case
         PackageTraceRoutingRequest aTraceRouting aRequestPackage ->
@@ -515,8 +513,9 @@ answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aMd = do
         modifyIORef aMd $ nodes %~ M.insert aId (makeNode aInputChan)
         aNewData <- readIORef aMd
         sendRemoteConnectDatagram aInputChan aNewData
+        let aStringKey = getKay (aNewData^.privateNumber) aPublicPoint
         modifyIORef aMd $ nodes %~ M.adjust (&~ do
-            mKey            .= Just (getKay (aNewData^.privateNumber) aPublicPoint)
+            mKey            .= Just aStringKey
             status          .= Active
           ) aId
 
@@ -634,7 +633,7 @@ makeMsg
 makeMsg aId aData func = do
     aNode        <- aId `M.lookup` (aData^.nodes)
     packagedMsg  <- maybeCryptoError . func =<< aNode^.mKey
-    pure (nodeChan aNode, packagedMsg)
+    pure (aNode^.chan, packagedMsg)
 
 getStatus :: ManagerData md => NodeId -> md -> Maybe NodeStatus
 getStatus aId aMd = (^.status) <$> (aId `M.lookup` (aMd^.nodes))

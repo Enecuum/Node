@@ -7,6 +7,7 @@ import qualified    Boot.Map.Random                 as RM
 import              Data.IORef
 import              Control.Monad.Extra
 import              Lens.Micro
+import              Lens.Micro.Mtl
 import              Control.Concurrent.Chan
 import              Debug.Trace
 
@@ -34,10 +35,6 @@ managerBootNode ch md = forever $ do
 
         opt isInitDatagram      $ answerToInitDatagram md
         opt isDatagramMsg       $ answerToDatagramMsg ch md (mData^.myNodeId)
-            bootNodeAnswerToPing
-            (answerToPong
-                :: PongAnswer NodeBootNodeData ManagerBootNodeMsgBase)
-            bootNodeAnswerToInfoPing
         opt isCheckBroadcastNodes $ answerToCheckBroadcastNodes md ch
         opt isCheckBroadcastNode  $ answerToCheckBroadcastNode ch md
 
@@ -48,11 +45,15 @@ answerToCheckBroadcastNodes ::
     ManagerBootNodeMsgBase -> IO ()
 answerToCheckBroadcastNodes aMd aChan _ = do
     aData <- readIORef aMd
-    let anActiveNodes :: [Node]
-        anActiveNodes = getNodes Active aData
+    let
+        anActiveNodes :: [(NodeId, Node)]
+        anActiveNodes = filter isActive . M.toList $ aData^.nodes
+
+        isActive :: (a, Node) -> Bool
+        isActive a = (a^._2.status) == Active
 
         aNodeIds :: [NodeId]
-        aNodeIds = (\aNode -> keyToId $ (aNode^.nPublicKey)) <$> anActiveNodes
+        aNodeIds = (^._1) <$> anActiveNodes
 
         aNeededInBroadcastLis :: [NodeId]
         aNeededInBroadcastLis = filter (\aId -> S.notMember aId $ aData^.checSet)
@@ -64,8 +65,10 @@ answerToCheckBroadcastNodes aMd aChan _ = do
 
     forM_ aNeededInBroadcastLis $ \aNodeId -> do
         aBroadcastNodeList <- aData^.broadcastNodes.to (RM.takeRandom 10)
+        {-
         sendJustPackagedMsg $ makeMsg aNodeId aData $
             makePingPongMsg Pong $ BroadcastNodeListAnswer aBroadcastNodeList
+            -}
         whenJust (aNodeId `M.lookup` (aData^.nodes)) $ \aNode -> do
             timer 100000 $ do
                 sendExitMsgToNode aNode
@@ -90,7 +93,7 @@ answerToCheckBroadcastNode :: ManagerMsg a =>
     Chan a -> IORef NodeBootNodeData -> ManagerBootNodeMsgBase -> IO ()
 answerToCheckBroadcastNode aChan aMd (CheckBroadcastNode aNodeId aIp aPort) = do
     modifyIORef aMd $ checSet %~ S.insert aNodeId
-    sendInitDatagramFunc aChan aIp aPort aNodeId aMd
+    writeChan aChan $ sendInitDatagram aIp aPort aNodeId
 answerToCheckBroadcastNode _ _ _ = return ()
 
 
@@ -105,15 +108,3 @@ bootNodeAnswerClientIsDisconnected aMd
                 minusStatusNumber aMd aId
                 modifyIORef aMd (nodes %~ M.delete aId)
 bootNodeAnswerClientIsDisconnected _ _ = pure ()
-
-
-bootNodeAnswerToPing :: PingAnswer NodeBootNodeData ManagerBootNodeMsgBase
-bootNodeAnswerToPing _ _ _ _ = pure ()
-
-
-bootNodeAnswerToPong :: PongAnswer NodeBootNodeData ManagerBootNodeMsgBase
-bootNodeAnswerToPong _ _ _ _ = pure ()
-
-
-bootNodeAnswerToInfoPing :: InfoPingAnswer  NodeBootNodeData ManagerBootNodeMsgBase
-bootNodeAnswerToInfoPing _ _ _ _ = pure ()

@@ -233,10 +233,6 @@ answerToBlockMadeMsg _ _ = pure ()
 -}
 
 
-isBrodcastNode :: ManagerNodeData -> Bool
-isBrodcastNode aData = aData^.nodeConfig.helloMsg.nodeVariantRoles.to
-    (BroadcastNode `elem`)
-
 notInIndex :: Serialize a => ManagerNodeData -> a -> Bool
 notInIndex aData a = not $ BI.memberR (cryptoHash a) $ aData^.hashMap
 

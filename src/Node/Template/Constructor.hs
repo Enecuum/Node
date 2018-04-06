@@ -11,7 +11,6 @@ module Node.Template.Constructor (
     ,   managerBootNodeMsgListData
     ,   nodeBaseDataList
     ,   nodeConfigList
-    ,   helloMsgList
     ,   genDataClass
     ,   genBazeDataInstance
     ,   dataConstruct
@@ -57,7 +56,7 @@ managerMsgFuncListData = toList $ do
     "connectivityQuery"     +: []
     "disconnectNode"        +: [["NodeId"]]
     "sendInitDatagram"      +: [["HostAddress"], ["PortNumber"], ["NodeId"]]
-    "shardingNodeRequestMsg" +: [["ShardingNodeRequestMsg"]]
+    "shardingNodeRequestMsg" +: [["N.ShardingNodeRequestMsg"]]
 
 
 managerMiningMsgListData :: [(Bool, String, [[String]])]
@@ -78,10 +77,9 @@ managerBootNodeMsgListData = toList $ do
     "checkBroadcastNodes"   +: []
 
 
-nodeBaseDataList, nodeConfigList, helloMsgList :: [(String, [String])]
+nodeBaseDataList, nodeConfigList :: [(String, [String])]
 nodeConfigList = toList $ do
     "privateNumber" !: ["DH.PrivateNumber"]
-    "publicKey"     !: ["ECDSA.PublicKey"]
     "privateKey"    !: ["ECDSA.PrivateKey"]
     "publicPoint"   !: ["DH.PublicPoint"]
     "myNodeId"      !: ["MyNodeId"]
@@ -98,16 +96,10 @@ nodeBaseDataList = toList $ do
     "hostAddress"       !: ["Maybe", "HostAddress"]
     "microblockChan"    !: ["Chan", "Microblock"]
     "myNodePosition"    !: ["Maybe", "MyNodePosition"]
-    "shardingChan"      !: ["MaybeChan", "ShardingNodeAction"]
+    "shardingChan"      !: ["MaybeChan", "N.ShardingNodeAction"]
+    "iAmBroadcast"      !: ["Bool"]
 
 
-helloMsgList = toList $ do
-    "p2pVersion"        !: ["P2pVersion"]
-    "clientId"          !: ["ClientId"]
-    "listenPort"        !: ["PortNumber"]
-    "nodeId"            !: ["NodeId"]
-    "caps"              !: ["Caps"]
-    "nodeVariantRoles"  !: ["NodeVariantRoles"]
 
 infixl 2 +:
 --infixl 2 -:
