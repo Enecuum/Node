@@ -179,8 +179,7 @@ answerToConnectivityQuery aChan aMd _ = do
             --if we don't find anybody send message error
         -- TODO: optimize by net and logic lvl
       --  | aBroadcastNum > 6     -> undefined
-
-
+--
 --makePositionRequest
 
 iDontHaveAPosition :: ManagerData md => md -> Bool

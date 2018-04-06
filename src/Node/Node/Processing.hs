@@ -17,7 +17,9 @@ import              Data.Serialize
 import              Data.List.Extra
 import              Data.IORef
 import              System.Clock
+import              System.Random
 import              Lens.Micro
+import              Lens.Micro.Mtl
 import              Control.Concurrent
 import              Control.Monad.Extra
 import              Crypto.Error
@@ -28,13 +30,16 @@ import              Node.Crypto
 import              Node.Data.Data
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
+import              Sharding.Sharding
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Sharding.Space.Distance
 
 class Processing aNodeData aPackage where
     processing
-        ::  aNodeData
+        ::  ManagerMsg msg
+        =>  Chan msg
+        ->  aNodeData
         ->  PackageSignature
         ->  TraceRouting
         ->  aPackage
@@ -42,12 +47,22 @@ class Processing aNodeData aPackage where
 
 
 instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
-    processing aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
+    processing aChan aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
         BroadcastListResponce aBroadcastListLogic aBroadcastList -> do
             aData <- readIORef aMd
-
-            addRecordsToNodeListFile (aData^.myNodeId) aBroadcastListLogic
-            addRecordsToNodeListFile (aData^.myNodeId) aBroadcastList
+            let aMyNodeId = aData^.myNodeId
+            addRecordsToNodeListFile aMyNodeId aBroadcastListLogic
+            addRecordsToNodeListFile aMyNodeId aBroadcastList
+            let NodeInfoListNetLvl aList = aBroadcastList
+            when (null aList) $ do
+                aDeltaX <- randomIO
+                aDeltaY <- randomIO
+                let aMyNodePosition = MyNodePosition $ Point aDeltaX aDeltaY
+                aChanOfSharding <- newChan
+                makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition
+                modifyIORef aMd (&~ do
+                    myNodePosition .= Just aMyNodePosition
+                    shardingChan   .= Just aChanOfSharding)
 
         HostAdressResponce _ -> return ()
 
@@ -56,7 +71,7 @@ instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
 
 
 instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
-    processing aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ aResponse = do
+    processing _ aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ aResponse = do
         aData <- readIORef aMd
         case aResponse of
             ShardIndexResponce aShardHashList ->
@@ -71,7 +86,7 @@ instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
                     T.TheNodeHaveNewCoordinates aNodeId aNodePosition
 --
 instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
-    processing aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting aRequestLogicLvl = do
+    processing _ aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting aRequestLogicLvl = do
         aData <- readIORef aMd
         let aRequestPackage = RequestLogicLvlPackage aRequestLogicLvl aSignature
 
@@ -101,12 +116,13 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     sendToShardingLvl aData $
                         T.NodePositionAction aChan aNodeId
                     T.NodePositionResponse aMyNodePosition <- readChan aChan
+                    modifyIORef aMd $ myNodePosition .~ Just aMyNodePosition
                     return aMyNodePosition
 
 
 
 instance Processing (IORef ManagerNodeData) (Request NetLvl) where
-    processing aMd aSignature aTraceRouting aRequest = do
+    processing _ aMd aSignature aTraceRouting aRequest = do
         aData <- readIORef aMd
         let aSendNetLvlResponse = sendNetLvlResponse
                 aTraceRouting aData aRequest aSignature
