@@ -30,6 +30,7 @@ import              Data.Serialize
 import              Data.Monoid
 import              Lens.Micro.Mtl
 import              Lens.Micro
+import              Lens.Micro.GHC
 
 import              Service.Network.WebSockets.Client
 import              Service.Network.Base
@@ -84,13 +85,17 @@ answerToSendDatagram
     ->  IO ()
 answerToSendDatagram aMd (toManagerMsg -> SendDatagram aMsg aId) = do
     aData <- readIORef aMd
-    whenJust (aId `M.lookup`(aData^.nodes)) $
+    whenJust (aData^.nodes.at aId) $
         \aNode -> sendDatagramFunc (aNode^.chan) aMsg
 answerToSendDatagram _ _ = pure ()
 
 
+pattern Chan :: Chan MsgToSender -> Node
+pattern Chan aChan <- ((^.chan) -> aChan)
+
+
 sendExitMsgToNode :: Node -> IO ()
-sendExitMsgToNode ((^.chan) -> aChan) = do
+sendExitMsgToNode (Chan aChan) = do
     sendPackagedMsg aChan disconnectRequest
     writeChan       aChan SenderTerminate
 
@@ -312,7 +317,7 @@ answerToClientDisconnected
     ->  IO ()
 answerToClientDisconnected aMd (toManagerMsg -> ClientIsDisconnected aId aChan) = do
     aData <- readIORef aMd
-    whenJust (aId `M.lookup` (aData^.nodes)) $ \aNode -> do
+    whenJust (aData^.nodes.at aId) $ \aNode -> do
         when (aNode^.status == Noactive) $
             deleteFromFile NetLvl (aData^.myNodeId) aId
 
@@ -321,7 +326,20 @@ answerToClientDisconnected aMd (toManagerMsg -> ClientIsDisconnected aId aChan) 
 
 answerToClientDisconnected _ _ = pure ()
 
+{-
+Expected type: (Maybe Node
+                -> Const (Maybe Node) (Maybe Node))
+               -> M.Map NodeId Node
+               -> Const (Maybe Node) (M.Map NodeId Node)
+  Actual type: (Maybe
+                  (IxValue (M.Map NodeId Node))
+                -> Const
+                     (Maybe Node)
+                     (Maybe (IxValue (M.Map NodeId Node))))
+               -> M.Map NodeId Node
+               -> Const (Maybe Node) (M.Map NodeId Node)
 
+-}
 answerToSendInitDatagram
     :: ManagerData md
     => ManagerMsg msg
