@@ -5,6 +5,7 @@
     ,   ScopedTypeVariables
     ,   MultiParamTypeClasses
     ,   FlexibleContexts
+    ,   PatternSynonyms
 #-}
 
 module Node.Node.Base where
@@ -34,6 +35,7 @@ import              Service.Network.WebSockets.Client
 import              Service.Network.Base
 import              Service.Monad.Option
 import              Sharding.Space.Point
+import              Sharding.Space.Shift
 import              Sharding.Sharding
 import              Node.Node.Types
 import              Node.Crypto
@@ -103,6 +105,11 @@ answerToDeleteDeadSouls aData _ = do
     let aNotIsActive aNode = aNode^.status /= Active
     forM_ (M.filter aNotIsActive $ aData^.nodes) sendExitMsgToNode
 
+pattern Head aId aElem <- (aId, aElem):_
+pattern PositionOfFirst aPosition <- Head _ ((^.nodePosition) -> Just aPosition)
+
+preferedBroadcastCount :: Int
+preferedBroadcastCount = 4
 
 answerToConnectivityQuery
     ::  ManagerData md
@@ -114,7 +121,7 @@ answerToConnectivityQuery
 answerToConnectivityQuery aChan aMd _ = do
     aData <- readIORef aMd
     let aNeighbors    = aData^.nodes
-        aBroadcasts   = filter (^.isBroadcast) $ M.elems aNeighbors
+        aBroadcasts   = filter (^._2.isBroadcast) $ M.toList aNeighbors
 
         aMyNodeId     = aData^.myNodeId
         aBroadcastNum = length aBroadcasts
@@ -122,7 +129,7 @@ answerToConnectivityQuery aChan aMd _ = do
 
     NodeInfoListNetLvl aConnectList     <- readRecordsFromNodeListFile aMyNodeId
     NodeInfoListLogicLvl aPossitionList <- readRecordsFromNodeListFile aMyNodeId
-    let aWait = aBroadcastNum >= 4 || aBroadcastNum <= 6 || aUnActiveNum /= 0
+    let aWait = aBroadcastNum >= preferedBroadcastCount{- || aBroadcastNum <= 6 -} || aUnActiveNum /= 0
 
         aConnectMap   = M.fromList $ (\(a,b,c) -> (a, (b, c))) <$> aConnectList
         aPossitionMap = M.fromList $ aPossitionList
@@ -133,7 +140,7 @@ answerToConnectivityQuery aChan aMd _ = do
         | null aConnectList -> connectToBootNode aChan aData
         | iDontHaveAPosition aData -> if
             | aBroadcastNum == 0 -> connectTo aChan 1 aConnectList
-            | ((^.nodePosition) -> Just aPosition) <- head aBroadcasts -> do
+            | PositionOfFirst aPosition <- aBroadcasts -> do
                 aDeltaX <- randomRIO (0, 2000)
                 aDeltaY <- randomRIO (0, 2000)
                 let aMyNodePosition = MyNodePosition $ Point
@@ -141,13 +148,40 @@ answerToConnectivityQuery aChan aMd _ = do
                     NodePosition (Point x y) = aPosition
                 aChanOfSharding <- newChan
                 makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition
+                modifyIORef aMd (&~ do
+                    myNodePosition .= Just aMyNodePosition
+                    shardingChan   .= Just aChanOfSharding)
+            | Head aNodeId aNode <- aBroadcasts -> do
+                let aPositionRequest = NodePositionRequestPackage
+                aPackageSignature <- makePackageSignature aData aPositionRequest
+                let aRequestLogicLvlPackage = RequestLogicLvlPackage
+                        aPositionRequest aPackageSignature
 
---                modifyIORef aMd $
+                aTraceSignature <- makePackageSignature aData
+                    (aNodeId, aRequestLogicLvlPackage)
+                let aTraceRouting = ToNode aNodeId aTraceSignature
+                    aRequest = PackageTraceRoutingRequest aTraceRouting aRequestLogicLvlPackage
 
-        | aBroadcastNum < 4     -> undefined -- findNearestNeighborPositions BroadcastList
-        -- if we don't find anybody send message error
+                sendToNode (makeCipheredPackage aRequest) aNode
+-- findNearestNeighborPositions :: MyNodePosition -> S.Set NodePosition -> [NodePosition]
+
+        |   aBroadcastNum < preferedBroadcastCount,
+            Just aMyNodePosition <- aData^.myNodePosition -> do
+
+            let aPositionOfPreferedConnect = findNearestNeighborPositions
+                    aMyNodePosition aFilteredPositions
+                isPreferedByPositon a = (a^._2) `elem`aPositionOfPreferedConnect
+                aNodesId = (^._1) <$> filter isPreferedByPositon aPossitionList
+                isPreferedById a = (a^._1)  `elem` aNodesId
+                aPreferedConnects = filter isPreferedById aConnectList
+            connectTo aChan (preferedBroadcastCount - aBroadcastNum) aPreferedConnects
+
+            --if we don't find anybody send message error
         -- TODO: optimize by net and logic lvl
-        | aBroadcastNum > 6     -> undefined
+      --  | aBroadcastNum > 6     -> undefined
+
+
+--makePositionRequest
 
 iDontHaveAPosition :: ManagerData md => md -> Bool
 iDontHaveAPosition aData = aData^.myNodePosition /= Nothing

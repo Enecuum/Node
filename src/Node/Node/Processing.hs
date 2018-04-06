@@ -204,20 +204,6 @@ getClosedNode aTraceRouting aData = case aTraceRouting of
         aNeighborList   = M.keys (aData^.nodes)
 
 
-makePackageSignature
-    ::  Serialize aPackage
-    =>  ManagerNodeData
-    ->  aPackage
-    ->  IO PackageSignature
-makePackageSignature aData aResponse = do
-    aTime <- getTime Realtime
-    let aNodeId = aData^.myNodeId
-    aResponceSignature <- signEncodeble
-        (aData^.privateKey)
-        (aNodeId, aTime, aResponse)
-    return $ PackageSignature aNodeId aTime aResponceSignature
-
-
 sendResponse :: Maybe Node -> TraceRouting -> ResponcePackage -> IO ()
 sendResponse aNode aTraceRouting aPackageResponse = whenJust aNode $
     sendToNode (makeResponse aTraceRouting aPackageResponse)

@@ -173,10 +173,15 @@ newtype CipheredString = CipheredString B.ByteString
 data BroadcastThing where
     BroadcastWarning      :: BroadcastWarning               -> BroadcastThing
     BroadcastShard        :: Shard                          -> BroadcastThing
---  BroadcastBlock        :: Block                          -> BroadcastThing
     BroadcastTransaction  :: Transaction                    -> BroadcastThing
     BroadcastPosition     :: MyNodeId       -> NodePosition -> BroadcastThing
   deriving (Eq, Ord, Show, Generic)
+
+--data MiningThing where
+--  BroadcastBlock        :: Block          -> Mayby NodeId -> MiningThing
+--  BroadcastBlock        :: Block          -> Mayby NodeId -> MiningThing
+--  BroadcastTransaction  :: Transaction    -> Mayby NodeId -> MiningThing
+
 
 data BroadcastWarning = INeedNeighbors MyNodeId HostAddress PortNumber
   deriving (Eq, Ord, Show, Generic)
