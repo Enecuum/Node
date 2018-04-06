@@ -117,7 +117,7 @@ instance Verifycation ResponcePackage where
 -}
 
 instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
-    makeAction _ md aNodeId aTraceRouting aResponcePackage = do
+    makeAction aChan md aNodeId aTraceRouting aResponcePackage = do
         aData <- readIORef md
         when (verifyResponce aTraceRouting aResponcePackage) $ if
             | isItMyResponce aNodeId aTraceRouting  -> aProcessingOfAction
@@ -126,9 +126,9 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
         verifyResponce _ _ = True -- TODO : add body
         aProcessingOfAction = case aResponcePackage of
             ResponceNetLvlPackage _ aResponse aSignature   | True ->
-                processing md aSignature aTraceRouting aResponse
+                processing aChan md aSignature aTraceRouting aResponse
             ResponceLogicLvlPackage _ aResponse aSignature | True ->
-                processing md aSignature aTraceRouting aResponse
+                processing aChan md aSignature aTraceRouting aResponse
 
         aSendToNeighbor aData = do
             let (aNode, aNewTrace) = getClosedNode aTraceRouting aData
