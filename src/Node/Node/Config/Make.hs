@@ -6,6 +6,7 @@ import              Data.Serialize
 import              Data.Monoid
 import              Control.Monad
 import              Control.Monad.State.Lazy
+import              Lens.Micro
 import              Lens.Micro.Mtl
 import              Control.Exception
 import              Network.Socket
@@ -21,11 +22,7 @@ makeFileConfig :: String -> NodeVariantRoles -> PortNumber -> IO ()
 makeFileConfig path aRoles aPort = do
     nConfig <- makeNewNodeConfig aPort
     createFilesDirectory path
-    B.writeFile path $ encode $ (execState $ do
-        helloMsg.nodeVariantRoles   .= aRoles
-        helloMsg.listenPort         .= aPort
-        portNumber                  .= aPort
-      ) nConfig
+    B.writeFile path $ encode $ nConfig & portNumber .~ aPort
 
 
 makeNodeConfigsForTestNets :: IO ()

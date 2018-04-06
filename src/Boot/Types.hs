@@ -14,6 +14,7 @@ import qualified    Data.Map                        as M
 import qualified    Data.Bimap                      as BI
 import qualified    Boot.Map.Random                 as RM
 import              Node.Node.Types
+import              Sharding.Types.Node as N
 
 import              Node.Data.NodeTypes
 
@@ -47,10 +48,9 @@ mapM (uncurry makeLensInstance') [
 
 instance ManagerData NodeBootNodeData
 
-
 instance ToManagerData NodeBootNodeData where
     toManagerData _ aMicroblockChan aExitChan aAnswerChan aList aNodeConfig = NodeBootNodeData
-        aNodeConfig (NodeBaseData aExitChan M.empty aList aAnswerChan BI.empty 0 Nothing aMicroblockChan)
+        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan)
             RM.empty S.empty
 
 lensInst "checSet" ["NodeBootNodeData"] ["S.Set", "NodeId"]
