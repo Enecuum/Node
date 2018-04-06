@@ -152,7 +152,7 @@ isItMyResponce aMyNodeId = \case
 
 ---------------TODO: fix True---------------------------------------------------
 instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
-    makeAction _ md _ aTraceRouting aRequestPackage = do
+    makeAction aChan md _ aTraceRouting aRequestPackage = do
         aData <- readIORef md
         when True $ if
             | True                                 -> aProcessingOfAction
@@ -160,9 +160,9 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
       where
         aProcessingOfAction = case aRequestPackage of
             RequestLogicLvlPackage aRequest aSignature
-                | True -> processing md aSignature aTraceRouting aRequest
+                | True -> processing aChan md aSignature aTraceRouting aRequest
             RequestNetLvlPackage aRequest aSignature
-                | True -> processing md aSignature aTraceRouting aRequest
+                | True -> processing aChan md aSignature aTraceRouting aRequest
 
         aSendToNeighbor aData = case aTraceRouting of
             ToDirect _ aPointTo _ ->
