@@ -57,6 +57,7 @@ managerMsgFuncListData = toList $ do
     "connectivityQuery"     +: []
     "disconnectNode"        +: [["NodeId"]]
     "sendInitDatagram"      +: [["HostAddress"], ["PortNumber"], ["NodeId"]]
+    "shardingNodeRequestMsg" +: [["ShardingNodeRequestMsg"]]
 
 
 managerMiningMsgListData :: [(Bool, String, [[String]])]
@@ -70,7 +71,6 @@ managerMiningMsgListData = toList $ do
     "sendRawData"                   +: [["B.ByteString"]]
     "sendTransactionToPublicator"   +: [["Transaction"]]
     "resendTransactionToPublicator" +: []
-    "shardingNodeRequestMsg" +: [["ShardingNodeRequestMsg"]]
 
 managerBootNodeMsgListData :: [(Bool, String, [[String]])]
 managerBootNodeMsgListData = toList $ do
@@ -97,6 +97,8 @@ nodeBaseDataList = toList $ do
     "vacantPositions"   !: ["BI.Bimap", "TimeSpec", "IdIpPort"]
     "hostAddress"       !: ["Maybe", "HostAddress"]
     "microblockChan"    !: ["Chan", "Microblock"]
+    "myNodePosition"    !: ["Maybe", "MyNodePosition"]
+    "shardingChan"      !: ["MaybeChan", "ShardingNodeAction"]
 
 
 helloMsgList = toList $ do

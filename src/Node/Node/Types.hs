@@ -99,13 +99,13 @@ data ManagerNodeData = ManagerNodeData {
     managerHashMap              :: BI.Bimap TimeSpec B.ByteString,
     managerPublicators          :: S.Set NodeId,
     managerSendedTransctions    :: BI.Bimap TimeSpec Transaction,
-    managerShardingChan         :: Maybe (Chan ShardingNodeAction),
-    managerNodePosition         :: Maybe MyNodePosition,
     managerIAmBroadcast         :: Bool
   }
 
 type IdIpPort = (NodeId, HostAddress, PortNumber)
 type IpPort = (HostAddress, PortNumber)
+type ShardingChan = Chan ShardingNodeAction
+type MaybeChan a = Maybe (Chan a)
 
 data NodeBaseData = NodeBaseData {
     nodeBaseDataExitChan            :: Chan ExitMsg,
@@ -115,7 +115,9 @@ data NodeBaseData = NodeBaseData {
     nodeBaseDataVacantPositions     :: BI.Bimap TimeSpec IdIpPort,
     nodeBaseDataBroadcastNum        :: Int,
     nodeBaseDataHostAddress         :: Maybe HostAddress,
-    nodeBaseDataMicroblockChan      :: Chan Microblock
+    nodeBaseDataMicroblockChan      :: Chan Microblock,
+    nodeBaseDataMyNodePosition      :: Maybe MyNodePosition,
+    nodeBaseDataShardingChan        :: MaybeChan ShardingNodeAction
   }
 
 
@@ -166,8 +168,8 @@ class ToManagerData a where
 
 instance ToManagerData ManagerNodeData where
     toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aList aNodeConfig = ManagerNodeData
-        aNodeConfig (NodeBaseData aExitChan M.empty aList aAnswerChan BI.empty 0 Nothing aMicroblockChan)
-            aTransactionChan BI.empty S.empty BI.empty Nothing Nothing False
+        aNodeConfig (NodeBaseData aExitChan M.empty aList aAnswerChan BI.empty 0 Nothing aMicroblockChan Nothing Nothing)
+            aTransactionChan BI.empty S.empty BI.empty False
 
 defaultHelloMsg :: HelloMsg
 defaultHelloMsg = HelloMsg (P2pVersion 0) (ClientId 0) 3000 (NodeId 0) []
@@ -221,10 +223,8 @@ lensInst "publicators" ["ManagerNodeData"] ["S.Set", "NodeId"]
 lensInst "sendedTransctions" ["ManagerNodeData"]
     ["BI.Bimap", "TimeSpec", "Transaction"] "managerSendedTransctions"
 
-type MaybeChan a = Maybe (Chan a)
 
-lensInst "shardingChan" ["ManagerNodeData"] ["MaybeChan", "ShardingNodeAction"] "managerShardingChan"
-lensInst "myNodePosition" ["ManagerNodeData"] ["Maybe", "MyNodePosition"] "managerNodePosition"
+
 lensInst "iAmBroadcast" ["ManagerNodeData"] ["Bool"] "managerIAmBroadcast"
 
 

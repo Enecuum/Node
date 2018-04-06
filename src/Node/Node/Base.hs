@@ -11,6 +11,7 @@ module Node.Node.Base where
 
 import qualified    Network.WebSockets                  as WS
 import              System.Clock
+import              System.Random
 import              System.Random.Shuffle
 import              Control.Monad.State.Lazy
 import              Control.Monad.Extra
@@ -32,6 +33,8 @@ import              Lens.Micro
 import              Service.Network.WebSockets.Client
 import              Service.Network.Base
 import              Service.Monad.Option
+import              Sharding.Space.Point
+import              Sharding.Sharding
 import              Node.Node.Types
 import              Node.Crypto
 import              Node.Data.Data
@@ -101,38 +104,6 @@ answerToDeleteDeadSouls aData _ = do
     forM_ (M.filter aNotIsActive $ aData^.nodes) sendExitMsgToNode
 
 
--- 1. 4 pings -> min
--- 2. pings -> min = p1  20 ms  100 ms
---    logic -> min = l4  20 Mb  0.5 Gb    1 ms == 2 Mb
---    (p1 - p2)*2 < (l1-l2)
-
-
---      0
---      |
--- 0    X    0
---   \  |  /
---
---     \
---     \
---      0
--- o  1  1  1  1  1   1  0 1  1   1    1     1     1   1    1   1   1  1  o
-
---
---
---  8  -  7   -   6   -   5
---  7  -  6   -   8   -   5
--- statistic:
---  average     < 500 ms
---  mean square < 250 ms
--- count
-{-
-average = (average * count + newx) / (count + 1)
-
-[1,23,3,4,5,2,4,3,2,1] x
- 1 12 9
-S = sqrt (1/n * sum [(x i - a)^2| i <- [1..count] ])
--}
--- count * average  = total
 answerToConnectivityQuery
     ::  ManagerData md
     =>  ManagerMsg msg
@@ -142,18 +113,81 @@ answerToConnectivityQuery
     ->  IO ()
 answerToConnectivityQuery aChan aMd _ = do
     aData <- readIORef aMd
-    let aBroadcastNum  = M.size $ M.filter (^.isBroadcast) $ aData^.nodes
-        aConnectingNum = M.size $ M.filter
-            (\a -> a^.status /= Active) $ aData^.nodes
+    let aNeighbors    = aData^.nodes
+        aBroadcasts   = filter (^.isBroadcast) $ M.elems aNeighbors
 
-    NodeInfoListNetLvl aListOfConnects <- readRecordsFromNodeListFile $ aData^.myNodeId
-    let aWait = aBroadcastNum >= 4 || aBroadcastNum <= 6 || aConnectingNum /= 0
-    if  | aWait                 -> return ()
-        | null aListOfConnects  -> connectToBootNode aChan aData
-        | aBroadcastNum == 0    -> undefined
+        aMyNodeId     = aData^.myNodeId
+        aBroadcastNum = length aBroadcasts
+        aUnActiveNum  = M.size $ M.filter (\a -> a^.status /= Active) aNeighbors
+
+    NodeInfoListNetLvl aConnectList     <- readRecordsFromNodeListFile aMyNodeId
+    NodeInfoListLogicLvl aPossitionList <- readRecordsFromNodeListFile aMyNodeId
+    let aWait = aBroadcastNum >= 4 || aBroadcastNum <= 6 || aUnActiveNum /= 0
+
+        aConnectMap   = M.fromList $ (\(a,b,c) -> (a, (b, c))) <$> aConnectList
+        aPossitionMap = M.fromList $ aPossitionList
+        aFilteredPositions = S.fromList . M.elems $
+            M.intersection aPossitionMap aConnectMap
+
+    if  | aWait             -> return ()
+        | null aConnectList -> connectToBootNode aChan aData
+        | iDontHaveAPosition aData -> if
+            | aBroadcastNum == 0 -> connectTo aChan 1 aConnectList
+            | ((^.nodePosition) -> Just aPosition) <- head aBroadcasts -> do
+                aDeltaX <- randomRIO (0, 2000)
+                aDeltaY <- randomRIO (0, 2000)
+                let aMyNodePosition = MyNodePosition $ Point
+                        (x + aDeltaX - 1000) (y + aDeltaY - 1000)
+                    NodePosition (Point x y) = aPosition
+                aChanOfSharding <- newChan
+                makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition
+
+--                modifyIORef aMd $
+
+        | aBroadcastNum < 4     -> undefined -- findNearestNeighborPositions BroadcastList
+        -- if we don't find anybody send message error
+        -- TODO: optimize by net and logic lvl
         | aBroadcastNum > 6     -> undefined
-        | aBroadcastNum < 4     -> undefined
+
+iDontHaveAPosition :: ManagerData md => md -> Bool
+iDontHaveAPosition aData = aData^.myNodePosition /= Nothing
+
+-- MyNodePosition = Nothing, aBroadcastNum == 0, notNull aListOfConnects
+
+-- Maybe MyNodePosition
+
+-- findNearestNeighborPositions :: MyNodePosition -> S.Set NodePosition -> [NodePosition]
+
+-- is my prefered connects: (1,2,3,4)
+-- i have connnects: (1,2,4, 7)
+
+
+
+
+-- ToNetLvl   -> NodePosition
+-- ToLogicLvl -> is brodcast?
+--
+--
+--  If i have logic coordinates. (1)
+--      aNeighbor <- distance (I, neighbor) -> min.
+--      if i don't have the a neighbor -> (2)
+--      connect to the aNeighbor
+--      reques listOfConnects of the aNeighbor
+--      connect in the grid
+
+
+
+-- If i don't have logic coordinates
+
+--  x (0,0)  y (100, 100) z(200, 0)
+--           y (100, 100) z(200, 0)
+--    (-50, -50)
+--   x -> y
+--
+
+
 {-
+
 ---------------------------
 --    let aBroadcastNodes = getNodes BroadcastNode aData
     let
@@ -172,7 +206,7 @@ answerToConnectivityQuery aChan aMd _ = do
         | not $ iIsBroadcastNode aData -> do
             aListOfConnects <- readRecordsFromNodeListFile $ aData^.myNodeId
             if  | null $ aListOfConnects -> connectToBootNode aChan aData
-                | otherwise -> connectToListOfConnect
+                | otherwise -> connectTo
                     aChan (3 - aBroadcastNum) aListOfConnects
         | not $ null aConnects -> do
             connectTo aChan (3 - aBroadcastNum) aConnects
@@ -187,26 +221,22 @@ answerToConnectivityQuery aChan aMd _ = do
             if  | null aListOfConnects  -> do
                     connectToBootNode aChan aData
                 | otherwise             -> do
-                    connectToListOfConnect aChan 2 aListOfConnects
+                    connectTo aChan 2 aListOfConnects
 
 -}
 
-
-
-connectToListOfConnect
+{-
+connectByPosition
     ::  ManagerMsg msg
+    =>  ManagerData md
     =>  Chan msg
-    ->  Int
-    ->  [(NodeId, HostAddress, PortNumber)]
+    ->  md
+    ->  [NodePosition]
+    ->  NodeInfoList NetLvl
+    ->  NodeInfoList LogicLvl
     ->  IO ()
-connectToListOfConnect aChan aNum aConnects = do
-    aShuffledConnects <- shuffleM aConnects
-    forM_ (take aNum aShuffledConnects) $ \(aNodeId, aIp, aPort) -> do
-        writeChan aChan $ sendInitDatagram aIp aPort aNodeId
 
-connectToBootNode :: (ManagerMsg msg, ManagerData md) => Chan msg -> md -> IO ()
-connectToBootNode aChan ((^.nodeBaseData.bootNodes) -> aBootNodeList) =
-    connectToListOfConnect aChan 1 aBootNodeList
+-}
 
 connectTo
     ::  ManagerMsg msg
@@ -214,7 +244,15 @@ connectTo
     ->  Int
     ->  [(NodeId, HostAddress, PortNumber)]
     ->  IO ()
-connectTo aChan aBroadcastNum = connectToListOfConnect aChan aBroadcastNum
+connectTo aChan aNum aConnects = do
+    aShuffledConnects <- shuffleM aConnects
+    forM_ (take aNum aShuffledConnects) $ \(aNodeId, aIp, aPort) -> do
+        writeChan aChan $ sendInitDatagram aIp aPort aNodeId
+
+connectToBootNode :: (ManagerMsg msg, ManagerData md) => Chan msg -> md -> IO ()
+connectToBootNode aChan ((^.nodeBaseData.bootNodes) -> aBootNodeList) =
+    connectTo aChan 1 aBootNodeList
+
 {-
   TODO answerToConnectivityQuery
 sendIHaveBroadcastConnects :: ManagerData md => IORef md -> HostAddress -> IO ()
@@ -244,8 +282,14 @@ answerToClientDisconnected
 answerToClientDisconnected aMd (toManagerMsg -> ClientIsDisconnected aId aChan) = do
     aData <- readIORef aMd
     whenJust (aId `M.lookup` (aData^.nodes)) $ \aNode -> do
-        when (aNode^.chan == aChan) $ modifyIORef aMd (nodes %~ M.delete aId)
+        when (aNode^.status == Noactive) $
+            deleteFromFile NetLvl (aData^.myNodeId) aId
+
+        when (aNode^.chan == aChan) $
+            modifyIORef aMd (nodes %~ M.delete aId)
+
 answerToClientDisconnected _ _ = pure ()
+
 
 answerToSendInitDatagram
     :: ManagerData md
@@ -255,40 +299,31 @@ answerToSendInitDatagram
     -> msg
     -> IO ()
 answerToSendInitDatagram
-    aChan
+    aManagerChan
     aMd
-    (toManagerMsg -> SendInitDatagram aIp aPort aId)
-    = do
+    (toManagerMsg -> SendInitDatagram receiverIp receiverPort aId) = do
         aData <- readIORef aMd
-        loging aData "answerToSendInitDatagram"
-        unless (aId `M.member` (aData^.nodes)) $
-            sendInitDatagramFunc aChan aIp aPort aId aMd
+        loging aData $ "answerToSendInitDatagram: " ++
+            showHostAddress receiverIp ++ ":" ++ show receiverPort ++ " " ++
+            show aId
+        unless (aId `M.member` (aData^.nodes)) $ do
+
+            aNodeChan <- newChan
+            modifyIORef aMd $ nodes %~ M.insert aId (makeNode aNodeChan)
+
+            void $ forkIO $ do
+                aMsg <- makeConnectingRequest
+                    (aData^.myNodeId)
+                    (aData^.publicPoint)
+                    (aData^.privateKey)
+                sendPackagedMsg aNodeChan aMsg
+                runClient
+                    (showHostAddress receiverIp)
+                    (fromEnum receiverPort) "/"
+                    (socketActor receiverIp aId aManagerChan aNodeChan) `finally`
+                        (writeChan aManagerChan $ clientIsDisconnected aId aNodeChan)
 
 answerToSendInitDatagram _ _ _ = pure ()
-
-sendInitDatagramFunc
-    ::  ManagerMsg a
-    =>  ManagerData md
-    =>  Chan a
-    ->  HostAddress
-    ->  PortNumber
-    ->  NodeId
-    ->  IORef md
-    ->  IO ()
-sendInitDatagramFunc aManagerChan receiverIp receiverPort aId aMd = do
-    aData <- readIORef aMd
-    loging aData $ "sendInitDatagramFunc: " ++
-        showHostAddress receiverIp ++ ":" ++ show receiverPort ++ " " ++
-        show aId
-
-    aMsg <- makeConnectingRequest
-        (aData^.myNodeId)
-        (aData^.publicPoint)
-        (aData^.privateKey)
-
-    aNodeChan <- initSenderSocket aManagerChan receiverIp receiverPort aId aMd
-    sendPackagedMsg aNodeChan aMsg
-
 
 answerToServerDead
     ::  ManagerMsg a
@@ -474,43 +509,6 @@ sendDatagramFunc aChan aMsg = writeChan aChan $ MsgToSender aMsg
 sendPackagedMsg :: Chan MsgToSender -> Package -> IO ()
 sendPackagedMsg aChan aMsg = sendDatagramFunc aChan $ encode aMsg
 
-
-initSenderSocket
-    ::  ManagerMsg a
-    =>  ManagerData md
-    =>  Chan a
-    ->  HostAddress
-    ->  PortNumber
-    ->  NodeId
-    ->  IORef md
-    ->  IO (Chan MsgToSender)
-initSenderSocket aManagerChan aIp aPort aId aMd = do
-    aData <- readIORef aMd
-    loging aData $ "initSenderSocket to " ++ showHostAddress aIp ++ ":"
-        ++ show aPort ++ " " ++ show aId
-    aNodeChan  <- initSender aId aManagerChan aIp aPort
-    let fAlter = \case
-          Just lNode    -> Just $ lNode & chan .~ aNodeChan
-          _             -> Just $ makeNode aNodeChan
-    modifyIORef aMd (nodes %~ M.alter fAlter aId)
-    return aNodeChan
-
-
-initSender
-    ::  ManagerMsg a
-    =>  NodeId
-    ->  Chan a
-    ->  HostAddress
-    ->  PortNumber
-    ->  IO (Chan MsgToSender)
-initSender aId aChan aIp aPort = do
-    aInputChan <- newChan
-    void $ forkIO $ runClient
-        (showHostAddress aIp)
-        (fromEnum aPort) "/"
-        (socketActor aIp aId aChan aInputChan)
-                `finally` (writeChan aChan $ clientIsDisconnected aId aInputChan)
-    return aInputChan
 
 makePing
     ::  ManagerMsg a
