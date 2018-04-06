@@ -5,6 +5,7 @@ import              Service.Network.Base (HostAddress, PortNumber)
 import              Node.Data.Data
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
+--import              Node.Node.Types
 
 import              System.Clock
 import              Crypto.Error

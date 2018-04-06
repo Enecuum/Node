@@ -23,6 +23,7 @@ import              Lens.Micro
 
 import              Node.Crypto
 import              Node.Data.Data
+import              Node.Data.NetPackage
 import              Node.Data.NetMesseges
 import              Node.Data.Lens
 import              Node.Data.NodeTypes
@@ -198,6 +199,20 @@ emptyData
 emptyData aPort aTransactionChan aMicroblockChan aExitChan aAnswerChan aList =
     toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan  aList
         <$> makeNewNodeConfig aPort
+
+makePackageSignature
+    ::  Serialize aPackage
+    =>  ManagerData md
+    =>  md
+    ->  aPackage
+    ->  IO PackageSignature
+makePackageSignature aData aResponse = do
+    aTime <- getTime Realtime
+    let aNodeId = aData^.myNodeId
+    aResponceSignature <- signEncodeble
+        (aData^.privateKey)
+        (aNodeId, aTime, aResponse)
+    return $ PackageSignature aNodeId aTime aResponceSignature
 
 
 roles :: NodeConfigClass a => Lens' a NodeVariantRoles
