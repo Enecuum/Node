@@ -38,6 +38,7 @@ import              Node.Data.NetMesseges
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Node.Node.Processing
+import              Lens.Micro.GHC
 
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
@@ -251,8 +252,7 @@ deleteOldest aTime = BI.filter
 
 
 isBootNode :: NodeId -> ManagerNodeData -> Bool
-isBootNode aId aData = aId `elem`
-    ((\(i, _, _) -> i) <$> (aData^.nodeBaseData.bootNodes))
+isBootNode aId aData = aId `elem` ((^._1) <$> aData^.nodeBaseData.bootNodes)
 
 
 eq :: MyNodeId -> NodeId -> Bool

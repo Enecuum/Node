@@ -55,6 +55,7 @@ dependencies:
 - microlens
 - microlens-mtl
 - microlens-th
+- microlens-ghc
 - extra
 - time
 - clock
