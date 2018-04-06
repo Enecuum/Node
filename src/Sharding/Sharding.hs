@@ -95,8 +95,8 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
     return $ makeEmptyShardingNode aMyNeighbors aMyNodeId aMyPosition aMyShardsIndex
 
 
-shiftTheShardingNode ::
-        Chan T.ManagerMiningMsgBase
+shiftTheShardingNode :: T.ManagerMsg msg =>
+        Chan msg
     -> (ShardingNode ->  IO ())
     ->  ShardingNode
     ->  IO ()
@@ -212,8 +212,8 @@ shiftIsNeed aShardingNode = checkUnevenness
     (aShardingNode^.nodePosition) (neighborPositions aShardingNode)
 
 
-sendToNetLevet :: Chan T.ManagerMiningMsgBase -> ShardingNodeRequestMsg -> IO ()
-sendToNetLevet aChan aMsg = writeChan aChan $ T.ShardingNodeRequestMsg aMsg
+sendToNetLevet :: T.ManagerMsg msg => Chan msg -> ShardingNodeRequestMsg -> IO ()
+sendToNetLevet aChan aMsg = writeChan aChan $ T.shardingNodeRequestMsg aMsg
 
 
 mul :: Word64 -> Word64 -> Word64
