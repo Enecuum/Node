@@ -33,7 +33,13 @@ data Package where
 
 -- | Unciphered data from NetNode A to NetNode B.
 data Unciphered where
-    ConnectingRequest  :: PublicPoint -> MyNodeId -> Signature  ->  Unciphered
+    ConnectingRequest
+        ::  PublicPoint
+        ->  MyNodeId
+        ->  PortNumber
+        ->  Signature
+        ->  Unciphered
+
     DisconnectRequest  :: [Reason]                              ->  Unciphered
     PingRequest        ::                                           Unciphered
     PongResponce       :: HostAddress                           ->  Unciphered

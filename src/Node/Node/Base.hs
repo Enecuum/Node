@@ -116,6 +116,8 @@ pattern PositionOfFirst aPosition <- Head _ ((^.nodePosition) -> Just aPosition)
 preferedBroadcastCount :: Int
 preferedBroadcastCount = 4
 
+-- TODO optimization by ping
+-- TODO optimization by routing
 answerToConnectivityQuery
     ::  ManagerData md
     =>  ManagerMsg msg
@@ -190,91 +192,6 @@ answerToConnectivityQuery aChan aMd _ = do
 iDontHaveAPosition :: ManagerData md => md -> Bool
 iDontHaveAPosition aData = aData^.myNodePosition /= Nothing
 
--- MyNodePosition = Nothing, aBroadcastNum == 0, notNull aListOfConnects
-
--- Maybe MyNodePosition
-
--- findNearestNeighborPositions :: MyNodePosition -> S.Set NodePosition -> [NodePosition]
-
--- is my prefered connects: (1,2,3,4)
--- i have connnects: (1,2,4, 7)
-
-
-
-
--- ToNetLvl   -> NodePosition
--- ToLogicLvl -> is brodcast?
---
---
---  If i have logic coordinates. (1)
---      aNeighbor <- distance (I, neighbor) -> min.
---      if i don't have the a neighbor -> (2)
---      connect to the aNeighbor
---      reques listOfConnects of the aNeighbor
---      connect in the grid
-
-
-
--- If i don't have logic coordinates
-
---  x (0,0)  y (100, 100) z(200, 0)
---           y (100, 100) z(200, 0)
---    (-50, -50)
---   x -> y
---
-
-
-{-
-
----------------------------
---    let aBroadcastNodes = getNodes BroadcastNode aData
-    let
-        aBroadcastNum   = length $ filter (\aNode -> aNode^.status == Active) $
-            aBroadcastNodes
-        aConnectingNum = M.size (aData^.nodes) - length (getNodes Active aData)
-    let aConnects = BI.elems $ aData^.vacantPositions
-    if
-        | aBroadcastNum > 4 -> do
-            let ns = drop 2 aBroadcastNodes
-            aShuffledNS <- shuffleM ns
-            forM_ (drop 1 aShuffledNS) sendExitMsgToNode
-
-        | aBroadcastNum > 1 || aConnectingNum /= 0 -> return ()
-
-        | not $ iIsBroadcastNode aData -> do
-            aListOfConnects <- readRecordsFromNodeListFile $ aData^.myNodeId
-            if  | null $ aListOfConnects -> connectToBootNode aChan aData
-                | otherwise -> connectTo
-                    aChan (3 - aBroadcastNum) aListOfConnects
-        | not $ null aConnects -> do
-            connectTo aChan (3 - aBroadcastNum) aConnects
-        | Just aIp <- aData^.nodeBaseData.hostAddress, aBroadcastNum > 0 -> do
-            undefined
-            --sendIHaveBroadcastConnects aMd aIp
-        | aBroadcastNum > 0 -> do
-            undefined
-
-        | otherwise -> do
-            aListOfConnects <- readRecordsFromNodeListFile $ aData^.myNodeId
-            if  | null aListOfConnects  -> do
-                    connectToBootNode aChan aData
-                | otherwise             -> do
-                    connectTo aChan 2 aListOfConnects
-
--}
-
-{-
-connectByPosition
-    ::  ManagerMsg msg
-    =>  ManagerData md
-    =>  Chan msg
-    ->  md
-    ->  [NodePosition]
-    ->  NodeInfoList NetLvl
-    ->  NodeInfoList LogicLvl
-    ->  IO ()
-
--}
 
 connectTo
     ::  ManagerMsg msg
@@ -288,7 +205,8 @@ connectTo aChan aNum aConnects = do
         writeChan aChan $ sendInitDatagram aIp aPort aNodeId
 
 connectToBootNode :: (ManagerMsg msg, ManagerData md) => Chan msg -> md -> IO ()
-connectToBootNode aChan ((^.nodeBaseData.bootNodes) -> aBootNodeList) =
+connectToBootNode aChan ((^.nodeBaseData.bootNodes) -> aBootNodeList) = do
+    when (null aBootNodeList) $ error "aBootNodeList is empty!!! Check config."
     connectTo aChan 1 aBootNodeList
 
 {-
@@ -318,8 +236,10 @@ answerToClientDisconnected
 answerToClientDisconnected aMd (toManagerMsg -> ClientIsDisconnected aId aChan) = do
     aData <- readIORef aMd
     whenJust (aData^.nodes.at aId) $ \aNode -> do
-        when (aNode^.status == Noactive) $
+        when (aNode^.status == Noactive) $ do
             deleteFromFile NetLvl (aData^.myNodeId) aId
+            when (aId `elem` ((^._1) <$> aData^.nodeBaseData.bootNodes)) $
+                putStrLn $ "The " ++ show aId ++ " bootNode is unreachable"
 
         when (aNode^.chan == aChan) $
             modifyIORef aMd (nodes %~ M.delete aId)
@@ -358,12 +278,14 @@ answerToSendInitDatagram
         unless (aId `M.member` (aData^.nodes)) $ do
 
             aNodeChan <- newChan
-            modifyIORef aMd $ nodes %~ M.insert aId (makeNode aNodeChan)
+            modifyIORef aMd $ nodes %~ M.insert aId
+                (makeNode aNodeChan receiverPort)
 
             void $ forkIO $ do
                 aMsg <- makeConnectingRequest
                     (aData^.myNodeId)
                     (aData^.publicPoint)
+                    (aData^.portNumber)
                     (aData^.privateKey)
                 sendPackagedMsg aNodeChan aMsg
                 runClient
@@ -406,9 +328,15 @@ answerToInitDatagram aMd
     (toManagerMsg -> InitDatagram aInputChan aHostAdress aDatagram) = do
     modifyIORef aMd $ iAmBroadcast .~ True
     case decode aDatagram of
-        Right (aPack @(Unciphered (ConnectingRequest aPublicPoint aId _)))
+        Right (aPack @(Unciphered (ConnectingRequest aPublicPoint aId aPortNumber _)))
             | verifyConnectingRequest aPack ->
-                answerToInitiatorConnectingMsg (toNodeId aId) aHostAdress aInputChan aPublicPoint aMd
+                answerToInitiatorConnectingMsg
+                    (toNodeId aId)
+                    aHostAdress
+                    aInputChan
+                    aPublicPoint
+                    aPortNumber
+                    aMd
         _                               -> writeChan aInputChan SenderTerminate
 answerToInitDatagram _ _                =  pure ()
 
@@ -427,7 +355,7 @@ answerToDatagramMsg
 answerToDatagramMsg aChan aMd _
     (toManagerMsg -> DatagramMsg aDatagramMsg aId) = do
         whenRight (decode aDatagramMsg) $ \case
-            aPack @(Unciphered (ConnectingRequest aPublicPoint aId _))
+            aPack @(Unciphered (ConnectingRequest aPublicPoint aId _ _))
                 | verifyConnectingRequest aPack
                     -> answerToRemoteConnectingMsg (toNodeId aId) aPublicPoint aMd
             Ciphered aCipheredString ->
@@ -518,9 +446,10 @@ answerToInitiatorConnectingMsg
     ->  HostAddress
     ->  Chan MsgToSender
     ->  PublicPoint
+    ->  PortNumber
     ->  IORef md
     ->  IO ()
-answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aMd = do
+answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aPortNumber aMd = do
     aData <- readIORef aMd
     loging aData $ "answerToInitiatorConnectingMsg from " ++ showHostAddress aHostAdress ++ " " ++ show aId
     if aId `M.member` (aData^.nodes) then do
@@ -528,7 +457,7 @@ answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aMd = do
         writeChan aInputChan SenderTerminate
     else do
         loging aData $ "is accepted " ++ showHostAddress aHostAdress ++ " " ++ show aId
-        modifyIORef aMd $ nodes %~ M.insert aId (makeNode aInputChan)
+        modifyIORef aMd $ nodes %~ M.insert aId (makeNode aInputChan aPortNumber)
         aNewData <- readIORef aMd
         sendRemoteConnectDatagram aInputChan aNewData
         let aStringKey = getKay (aNewData^.privateNumber) aPublicPoint
@@ -552,11 +481,26 @@ answerToRemoteConnectingMsg aId aPublicPoint aMd = do
       ) aId
 
 
+{-
+1 - 2 - 3
+    |   |
+    5 - 4 - 6
+    |       |
+    6       7 - 9
+            |
+            8
+-}
+
+
 sendRemoteConnectDatagram :: ManagerData md => Chan MsgToSender -> md -> IO ()
 sendRemoteConnectDatagram aChan aData = do
     loging aData $ "sendRemoteConnectDatagram"
     sendPackagedMsg aChan =<<  makeConnectingRequest
-        (aData^.myNodeId) (aData^.publicPoint) (aData^.privateKey)
+        (aData^.myNodeId)
+        (aData^.publicPoint)
+        (aData^.portNumber)
+        (aData^.privateKey)
+
 
 {-# DEPRECATED sendDatagramFunc "Use sendPackagedMsg" #-}
 sendDatagramFunc :: Chan MsgToSender -> B.ByteString -> IO ()

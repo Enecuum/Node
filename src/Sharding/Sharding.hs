@@ -84,7 +84,6 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
     sendToNetLevet aChanOfNetLevel $ IamAwakeRequst aMyNodeId aMyNodePosition
 
     aMyShardsIndex <- loadMyShardIndex
-    (aMyNeighbors, aMyPosition) <- loadInitInformation
 
     metronome (10^8) $ do
         writeChan aChanRequest CleanShardsAction
@@ -92,7 +91,7 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
     metronome (10^8) $ do
         writeChan aChanRequest ShiftAction
 
-    return $ makeEmptyShardingNode aMyNeighbors aMyNodeId aMyPosition aMyShardsIndex
+    return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex
 
 
 shiftTheShardingNode :: T.ManagerMsg msg =>
@@ -187,13 +186,11 @@ findNodeDomain aMyPosition aPositions = if
     aNearestPoints = findNearestNeighborPositions aMyPosition aPositions
 
 
--- TODO Is it file or db like sqlite?
-loadInitInformation :: IO (S.Set Neighbor, MyNodePosition)
-loadInitInformation = undefined
-
-
 nodeSaveShard :: Shard -> (ShardingNode ->  IO ()) -> ShardingNode -> IO ()
-nodeSaveShard aShard aLoop aShardingNode = undefined
+nodeSaveShard aShard aLoop aShardingNode = do
+    saveShard aShard
+    aLoop $ aShardingNode & nodeIndex %~
+        addShardToIndex aShard (aShardingNode^.nodePosition)
 
 
 neighborPositions :: ShardingNode -> S.Set NodePosition
