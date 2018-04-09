@@ -1,4 +1,4 @@
-{-# LANGUAGE ViewPatterns, LambdaCase #-}
+{-# LANGUAGE ViewPatterns, LambdaCase, MultiParamTypeClasses #-}
 module Boot.Boot where
 
 import qualified    Data.Map                        as M
@@ -33,12 +33,19 @@ managerBootNode ch md = forever $ do
 
         opt isClientIsDisconnected $ bootNodeAnswerClientIsDisconnected md
 
-        opt isInitDatagram      $ answerToInitDatagram md
-        opt isDatagramMsg       $ answerToDatagramMsg ch md (mData^.myNodeId)
-        opt isCheckBroadcastNodes $ answerToCheckBroadcastNodes md ch
+        opt isInitDatagram        $ answerToInitDatagram md
+        opt isDatagramMsg         $ answerToDatagramMsg ch md (mData^.myNodeId)
+        --opt isCheckBroadcastNodes $ answerToCheckBroadcastNodes md ch
         opt isCheckBroadcastNode  $ answerToCheckBroadcastNode ch md
 
 
+
+instance  PackageTraceRoutingAction NodeBootNodeData ResponcePackage where
+instance  PackageTraceRoutingAction NodeBootNodeData RequestPackage where
+instance  BroadcastAction NodeBootNodeData where
+
+
+{-
 answerToCheckBroadcastNodes ::
     IORef NodeBootNodeData ->
     Chan ManagerBootNodeMsgBase ->
@@ -87,7 +94,7 @@ answerToCheckBroadcastNodes aMd aChan _ = do
         aNode     <- aNodeId `M.lookup` (aData^.nodes)
         aHelloMsg <- aNode^.mHelloMsg
         return (aNode^.nHostAddress, aHelloMsg^.listenPort)
-
+-}
 
 answerToCheckBroadcastNode :: ManagerMsg a =>
     Chan a -> IORef NodeBootNodeData -> ManagerBootNodeMsgBase -> IO ()
