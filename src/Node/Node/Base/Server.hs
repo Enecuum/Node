@@ -28,7 +28,7 @@ startServerActor aOutputChan aPort = do
             WS.forkPingThread aConnect 30
             aMsg <- WS.receiveData aConnect
             case decode aMsg of
-                Right (conMsg@(Unciphered (ConnectingRequest _ aId _)))
+                Right (conMsg@(Unciphered (ConnectingRequest _ aId _ _)))
                     | verifyConnectingRequest conMsg -> do
                             aInputChan <- newChan
                             writeChan aOutputChan $

@@ -90,7 +90,7 @@ data Node = Node {
     ,   _mKey            :: Maybe StringKey
     ,   _chan            :: Chan MsgToSender
     ,   _nodePosition    :: Maybe NodePosition
-    ,   _nodePort        :: Maybe PortNumber
+    ,   _nodePort        :: PortNumber
     ,   _isBroadcast     :: Bool
   }
 
@@ -240,13 +240,13 @@ lensInst "sendedTransctions" ["ManagerNodeData"]
 
 
 
-makeNode :: Chan MsgToSender -> Node
-makeNode aChan = Node {
+makeNode :: Chan MsgToSender -> PortNumber -> Node
+makeNode aChan aPortNumber = Node {
         _status         = Noactive
     ,   _mKey           = Nothing
     ,   _chan           = aChan
     ,   _nodePosition   = Nothing
-    ,   _nodePort       = Nothing
+    ,   _nodePort       = aPortNumber
     ,   _isBroadcast    = False
   }
 

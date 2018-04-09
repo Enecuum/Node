@@ -23,18 +23,25 @@ import              Data.ByteArray (unpack)
 import              Data.ByteString (ByteString, pack)
 import              Data.Serialize
 
-makeConnectingRequest :: MyNodeId -> PublicPoint -> PrivateKey -> IO Package
-makeConnectingRequest aMyNodeId aPublicPoint aPrivateKey =
-    Unciphered . ConnectingRequest aPublicPoint aMyNodeId <$>
+makeConnectingRequest
+    ::  MyNodeId
+    ->  PublicPoint
+    ->  PortNumber
+    ->  PrivateKey
+    ->  IO Package
+makeConnectingRequest aMyNodeId aPublicPoint aPortNumber aPrivateKey =
+    Unciphered . ConnectingRequest aPublicPoint aMyNodeId aPortNumber<$>
         signEncodeble aPrivateKey
-            (aPublicPoint, aMyNodeId, "ConnectingRequest")
+            (aPublicPoint, aMyNodeId, aPortNumber, "ConnectingRequest")
 
 --
 verifyConnectingRequest :: Package -> Bool
 verifyConnectingRequest = \case
-    Unciphered (ConnectingRequest aPublicPoint aMyNodeId aSignature) ->
-        verifyEncodeble (idToKey $ toNodeId aMyNodeId)
-            aSignature (aPublicPoint, aMyNodeId, "ConnectingRequest")
+    Unciphered
+        (ConnectingRequest aPublicPoint aMyNodeId aPortNumber aSignature) ->
+            verifyEncodeble (idToKey $ toNodeId aMyNodeId)
+                aSignature
+                    (aPublicPoint, aMyNodeId, aPortNumber, "ConnectingRequest")
     _ -> False
 
 
