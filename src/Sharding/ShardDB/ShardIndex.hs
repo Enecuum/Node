@@ -26,7 +26,9 @@ data ShardExistIndex   = ShardExistIndex {
     , _lastSnapshot   :: SpaceSnapshot
   } deriving (Show, Eq, Ord, Generic)
 
-data ShardNeededIndex  = ShardNeededIndex [ShardHash]
+data ShardNeededIndex  = ShardNeededIndex {
+    _setOfHash :: (S.Set ShardHash)
+  }
   deriving (Show, Eq, Ord, Generic)
 
 data ShardLoadingIndex = ShardLoadingIndex [(ShardHash, Priority, TimeSpec)]
@@ -58,6 +60,14 @@ instance Serialize Priority
 makeLenses ''SpaceSnapshot
 makeLenses ''ShardExistIndex
 makeLenses ''ShardIndex
+makeLenses ''ShardNeededIndex
+
+indexToSet :: ShardIndex -> S.Set ShardHash
+indexToSet aIndexList = S.unions $ aSnapshotToSet <$>
+    aIndexList^.shardExistIndex.baseSnapshots
+  where
+    aSnapshotToSet :: SpaceSnapshot -> S.Set ShardHash
+    aSnapshotToSet (SpaceSnapshot aSnapshot) = S.fromList $ (^._1) <$> aSnapshot
 
 
 addShardToIndex :: Shard -> MyNodePosition -> ShardIndex -> ShardIndex
@@ -189,7 +199,7 @@ instance Emptable SpaceSnapshot where
     empty = SpaceSnapshot []
 
 instance Emptable ShardNeededIndex where
-    empty = ShardNeededIndex []
+    empty = ShardNeededIndex S.empty
 
 
 

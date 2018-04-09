@@ -71,10 +71,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
             writeChan aChan $ NodePositionResponse (aShardingNode^.nodePosition)
             aLoop aShardingNode
 
---        CleanShardsAction -> do
-
-        _ -> undefined
-
+        a -> error $ "Sharding.Sharding.makeShardingNode"
 
 
 --------------------------------------------------------------------------------
@@ -134,26 +131,26 @@ isInNodeDomain aShardingNode aNodePosition =
 
 
 addShardingIndex :: S.Set ShardHash ->  ShardingNode -> ShardingNode -- Is it one list or many?
-addShardingIndex aShardIndex aShardingNode = undefined
-    --aShardingNode & nodeIndex %~ S.union aShardIndex
+addShardingIndex aShardIndex aShardingNode =
+    aShardingNode & nodeIndex.shardNeededIndex.setOfHash %~ S.union aNeeded
+  where
+    aNeeded :: S.Set ShardHash
+    aNeeded = S.difference aShardIndex aExistShards
+    aExistShards = indexToSet (aShardingNode^.nodeIndex)
 
 
 createShardingIndex :: Chan ShardingNodeResponce -> ShardingNode -> NodeId -> Word64 ->  IO ()
-createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = undefined
-{-
- do
-    let maybeNeighbor = S.toList$ S.filter (\n -> n^.neighborId == aNodeId) $
+createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = do
+    let aMaybeNeighbor = S.toList $ S.filter (\n -> n^.neighborId == aNodeId) $
             aShardingNode^.nodeNeighbors
-    case maybeNeighbor of
+    case aMaybeNeighbor of
         [Neighbor aNeighborPosition _] -> do
             let resultsShardingHash = S.filter
                     (checkShardIsInRadiusOfCapture aNeighborPosition aRadiusOfCapture)
-                    (aShardingNode^.nodeIndex)
-            sendToNetLevet aChanOfNetLevel (ShardIndexResponse aNodeId $ S.toList resultsShardingHash)
-        _                      -> return ()
--}
----- TODO after add db
-
+                    (indexToSet $ aShardingNode^.nodeIndex)
+            writeChan aChanOfNetLevel (ShardIndexResponse $ S.toList resultsShardingHash)
+        _  -> do
+            writeChan aChanOfNetLevel (ShardIndexResponse [])
 
 
 checkShardIsInRadiusOfCaptureShardingNode :: ShardingNode -> ShardHash -> Bool
