@@ -481,15 +481,7 @@ answerToRemoteConnectingMsg aId aPublicPoint aMd = do
       ) aId
 
 
-{-
-1 - 2 - 3
-    |   |
-    5 - 4 - 6
-    |       |
-    6       7 - 9
-            |
-            8
--}
+
 
 
 sendRemoteConnectDatagram :: ManagerData md => Chan MsgToSender -> md -> IO ()
@@ -540,24 +532,6 @@ makePing aChan aHostAdress aPortNumber = do
          void $ writeChan aChan $ pingRequestInfo
             aHostAdress aPortNumber aPingTime aHostAdress
 
-{-
-
-    race ()
-
-  sender :: IO ()
-  sender = readChan aInputChan >>= \case
-      MsgToSender aMsg  -> do
-          WS.sendBinaryData aConnect aMsg >> sender
-      SenderExit aMsg   -> do
-          WS.sendBinaryData aConnect aMsg
-      SenderTerminate -> pure ()
-
-  receiver :: IO ()
-  receiver = forever $ do
-      aMsg <- WS.receiveDataMessage aConnect
-      writeChan aChan $ datagramMsg (WS.fromDataMessage aMsg) aId
-
--}
 
 {-
 type PingAnswer a c = Chan c -> IORef a -> NodeId -> PingPackage -> IO ()

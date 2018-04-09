@@ -26,6 +26,7 @@ import              Lens.Micro
 import              Control.Concurrent
 import              Control.Monad.Extra
 import              Crypto.Error
+import              Node.Node.BroadcastProcessing
 
 import              Service.Monad.Option
 import              Node.Crypto
@@ -259,29 +260,16 @@ eq :: MyNodeId -> NodeId -> Bool
 eq (MyNodeId aMyNodeId) (NodeId aNodeId) = aMyNodeId == aNodeId
 
 
+
+
 processingOfBroadcastThing :: IORef ManagerNodeData -> BroadcastThing -> IO ()
 processingOfBroadcastThing aMd aBroadcastThing = do
     aData <- readIORef aMd
     loging aData $ "Recived " ++ show aBroadcastThing
     case aBroadcastThing of
-        BroadcastWarning      aBroadcastWarning -> case aBroadcastWarning of
-            INeedNeighbors (toNodeId -> aNodeId) aHostAddress aPortNumber -> do
-                addRecordsToNodeListFile (aData^.myNodeId)
-                    (NodeInfoListNetLvl [(aNodeId, aHostAddress, aPortNumber)])
-
-        BroadcastShard        aShard            -> do
-            whenJust (aData^.shardingChan) $ \aChan ->
-                writeChan aChan $ T.NewShardInNetAction aShard
-        BroadcastTransaction  aTransaction      ->
-{-
-            metric $ add ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount") (1 :: Integer)
--}
-            writeChan (aData^.transactions) aTransaction
-        BroadcastPosition     aMyNodeId aNodePosition  -> do
-            updateFile aMyNodeId (NodeInfoListLogicLvl [(toNodeId aMyNodeId, aNodePosition)])
-            sendToShardingLvl aData $
-                T.TheNodeHaveNewCoordinates (toNodeId aMyNodeId) aNodePosition
-
+        BroadcastNet    aMsg -> processingOfBroadcast aMd aMsg
+        BroadcastLogic  aMsg -> processingOfBroadcast aMd aMsg
+        BroadcastMining aMsg -> processingOfBroadcast aMd aMsg
 
 
 --------------------------------------------------------------------------------

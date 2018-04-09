@@ -18,7 +18,7 @@ import              Crypto.PubKey.ECC.ECDSA (Signature(..))
 import              Crypto.PubKey.ECC.DH
 
 import              Service.Network.Base (HostAddress, PortNumber)
-import              Service.Types (Transaction)
+import              Service.Types (Transaction, Microblock)
 
 import              Sharding.Types.ShardTypes
 import              Sharding.Space.Point as P
@@ -95,8 +95,9 @@ data ResponcePackage where
   deriving (Eq, Generic, Show)
 
 
-data LogicLvl = LogicLvl
-data NetLvl   = NetLvl
+data LogicLvl   = LogicLvl
+data NetLvl     = NetLvl
+data MiningLvl  = MiningLvl
 
 data family Request a :: *
 
@@ -177,19 +178,46 @@ newtype CipheredString = CipheredString B.ByteString
 
 
 data BroadcastThing where
-    BroadcastWarning      :: BroadcastWarning               -> BroadcastThing
-    BroadcastShard        :: Shard                          -> BroadcastThing
-    BroadcastTransaction  :: Transaction                    -> BroadcastThing
-    BroadcastPosition     :: MyNodeId       -> NodePosition -> BroadcastThing
+    BroadcastNet          :: BroadcastThingLvl NetLvl       -> BroadcastThing
+    BroadcastLogic        :: BroadcastThingLvl LogicLvl     -> BroadcastThing
+    BroadcastMining       :: BroadcastThingLvl MiningLvl    -> BroadcastThing
   deriving (Eq, Ord, Show, Generic)
 
---data MiningThing where
---  BroadcastBlock        :: Block          -> Mayby NodeId -> MiningThing
---  BroadcastBlock        :: Block          -> Mayby NodeId -> MiningThing
---  BroadcastTransaction  :: Transaction    -> Mayby NodeId -> MiningThing
+
+data family BroadcastThingLvl a
+
+data instance BroadcastThingLvl LogicLvl where
+    BroadcastShard      :: Shard    -> BroadcastThingLvl LogicLvl
+    BroadcastPosition   :: MyNodeId -> NodePosition -> BroadcastThingLvl LogicLvl
+  deriving (Eq, Ord, Show, Generic)
 
 
-data BroadcastWarning = INeedNeighbors MyNodeId HostAddress PortNumber
+data instance BroadcastThingLvl MiningLvl where
+    BroadcastMacroBlockHead
+        ::  B.ByteString
+        ->  Maybe NodeId
+        ->  BroadcastThingLvl MiningLvl
+    BroadcastMicroBlock
+        ::  Microblock
+        ->  Maybe NodeId
+        ->  BroadcastThingLvl MiningLvl
+    BroadcastMacroBlock
+        ::  B.ByteString
+        ->  Maybe NodeId
+        ->  BroadcastThingLvl MiningLvl
+    BroadcastTransaction
+        ::  Transaction
+        ->  Maybe NodeId
+        ->  BroadcastThingLvl MiningLvl
+  deriving (Eq, Ord, Show, Generic)
+
+
+data instance BroadcastThingLvl NetLvl where
+    INeedNeighbors
+        ::  MyNodeId
+        ->  HostAddress
+        ->  PortNumber
+        ->  BroadcastThingLvl NetLvl
   deriving (Eq, Ord, Show, Generic)
 
 
@@ -222,7 +250,6 @@ instance Serialize Ciphered
 instance Serialize Package
 instance Serialize Unciphered
 instance Serialize RequestPackage
-instance Serialize BroadcastWarning
 
 instance Serialize (Responce NetLvl)
 instance Serialize (Responce LogicLvl)
@@ -231,6 +258,10 @@ instance Serialize (Request  LogicLvl)
 
 instance Serialize (NodeInfoList NetLvl)
 instance Serialize (NodeInfoList LogicLvl)
+
+instance Serialize (BroadcastThingLvl LogicLvl)
+instance Serialize (BroadcastThingLvl MiningLvl)
+instance Serialize (BroadcastThingLvl NetLvl)
 
 
 --------------------------------------------------------------------------------
