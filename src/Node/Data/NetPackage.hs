@@ -32,6 +32,7 @@ data Package where
 
 
 -- | Unciphered data from NetNode A to NetNode B.
+-- TODO add the Node id of addresat and it verification.
 data Unciphered where
     ConnectingRequest
         ::  PublicPoint
@@ -219,8 +220,6 @@ data instance BroadcastThingLvl NetLvl where
         ->  PortNumber
         ->  BroadcastThingLvl NetLvl
   deriving (Eq, Ord, Show, Generic)
-
-
 
 
 data Reason where

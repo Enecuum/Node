@@ -279,7 +279,7 @@ answerToSendInitDatagram
 
             aNodeChan <- newChan
             modifyIORef aMd $ nodes %~ M.insert aId
-                (makeNode aNodeChan receiverPort)
+                (makeNode aNodeChan receiverIp receiverPort)
 
             void $ forkIO $ do
                 aMsg <- makeConnectingRequest
@@ -457,14 +457,59 @@ answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aPortNumb
         writeChan aInputChan SenderTerminate
     else do
         loging aData $ "is accepted " ++ showHostAddress aHostAdress ++ " " ++ show aId
-        modifyIORef aMd $ nodes %~ M.insert aId (makeNode aInputChan aPortNumber)
+        let aKey = getKay (aData^.privateNumber) aPublicPoint
+            aNode = (makeNode aInputChan aHostAdress aPortNumber) &~ do
+                mKey            .= Just aKey
+                status          .= Active
+
+        modifyIORef aMd $ nodes %~ M.insert aId aNode
         aNewData <- readIORef aMd
         sendRemoteConnectDatagram aInputChan aNewData
-        let aStringKey = getKay (aNewData^.privateNumber) aPublicPoint
-        modifyIORef aMd $ nodes %~ M.adjust (&~ do
-            mKey            .= Just aStringKey
-            status          .= Active
-          ) aId
+        sendBroadcastRequestList aNewData aId
+
+
+sendBroadcastRequestList ::  ManagerData md => md -> NodeId  -> IO ()
+sendBroadcastRequestList = sendRequest RequestNetLvlPackage BroadcastListRequest
+{-
+    do
+    aRequestSignature <- makePackageSignature aData BroadcastListRequest
+    let aRequest = RequestNetLvlPackage BroadcastListRequest aRequestSignature
+    let aTraceRouting = ToNode aNodeId aTraceSignature
+    let aTraceRoutingRequest = PackageTraceRoutingRequest
+
+    sendToNode (makeCipheredPackage aRequest)
+-}
+--makeRequest :: ManagerData md => md -> NodeId -> IO ()
+sendRequest aConstructorOfReques aRequest aData aNodeId = do
+    whenJust (aData^.nodes.at aNodeId) $ \aNode -> do
+        aPackageSignature <- makePackageSignature aData aRequest
+        let aRequestPackage = aConstructorOfReques
+                aRequest aPackageSignature
+
+        aTraceSignature <- makePackageSignature aData
+            (aNodeId, aRequestPackage)
+        let aTraceRouting = ToNode aNodeId aTraceSignature
+            aRequest = PackageTraceRoutingRequest aTraceRouting aRequestPackage
+
+        sendToNode (makeCipheredPackage aRequest) aNode
+
+-- data instance Request NetLvl where BroadcastListRequest    :: Request NetLvl
+
+
+{-
+BroadcastListRequest    :: Request NetLvl
+ToNode   :: NodeId -> PackageSignature -> TraceRouting
+makePackageSignature ::  Serialize aPackage =>  ManagerData md =>  md ->  aPackage ->  IO PackageSignature
+PackageTraceRoutingRequest ::  TraceRouting ->  RequestPackage ->  Ciphered
+data TraceRouting where ToNode   :: NodeId -> PackageSignature -> TraceRouting
+
+
+
+-}
+
+-- sendToNode :: (StringKey -> CryptoFailable Package) -> Node -> IO ()
+-- makeCipheredPackage :: Ciphered -> StringKey -> CryptoFailable Package
+
 
 answerToRemoteConnectingMsg
     ::  ManagerData md
@@ -479,9 +524,8 @@ answerToRemoteConnectingMsg aId aPublicPoint aMd = do
         mKey            .= Just (getKay (aData^.privateNumber) aPublicPoint)
         status          .= Active
       ) aId
-
-
-
+    aNewData <- readIORef aMd
+    sendBroadcastRequestList aNewData aId
 
 
 sendRemoteConnectDatagram :: ManagerData md => Chan MsgToSender -> md -> IO ()
