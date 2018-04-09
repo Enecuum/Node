@@ -1,4 +1,9 @@
-{-# LANGUAGE ViewPatterns, LambdaCase, MultiParamTypeClasses #-}
+{-# LANGUAGE
+        ViewPatterns
+    ,   LambdaCase
+    ,   MultiParamTypeClasses
+    ,   FlexibleInstances
+#-}
 module Boot.Boot where
 
 import qualified    Data.Map                        as M
@@ -19,6 +24,7 @@ import              Node.Crypto
 import              Node.Data.Data
 import              Service.Timer
 
+import              Node.Node.Processing
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Data.NetMesseges
@@ -39,17 +45,41 @@ managerBootNode ch md = forever $ do
         opt isCheckBroadcastNode  $ answerToCheckBroadcastNode ch md
 
 
+instance PackageTraceRoutingAction NodeBootNodeData RequestPackage where
+    makeAction aChan md aNodeId aTraceRouting aRequesPackage = do
+        aData <- readIORef md
+        case aRequesPackage of
+            RequestNetLvlPackage aReques aSignature ->
+                processing aChan md aSignature aTraceRouting aReques
+            _   -> return ()
+
+
+instance  Processing (IORef NodeBootNodeData) (Request NetLvl) where
+    processing aChan aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting = \case
+        BroadcastListRequest -> do
+            aData <- readIORef aMd
+            let aSendNetLvlResponse = sendNetLvlResponse
+                    aTraceRouting aData BroadcastListRequest aSignature
+            NodeInfoListNetLvl aBroadcasts <- readRecordsFromNodeListFile $ aData^.myNodeId
+            let aBroadcastListResponce = BroadcastListResponce
+                    (NodeInfoListLogicLvl [])
+                    (NodeInfoListNetLvl $ take 10 aBroadcasts)
+            aSendNetLvlResponse aBroadcastListResponce
+        _ -> return ()
+
 
 instance  PackageTraceRoutingAction NodeBootNodeData ResponcePackage where
-instance  PackageTraceRoutingAction NodeBootNodeData RequestPackage where
+    makeAction _ _ _ _ _ = return ()
+
 instance  BroadcastAction NodeBootNodeData where
+    makeBroadcastAction _ _ _ _ _ = return ()
 
 
-{-
-answerToCheckBroadcastNodes ::
-    IORef NodeBootNodeData ->
-    Chan ManagerBootNodeMsgBase ->
-    ManagerBootNodeMsgBase -> IO ()
+answerToCheckBroadcastNodes
+    ::  IORef NodeBootNodeData
+    ->  Chan ManagerBootNodeMsgBase
+    ->  ManagerBootNodeMsgBase
+    ->  IO ()
 answerToCheckBroadcastNodes aMd aChan _ = do
     aData <- readIORef aMd
     let
@@ -59,9 +89,11 @@ answerToCheckBroadcastNodes aMd aChan _ = do
         isActive :: (a, Node) -> Bool
         isActive a = (a^._2.status) == Active
 
+        -- активные ноды.
         aNodeIds :: [NodeId]
         aNodeIds = (^._1) <$> anActiveNodes
 
+        --
         aNeededInBroadcastLis :: [NodeId]
         aNeededInBroadcastLis = filter (\aId -> S.notMember aId $ aData^.checSet)
             aNodeIds
@@ -71,17 +103,10 @@ answerToCheckBroadcastNodes aMd aChan _ = do
             aNodeIds
 
     forM_ aNeededInBroadcastLis $ \aNodeId -> do
-        aBroadcastNodeList <- aData^.broadcastNodes.to (RM.takeRandom 10)
-        {-
-        sendJustPackagedMsg $ makeMsg aNodeId aData $
-            makePingPongMsg Pong $ BroadcastNodeListAnswer aBroadcastNodeList
-            -}
-        whenJust (aNodeId `M.lookup` (aData^.nodes)) $ \aNode -> do
-            timer 100000 $ do
-                sendExitMsgToNode aNode
-                whenJust (aGetIpAndPort aData aNodeId) $ \(aIp, aPort) -> do
-                    timer 100000 $ do
-                        writeChan aChan $ checkBroadcastNode aNodeId aIp aPort
+        whenJust (aData^.nodes.at aNodeId) $ \aNode -> do
+            sendExitMsgToNode aNode
+            whenJust (aGetIpAndPort aData aNodeId) $ \(aIp, aPort) -> do
+                writeChan aChan $ checkBroadcastNode aNodeId aIp aPort
 
     forM_ aBroadcastNodes $ \aNodeId -> do
         modifyIORef aMd $ checSet %~ S.delete aNodeId
@@ -91,10 +116,9 @@ answerToCheckBroadcastNodes aMd aChan _ = do
             modifyIORef aMd $ broadcastNodes %~ RM.insert aNodeId (aIp, aPort)
   where
     aGetIpAndPort aData aNodeId = do
-        aNode     <- aNodeId `M.lookup` (aData^.nodes)
-        aHelloMsg <- aNode^.mHelloMsg
-        return (aNode^.nHostAddress, aHelloMsg^.listenPort)
--}
+        aNode     <- aData^.nodes.at aNodeId
+        return (aNode^.nodeHost, aNode^.nodePort)
+
 
 answerToCheckBroadcastNode :: ManagerMsg a =>
     Chan a -> IORef NodeBootNodeData -> ManagerBootNodeMsgBase -> IO ()

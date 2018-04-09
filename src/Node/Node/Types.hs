@@ -92,6 +92,7 @@ data Node = Node {
     ,   _nodePosition    :: Maybe NodePosition
     ,   _nodePort        :: PortNumber
     ,   _isBroadcast     :: Bool
+    ,   _nodeHost        :: HostAddress
   }
 
 makeLenses ''Node
@@ -240,14 +241,15 @@ lensInst "sendedTransctions" ["ManagerNodeData"]
 
 
 
-makeNode :: Chan MsgToSender -> PortNumber -> Node
-makeNode aChan aPortNumber = Node {
+makeNode :: Chan MsgToSender -> HostAddress -> PortNumber -> Node
+makeNode aChan aHostAdress aPortNumber = Node {
         _status         = Noactive
     ,   _mKey           = Nothing
     ,   _chan           = aChan
     ,   _nodePosition   = Nothing
     ,   _nodePort       = aPortNumber
     ,   _isBroadcast    = False
+    ,   _nodeHost       = aHostAdress
   }
 
 

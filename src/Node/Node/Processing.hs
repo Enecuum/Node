@@ -145,7 +145,7 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
 
 
 -- TODO
-sendToShardingLvl :: ManagerNodeData -> T.ShardingNodeAction -> IO ()
+sendToShardingLvl :: ManagerData md => md -> T.ShardingNodeAction -> IO ()
 sendToShardingLvl aData aMsg = whenJust (aData^.shardingChan) $ \aChan ->
     writeChan aChan aMsg
 
@@ -170,8 +170,9 @@ requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
             (ResponceLogicLvlPackage aRequestPackage aNetLevetPackage aResponsePackageSignature)
 
 sendNetLvlResponse
-    ::  TraceRouting
-    ->  ManagerNodeData
+    :: ManagerData md
+    =>  TraceRouting
+    ->  md
     ->  Request NetLvl
     ->  PackageSignature
     ->  Responce NetLvl
@@ -186,7 +187,7 @@ sendNetLvlResponse aTraceRouting aData aRequest aSignature aNetPackage = do
         (makeNewTraceRouting aTrace aTraceRouting)
         (ResponceNetLvlPackage aRequestPackage aNetPackage aResponsePackageSignature)
 --
-getClosedNodeByDirect :: ManagerNodeData -> Point -> Maybe Node
+getClosedNodeByDirect :: ManagerData md => md -> Point -> Maybe Node
 getClosedNodeByDirect aData aPoint =
     case closedToPointNeighbor aData aPoint of
         aNode:_ | not $ amIClose aData aNode (fromPoint aPoint :: PointTo)
@@ -195,8 +196,9 @@ getClosedNodeByDirect aData aPoint =
 
 
 getClosedNode
-    ::  TraceRouting
-    ->  ManagerNodeData
+    ::  ManagerData md
+    =>  TraceRouting
+    ->  md
     ->  (Maybe Node, [PackageSignature])
 getClosedNode aTraceRouting aData = case aTraceRouting of
     ToDirect _ aPointTo aTrace
@@ -243,7 +245,8 @@ closedToPointNeighbor aData aPointTo = sortOn
 amIClose
     ::  DistanceTo MyNodePosition aPointB
     =>  DistanceTo aPointA aPointB
-    =>  ManagerNodeData
+    =>  ManagerData md
+    =>  md
     ->  aPointA
     ->  aPointB
     ->  Bool
