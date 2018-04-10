@@ -77,6 +77,7 @@ dependencies:
 - time-out
 - ini
 - text
+- aeson-pretty
 
 library:
   source-dirs: src
@@ -103,28 +104,6 @@ executables:
   SimpleNode-exe:
     main:                Main.hs
     source-dirs:         app/SimpleNode
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    - -Wall
-    - -O2
-    dependencies:
-    - Node
-  MakeConfigBootNode-exe:
-    main:                Main.hs
-    source-dirs:         app/MakeConfigBootNode
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    - -Wall
-    - -O2
-    dependencies:
-    - Node
-  MakeConfigSimpleNode-exe:
-    main:                Main.hs
-    source-dirs:         app/MakeConfigSimpleNode
     ghc-options:
     - -threaded
     - -rtsopts

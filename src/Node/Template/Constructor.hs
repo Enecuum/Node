@@ -83,7 +83,6 @@ nodeConfigList = toList $ do
     "privateKey"    !: ["ECDSA.PrivateKey"]
     "publicPoint"   !: ["DH.PublicPoint"]
     "myNodeId"      !: ["MyNodeId"]
-    "portNumber"    !: ["PortNumber"]
 
 
 nodeBaseDataList = toList $ do
@@ -98,7 +97,7 @@ nodeBaseDataList = toList $ do
     "myNodePosition"    !: ["Maybe", "MyNodePosition"]
     "shardingChan"      !: ["MaybeChan", "N.ShardingNodeAction"]
     "iAmBroadcast"      !: ["Bool"]
-
+    "outPort"           !: ["PortNumber"]
 
 
 infixl 2 +:

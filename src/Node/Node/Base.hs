@@ -219,7 +219,7 @@ sendIHaveBroadcastConnects aMd aIp = do
     aMsg <- makeIHaveBroadcastConnects
         aBroadcastNum
         aIp
-        (aData^.nodeConfig.portNumber)
+        (aData^.nodeBase.portNumber)
         (aData^.nodeConfig.myNodeId)
         (aData^.nodeConfig.privateKey)
     sendInfoPingToNodes aMd aMsg
@@ -284,7 +284,7 @@ answerToSendInitDatagram
                 aMsg <- makeConnectingRequest
                     (aData^.myNodeId)
                     (aData^.publicPoint)
-                    (aData^.portNumber)
+                    (aData^.nodeBaseData.outPort)
                     (aData^.privateKey)
                 sendPackagedMsg aNodeChan aMsg
                 runClient
@@ -456,7 +456,7 @@ answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aPortNumb
         writeChan aInputChan SenderTerminate
     else do
         loging aData $ "is accepted " ++ showHostAddress aHostAdress ++ " " ++ show aId
-        let aKey = getKay (aData^.privateNumber) aPublicPoint
+        let aKey = getKey (aData^.privateNumber) aPublicPoint
             aNode = (makeNode aInputChan aHostAdress aPortNumber) &~ do
                 mKey            .= Just aKey
                 status          .= Active
@@ -520,7 +520,7 @@ answerToRemoteConnectingMsg aId aPublicPoint aMd = do
     aData <- readIORef aMd
     loging aData $ "answerToRemoteConnectingMsg from " ++ show aId
     modifyIORef aMd $ nodes %~ M.adjust (&~ do
-        mKey            .= Just (getKay (aData^.privateNumber) aPublicPoint)
+        mKey            .= Just (getKey (aData^.privateNumber) aPublicPoint)
         status          .= Active
       ) aId
     aNewData <- readIORef aMd
@@ -533,7 +533,7 @@ sendRemoteConnectDatagram aChan aData = do
     sendPackagedMsg aChan =<<  makeConnectingRequest
         (aData^.myNodeId)
         (aData^.publicPoint)
-        (aData^.portNumber)
+        (aData^.nodeBaseData.outPort)
         (aData^.privateKey)
 
 

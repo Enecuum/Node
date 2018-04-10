@@ -1,10 +1,11 @@
-{-# LANGUAGE GADTs, DeriveGeneric, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GADTs, DeriveGeneric, GeneralizedNewtypeDeriving, TemplateHaskell #-}
 module Node.Data.NodeTypes where
 
 import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 import              GHC.Generics
 import              Data.Serialize
 import              Data.Word
+import              Data.Aeson.TH
 
 import              Service.Network.Base (HostAddress, PortNumber)
 import              Service.Types.PublicPrivateKeyPair (
@@ -33,6 +34,9 @@ newtype ClientId   = ClientId   Word64  deriving (Eq, Ord, Num, Enum, Show, Read
 
 type BootNodeList   = [(NodeId, HostAddress, PortNumber)]
 
+$(deriveJSON defaultOptions ''NodeId)
+$(deriveJSON defaultOptions ''MyNodeId)
+$(deriveJSON defaultOptions ''ClientId)
 
 instance Serialize PortNumber where
     get = toEnum.fromEnum <$> getWord32be

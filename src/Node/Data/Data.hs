@@ -41,9 +41,9 @@ newtype StringKey  = StringKey B.ByteString deriving (Eq, Show)
 curve :: Curve
 curve = getCurveByName SEC_p256k1
 
--- TODO to getKay
-getKay :: PrivateNumber -> PublicPoint -> StringKey
-getKay priv pub = StringKey key
+-- TODO to getKey
+getKey :: PrivateNumber -> PublicPoint -> StringKey
+getKey priv pub = StringKey key
   where
     SharedKey sharedKey = getShared curve priv pub
     key = (B.pack . BA.unpack $ sharedKey) :: B.ByteString

@@ -4,7 +4,8 @@
     TypeSynonymInstances,
     GeneralizedNewtypeDeriving,
     StandaloneDeriving,
-    DeriveGeneric
+    DeriveGeneric,
+    TemplateHaskell
 #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -20,6 +21,8 @@ import qualified Data.Aeson as A
 import Control.Monad
 import "cryptonite" Crypto.PubKey.ECC.ECDSA
 import "cryptonite" Crypto.PubKey.ECC.Types
+
+import Data.Aeson.TH
 
 newtype CompactInteger = CompactInteger Integer
     deriving (Eq, Show, Enum, Num, Integral, Real, Ord, Bits, A.ToJSON, A.FromJSON)
@@ -89,3 +92,11 @@ instance Serialize Curve
 instance Serialize CurveBinary
 instance Serialize CurvePrime
 instance Serialize CurveCommon
+
+$(deriveJSON defaultOptions ''PublicKey)
+$(deriveJSON defaultOptions ''PrivateKey)
+$(deriveJSON defaultOptions ''Point)
+$(deriveJSON defaultOptions ''Curve)
+$(deriveJSON defaultOptions ''CurveBinary)
+$(deriveJSON defaultOptions ''CurveCommon)
+$(deriveJSON defaultOptions ''CurvePrime)

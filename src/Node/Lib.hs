@@ -1,17 +1,18 @@
-{-# LANGUAGE ScopedTypeVariables, LambdaCase, PackageImports #-}
+{-# LANGUAGE ScopedTypeVariables, LambdaCase, PackageImports, OverloadedStrings #-}
 module Node.Lib where
 
 import              Control.Monad
 import              Control.Exception
 import              Control.Concurrent
 import qualified    Data.ByteString             as B
+import qualified    Data.ByteString.Lazy        as L
 import              Data.Serialize              as S
 import              Data.IORef
-
+import qualified    Data.Aeson as A
 import              Lens.Micro
 import              Service.Types
-
-
+import              Service.Config
+import              Network.Socket (tupleToHostAddress)
 import              Node.Data.NodeTypes
 import Node.FileDB.FileDB
 import Node.Node.Types
@@ -20,6 +21,8 @@ import Node.Node.Config.Make
 import Node.Node.Base.Server
 
 import Service.System.Directory (getTransactionFilePath)
+
+import Data.Ini
 
 -- code exemples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html
@@ -30,22 +33,30 @@ import Service.System.Directory (getTransactionFilePath)
 
 -- | Standart function to launch a node.
 startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
-    String
+       Ini
     -> Chan ExitMsg
     -> Chan Answer
     -> (Chan a1 -> IORef s -> IO ())
     -> (Chan a1 -> Chan Transaction -> MyNodeId -> IO a2)
     -> IO (Chan a1)
-startNode path exitCh answerCh manager startDo = do
+startNode buildConf exitCh answerCh manager startDo = do
     managerChan <- newChan
     aMicroblockChan <- newChan
     aTransactionChan <- newChan
-    config  <- readNodeConfig path aTransactionChan aMicroblockChan exitCh answerCh
-    md      <- newIORef config
-    startServerActor managerChan (config^.portNumber)
+    config  <- readNodeConfig 
+    bnList <- readBootNodeList buildConf
+    port   <- read <$> getConfigValue buildConf "main" "OutPort" 
+    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh bnList config port
+    startServerActor managerChan port
     aFilePath <- getTransactionFilePath
-    void $ forkIO $ forever $ do
-        aMicroblock <- readChan aMicroblockChan
+    void $ forkIO $ microblockProc aMicroblockChan aFilePath
+    void $ forkIO $ manager managerChan md
+    void $ startDo managerChan aTransactionChan (config^.myNodeId)
+    return managerChan
+
+
+microblockProc aMicroblockCh aFilePath = forever $ do
+        aMicroblock <- readChan aMicroblockCh
         aBlocksFile <- try $ readHashMsgFromFile aFilePath
         aBlocks <- case aBlocksFile of
             Right aBlocks      -> return aBlocks
@@ -53,37 +64,27 @@ startNode path exitCh answerCh manager startDo = do
                  B.writeFile aFilePath $ S.encode ([] :: [Microblock])
                  return []
         B.writeFile aFilePath $ S.encode (aBlocks ++ [aMicroblock])
-    void $ forkIO $ manager managerChan md
-    void $ startDo managerChan aTransactionChan (config^.myNodeId)
-    return managerChan
 
 
-readNodeConfig :: ToManagerData d =>
-    String
-    -> Chan Transaction
-    -> Chan Microblock
-    -> Chan ExitMsg
-    -> Chan Answer
-    -> IO d
-readNodeConfig path aTransactionChan aMicroblockChan exitCh answerCh = do
-    try (B.readFile path) >>= \case
-        Right nodeConfigMsg         -> case decode nodeConfigMsg of
-            Right nodeConfigData    -> do
-                bnList <- readBootNodeList
-                return $ toManagerData
-                    aTransactionChan
-                    aMicroblockChan
-                    exitCh
-                    answerCh
-                    bnList
-                    nodeConfigData
-            Left _                  -> config
-        Left (_ :: SomeException)   -> config
+readNodeConfig :: IO NodeConfig
+readNodeConfig = do
+    try (L.readFile "configs/nodeInfo.json") >>= \case
+        Right nodeConfigMsg         -> case (A.decode nodeConfigMsg) of
+            Just nodeConfigData     -> return nodeConfigData
+            Nothing                 -> putStrLn "Config file can not be readed. New one will be created" >> config
+        Left (_ :: SomeException)   -> putStrLn "ConfigFile will be created." >> config
   where
-    config :: ToManagerData d => IO d
     config = do
-        bnList <- readBootNodeList
-        emptyData defaultServerPort aTransactionChan aMicroblockChan exitCh answerCh bnList
+        makeFileConfig
+        readNodeConfig
+
+readBootNodeList :: Ini -> IO BootNodeList
+readBootNodeList ini = do
+    bnList <- getConfigValue ini "main" "BootNodeList"
+    toNormForm $ read bnList
+     where 
+       toNormForm aList = return $ (\(a,b,c) -> (NodeId a,tupleToHostAddress b, c))
+          <$> aList
 
 ---
 
