@@ -49,7 +49,6 @@ import              Node.Data.NetMesseges
 import              Node.Node.Base.Server
 
 
-
 loging :: NodeConfigClass aData => aData -> String -> IO ()
 loging aData aString = do
     aTime <- getTime Realtime

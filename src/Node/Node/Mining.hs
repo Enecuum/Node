@@ -204,35 +204,45 @@ addToTrace aTraceRouting aRequestPackage aMyNodeId aPrivateKey = do
         _ -> error "Node.Node.Mining.addToTrace: It is not ToDirect!"
 
 
-{-
-TODO init Broadcast
+
+
 answerToNewTransaction :: IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
 answerToNewTransaction aMd (NewTransaction aTransaction) = do
-    metric $ increment "net.tx.count"
+    --metric $ increment "net.tx.count"
     aData <- readIORef aMd
-    loging aData $ "new transaction in net"
-    addInIndex (NewTransactionInNet aTransaction) aMd
-    sendInfoPingToNodes aMd $ NewTransactionInNet aTransaction
+    loging aData $ "I create a transaction: " ++ show aTransaction
+    let aBroadcastThing = BroadcastMining $
+            BroadcastTransaction aTransaction Nothing
+    addInIndex aBroadcastThing aMd
+
+    aPackageSignature <- makePackageSignature aData aBroadcastThing
+    sendBroadcastThingToNodes aMd aPackageSignature aBroadcastThing
+    {-
     metric $ add
         ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount")
         (1 :: Integer)
+    -}
     writeChan (aData^.transactions) aTransaction
+
 answerToNewTransaction _ _ = error
     "answerToNewTransaction: something unexpected  has happened."
+
 
 answerToBlockMadeMsg :: ManagerMiningMsg msg =>
     IORef ManagerNodeData -> msg -> IO ()
 answerToBlockMadeMsg aMd (toManagerMiningMsg -> BlockMadeMsg aMicroblock) = do
-    metric $ increment "net.bl.count"
+    --metric $ increment "net.bl.count"
     aData <- readIORef aMd
-    loging aData $ "answerToBlockMadeMsg " ++ show aMicroblock
+    loging aData $ "I create a a microblock: " ++ show aMicroblock
+    let aBroadcastThing = BroadcastMining $
+            BroadcastMicroBlock aMicroblock Nothing
+    addInIndex aBroadcastThing aMd
 
-    addInIndex (BlockMade aMicroblock) aMd
-    sendInfoPingToNodes aMd $ BlockMade aMicroblock
-    writeChan (aData^.microblockChan) aMicroblock
+    aPackageSignature <- makePackageSignature aData aBroadcastThing
+    sendBroadcastThingToNodes aMd aPackageSignature aBroadcastThing
+
+--    writeChan (aData^.microblockChan) aMicroblock
 answerToBlockMadeMsg _ _ = pure ()
-
--}
 
 
 notInIndex :: Serialize a => ManagerNodeData -> a -> Bool
@@ -258,8 +268,6 @@ isBootNode aId aData = aId `elem` ((^._1) <$> aData^.nodeBaseData.bootNodes)
 
 eq :: MyNodeId -> NodeId -> Bool
 eq (MyNodeId aMyNodeId) (NodeId aNodeId) = aMyNodeId == aNodeId
-
-
 
 
 processingOfBroadcastThing :: IORef ManagerNodeData -> BroadcastThing -> IO ()
