@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, GADTs #-}
 --{-# OPTIONS_GHC -fno-Wtype-defaults #-}
 
+
 module Sharding.Types.Node where
 
 import              Node.Data.NodeTypes
@@ -13,6 +14,8 @@ import              Control.Concurrent.Chan
 import              Lens.Micro.TH
 import              Data.Word
 import qualified    Data.Set            as S
+import qualified    Data.Map            as M
+import              System.Clock
 
 
 data ShardingNode = ShardingNode {
@@ -20,10 +23,13 @@ data ShardingNode = ShardingNode {
     ,   _shardingNodeId     :: MyNodeId
     ,   _nodePosition       :: MyNodePosition
     ,   _nodeIndex          :: ShardIndex
+    ,   _nodeIndexOfReques  :: M.Map ShardHash (TimeSpec, Chan Shard)
     ,   _nodeDistance       :: Word64 -- think
   }
-  deriving (Show, Eq, Ord)
+  deriving Eq
 
+
+-- sharding
 
 data Neighbor = Neighbor {
         _neighborPosition   :: NodePosition
@@ -41,6 +47,7 @@ data ShardingNodeAction =
     ---    InitAction
         NewNodeInNetAction          NodeId NodePosition
     -- TODO create index for new node by NodeId
+    |   ShardRequestAction          ShardHash (Chan Shard)
     |   ShardIndexAcceptAction      [ShardHash]
     |   ShardIndexCreateAction      (Chan ShardingNodeResponce) NodeId Word64
     |   ShardListCreateAction       (Chan ShardingNodeResponce) NodeId ShardHash
@@ -67,7 +74,7 @@ data ShardingNodeRequestMsg =
         IamAwakeRequst        MyNodeId MyNodePosition -- broadcast for all network
     ---- TODO sending of ShardIndexRequest
     |   ShardIndexRequest     Word64 [NodeId]    -- for neighbors
-    |   ShardListRequest      [ShardHash]
+    |   ShardListRequest      [ShardHash] -- TODO add functionality
     --- ShiftAction => NewPosiotionResponse
     |   NewPosiotionMsg       MyNodePosition
     ---

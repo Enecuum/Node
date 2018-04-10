@@ -1,6 +1,39 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE
+        LambdaCase
+    ,   MultiWayIf
+    ,   ViewPatterns
+#-}
+
+-- 1. Request of block
+-- -> NetLvl -> LogicLvl -> NetLvl ->
+--              | <---------------------------+
+--              |                             |
+--    toStore --+-- To NetLvl -> LogicLvl -> NetLvl
+
+-- -> NetLevet: BlockRequest
+-- NetLevet -> LogicLvl: BlockRequest (Chan for Response) BlockHash
+-- LogicLvl -> NetLevet: BlockResponse (Maybe Block)
+    -- LogicLvl (local) -> LogicLvl (non local): BlockRequest (Maybe Block)
+    -- LogicLvl (non local) -> LogicLvl (local): BlockResponse (Maybe Block)
+
+--- broadcastLvl                             logicLvl
+---                   index shard
+---                   store shard
+
+-- mackroblock ([hash mickroblock] , sign, hash, hask prev)
+-- epoch [hash mackroblock , sign, hash, hask prev]
+
+-- hass -> microblock | head of mackroblock
+
+
+--      logicLvl            logicLvl
+--         |                   ^
+--         V                   |
+--      netLvl    ->  ->    netLvl
+--
+--   2 request with id 1 -> node -> block 1
+
+
 module Sharding.Sharding where
 
 import              Sharding.Space.Distance
@@ -17,10 +50,13 @@ import              Control.Concurrent.Chan
 import              Data.List.Extra
 import              Control.Concurrent
 import              Lens.Micro
+import              Lens.Micro.GHC
 import              Control.Monad
 import              Data.Word
 import              Service.Timer
 import qualified    Data.Set            as S
+import qualified    Data.Map            as M
+import              System.Clock
 
 import              Node.Data.NodeTypes
 
@@ -48,6 +84,18 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
         NewNodeInNetAction aNodeId aNodePosition -> aLoop
             $ insertTheNeighbor aNodeId aNodePosition aShardingNode
 
+        ShardRequestAction  aShardHash aChan -> do
+            aMaybeShard <- loadShard aShardHash
+            case aMaybeShard of
+                Just aShard -> do
+                    writeChan aChan aShard
+                    aLoop aShardingNode
+                Nothing -> do
+                    sendToNetLevet aChanOfNetLevel $ ShardListRequest [aShardHash]
+                    aTime <- getTime Realtime
+                    aLoop $ aShardingNode & nodeIndexOfReques %~
+                        M.insert aShardHash (aTime, aChan)
+
         ShardIndexAcceptAction aShardHashs -> aLoop
             $ addShardingIndex (S.fromList aShardHashs) aShardingNode
 
@@ -56,6 +104,10 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
             aLoop aShardingNode
 
         ShardAcceptAction aShard
+            | Just (_, aChan) <- aShardingNode^.nodeIndexOfReques.at (shardToHash aShard) -> do
+                writeChan aChan aShard
+                aLoop $ aShardingNode & nodeIndexOfReques %~ M.delete (shardToHash aShard)
+
             | checkShardIsInRadiusOfCaptureShardingNode aShardingNode (shardToHash aShard) ->
                 nodeSaveShard aShard aLoop aShardingNode
 
