@@ -33,6 +33,8 @@ import              Sharding.Space.Point
 import qualified    Sharding.Types.Node as N
 import              Service.Types (Transaction, Microblock)
 
+import              Data.Aeson.TH 
+
 instance Show (Chan a) where
     show _ = "Chan"
 
@@ -123,10 +125,11 @@ data NodeBaseData = NodeBaseData {
     ,   nodeBaseDataMyNodePosition      :: Maybe MyNodePosition
     ,   nodeBaseDataShardingChan        :: MaybeChan N.ShardingNodeAction
     ,   nodeBaseDataIAmBroadcast        :: Bool
+    ,   nodeBaseDataOutPort             :: PortNumber
   }
 
 
-makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan = NodeBaseData
+makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan port = NodeBaseData
     aExitChan
     M.empty
     aList
@@ -138,17 +141,17 @@ makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan = NodeBaseData
     Nothing
     Nothing
     False
+    port
 
 
 data NodeConfig = NodeConfig {
     nodeConfigPrivateNumber :: DH.PrivateNumber,
     nodeConfigPublicPoint   :: DH.PublicPoint,
     nodeConfigPrivateKey    :: PrivateKey,
-    nodeConfigMyNodeId      :: MyNodeId,
-    nodeConfigPortNumber    :: PortNumber
+    nodeConfigMyNodeId      :: MyNodeId
   }
   deriving (Generic)
-
+$(deriveJSON defaultOptions ''NodeConfig)
 
 genDataClass        "nodeConfig" nodeConfigList
 genBazeDataInstance "nodeConfig" (fst <$> nodeConfigList)
@@ -180,22 +183,23 @@ class ToManagerData a where
         -> Chan Answer
         -> BootNodeList
         -> NodeConfig
+        -> PortNumber
         ->  a
 
 instance ToManagerData ManagerNodeData where
-    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aList aNodeConfig = ManagerNodeData
-        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan)
+    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aList aNodeConfig port = ManagerNodeData
+        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan port)
             aTransactionChan BI.empty S.empty BI.empty
 
 
-makeNewNodeConfig :: MonadRandom m => PortNumber -> m NodeConfig
-makeNewNodeConfig aPort = do
+makeNewNodeConfig :: MonadRandom m => m NodeConfig
+makeNewNodeConfig = do
     (aPublicKey,     aPrivateKey)  <- generate curve
     (aPrivateNumber, aPublicPoint) <- genKayPair curve
     let aId = keyToId aPublicKey
-    pure $ NodeConfig aPrivateNumber aPublicPoint aPrivateKey (toMyNodeId aId) aPort
+    pure $ NodeConfig aPrivateNumber aPublicPoint aPrivateKey (toMyNodeId aId)
 
-
+{-
 emptyData
     :: MonadRandom m
     => ToManagerData d
@@ -209,6 +213,7 @@ emptyData
 emptyData aPort aTransactionChan aMicroblockChan aExitChan aAnswerChan aList =
     toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan  aList
         <$> makeNewNodeConfig aPort
+-}
 
 makePackageSignature
     ::  Serialize aPackage

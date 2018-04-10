@@ -1,41 +1,49 @@
+{-# LANGUAGE OverloadedStrings, LambdaCase, ScopedTypeVariables #-}
+
 module Main where
 
 import              Control.Monad
 import              Control.Concurrent
-import              System.Environment (getArgs)
+import              System.Environment (getArgs, getEnv)
 
 import              Node.Node.Mining
 import              Node.Node.Types
-import              Service.Config
 import              Service.Timer
+import              Service.Config
 import              Node.Lib
 import              Service.Metrics
 import              PoA
 import              CLI.CLI (control)
-
+import              Control.Exception (try)
+import              Prelude hiding (concat)
+import              Data.Ini
+import              Data.Text
+import              Network.Socket (PortNumber)
+import              Control.Exception (SomeException())
 
 main :: IO ()
 main = do
-    args <- getArgs
-    maybeConf <- findConfigFile args
-    case maybeConf of
-      Nothing     -> return ()
-      Just config -> do
-        aExitChan <- newChan
-        aAnswerChan  <- newChan
+    (readIniFile "configs/config.ini") >>= \case
+       Left e    -> error e
+       Right ini -> do
+        aExitCh <- newChan
+        aAnswerCh  <- newChan
+
         metric $ increment "cl.node.count"
-        void $ startNode "./data/miningInitData.bin"
-            aExitChan aAnswerChan managerMining $ \ch aChan aMyNodeId -> do
+        
+        void $ startNode ini
+            aExitCh aAnswerCh managerMining $ \ch aChan aMyNodeId -> do
                 -- periodically check current state compare to the whole network state
                 metronomeS 400000 (writeChan ch connectivityQuery)
                 metronomeS 1000000 (writeChan ch deleteOldestMsg)
                 metronomeS 10000000 (writeChan ch deleteDeadSouls)
                 metronomeS 3000000 $ writeChan ch deleteOldestVacantPositions
 
-                Just poa_in  <- getVar config "SimpleNode" "poa_in"
-                Just poa_out <- getVar config "SimpleNode" "poa_out"
+                poa_in  <- getConfigValue ini "poa" "InpPort"
+                poa_out <- getConfigValue ini "poa" "OutPort"
                 void $ forkIO $ servePoA poa_in  aMyNodeId ch aChan poa_out
 
-                Just rpc_port <- getVar config "SimpleNode" "rpc"
+                rpc_port <- getConfigValue ini "rpc" "Port"
                 void $ forkIO $ control rpc_port ch
-        void $ readChan aExitChan
+        void $ readChan aExitCh
+
