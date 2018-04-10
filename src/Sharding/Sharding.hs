@@ -60,6 +60,7 @@ import              System.Clock
 
 import              Node.Data.NodeTypes
 
+-- TODO loading of shards to sharding lvl.
 
 --makeShardingNode :: MyNodeId -> Point -> IO ()
 makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
@@ -189,6 +190,7 @@ addShardingIndex aShardIndex aShardingNode =
     aNeeded :: S.Set ShardHash
     aNeeded = S.difference aShardIndex aExistShards
     aExistShards = indexToSet (aShardingNode^.nodeIndex)
+    --- TODO add request for load shards
 
 
 createShardingIndex :: Chan ShardingNodeResponce -> ShardingNode -> NodeId -> Word64 ->  IO ()

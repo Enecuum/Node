@@ -52,12 +52,12 @@ managerMining ch aMd = forever $ do
         opt isDatagramMsg           $ answerToDatagramMsg ch aMd (mData^.myNodeId)
         opt isClientIsDisconnected $ miningNodeAnswerClientIsDisconnected aMd
 
---      opt isNewTransaction            $ answerToNewTransaction aMd
+        opt isNewTransaction            $ answerToNewTransaction aMd
+        opt isBlockMadeMsg              $ answerToBlockMadeMsg aMd
         opt isInitDatagram              $ answerToSendInitDatagram ch aMd
---      opt isBlockMadeMsg              $ answerToBlockMadeMsg aMd
         opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
         opt isDeleteOldestVacantPositions $ answerToDeleteOldestVacantPositions aMd
-
+        opt isShardingNodeRequestMsg    $ answerToShardingNodeRequestMsg aMd
 
 miningNodeAnswerClientIsDisconnected
     ::  IORef ManagerNodeData
@@ -72,6 +72,32 @@ miningNodeAnswerClientIsDisconnected aMd
                 minusStatusNumber aMd aNodeId
                 modifyIORef aMd $ (nodes %~ M.delete aNodeId)
 miningNodeAnswerClientIsDisconnected _ _ = pure ()
+
+answerToShardingNodeRequestMsg
+    ::  IORef ManagerNodeData
+    ->  ManagerMiningMsgBase
+    ->  IO ()
+answerToShardingNodeRequestMsg aMd
+    (toManagerMsg -> ShardingNodeRequestMsg aNetLvlMsg) = do
+        aData <- readIORef aMd
+        case aNetLvlMsg of
+            T.NewPosiotionMsg aMyNodePosition -> sendBroadcast aMd
+                (BroadcastLogic $ BroadcastPosition
+                    (aData^.myNodeId)
+                    (toNodePosition aMyNodePosition))
+            T.IamAwakeRequst aMyNodeId aMyNodePosition -> sendBroadcast aMd
+                (BroadcastLogic $ BroadcastPosition
+                    (aData^.myNodeId)
+                    (toNodePosition aMyNodePosition))
+
+{-
+---- TODO sending of ShardIndexRequest
+|   ShardIndexRequest     Word64 [NodeId]    -- for neighbors
+|   ShardListRequest      [ShardHash] -- TODO add functionality
+
+---
+|   NeighborListRequest -- ask net level new neighbors
+-}
 
 ----TODO: MOVE TO ?????? --------------
 answerToDeleteOldestVacantPositions
@@ -209,12 +235,7 @@ answerToNewTransaction aMd (NewTransaction aTransaction) = do
     --metric $ increment "net.tx.count"
     aData <- readIORef aMd
     loging aData $ "I create a transaction: " ++ show aTransaction
-    let aBroadcastThing = BroadcastMining $
-            BroadcastTransaction aTransaction Nothing
-    addInIndex aBroadcastThing aMd
-
-    aPackageSignature <- makePackageSignature aData aBroadcastThing
-    sendBroadcastThingToNodes aMd aPackageSignature aBroadcastThing
+    sendBroadcast aMd (BroadcastMining $ BroadcastTransaction aTransaction Nothing)
     {-
     metric $ add
         ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount")
@@ -225,6 +246,12 @@ answerToNewTransaction aMd (NewTransaction aTransaction) = do
 answerToNewTransaction _ _ = error
     "answerToNewTransaction: something unexpected  has happened."
 
+sendBroadcast aMd aBroadcastThing = do
+    aData <- readIORef aMd
+    addInIndex aBroadcastThing aMd
+    aPackageSignature <- makePackageSignature aData aBroadcastThing
+    sendBroadcastThingToNodes aMd aPackageSignature aBroadcastThing
+
 
 answerToBlockMadeMsg :: ManagerMiningMsg msg =>
     IORef ManagerNodeData -> msg -> IO ()
@@ -232,12 +259,7 @@ answerToBlockMadeMsg aMd (toManagerMiningMsg -> BlockMadeMsg aMicroblock) = do
     --metric $ increment "net.bl.count"
     aData <- readIORef aMd
     loging aData $ "I create a a microblock: " ++ show aMicroblock
-    let aBroadcastThing = BroadcastMining $
-            BroadcastMicroBlock aMicroblock Nothing
-    addInIndex aBroadcastThing aMd
-
-    aPackageSignature <- makePackageSignature aData aBroadcastThing
-    sendBroadcastThingToNodes aMd aPackageSignature aBroadcastThing
+    sendBroadcast aMd (BroadcastMining $ BroadcastMicroBlock aMicroblock Nothing)
 
 --    writeChan (aData^.microblockChan) aMicroblock
 answerToBlockMadeMsg _ _ = pure ()
