@@ -9,6 +9,7 @@ module Boot.Boot where
 import qualified    Data.Map                        as M
 import qualified    Data.Set                        as S
 import qualified    Boot.Map.Random                 as RM
+import              Data.List
 import              Data.IORef
 import              Control.Monad.Extra
 import              Lens.Micro
@@ -33,7 +34,6 @@ managerBootNode :: Chan ManagerBootNodeMsgBase -> IORef NodeBootNodeData -> IO (
 managerBootNode ch md = forever $ do
     mData <- readIORef md
     msg <- readChan ch
-    --debug (mData^.outChan) $ "manager " <> show msg
     runOption msg $ do
         baseNodeOpts ch md mData
 
@@ -41,7 +41,7 @@ managerBootNode ch md = forever $ do
 
         opt isInitDatagram        $ answerToInitDatagram md
         opt isDatagramMsg         $ answerToDatagramMsg ch md (mData^.myNodeId)
-        --opt isCheckBroadcastNodes $ answerToCheckBroadcastNodes md ch
+        opt isCheckBroadcastNodes $ answerToCheckBroadcastNodes md ch
         opt isCheckBroadcastNode  $ answerToCheckBroadcastNode ch md
 
 
@@ -83,42 +83,31 @@ answerToCheckBroadcastNodes
 answerToCheckBroadcastNodes aMd aChan _ = do
     aData <- readIORef aMd
     let
-        anActiveNodes :: [(NodeId, Node)]
-        anActiveNodes = filter isActive . M.toList $ aData^.nodes
-
-        isActive :: (a, Node) -> Bool
-        isActive a = (a^._2.status) == Active
-
         -- активные ноды.
         aNodeIds :: [NodeId]
-        aNodeIds = (^._1) <$> anActiveNodes
+        aNodeIds = do
+            (aId, aNode) <- M.toList $ aData^.nodes
+            guard $ aNode^.status == Active
+            pure aId
 
-        --
-        aNeededInBroadcastLis :: [NodeId]
-        aNeededInBroadcastLis = filter (\aId -> S.notMember aId $ aData^.checSet)
-            aNodeIds
-
-        aBroadcastNodes :: [NodeId]
-        aBroadcastNodes = filter (\aId -> S.member aId $ aData^.checSet)
-            aNodeIds
+        (aBroadcastNodes, aNeededInBroadcastLis) = partition
+            (\aId -> S.notMember aId $ aData^.checSet) aNodeIds
 
     forM_ aNeededInBroadcastLis $ \aNodeId -> do
         whenJust (aData^.nodes.at aNodeId) $ \aNode -> do
             sendExitMsgToNode aNode
-            whenJust (aGetIpAndPort aData aNodeId) $ \(aIp, aPort) -> do
-                writeChan aChan $ checkBroadcastNode aNodeId aIp aPort
+            writeChan aChan $ checkBroadcastNode
+                aNodeId (aNode^.nodeHost) (aNode^.nodePort)
 
     forM_ aBroadcastNodes $ \aNodeId -> do
         modifyIORef aMd $ checSet %~ S.delete aNodeId
 
-        whenJust (aNodeId `M.lookup` (aData^.nodes)) sendExitMsgToNode
-        whenJust (aGetIpAndPort aData aNodeId) $ \(aIp, aPort) -> do
-            modifyIORef aMd $ broadcastNodes %~ RM.insert aNodeId (aIp, aPort)
-  where
-    aGetIpAndPort aData aNodeId = do
-        aNode     <- aData^.nodes.at aNodeId
-        return (aNode^.nodeHost, aNode^.nodePort)
-
+        whenJust (aData^.nodes.at aNodeId) $ \aNode -> do
+            sendExitMsgToNode aNode
+            addRecordsToNodeListFile
+                (aData^.myNodeId)
+                (NodeInfoListNetLvl [
+                    (aNodeId, aNode^.nodeHost, aNode^.nodePort)])
 
 answerToCheckBroadcastNode :: ManagerMsg a =>
     Chan a -> IORef NodeBootNodeData -> ManagerBootNodeMsgBase -> IO ()
