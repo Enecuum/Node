@@ -192,9 +192,6 @@ data instance BroadcastThingLvl LogicLvl where
     BroadcastPosition   :: MyNodeId -> NodePosition -> BroadcastThingLvl LogicLvl
   deriving (Eq, Ord, Show, Generic)
 
--- X - x - x - x - X - x - x - x - x - x - X
---
---
 
 
 data instance BroadcastThingLvl MiningLvl where
