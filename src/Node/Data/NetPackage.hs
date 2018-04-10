@@ -192,22 +192,29 @@ data instance BroadcastThingLvl LogicLvl where
     BroadcastPosition   :: MyNodeId -> NodePosition -> BroadcastThingLvl LogicLvl
   deriving (Eq, Ord, Show, Generic)
 
+-- X - x - x - x - X - x - x - x - x - x - X
+--
+--
+
 
 data instance BroadcastThingLvl MiningLvl where
-    BroadcastMacroBlockHead
-        ::  B.ByteString
+    BroadcastTransaction
+        ::  Transaction
         ->  Maybe NodeId
         ->  BroadcastThingLvl MiningLvl
+
     BroadcastMicroBlock
         ::  Microblock
         ->  Maybe NodeId
         ->  BroadcastThingLvl MiningLvl
-    BroadcastMacroBlock
+
+    BroadcastBlockIndex
         ::  B.ByteString
         ->  Maybe NodeId
         ->  BroadcastThingLvl MiningLvl
-    BroadcastTransaction
-        ::  Transaction
+
+    BroadcastKeyBlock
+        ::  B.ByteString
         ->  Maybe NodeId
         ->  BroadcastThingLvl MiningLvl
   deriving (Eq, Ord, Show, Generic)

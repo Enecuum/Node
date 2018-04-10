@@ -204,8 +204,6 @@ addToTrace aTraceRouting aRequestPackage aMyNodeId aPrivateKey = do
         _ -> error "Node.Node.Mining.addToTrace: It is not ToDirect!"
 
 
-
-
 answerToNewTransaction :: IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
 answerToNewTransaction aMd (NewTransaction aTransaction) = do
     --metric $ increment "net.tx.count"
