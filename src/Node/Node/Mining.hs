@@ -30,6 +30,7 @@ import              Crypto.Error
 import              Node.Node.BroadcastProcessing
 import              Node.Data.MakeTraceRouting
 
+import              Sharding.Types.ShardLogic
 import              Service.Monad.Option
 import              Node.Crypto
 import              Node.Data.Data
@@ -88,17 +89,16 @@ answerToShardingNodeRequestMsg aMd
                 (BroadcastLogic $ BroadcastPosition
                     (aData^.myNodeId)
                     (toNodePosition aMyNodePosition))
+
             T.IamAwakeRequst aMyNodeId aMyNodePosition -> sendBroadcast aMd
                 (BroadcastLogic $ BroadcastPosition
                     (aData^.myNodeId)
                     (toNodePosition aMyNodePosition))
+
             T.NeighborListRequest -> do
-                aRequestSignature <- makePackageSignature aData NeighborListRequestPackage
-                let aRequestPackage = RequestLogicLvlPackage NeighborListRequestPackage aRequestSignature
-                forM_ (M.toList $ aData^.nodes) $ \(aNodeId, aNode) -> do
-                    aTraceRouting <- makeTraceRouting
-                        aData aRequestPackage (ToNode aNodeId)
-                    sendToNode (makeRequest aTraceRouting aRequestPackage) aNode
+                forM_ (M.keys $ aData^.nodes) $ \aNodeId -> do
+                makeAndSendTo aData (M.keys $ aData^.nodes) $
+                    NeighborListRequestPackage
 
             T.ShardIndexRequest aDistance aNodePositions -> do
                 whenJust (aData^.myNodePosition) $ \aPosition -> do
@@ -107,52 +107,12 @@ answerToShardingNodeRequestMsg aMd
                     forM_ aNodePositions $ \aPosition -> do
                         makeAndSendTo aData aPosition aRequest
 
-            --ShardListRequest      [ShardHash] -- TODO add functionality
-
-                --    ---
-                  --  |   NeighborListRequest -- ask net level new neighbors
-{-
-|   ShardIndexRequest     Word64 [NodeId]    -- for neighbors
-|   ShardListRequest      [ShardHash] -- TODO add functionality
-|   NeighborListRequest -- ask net level new neighbors
-
--}
-{-
--- sendToNodes aData aMakeMsg = forM_ (M.elems $ aData^.nodes) (sendToNode aMakeMsg)
-sendToNodes
-    ::  ManagerData md
-    =>  md
-    ->  (StringKey -> CryptoFailable Package)
-    ->  IO ()
-
-sendToNode :: (StringKey -> CryptoFailable Package) -> Node -> IO ()
-
---
-makeRequest
-    ::  TraceRouting
-    ->  RequestPackage
-    ->  StringKey
-    ->  CryptoFailable Package
---
-makePackageSignature
-    ::  Serialize aPackage
-    =>  ManagerData md
-    =>  md
-    ->  aPackage
-    ->  IO PackageSignature
---
-ToNode   :: NodeId -> PackageSignature -> TraceRouting
--}
---            T.ShardIndexRequest aRadius aNodeIds ->
-
-{-
----- TODO sending of ShardIndexRequest
-|   ShardIndexRequest     Word64 [NodeId]    -- for neighbors
-|   ShardListRequest      [ShardHash] -- TODO add functionality
-
----
-|   NeighborListRequest -- ask net level new neighbors
--}
+            T.ShardListRequest shardHashes -> do
+                whenJust (aData^.myNodePosition) $ \aPosition -> do
+                    forM_ shardHashes $ \aHash -> do
+                        let aPosition = NodePosition $ hashToPoint aHash
+                            aRequest  = ShardRequestPackage aHash
+                        makeAndSendTo aData aPosition aRequest
 
 ----TODO: MOVE TO ?????? --------------
 answerToDeleteOldestVacantPositions
