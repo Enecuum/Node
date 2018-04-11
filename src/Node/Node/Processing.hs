@@ -34,6 +34,7 @@ import              Sharding.Sharding
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Sharding.Space.Distance
+import              Node.Data.MakeAndSendTraceRouting
 
 class Processing aNodeData aPackage where
     processing
@@ -148,7 +149,24 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
 sendToShardingLvl :: ManagerData md => md -> T.ShardingNodeAction -> IO ()
 sendToShardingLvl aData aMsg = whenJust (aData^.shardingChan) $ \aChan ->
     writeChan aChan aMsg
+--
+sendNetLvlResponse
+    :: ManagerData md
+    =>  TraceRouting
+    ->  md
+    ->  Request NetLvl
+    ->  PackageSignature
+    ->  Responce NetLvl
+    ->  IO ()
 
+sendNetLvlResponse aTraceRouting aData aRequest aSignature aNetPackage = do
+    let (aNode, aTrace) = getClosedNode aTraceRouting aData
+        aRequestPackage = request aRequest aSignature
+
+    aResponsePackageSignature <- makePackageSignature aData aNetPackage
+    sendResponse aNode
+        (makeNewTraceRouting aTrace aTraceRouting)
+        (ResponceNetLvlPackage aRequestPackage aNetPackage aResponsePackageSignature)
 
 -- TODO  requestToNetLvl + sendNetLvlResponse
 requestToNetLvl
@@ -168,31 +186,6 @@ requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
         sendResponse aNode
             (makeNewTraceRouting aTrace aTraceRouting)
             (ResponceLogicLvlPackage aRequestPackage aNetLevetPackage aResponsePackageSignature)
-
-sendNetLvlResponse
-    :: ManagerData md
-    =>  TraceRouting
-    ->  md
-    ->  Request NetLvl
-    ->  PackageSignature
-    ->  Responce NetLvl
-    ->  IO ()
-
-sendNetLvlResponse aTraceRouting aData aRequest aSignature aNetPackage = do
-    let (aNode, aTrace) = getClosedNode aTraceRouting aData
-        aRequestPackage = RequestNetLvlPackage aRequest aSignature
-
-    aResponsePackageSignature <- makePackageSignature aData aNetPackage
-    sendResponse aNode
-        (makeNewTraceRouting aTrace aTraceRouting)
-        (ResponceNetLvlPackage aRequestPackage aNetPackage aResponsePackageSignature)
---
-getClosedNodeByDirect :: ManagerData md => md -> Point -> Maybe Node
-getClosedNodeByDirect aData aPoint =
-    case closedToPointNeighbor aData aPoint of
-        aNode:_ | not $ amIClose aData aNode (fromPoint aPoint :: PointTo)
-                -> Just aNode
-        _       -> Nothing
 
 
 getClosedNode
@@ -233,28 +226,6 @@ makeNewTraceRouting aSignatures = \case
     aTraceRouting                   -> aTraceRouting
 
 
-closedToPointNeighbor
-    ::  NodeBaseDataClass s
-    =>  DistanceTo Node b
-    =>  s
-    ->  b
-    ->  [Node]
-closedToPointNeighbor aData aPointTo = sortOn
-    (\n -> distanceTo n aPointTo) $ M.elems $ aData^.nodes
---
-amIClose
-    ::  DistanceTo MyNodePosition aPointB
-    =>  DistanceTo aPointA aPointB
-    =>  ManagerData md
-    =>  md
-    ->  aPointA
-    ->  aPointB
-    ->  Bool
-amIClose aData aNode aPointTo = if
-    | Just aPosition <- aData^.myNodePosition,
-        distanceTo aPosition aPointTo < distanceTo aNode aPointTo -> True
-    | otherwise -> False
-
 traceDrop :: NodeId -> [PackageSignature] -> [PackageSignature]
 traceDrop aNextNodeId = dropWhile
     (\(PackageSignature (toNodeId -> aId) _ _) -> aId /= aNextNodeId)
@@ -272,13 +243,6 @@ makeResponse aTraceRouting aResponse = makeCipheredPackage
 signatureToNodeId :: PackageSignature -> NodeId
 signatureToNodeId (PackageSignature (toNodeId -> aNodeId) _ _) = aNodeId
 
-instance DistanceTo Node Point where
-    distanceTo aNode aPoint = if
-        | Just aPosition <- aNode^.nodePosition ->
-            distanceTo aPosition  (NodePosition aPoint)
-        | otherwise                             -> maxBound
 
-instance DistanceTo Node PointTo where
-    distanceTo aNode aPoint = distanceTo aNode (toPoint aPoint)
 
 --------------------------------------------------------------------------------

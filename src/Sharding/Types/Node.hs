@@ -55,7 +55,7 @@ data ShardingNodeAction =
     ---
     |   NewShardInNetAction         Shard
     |   NeighborListAcceptAction    [(NodeId, NodePosition)]
-    --  TODO add cleaning index
+    --  TODO: add cleaning index
     |   CleanShardsAction -- clean local Shards
     --- ShiftAction => NewPosiotionResponse
     |   ShiftAction

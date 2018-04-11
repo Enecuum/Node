@@ -16,6 +16,7 @@ module Node.Node.Mining where
 
 import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 
+
 import qualified    Data.ByteString                 as B
 import qualified    Data.Map                        as M
 import qualified    Data.Bimap                      as BI
@@ -41,6 +42,8 @@ import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Node.Node.Processing
 import              Lens.Micro.GHC
+import              Node.Data.MakeAndSendTraceRouting
+
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
 managerMining ch aMd = forever $ do
@@ -96,7 +99,21 @@ answerToShardingNodeRequestMsg aMd
                     aTraceRouting <- makeTraceRouting
                         aData aRequestPackage (ToNode aNodeId)
                     sendToNode (makeRequest aTraceRouting aRequestPackage) aNode
+                    {-
+            T.ShardIndexRequest aDistance aNodePositions -> do
+                let aRequest = ShardIndexRequestPackage
+                        (toNodePosition $ aData^.myNodePosition) aDistance
+                makeAndSendTo aData aNodeIds aRequest
+            --ShardListRequest      [ShardHash] -- TODO add functionality
+-}
+                --    ---
+                  --  |   NeighborListRequest -- ask net level new neighbors
+{-
+|   ShardIndexRequest     Word64 [NodeId]    -- for neighbors
+|   ShardListRequest      [ShardHash] -- TODO add functionality
+|   NeighborListRequest -- ask net level new neighbors
 
+-}
 {-
 -- sendToNodes aData aMakeMsg = forM_ (M.elems $ aData^.nodes) (sendToNode aMakeMsg)
 sendToNodes
@@ -186,7 +203,7 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
             | isItMyResponce aNodeId aTraceRouting  -> aProcessingOfAction
             | otherwise                             -> aSendToNeighbor aData
       where
-        verifyResponce _ _ = True -- TODO : add body
+        verifyResponce _ _ = True -- TODO: add body
         aProcessingOfAction = case aResponcePackage of
             ResponceNetLvlPackage _ aResponse aSignature   | True ->
                 processing aChan md aSignature aTraceRouting aResponse

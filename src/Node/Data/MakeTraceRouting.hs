@@ -18,8 +18,6 @@ import              Control.Concurrent
 import              Control.Monad.Extra
 import              Crypto.Error
 
-
-
 import              Node.Node.Types
 import              Node.Data.NetPackage
 import              Node.Data.NetMesseges
@@ -51,7 +49,7 @@ instance Serialize (Request a) => TraceRoutingMaker TraceRouting (Request a) whe
             (aTraceRouting, aPackage)
         case aTraceRouting of
           ToDirect aPointFrom aPointTo aSignatures -> return $
-                ToDirect aPointFrom aPointTo (aPackageSignature : aSignatures)
+            ToDirect aPointFrom aPointTo (aPackageSignature : aSignatures)
           _ -> error "Node.Node.Mining.addToTrace: It is not ToDirect!"
 
 {- TEMP think of the instance

@@ -117,6 +117,7 @@ data instance Request LogicLvl where
 -- | Request network information.
 data instance Request NetLvl where
     BroadcastListRequest    :: Request NetLvl
+    --  TODO: Make a sending of HostAdressRequest and IsYouBrodcast
     HostAdressRequest       :: Request NetLvl
     IsYouBrodcast           :: Request NetLvl
   deriving (Eq, Generic, Show)
