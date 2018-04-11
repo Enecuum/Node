@@ -47,6 +47,7 @@ import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Data.NetMesseges
 import              Node.Node.Base.Server
+import              Node.Data.MakeTraceRouting
 
 
 loging :: NodeConfigClass aData => aData -> String -> IO ()
@@ -163,12 +164,12 @@ answerToConnectivityQuery aChan aMd _ = do
                 let aRequestLogicLvlPackage = RequestLogicLvlPackage
                         aPositionRequest aPackageSignature
 
-                aTraceSignature <- makePackageSignature aData
-                    (aNodeId, aRequestLogicLvlPackage)
-                let aTraceRouting = ToNode aNodeId aTraceSignature
-                    aRequest = PackageTraceRoutingRequest aTraceRouting aRequestLogicLvlPackage
+                aTraceRouting <- makeTraceRouting
+                    aData aRequestLogicLvlPackage (ToNode aNodeId)
 
-                sendToNode (makeCipheredPackage aRequest) aNode
+                sendToNode
+                    (makeCipheredPackage (PackageTraceRoutingRequest aTraceRouting aRequestLogicLvlPackage))
+                    aNode
 -- findNearestNeighborPositions :: MyNodePosition -> S.Set NodePosition -> [NodePosition]
 
         |   aBroadcastNum < preferedBroadcastCount,
@@ -485,10 +486,8 @@ sendRequest aConstructorOfReques aRequest aData aNodeId = do
         let aRequestPackage = aConstructorOfReques
                 aRequest aPackageSignature
 
-        aTraceSignature <- makePackageSignature aData
-            (aNodeId, aRequestPackage)
-        let aTraceRouting = ToNode aNodeId aTraceSignature
-            aRequest = PackageTraceRoutingRequest aTraceRouting aRequestPackage
+        aTraceRouting <- makeTraceRouting aData aRequestPackage (ToNode aNodeId)
+        let aRequest = PackageTraceRoutingRequest aTraceRouting aRequestPackage
 
         sendToNode (makeCipheredPackage aRequest) aNode
 
