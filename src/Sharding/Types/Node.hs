@@ -45,9 +45,8 @@ makeLenses ''Neighbor
 data ShardingNodeAction =
     -- TODO think requestShardIndex requestNeededShards, find position
     ---    InitAction
-        NewNodeInNetAction          NodeId NodePosition
-    -- TODO create index for new node by NodeId
-    |   ShardRequestAction          ShardHash (Chan Shard)
+    --  BUG the generation of ShardRequestAction from net lvl.
+        ShardRequestAction          ShardHash (Chan Shard)
     |   ShardIndexAcceptAction      [ShardHash]
     |   ShardIndexCreateAction      (Chan ShardingNodeResponce) NodeId Word64
     |   ShardListCreateAction       (Chan ShardingNodeResponce) NodeId ShardHash
@@ -55,11 +54,14 @@ data ShardingNodeAction =
     |   ShardAcceptAction           Shard
     ---
     |   NewShardInNetAction         Shard
+    |   NeighborListAcceptAction    [(NodeId, NodePosition)]
+    --  TODO add cleaning index
     |   CleanShardsAction -- clean local Shards
     --- ShiftAction => NewPosiotionResponse
     |   ShiftAction
     |   TheNodeHaveNewCoordinates   NodeId NodePosition
     ---- NeighborListRequest => NeighborListAcceptAction
+    --  BUG the generation of TheNodeIsDead from net lvl.
     |   TheNodeIsDead               NodeId
 
 
@@ -72,13 +74,14 @@ data ShardingNodeResponce where
 
 data ShardingNodeRequestMsg =
         IamAwakeRequst        MyNodeId MyNodePosition -- broadcast for all network
-    ---- TODO sending of ShardIndexRequest
-    |   ShardIndexRequest     Word64 [NodeId]    -- for neighbors
-    |   ShardListRequest      [ShardHash] -- TODO add functionality
-    --- ShiftAction => NewPosiotionResponse
-    |   NewPosiotionMsg       MyNodePosition
-    ---
+    --  BUG No realisation
     |   NeighborListRequest -- ask net level new neighbors
+    --  BUG sending of ShardIndexRequest
+    |   ShardIndexRequest     Word64 [NodePosition]
+    --  BUG add functionality
+    |   ShardListRequest      [ShardHash]
+    --  ShiftAction => NewPosiotionResponse
+    |   NewPosiotionMsg       MyNodePosition
   deriving (Show)
 
 

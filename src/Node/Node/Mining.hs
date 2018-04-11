@@ -89,6 +89,41 @@ answerToShardingNodeRequestMsg aMd
                 (BroadcastLogic $ BroadcastPosition
                     (aData^.myNodeId)
                     (toNodePosition aMyNodePosition))
+            T.NeighborListRequest -> do
+                aRequestSignature <- makePackageSignature aData NeighborListRequestPackage
+                let aRequestPackage = RequestLogicLvlPackage NeighborListRequestPackage aRequestSignature
+                aSignature <- makePackageSignature aData aRequestPackage
+                forM_ (M.toList $ aData^.nodes) $ \(aNodeId, aNode) -> do
+                    let aTraceRouting = ToNode aNodeId aSignature
+                    sendToNode (makeRequest aTraceRouting aRequestPackage) aNode
+
+{-
+-- sendToNodes aData aMakeMsg = forM_ (M.elems $ aData^.nodes) (sendToNode aMakeMsg)
+sendToNodes
+    ::  ManagerData md
+    =>  md
+    ->  (StringKey -> CryptoFailable Package)
+    ->  IO ()
+
+sendToNode :: (StringKey -> CryptoFailable Package) -> Node -> IO ()
+
+--
+makeRequest
+    ::  TraceRouting
+    ->  RequestPackage
+    ->  StringKey
+    ->  CryptoFailable Package
+--
+makePackageSignature
+    ::  Serialize aPackage
+    =>  ManagerData md
+    =>  md
+    ->  aPackage
+    ->  IO PackageSignature
+--
+ToNode   :: NodeId -> PackageSignature -> TraceRouting
+-}
+--            T.ShardIndexRequest aRadius aNodeIds ->
 
 {-
 ---- TODO sending of ShardIndexRequest
