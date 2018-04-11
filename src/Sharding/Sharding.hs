@@ -45,6 +45,7 @@ import              Sharding.Types.Node
 import              Sharding.ShardDB.ShardIndex
 import              Sharding.ShardDB.ShardStore
 
+import              Control.Monad.State.Lazy
 import qualified    Node.Node.Types     as T
 import              Control.Concurrent.Chan
 import              Data.List.Extra
@@ -81,9 +82,6 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
 
         TheNodeIsDead aNodeId -> aLoop
             $ deleteTheNeighbor aNodeId aShardingNode
-
-        NewNodeInNetAction aNodeId aNodePosition -> aLoop
-            $ insertTheNeighbor aNodeId aNodePosition aShardingNode
 
         ShardRequestAction  aShardHash aChan -> do
             aMaybeShard <- loadShard aShardHash
@@ -124,6 +122,14 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
             writeChan aChan $ NodePositionResponse (aShardingNode^.nodePosition)
             aLoop aShardingNode
 
+        NeighborListAcceptAction aNeighborList -> aLoop $
+            flip execState aShardingNode $ do
+                forM_ aNeighborList $ \(aNodeId, aNodePosition) -> do
+                    aNewShardingNode <- get
+                    when (isInNodeDomain aNewShardingNode aNodePosition) $ do
+                        modify (deleteTheNeighbor aNodeId)
+                        modify (insertTheNeighbor aNodeId aNodePosition)
+
         a -> error $ "Sharding.Sharding.makeShardingNode"
 
 
@@ -132,6 +138,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
 --------------------------------------------------------------------------------
 initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
     sendToNetLevet aChanOfNetLevel $ IamAwakeRequst aMyNodeId aMyNodePosition
+    sendToNetLevet aChanOfNetLevel $ NeighborListRequest
 
     aMyShardsIndex <- loadMyShardIndex
 

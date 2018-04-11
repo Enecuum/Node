@@ -108,7 +108,7 @@ data instance Request LogicLvl where
         ::  P.PointFrom
         ->  Distance P.Point
         ->  Request LogicLvl
-
+    NeighborListRequestPackage  :: Request LogicLvl
     ShardRequestPackage         :: ShardHash -> Request LogicLvl
     NodePositionRequestPackage  :: Request LogicLvl
   deriving (Eq, Generic, Show)
@@ -160,6 +160,7 @@ data instance Responce LogicLvl where
     ShardIndexResponce            :: [ShardHash]    -> Responce LogicLvl
     ShardResponce                 :: Shard          -> Responce LogicLvl
     NodePositionResponcePackage   :: MyNodePosition -> Responce LogicLvl
+    NeighborListResponcePackage   :: [(NodeId, NodePosition)] -> Responce LogicLvl
   deriving (Eq, Generic, Show)
 
 
