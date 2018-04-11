@@ -27,6 +27,7 @@ import              Control.Concurrent
 import              Control.Monad.Extra
 import              Crypto.Error
 import              Node.Node.BroadcastProcessing
+import              Node.Data.MakeTraceRouting
 
 import              Service.Monad.Option
 import              Node.Crypto
@@ -40,7 +41,6 @@ import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Node.Node.Processing
 import              Lens.Micro.GHC
-
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
 managerMining ch aMd = forever $ do
@@ -92,9 +92,9 @@ answerToShardingNodeRequestMsg aMd
             T.NeighborListRequest -> do
                 aRequestSignature <- makePackageSignature aData NeighborListRequestPackage
                 let aRequestPackage = RequestLogicLvlPackage NeighborListRequestPackage aRequestSignature
-                aSignature <- makePackageSignature aData aRequestPackage
                 forM_ (M.toList $ aData^.nodes) $ \(aNodeId, aNode) -> do
-                    let aTraceRouting = ToNode aNodeId aSignature
+                    aTraceRouting <- makeTraceRouting
+                        aData aRequestPackage (ToNode aNodeId)
                     sendToNode (makeRequest aTraceRouting aRequestPackage) aNode
 
 {-
