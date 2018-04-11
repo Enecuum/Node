@@ -72,8 +72,8 @@ instance (LevelRequestContractor aLvl, Serialize (Request aLvl)) =>
                     sendToNode (makeCipheredPackage aRequest) aNode
 
 instance (LevelRequestContractor aLvl, Serialize (Request aLvl)) =>
-    MakeAndSendTraceRouting (Request aLvl) PointTo where
-        makeAndSendTo aData aPointTo aRequest = do
+    MakeAndSendTraceRouting (Request aLvl) NodePosition where
+        makeAndSendTo aData (toNodePosition -> aPointTo) aRequest = do
             whenJust (aData^.myNodePosition) $ \aMyPosition -> do
                 aPackageSignature <- makePackageSignature aData aRequest
                 let aRequestPackage = request aRequest aPackageSignature
