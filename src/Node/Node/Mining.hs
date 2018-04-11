@@ -99,13 +99,16 @@ answerToShardingNodeRequestMsg aMd
                     aTraceRouting <- makeTraceRouting
                         aData aRequestPackage (ToNode aNodeId)
                     sendToNode (makeRequest aTraceRouting aRequestPackage) aNode
-                    {-
+
             T.ShardIndexRequest aDistance aNodePositions -> do
-                let aRequest = ShardIndexRequestPackage
-                        (toNodePosition $ aData^.myNodePosition) aDistance
-                makeAndSendTo aData aNodeIds aRequest
+                whenJust (aData^.myNodePosition) $ \aPosition -> do
+                    let aRequest = ShardIndexRequestPackage
+                            (toNodePosition aPosition) aDistance
+                    forM_ aNodePositions $ \aPosition -> do
+                        makeAndSendTo aData aPosition aRequest
+
             --ShardListRequest      [ShardHash] -- TODO add functionality
--}
+
                 --    ---
                   --  |   NeighborListRequest -- ask net level new neighbors
 {-
