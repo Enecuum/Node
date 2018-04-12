@@ -44,6 +44,7 @@ import              Sharding.Space.Point
 import              Node.Node.Processing
 import              Lens.Micro.GHC
 import              Node.Data.MakeAndSendTraceRouting
+import              Node.Data.Verification
 
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
@@ -143,34 +144,18 @@ instance BroadcastAction ManagerNodeData where
             sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing
             processingOfBroadcastThing aMd aBroadcastThing
 
-{-
-TODO verification
-class Verifycation a where
-    verifyPackage :: a -> Bool
-
-instance Verifycation ResponcePackage where
-    verifyPackage = \case
-        ResponceNetLvlPackage aRequestPackage aSignature aResponse ->
-            verifyEncodeble  ()
-            | verifyNetLvlResponse aRequestPackage aSignature aResponse ->
-                True
-        ResponceLogicLvlPackage aRequestPackage aSignature aResponse ->
-            | verifyLogicLvlResponse aRequestPackage aSignature aResponse ->
-
--}
 
 instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
     makeAction aChan md aNodeId aTraceRouting aResponcePackage = do
         aData <- readIORef md
-        when (verifyResponce aTraceRouting aResponcePackage) $ if
+        when (verify (aTraceRouting, aResponcePackage)) $ if
             | isItMyResponce aNodeId aTraceRouting  -> aProcessingOfAction
             | otherwise                             -> aSendToNeighbor aData
       where
-        verifyResponce _ _ = True -- TODO: add body of verification.
         aProcessingOfAction = case aResponcePackage of
-            ResponceNetLvlPackage _ aResponse aSignature   | True ->
+            ResponceNetLvlPackage _ aResponse aSignature ->
                 processing aChan md aSignature aTraceRouting aResponse
-            ResponceLogicLvlPackage _ aResponse aSignature | True ->
+            ResponceLogicLvlPackage _ aResponse aSignature ->
                 processing aChan md aSignature aTraceRouting aResponse
 
         aSendToNeighbor aData = do
@@ -193,19 +178,19 @@ isItMyResponce aMyNodeId = \case
     _                                   -> False
 
 
--- TODO: add body of verification.
 instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
     makeAction aChan md _ aTraceRouting aRequestPackage = do
         aData <- readIORef md
-        when True $ if
+        when (verify (aTraceRouting, aRequestPackage)) $ if
+            -- FIXME: routing condition.
             | True                                 -> aProcessingOfAction
             | otherwise                            -> aSendToNeighbor aData
       where
         aProcessingOfAction = case aRequestPackage of
-            RequestLogicLvlPackage aRequest aSignature
-                | True -> processing aChan md aSignature aTraceRouting aRequest
-            RequestNetLvlPackage aRequest aSignature
-                | True -> processing aChan md aSignature aTraceRouting aRequest
+            RequestLogicLvlPackage aRequest aSignature  ->
+                processing aChan md aSignature aTraceRouting aRequest
+            RequestNetLvlPackage aRequest aSignature    ->
+                processing aChan md aSignature aTraceRouting aRequest
 
         aSendToNeighbor aData = case aTraceRouting of
             ToDirect _ aPointTo _ ->
@@ -314,6 +299,5 @@ processingOfBroadcastThing aMd aBroadcastThing = do
         BroadcastNet    aMsg -> processingOfBroadcast aMd aMsg
         BroadcastLogic  aMsg -> processingOfBroadcast aMd aMsg
         BroadcastMining aMsg -> processingOfBroadcast aMd aMsg
-
 
 --------------------------------------------------------------------------------
