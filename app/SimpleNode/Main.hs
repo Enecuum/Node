@@ -21,9 +21,8 @@ import              Data.Text
 import              Network.Socket (PortNumber)
 import              Control.Exception (SomeException())
 
-import Data.Aeson
-import Data.Aeson.Encode.Pretty
-import qualified Data.ByteString.Lazy as L
+import              Data.Aeson
+import qualified    Data.ByteString.Lazy as L
 
 main :: IO ()
 main =  do
@@ -32,13 +31,12 @@ main =  do
           Nothing   -> error "Please, specify config file correctly"
           Just conf -> do
      
-            aExitCh <- newChan
+            aExitCh   <- newChan
             aAnswerCh <- newChan
-
-            metric $ increment "cl.node.count"
+            aMetricCh <- newChan
 
             void $ startNode conf
-                aExitCh aAnswerCh managerMining $ \ch aChan aMyNodeId -> do
+                aExitCh aAnswerCh aMetricCh managerMining $ \ch aChan aMyNodeId -> do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
                     metronomeS 1000000 (writeChan ch deleteOldestMsg)
@@ -63,8 +61,24 @@ main =  do
                                  Nothing   -> error "Please, specify SimpleNodeConfig"
                                  Just snbc -> return $ rpcPort snbc
 
-                    void $ forkIO $ servePoA poa_in  aMyNodeId ch aChan poa_out
-                    void $ forkIO $ serveRpc rpc_p ch
+                    stat_h  <- try (getEnv "statsdHost") >>= \case
+                            Right item              -> return $ read item
+                            Left (_::SomeException) -> case statsdBuildConfig conf of
+                                 Nothing   -> error "Please, specify statsdConfig"
+                                 Just stat -> return $ read $ statsdHost stat
+
+                    stat_p  <- try (getEnv "statsdPort") >>= \case
+                            Right item              -> return $ read item
+                            Left (_::SomeException) -> case statsdBuildConfig conf of
+                                 Nothing   -> error "Please, specify statsdConfig"
+                                 Just stat -> return $ statsdPort stat
+
+                    void $ forkIO $ serveMetrics stat_h stat_p aMetricCh
+
+                    void $ forkIO $ servePoA poa_in poa_out aMyNodeId ch aChan aMetricCh
+                    void $ forkIO $ serveRpc rpc_p ch aMetricCh
+
+                    writeChan aMetricCh $ increment "cl.node.count"
 
             void $ readChan aExitCh
 

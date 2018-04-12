@@ -24,9 +24,10 @@ main =  do
 
             exitCh <- newChan
             answerCh <- newChan
+            metricCh <- newChan
 
             void $ startNode conf
-              exitCh answerCh managerBootNode $ \ch _ _ -> do
+              exitCh answerCh metricCh managerBootNode $ \ch _ _ -> do
                   metronomeS 100000 (writeChan ch checkBroadcastNodes)
                   metronomeS 10000000 (writeChan ch deleteDeadSouls)
             void $ readChan exitCh

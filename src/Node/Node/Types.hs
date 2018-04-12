@@ -37,12 +37,15 @@ import Data.Text (unpack)
 import Data.Scientific (floatingOrInteger)
 import              Data.Aeson
 import              Data.Aeson.TH 
+import              Service.Metrics
 
 instance Show (Chan a) where
     show _ = "Chan"
 
 data Msg where Msg :: B.ByteString -> Msg
 type Transactions = [Transaction]
+
+
 data Answer where
     StateRequestAnswer ::
         NodeVariantRoles
@@ -106,6 +109,7 @@ data ManagerNodeData = ManagerNodeData {
         managerNodeDataNodeConfig   :: NodeConfig
     ,   managerNodeDataNodeBaseData :: NodeBaseData
     ,   managerTransactions         :: Chan Transaction
+    ,   managerMetrics              :: Chan Metric
     ,   managerHashMap              :: BI.Bimap TimeSpec B.ByteString
     ,   managerPublicators          :: S.Set NodeId
     ,   managerSendedTransctions    :: BI.Bimap TimeSpec Transaction
@@ -226,15 +230,16 @@ class ToManagerData a where
         -> Chan Microblock
         -> Chan ExitMsg
         -> Chan Answer
+        -> Chan Metric
         -> BootNodeList
         -> NodeConfig
         -> PortNumber
         ->  a
 
 instance ToManagerData ManagerNodeData where
-    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aList aNodeConfig port = ManagerNodeData
-        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan port)
-            aTransactionChan BI.empty S.empty BI.empty
+    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aMetricChan aList aNodeConfig aOutPort = ManagerNodeData
+        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aOutPort)
+            aTransactionChan aMetricChan BI.empty S.empty BI.empty
 
 
 makeNewNodeConfig :: MonadRandom m => m NodeConfig
