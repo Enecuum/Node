@@ -2,6 +2,7 @@
         LambdaCase
     ,   MultiWayIf
     ,   ViewPatterns
+    ,   FlexibleContexts
 #-}
 
 -- 1. Request of block
@@ -58,10 +59,24 @@ import              Service.Timer
 import qualified    Data.Set            as S
 import qualified    Data.Map            as M
 import              System.Clock
+import              Lens.Micro.Mtl
 
 import              Node.Data.NodeTypes
 
+sizeOfShardStore:: Int
+sizeOfShardStore = 500
+
 -- TODO loading of shards to sharding lvl.
+
+numberOfLoadingShards aShardingNode =
+    length $ aShardingNode^.nodeIndex.shardLoadingIndex.setOfLoadingShards
+
+numberOfNeededShards aShardingNode =
+    length $ aShardingNode^.nodeIndex.shardNeededIndex.setOfHash
+
+
+-- COMBAK: Understand what is the problem.
+-- nodeIndex.shardNeededIndex.setOfHash
 
 --makeShardingNode :: MyNodeId -> Point -> IO ()
 makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
@@ -70,6 +85,29 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
   where
     aLoop :: ShardingNode -> IO ()
     aLoop aShardingNode = readChan aChanRequest >>= \case
+        CheckOfShardLoadingList -> do
+            aNow <- getTime Realtime
+            let aCondition (_, _, aTime) = diffTimeSpec aNow aTime < fromNanoSecs (10^8)
+                aLoadingShards = aShardingNode^.nodeIndex.shardLoadingIndex.setOfLoadingShards
+                (aFresh, aOld) = partition aCondition aLoadingShards
+            aLoop $ flip execState aShardingNode $ do
+                zoom nodeIndex $ do
+                    shardNeededIndex.setOfHash %= S.union
+                        (S.fromList $ (^._1) <$> aOld)
+                    shardLoadingIndex.setOfLoadingShards .= aFresh
+
+        ShardCheckLoading
+            | numberOfLoadingShards aShardingNode < 4 &&
+                numberOfNeededShards aShardingNode /= 0 -> do
+                    let aNumberOfLoading = 4 - numberOfLoadingShards aShardingNode
+                        aShardHashes = S.take aNumberOfLoading $
+                            aShardingNode^.nodeIndex.shardNeededIndex.setOfHash
+
+                    sendToNetLevet aChanOfNetLevel $
+                        ShardListRequest (S.toList aShardHashes)
+                    aLoop $ aShardingNode &
+                        nodeIndex.shardNeededIndex.setOfHash %~ S.drop aNumberOfLoading
+
         ShiftAction | shiftIsNeed aShardingNode ->
             shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode
 
@@ -98,7 +136,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
         ShardIndexAcceptAction aShardHashs -> aLoop
             $ addShardingIndex (S.fromList aShardHashs) aShardingNode
 
-        ShardIndexCreateAction aChan aNodeId aRadiusOfCapture -> do                         --- !!!!! TODO
+        ShardIndexCreateAction aChan aNodeId aRadiusOfCapture -> do
             createShardingIndex aChan aShardingNode aNodeId aRadiusOfCapture
             aLoop aShardingNode
 
@@ -130,6 +168,28 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
                         modify (deleteTheNeighbor aNodeId)
                         modify (insertTheNeighbor aNodeId aNodePosition)
 
+        CleanShardsAction -> do
+            let aNodeDomain = findShardingNodeDomain aShardingNode
+                (aNewShardIndex, aOldShardHashList) = cleanShardIndex
+                    (aShardingNode^.nodePosition)
+                    aNodeDomain
+                    sizeOfShardStore
+                    (aShardingNode^.nodeIndex)
+            forM_ aOldShardHashList removeShard
+            aLoop $ aShardingNode & nodeIndex .~ aNewShardIndex
+
+        CleanNeededIndex -> do
+            let aNodeDomain = findShardingNodeDomain aShardingNode
+                aCondition aHash = distanceTo
+                    (aShardingNode^.nodePosition) aHash < aNodeDomain
+                aFilter = S.filter aCondition
+            aLoop $ aShardingNode & nodeIndex.shardNeededIndex.setOfHash %~ aFilter
+
+        CleanRequestIndex -> do
+            aTime <- getTime Realtime
+            aLoop $ aShardingNode & nodeIndexOfReques %~
+                M.filter (\a -> diffTimeSpec (a^._1) aTime < fromNanoSecs (10^8))
+
         a -> error $ "Sharding.Sharding.makeShardingNode"
 
 
@@ -144,6 +204,15 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
 
     metronome (10^8) $ do
         writeChan aChanRequest CleanShardsAction
+
+    metronome (10^8) $ do
+        writeChan aChanRequest CleanNeededIndex
+
+    metronome (10^8) $ do
+        writeChan aChanRequest CleanRequestIndex
+
+    metronome (10^6) $ do
+        writeChan aChanRequest CheckOfShardLoadingList
 
     metronome (10^8) $ do
         writeChan aChanRequest ShiftAction
@@ -172,6 +241,9 @@ shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
         aNewPosition       = shiftToCenterOfMass aMyNodePosition aNearestPositions
 
     sendToNetLevet aChanOfNetLevel $ NewPosiotionMsg aNewPosition
+    sendToNetLevet aChanOfNetLevel $ ShardIndexRequest
+        (findShardingNodeDomain aShardingNode)
+        (S.toList aNearestPositions)
     aLoop $ aShardingNode & nodePosition .~ aNewPosition
 
 

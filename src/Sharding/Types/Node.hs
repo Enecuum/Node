@@ -57,6 +57,10 @@ data ShardingNodeAction =
     |   NeighborListAcceptAction    [(NodeId, NodePosition)]
     --  TODO: add cleaning index
     |   CleanShardsAction -- clean local Shards
+    |   CheckOfShardLoadingList
+    |   CleanNeededIndex
+    |   CleanRequestIndex
+    |   ShardCheckLoading
     --- ShiftAction => NewPosiotionResponse
     |   ShiftAction
     |   TheNodeHaveNewCoordinates   NodeId NodePosition
