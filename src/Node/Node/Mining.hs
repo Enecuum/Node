@@ -41,6 +41,7 @@ import              Sharding.Space.Point
 import              Node.Node.Processing
 import              Lens.Micro.GHC
 
+import              Service.Metrics
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
 managerMining ch aMd = forever $ do
@@ -232,15 +233,15 @@ addToTrace aTraceRouting aRequestPackage aMyNodeId aPrivateKey = do
 
 answerToNewTransaction :: IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
 answerToNewTransaction aMd (NewTransaction aTransaction) = do
-    --metric $ increment "net.tx.count"
     aData <- readIORef aMd
+    writeChan (managerMetrics aData) $ increment "net.tx.count"
     loging aData $ "I create a transaction: " ++ show aTransaction
     sendBroadcast aMd (BroadcastMining $ BroadcastTransaction aTransaction Nothing)
-    {-
-    metric $ add
+    
+    writeChan (managerMetrics aData) $ add
         ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount")
         (1 :: Integer)
-    -}
+    
     writeChan (aData^.transactions) aTransaction
 
 answerToNewTransaction _ _ = error
@@ -256,8 +257,8 @@ sendBroadcast aMd aBroadcastThing = do
 answerToBlockMadeMsg :: ManagerMiningMsg msg =>
     IORef ManagerNodeData -> msg -> IO ()
 answerToBlockMadeMsg aMd (toManagerMiningMsg -> BlockMadeMsg aMicroblock) = do
-    --metric $ increment "net.bl.count"
     aData <- readIORef aMd
+    writeChan (managerMetrics aData) $ increment "net.bl.count"
     loging aData $ "I create a a microblock: " ++ show aMicroblock
     sendBroadcast aMd (BroadcastMining $ BroadcastMicroBlock aMicroblock Nothing)
 
