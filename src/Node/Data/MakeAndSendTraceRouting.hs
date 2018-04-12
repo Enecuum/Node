@@ -84,6 +84,7 @@ instance (LevelRequestContractor aLvl, Serialize (Request aLvl)) =>
                 whenJust (getClosedNodeByDirectUnsafe aData (toNodePosition aPointTo)) $
                     sendToNode (makeCipheredPackage aRequest)
 
+
 class LevelRequestContractor aLvl where
     request :: Request aLvl -> PackageSignature -> RequestPackage
 
