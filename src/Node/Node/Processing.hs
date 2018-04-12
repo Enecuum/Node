@@ -164,7 +164,8 @@ sendNetLvlResponse aTraceRouting aData aRequest aSignature aNetPackage = do
     let (aNode, aTrace) = getClosedNode aTraceRouting aData
         aRequestPackage = request aRequest aSignature
 
-    aResponsePackageSignature <- makePackageSignature aData aNetPackage
+    aResponsePackageSignature <- makePackageSignature aData
+        (aNetPackage, aRequestPackage)
     sendResponse aNode
         (makeNewTraceRouting aTrace aTraceRouting)
         (ResponceNetLvlPackage aRequestPackage aNetPackage aResponsePackageSignature)
@@ -183,7 +184,9 @@ requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
         let (aNode, aTrace) = getClosedNode aTraceRouting aData
             aNetLevetPackage = aConstructor aResultOfRequest
 
-        aResponsePackageSignature <- makePackageSignature aData aNetLevetPackage
+        aResponsePackageSignature <- makePackageSignature aData
+            (aNetLevetPackage, aRequestPackage)
+
         sendResponse aNode
             (makeNewTraceRouting aTrace aTraceRouting)
             (ResponceLogicLvlPackage aRequestPackage aNetLevetPackage aResponsePackageSignature)

@@ -18,6 +18,7 @@ import              Control.Concurrent
 import              Control.Monad.Extra
 import              Crypto.Error
 
+import              Sharding.Space.Point
 import              Node.Node.Types
 import              Node.Data.NetPackage
 import              Node.Data.NetMesseges
@@ -37,10 +38,12 @@ instance Serialize a => TraceRoutingMaker (PackageSignature -> TraceRouting) a w
         aConstructor <$> makePackageSignature aData aPackage
 
 
-instance Serialize a => TraceRoutingMaker ([PackageSignature] -> TraceRouting) a where
-    makeTraceRouting aData aPackage aConstructor = do
-        aSignature <- makePackageSignature aData aPackage
-        return $ aConstructor [aSignature]
+instance Serialize a => TraceRoutingMaker
+    ([PackageSignature] -> TraceRouting)
+    (a, PointTo, PointFrom) where
+        makeTraceRouting aData aPackage aConstructor = do
+            aSignature <- makePackageSignature aData aPackage
+            return $ aConstructor [aSignature]
 
 
 instance Serialize (Request a) => TraceRoutingMaker TraceRouting (Request a) where

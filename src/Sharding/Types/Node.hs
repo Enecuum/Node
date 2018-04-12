@@ -29,8 +29,6 @@ data ShardingNode = ShardingNode {
   deriving Eq
 
 
--- sharding
-
 data Neighbor = Neighbor {
         _neighborPosition   :: NodePosition
     ,   _neighborId         :: NodeId
@@ -43,9 +41,6 @@ makeLenses ''Neighbor
 
 
 data ShardingNodeAction =
-    -- TODO think requestShardIndex requestNeededShards, find position
-    ---    InitAction
-    --  BUG the generation of ShardRequestAction from net lvl.
         ShardRequestAction          ShardHash (Chan Shard)
     |   ShardIndexAcceptAction      [ShardHash]
     |   ShardIndexCreateAction      (Chan ShardingNodeResponce) NodeId Word64

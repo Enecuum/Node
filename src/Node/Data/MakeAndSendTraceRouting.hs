@@ -77,8 +77,12 @@ instance (LevelRequestContractor aLvl, Serialize (Request aLvl)) =>
             whenJust (aData^.myNodePosition) $ \aMyPosition -> do
                 aPackageSignature <- makePackageSignature aData aRequest
                 let aRequestPackage = request aRequest aPackageSignature
+                    aPointFrom = toNodePosition aMyPosition :: PointFrom
+
                 aTraceRouting <- makeTraceRouting
-                    aData aRequestPackage (ToDirect (toNodePosition $ aMyPosition) aPointTo)
+                    aData
+                    (aRequestPackage, aPointTo, aPointFrom)
+                    (ToDirect aPointFrom aPointTo)
                 let aRequest = PackageTraceRoutingRequest
                         aTraceRouting aRequestPackage
                 whenJust (getClosedNodeByDirectUnsafe aData (toNodePosition aPointTo)) $
