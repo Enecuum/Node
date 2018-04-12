@@ -135,7 +135,7 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
                 (HostAdressResponce $ aData^.hostAddress)
 
             BroadcastListRequest -> do
-                -- TODO think about aBroadcastList
+                -- TEMP Think about move aBroadcastList to operacety memory.
                 NodeInfoListNetLvl   aBroadcastList      <- readRecordsFromNodeListFile $ aData^.myNodeId
                 NodeInfoListLogicLvl aBroadcastListLogic <- readRecordsFromNodeListFile $ aData^.myNodeId
                 let aBroadcastListResponce = BroadcastListResponce
@@ -145,11 +145,12 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
                 aSendNetLvlResponse aBroadcastListResponce
 
 
--- TODO
+
 sendToShardingLvl :: ManagerData md => md -> T.ShardingNodeAction -> IO ()
 sendToShardingLvl aData aMsg = whenJust (aData^.shardingChan) $ \aChan ->
     writeChan aChan aMsg
---
+
+
 sendNetLvlResponse
     :: ManagerData md
     =>  TraceRouting
@@ -168,7 +169,7 @@ sendNetLvlResponse aTraceRouting aData aRequest aSignature aNetPackage = do
         (makeNewTraceRouting aTrace aTraceRouting)
         (ResponceNetLvlPackage aRequestPackage aNetPackage aResponsePackageSignature)
 
--- TODO  requestToNetLvl + sendNetLvlResponse
+-- TEMP: requestToNetLvl + sendNetLvlResponse
 requestToNetLvl
     ::  ManagerNodeData
     ->  TraceRouting

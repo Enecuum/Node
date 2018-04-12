@@ -52,13 +52,4 @@ instance Serialize (Request a) => TraceRoutingMaker TraceRouting (Request a) whe
             ToDirect aPointFrom aPointTo (aPackageSignature : aSignatures)
           _ -> error "Node.Node.Mining.addToTrace: It is not ToDirect!"
 
-{- TEMP think of the instance
-instance Serialize (Request a) => TraceRoutingMaker TraceRouting (Response a) where
-    makeTraceRouting aData aPackage aTraceRouting = do
-        case aTraceRouting of
-          ToDirect aPointFrom aPointTo aSignatures -> return $
-                ToDirect aPointFrom aPointTo ( aSignatures)
-          _ -> error "Node.Node.Mining.addToTrace: It is not ToDirect!"
---}
-
 --------------------------------------------------------------------------------
