@@ -152,7 +152,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
             | checkShardIsInRadiusOfCaptureShardingNode aShardingNode (shardToHash aShard) ->
                 nodeSaveShard aShard aLoop aShardingNode
 
-        ShardListCreateAction aChan aNodeId aHashList -> do
+        ShardLoadAction aChan aNodeId aHashList -> do
             sendShardsToNode aShardingNode aNodeId aHashList aChan
             aLoop aShardingNode
 
@@ -302,7 +302,7 @@ sendShardsToNode ::
     ->  Chan ShardingNodeResponce
     ->  IO ()
 sendShardsToNode aShardingNode aNodeId aHashList aChanOfNetLevel = do
-    [aShards] <- loadShards [aHashList]
+    aShards <- loadShards [aHashList]
     writeChan aChanOfNetLevel $ ShardResponse aShards
 
 --------------------------------------------------------------------------------

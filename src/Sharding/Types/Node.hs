@@ -49,7 +49,7 @@ data ShardingNodeAction =
         ShardRequestAction          ShardHash (Chan Shard)
     |   ShardIndexAcceptAction      [ShardHash]
     |   ShardIndexCreateAction      (Chan ShardingNodeResponce) NodeId Word64
-    |   ShardListCreateAction       (Chan ShardingNodeResponce) NodeId ShardHash
+    |   ShardLoadAction             (Chan ShardingNodeResponce) NodeId ShardHash
     |   NodePositionAction          (Chan ShardingNodeResponce) NodeId
     |   ShardAcceptAction           Shard
     ---
@@ -71,7 +71,7 @@ data ShardingNodeAction =
 
 data ShardingNodeResponce where
     ShardIndexResponse    :: [ShardHash]    -> ShardingNodeResponce
-    ShardResponse         :: Shard          -> ShardingNodeResponce
+    ShardResponse         :: [Shard]        -> ShardingNodeResponce
     NodePositionResponse  :: MyNodePosition -> ShardingNodeResponce
   deriving (Show)
 
