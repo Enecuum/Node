@@ -27,7 +27,6 @@ instance ShardName ShardHash where
         show (hex (encode (x1, x2, x3, x4, x5, x6, x7, x8))) <> ".block"
 
 
--- TODO Is it file or db like sqlite?
 loadShards :: [ShardHash] -> IO [Shard]
 loadShards aHashList = pure . catMaybes =<< forM aHashList loadShard
 
