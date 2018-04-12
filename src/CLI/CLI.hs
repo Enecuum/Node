@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module CLI.CLI (control) where
+module CLI.CLI (serveRpc) where
 
+import Network.Socket (PortNumber)
 import Network.JsonRpc.Server
 import Network.Socket.ByteString (sendAllTo)
 import Service.Network.UDP.Server
@@ -27,8 +28,8 @@ data TxChanMsg = NewTx Transaction
                | GenTxUnlim
 
 
-control :: String -> Chan ManagerMiningMsgBase -> IO ()
-control portNum ch = runServer (read portNum) $ \aMsg addr aSocket -> do
+serveRpc :: PortNumber -> Chan ManagerMiningMsgBase -> IO ()
+serveRpc portNum ch = runServer portNum $ \aMsg addr aSocket -> do
     txChan     <- newChan
     ledgerRespChan <- newChan
     ledgerReqChan <- newChan

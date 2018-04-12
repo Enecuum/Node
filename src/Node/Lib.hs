@@ -22,7 +22,7 @@ import Node.Node.Base.Server
 
 import Service.System.Directory (getTransactionFilePath)
 
-import Data.Ini
+import System.Environment
 
 -- code exemples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html
@@ -33,7 +33,7 @@ import Data.Ini
 
 -- | Standart function to launch a node.
 startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
-       Ini
+       BuildConfig
     -> Chan ExitMsg
     -> Chan Answer
     -> (Chan a1 -> IORef s -> IO ())
@@ -44,8 +44,8 @@ startNode buildConf exitCh answerCh manager startDo = do
     aMicroblockChan <- newChan
     aTransactionChan <- newChan
     config  <- readNodeConfig 
-    bnList <- readBootNodeList buildConf
-    port   <- read <$> getConfigValue buildConf "main" "OutPort" 
+    bnList  <- readBootNodeList $ bootNodeList buildConf
+    let port = extConnectPort buildConf 
     md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh bnList config port
     startServerActor managerChan port
     aFilePath <- getTransactionFilePath
@@ -78,9 +78,11 @@ readNodeConfig = do
         makeFileConfig
         readNodeConfig
 
-readBootNodeList :: Ini -> IO BootNodeList
-readBootNodeList ini = do
-    bnList <- getConfigValue ini "main" "BootNodeList"
+readBootNodeList :: String -> IO BootNodeList
+readBootNodeList conf = do
+    bnList  <- try (getEnv "poaInPort") >>= \case
+            Right item              -> return item
+            Left (_::SomeException) -> return conf
     toNormForm $ read bnList
      where 
        toNormForm aList = return $ (\(a,b,c) -> (NodeId a,tupleToHostAddress b, c))

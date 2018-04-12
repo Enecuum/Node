@@ -32,7 +32,8 @@ newtype NodeId     = NodeId     Integer deriving (Eq, Ord, Num, Enum, Show, Read
 newtype MyNodeId   = MyNodeId   Integer deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)
 newtype ClientId   = ClientId   Word64  deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)
 
-type BootNodeList   = [(NodeId, HostAddress, PortNumber)]
+type IdIpPort = (NodeId, HostAddress, PortNumber)
+type BootNodeList   = [IdIpPort]
 
 $(deriveJSON defaultOptions ''NodeId)
 $(deriveJSON defaultOptions ''MyNodeId)

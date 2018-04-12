@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, DeriveGeneric, TemplateHaskell #-}
+{-# LANGUAGE GADTs, DeriveGeneric, TemplateHaskell, OverloadedStrings, TypeSynonymInstances, FlexibleInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | Module provides types for storing internal state of a node and messages.
@@ -33,6 +33,9 @@ import              Sharding.Space.Point
 import qualified    Sharding.Types.Node as N
 import              Service.Types (Transaction, Microblock)
 
+import Data.Text (unpack)
+import Data.Scientific (floatingOrInteger)
+import              Data.Aeson
 import              Data.Aeson.TH 
 
 instance Show (Chan a) where
@@ -108,7 +111,7 @@ data ManagerNodeData = ManagerNodeData {
     ,   managerSendedTransctions    :: BI.Bimap TimeSpec Transaction
   }
 
-type IdIpPort = (NodeId, HostAddress, PortNumber)
+--type IdIpPort = (NodeId, HostAddress, PortNumber)
 type IpPort = (HostAddress, PortNumber)
 type ShardingChan = Chan N.ShardingNodeAction
 type MaybeChan a = Maybe (Chan a)
@@ -152,6 +155,48 @@ data NodeConfig = NodeConfig {
   }
   deriving (Generic)
 $(deriveJSON defaultOptions ''NodeConfig)
+
+data SimpleNodeBuildConfig where
+     SimpleNodeBuildConfig :: {
+        poaInPort      :: PortNumber,
+        poaOutPort     :: PortNumber,
+        rpcPort        :: PortNumber
+  } -> SimpleNodeBuildConfig
+  deriving (Generic)
+
+instance ToJSON PortNumber where
+  toJSON pn = Number $ fromInteger $ toInteger pn
+
+instance FromJSON PortNumber where
+  parseJSON (Number s) = case (floatingOrInteger s) of
+            Left _  -> error "it was floating =("
+            Right i -> return $ fromInteger i  
+  parseJSON _ = error "i've felt with the portnumber parsing"
+
+
+$(deriveJSON defaultOptions ''SimpleNodeBuildConfig)
+
+data StatsdBuildConfig where
+     StatsdBuildConfig :: {
+        statsdHost      :: String,
+        statsdPort      :: PortNumber
+  } -> StatsdBuildConfig
+  deriving (Generic)
+
+$(deriveJSON defaultOptions ''StatsdBuildConfig)
+
+data BuildConfig where
+     BuildConfig :: {
+        extConnectPort        :: PortNumber,
+        bootNodeList          :: String,
+        simpleNodeBuildConfig :: Maybe SimpleNodeBuildConfig,
+        statsdBuildConfig     :: Maybe StatsdBuildConfig 
+  } -> BuildConfig
+  deriving (Generic)
+
+$(deriveJSON defaultOptions ''BuildConfig)
+
+
 
 genDataClass        "nodeConfig" nodeConfigList
 genBazeDataInstance "nodeConfig" (fst <$> nodeConfigList)
