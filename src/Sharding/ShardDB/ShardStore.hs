@@ -50,6 +50,4 @@ saveShard aShard = do
 removeShard :: ShardHash -> IO ()
 removeShard aShardHash = removeFile (shardsPath aShardHash)
 
-
-
 ---

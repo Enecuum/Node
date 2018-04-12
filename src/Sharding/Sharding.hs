@@ -269,7 +269,6 @@ addShardingIndex aShardIndex aShardingNode =
     aNeeded :: S.Set ShardHash
     aNeeded = S.difference aShardIndex aExistShards
     aExistShards = indexToSet (aShardingNode^.nodeIndex)
-    --- TODO add request for load shards
 
 
 createShardingIndex :: Chan ShardingNodeResponce -> ShardingNode -> NodeId -> Word64 ->  IO ()
@@ -306,7 +305,6 @@ sendShardsToNode aShardingNode aNodeId aHashList aChanOfNetLevel = do
     writeChan aChanOfNetLevel $ ShardResponse aShards
 
 --------------------------------------------------------------------------------
---------------------------TODO-TO-REMOVE----------------------------------------
 findNodeDomain :: MyNodePosition -> S.Set NodePosition -> Distance Point
 findNodeDomain aMyPosition aPositions = if
     | length aNearestPoints < 4 -> maxBound
@@ -327,7 +325,6 @@ neighborPositions :: ShardingNode -> S.Set NodePosition
 neighborPositions = S.map (^.neighborPosition) . (^.nodeNeighbors)
 
 
--- !!!! -> ????????????
 findShardingNodeDomain :: ShardingNode -> Distance Point
 findShardingNodeDomain aShardingNode = findNodeDomain
     (aShardingNode^.nodePosition)

@@ -55,8 +55,7 @@ data ShardingNodeAction =
     ---
     |   NewShardInNetAction         Shard
     |   NeighborListAcceptAction    [(NodeId, NodePosition)]
-    --  TODO: add cleaning index
-    |   CleanShardsAction -- clean local Shards
+    |   CleanShardsAction
     |   CheckOfShardLoadingList
     |   CleanNeededIndex
     |   CleanRequestIndex
@@ -78,11 +77,8 @@ data ShardingNodeResponce where
 
 data ShardingNodeRequestMsg =
         IamAwakeRequst        MyNodeId MyNodePosition -- broadcast for all network
-    --  BUG No realisation
     |   NeighborListRequest -- ask net level new neighbors
-    --  BUG sending of ShardIndexRequest
     |   ShardIndexRequest     Word64 [NodePosition]
-    --  BUG add functionality
     |   ShardListRequest      [ShardHash]
     --  ShiftAction => NewPosiotionResponse
     |   NewPosiotionMsg       MyNodePosition

@@ -114,7 +114,7 @@ answerToShardingNodeRequestMsg aMd
                             aRequest  = ShardRequestPackage aHash
                         makeAndSendTo aData aPosition aRequest
 
-----TODO: MOVE TO ?????? --------------
+
 answerToDeleteOldestVacantPositions
     ::  IORef ManagerNodeData
     ->  ManagerMiningMsgBase
@@ -124,7 +124,7 @@ answerToDeleteOldestVacantPositions aMd _ = do
     modifyIORef aMd $ vacantPositions %~ BI.filter (\aTimeSpec _ ->
         diffTimeSpec aTime aTimeSpec > 3000000)
 
-----TODO: MOVE TO ?????? --------------
+
 answerToDeleteOldestMsg
     ::  IORef ManagerNodeData
     ->  ManagerMiningMsgBase
@@ -166,7 +166,7 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
             | isItMyResponce aNodeId aTraceRouting  -> aProcessingOfAction
             | otherwise                             -> aSendToNeighbor aData
       where
-        verifyResponce _ _ = True -- TODO: add body
+        verifyResponce _ _ = True -- TODO: add body of verification.
         aProcessingOfAction = case aResponcePackage of
             ResponceNetLvlPackage _ aResponse aSignature   | True ->
                 processing aChan md aSignature aTraceRouting aResponse
@@ -193,7 +193,7 @@ isItMyResponce aMyNodeId = \case
     _                                   -> False
 
 
----------------TODO: fix True---------------------------------------------------
+-- TODO: add body of verification.
 instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
     makeAction aChan md _ aTraceRouting aRequestPackage = do
         aData <- readIORef md
@@ -275,8 +275,9 @@ answerToBlockMadeMsg aMd (toManagerMiningMsg -> BlockMadeMsg aMicroblock) = do
     aData <- readIORef aMd
     loging aData $ "I create a a microblock: " ++ show aMicroblock
     sendBroadcast aMd (BroadcastMining $ BroadcastMicroBlock aMicroblock Nothing)
+    sendToShardingLvl aData $
+        T.ShardAcceptAction (microblockToShard aMicroblock)
 
---    writeChan (aData^.microblockChan) aMicroblock
 answerToBlockMadeMsg _ _ = pure ()
 
 

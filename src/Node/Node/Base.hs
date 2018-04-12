@@ -162,8 +162,6 @@ answerToConnectivityQuery aChan aMd _ = do
             | Head aNodeId _ <- aBroadcasts -> do
                 makeAndSendTo aData [aNodeId] NodePositionRequestPackage
 
--- findNearestNeighborPositions :: MyNodePosition -> S.Set NodePosition -> [NodePosition]
-
         |   aBroadcastNum < preferedBroadcastCount,
             Just aMyNodePosition <- aData^.myNodePosition -> do
 
@@ -175,11 +173,10 @@ answerToConnectivityQuery aChan aMd _ = do
                 aPreferedConnects = filter isPreferedById aConnectList
             connectTo aChan (preferedBroadcastCount - aBroadcastNum) aPreferedConnects
 
-            --if we don't find anybody send message error
-        -- TODO: optimize by net and logic lvl
+      -- if we don't find anybody send message error
+      -- TODO: optimize by net and logic lvl
       --  | aBroadcastNum > 6     -> undefined
---
---makePositionRequest
+
 
 iDontHaveAPosition :: ManagerData md => md -> Bool
 iDontHaveAPosition aData = aData^.myNodePosition /= Nothing
@@ -201,23 +198,6 @@ connectToBootNode aChan ((^.nodeBaseData.bootNodes) -> aBootNodeList) = do
     when (null aBootNodeList) $ error "aBootNodeList is empty!!! Check config."
     connectTo aChan 1 aBootNodeList
 
-{-
-  TODO answerToConnectivityQuery
-sendIHaveBroadcastConnects :: ManagerData md => IORef md -> HostAddress -> IO ()
-sendIHaveBroadcastConnects aMd aIp = do
-    aData <- readIORef aMd
-    loging aData $ "sendIHaveBroadcastConnects"
-    let aBroadcastNum = length $ filter (\aNode -> aNode^.status == Active) $
-            getNodes BroadcastNode aData
-    aMsg <- makeIHaveBroadcastConnects
-        aBroadcastNum
-        aIp
-        (aData^.nodeBase.portNumber)
-        (aData^.nodeConfig.myNodeId)
-        (aData^.nodeConfig.privateKey)
-    sendInfoPingToNodes aMd aMsg
--}
-
 
 answerToClientDisconnected
     ::  ManagerData md
@@ -238,20 +218,7 @@ answerToClientDisconnected aMd (toManagerMsg -> ClientIsDisconnected aId aChan) 
 
 answerToClientDisconnected _ _ = pure ()
 
-{-
-Expected type: (Maybe Node
-                -> Const (Maybe Node) (Maybe Node))
-               -> M.Map NodeId Node
-               -> Const (Maybe Node) (M.Map NodeId Node)
-  Actual type: (Maybe
-                  (IxValue (M.Map NodeId Node))
-                -> Const
-                     (Maybe Node)
-                     (Maybe (IxValue (M.Map NodeId Node))))
-               -> M.Map NodeId Node
-               -> Const (Maybe Node) (M.Map NodeId Node)
 
--}
 answerToSendInitDatagram
     :: ManagerData md
     => ManagerMsg msg
@@ -355,12 +322,6 @@ answerToDatagramMsg aChan aMd _
             _                     -> pure ()
 answerToDatagramMsg _ _  _ _    =  pure ()
 
-{-
-sendPingMsgTo :: (ManagerData md, )
-    -- aTimeSpec
-    --
--}
-
 
 class PackageTraceRoutingAction aManagerData aRequest where
     makeAction
@@ -411,9 +372,6 @@ answerToPackagedMsg aId aChan aChipredString aMd = do
 answerToPackagedMsg _ _ _  _ = return ()
 
 
--- aNodeType -> t -> IORef md -> NodeId -> [(NodeId, TimeSpec, Signature)] -> RequestPackage -> IO ()
-
-
 whenLeft
     ::  Show a
     =>  Show b
@@ -458,26 +416,6 @@ answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aPortNumb
         aNewData <- readIORef aMd
         sendRemoteConnectDatagram aInputChan aNewData
         makeAndSendTo aNewData [aId] BroadcastListRequest
-
-
-
-{-
-class MakeAndSendBroadCast a where
-  makeAndSendTo :: ManagerData md => md -> a -> IO ()
--}
-
--- request
--- Шлём соседу непосредственно.
--- Шлём по направлению.
--- Шлём бродкаст.
-
-
---Responce
--- Шлём соседу непосредственно.
--- Шлём по направлению.
-
--- sendToNode :: (StringKey -> CryptoFailable Package) -> Node -> IO ()
-
 
 
 answerToRemoteConnectingMsg
@@ -537,13 +475,6 @@ makePing aChan aHostAdress aPortNumber = do
             aHostAdress aPortNumber aPingTime aHostAdress
 
 
-{-
-type PingAnswer a c = Chan c -> IORef a -> NodeId -> PingPackage -> IO ()
-type PongAnswer a c = Chan c -> IORef a -> NodeId -> PongPackage -> IO ()
-type InfoPingAnswer a c =
-    Chan c -> IORef a -> NodeId -> InfoPingPackage -> IO ()
--}
-
 minusStatusNumber
     ::  NodeBaseDataClass a
     =>  NodeConfigClass a
@@ -559,10 +490,6 @@ minusStatusNumber aMd aId = do
 sendJustPackagedMsg :: Maybe (Chan MsgToSender, Package) -> IO ()
 sendJustPackagedMsg x = whenJust x $ uncurry sendPackagedMsg
 
-{-
-sendJustDatagram :: Maybe (Chan MsgToSender, PackagedMsg) -> IO ()
-sendJustDatagram = sendJustPackagedMsg
--}
 
 makeMsg
     ::  ManagerData s
@@ -611,11 +538,6 @@ sendToNodes
 sendToNodes aData aMakeMsg = forM_ (M.elems $ aData^.nodes) (sendToNode aMakeMsg)
 
 
-
-{-
-type instance NodeInfoList LogicLvl = [(NodeId, NodePosition)]
-type instance NodeInfoList NetLvl   = [(NodeId, HostAddress, PortNumber)]
--}
 class FileDB a where
     saveRecordsToNodeListFile   :: MyNodeId -> NodeInfoList a -> IO ()
     readRecordsFromNodeListFile :: MyNodeId -> IO (NodeInfoList a)
@@ -702,9 +624,5 @@ instance FileDB LogicLvl where
 lInsert :: NodeVariantRole -> [NodeVariantRole] -> [NodeVariantRole]
 lInsert _ [BootNode] = [BootNode]
 lInsert aElem aList  = S.toList . S.fromList $ aElem : aList
-
-
-
-
 
 --------------------------------------------------------------------------------
