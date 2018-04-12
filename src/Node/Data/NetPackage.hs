@@ -159,7 +159,7 @@ data instance NodeInfoList NetLvl where
 
 data instance Responce LogicLvl where
     ShardIndexResponce            :: [ShardHash]    -> Responce LogicLvl
-    ShardResponce                 :: Shard          -> Responce LogicLvl
+    ShardResponce                 :: [Shard]        -> Responce LogicLvl
     NodePositionResponcePackage   :: MyNodePosition -> Responce LogicLvl
     NeighborListResponcePackage   :: [(NodeId, NodePosition)] -> Responce LogicLvl
   deriving (Eq, Generic, Show)

@@ -78,8 +78,8 @@ instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
             ShardIndexResponce aShardHashList ->
                 sendToShardingLvl aData $ T.ShardIndexAcceptAction aShardHashList
 
-            ShardResponce      aShard         ->
-                sendToShardingLvl aData $ T.ShardAcceptAction aShard
+            ShardResponce      aShardes         -> forM_ aShardes $
+                sendToShardingLvl aData . T.ShardAcceptAction
 
             NodePositionResponcePackage (toNodePosition -> aNodePosition) -> do
                 updateFile (aData^.myNodeId) (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
@@ -107,7 +107,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                 aRequestToNetLvl ShardResponce $ do
                     aChan <- newChan
                     sendToShardingLvl aData $
-                        T.ShardListCreateAction aChan aNodeId aShardHash
+                        T.ShardLoadAction aChan aNodeId aShardHash
                     T.ShardResponse aShard <- readChan aChan
                     return aShard
 
