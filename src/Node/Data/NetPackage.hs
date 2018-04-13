@@ -101,15 +101,20 @@ data MiningLvl  = MiningLvl
 
 data family Request a :: *
 
+
+--data _____ = _____Request NodeId MyNodeId Signature
+
+
 -- | Request logic information
 data instance Request LogicLvl where
     ShardIndexRequestPackage
         ::  P.PointFrom
         ->  Distance P.Point
         ->  Request LogicLvl
-    NeighborListRequestPackage  :: Request LogicLvl
-    ShardRequestPackage         :: ShardHash -> Request LogicLvl
-    NodePositionRequestPackage  :: Request LogicLvl
+    NeighborListRequestPackage      :: Request LogicLvl
+    ShardRequestPackage             :: ShardHash -> Request LogicLvl
+    NodePositionRequestPackage      :: Request LogicLvl
+    IsAliveTheNodeRequestPackage    :: NodeId -> Request LogicLvl
   deriving (Eq, Generic, Show)
 
 
@@ -162,6 +167,7 @@ data instance Responce LogicLvl where
     ShardResponce                 :: [Shard]        -> Responce LogicLvl
     NodePositionResponcePackage   :: MyNodePosition -> Responce LogicLvl
     NeighborListResponcePackage   :: [(NodeId, NodePosition)] -> Responce LogicLvl
+    TheNodeIsAlive                :: NodeId -> Bool -> Responce LogicLvl
   deriving (Eq, Generic, Show)
 
 

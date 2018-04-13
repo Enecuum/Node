@@ -35,6 +35,7 @@ import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Sharding.Space.Distance
 import              Node.Data.MakeAndSendTraceRouting
+import              Node.Data.MakeTraceRouting
 
 class Processing aNodeData aPackage where
     processing
@@ -120,7 +121,51 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     modifyIORef aMd $ myNodePosition .~ Just aMyNodePosition
                     return aMyNodePosition
 
+            IsAliveTheNodeRequestPackage aNodeId -> do
+                let aMaybeNodeId = case aTraceRouting of
+                        ToNode _ (PackageSignature (toNodeId -> aId) _ _)
+                            -> Just aId
+                        _   -> Nothing
 
+                whenJust aMaybeNodeId $ \aJustNodeId -> do
+                    let aNetLvlPackage = TheNodeIsAlive
+                            aNodeId $ (aData^.nodes.at aNodeId) /= Nothing
+                    aResponsePackageSignature <- makePackageSignature aData
+                        (aNetLvlPackage, aRequestPackage)
+                    let aPackage = ResponceLogicLvlPackage
+                            aRequestPackage aNetLvlPackage aResponsePackageSignature
+                    aTrace <- makeTraceRouting  aData aPackage
+                        (ToNode aJustNodeId)
+                    sendResponse (aData^.nodes.at aJustNodeId) aTrace aPackage
+
+
+{-
+
+aTraceRouting = (ToNode aNodeId (PackageSignature aMyNodeId _ _))
+
+PackageSignature :: MyNodeId -> TimeSpec  -> Signature  -> PackageSignature
+-}
+
+{-
+            IsAliveTheNodeRequestPackage    :: NodeId -> Request LogicLvl
+            TheNodeIsAlive                :: NodeId -> Bool -> Responce LogicLvl
+-}
+
+{-
+requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
+    void $ forkIO $ do
+        aResultOfRequest <- aLogicRequest
+        let (aNode, aTrace) = getClosedNode aTraceRouting aData
+            aNetLevetPackage = aConstructor aResultOfRequest
+
+        aResponsePackageSignature <- makePackageSignature aData
+            (aNetLevetPackage, aRequestPackage)
+
+        sendResponse aNode
+            (makeNewTraceRouting aTrace aTraceRouting)
+            (ResponceLogicLvlPackage aRequestPackage aNetLevetPackage aResponsePackageSignature)
+
+-}
 
 instance Processing (IORef ManagerNodeData) (Request NetLvl) where
     processing _ aMd aSignature aTraceRouting aRequest = do
