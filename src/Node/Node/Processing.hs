@@ -86,7 +86,11 @@ instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
                 updateFile (aData^.myNodeId) (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
                 sendToShardingLvl aData $
                     T.TheNodeHaveNewCoordinates aNodeId aNodePosition
---
+
+            TheNodeIsAlive aNodeId ok -> unless ok $ do
+                sendToShardingLvl aData $ T.TheNodeIsDead aNodeId
+
+
 instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
     processing _ aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting aRequestLogicLvl = do
         aData <- readIORef aMd
@@ -138,34 +142,6 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                         (ToNode aJustNodeId)
                     sendResponse (aData^.nodes.at aJustNodeId) aTrace aPackage
 
-
-{-
-
-aTraceRouting = (ToNode aNodeId (PackageSignature aMyNodeId _ _))
-
-PackageSignature :: MyNodeId -> TimeSpec  -> Signature  -> PackageSignature
--}
-
-{-
-            IsAliveTheNodeRequestPackage    :: NodeId -> Request LogicLvl
-            TheNodeIsAlive                :: NodeId -> Bool -> Responce LogicLvl
--}
-
-{-
-requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
-    void $ forkIO $ do
-        aResultOfRequest <- aLogicRequest
-        let (aNode, aTrace) = getClosedNode aTraceRouting aData
-            aNetLevetPackage = aConstructor aResultOfRequest
-
-        aResponsePackageSignature <- makePackageSignature aData
-            (aNetLevetPackage, aRequestPackage)
-
-        sendResponse aNode
-            (makeNewTraceRouting aTrace aTraceRouting)
-            (ResponceLogicLvlPackage aRequestPackage aNetLevetPackage aResponsePackageSignature)
-
--}
 
 instance Processing (IORef ManagerNodeData) (Request NetLvl) where
     processing _ aMd aSignature aTraceRouting aRequest = do

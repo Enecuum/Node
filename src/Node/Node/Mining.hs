@@ -16,11 +16,11 @@ module Node.Node.Mining where
 
 import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 
-
 import qualified    Data.ByteString                 as B
 import qualified    Data.Map                        as M
 import qualified    Data.Bimap                      as BI
 import              Data.Maybe (isNothing)
+import              Data.List.Extra
 import              System.Clock
 import              Data.IORef
 import              Data.Serialize
@@ -31,6 +31,8 @@ import              Crypto.Error
 import              Node.Node.BroadcastProcessing
 import              Node.Data.MakeTraceRouting
 
+
+import              Sharding.Space.Distance
 import              Sharding.Types.ShardLogic
 import              Service.Monad.Option
 import              Node.Crypto
@@ -114,6 +116,24 @@ answerToShardingNodeRequestMsg aMd
                         let aPosition = NodePosition $ hashToPoint aHash
                             aRequest  = ShardRequestPackage aHash
                         makeAndSendTo aData aPosition aRequest
+
+            T.IsTheNeighborAliveRequest aNodeId aNodePosition
+                | aData^.iAmBroadcast -> if
+                    | Just _ <- aData^.nodes.at aNodeId -> return ()
+                    | otherwise -> sendToShardingLvl aData $ T.TheNodeIsDead aNodeId
+                | otherwise -> do
+                    let aListOfBroatcastPosition = concat $ do
+                            (aId, aNode) <- M.toList $ aData^.nodes
+                            if  | Just aPosition <- aNode^.nodePosition
+                                    -> return [(aId, aPosition)]
+                                | otherwise -> return []
+
+                        aBroadcastNodeId = take 1 $(^._1) <$> sortOn
+                            (\a -> distanceTo (a^._2) aNodePosition)
+                            aListOfBroatcastPosition
+
+                    makeAndSendTo aData aBroadcastNodeId
+                        (IsAliveTheNodeRequestPackage aNodeId)
 
 
 answerToDeleteOldestVacantPositions

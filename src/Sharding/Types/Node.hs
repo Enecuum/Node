@@ -57,6 +57,7 @@ data ShardingNodeAction =
     |   ShardCheckLoading
     --- ShiftAction => NewPosiotionResponse
     |   ShiftAction
+    |   CheckTheNeighbors
     |   TheNodeHaveNewCoordinates   NodeId NodePosition
     ---- NeighborListRequest => NeighborListAcceptAction
     --  BUG the generation of TheNodeIsDead from net lvl.
@@ -71,12 +72,13 @@ data ShardingNodeResponce where
 
 
 data ShardingNodeRequestMsg =
-        IamAwakeRequst        MyNodeId MyNodePosition -- broadcast for all network
+        IamAwakeRequst              MyNodeId MyNodePosition -- broadcast for all network
     |   NeighborListRequest -- ask net level new neighbors
-    |   ShardIndexRequest     Word64 [NodePosition]
-    |   ShardListRequest      [ShardHash]
+    |   ShardIndexRequest           Word64 [NodePosition]
+    |   ShardListRequest            [ShardHash]
     --  ShiftAction => NewPosiotionResponse
-    |   NewPosiotionMsg       MyNodePosition
+    |   NewPosiotionMsg             MyNodePosition
+    |   IsTheNeighborAliveRequest   NodeId NodePosition
   deriving (Show)
 
 
