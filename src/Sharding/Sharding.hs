@@ -109,7 +109,6 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
             shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode
 
         CheckTheNeighbors -> do
-            -- findNearestNeighborPositions :: MyNodePosition -> S.Set NodePosition -> [NodePosition]
             let aMyNodePosition     = aShardingNode^.nodePosition
                 aNodePositions      = (^.neighborPosition) `S.map` aNeighbors
                 aNeighborsPositions = findNearestNeighborPositions aMyNodePosition aNodePositions
@@ -228,6 +227,8 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
         writeChan aChanRequest CheckOfShardLoadingList
 
     metronome (10^8) $ do
+        writeChan aChanRequest CheckTheNeighbors
+        threadDelay (10^6)
         writeChan aChanRequest ShiftAction
 
     return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex
