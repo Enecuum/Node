@@ -177,14 +177,25 @@ isItMyResponce aMyNodeId = \case
         | aNodeId == aMyNodeId          -> True
     _                                   -> False
 
-
+--  THINK: how to understand what the request is for me.
 instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
     makeAction aChan md _ aTraceRouting aRequestPackage = do
         aData <- readIORef md
-        when (verify (aTraceRouting, aRequestPackage)) $ if
-            -- FIXME: routing condition.
-            | True                                 -> aProcessingOfAction
-            | otherwise                            -> aSendToNeighbor aData
+        when (verify (aTraceRouting, aRequestPackage)) $ case aTraceRouting of
+            ToDirect _ aPointTo _ -> do
+                let aMaybeNode = getClosedNodeByDirect aData (toPoint aPointTo)
+                whenJust aMaybeNode $ \aNode -> do
+                    aNewTrace <- addToTrace
+                        aTraceRouting
+                        aRequestPackage
+                        (aData^.myNodeId)
+                        (aData^.privateKey)
+                    sendToNode (makeRequest aNewTrace aRequestPackage) aNode
+                when (aMaybeNode == Nothing) aProcessingOfAction
+            ToNode aNodeId _ | toNodeId aData^.myNodeId == aNodeId ->
+                aProcessingOfAction
+            _   -> return ()
+
       where
         aProcessingOfAction = case aRequestPackage of
             RequestLogicLvlPackage aRequest aSignature  ->
@@ -192,17 +203,11 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
             RequestNetLvlPackage aRequest aSignature    ->
                 processing aChan md aSignature aTraceRouting aRequest
 
-        aSendToNeighbor aData = case aTraceRouting of
-            ToDirect _ aPointTo _ ->
-                whenJust (getClosedNodeByDirect aData (toPoint aPointTo)) $
-                    \aNode -> do
-                        aNewTrace <- addToTrace
-                            aTraceRouting
-                            aRequestPackage
-                            (aData^.myNodeId)
-                            (aData^.privateKey)
-                        sendToNode (makeRequest aNewTrace aRequestPackage) aNode
-            _ -> return ()
+isItRequestForMe :: ManagerNodeData -> TraceRouting -> Bool
+isItRequestForMe aData = \case
+    ToNode aNodeId _      -> toNodeId aData^.myNodeId == aNodeId
+    ToDirect _ _ _ -> False
+
 
 makeRequest
     ::  TraceRouting
