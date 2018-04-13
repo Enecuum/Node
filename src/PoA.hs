@@ -32,33 +32,34 @@ whenLeft aPath aMsg@(Left _) = loging aPath $ show aMsg
 whenLeft _ _ = pure ()
 
 servePoA ::
-    String
+       PortNumber
+    -> PortNumber
     -> MyNodeId
     -> Chan ManagerMiningMsgBase
     -> Chan Transaction
-    -> String
+    -> Chan Metric
     -> IO ()
-servePoA aRecivePort aNodeId ch aRecvChan aSendPort = runServer (read aRecivePort) $
+servePoA aRecivePort aSendPort aNodeId ch aRecvChan aMetricChan = runServer aRecivePort $
     \aMsg aSockAddr _ -> do
-        loging (aRecivePort) $ "PaA msg: " ++ (show $ hex $ aMsg)
+        loging (show aRecivePort) $ "PaA msg: " ++ (show $ hex $ aMsg)
         let aDecodeMsg = S.decode aMsg
-        whenLeft aRecivePort aDecodeMsg
+        whenLeft (show aRecivePort) aDecodeMsg
         whenRight aDecodeMsg $ \case
             HashMsgTransactionsRequest num -> do
-                loging (aRecivePort) $ "Recived HashMsgTransactionsRequest " ++ show num
+                loging (show aRecivePort) $ "Recived HashMsgTransactionsRequest " ++ show num
                 recvTx aSockAddr num
             MBlock mb -> do
-                loging aRecivePort $ "Recived MBlock \n" ++ show mb
+                loging (show aRecivePort) $ "Recived MBlock \n" ++ show mb
                 writeChan ch $ BlockMadeMsg mb
   where
     recvTx aSockAddr aNum =
-        runClient (sockAddrToHostAddress aSockAddr) (read aSendPort) $
+        runClient (sockAddrToHostAddress aSockAddr) aSendPort $
         \aHandle -> forM_ [1..aNum] $ \_  -> do
             aTransaction <- readChan aRecvChan
-            metric $ add
+            writeChan aMetricChan $ add
                 ("net.node." ++ show (toInteger aNodeId) ++ ".pending.amount")
                 (-1 :: Integer)
-            loging aRecivePort $  "sendTransaction to poa " ++ show aTransaction
+            loging (show aRecivePort) $  "sendTransaction to poa " ++ show aTransaction
             sendTransaction aHandle aTransaction
 
 -- | Send one transaction.

@@ -13,37 +13,72 @@ import              Service.Config
 import              Node.Lib
 import              Service.Metrics
 import              PoA
-import              CLI.CLI (control)
+import              CLI.CLI (serveRpc)
 import              Control.Exception (try)
 import              Prelude hiding (concat)
 import              Data.Ini
 import              Data.Text
-import              Network.Socket (PortNumber)
+import              Network.Socket (PortNumber, inet_addr)
 import              Control.Exception (SomeException())
 
+import              Data.Aeson
+import qualified    Data.ByteString.Lazy as L
+
 main :: IO ()
-main = do
-    (readIniFile "configs/config.ini") >>= \case
-       Left e    -> error e
-       Right ini -> do
-        aExitCh <- newChan
-        aAnswerCh  <- newChan
+main =  do
+        enc <- L.readFile "configs/config.json"
+        case (decode enc) :: Maybe BuildConfig of
+          Nothing   -> error "Please, specify config file correctly"
+          Just conf -> do
+     
+            aExitCh   <- newChan
+            aAnswerCh <- newChan
+            aMetricCh <- newChan
 
-        metric $ increment "cl.node.count"
-        
-        void $ startNode ini
-            aExitCh aAnswerCh managerMining $ \ch aChan aMyNodeId -> do
-                -- periodically check current state compare to the whole network state
-                metronomeS 400000 (writeChan ch connectivityQuery)
-                metronomeS 1000000 (writeChan ch deleteOldestMsg)
-                metronomeS 10000000 (writeChan ch deleteDeadSouls)
-                metronomeS 3000000 $ writeChan ch deleteOldestVacantPositions
+            void $ startNode conf
+                aExitCh aAnswerCh aMetricCh managerMining $ \ch aChan aMyNodeId -> do
+                    -- periodically check current state compare to the whole network state
+                    metronomeS 400000 (writeChan ch connectivityQuery)
+                    metronomeS 1000000 (writeChan ch deleteOldestMsg)
+                    metronomeS 10000000 (writeChan ch deleteDeadSouls)
+                    metronomeS 3000000 $ writeChan ch deleteOldestVacantPositions
+  
+                    poa_in  <- try (getEnv "poaInPort") >>= \case
+                            Right item              -> return $ read item
+                            Left (_::SomeException) -> case simpleNodeBuildConfig conf of
+                                 Nothing   -> error "Please, specify SimpleNodeConfig"
+                                 Just snbc -> return $ poaInPort snbc
 
-                poa_in  <- getConfigValue ini "poa" "InpPort"
-                poa_out <- getConfigValue ini "poa" "OutPort"
-                void $ forkIO $ servePoA poa_in  aMyNodeId ch aChan poa_out
+                    poa_out <- try (getEnv "poaOutPort") >>= \case
+                            Right item              -> return $ read item
+                            Left (_::SomeException) -> case simpleNodeBuildConfig conf of
+                                 Nothing   -> error "Please, specify SimpleNodeConfig"
+                                 Just snbc -> return $ poaOutPort snbc
+                    
+                    rpc_p   <- try (getEnv "rpcPort") >>= \case
+                            Right item              -> return $ read item
+                            Left (_::SomeException) -> case simpleNodeBuildConfig conf of
+                                 Nothing   -> error "Please, specify SimpleNodeConfig"
+                                 Just snbc -> return $ rpcPort snbc
 
-                rpc_port <- getConfigValue ini "rpc" "Port"
-                void $ forkIO $ control rpc_port ch
-        void $ readChan aExitCh
+                    stat_h  <- try (getEnv "statsdHost") >>= \case
+                            Right item              -> inet_addr item
+                            Left (_::SomeException) -> case statsdBuildConfig conf of
+                                 Nothing   -> error "Please, specify statsdConfig"
+                                 Just stat -> inet_addr $ statsdHost stat
+
+                    stat_p  <- try (getEnv "statsdPort") >>= \case
+                            Right item              -> return $ read item
+                            Left (_::SomeException) -> case statsdBuildConfig conf of
+                                 Nothing   -> error "Please, specify statsdConfig"
+                                 Just stat -> return $ statsdPort stat
+
+                    void $ forkIO $ serveMetrics stat_h stat_p aMetricCh
+
+                    void $ forkIO $ servePoA poa_in poa_out aMyNodeId ch aChan aMetricCh
+                    void $ forkIO $ serveRpc rpc_p ch aMetricCh
+
+                    writeChan aMetricCh $ increment "cl.node.count"
+
+            void $ readChan aExitCh
 
