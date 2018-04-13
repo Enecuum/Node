@@ -34,7 +34,8 @@ import              Node.Node.Types
 import              Node.Node.Base
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
-import              Node.Data.NetMesseges
+
+import              Node.Data.NetMessages
 
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point

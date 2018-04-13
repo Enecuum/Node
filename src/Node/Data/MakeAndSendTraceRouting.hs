@@ -48,7 +48,7 @@ import              Node.FileDB.FileDB
 import              Node.Extra
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
-import              Node.Data.NetMesseges
+import              Node.Data.NetMessages
 import              Node.Node.Base.Server
 import              Node.Data.MakeTraceRouting
 import              Sharding.Space.Distance

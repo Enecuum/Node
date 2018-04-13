@@ -20,6 +20,7 @@ import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 import qualified    Data.ByteString                 as B
 import qualified    Data.Map                        as M
 import qualified    Data.Bimap                      as BI
+import              Data.Maybe (isNothing)
 import              System.Clock
 import              Data.IORef
 import              Data.Serialize
@@ -38,14 +39,13 @@ import              Node.Node.Types
 import              Node.Node.Base
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
-import              Node.Data.NetMesseges
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Node.Node.Processing
+import              Service.Metrics
 import              Lens.Micro.GHC
 import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.Verification
-
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
 managerMining ch aMd = forever $ do
@@ -98,7 +98,7 @@ answerToShardingNodeRequestMsg aMd
 
             T.NeighborListRequest -> do
                 forM_ (M.keys $ aData^.nodes) $ \aNodeId -> do
-                makeAndSendTo aData (M.keys $ aData^.nodes) $
+                  makeAndSendTo aData (M.keys $ aData^.nodes) $
                     NeighborListRequestPackage
 
             T.ShardIndexRequest aDistance aNodePositions -> do
@@ -193,7 +193,7 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                         (aData^.myNodeId)
                         (aData^.privateKey)
                     sendToNode (makeRequest aNewTrace aRequestPackage) aNode
-                when (aMaybeNode == Nothing) aProcessingOfAction
+                when (isNothing aMaybeNode) aProcessingOfAction
             ToNode aNodeId _ | toNodeId (aData^.myNodeId) == aNodeId ->
                 aProcessingOfAction
             _   -> return ()
@@ -239,20 +239,21 @@ addToTrace aTraceRouting aRequestPackage aMyNodeId aPrivateKey = do
 
 answerToNewTransaction :: IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
 answerToNewTransaction aMd (NewTransaction aTransaction) = do
-    --metric $ increment "net.tx.count"
     aData <- readIORef aMd
+    writeChan (managerMetrics aData) $ increment "net.tx.count"
     loging aData $ "I create a transaction: " ++ show aTransaction
     sendBroadcast aMd (BroadcastMining $ BroadcastTransaction aTransaction Nothing)
-    {-
-    metric $ add
+
+    writeChan (managerMetrics aData) $ add
         ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount")
         (1 :: Integer)
-    -}
+
     writeChan (aData^.transactions) aTransaction
 
 answerToNewTransaction _ _ = error
     "answerToNewTransaction: something unexpected  has happened."
 
+sendBroadcast :: IORef ManagerNodeData -> BroadcastThing -> IO ()
 sendBroadcast aMd aBroadcastThing = do
     aData <- readIORef aMd
     addInIndex aBroadcastThing aMd
@@ -263,8 +264,8 @@ sendBroadcast aMd aBroadcastThing = do
 answerToBlockMadeMsg :: ManagerMiningMsg msg =>
     IORef ManagerNodeData -> msg -> IO ()
 answerToBlockMadeMsg aMd (toManagerMiningMsg -> BlockMadeMsg aMicroblock) = do
-    --metric $ increment "net.bl.count"
     aData <- readIORef aMd
+    writeChan (managerMetrics aData) $ increment "net.bl.count"
     loging aData $ "I create a a microblock: " ++ show aMicroblock
     sendBroadcast aMd (BroadcastMining $ BroadcastMicroBlock aMicroblock Nothing)
     sendToShardingLvl aData $

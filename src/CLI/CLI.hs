@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module CLI.CLI (control) where
+module CLI.CLI (serveRpc) where
 
+import Network.Socket (PortNumber)
 import Network.JsonRpc.Server
 import Network.Socket.ByteString (sendAllTo)
 import Service.Network.UDP.Server
@@ -27,13 +28,13 @@ data TxChanMsg = NewTx Transaction
                | GenTxUnlim
 
 
-control :: String -> Chan ManagerMiningMsgBase -> IO ()
-control portNum ch = runServer (read portNum) $ \aMsg addr aSocket -> do
+serveRpc :: PortNumber -> Chan ManagerMiningMsgBase -> Chan Metric -> IO ()
+serveRpc portNum ch aMetricCh = runServer portNum $ \aMsg addr aSocket -> do
     txChan     <- newChan
     ledgerRespChan <- newChan
     ledgerReqChan <- newChan
-    _ <- forkIO $ txWait txChan ch
-    _ <- forkIO $ ledgerWait ledgerReqChan ledgerRespChan
+    _ <- forkIO $ txWait txChan ch aMetricCh
+    _ <- forkIO $ ledgerWait ledgerReqChan ledgerRespChan aMetricCh
     runRpc txChan ledgerReqChan ledgerRespChan addr aSocket aMsg
       where
         runRpc txChan ledgerReqChan ledgerRespChan addr aSocket aMsg = do
@@ -45,9 +46,7 @@ control portNum ch = runServer (read portNum) $ \aMsg addr aSocket -> do
               createTx = toMethod "new_tx" f (Required "x" :+: ())
                 where
                   f :: Transaction -> RpcResult IO ()
-                  f tx = liftIO $ do
-                      sendMetrics tx
-                      writeChan txChan $ NewTx tx
+                  f tx = liftIO $ writeChan txChan $ NewTx tx
 
               createNTx = toMethod "gen_n_tx" f (Required "x" :+: ())
                 where
@@ -69,25 +68,27 @@ control portNum ch = runServer (read portNum) $ \aMsg addr aSocket -> do
 
 
 
-txWait :: Chan TxChanMsg -> Chan ManagerMiningMsgBase -> IO ()
-txWait recvCh mngCh = do
+txWait :: Chan TxChanMsg -> Chan ManagerMiningMsgBase -> Chan Metric -> IO ()
+txWait recvCh mngCh metricCh = do
     msg <- readChan recvCh
     case msg of
-      NewTx tx       -> writeChan mngCh $ newTransaction tx
-      GenTxNum num   -> generateNTransactions num   mngCh
-      GenTxUnlim     -> generateTransactionsForever mngCh
-    txWait recvCh mngCh
+      NewTx tx       -> do
+                        sendMetrics tx metricCh 
+                        writeChan mngCh $ newTransaction tx
+      GenTxNum num   -> generateNTransactions num   mngCh metricCh
+      GenTxUnlim     -> generateTransactionsForever mngCh metricCh
+    txWait recvCh mngCh metricCh
 
 
-ledgerWait :: Chan PublicKey -> Chan Amount -> IO ()
-ledgerWait chReq chResp = do
+ledgerWait :: Chan PublicKey -> Chan Amount -> Chan Metric -> IO ()
+ledgerWait chReq chResp m = do
     key <- readChan chReq
     stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
     result  <- countBalance key
     endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
-    metric $ timing "cl.ld.time" (subTime stTime endTime)
+    writeChan m $ timing "cl.ld.time" (subTime stTime endTime)
     writeChan chResp result
-    ledgerWait chReq chResp
+    ledgerWait chReq chResp m
 
 
 
@@ -100,36 +101,36 @@ genNTx n = do
    return tx
 
 generateNTransactions :: ManagerMiningMsg a =>
-    Int -> Chan a -> IO ()
-generateNTransactions qTx ch = do
+    Int -> Chan a -> Chan Metric -> IO ()
+generateNTransactions qTx ch m = do
   tx <- genNTx qTx
   mapM_ (\x -> do
           writeChan ch $ newTransaction x
-          sendMetrics x
+          sendMetrics x m
         ) tx
   putStrLn "Transactions are created"
 
 
-generateTransactionsForever :: ManagerMiningMsg a => Chan a -> IO b
-generateTransactionsForever ch = forever $ do
+generateTransactionsForever :: ManagerMiningMsg a => Chan a -> Chan Metric -> IO b
+generateTransactionsForever ch m = forever $ do
                                 quantityOfTranscations <- randomRIO (20,30)
                                 tx <- genNTx quantityOfTranscations
                                 mapM_ (\x -> do
                                             writeChan ch $ newTransaction x
-                                            sendMetrics x
+                                            sendMetrics x m
                                        ) tx
                                 threadDelay (10^(6 :: Int))
                                 putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
 
-sendMetrics :: Transaction -> IO ()
-sendMetrics (WithTime _ tx) = sendMetrics tx
-sendMetrics (WithSignature tx _) = sendMetrics tx
-sendMetrics (RegisterPublicKey k b) = do
-                           metric $ increment "cl.tx.count"
-                           metric $ set "cl.tx.wallet" k
-                           metric $ gauge "cl.tx.amount" b
-sendMetrics (SendAmountFromKeyToKey o r a) = do
-                           metric $ increment "cl.tx.count"
-                           metric $ set "cl.tx.wallet" o
-                           metric $ set "cl.tx.wallet" r
-                           metric $ gauge "cl.tx.amount" a
+sendMetrics :: Transaction -> Chan Metric -> IO ()
+sendMetrics (WithTime _ tx) m = sendMetrics tx m
+sendMetrics (WithSignature tx _) m = sendMetrics tx m
+sendMetrics (RegisterPublicKey k b) m = do
+                           writeChan m $ increment "cl.tx.count"
+                           writeChan m $ set "cl.tx.wallet" k
+                           writeChan m $ gauge "cl.tx.amount" b
+sendMetrics (SendAmountFromKeyToKey o r a) m = do
+                           writeChan m $ increment "cl.tx.count"
+                           writeChan m $ set "cl.tx.wallet" o
+                           writeChan m $ set "cl.tx.wallet" r
+                           writeChan m $ gauge "cl.tx.amount" a

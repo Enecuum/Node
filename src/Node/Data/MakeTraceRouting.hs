@@ -21,7 +21,7 @@ import              Crypto.Error
 import              Sharding.Space.Point
 import              Node.Node.Types
 import              Node.Data.NetPackage
-import              Node.Data.NetMesseges
+import              Node.Data.NetMessages
 import              Lens.Micro.GHC
 
 
