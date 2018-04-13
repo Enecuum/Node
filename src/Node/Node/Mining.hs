@@ -71,8 +71,8 @@ miningNodeAnswerClientIsDisconnected
 miningNodeAnswerClientIsDisconnected aMd
     (toManagerMsg -> ClientIsDisconnected aNodeId aChan) = do
         aData <- readIORef aMd
-        loging aData $ "miningNodeAnswerClientIsDisconnected " ++ show aNodeId
         whenJust (aNodeId `M.lookup`(aData^.nodes)) $ \aNode -> do
+            loging aData $ "The node " ++ show aNodeId ++ " is disconnected."
             when (aChan == (aNode^.chan)) $ do
                 minusStatusNumber aMd aNodeId
                 modifyIORef aMd $ (nodes %~ M.delete aNodeId)
@@ -177,7 +177,9 @@ isItMyResponce aMyNodeId = \case
         | aNodeId == aMyNodeId          -> True
     _                                   -> False
 
---  THINK: how to understand what the request is for me.
+--  THINK: About request routing.
+--  How to understand what the request is for me, if i have the more closed
+--  neighbor to the point.
 instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
     makeAction aChan md _ aTraceRouting aRequestPackage = do
         aData <- readIORef md
@@ -192,7 +194,7 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                         (aData^.privateKey)
                     sendToNode (makeRequest aNewTrace aRequestPackage) aNode
                 when (aMaybeNode == Nothing) aProcessingOfAction
-            ToNode aNodeId _ | toNodeId aData^.myNodeId == aNodeId ->
+            ToNode aNodeId _ | toNodeId (aData^.myNodeId) == aNodeId ->
                 aProcessingOfAction
             _   -> return ()
 
@@ -205,7 +207,7 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
 
 isItRequestForMe :: ManagerNodeData -> TraceRouting -> Bool
 isItRequestForMe aData = \case
-    ToNode aNodeId _      -> toNodeId aData^.myNodeId == aNodeId
+    ToNode aNodeId _      -> toNodeId (aData^.myNodeId) == aNodeId
     ToDirect _ _ _ -> False
 
 

@@ -96,6 +96,7 @@ data Node = Node {
     ,   _isBroadcast     :: Bool
     ,   _nodeHost        :: HostAddress
   }
+  deriving (Eq)
 
 makeLenses ''Node
 
