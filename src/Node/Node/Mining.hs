@@ -16,6 +16,7 @@ module Node.Node.Mining where
 
 import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 
+
 import qualified    Data.ByteString                 as B
 import qualified    Data.Map                        as M
 import qualified    Data.Bimap                      as BI
@@ -27,7 +28,9 @@ import              Control.Concurrent
 import              Control.Monad.Extra
 import              Crypto.Error
 import              Node.Node.BroadcastProcessing
+import              Node.Data.MakeTraceRouting
 
+import              Sharding.Types.ShardLogic
 import              Service.Monad.Option
 import              Node.Crypto
 import              Node.Data.Data
@@ -40,6 +43,8 @@ import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Node.Node.Processing
 import              Lens.Micro.GHC
+import              Node.Data.MakeAndSendTraceRouting
+import              Node.Data.Verification
 
 import              Service.Metrics
 
@@ -86,21 +91,32 @@ answerToShardingNodeRequestMsg aMd
                 (BroadcastLogic $ BroadcastPosition
                     (aData^.myNodeId)
                     (toNodePosition aMyNodePosition))
+
             T.IamAwakeRequst aMyNodeId aMyNodePosition -> sendBroadcast aMd
                 (BroadcastLogic $ BroadcastPosition
                     (aData^.myNodeId)
                     (toNodePosition aMyNodePosition))
 
-{-
----- TODO sending of ShardIndexRequest
-|   ShardIndexRequest     Word64 [NodeId]    -- for neighbors
-|   ShardListRequest      [ShardHash] -- TODO add functionality
+            T.NeighborListRequest -> do
+                forM_ (M.keys $ aData^.nodes) $ \aNodeId -> do
+                makeAndSendTo aData (M.keys $ aData^.nodes) $
+                    NeighborListRequestPackage
 
----
-|   NeighborListRequest -- ask net level new neighbors
--}
+            T.ShardIndexRequest aDistance aNodePositions -> do
+                whenJust (aData^.myNodePosition) $ \aPosition -> do
+                    let aRequest = ShardIndexRequestPackage
+                            (toNodePosition aPosition) aDistance
+                    forM_ aNodePositions $ \aPosition -> do
+                        makeAndSendTo aData aPosition aRequest
 
-----TODO: MOVE TO ?????? --------------
+            T.ShardListRequest shardHashes -> do
+                whenJust (aData^.myNodePosition) $ \aPosition -> do
+                    forM_ shardHashes $ \aHash -> do
+                        let aPosition = NodePosition $ hashToPoint aHash
+                            aRequest  = ShardRequestPackage aHash
+                        makeAndSendTo aData aPosition aRequest
+
+
 answerToDeleteOldestVacantPositions
     ::  IORef ManagerNodeData
     ->  ManagerMiningMsgBase
@@ -110,7 +126,7 @@ answerToDeleteOldestVacantPositions aMd _ = do
     modifyIORef aMd $ vacantPositions %~ BI.filter (\aTimeSpec _ ->
         diffTimeSpec aTime aTimeSpec > 3000000)
 
-----TODO: MOVE TO ?????? --------------
+
 answerToDeleteOldestMsg
     ::  IORef ManagerNodeData
     ->  ManagerMiningMsgBase
@@ -129,34 +145,18 @@ instance BroadcastAction ManagerNodeData where
             sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing
             processingOfBroadcastThing aMd aBroadcastThing
 
-{-
-TODO verification
-class Verifycation a where
-    verifyPackage :: a -> Bool
-
-instance Verifycation ResponcePackage where
-    verifyPackage = \case
-        ResponceNetLvlPackage aRequestPackage aSignature aResponse ->
-            verifyEncodeble  ()
-            | verifyNetLvlResponse aRequestPackage aSignature aResponse ->
-                True
-        ResponceLogicLvlPackage aRequestPackage aSignature aResponse ->
-            | verifyLogicLvlResponse aRequestPackage aSignature aResponse ->
-
--}
 
 instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
     makeAction aChan md aNodeId aTraceRouting aResponcePackage = do
         aData <- readIORef md
-        when (verifyResponce aTraceRouting aResponcePackage) $ if
+        when (verify (aTraceRouting, aResponcePackage)) $ if
             | isItMyResponce aNodeId aTraceRouting  -> aProcessingOfAction
             | otherwise                             -> aSendToNeighbor aData
       where
-        verifyResponce _ _ = True -- TODO : add body
         aProcessingOfAction = case aResponcePackage of
-            ResponceNetLvlPackage _ aResponse aSignature   | True ->
+            ResponceNetLvlPackage _ aResponse aSignature ->
                 processing aChan md aSignature aTraceRouting aResponse
-            ResponceLogicLvlPackage _ aResponse aSignature | True ->
+            ResponceLogicLvlPackage _ aResponse aSignature ->
                 processing aChan md aSignature aTraceRouting aResponse
 
         aSendToNeighbor aData = do
@@ -178,32 +178,37 @@ isItMyResponce aMyNodeId = \case
         | aNodeId == aMyNodeId          -> True
     _                                   -> False
 
-
----------------TODO: fix True---------------------------------------------------
+--  THINK: how to understand what the request is for me.
 instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
     makeAction aChan md _ aTraceRouting aRequestPackage = do
         aData <- readIORef md
-        when True $ if
-            | True                                 -> aProcessingOfAction
-            | otherwise                            -> aSendToNeighbor aData
+        when (verify (aTraceRouting, aRequestPackage)) $ case aTraceRouting of
+            ToDirect _ aPointTo _ -> do
+                let aMaybeNode = getClosedNodeByDirect aData (toPoint aPointTo)
+                whenJust aMaybeNode $ \aNode -> do
+                    aNewTrace <- addToTrace
+                        aTraceRouting
+                        aRequestPackage
+                        (aData^.myNodeId)
+                        (aData^.privateKey)
+                    sendToNode (makeRequest aNewTrace aRequestPackage) aNode
+                when (aMaybeNode == Nothing) aProcessingOfAction
+            ToNode aNodeId _ | toNodeId aData^.myNodeId == aNodeId ->
+                aProcessingOfAction
+            _   -> return ()
+
       where
         aProcessingOfAction = case aRequestPackage of
-            RequestLogicLvlPackage aRequest aSignature
-                | True -> processing aChan md aSignature aTraceRouting aRequest
-            RequestNetLvlPackage aRequest aSignature
-                | True -> processing aChan md aSignature aTraceRouting aRequest
+            RequestLogicLvlPackage aRequest aSignature  ->
+                processing aChan md aSignature aTraceRouting aRequest
+            RequestNetLvlPackage aRequest aSignature    ->
+                processing aChan md aSignature aTraceRouting aRequest
 
-        aSendToNeighbor aData = case aTraceRouting of
-            ToDirect _ aPointTo _ ->
-                whenJust (getClosedNodeByDirect aData (toPoint aPointTo)) $
-                    \aNode -> do
-                        aNewTrace <- addToTrace
-                            aTraceRouting
-                            aRequestPackage
-                            (aData^.myNodeId)
-                            (aData^.privateKey)
-                        sendToNode (makeRequest aNewTrace aRequestPackage) aNode
-            _ -> return ()
+isItRequestForMe :: ManagerNodeData -> TraceRouting -> Bool
+isItRequestForMe aData = \case
+    ToNode aNodeId _      -> toNodeId aData^.myNodeId == aNodeId
+    ToDirect _ _ _ -> False
+
 
 makeRequest
     ::  TraceRouting
@@ -261,8 +266,9 @@ answerToBlockMadeMsg aMd (toManagerMiningMsg -> BlockMadeMsg aMicroblock) = do
     writeChan (managerMetrics aData) $ increment "net.bl.count"
     loging aData $ "I create a a microblock: " ++ show aMicroblock
     sendBroadcast aMd (BroadcastMining $ BroadcastMicroBlock aMicroblock Nothing)
+    sendToShardingLvl aData $
+        T.ShardAcceptAction (microblockToShard aMicroblock)
 
---    writeChan (aData^.microblockChan) aMicroblock
 answerToBlockMadeMsg _ _ = pure ()
 
 
@@ -299,6 +305,5 @@ processingOfBroadcastThing aMd aBroadcastThing = do
         BroadcastNet    aMsg -> processingOfBroadcast aMd aMsg
         BroadcastLogic  aMsg -> processingOfBroadcast aMd aMsg
         BroadcastMining aMsg -> processingOfBroadcast aMd aMsg
-
 
 --------------------------------------------------------------------------------

@@ -39,6 +39,7 @@ import              Data.Aeson
 import              Data.Aeson.TH 
 import              Service.Metrics
 
+
 instance Show (Chan a) where
     show _ = "Chan"
 
@@ -249,22 +250,7 @@ makeNewNodeConfig = do
     let aId = keyToId aPublicKey
     pure $ NodeConfig aPrivateNumber aPublicPoint aPrivateKey (toMyNodeId aId)
 
-{-
-emptyData
-    :: MonadRandom m
-    => ToManagerData d
-    => PortNumber
-    -> Chan Transaction
-    -> Chan Microblock
-    -> Chan ExitMsg
-    -> Chan Answer
-    -> BootNodeList
-    -> m d
-emptyData aPort aTransactionChan aMicroblockChan aExitChan aAnswerChan aList =
-    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan  aList
-        <$> makeNewNodeConfig aPort
--}
-
+-- FIXME: find a right place.
 makePackageSignature
     ::  Serialize aPackage
     =>  ManagerData md

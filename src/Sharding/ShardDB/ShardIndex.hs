@@ -27,16 +27,21 @@ data ShardExistIndex   = ShardExistIndex {
   } deriving (Show, Eq, Ord, Generic)
 
 data ShardNeededIndex  = ShardNeededIndex {
-    _setOfHash :: (S.Set ShardHash)
+    _setOfHash :: S.Set ShardHash
   }
   deriving (Show, Eq, Ord, Generic)
 
-data ShardLoadingIndex = ShardLoadingIndex [(ShardHash, Priority, TimeSpec)]
+
+--  FIXME:  [(ShardHash, Priority, TimeSpec)] => Map ShardHash (Priority, TimeSpec)
+data ShardLoadingIndex = ShardLoadingIndex {
+    _setOfLoadingShards :: [(ShardHash, Priority, TimeSpec)]
+  }
   deriving (Show, Eq, Ord, Generic)
 
 data Priority          = Priority Int
   deriving (Show, Eq, Ord, Generic)
 
+--  FIXME:  [(ShardHash, Distance Point)] => Map ShardHash (Distance Point)
 data SpaceSnapshot     = SpaceSnapshot {
     _shapshotHashes :: [(ShardHash, Distance Point)]
   }
@@ -60,6 +65,7 @@ instance Serialize Priority
 makeLenses ''SpaceSnapshot
 makeLenses ''ShardExistIndex
 makeLenses ''ShardIndex
+makeLenses ''ShardLoadingIndex
 makeLenses ''ShardNeededIndex
 
 indexToSet :: ShardIndex -> S.Set ShardHash
@@ -73,12 +79,14 @@ indexToSet aIndexList = S.unions $ aSnapshotToSet <$>
 addShardToIndex :: Shard -> MyNodePosition -> ShardIndex -> ShardIndex
 addShardToIndex aShard aMyPosition aShardIndex = aShardIndex &~ do
     zoom shardExistIndex $ do
-        lastSnapshot.shapshotHashes %= aFilter
+        lastSnapshot.shapshotHashes %= filter (\h -> h^._1 /= aHash)
         zoom baseSnapshots $ do
             _head %= addShardToSnapshot aShard aMyPosition
-            _tail.traversed.shapshotHashes %= aFilter
+            _tail.traversed.shapshotHashes  %= filter (\h -> h^._1 /= aHash)
+    shardNeededIndex.setOfHash              %= S.delete aHash
+    shardLoadingIndex.setOfLoadingShards    %= filter (\h -> h^._1 /= aHash)
   where
-    aFilter = filter (\(h, _) -> h /= shardToHash aShard)
+    aHash   = shardToHash aShard
 
 
 addShardToSnapshot :: Shard -> MyNodePosition -> SpaceSnapshot -> SpaceSnapshot
