@@ -30,7 +30,7 @@ instance Verification RequestPackage where
             verify (aPackageSignature, aPackage)
 
 
-instance (Verification a, Serialize a) => Verification (TraceRouting, a) where
+instance Verification (TraceRouting, RequestPackage) where
     verify = \case
         (ToNode _ aPackageSignature, aMsg)                ->
             verify (aPackageSignature, aMsg)
@@ -42,6 +42,34 @@ instance (Verification a, Serialize a) => Verification (TraceRouting, a) where
         (ToDirect aPointFrom aPointTo (aS:xS), aMsg)      ->
             verify (aS, (ToDirect aPointFrom aPointTo xS, aMsg)) &&
             verify ((ToDirect aPointFrom aPointTo xS), aMsg)
+
+
+instance Verification (TraceRouting, ResponcePackage) where
+    verify = \case
+        (ToNode _ aPackageSignature, aMsg)                ->
+            verify (aPackageSignature, aMsg)
+
+        (ToDirect aPointFrom aPointTo [aSignature],
+            aResponcePackage@(ResponceNetLvlPackage aRequestPackage aResponce aPackageSignature)) ->
+                verify (aPackageSignature, aResponce) &&
+                verify aRequestPackage &&
+                verify (aSignature, (aRequestPackage, aPointTo, aPointFrom))
+
+        (ToDirect aPointFrom aPointTo [aSignature],
+             aResponcePackage@(ResponceLogicLvlPackage aRequestPackage aResponce aPackageSignature)) ->
+                verify (aPackageSignature, aResponce) &&
+                verify aResponcePackage &&
+                verify (aSignature, (aRequestPackage, aPointTo, aPointFrom))
+
+        (ToDirect aPointFrom aPointTo (aS:xS),
+             aResponcePackage@(ResponceLogicLvlPackage aRequestPackage aResponce aPackageSignature)) ->
+                verify (aS, (ToDirect aPointFrom aPointTo xS, aRequestPackage)) &&
+                verify ((ToDirect aPointFrom aPointTo xS), aResponcePackage)
+
+        (ToDirect aPointFrom aPointTo (aS:xS),
+             aResponcePackage@(ResponceNetLvlPackage aRequestPackage aResponce aPackageSignature)) ->
+                verify (aS, (ToDirect aPointFrom aPointTo xS, aRequestPackage)) &&
+                verify ((ToDirect aPointFrom aPointTo xS), aResponcePackage)
 
 
 instance Serialize a => Verification (PackageSignature, a) where
