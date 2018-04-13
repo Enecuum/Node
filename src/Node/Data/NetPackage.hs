@@ -32,7 +32,7 @@ data Package where
 
 
 -- | Unciphered data from NetNode A to NetNode B.
--- TODO add the Node id of addresat and it verification.
+-- TODO: Add the Node id of addresat and it verification for multy nodes on one ip.
 data Unciphered where
     ConnectingRequest
         ::  PublicPoint
@@ -108,7 +108,7 @@ data instance Request LogicLvl where
         ::  P.PointFrom
         ->  Distance P.Point
         ->  Request LogicLvl
-
+    NeighborListRequestPackage  :: Request LogicLvl
     ShardRequestPackage         :: ShardHash -> Request LogicLvl
     NodePositionRequestPackage  :: Request LogicLvl
   deriving (Eq, Generic, Show)
@@ -117,7 +117,9 @@ data instance Request LogicLvl where
 -- | Request network information.
 data instance Request NetLvl where
     BroadcastListRequest    :: Request NetLvl
+    --  TODO: Make a sending of HostAdressRequest.
     HostAdressRequest       :: Request NetLvl
+    --  TODO: Make a sending of IsYouBrodcast.
     IsYouBrodcast           :: Request NetLvl
   deriving (Eq, Generic, Show)
 
@@ -158,8 +160,9 @@ data instance NodeInfoList NetLvl where
 
 data instance Responce LogicLvl where
     ShardIndexResponce            :: [ShardHash]    -> Responce LogicLvl
-    ShardResponce                 :: Shard          -> Responce LogicLvl
+    ShardResponce                 :: [Shard]        -> Responce LogicLvl
     NodePositionResponcePackage   :: MyNodePosition -> Responce LogicLvl
+    NeighborListResponcePackage   :: [(NodeId, NodePosition)] -> Responce LogicLvl
   deriving (Eq, Generic, Show)
 
 

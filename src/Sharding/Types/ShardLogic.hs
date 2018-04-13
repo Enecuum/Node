@@ -21,7 +21,7 @@ instance ShardCaptureDistance ShardHash where
         shardCaptureDistance aType
 
 instance ShardCaptureDistance Shard where
-    shardCaptureDistance (Shard aType _ ) =
+    shardCaptureDistance (Shard aType _ _) =
         shardCaptureDistance aType
 
 instance ShardCaptureDistance ShardType where
@@ -40,8 +40,8 @@ instance DistanceTo MyNodePosition Shard where
         distance aNodePosition (hashToPoint $ shardToHash aShardHash)
 
 shardToHash :: Shard -> ShardHash
-shardToHash (Shard aShardType aByteString) =
-    case decode $ cryptoHash aByteString of
+shardToHash (Shard aShardType (Hash aHash) aByteString) =
+    case decode aHash of
         Right (x1, x2, x3, x4, x5, x6, x7, x8) ->
             ShardHash aShardType x1 x2 x3 x4 x5 x6 x7 x8
         Left _                                 ->
