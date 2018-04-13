@@ -18,7 +18,7 @@ import              Control.Exception (try)
 import              Prelude hiding (concat)
 import              Data.Ini
 import              Data.Text
-import              Network.Socket (PortNumber)
+import              Network.Socket (PortNumber, inet_addr)
 import              Control.Exception (SomeException())
 
 import              Data.Aeson
@@ -54,7 +54,7 @@ main =  do
                             Left (_::SomeException) -> case simpleNodeBuildConfig conf of
                                  Nothing   -> error "Please, specify SimpleNodeConfig"
                                  Just snbc -> return $ poaOutPort snbc
-
+                    
                     rpc_p   <- try (getEnv "rpcPort") >>= \case
                             Right item              -> return $ read item
                             Left (_::SomeException) -> case simpleNodeBuildConfig conf of
@@ -62,10 +62,10 @@ main =  do
                                  Just snbc -> return $ rpcPort snbc
 
                     stat_h  <- try (getEnv "statsdHost") >>= \case
-                            Right item              -> return $ read item
+                            Right item              -> inet_addr item
                             Left (_::SomeException) -> case statsdBuildConfig conf of
                                  Nothing   -> error "Please, specify statsdConfig"
-                                 Just stat -> return $ read $ statsdHost stat
+                                 Just stat -> inet_addr $ statsdHost stat
 
                     stat_p  <- try (getEnv "statsdPort") >>= \case
                             Right item              -> return $ read item
