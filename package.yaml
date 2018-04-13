@@ -79,6 +79,9 @@ dependencies:
 - text
 - aeson-pretty
 
+#tmp
+- scientific
+
 library:
   source-dirs: src
   ghc-options:
