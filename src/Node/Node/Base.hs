@@ -6,6 +6,7 @@
     ,   MultiParamTypeClasses
     ,   FlexibleContexts
     ,   PatternSynonyms
+    ,   FlexibleInstances
 #-}
 
 module Node.Node.Base where
@@ -44,6 +45,8 @@ import              Node.Extra
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Node.Base.Server
+import              Node.Data.MakeTraceRouting
+import              Node.Data.MakeAndSendTraceRouting
 
 
 loging :: NodeConfigClass aData => aData -> String -> IO ()
@@ -53,7 +56,6 @@ loging aData aString = do
     appendFile
         ("./data/log_" ++ show aNodeId ++ "_.txt")
         ("["++ show aTime ++ "] " ++ aString ++ "\n")
-
 
 baseNodeOpts
     ::  ManagerData md2
@@ -154,19 +156,8 @@ answerToConnectivityQuery aChan aMd _ = do
                 modifyIORef aMd (&~ do
                     myNodePosition .= Just aMyNodePosition
                     shardingChan   .= Just aChanOfSharding)
-            | Head aNodeId aNode <- aBroadcasts -> do
-                let aPositionRequest = NodePositionRequestPackage
-                aPackageSignature <- makePackageSignature aData aPositionRequest
-                let aRequestLogicLvlPackage = RequestLogicLvlPackage
-                        aPositionRequest aPackageSignature
-
-                aTraceSignature <- makePackageSignature aData
-                    (aNodeId, aRequestLogicLvlPackage)
-                let aTraceRouting = ToNode aNodeId aTraceSignature
-                    aRequest = PackageTraceRoutingRequest aTraceRouting aRequestLogicLvlPackage
-
-                sendToNode (makeCipheredPackage aRequest) aNode
--- findNearestNeighborPositions :: MyNodePosition -> S.Set NodePosition -> [NodePosition]
+            | Head aNodeId _ <- aBroadcasts -> do
+                makeAndSendTo aData [aNodeId] NodePositionRequestPackage
 
         |   aBroadcastNum < preferedBroadcastCount,
             Just aMyNodePosition <- aData^.myNodePosition -> do
@@ -179,11 +170,10 @@ answerToConnectivityQuery aChan aMd _ = do
                 aPreferedConnects = filter isPreferedById aConnectList
             connectTo aChan (preferedBroadcastCount - aBroadcastNum) aPreferedConnects
 
-            --if we don't find anybody send message error
-        -- TODO: optimize by net and logic lvl
+      -- if we don't find anybody send message error
+      -- TODO: optimize by net and logic lvl
       --  | aBroadcastNum > 6     -> undefined
---
---makePositionRequest
+
 
 iDontHaveAPosition :: ManagerData md => md -> Bool
 iDontHaveAPosition aData = aData^.myNodePosition /= Nothing
@@ -205,23 +195,6 @@ connectToBootNode aChan ((^.nodeBaseData.bootNodes) -> aBootNodeList) = do
     when (null aBootNodeList) $ error "aBootNodeList is empty!!! Check config."
     connectTo aChan 1 aBootNodeList
 
-{-
-  TODO answerToConnectivityQuery
-sendIHaveBroadcastConnects :: ManagerData md => IORef md -> HostAddress -> IO ()
-sendIHaveBroadcastConnects aMd aIp = do
-    aData <- readIORef aMd
-    loging aData $ "sendIHaveBroadcastConnects"
-    let aBroadcastNum = length $ filter (\aNode -> aNode^.status == Active) $
-            getNodes BroadcastNode aData
-    aMsg <- makeIHaveBroadcastConnects
-        aBroadcastNum
-        aIp
-        (aData^.nodeBase.portNumber)
-        (aData^.nodeConfig.myNodeId)
-        (aData^.nodeConfig.privateKey)
-    sendInfoPingToNodes aMd aMsg
--}
-
 
 answerToClientDisconnected
     ::  ManagerData md
@@ -242,20 +215,7 @@ answerToClientDisconnected aMd (toManagerMsg -> ClientIsDisconnected aId aChan) 
 
 answerToClientDisconnected _ _ = pure ()
 
-{-
-Expected type: (Maybe Node
-                -> Const (Maybe Node) (Maybe Node))
-               -> M.Map NodeId Node
-               -> Const (Maybe Node) (M.Map NodeId Node)
-  Actual type: (Maybe
-                  (IxValue (M.Map NodeId Node))
-                -> Const
-                     (Maybe Node)
-                     (Maybe (IxValue (M.Map NodeId Node))))
-               -> M.Map NodeId Node
-               -> Const (Maybe Node) (M.Map NodeId Node)
 
--}
 answerToSendInitDatagram
     :: ManagerData md
     => ManagerMsg msg
@@ -359,12 +319,6 @@ answerToDatagramMsg aChan aMd _
             _                     -> pure ()
 answerToDatagramMsg _ _  _ _    =  pure ()
 
-{-
-sendPingMsgTo :: (ManagerData md, )
-    -- aTimeSpec
-    --
--}
-
 
 class PackageTraceRoutingAction aManagerData aRequest where
     makeAction
@@ -415,9 +369,6 @@ answerToPackagedMsg aId aChan aChipredString aMd = do
 answerToPackagedMsg _ _ _  _ = return ()
 
 
--- aNodeType -> t -> IORef md -> NodeId -> [(NodeId, TimeSpec, Signature)] -> RequestPackage -> IO ()
-
-
 whenLeft
     ::  Show a
     =>  Show b
@@ -461,50 +412,7 @@ answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aPortNumb
         modifyIORef aMd $ nodes %~ M.insert aId aNode
         aNewData <- readIORef aMd
         sendRemoteConnectDatagram aInputChan aNewData
-        sendBroadcastRequestList aNewData aId
-
-
-sendBroadcastRequestList ::  ManagerData md => md -> NodeId  -> IO ()
-sendBroadcastRequestList = sendRequest RequestNetLvlPackage BroadcastListRequest
-{-
-    do
-    aRequestSignature <- makePackageSignature aData BroadcastListRequest
-    let aRequest = RequestNetLvlPackage BroadcastListRequest aRequestSignature
-    let aTraceRouting = ToNode aNodeId aTraceSignature
-    let aTraceRoutingRequest = PackageTraceRoutingRequest
-
-    sendToNode (makeCipheredPackage aRequest)
--}
---makeRequest :: ManagerData md => md -> NodeId -> IO ()
-sendRequest aConstructorOfReques aRequest aData aNodeId = do
-    whenJust (aData^.nodes.at aNodeId) $ \aNode -> do
-        aPackageSignature <- makePackageSignature aData aRequest
-        let aRequestPackage = aConstructorOfReques
-                aRequest aPackageSignature
-
-        aTraceSignature <- makePackageSignature aData
-            (aNodeId, aRequestPackage)
-        let aTraceRouting = ToNode aNodeId aTraceSignature
-            aRequest = PackageTraceRoutingRequest aTraceRouting aRequestPackage
-
-        sendToNode (makeCipheredPackage aRequest) aNode
-
--- data instance Request NetLvl where BroadcastListRequest    :: Request NetLvl
-
-
-{-
-BroadcastListRequest    :: Request NetLvl
-ToNode   :: NodeId -> PackageSignature -> TraceRouting
-makePackageSignature ::  Serialize aPackage =>  ManagerData md =>  md ->  aPackage ->  IO PackageSignature
-PackageTraceRoutingRequest ::  TraceRouting ->  RequestPackage ->  Ciphered
-data TraceRouting where ToNode   :: NodeId -> PackageSignature -> TraceRouting
-
-
-
--}
-
--- sendToNode :: (StringKey -> CryptoFailable Package) -> Node -> IO ()
--- makeCipheredPackage :: Ciphered -> StringKey -> CryptoFailable Package
+        makeAndSendTo aNewData [aId] BroadcastListRequest
 
 
 answerToRemoteConnectingMsg
@@ -521,7 +429,7 @@ answerToRemoteConnectingMsg aId aPublicPoint aMd = do
         status          .= Active
       ) aId
     aNewData <- readIORef aMd
-    sendBroadcastRequestList aNewData aId
+    makeAndSendTo aNewData [aId] BroadcastListRequest
 
 
 sendRemoteConnectDatagram :: ManagerData md => Chan MsgToSender -> md -> IO ()
@@ -532,15 +440,6 @@ sendRemoteConnectDatagram aChan aData = do
         (aData^.publicPoint)
         (aData^.nodeBaseData.outPort)
         (aData^.privateKey)
-
-
-{-# DEPRECATED sendDatagramFunc "Use sendPackagedMsg" #-}
-sendDatagramFunc :: Chan MsgToSender -> B.ByteString -> IO ()
-sendDatagramFunc aChan aMsg = writeChan aChan $ MsgToSender aMsg
-
-
-sendPackagedMsg :: Chan MsgToSender -> Package -> IO ()
-sendPackagedMsg aChan aMsg = sendDatagramFunc aChan $ encode aMsg
 
 
 makePing
@@ -573,13 +472,6 @@ makePing aChan aHostAdress aPortNumber = do
             aHostAdress aPortNumber aPingTime aHostAdress
 
 
-{-
-type PingAnswer a c = Chan c -> IORef a -> NodeId -> PingPackage -> IO ()
-type PongAnswer a c = Chan c -> IORef a -> NodeId -> PongPackage -> IO ()
-type InfoPingAnswer a c =
-    Chan c -> IORef a -> NodeId -> InfoPingPackage -> IO ()
--}
-
 minusStatusNumber
     ::  NodeBaseDataClass a
     =>  NodeConfigClass a
@@ -595,10 +487,6 @@ minusStatusNumber aMd aId = do
 sendJustPackagedMsg :: Maybe (Chan MsgToSender, Package) -> IO ()
 sendJustPackagedMsg x = whenJust x $ uncurry sendPackagedMsg
 
-{-
-sendJustDatagram :: Maybe (Chan MsgToSender, PackagedMsg) -> IO ()
-sendJustDatagram = sendJustPackagedMsg
--}
 
 makeMsg
     ::  ManagerData s
@@ -646,17 +534,7 @@ sendToNodes
     ->  IO ()
 sendToNodes aData aMakeMsg = forM_ (M.elems $ aData^.nodes) (sendToNode aMakeMsg)
 
-sendToNode :: (StringKey -> CryptoFailable Package) -> Node -> IO ()
-sendToNode aMakeMsg aNode = do
-    whenJust (aNode^.mKey) $ \aKey -> do
-        whenJust (maybeCryptoError $ aMakeMsg aKey) $ \aJustMsg -> do
-            sendPackagedMsg (aNode^.chan) aJustMsg
 
-
-{-
-type instance NodeInfoList LogicLvl = [(NodeId, NodePosition)]
-type instance NodeInfoList NetLvl   = [(NodeId, HostAddress, PortNumber)]
--}
 class FileDB a where
     saveRecordsToNodeListFile   :: MyNodeId -> NodeInfoList a -> IO ()
     readRecordsFromNodeListFile :: MyNodeId -> IO (NodeInfoList a)
@@ -743,9 +621,5 @@ instance FileDB LogicLvl where
 lInsert :: NodeVariantRole -> [NodeVariantRole] -> [NodeVariantRole]
 lInsert _ [BootNode] = [BootNode]
 lInsert aElem aList  = S.toList . S.fromList $ aElem : aList
-
-
-
-
 
 --------------------------------------------------------------------------------
