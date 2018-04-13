@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, GADTs, DeriveGeneric, GeneralizedNewtypeDeriving #-}
-module Node.Data.NetMesseges where
+module Node.Data.NetMessages where
 
 import              GHC.Generics
 import              Data.Serialize

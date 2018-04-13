@@ -28,7 +28,7 @@ import              Service.Timer
 import              Node.Node.Processing
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
-import              Node.Data.NetMesseges
+import              Node.Data.NetMessages
 
 managerBootNode :: Chan ManagerBootNodeMsgBase -> IORef NodeBootNodeData -> IO ()
 managerBootNode ch md = forever $ do

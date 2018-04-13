@@ -4,21 +4,18 @@ module Main where
 
 import              Control.Monad
 import              Control.Concurrent
-import              System.Environment (getArgs, getEnv)
+import              System.Environment (getEnv)
 
 import              Node.Node.Mining
 import              Node.Node.Types
 import              Service.Timer
-import              Service.Config
 import              Node.Lib
 import              Service.Metrics
 import              PoA
 import              CLI.CLI (serveRpc)
 import              Control.Exception (try)
 import              Prelude hiding (concat)
-import              Data.Ini
-import              Data.Text
-import              Network.Socket (PortNumber, inet_addr)
+import              Network.Socket (inet_addr)
 import              Control.Exception (SomeException())
 
 import              Data.Aeson

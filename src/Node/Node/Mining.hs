@@ -35,12 +35,9 @@ import              Node.Node.Types
 import              Node.Node.Base
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
-import              Node.Data.NetMesseges
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Node.Node.Processing
-import              Lens.Micro.GHC
-
 import              Service.Metrics
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
@@ -247,6 +244,7 @@ answerToNewTransaction aMd (NewTransaction aTransaction) = do
 answerToNewTransaction _ _ = error
     "answerToNewTransaction: something unexpected  has happened."
 
+sendBroadcast :: IORef ManagerNodeData -> BroadcastThing -> IO ()
 sendBroadcast aMd aBroadcastThing = do
     aData <- readIORef aMd
     addInIndex aBroadcastThing aMd
