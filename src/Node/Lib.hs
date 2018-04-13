@@ -11,7 +11,6 @@ import              Data.IORef
 import qualified    Data.Aeson as A
 import              Lens.Micro
 import              Service.Types
-import              Service.Config
 import              Network.Socket (tupleToHostAddress)
 import              Node.Data.NodeTypes
 import Node.FileDB.FileDB
@@ -56,7 +55,7 @@ startNode buildConf exitCh answerCh metricCh manager startDo = do
     void $ startDo managerChan aTransactionChan (config^.myNodeId)
     return managerChan
 
-
+microblockProc :: Chan Microblock -> String -> IO b
 microblockProc aMicroblockCh aFilePath = forever $ do
         aMicroblock <- readChan aMicroblockCh
         aBlocksFile <- try $ readHashMsgFromFile aFilePath

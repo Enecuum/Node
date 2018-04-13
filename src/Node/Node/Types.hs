@@ -25,7 +25,6 @@ import              Lens.Micro.TH
 import              Node.Crypto
 import              Node.Data.Data
 import              Node.Data.NetPackage
-import              Node.Data.NetMesseges
 import              Node.Data.Lens
 import              Node.Data.NodeTypes
 import              Node.Template.Constructor
@@ -33,8 +32,7 @@ import              Sharding.Space.Point
 import qualified    Sharding.Types.Node as N
 import              Service.Types (Transaction, Microblock)
 
-import Data.Text (unpack)
-import Data.Scientific (floatingOrInteger)
+import              Data.Scientific (floatingOrInteger)
 import              Data.Aeson
 import              Data.Aeson.TH 
 import              Service.Metrics
@@ -135,7 +133,12 @@ data NodeBaseData = NodeBaseData {
     ,   nodeBaseDataOutPort             :: PortNumber
   }
 
-
+makeNodeBaseData :: Chan ExitMsg
+                 -> BootNodeList
+                 -> Chan Answer
+                 -> Chan Microblock
+                 -> PortNumber
+                 -> NodeBaseData
 makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan port = NodeBaseData
     aExitChan
     M.empty
