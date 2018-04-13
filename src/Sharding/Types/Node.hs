@@ -29,8 +29,6 @@ data ShardingNode = ShardingNode {
   deriving Eq
 
 
--- sharding
-
 data Neighbor = Neighbor {
         _neighborPosition   :: NodePosition
     ,   _neighborId         :: NodeId
@@ -43,42 +41,42 @@ makeLenses ''Neighbor
 
 
 data ShardingNodeAction =
-    -- TODO think requestShardIndex requestNeededShards, find position
-    ---    InitAction
-        NewNodeInNetAction          NodeId NodePosition
-    -- TODO create index for new node by NodeId
-    |   ShardRequestAction          ShardHash (Chan Shard)
+        ShardRequestAction          ShardHash (Chan Shard)
     |   ShardIndexAcceptAction      [ShardHash]
     |   ShardIndexCreateAction      (Chan ShardingNodeResponce) NodeId Word64
-    |   ShardListCreateAction       (Chan ShardingNodeResponce) NodeId ShardHash
+    |   ShardLoadAction             (Chan ShardingNodeResponce) NodeId ShardHash
     |   NodePositionAction          (Chan ShardingNodeResponce) NodeId
     |   ShardAcceptAction           Shard
     ---
     |   NewShardInNetAction         Shard
-    |   CleanShardsAction -- clean local Shards
+    |   NeighborListAcceptAction    [(NodeId, NodePosition)]
+    |   CleanShardsAction
+    |   CheckOfShardLoadingList
+    |   CleanNeededIndex
+    |   CleanRequestIndex
+    |   ShardCheckLoading
     --- ShiftAction => NewPosiotionResponse
     |   ShiftAction
     |   TheNodeHaveNewCoordinates   NodeId NodePosition
     ---- NeighborListRequest => NeighborListAcceptAction
+    --  BUG the generation of TheNodeIsDead from net lvl.
     |   TheNodeIsDead               NodeId
 
 
 data ShardingNodeResponce where
     ShardIndexResponse    :: [ShardHash]    -> ShardingNodeResponce
-    ShardResponse         :: Shard          -> ShardingNodeResponce
+    ShardResponse         :: [Shard]        -> ShardingNodeResponce
     NodePositionResponse  :: MyNodePosition -> ShardingNodeResponce
   deriving (Show)
 
 
 data ShardingNodeRequestMsg =
         IamAwakeRequst        MyNodeId MyNodePosition -- broadcast for all network
-    ---- TODO sending of ShardIndexRequest
-    |   ShardIndexRequest     Word64 [NodeId]    -- for neighbors
-    |   ShardListRequest      [ShardHash] -- TODO add functionality
-    --- ShiftAction => NewPosiotionResponse
-    |   NewPosiotionMsg       MyNodePosition
-    ---
     |   NeighborListRequest -- ask net level new neighbors
+    |   ShardIndexRequest     Word64 [NodePosition]
+    |   ShardListRequest      [ShardHash]
+    --  ShiftAction => NewPosiotionResponse
+    |   NewPosiotionMsg       MyNodePosition
   deriving (Show)
 
 

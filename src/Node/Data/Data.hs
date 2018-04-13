@@ -41,7 +41,7 @@ newtype StringKey  = StringKey B.ByteString deriving (Eq, Show)
 curve :: Curve
 curve = getCurveByName SEC_p256k1
 
--- TODO to getKey
+
 getKey :: PrivateNumber -> PublicPoint -> StringKey
 getKey priv pub = StringKey key
   where

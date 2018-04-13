@@ -34,6 +34,7 @@ import              Sharding.Sharding
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Sharding.Space.Distance
+import              Node.Data.MakeAndSendTraceRouting
 
 class Processing aNodeData aPackage where
     processing
@@ -77,8 +78,8 @@ instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
             ShardIndexResponce aShardHashList ->
                 sendToShardingLvl aData $ T.ShardIndexAcceptAction aShardHashList
 
-            ShardResponce      aShard         ->
-                sendToShardingLvl aData $ T.ShardAcceptAction aShard
+            ShardResponce      aShardes         -> forM_ aShardes $
+                sendToShardingLvl aData . T.ShardAcceptAction
 
             NodePositionResponcePackage (toNodePosition -> aNodePosition) -> do
                 updateFile (aData^.myNodeId) (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
@@ -106,7 +107,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                 aRequestToNetLvl ShardResponce $ do
                     aChan <- newChan
                     sendToShardingLvl aData $
-                        T.ShardListCreateAction aChan aNodeId aShardHash
+                        T.ShardLoadAction aChan aNodeId aShardHash
                     T.ShardResponse aShard <- readChan aChan
                     return aShard
 
@@ -134,7 +135,7 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
                 (HostAdressResponce $ aData^.hostAddress)
 
             BroadcastListRequest -> do
-                -- TODO think about aBroadcastList
+                -- TEMP Think about move aBroadcastList to operacety memory.
                 NodeInfoListNetLvl   aBroadcastList      <- readRecordsFromNodeListFile $ aData^.myNodeId
                 NodeInfoListLogicLvl aBroadcastListLogic <- readRecordsFromNodeListFile $ aData^.myNodeId
                 let aBroadcastListResponce = BroadcastListResponce
@@ -144,13 +145,32 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
                 aSendNetLvlResponse aBroadcastListResponce
 
 
--- TODO
+
 sendToShardingLvl :: ManagerData md => md -> T.ShardingNodeAction -> IO ()
 sendToShardingLvl aData aMsg = whenJust (aData^.shardingChan) $ \aChan ->
     writeChan aChan aMsg
 
 
--- TODO  requestToNetLvl + sendNetLvlResponse
+sendNetLvlResponse
+    :: ManagerData md
+    =>  TraceRouting
+    ->  md
+    ->  Request NetLvl
+    ->  PackageSignature
+    ->  Responce NetLvl
+    ->  IO ()
+
+sendNetLvlResponse aTraceRouting aData aRequest aSignature aNetPackage = do
+    let (aNode, aTrace) = getClosedNode aTraceRouting aData
+        aRequestPackage = request aRequest aSignature
+
+    aResponsePackageSignature <- makePackageSignature aData
+        (aNetPackage, aRequestPackage)
+    sendResponse aNode
+        (makeNewTraceRouting aTrace aTraceRouting)
+        (ResponceNetLvlPackage aRequestPackage aNetPackage aResponsePackageSignature)
+
+-- TEMP: requestToNetLvl + sendNetLvlResponse
 requestToNetLvl
     ::  ManagerNodeData
     ->  TraceRouting
@@ -164,35 +184,12 @@ requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
         let (aNode, aTrace) = getClosedNode aTraceRouting aData
             aNetLevetPackage = aConstructor aResultOfRequest
 
-        aResponsePackageSignature <- makePackageSignature aData aNetLevetPackage
+        aResponsePackageSignature <- makePackageSignature aData
+            (aNetLevetPackage, aRequestPackage)
+
         sendResponse aNode
             (makeNewTraceRouting aTrace aTraceRouting)
             (ResponceLogicLvlPackage aRequestPackage aNetLevetPackage aResponsePackageSignature)
-
-sendNetLvlResponse
-    :: ManagerData md
-    =>  TraceRouting
-    ->  md
-    ->  Request NetLvl
-    ->  PackageSignature
-    ->  Responce NetLvl
-    ->  IO ()
-
-sendNetLvlResponse aTraceRouting aData aRequest aSignature aNetPackage = do
-    let (aNode, aTrace) = getClosedNode aTraceRouting aData
-        aRequestPackage = RequestNetLvlPackage aRequest aSignature
-
-    aResponsePackageSignature <- makePackageSignature aData aNetPackage
-    sendResponse aNode
-        (makeNewTraceRouting aTrace aTraceRouting)
-        (ResponceNetLvlPackage aRequestPackage aNetPackage aResponsePackageSignature)
---
-getClosedNodeByDirect :: ManagerData md => md -> Point -> Maybe Node
-getClosedNodeByDirect aData aPoint =
-    case closedToPointNeighbor aData aPoint of
-        aNode:_ | not $ amIClose aData aNode (fromPoint aPoint :: PointTo)
-                -> Just aNode
-        _       -> Nothing
 
 
 getClosedNode
@@ -233,28 +230,6 @@ makeNewTraceRouting aSignatures = \case
     aTraceRouting                   -> aTraceRouting
 
 
-closedToPointNeighbor
-    ::  NodeBaseDataClass s
-    =>  DistanceTo Node b
-    =>  s
-    ->  b
-    ->  [Node]
-closedToPointNeighbor aData aPointTo = sortOn
-    (\n -> distanceTo n aPointTo) $ M.elems $ aData^.nodes
---
-amIClose
-    ::  DistanceTo MyNodePosition aPointB
-    =>  DistanceTo aPointA aPointB
-    =>  ManagerData md
-    =>  md
-    ->  aPointA
-    ->  aPointB
-    ->  Bool
-amIClose aData aNode aPointTo = if
-    | Just aPosition <- aData^.myNodePosition,
-        distanceTo aPosition aPointTo < distanceTo aNode aPointTo -> True
-    | otherwise -> False
-
 traceDrop :: NodeId -> [PackageSignature] -> [PackageSignature]
 traceDrop aNextNodeId = dropWhile
     (\(PackageSignature (toNodeId -> aId) _ _) -> aId /= aNextNodeId)
@@ -272,13 +247,6 @@ makeResponse aTraceRouting aResponse = makeCipheredPackage
 signatureToNodeId :: PackageSignature -> NodeId
 signatureToNodeId (PackageSignature (toNodeId -> aNodeId) _ _) = aNodeId
 
-instance DistanceTo Node Point where
-    distanceTo aNode aPoint = if
-        | Just aPosition <- aNode^.nodePosition ->
-            distanceTo aPosition  (NodePosition aPoint)
-        | otherwise                             -> maxBound
 
-instance DistanceTo Node PointTo where
-    distanceTo aNode aPoint = distanceTo aNode (toPoint aPoint)
 
 --------------------------------------------------------------------------------

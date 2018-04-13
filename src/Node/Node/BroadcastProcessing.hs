@@ -26,6 +26,7 @@ import              Control.Concurrent
 import              Control.Monad.Extra
 import              Crypto.Error
 
+import              Service.Types
 import              Service.Monad.Option
 import              Node.Crypto
 import              Node.Data.Data
@@ -33,11 +34,14 @@ import              Node.Node.Types
 import              Node.Node.Base
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
+
 import              Node.Data.NetMessages
+
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Node.Node.Processing
 import              Lens.Micro.GHC
+import              Sharding.Types.ShardTypes
 
 --
 class BroadcastProcessing aNodeData aPackage where
@@ -73,4 +77,38 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
             BroadcastTransaction aTransaction _ ->
                 writeChan (aData^.transactions) aTransaction
                 -- metric $ add ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount") (1 :: Integer)
+            BroadcastMicroBlock aMicroblock _ -> sendToShardingLvl aData $
+                T.ShardAcceptAction (microblockToShard aMicroblock)
+
             _ -> return ()
+
+
+microblockToShard :: Microblock -> Shard
+microblockToShard aMicroblock@(Microblock aHash _ _) =
+    Shard ShardType (Hash aHash) (encode aMicroblock)
+
+-- data Microblock = Microblock ByteString ByteString [Transaction] deriving (Eq, Generic, Ord)
+{-
+BroadcastTransaction
+    ::  Transaction
+    ->  Maybe NodeId
+    ->  BroadcastThingLvl MiningLvl
+
+BroadcastMicroBlock
+    ::  Microblock
+    ->  Maybe NodeId
+    ->  BroadcastThingLvl MiningLvl
+
+BroadcastBlockIndex
+    ::  B.ByteString
+    ->  Maybe NodeId
+    ->  BroadcastThingLvl MiningLvl
+
+BroadcastKeyBlock
+    ::  B.ByteString
+    ->  Maybe NodeId
+    ->  BroadcastThingLvl MiningLvl
+
+-}
+
+--------------------------------------------------------------------------------
