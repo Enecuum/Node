@@ -20,6 +20,7 @@ import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 import qualified    Data.ByteString                 as B
 import qualified    Data.Map                        as M
 import qualified    Data.Bimap                      as BI
+import              Data.Maybe (isNothing)
 import              System.Clock
 import              Data.IORef
 import              Data.Serialize
@@ -42,6 +43,9 @@ import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Node.Node.Processing
 import              Service.Metrics
+import              Lens.Micro.GHC
+import              Node.Data.MakeAndSendTraceRouting
+import              Node.Data.Verification
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
 managerMining ch aMd = forever $ do
@@ -94,7 +98,7 @@ answerToShardingNodeRequestMsg aMd
 
             T.NeighborListRequest -> do
                 forM_ (M.keys $ aData^.nodes) $ \aNodeId -> do
-                makeAndSendTo aData (M.keys $ aData^.nodes) $
+                  makeAndSendTo aData (M.keys $ aData^.nodes) $
                     NeighborListRequestPackage
 
             T.ShardIndexRequest aDistance aNodePositions -> do
@@ -187,8 +191,8 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                         (aData^.myNodeId)
                         (aData^.privateKey)
                     sendToNode (makeRequest aNewTrace aRequestPackage) aNode
-                when (aMaybeNode == Nothing) aProcessingOfAction
-            ToNode aNodeId _ | toNodeId aData^.myNodeId == aNodeId ->
+                when (isNothing aMaybeNode) aProcessingOfAction
+            ToNode aNodeId _ | toNodeId (aData^.myNodeId) == aNodeId ->
                 aProcessingOfAction
             _   -> return ()
 
@@ -201,7 +205,7 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
 
 isItRequestForMe :: ManagerNodeData -> TraceRouting -> Bool
 isItRequestForMe aData = \case
-    ToNode aNodeId _      -> toNodeId aData^.myNodeId == aNodeId
+    ToNode aNodeId _      -> toNodeId (aData^.myNodeId) == aNodeId
     ToDirect _ _ _ -> False
 
 
