@@ -10,7 +10,8 @@ module Service.Metrics (
   timing,
   set,
 
-  metric
+  serveMetrics,
+  Metric
 )  where
 
 import Network.Socket.ByteString (sendAllTo)
@@ -19,21 +20,17 @@ import Data.Serialize (encode)
 import Service.Network.UDP.Client
 import Service.Metrics.Statsd
 
-import Service.Config
+import Control.Concurrent.Chan
 
-defaultHost :: IO String
-defaultHost = return "localhost"
-
-defaultPort :: IO PortNumber
-defaultPort = return $ (8125 :: PortNumber)
+type Metric = String
 
 sendMetric :: String -> ClientHandle -> IO ()
 sendMetric stat h = sendAllTo (clientSocket h)
                               (encode stat)
                               (clientAddress h)
 
-metric :: String -> IO ()
-metric stat = do
-         host <- defaultHost
-         port <- defaultPort
-         runClient host port (sendMetric stat)
+serveMetrics :: HostAddress -> PortNumber -> Chan Metric -> IO ()
+serveMetrics host port chan = do
+             m <- readChan chan
+             runClient host port $ sendMetric m
+               

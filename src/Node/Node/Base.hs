@@ -19,7 +19,6 @@ import              Control.Monad.State.Lazy
 import              Control.Monad.Extra
 import              Control.Exception
 import              Control.Concurrent
-import              Control.Concurrent.Chan
 import              Control.Concurrent.Async
 import              Crypto.Error
 import              Crypto.PubKey.ECC.ECDSA
@@ -31,7 +30,6 @@ import              Data.Serialize
 import              Data.Monoid
 import              Lens.Micro.Mtl
 import              Lens.Micro
-import              Lens.Micro.GHC
 
 import              Service.Network.WebSockets.Client
 import              Service.Network.Base
@@ -46,7 +44,6 @@ import              Node.FileDB.FileDB
 import              Node.Extra
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
-import              Node.Data.NetMesseges
 import              Node.Node.Base.Server
 import              Node.Data.MakeTraceRouting
 import              Node.Data.MakeAndSendTraceRouting

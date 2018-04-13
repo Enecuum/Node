@@ -10,8 +10,6 @@ import              Control.Concurrent.Chan
 import              Node.Template.Constructor
 import qualified    Data.Set                        as S
 import qualified    Data.ByteString                 as B
-import qualified    Data.Map                        as M
-import qualified    Data.Bimap                      as BI
 import qualified    Boot.Map.Random                 as RM
 import              Node.Node.Types
 import              Sharding.Types.Node as N
@@ -49,7 +47,7 @@ mapM (uncurry makeLensInstance') [
 instance ManagerData NodeBootNodeData
 
 instance ToManagerData NodeBootNodeData where
-    toManagerData _ aMicroblockChan aExitChan aAnswerChan aList aNodeConfig port = NodeBootNodeData
+    toManagerData _ aMicroblockChan aExitChan aAnswerChan _ aList aNodeConfig port = NodeBootNodeData
         aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan port)
             RM.empty S.empty
 
