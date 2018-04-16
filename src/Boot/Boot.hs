@@ -29,8 +29,8 @@ import              Node.Data.GlobalLoging
 managerBootNode :: Chan ManagerBootNodeMsgBase -> IORef NodeBootNodeData -> IO ()
 managerBootNode ch md = forever $ do
     mData <- readIORef md
-    msg <- readChan ch
-    runOption msg $ do
+    aMsg <- readChan ch
+    runOption aMsg $ do
         baseNodeOpts ch md mData
 
         opt isClientIsDisconnected $ bootNodeAnswerClientIsDisconnected md
@@ -59,6 +59,8 @@ instance  Processing (IORef NodeBootNodeData) (Request NetLvl) where
             let aBroadcastListResponce = BroadcastListResponce
                     (NodeInfoListLogicLvl [])
                     (NodeInfoListNetLvl $ take 10 aBroadcasts)
+            loging aData $ "Send to node " ++ show aNodeId ++ " broadcast list responce " ++
+                show (take 10 aBroadcasts) ++ "."
             aSendNetLvlResponse aBroadcastListResponce
         _ -> return ()
 
@@ -105,6 +107,7 @@ answerToCheckBroadcastNodes aMd aChan _ = do
 
         whenJust aMaybeNode $ \aNode -> do
             loging aData $ "The node " ++ show aNodeId ++ " is broadcast."
+            loging aData $ "Addition the node to list of broadcast node."
             sendExitMsgToNode aNode
             addRecordsToNodeListFile
                 (aData^.myNodeId)
@@ -114,6 +117,9 @@ answerToCheckBroadcastNodes aMd aChan _ = do
 answerToCheckBroadcastNode :: ManagerMsg a =>
     Chan a -> IORef NodeBootNodeData -> ManagerBootNodeMsgBase -> IO ()
 answerToCheckBroadcastNode aChan aMd (CheckBroadcastNode aNodeId aIp aPort) = do
+    aData <- readIORef aMd
+    loging aData $ "Check of node " ++ show aNodeId ++ " " ++ show aIp ++ ":" ++
+        show aPort ++ ". Is it broadcast?"
     modifyIORef aMd $ checSet %~ S.insert aNodeId
     writeChan aChan $ sendInitDatagram aIp aPort aNodeId
 answerToCheckBroadcastNode _ _ _ = return ()
@@ -126,5 +132,6 @@ bootNodeAnswerClientIsDisconnected aMd
         aData <- readIORef aMd
         whenJust (aId `M.lookup` (aData^.nodes)) $ \aNode -> do
             when (aNode^.chan == aChan) $ do
+                loging aData $ "The node " ++ show aId ++ " is disconnected."
                 modifyIORef aMd (nodes %~ M.delete aId)
 bootNodeAnswerClientIsDisconnected _ _ = pure ()

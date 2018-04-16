@@ -30,6 +30,7 @@ import              Data.Serialize
 import              Data.Monoid
 import              Lens.Micro.Mtl
 import              Lens.Micro
+import              Data.Hex
 
 import              Service.Network.WebSockets.Client
 import              Service.Network.Base
@@ -58,26 +59,10 @@ baseNodeOpts
     ->  md2
     ->  Options msg ()
 baseNodeOpts aChan aMd aData = do
-    opt isSendInitDatagram  $ answerToSendInitDatagram aChan aMd
-    opt isServerIsDead          $
-        answerToServerDead aChan defaultServerPort
+    opt isSendInitDatagram      $ answerToSendInitDatagram aChan aMd
+    opt isServerIsDead          $ answerToServerDead aChan defaultServerPort
     opt isConnectivityQuery     $ answerToConnectivityQuery aChan aMd
-    opt isSendDatagram          $ answerToSendDatagram      aMd
     opt isDisconnectNode        $ answerToDisconnectNode    aData
-    opt isDeleteDeadSouls       $ answerToDeleteDeadSouls   aData
-
-
-answerToSendDatagram
-    ::  ManagerData md
-    =>  ManagerMsg msg
-    =>  IORef md
-    ->  msg
-    ->  IO ()
-answerToSendDatagram aMd (toManagerMsg -> SendDatagram aMsg aId) = do
-    aData <- readIORef aMd
-    whenJust (aData^.nodes.at aId) $
-        \aNode -> sendDatagramFunc (aNode^.chan) aMsg
-answerToSendDatagram _ _ = pure ()
 
 
 pattern Chan :: Chan MsgToSender -> Node
@@ -89,16 +74,6 @@ sendExitMsgToNode (Chan aChan) = do
     sendPackagedMsg aChan disconnectRequest
     writeChan       aChan SenderTerminate
 
-
-answerToDeleteDeadSouls
-    ::  ManagerData md
-    =>  ManagerMsg msg
-    =>  md
-    ->  msg
-    ->  IO ()
-answerToDeleteDeadSouls aData _ = do
-    let aNotIsActive aNode = aNode^.status /= Active
-    forM_ (M.filter aNotIsActive $ aData^.nodes) sendExitMsgToNode
 
 pattern Head aId aElem <- (aId, aElem):_
 pattern PositionOfFirst aPosition <- Head _ ((^.nodePosition) -> Just aPosition)
@@ -256,13 +231,9 @@ answerToSendInitDatagram
 
 answerToSendInitDatagram _ _ _ = pure ()
 
-answerToServerDead
-    ::  ManagerMsg a
-    =>  Chan a
-    ->  PortNumber
-    ->  a
-    ->  IO ()
-answerToServerDead aChan aPort _ =  void $ startServerActor aChan aPort
+
+answerToServerDead :: ManagerMsg a => Chan a -> PortNumber -> a -> IO ()
+answerToServerDead aChan aPort _ = void $ startServerActor aChan aPort
 
 
 answerToDisconnectNode
@@ -364,12 +335,12 @@ answerToPackagedMsg
     ->  IORef md
     ->  IO ()
 
-answerToPackagedMsg aId aChan aChipredString aMd = do
+answerToPackagedMsg aId aChan aCipheredString@(CipheredString aStr) aMd = do
     aData <- readIORef aMd
-    loging aData $ "answerToPackagedMsg: " ++ show aChipredString
+    loging aData $ "Received a message " ++ show (hex aStr) ++ " from " ++ show aId ++ "."
     let aDecryptedPacage = do
-            key  <- _mKey =<< (aId `M.lookup`(aData^.nodes))
-            decryptChipred key aChipredString
+            key  <- _mKey =<< aData^.nodes.at aId
+            decryptChipred key aCipheredString
     whenJust aDecryptedPacage $ \case
         PackageTraceRoutingRequest aTraceRouting aRequestPackage ->
             makeAction aChan aMd aId aTraceRouting aRequestPackage
@@ -380,22 +351,12 @@ answerToPackagedMsg aId aChan aChipredString aMd = do
 answerToPackagedMsg _ _ _  _ = return ()
 
 
-whenLeft
-    ::  Show a
-    =>  Show b
-    =>  NodeConfigClass aData
-    =>  aData
-    ->  Either a b
-    ->  IO ()
-whenLeft aData aMsg@(Left _) = loging aData $ show aMsg
-whenLeft _ _ = pure ()
-
-
 answerToDisconnect :: ManagerData md => [Reason] -> NodeId -> IORef md -> IO ()
 answerToDisconnect _ aNodeId aMd = do
     aData <- readIORef aMd
-    loging aData "answerToDisconnect"
-    whenJust (aNodeId `M.lookup` (aData^.nodes)) sendExitMsgToNode
+    whenJust (aData^.nodes.at aNodeId) $ \aNode -> do
+        loging aData $ "Make answer to disconnect of " ++ show aNodeId ++ "."
+        sendExitMsgToNode aNode
 
 
 answerToInitiatorConnectingMsg
@@ -409,12 +370,12 @@ answerToInitiatorConnectingMsg
     ->  IO ()
 answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aPortNumber aMd = do
     aData <- readIORef aMd
-    loging aData $ "answerToInitiatorConnectingMsg from " ++ showHostAddress aHostAdress ++ " " ++ show aId
+    loging aData $ "Make answer to initiator connecting msg from " ++ showHostAddress aHostAdress ++ " " ++ show aId
     if aId `M.member` (aData^.nodes) then do
-        loging aData $ "is refused " ++ showHostAddress aHostAdress ++ " " ++ show aId
+        loging aData $ "Is refused " ++ showHostAddress aHostAdress ++ " " ++ show aId
         writeChan aInputChan SenderTerminate
     else do
-        loging aData $ "is accepted " ++ showHostAddress aHostAdress ++ " " ++ show aId
+        loging aData $ "Is accepted " ++ showHostAddress aHostAdress ++ " " ++ show aId
         let aKey = getKey (aData^.privateNumber) aPublicPoint
             aNode = (makeNode aInputChan aHostAdress aPortNumber) &~ do
                 mKey            .= Just aKey
@@ -579,5 +540,4 @@ instance FileDB LogicLvl where
             aUpdatedRecords  = aNewRecords ++ aFilteredRecords
 
         saveRecordsToNodeListFile aMyNodeId (NodeInfoListLogicLvl aUpdatedRecords)
-
 --------------------------------------------------------------------------------

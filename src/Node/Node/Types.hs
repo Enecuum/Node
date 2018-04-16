@@ -125,7 +125,6 @@ data NodeBaseData = NodeBaseData {
     ,   nodeBaseDataNodes               :: M.Map NodeId Node
     ,   nodeBaseDataBootNodes           :: BootNodeList
     ,   nodeBaseDataAnswerChan          :: Chan Answer
-    ,   nodeBaseDataVacantPositions     :: BI.Bimap TimeSpec IdIpPort
     ,   nodeBaseDataBroadcastNum        :: Int
     ,   nodeBaseDataHostAddress         :: Maybe HostAddress
     ,   nodeBaseDataMicroblockChan      :: Chan Microblock
@@ -146,7 +145,6 @@ makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan port = NodeBaseData
     M.empty
     aList
     aAnswerChan
-    BI.empty
     0
     Nothing
     aMicroblockChan

@@ -29,5 +29,4 @@ main =  do
             void $ startNode conf
               exitCh answerCh metricCh managerBootNode $ \ch _ _ -> do
                   metronomeS 100000 (writeChan ch checkBroadcastNodes)
-                  metronomeS 10000000 (writeChan ch deleteDeadSouls)
             void $ readChan exitCh
