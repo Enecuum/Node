@@ -35,6 +35,7 @@ import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Sharding.Space.Distance
 import              Node.Data.MakeAndSendTraceRouting
+import              Node.Data.MakeTraceRouting
 
 class Processing aNodeData aPackage where
     processing
@@ -85,7 +86,11 @@ instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
                 updateFile (aData^.myNodeId) (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
                 sendToShardingLvl aData $
                     T.TheNodeHaveNewCoordinates aNodeId aNodePosition
---
+
+            TheNodeIsAlive aNodeId ok -> unless ok $ do
+                sendToShardingLvl aData $ T.TheNodeIsDead aNodeId
+
+
 instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
     processing _ aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting aRequestLogicLvl = do
         aData <- readIORef aMd
@@ -120,6 +125,22 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     modifyIORef aMd $ myNodePosition .~ Just aMyNodePosition
                     return aMyNodePosition
 
+            IsAliveTheNodeRequestPackage aNodeId -> do
+                let aMaybeNodeId = case aTraceRouting of
+                        ToNode _ (PackageSignature (toNodeId -> aId) _ _)
+                            -> Just aId
+                        _   -> Nothing
+
+                whenJust aMaybeNodeId $ \aJustNodeId -> do
+                    let aNetLvlPackage = TheNodeIsAlive
+                            aNodeId $ (aData^.nodes.at aNodeId) /= Nothing
+                    aResponsePackageSignature <- makePackageSignature aData
+                        (aNetLvlPackage, aRequestPackage)
+                    let aPackage = ResponceLogicLvlPackage
+                            aRequestPackage aNetLvlPackage aResponsePackageSignature
+                    aTrace <- makeTraceRouting  aData aPackage
+                        (ToNode aJustNodeId)
+                    sendResponse (aData^.nodes.at aJustNodeId) aTrace aPackage
 
 
 instance Processing (IORef ManagerNodeData) (Request NetLvl) where

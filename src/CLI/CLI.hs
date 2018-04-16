@@ -21,20 +21,20 @@ import Node.Node.Types
 import Service.Types
 import Service.Types.SerializeJSON ()
 import Service.Types.PublicPrivateKeyPair
-import Service.Metrics
+import Service.InfoMsg
 
 data TxChanMsg = NewTx Transaction
                | GenTxNum Int
                | GenTxUnlim
 
 
-serveRpc :: PortNumber -> Chan ManagerMiningMsgBase -> Chan Metric -> IO ()
-serveRpc portNum ch aMetricCh = runServer portNum $ \aMsg addr aSocket -> do
+serveRpc :: PortNumber -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
+serveRpc portNum ch aInfoCh = runServer portNum $ \aMsg addr aSocket -> do
     txChan     <- newChan
     ledgerRespChan <- newChan
     ledgerReqChan <- newChan
-    _ <- forkIO $ txWait txChan ch aMetricCh
-    _ <- forkIO $ ledgerWait ledgerReqChan ledgerRespChan aMetricCh
+    _ <- forkIO $ txWait txChan ch aInfoCh
+    _ <- forkIO $ ledgerWait ledgerReqChan ledgerRespChan aInfoCh
     runRpc txChan ledgerReqChan ledgerRespChan addr aSocket aMsg
       where
         runRpc txChan ledgerReqChan ledgerRespChan addr aSocket aMsg = do
@@ -68,25 +68,25 @@ serveRpc portNum ch aMetricCh = runServer portNum $ \aMsg addr aSocket -> do
 
 
 
-txWait :: Chan TxChanMsg -> Chan ManagerMiningMsgBase -> Chan Metric -> IO ()
-txWait recvCh mngCh metricCh = do
+txWait :: Chan TxChanMsg -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
+txWait recvCh mngCh infoCh = do
     msg <- readChan recvCh
     case msg of
       NewTx tx       -> do
-                        sendMetrics tx metricCh 
+                        sendMetrics tx infoCh 
                         writeChan mngCh $ newTransaction tx
-      GenTxNum num   -> generateNTransactions num   mngCh metricCh
-      GenTxUnlim     -> generateTransactionsForever mngCh metricCh
-    txWait recvCh mngCh metricCh
+      GenTxNum num   -> generateNTransactions num   mngCh infoCh
+      GenTxUnlim     -> generateTransactionsForever mngCh infoCh
+    txWait recvCh mngCh infoCh
 
 
-ledgerWait :: Chan PublicKey -> Chan Amount -> Chan Metric -> IO ()
+ledgerWait :: Chan PublicKey -> Chan Amount -> Chan InfoMsg -> IO ()
 ledgerWait chReq chResp m = do
     key <- readChan chReq
     stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
     result  <- countBalance key
     endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
-    writeChan m $ timing "cl.ld.time" (subTime stTime endTime)
+    writeChan m $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
     writeChan chResp result
     ledgerWait chReq chResp m
 
@@ -101,7 +101,7 @@ genNTx n = do
    return tx
 
 generateNTransactions :: ManagerMiningMsg a =>
-    Int -> Chan a -> Chan Metric -> IO ()
+    Int -> Chan a -> Chan InfoMsg -> IO ()
 generateNTransactions qTx ch m = do
   tx <- genNTx qTx
   mapM_ (\x -> do
@@ -111,7 +111,7 @@ generateNTransactions qTx ch m = do
   putStrLn "Transactions are created"
 
 
-generateTransactionsForever :: ManagerMiningMsg a => Chan a -> Chan Metric -> IO b
+generateTransactionsForever :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO b
 generateTransactionsForever ch m = forever $ do
                                 quantityOfTranscations <- randomRIO (20,30)
                                 tx <- genNTx quantityOfTranscations
@@ -122,15 +122,15 @@ generateTransactionsForever ch m = forever $ do
                                 threadDelay (10^(6 :: Int))
                                 putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
 
-sendMetrics :: Transaction -> Chan Metric -> IO ()
+sendMetrics :: Transaction -> Chan InfoMsg -> IO ()
 sendMetrics (WithTime _ tx) m = sendMetrics tx m
 sendMetrics (WithSignature tx _) m = sendMetrics tx m
 sendMetrics (RegisterPublicKey k b) m = do
-                           writeChan m $ increment "cl.tx.count"
-                           writeChan m $ set "cl.tx.wallet" k
-                           writeChan m $ gauge "cl.tx.amount" b
+                           writeChan m $ Metric $ increment "cl.tx.count"
+                           writeChan m $ Metric $ set "cl.tx.wallet" k
+                           writeChan m $ Metric $ gauge "cl.tx.amount" b
 sendMetrics (SendAmountFromKeyToKey o r a) m = do
-                           writeChan m $ increment "cl.tx.count"
-                           writeChan m $ set "cl.tx.wallet" o
-                           writeChan m $ set "cl.tx.wallet" r
-                           writeChan m $ gauge "cl.tx.amount" a
+                           writeChan m $ Metric $ increment "cl.tx.count"
+                           writeChan m $ Metric $ set "cl.tx.wallet" o
+                           writeChan m $ Metric $ set "cl.tx.wallet" r
+                           writeChan m $ Metric $ gauge "cl.tx.amount" a

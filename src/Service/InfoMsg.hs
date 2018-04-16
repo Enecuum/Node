@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Service.Metrics (
+module Service.InfoMsg (
   withRate,
   increment,
   decrement,
@@ -10,8 +10,8 @@ module Service.Metrics (
   timing,
   set,
 
-  serveMetrics,
-  Metric
+  serveInfoMsg,
+  InfoMsg(..)
 )  where
 
 import Network.Socket.ByteString (sendAllTo)
@@ -22,15 +22,18 @@ import Service.Metrics.Statsd
 
 import Control.Concurrent.Chan
 
-type Metric = String
+data InfoMsg = Metric String
+             | Log String
 
 sendMetric :: String -> ClientHandle -> IO ()
 sendMetric stat h = sendAllTo (clientSocket h)
                               (encode stat)
                               (clientAddress h)
 
-serveMetrics :: HostAddress -> PortNumber -> Chan Metric -> IO ()
-serveMetrics host port chan = do
+serveInfoMsg :: HostAddress -> PortNumber -> Chan InfoMsg -> IO ()
+serveInfoMsg host port chan = do
              m <- readChan chan
-             runClient host port $ sendMetric m
+             case m of
+               Metric s -> runClient host port $ sendMetric s
+               Log s    -> undefined
                

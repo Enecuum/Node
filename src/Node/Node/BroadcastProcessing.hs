@@ -27,6 +27,7 @@ import              Control.Monad.Extra
 import              Crypto.Error
 
 import              Service.Types
+import              Service.InfoMsg
 import              Service.Monad.Option
 import              Node.Crypto
 import              Node.Data.Data
@@ -74,9 +75,9 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
     processingOfBroadcast aMd aMsg = do
         aData <- readIORef aMd
         case aMsg of
-            BroadcastTransaction aTransaction _ ->
+            BroadcastTransaction aTransaction _ -> do
                 writeChan (aData^.transactions) aTransaction
-                -- metric $ add ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount") (1 :: Integer)
+                writeChan (managerInfoMsg aData) $ Metric $ add ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount") (1 :: Integer)
             BroadcastMicroBlock aMicroblock _ -> sendToShardingLvl aData $
                 T.ShardAcceptAction (microblockToShard aMicroblock)
 
