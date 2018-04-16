@@ -61,9 +61,8 @@ managerMining ch aMd = forever $ do
         opt isNewTransaction            $ answerToNewTransaction aMd
         opt isBlockMadeMsg              $ answerToBlockMadeMsg aMd
         opt isInitDatagram              $ answerToSendInitDatagram ch aMd
-        opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
-        opt isDeleteOldestVacantPositions $ answerToDeleteOldestVacantPositions aMd
         opt isShardingNodeRequestMsg    $ answerToShardingNodeRequestMsg aMd
+        opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
 
 miningNodeAnswerClientIsDisconnected
     ::  IORef ManagerNodeData
@@ -77,6 +76,7 @@ miningNodeAnswerClientIsDisconnected aMd
             when (aChan == (aNode^.chan)) $ do
                 modifyIORef aMd $ (nodes %~ M.delete aNodeId)
 miningNodeAnswerClientIsDisconnected _ _ = pure ()
+
 
 answerToShardingNodeRequestMsg
     ::  IORef ManagerNodeData
@@ -134,29 +134,22 @@ answerToShardingNodeRequestMsg aMd
                         (IsAliveTheNodeRequestPackage aNodeId)
 
 
-answerToDeleteOldestVacantPositions
-    ::  IORef ManagerNodeData
-    ->  ManagerMiningMsgBase
-    ->  IO ()
-answerToDeleteOldestVacantPositions aMd _ = do
-    aTime <- getTime Realtime
-    modifyIORef aMd $ vacantPositions %~ BI.filter (\aTimeSpec _ ->
-        diffTimeSpec aTime aTimeSpec > 3000000)
-
-
 answerToDeleteOldestMsg
     ::  IORef ManagerNodeData
     ->  ManagerMiningMsgBase
     ->  IO ()
 answerToDeleteOldestMsg aMd _ = do
+    aData <- readIORef aMd
+    loging aData "Cleaning of index of bradcasted msg."
     aTime <- getTime Realtime
-    modifyIORef aMd $ hashMap %~ deleteOldest aTime
+    modifyIORef aMd $ hashMap %~ BI.filter
+        (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs 3000000)
 
 
 instance BroadcastAction ManagerNodeData where
     makeBroadcastAction _ aMd _ aBroadcastSignature aBroadcastThing = do
         aData <- readIORef aMd
-        loging aData $ "BroadcastAction ManagerNodeData" ++ show aBroadcastThing
+        loging aData $ "Recived the broadcast msg " ++ show aBroadcastThing ++ "."
         when (notInIndex aData aBroadcastThing) $ do
             addInIndex aBroadcastThing aMd
             sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing
@@ -166,9 +159,14 @@ instance BroadcastAction ManagerNodeData where
 instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
     makeAction aChan md aNodeId aTraceRouting aResponcePackage = do
         aData <- readIORef md
+        loging aData $ "Recived a responce package."
         when (verify (aTraceRouting, aResponcePackage)) $ if
-            | isItMyResponce aNodeId aTraceRouting  -> aProcessingOfAction
-            | otherwise                             -> aSendToNeighbor aData
+            | isItMyResponce aNodeId aTraceRouting  -> do
+                loging aData $ "The responce is for me. The processing of responce."
+                aProcessingOfAction
+            | otherwise                             -> do
+                loging aData $ "This is someone else's message. Resending of responce."
+                aSendToNeighbor aData
       where
         aProcessingOfAction = case aResponcePackage of
             ResponceNetLvlPackage _ aResponse aSignature ->
@@ -300,21 +298,6 @@ addInIndex :: Serialize a => a -> IORef ManagerNodeData -> IO ()
 addInIndex aMsg aMd = do
     aTime <- getTime Realtime
     modifyIORef aMd $ hashMap %~ BI.insert aTime (cryptoHash aMsg)
-
-deleteOldest
-    ::  TimeSpec
-    ->  BI.Bimap TimeSpec B.ByteString
-    ->  BI.Bimap TimeSpec B.ByteString
-deleteOldest aTime = BI.filter
-    (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs 3000000)
-
-
-isBootNode :: NodeId -> ManagerNodeData -> Bool
-isBootNode aId aData = aId `elem` ((^._1) <$> aData^.nodeBaseData.bootNodes)
-
-
-eq :: MyNodeId -> NodeId -> Bool
-eq (MyNodeId aMyNodeId) (NodeId aNodeId) = aMyNodeId == aNodeId
 
 
 processingOfBroadcastThing :: IORef ManagerNodeData -> BroadcastThing -> IO ()

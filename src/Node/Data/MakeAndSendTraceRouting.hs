@@ -107,14 +107,9 @@ sendToNode aMakeMsg aNode = do
         whenJust (maybeCryptoError $ aMakeMsg aKey) $ \aJustMsg -> do
             sendPackagedMsg (aNode^.chan) aJustMsg
 
---
-{-# DEPRECATED sendDatagramFunc "Use sendPackagedMsg" #-}
-sendDatagramFunc :: Chan MsgToSender -> B.ByteString -> IO ()
-sendDatagramFunc aChan aMsg = writeChan aChan $ MsgToSender aMsg
-
 
 sendPackagedMsg :: Chan MsgToSender -> Package -> IO ()
-sendPackagedMsg aChan aMsg = sendDatagramFunc aChan $ encode aMsg
+sendPackagedMsg aChan aMsg = writeChan aChan $ MsgToSender $ encode aMsg
 
 
 closedToPointNeighbor

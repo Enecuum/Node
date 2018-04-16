@@ -56,7 +56,6 @@ testSuit2 = do
                 metronomeS 400000 (writeChan ch connectivityQuery)
                 metronomeS 300000 (writeChan ch deleteOldestMsg)
                 metronomeS 10000000 (writeChan ch deleteDeadSouls)
-                metronomeS 3000000 $ writeChan ch deleteOldestVacantPositions
     -- start broadcast nodes
     broadcastNodeList <-forM [1] $ \i -> do
         threadDelay 1000000
@@ -66,7 +65,6 @@ testSuit2 = do
                 metronomeS 400000 (writeChan ch connectivityQuery)
                 metronomeS 300000 (writeChan ch deleteOldestMsg)
                 metronomeS 10000000 (writeChan ch deleteDeadSouls)
-                metronomeS 3000000 $ writeChan ch deleteOldestVacantPositions
                 void $ forkIO $ servePoA (show (1800 + i))  aMyNodeId ch aChan (show (2400 + i))
                 void $ forkIO $ generateTransactionsForever ch
 
@@ -91,7 +89,6 @@ testSuit2 = do
                 metronomeS 100000 (writeChan ch connectivityQuery)
                 metronomeS 300000 (writeChan ch deleteOldestMsg)
                 metronomeS 10000000 (writeChan ch deleteDeadSouls)
-                metronomeS 3000000 $ writeChan ch deleteOldestVacantPositions
 {-
                 void $ forkIO $ servePoA (show (1900 + i)) ch (show (2300 + i))
                 void $ forkIO $ txReceiver (show (2000 + i)) ch
