@@ -16,11 +16,10 @@ module Node.Node.Mining where
 
 import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 
-
-import qualified    Data.ByteString                 as B
 import qualified    Data.Map                        as M
 import qualified    Data.Bimap                      as BI
 import              Data.Maybe (isNothing)
+import              Data.List.Extra
 import              System.Clock
 import              Data.IORef
 import              Data.Serialize
@@ -29,8 +28,9 @@ import              Control.Concurrent
 import              Control.Monad.Extra
 import              Crypto.Error
 import              Node.Node.BroadcastProcessing
-import              Node.Data.MakeTraceRouting
 
+
+import              Sharding.Space.Distance
 import              Sharding.Types.ShardLogic
 import              Service.Monad.Option
 import              Node.Crypto
@@ -42,10 +42,10 @@ import              Node.Data.NetPackage
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Node.Node.Processing
-import              Service.Metrics
-import              Lens.Micro.GHC
+import              Service.InfoMsg
 import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.Verification
+import              Node.Data.GlobalLoging
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
 managerMining ch aMd = forever $ do
@@ -60,9 +60,8 @@ managerMining ch aMd = forever $ do
         opt isNewTransaction            $ answerToNewTransaction aMd
         opt isBlockMadeMsg              $ answerToBlockMadeMsg aMd
         opt isInitDatagram              $ answerToSendInitDatagram ch aMd
-        opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
-        opt isDeleteOldestVacantPositions $ answerToDeleteOldestVacantPositions aMd
         opt isShardingNodeRequestMsg    $ answerToShardingNodeRequestMsg aMd
+        opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
 
 miningNodeAnswerClientIsDisconnected
     ::  IORef ManagerNodeData
@@ -71,12 +70,12 @@ miningNodeAnswerClientIsDisconnected
 miningNodeAnswerClientIsDisconnected aMd
     (toManagerMsg -> ClientIsDisconnected aNodeId aChan) = do
         aData <- readIORef aMd
-        loging aData $ "miningNodeAnswerClientIsDisconnected " ++ show aNodeId
         whenJust (aNodeId `M.lookup`(aData^.nodes)) $ \aNode -> do
+            loging aData $ "The node " ++ show aNodeId ++ " is disconnected."
             when (aChan == (aNode^.chan)) $ do
-                minusStatusNumber aMd aNodeId
                 modifyIORef aMd $ (nodes %~ M.delete aNodeId)
 miningNodeAnswerClientIsDisconnected _ _ = pure ()
+
 
 answerToShardingNodeRequestMsg
     ::  IORef ManagerNodeData
@@ -85,45 +84,73 @@ answerToShardingNodeRequestMsg
 answerToShardingNodeRequestMsg aMd
     (toManagerMsg -> ShardingNodeRequestMsg aNetLvlMsg) = do
         aData <- readIORef aMd
+        let aLogMsg a = "Net lvl accept a msg about " ++ a ++  " from logic lvl."
+        let aLogAboutAliveRequest aNodeId =
+                loging aData $ aLogMsg "is this neighbor alive" ++
+                    "Noda about which they asked: " ++  show aNodeId
         case aNetLvlMsg of
-            T.NewPosiotionMsg aMyNodePosition -> sendBroadcast aMd
-                (BroadcastLogic $ BroadcastPosition
-                    (aData^.myNodeId)
-                    (toNodePosition aMyNodePosition))
+            T.NewPosiotionMsg aMyNodePosition -> do
+                loging aData $ aLogMsg "new position"
+                    ++ ". The position is "
+                    ++ show aMyNodePosition ++ "."
+                sendBroadcast aMd
+                    (BroadcastLogic $ BroadcastPosition
+                        (aData^.myNodeId)
+                        (toNodePosition aMyNodePosition))
 
-            T.IamAwakeRequst aMyNodeId aMyNodePosition -> sendBroadcast aMd
-                (BroadcastLogic $ BroadcastPosition
-                    (aData^.myNodeId)
-                    (toNodePosition aMyNodePosition))
+            T.IamAwakeRequst _ aMyNodePosition -> do
+                loging aData $ aLogMsg "awake logic lvl"
+                sendBroadcast aMd
+                    (BroadcastLogic $ BroadcastPosition
+                        (aData^.myNodeId)
+                        (toNodePosition aMyNodePosition))
 
             T.NeighborListRequest -> do
-                forM_ (M.keys $ aData^.nodes) $ \aNodeId -> do
-                  makeAndSendTo aData (M.keys $ aData^.nodes) $
+                loging aData $ aLogMsg "neighbors"
+                makeAndSendTo aData (M.keys $ aData^.nodes) $
                     NeighborListRequestPackage
 
             T.ShardIndexRequest aDistance aNodePositions -> do
-                whenJust (aData^.myNodePosition) $ \aPosition -> do
+                loging aData $ aLogMsg "hashes of needed shards"
+                whenJust (aData^.myNodePosition) $ \aMyPosition -> do
                     let aRequest = ShardIndexRequestPackage
-                            (toNodePosition aPosition) aDistance
+                            (toNodePosition aMyPosition) aDistance
                     forM_ aNodePositions $ \aPosition -> do
                         makeAndSendTo aData aPosition aRequest
 
             T.ShardListRequest shardHashes -> do
-                whenJust (aData^.myNodePosition) $ \aPosition -> do
-                    forM_ shardHashes $ \aHash -> do
-                        let aPosition = NodePosition $ hashToPoint aHash
-                            aRequest  = ShardRequestPackage aHash
-                        makeAndSendTo aData aPosition aRequest
+                loging aData $ aLogMsg "needed shards"
+                loging aData $ "The list of requested shards:" ++ show shardHashes
+                forM_ shardHashes $ \aHash -> do
+                    let aPosition = NodePosition $ hashToPoint aHash
+                        aRequest  = ShardRequestPackage aHash
+                    makeAndSendTo aData aPosition aRequest
 
+            T.IsTheNeighborAliveRequest aNodeId aNodePosition
+                | aData^.iAmBroadcast -> if
+                    | Just _ <- aData^.nodes.at aNodeId -> do
+                        aLogAboutAliveRequest aNodeId
+                        loging aData $ "The node is alive."
+                        return ()
+                    | otherwise -> do
+                        aLogAboutAliveRequest aNodeId
+                        loging aData $ "The node is dead."
+                        sendToShardingLvl aData $ T.TheNodeIsDead aNodeId
+                | otherwise -> do
+                    let aListOfBroatcastPosition = concat $ do
+                            (aId, aNode) <- M.toList $ aData^.nodes
+                            if  | Just aPosition <- aNode^.nodePosition
+                                    -> return [(aId, aPosition)]
+                                | otherwise -> return []
 
-answerToDeleteOldestVacantPositions
-    ::  IORef ManagerNodeData
-    ->  ManagerMiningMsgBase
-    ->  IO ()
-answerToDeleteOldestVacantPositions aMd _ = do
-    aTime <- getTime Realtime
-    modifyIORef aMd $ vacantPositions %~ BI.filter (\aTimeSpec _ ->
-        diffTimeSpec aTime aTimeSpec > 3000000)
+                        aBroadcastNodeId = take 1 $(^._1) <$> sortOn
+                            (\a -> distanceTo (a^._2) aNodePosition)
+                            aListOfBroatcastPosition
+                    aLogAboutAliveRequest aNodeId
+                    loging aData $ "Request to broadcast node about state (alive or dead) of " ++ show aNodeId
+                    makeAndSendTo aData aBroadcastNodeId
+                        (IsAliveTheNodeRequestPackage aNodeId)
+answerToShardingNodeRequestMsg _ _ = return ()
 
 
 answerToDeleteOldestMsg
@@ -131,14 +158,17 @@ answerToDeleteOldestMsg
     ->  ManagerMiningMsgBase
     ->  IO ()
 answerToDeleteOldestMsg aMd _ = do
+    aData <- readIORef aMd
+    loging aData "Cleaning of index of bradcasted msg."
     aTime <- getTime Realtime
-    modifyIORef aMd $ hashMap %~ deleteOldest aTime
+    modifyIORef aMd $ hashMap %~ BI.filter
+        (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs 3000000)
 
 
 instance BroadcastAction ManagerNodeData where
     makeBroadcastAction _ aMd _ aBroadcastSignature aBroadcastThing = do
         aData <- readIORef aMd
-        loging aData $ "BroadcastAction ManagerNodeData" ++ show aBroadcastThing
+        loging aData $ "Recived the broadcast msg " ++ show aBroadcastThing ++ "."
         when (notInIndex aData aBroadcastThing) $ do
             addInIndex aBroadcastThing aMd
             sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing
@@ -148,9 +178,12 @@ instance BroadcastAction ManagerNodeData where
 instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
     makeAction aChan md aNodeId aTraceRouting aResponcePackage = do
         aData <- readIORef md
+        loging aData $ "Recived a responce package."
         when (verify (aTraceRouting, aResponcePackage)) $ if
-            | isItMyResponce aNodeId aTraceRouting  -> aProcessingOfAction
-            | otherwise                             -> aSendToNeighbor aData
+            | isItMyResponce aNodeId aTraceRouting  -> do
+                loging aData $ "The responce is for me. The processing of responce."
+                aProcessingOfAction
+            | otherwise -> aSendToNeighbor aData
       where
         aProcessingOfAction = case aResponcePackage of
             ResponceNetLvlPackage _ aResponse aSignature ->
@@ -159,12 +192,13 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
                 processing aChan md aSignature aTraceRouting aResponse
 
         aSendToNeighbor aData = do
+            loging aData $ "This is someone else's message. Resending of responce."
             let (aNode, aNewTrace) = getClosedNode aTraceRouting aData
                 aMaybePoints = case aTraceRouting of
                     ToDirect aPointFrom aPointTo _
                         -> Just (aPointFrom, aPointTo)
                     _   -> Nothing
-            whenJust aMaybePoints $ \(aPointFrom, aPointTo) ->
+            whenJust aMaybePoints $ \(aPointFrom, aPointTo) -> do
                 whenJust aNode $ sendToNode (makeResponse
                     (ToDirect aPointFrom aPointTo aNewTrace) aResponcePackage)
 
@@ -177,7 +211,9 @@ isItMyResponce aMyNodeId = \case
         | aNodeId == aMyNodeId          -> True
     _                                   -> False
 
---  THINK: how to understand what the request is for me.
+--  THINK: About request routing.
+--  How to understand what the request is for me, if i have the more closed
+--  neighbor to the point.
 instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
     makeAction aChan md _ aTraceRouting aRequestPackage = do
         aData <- readIORef md
@@ -238,14 +274,14 @@ addToTrace aTraceRouting aRequestPackage aMyNodeId aPrivateKey = do
 answerToNewTransaction :: IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
 answerToNewTransaction aMd (NewTransaction aTransaction) = do
     aData <- readIORef aMd
-    writeChan (managerMetrics aData) $ increment "net.tx.count"
+    writeChan (managerInfoMsg aData) $ Metric $ increment "net.tx.count"
     loging aData $ "I create a transaction: " ++ show aTransaction
     sendBroadcast aMd (BroadcastMining $ BroadcastTransaction aTransaction Nothing)
-    
-    writeChan (managerMetrics aData) $ add
+
+    writeChan (managerInfoMsg aData) $ Metric $ add
         ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount")
         (1 :: Integer)
-    
+
     writeChan (aData^.transactions) aTransaction
 
 answerToNewTransaction _ _ = error
@@ -263,7 +299,7 @@ answerToBlockMadeMsg :: ManagerMiningMsg msg =>
     IORef ManagerNodeData -> msg -> IO ()
 answerToBlockMadeMsg aMd (toManagerMiningMsg -> BlockMadeMsg aMicroblock) = do
     aData <- readIORef aMd
-    writeChan (managerMetrics aData) $ increment "net.bl.count"
+    writeChan (managerInfoMsg aData) $ Metric $ increment "net.bl.count"
     loging aData $ "I create a a microblock: " ++ show aMicroblock
     sendBroadcast aMd (BroadcastMining $ BroadcastMicroBlock aMicroblock Nothing)
     sendToShardingLvl aData $
@@ -280,21 +316,6 @@ addInIndex :: Serialize a => a -> IORef ManagerNodeData -> IO ()
 addInIndex aMsg aMd = do
     aTime <- getTime Realtime
     modifyIORef aMd $ hashMap %~ BI.insert aTime (cryptoHash aMsg)
-
-deleteOldest
-    ::  TimeSpec
-    ->  BI.Bimap TimeSpec B.ByteString
-    ->  BI.Bimap TimeSpec B.ByteString
-deleteOldest aTime = BI.filter
-    (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs 3000000)
-
-
-isBootNode :: NodeId -> ManagerNodeData -> Bool
-isBootNode aId aData = aId `elem` ((^._1) <$> aData^.nodeBaseData.bootNodes)
-
-
-eq :: MyNodeId -> NodeId -> Bool
-eq (MyNodeId aMyNodeId) (NodeId aNodeId) = aMyNodeId == aNodeId
 
 
 processingOfBroadcastThing :: IORef ManagerNodeData -> BroadcastThing -> IO ()

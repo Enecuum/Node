@@ -13,7 +13,7 @@ import              Service.Network.UDP.Client
 import              Service.Network.UDP.Server
 import              Control.Concurrent.Chan
 import              Node.Node.Types
-import              Service.Metrics
+import              Service.InfoMsg
 import              Service.Types
 import              Node.Extra
 
@@ -37,9 +37,9 @@ servePoA ::
     -> MyNodeId
     -> Chan ManagerMiningMsgBase
     -> Chan Transaction
-    -> Chan Metric
+    -> Chan InfoMsg
     -> IO ()
-servePoA aRecivePort aSendPort aNodeId ch aRecvChan aMetricChan = runServer aRecivePort $
+servePoA aRecivePort aSendPort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
     \aMsg aSockAddr _ -> do
         loging (show aRecivePort) $ "PaA msg: " ++ (show $ hex $ aMsg)
         let aDecodeMsg = S.decode aMsg
@@ -56,7 +56,7 @@ servePoA aRecivePort aSendPort aNodeId ch aRecvChan aMetricChan = runServer aRec
         runClient (sockAddrToHostAddress aSockAddr) aSendPort $
         \aHandle -> forM_ [1..aNum] $ \_  -> do
             aTransaction <- readChan aRecvChan
-            writeChan aMetricChan $ add
+            writeChan aInfoChan $ Metric $ add
                 ("net.node." ++ show (toInteger aNodeId) ++ ".pending.amount")
                 (-1 :: Integer)
             loging (show aRecivePort) $  "sendTransaction to poa " ++ show aTransaction

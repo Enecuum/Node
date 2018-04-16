@@ -34,8 +34,8 @@ import              Service.Types (Transaction, Microblock)
 
 import              Data.Scientific (floatingOrInteger)
 import              Data.Aeson
-import              Data.Aeson.TH 
-import              Service.Metrics
+import              Data.Aeson.TH
+import              Service.InfoMsg
 
 
 instance Show (Chan a) where
@@ -101,6 +101,7 @@ data Node = Node {
     ,   _isBroadcast     :: Bool
     ,   _nodeHost        :: HostAddress
   }
+  deriving (Eq)
 
 makeLenses ''Node
 
@@ -108,7 +109,7 @@ data ManagerNodeData = ManagerNodeData {
         managerNodeDataNodeConfig   :: NodeConfig
     ,   managerNodeDataNodeBaseData :: NodeBaseData
     ,   managerTransactions         :: Chan Transaction
-    ,   managerMetrics              :: Chan Metric
+    ,   managerInfoMsg              :: Chan InfoMsg
     ,   managerHashMap              :: BI.Bimap TimeSpec B.ByteString
     ,   managerPublicators          :: S.Set NodeId
     ,   managerSendedTransctions    :: BI.Bimap TimeSpec Transaction
@@ -124,7 +125,6 @@ data NodeBaseData = NodeBaseData {
     ,   nodeBaseDataNodes               :: M.Map NodeId Node
     ,   nodeBaseDataBootNodes           :: BootNodeList
     ,   nodeBaseDataAnswerChan          :: Chan Answer
-    ,   nodeBaseDataVacantPositions     :: BI.Bimap TimeSpec IdIpPort
     ,   nodeBaseDataBroadcastNum        :: Int
     ,   nodeBaseDataHostAddress         :: Maybe HostAddress
     ,   nodeBaseDataMicroblockChan      :: Chan Microblock
@@ -145,7 +145,6 @@ makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan port = NodeBaseData
     M.empty
     aList
     aAnswerChan
-    BI.empty
     0
     Nothing
     aMicroblockChan
@@ -178,7 +177,7 @@ instance ToJSON PortNumber where
 instance FromJSON PortNumber where
   parseJSON (Number s) = case (floatingOrInteger s) of
             Left _  -> error "it was floating =("
-            Right i -> return $ fromInteger i  
+            Right i -> return $ fromInteger i
   parseJSON _ = error "i've felt with the portnumber parsing"
 
 
@@ -198,7 +197,7 @@ data BuildConfig where
         extConnectPort        :: PortNumber,
         bootNodeList          :: String,
         simpleNodeBuildConfig :: Maybe SimpleNodeBuildConfig,
-        statsdBuildConfig     :: Maybe StatsdBuildConfig 
+        statsdBuildConfig     :: Maybe StatsdBuildConfig
   } -> BuildConfig
   deriving (Generic)
 
@@ -234,16 +233,16 @@ class ToManagerData a where
         -> Chan Microblock
         -> Chan ExitMsg
         -> Chan Answer
-        -> Chan Metric
+        -> Chan InfoMsg
         -> BootNodeList
         -> NodeConfig
         -> PortNumber
         ->  a
 
 instance ToManagerData ManagerNodeData where
-    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aMetricChan aList aNodeConfig aOutPort = ManagerNodeData
+    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aInfoChan aList aNodeConfig aOutPort = ManagerNodeData
         aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aOutPort)
-            aTransactionChan aMetricChan BI.empty S.empty BI.empty
+            aTransactionChan aInfoChan BI.empty S.empty BI.empty
 
 
 makeNewNodeConfig :: MonadRandom m => m NodeConfig

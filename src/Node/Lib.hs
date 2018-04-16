@@ -22,7 +22,7 @@ import Node.Node.Base.Server
 import Service.System.Directory (getTransactionFilePath)
 
 import System.Environment
-import Service.Metrics (Metric)
+import Service.InfoMsg (InfoMsg)
 
 -- code exemples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html
@@ -36,18 +36,18 @@ startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
        BuildConfig
     -> Chan ExitMsg
     -> Chan Answer
-    -> Chan Metric
+    -> Chan InfoMsg
     -> (Chan a1 -> IORef s -> IO ())
     -> (Chan a1 -> Chan Transaction -> MyNodeId -> IO a2)
     -> IO (Chan a1)
-startNode buildConf exitCh answerCh metricCh manager startDo = do
+startNode buildConf exitCh answerCh infoCh manager startDo = do
     managerChan <- newChan
     aMicroblockChan <- newChan
     aTransactionChan <- newChan
     config  <- readNodeConfig 
     bnList  <- readBootNodeList $ bootNodeList buildConf
     let port = extConnectPort buildConf 
-    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh metricCh bnList config port
+    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh bnList config port
     startServerActor managerChan port
     aFilePath <- getTransactionFilePath
     void $ forkIO $ microblockProc aMicroblockChan aFilePath

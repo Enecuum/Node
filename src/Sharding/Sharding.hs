@@ -17,9 +17,6 @@
     -- LogicLvl (local) -> LogicLvl (non local): BlockRequest (Maybe Block)
     -- LogicLvl (non local) -> LogicLvl (local): BlockResponse (Maybe Block)
 
---- broadcastLvl                             logicLvl
----                   index shard
----                   store shard
 
 -- mackroblock ([hash mickroblock] , sign, hash, hask prev)
 -- epoch [hash mackroblock , sign, hash, hask prev]
@@ -110,6 +107,21 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
 
         ShiftAction | shiftIsNeed aShardingNode ->
             shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode
+
+        CheckTheNeighbors -> do
+            let aMyNodePosition     = aShardingNode^.nodePosition
+                aNodePositions      = (^.neighborPosition) `S.map` aNeighbors
+                aNeighborsPositions = findNearestNeighborPositions aMyNodePosition aNodePositions
+                aNeighbors = aShardingNode^.nodeNeighbors
+                aFilteredNeighbors = filter
+                    (\a -> a^.neighborPosition `elem` aNeighborsPositions)
+                    $ S.toList aNeighbors
+
+            forM_ aFilteredNeighbors $ \aNeighbor -> do
+                sendToNetLevet aChanOfNetLevel $ IsTheNeighborAliveRequest
+                    (aNeighbor^.neighborId)
+                    (aNeighbor^.neighborPosition)
+            aLoop aShardingNode
 
         TheNodeHaveNewCoordinates aNodeId aNodePosition
             | isInNodeDomain aShardingNode aNodePosition -> aLoop
@@ -215,6 +227,8 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
         writeChan aChanRequest CheckOfShardLoadingList
 
     metronome (10^8) $ do
+        writeChan aChanRequest CheckTheNeighbors
+        threadDelay (10^6)
         writeChan aChanRequest ShiftAction
 
     return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex

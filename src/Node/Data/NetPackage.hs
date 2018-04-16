@@ -80,7 +80,6 @@ data RequestPackage where
   deriving (Eq, Generic, Show)
 
 
-
 data ResponcePackage where
     ResponceNetLvlPackage
         ::  RequestPackage
@@ -102,15 +101,20 @@ data MiningLvl  = MiningLvl
 
 data family Request a :: *
 
+
+--data _____ = _____Request NodeId MyNodeId Signature
+
+
 -- | Request logic information
 data instance Request LogicLvl where
     ShardIndexRequestPackage
         ::  P.PointFrom
         ->  Distance P.Point
         ->  Request LogicLvl
-    NeighborListRequestPackage  :: Request LogicLvl
-    ShardRequestPackage         :: ShardHash -> Request LogicLvl
-    NodePositionRequestPackage  :: Request LogicLvl
+    NeighborListRequestPackage      :: Request LogicLvl
+    ShardRequestPackage             :: ShardHash -> Request LogicLvl
+    NodePositionRequestPackage      :: Request LogicLvl
+    IsAliveTheNodeRequestPackage    :: NodeId -> Request LogicLvl
   deriving (Eq, Generic, Show)
 
 
@@ -163,6 +167,7 @@ data instance Responce LogicLvl where
     ShardResponce                 :: [Shard]        -> Responce LogicLvl
     NodePositionResponcePackage   :: MyNodePosition -> Responce LogicLvl
     NeighborListResponcePackage   :: [(NodeId, NodePosition)] -> Responce LogicLvl
+    TheNodeIsAlive                :: NodeId -> Bool -> Responce LogicLvl
   deriving (Eq, Generic, Show)
 
 
@@ -291,4 +296,29 @@ instance IsByteString CipheredString where
 instance Serialize TimeSpec where
     put (TimeSpec a b) = put a *> put b
     get = TimeSpec <$> get <*> get
+
 --------
+-- 1.
+-- A, B -- don't have white ip.
+-- C, D -- is a broadcast nodes.
+
+-- 1.1. A or B is dead.
+-- 1.2. C or D is dead.
+
+-- 2
+-- A, B -- is a broadcast nodes.
+
+-- 2.1. A or B is dead.
+
+
+-- IDEA: About node is dead.
+-- Time a live of msg 5-6 hops.
+    -- 1. Send msg "DISCONNECT".
+    -- 2. Send msg "I AM ALIVE".
+-- 3. Aggregation information of alive nodes and send to another
+
+
+
+
+
+--------------------------------------------------------------------------------
