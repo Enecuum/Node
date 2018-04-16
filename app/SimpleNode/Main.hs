@@ -27,7 +27,7 @@ main =  do
         case (decode enc) :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
           Just conf -> do
-     
+
             aExitCh   <- newChan
             aAnswerCh <- newChan
             aMetricCh <- newChan
@@ -37,9 +37,6 @@ main =  do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
                     metronomeS 1000000 (writeChan ch deleteOldestMsg)
-                    metronomeS 10000000 (writeChan ch deleteDeadSouls)
-                    metronomeS 3000000 $ writeChan ch deleteOldestVacantPositions
-  
                     poa_in  <- try (getEnv "poaInPort") >>= \case
                             Right item              -> return $ read item
                             Left (_::SomeException) -> case simpleNodeBuildConfig conf of
@@ -51,7 +48,7 @@ main =  do
                             Left (_::SomeException) -> case simpleNodeBuildConfig conf of
                                  Nothing   -> error "Please, specify SimpleNodeConfig"
                                  Just snbc -> return $ poaOutPort snbc
-                    
+
                     rpc_p   <- try (getEnv "rpcPort") >>= \case
                             Right item              -> return $ read item
                             Left (_::SomeException) -> case simpleNodeBuildConfig conf of
@@ -78,4 +75,3 @@ main =  do
                     writeChan aMetricCh $ increment "cl.node.count"
 
             void $ readChan aExitCh
-
