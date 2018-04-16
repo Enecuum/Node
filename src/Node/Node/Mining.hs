@@ -16,7 +16,6 @@ module Node.Node.Mining where
 
 import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 
-import qualified    Data.ByteString                 as B
 import qualified    Data.Map                        as M
 import qualified    Data.Bimap                      as BI
 import              Data.Maybe (isNothing)
@@ -85,40 +84,58 @@ answerToShardingNodeRequestMsg
 answerToShardingNodeRequestMsg aMd
     (toManagerMsg -> ShardingNodeRequestMsg aNetLvlMsg) = do
         aData <- readIORef aMd
+        let aLogMsg a = "Net lvl accept a msg about " ++ a ++  " from logic lvl."
+        let aLogAboutAliveRequest aNodeId =
+                loging aData $ aLogMsg "is this neighbor alive" ++
+                    "Noda about which they asked: " ++  show aNodeId
         case aNetLvlMsg of
-            T.NewPosiotionMsg aMyNodePosition -> sendBroadcast aMd
-                (BroadcastLogic $ BroadcastPosition
-                    (aData^.myNodeId)
-                    (toNodePosition aMyNodePosition))
+            T.NewPosiotionMsg aMyNodePosition -> do
+                loging aData $ aLogMsg "new position"
+                    ++ ". The position is "
+                    ++ show aMyNodePosition ++ "."
+                sendBroadcast aMd
+                    (BroadcastLogic $ BroadcastPosition
+                        (aData^.myNodeId)
+                        (toNodePosition aMyNodePosition))
 
-            T.IamAwakeRequst aMyNodeId aMyNodePosition -> sendBroadcast aMd
-                (BroadcastLogic $ BroadcastPosition
-                    (aData^.myNodeId)
-                    (toNodePosition aMyNodePosition))
+            T.IamAwakeRequst _ aMyNodePosition -> do
+                loging aData $ aLogMsg "awake logic lvl"
+                sendBroadcast aMd
+                    (BroadcastLogic $ BroadcastPosition
+                        (aData^.myNodeId)
+                        (toNodePosition aMyNodePosition))
 
             T.NeighborListRequest -> do
-                forM_ (M.keys $ aData^.nodes) $ \aNodeId -> do
-                  makeAndSendTo aData (M.keys $ aData^.nodes) $
+                loging aData $ aLogMsg "neighbors"
+                makeAndSendTo aData (M.keys $ aData^.nodes) $
                     NeighborListRequestPackage
 
             T.ShardIndexRequest aDistance aNodePositions -> do
-                whenJust (aData^.myNodePosition) $ \aPosition -> do
+                loging aData $ aLogMsg "hashes of needed shards"
+                whenJust (aData^.myNodePosition) $ \aMyPosition -> do
                     let aRequest = ShardIndexRequestPackage
-                            (toNodePosition aPosition) aDistance
+                            (toNodePosition aMyPosition) aDistance
                     forM_ aNodePositions $ \aPosition -> do
                         makeAndSendTo aData aPosition aRequest
 
             T.ShardListRequest shardHashes -> do
-                whenJust (aData^.myNodePosition) $ \aPosition -> do
-                    forM_ shardHashes $ \aHash -> do
-                        let aPosition = NodePosition $ hashToPoint aHash
-                            aRequest  = ShardRequestPackage aHash
-                        makeAndSendTo aData aPosition aRequest
+                loging aData $ aLogMsg "needed shards"
+                loging aData $ "The list of requested shards:" ++ show shardHashes
+                forM_ shardHashes $ \aHash -> do
+                    let aPosition = NodePosition $ hashToPoint aHash
+                        aRequest  = ShardRequestPackage aHash
+                    makeAndSendTo aData aPosition aRequest
 
             T.IsTheNeighborAliveRequest aNodeId aNodePosition
                 | aData^.iAmBroadcast -> if
-                    | Just _ <- aData^.nodes.at aNodeId -> return ()
-                    | otherwise -> sendToShardingLvl aData $ T.TheNodeIsDead aNodeId
+                    | Just _ <- aData^.nodes.at aNodeId -> do
+                        aLogAboutAliveRequest aNodeId
+                        loging aData $ "The node is alive."
+                        return ()
+                    | otherwise -> do
+                        aLogAboutAliveRequest aNodeId
+                        loging aData $ "The node is dead."
+                        sendToShardingLvl aData $ T.TheNodeIsDead aNodeId
                 | otherwise -> do
                     let aListOfBroatcastPosition = concat $ do
                             (aId, aNode) <- M.toList $ aData^.nodes
@@ -129,9 +146,11 @@ answerToShardingNodeRequestMsg aMd
                         aBroadcastNodeId = take 1 $(^._1) <$> sortOn
                             (\a -> distanceTo (a^._2) aNodePosition)
                             aListOfBroatcastPosition
-
+                    aLogAboutAliveRequest aNodeId
+                    loging aData $ "Request to broadcast node about state (alive or dead) of " ++ show aNodeId
                     makeAndSendTo aData aBroadcastNodeId
                         (IsAliveTheNodeRequestPackage aNodeId)
+answerToShardingNodeRequestMsg _ _ = return ()
 
 
 answerToDeleteOldestMsg
@@ -164,9 +183,7 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
             | isItMyResponce aNodeId aTraceRouting  -> do
                 loging aData $ "The responce is for me. The processing of responce."
                 aProcessingOfAction
-            | otherwise                             -> do
-                loging aData $ "This is someone else's message. Resending of responce."
-                aSendToNeighbor aData
+            | otherwise -> aSendToNeighbor aData
       where
         aProcessingOfAction = case aResponcePackage of
             ResponceNetLvlPackage _ aResponse aSignature ->
@@ -175,12 +192,13 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
                 processing aChan md aSignature aTraceRouting aResponse
 
         aSendToNeighbor aData = do
+            loging aData $ "This is someone else's message. Resending of responce."
             let (aNode, aNewTrace) = getClosedNode aTraceRouting aData
                 aMaybePoints = case aTraceRouting of
                     ToDirect aPointFrom aPointTo _
                         -> Just (aPointFrom, aPointTo)
                     _   -> Nothing
-            whenJust aMaybePoints $ \(aPointFrom, aPointTo) ->
+            whenJust aMaybePoints $ \(aPointFrom, aPointTo) -> do
                 whenJust aNode $ sendToNode (makeResponse
                     (ToDirect aPointFrom aPointTo aNewTrace) aResponcePackage)
 
