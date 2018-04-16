@@ -29,7 +29,6 @@ import              Control.Concurrent
 import              Control.Monad.Extra
 import              Crypto.Error
 import              Node.Node.BroadcastProcessing
-import              Node.Data.MakeTraceRouting
 
 
 import              Sharding.Space.Distance
@@ -45,9 +44,9 @@ import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Node.Node.Processing
 import              Service.Metrics
-import              Lens.Micro.GHC
 import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.Verification
+import              Node.Data.GlobalLoging
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
 managerMining ch aMd = forever $ do
@@ -76,7 +75,6 @@ miningNodeAnswerClientIsDisconnected aMd
         whenJust (aNodeId `M.lookup`(aData^.nodes)) $ \aNode -> do
             loging aData $ "The node " ++ show aNodeId ++ " is disconnected."
             when (aChan == (aNode^.chan)) $ do
-                minusStatusNumber aMd aNodeId
                 modifyIORef aMd $ (nodes %~ M.delete aNodeId)
 miningNodeAnswerClientIsDisconnected _ _ = pure ()
 

@@ -4,31 +4,27 @@
     ,   MultiParamTypeClasses
     ,   FlexibleInstances
 #-}
+
 module Boot.Boot where
 
 import qualified    Data.Map                        as M
 import qualified    Data.Set                        as S
-import qualified    Boot.Map.Random                 as RM
 import              Data.List
 import              Data.IORef
 import              Control.Monad.Extra
 import              Lens.Micro
-import              Lens.Micro.Mtl
 import              Control.Concurrent.Chan
-import              Debug.Trace
+import              Data.Maybe
 
 import              Boot.Types
 import              Node.Node.Base
 import              Node.Node.Types
 import              Service.Monad.Option
-import              Node.Crypto
-import              Node.Data.Data
-import              Service.Timer
 
 import              Node.Node.Processing
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
-import              Node.Data.NetMessages
+import              Node.Data.GlobalLoging
 
 managerBootNode :: Chan ManagerBootNodeMsgBase -> IORef NodeBootNodeData -> IO ()
 managerBootNode ch md = forever $ do
@@ -47,9 +43,8 @@ managerBootNode ch md = forever $ do
 
 instance PackageTraceRoutingAction NodeBootNodeData RequestPackage where
     makeAction aChan md aNodeId aTraceRouting aRequesPackage = do
-        aData <- readIORef md
         case aRequesPackage of
-            RequestNetLvlPackage aReques aSignature ->
+            RequestNetLvlPackage aReques aSignature -> do
                 processing aChan md aSignature aTraceRouting aReques
             _   -> return ()
 
@@ -90,19 +85,26 @@ answerToCheckBroadcastNodes aMd aChan _ = do
             guard $ aNode^.status == Active
             pure aId
 
-        (aBroadcastNodes, aNeededInBroadcastLis) = partition
+        (aBroadcastNodes, aNeededInBroadcastList) = partition
             (\aId -> S.notMember aId $ aData^.checSet) aNodeIds
 
-    forM_ aNeededInBroadcastLis $ \aNodeId -> do
+    forM_ aNeededInBroadcastList $ \aNodeId -> do
+        loging aData $ "Start of node check " ++ show aNodeId ++ ". Is it broadcast?"
         whenJust (aData^.nodes.at aNodeId) $ \aNode -> do
             sendExitMsgToNode aNode
             writeChan aChan $ checkBroadcastNode
                 aNodeId (aNode^.nodeHost) (aNode^.nodePort)
 
     forM_ aBroadcastNodes $ \aNodeId -> do
+        loging aData $ "Ending of node check " ++ show aNodeId ++ ". Is it broadcast?"
         modifyIORef aMd $ checSet %~ S.delete aNodeId
 
-        whenJust (aData^.nodes.at aNodeId) $ \aNode -> do
+        let aMaybeNode = aData^.nodes.at aNodeId
+        when (isNothing aMaybeNode) $ do
+            loging aData $ "The node " ++ show aNodeId ++ " doesn't a broadcast."
+
+        whenJust aMaybeNode $ \aNode -> do
+            loging aData $ "The node " ++ show aNodeId ++ " is broadcast."
             sendExitMsgToNode aNode
             addRecordsToNodeListFile
                 (aData^.myNodeId)
@@ -121,10 +123,8 @@ bootNodeAnswerClientIsDisconnected ::
     IORef NodeBootNodeData -> ManagerBootNodeMsgBase -> IO ()
 bootNodeAnswerClientIsDisconnected aMd
     (toManagerMsg -> ClientIsDisconnected aId aChan) = do
-        traceMarkerIO "bootNodeAnswerClientIsDisconnected"
         aData <- readIORef aMd
         whenJust (aId `M.lookup` (aData^.nodes)) $ \aNode -> do
             when (aNode^.chan == aChan) $ do
-                minusStatusNumber aMd aId
                 modifyIORef aMd (nodes %~ M.delete aId)
 bootNodeAnswerClientIsDisconnected _ _ = pure ()

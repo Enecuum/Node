@@ -13,20 +13,19 @@ import              Control.Concurrent.Chan
 import              Debug.Trace
 
 import              Boot.Types
-import              Node.Node.Base
 import              Node.Node.Types
 import              Service.Monad.Option
 import              Node.Crypto
 import              Node.Data.Data
 import              Service.Timer
 
-import              Node.Node.Processing
+
 import              Node.Data.NodeTypes
-import              Node.Data.NetPackage
-import              Node.Data.NetMessages
 import              Sharding.Space.Distance
 import              Sharding.Space.Point
-import              Sharding.Types.ShardTypes 
+import              Sharding.Types.ShardTypes
+
+import              System.Clock
 
 
 type ConnectList = [NodeId]
@@ -34,6 +33,14 @@ type ShardCount = Int
 
 data LogInfoMsg = LogInfoMsg MyNodeId MyNodePosition ConnectList  ShardCount (Distance Point) (Maybe [ShardHash])
 
+
+loging :: NodeConfigClass aData => aData -> String -> IO ()
+loging aData aString = do
+    aTime <- getTime Realtime
+    let MyNodeId aNodeId = aData^.myNodeId
+    appendFile
+        ("./data/log_" ++ show aNodeId ++ "_.txt")
+        ("["++ show aTime ++ "] " ++ aString ++ "\n")
 
 
 ----
