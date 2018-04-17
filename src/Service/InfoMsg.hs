@@ -38,6 +38,7 @@ data LogingTag
     | ShardingLvlTag
     | NetLvlTag
     | MiningLvlTag
+    | ServePoATag
   deriving Show
 
 
