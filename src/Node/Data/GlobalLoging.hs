@@ -23,6 +23,7 @@ type ShardCount = Int
 data LogInfoMsg = LogInfoMsg MyNodeId MyNodePosition ConnectList  ShardCount (Distance Point) (Maybe [ShardHash])
 
 
+-- | Пишу логи или метрики в канал, где их подхватит поток и перешлёт на сервер.
 writeLog, writeMetric :: Chan InfoMsg ->  String ->  IO ()
 writeLog aChan aString = writeChan aChan $ Log aString
 writeMetric aChan metric = writeChan aChan $ Metric $ metric
