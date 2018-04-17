@@ -42,7 +42,7 @@ import              Node.Data.NetPackage
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Node.Node.Processing
-import              Service.Metrics
+import              Service.InfoMsg
 import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.Verification
 import              Node.Data.GlobalLoging
@@ -274,11 +274,11 @@ addToTrace aTraceRouting aRequestPackage aMyNodeId aPrivateKey = do
 answerToNewTransaction :: IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
 answerToNewTransaction aMd (NewTransaction aTransaction) = do
     aData <- readIORef aMd
-    writeChan (managerMetrics aData) $ increment "net.tx.count"
+    writeChan (managerInfoMsg aData) $ Metric $ increment "net.tx.count"
     loging aData $ "I create a transaction: " ++ show aTransaction
     sendBroadcast aMd (BroadcastMining $ BroadcastTransaction aTransaction Nothing)
 
-    writeChan (managerMetrics aData) $ add
+    writeChan (managerInfoMsg aData) $ Metric $ add
         ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount")
         (1 :: Integer)
 
@@ -299,7 +299,7 @@ answerToBlockMadeMsg :: ManagerMiningMsg msg =>
     IORef ManagerNodeData -> msg -> IO ()
 answerToBlockMadeMsg aMd (toManagerMiningMsg -> BlockMadeMsg aMicroblock) = do
     aData <- readIORef aMd
-    writeChan (managerMetrics aData) $ increment "net.bl.count"
+    writeChan (managerInfoMsg aData) $ Metric $ increment "net.bl.count"
     loging aData $ "I create a a microblock: " ++ show aMicroblock
     sendBroadcast aMd (BroadcastMining $ BroadcastMicroBlock aMicroblock Nothing)
     sendToShardingLvl aData $
