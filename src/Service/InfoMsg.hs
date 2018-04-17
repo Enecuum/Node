@@ -11,8 +11,8 @@ module Service.InfoMsg (
   set,
   serveInfoMsg,
   InfoMsg(..),
-  MsgType,
-  LogingTag
+  MsgType(..),
+  LogingTag(..)
 )  where
 
 import Network.Socket.ByteString (sendAllTo)
@@ -34,6 +34,7 @@ data LogingTag
     = ConnectingTag
     | LoadingShardsTag
     | BroadcatingTag
+    | BootNodeTag
     | ShardingLvlTag
     | NetLvlTag
     | MiningLvlTag
