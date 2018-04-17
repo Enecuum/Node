@@ -24,9 +24,14 @@ data LogInfoMsg = LogInfoMsg MyNodeId MyNodePosition ConnectList  ShardCount (Di
 
 
 -- | Пишу логи или метрики в канал, где их подхватит поток и перешлёт на сервер.
-writeLog, writeMetric :: Chan InfoMsg ->  String ->  IO ()
-writeLog aChan aString = writeChan aChan $ Log aString
+writeMetric :: Chan InfoMsg ->  String ->  IO ()
 writeMetric aChan metric = writeChan aChan $ Metric $ metric
+
+
+-- +log|tag1,tag2,tag3|nodeId|info|logMsg\r\n
+writeLog :: Chan InfoMsg -> [LogingTag] -> MsgType -> String -> IO ()
+writeLog aChan aTags aTypes aMsg = writeChan aChan $ Log aTags aTypes aMsg
+
 
 
 -------------------------------------------------------------------------------------

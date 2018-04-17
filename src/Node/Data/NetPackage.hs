@@ -95,9 +95,9 @@ data ResponcePackage where
   deriving (Eq, Generic, Show)
 
 
-data LogicLvl   = LogicLvl
-data NetLvl     = NetLvl
-data MiningLvl  = MiningLvl
+data LogicLvl   = LogicLvl  deriving Show
+data NetLvl     = NetLvl    deriving Show
+data MiningLvl  = MiningLvl deriving Show
 
 data family Request a :: *
 
