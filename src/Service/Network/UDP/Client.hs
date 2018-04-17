@@ -1,5 +1,6 @@
 {-#Language TypeSynonymInstances, FlexibleInstances#-}
 module Service.Network.UDP.Client (
+    ConnectInfo(..),
     ClientHandle(..),
     runClient,
     PortNumber(..),
@@ -28,7 +29,7 @@ runClient :: Hosts a => a -> PortNumber -> (ClientHandle -> IO ()) -> IO ()
 runClient aHostAdress aPort aPlainHandler = withSocketsDo $ do
     aHandle <- openConnect aHostAdress aPort
     aPlainHandler aHandle
-    close (clientSocket aHandle)
+    closeConnect aHandle
 
 instance Hosts HostAddress where
     openConnect aHostAdress = openConnect (showHostAddress aHostAdress)
