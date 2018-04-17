@@ -71,18 +71,23 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl LogicLvl
                 sendToShardingLvl aData $
                     T.TheNodeHaveNewCoordinates (toNodeId aMyNodeId) aNodePosition
 
+-- TODO: Сделать нормальный ввод данных в метрики.
 instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLvl) where
     processingOfBroadcast aMd aMsg = do
         aData <- readIORef aMd
         case aMsg of
             BroadcastTransaction aTransaction _ -> do
                 writeChan (aData^.transactions) aTransaction
-                writeChan (managerInfoMsg aData) $ Metric $ add ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount") (1 :: Integer)
+                writeChan (aData^.infoMsgChan) $
+                    Metric $ add
+                        ("net.node." ++ idShow (aData^.myNodeId) ++ ".pending.amount")
+                        (1 :: Integer)
             BroadcastMicroBlock aMicroblock _ -> sendToShardingLvl aData $
                 T.ShardAcceptAction (microblockToShard aMicroblock)
 
             _ -> return ()
 
+idShow myNodeId = show (toInteger myNodeId)
 
 microblockToShard :: Microblock -> Shard
 microblockToShard aMicroblock@(Microblock aHash _ _) =
