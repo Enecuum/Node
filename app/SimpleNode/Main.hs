@@ -67,7 +67,7 @@ main =  do
                                  Nothing   -> error "Please, specify statsdConfig"
                                  Just stat -> return $ statsdPort stat
 
-                    void $ forkIO $ serveInfoMsg stat_h stat_p aInfoCh
+                    void $ forkIO $ serveInfoMsg stat_h stat_p aInfoCh (toInteger aMyNodeId)
 
                     void $ forkIO $ servePoA poa_in poa_out aMyNodeId ch aChan aInfoCh
                     void $ forkIO $ serveRpc rpc_p ch aInfoCh

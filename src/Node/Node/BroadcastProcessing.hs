@@ -79,7 +79,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
         case aMsg of
             BroadcastTransaction aTransaction _ -> do
                 writeChan (aData^.transactions) aTransaction
-                writeMetric aData $ add
+                writeMetric (aData^.infoMsgChan) $ add
                     ("net.node." ++ idShow (aData^.myNodeId) ++ ".pending.amount")
                     (1 :: Integer)
             BroadcastMicroBlock aMicroblock _ -> sendToShardingLvl aData $
