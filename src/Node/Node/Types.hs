@@ -35,7 +35,8 @@ import              Service.Types (Transaction, Microblock)
 import              Data.Scientific (floatingOrInteger)
 import              Data.Aeson
 import              Data.Aeson.TH
-import              Service.Metrics
+import              Service.InfoMsg
+
 
 
 instance Show (Chan a) where
@@ -109,7 +110,7 @@ data ManagerNodeData = ManagerNodeData {
         managerNodeDataNodeConfig   :: NodeConfig
     ,   managerNodeDataNodeBaseData :: NodeBaseData
     ,   managerTransactions         :: Chan Transaction
-    ,   managerMetrics              :: Chan Metric
+    ,   managerInfoMsg              :: Chan InfoMsg
     ,   managerHashMap              :: BI.Bimap TimeSpec B.ByteString
     ,   managerPublicators          :: S.Set NodeId
     ,   managerSendedTransctions    :: BI.Bimap TimeSpec Transaction
@@ -233,16 +234,16 @@ class ToManagerData a where
         -> Chan Microblock
         -> Chan ExitMsg
         -> Chan Answer
-        -> Chan Metric
+        -> Chan InfoMsg
         -> BootNodeList
         -> NodeConfig
         -> PortNumber
         ->  a
 
 instance ToManagerData ManagerNodeData where
-    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aMetricChan aList aNodeConfig aOutPort = ManagerNodeData
+    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aInfoChan aList aNodeConfig aOutPort = ManagerNodeData
         aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aOutPort)
-            aTransactionChan aMetricChan BI.empty S.empty BI.empty
+            aTransactionChan aInfoChan BI.empty S.empty BI.empty
 
 
 makeNewNodeConfig :: MonadRandom m => m NodeConfig
