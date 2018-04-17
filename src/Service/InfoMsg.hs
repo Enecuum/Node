@@ -10,11 +10,14 @@ module Service.InfoMsg (
   timing,
   set,
   serveInfoMsg,
-  InfoMsg(..)
+  InfoMsg(..),
+  MsgType,
+  LogingTag
 )  where
 
 import Network.Socket.ByteString (sendAllTo)
 import Data.Serialize (encode)
+import Data.List
 
 import System.Clock
 import Service.Network.UDP.Client
@@ -23,8 +26,28 @@ import Service.Metrics.Statsd
 import Control.Monad
 import Control.Concurrent.Chan
 
+
+--
+data MsgType = Info | Warnig | Error
+
+data LogingTag
+    = ConnectingTag
+    | LoadingShardsTag
+    | BroadcatingTag
+    | ShardingLvlTag
+    | NetLvlTag
+    | MiningLvlTag
+  deriving Show
+
+
+instance Show MsgType where
+    show Info   = "info"
+    show Warnig = "warnig"
+    show Error  = "error"
+
+
 data InfoMsg = Metric String
-             | Log String
+             | Log [LogingTag] MsgType String
 
 sendLog, sendMetric :: String -> ClientHandle -> IO ()
 sendLog = sendMetric
@@ -38,9 +61,10 @@ serveInfoMsg host port chan aId = forever $ do
     m <- readChan chan
     case m of
         Metric s -> runClient host port $ sendMetric s
-        Log s    -> do
+        Log aTags aMsgType aMsg -> do
             aTime <- getTime Realtime
-            let aTag = "[" ++ show aId ++ "]["++ show aTime ++ "]"
-            runClient host port $ sendLog $ aTag ++ s
-
+            let aTagsList = concat (intersperse "," (show <$> aTags))
+                aString = "+log|" ++ aTagsList ++ "|" ++ show aId  ++ "|"
+                    ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
+            undefined
 --------------------------------------------------------------------------------
