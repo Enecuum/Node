@@ -37,6 +37,7 @@ import              Sharding.Space.Distance
 import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.MakeTraceRouting
 
+
 class Processing aNodeData aPackage where
     processing
         ::  ManagerMsg msg
