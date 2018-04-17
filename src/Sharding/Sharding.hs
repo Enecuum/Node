@@ -80,7 +80,7 @@ numberOfNeededShards aShardingNode =
 --makeShardingNode :: MyNodeId -> Point -> IO ()
 makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgChan = do
     aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition
-    writeLogNew infoMsgChan [ShardingLvlTag] Info $  "Start of sharding lvl."
+    writeLog infoMsgChan [ShardingLvlTag] Info $  "Start of sharding lvl."
     void $ forkIO $ aLoop aShardingNode
   where
     aLoop :: ShardingNode -> IO ()
