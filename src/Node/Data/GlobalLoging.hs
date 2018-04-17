@@ -28,9 +28,10 @@ writeMetric :: Chan InfoMsg ->  String ->  IO ()
 writeMetric aChan metric = writeChan aChan $ Metric $ metric
 
 
--- +log|tag1,tag2,tag3|nodeId|info|logMsg\r\n
-writeLog :: Chan InfoMsg -> [LogingTag] -> MsgType -> String -> IO ()
-writeLog aChan aTags aTypes aMsg = writeChan aChan $ Log aTags aTypes aMsg
+writeLog aChan aMsg = writeChan aChan $ Log [] Info aMsg
+
+writeLogNew :: Chan InfoMsg -> [LogingTag] -> MsgType -> String -> IO ()
+writeLogNew aChan aTags aTypes aMsg = writeChan aChan $ Log aTags aTypes aMsg
 
 
 
