@@ -118,15 +118,15 @@ answerToConnectivityQuery aChan aMd _ = do
                 let aMyNodePosition = MyNodePosition $ Point
                         (x + aDeltaX - 1000) (y + aDeltaY - 1000)
                     NodePosition (Point x y) = aPosition
-                loging aData $ "Init. Take new logic coordinates " ++ show aMyNodePosition ++ "."
-                loging aData $ "Init. A sharding lvl init."
+                writeLog aData $ "Init. Take new logic coordinates " ++ show aMyNodePosition ++ "."
+                writeLog aData $ "Init. A sharding lvl init."
                 aChanOfSharding <- newChan
                 makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition
                 modifyIORef aMd (&~ do
                     myNodePosition .= Just aMyNodePosition
                     shardingChan   .= Just aChanOfSharding)
             | Head aNodeId _ <- aBroadcasts -> do
-                loging aData $ "Request of a node position of the " ++ show aNodeId ++ "."
+                writeLog aData $ "Request of a node position of the " ++ show aNodeId ++ "."
                 makeAndSendTo aData [aNodeId] NodePositionRequestPackage
 
         |   aBroadcastNum < preferedBroadcastCount,
@@ -139,7 +139,7 @@ answerToConnectivityQuery aChan aMd _ = do
                 isPreferedById a = (a^._1)  `elem` aNodesId
                 aPreferedConnects = filter isPreferedById aConnectList
                 aConnectsNum = preferedBroadcastCount - aBroadcastNum
-            loging aData $ "Request of the " ++ show aConnectsNum ++ " connects."
+            writeLog aData $ "Request of the " ++ show aConnectsNum ++ " connects."
             connectTo aChan aConnectsNum aPreferedConnects
 
       -- if we don't find anybody send message error
@@ -164,13 +164,13 @@ connectTo aChan aNum aConnects = do
 
 connectToBootNode :: (ManagerMsg msg, ManagerData md) => Chan msg -> md -> IO ()
 connectToBootNode aChan aData = do
-    loging aData "Try connect to a bootNode."
+    writeLog aData "Try connect to a bootNode."
     let aBootNodeList = aData^.nodeBaseData.bootNodes
     when (null aBootNodeList) $ do
         let aError = "aBootNodeList is empty!!! Check config."
-        loging aData aError
+        writeLog aData aError
         error aError
-    loging aData $ "Try connect to the bootNode " ++ show (head aBootNodeList) ++ "."
+    writeLog aData $ "Try connect to the bootNode " ++ show (head aBootNodeList) ++ "."
     connectTo aChan 1 aBootNodeList
 
 
@@ -186,10 +186,10 @@ answerToClientDisconnected aMd (toManagerMsg -> ClientIsDisconnected aId aChan) 
         when (aNode^.status == Noactive) $ do
             deleteFromFile NetLvl (aData^.myNodeId) aId
             when (aId `elem` ((^._1) <$> aData^.nodeBaseData.bootNodes)) $
-                loging aData $ "The " ++ show aId ++ " bootNode is unreachable."
+                writeLog aData $ "The " ++ show aId ++ " bootNode is unreachable."
 
         when (aNode^.chan == aChan) $ do
-            loging aData $ "The " ++ show aId ++ " is disconnected."
+            writeLog aData $ "The " ++ show aId ++ " is disconnected."
             modifyIORef aMd (nodes %~ M.delete aId)
 
 answerToClientDisconnected _ _ = pure ()
@@ -207,11 +207,11 @@ answerToSendInitDatagram
     aMd
     (toManagerMsg -> SendInitDatagram receiverIp receiverPort aId) = do
         aData <- readIORef aMd
-        loging aData $ "Request of connect to " ++
+        writeLog aData $ "Request of connect to " ++
             showHostAddress receiverIp ++ ":" ++ show receiverPort ++ " " ++
             show aId ++ "."
         unless (aId `M.member` (aData^.nodes)) $ do
-            loging aData $ "Try connect to " ++ show aId ++ "."
+            writeLog aData $ "Try connect to " ++ show aId ++ "."
             aNodeChan <- newChan
             modifyIORef aMd $ nodes %~ M.insert aId
                 (makeNode aNodeChan receiverIp receiverPort)
@@ -243,7 +243,7 @@ answerToDisconnectNode
     ->  msg
     ->  IO ()
 answerToDisconnectNode aData (toManagerMsg -> DisconnectNode aId) = do
-    loging aData "answerToDisconnectNode"
+    writeLog aData "answerToDisconnectNode"
     whenJust (aId `M.lookup`(aData^.nodes)) $ sendExitMsgToNode
 
 answerToDisconnectNode _ _ = pure ()
@@ -259,12 +259,12 @@ answerToInitDatagram aMd
     (toManagerMsg -> InitDatagram aInputChan aHostAdress aDatagram) = do
     aData <- readIORef aMd
     unless (aData^.iAmBroadcast) $ do
-        loging aData "I am a broadcast node."
+        writeLog aData "I am a broadcast node."
         modifyIORef aMd $ iAmBroadcast .~ True
     case decode aDatagram of
         Right (aPack @(Unciphered (ConnectingRequest aPublicPoint aId aPortNumber _)))
             | verifyConnectingRequest aPack -> do
-                loging aData $ "Request of connect from " ++ show aId ++ "."
+                writeLog aData $ "Request of connect from " ++ show aId ++ "."
                 answerToInitiatorConnectingMsg
                     (toNodeId aId)
                     aHostAdress
@@ -273,7 +273,7 @@ answerToInitDatagram aMd
                     aPortNumber
                     aMd
         _ -> do
-            loging aData $ "Request of connect is bad."
+            writeLog aData $ "Request of connect is bad."
             writeChan aInputChan SenderTerminate
 answerToInitDatagram _ _                =  pure ()
 
@@ -337,7 +337,7 @@ answerToPackagedMsg
 
 answerToPackagedMsg aId aChan aCipheredString@(CipheredString aStr) aMd = do
     aData <- readIORef aMd
-    loging aData $ "Received a message " ++ show (hex aStr) ++ " from " ++ show aId ++ "."
+    writeLog aData $ "Received a message " ++ show (hex aStr) ++ " from " ++ show aId ++ "."
     let aDecryptedPacage = do
             key  <- _mKey =<< aData^.nodes.at aId
             decryptChipred key aCipheredString
@@ -355,7 +355,7 @@ answerToDisconnect :: ManagerData md => [Reason] -> NodeId -> IORef md -> IO ()
 answerToDisconnect _ aNodeId aMd = do
     aData <- readIORef aMd
     whenJust (aData^.nodes.at aNodeId) $ \aNode -> do
-        loging aData $ "Make answer to disconnect of " ++ show aNodeId ++ "."
+        writeLog aData $ "Make answer to disconnect of " ++ show aNodeId ++ "."
         sendExitMsgToNode aNode
 
 
@@ -370,12 +370,12 @@ answerToInitiatorConnectingMsg
     ->  IO ()
 answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aPortNumber aMd = do
     aData <- readIORef aMd
-    loging aData $ "Make answer to initiator connecting msg from " ++ showHostAddress aHostAdress ++ " " ++ show aId
+    writeLog aData $ "Make answer to initiator connecting msg from " ++ showHostAddress aHostAdress ++ " " ++ show aId
     if aId `M.member` (aData^.nodes) then do
-        loging aData $ "Is refused " ++ showHostAddress aHostAdress ++ " " ++ show aId
+        writeLog aData $ "Is refused " ++ showHostAddress aHostAdress ++ " " ++ show aId
         writeChan aInputChan SenderTerminate
     else do
-        loging aData $ "Is accepted " ++ showHostAddress aHostAdress ++ " " ++ show aId
+        writeLog aData $ "Is accepted " ++ showHostAddress aHostAdress ++ " " ++ show aId
         let aKey = getKey (aData^.privateNumber) aPublicPoint
             aNode = (makeNode aInputChan aHostAdress aPortNumber) &~ do
                 mKey            .= Just aKey
@@ -395,7 +395,7 @@ answerToRemoteConnectingMsg
     ->  IO ()
 answerToRemoteConnectingMsg aId aPublicPoint aMd = do
     aData <- readIORef aMd
-    loging aData $ "The node " ++ show aId ++ " confirmed the connection."
+    writeLog aData $ "The node " ++ show aId ++ " confirmed the connection."
     modifyIORef aMd $ nodes %~ M.adjust (&~ do
         mKey            .= Just (getKey (aData^.privateNumber) aPublicPoint)
         status          .= Active
@@ -406,7 +406,7 @@ answerToRemoteConnectingMsg aId aPublicPoint aMd = do
 
 sendRemoteConnectDatagram :: ManagerData md => Chan MsgToSender -> md -> IO ()
 sendRemoteConnectDatagram aChan aData = do
-    loging aData $ "Send of connection confirmetion."
+    writeLog aData $ "Send of connection confirmetion."
     sendPackagedMsg aChan =<<  makeConnectingRequest
         (aData^.myNodeId)
         (aData^.publicPoint)
@@ -452,7 +452,7 @@ sendBroadcastThingToNodes
     ->  IO ()
 sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing = do
     aData <- readIORef aMd
-    loging aData $ "Broadcasting to neighbors a " ++ show aBroadcastThing ++ "."
+    writeLog aData $ "Broadcasting to neighbors a " ++ show aBroadcastThing ++ "."
     forM_ (M.elems $ aData^.nodes) (sendToNode aMakeMsg)
   where
     aMakeMsg :: StringKey -> CryptoFailable Package

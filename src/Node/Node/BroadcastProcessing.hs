@@ -43,6 +43,7 @@ import              Sharding.Space.Point
 import              Node.Node.Processing
 import              Lens.Micro.GHC
 import              Sharding.Types.ShardTypes
+import              Node.Data.GlobalLoging
 
 --
 class BroadcastProcessing aNodeData aPackage where
@@ -78,10 +79,9 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
         case aMsg of
             BroadcastTransaction aTransaction _ -> do
                 writeChan (aData^.transactions) aTransaction
-                writeChan (aData^.infoMsgChan) $
-                    Metric $ add
-                        ("net.node." ++ idShow (aData^.myNodeId) ++ ".pending.amount")
-                        (1 :: Integer)
+                writeMetric aData $ add
+                    ("net.node." ++ idShow (aData^.myNodeId) ++ ".pending.amount")
+                    (1 :: Integer)
             BroadcastMicroBlock aMicroblock _ -> sendToShardingLvl aData $
                 T.ShardAcceptAction (microblockToShard aMicroblock)
 
