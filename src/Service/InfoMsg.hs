@@ -58,15 +58,22 @@ sendMetric stat h = sendAllTo (clientSocket h)
                               (clientAddress h)
 
 
+sendToLogServer a = undefined
+
 serveInfoMsg :: HostAddress -> PortNumber -> Chan InfoMsg -> Integer -> IO ()
-serveInfoMsg host port chan aId = forever $ do
-    m <- readChan chan
-    case m of
-        Metric s -> runClient host port $ sendMetric s
-        Log aTags aMsgType aMsg -> do
-            aTime <- getTime Realtime
-            let aTagsList = concat (intersperse "," (show <$> aTags))
-                aString = "+log|" ++ aTagsList ++ "|" ++ show aId  ++ "|"
-                    ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
-            undefined
+serveInfoMsg host port chan aId = do
+    sendToLogServer $ "+node|" ++  show aId ++ "|" ++
+        concat (intersperse "," (show <$> [
+            ConnectingTag, LoadingShardsTag, BroadcatingTag, BootNodeTag,
+            ShardingLvlTag, NetLvlTag, MiningLvlTag, ServePoATag])) ++ "\r\n"
+    forever $ do
+        m <- readChan chan
+        case m of
+            Metric s -> runClient host port $ sendMetric s
+            Log aTags aMsgType aMsg -> do
+                aTime <- getTime Realtime
+                let aTagsList = concat (intersperse "," (show <$> aTags))
+                    aString = "+log|" ++ aTagsList ++ "|" ++ show aId  ++ "|"
+                        ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
+                sendToLogServer aString
 --------------------------------------------------------------------------------
