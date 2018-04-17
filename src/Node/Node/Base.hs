@@ -120,9 +120,8 @@ answerToConnectivityQuery aChan aMd _ = do
                     NodePosition (Point x y) = aPosition
                 writeLog (aData^.infoMsgChan) $
                     "Init. Take new logic coordinates " ++ show aMyNodePosition ++ "."
-                writeLog (aData^.infoMsgChan) $ "Init. A sharding lvl init."
                 aChanOfSharding <- newChan
-                makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition
+                makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition (aData^.infoMsgChan)
                 modifyIORef aMd (&~ do
                     myNodePosition .= Just aMyNodePosition
                     shardingChan   .= Just aChanOfSharding)

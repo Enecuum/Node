@@ -36,6 +36,7 @@ import              Sharding.Space.Point
 import              Sharding.Space.Distance
 import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.MakeTraceRouting
+import              Node.Data.GlobalLoging
 
 
 class Processing aNodeData aPackage where
@@ -49,11 +50,17 @@ class Processing aNodeData aPackage where
         ->  IO ()
 
 
+-- | Обработка "ответа" для сетевого уровня.
 instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
     processing aChan aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
         BroadcastListResponce aBroadcastListLogic aBroadcastList -> do
             aData <- readIORef aMd
+            writeLog (aData^.infoMsgChan) "Accepted lists of broadcasts and points of node."
             let aMyNodeId = aData^.myNodeId
+            -- добавление соответсвующих записей в списки коннектов и координат.
+            writeLog (aData^.infoMsgChan) "Add connects to list."
+            writeLog (aData^.infoMsgChan) "Add node coordinate to coordinate list."
+
             addRecordsToNodeListFile aMyNodeId aBroadcastListLogic
             addRecordsToNodeListFile aMyNodeId aBroadcastList
             let NodeInfoListNetLvl aList = aBroadcastList
@@ -62,17 +69,23 @@ instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
                 aDeltaY <- randomIO
                 let aMyNodePosition = MyNodePosition $ Point aDeltaX aDeltaY
                 aChanOfSharding <- newChan
-                makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition
+                writeLog (aData^.infoMsgChan) "Select new random coordinate because I am first node in net."
+                makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition (aData^.infoMsgChan)
                 modifyIORef aMd (&~ do
                     myNodePosition .= Just aMyNodePosition
                     shardingChan   .= Just aChanOfSharding)
 
         HostAdressResponce _ -> return ()
 
+        -- нода сказала, что она бродкаст меняем её статус в нашей памяти.
         IAmBroadcast          aBool          -> do
+            aData <- readIORef aMd
+            writeLog (aData^.infoMsgChan) $ "Node " ++ show aNodeId
+                ++ " talk that it is broadcast. Changing the node status."
             modifyIORef aMd $ nodes %~ M.adjust (isBroadcast .~ aBool) aNodeId
 
 
+-- обработка ответов для логического уровня.
 instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
     processing _ aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ aResponse = do
         aData <- readIORef aMd
@@ -268,7 +281,5 @@ makeResponse aTraceRouting aResponse = makeCipheredPackage
 
 signatureToNodeId :: PackageSignature -> NodeId
 signatureToNodeId (PackageSignature (toNodeId -> aNodeId) _ _) = aNodeId
-
-
 
 --------------------------------------------------------------------------------

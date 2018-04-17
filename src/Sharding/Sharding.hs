@@ -59,6 +59,7 @@ import              System.Clock
 import              Lens.Micro.Mtl
 
 import              Node.Data.NodeTypes
+import              Node.Data.GlobalLoging
 
 sizeOfShardStore:: Int
 sizeOfShardStore = 500
@@ -76,8 +77,9 @@ numberOfNeededShards aShardingNode =
 -- nodeIndex.shardNeededIndex.setOfHash
 
 --makeShardingNode :: MyNodeId -> Point -> IO ()
-makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition = do
+makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgChan = do
     aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition
+    writeLog infoMsgChan "Start of sharding lvl."
     void $ forkIO $ aLoop aShardingNode
   where
     aLoop :: ShardingNode -> IO ()
