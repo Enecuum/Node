@@ -20,15 +20,15 @@ import              Node.Extra
 import              Node.Data.Data
 import              Node.Data.NodeTypes
 
-loging :: String -> String -> IO ()
-loging aPath aString = do
+writeLog :: String -> String -> IO ()
+writeLog aPath aString = do
     aTime <- getTime Realtime
     appendFile
         ("./data/log_" ++ aPath ++ "_.txt")
         ("["++ show aTime ++ "] " ++ aString ++ "\n")
 
 whenLeft :: (Show a, Show b) => String -> Either a b -> IO ()
-whenLeft aPath aMsg@(Left _) = loging aPath $ show aMsg
+whenLeft aPath aMsg@(Left _) = writeLog aPath $ show aMsg
 whenLeft _ _ = pure ()
 
 servePoA ::
@@ -41,15 +41,15 @@ servePoA ::
     -> IO ()
 servePoA aRecivePort aSendPort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
     \aMsg aSockAddr _ -> do
-        loging (show aRecivePort) $ "PaA msg: " ++ (show $ hex $ aMsg)
+        writeLog (show aRecivePort) $ "PaA msg: " ++ (show $ hex $ aMsg)
         let aDecodeMsg = S.decode aMsg
         whenLeft (show aRecivePort) aDecodeMsg
         whenRight aDecodeMsg $ \case
             HashMsgTransactionsRequest num -> do
-                loging (show aRecivePort) $ "Recived HashMsgTransactionsRequest " ++ show num
+                writeLog (show aRecivePort) $ "Recived HashMsgTransactionsRequest " ++ show num
                 recvTx aSockAddr num
             MBlock mb -> do
-                loging (show aRecivePort) $ "Recived MBlock \n" ++ show mb
+                writeLog (show aRecivePort) $ "Recived MBlock \n" ++ show mb
                 writeChan ch $ BlockMadeMsg mb
   where
     recvTx aSockAddr aNum =
@@ -59,7 +59,7 @@ servePoA aRecivePort aSendPort aNodeId ch aRecvChan aInfoChan = runServer aReciv
             writeChan aInfoChan $ Metric $ add
                 ("net.node." ++ show (toInteger aNodeId) ++ ".pending.amount")
                 (-1 :: Integer)
-            loging (show aRecivePort) $  "sendTransaction to poa " ++ show aTransaction
+            writeLog (show aRecivePort) $  "sendTransaction to poa " ++ show aTransaction
             sendTransaction aHandle aTransaction
 
 -- | Send one transaction.
