@@ -94,6 +94,7 @@ nodeBaseDataList = toList $ do
     "shardingChan"      !: ["MaybeChan", "N.ShardingNodeAction"]
     "iAmBroadcast"      !: ["Bool"]
     "outPort"           !: ["PortNumber"]
+    "infoMsgChan"       !: ["Chan", "InfoMsg"]
 
 
 infixl 2 +:

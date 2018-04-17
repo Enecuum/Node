@@ -110,7 +110,6 @@ data ManagerNodeData = ManagerNodeData {
         managerNodeDataNodeConfig   :: NodeConfig
     ,   managerNodeDataNodeBaseData :: NodeBaseData
     ,   managerTransactions         :: Chan Transaction
-    ,   managerInfoMsg              :: Chan InfoMsg
     ,   managerHashMap              :: BI.Bimap TimeSpec B.ByteString
     ,   managerPublicators          :: S.Set NodeId
     ,   managerSendedTransctions    :: BI.Bimap TimeSpec Transaction
@@ -133,6 +132,7 @@ data NodeBaseData = NodeBaseData {
     ,   nodeBaseDataShardingChan        :: MaybeChan N.ShardingNodeAction
     ,   nodeBaseDataIAmBroadcast        :: Bool
     ,   nodeBaseDataOutPort             :: PortNumber
+    ,   nodeBaseDataInfoMsgChan         :: Chan InfoMsg
   }
 
 makeNodeBaseData :: Chan ExitMsg
@@ -140,8 +140,9 @@ makeNodeBaseData :: Chan ExitMsg
                  -> Chan Answer
                  -> Chan Microblock
                  -> PortNumber
+                 -> Chan InfoMsg
                  -> NodeBaseData
-makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan port = NodeBaseData
+makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan port aInfoCh = NodeBaseData
     aExitChan
     M.empty
     aList
@@ -153,6 +154,7 @@ makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan port = NodeBaseData
     Nothing
     False
     port
+    aInfoCh
 
 
 data NodeConfig = NodeConfig {
@@ -242,8 +244,8 @@ class ToManagerData a where
 
 instance ToManagerData ManagerNodeData where
     toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aInfoChan aList aNodeConfig aOutPort = ManagerNodeData
-        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aOutPort)
-            aTransactionChan aInfoChan BI.empty S.empty BI.empty
+        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aOutPort aInfoChan)
+            aTransactionChan BI.empty S.empty BI.empty
 
 
 makeNewNodeConfig :: MonadRandom m => m NodeConfig
@@ -280,9 +282,6 @@ lensInst "publicators" ["ManagerNodeData"] ["S.Set", "NodeId"]
 
 lensInst "sendedTransctions" ["ManagerNodeData"]
     ["BI.Bimap", "TimeSpec", "Transaction"] "managerSendedTransctions"
-
-
-
 
 
 makeNode :: Chan MsgToSender -> HostAddress -> PortNumber -> Node
