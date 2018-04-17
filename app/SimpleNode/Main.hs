@@ -11,11 +11,11 @@ import              Node.Node.Types
 import              Service.Timer
 import              Node.Lib
 import              Service.InfoMsg
+import              Service.Network.Base
 import              PoA
 import              CLI.CLI (serveRpc)
 import              Control.Exception (try)
 import              Prelude hiding (concat)
-import              Network.Socket (inet_addr)
 import              Control.Exception (SomeException())
 
 import              Data.Aeson
@@ -56,18 +56,26 @@ main =  do
                                  Just snbc -> return $ rpcPort snbc
 
                     stat_h  <- try (getEnv "statsdHost") >>= \case
-                            Right item              -> inet_addr item
-                            Left (_::SomeException) -> case statsdBuildConfig conf of
-                                 Nothing   -> error "Please, specify statsdConfig"
-                                 Just stat -> inet_addr $ statsdHost stat
+                            Right item              -> return $ item
+                            Left (_::SomeException) -> return $ host $ statsdBuildConfig conf
 
                     stat_p  <- try (getEnv "statsdPort") >>= \case
                             Right item              -> return $ read item
-                            Left (_::SomeException) -> case statsdBuildConfig conf of
-                                 Nothing   -> error "Please, specify statsdConfig"
-                                 Just stat -> return $ statsdPort stat
+                            Left (_::SomeException) -> return $ port $ statsdBuildConfig conf
 
+<<<<<<< HEAD
                     void $ forkIO $ serveInfoMsg stat_h stat_p aInfoCh
+=======
+                    logs_h  <- try (getEnv "logHost") >>= \case
+                            Right item              -> return item
+                            Left (_::SomeException) -> return $ host $ logsBuildConfig conf
+
+                    logs_p  <- try (getEnv "logPort") >>= \case
+                            Right item              -> return $ read item
+                            Left (_::SomeException) -> return $ port $ statsdBuildConfig conf 
+
+                    void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh (toInteger aMyNodeId)
+>>>>>>> 99d18be... logServer added, configs example updated
 
                     void $ forkIO $ servePoA poa_in poa_out aMyNodeId ch aChan aInfoCh
                     void $ forkIO $ serveRpc rpc_p ch aInfoCh

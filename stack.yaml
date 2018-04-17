@@ -18,13 +18,13 @@ build:
     haddock-args:
     - "--odir=./docs"
 
-# docker:
-#   enable: true
+docker:
+  enable: true
 
-# image:
-#   container:
-#     name: docker-node
-#     base: fpco/stack-run
-#     # add:
-#       # config: /app/config
+image:
+  container:
+    name: docker-node
+    base: fpco/stack-run
+    add:
+      configs: /configs
 #       # static: /app/static
