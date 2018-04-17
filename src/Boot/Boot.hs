@@ -59,7 +59,7 @@ instance  Processing (IORef NodeBootNodeData) (Request NetLvl) where
             let aBroadcastListResponce = BroadcastListResponce
                     (NodeInfoListLogicLvl [])
                     (NodeInfoListNetLvl $ take 10 aBroadcasts)
-            writeLog aData $ "Send to node " ++ show aNodeId ++ " broadcast list responce " ++
+            writeLog (aData^.infoMsgChan)  $ "Send to node " ++ show aNodeId ++ " broadcast list responce " ++
                 show (take 10 aBroadcasts) ++ "."
             aSendNetLvlResponse aBroadcastListResponce
         _ -> return ()
@@ -91,23 +91,23 @@ answerToCheckBroadcastNodes aMd aChan _ = do
             (\aId -> S.notMember aId $ aData^.checSet) aNodeIds
 
     forM_ aNeededInBroadcastList $ \aNodeId -> do
-        writeLog aData $ "Start of node check " ++ show aNodeId ++ ". Is it broadcast?"
+        writeLog (aData^.infoMsgChan)  $ "Start of node check " ++ show aNodeId ++ ". Is it broadcast?"
         whenJust (aData^.nodes.at aNodeId) $ \aNode -> do
             sendExitMsgToNode aNode
             writeChan aChan $ checkBroadcastNode
                 aNodeId (aNode^.nodeHost) (aNode^.nodePort)
 
     forM_ aBroadcastNodes $ \aNodeId -> do
-        writeLog aData $ "Ending of node check " ++ show aNodeId ++ ". Is it broadcast?"
+        writeLog (aData^.infoMsgChan)  $ "Ending of node check " ++ show aNodeId ++ ". Is it broadcast?"
         modifyIORef aMd $ checSet %~ S.delete aNodeId
 
         let aMaybeNode = aData^.nodes.at aNodeId
         when (isNothing aMaybeNode) $ do
-            writeLog aData $ "The node " ++ show aNodeId ++ " doesn't a broadcast."
+            writeLog (aData^.infoMsgChan)  $ "The node " ++ show aNodeId ++ " doesn't a broadcast."
 
         whenJust aMaybeNode $ \aNode -> do
-            writeLog aData $ "The node " ++ show aNodeId ++ " is broadcast."
-            writeLog aData $ "Addition the node to list of broadcast node."
+            writeLog (aData^.infoMsgChan)  $ "The node " ++ show aNodeId ++ " is broadcast."
+            writeLog (aData^.infoMsgChan)  $ "Addition the node to list of broadcast node."
             sendExitMsgToNode aNode
             addRecordsToNodeListFile
                 (aData^.myNodeId)
@@ -118,7 +118,7 @@ answerToCheckBroadcastNode :: ManagerMsg a =>
     Chan a -> IORef NodeBootNodeData -> ManagerBootNodeMsgBase -> IO ()
 answerToCheckBroadcastNode aChan aMd (CheckBroadcastNode aNodeId aIp aPort) = do
     aData <- readIORef aMd
-    writeLog aData $ "Check of node " ++ show aNodeId ++ " " ++ show aIp ++ ":" ++
+    writeLog (aData^.infoMsgChan)  $ "Check of node " ++ show aNodeId ++ " " ++ show aIp ++ ":" ++
         show aPort ++ ". Is it broadcast?"
     modifyIORef aMd $ checSet %~ S.insert aNodeId
     writeChan aChan $ sendInitDatagram aIp aPort aNodeId
@@ -132,6 +132,6 @@ bootNodeAnswerClientIsDisconnected aMd
         aData <- readIORef aMd
         whenJust (aId `M.lookup` (aData^.nodes)) $ \aNode -> do
             when (aNode^.chan == aChan) $ do
-                writeLog aData $ "The node " ++ show aId ++ " is disconnected."
+                writeLog (aData^.infoMsgChan)  $ "The node " ++ show aId ++ " is disconnected."
                 modifyIORef aMd (nodes %~ M.delete aId)
 bootNodeAnswerClientIsDisconnected _ _ = pure ()

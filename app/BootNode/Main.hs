@@ -44,7 +44,7 @@ main =  do
 
 
             void $ startNode conf
-              exitCh answerCh infoCh managerBootNode $ \ch _ _ -> do
+              exitCh answerCh infoCh managerBootNode $ \ch _ aNodeId -> do
                   metronomeS 100000 (writeChan ch checkBroadcastNodes)
-                  void $ forkIO $ serveInfoMsg stat_h stat_p infoCh
+                  void $ forkIO $ serveInfoMsg stat_h stat_p infoCh (toInteger aNodeId)
             void $ readChan exitCh
