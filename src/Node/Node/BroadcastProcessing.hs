@@ -43,7 +43,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl NetLvl) 
         case aMsg of
             -- обработка события, что кто-то хочет соседей.
             INeedNeighbors (toNodeId -> aNodeId) aHostAddress aPortNumber -> do
-                writeLogNew (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted msg from the " ++
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted msg from the " ++
                     show aNodeId ++ "that it need a neighbors. Addtition the node in the list of possible connects."
                 addRecordsToNodeListFile
                     (aData^.myNodeId)
@@ -56,13 +56,13 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl LogicLvl
             -- FIXME: переписать show для shard, показывать только хеш.
             -- обработка полученой через бродкаст шарды
             BroadcastShard aShard -> do
-                writeLogNew (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted new shard from broadcast. The shard is " ++ show aShard
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted new shard from broadcast. The shard is " ++ show aShard
                 whenJust (aData^.shardingChan) $ \aChan ->
                     writeChan aChan $ T.NewShardInNetAction aShard
 
             -- обработка полученных данных, что у какой-то ноды позиция изменилась.
             BroadcastPosition     aMyNodeId aNodePosition  -> do
-                writeLogNew (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted new position for the node." ++
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted new position for the node." ++
                     "The node have position " ++ show aNodePosition ++ ", node id is " ++ show aMyNodeId
                 updateFile aMyNodeId
                     (NodeInfoListLogicLvl [(toNodeId aMyNodeId, aNodePosition)])
@@ -79,7 +79,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
                 writeChan (aData^.transactions) aTransaction
 
                 -- логирование и метрика
-                writeLogNew (aData^.infoMsgChan) [NetLvlTag] Info $
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Addtition the transaction to pending. The transaction = "
                         ++ show aTransaction
                 writeMetric (aData^.infoMsgChan) $ add
@@ -93,7 +93,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
 
                 -- FIXME: переписать show для Transaction и Microblock
                 --        так, чтобы они выводили только хеш и структуру.
-                writeLogNew (aData^.infoMsgChan) [NetLvlTag] Info $
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Addtition the mickroblock to shard DB. The mickroblock = "
                     ++ show aMicroblock
             _ -> return ()

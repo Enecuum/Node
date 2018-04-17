@@ -56,11 +56,11 @@ instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
     processing aChan aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
         BroadcastListResponce aBroadcastListLogic aBroadcastList -> do
             aData <- readIORef aMd
-            writeLogNew (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted lists of broadcasts and points of node."
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted lists of broadcasts and points of node."
             let aMyNodeId = aData^.myNodeId
             -- добавление соответсвующих записей в списки коннектов и координат.
-            writeLogNew (aData^.infoMsgChan) [NetLvlTag] Info $ "Add connects to list."
-            writeLogNew (aData^.infoMsgChan) [NetLvlTag] Info $ "Add node coordinate to coordinate list."
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Add connects to list."
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Add node coordinate to coordinate list."
 
             addRecordsToNodeListFile aMyNodeId aBroadcastListLogic
             addRecordsToNodeListFile aMyNodeId aBroadcastList
@@ -70,7 +70,7 @@ instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
                 aDeltaY <- randomIO
                 let aMyNodePosition = MyNodePosition $ Point aDeltaX aDeltaY
                 aChanOfSharding <- newChan
-                writeLogNew (aData^.infoMsgChan) [NetLvlTag] Info $ "Select new random coordinate because I am first node in net."
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Select new random coordinate because I am first node in net."
                 makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition (aData^.infoMsgChan)
                 modifyIORef aMd (&~ do
                     myNodePosition .= Just aMyNodePosition
@@ -81,7 +81,7 @@ instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
         -- нода сказала, что она бродкаст меняем её статус в нашей памяти.
         IAmBroadcast          aBool          -> do
             aData <- readIORef aMd
-            writeLogNew (aData^.infoMsgChan) [NetLvlTag] Info $"Node " ++ show aNodeId
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info $"Node " ++ show aNodeId
                 ++ " talk that it is broadcast. Changing the node status."
             modifyIORef aMd $ nodes %~ M.adjust (isBroadcast .~ aBool) aNodeId
 
