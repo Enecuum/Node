@@ -59,6 +59,7 @@ import              Lens.Micro.Mtl
 import              Node.Data.NodeTypes
 import              Node.Data.GlobalLoging
 import              Service.InfoMsg
+import              Lens.Micro.GHC
 
 sizeOfShardStore:: Int
 sizeOfShardStore = 500
@@ -125,7 +126,8 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
 
             writeLog infoMsgChan [ShardingLvlTag] Info $ "Check neighbors."
                 ++ " Node position: " ++ show aNodePositions
-                ++ " Neighbors positions: " ++ show  (S.toList aNodePositions)
+                ++ ", Node positions: " ++ show  (S.toList aNodePositions)
+                ++ ", Neighbors positions: " ++ show (S.toList aNeighbors)
 
             forM_ aFilteredNeighbors $ \aNeighbor -> do
                 sendToNetLevet aChanOfNetLevel $ IsTheNeighborAliveRequest
