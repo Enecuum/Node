@@ -22,23 +22,30 @@ import Service.Metrics.Statsd
 
 import Control.Concurrent.Chan
 
+data MsgType = Info | Warnig | Error
+
+data LogingTag
+    = ConnectingTag
+    | LoadingShardsTag
+    | BroadcatingTag
+    | BootNodeTag
+    | ShardingLvlTag
+    | NetLvlTag
+    | MiningLvlTag
+    | ServePoATag
+  deriving Show
+
+
+instance Show MsgType where
+    show Info   = "info"
+    show Warnig = "warnig"
+    show Error  = "error"
+
+
 data InfoMsg = Metric String
-             | Log String
+             | Log [LogingTag] MsgType String
 
-<<<<<<< HEAD
-sendMetric :: String -> ClientHandle -> IO ()
-sendMetric stat h = sendAllTo (clientSocket h)
-                              (encode stat)
-                              (clientAddress h)
 
-serveInfoMsg :: HostAddress -> PortNumber -> Chan InfoMsg -> IO ()
-serveInfoMsg host port chan = do
-             m <- readChan chan
-             case m of
-               Metric s -> runClient host port $ sendMetric s
-               Log s    -> undefined
-               
-=======
 sendToServer :: ClientHandle -> String -> IO ()
 sendToServer h s = sendAllTo (clientSocket h)
                              (encode s)
@@ -65,4 +72,3 @@ serveInfoMsg statsdInfo logsInfo  chan aId = do
                         ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
                 sendToServer logHandle aString
 --------------------------------------------------------------------------------
->>>>>>> 99d18be... logServer added, configs example updated
