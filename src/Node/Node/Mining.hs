@@ -111,7 +111,7 @@ answerToShardingNodeRequestMsg aMd
                     NeighborListRequestPackage
 
             T.ShardIndexRequest aDistance aNodePositions -> do
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $aLogMsg "hashes of needed shards"
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ aLogMsg "hashes of needed shards"
                 whenJust (aData^.myNodePosition) $ \aMyPosition -> do
                     let aRequest = ShardIndexRequestPackage
                             (toNodePosition aMyPosition) aDistance
@@ -178,7 +178,7 @@ instance BroadcastAction ManagerNodeData where
 instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
     makeAction aChan md aNodeId aTraceRouting aResponcePackage = do
         aData <- readIORef md
-        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $"Recived a responce package."
+        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Recived a responce package."
         when (verify (aTraceRouting, aResponcePackage)) $ if
             | isItMyResponce aNodeId aTraceRouting  -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "The responce is for me. The processing of responce."

@@ -119,7 +119,7 @@ answerToConnectivityQuery aChan aMd _ = do
                 let aMyNodePosition = MyNodePosition $ Point
                         (x + aDeltaX - 1000) (y + aDeltaY - 1000)
                     NodePosition (Point x y) = aPosition
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info  $
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Init. Take new logic coordinates " ++ show aMyNodePosition ++ "."
                 aChanOfSharding <- newChan
                 makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition (aData^.infoMsgChan)
