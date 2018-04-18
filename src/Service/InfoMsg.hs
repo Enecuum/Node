@@ -57,8 +57,8 @@ sendMetric stat h = sendAllTo (clientSocket h)
                               (encode stat)
                               (clientAddress h)
 
-
 sendToLogServer a = undefined
+
 
 serveInfoMsg :: HostAddress -> PortNumber -> Chan InfoMsg -> Integer -> IO ()
 serveInfoMsg host port chan aId = do
