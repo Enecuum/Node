@@ -91,19 +91,42 @@ instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
     processing _ aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ aResponse = do
         aData <- readIORef aMd
         case aResponse of
-            ShardIndexResponce aShardHashList ->
+            -- Accepted the index of shards from the neighbor node.
+            ShardIndexResponce aShardHashList -> do
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    "Send from netLvl to sharding lvl the shards hashes list. "
+                    ++ show aShardHashList
                 sendToShardingLvl aData $ T.ShardIndexAcceptAction aShardHashList
 
-            ShardResponce      aShardes         -> forM_ aShardes $
-                sendToShardingLvl aData . T.ShardAcceptAction
+            -- Accepted the shard from the neighbor node.
+            ShardResponce      aShardes         -> do
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    "Send from netLvl toSharding lvl the shards acepted from neighbor "
+                    ++ "the list of shards is:" ++ show aShardes
+                forM_ aShardes $ sendToShardingLvl aData . T.ShardAcceptAction
 
+            -- Accepted the node position of a neighbor node.
             NodePositionResponcePackage (toNodePosition -> aNodePosition) -> do
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    "Accepted the node position of a neighbor node " ++ show aNodeId ++
+                    " a new position is a " ++ show aNodePosition
                 updateFile (aData^.myNodeId) (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    "Updating of node positions file."
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    "Send to sharding lvl the real coordinate of neighbor"
                 sendToShardingLvl aData $
                     T.TheNodeHaveNewCoordinates aNodeId aNodePosition
 
-            TheNodeIsAlive aNodeId ok -> unless ok $ do
-                sendToShardingLvl aData $ T.TheNodeIsDead aNodeId
+            -- Accepted info about a live status of neighbor node.
+            TheNodeIsAlive aNodeId ok -> do
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    "Accepted info about a live status of neighbor node." ++
+                    show aNodeId ++ " alive status is a " ++ show ok
+                unless ok $ do
+                    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                        "The neighbor is dead send msg about it to the sharding lvl."
+                    sendToShardingLvl aData $ T.TheNodeIsDead aNodeId
 
 
 instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
@@ -115,12 +138,23 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
             aRequestToNetLvl = requestToNetLvl aData aTraceRouting aRequestPackage
 
         case aRequestLogicLvl of
-            ShardIndexRequestPackage _ aDistance ->
+            ShardIndexRequestPackage _ aDistance -> do
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    "Sending request of shard index to sharding lvl. "
+                    ++ "Petitioner " ++ show aNodeId ++ " a domain = "
+                    ++ show aDistance ++ "."
+
                 aRequestToNetLvl ShardIndexResponce $ do
                     aChan <- newChan
                     sendToShardingLvl aData $
                         T.ShardIndexCreateAction aChan aNodeId aDistance
                     T.ShardIndexResponse aShardIndex <- readChan aChan
+
+                    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                        "Recived response from sharding lvl. The sharding index for "
+                        ++ show aNodeId ++ " is " ++ show aShardIndex ++ "."
+                        ++ " Sending the sharding index."
+
                     return aShardIndex
 
             ShardRequestPackage aShardHash -> do
