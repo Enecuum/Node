@@ -78,7 +78,7 @@ numberOfNeededShards aShardingNode =
 
 --makeShardingNode :: MyNodeId -> Point -> IO ()
 makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgChan = do
-    aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition
+    aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMsgChan
     writeLog infoMsgChan [ShardingLvlTag] Info $  "Start of sharding lvl."
     void $ forkIO $ aLoop aShardingNode
   where
@@ -113,7 +113,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
 
         ShiftAction | shiftIsNeed aShardingNode -> do
             writeLog infoMsgChan [ShardingLvlTag] Info $ "Try shift."
-            shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan
+            shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode
 
         CheckTheNeighbors -> do
             let aMyNodePosition     = aShardingNode^.nodePosition
@@ -128,6 +128,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
                 ++ " Node position: " ++ show aNodePositions
                 ++ ", Node positions: " ++ show  (S.toList aNodePositions)
                 ++ ", Neighbors positions: " ++ show (S.toList aNeighbors)
+                ++ ", Filtered neighbors positions: " ++ show aFilteredNeighbors
 
             forM_ aFilteredNeighbors $ \aNeighbor -> do
                 sendToNetLevet aChanOfNetLevel $ IsTheNeighborAliveRequest
@@ -136,31 +137,56 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
             aLoop aShardingNode
 
         TheNodeHaveNewCoordinates aNodeId aNodePosition
-            | isInNodeDomain aShardingNode aNodePosition -> aLoop
-                $ insertTheNeighbor aNodeId aNodePosition
-                $ deleteTheNeighbor aNodeId aShardingNode
-            | otherwise -> aLoop
-                $ deleteTheNeighbor aNodeId aShardingNode
+            | isInNodeDomain aShardingNode aNodePosition -> do
+                writeLog infoMsgChan [ShardingLvlTag] Info $
+                     "The node " ++ show aNodeId
+                  ++ " have new posiotion: " ++ show aNodePosition
+                  ++ " and save it position"
+                aLoop
+                  $ insertTheNeighbor aNodeId aNodePosition
+                  $ deleteTheNeighbor aNodeId aShardingNode
+            | otherwise -> do
+                writeLog infoMsgChan [ShardingLvlTag] Info $
+                     "The node " ++ show aNodeId
+                  ++ " have new posiotion: " ++ show aNodePosition
+                  ++ " , remove this node because it isn't my neighbor more."
+                aLoop
+                  $ deleteTheNeighbor aNodeId aShardingNode
 
-        TheNodeIsDead aNodeId -> aLoop
-            $ deleteTheNeighbor aNodeId aShardingNode
+        TheNodeIsDead aNodeId -> do
+            writeLog infoMsgChan [ShardingLvlTag] Info $
+               "This node " ++ show aNodeId ++ " is dead."
+            aLoop $ deleteTheNeighbor aNodeId aShardingNode
 
         ShardRequestAction  aShardHash aChan -> do
+            writeLog infoMsgChan [ShardingLvlTag] Info $
+                "Somebody ask shard " ++ show aShardHash ++ "."
             aMaybeShard <- loadShard aShardHash
             case aMaybeShard of
                 Just aShard -> do
+                    writeLog infoMsgChan [ShardingLvlTag] Info $
+                        "This shard " ++ show aShardHash ++ " store hire."
                     writeChan aChan aShard
                     aLoop aShardingNode
                 Nothing -> do
+                    writeLog infoMsgChan [ShardingLvlTag] Info $
+                        "This shard " ++ show aShardHash
+                     ++ " doesn't store hire. Request neighbors of this shard."
                     sendToNetLevet aChanOfNetLevel $ ShardListRequest [aShardHash]
                     aTime <- getTime Realtime
                     aLoop $ aShardingNode & nodeIndexOfReques %~
                         M.insert aShardHash (aTime, aChan)
 
-        ShardIndexAcceptAction aShardHashs -> aLoop
-            $ addShardingIndex (S.fromList aShardHashs) aShardingNode
+        ShardIndexAcceptAction aShardHashs -> do
+            writeLog infoMsgChan [ShardingLvlTag] Info $
+                "Accept shard index list " ++ show (S.fromList aShardHashs)
+            aLoop $ addShardingIndex (S.fromList aShardHashs) aShardingNode
 
         ShardIndexCreateAction aChan aNodeId aRadiusOfCapture -> do
+            writeLog infoMsgChan [ShardingLvlTag] Info $
+                "This node " ++ aNodeId
+             ++ "with this radius " ++ aRadiusOfCapture
+             ++ " ask shard index."
             createShardingIndex aChan aShardingNode aNodeId aRadiusOfCapture
             aLoop aShardingNode
 
@@ -220,7 +246,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
 --------------------------------------------------------------------------------
 --                              INTERNAL                                      --
 --------------------------------------------------------------------------------
-initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
+initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMsgChan = do
     sendToNetLevet aChanOfNetLevel $ IamAwakeRequst aMyNodeId aMyNodePosition
     sendToNetLevet aChanOfNetLevel $ NeighborListRequest
 
@@ -243,16 +269,15 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition = do
         threadDelay (10^6)
         writeChan aChanRequest ShiftAction
 
-    return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex
+    return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan
 
 
 shiftTheShardingNode :: T.ManagerMsg msg =>
         Chan msg
     -> (ShardingNode ->  IO ())
     ->  ShardingNode
-    ->  Chan InfoMsg
     ->  IO ()
-shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan = do
+shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
     let
         aNeighborPositions :: S.Set NodePosition
         aNeighborPositions = neighborPositions aShardingNode
@@ -266,7 +291,7 @@ shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan = do
 
         aNewPosition :: MyNodePosition
         aNewPosition       = shiftToCenterOfMass aMyNodePosition aNearestPositions
-    writeLog infoMsgChan [ShardingLvlTag] Info $
+    writeLog (aShardingNode^.nodeInfoMsgChan) [ShardingLvlTag] Info $
           "Make shift action. "
         ++ "Neighbor positions: " ++ show (S.toList aNeighborPositions)
         ++ ". My position: " ++ show aMyNodePosition
