@@ -158,14 +158,25 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     return aShardIndex
 
             ShardRequestPackage aShardHash -> do
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    "Sending request of shard to sharding lvl. "
+                    ++ "Petitioner " ++ show aNodeId ++ " shardHash = "
+                    ++ show aShardHash ++ "."
                 aRequestToNetLvl ShardResponce $ do
                     aChan <- newChan
                     sendToShardingLvl aData $
                         T.ShardLoadAction aChan aNodeId aShardHash
                     T.ShardResponse aShard <- readChan aChan
+                    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                        "Recived response from sharding lvl. The shard for "
+                        ++ show aNodeId ++ " is " ++ show aShard ++ "."
+                        ++ " Sending the shard."
                     return aShard
 
-            NodePositionRequestPackage ->
+            NodePositionRequestPackage -> do
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    "Sending request of node position to sharding lvl. "
+                    ++ "Petitioner " ++ show aNodeId ++ "."
                 aRequestToNetLvl NodePositionResponcePackage $ do
                     aChan <- newChan
                     sendToShardingLvl aData $
