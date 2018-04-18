@@ -49,8 +49,6 @@ import              Control.Concurrent.Chan
 import              Data.List.Extra
 import              Control.Concurrent
 import              Lens.Micro
-import              Lens.Micro.GHC
-import              Control.Monad
 import              Data.Word
 import              Service.Timer
 import qualified    Data.Set            as S
@@ -86,6 +84,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
     aLoop :: ShardingNode -> IO ()
     aLoop aShardingNode = readChan aChanRequest >>= \case
         CheckOfShardLoadingList -> do
+            writeLog infoMsgChan [ShardingLvlTag] Info $ "Check loading sharding list."
             aNow <- getTime Realtime
             let aCondition (_, _, aTime) = diffTimeSpec aNow aTime < fromNanoSecs (10^8)
                 aLoadingShards = aShardingNode^.nodeIndex.shardLoadingIndex.setOfLoadingShards
@@ -99,17 +98,21 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
         ShardCheckLoading
             | numberOfLoadingShards aShardingNode < 4 &&
                 numberOfNeededShards aShardingNode /= 0 -> do
+                    writeLog infoMsgChan [ShardingLvlTag] Info $
+                        "Check loading shard. Loading shards < 4 and needed shards > 0."
                     let aNumberOfLoading = 4 - numberOfLoadingShards aShardingNode
                         aShardHashes = S.take aNumberOfLoading $
                             aShardingNode^.nodeIndex.shardNeededIndex.setOfHash
-
+                    writeLog infoMsgChan [ShardingLvlTag] Info $
+                        "Request shards by hash: " ++ show (S.toList aShardHashes)
                     sendToNetLevet aChanOfNetLevel $
                         ShardListRequest (S.toList aShardHashes)
                     aLoop $ aShardingNode &
                         nodeIndex.shardNeededIndex.setOfHash %~ S.drop aNumberOfLoading
 
-        ShiftAction | shiftIsNeed aShardingNode ->
-            shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode
+        ShiftAction | shiftIsNeed aShardingNode -> do
+            writeLog infoMsgChan [ShardingLvlTag] Info $ "Try shift."
+            shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan
 
         CheckTheNeighbors -> do
             let aMyNodePosition     = aShardingNode^.nodePosition
@@ -119,6 +122,10 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
                 aFilteredNeighbors = filter
                     (\a -> a^.neighborPosition `elem` aNeighborsPositions)
                     $ S.toList aNeighbors
+
+            writeLog infoMsgChan [ShardingLvlTag] Info $ "Check neighbors."
+                ++ " Node position: " ++ show aNodePositions
+                ++ " Neighbors positions: " ++ show  (S.toList aNodePositions)
 
             forM_ aFilteredNeighbors $ \aNeighbor -> do
                 sendToNetLevet aChanOfNetLevel $ IsTheNeighborAliveRequest
@@ -241,8 +248,9 @@ shiftTheShardingNode :: T.ManagerMsg msg =>
         Chan msg
     -> (ShardingNode ->  IO ())
     ->  ShardingNode
+    ->  Chan InfoMsg
     ->  IO ()
-shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
+shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan = do
     let
         aNeighborPositions :: S.Set NodePosition
         aNeighborPositions = neighborPositions aShardingNode
@@ -256,6 +264,12 @@ shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
 
         aNewPosition :: MyNodePosition
         aNewPosition       = shiftToCenterOfMass aMyNodePosition aNearestPositions
+    writeLog infoMsgChan [ShardingLvlTag] Info $
+          "Make shift action. "
+        ++ "Neighbor positions: " ++ show (S.toList aNeighborPositions)
+        ++ ". My position: " ++ show aMyNodePosition
+        ++ ". Nearest positions: " ++ show (S.toList aNearestPositions)
+        ++ ". New position: " ++ show aNewPosition
 
     sendToNetLevet aChanOfNetLevel $ NewPosiotionMsg aNewPosition
     sendToNetLevet aChanOfNetLevel $ ShardIndexRequest
