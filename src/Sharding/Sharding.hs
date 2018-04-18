@@ -184,8 +184,8 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
 
         ShardIndexCreateAction aChan aNodeId aRadiusOfCapture -> do
             writeLog infoMsgChan [ShardingLvlTag] Info $
-                "This node " ++ aNodeId
-             ++ "with this radius " ++ aRadiusOfCapture
+                "This node " ++ show aNodeId
+             ++ "with this radius " ++ show aRadiusOfCapture
              ++ " ask shard index."
             createShardingIndex aChan aShardingNode aNodeId aRadiusOfCapture
             aLoop aShardingNode
