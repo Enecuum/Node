@@ -45,7 +45,7 @@ main =  do
 
             logs_p  <- try (getEnv "logPort") >>= \case
                     Right item              -> return $ read item
-                    Left (_::SomeException) -> return $ port $ statsdBuildConfig conf 
+                    Left (_::SomeException) -> return $ port $ logsBuildConfig conf 
 
 
             void $ startNode conf
