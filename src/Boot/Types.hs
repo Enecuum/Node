@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, DeriveGeneric, TemplateHaskell #-}
+{-# LANGUAGE GADTs, DeriveGeneric, TemplateHaskell, LambdaCase, ViewPatterns, FlexibleInstances, MultiParamTypeClasses #-}
 
 module Boot.Types where
 
@@ -10,17 +10,22 @@ import              Control.Concurrent.Chan
 import              Node.Template.Constructor
 import qualified    Data.Set                        as S
 import qualified    Data.ByteString                 as B
-import qualified    Boot.Map.Random                 as RM
+
 import              Node.Node.Types
 import              Sharding.Types.Node as N
+import              Data.IORef
+import              Node.Node.Base
 
+import              Node.Node.Processing
 import              Node.Data.NodeTypes
+import              Node.Data.NetPackage
+import              Node.Data.GlobalLoging
+import              Service.InfoMsg
 
 data NodeBootNodeData where
     NodeBootNodeData :: {
         nodeBootNodeDataNodeConfig      :: NodeConfig,
         nodeBootNodeDataNodeBaseData    :: NodeBaseData,
-        nodeBootNodeDataBroadcastNodes  :: RM.RandomMap IpPort,
         nodeBootNodeDataChecSet         :: S.Set NodeId
   } -> NodeBootNodeData
 
@@ -35,10 +40,6 @@ baseMsgInstance "ManagerBootNodeMsg" "ManagerBootNodeMsgBase" managerBootNodeMsg
 derivativeMsgInstance "ManagerMsg" "ManagerBootNodeMsgBase" managerMsgFuncList
 
 
-broadcastNodes :: Lens' NodeBootNodeData (RM.RandomMap (HostAddress, PortNumber))
-broadcastNodes = lens nodeBootNodeDataBroadcastNodes
-    (\md a -> md {nodeBootNodeDataBroadcastNodes = a})
-
 
 mapM (uncurry makeLensInstance') [
     ("nodeConfig", "nodeBootNodeData"),
@@ -49,7 +50,39 @@ instance ManagerData NodeBootNodeData
 instance ToManagerData NodeBootNodeData where
     toManagerData _ aMicroblockChan aExitChan aAnswerChan aInfoChan aList aNodeConfig port = NodeBootNodeData
         aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan port aInfoChan)
-            RM.empty S.empty
+            S.empty
 
 lensInst "checSet" ["NodeBootNodeData"] ["S.Set", "NodeId"]
     "nodeBootNodeDataChecSet"
+
+
+instance PackageTraceRoutingAction NodeBootNodeData RequestPackage where
+    makeAction aChan aMd _ aTraceRouting aRequesPackage = do
+        case aRequesPackage of
+            RequestNetLvlPackage aReques aSignature -> do
+                processing aChan aMd aSignature aTraceRouting aReques
+            _   -> return ()
+
+
+instance  Processing (IORef NodeBootNodeData) (Request NetLvl) where
+    processing _ aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting = \case
+        BroadcastListRequest -> do
+            aData <- readIORef aMd
+            let aSendNetLvlResponse = sendNetLvlResponse
+                    aTraceRouting aData BroadcastListRequest aSignature
+            NodeInfoListNetLvl aBroadcasts <- readRecordsFromNodeListFile $ aData^.myNodeId
+            let aBroadcastListResponce = BroadcastListResponce
+                    (NodeInfoListLogicLvl [])
+                    (NodeInfoListNetLvl $ take 10 aBroadcasts)
+            writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info $
+                "Send to node " ++ show aNodeId ++ " broadcast list responce " ++
+                show (take 10 aBroadcasts) ++ "."
+            aSendNetLvlResponse aBroadcastListResponce
+        _ -> return ()
+
+
+instance  PackageTraceRoutingAction NodeBootNodeData ResponcePackage where
+    makeAction _ _ _ _ _ = return ()
+
+instance  BroadcastAction NodeBootNodeData where
+    makeBroadcastAction _ _ _ _ _ = return ()
