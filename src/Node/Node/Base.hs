@@ -492,13 +492,11 @@ instance FileDB NetLvl where
 
     addRecordsToNodeListFile aMyNodeId (NodeInfoListNetLvl aList) = do
         NodeInfoListNetLvl aFileContent <- readRecordsFromNodeListFile
-        let aFilteredRecords = filter
-                (\a -> aNotInFile a || aNotIAm a) aList
-            -- aNotInLocalHost a = a^._2 /= read "127.0.0.1"
-            aNotInFile  = (`notElem` aFileContent)
+        let aNotInFile  = (`notElem` aFileContent)
             aNotIAm  a  = toMyNodeId (a^._1) /= aMyNodeId
 
-        addDataToFile "./data/listOfConnects.txt" aFilteredRecords
+        addDataToFile "./data/listOfConnects.txt" $
+            (\a -> aNotInFile a && aNotIAm a) aList
 
 
     deleteFromFile _ aNodeId = do
