@@ -1,8 +1,12 @@
-{-# LANGUAGE PackageImports #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE
+        PackageImports
+    ,   DeriveGeneric
+    ,   GeneralizedNewtypeDeriving
+    ,   StandaloneDeriving
+    ,   TypeSynonymInstances
+#-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Service.Types.PublicPrivateKeyPair where
 
