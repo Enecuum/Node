@@ -22,12 +22,10 @@ import              Control.Concurrent
 import              Control.Concurrent.Async
 import              Crypto.Error
 import              Crypto.PubKey.ECC.ECDSA
-import qualified    Data.ByteString                 as B
 import qualified    Data.Map                        as M
 import qualified    Data.Set                        as S
 import              Data.IORef
 import              Data.Serialize
-import              Data.Monoid
 import              Lens.Micro.Mtl
 import              Lens.Micro
 import              Data.Hex
@@ -46,7 +44,6 @@ import              Node.Extra
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Node.Base.Server
-import              Node.Data.MakeTraceRouting
 import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.GlobalLoging
 import              Service.InfoMsg
@@ -75,8 +72,10 @@ sendExitMsgToNode (Chan aChan) = do
     sendPackagedMsg aChan disconnectRequest
     writeChan       aChan SenderTerminate
 
-
+pattern Head :: forall a b. a -> b -> [(a, b)]
 pattern Head aId aElem <- (aId, aElem):_
+
+pattern PositionOfFirst :: forall a. NodePosition -> [(a, Node)]
 pattern PositionOfFirst aPosition <- Head _ ((^.nodePosition) -> Just aPosition)
 
 preferedBroadcastCount :: Int
@@ -303,11 +302,10 @@ answerToDatagramMsg
     ->  IO ()
 answerToDatagramMsg aChan aMd _
     (toManagerMsg -> DatagramMsg aDatagramMsg aId) = do
-        aData <- readIORef aMd
         whenRight (decode aDatagramMsg) $ \case
-            aPack @(Unciphered (ConnectingRequest aPublicPoint aId _ _))
+            aPack @(Unciphered (ConnectingRequest aPublicPoint _ _ _))
                 | verifyConnectingRequest aPack
-                    -> answerToRemoteConnectingMsg (toNodeId aId) aPublicPoint aMd
+                    -> answerToRemoteConnectingMsg (aId) aPublicPoint aMd
             Ciphered aCipheredString ->
                 answerToPackagedMsg aId aChan aCipheredString aMd
             _                     -> pure ()
@@ -361,7 +359,7 @@ answerToPackagedMsg aId aChan aCipheredString@(CipheredString aStr) aMd = do
             makeAction aChan aMd aId aTraceRouting aResponcePackage
         BroadcastRequest aBroadcastSignature aBroadcastThing ->
             makeBroadcastAction aChan aMd aId aBroadcastSignature aBroadcastThing
-answerToPackagedMsg _ _ _  _ = return ()
+--answerToPackagedMsg _ _ _ _ = return ()
 
 
 answerToDisconnect :: ManagerData md => [Reason] -> NodeId -> IORef md -> IO ()
@@ -447,7 +445,7 @@ makePing aChan aHostAdress aPortNumber = do
      aSendRecive aConnect = void $ race aStoper (aPinger aConnect)
 
      aStoper = do
-         threadDelay $ 2*10^6
+         threadDelay $ 2*10^(6::Int)
          return ()
 
      aPinger aConnect = do
@@ -459,7 +457,7 @@ makePing aChan aHostAdress aPortNumber = do
          aTimeStop <- getTime Realtime
          let aPingTime = diffTimeSpec aTimeStart aTimeStop
          void $ writeChan aChan $ pingRequestInfo
-            aHostAdress aPortNumber aPingTime aHostAdress
+            aHostAdress aPortNumber aPingTime aMyHostAdress
 
 
 sendBroadcastThingToNodes
