@@ -26,8 +26,6 @@ import Service.Metrics.Statsd
 import Control.Monad
 import Control.Concurrent.Chan
 
-
---
 data MsgType = Info | Warnig | Error
 
 data LogingTag
@@ -51,29 +49,33 @@ instance Show MsgType where
 data InfoMsg = Metric String
              | Log [LogingTag] MsgType String
 
-sendLog, sendMetric :: String -> ClientHandle -> IO ()
-sendLog = sendMetric
-sendMetric stat h = sendAllTo (clientSocket h)
-                              (encode stat)
-                              (clientAddress h)
-
-sendToLogServer a = undefined
 
 
-serveInfoMsg :: HostAddress -> PortNumber -> Chan InfoMsg -> Integer -> IO ()
-serveInfoMsg host port chan aId = do
-    sendToLogServer $ "+node|" ++  show aId ++ "|" ++
+sendToServer :: ClientHandle -> String -> IO ()
+sendToServer h s = sendAllTo (clientSocket h)
+                             (encode s)
+                             (clientAddress h)
+
+serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> Integer -> IO ()
+serveInfoMsg statsdInfo logsInfo  chan aId = do
+    metricHandle <- openConnect (host statsdInfo) (port statsdInfo)
+    logHandle    <- openConnect (host logsInfo)   (port logsInfo)   
+
+    sendToServer logHandle $ "+node|" ++  show aId ++ "|" ++
         concat (intersperse "," (show <$> [
             ConnectingTag, LoadingShardsTag, BroadcatingTag, BootNodeTag,
             ShardingLvlTag, NetLvlTag, MiningLvlTag, ServePoATag])) ++ "\r\n"
+
     forever $ do
         m <- readChan chan
         case m of
-            Metric s -> runClient host port $ sendMetric s
+            Metric s -> sendToServer metricHandle s
+
             Log aTags aMsgType aMsg -> do
                 aTime <- getTime Realtime
                 let aTagsList = concat (intersperse "," (show <$> aTags))
                     aString = "+log|" ++ aTagsList ++ "|" ++ show aId  ++ "|"
                         ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
-                sendToLogServer aString
+
+                sendToServer logHandle aString
 --------------------------------------------------------------------------------

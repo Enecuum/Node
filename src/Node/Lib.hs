@@ -24,6 +24,9 @@ import Service.System.Directory (getTransactionFilePath)
 import System.Environment
 import Service.InfoMsg (InfoMsg)
 
+--tmp
+import System.Directory (createDirectoryIfMissing)
+
 -- code exemples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html
 -- docs:
@@ -41,6 +44,10 @@ startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
     -> (Chan a1 -> Chan Transaction -> MyNodeId -> IO a2)
     -> IO (Chan a1)
 startNode buildConf exitCh answerCh infoCh manager startDo = do
+
+    --tmp
+    createDirectoryIfMissing False "data"
+
     managerChan <- newChan
     aMicroblockChan <- newChan
     aTransactionChan <- newChan
