@@ -10,7 +10,6 @@ import Data.Maybe
 import Control.Monad
 import System.Directory
 
-import Node.Crypto
 import Sharding.Types.ShardTypes
 
 class ShardName a where
@@ -20,7 +19,7 @@ class ShardName a where
     shardsPath aElem = "shardDB/shard_" <> shardName aElem
 
 instance ShardName Shard where
-    shardName (Shard _ (Hash aHash) aData) = show (hex aHash) <> ".block"
+    shardName (Shard _ (Hash aHash) _) = show (hex aHash) <> ".block"
 
 instance ShardName ShardHash where
     shardName (ShardHash _ x1 x2 x3 x4 x5 x6 x7 x8) =

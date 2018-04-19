@@ -45,8 +45,11 @@ verifyConnectingRequest = \case
     _ -> False
 
 
+disconnectRequest :: Package
 disconnectRequest = Unciphered $ DisconnectRequest []
+pingRequest :: Package
 pingRequest       = Unciphered $ PingRequest
+pongResponce :: HostAddress -> Package
 pongResponce      = Unciphered . PongResponce
 
 
