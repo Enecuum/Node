@@ -70,7 +70,7 @@ instance  Processing (IORef NodeBootNodeData) (Request NetLvl) where
             aData <- readIORef aMd
             let aSendNetLvlResponse = sendNetLvlResponse
                     aTraceRouting aData BroadcastListRequest aSignature
-            NodeInfoListNetLvl aBroadcasts <- readRecordsFromNodeListFile $ aData^.myNodeId
+            NodeInfoListNetLvl aBroadcasts <- readRecordsFromNodeListFile
             let aBroadcastListResponce = BroadcastListResponce
                     (NodeInfoListLogicLvl [])
                     (NodeInfoListNetLvl $ take 10 aBroadcasts)

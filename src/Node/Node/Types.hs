@@ -168,7 +168,7 @@ makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan port aInfoCh = Node
     port
     aInfoCh
 
-
+-- | TODO: Нужно отрефакторить, уменьшить колво ключей.
 data NodeConfig = NodeConfig {
     nodeConfigPrivateNumber :: DH.PrivateNumber,
     nodeConfigPublicPoint   :: DH.PublicPoint,
