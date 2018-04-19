@@ -131,15 +131,7 @@ amIClose aData aNode aPointTo = if
         distanceTo aPosition aPointTo < distanceTo aNode aPointTo -> True
     | otherwise -> False
 
---
-instance DistanceTo Node Point where
-    distanceTo aNode aPoint = if
-        | Just aPosition <- aNode^.nodePosition ->
-            distanceTo aPosition  (NodePosition aPoint)
-        | otherwise                             -> maxBound
 
-instance DistanceTo Node PointTo where
-    distanceTo aNode aPoint = distanceTo aNode (toPoint aPoint)
 
 
 --------------------------------------------------------------------------------
