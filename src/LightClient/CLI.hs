@@ -73,19 +73,19 @@ control = do
             (h,p)  <- getRecipient "localhost" 1555 a
             handle <- openConnect h p
             putStrLn $ usageInfo "Usage: " options
-            loop handle 
+            loop handle
               where
-                loop handle = do
+                loop aHandle = do
                   argv <- splitOn " " <$> getLine
                   case getOpt Permute options argv of
-                    (flags, _, []) -> dispatch flags handle
+                    (flags, _, []) -> dispatch flags aHandle
                     (_, _, err)    -> putStrLn $ concat err ++ usageInfo "Usage: " options
-                  loop handle
+                  loop aHandle
 
 getRecipient :: HostName -> PortNumber -> [ArgFlag] -> IO (HostName, PortNumber)
 getRecipient defHost defPort []     = return (defHost, defPort)
 getRecipient defHost defPort (x:xs) = case x of
-         Version  -> do 
+         Version  -> do
                      liftIO $ printVersion
                      getRecipient defHost defPort xs
          Port p   -> getRecipient defHost p xs
@@ -100,8 +100,8 @@ dispatch flags ch = do
         (Send tx : _)            -> sendTrans ch tx
         (ShowKey : _)            -> showPublicKey
         (Balance aPublicKey : _) -> getBalance ch aPublicKey
-        (Quit : _)               -> closeAndExit ch                                 
-        _                        -> putStrLn "Wrong argument" 
+        (Quit : _)               -> closeAndExit ch
+        _                        -> putStrLn "Wrong argument"
 
 closeAndExit :: ClientHandle -> IO ()
 closeAndExit ch = do
@@ -116,8 +116,8 @@ showPublicKey = do
 getSavedPublicKey :: IO [(PublicKey, PrivateKey)]
 getSavedPublicKey = do
   result <- try $ getKeyFilePath >>= (\keyFileName -> readFile keyFileName)
-  case result of 
-    Left ( _ :: SomeException) -> do 
+  case result of
+    Left ( _ :: SomeException) -> do
           putStrLn "There is no keys"
           return []
     Right keyFileContent       -> do
@@ -164,7 +164,7 @@ getKey ch = do
 getBalance :: ClientHandle -> String -> IO ()
 getBalance ch rawKey = do
   result  <- runExceptT $ reqLedger ch $ parseKey rawKey
-  case result of 
+  case result of
     (Left err) -> putStrLn $ "Get Balance error: " ++ show err
     (Right b ) -> putStrLn $ "Balance: " ++ show b
 
@@ -187,4 +187,3 @@ generateTransactionsForever ch = do
   case result of
     (Left err) -> putStrLn $ "generateTransactionsForever error: " ++ show err
     (Right _ ) -> putStrLn   "Transactions request was sent"
-
