@@ -43,6 +43,8 @@ instance Verification (TraceRouting, RequestPackage) where
             verify (aS, (ToDirect aPointFrom aPointTo xS, aMsg)) &&
             verify ((ToDirect aPointFrom aPointTo xS), aMsg)
 
+        _   -> False
+
 
 instance Verification (TraceRouting, ResponcePackage) where
     verify = \case
@@ -50,7 +52,7 @@ instance Verification (TraceRouting, ResponcePackage) where
             verify (aPackageSignature, aMsg)
 
         (ToDirect aPointFrom aPointTo [aSignature],
-            aResponcePackage@(ResponceNetLvlPackage aRequestPackage aResponce aPackageSignature)) ->
+            (ResponceNetLvlPackage aRequestPackage aResponce aPackageSignature)) ->
                 verify (aPackageSignature, aResponce) &&
                 verify aRequestPackage &&
                 verify (aSignature, (aRequestPackage, aPointTo, aPointFrom))
@@ -62,14 +64,16 @@ instance Verification (TraceRouting, ResponcePackage) where
                 verify (aSignature, (aRequestPackage, aPointTo, aPointFrom))
 
         (ToDirect aPointFrom aPointTo (aS:xS),
-             aResponcePackage@(ResponceLogicLvlPackage aRequestPackage aResponce aPackageSignature)) ->
+             aResponcePackage@(ResponceLogicLvlPackage aRequestPackage _ _)) ->
                 verify (aS, (ToDirect aPointFrom aPointTo xS, aRequestPackage)) &&
                 verify ((ToDirect aPointFrom aPointTo xS), aResponcePackage)
 
         (ToDirect aPointFrom aPointTo (aS:xS),
-             aResponcePackage@(ResponceNetLvlPackage aRequestPackage aResponce aPackageSignature)) ->
+             aResponcePackage@(ResponceNetLvlPackage aRequestPackage _ _)) ->
                 verify (aS, (ToDirect aPointFrom aPointTo xS, aRequestPackage)) &&
                 verify ((ToDirect aPointFrom aPointTo xS), aResponcePackage)
+
+        _   -> False
 
 
 instance Serialize a => Verification (PackageSignature, a) where
