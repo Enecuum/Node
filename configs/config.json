@@ -5,9 +5,13 @@
         "poaOutPort": 1556
     },
     "statsdBuildConfig": {
-        "statsdPort": 8125,
-        "statsdHost": "127.0.0.1"
+        "port": 8125,
+        "host": "127.0.0.1"
+    },
+    "logsBuildConfig": {
+        "port": 9999,
+        "host": "127.0.0.1"
     },
     "bootNodeList": "[(1,(127,0,0,1),1666)]",
-    "extConnectPort": 1666
+    "extConnectPort": 1667
 }

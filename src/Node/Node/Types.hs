@@ -36,6 +36,7 @@ import              Data.Scientific (floatingOrInteger)
 import              Data.Aeson
 import              Data.Aeson.TH
 import              Service.InfoMsg
+import              Service.Network.Base (ConnectInfo)
 
 
 
@@ -186,21 +187,15 @@ instance FromJSON PortNumber where
 
 $(deriveJSON defaultOptions ''SimpleNodeBuildConfig)
 
-data StatsdBuildConfig where
-     StatsdBuildConfig :: {
-        statsdHost      :: String,
-        statsdPort      :: PortNumber
-  } -> StatsdBuildConfig
-  deriving (Generic)
-
-$(deriveJSON defaultOptions ''StatsdBuildConfig)
+$(deriveJSON defaultOptions ''ConnectInfo)
 
 data BuildConfig where
      BuildConfig :: {
         extConnectPort        :: PortNumber,
         bootNodeList          :: String,
         simpleNodeBuildConfig :: Maybe SimpleNodeBuildConfig,
-        statsdBuildConfig     :: Maybe StatsdBuildConfig
+        statsdBuildConfig     :: ConnectInfo,
+        logsBuildConfig       :: ConnectInfo
   } -> BuildConfig
   deriving (Generic)
 

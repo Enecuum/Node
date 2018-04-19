@@ -16,6 +16,7 @@ import              Data.Word
 import qualified    Data.Set            as S
 import qualified    Data.Map            as M
 import              System.Clock
+import              Service.InfoMsg
 
 
 data ShardingNode = ShardingNode {
@@ -24,6 +25,7 @@ data ShardingNode = ShardingNode {
     ,   _nodePosition       :: MyNodePosition
     ,   _nodeIndex          :: ShardIndex
     ,   _nodeIndexOfReques  :: M.Map ShardHash (TimeSpec, Chan Shard)
+    ,   _nodeInfoMsgChan    :: Chan InfoMsg
     ,   _nodeDistance       :: Word64 -- think
   }
   deriving Eq
@@ -82,12 +84,13 @@ data ShardingNodeRequestMsg =
   deriving (Show)
 
 
-makeEmptyShardingNode :: S.Set Neighbor ->  MyNodeId -> MyNodePosition -> ShardIndex -> ShardingNode
-makeEmptyShardingNode aNeighbors aMyNodeId aMyPosition aMyShardIndex = ShardingNode {
+makeEmptyShardingNode :: S.Set Neighbor ->  MyNodeId -> MyNodePosition -> ShardIndex -> Chan InfoMsg -> ShardingNode
+makeEmptyShardingNode aNeighbors aMyNodeId aMyPosition aMyShardIndex infoMsgChan = ShardingNode {
         _nodeNeighbors      = aNeighbors
     ,   _shardingNodeId     = aMyNodeId
     ,   _nodePosition       = aMyPosition
     ,   _nodeIndex          = aMyShardIndex
+    ,   _nodeInfoMsgChan    = infoMsgChan
     ,   _nodeDistance       = 1
   }
 

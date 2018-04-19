@@ -1,5 +1,8 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Service.Network.Base (
     HostAddress,
+    ConnectInfo(..),
     PortNumber(..),
     showHostAddress,
     sockAddrToHostAddress
@@ -7,6 +10,12 @@ module Service.Network.Base (
 
 import Network.Socket
 import Data.List
+import GHC.Generics (Generic)
+data ConnectInfo = ConnectInfo {
+    host :: String
+  , port :: PortNumber
+  } deriving (Show, Generic)
+  
 
 -- | Show host adres in 0.0.0.0 form.
 showHostAddress :: HostAddress -> String
