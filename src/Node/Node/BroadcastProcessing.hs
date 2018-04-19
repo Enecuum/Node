@@ -98,7 +98,8 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
                     ++ show aMicroblock
             _ -> return ()
 
-idShow myNodeId = show (toInteger myNodeId)
+idShow :: Integral a => a -> String
+idShow aMyNodeId = show (toInteger aMyNodeId)
 
 
 -- | Преобразуем микроблок в шарду, по хорошему нужно бы ещё проверять, что её
