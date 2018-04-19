@@ -496,7 +496,7 @@ instance FileDB NetLvl where
             aNotIAm  a  = toMyNodeId (a^._1) /= aMyNodeId
 
         addDataToFile "./data/listOfConnects.txt" $
-            (\a -> aNotInFile a && aNotIAm a) aList
+            filter (\a -> aNotInFile a && aNotIAm a) aList
 
 
     deleteFromFile _ aNodeId = do
