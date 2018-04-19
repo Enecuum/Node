@@ -479,7 +479,6 @@ sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing = do
 
 
 class FileDB a where
-    saveRecordsToNodeListFile   :: NodeInfoList a -> IO ()
     readRecordsFromNodeListFile :: IO (NodeInfoList a)
     addRecordsToNodeListFile    :: MyNodeId -> NodeInfoList a -> IO ()
     deleteFromFile              :: a -> NodeId -> IO ()
@@ -491,16 +490,13 @@ instance FileDB NetLvl where
         return $ NodeInfoListNetLvl aFileContent
 
 
-    saveRecordsToNodeListFile (NodeInfoListNetLvl aList) =
-        writeDataToFile "./data/listOfConnects.txt" aList
-
     addRecordsToNodeListFile aMyNodeId (NodeInfoListNetLvl aList) = do
         NodeInfoListNetLvl aFileContent <- readRecordsFromNodeListFile
         let aFilteredRecords = filter
-                (\a -> aNotInFile a && aNotIAm a) aList
+                (\a -> aNotInFile a || aNotIAm a) aList
             -- aNotInLocalHost a = a^._2 /= read "127.0.0.1"
-            aNotInFile      a = a `notElem` aFileContent
-            aNotIAm         a = toMyNodeId (a^._1) /= aMyNodeId
+            aNotInFile  = (`notElem` aFileContent)
+            aNotIAm  a  = toMyNodeId (a^._1) /= aMyNodeId
 
         addDataToFile "./data/listOfConnects.txt" aFilteredRecords
 
@@ -508,7 +504,7 @@ instance FileDB NetLvl where
     deleteFromFile _ aNodeId = do
         NodeInfoListNetLvl aRecords <-readRecordsFromNodeListFile
         let aFilteredRecords = filter (\a -> a^._1 /= aNodeId) aRecords
-        saveRecordsToNodeListFile (NodeInfoListNetLvl aFilteredRecords)
+        writeDataToFile "./data/listOfConnects.txt" aFilteredRecords
 
     updateFile (NodeInfoListNetLvl aNewRecords) = do
         NodeInfoListNetLvl aRecords <-readRecordsFromNodeListFile
@@ -516,17 +512,13 @@ instance FileDB NetLvl where
             aFilteredRecords = filter (\a -> a^._1 `notElem` aIdsForUpdate) aRecords
             aUpdatedRecords  = aNewRecords ++ aFilteredRecords
 
-        saveRecordsToNodeListFile (NodeInfoListNetLvl aUpdatedRecords)
+        writeDataToFile "./data/listOfConnects.txt" aUpdatedRecords
 
 
 instance FileDB LogicLvl where
     readRecordsFromNodeListFile = do
         aList <- readDataFile $ "./data/listOfPositions.txt"
         return $ NodeInfoListLogicLvl aList
-
-
-    saveRecordsToNodeListFile (NodeInfoListLogicLvl aList) =
-        writeDataToFile "./data/listOfPositions.txt" aList
 
 
     addRecordsToNodeListFile aMyNodeId (NodeInfoListLogicLvl aList) = do
@@ -538,10 +530,12 @@ instance FileDB LogicLvl where
 
         addDataToFile "./data/listOfPositions.txt" aFilteredRecords
 
+
     deleteFromFile _ aNodeId = do
         NodeInfoListLogicLvl aRecords <- readRecordsFromNodeListFile
         let aFilteredRecords = filter (\a -> a^._1 /= aNodeId) aRecords
-        saveRecordsToNodeListFile (NodeInfoListLogicLvl aFilteredRecords)
+        writeDataToFile "./data/listOfPositions.txt" aFilteredRecords
+
 
     updateFile (NodeInfoListLogicLvl aNewRecords) = do
         NodeInfoListLogicLvl aRecords <-readRecordsFromNodeListFile
@@ -549,5 +543,5 @@ instance FileDB LogicLvl where
             aFilteredRecords = filter (\a -> a^._1 `notElem` aIdsForUpdate) aRecords
             aUpdatedRecords  = aNewRecords ++ aFilteredRecords
 
-        saveRecordsToNodeListFile (NodeInfoListLogicLvl aUpdatedRecords)
+        writeDataToFile "./data/listOfPositions.txt" aUpdatedRecords
 --------------------------------------------------------------------------------
