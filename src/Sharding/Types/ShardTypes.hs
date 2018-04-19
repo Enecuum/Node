@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, DeriveGeneric #-}
 module Sharding.Types.ShardTypes where
 
-import              Sharding.Space.Distance
-import              Sharding.Space.Point
+import              Sharding.Space.Distance()
+import              Sharding.Space.Point()
 
 import              GHC.Generics
 
