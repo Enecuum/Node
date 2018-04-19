@@ -19,7 +19,7 @@ import Network.Socket.ByteString (sendAllTo)
 import Data.Serialize (encode)
 import Data.List
 
-import System.Clock
+import System.Clock()
 import Service.Network.UDP.Client
 import Service.Metrics.Statsd
 
@@ -74,7 +74,6 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
             Metric s -> sendToServer metricHandle s
 
             Log aTags aMsgType aMsg -> do
-                aTime <- getTime Realtime
                 let aTagsList = concat (intersperse "," (show <$> aTags))
                     aString = "+log|" ++ aTagsList ++ "|" ++ show aId  ++ "|"
                         ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
