@@ -9,7 +9,7 @@
         "host": "127.0.0.1"
     },
     "logsBuildConfig": {
-        "port": 9999,
+        "port": 28777,
         "host": "127.0.0.1"
     },
     "bootNodeList": "[(1,(127,0,0,1),1666)]",
