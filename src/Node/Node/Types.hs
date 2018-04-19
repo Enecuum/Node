@@ -1,4 +1,14 @@
-{-# LANGUAGE GADTs, DeriveGeneric, TemplateHaskell, OverloadedStrings, TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE
+        GADTs
+    ,   DeriveGeneric
+    ,   TemplateHaskell
+    ,   OverloadedStrings
+    ,   TypeSynonymInstances
+    ,   FlexibleInstances
+    ,   MultiWayIf
+    ,   MultiParamTypeClasses
+#-}
+
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | Module provides types for storing internal state of a node and messages.
@@ -31,6 +41,7 @@ import              Node.Template.Constructor
 import              Sharding.Space.Point
 import qualified    Sharding.Types.Node as N
 import              Service.Types (Transaction, Microblock)
+import              Sharding.Space.Distance
 
 import              Data.Scientific (floatingOrInteger)
 import              Data.Aeson
@@ -293,3 +304,14 @@ makeNode aChan aHostAdress aPortNumber = Node {
 
 defaultServerPort :: PortNumber
 defaultServerPort = 3000
+
+--
+--
+instance DistanceTo Node Point where
+    distanceTo aNode aPoint = if
+        | Just aPosition <- aNode^.nodePosition ->
+            distanceTo aPosition  (NodePosition aPoint)
+        | otherwise                             -> maxBound
+
+instance DistanceTo Node PointTo where
+    distanceTo aNode aPoint = distanceTo aNode (toPoint aPoint)

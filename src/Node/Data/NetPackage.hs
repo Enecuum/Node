@@ -6,6 +6,8 @@
     ,   FlexibleInstances
 #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Node.Data.NetPackage where
 
 import Node.Data.NodeTypes
@@ -111,7 +113,7 @@ data instance Request LogicLvl where
         ::  P.PointFrom
         ->  Distance P.Point
         ->  Request LogicLvl
-    -- XXX: сделать обработку отправки запроса списка соседей и ответа на него. 
+    -- XXX: сделать обработку отправки запроса списка соседей и ответа на него.
     NeighborListRequestPackage      :: Request LogicLvl
     ShardRequestPackage             :: ShardHash -> Request LogicLvl
     NodePositionRequestPackage      :: Request LogicLvl
