@@ -71,9 +71,9 @@ control = do
       (_, _, err) -> ioError (userError (concat err ++ usageInfo "Usage: enq-cli [OPTION...]" args))
     where parseArgs a = do
             (h,p)  <- getRecipient "localhost" 1555 a
-            handle <- openConnect h p
+            aHandle <- openConnect h p
             putStrLn $ usageInfo "Usage: " options
-            loop handle
+            loop aHandle
               where
                 loop aHandle = do
                   argv <- splitOn " " <$> getLine
