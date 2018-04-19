@@ -188,8 +188,8 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     "Recived request of alive status the node " ++ show aId
                     ++ " from the " ++ show aNodeId ++ "."
                 let aMaybeNodeId = case aTraceRouting of
-                        ToNode _ (PackageSignature (toNodeId -> aId) _ _)
-                            -> Just aId
+                        ToNode _ (PackageSignature (toNodeId -> aAliveId) _ _)
+                            -> Just aAliveId
                         _   -> Nothing
 
                 whenJust aMaybeNodeId $ \aJustNodeId -> do
