@@ -57,9 +57,9 @@ sendToServer h s = sendAllTo (clientSocket h)
                              (clientAddress h)
 
 serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> Integer -> IO ()
-serveInfoMsg statsdInfo logsInfo  chan aId = do
+serveInfoMsg statsdInfo logsInfo chan aId = do
     metricHandle <- openConnect (host statsdInfo) (port statsdInfo)
-    logHandle    <- openConnect (host logsInfo)   (port logsInfo)   
+    logHandle    <- openConnect (host logsInfo)   (port logsInfo)
 
     sendToServer logHandle $ "+node|" ++  show aId ++ "|" ++
         concat (intersperse "," (show <$> [
