@@ -1,4 +1,12 @@
-{-# LANGUAGE GADTs, DeriveGeneric, GeneralizedNewtypeDeriving, TemplateHaskell #-}
+{-# LANGUAGE
+        GADTs
+    ,   DeriveGeneric
+    ,   GeneralizedNewtypeDeriving
+    ,   TemplateHaskell
+#-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Node.Data.NodeTypes where
 
 import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
