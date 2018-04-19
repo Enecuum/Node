@@ -185,7 +185,10 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     modifyIORef aMd $ myNodePosition .~ Just aMyNodePosition
                     return aMyNodePosition
 
-            IsAliveTheNodeRequestPackage aNodeId -> do
+            IsAliveTheNodeRequestPackage aId -> do
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    "Recived request of alive status the node " ++ show aId
+                    ++ " from the " ++ show aNodeId ++ "."
                 let aMaybeNodeId = case aTraceRouting of
                         ToNode _ (PackageSignature (toNodeId -> aId) _ _)
                             -> Just aId
@@ -194,6 +197,9 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                 whenJust aMaybeNodeId $ \aJustNodeId -> do
                     let aNetLvlPackage = TheNodeIsAlive
                             aNodeId $ (aData^.nodes.at aNodeId) /= Nothing
+                    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                        "Send the " ++ show aNetLvlPackage ++ " to "
+                        ++ show aJustNodeId ++ "."
                     aResponsePackageSignature <- makePackageSignature aData
                         (aNetLvlPackage, aRequestPackage)
                     let aPackage = ResponceLogicLvlPackage
@@ -208,15 +214,26 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
         aData <- readIORef aMd
         let aSendNetLvlResponse = sendNetLvlResponse
                 aTraceRouting aData aRequest aSignature
+        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+            "Recived the  " ++ show aRequest  ++ "."
         case aRequest of
-            IsYouBrodcast -> aSendNetLvlResponse
-                (IAmBroadcast $ aData^.iAmBroadcast)
+            IsYouBrodcast -> do
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    "Send responce 'I am broadcast' " ++ show (aData^.iAmBroadcast)
+                    ++ "."
+                aSendNetLvlResponse (IAmBroadcast $ aData^.iAmBroadcast)
 
-            HostAdressRequest -> aSendNetLvlResponse
-                (HostAdressResponce $ aData^.hostAddress)
+            HostAdressRequest -> do
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    "Send responce 'I am broadcast' " ++ show (aData^.hostAddress) ++ "."
+                aSendNetLvlResponse (HostAdressResponce $ aData^.hostAddress)
 
             BroadcastListRequest -> do
                 -- TEMP Think about move aBroadcastList to operacety memory.
+                {-
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    "Send responce 'I am broadcast' " ++ show (aData^.hostAddress) ++ "."
+                    -}
                 NodeInfoListNetLvl   aBroadcastList      <- readRecordsFromNodeListFile $ aData^.myNodeId
                 NodeInfoListLogicLvl aBroadcastListLogic <- readRecordsFromNodeListFile $ aData^.myNodeId
                 let aBroadcastListResponce = BroadcastListResponce
