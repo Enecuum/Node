@@ -116,8 +116,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
             shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode
 
         CheckTheNeighbors -> do
-            let aMyNodePosition     = aShardingNode^.nodePosition
-                aNodePositions      = (^.neighborPosition) `S.map` aNeighbors
+            let aNodePositions      = (^.neighborPosition) `S.map` aNeighbors
                 aNeighborsPositions = findNearestNeighborPositions aMyNodePosition aNodePositions
                 aNeighbors = aShardingNode^.nodeNeighbors
                 aFilteredNeighbors = filter
@@ -192,22 +191,35 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
 
         ShardAcceptAction aShard
             | Just (_, aChan) <- aShardingNode^.nodeIndexOfReques.at (shardToHash aShard) -> do
+                writeLog infoMsgChan [ShardingLvlTag] Info $
+                    "This shard " ++ show aShard ++ " accepted and sended to request channel."
                 writeChan aChan aShard
                 aLoop $ aShardingNode & nodeIndexOfReques %~ M.delete (shardToHash aShard)
 
-            | checkShardIsInRadiusOfCaptureShardingNode aShardingNode (shardToHash aShard) ->
+            | checkShardIsInRadiusOfCaptureShardingNode aShardingNode (shardToHash aShard) -> do
+                writeLog infoMsgChan [ShardingLvlTag] Info $
+                    "This shard " ++ show aShard ++ " accepted and saved localy."
                 nodeSaveShard aShard aLoop aShardingNode
 
         NewShardInNetAction aShard
-            | checkShardIsInRadiusOfCaptureShardingNode aShardingNode (shardToHash aShard) ->
+            | checkShardIsInRadiusOfCaptureShardingNode aShardingNode (shardToHash aShard) -> do
+                writeLog infoMsgChan [ShardingLvlTag] Info $
+                    "New shard " ++ show aShard ++ " in net and save localy."
                 nodeSaveShard aShard aLoop aShardingNode
 
         ShardLoadAction aChan aNodeId aHashList -> do
+            writeLog infoMsgChan [ShardingLvlTag] Info $
+                "Node  " ++ show aNodeId ++ " want this shards "
+              ++ show aHashList ++ "."
             sendShardsToNode aShardingNode aNodeId aHashList aChan
             aLoop aShardingNode
 
         NodePositionAction aChan aNodeId -> do
-            writeChan aChan $ NodePositionResponse (aShardingNode^.nodePosition)
+            let aMyPosition = aShardingNode^.nodePosition
+            writeLog infoMsgChan [ShardingLvlTag] Info $
+                "This node  " ++ show aNodeId ++ " ask my position "
+              ++ show aMyPosition ++ "."
+            writeChan aChan $ NodePositionResponse (aMyPosition)
             aLoop aShardingNode
 
         NeighborListAcceptAction aNeighborList -> aLoop $
