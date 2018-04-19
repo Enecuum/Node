@@ -43,7 +43,7 @@ import qualified    Sharding.Types.Node as N
 import              Service.Types (Transaction, Microblock)
 import              Sharding.Space.Distance
 
-import              Data.Scientific (floatingOrInteger)
+import              Data.Scientific (toRealFloat, Scientific)
 import              Data.Aeson
 import              Data.Aeson.TH
 import              Service.InfoMsg
@@ -189,11 +189,12 @@ data SimpleNodeBuildConfig where
 instance ToJSON PortNumber where
   toJSON pn = Number $ fromInteger $ toInteger pn
 
+toDouble :: Scientific -> Double
+toDouble = toRealFloat
+
 instance FromJSON PortNumber where
-  parseJSON (Number s) = case (floatingOrInteger s) of
-            Left _  -> error "it was floating =("
-            Right i -> return $ fromInteger i
-  parseJSON _ = error "i've felt with the portnumber parsing"
+    parseJSON (Number s) = return.toEnum.fromEnum.toDouble $ s
+    parseJSON _          = error "i've felt with the portnumber parsing"
 
 
 $(deriveJSON defaultOptions ''SimpleNodeBuildConfig)
