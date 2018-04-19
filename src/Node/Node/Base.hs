@@ -100,8 +100,8 @@ answerToConnectivityQuery aChan aMd _ = do
         aBroadcastNum = length aBroadcasts
         aUnActiveNum  = M.size $ M.filter (\a -> a^.status /= Active) aNeighbors
 
-    NodeInfoListNetLvl aConnectList     <- readRecordsFromNodeListFile aMyNodeId
-    NodeInfoListLogicLvl aPossitionList <- readRecordsFromNodeListFile aMyNodeId
+    NodeInfoListNetLvl aConnectList     <- readRecordsFromNodeListFile
+    NodeInfoListLogicLvl aPossitionList <- readRecordsFromNodeListFile
     let aWait = aBroadcastNum >= preferedBroadcastCount{- || aBroadcastNum <= 6 -} || aUnActiveNum /= 0
 
         aConnectMap   = M.fromList $ (\(a,b,c) -> (a, (b, c))) <$> aConnectList
@@ -188,7 +188,7 @@ answerToClientDisconnected aMd (toManagerMsg -> ClientIsDisconnected aId aChan) 
     aData <- readIORef aMd
     whenJust (aData^.nodes.at aId) $ \aNode -> do
         when (aNode^.status == Noactive) $ do
-            deleteFromFile NetLvl (aData^.myNodeId) aId
+            deleteFromFile NetLvl aId
             when (aId `elem` ((^._1) <$> aData^.nodeBaseData.bootNodes)) $
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "The " ++ show aId ++ " bootNode is unreachable."
@@ -479,83 +479,75 @@ sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing = do
 
 
 class FileDB a where
-    saveRecordsToNodeListFile   :: MyNodeId -> NodeInfoList a -> IO ()
-    readRecordsFromNodeListFile :: MyNodeId -> IO (NodeInfoList a)
+    saveRecordsToNodeListFile   :: NodeInfoList a -> IO ()
+    readRecordsFromNodeListFile :: IO (NodeInfoList a)
     addRecordsToNodeListFile    :: MyNodeId -> NodeInfoList a -> IO ()
-    deleteFromFile              :: a -> MyNodeId -> NodeId -> IO ()
-    updateFile                  :: MyNodeId -> NodeInfoList a -> IO ()
+    deleteFromFile              :: a -> NodeId -> IO ()
+    updateFile                  :: NodeInfoList a -> IO ()
 
 instance FileDB NetLvl where
-    readRecordsFromNodeListFile (MyNodeId aMyNodeId) = do
-        aFileContent <- readDataFile $
-            "./data/listOfConnects" ++ show aMyNodeId ++ ".txt"
+    readRecordsFromNodeListFile = do
+        aFileContent <- readDataFile "./data/listOfConnects.txt"
         return $ NodeInfoListNetLvl aFileContent
 
 
-    saveRecordsToNodeListFile aMyNodeId (NodeInfoListNetLvl aList) =
-        writeDataToFile
-            ("./data/listOfConnects" ++ show aMyNodeId ++ ".txt")
-            aList
+    saveRecordsToNodeListFile (NodeInfoListNetLvl aList) =
+        writeDataToFile "./data/listOfConnects.txt" aList
 
     addRecordsToNodeListFile aMyNodeId (NodeInfoListNetLvl aList) = do
-        NodeInfoListNetLvl aFileContent <- readRecordsFromNodeListFile aMyNodeId
+        NodeInfoListNetLvl aFileContent <- readRecordsFromNodeListFile
         let aFilteredRecords = filter
                 (\a -> aNotInFile a && aNotIAm a) aList
             -- aNotInLocalHost a = a^._2 /= read "127.0.0.1"
             aNotInFile      a = a `notElem` aFileContent
             aNotIAm         a = toMyNodeId (a^._1) /= aMyNodeId
 
-        addDataToFile
-            ("./data/listOfConnects" ++ show aMyNodeId ++ ".txt")
-            aFilteredRecords
+        addDataToFile "./data/listOfConnects.txt" aFilteredRecords
 
 
-    deleteFromFile _ aMyNodeId aNodeId = do
-        NodeInfoListNetLvl aRecords <-readRecordsFromNodeListFile aMyNodeId
+    deleteFromFile _ aNodeId = do
+        NodeInfoListNetLvl aRecords <-readRecordsFromNodeListFile
         let aFilteredRecords = filter (\a -> a^._1 /= aNodeId) aRecords
-        saveRecordsToNodeListFile aMyNodeId (NodeInfoListNetLvl aFilteredRecords)
+        saveRecordsToNodeListFile (NodeInfoListNetLvl aFilteredRecords)
 
-    updateFile aMyNodeId (NodeInfoListNetLvl aNewRecords) = do
-        NodeInfoListNetLvl aRecords <-readRecordsFromNodeListFile aMyNodeId
+    updateFile (NodeInfoListNetLvl aNewRecords) = do
+        NodeInfoListNetLvl aRecords <-readRecordsFromNodeListFile
         let aIdsForUpdate    = (^._1) <$> aNewRecords
             aFilteredRecords = filter (\a -> a^._1 `notElem` aIdsForUpdate) aRecords
             aUpdatedRecords  = aNewRecords ++ aFilteredRecords
 
-        saveRecordsToNodeListFile aMyNodeId (NodeInfoListNetLvl aUpdatedRecords)
+        saveRecordsToNodeListFile (NodeInfoListNetLvl aUpdatedRecords)
 
 
 instance FileDB LogicLvl where
-    readRecordsFromNodeListFile (MyNodeId aMyNodeId) = do
-        aList <- readDataFile $ "./data/listOfPositions" ++ show aMyNodeId ++ ".txt"
+    readRecordsFromNodeListFile = do
+        aList <- readDataFile $ "./data/listOfPositions.txt"
         return $ NodeInfoListLogicLvl aList
 
 
-    saveRecordsToNodeListFile aMyNodeId (NodeInfoListLogicLvl aList) =
-        writeDataToFile ("./data/listOfPositions" ++ show aMyNodeId ++ ".txt") aList
+    saveRecordsToNodeListFile (NodeInfoListLogicLvl aList) =
+        writeDataToFile "./data/listOfPositions.txt" aList
 
 
     addRecordsToNodeListFile aMyNodeId (NodeInfoListLogicLvl aList) = do
-        NodeInfoListLogicLvl aFileContent <- readRecordsFromNodeListFile aMyNodeId
+        NodeInfoListLogicLvl aFileContent <- readRecordsFromNodeListFile
         let aFilteredRecords = filter
                 (\a -> aNotInFile a && aNotIAm a) aList
             aNotInFile      a = a `notElem` aFileContent
             aNotIAm         a = toMyNodeId (a^._1) /= aMyNodeId
 
-        addDataToFile
-            ("./data/listOfPositions" ++ show aMyNodeId ++ ".txt")
-            aFilteredRecords
+        addDataToFile "./data/listOfPositions.txt" aFilteredRecords
 
-    deleteFromFile _ aMyNodeId aNodeId = do
-        NodeInfoListLogicLvl aRecords <- readRecordsFromNodeListFile aMyNodeId
+    deleteFromFile _ aNodeId = do
+        NodeInfoListLogicLvl aRecords <- readRecordsFromNodeListFile
         let aFilteredRecords = filter (\a -> a^._1 /= aNodeId) aRecords
-        saveRecordsToNodeListFile
-            aMyNodeId (NodeInfoListLogicLvl aFilteredRecords)
+        saveRecordsToNodeListFile (NodeInfoListLogicLvl aFilteredRecords)
 
-    updateFile aMyNodeId (NodeInfoListLogicLvl aNewRecords) = do
-        NodeInfoListLogicLvl aRecords <-readRecordsFromNodeListFile aMyNodeId
+    updateFile (NodeInfoListLogicLvl aNewRecords) = do
+        NodeInfoListLogicLvl aRecords <-readRecordsFromNodeListFile
         let aIdsForUpdate    = (^._1) <$> aNewRecords
             aFilteredRecords = filter (\a -> a^._1 `notElem` aIdsForUpdate) aRecords
             aUpdatedRecords  = aNewRecords ++ aFilteredRecords
 
-        saveRecordsToNodeListFile aMyNodeId (NodeInfoListLogicLvl aUpdatedRecords)
+        saveRecordsToNodeListFile (NodeInfoListLogicLvl aUpdatedRecords)
 --------------------------------------------------------------------------------

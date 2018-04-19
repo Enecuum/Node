@@ -64,7 +64,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl LogicLvl
             BroadcastPosition     aMyNodeId aNodePosition  -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted new position for the node." ++
                     "The node have position " ++ show aNodePosition ++ ", node id is " ++ show aMyNodeId
-                updateFile aMyNodeId
+                updateFile
                     (NodeInfoListLogicLvl [(toNodeId aMyNodeId, aNodePosition)])
                 sendToShardingLvl aData $
                     T.TheNodeHaveNewCoordinates (toNodeId aMyNodeId) aNodePosition

@@ -107,7 +107,7 @@ instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Accepted the node position of a neighbor node " ++ show aNodeId ++
                     " a new position is a " ++ show aNodePosition
-                updateFile (aData^.myNodeId) (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
+                updateFile (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Updating of node positions file."
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
@@ -230,8 +230,8 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
                 -- TEMP Think about move aBroadcastList to operacety memory.
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Send responce 'Broadcast list'."
-                NodeInfoListNetLvl   aBroadcastList      <- readRecordsFromNodeListFile $ aData^.myNodeId
-                NodeInfoListLogicLvl aBroadcastListLogic <- readRecordsFromNodeListFile $ aData^.myNodeId
+                NodeInfoListNetLvl   aBroadcastList      <- readRecordsFromNodeListFile
+                NodeInfoListLogicLvl aBroadcastListLogic <- readRecordsFromNodeListFile
                 let aBroadcastListResponce = BroadcastListResponce
                         (NodeInfoListLogicLvl $ take 10 aBroadcastListLogic)
                         (NodeInfoListNetLvl   $ take 10 aBroadcastList)
