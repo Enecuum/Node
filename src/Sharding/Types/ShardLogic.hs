@@ -1,4 +1,10 @@
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, DeriveGeneric #-}
+{-# LANGUAGE
+        TemplateHaskell
+    ,   MultiParamTypeClasses
+    ,   DeriveGeneric
+#-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Sharding.Types.ShardLogic where
 
 import              Sharding.Space.Distance
