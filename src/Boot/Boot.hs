@@ -21,7 +21,6 @@ import              Node.Node.Base
 import              Node.Node.Types
 import              Service.Monad.Option
 
-import              Node.Node.Processing
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Data.GlobalLoging
@@ -42,36 +41,7 @@ managerBootNode ch md = forever $ do
         opt isCheckBroadcastNode  $ answerToCheckBroadcastNode ch md
 
 
-instance PackageTraceRoutingAction NodeBootNodeData RequestPackage where
-    makeAction aChan md aNodeId aTraceRouting aRequesPackage = do
-        case aRequesPackage of
-            RequestNetLvlPackage aReques aSignature -> do
-                processing aChan md aSignature aTraceRouting aReques
-            _   -> return ()
 
-
-instance  Processing (IORef NodeBootNodeData) (Request NetLvl) where
-    processing aChan aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting = \case
-        BroadcastListRequest -> do
-            aData <- readIORef aMd
-            let aSendNetLvlResponse = sendNetLvlResponse
-                    aTraceRouting aData BroadcastListRequest aSignature
-            NodeInfoListNetLvl aBroadcasts <- readRecordsFromNodeListFile $ aData^.myNodeId
-            let aBroadcastListResponce = BroadcastListResponce
-                    (NodeInfoListLogicLvl [])
-                    (NodeInfoListNetLvl $ take 10 aBroadcasts)
-            writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info $
-                "Send to node " ++ show aNodeId ++ " broadcast list responce " ++
-                show (take 10 aBroadcasts) ++ "."
-            aSendNetLvlResponse aBroadcastListResponce
-        _ -> return ()
-
-
-instance  PackageTraceRoutingAction NodeBootNodeData ResponcePackage where
-    makeAction _ _ _ _ _ = return ()
-
-instance  BroadcastAction NodeBootNodeData where
-    makeBroadcastAction _ _ _ _ _ = return ()
 
 
 answerToCheckBroadcastNodes
