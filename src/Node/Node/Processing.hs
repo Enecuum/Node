@@ -13,10 +13,8 @@
 module Node.Node.Processing where
 
 import qualified    Data.Map                        as M
-import              Data.Serialize
 import              Data.List.Extra
 import              Data.IORef
-import              System.Clock
 import              System.Random
 import              Lens.Micro
 import              Lens.Micro.Mtl
@@ -33,7 +31,6 @@ import              Node.Data.NetPackage
 import              Sharding.Sharding
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
-import              Sharding.Space.Distance
 import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.MakeTraceRouting
 import              Node.Data.GlobalLoging
@@ -119,7 +116,7 @@ instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
                     T.TheNodeHaveNewCoordinates aNodeId aNodePosition
 
             -- Accepted info about a live status of neighbor node.
-            TheNodeIsAlive aNodeId ok -> do
+            TheNodeIsAlive _ ok -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Accepted info about a live status of neighbor node." ++
                     show aNodeId ++ " alive status is a " ++ show ok
@@ -127,6 +124,7 @@ instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
                     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                         "The neighbor is dead send msg about it to the sharding lvl."
                     sendToShardingLvl aData $ T.TheNodeIsDead aNodeId
+            _       -> return ()
 
 
 instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
@@ -207,7 +205,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     aTrace <- makeTraceRouting  aData aPackage
                         (ToNode aJustNodeId)
                     sendResponse (aData^.nodes.at aJustNodeId) aTrace aPackage
-
+            _       -> return ()
 
 instance Processing (IORef ManagerNodeData) (Request NetLvl) where
     processing _ aMd aSignature aTraceRouting aRequest = do
