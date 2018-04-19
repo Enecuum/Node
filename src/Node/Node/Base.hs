@@ -71,6 +71,7 @@ sendExitMsgToNode :: Node -> IO ()
 sendExitMsgToNode (Chan aChan) = do
     sendPackagedMsg aChan disconnectRequest
     writeChan       aChan SenderTerminate
+sendExitMsgToNode _ = error "Node.Node.Base.sendExitMsgToNode"
 
 pattern Head :: forall a b. a -> b -> [(a, b)]
 pattern Head aId aElem <- (aId, aElem):_
