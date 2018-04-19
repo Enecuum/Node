@@ -91,6 +91,7 @@ makeEmptyShardingNode aNeighbors aMyNodeId aMyPosition aMyShardIndex infoMsgChan
     ,   _nodePosition       = aMyPosition
     ,   _nodeIndex          = aMyShardIndex
     ,   _nodeInfoMsgChan    = infoMsgChan
+    ,   _nodeIndexOfReques  = M.empty
     ,   _nodeDistance       = 1
   }
 
