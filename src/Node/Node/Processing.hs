@@ -158,7 +158,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     return aShardIndex
 
             ShardRequestPackage aShardHash -> do
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                writeLog (aData^.infoMsgChan) [NetLvlTag, LoadingShardsTag] Info $
                     "Sending request of shard to sharding lvl. "
                     ++ "Petitioner " ++ show aNodeId ++ " shardHash = "
                     ++ show aShardHash ++ "."
@@ -167,7 +167,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     sendToShardingLvl aData $
                         T.ShardLoadAction aChan aNodeId aShardHash
                     T.ShardResponse aShard <- readChan aChan
-                    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    writeLog (aData^.infoMsgChan) [NetLvlTag, LoadingShardsTag] Info $
                         "Recived response from sharding lvl. The shard for "
                         ++ show aNodeId ++ " is " ++ show aShard ++ "."
                         ++ " Sending the shard."
@@ -219,21 +219,19 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
         case aRequest of
             IsYouBrodcast -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                    "Send responce 'I am broadcast' " ++ show (aData^.iAmBroadcast)
+                    "Send responce: I am broadcast " ++ show (aData^.iAmBroadcast)
                     ++ "."
                 aSendNetLvlResponse (IAmBroadcast $ aData^.iAmBroadcast)
 
             HostAdressRequest -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                    "Send responce 'I am broadcast' " ++ show (aData^.hostAddress) ++ "."
+                    "Send responce: I have host addres " ++ show (aData^.hostAddress) ++ "."
                 aSendNetLvlResponse (HostAdressResponce $ aData^.hostAddress)
 
             BroadcastListRequest -> do
                 -- TEMP Think about move aBroadcastList to operacety memory.
-                {-
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                    "Send responce 'I am broadcast' " ++ show (aData^.hostAddress) ++ "."
-                    -}
+                    "Send responce 'Broadcast list'."
                 NodeInfoListNetLvl   aBroadcastList      <- readRecordsFromNodeListFile $ aData^.myNodeId
                 NodeInfoListLogicLvl aBroadcastListLogic <- readRecordsFromNodeListFile $ aData^.myNodeId
                 let aBroadcastListResponce = BroadcastListResponce

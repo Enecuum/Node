@@ -119,8 +119,11 @@ answerToShardingNodeRequestMsg aMd
                         makeAndSendTo aData aPosition aRequest
 
             T.ShardListRequest shardHashes -> do
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $aLogMsg "needed shards"
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $"The list of requested shards:" ++ show shardHashes
+                writeLog (aData^.infoMsgChan) [NetLvlTag, LoadingShardsTag] Info $
+                    aLogMsg "needed shards"
+                writeLog (aData^.infoMsgChan) [NetLvlTag, LoadingShardsTag] Info $
+                    "The list of requested shards:" ++ show shardHashes
+
                 forM_ shardHashes $ \aHash -> do
                     let aPosition = NodePosition $ hashToPoint aHash
                         aRequest  = ShardRequestPackage aHash
@@ -130,11 +133,11 @@ answerToShardingNodeRequestMsg aMd
                 | aData^.iAmBroadcast -> if
                     | Just _ <- aData^.nodes.at aNodeId -> do
                         aLogAboutAliveRequest aNodeId
-                        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $"The node is alive."
+                        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "The node is alive."
                         return ()
                     | otherwise -> do
                         aLogAboutAliveRequest aNodeId
-                        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $"The node is dead."
+                        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "The node is dead."
                         sendToShardingLvl aData $ T.TheNodeIsDead aNodeId
                 | otherwise -> do
                     let aListOfBroatcastPosition = concat $ do
