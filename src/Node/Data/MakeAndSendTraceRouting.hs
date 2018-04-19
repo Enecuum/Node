@@ -12,44 +12,23 @@
 
 module Node.Data.MakeAndSendTraceRouting where
 
-import qualified    Network.WebSockets                  as WS
-import              System.Clock
-import              System.Random
-import              System.Random.Shuffle
 import              Control.Monad.State.Lazy
 import              Control.Monad.Extra
-import              Control.Exception
 import              Control.Concurrent
-import              Control.Concurrent.Chan
-import              Control.Concurrent.Async
 import              Crypto.Error
-import              Crypto.PubKey.ECC.ECDSA
 import              Data.List.Extra
-import qualified    Data.ByteString                 as B
 import qualified    Data.Map                        as M
-import qualified    Data.Set                        as S
-import              Data.IORef
 import              Data.Serialize
-import              Data.Monoid
-import              Lens.Micro.Mtl
 import              Lens.Micro
-import              Lens.Micro.GHC
+import              Lens.Micro.GHC()
 
-import              Service.Network.WebSockets.Client
-import              Service.Network.Base
-import              Service.Monad.Option
+
 import              Sharding.Space.Point
-import              Sharding.Space.Shift
-import              Sharding.Sharding
 import              Node.Node.Types
 import              Node.Crypto
 import              Node.Data.Data
-import              Node.FileDB.FileDB
-import              Node.Extra
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
-import              Node.Data.NetMessages
-import              Node.Node.Base.Server
 import              Node.Data.MakeTraceRouting
 import              Sharding.Space.Distance
 
@@ -67,9 +46,9 @@ instance (LevelRequestContractor aLvl, Serialize (Request aLvl)) =>
                 $ \aNode -> do
                     aTraceRouting <- makeTraceRouting
                         aData aRequestPackage (ToNode aNodeId)
-                    let aRequest = PackageTraceRoutingRequest
+                    let aNewRequest = PackageTraceRoutingRequest
                             aTraceRouting aRequestPackage
-                    sendToNode (makeCipheredPackage aRequest) aNode
+                    sendToNode (makeCipheredPackage aNewRequest) aNode
 
 instance (LevelRequestContractor aLvl, Serialize (Request aLvl)) =>
     MakeAndSendTraceRouting (Request aLvl) NodePosition where
@@ -83,10 +62,10 @@ instance (LevelRequestContractor aLvl, Serialize (Request aLvl)) =>
                     aData
                     (aRequestPackage, aPointTo, aPointFrom)
                     (ToDirect aPointFrom aPointTo)
-                let aRequest = PackageTraceRoutingRequest
+                let aNewRequest = PackageTraceRoutingRequest
                         aTraceRouting aRequestPackage
                 whenJust (getClosedNodeByDirectUnsafe aData (toNodePosition aPointTo)) $
-                    sendToNode (makeCipheredPackage aRequest)
+                    sendToNode (makeCipheredPackage aNewRequest)
 
 
 class LevelRequestContractor aLvl where
