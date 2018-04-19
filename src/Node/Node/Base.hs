@@ -498,10 +498,10 @@ instance FileDB NetLvl where
             ("./data/listOfConnects" ++ show aMyNodeId ++ ".txt")
             aList
 
-    addRecordsToNodeListFile aMyNodeId aRecords = do
+    addRecordsToNodeListFile aMyNodeId (NodeInfoListNetLvl aList) = do
         NodeInfoListNetLvl aFileContent <- readRecordsFromNodeListFile aMyNodeId
         let aFilteredRecords = filter
-                (\a -> aNotInFile a && aNotIAm a) aFileContent
+                (\a -> aNotInFile a && aNotIAm a) aList
             -- aNotInLocalHost a = a^._2 /= read "127.0.0.1"
             aNotInFile      a = a `notElem` aFileContent
             aNotIAm         a = toMyNodeId (a^._1) /= aMyNodeId
@@ -535,10 +535,10 @@ instance FileDB LogicLvl where
         writeDataToFile ("./data/listOfPositions" ++ show aMyNodeId ++ ".txt") aList
 
 
-    addRecordsToNodeListFile aMyNodeId aRecords = do
+    addRecordsToNodeListFile aMyNodeId (NodeInfoListLogicLvl aList) = do
         NodeInfoListLogicLvl aFileContent <- readRecordsFromNodeListFile aMyNodeId
         let aFilteredRecords = filter
-                (\a -> aNotInFile a && aNotIAm a) aFileContent
+                (\a -> aNotInFile a && aNotIAm a) aList
             aNotInFile      a = a `notElem` aFileContent
             aNotIAm         a = toMyNodeId (a^._1) /= aMyNodeId
 
