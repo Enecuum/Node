@@ -12,7 +12,7 @@ import              Service.Network.Base (ConnectInfo(..))
 import              System.Environment
 import              Node.Node.Types
 
-import              Network.Socket (inet_addr)
+import              Network.Socket()
 import qualified    Data.ByteString.Lazy as L
 
 import              Boot.Boot
@@ -45,7 +45,7 @@ main =  do
 
             logs_p  <- try (getEnv "logPort") >>= \case
                     Right item              -> return $ read item
-                    Left (_::SomeException) -> return $ port $ logsBuildConfig conf 
+                    Left (_::SomeException) -> return $ port $ logsBuildConfig conf
 
 
             void $ startNode conf
