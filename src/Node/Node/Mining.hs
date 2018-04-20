@@ -187,8 +187,10 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "The responce is for me. The processing of responce."
                 aProcessingOfAction
             | otherwise -> aSendToNeighbor aData
-        else writeLog (aData^.infoMsgChan) [NetLvlTag] Warnig $
-            "The error of verification of responce package. " ++ show aResponcePackage
+        else writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
+            "The error of verification of responce package. The trace is a "
+            ++ show aTraceRouting
+            ++ "the package is " ++ show aResponcePackage
       where
         aProcessingOfAction = case aResponcePackage of
             ResponceNetLvlPackage _ aResponse aSignature ->
@@ -235,7 +237,7 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                 when (isNothing aMaybeNode) aProcessingOfAction
             ToNode aNodeId _
                 | toNodeId (aData^.myNodeId) == aNodeId -> aProcessingOfAction
-                | otherwise -> writeLog (aData^.infoMsgChan) [NetLvlTag] Warnig $
+                | otherwise -> writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
                     "The package is to " ++ show aNodeId ++ "but i am a " ++
                     show (aData^.myNodeId) ++ ". The package is a " ++ show aRequestPackage
             _   -> return ()

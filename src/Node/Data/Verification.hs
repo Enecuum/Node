@@ -48,8 +48,7 @@ instance Verification (TraceRouting, RequestPackage) where
 
 instance Verification (TraceRouting, ResponcePackage) where
     verify = \case
-        (ToNode _ aPackageSignature, aMsg)                ->
-            verify (aPackageSignature, aMsg)
+        (ToNode _ aPackageSignature, aMsg) -> verify aMsg
 
         (ToDirect aPointFrom aPointTo [aSignature],
             (ResponceNetLvlPackage aRequestPackage aResponce aPackageSignature)) ->

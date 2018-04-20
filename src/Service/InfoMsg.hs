@@ -26,7 +26,7 @@ import Service.Metrics.Statsd
 import Control.Monad
 import Control.Concurrent.Chan
 
-data MsgType = Info | Warnig | Error
+data MsgType = Info | Warning | Error
 
 data LogingTag
     = ConnectingTag
@@ -44,7 +44,7 @@ data LogingTag
 
 instance Show MsgType where
     show Info   = "info"
-    show Warnig = "warnig"
+    show Warning = "warning"
     show Error  = "error"
 
 

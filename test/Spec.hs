@@ -35,7 +35,7 @@ import                  PoA
 main :: IO ()
 main = undefined
 
-
+-- проверить,
 {-
 ResponceNetLvlPackage
     (RequestNetLvlPackage BroadcastListRequest
