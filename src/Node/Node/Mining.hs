@@ -237,7 +237,7 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                 | toNodeId (aData^.myNodeId) == aNodeId -> aProcessingOfAction
                 | otherwise -> writeLog (aData^.infoMsgChan) [NetLvlTag] Warnig $
                     "The package is to " ++ show aNodeId ++ "but i am a " ++
-                    show myNodeId ++ ". The package is a " ++ show aRequestPackage
+                    show (aData^.myNodeId) ++ ". The package is a " ++ show aRequestPackage
             _   -> return ()
 
       where
