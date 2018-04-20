@@ -78,5 +78,6 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                     aString = "+log|" ++ aTagsList ++ "|" ++ show aId  ++ "|"
                         ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
 
+                appendFile "log.txt" aString
                 sendToServer logHandle aString
 --------------------------------------------------------------------------------

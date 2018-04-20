@@ -27,4 +27,4 @@ image:
     base: fpco/stack-run
     add:
       configs: /configs
-#       # static: /app/static
+#      static: /app/static
