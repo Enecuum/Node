@@ -233,8 +233,11 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                         (aData^.privateKey)
                     sendToNode (makeRequest aNewTrace aRequestPackage) aNode
                 when (isNothing aMaybeNode) aProcessingOfAction
-            ToNode aNodeId _ | toNodeId (aData^.myNodeId) == aNodeId ->
-                aProcessingOfAction
+            ToNode aNodeId _
+                | toNodeId (aData^.myNodeId) == aNodeId -> aProcessingOfAction
+                | otherwise -> writeLog (aData^.infoMsgChan) [NetLvlTag] Warnig $
+                    "The package is to " ++ show aNodeId ++ "but i am a " ++
+                    show myNodeId ++ ". The package is a " ++ show aRequestPackage
             _   -> return ()
 
       where

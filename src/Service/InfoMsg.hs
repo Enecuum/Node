@@ -75,9 +75,12 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
 
             Log aTags aMsgType aMsg -> do
                 let aTagsList = concat (intersperse "," (show <$> aTags))
+
                     aString = "+log|" ++ aTagsList ++ "|" ++ show aId  ++ "|"
                         ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
 
-                appendFile "log.txt" aString
+                    aFileString = aTagsList ++ "|" ++ show aMsgType ++  "|" ++ aMsg ++"\n"
+
+                appendFile "log.txt" aFileString
                 sendToServer logHandle aString
 --------------------------------------------------------------------------------

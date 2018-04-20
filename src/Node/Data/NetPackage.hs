@@ -204,7 +204,6 @@ data instance BroadcastThingLvl LogicLvl where
   deriving (Eq, Ord, Show, Generic)
 
 
-
 data instance BroadcastThingLvl MiningLvl where
     BroadcastTransaction
         ::  Transaction
