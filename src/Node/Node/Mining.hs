@@ -182,11 +182,13 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
     makeAction aChan md aNodeId aTraceRouting aResponcePackage = do
         aData <- readIORef md
         writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Recived a responce package."
-        when (verify (aTraceRouting, aResponcePackage)) $ if
+        if verify (aTraceRouting, aResponcePackage) then if
             | isItMyResponce aNodeId aTraceRouting  -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "The responce is for me. The processing of responce."
                 aProcessingOfAction
             | otherwise -> aSendToNeighbor aData
+        else writeLog (aData^.infoMsgChan) [NetLvlTag] Warnig $
+            "The error of verification of responce package. " ++ show aResponcePackage
       where
         aProcessingOfAction = case aResponcePackage of
             ResponceNetLvlPackage _ aResponse aSignature ->
