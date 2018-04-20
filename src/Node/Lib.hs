@@ -51,9 +51,9 @@ startNode buildConf exitCh answerCh infoCh manager startDo = do
     managerChan <- newChan
     aMicroblockChan <- newChan
     aTransactionChan <- newChan
-    config  <- readNodeConfig 
+    config  <- readNodeConfig
     bnList  <- readBootNodeList $ bootNodeList buildConf
-    let port = extConnectPort buildConf 
+    let port = extConnectPort buildConf
     md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh bnList config port
     startServerActor managerChan port
     aFilePath <- getTransactionFilePath
@@ -88,11 +88,11 @@ readNodeConfig = do
 
 readBootNodeList :: String -> IO BootNodeList
 readBootNodeList conf = do
-    bnList  <- try (getEnv "poaInPort") >>= \case
+    bnList  <- try (getEnv "bootNodeList") >>= \case
             Right item              -> return item
             Left (_::SomeException) -> return conf
     toNormForm $ read bnList
-     where 
+     where
        toNormForm aList = return $ (\(a,b,c) -> (NodeId a,tupleToHostAddress b, c))
           <$> aList
 
