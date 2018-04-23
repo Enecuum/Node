@@ -3,6 +3,7 @@
 module Service.Network.Base (
     HostAddress,
     ConnectInfo(..),
+    ClientHandle(..),
     PortNumber(..),
     showHostAddress,
     sockAddrToHostAddress
@@ -15,6 +16,11 @@ data ConnectInfo = ConnectInfo {
     host :: String
   , port :: PortNumber
   } deriving (Show, Generic)
+
+data ClientHandle = ClientHandle {
+    clientSocket  :: Socket,
+    clientAddress :: SockAddr
+  }
   
 
 -- | Show host adres in 0.0.0.0 form.
