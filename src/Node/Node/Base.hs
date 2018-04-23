@@ -144,14 +144,14 @@ answerToConnectivityQuery aChan aMd _ = do
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "Request of the " ++ show aConnectsNum ++ " connects."
             connectTo aChan aConnectsNum aPreferedConnects
-
+        |   otherwise -> error $ "!!!!!!!!!!!" ++ show aBroadcastNum ++ " " ++ show aUnActiveNum
       -- if we don't find anybody send message error
       -- TODO: optimize by net and logic lvl
       --  | aBroadcastNum > 6     -> undefined
 
 
 iDontHaveAPosition :: ManagerData md => md -> Bool
-iDontHaveAPosition aData = aData^.myNodePosition /= Nothing
+iDontHaveAPosition aData = aData^.myNodePosition == Nothing
 
 
 connectTo
