@@ -18,17 +18,14 @@ import System.Directory
 
 readDataFile :: Read a => FilePath -> IO [a]
 readDataFile aFilePath = do
+    aDirectoryExist <- doesDirectoryExist "./data"
+    unless aDirectoryExist $ createDirectory "./data"
     aFileContent <- try $ unsafeReadDataFile aFilePath
     case aFileContent of
         Right aJustFileContent    -> pure aJustFileContent
         Left (_ :: SomeException) -> do
-            aOk <- try $ writeFile aFilePath ""
-            case aOk of
-                Right _                   -> return ()
-                Left (_ :: SomeException) -> do
-                    createDirectory "./data"
-                    writeFile aFilePath ""
-            pure []
+            writeFile aFilePath ""
+            return []
 
 
 unsafeReadDataFile :: Read a => FilePath -> IO [a]
@@ -49,18 +46,10 @@ deleteDataFromFile aFilePath aElem = do
 
 writeDataToFile :: Show a => FilePath -> [a] -> IO ()
 writeDataToFile aFilePath aDataLis = do
-    let aWriteFile = writeFile aFilePath $ concat
-            [show aData ++ "\n" | aData <- aDataLis]
-    aOk1 <- try aWriteFile
-    case aOk1 of
-        Right _ -> pure ()
-        Left (_ :: SomeException) -> do
-            aOk2 <- try aWriteFile
-            case aOk2 of
-                Right _                   -> pure ()
-                Left (_ :: SomeException) -> do
-                    createDirectory "./data"
-                    aWriteFile
+    aDirectoryExist <- doesDirectoryExist "./data"
+    unless aDirectoryExist $ createDirectory "./data"
+    writeFile aFilePath $ concat
+        [show aData ++ "\n" | aData <- aDataLis]
 
 
 addDataToFile :: Show a => FilePath -> [a] -> IO ()

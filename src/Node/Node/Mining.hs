@@ -162,7 +162,7 @@ answerToDeleteOldestMsg
     ->  IO ()
 answerToDeleteOldestMsg aMd _ = do
     aData <- readIORef aMd
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $"Cleaning of index of bradcasted msg."
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Cleaning of index of bradcasted msg."
     aTime <- getTime Realtime
     modifyIORef aMd $ hashMap %~ BI.filter
         (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs 3000000)
