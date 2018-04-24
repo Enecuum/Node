@@ -15,16 +15,18 @@ module Service.InfoMsg (
   LogingTag(..)
 )  where
 
-import Network.Socket.ByteString (sendAllTo)
-import Data.Serialize (encode)
+import Network.Socket (sendTo)
 import Data.List
 
 import System.Clock()
-import Service.Network.UDP.Client
+import Service.Network.Base
+import Service.Network.TCP.Client
+import qualified Service.Network.UDP.Client as UDP
 import Service.Metrics.Statsd
 
-import Control.Monad
+import Control.Monad (void, forever)
 import Control.Concurrent.Chan
+
 
 data MsgType = Info | Warning | Error
 
@@ -54,17 +56,18 @@ data InfoMsg = Metric String
 
 
 sendToServer :: ClientHandle -> String -> IO ()
-sendToServer h s = sendAllTo (clientSocket h)
-                             (encode s)
-                             (clientAddress h)
+sendToServer h s = void $ sendTo (clientSocket h)
+                                 s
+                                (clientAddress h)
 
 serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> Integer -> IO ()
 serveInfoMsg statsdInfo logsInfo chan aId = do
-    metricHandle <- openConnect (host statsdInfo) (port statsdInfo)
+    metricHandle <- UDP.openConnect (host statsdInfo) (port statsdInfo)
+    putStrLn "Metrics connected"
     logHandle    <- openConnect (host logsInfo)   (port logsInfo)
-
+    putStrLn "Logs connected"
     sendToServer logHandle $ "+node|" ++  show aId ++ "|" ++
-        concat (intersperse "," (show <$> [
+          concat (intersperse "," (show <$> [
             ConnectingTag, LoadingShardsTag, BroadcatingTag, BootNodeTag,
             ShardingLvlTag, NetLvlTag, MiningLvlTag, ServePoATag])) ++ "\r\n"
 
@@ -82,5 +85,6 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                     aFileString = "  !  " ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
 
                 appendFile "log.txt" aFileString
+                putStrLn aString
                 sendToServer logHandle aString
 --------------------------------------------------------------------------------

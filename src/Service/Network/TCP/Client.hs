@@ -1,7 +1,6 @@
 {-#Language TypeSynonymInstances, FlexibleInstances#-}
-module Service.Network.UDP.Client (
+module Service.Network.TCP.Client (
     ConnectInfo(..),
-    ClientHandle(..),
     runClient,
     PortNumber(..),
     HostAddress,
@@ -12,8 +11,6 @@ module Service.Network.UDP.Client (
 import Network.Socket
 import Service.Network.Base
 
--- | Client handle data for your app.
-
 
 class Hosts a where
     openConnect :: a -> PortNumber -> IO ClientHandle
@@ -21,7 +18,7 @@ class Hosts a where
 closeConnect :: ClientHandle -> IO ()
 closeConnect = close . clientSocket 
 
--- | Run a UDP client.
+-- | Run a TCP client.
 runClient :: Hosts a => a -> PortNumber -> (ClientHandle -> IO ()) -> IO ()
 runClient aHostAdress aPort aPlainHandler = withSocketsDo $ do
     aHandle <- openConnect aHostAdress aPort
@@ -37,5 +34,6 @@ instance Hosts String where
             Nothing
             (Just $ aHostAdress)
             (Just $ show aPort)
-        aSocket <- socket (addrFamily aServerAddr) Datagram defaultProtocol
+        aSocket <- socket (addrFamily aServerAddr) Stream defaultProtocol
+        connect aSocket $ addrAddress aServerAddr
         return $ ClientHandle aSocket (addrAddress aServerAddr)
