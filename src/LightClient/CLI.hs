@@ -20,7 +20,8 @@ import Control.Exception
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
 import Service.System.Directory (getTime, getKeyFilePath)
-import Service.Network.UDP.Client
+import Service.Network.TCP.Client
+import Service.Network.Base (ClientHandle)
 import LightClient.RPC
 
 type QuantityTx = Int
