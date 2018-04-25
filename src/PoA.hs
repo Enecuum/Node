@@ -9,8 +9,8 @@ import qualified    Data.Serialize as S
 import              Control.Monad (forM_, void)
 import              Network.Socket.ByteString(sendAllTo)
 import              Service.Network.Base
-import              Service.Network.UDP.Client
-import              Service.Network.UDP.Server
+import              Service.Network.TCP.Client
+import              Service.Network.TCP.Server
 import              Control.Concurrent.Chan
 import              Node.Node.Types
 import              Service.InfoMsg

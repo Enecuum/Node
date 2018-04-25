@@ -5,7 +5,7 @@ module CLI.CLI (serveRpc) where
 import Network.Socket (PortNumber)
 import Network.JsonRpc.Server
 import Network.Socket.ByteString (sendAllTo)
-import Service.Network.UDP.Server
+import Service.Network.TCP.Server
 import Control.Monad (forever, replicateM)
 import Control.Monad.IO.Class
 import Control.Concurrent (threadDelay, forkIO)
