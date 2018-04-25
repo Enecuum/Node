@@ -21,7 +21,6 @@ import Data.List
 import System.Clock()
 import Service.Network.Base
 import Service.Network.TCP.Client
-import qualified Service.Network.UDP.Client as UDP
 import Service.Metrics.Statsd
 
 import Control.Monad (void, forever)
@@ -62,10 +61,10 @@ sendToServer h s = void $ sendTo (clientSocket h)
 
 serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> Integer -> IO ()
 serveInfoMsg statsdInfo logsInfo chan aId = do
-    metricHandle <- UDP.openConnect (host statsdInfo) (port statsdInfo)
-    putStrLn "Metrics connected"
+    metricHandle <- openConnect (host statsdInfo) (port statsdInfo)
+    putStrLn "Metrics server connected"
     logHandle    <- openConnect (host logsInfo)   (port logsInfo)
-    putStrLn "Logs connected"
+    putStrLn "Logs server connected"
     sendToServer logHandle $ "+node|" ++  show aId ++ "|" ++
           concat (intersperse "," (show <$> [
             ConnectingTag, LoadingShardsTag, BroadcatingTag, BootNodeTag,
@@ -85,6 +84,5 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                     aFileString = "  !  " ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
 
                 appendFile "log.txt" aFileString
-                putStrLn aString
                 sendToServer logHandle aString
 --------------------------------------------------------------------------------
