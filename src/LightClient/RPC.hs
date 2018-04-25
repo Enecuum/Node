@@ -17,7 +17,7 @@ import Control.Timeout (timeout)
 import Data.Time.Units (Second)
 import Service.Types (Transaction)
 import Service.Types.PublicPrivateKeyPair hiding (Signature)
-import Service.Network.UDP.Client
+import Service.Network.Base
 import Service.Types.SerializeJSON ()
 
 type Result a = RpcResult IO a
