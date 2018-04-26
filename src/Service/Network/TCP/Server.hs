@@ -19,9 +19,8 @@ runServer aPortNumber aPlainHandler = withSocketsDo $ do
     setSocketOption aSocket ReuseAddr 1
     bind aSocket (addrAddress aServerAddr)
     listen aSocket 10
-    (conn, peer) <- accept aSocket
-    putStrLn $ "Connection from " ++ show peer
 
     forever $ do
+        (conn, peer) <- accept aSocket
         (aMsg, aHostAddress) <- recvFrom conn (1024*100)
         aPlainHandler aMsg aHostAddress conn
