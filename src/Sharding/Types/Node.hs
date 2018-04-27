@@ -84,15 +84,15 @@ data ShardingNodeRequestMsg =
   deriving (Show)
 
 
-makeEmptyShardingNode :: S.Set Neighbor ->  MyNodeId -> MyNodePosition -> ShardIndex -> Chan InfoMsg -> ShardingNode
-makeEmptyShardingNode aNeighbors aMyNodeId aMyPosition aMyShardIndex infoMsgChan = ShardingNode {
+makeEmptyShardingNode :: S.Set Neighbor ->  MyNodeId -> MyNodePosition -> ShardIndex -> Chan InfoMsg -> Word64 -> ShardingNode
+makeEmptyShardingNode aNeighbors aMyNodeId aMyPosition aMyShardIndex infoMsgChan aNodeDistance = ShardingNode {
         _nodeNeighbors      = aNeighbors
     ,   _shardingNodeId     = aMyNodeId
     ,   _nodePosition       = aMyPosition
     ,   _nodeIndex          = aMyShardIndex
     ,   _nodeInfoMsgChan    = infoMsgChan
     ,   _nodeIndexOfReques  = M.empty
-    ,   _nodeDistance       = 1
+    ,   _nodeDistance       = aNodeDistance
   }
 
 

@@ -205,6 +205,7 @@ data BuildConfig where
      BuildConfig :: {
         extConnectPort        :: PortNumber,
         bootNodeList          :: String,
+        sharding              :: String,
         simpleNodeBuildConfig :: Maybe SimpleNodeBuildConfig,
         statsdBuildConfig     :: ConnectInfo,
         logsBuildConfig       :: ConnectInfo
