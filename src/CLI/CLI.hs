@@ -4,7 +4,7 @@ module CLI.CLI (serveRpc) where
 
 import Network.Socket (PortNumber)
 import Network.JsonRpc.Server
-import Network.Socket.ByteString (sendAllTo)
+import Network.Socket.ByteString (sendAllTo, recvFrom)
 import Service.Network.TCP.Server
 import Control.Monad (forever, replicateM)
 import Control.Monad.IO.Class
@@ -29,7 +29,8 @@ data TxChanMsg = NewTx Transaction
 
 
 serveRpc :: PortNumber -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
-serveRpc portNum ch aInfoCh = runServer portNum $ \aMsg addr aSocket -> do
+serveRpc portNum ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
+    (aMsg, addr) <- recvFrom aSocket (1024*100)
     txChan     <- newChan
     ledgerRespChan <- newChan
     ledgerReqChan <- newChan
@@ -73,7 +74,7 @@ txWait recvCh mngCh infoCh = do
     msg <- readChan recvCh
     case msg of
       NewTx tx       -> do
-                        sendMetrics tx infoCh 
+                        sendMetrics tx infoCh
                         writeChan mngCh $ newTransaction tx
       GenTxNum num   -> generateNTransactions num   mngCh infoCh
       GenTxUnlim     -> generateTransactionsForever mngCh infoCh
