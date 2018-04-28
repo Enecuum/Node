@@ -45,7 +45,9 @@ import              Sharding.ShardDB.ShardStore
 
 import              Control.Monad.State.Lazy
 import qualified    Node.Node.Types     as T
+import qualified    Data.ByteString.Lazy as L
 import              Control.Concurrent.Chan
+import qualified    Data.Aeson as A
 import              Data.List.Extra
 import              Control.Concurrent
 import              Lens.Micro
@@ -309,8 +311,12 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMs
         threadDelay (smallPeriod)
         writeChan aChanRequest ShiftAction
 
-    return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan
-
+    enc <- L.readFile "configs/config.json"
+    case A.decode enc of
+        Nothing -> error "config not is valid"
+        Just aEnc
+            |  T.sharding aEnc == "off" -> return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan maxBound
+            | otherwise              ->  return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan 1
 
 shiftTheShardingNode :: T.ManagerMsg msg =>
         Chan msg
