@@ -28,7 +28,7 @@ import              Data.IP
 
 -- TODO finding of optimal broadcast node for PoA/PoW node. ???
 
-newtype UUID = UUID Point
+newtype UUID = UUID Point deriving Show
 
 data PPToNNMessage
     -- Запросы:
@@ -44,7 +44,6 @@ data PPToNNMessage
     }
     -- запрос на получение конектов.
     | RequestConnects
-    | RequestUUIDToNN
 
     -- Ответы с UUID
     | ResponseUUIDToNN {
@@ -69,14 +68,12 @@ data NodeType = PoW | PoA deriving Show
 
 data Connect = Connect HostAddress PortNumber
 
+
 -- PP means PoW and PoA
+-- MsgToMainActorFromPP
 
 data NNToPPMessage
     = RequestUUIDToPP
-
-    | ResponseUUIDToPP {
-        uuid :: UUID
-    }
 
     | ResponseConnects {
       connects  :: [Connect]
@@ -139,7 +136,6 @@ instance FromJSON PPToNNMessage where
 
             ("Request","Connects")    -> return RequestConnects
 
-            ("Request","UUID")        -> return RequestUUIDToNN
 
             ("Response", "UUID") -> do
                 aUuid :: T.Text <- aMessage .: "uuid"
@@ -194,12 +190,6 @@ instance ToJSON NNToPPMessage where
         "type"      .= ("MsgTo" :: String),
         "sender"    .= uuidToString aUuid,
         "messages"  .= (show.hex $ aMessage)
-      ]
-
-    toJSON (ResponseUUIDToPP aUuid) = object [
-        "tag"       .= ("Response"  :: String),
-        "type"      .= ("UUID"      :: String),
-        "uuid"      .= uuidToString aUuid
       ]
 
     toJSON (ResponseConnects aConnects) = object [

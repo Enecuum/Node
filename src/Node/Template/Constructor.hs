@@ -52,6 +52,7 @@ managerMsgFuncListData = toList $ do
     "datagramMsg"           +: [["B.ByteString"], ["NodeId"]]
     "initDatagram"          +: [["Chan", "MsgToSender"], ["HostAddress"], ["B.ByteString"]]
     "connectivityQuery"     +: []
+    "msgFromPP"             +: [["MsgToMainActorFromPP"]]
     "disconnectNode"        +: [["NodeId"]]
     "sendInitDatagram"      +: [["HostAddress"], ["PortNumber"], ["NodeId"]]
     "shardingNodeRequestMsg" +: [["N.ShardingNodeRequestMsg"]]
