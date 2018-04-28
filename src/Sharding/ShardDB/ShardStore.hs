@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, DeriveGeneric, ScopedTypeVariables, MultiWayIf #-}
+{-# LANGUAGE ScopedTypeVariables, MultiWayIf #-}
 module Sharding.ShardDB.ShardStore where
 
 import Data.Serialize
@@ -27,7 +27,7 @@ instance ShardName ShardHash where
 
 
 loadShards :: [ShardHash] -> IO [Shard]
-loadShards aHashList = pure . catMaybes =<< forM aHashList loadShard
+loadShards aHashList = catMaybes <$> forM aHashList loadShard
 
 
 loadShard :: ShardHash -> IO (Maybe Shard)
@@ -41,8 +41,7 @@ loadShard aShardHash = do
 
 
 saveShard :: Shard -> IO ()
-saveShard aShard = do
-    B.writeFile (shardsPath aShard) $ encode aShard
+saveShard aShard = B.writeFile (shardsPath aShard) $ encode aShard
 
 
 removeShard :: ShardHash -> IO ()

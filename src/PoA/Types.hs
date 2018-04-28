@@ -28,7 +28,10 @@ import              Data.IP
 
 -- TODO finding of optimal broadcast node for PoA/PoW node. ???
 
-newtype UUID = UUID Point deriving Show
+newtype UUID    = UUID    Point deriving Show
+newtype IdFrom  = IdFrom  UUID  deriving Show
+newtype IdTo    = IdTo    UUID  deriving Show
+
 
 data PPToNNMessage
     -- Запросы:
@@ -66,7 +69,7 @@ data PPToNNMessage
 data NodeType = PoW | PoA deriving Show
 
 
-data Connect = Connect HostAddress PortNumber
+data Connect = Connect HostAddress PortNumber deriving Show
 
 
 -- PP means PoW and PoA

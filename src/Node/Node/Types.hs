@@ -80,7 +80,9 @@ data MsgToSender where
 
 data MsgToMainActorFromPP
     = MicroblockFromPP Microblock
-    | BroadcastRequestFromPP B.ByteString UUID NodeType
+    | BroadcastRequestFromPP B.ByteString IdFrom NodeType
+    | NewConnectWithPP UUID NodeType (Chan NNToPPMessage)
+    | MsgResendingToPP IdFrom IdTo B.ByteString
   deriving (Show)
 
 dataConstruct "MsgToNodeManager" $
@@ -141,6 +143,8 @@ type MaybeChan a = Maybe (Chan a)
 data NodeBaseData = NodeBaseData {
         nodeBaseDataExitChan            :: Chan ExitMsg
     ,   nodeBaseDataNodes               :: M.Map NodeId Node
+    -- TODO: sending msg about closing of the socket...
+    --  nodeBaseDataPPNodes             :: M.Map UUID PPNode
     ,   nodeBaseDataBootNodes           :: BootNodeList
     ,   nodeBaseDataAnswerChan          :: Chan Answer
     ,   nodeBaseDataBroadcastNum        :: Int

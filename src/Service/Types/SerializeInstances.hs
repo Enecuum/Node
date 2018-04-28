@@ -38,7 +38,7 @@ instance Serialize CompactInteger where
 
     get = do
         lenSig <- get :: Get Int8
-        bytes <- forM [1..abs lenSig] $ \_ -> (get :: Get Word8)
+        bytes <- forM [1..abs lenSig] $ \_ -> get :: Get Word8
         return $! roll bytes * (toEnum.fromEnum.signum $ lenSig)
 
 

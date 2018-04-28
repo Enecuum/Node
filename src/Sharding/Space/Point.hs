@@ -3,8 +3,7 @@
     ,   GeneralizedNewtypeDeriving
     ,   FlexibleInstances
     ,   MultiParamTypeClasses
-    ,   ViewPatterns
-#-}
+  #-}
 
 module Sharding.Space.Point where
 
