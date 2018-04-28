@@ -53,13 +53,15 @@ servePoA aRecivePort aSendPort aNodeId ch aRecvChan aInfoChan = runServer aReciv
         aId <- newEmptyMVar
         aNewChan  <- newChan
         -- writeChan ch $ connecting to PoA, the PoA have id.
-        void $ race (aSender aId aSocket aNewChan) (aReceiver aId aSocket)
+        void $ race
+            (aSender aId aSocket aNewChan)
+            (aReceiver aId aSocket aNewChan)
   where
     aSender aId aSocket aNewChan = forever $ do
         aMsg <- readChan aNewChan
         sendAll aSocket $ myEncode aMsg
 
-    aReceiver aId aSocket = do
+    aReceiver aId aSocket aNewChan = do
         (aMsg, _) <- recvFrom aSocket (1024*100)
         aOk <- isEmptyMVar aId
         case myDecode $ aMsg of
@@ -91,6 +93,9 @@ servePoA aRecivePort aSendPort aNodeId ch aRecvChan aInfoChan = runServer aReciv
                     let aConnects = (\(_, a, b) -> Connect a b) <$> (take 5 aShuffledRecords)
                     sendAll aSocket $ myEncode $ ResponseConnects aConnects
 
+                ResponseUUIDToNN aUuid aNodeType | aOk -> do
+                    putMVar aId aUuid
+                    sendMsgToNetLvlFromPP ch $ NewConnectWithPP aUuid aNodeType aNewChan
 
             Nothing -> do
                 -- TODO: Вписать ID если такой есть.
