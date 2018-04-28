@@ -48,6 +48,7 @@ import              Data.Aeson
 import              Data.Aeson.TH
 import              Service.InfoMsg
 import              Service.Network.Base (ConnectInfo)
+import              PoA.Types
 
 
 
@@ -76,6 +77,11 @@ data MsgToSender where
     MsgToSender     :: B.ByteString -> MsgToSender
     SenderExit      :: B.ByteString -> MsgToSender
     SenderTerminate :: MsgToSender
+
+data MsgToMainActorFromPP
+    = MicroblockFromPP Microblock
+    | BroadcastRequestFromPP B.ByteString UUID NodeType
+  deriving (Show)
 
 dataConstruct "MsgToNodeManager" $
     ((_1 .~ False) <$> managerMsgFuncListData) <>
@@ -146,6 +152,8 @@ data NodeBaseData = NodeBaseData {
     ,   nodeBaseDataOutPort             :: PortNumber
     ,   nodeBaseDataInfoMsgChan         :: Chan InfoMsg
   }
+
+
 
 makeNodeBaseData :: Chan ExitMsg
                  -> BootNodeList
