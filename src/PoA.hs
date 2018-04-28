@@ -83,7 +83,7 @@ servePoA aRecivePort aSendPort aNodeId ch aRecvChan aInfoChan = runServer aReciv
                     | not aOk -> do
                         aNodeId <- readMVar aId
                         writeLog aInfoChan [ServePoATag] Info $ "Broadcast request " ++ show aMsg
-                        sendMsgToNetLvlFromPP ch $ BroadcastRequestFromPP msg aNodeId recipientType
+                        sendMsgToNetLvlFromPP ch $ BroadcastRequestFromPP msg (IdFrom aNodeId) recipientType
                     | otherwise -> do
                         writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without UUID " ++ show aMsg
                         sendAll aSocket $ myEncode RequestUUIDToPP
@@ -91,11 +91,24 @@ servePoA aRecivePort aSendPort aNodeId ch aRecvChan aInfoChan = runServer aReciv
                     NodeInfoListNetLvl aRecords <- readRecordsFromNodeListFile
                     aShuffledRecords <- shuffleM aRecords
                     let aConnects = (\(_, a, b) -> Connect a b) <$> (take 5 aShuffledRecords)
+                    writeLog aInfoChan [ServePoATag] Info $ "Send connections " ++ show aConnects
                     sendAll aSocket $ myEncode $ ResponseConnects aConnects
 
                 ResponseUUIDToNN aUuid aNodeType | aOk -> do
                     putMVar aId aUuid
+                    writeLog aInfoChan [ServePoATag] Info $ "Accept UUID " ++ show aUuid ++ " with type " ++ show aNodeType
+
                     sendMsgToNetLvlFromPP ch $ NewConnectWithPP aUuid aNodeType aNewChan
+
+                MsgMsgToNN aDestination aMsg
+                    | not aOk       -> do
+                        aNodeId <- readMVar aId
+                        writeLog aInfoChan [ServePoATag] Info $
+                            "Resending the msg from " ++ show aNodeId ++ " the msg is " ++ show aMsg
+                        sendMsgToNetLvlFromPP ch $ MsgResendingToPP (IdFrom aNodeId) (IdTo aDestination) aMsg
+                    | otherwise     -> do
+                        writeLog aInfoChan [ServePoATag] Warning $ "Can't send request without UUID " ++ show aMsg
+                        sendAll aSocket $ myEncode RequestUUIDToPP
 
             Nothing -> do
                 -- TODO: Вписать ID если такой есть.
@@ -103,86 +116,3 @@ servePoA aRecivePort aSendPort aNodeId ch aRecvChan aInfoChan = runServer aReciv
                     "Brouken message from PP " ++ show aMsg
 -- TODO class sendMsgToNetLvl
 sendMsgToNetLvlFromPP aChan aMsg = writeChan aChan $ msgFromPP aMsg
-
-{-
-
-
--- запрос на получение конектов.
-
--- Ответы с UUID
-| ResponseUUIDToNN {
-    uuid      :: UUID,
-    nodeType  :: NodeType
-}
-
--- Сообщения:
--- Для другой PoA/PoW ноды.
-| MsgMsgToNN { ----
-    destination :: UUID,
-    msg :: B.ByteString
-}
-
--- О том, что намйнился микроблок.
-| MsgMicroblock {
-    microblock :: Microblock
-}
--}
-
-{-
-    \aMsg aSockAddr _ -> do
-        writeLog aInfoChan [ServePoATag] Info $ "PaA msg: " ++ (show $ hex $ aMsg)
-        let aDecodeMsg = S.decode aMsg
-        whenLeft aInfoChan aDecodeMsg
-        whenRight aDecodeMsg $ \case
-            HashMsgTransactionsRequest num -> do
-                writeLog aInfoChan [ServePoATag] Info $ "Recived HashMsgTransactionsRequest " ++ show num
-                recvTx aSockAddr num
-            MBlock mb -> do
-                writeLog aInfoChan [ServePoATag] Info $ "Recived MBlock \n" ++ show mb
-                writeChan ch $ BlockMadeMsg mb
-  where
-    recvTx aSockAddr aNum =
-        runClient (sockAddrToHostAddress aSockAddr) aSendPort $
-        \aHandle -> forM_ [1..aNum] $ \_  -> do
-            aTransaction <- readChan aRecvChan
-            writeChan aInfoChan $ Metric $ add
-                ("net.node." ++ show (toInteger aNodeId) ++ ".pending.amount")
-                (-1 :: Integer)
-            writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
-            sendTransaction aHandle aTransaction
--}
--- | Send one transaction.
-sendTransaction :: ClientHandle -> Transaction -> IO ()
-sendTransaction aHandle aTransaction  = void $ sendAllTo
-    (clientSocket aHandle) (S.encode aTransaction) (clientAddress aHandle)
-
-{-
-
-\aSocket -> forever $ do
-   (aMsg, addr) <- recvFrom aSocket (1024*100)
-
-socketActor
-    ::  ManagerMsg a
-    =>  HostAddress
-    ->  NodeId
-    ->  Chan a
-    ->  Chan MsgToSender
-    ->  WS.Connection
-    ->  IO ()
-socketActor _ aId aChan aInputChan aConnect = do
-    (void $ race sender receiver) `finally`
-        (writeChan aChan $ clientIsDisconnected aId aInputChan)
-  where
-    sender :: IO ()
-    sender = readChan aInputChan >>= \case
-        MsgToSender aMsg  -> do
-            WS.sendBinaryData aConnect aMsg >> sender
-        SenderExit aMsg   -> do
-            WS.sendBinaryData aConnect aMsg
-        SenderTerminate -> pure ()
-
-    receiver :: IO ()
-    receiver = forever $ do
-        aMsg <- WS.receiveDataMessage aConnect
-        writeChan aChan $ datagramMsg (WS.fromDataMessage aMsg) aId
--}

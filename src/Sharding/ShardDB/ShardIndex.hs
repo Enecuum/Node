@@ -26,23 +26,23 @@ data ShardExistIndex   = ShardExistIndex {
     , _lastSnapshot   :: SpaceSnapshot
   } deriving (Show, Eq, Ord, Generic)
 
-data ShardNeededIndex  = ShardNeededIndex {
+newtype ShardNeededIndex  = ShardNeededIndex {
     _setOfHash :: S.Set ShardHash
   }
   deriving (Show, Eq, Ord, Generic)
 
 
 --  FIXME:  [(ShardHash, Priority, TimeSpec)] => Map ShardHash (Priority, TimeSpec)
-data ShardLoadingIndex = ShardLoadingIndex {
+newtype ShardLoadingIndex = ShardLoadingIndex {
     _setOfLoadingShards :: [(ShardHash, Priority, TimeSpec)]
   }
   deriving (Show, Eq, Ord, Generic)
 
-data Priority          = Priority Int
+newtype Priority          = Priority Int
   deriving (Show, Eq, Ord, Generic)
 
 --  FIXME:  [(ShardHash, Distance Point)] => Map ShardHash (Distance Point)
-data SpaceSnapshot     = SpaceSnapshot {
+newtype SpaceSnapshot     = SpaceSnapshot {
     _shapshotHashes :: [(ShardHash, Distance Point)]
   }
   deriving (Show, Eq, Ord, Generic)
@@ -186,7 +186,7 @@ loadMyShardIndex = do
 
 
 saveMyShardIndex :: ShardIndex -> IO ()
-saveMyShardIndex aShardIndex = do
+saveMyShardIndex aShardIndex =
     B.writeFile shardIndexFileName $ encode aShardIndex
 
 --------------------------------------------------------------------------------

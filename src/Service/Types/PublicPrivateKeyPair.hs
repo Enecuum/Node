@@ -4,7 +4,7 @@
     ,   GeneralizedNewtypeDeriving
     ,   StandaloneDeriving
     ,   TypeSynonymInstances
-#-}
+  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -43,7 +43,7 @@ compressPublicKey pub
     curve = ECDSA.public_curve pub
     (Point x y) = ECDSA.public_q pub
     (CurveFP (CurvePrime prime (CurveCommon a b _ _ _))) = curve
-    c = (fromJust $ ((x^(3 :: Int) + x*a + b) `mod` prime) `sqrtModP` prime)
+    c = fromJust $ ((x^(3 :: Int) + x*a + b) `mod` prime) `sqrtModP` prime
     d = prime - c
 
 uncompressPublicKey :: PublicKey -> (Integer, Integer)
@@ -55,7 +55,7 @@ uncompressPublicKey aKey
     (x, aa)  = k `divMod` 2
     curve = getCurveByName SEC_p256k1
     (CurveFP (CurvePrime prime (CurveCommon a b _ _ _))) = curve
-    c = (fromJust $ (( x^(3 :: Int) + x*a + b) `mod` prime ) `sqrtModP` prime)
+    c = fromJust $ (( x^(3 :: Int) + x*a + b) `mod` prime ) `sqrtModP` prime
     d = prime - c
 
 {-
@@ -115,7 +115,7 @@ instance Show PrivateKey where
   show (PrivateKey256k1 a) = "P" ++ if length b == 20 then b else "0" ++ b
    where b = integerToBase58 a
 
-integerToBase58 :: Integer -> [Char]
+integerToBase58 :: Integer -> String
 integerToBase58 = BC.unpack . encodeBase58I bitcoinAlphabet
 
 base58ToInteger :: String -> Integer
@@ -172,14 +172,14 @@ test2 = do
     sign <- getSignature priv (23 :: Amount)
     return $ verifySiganture pub sign (23 :: Amount)
 
-byte'msg :: BC.ByteString
-byte'msg = BC.pack "32613"
+byteMsg :: BC.ByteString
+byteMsg = BC.pack "32613"
 
 test1 :: MonadRandom m => m Bool
 test1 = do
     (KeyPair pub1 priv1)    <- generateNewRandomAnonymousKeyPair
     (KeyPair pub2 _)        <- generateNewRandomAnonymousKeyPair
-    sign                    <- ECDSA.sign (getPrivateKey priv1) MD2 byte'msg
+    sign                    <- ECDSA.sign (getPrivateKey priv1) MD2 byteMsg
     let pub1' = uncompressPublicKey pub1
         _     = uncompressPublicKey pub2
-    pure $ ECDSA.verify MD2 (getPublicKey pub1') sign byte'msg
+    pure $ ECDSA.verify MD2 (getPublicKey pub1') sign byteMsg

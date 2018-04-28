@@ -1,9 +1,8 @@
 {-# LANGUAGE
         LambdaCase
     ,   MultiWayIf
-    ,   ViewPatterns
     ,   FlexibleContexts
-#-}
+  #-}
 
 -- 1. Request of block
 -- -> NetLvl -> LogicLvl -> NetLvl ->
@@ -96,18 +95,18 @@ makeShardingNode :: T.ManagerMsg msg =>
                           -> IO ()
 makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgChan = do
     aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMsgChan
-    writeLog infoMsgChan [ShardingLvlTag] Info $  "Start of sharding lvl."
+    writeLog infoMsgChan [ShardingLvlTag] Info "Start of sharding lvl."
     void $ forkIO $ aLoop aShardingNode
   where
     aLoop :: ShardingNode -> IO ()
     aLoop aShardingNode = readChan aChanRequest >>= \case
         CheckOfShardLoadingList -> do
-            writeLog infoMsgChan [ShardingLvlTag] Info $ "Check loading sharding list."
+            writeLog infoMsgChan [ShardingLvlTag] Info "Check loading sharding list."
             aNow <- getTime Realtime
             let aCondition (_, _, aTime) = diffTimeSpec aNow aTime < fromNanoSecs (toInteger bigPeriod)
                 aLoadingShards = aShardingNode^.nodeIndex.shardLoadingIndex.setOfLoadingShards
                 (aFresh, aOld) = partition aCondition aLoadingShards
-            aLoop $ flip execState aShardingNode $ do
+            aLoop $ flip execState aShardingNode $
                 zoom nodeIndex $ do
                     shardNeededIndex.setOfHash %= S.union
                         (S.fromList $ (^._1) <$> aOld)
@@ -116,7 +115,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
         ShardCheckLoading
             | numberOfLoadingShards aShardingNode < 4 &&
                 numberOfNeededShards aShardingNode /= 0 -> do
-                    writeLog infoMsgChan [ShardingLvlTag] Info $
+                    writeLog infoMsgChan [ShardingLvlTag] Info
                         "Check loading shard. Loading shards < 4 and needed shards > 0."
                     let aNumberOfLoading = 4 - numberOfLoadingShards aShardingNode
                         aShardHashes = S.take aNumberOfLoading $
@@ -129,7 +128,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
                         nodeIndex.shardNeededIndex.setOfHash %~ S.drop aNumberOfLoading
 
         ShiftAction | shiftIsNeed aShardingNode -> do
-            writeLog infoMsgChan [ShardingLvlTag] Info $ "Try shift."
+            writeLog infoMsgChan [ShardingLvlTag] Info "Try shift."
             shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode
 
         CheckTheNeighbors -> do
@@ -146,7 +145,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
                 ++ ", Neighbors positions: " ++ show (S.toList aNeighbors)
                 ++ ", Filtered neighbors positions: " ++ show aFilteredNeighbors
 
-            forM_ aFilteredNeighbors $ \aNeighbor -> do
+            forM_ aFilteredNeighbors $ \aNeighbor ->
                 sendToNetLevet aChanOfNetLevel $ IsTheNeighborAliveRequest
                     (aNeighbor^.neighborId)
                     (aNeighbor^.neighborPosition)
@@ -236,13 +235,13 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
             writeLog infoMsgChan [ShardingLvlTag] Info $
                 "This node  " ++ show aNodeId ++ " ask my position "
               ++ show aMyPosition ++ "."
-            writeChan aChan $ NodePositionResponse (aMyPosition)
+            writeChan aChan $ NodePositionResponse aMyPosition
             aLoop aShardingNode
 
         NeighborListAcceptAction aNeighborList -> do
             writeLog infoMsgChan [ShardingLvlTag] Info $
                 "Accept neighbor list  " ++ show aNeighborList ++ "."
-            aLoop $ flip execState aShardingNode $ do
+            aLoop $ flip execState aShardingNode $
                 forM_ aNeighborList $ \(aNodeId, aNodePosition) -> do
                     aNewShardingNode <- get
                     when (isInNodeDomain aNewShardingNode aNodePosition) $ do
@@ -250,7 +249,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
                         modify (insertTheNeighbor aNodeId aNodePosition)
 
         CleanShardsAction -> do
-            writeLog infoMsgChan [GCTag] Info $ "Clean shards action."
+            writeLog infoMsgChan [GCTag] Info "Clean shards action."
             let aNodeDomain = findShardingNodeDomain aShardingNode
                 (aNewShardIndex, aOldShardHashList) = cleanShardIndex
                     (aShardingNode^.nodePosition)
@@ -261,7 +260,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
             aLoop $ aShardingNode & nodeIndex .~ aNewShardIndex
 
         CleanNeededIndex -> do
-            writeLog infoMsgChan [GCTag] Info $ "Clean needed index action."
+            writeLog infoMsgChan [GCTag] Info "Clean needed index action."
             let aNodeDomain = findShardingNodeDomain aShardingNode
                 aCondition aHash = distanceTo
                     (aShardingNode^.nodePosition) aHash < aNodeDomain
@@ -269,12 +268,12 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
             aLoop $ aShardingNode & nodeIndex.shardNeededIndex.setOfHash %~ aFilter
 
         CleanRequestIndex -> do
-            writeLog infoMsgChan [GCTag] Info $ "Clean request index action."
+            writeLog infoMsgChan [GCTag] Info "Clean request index action."
             aTime <- getTime Realtime
             aLoop $ aShardingNode & nodeIndexOfReques %~
                 M.filter (\a -> diffTimeSpec (a^._1) aTime < fromNanoSecs (toInteger bigPeriod))
 
-        _                 -> error $ "Sharding.Sharding.makeShardingNode"
+        _                 -> error "Sharding.Sharding.makeShardingNode"
 
 
 --------------------------------------------------------------------------------
@@ -288,27 +287,19 @@ initOfShardingNode :: T.ManagerMsg msg =>
                             -> Chan InfoMsg
                             -> IO ShardingNode
 initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMsgChan = do
-    writeLog infoMsgChan [InitTag] Info $ "Init sharding node"
+    writeLog infoMsgChan [InitTag] Info "Init sharding node"
     sendToNetLevet aChanOfNetLevel $ IamAwakeRequst aMyNodeId aMyNodePosition
-    sendToNetLevet aChanOfNetLevel $ NeighborListRequest
+    sendToNetLevet aChanOfNetLevel NeighborListRequest
 
     aMyShardsIndex <- loadMyShardIndex
 
-    metronome (bigPeriod) $ do
-        writeChan aChanRequest CleanShardsAction
-
-    metronome (bigPeriod) $ do
-        writeChan aChanRequest CleanNeededIndex
-
-    metronome (bigPeriod) $ do
-        writeChan aChanRequest CleanRequestIndex
-
-    metronome (smallPeriod) $ do
-        writeChan aChanRequest CheckOfShardLoadingList
-
-    metronome (bigPeriod) $ do
+    metronome bigPeriod $ writeChan aChanRequest CleanShardsAction
+    metronome bigPeriod $ writeChan aChanRequest CleanNeededIndex
+    metronome bigPeriod $ writeChan aChanRequest CleanRequestIndex
+    metronome smallPeriod $ writeChan aChanRequest CheckOfShardLoadingList
+    metronome bigPeriod $ do
         writeChan aChanRequest CheckTheNeighbors
-        threadDelay (smallPeriod)
+        threadDelay smallPeriod
         writeChan aChanRequest ShiftAction
 
     enc <- L.readFile "configs/config.json"
@@ -385,17 +376,15 @@ createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = do
                     (checkShardIsInRadiusOfCapture aNeighborPosition aRadiusOfCapture)
                     (indexToSet $ aShardingNode^.nodeIndex)
             writeChan aChanOfNetLevel (ShardIndexResponse $ S.toList resultsShardingHash)
-        _  -> do
-            writeChan aChanOfNetLevel (ShardIndexResponse [])
+        _  -> writeChan aChanOfNetLevel (ShardIndexResponse [])
 
 
 checkShardIsInRadiusOfCaptureShardingNode :: ShardingNode -> ShardHash -> Bool
-checkShardIsInRadiusOfCaptureShardingNode aShardNode aShardHash =
+checkShardIsInRadiusOfCaptureShardingNode aShardNode =
     checkShardIsInRadiusOfCapture
         (toNodePosition $ aShardNode^.nodePosition)
         (mul    (findShardingNodeDomain aShardNode)
                 (distanceNormalizedCapture + aShardNode^.nodeDistance))
-        aShardHash
 
 
 sendShardsToNode ::
@@ -411,7 +400,7 @@ findNodeDomain :: MyNodePosition -> S.Set NodePosition -> Distance Point
 findNodeDomain aMyPosition aPositions = if
     | length aNearestPoints < 4 -> maxBound
     | otherwise                 ->
-        last . sort $ distanceTo aMyPosition <$> aNearestPoints
+        maximum $ distanceTo aMyPosition <$> aNearestPoints
   where
     aNearestPoints = findNearestNeighborPositions aMyPosition aPositions
 

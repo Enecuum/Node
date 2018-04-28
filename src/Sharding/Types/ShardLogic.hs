@@ -1,8 +1,4 @@
-{-# LANGUAGE
-        TemplateHaskell
-    ,   MultiParamTypeClasses
-    ,   DeriveGeneric
-#-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Sharding.Types.ShardLogic where

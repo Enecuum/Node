@@ -1,7 +1,7 @@
 {-# LANGUAGE
         OverloadedStrings
     ,   PackageImports
-#-}
+  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -34,7 +34,7 @@ instance ToJSON Transaction where
     toJSON trans = object $ txToJSON trans
         where
         txToJSON (WithTime aTime tx)
-            = [ "time" .= aTime ] ++ txToJSON tx
+            = ("time" .= aTime) : txToJSON tx
         txToJSON (WithSignature tx sign)                   = txToJSON tx ++ [ "signature" .= sign ]
         txToJSON (RegisterPublicKey key aBalance)
             = [ "public_key" .= key, "start_balance" .= aBalance]

@@ -16,8 +16,8 @@ checkUnevenness aMyNodePosition aPositions =
         findNearestNeighborPositions aMyNodePosition aPositions
 
 findNearestNeighborPositions :: MyNodePosition -> S.Set NodePosition -> [NodePosition]
-findNearestNeighborPositions aMyNodePosition aPositions = head <$>
-     sortOn (distanceTo aMyNodePosition) <$> aFilteredPositions
+findNearestNeighborPositions aMyNodePosition aPositions =
+    head . sortOn (distanceTo aMyNodePosition) <$> aFilteredPositions
   where
     aFilteredPositions :: [[NodePosition]]
     aFilteredPositions = S.toList <$> filter (not . S.null) aSeparatedPositions
@@ -50,8 +50,8 @@ shiftToCenterOfMass aMyNodePosition aNearestPositions =
     NodePosition (Point _ yh2) = aFind (Point x1 (x2 - fourthOfMaxBound)) distX2
 
     aFind :: Point -> (Point -> Point -> Word64) -> NodePosition
-    aFind aPositionPoint aDist = findSuportNeighborPosition
-        aMyNodePosition aNearestPositions (NodePosition aPositionPoint) aDist
+    aFind aPositionPoint = findSuportNeighborPosition
+        aMyNodePosition aNearestPositions (NodePosition aPositionPoint)
 
     MyNodePosition (Point x1 x2) = aMyNodePosition
 

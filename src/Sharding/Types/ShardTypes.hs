@@ -1,4 +1,7 @@
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, DeriveGeneric #-}
+{-# LANGUAGE
+        MultiParamTypeClasses
+    ,   DeriveGeneric
+  #-}
 module Sharding.Types.ShardTypes where
 
 import              Sharding.Space.Distance()
