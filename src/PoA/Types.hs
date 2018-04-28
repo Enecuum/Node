@@ -30,34 +30,31 @@ import              Data.IP
 
 newtype UUID = UUID Point
 
-data PoAPoWToNnMessage
+data PPToNNMessage
     -- Запросы:
-    -- на получение сообщения от PoA/PoW ноды.
-    = RequestMsgTo { ---
-        sender :: UUID
-    }
-
     -- на получение транзакций.
-    | RequestTransaction { ---
+    = RequestTransaction { ---
         number :: Int
     }
 
     -- запрос на рассылку бродкаста.
     | RequestBroadcast { ---
-        msg :: B.ByteString
+        recipientType :: NodeType,
+        msg           :: B.ByteString
     }
     -- запрос на получение конектов.
     | RequestConnects
-    | RequestUUIDToNn
+    | RequestUUIDToNN
 
     -- Ответы с UUID
-    | ResponseUUIDToNn {
-        uuid :: UUID
+    | ResponseUUIDToNN {
+        uuid      :: UUID,
+        nodeType  :: NodeType
     }
 
     -- Сообщения:
     -- Для другой PoA/PoW ноды.
-    | MsgMsgTo { ----
+    | MsgMsgToNN { ----
         destination :: UUID,
         msg :: B.ByteString
     }
@@ -72,15 +69,12 @@ data NodeType = PoW | PoA deriving Show
 
 data Connect = Connect HostAddress PortNumber
 
-data NnToPoAPoWMessage
-    = RequestUUIDToPoAPoWMessage
+-- PP means PoW and PoA
 
-    | ResponseMsgTo {
-        sender :: UUID,
-        messages :: [B.ByteString]
-    }
+data NNToPPMessage
+    = RequestUUIDToPP
 
-    | ResponseUUIDToPoAPoWMessage {
+    | ResponseUUIDToPP {
         uuid :: UUID
     }
 
@@ -88,22 +82,27 @@ data NnToPoAPoWMessage
       connects  :: [Connect]
     }
 
+    | ResponseTransaction {
+        transaction :: Transaction
+    }
+
     | MsgConnect {
         ip    :: HostAddress,
         port  :: PortNumber
     }
 
+    | MsgMsgToPP {
+        sender :: UUID,
+        message :: B.ByteString
+    }
+
+    | MsgBroadcastMsg {
+        message :: B.ByteString
+    }
+
     | MsgNewNodeInNet {
         id :: UUID,
         nodeType :: NodeType
-    }
-
-    | ResponseTransaction {
-        transaction :: Transaction
-    }
-
-    | ResponseBroadcastMsg {
-        messages :: [B.ByteString]
     }
 
 
@@ -123,41 +122,38 @@ myTextUnhex aString = fromString <$> aUnxeded
         aNewString :: String
         aNewString = T.unpack aString
 
-instance FromJSON PoAPoWToNnMessage where
+instance FromJSON PPToNNMessage where
     parseJSON (Object aMessage) = do
         aTag  :: T.Text <- aMessage .: "tag"
         aType :: T.Text <- aMessage .: "type"
         case (T.unpack aTag, T.unpack aType) of
-            ("Request", "MsgTo") -> do
-                aSender :: T.Text <- aMessage .: "sender"
-                aPoint <- myUnhex aSender
-                return (RequestMsgTo $ UUID aPoint)
-
             ("Request", "Transaction") -> RequestTransaction <$> aMessage .: "number"
 
             ("Request", "Broadcast") -> do
                 aMsg :: T.Text <- aMessage .: "msg"
+                aRecipientType :: T.Text <-  aMessage .: "aRecipientType"
                 case myTextUnhex aMsg of
-                    Just aUnxededMsg  -> return $ RequestBroadcast aUnxededMsg
+                    Just aUnxededMsg  -> return $
+                        RequestBroadcast (readNodeType aRecipientType) aUnxededMsg
                     Nothing           -> mzero
 
             ("Request","Connects")    -> return RequestConnects
 
-            ("Request","UUID")        -> return RequestUUIDToNn
+            ("Request","UUID")        -> return RequestUUIDToNN
 
             ("Response", "UUID") -> do
                 aUuid :: T.Text <- aMessage .: "uuid"
-                aPoint <- myUnhex aUuid
-                return (ResponseUUIDToNn $ UUID aPoint)
+                aPoint    <- myUnhex aUuid
+                aNodeType :: T.Text <- aMessage .: "nodeType"
+                return (ResponseUUIDToNN (UUID aPoint) (readNodeType aNodeType))
 
             ("Msg", "MsgTo") -> do
                 aDestination :: T.Text <- aMessage .: "destination"
                 aMsg         :: T.Text <- aMessage .: "msg"
                 aPoint <- myUnhex aDestination
                 case myTextUnhex aMsg of
-                    Just aJustMsg -> return $ MsgMsgTo (UUID aPoint) aJustMsg
+                    Just aJustMsg -> return $ MsgMsgToNN (UUID aPoint) aJustMsg
                     Nothing -> mzero
-
 
             ("Msg", "Microblock") -> do
                 aPreviousHash :: T.Text <- aMessage .: "previousHash"
@@ -176,6 +172,8 @@ instance FromJSON PoAPoWToNnMessage where
 
     parseJSON _ = mzero
 
+readNodeType :: (IsString a, Eq a) => a -> NodeType
+readNodeType aNodeType = if aNodeType == "PoW" then PoW else PoA
 
 decodeList :: S.Serialize a => [T.Text] -> [a]
 
@@ -185,20 +183,20 @@ decodeList aList
     where aDecodeList = S.decode <$> fromString . T.unpack <$> aList
 
 
-instance ToJSON NnToPoAPoWMessage where
-    toJSON RequestUUIDToPoAPoWMessage = object [
+instance ToJSON NNToPPMessage where
+    toJSON RequestUUIDToPP = object [
         "tag"   .= ("Request" :: String),
         "type"  .= ("UUID"    :: String)
       ]
 
-    toJSON (ResponseMsgTo aUuid aMessages) = object [
-        "tag"       .= ("Response"  :: String),
-        "type"      .= ("MsgTo"     :: String),
+    toJSON (MsgMsgToPP aUuid aMessage) = object [
+        "tag"       .= ("Msg"   :: String),
+        "type"      .= ("MsgTo" :: String),
         "sender"    .= uuidToString aUuid,
-        "messages"  .= (show.hex <$> aMessages)
+        "messages"  .= (show.hex $ aMessage)
       ]
 
-    toJSON (ResponseUUIDToPoAPoWMessage aUuid) = object [
+    toJSON (ResponseUUIDToPP aUuid) = object [
         "tag"       .= ("Response"  :: String),
         "type"      .= ("UUID"      :: String),
         "uuid"      .= uuidToString aUuid
@@ -223,8 +221,8 @@ instance ToJSON NnToPoAPoWMessage where
         "transaction" .= (hex . show $ S.encode aTransaction)
       ]
 
-    toJSON (ResponseBroadcastMsg aMessages) = object [
-        "messages"  .= (show.hex <$> aMessages)
+    toJSON (MsgBroadcastMsg aMessage) = object [
+        "messages"  .= (show.hex $ aMessage)
       ]
 
 
