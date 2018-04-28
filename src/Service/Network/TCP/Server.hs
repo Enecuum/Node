@@ -1,9 +1,10 @@
 module Service.Network.TCP.Server (runServer) where
 
-import Network.Socket hiding (recvFrom)
-import Network.Socket.ByteString
+import Network (listenOn, PortID(..))
+import Network.Socket hiding (recvFrom)  
+import Network.Socket.ByteString (recvFrom)
 
-import Control.Monad
+import Control.Concurrent (forkIO)
 import Data.ByteString (ByteString)
 
 
@@ -12,16 +13,16 @@ runServer ::
     PortNumber ->
     (ByteString -> SockAddr -> Socket -> IO ())
     -> IO ()
-runServer aPortNumber aPlainHandler = withSocketsDo $ do
-    aServerAddr:_ <- getAddrInfo (Just (defaultHints {addrFlags = [AI_PASSIVE]}))
-            Nothing (Just $ show aPortNumber)
-    aSocket <- socket (addrFamily aServerAddr) Stream defaultProtocol
-    setSocketOption aSocket ReuseAddr 1
-    bind aSocket (addrAddress aServerAddr)
-    listen aSocket 10
-    (conn, peer) <- accept aSocket
-    putStrLn $ "Connection from " ++ show peer
+runServer aPortNumber aPlainHandler = do
+    sock <- listenOn $ PortNumber aPortNumber
+    loop sock
 
-    forever $ do
-        (aMsg, aHostAddress) <- recvFrom conn (1024*100)
-        aPlainHandler aMsg aHostAddress conn
+  where loop :: Socket -> IO()
+        loop sock = do
+          (conn, _) <- accept sock
+
+          _ <- forkIO $ do
+            (aMsg, aHostAddress) <- recvFrom conn (1024*100)
+            aPlainHandler aMsg aHostAddress conn
+            close conn
+          loop sock
