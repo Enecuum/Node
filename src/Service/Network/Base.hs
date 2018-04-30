@@ -21,11 +21,11 @@ data ClientHandle = ClientHandle {
     clientSocket  :: Socket,
     clientAddress :: SockAddr
   }
-  
+
 
 -- | Show host adres in 0.0.0.0 form.
 showHostAddress :: HostAddress -> String
-showHostAddress aHostAdress = concat $ intersperse "." $ show <$> [i1, i2, i3, i4]
+showHostAddress aHostAdress = intercalate "." $ show <$> [i1, i2, i3, i4]
   where (i1, i2, i3, i4) = hostAddressToTuple aHostAdress
 
 

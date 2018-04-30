@@ -14,9 +14,7 @@ import              Service.InfoMsg
 import              Service.Network.Base
 import              PoA
 import              CLI.CLI (serveRpc)
-import              Control.Exception (try)
-import              Prelude hiding (concat)
-import              Control.Exception (SomeException())
+import              Control.Exception (try, SomeException())
 
 import              Data.Aeson
 import qualified    Data.ByteString.Lazy as L
@@ -24,7 +22,7 @@ import qualified    Data.ByteString.Lazy as L
 main :: IO ()
 main =  do
         enc <- L.readFile "configs/config.json"
-        case (decode enc) :: Maybe BuildConfig of
+        case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
           Just conf -> do
 
@@ -56,7 +54,7 @@ main =  do
                                  Just snbc -> return $ rpcPort snbc
 
                     stat_h  <- try (getEnv "statsdHost") >>= \case
-                            Right item              -> return $ item
+                            Right item              -> return item
                             Left (_::SomeException) -> return $ host $ statsdBuildConfig conf
 
                     stat_p  <- try (getEnv "statsdPort") >>= \case
@@ -69,7 +67,7 @@ main =  do
 
                     logs_p  <- try (getEnv "logPort") >>= \case
                             Right item              -> return $ read item
-                            Left (_::SomeException) -> return $ port $ logsBuildConfig conf 
+                            Left (_::SomeException) -> return $ port $ logsBuildConfig conf
 
                     void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh (toInteger aMyNodeId)
 

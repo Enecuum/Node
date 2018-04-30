@@ -3,7 +3,7 @@
 
 module LightClient.RPC (
         newTx,
-        genNTx, 
+        genNTx,
         genUnlimTx,
         reqLedger,
      ) where
@@ -38,16 +38,16 @@ reqLedgerSig = Signature "get_balance" ("x" ::: ())
 
 -- Bind function signature with RPC connection
 newTx :: ClientHandle -> Transaction -> Result ()
-newTx h tx = toFunction (connectionWithTimeOut h) newTxSig tx
+newTx h = toFunction (connectionWithTimeOut h) newTxSig
 
 genNTx :: ClientHandle -> Int -> Result ()
-genNTx h num = toFunction (connectionWithTimeOut h) genNTxSig num
+genNTx h = toFunction (connectionWithTimeOut h) genNTxSig
 
 genUnlimTx :: ClientHandle -> Result ()
 genUnlimTx h = toFunction (connectionWithTimeOut h) genUnlimTxSig
 
 reqLedger :: ClientHandle -> PublicKey -> Result Amount
-reqLedger h key = toFunction (connectionWithTimeOut h) reqLedgerSig key
+reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
 
 
 

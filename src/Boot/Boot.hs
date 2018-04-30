@@ -1,10 +1,4 @@
-{-# LANGUAGE
-        ViewPatterns
-    ,   LambdaCase
-    ,   MultiParamTypeClasses
-    ,   FlexibleInstances
-#-}
-
+{-# LANGUAGE ViewPatterns, MultiParamTypeClasses #-}
 module Boot.Boot where
 
 import qualified    Data.Map                        as M
@@ -76,14 +70,14 @@ answerToCheckBroadcastNodes aMd aChan _ = do
         modifyIORef aMd $ checSet %~ S.delete aNodeId
 
         let aMaybeNode = aData^.nodes.at aNodeId
-        when (isNothing aMaybeNode) $ do
+        when (isNothing aMaybeNode) $
             writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info $
                 "The node " ++ show aNodeId ++ " doesn't a broadcast."
 
         whenJust aMaybeNode $ \aNode -> do
             writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info $
                 "The node " ++ show aNodeId ++ " is broadcast."
-            writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info $
+            writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info
                 "Addition the node to list of broadcast node."
             sendExitMsgToNode aNode
             addRecordsToNodeListFile
@@ -108,7 +102,7 @@ bootNodeAnswerClientIsDisconnected ::
 bootNodeAnswerClientIsDisconnected aMd
     (toManagerMsg -> ClientIsDisconnected aId aChan) = do
         aData <- readIORef aMd
-        whenJust (aId `M.lookup` (aData^.nodes)) $ \aNode -> do
+        whenJust (aId `M.lookup` (aData^.nodes)) $ \aNode ->
             when (aNode^.chan == aChan) $ do
                 writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info $
                     "The node " ++ show aId ++ " is disconnected."

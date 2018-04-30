@@ -107,8 +107,8 @@ data NNToPPMessage
 
 
 myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
-myUnhex aString = case unhex $ T.unpack $ aString of
-    Just aDecodeString  -> case S.decode $ fromString $ aDecodeString of
+myUnhex aString = case unhex $ T.unpack aString of
+    Just aDecodeString  -> case S.decode $ fromString aDecodeString of
         Right aJustVal  -> return aJustVal
         Left _          -> mzero
     Nothing             -> mzero
@@ -160,7 +160,7 @@ instance FromJSON PPToNNMessage where
                 aListTransaction  <- aMessage .: "transactions"
                 case (myTextUnhex aPreviousHash, myTextUnhex aBlockHash) of
                     (Just aHash1, Just aHash2) ->
-                        case (decodeList aListTransaction) of
+                        case decodeList aListTransaction of
                             []      -> mzero
                             aResult -> return . MsgMicroblock
                                 $ Microblock aHash1 aHash2 aResult
@@ -179,7 +179,7 @@ decodeList :: S.Serialize a => [T.Text] -> [a]
 decodeList aList
     | all isRight aDecodeList   = rights aDecodeList
     | otherwise                 = []
-    where aDecodeList = S.decode <$> fromString . T.unpack <$> aList
+    where aDecodeList = S.decode . fromString . T.unpack <$> aList
 
 
 instance ToJSON NNToPPMessage where

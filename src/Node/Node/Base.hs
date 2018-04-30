@@ -7,7 +7,7 @@
     ,   FlexibleContexts
     ,   PatternSynonyms
     ,   FlexibleInstances
-#-}
+  #-}
 
 module Node.Node.Base where
 
@@ -47,6 +47,7 @@ import              Node.Node.Base.Server
 import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.GlobalLoging
 import              Service.InfoMsg
+import              Data.Maybe
 
 baseNodeOpts
     ::  ManagerData md2
@@ -105,7 +106,7 @@ answerToConnectivityQuery aChan aMd _ = do
     let aWait = aBroadcastNum >= preferedBroadcastCount{- || aBroadcastNum <= 6 -} || aUnActiveNum /= 0
 
         aConnectMap   = M.fromList $ (\(a,b,c) -> (a, (b, c))) <$> aConnectList
-        aPossitionMap = M.fromList $ aPossitionList
+        aPossitionMap = M.fromList aPossitionList
         aFilteredPositions = S.fromList . M.elems $
             M.intersection aPossitionMap aConnectMap
 
@@ -151,7 +152,7 @@ answerToConnectivityQuery aChan aMd _ = do
 
 
 iDontHaveAPosition :: ManagerData md => md -> Bool
-iDontHaveAPosition aData = aData^.myNodePosition == Nothing
+iDontHaveAPosition aData = isNothing $ aData^.myNodePosition
 
 
 connectTo
@@ -162,16 +163,16 @@ connectTo
     ->  IO ()
 connectTo aChan aNum aConnects = do
     aShuffledConnects <- shuffleM aConnects
-    forM_ (take aNum aShuffledConnects) $ \(aNodeId, aIp, aPort) -> do
+    forM_ (take aNum aShuffledConnects) $ \(aNodeId, aIp, aPort) ->
         writeChan aChan $ sendInitDatagram aIp aPort aNodeId
 
 connectToBootNode :: (ManagerMsg msg, ManagerData md) => Chan msg -> md -> IO ()
 connectToBootNode aChan aData = do
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Try connect to a bootNode."
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Try connect to a bootNode."
     let aBootNodeList = aData^.nodeBaseData.bootNodes
     when (null aBootNodeList) $ do
         let aError = "aBootNodeList is empty!!! Check config."
-        writeLog (aData^.infoMsgChan) [NetLvlTag] Error $ aError
+        writeLog (aData^.infoMsgChan) [NetLvlTag] Error aError
         error aError
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
         "Try connect to the bootNode " ++ show (head aBootNodeList) ++ "."
@@ -235,7 +236,7 @@ answerToSendInitDatagram
                     (showHostAddress receiverIp)
                     (fromEnum receiverPort) "/"
                     (socketActor receiverIp aId aManagerChan aNodeChan) `finally`
-                        (writeChan aManagerChan $ clientIsDisconnected aId aNodeChan)
+                        writeChan aManagerChan (clientIsDisconnected aId aNodeChan)
 
 answerToSendInitDatagram _ _ _ = pure ()
 
@@ -251,9 +252,9 @@ answerToDisconnectNode
     ->  msg
     ->  IO ()
 answerToDisconnectNode aData (toManagerMsg -> DisconnectNode aId) = do
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info
         "answerToDisconnectNode"
-    whenJust (aId `M.lookup`(aData^.nodes)) $ sendExitMsgToNode
+    whenJust (aData^.nodes.at aId) sendExitMsgToNode
 
 answerToDisconnectNode _ _ = pure ()
 
@@ -268,7 +269,7 @@ answerToInitDatagram aMd
     (toManagerMsg -> InitDatagram aInputChan aHostAdress aDatagram) = do
     aData <- readIORef aMd
     unless (aData^.iAmBroadcast) $ do
-        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+        writeLog (aData^.infoMsgChan) [NetLvlTag] Info
             "I am a broadcast node."
         modifyIORef aMd $ iAmBroadcast .~ True
     case decode aDatagram of
@@ -284,7 +285,7 @@ answerToInitDatagram aMd
                     aPortNumber
                     aMd
         _ -> do
-            writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                 "Request of connect is bad."
             writeChan aInputChan SenderTerminate
 answerToInitDatagram _ _                =  pure ()
@@ -302,11 +303,11 @@ answerToDatagramMsg
     ->  msg
     ->  IO ()
 answerToDatagramMsg aChan aMd _
-    (toManagerMsg -> DatagramMsg aDatagramMsg aId) = do
+    (toManagerMsg -> DatagramMsg aDatagramMsg aId) =
         whenRight (decode aDatagramMsg) $ \case
             aPack @(Unciphered (ConnectingRequest aPublicPoint _ _ _))
                 | verifyConnectingRequest aPack
-                    -> answerToRemoteConnectingMsg (aId) aPublicPoint aMd
+                    -> answerToRemoteConnectingMsg aId aPublicPoint aMd
             Ciphered aCipheredString ->
                 answerToPackagedMsg aId aChan aCipheredString aMd
             _                     -> pure ()
@@ -393,7 +394,7 @@ answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aPortNumb
         writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
             "Is accepted " ++ showHostAddress aHostAdress ++ " " ++ show aId
         let aKey = getKey (aData^.privateNumber) aPublicPoint
-            aNode = (makeNode aInputChan aHostAdress aPortNumber) &~ do
+            aNode = makeNode aInputChan aHostAdress aPortNumber &~ do
                 mKey            .= Just aKey
                 status          .= Active
 
@@ -423,7 +424,7 @@ answerToRemoteConnectingMsg aId aPublicPoint aMd = do
 
 sendRemoteConnectDatagram :: ManagerData md => Chan MsgToSender -> md -> IO ()
 sendRemoteConnectDatagram aChan aData = do
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Send of connection confirmetion."
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Send of connection confirmetion."
     sendPackagedMsg aChan =<<  makeConnectingRequest
         (aData^.myNodeId)
         (aData^.publicPoint)
@@ -437,11 +438,8 @@ makePing
     ->  HostAddress
     ->  PortNumber
     ->  IO ()
-makePing aChan aHostAdress aPortNumber = do
-    void $ forkIO $ runClient
-        (showHostAddress aHostAdress)
-        (fromEnum aPortNumber) "/"
-        aSendRecive
+makePing aChan aHostAdress aPortNumber = void $ forkIO $ runClient
+    (showHostAddress aHostAdress) (fromEnum aPortNumber) "/" aSendRecive
    where
      aSendRecive aConnect = void $ race aStoper (aPinger aConnect)
 
@@ -485,9 +483,8 @@ class FileDB a where
     updateFile                  :: NodeInfoList a -> IO ()
 
 instance FileDB NetLvl where
-    readRecordsFromNodeListFile = do
-        aFileContent <- readDataFile "./data/listOfConnects.txt"
-        return $ NodeInfoListNetLvl aFileContent
+    readRecordsFromNodeListFile =
+        NodeInfoListNetLvl <$> readDataFile "./data/listOfConnects.txt"
 
 
     addRecordsToNodeListFile aMyNodeId (NodeInfoListNetLvl aList) = do
@@ -514,9 +511,8 @@ instance FileDB NetLvl where
 
 
 instance FileDB LogicLvl where
-    readRecordsFromNodeListFile = do
-        aList <- readDataFile $ "./data/listOfPositions.txt"
-        return $ NodeInfoListLogicLvl aList
+    readRecordsFromNodeListFile =
+        NodeInfoListLogicLvl <$> readDataFile "./data/listOfPositions.txt"
 
 
     addRecordsToNodeListFile aMyNodeId (NodeInfoListLogicLvl aList) = do

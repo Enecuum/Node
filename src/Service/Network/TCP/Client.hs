@@ -16,7 +16,7 @@ class Hosts a where
     openConnect :: a -> PortNumber -> IO ClientHandle
 
 closeConnect :: ClientHandle -> IO ()
-closeConnect = close . clientSocket 
+closeConnect = close . clientSocket
 
 -- | Run a TCP client.
 runClient :: Hosts a => a -> PortNumber -> (ClientHandle -> IO ()) -> IO ()
@@ -32,7 +32,7 @@ instance Hosts String where
     openConnect aHostAdress aPort = do
         aServerAddr <- head <$> getAddrInfo
             Nothing
-            (Just $ aHostAdress)
+            (Just aHostAdress)
             (Just $ show aPort)
         aSocket <- socket (addrFamily aServerAddr) Stream defaultProtocol
         connect aSocket $ addrAddress aServerAddr

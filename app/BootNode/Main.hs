@@ -23,7 +23,7 @@ import              Data.Aeson
 main :: IO ()
 main =  do
       enc <- L.readFile "configs/config.json"
-      case (decode enc) :: Maybe BuildConfig of
+      case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
           Just conf -> do
 

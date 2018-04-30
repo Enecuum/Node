@@ -6,7 +6,7 @@
     StandaloneDeriving,
     DeriveGeneric,
     TemplateHaskell
-#-}
+  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Service.Types.SerializeInstances where

@@ -1,6 +1,5 @@
 {-# LANGUAGE
-        LambdaCase
-    ,   ViewPatterns
+        ViewPatterns
     ,   MultiWayIf
     ,   ScopedTypeVariables
     ,   MultiParamTypeClasses
@@ -8,7 +7,7 @@
     ,   PatternSynonyms
     ,   FlexibleInstances
     ,   UndecidableInstances
-#-}
+  #-}
 
 module Node.Data.MakeAndSendTraceRouting where
 
@@ -52,7 +51,7 @@ instance (LevelRequestContractor aLvl, Serialize (Request aLvl)) =>
 
 instance (LevelRequestContractor aLvl, Serialize (Request aLvl)) =>
     MakeAndSendTraceRouting (Request aLvl) NodePosition where
-        makeAndSendTo aData (toNodePosition -> aPointTo) aRequest = do
+        makeAndSendTo aData (toNodePosition -> aPointTo) aRequest =
             whenJust (aData^.myNodePosition) $ \aMyPosition -> do
                 aPackageSignature <- makePackageSignature aData aRequest
                 let aRequestPackage = request aRequest aPackageSignature
@@ -81,10 +80,9 @@ instance LevelRequestContractor LogicLvl where
 
 
 sendToNode :: (StringKey -> CryptoFailable Package) -> Node -> IO ()
-sendToNode aMakeMsg aNode = do
-    whenJust (aNode^.mKey) $ \aKey -> do
-        whenJust (maybeCryptoError $ aMakeMsg aKey) $ \aJustMsg -> do
-            sendPackagedMsg (aNode^.chan) aJustMsg
+sendToNode aMakeMsg aNode = whenJust (aNode^.mKey) $ \aKey ->
+    whenJust (maybeCryptoError $ aMakeMsg aKey) $ \aJustMsg ->
+        sendPackagedMsg (aNode^.chan) aJustMsg
 
 
 sendPackagedMsg :: Chan MsgToSender -> Package -> IO ()
@@ -98,7 +96,7 @@ closedToPointNeighbor
     ->  b
     ->  [Node]
 closedToPointNeighbor aData aPointTo = sortOn
-    (\n -> distanceTo n aPointTo) $ M.elems $ aData^.nodes
+    (`distanceTo`aPointTo) $ M.elems $ aData^.nodes
 
 
 getClosedNodeByDirect :: ManagerData md => md -> Point -> Maybe Node

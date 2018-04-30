@@ -16,7 +16,6 @@ import              Crypto.PubKey.ECC.DH
 import              Crypto.PubKey.ECC.ECDSA
 
 import              Crypto.Cipher.AES   (AES256)
-import              Crypto.Error        (CryptoFailable(..))
 import              Data.ByteArray (unpack)
 
 
@@ -48,7 +47,7 @@ verifyConnectingRequest = \case
 disconnectRequest :: Package
 disconnectRequest = Unciphered $ DisconnectRequest []
 pingRequest :: Package
-pingRequest       = Unciphered $ PingRequest
+pingRequest       = Unciphered PingRequest
 pongResponce :: HostAddress -> Package
 pongResponce      = Unciphered . PongResponce
 

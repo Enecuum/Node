@@ -1,9 +1,8 @@
 {-# LANGUAGE
         LambdaCase
-    ,   ViewPatterns
     ,   MultiWayIf
     ,   ScopedTypeVariables
-#-}
+  #-}
 module Node.Node.Base.Server where
 
 import qualified    Network.WebSockets                  as WS
@@ -21,7 +20,7 @@ import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 
 startServerActor :: ManagerMsg a => Chan a -> PortNumber -> IO ()
-startServerActor aOutputChan aPort = do
+startServerActor aOutputChan aPort =
     void $ forkIO $ runServer 0 (fromEnum aPort) $
         \aHostAdress pending -> do
             aConnect <- WS.acceptRequest pending
@@ -39,7 +38,7 @@ startServerActor aOutputChan aPort = do
                                 aOutputChan
                                 aInputChan
                                 aConnect
-                Right (Unciphered PingRequest) -> do
+                Right (Unciphered PingRequest) ->
                     WS.sendBinaryData aConnect $ encode $
                         PongResponce aHostAdress
                 _     -> pure ()
@@ -53,16 +52,14 @@ socketActor
     ->  Chan MsgToSender
     ->  WS.Connection
     ->  IO ()
-socketActor _ aId aChan aInputChan aConnect = do
-    (void $ race sender receiver) `finally`
-        (writeChan aChan $ clientIsDisconnected aId aInputChan)
+socketActor _ aId aChan aInputChan aConnect =
+    void (race sender receiver) `finally`
+        writeChan aChan (clientIsDisconnected aId aInputChan)
   where
     sender :: IO ()
     sender = readChan aInputChan >>= \case
-        MsgToSender aMsg  -> do
-            WS.sendBinaryData aConnect aMsg >> sender
-        SenderExit aMsg   -> do
-            WS.sendBinaryData aConnect aMsg
+        MsgToSender aMsg  -> WS.sendBinaryData aConnect aMsg >> sender
+        SenderExit aMsg   -> WS.sendBinaryData aConnect aMsg
         SenderTerminate -> pure ()
 
     receiver :: IO ()

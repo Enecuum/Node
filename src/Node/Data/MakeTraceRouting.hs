@@ -2,7 +2,7 @@
         FlexibleInstances
     ,   MultiParamTypeClasses
     ,   FlexibleContexts
-#-}
+  #-}
 module Node.Data.MakeTraceRouting where
 
 import              Data.Serialize
