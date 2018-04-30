@@ -99,8 +99,8 @@ signEncodeble :: (MonadRandom m, Serialize msg) =>
     -> m Signature
 signEncodeble aPrivateKey aMsg = sign aPrivateKey SHA3_256 (encode aMsg)
 
-genKayPair :: MonadRandom m => Curve -> m (PrivateNumber, PublicPoint)
-genKayPair cur = do
+genKeyPair :: MonadRandom m => Curve -> m (PrivateNumber, PublicPoint)
+genKeyPair cur = do
     aPrivateKey <- generatePrivate cur
     pure (aPrivateKey, calculatePublic cur aPrivateKey)
 
