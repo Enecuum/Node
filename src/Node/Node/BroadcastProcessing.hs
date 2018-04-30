@@ -1,15 +1,13 @@
 {-# LANGUAGE
-    OverloadedStrings,
-    MultiWayIf,
-    LambdaCase,
-    MultiParamTypeClasses,
-    ViewPatterns,
-    StandaloneDeriving,
-    TypeSynonymInstances,
-    FlexibleContexts,
-    TypeFamilies,
-    FlexibleInstances
-#-}
+        OverloadedStrings
+    ,   MultiWayIf
+    ,   MultiParamTypeClasses
+    ,   ViewPatterns
+    ,   TypeSynonymInstances
+    ,   FlexibleContexts
+    ,   TypeFamilies
+    ,   FlexibleInstances
+  #-}
 module Node.Node.BroadcastProcessing where
 
 --

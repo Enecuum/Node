@@ -41,7 +41,7 @@ instance Verification (TraceRouting, RequestPackage) where
 
         (ToDirect aPointFrom aPointTo (aS:xS), aMsg)      ->
             verify (aS, (ToDirect aPointFrom aPointTo xS, aMsg)) &&
-            verify ((ToDirect aPointFrom aPointTo xS), aMsg)
+            verify (ToDirect aPointFrom aPointTo xS, aMsg)
 
         _   -> False
 
@@ -51,7 +51,7 @@ instance Verification (TraceRouting, ResponcePackage) where
         (ToNode _ _, aMsg) -> verify aMsg
 
         (ToDirect aPointFrom aPointTo [aSignature],
-            (ResponceNetLvlPackage aRequestPackage aResponce aPackageSignature)) ->
+            ResponceNetLvlPackage aRequestPackage aResponce aPackageSignature) ->
                 verify (aPackageSignature, aResponce) &&
                 verify aRequestPackage &&
                 verify (aSignature, (aRequestPackage, aPointTo, aPointFrom))
@@ -65,12 +65,12 @@ instance Verification (TraceRouting, ResponcePackage) where
         (ToDirect aPointFrom aPointTo (aS:xS),
              aResponcePackage@(ResponceLogicLvlPackage aRequestPackage _ _)) ->
                 verify (aS, (ToDirect aPointFrom aPointTo xS, aRequestPackage)) &&
-                verify ((ToDirect aPointFrom aPointTo xS), aResponcePackage)
+                verify (ToDirect aPointFrom aPointTo xS, aResponcePackage)
 
         (ToDirect aPointFrom aPointTo (aS:xS),
              aResponcePackage@(ResponceNetLvlPackage aRequestPackage _ _)) ->
                 verify (aS, (ToDirect aPointFrom aPointTo xS, aRequestPackage)) &&
-                verify ((ToDirect aPointFrom aPointTo xS), aResponcePackage)
+                verify (ToDirect aPointFrom aPointTo xS, aResponcePackage)
 
         _   -> False
 

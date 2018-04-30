@@ -18,9 +18,8 @@ getBalance key transactions = sum $ map getAmount transactions
     getAmount _ = 0
 
 countBalance :: PublicKey -> IO Amount
-countBalance key = do
-    ts <- readTransactions =<< getTransactionFilePath
-    return $ getBalance key ts
+countBalance key = getBalance key <$> (readTransactions =<< getTransactionFilePath)
+
 
 readTransactions :: String -> IO [Transaction]
 readTransactions fileName = do

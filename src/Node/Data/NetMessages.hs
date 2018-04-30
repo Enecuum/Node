@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, GADTs, DeriveGeneric, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GADTs, GeneralizedNewtypeDeriving #-}
 module Node.Data.NetMessages where
 
 import              GHC.Generics()

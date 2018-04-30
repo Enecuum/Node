@@ -4,7 +4,7 @@
     ,   GeneralizedNewtypeDeriving
     ,   TypeFamilies
     ,   FlexibleInstances
-#-}
+  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -291,7 +291,7 @@ decodePackage = decode . toByteString
 
 
 instance IsByteString CipheredString where
-    fromByteString a = CipheredString a
+    fromByteString = CipheredString
     toByteString (CipheredString a) = a
 
 

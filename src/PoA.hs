@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase, ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module PoA (
   servePoA
   )  where
@@ -64,7 +64,7 @@ servePoA aRecivePort aSendPort aNodeId ch aRecvChan aInfoChan = runServer aReciv
     aReceiver aId aSocket aNewChan = do
         (aMsg, _) <- recvFrom aSocket (1024*100)
         aOk <- isEmptyMVar aId
-        case myDecode $ aMsg of
+        case myDecode aMsg of
             Just a -> case a of
                 -- REVIEW: Check fair distribution of transactions between nodes
                 RequestTransaction aNum -> void $ forkIO $ forM_ [1..aNum] $ \_  -> do
@@ -90,7 +90,7 @@ servePoA aRecivePort aSendPort aNodeId ch aRecvChan aInfoChan = runServer aReciv
                 RequestConnects -> do
                     NodeInfoListNetLvl aRecords <- readRecordsFromNodeListFile
                     aShuffledRecords <- shuffleM aRecords
-                    let aConnects = (\(_, a, b) -> Connect a b) <$> (take 5 aShuffledRecords)
+                    let aConnects = (\(_, a, b) -> Connect a b) <$> take 5 aShuffledRecords
                     writeLog aInfoChan [ServePoATag] Info $ "Send connections " ++ show aConnects
                     sendAll aSocket $ myEncode $ ResponseConnects aConnects
 
@@ -110,7 +110,7 @@ servePoA aRecivePort aSendPort aNodeId ch aRecvChan aInfoChan = runServer aReciv
                         writeLog aInfoChan [ServePoATag] Warning $ "Can't send request without UUID " ++ show aMsg
                         sendAll aSocket $ myEncode RequestUUIDToPP
 
-            Nothing -> do
+            Nothing ->
                 -- TODO: Вписать ID если такой есть.
                 writeLog aInfoChan [ServePoATag] Warning $
                     "Brouken message from PP " ++ show aMsg

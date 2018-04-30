@@ -1,5 +1,5 @@
 {-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
-{-# LANGUAGE DeriveGeneric, LambdaCase, StandaloneDeriving #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Service.Types where
 
 import              Data.Serialize
@@ -19,8 +19,8 @@ instance Serialize Microblock
 
 instance Show Microblock where
     show (Microblock aByteString1 aByteString2 tr) =
-        " hash1: " ++ (show $ B16.encode aByteString1) ++
-        " hash2: " ++ (show $ B16.encode aByteString2) ++
+        " hash1: " ++ show (B16.encode aByteString1) ++
+        " hash2: " ++ show (B16.encode aByteString2) ++
         " transactions: " ++ show tr
 
 data Transaction = WithTime { time :: Time, transaction :: Transaction }
@@ -61,5 +61,5 @@ instance Show (LHistory INVALID) where
   show (Invalid tm hst) = "Invalid { invalid = " ++ show tm ++ ", history = " ++ show hst ++ " }"
 
 instance Show (LHistory VALID) where
-  show (End) = "End"
+  show End = "End"
   show (Valid tm bl pr) = "Valid { valid = " ++ show tm ++ ", balance = " ++ show bl ++ ", prev = " ++ show pr ++ " }"

@@ -3,7 +3,7 @@
     ,   DeriveGeneric
     ,   GeneralizedNewtypeDeriving
     ,   TemplateHaskell
-#-}
+  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 

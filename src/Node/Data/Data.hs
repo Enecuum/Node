@@ -1,10 +1,4 @@
-{-# LANGUAGE
-        GADTs
-    ,   GeneralizedNewtypeDeriving
-    ,   DeriveGeneric
-    ,   TemplateHaskell
-    ,   StandaloneDeriving
-#-}
+{-# LANGUAGE GADTs, DeriveGeneric #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Node.Data.Data where

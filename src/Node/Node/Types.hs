@@ -7,7 +7,7 @@
     ,   FlexibleInstances
     ,   MultiWayIf
     ,   MultiParamTypeClasses
-#-}
+  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -166,7 +166,7 @@ makeNodeBaseData :: Chan ExitMsg
                  -> PortNumber
                  -> Chan InfoMsg
                  -> NodeBaseData
-makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan port aInfoCh = NodeBaseData
+makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan = NodeBaseData
     aExitChan
     M.empty
     aList
@@ -177,8 +177,6 @@ makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan port aInfoCh = Node
     Nothing
     Nothing
     False
-    port
-    aInfoCh
 
 -- | TODO: Нужно отрефакторить, уменьшить колво ключей.
 data NodeConfig = NodeConfig {

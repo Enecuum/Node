@@ -12,7 +12,7 @@ import Data.Time.Clock       (getCurrentTime, utctDayTime)
 
 
 getTime :: IO Double
-getTime = getCurrentTime >>= return . fromRational . toRational . utctDayTime
+getTime = fromRational . toRational . utctDayTime <$> getCurrentTime
 
 getEnecuumDir :: IO String
 getEnecuumDir = do
@@ -34,4 +34,4 @@ getTransactionFilePath = do
     return (enecuumDir ++ [pathSeparator] ++ "tx")
 
 createFilesDirectory :: FilePath -> IO ()
-createFilesDirectory path = createDirectoryIfMissing True $ takeDirectory path 
+createFilesDirectory path = createDirectoryIfMissing True $ takeDirectory path

@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, LambdaCase, PackageImports, OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables, LambdaCase #-}
 module Node.Lib where
 
 import              Control.Monad
@@ -75,9 +75,9 @@ microblockProc aMicroblockCh aFilePath = forever $ do
 
 
 readNodeConfig :: IO NodeConfig
-readNodeConfig = do
+readNodeConfig =
     try (L.readFile "configs/nodeInfo.json") >>= \case
-        Right nodeConfigMsg         -> case (A.decode nodeConfigMsg) of
+        Right nodeConfigMsg         -> case A.decode nodeConfigMsg of
             Just nodeConfigData     -> return nodeConfigData
             Nothing                 -> putStrLn "Config file can not be readed. New one will be created" >> config
         Left (_ :: SomeException)   -> putStrLn "ConfigFile will be created." >> config
@@ -102,9 +102,9 @@ readBootNodeList conf = do
 
 mergeMBlocks :: [Microblock] -> [Microblock] -> [Microblock] -- new old result
 mergeMBlocks [] old = old
-mergeMBlocks (x:xs) olds = if (containMBlock x olds)
-                       then mergeMBlocks xs olds
-                       else mergeMBlocks xs (x : olds)
+mergeMBlocks (x:xs) olds = if containMBlock x olds
+    then mergeMBlocks xs olds
+    else mergeMBlocks xs (x : olds)
 
 
 containMBlock :: Microblock -> [Microblock] -> Bool

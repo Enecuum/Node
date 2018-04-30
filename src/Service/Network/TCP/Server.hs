@@ -1,6 +1,6 @@
 module Service.Network.TCP.Server (runServer) where
 
-import Network.Socket hiding (recvFrom)
+import Network.Socket
 import Network.Socket.ByteString
 
 import Control.Monad

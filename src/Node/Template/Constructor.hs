@@ -125,7 +125,7 @@ itIsFuncMod postf n i = do
 
 
 constrFunc :: String -> String -> DecQ
-constrFunc name clName = funD (mkName name) $
+constrFunc name clName = funD (mkName name)
     [clause [] (normalB $ conE $ mkName $ (name & ix 0 %~ toUpper) ++ clName) []]
 
 
@@ -134,7 +134,7 @@ baseMsgInstance' clName tName patts = do
     [ValD _ body _] <- [d|fun = id|]
     instanceD (cxt []) (appT (conT $ mkName clName) (conT $ mkName tName))
         (map (\(a, _) -> constrFunc a "") patts ++
-        map (\(a, b)-> itIsFunc a b) patts ++
+        map (uncurry itIsFunc) patts ++
         [pure $ ValD (VarP $ mkName $ "to" ++ clName) body []])
 
 baseMsgInstance :: String -> String -> [(String, Int)] -> Q [Dec]
@@ -151,7 +151,7 @@ derivativeMsgInstance' :: String -> String -> [(String, Int)] -> DecQ
 derivativeMsgInstance' clName tName patts = instanceD
     (cxt []) (appT (conT $ mkName clName) (conT $ mkName tName))
     (map (\(a, _) -> constrFunc a tName) patts ++
-    map (\(a, i) -> itIsFuncMod tName a i) patts ++
+    map (uncurry (itIsFuncMod tName)) patts ++
     [funD (mkName $ "to" ++ clName)
         [clause [] body []]]
     )
@@ -163,7 +163,7 @@ derivativeMsgInstance' clName tName patts = instanceD
 
     branches = map (\(a, b) -> match
         (conP (mkName $ (a & ix 0 %~ toUpper) ++ tName) (map varP $ names b))
-        (normalB $ foldl appE (conE $ mkName $ (a & ix 0 %~ toUpper)) (vars b))
+        (normalB $ foldl appE (conE $ mkName (a & ix 0 %~ toUpper)) (vars b))
         []) patts
 
     vars :: Int -> [ExpQ]
@@ -177,7 +177,7 @@ makeLensInstance' :: String -> String -> DecQ
 makeLensInstance' clName tpName = instanceD (cxt [])
     (appT (conT $ mkName ((clName & ix 0 %~ toUpper) ++ "Class"))
         (conT $ mkName $ tpName & ix 0 %~ toUpper))
-        [(lensGen' clName (tpName ++ (clName & ix 0 %~ toUpper)))]
+        [lensGen' clName (tpName ++ (clName & ix 0 %~ toUpper))]
 
 
 msgClass' :: [String] -> String -> [(String, [[String]])] -> DecQ
@@ -209,7 +209,7 @@ msgConstructorType :: (String, [[String]]) -> DecQ
 msgConstructorType (name, typeLine) = sigD (mkName name) theType
   where
     theType :: TypeQ
-    theType = if length typeLine > 0
+    theType = if not (null typeLine)
         then appArrowT $ (foldTypeList <$> typeLine) ++ [varT $ mkName "a"]
         else varT $ mkName "a"
 
@@ -218,7 +218,7 @@ foldTypeList t = foldl1 appT (conT.mkName <$> t)
 
 
 appArrowT :: [TypeQ] -> TypeQ
-appArrowT (t:[]) = t
+appArrowT [t] = t
 appArrowT (t:xs) = appT (appT arrowT t) (appArrowT xs)
 appArrowT []     = error "Template.Constructor: appArrowT"
 

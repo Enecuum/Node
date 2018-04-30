@@ -21,7 +21,7 @@ runServer aHost aPort app = S.withSocketsDo $
   bracket
   (makeListenSocket (show aHost) aPort)
   S.close
-  (\sock -> do
+  (\sock ->
     mask_ $ forever $ do
       allowInterrupt
       (conn, sockAddr) <- S.accept sock
@@ -36,7 +36,6 @@ runApp ::
     -> ConnectionOptions
     -> ServerApp
     -> IO ()
-runApp socket opts app = bracket
+runApp socket opts = bracket
     (makePendingConnection socket opts)
     (Stream.close . pendingStream)
-    app

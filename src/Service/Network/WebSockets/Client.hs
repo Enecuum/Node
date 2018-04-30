@@ -11,8 +11,8 @@ runClient :: String       -- ^ Host
           -> String       -- ^ Path
           -> ClientApp a  -- ^ Client application
           -> IO a
-runClient host port path ws =
-    runClientWith host port path defaultConnectionOptions [] ws
+runClient host port path =
+    runClientWith host port path defaultConnectionOptions []
 
 
 runClientWith :: String             -- ^ Host
@@ -28,17 +28,14 @@ runClientWith host port path0 opts customHeaders app = do
                     {S.addrSocketType = S.Stream}
 
         -- Correct host and path.
-        fullHost = if port == 80 then host else (host ++ ":" ++ show port)
+        fullHost = if port == 80 then host else host ++ ":" ++ show port
         path     = if null path0 then "/" else path0
     addr:_ <- S.getAddrInfo (Just hints) (Just host) (Just $ show port)
     sock      <- S.socket (S.addrFamily addr) S.Stream S.defaultProtocol
     S.setSocketOption sock S.NoDelay 1
 
     -- Connect WebSocket and run client
-    res <- finally
+    finally
         (S.connect sock (S.addrAddress addr) >>
          runClientWithSocket sock fullHost path opts customHeaders app)
         (S.close sock)
-
-    -- Clean up
-    return res

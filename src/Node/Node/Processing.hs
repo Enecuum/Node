@@ -4,12 +4,11 @@
     LambdaCase,
     MultiParamTypeClasses,
     ViewPatterns,
-    StandaloneDeriving,
     TypeSynonymInstances,
     FlexibleContexts,
     TypeFamilies,
     FlexibleInstances
-#-}
+  #-}
 module Node.Node.Processing where
 
 import qualified    Data.Map                        as M
@@ -35,6 +34,7 @@ import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.MakeTraceRouting
 import              Node.Data.GlobalLoging
 import              Service.InfoMsg
+import              Data.Maybe
 
 
 class Processing aNodeData aPackage where
@@ -53,14 +53,14 @@ instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
     processing aChan aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
         BroadcastListResponce aBroadcastListLogic aBroadcastList -> do
             aData <- readIORef aMd
-            writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                 "Accepted lists of broadcasts and points of node."
             let aMyNodeId = aData^.myNodeId
 
             -- добавление соответсвующих записей в списки коннектов и координат.
-            writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                 "Add connects to list."
-            writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                 "Add node coordinate to coordinate list."
 
             addRecordsToNodeListFile aMyNodeId aBroadcastListLogic
@@ -71,7 +71,7 @@ instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
                 aDeltaY <- randomIO
                 let aMyNodePosition = MyNodePosition $ Point aDeltaX aDeltaY
                 aChanOfSharding <- newChan
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                     "Select new random coordinate because I am first node in net."
                 makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition (aData^.infoMsgChan)
                 modifyIORef aMd (&~ do
@@ -113,9 +113,9 @@ instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
                     "Accepted the node position of a neighbor node " ++ show aNodeId ++
                     " a new position is a " ++ show aNodePosition
                 updateFile (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                     "Updating of node positions file."
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                     "Send to sharding lvl the real coordinate of neighbor"
                 sendToShardingLvl aData $
                     T.TheNodeHaveNewCoordinates aNodeId aNodePosition
@@ -126,7 +126,7 @@ instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
                     "Accepted info about a live status of neighbor node." ++
                     show aNodeId ++ " alive status is a " ++ show ok
                 unless ok $ do
-                    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                    writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                         "The neighbor is dead send msg about it to the sharding lvl."
                     sendToShardingLvl aData $ T.TheNodeIsDead aNodeId
             _       -> return ()
@@ -185,7 +185,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     sendToShardingLvl aData $
                         T.NodePositionAction aChan aNodeId
                     T.NodePositionResponse aMyNodePosition <- readChan aChan
-                    modifyIORef aMd $ myNodePosition .~ Just aMyNodePosition
+                    modifyIORef aMd (myNodePosition ?~ aMyNodePosition)
                     return aMyNodePosition
 
             IsAliveTheNodeRequestPackage aId -> do
@@ -199,7 +199,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
 
                 whenJust aMaybeNodeId $ \aJustNodeId -> do
                     let aNetLvlPackage = TheNodeIsAlive
-                            aNodeId $ (aData^.nodes.at aNodeId) /= Nothing
+                            aNodeId . isJust $ aData^.nodes.at aNodeId
                     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                         "Send the " ++ show aNetLvlPackage ++ " to "
                         ++ show aJustNodeId ++ "."
@@ -233,7 +233,7 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
 
             BroadcastListRequest -> do
                 -- TEMP Think about move aBroadcastList to operacety memory.
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                     "Send responce 'Broadcast list'."
                 NodeInfoListNetLvl   aBroadcastList      <- readRecordsFromNodeListFile
                 NodeInfoListLogicLvl aBroadcastListLogic <- readRecordsFromNodeListFile

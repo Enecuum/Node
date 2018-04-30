@@ -66,9 +66,9 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
     logHandle    <- openConnect (host logsInfo)   (port logsInfo)
     putStrLn "Logs server connected"
     sendToServer logHandle $ "+node|" ++  show aId ++ "|" ++
-          concat (intersperse "," (show <$> [
+          intercalate "," (show <$> [
             ConnectingTag, LoadingShardsTag, BroadcatingTag, BootNodeTag,
-            ShardingLvlTag, NetLvlTag, MiningLvlTag, ServePoATag])) ++ "\r\n"
+            ShardingLvlTag, NetLvlTag, MiningLvlTag, ServePoATag]) ++ "\r\n"
 
     forever $ do
         m <- readChan chan
@@ -76,7 +76,7 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
             Metric s -> sendToServer metricHandle s
 
             Log aTags aMsgType aMsg -> do
-                let aTagsList = concat (intersperse "," (show <$> aTags))
+                let aTagsList = intercalate "," (show <$> aTags)
 
                     aString = "+log|" ++ aTagsList ++ "|" ++ show aId  ++ "|"
                         ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"

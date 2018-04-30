@@ -1,5 +1,4 @@
 {-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
-{-# LANGUAGE DeriveGeneric #-}
 
 module CLI.TransactionsDAG where
 
@@ -28,7 +27,7 @@ getRegisterPublicKeyTransactions keys (x,y) = do
   let n = length keys
   sums   <- replicateM n $ randomRIO (x,y)
   points <- replicateM n getTime
-  let res = take n $ [WithTime p (RegisterPublicKey k (fromIntegral s)) | p <- points, k <- keys, s <- sums]
+  let res = take n [WithTime p (RegisterPublicKey k (fromIntegral s)) | p <- points, k <- keys, s <- sums]
   return res
 
 getSignTransactions :: Int -> [LNode KeyPair] -> (Int, Int) -> IO [Transaction] --[LEdge Transaction]
@@ -40,7 +39,7 @@ getSignTransactions quantityOfTx keys'ns (x,y) = do
   points <- replicateM n getTime
   signs  <- mapM (\(KeyPair _ priv, s) -> getSignature priv (fromIntegral s :: Amount)) (zip keys sums)
   let sts  = [WithSignature (WithTime p (SendAmountFromKeyToKey pub1 pub2 (fromIntegral aSum))) sign |
-              p <- points, ( (_, (KeyPair pub1 _)), (_, (KeyPair pub2 _)) ) <- skel, aSum <- sums, sign <- signs]
+              p <- points, ((_, KeyPair pub1 _), (_, KeyPair pub2 _) ) <- skel, aSum <- sums, sign <- signs]
   return (take quantityOfTx sts)
 
 getTransactions :: [KeyPair] -> QuantityOfTransactions-> IO [Transaction] --IO DAG
@@ -56,12 +55,13 @@ getTransactions keys quantityTx = do
 -- generate N transactions
 genNNTx :: Int -> IO [Transaction]
 genNNTx quantityOfTx = do
-   let ratioKeysToTx = 3
-   let quantityOfKeys = if qKeys < 2 then 2 else qKeys
-                        where qKeys = div quantityOfTx ratioKeysToTx
-   keys <- replicateM quantityOfKeys generateNewRandomAnonymousKeyPair
-   tx <- getTransactions keys quantityOfTx
-   return tx
+    let ratioKeysToTx = 3
+        qKeys = div quantityOfTx ratioKeysToTx
+        quantityOfKeys = if qKeys < 2 then 2 else qKeys
+
+    keys <- replicateM quantityOfKeys generateNewRandomAnonymousKeyPair
+    getTransactions keys quantityOfTx
+
 
 -- accumulate Transcations in acc until it satisfies required Quantity Of Transactions
 loopTransaction :: [LNode KeyPair] -> Int -> IO [Transaction]
@@ -70,4 +70,4 @@ loopTransaction keys'ns requiredQuantityOfTransactions = loop []
    loop acc = do
      let amountRange = (10,20)
      tx <- getSignTransactions requiredQuantityOfTransactions keys'ns amountRange
-     if (length acc >= requiredQuantityOfTransactions) then return acc else do { loop (tx ++ acc)}
+     if length acc >= requiredQuantityOfTransactions then return acc else loop (tx ++ acc)
