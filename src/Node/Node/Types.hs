@@ -258,7 +258,7 @@ instance ToManagerData ManagerNodeData where
 makeNewNodeConfig :: MonadRandom m => m NodeConfig
 makeNewNodeConfig = do
     (aPublicKey,     aPrivateKey)  <- generate curve
-    (aPrivateNumber, aPublicPoint) <- genKayPair curve
+    (aPrivateNumber, aPublicPoint) <- genKeyPair curve
     let aId = keyToId aPublicKey
     pure $ NodeConfig aPrivateNumber aPublicPoint aPrivateKey (toMyNodeId aId)
 
