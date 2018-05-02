@@ -49,15 +49,11 @@ instance Show MsgType where
     show Error  = "error"
 
 
-data InfoMsg = Metric String
-             | Log [LogingTag] MsgType String
-
+data InfoMsg = Metric String | Log [LogingTag] MsgType String
 
 
 sendToServer :: ClientHandle -> String -> IO ()
-sendToServer h s = void $ sendTo (clientSocket h)
-                                 s
-                                (clientAddress h)
+sendToServer h s = void $ sendTo (clientSocket h) s (clientAddress h)
 
 serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> Integer -> IO ()
 serveInfoMsg statsdInfo logsInfo chan aId = do
