@@ -79,7 +79,7 @@ data MsgToSender where
     SenderTerminate :: MsgToSender
 
 data MsgToMainActorFromPP
-    = MicroblockFromPP Microblock
+    = MicroblockFromPP Microblock UUID
     | BroadcastRequestFromPP B.ByteString IdFrom NodeType
     | NewConnectWithPP UUID NodeType (Chan NNToPPMessage)
     | MsgResendingToPP IdFrom IdTo B.ByteString
@@ -140,11 +140,18 @@ type IpPort = (HostAddress, PortNumber)
 type ShardingChan = Chan N.ShardingNodeAction
 type MaybeChan a = Maybe (Chan a)
 
+data PPNode = PPNode {
+        _ppType :: NodeType
+    ,   _ppChan :: Chan NNToPPMessage
+  }
+  deriving (Eq)
+
+
+
 data NodeBaseData = NodeBaseData {
         nodeBaseDataExitChan            :: Chan ExitMsg
     ,   nodeBaseDataNodes               :: M.Map NodeId Node
-    -- TODO: sending msg about closing of the socket...
-    --  nodeBaseDataPPNodes             :: M.Map UUID PPNode
+    ,   nodeBaseDataPpNodes             :: M.Map UUID PPNode
     ,   nodeBaseDataBootNodes           :: BootNodeList
     ,   nodeBaseDataAnswerChan          :: Chan Answer
     ,   nodeBaseDataBroadcastNum        :: Int
@@ -167,16 +174,8 @@ makeNodeBaseData :: Chan ExitMsg
                  -> Chan InfoMsg
                  -> NodeBaseData
 makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan = NodeBaseData
-    aExitChan
-    M.empty
-    aList
-    aAnswerChan
-    0
-    Nothing
-    aMicroblockChan
-    Nothing
-    Nothing
-    False
+    aExitChan M.empty M.empty aList aAnswerChan 0 Nothing aMicroblockChan
+    Nothing Nothing False
 
 -- | TODO: Нужно отрефакторить, уменьшить колво ключей.
 data NodeConfig = NodeConfig {
@@ -316,6 +315,9 @@ makeNode aChan aHostAdress aPortNumber = Node {
 
 defaultServerPort :: PortNumber
 defaultServerPort = 3000
+
+
+makeLenses ''PPNode
 
 --
 --

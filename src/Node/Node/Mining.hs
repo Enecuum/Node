@@ -58,10 +58,35 @@ managerMining ch aMd = forever $ do
         opt isClientIsDisconnected $ miningNodeAnswerClientIsDisconnected aMd
 
         opt isNewTransaction            $ answerToNewTransaction aMd
-        opt isBlockMadeMsg              $ answerToBlockMadeMsg aMd
+        --opt isBlockMadeMsg              $ answerToBlockMadeMsg aMd
         opt isInitDatagram              $ answerToSendInitDatagram ch aMd
         opt isShardingNodeRequestMsg    $ answerToShardingNodeRequestMsg aMd
         opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
+
+        opt isMsgFromPP                 $ answeToMsgFromPP aMd
+
+answeToMsgFromPP :: IORef ManagerNodeData ->  ManagerMiningMsgBase ->  IO ()
+answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
+    aData <- readIORef aMd
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $  "Recived msg from PP " ++ show aMsg
+    case aMsg of
+        MicroblockFromPP aMicroblock aSenderId -> do
+            writeMetric (aData^.infoMsgChan)  $ increment "net.bl.count"
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                "PP node " ++ (show aSenderId) ++ ", create a a microblock: " ++ show aMicroblock
+            sendBroadcast aMd (BroadcastMining $ BroadcastMicroBlock aMicroblock Nothing)
+            sendToShardingLvl aData $
+                T.ShardAcceptAction (microblockToShard aMicroblock)
+
+        BroadcastRequestFromPP aByteString aIdFrom aNodeType -> undefined
+        NewConnectWithPP aUUID aNodeType aChanNNToPPMessage  -> do
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                "A new connect with PP node " ++ (show aUUID) ++ ", the type of node is " ++ show aNodeType
+            modifyIORef aMd $ ppNodes %~ M.insert aUUID
+                (PPNode aNodeType aChanNNToPPMessage)
+
+        MsgResendingToPP aIdFrom aIdTo aByteString           -> undefined
+
 
 miningNodeAnswerClientIsDisconnected
     ::  IORef ManagerNodeData
@@ -305,7 +330,7 @@ sendBroadcast aMd aBroadcastThing = do
     aPackageSignature <- makePackageSignature aData aBroadcastThing
     sendBroadcastThingToNodes aMd aPackageSignature aBroadcastThing
 
-
+{-
 answerToBlockMadeMsg :: ManagerMiningMsg msg =>
     IORef ManagerNodeData -> msg -> IO ()
 answerToBlockMadeMsg aMd (toManagerMiningMsg -> BlockMadeMsg aMicroblock) = do
@@ -317,7 +342,7 @@ answerToBlockMadeMsg aMd (toManagerMiningMsg -> BlockMadeMsg aMicroblock) = do
         T.ShardAcceptAction (microblockToShard aMicroblock)
 
 answerToBlockMadeMsg _ _ = pure ()
-
+-}
 
 notInIndex :: Serialize a => ManagerNodeData -> a -> Bool
 notInIndex aData a = not $ BI.memberR (cryptoHash a) $ aData^.hashMap

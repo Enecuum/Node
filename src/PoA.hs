@@ -7,7 +7,7 @@ module PoA (
 import              Node.Data.NetPackage
 import              Data.Hex()
 import              Data.Serialize()
-import              Control.Monad (forM_, void, forever)
+import              Control.Monad (forM_, void, forever, unless)
 import              Network.Socket.ByteString(sendAll, recvFrom)
 import              Service.Network.Base
 import              Service.Network.TCP.Client()
@@ -21,7 +21,7 @@ import              System.Random.Shuffle
 import              Data.String
 import qualified    Data.ByteString as B
 import              Data.Aeson as A
-
+import              Control.Exception
 import              Node.Node.Base
 import              Node.Data.Data()
 import              Node.Data.NodeTypes
@@ -52,12 +52,16 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
         aNewChan  <- newChan
         -- writeChan ch $ connecting to PoA, the PoA have id.
         void $ race
-            (aSender aSocket aNewChan)
+            (aSender aId aSocket aNewChan)
             (aReceiver aId aSocket aNewChan)
   where
-    aSender aSocket aNewChan = forever $ do
+    aSender aId aSocket aNewChan = (forever $ do
         aMsg <- readChan aNewChan
-        sendAll aSocket $ myEncode aMsg
+        sendAll aSocket $ myEncode aMsg) `finally` (do
+            aIsEmpty <- isEmptyMVar aId
+            unless aIsEmpty $ do
+                aDeadId <- readMVar aId
+                writeChan ch $ ppNodeIsDisconected aDeadId)
 
     aReceiver aId aSocket aNewChan = do
         (aMsg, _) <- recvFrom aSocket (1024*100)
@@ -73,9 +77,14 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
                         writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
                         sendAll aSocket $ fromString.show $ A.encode $ ResponseTransaction aTransaction
 
-                MsgMicroblock aMicroblock -> do
-                    writeLog aInfoChan [ServePoATag] Info $ "Recived MBlock: " ++ show aMicroblock
-                    sendMsgToNetLvlFromPP ch $ MicroblockFromPP aMicroblock
+                MsgMicroblock aMicroblock
+                    | not aOk -> do
+                        aSenderId <- readMVar aId
+                        writeLog aInfoChan [ServePoATag] Info $ "Recived MBlock: " ++ show aMicroblock
+                        sendMsgToNetLvlFromPP ch $ MicroblockFromPP aMicroblock aSenderId
+                    | otherwise -> do
+                        writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without UUID " ++ show aMsg
+                        sendAll aSocket $ myEncode RequestUUIDToPP
 
                 RequestBroadcast aRecipientType aBroadcastMsg
                     | not aOk -> do
