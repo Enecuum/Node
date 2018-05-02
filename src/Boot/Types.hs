@@ -10,7 +10,7 @@ import              Control.Concurrent.Chan
 import              Node.Template.Constructor
 import qualified    Data.Set                        as S
 import qualified    Data.ByteString                 as B
-
+import              PoA.Types
 import              Node.Node.Types
 import              Sharding.Types.Node as N
 import              Data.IORef

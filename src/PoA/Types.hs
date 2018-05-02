@@ -28,7 +28,7 @@ import              Data.IP
 
 -- TODO finding of optimal broadcast node for PoA/PoW node. ???
 
-newtype UUID    = UUID    Point deriving Show
+newtype UUID    = UUID    Point deriving (Show, Ord, Eq)
 newtype IdFrom  = IdFrom  UUID  deriving Show
 newtype IdTo    = IdTo    UUID  deriving Show
 
@@ -66,7 +66,12 @@ data PPToNNMessage
         microblock :: Microblock
     }
 
-data NodeType = PoW | PoA deriving Show
+    -- О том, что закрылся ма кроблок.
+    -- | MsgMacroblock {
+    --     macroblock :: Macroblock
+    -- }
+
+data NodeType = PoW | PoA deriving (Eq, Show)
 
 
 data Connect = Connect HostAddress PortNumber deriving Show

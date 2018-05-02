@@ -53,6 +53,7 @@ managerMsgFuncListData = toList $ do
     "initDatagram"          +: [["Chan", "MsgToSender"], ["HostAddress"], ["B.ByteString"]]
     "connectivityQuery"     +: []
     "msgFromPP"             +: [["MsgToMainActorFromPP"]]
+    "ppNodeIsDisconected"   +: [["UUID"]]
     "disconnectNode"        +: [["NodeId"]]
     "sendInitDatagram"      +: [["HostAddress"], ["PortNumber"], ["NodeId"]]
     "shardingNodeRequestMsg" +: [["N.ShardingNodeRequestMsg"]]
@@ -85,6 +86,7 @@ nodeConfigList = toList $ do
 
 nodeBaseDataList = toList $ do
     "nodes"             !: ["M.Map", "NodeId", "Node"]
+    "ppNodes"           !: ["M.Map", "UUID", "PPNode"]
     "exitChan"          !: ["Chan", "ExitMsg"]
     "bootNodes"         !: ["BootNodeList"]
     "answerChan"        !: ["Chan", "Answer"]
