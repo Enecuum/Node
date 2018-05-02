@@ -78,15 +78,16 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
             sendToShardingLvl aData $
                 T.ShardAcceptAction (microblockToShard aMicroblock)
 
-        BroadcastRequestFromPP aByteString aIdFrom aNodeType -> undefined
         NewConnectWithPP aUUID aNodeType aChanNNToPPMessage  -> do
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "A new connect with PP node " ++ (show aUUID) ++ ", the type of node is " ++ show aNodeType
             modifyIORef aMd $ ppNodes %~ M.insert aUUID
                 (PPNode aNodeType aChanNNToPPMessage)
 
+        BroadcastRequestFromPP aByteString aIdFrom aNodeType -> undefined
         MsgResendingToPP aIdFrom aIdTo aByteString           -> undefined
 
+-- TODO:  определение "места" где должа находиться PP нода.
 
 miningNodeAnswerClientIsDisconnected
     ::  IORef ManagerNodeData
