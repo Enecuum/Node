@@ -269,7 +269,7 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
         aData <- readIORef md
         when (verify (aTraceRouting, aRequestPackage)) $ case aTraceRouting of
             ToDirect _ aPointTo _ -> do
-                let aMaybeNode = getClosedNodeByDirect aData (toPoint aPointTo)
+                let aMaybeNode = getClosedNodeByDirect aData (toPoint aPointTo) aIsMiningLvlMsg
                 whenJust aMaybeNode $ \aNode -> do
                     aNewTrace <- addToTrace
                         aTraceRouting
@@ -290,6 +290,12 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                 processing aChan md aSignature aTraceRouting aRequest
             RequestNetLvlPackage aRequest aSignature    ->
                 processing aChan md aSignature aTraceRouting aRequest
+            RequestMiningLvlPackage aRequest aSignature -> 
+                processing aChan md aSignature aTraceRouting aRequest
+
+        aIsMiningLvlMsg = case aRequestPackage of
+            RequestMiningLvlPackage{}  -> True
+            _                          -> False
 
 isItRequestForMe :: ManagerNodeData -> TraceRouting -> Bool
 isItRequestForMe aData = \case

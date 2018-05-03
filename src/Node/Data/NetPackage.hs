@@ -80,7 +80,8 @@ data RequestPackage where
         ::  Request NetLvl
         ->  PackageSignature
         ->  RequestPackage
-    RequestMiningLvl
+
+    RequestMiningLvlPackage
         ::  Request MiningLvl
         ->  PackageSignature
         ->  RequestPackage

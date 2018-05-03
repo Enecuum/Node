@@ -35,6 +35,7 @@ import              Node.Data.MakeTraceRouting
 import              Node.Data.GlobalLoging
 import              Service.InfoMsg
 import              Data.Maybe
+import              PoA.Types
 
 
 class Processing aNodeData aPackage where
@@ -246,6 +247,15 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
                 aSendNetLvlResponse aBroadcastListResponce
 
 
+instance Processing (IORef ManagerNodeData) (Request MiningLvl) where
+    processing _ aMd _ _ aRequest = do
+        aData <- readIORef aMd
+        case aRequest of
+            PPMessage aByteString (IdFrom aUuidFrom) (IdTo aId)
+                | Just aNode <- aData^.ppNodes.at aId ->
+                    writeChan (aNode^.ppChan) $ MsgMsgToPP aUuidFrom aByteString
+                | otherwise -> writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
+                    "This PP does not exist: " ++ show aId
 
 sendToShardingLvl :: ManagerData md => md -> T.ShardingNodeAction -> IO ()
 sendToShardingLvl aData aMsg = whenJust (aData^.shardingChan) $ \aChan ->
@@ -303,7 +313,7 @@ getClosedNode aTraceRouting aData = case aTraceRouting of
         | Just aNextNodeId <- lookupNextNode aTrace -> do
             let aNewTrace = traceDrop aNextNodeId aTrace
             (aNextNodeId `M.lookup` (aData^.nodes), aNewTrace)
-        | otherwise -> (getClosedNodeByDirect aData (toPoint aPointTo), cleanTrace aTrace)
+        | otherwise -> (getClosedNodeByDirect aData (toPoint aPointTo) False, cleanTrace aTrace)
     ToNode _ (PackageSignature (toNodeId -> aNodeId) _ _) ->
         (aNodeId `M.lookup` (aData^.nodes), [])
 
