@@ -77,7 +77,7 @@ instance LevelRequestContractor LogicLvl where
     request = RequestLogicLvlPackage
 
 instance LevelRequestContractor MiningLvl where
-    request = RequestMiningLvl
+    request = RequestMiningLvlPackage
 
 --instance MakeAndSendTraceRouting (Responce NetLvl) where
 
@@ -97,21 +97,25 @@ closedToPointNeighbor
     =>  DistanceTo Node b
     =>  s
     ->  b
+    ->  Bool
     ->  [Node]
-closedToPointNeighbor aData aPointTo = sortOn
-    (`distanceTo`aPointTo) $ M.elems $ aData^.nodes
+closedToPointNeighbor aData aPointTo aFilterBool =
+    sortOn (`distanceTo` aPointTo) $ aFilter $ M.elems $ aData^.nodes
+  where
+    aFilter = if aFilterBool then filter (^.isBroadcast) else id
 
 
-getClosedNodeByDirect :: ManagerData md => md -> Point -> Maybe Node
-getClosedNodeByDirect aData aPoint =
-    case closedToPointNeighbor aData aPoint of
+getClosedNodeByDirect :: ManagerData md => md -> Point -> Bool -> Maybe Node
+getClosedNodeByDirect aData aPoint aFilterBool =
+    case closedToPointNeighbor aData aPoint aFilterBool of
         aNode:_ | not $ amIClose aData aNode (fromPoint aPoint :: PointTo)
                 -> Just aNode
         _       -> Nothing
 
+
 getClosedNodeByDirectUnsafe ::  ManagerData md => md -> Point -> Maybe Node
 getClosedNodeByDirectUnsafe aData aPoint =
-    case closedToPointNeighbor aData aPoint of
+    case closedToPointNeighbor aData aPoint False of
         aNode:_ -> Just aNode
         _       -> Nothing
 
