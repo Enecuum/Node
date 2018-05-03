@@ -76,6 +76,9 @@ instance LevelRequestContractor NetLvl where
 instance LevelRequestContractor LogicLvl where
     request = RequestLogicLvlPackage
 
+instance LevelRequestContractor MiningLvl where
+    request = RequestMiningLvl
+
 --instance MakeAndSendTraceRouting (Responce NetLvl) where
 
 

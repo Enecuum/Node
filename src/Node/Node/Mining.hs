@@ -46,6 +46,7 @@ import              Service.InfoMsg
 import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.Verification
 import              Node.Data.GlobalLoging
+import              PoA.Types
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
 managerMining ch aMd = forever $ do
@@ -73,21 +74,37 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
         MicroblockFromPP aMicroblock aSenderId -> do
             writeMetric (aData^.infoMsgChan)  $ increment "net.bl.count"
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                "PP node " ++ (show aSenderId) ++ ", create a a microblock: " ++ show aMicroblock
-            sendBroadcast aMd (BroadcastMining $ BroadcastMicroBlock aMicroblock Nothing)
+                "PP node " ++ show aSenderId ++ ", create a a microblock: " ++ show aMicroblock
+            sendBroadcast aMd (BroadcastMicroBlock aMicroblock Nothing)
             sendToShardingLvl aData $
                 T.ShardAcceptAction (microblockToShard aMicroblock)
 
         NewConnectWithPP aUUID aNodeType aChanNNToPPMessage  -> do
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                "A new connect with PP node " ++ (show aUUID) ++ ", the type of node is " ++ show aNodeType
+                "A new connect with PP node " ++ show aUUID ++ ", the type of node is " ++ show aNodeType
             modifyIORef aMd $ ppNodes %~ M.insert aUUID
                 (PPNode aNodeType aChanNNToPPMessage)
 
-        BroadcastRequestFromPP aByteString aIdFrom aNodeType -> undefined
-        MsgResendingToPP aIdFrom aIdTo aByteString           -> undefined
+        BroadcastRequestFromPP aByteString aIdFrom aNodeType ->
+            sendBroadcast aMd (BroadcastPPMsg aByteString aNodeType aIdFrom)
 
--- TODO:  определение "места" где должа находиться PP нода.
+        MsgResendingToPP aIdFrom@(IdFrom aUuidFrom) aIdTo@(IdTo aId) aByteString
+            | Just aNode <- aData^.ppNodes.at aId ->
+              writeChan (aNode^.ppChan) $ MsgMsgToPP aUuidFrom aByteString
+            | otherwise -> do
+                let aRequest = PPMessage aByteString aIdFrom aIdTo
+
+                    uuidToNodePosition :: UUID -> NodePosition
+                    uuidToNodePosition (UUID aPoint) = toNodePosition aPoint
+
+                makeAndSendTo aData (uuidToNodePosition aId) aRequest
+
+
+answeToMsgFromPP _ _ = error "answeToMsgFromPP"
+
+
+-- TODO: определение "места" где должа находиться PP нода.
+-- TODO: бут нода механизм получения адреса
 
 miningNodeAnswerClientIsDisconnected
     ::  IORef ManagerNodeData
@@ -98,8 +115,8 @@ miningNodeAnswerClientIsDisconnected aMd
         aData <- readIORef aMd
         whenJust (aNodeId `M.lookup`(aData^.nodes)) $ \aNode -> do
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $  "The node " ++ show aNodeId ++ " is disconnected."
-            when (aChan == (aNode^.chan)) $ do
-                modifyIORef aMd $ (nodes %~ M.delete aNodeId)
+            when (aChan == (aNode^.chan)) $
+                modifyIORef aMd $ nodes %~ M.delete aNodeId
 miningNodeAnswerClientIsDisconnected _ _ = pure ()
 
 
@@ -120,20 +137,20 @@ answerToShardingNodeRequestMsg aMd
                     ++ ". The position is "
                     ++ show aMyNodePosition ++ "."
                 sendBroadcast aMd
-                    (BroadcastLogic $ BroadcastPosition
+                    (BroadcastPosition
                         (aData^.myNodeId)
                         (toNodePosition aMyNodePosition))
 
             T.IamAwakeRequst _ aMyNodePosition -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $aLogMsg "awake logic lvl"
                 sendBroadcast aMd
-                    (BroadcastLogic $ BroadcastPosition
+                    (BroadcastPosition
                         (aData^.myNodeId)
                         (toNodePosition aMyNodePosition))
 
             T.NeighborListRequest -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $aLogMsg "neighbors"
-                makeAndSendTo aData (M.keys $ aData^.nodes) $
+                makeAndSendTo aData (M.keys $ aData^.nodes)
                     NeighborListRequestPackage
 
             T.ShardIndexRequest aDistance aNodePositions -> do
@@ -141,7 +158,7 @@ answerToShardingNodeRequestMsg aMd
                 whenJust (aData^.myNodePosition) $ \aMyPosition -> do
                     let aRequest = ShardIndexRequestPackage
                             (toNodePosition aMyPosition) aDistance
-                    forM_ aNodePositions $ \aPosition -> do
+                    forM_ aNodePositions $ \aPosition ->
                         makeAndSendTo aData aPosition aRequest
 
             T.ShardListRequest shardHashes -> do
@@ -159,11 +176,11 @@ answerToShardingNodeRequestMsg aMd
                 | aData^.iAmBroadcast -> if
                     | Just _ <- aData^.nodes.at aNodeId -> do
                         aLogAboutAliveRequest aNodeId
-                        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "The node is alive."
+                        writeLog (aData^.infoMsgChan) [NetLvlTag] Info "The node is alive."
                         return ()
                     | otherwise -> do
                         aLogAboutAliveRequest aNodeId
-                        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "The node is dead."
+                        writeLog (aData^.infoMsgChan) [NetLvlTag] Info "The node is dead."
                         sendToShardingLvl aData $ T.TheNodeIsDead aNodeId
                 | otherwise -> do
                     let aListOfBroatcastPosition = concat $ do
@@ -172,7 +189,7 @@ answerToShardingNodeRequestMsg aMd
                                     -> return [(aId, aPosition)]
                                 | otherwise -> return []
 
-                        aBroadcastNodeId = take 1 $(^._1) <$> sortOn
+                        aBroadcastNodeId = take 1 $ (^._1) <$> sortOn
                             (\a -> distanceTo (a^._2) aNodePosition)
                             aListOfBroatcastPosition
                     aLogAboutAliveRequest aNodeId
@@ -188,7 +205,7 @@ answerToDeleteOldestMsg
     ->  IO ()
 answerToDeleteOldestMsg aMd _ = do
     aData <- readIORef aMd
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Cleaning of index of bradcasted msg."
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of index of bradcasted msg."
     aTime <- getTime Realtime
     modifyIORef aMd $ hashMap %~ BI.filter
         (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs 3000000)
@@ -207,10 +224,10 @@ instance BroadcastAction ManagerNodeData where
 instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
     makeAction aChan md aNodeId aTraceRouting aResponcePackage = do
         aData <- readIORef md
-        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Recived a responce package."
+        writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Recived a responce package."
         if verify (aTraceRouting, aResponcePackage) then if
             | isItMyResponce aNodeId aTraceRouting  -> do
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "The responce is for me. The processing of responce."
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info "The responce is for me. The processing of responce."
                 aProcessingOfAction
             | otherwise -> aSendToNeighbor aData
         else writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
@@ -225,13 +242,13 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
                 processing aChan md aSignature aTraceRouting aResponse
 
         aSendToNeighbor aData = do
-            writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "This is someone else's message. Resending of responce."
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info "This is someone else's message. Resending of responce."
             let (aNode, aNewTrace) = getClosedNode aTraceRouting aData
                 aMaybePoints = case aTraceRouting of
                     ToDirect aPointFrom aPointTo _
                         -> Just (aPointFrom, aPointTo)
                     _   -> Nothing
-            whenJust aMaybePoints $ \(aPointFrom, aPointTo) -> do
+            whenJust aMaybePoints $ \(aPointFrom, aPointTo) ->
                 whenJust aNode $ sendToNode (makeResponse
                     (ToDirect aPointFrom aPointTo aNewTrace) aResponcePackage)
 
@@ -277,7 +294,7 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
 isItRequestForMe :: ManagerNodeData -> TraceRouting -> Bool
 isItRequestForMe aData = \case
     ToNode aNodeId _      -> toNodeId (aData^.myNodeId) == aNodeId
-    ToDirect _ _ _ -> False
+    ToDirect {} -> False
 
 
 makeRequest
@@ -311,7 +328,7 @@ answerToNewTransaction :: IORef ManagerNodeData -> ManagerMiningMsgBase -> IO ()
 answerToNewTransaction aMd (NewTransaction aTransaction) = do
     aData <- readIORef aMd
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "I create a transaction: " ++ show aTransaction
-    sendBroadcast aMd (BroadcastMining $ BroadcastTransaction aTransaction Nothing)
+    sendBroadcast aMd (BroadcastTransaction aTransaction Nothing)
 
     writeMetric (aData^.infoMsgChan)  $ increment "net.tx.count"
     writeMetric (aData^.infoMsgChan)  $ add
@@ -324,26 +341,29 @@ answerToNewTransaction aMd (NewTransaction aTransaction) = do
 answerToNewTransaction _ _ = error
     "answerToNewTransaction: something unexpected  has happened."
 
-sendBroadcast :: IORef ManagerNodeData -> BroadcastThing -> IO ()
-sendBroadcast aMd aBroadcastThing = do
-    aData <- readIORef aMd
-    addInIndex aBroadcastThing aMd
-    aPackageSignature <- makePackageSignature aData aBroadcastThing
-    sendBroadcastThingToNodes aMd aPackageSignature aBroadcastThing
 
-{-
-answerToBlockMadeMsg :: ManagerMiningMsg msg =>
-    IORef ManagerNodeData -> msg -> IO ()
-answerToBlockMadeMsg aMd (toManagerMiningMsg -> BlockMadeMsg aMicroblock) = do
-    aData <- readIORef aMd
-    writeMetric (aData^.infoMsgChan)  $ increment "net.bl.count"
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "I create a a microblock: " ++ show aMicroblock
-    sendBroadcast aMd (BroadcastMining $ BroadcastMicroBlock aMicroblock Nothing)
-    sendToShardingLvl aData $
-        T.ShardAcceptAction (microblockToShard aMicroblock)
+---- IDEA: Вынести в отдельный модуль????
+--------------------------------------------------------------------------------
+class SendBroadcast a where
+    sendBroadcast :: IORef ManagerNodeData -> a -> IO ()
 
-answerToBlockMadeMsg _ _ = pure ()
--}
+instance SendBroadcast BroadcastThing where
+    sendBroadcast aMd aBroadcastThing = do
+        aData <- readIORef aMd
+        addInIndex aBroadcastThing aMd
+        aPackageSignature <- makePackageSignature aData aBroadcastThing
+        sendBroadcastThingToNodes aMd aPackageSignature aBroadcastThing
+
+instance SendBroadcast (BroadcastThingLvl NetLvl) where
+    sendBroadcast aMd = sendBroadcast aMd . BroadcastNet
+
+instance SendBroadcast (BroadcastThingLvl LogicLvl) where
+    sendBroadcast aMd = sendBroadcast aMd . BroadcastLogic
+
+instance SendBroadcast (BroadcastThingLvl MiningLvl) where
+    sendBroadcast aMd = sendBroadcast aMd . BroadcastMining
+--------------------------------------------------------------------------------
+
 
 notInIndex :: Serialize a => ManagerNodeData -> a -> Bool
 notInIndex aData a = not $ BI.memberR (cryptoHash a) $ aData^.hashMap

@@ -47,7 +47,7 @@ servePoA ::
     -> IO ()
 servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
     \aSocket -> do
-        sendAll aSocket $ myEncode RequestUUIDToPP
+        sendAll aSocket $ myEncode RequestNodeIdToPP
         aId <- newEmptyMVar
         aNewChan  <- newChan
         -- writeChan ch $ connecting to PoA, the PoA have id.
@@ -55,7 +55,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
             (aSender aId aSocket aNewChan)
             (aReceiver aId aSocket aNewChan)
   where
-    aSender aId aSocket aNewChan = (forever $ do
+    aSender aId aSocket aNewChan = forever (do
         aMsg <- readChan aNewChan
         sendAll aSocket $ myEncode aMsg) `finally` (do
             aIsEmpty <- isEmptyMVar aId
@@ -84,7 +84,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
                         sendMsgToNetLvlFromPP ch $ MicroblockFromPP aMicroblock aSenderId
                     | otherwise -> do
                         writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without UUID " ++ show aMsg
-                        sendAll aSocket $ myEncode RequestUUIDToPP
+                        sendAll aSocket $ myEncode RequestNodeIdToPP
 
                 RequestBroadcast aRecipientType aBroadcastMsg
                     | not aOk -> do
@@ -94,7 +94,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
                             BroadcastRequestFromPP aBroadcastMsg (IdFrom aSenderId) aRecipientType
                     | otherwise -> do
                         writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without UUID " ++ show aMsg
-                        sendAll aSocket $ myEncode RequestUUIDToPP
+                        sendAll aSocket $ myEncode RequestNodeIdToPP
                 RequestConnects -> do
                     NodeInfoListNetLvl aRecords <- readRecordsFromNodeListFile
                     aShuffledRecords <- shuffleM aRecords
@@ -102,7 +102,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
                     writeLog aInfoChan [ServePoATag] Info $ "Send connections " ++ show aConnects
                     sendAll aSocket $ myEncode $ ResponseConnects aConnects
 
-                ResponseUUIDToNN aUuid aNodeType -> do
+                ResponseNodeIdToNN aUuid aNodeType -> do
                     if aOk then putMVar aId aUuid else void $ swapMVar aId aUuid
                     writeLog aInfoChan [ServePoATag] Info $
                         "Accept UUID " ++ show aUuid ++ " with type " ++ show aNodeType
@@ -117,7 +117,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
                         sendMsgToNetLvlFromPP ch $ MsgResendingToPP (IdFrom aSenderId) (IdTo aDestination) aMsgToNN
                     | otherwise     -> do
                         writeLog aInfoChan [ServePoATag] Warning $ "Can't send request without UUID " ++ show aMsgToNN
-                        sendAll aSocket $ myEncode RequestUUIDToPP
+                        sendAll aSocket $ myEncode RequestNodeIdToPP
 
             Nothing ->
                 -- TODO: Вписать ID если такой есть.
