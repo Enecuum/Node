@@ -13,10 +13,12 @@ module Node.Node.BroadcastProcessing where
 --
 import              Data.IORef
 import              Data.Serialize
+import qualified    Data.Map as M
 import              Lens.Micro
 import              Control.Concurrent
 import              Control.Monad.Extra
 
+import              PoA.Types
 import              Service.Types
 import              Service.InfoMsg
 import              Node.Node.Types
@@ -72,6 +74,17 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
     processingOfBroadcast aMd aMsg = do
         aData <- readIORef aMd
         case aMsg of
+            -- передаем полученные по сети сообщения PP
+            BroadcastPPMsg aBroadcastMsg aNodeType aIdFrom -> do
+                let aFilteredNode :: [Chan NNToPPMessage]
+                    aFilteredNode = do
+                        aNode <- snd <$> M.toList (aData^.ppNodes)
+                        guard $ aNode^.ppType == aNodeType
+                        return $ aNode^.ppChan
+
+                forM_ aFilteredNode $ \aChan ->
+                    writeChan aChan $ MsgBroadcastMsg aBroadcastMsg aIdFrom
+
             -- добавлям полученую по сети транзакцию в пендинг
             BroadcastTransaction aTransaction _ -> do
                 writeChan (aData^.transactions) aTransaction

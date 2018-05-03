@@ -1,10 +1,18 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, DuplicateRecordFields, FlexibleInstances #-}
+{-# LANGUAGE
+        OverloadedStrings
+    ,   ScopedTypeVariables
+    ,   DuplicateRecordFields
+    ,   FlexibleInstances
+    ,   DeriveGeneric
+    ,   GeneralizedNewtypeDeriving
+  #-}
 module PoA.Types where
 
 import              Data.Word()
 import qualified    Data.ByteString as B
 import              Data.Aeson
 import              Data.String
+import              GHC.Generics
 import qualified    Data.Text.Lazy as T
 import              Data.Hex
 import              Control.Monad.Extra
@@ -28,9 +36,9 @@ import              Data.IP
 
 -- TODO finding of optimal broadcast node for PoA/PoW node. ???
 
-newtype UUID    = UUID    Point deriving (Show, Ord, Eq)
-newtype IdFrom  = IdFrom  UUID  deriving Show
-newtype IdTo    = IdTo    UUID  deriving Show
+newtype UUID    = UUID    Point deriving (Show, Ord, Eq, Generic, S.Serialize)
+newtype IdFrom  = IdFrom  UUID  deriving (Show, Ord, Eq, Generic, S.Serialize)
+newtype IdTo    = IdTo    UUID  deriving (Show, Ord, Eq, Generic, S.Serialize)
 
 
 data PPToNNMessage
@@ -49,8 +57,8 @@ data PPToNNMessage
     | RequestConnects
 
     -- Ответы с UUID
-    | ResponseUUIDToNN {
-        uuid      :: UUID,
+    | ResponseNodeIdToNN {
+        nodeId    :: UUID,
         nodeType  :: NodeType
     }
 
@@ -71,8 +79,9 @@ data PPToNNMessage
     --     macroblock :: Macroblock
     -- }
 
-data NodeType = PoW | PoA deriving (Eq, Show)
+data NodeType = PoW | PoA deriving (Eq, Show, Ord, Generic)
 
+instance S.Serialize NodeType
 
 data Connect = Connect HostAddress PortNumber deriving Show
 
@@ -81,7 +90,7 @@ data Connect = Connect HostAddress PortNumber deriving Show
 -- MsgToMainActorFromPP
 
 data NNToPPMessage
-    = RequestUUIDToPP
+    = RequestNodeIdToPP
 
     | ResponseConnects {
       connects  :: [Connect]
@@ -102,7 +111,8 @@ data NNToPPMessage
     }
 
     | MsgBroadcastMsg {
-        message :: B.ByteString
+        message :: B.ByteString,
+        idFrom  :: IdFrom
     }
 
     | MsgNewNodeInNet {
@@ -145,11 +155,11 @@ instance FromJSON PPToNNMessage where
             ("Request","Connects")    -> return RequestConnects
 
 
-            ("Response", "UUID") -> do
-                aUuid :: T.Text <- aMessage .: "uuid"
+            ("Response", "NodeId") -> do
+                aUuid :: T.Text <- aMessage .: "nodeId"
                 aPoint    <- myUnhex aUuid
                 aNodeType :: T.Text <- aMessage .: "nodeType"
-                return (ResponseUUIDToNN (UUID aPoint) (readNodeType aNodeType))
+                return (ResponseNodeIdToNN (UUID aPoint) (readNodeType aNodeType))
 
             ("Msg", "MsgTo") -> do
                 aDestination :: T.Text <- aMessage .: "destination"
@@ -188,9 +198,9 @@ decodeList aList
 
 
 instance ToJSON NNToPPMessage where
-    toJSON RequestUUIDToPP = object [
+    toJSON RequestNodeIdToPP = object [
         "tag"   .= ("Request" :: String),
-        "type"  .= ("UUID"    :: String)
+        "type"  .= ("NodeId"  :: String)
       ]
 
     toJSON (MsgMsgToPP aUuid aMessage) = object [
@@ -219,8 +229,9 @@ instance ToJSON NNToPPMessage where
         "transaction" .= (hex . show $ S.encode aTransaction)
       ]
 
-    toJSON (MsgBroadcastMsg aMessage) = object [
-        "messages"  .= (show.hex $ aMessage)
+    toJSON (MsgBroadcastMsg aMessage (IdFrom aUuid)) = object [
+        "messages"  .= (show.hex $ aMessage),
+        "idFrom"    .= uuidToString aUuid
       ]
 
 

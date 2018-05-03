@@ -25,6 +25,7 @@ import              Service.Types (Transaction, Microblock)
 import              Sharding.Types.ShardTypes
 import              Sharding.Space.Point as P
 import              Sharding.Space.Distance
+import              PoA.Types
 
 -- | Data for resending from NetNode A to NetNode B.
 data Package where
@@ -79,6 +80,10 @@ data RequestPackage where
         ::  Request NetLvl
         ->  PackageSignature
         ->  RequestPackage
+    RequestMiningLvl
+        ::  Request MiningLvl
+        ->  PackageSignature
+        ->  RequestPackage
   deriving (Eq, Generic, Show)
 
 
@@ -130,6 +135,14 @@ data instance Request NetLvl where
     IsYouBrodcast           :: Request NetLvl
   deriving (Eq, Generic, Show)
 
+
+data instance Request MiningLvl where
+    PPMessage
+        ::  B.ByteString
+        ->  IdFrom
+        ->  IdTo
+        ->  Request MiningLvl
+  deriving (Eq, Show, Generic)
 
 data family Responce a :: *
 
@@ -205,6 +218,12 @@ data instance BroadcastThingLvl LogicLvl where
 
 
 data instance BroadcastThingLvl MiningLvl where
+    BroadcastPPMsg
+        :: B.ByteString
+        -> NodeType
+        -> IdFrom
+        -> BroadcastThingLvl MiningLvl
+
     BroadcastTransaction
         ::  Transaction
         ->  Maybe NodeId
@@ -266,8 +285,10 @@ instance Serialize RequestPackage
 
 instance Serialize (Responce NetLvl)
 instance Serialize (Responce LogicLvl)
+
 instance Serialize (Request  NetLvl)
 instance Serialize (Request  LogicLvl)
+instance Serialize (Request MiningLvl)
 
 instance Serialize (NodeInfoList NetLvl)
 instance Serialize (NodeInfoList LogicLvl)
