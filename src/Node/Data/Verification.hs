@@ -28,6 +28,8 @@ instance Verification RequestPackage where
             verify (aPackageSignature, aPackage)
         RequestNetLvlPackage   aPackage aPackageSignature ->
             verify (aPackageSignature, aPackage)
+        RequestMiningLvlPackage aPackage aPackageSignature ->
+            verify (aPackageSignature, aPackage)
 
 
 instance Verification (TraceRouting, RequestPackage) where

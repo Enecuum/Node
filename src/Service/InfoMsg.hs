@@ -38,9 +38,10 @@ data LogingTag
     | NetLvlTag
     | MiningLvlTag
     | ServePoATag
+    | ServerBootNodeTag
     | GCTag
     | InitTag
-  deriving Show
+  deriving (Show, Enum)
 
 
 instance Show MsgType where
@@ -62,9 +63,7 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
     logHandle    <- openConnect (host logsInfo)   (port logsInfo)
     putStrLn "Logs server connected"
     sendToServer logHandle $ "+node|" ++  show aId ++ "|" ++
-          intercalate "," (show <$> [
-            ConnectingTag, LoadingShardsTag, BroadcatingTag, BootNodeTag,
-            ShardingLvlTag, NetLvlTag, MiningLvlTag, ServePoATag]) ++ "\r\n"
+          intercalate "," (show <$> [ConnectingTag .. InitTag]) ++ "\r\n"
 
     forever $ do
         m <- readChan chan

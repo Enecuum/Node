@@ -19,6 +19,7 @@ import              Boot.Boot
 import              Boot.Types
 import              Node.Lib
 import              Data.Aeson
+import              PoA
 
 main :: IO ()
 main =  do
@@ -29,7 +30,13 @@ main =  do
 
             exitCh <- newChan
             answerCh <- newChan
-            infoCh <- newChan
+            aInfoChan <- newChan
+
+            poa_in  <- try (getEnv "poaInPort") >>= \case
+                    Right item              -> return $ read item
+                    Left (_::SomeException) -> case simpleNodeBuildConfig conf of
+                         Nothing   -> error "Please, specify SimpleNodeConfig"
+                         Just snbc -> return $ poaInPort snbc
 
             stat_h  <- try (getEnv "statsdHost") >>= \case
                     Right item              -> return item
@@ -49,7 +56,8 @@ main =  do
 
 
             void $ startNode conf
-              exitCh answerCh infoCh managerBootNode $ \ch _ aNodeId -> do
+              exitCh answerCh aInfoChan managerBootNode $ \ch _ aNodeId -> do
                   metronomeS 100000 (writeChan ch checkBroadcastNodes)
-                  void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) infoCh (toInteger aNodeId)
+                  void $ forkIO $ serverPoABootNode poa_in aInfoChan
+                  void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChan (toInteger aNodeId)
             void $ readChan exitCh

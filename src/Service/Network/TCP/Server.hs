@@ -1,10 +1,10 @@
 module Service.Network.TCP.Server (runServer) where
 
 import Network.Socket
-import Network.Socket.ByteString
+import Network.Socket.ByteString()
 
 import Control.Monad
-import Data.ByteString (ByteString)
+import Data.ByteString()
 import qualified Control.Exception as E (bracket)
 import Control.Concurrent (forkFinally)
 
