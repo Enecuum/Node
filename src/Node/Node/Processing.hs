@@ -12,19 +12,20 @@
 module Node.Node.Processing where
 
 import qualified    Data.Map                        as M
-import              Data.List.Extra
+import              Data.List.Extra()
 import              Data.IORef
 import              System.Random
 import              Lens.Micro
 import              Lens.Micro.Mtl
 import              Control.Concurrent
 import              Control.Monad.Extra
-import              Crypto.Error
+import              Crypto.Error()
+import              Service.Network.Base
 
 import              Node.Node.Base
 import              Node.Node.Types
-import              Node.Crypto
-import              Node.Data.Data
+import              Node.Crypto()
+import              Node.Data.Data()
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Sharding.Sharding
@@ -47,6 +48,13 @@ class Processing aNodeData aPackage where
         ->  TraceRouting
         ->  aPackage
         ->  IO ()
+
+instance Processing (IORef ManagerNodeData) (Responce MiningLvl) where
+    processing _ aMd _ _ = \case
+        ResponcePPConnection aUuid (Connect aHost aOutPort) -> do
+            aData <- readIORef aMd
+            whenJust (aData^.ppNodes.at aUuid) $ \aPpNode ->
+                writeChan (aPpNode^.ppChan) $ MsgConnect aHost aOutPort
 
 
 -- | Обработка "ответа" для сетевого уровня.
@@ -216,7 +224,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
 instance Processing (IORef ManagerNodeData) (Request NetLvl) where
     processing _ aMd aSignature aTraceRouting aRequest = do
         aData <- readIORef aMd
-        let aSendNetLvlResponse = sendNetLvlResponse
+        let aSendNetLvlResponse = sendResponseTo
                 aTraceRouting aData aRequest aSignature
         writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
             "Recived the  " ++ show aRequest  ++ "."
@@ -248,7 +256,7 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
 
 
 instance Processing (IORef ManagerNodeData) (Request MiningLvl) where
-    processing _ aMd _ _ aRequest = do
+    processing _ aMd aSignature aTraceRouting aRequest = do
         aData <- readIORef aMd
         case aRequest of
             PPMessage aByteString (IdFrom aUuidFrom) (IdTo aId)
@@ -256,32 +264,17 @@ instance Processing (IORef ManagerNodeData) (Request MiningLvl) where
                     writeChan (aNode^.ppChan) $ MsgMsgToPP aUuidFrom aByteString
                 | otherwise -> writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
                     "This PP does not exist: " ++ show aId
+            RequestPPConnection aUuid -> whenJust (aData^.hostAddress) $ \aHost -> do
+                let aResponse = sendResponseTo
+                        aTraceRouting aData aRequest aSignature
+                aResponse $ ResponcePPConnection aUuid (Connect aHost (aData^.outPort))
+
 
 sendToShardingLvl :: ManagerData md => md -> T.ShardingNodeAction -> IO ()
 sendToShardingLvl aData aMsg = whenJust (aData^.shardingChan) $ \aChan ->
     writeChan aChan aMsg
 
 
-sendNetLvlResponse
-    :: ManagerData md
-    =>  TraceRouting
-    ->  md
-    ->  Request NetLvl
-    ->  PackageSignature
-    ->  Responce NetLvl
-    ->  IO ()
-
-sendNetLvlResponse aTraceRouting aData aRequest aSignature aNetPackage = do
-    let (aNode, aTrace) = getClosedNode aTraceRouting aData
-        aRequestPackage = request aRequest aSignature
-
-    aResponsePackageSignature <- makePackageSignature aData
-        (aNetPackage, aRequestPackage)
-    sendResponse aNode
-        (makeNewTraceRouting aTrace aTraceRouting)
-        (ResponceNetLvlPackage aRequestPackage aNetPackage aResponsePackageSignature)
-
--- TEMP: requestToNetLvl + sendNetLvlResponse
 requestToNetLvl
     ::  ManagerNodeData
     ->  TraceRouting
@@ -302,61 +295,5 @@ requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
             (makeNewTraceRouting aTrace aTraceRouting)
             (ResponceLogicLvlPackage aRequestPackage aNetLevetPackage aResponsePackageSignature)
 
-
-getClosedNode
-    ::  ManagerData md
-    =>  TraceRouting
-    ->  md
-    ->  (Maybe Node, [PackageSignature])
-getClosedNode aTraceRouting aData = case aTraceRouting of
-    ToDirect _ aPointTo aTrace
-        | Just aNextNodeId <- lookupNextNode aTrace -> do
-            let aNewTrace = traceDrop aNextNodeId aTrace
-            (aNextNodeId `M.lookup` (aData^.nodes), aNewTrace)
-        | otherwise -> (getClosedNodeByDirect aData (toPoint aPointTo) False, cleanTrace aTrace)
-    ToNode _ (PackageSignature (toNodeId -> aNodeId) _ _) ->
-        (aNodeId `M.lookup` (aData^.nodes), [])
-
-  where
-    cleanTrace aTrace = filter aPredicat $ dropWhile aPredicat aTrace
-      where
-        aPredicat (PackageSignature aNodeId _ _) = aData^.myNodeId /= aNodeId
-
-    lookupNextNode aTrace = if
-        | x:_ <- aIntersect -> Just x
-        | otherwise         -> Nothing
-      where
-        aIntersect      = (signatureToNodeId <$> aTrace) `intersect` aNeighborList
-        aNeighborList   = M.keys (aData^.nodes)
-
-
-sendResponse :: Maybe Node -> TraceRouting -> ResponcePackage -> IO ()
-sendResponse aNode aTraceRouting aPackageResponse = whenJust aNode $
-    sendToNode (makeResponse aTraceRouting aPackageResponse)
-
-
-makeNewTraceRouting :: [PackageSignature] -> TraceRouting -> TraceRouting
-makeNewTraceRouting aSignatures = \case
-    ToDirect aPointFrom aPointTo _  -> ToDirect aPointFrom aPointTo aSignatures
-    ToNode aNodeId (PackageSignature (toNodeId -> aId) aTime aSig) ->
-        ToNode aId (PackageSignature (toMyNodeId aNodeId) aTime aSig)
-
-
-traceDrop :: NodeId -> [PackageSignature] -> [PackageSignature]
-traceDrop aNextNodeId = dropWhile
-    (\(PackageSignature (toNodeId -> aId) _ _) -> aId /= aNextNodeId)
-
-
-makeResponse
-    ::  TraceRouting
-    ->  ResponcePackage
-    ->  StringKey
-    ->  CryptoFailable Package
-makeResponse aTraceRouting aResponse = makeCipheredPackage
-    (PackageTraceRoutingResponce aTraceRouting aResponse)
-
-
-signatureToNodeId :: PackageSignature -> NodeId
-signatureToNodeId (PackageSignature (toNodeId -> aNodeId) _ _) = aNodeId
 
 --------------------------------------------------------------------------------

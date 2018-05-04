@@ -20,7 +20,7 @@ import              Data.Either
 import qualified    Data.Serialize as S
 import              Sharding.Space.Point
 import              Service.Types (Microblock(..), Transaction)
-import              Service.Network.Base (HostAddress, PortNumber)
+import              Service.Network.Base
 import              Data.IP
 
 -- TODO: aception of msg from a PoA/PoW.
@@ -83,7 +83,6 @@ data NodeType = PoW | PoA deriving (Eq, Show, Ord, Generic)
 
 instance S.Serialize NodeType
 
-data Connect = Connect HostAddress PortNumber deriving Show
 
 
 -- PP means PoW and PoA

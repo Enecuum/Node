@@ -84,6 +84,8 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
                 "A new connect with PP node " ++ show aUUID ++ ", the type of node is " ++ show aNodeType
             modifyIORef aMd $ ppNodes %~ M.insert aUUID
                 (PPNode aNodeType aChanNNToPPMessage)
+            let aRequest = RequestPPConnection aUUID
+            makeAndSendTo aData (uuidToNodePosition aUUID) aRequest
 
         BroadcastRequestFromPP aByteString aIdFrom aNodeType ->
             sendBroadcast aMd (BroadcastPPMsg aByteString aNodeType aIdFrom)
@@ -93,17 +95,14 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
               writeChan (aNode^.ppChan) $ MsgMsgToPP aUuidFrom aByteString
             | otherwise -> do
                 let aRequest = PPMessage aByteString aIdFrom aIdTo
-
-                    uuidToNodePosition :: UUID -> NodePosition
-                    uuidToNodePosition (UUID aPoint) = toNodePosition aPoint
-
                 makeAndSendTo aData (uuidToNodePosition aId) aRequest
-
+  where
+    uuidToNodePosition :: UUID -> NodePosition
+    uuidToNodePosition (UUID aPoint) = toNodePosition aPoint
 
 answeToMsgFromPP _ _ = error "answeToMsgFromPP"
 
 
--- TODO: бут нода механизм получения адреса
 -- TODO: определение "места" где должа находиться PP нода. (переконект)
 
 miningNodeAnswerClientIsDisconnected
@@ -239,6 +238,8 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
             ResponceNetLvlPackage _ aResponse aSignature ->
                 processing aChan md aSignature aTraceRouting aResponse
             ResponceLogicLvlPackage _ aResponse aSignature ->
+                processing aChan md aSignature aTraceRouting aResponse
+            ResponceMiningLvlPackage _ aResponse aSignature ->
                 processing aChan md aSignature aTraceRouting aResponse
 
         aSendToNeighbor aData = do

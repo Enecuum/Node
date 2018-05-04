@@ -19,7 +19,7 @@ import              GHC.Generics
 import              Crypto.PubKey.ECC.ECDSA (Signature(..))
 import              Crypto.PubKey.ECC.DH
 
-import              Service.Network.Base (HostAddress, PortNumber)
+import              Service.Network.Base
 import              Service.Types (Transaction, Microblock)
 
 import              Sharding.Types.ShardTypes
@@ -100,6 +100,13 @@ data ResponcePackage where
         ->  Responce LogicLvl
         ->  PackageSignature
         ->  ResponcePackage
+
+    ResponceMiningLvlPackage
+        :: RequestPackage
+        -> Responce MiningLvl
+        -> PackageSignature
+        -> ResponcePackage
+
   deriving (Eq, Generic, Show)
 
 
@@ -143,9 +150,16 @@ data instance Request MiningLvl where
         ->  IdFrom
         ->  IdTo
         ->  Request MiningLvl
+    RequestPPConnection :: UUID -> Request MiningLvl
   deriving (Eq, Show, Generic)
 
 data family Responce a :: *
+
+--
+data instance Responce MiningLvl where
+    ResponcePPConnection :: UUID -> Connect -> Responce MiningLvl
+  deriving (Eq, Show, Generic)
+
 
 data instance Responce NetLvl where
     BroadcastListResponce
@@ -286,10 +300,11 @@ instance Serialize RequestPackage
 
 instance Serialize (Responce NetLvl)
 instance Serialize (Responce LogicLvl)
+instance Serialize (Responce MiningLvl)
 
 instance Serialize (Request  NetLvl)
 instance Serialize (Request  LogicLvl)
-instance Serialize (Request MiningLvl)
+instance Serialize (Request  MiningLvl)
 
 instance Serialize (NodeInfoList NetLvl)
 instance Serialize (NodeInfoList LogicLvl)

@@ -135,8 +135,6 @@ data ManagerNodeData = ManagerNodeData {
     ,   managerSendedTransctions    :: BI.Bimap TimeSpec Transaction
   }
 
---type IdIpPort = (NodeId, HostAddress, PortNumber)
-type IpPort = (HostAddress, PortNumber)
 type ShardingChan = Chan N.ShardingNodeAction
 type MaybeChan a = Maybe (Chan a)
 
