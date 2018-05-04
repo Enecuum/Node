@@ -103,8 +103,8 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
 answeToMsgFromPP _ _ = error "answeToMsgFromPP"
 
 
--- TODO: определение "места" где должа находиться PP нода.
 -- TODO: бут нода механизм получения адреса
+-- TODO: определение "места" где должа находиться PP нода. (переконект)
 
 miningNodeAnswerClientIsDisconnected
     ::  IORef ManagerNodeData
@@ -290,7 +290,7 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                 processing aChan md aSignature aTraceRouting aRequest
             RequestNetLvlPackage aRequest aSignature    ->
                 processing aChan md aSignature aTraceRouting aRequest
-            RequestMiningLvlPackage aRequest aSignature -> 
+            RequestMiningLvlPackage aRequest aSignature ->
                 processing aChan md aSignature aTraceRouting aRequest
 
         aIsMiningLvlMsg = case aRequestPackage of

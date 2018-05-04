@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module PoA (
-  servePoA
+        servePoA
+    ,   serverPoABootNode
   )  where
 
 
@@ -37,6 +38,26 @@ myDecode = A.decode.fromString.show
 
 myEncode :: NNToPPMessage -> B.ByteString
 myEncode = fromString.show.A.encode
+
+--
+serverPoABootNode :: PortNumber -> Chan InfoMsg -> IO ()
+serverPoABootNode aRecivePort aInfoChan = runServer aRecivePort $ \aSocket -> do
+    (aMsg, _) <- recvFrom aSocket (1024*100)
+    case myDecode aMsg of
+        Just a -> case a of
+            RequestConnects -> do
+                NodeInfoListNetLvl aRecords <- readRecordsFromNodeListFile
+                aShuffledRecords <- shuffleM aRecords
+                let aConnects = (\(_, b, c) -> Connect b c) <$> take 5 aShuffledRecords
+                writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
+                sendAll aSocket $ myEncode $ ResponseConnects aConnects
+            _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
+                "Brouken message from PP " ++ show aMsg
+        Nothing ->
+            -- TODO: Вписать ID если такой есть.
+            writeLog aInfoChan [ServerBootNodeTag] Warning $
+                "Brouken message from PP " ++ show aMsg
+
 
 servePoA ::
        PortNumber
@@ -123,6 +144,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
                 -- TODO: Вписать ID если такой есть.
                 writeLog aInfoChan [ServePoATag] Warning $
                     "Brouken message from PP " ++ show aMsg
+
 -- TODO class sendMsgToNetLvl
 sendMsgToNetLvlFromPP :: ManagerMsg a => Chan a -> MsgToMainActorFromPP -> IO ()
 sendMsgToNetLvlFromPP aChan aMsg = writeChan aChan $ msgFromPP aMsg
