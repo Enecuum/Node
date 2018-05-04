@@ -1,26 +1,43 @@
 {-# LANGUAGE DeriveGeneric #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Service.Network.Base (
-    HostAddress,
-    ConnectInfo(..),
-    ClientHandle(..),
-    PortNumber(..),
-    showHostAddress,
-    sockAddrToHostAddress
+        HostAddress
+    ,   ConnectInfo(..)
+    ,   ClientHandle(..)
+    ,   PortNumber(..)
+    ,   Connect(..)
+    ,   showHostAddress
+    ,   sockAddrToHostAddress
   ) where
 
 import Network.Socket
 import Data.List
+import Data.Word
+import Data.Serialize
 import GHC.Generics (Generic)
+
 data ConnectInfo = ConnectInfo {
     host :: String
   , port :: PortNumber
   } deriving (Show, Generic)
 
+
 data ClientHandle = ClientHandle {
     clientSocket  :: Socket,
     clientAddress :: SockAddr
   }
+
+
+instance Serialize PortNumber where
+    get = toEnum.fromEnum <$> getWord32be
+    put aPortNumber = put (toEnum.fromEnum $ aPortNumber :: Word32)
+
+
+data Connect = Connect HostAddress PortNumber deriving (Show, Eq, Generic)
+
+instance Serialize Connect
 
 
 -- | Show host adres in 0.0.0.0 form.

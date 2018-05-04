@@ -47,9 +47,6 @@ $(deriveJSON defaultOptions ''NodeId)
 $(deriveJSON defaultOptions ''MyNodeId)
 $(deriveJSON defaultOptions ''ClientId)
 
-instance Serialize PortNumber where
-    get = toEnum.fromEnum <$> getWord32be
-    put aPortNumber = put (toEnum.fromEnum $ aPortNumber :: Word32)
 
 --
 toNodeId :: MyNodeId -> NodeId

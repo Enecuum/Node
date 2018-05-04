@@ -1,6 +1,7 @@
 {-# LANGUAGE
         ViewPatterns
     ,   MultiWayIf
+    ,   LambdaCase
     ,   ScopedTypeVariables
     ,   MultiParamTypeClasses
     ,   FlexibleContexts
@@ -66,18 +67,44 @@ instance (LevelRequestContractor aLvl, Serialize (Request aLvl)) =>
                 whenJust (getClosedNodeByDirectUnsafe aData (toNodePosition aPointTo)) $
                     sendToNode (makeCipheredPackage aNewRequest)
 
+class SendResponseTo aLvl where
+    sendResponseTo
+        :: ManagerData md
+        =>  TraceRouting
+        ->  md
+        ->  Request aLvl
+        ->  PackageSignature
+        ->  Responce aLvl
+        ->  IO ()
+--
+
+instance (LevelRequestContractor aLvl, Serialize (Responce aLvl)) => SendResponseTo aLvl where
+    sendResponseTo aTraceRouting aData aRequest aSignature aNetPackage = do
+        let (aNode, aTrace) = getClosedNode aTraceRouting aData
+            aRequestPackage = request aRequest aSignature
+
+        aResponsePackageSignature <- makePackageSignature aData
+            (aNetPackage, aRequestPackage)
+        sendResponse aNode
+            (makeNewTraceRouting aTrace aTraceRouting)
+            (response aRequestPackage aNetPackage aResponsePackageSignature)
+
 
 class LevelRequestContractor aLvl where
     request :: Request aLvl -> PackageSignature -> RequestPackage
+    response :: RequestPackage -> Responce aLvl -> PackageSignature -> ResponcePackage
 
 instance LevelRequestContractor NetLvl where
-    request = RequestNetLvlPackage
+    request  = RequestNetLvlPackage
+    response = ResponceNetLvlPackage
 
 instance LevelRequestContractor LogicLvl where
     request = RequestLogicLvlPackage
+    response = ResponceLogicLvlPackage
 
 instance LevelRequestContractor MiningLvl where
     request = RequestMiningLvlPackage
+    response = ResponceMiningLvlPackage
 
 --instance MakeAndSendTraceRouting (Responce NetLvl) where
 
@@ -137,6 +164,61 @@ amIClose aData aNode aPointTo = if
     | otherwise -> False
 
 
+--
+getClosedNode
+    ::  ManagerData md
+    =>  TraceRouting
+    ->  md
+    ->  (Maybe Node, [PackageSignature])
+getClosedNode aTraceRouting aData = case aTraceRouting of
+    ToDirect _ aPointTo aTrace
+        | Just aNextNodeId <- lookupNextNode aTrace -> do
+            let aNewTrace = traceDrop aNextNodeId aTrace
+            (aNextNodeId `M.lookup` (aData^.nodes), aNewTrace)
+        | otherwise -> (getClosedNodeByDirect aData (toPoint aPointTo) False, cleanTrace aTrace)
+    ToNode _ (PackageSignature (toNodeId -> aNodeId) _ _) ->
+        (aNodeId `M.lookup` (aData^.nodes), [])
 
+  where
+    cleanTrace aTrace = filter aPredicat $ dropWhile aPredicat aTrace
+      where
+        aPredicat (PackageSignature aNodeId _ _) = aData^.myNodeId /= aNodeId
+
+    lookupNextNode aTrace = if
+        | x:_ <- aIntersect -> Just x
+        | otherwise         -> Nothing
+      where
+        aIntersect      = (signatureToNodeId <$> aTrace) `intersect` aNeighborList
+        aNeighborList   = M.keys (aData^.nodes)
+
+--
+sendResponse :: Maybe Node -> TraceRouting -> ResponcePackage -> IO ()
+sendResponse aNode aTraceRouting aPackageResponse = whenJust aNode $
+    sendToNode (makeResponse aTraceRouting aPackageResponse)
+
+
+makeNewTraceRouting :: [PackageSignature] -> TraceRouting -> TraceRouting
+makeNewTraceRouting aSignatures = \case
+    ToDirect aPointFrom aPointTo _  -> ToDirect aPointFrom aPointTo aSignatures
+    ToNode aNodeId (PackageSignature (toNodeId -> aId) aTime aSig) ->
+        ToNode aId (PackageSignature (toMyNodeId aNodeId) aTime aSig)
+
+
+traceDrop :: NodeId -> [PackageSignature] -> [PackageSignature]
+traceDrop aNextNodeId = dropWhile
+    (\(PackageSignature (toNodeId -> aId) _ _) -> aId /= aNextNodeId)
+
+
+makeResponse
+    ::  TraceRouting
+    ->  ResponcePackage
+    ->  StringKey
+    ->  CryptoFailable Package
+makeResponse aTraceRouting aResponse = makeCipheredPackage
+    (PackageTraceRoutingResponce aTraceRouting aResponse)
+
+
+signatureToNodeId :: PackageSignature -> NodeId
+signatureToNodeId (PackageSignature (toNodeId -> aNodeId) _ _) = aNodeId
 
 --------------------------------------------------------------------------------
