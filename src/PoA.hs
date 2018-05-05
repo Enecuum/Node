@@ -6,25 +6,20 @@ module PoA (
 
 
 import              Node.Data.NetPackage
-import              Data.Hex()
-import              Data.Serialize()
 import              Control.Monad (forM_, void, forever, unless)
 import              Network.Socket.ByteString(sendAll, recvFrom)
 import              Service.Network.Base
-import              Service.Network.TCP.Client()
 import              Service.Network.TCP.Server
 import              Control.Concurrent.Chan
 import              Node.Node.Types
 import              Service.InfoMsg as I
 import              Service.Types
-import              Node.Extra()
 import              System.Random.Shuffle
 import              Data.String
 import qualified    Data.ByteString as B
 import              Data.Aeson as A
 import              Control.Exception
 import              Node.Node.Base
-import              Node.Data.Data()
 import              Node.Data.NodeTypes
 import              Node.Data.GlobalLoging
 import              PoA.Types

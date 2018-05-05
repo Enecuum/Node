@@ -35,7 +35,6 @@ import              Lens.Micro.TH
 import              Node.Crypto
 import              Node.Data.Data
 import              Node.Data.NetPackage
-import              Node.Data.Lens
 import              Node.Data.NodeTypes
 import              Node.Template.Constructor
 import              Sharding.Space.Point
@@ -58,6 +57,9 @@ instance Show (Chan a) where
 data Msg where Msg :: B.ByteString -> Msg
 type Transactions = [Transaction]
 
+--
+idLens :: Lens' a a
+idLens = lens Prelude.id (\_ a -> a)
 
 data Answer where
     StateRequestAnswer ::

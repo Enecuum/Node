@@ -40,7 +40,6 @@ import              Node.Node.Types
 import              Node.Crypto
 import              Node.Data.Data
 import              Node.FileDB.FileDB
-import              Node.Extra
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Node.Base.Server
@@ -539,3 +538,8 @@ instance FileDB LogicLvl where
 
         writeDataToFile "./data/listOfPositions.txt" aUpdatedRecords
 --------------------------------------------------------------------------------
+
+whenRight :: Show a => Either a t -> (t -> IO ()) -> IO ()
+whenRight aElem aFunc = case aElem of
+    Left  aError    -> putStrLn $ "Error: " ++ show aError
+    Right aJustElem -> aFunc aJustElem
