@@ -8,7 +8,10 @@
     ,   TypeFamilies
     ,   FlexibleInstances
   #-}
-module Node.Node.BroadcastProcessing where
+module Node.Node.BroadcastProcessing (
+        BroadcastProcessing(..)
+    ,   microblockToShard
+  ) where
 
 --
 import              Data.IORef

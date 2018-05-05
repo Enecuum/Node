@@ -9,7 +9,10 @@
     TypeFamilies,
     FlexibleInstances
   #-}
-module Node.Node.Processing where
+module Node.Node.Processing (
+        Processing(..)
+    ,   sendToShardingLvl
+  ) where
 
 import qualified    Data.Map                        as M
 import              Data.List.Extra()

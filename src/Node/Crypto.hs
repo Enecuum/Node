@@ -1,7 +1,18 @@
 {-# LANGUAGE ScopedTypeVariables, LambdaCase #-}
-module Node.Crypto where
+module Node.Crypto (
+        makeConnectingRequest
+    ,   verifyConnectingRequest
+    ,   disconnectRequest
+    ,   makeCipheredPackage
+    ,   makeBroadcastRequest
+    ,   cryptoHash
+    ,   genKeyPair
+    ,   signEncodeble
+    ,   verifyEncodeble
+    ,   decryptChipred
+  ) where
 
-import              Service.Network.Base (HostAddress, PortNumber)
+import              Service.Network.Base (PortNumber)
 import              Node.Data.Key
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
@@ -46,10 +57,6 @@ verifyConnectingRequest = \case
 
 disconnectRequest :: Package
 disconnectRequest = Unciphered $ DisconnectRequest []
-pingRequest :: Package
-pingRequest       = Unciphered PingRequest
-pongResponse :: HostAddress -> Package
-pongResponse      = Unciphered . PongResponse
 
 
 makeCipheredPackage :: Ciphered -> StringKey -> CryptoFailable Package
@@ -66,14 +73,6 @@ makeBroadcastRequest aBroadcastThing aPrivateKey aMyNodeId = do
         (PackageSignature aMyNodeId aTime aSignature)
         aBroadcastThing
 
-verifyBroadcastRequest :: BroadcastThing -> PackageSignature -> Bool
-verifyBroadcastRequest aBroadcastThing
-    (PackageSignature aMyNodeId aTimeSpec aSignature) =
-        verifyEncodeble
-            (idToKey $ toNodeId aMyNodeId)
-            aSignature
-            (aMyNodeId, aTimeSpec, aBroadcastThing)
-
 
 decryptChipred :: StringKey -> CipheredString -> Maybe Ciphered
 decryptChipred aSecretKey aChipredString = case decode <$> aDecryptedString of
@@ -82,10 +81,6 @@ decryptChipred aSecretKey aChipredString = case decode <$> aDecryptedString of
   where
     aDecryptedString = maybeCryptoError $
         encrypt aSecretKey (toByteString aChipredString)
-
-
-verifyByteString :: PublicKey -> Signature ->  ByteString -> Bool
-verifyByteString = verify SHA3_256
 
 
 verifyEncodeble :: Serialize msg => PublicKey -> Signature -> msg -> Bool

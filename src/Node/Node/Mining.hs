@@ -12,7 +12,9 @@
      #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Node.Node.Mining where
+module Node.Node.Mining (
+    managerMining
+  ) where
 
 import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 

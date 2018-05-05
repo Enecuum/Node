@@ -9,17 +9,24 @@
     ,   FlexibleInstances
   #-}
 
-module Node.Node.Base where
+module Node.Node.Base (
+            FileDB (..)
+        ,   BroadcastAction(..)
+        ,   PackageTraceRoutingAction(..)
+        ,   sendBroadcastThingToNodes
+        ,   answerToSendInitDatagram
+        ,   answerToDatagramMsg
+        ,   answerToInitDatagram
+        ,   baseNodeOpts
+        ,   sendExitMsgToNode
+  ) where
 
-import qualified    Network.WebSockets                  as WS
-import              System.Clock
 import              System.Random
 import              System.Random.Shuffle
 import              Control.Monad.State.Lazy
 import              Control.Monad.Extra
 import              Control.Exception
 import              Control.Concurrent
-import              Control.Concurrent.Async
 import              Crypto.Error
 import              Crypto.PubKey.ECC.ECDSA
 import qualified    Data.Map                        as M
@@ -176,29 +183,6 @@ connectToBootNode aChan aData = do
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
         "Try connect to the bootNode " ++ show (head aBootNodeList) ++ "."
     connectTo aChan 1 aBootNodeList
-
-
-answerToClientDisconnected
-    ::  ManagerData md
-    =>  ManagerMsg msg
-    =>  IORef md
-    ->  msg
-    ->  IO ()
-answerToClientDisconnected aMd (toManagerMsg -> ClientIsDisconnected aId aChan) = do
-    aData <- readIORef aMd
-    whenJust (aData^.nodes.at aId) $ \aNode -> do
-        when (aNode^.status == Noactive) $ do
-            deleteFromFile NetLvl aId
-            when (aId `elem` ((^._1) <$> aData^.nodeBaseData.bootNodes)) $
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                    "The " ++ show aId ++ " bootNode is unreachable."
-
-        when (aNode^.chan == aChan) $ do
-            writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                "The " ++ show aId ++ " is disconnected."
-            modifyIORef aMd (nodes %~ M.delete aId)
-
-answerToClientDisconnected _ _ = pure ()
 
 
 answerToSendInitDatagram
@@ -360,16 +344,6 @@ answerToPackagedMsg aId aChan aCipheredString@(CipheredString aStr) aMd = do
             makeAction aChan aMd aId aTraceRouting aResponsePackage
         BroadcastRequest aBroadcastSignature aBroadcastThing ->
             makeBroadcastAction aChan aMd aId aBroadcastSignature aBroadcastThing
---answerToPackagedMsg _ _ _ _ = return ()
-
-
-answerToDisconnect :: ManagerData md => [Reason] -> NodeId -> IORef md -> IO ()
-answerToDisconnect _ aNodeId aMd = do
-    aData <- readIORef aMd
-    whenJust (aData^.nodes.at aNodeId) $ \aNode -> do
-        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-            "Make answer to disconnect of " ++ show aNodeId ++ "."
-        sendExitMsgToNode aNode
 
 
 answerToInitiatorConnectingMsg
@@ -430,32 +404,6 @@ sendRemoteConnectDatagram aChan aData = do
         (aData^.nodeBaseData.outPort)
         (aData^.privateKey)
 
-
-makePing
-    ::  ManagerMsg a
-    =>  Chan a
-    ->  HostAddress
-    ->  PortNumber
-    ->  IO ()
-makePing aChan aHostAdress aPortNumber = void $ forkIO $ runClient
-    (showHostAddress aHostAdress) (fromEnum aPortNumber) "/" aSendRecive
-   where
-     aSendRecive aConnect = void $ race aStoper (aPinger aConnect)
-
-     aStoper = do
-         threadDelay $ 2*10^(6::Int)
-         return ()
-
-     aPinger aConnect = do
-         aTimeStart <- getTime Realtime
-         WS.sendBinaryData aConnect $ encode $ Unciphered PingRequest
-         aMsg <- WS.receiveDataMessage aConnect
-         let Right (Unciphered (PongResponse aMyHostAdress)) = decode
-                $ WS.fromDataMessage aMsg
-         aTimeStop <- getTime Realtime
-         let aPingTime = diffTimeSpec aTimeStart aTimeStop
-         void $ writeChan aChan $ pingRequestInfo
-            aHostAdress aPortNumber aPingTime aMyHostAdress
 
 
 sendBroadcastThingToNodes
