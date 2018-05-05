@@ -123,6 +123,18 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
                     writeLog aInfoChan [ServePoATag] Info $ "Send connections " ++ show aConnects
                     sendAll aSocket $ myEncode $ ResponseConnects aConnects
 
+                RequestPoWList
+                    | not aOk -> do
+                        aSenderId <- readMVar aId
+                        writeLog aInfoChan [ServePoATag] Info $
+                            "PoWListRequest the msg from " ++ show aSenderId
+                        sendMsgToNetLvlFromPP ch $ PoWListRequest (IdFrom aSenderId)
+
+                    | otherwise -> do
+                        writeLog aInfoChan [ServePoATag] Warning "Can't send request without UUID "
+                        sendAll aSocket $ myEncode RequestNodeIdToPP
+
+
                 ResponseNodeIdToNN aUuid aNodeType -> do
                     if aOk then putMVar aId aUuid else void $ swapMVar aId aUuid
                     writeLog aInfoChan [ServePoATag] Info $
