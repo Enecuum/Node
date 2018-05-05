@@ -72,17 +72,17 @@ instance  Processing (IORef NodeBootNodeData) (Request NetLvl) where
             let aSendNetLvlResponse = sendResponseTo
                     aTraceRouting aData BroadcastListRequest aSignature
             NodeInfoListNetLvl aBroadcasts <- readRecordsFromNodeListFile
-            let aBroadcastListResponce = BroadcastListResponce
+            let aBroadcastListResponse = BroadcastListResponse
                     (NodeInfoListLogicLvl [])
                     (NodeInfoListNetLvl $ take 10 aBroadcasts)
             writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info $
-                "Send to node " ++ show aNodeId ++ " broadcast list responce " ++
+                "Send to node " ++ show aNodeId ++ " broadcast list Response " ++
                 show (take 10 aBroadcasts) ++ "."
-            aSendNetLvlResponse aBroadcastListResponce
+            aSendNetLvlResponse aBroadcastListResponse
         _ -> return ()
 
 
-instance  PackageTraceRoutingAction NodeBootNodeData ResponcePackage where
+instance  PackageTraceRoutingAction NodeBootNodeData ResponsePackage where
     makeAction _ _ _ _ _ = return ()
 
 instance  BroadcastAction NodeBootNodeData where

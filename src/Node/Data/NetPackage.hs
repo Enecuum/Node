@@ -46,7 +46,7 @@ data Unciphered where
 
     DisconnectRequest  :: [Reason]                              ->  Unciphered
     PingRequest        ::                                           Unciphered
-    PongResponce       :: HostAddress                           ->  Unciphered
+    PongResponse       :: HostAddress                           ->  Unciphered
   deriving (Eq, Generic, Show)
 
 
@@ -57,9 +57,9 @@ data Ciphered where
         ->  RequestPackage
         ->  Ciphered
 
-    PackageTraceRoutingResponce
+    PackageTraceRoutingResponse
         ::  TraceRouting
-        ->  ResponcePackage
+        ->  ResponsePackage
         ->  Ciphered
 
     BroadcastRequest
@@ -88,24 +88,24 @@ data RequestPackage where
   deriving (Eq, Generic, Show)
 
 
-data ResponcePackage where
-    ResponceNetLvlPackage
+data ResponsePackage where
+    ResponseNetLvlPackage
         ::  RequestPackage
-        ->  Responce NetLvl
+        ->  Response NetLvl
         ->  PackageSignature
-        ->  ResponcePackage
+        ->  ResponsePackage
 
-    ResponceLogicLvlPackage
+    ResponseLogicLvlPackage
         ::  RequestPackage
-        ->  Responce LogicLvl
+        ->  Response LogicLvl
         ->  PackageSignature
-        ->  ResponcePackage
+        ->  ResponsePackage
 
-    ResponceMiningLvlPackage
+    ResponseMiningLvlPackage
         :: RequestPackage
-        -> Responce MiningLvl
+        -> Response MiningLvl
         -> PackageSignature
-        -> ResponcePackage
+        -> ResponsePackage
 
   deriving (Eq, Generic, Show)
 
@@ -153,27 +153,27 @@ data instance Request MiningLvl where
     RequestPPConnection :: UUID -> Request MiningLvl
   deriving (Eq, Show, Generic)
 
-data family Responce a :: *
+data family Response a :: *
 
 --
-data instance Responce MiningLvl where
-    ResponcePPConnection :: UUID -> Connect -> Responce MiningLvl
+data instance Response MiningLvl where
+    ResponsePPConnection :: UUID -> Connect -> Response MiningLvl
   deriving (Eq, Show, Generic)
 
 
-data instance Responce NetLvl where
-    BroadcastListResponce
+data instance Response NetLvl where
+    BroadcastListResponse
         ::  NodeInfoList LogicLvl
         ->  NodeInfoList NetLvl
-        ->  Responce NetLvl
+        ->  Response NetLvl
 
-    HostAdressResponce
+    HostAdressResponse
         ::  Maybe HostAddress
-        ->  Responce NetLvl
+        ->  Response NetLvl
 
     IAmBroadcast
         ::  Bool
-        ->  Responce NetLvl
+        ->  Response NetLvl
 
   deriving (Eq, Generic, Show)
 
@@ -193,12 +193,12 @@ data instance NodeInfoList NetLvl where
   deriving (Eq, Generic, Show)
 
 
-data instance Responce LogicLvl where
-    ShardIndexResponce            :: [ShardHash]    -> Responce LogicLvl
-    ShardResponce                 :: [Shard]        -> Responce LogicLvl
-    NodePositionResponcePackage   :: MyNodePosition -> Responce LogicLvl
-    NeighborListResponcePackage   :: [(NodeId, NodePosition)] -> Responce LogicLvl
-    TheNodeIsAlive                :: NodeId -> Bool -> Responce LogicLvl
+data instance Response LogicLvl where
+    ShardIndexResponse            :: [ShardHash]    -> Response LogicLvl
+    ShardResponse                 :: [Shard]        -> Response LogicLvl
+    NodePositionResponsePackage   :: MyNodePosition -> Response LogicLvl
+    NeighborListResponsePackage   :: [(NodeId, NodePosition)] -> Response LogicLvl
+    TheNodeIsAlive                :: NodeId -> Bool -> Response LogicLvl
   deriving (Eq, Generic, Show)
 
 
@@ -234,7 +234,8 @@ data instance BroadcastThingLvl LogicLvl where
 
 data instance BroadcastThingLvl MiningLvl where
     BroadcastPPMsg
-        :: B.ByteString
+        :: NodeType
+        -> B.ByteString
         -> NodeType
         -> IdFrom
         -> BroadcastThingLvl MiningLvl
@@ -292,15 +293,15 @@ instance Serialize Reason
 instance Serialize BroadcastThing
 instance Serialize TraceRouting
 instance Serialize PackageSignature
-instance Serialize ResponcePackage
+instance Serialize ResponsePackage
 instance Serialize Ciphered
 instance Serialize Package
 instance Serialize Unciphered
 instance Serialize RequestPackage
 
-instance Serialize (Responce NetLvl)
-instance Serialize (Responce LogicLvl)
-instance Serialize (Responce MiningLvl)
+instance Serialize (Response NetLvl)
+instance Serialize (Response LogicLvl)
+instance Serialize (Response MiningLvl)
 
 instance Serialize (Request  NetLvl)
 instance Serialize (Request  LogicLvl)

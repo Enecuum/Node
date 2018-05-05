@@ -12,14 +12,14 @@ class Verification a where
   verify :: a -> Bool
 
 
-instance Verification ResponcePackage where
+instance Verification ResponsePackage where
     verify = \case
-        ResponceNetLvlPackage aRequestPackage aResponce aPackageSignature ->
+        ResponseNetLvlPackage aRequestPackage aResponse aPackageSignature ->
             verify aRequestPackage &&
-            verify (aPackageSignature, (aResponce, aRequestPackage))
-        ResponceLogicLvlPackage aRequestPackage aResponce aPackageSignature ->
+            verify (aPackageSignature, (aResponse, aRequestPackage))
+        ResponseLogicLvlPackage aRequestPackage aResponse aPackageSignature ->
             verify aRequestPackage &&
-            verify (aPackageSignature, (aResponce, aRequestPackage))
+            verify (aPackageSignature, (aResponse, aRequestPackage))
 
 
 instance Verification RequestPackage where
@@ -48,31 +48,31 @@ instance Verification (TraceRouting, RequestPackage) where
         _   -> False
 
 
-instance Verification (TraceRouting, ResponcePackage) where
+instance Verification (TraceRouting, ResponsePackage) where
     verify = \case
         (ToNode _ _, aMsg) -> verify aMsg
 
         (ToDirect aPointFrom aPointTo [aSignature],
-            ResponceNetLvlPackage aRequestPackage aResponce aPackageSignature) ->
-                verify (aPackageSignature, aResponce) &&
+            ResponseNetLvlPackage aRequestPackage aResponse aPackageSignature) ->
+                verify (aPackageSignature, aResponse) &&
                 verify aRequestPackage &&
                 verify (aSignature, (aRequestPackage, aPointTo, aPointFrom))
 
         (ToDirect aPointFrom aPointTo [aSignature],
-             aResponcePackage@(ResponceLogicLvlPackage aRequestPackage aResponce aPackageSignature)) ->
-                verify (aPackageSignature, aResponce) &&
-                verify aResponcePackage &&
+             aResponsePackage@(ResponseLogicLvlPackage aRequestPackage aResponse aPackageSignature)) ->
+                verify (aPackageSignature, aResponse) &&
+                verify aResponsePackage &&
                 verify (aSignature, (aRequestPackage, aPointTo, aPointFrom))
 
         (ToDirect aPointFrom aPointTo (aS:xS),
-             aResponcePackage@(ResponceLogicLvlPackage aRequestPackage _ _)) ->
+             aResponsePackage@(ResponseLogicLvlPackage aRequestPackage _ _)) ->
                 verify (aS, (ToDirect aPointFrom aPointTo xS, aRequestPackage)) &&
-                verify (ToDirect aPointFrom aPointTo xS, aResponcePackage)
+                verify (ToDirect aPointFrom aPointTo xS, aResponsePackage)
 
         (ToDirect aPointFrom aPointTo (aS:xS),
-             aResponcePackage@(ResponceNetLvlPackage aRequestPackage _ _)) ->
+             aResponsePackage@(ResponseNetLvlPackage aRequestPackage _ _)) ->
                 verify (aS, (ToDirect aPointFrom aPointTo xS, aRequestPackage)) &&
-                verify (ToDirect aPointFrom aPointTo xS, aResponcePackage)
+                verify (ToDirect aPointFrom aPointTo xS, aResponsePackage)
 
         _   -> False
 
@@ -87,8 +87,8 @@ instance Verification Ciphered where
         PackageTraceRoutingRequest aTraceRouting aRequestPackage    ->
             verify (aTraceRouting, aRequestPackage)
 
-        PackageTraceRoutingResponce aTraceRouting aResponcePackage  ->
-            verify (aTraceRouting, aResponcePackage)
+        PackageTraceRoutingResponse aTraceRouting aResponsePackage  ->
+            verify (aTraceRouting, aResponsePackage)
 
         BroadcastRequest aPackageSignature aBroadcastThing          ->
             verify (aPackageSignature, aBroadcastThing)

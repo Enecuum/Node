@@ -74,11 +74,11 @@ class SendResponseTo aLvl where
         ->  md
         ->  Request aLvl
         ->  PackageSignature
-        ->  Responce aLvl
+        ->  Response aLvl
         ->  IO ()
 --
 
-instance (LevelRequestContractor aLvl, Serialize (Responce aLvl)) => SendResponseTo aLvl where
+instance (LevelRequestContractor aLvl, Serialize (Response aLvl)) => SendResponseTo aLvl where
     sendResponseTo aTraceRouting aData aRequest aSignature aNetPackage = do
         let (aNode, aTrace) = getClosedNode aTraceRouting aData
             aRequestPackage = request aRequest aSignature
@@ -92,21 +92,21 @@ instance (LevelRequestContractor aLvl, Serialize (Responce aLvl)) => SendRespons
 
 class LevelRequestContractor aLvl where
     request :: Request aLvl -> PackageSignature -> RequestPackage
-    response :: RequestPackage -> Responce aLvl -> PackageSignature -> ResponcePackage
+    response :: RequestPackage -> Response aLvl -> PackageSignature -> ResponsePackage
 
 instance LevelRequestContractor NetLvl where
     request  = RequestNetLvlPackage
-    response = ResponceNetLvlPackage
+    response = ResponseNetLvlPackage
 
 instance LevelRequestContractor LogicLvl where
     request = RequestLogicLvlPackage
-    response = ResponceLogicLvlPackage
+    response = ResponseLogicLvlPackage
 
 instance LevelRequestContractor MiningLvl where
     request = RequestMiningLvlPackage
-    response = ResponceMiningLvlPackage
+    response = ResponseMiningLvlPackage
 
---instance MakeAndSendTraceRouting (Responce NetLvl) where
+--instance MakeAndSendTraceRouting (Response NetLvl) where
 
 
 sendToNode :: (StringKey -> CryptoFailable Package) -> Node -> IO ()
@@ -192,7 +192,7 @@ getClosedNode aTraceRouting aData = case aTraceRouting of
         aNeighborList   = M.keys (aData^.nodes)
 
 --
-sendResponse :: Maybe Node -> TraceRouting -> ResponcePackage -> IO ()
+sendResponse :: Maybe Node -> TraceRouting -> ResponsePackage -> IO ()
 sendResponse aNode aTraceRouting aPackageResponse = whenJust aNode $
     sendToNode (makeResponse aTraceRouting aPackageResponse)
 
@@ -211,11 +211,11 @@ traceDrop aNextNodeId = dropWhile
 
 makeResponse
     ::  TraceRouting
-    ->  ResponcePackage
+    ->  ResponsePackage
     ->  StringKey
     ->  CryptoFailable Package
 makeResponse aTraceRouting aResponse = makeCipheredPackage
-    (PackageTraceRoutingResponce aTraceRouting aResponse)
+    (PackageTraceRoutingResponse aTraceRouting aResponse)
 
 
 signatureToNodeId :: PackageSignature -> NodeId

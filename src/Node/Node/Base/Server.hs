@@ -40,7 +40,7 @@ startServerActor aOutputChan aPort =
                                 aConnect
                 Right (Unciphered PingRequest) ->
                     WS.sendBinaryData aConnect $ encode $
-                        PongResponce aHostAdress
+                        PongResponse aHostAdress
                 _     -> pure ()
 
 

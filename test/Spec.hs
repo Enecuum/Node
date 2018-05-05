@@ -37,13 +37,13 @@ main = undefined
 
 -- проверить,
 {-
-ResponceNetLvlPackage
+ResponseNetLvlPackage
     (RequestNetLvlPackage BroadcastListRequest
         (PackageSignature
             (MyNodeId 1)
             (TimeSpec {sec = 1524216260, nsec = 508425014})
             (Signature {sign_r = 1, sign_s = 1})))
-    (BroadcastListResponce
+    (BroadcastListResponse
         (NodeInfoListLogicLvl [])
         (NodeInfoListNetLvl [(NodeId 1,1,1)]))
         (PackageSignature

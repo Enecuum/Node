@@ -53,7 +53,7 @@ Create a custom config file or use the /configs/config.ini. Define values for th
 
 #### Build container with a node
 
-Execute `./build.sh` to build stack and a container with a node in it. 
+Execute `./build.sh` to build stack and a container with a node in it.
 
 #### Run the container locally
 
@@ -72,7 +72,7 @@ Execute the following commands:\
 `stack exec MakeConfigSimpleNode-exe`\
 `stack exec SimpleNode-exe`
 
-You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used. 
+You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used.
 
 #### Initialization of a light client
 
@@ -112,7 +112,7 @@ Execute the following commands:\
 `stack exec MakeConfigSimpleNode-exe`\
 `stack exec SimpleNode-exe`
 
-You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used. 
+You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used.
 
 #### Initialization of a light client
 
@@ -169,3 +169,10 @@ In the case you want to know the balance of a public key, you'd run `-B publicKe
 
 Launch the node.\
 Execute `stack test`
+
+### UML
+
+```yuml:class
+[code]-[note:code2]
+
+```

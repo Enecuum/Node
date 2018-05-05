@@ -48,8 +48,8 @@ disconnectRequest :: Package
 disconnectRequest = Unciphered $ DisconnectRequest []
 pingRequest :: Package
 pingRequest       = Unciphered PingRequest
-pongResponce :: HostAddress -> Package
-pongResponce      = Unciphered . PongResponce
+pongResponse :: HostAddress -> Package
+pongResponse      = Unciphered . PongResponse
 
 
 makeCipheredPackage :: Ciphered -> StringKey -> CryptoFailable Package

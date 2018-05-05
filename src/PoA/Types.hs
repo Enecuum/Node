@@ -30,7 +30,7 @@ import              Data.IP
 -- TODO:    Broadcasting (in net);
 -- TODO:    Response.
 
--- TODO: i have msg (it not responce) for PoA/PoW node.
+-- TODO: i have msg (it not response) for PoA/PoW node.
 -- ----     toJson
 -- TODO sending to PoA/PoW node.
 
@@ -47,6 +47,9 @@ data PPToNNMessage
     = RequestTransaction { ---
         number :: Int
     }
+
+    -- запрос на получение списка PoW нод
+    | RequestPoWList
 
     -- запрос на рассылку бродкаста.
     | RequestBroadcast { ---
@@ -74,6 +77,7 @@ data PPToNNMessage
         microblock :: Microblock
     }
 
+
     -- О том, что закрылся ма кроблок.
     -- | MsgMacroblock {
     --     macroblock :: Macroblock
@@ -99,6 +103,11 @@ data NNToPPMessage
         transaction :: Transaction
     }
 
+    -- ответ со списком PoW нод
+    | ResponsePoWList {
+        poWList :: [UUID]
+    }
+
     | MsgConnect {
         ip    :: HostAddress,
         port  :: PortNumber
@@ -118,7 +127,14 @@ data NNToPPMessage
         id :: UUID,
         nodeType :: NodeType
     }
+{-
 
+{
+    "tag": "Response",
+    "type": "PoWList",
+    "poWList": [UUID]
+}
+-}
 
 myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
 myUnhex aString = case unhex $ T.unpack aString of
@@ -152,7 +168,7 @@ instance FromJSON PPToNNMessage where
                     Nothing           -> mzero
 
             ("Request","Connects")    -> return RequestConnects
-
+            ("Request","PoWList")     -> return RequestPoWList
 
             ("Response", "NodeId") -> do
                 aUuid :: T.Text <- aMessage .: "nodeId"
@@ -229,16 +245,25 @@ instance ToJSON NNToPPMessage where
       ]
 
     toJSON (MsgBroadcastMsg aMessage (IdFrom aUuid)) = object [
+        "tag"       .= ("Msg"           :: String),
+        "type"      .= ("BroadcastMsg"  :: String),
         "messages"  .= (show.hex $ aMessage),
         "idFrom"    .= uuidToString aUuid
       ]
 
+    toJSON (ResponsePoWList aUUIDs) = object [
+        "tag"       .= ("Response"  :: String),
+        "type"      .= ("PoWList"   :: String),
+        "poWList"   .=  map uuidToString aUUIDs
+      ]
 
 instance ToJSON Connect where
     toJSON (Connect aHostAddress aPortNumber) = object [
         "ip"   .= show (fromHostAddress aHostAddress),
         "port" .= fromEnum aPortNumber
       ]
+
+
 
 uuidToString :: UUID -> String
 uuidToString (UUID aPoint) = show . hex $ S.encode aPoint

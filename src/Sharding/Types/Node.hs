@@ -45,9 +45,9 @@ makeLenses ''Neighbor
 data ShardingNodeAction =
         ShardRequestAction          ShardHash (Chan Shard)
     |   ShardIndexAcceptAction      [ShardHash]
-    |   ShardIndexCreateAction      (Chan ShardingNodeResponce) NodeId Word64
-    |   ShardLoadAction             (Chan ShardingNodeResponce) NodeId ShardHash
-    |   NodePositionAction          (Chan ShardingNodeResponce) NodeId
+    |   ShardIndexCreateAction      (Chan ShardingNodeResponse) NodeId Word64
+    |   ShardLoadAction             (Chan ShardingNodeResponse) NodeId ShardHash
+    |   NodePositionAction          (Chan ShardingNodeResponse) NodeId
     |   ShardAcceptAction           Shard
     ---
     |   NewShardInNetAction         Shard
@@ -66,10 +66,10 @@ data ShardingNodeAction =
     |   TheNodeIsDead               NodeId
 
 
-data ShardingNodeResponce where
-    ShardIndexResponse    :: [ShardHash]    -> ShardingNodeResponce
-    ShardResponse         :: [Shard]        -> ShardingNodeResponce
-    NodePositionResponse  :: MyNodePosition -> ShardingNodeResponce
+data ShardingNodeResponse where
+    ShardIndexResponse    :: [ShardHash]    -> ShardingNodeResponse
+    ShardResponse         :: [Shard]        -> ShardingNodeResponse
+    NodePositionResponse  :: MyNodePosition -> ShardingNodeResponse
   deriving (Show)
 
 

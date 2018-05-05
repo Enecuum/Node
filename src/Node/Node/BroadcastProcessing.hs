@@ -14,9 +14,11 @@ module Node.Node.BroadcastProcessing where
 import              Data.IORef
 import              Data.Serialize
 import qualified    Data.Map as M
+import qualified    Data.Bimap as BI
 import              Lens.Micro
 import              Control.Concurrent
 import              Control.Monad.Extra
+import              System.Clock
 
 import              PoA.Types
 import              Service.Types
@@ -75,7 +77,12 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
         aData <- readIORef aMd
         case aMsg of
             -- передаем полученные по сети сообщения PP
-            BroadcastPPMsg aBroadcastMsg aNodeType aIdFrom -> do
+            BroadcastPPMsg aSenderType aBroadcastMsg aNodeType aIdFrom@(IdFrom aUuid) -> do
+                aTime <- getTime Realtime
+
+                when (aSenderType == PoW) $
+                    modifyIORef aMd $ poWNodes %~ BI.insert aTime aUuid
+
                 let aFilteredNode :: [Chan NNToPPMessage]
                     aFilteredNode = do
                         aNode <- snd <$> M.toList (aData^.ppNodes)
