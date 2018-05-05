@@ -38,7 +38,7 @@ import              Sharding.Space.Shift
 import              Sharding.Sharding
 import              Node.Node.Types
 import              Node.Crypto
-import              Node.Data.Data
+import              Node.Data.Key
 import              Node.FileDB.FileDB
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
@@ -392,7 +392,7 @@ answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aPortNumb
     else do
         writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
             "Is accepted " ++ showHostAddress aHostAdress ++ " " ++ show aId
-        let aKey = getKey (aData^.privateNumber) aPublicPoint
+        let aKey = getStringKey (aData^.privateNumber) aPublicPoint
             aNode = makeNode aInputChan aHostAdress aPortNumber &~ do
                 mKey            .= Just aKey
                 status          .= Active
@@ -414,7 +414,7 @@ answerToRemoteConnectingMsg aId aPublicPoint aMd = do
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
         "The node " ++ show aId ++ " confirmed the connection."
     modifyIORef aMd $ nodes %~ M.adjust (&~ do
-        mKey            .= Just (getKey (aData^.privateNumber) aPublicPoint)
+        mKey            .= Just (getStringKey (aData^.privateNumber) aPublicPoint)
         status          .= Active
       ) aId
     aNewData <- readIORef aMd

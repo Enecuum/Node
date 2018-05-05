@@ -22,11 +22,10 @@ import              Data.Serialize
 import              Lens.Micro
 import              Lens.Micro.GHC()
 
-
 import              Sharding.Space.Point
 import              Node.Node.Types
 import              Node.Crypto
-import              Node.Data.Data
+import              Node.Data.Key
 import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Data.MakeTraceRouting

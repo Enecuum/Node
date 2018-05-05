@@ -8,7 +8,18 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Service.Types.PublicPrivateKeyPair where
+module Service.Types.PublicPrivateKeyPair(
+        Amount
+    ,   ECDSA.Signature
+    ,   compressPublicKey
+    ,   uncompressPublicKey
+    ,   getPublicKey
+    ,   PublicKey(..)
+    ,   PrivateKey(..)
+    ,   KeyPair(..)
+    ,   getSignature
+    ,   generateNewRandomAnonymousKeyPair
+  ) where
 
 import Data.Maybe
 import GHC.Generics
@@ -24,15 +35,12 @@ import qualified "cryptonite"  Crypto.PubKey.ECC.ECDSA as ECDSA
 import qualified    Data.ByteString.Char8 as BC
 import              Data.ByteString.Base58
 
---import Math
 
 import              Math.NumberTheory.Moduli
 import Data.Int (Int64)
 type Amount = Int64
 
-deriving instance Ord Signature
-
-type Signature = ECDSA.Signature
+deriving instance Ord ECDSA.Signature
 
 compressPublicKey :: ECDSA.PublicKey -> PublicKey
 compressPublicKey pub
@@ -40,11 +48,8 @@ compressPublicKey pub
     | d == y = publicKey256k1 (x*2+1)
     | otherwise = error "error"
   where
-    curve = ECDSA.public_curve pub
     (Point x y) = ECDSA.public_q pub
-    (CurveFP (CurvePrime prime (CurveCommon a b _ _ _))) = curve
-    c = fromJust $ ((x^(3 :: Int) + x*a + b) `mod` prime) `sqrtModP` prime
-    d = prime - c
+    (c, d) = curveK (ECDSA.public_curve pub) x
 
 uncompressPublicKey :: PublicKey -> (Integer, Integer)
 uncompressPublicKey aKey
@@ -53,16 +58,14 @@ uncompressPublicKey aKey
   where
     k = fromPublicKey256k1 aKey
     (x, aa)  = k `divMod` 2
-    curve = getCurveByName SEC_p256k1
-    (CurveFP (CurvePrime prime (CurveCommon a b _ _ _))) = curve
+    (c, d) = curveK (getCurveByName SEC_p256k1) x
+
+curveK :: Curve -> Integer -> (Integer, Integer)
+curveK aCurve x = (c, d)
+  where
+    (CurveFP (CurvePrime prime (CurveCommon a b _ _ _))) = aCurve
     c = fromJust $ (( x^(3 :: Int) + x*a + b) `mod` prime ) `sqrtModP` prime
     d = prime - c
-
-{-
-getCompressed :: ECDSA.PublicKey -> PublicKey
-getCompressed pub =
- where
--}
 
 publicKey256k1 :: Integer -> PublicKey
 publicKey256k1 = PublicKey256k1 . CompactInteger
@@ -78,18 +81,10 @@ getPrivateKey :: PrivateKey -> ECDSA.PrivateKey
 getPrivateKey  (PrivateKey256k1 n)    =
     ECDSA.PrivateKey (getCurveByName SEC_p256k1) n
 
-getPrivateKey1 :: KeyPair -> ECDSA.PrivateKey
-getPrivateKey1 (KeyPair _ privateKey) = getPrivateKey privateKey
-
 getPublicKey :: (Integer, Integer) -> ECDSA.PublicKey
 getPublicKey (n1, n2) = ECDSA.PublicKey (getCurveByName SEC_p256k1) (Point n1 n2)
---getPublicKey (PrivateKey256k1 n) = ECDSA.PublicKey (getCurveByName SEC_p256k1)
---   (Point n n)
 
-{-
-getPublicKey pubk = ECDSA.PublicKey
-  pu@(x1,y1) = uncompressPublicKey pubk
--}
+
 
 --data KeyPair    = KeyPair PublicKey PrivateKey
 data KeyPair    = KeyPair { getPub :: PublicKey, getPriv :: PrivateKey }
@@ -121,33 +116,6 @@ integerToBase58 = BC.unpack . encodeBase58I bitcoinAlphabet
 base58ToInteger :: String -> Integer
 base58ToInteger = fromJust . decodeBase58I bitcoinAlphabet . BC.pack
 
--- showPublicKey :: ECDSA.PublicKey -> String
--- showPublicKey (ECDSA.PublicKey {public_q = Point a b}) = BC.unpack $
---      encodeBase58I rippleAlphabet (pair a b)
-
-
-{-
--}
-
--- generateNewRandomAnonymousKeyPair :: IO KeyPair
-{-
-ppair = unsafePerformIO $ generateNewRandomAnonymousKeyPair
-(pub,priv) = ppair
-pnt@(Point x y) = public_q pub
-curve = public_curve pub
-(CurveFP (CurvePrime prime (CurveCommon a b _ _ _))) = curve
--}
-
-{-
-PublicKey {public_curve = CurveFP (CurvePrime 4451685225093714772084598273548427
-    (CurveCommon {ecc_a = 4451685225093714772084598273548424, ecc_b =
-        2061118396808653202902996166388514, ecc_g = Point
-            188281465057972534892223778713752
-            3419875491033170827167861896082688,
-            ecc_n = 4451685225093714776491891542548933, ecc_h = 1})),
-            public_q = Point 1853673283466718284163024966200333
-                3266228631393728191639932752112443}
--}
 
 generateNewRandomAnonymousKeyPair :: MonadRandom m => m KeyPair
 generateNewRandomAnonymousKeyPair = do
@@ -158,28 +126,3 @@ generateNewRandomAnonymousKeyPair = do
 -- | Previous version of function was replaced by more generic function
 getSignature :: (Serialize msg, MonadRandom m) => PrivateKey -> msg -> m ECDSA.Signature
 getSignature priv msg = ECDSA.sign (getPrivateKey priv) MD2 (encode msg)
-
-
--- | Previous version of function was replaced by more generic function
-verifySiganture :: Serialize msg => PublicKey -> ECDSA.Signature -> msg -> Bool
-verifySiganture pub sign msg = ECDSA.verify MD2 pub' sign (encode msg)
-  where pub' = getPublicKey $ uncompressPublicKey pub
-
-
-test2 :: MonadRandom m => m Bool
-test2 = do
-    KeyPair pub priv <- generateNewRandomAnonymousKeyPair
-    sign <- getSignature priv (23 :: Amount)
-    return $ verifySiganture pub sign (23 :: Amount)
-
-byteMsg :: BC.ByteString
-byteMsg = BC.pack "32613"
-
-test1 :: MonadRandom m => m Bool
-test1 = do
-    (KeyPair pub1 priv1)    <- generateNewRandomAnonymousKeyPair
-    (KeyPair pub2 _)        <- generateNewRandomAnonymousKeyPair
-    sign                    <- ECDSA.sign (getPrivateKey priv1) MD2 byteMsg
-    let pub1' = uncompressPublicKey pub1
-        _     = uncompressPublicKey pub2
-    pure $ ECDSA.verify MD2 (getPublicKey pub1') sign byteMsg

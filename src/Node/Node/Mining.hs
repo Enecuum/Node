@@ -34,7 +34,7 @@ import              Sharding.Space.Distance
 import              Sharding.Types.ShardLogic
 import              Service.Monad.Option
 import              Node.Crypto
-import              Node.Data.Data
+import              Node.Data.Key
 import              Node.Node.Types
 import              Node.Node.Base
 import              Node.Data.NodeTypes
@@ -324,7 +324,7 @@ isItRequestForMe aData = \case
 makeRequest
     ::  TraceRouting
     ->  RequestPackage
-    ->  Node.Data.Data.StringKey
+    ->  StringKey
     ->  CryptoFailable Package
 makeRequest aTraceRouting aRequest = makeCipheredPackage
     (PackageTraceRoutingRequest aTraceRouting aRequest)
