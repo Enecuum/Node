@@ -33,7 +33,7 @@ import              Lens.Micro
 import              Lens.Micro.TH
 
 import              Node.Crypto
-import              Node.Data.Data
+import              Node.Data.Key
 import              Node.Data.NetPackage
 import              Node.Data.NodeTypes
 import              Node.Template.Constructor
@@ -270,8 +270,8 @@ instance ToManagerData ManagerNodeData where
 
 makeNewNodeConfig :: MonadRandom m => m NodeConfig
 makeNewNodeConfig = do
-    (aPublicKey,     aPrivateKey)  <- generate curve
-    (aPrivateNumber, aPublicPoint) <- genKeyPair curve
+    (aPublicKey,     aPrivateKey)  <- generate curve_256
+    (aPrivateNumber, aPublicPoint) <- genKeyPair curve_256
     let aId = keyToId aPublicKey
     pure $ NodeConfig aPrivateNumber aPublicPoint aPrivateKey (toMyNodeId aId)
 
