@@ -294,7 +294,7 @@ answerToInitDatagram _ _                =  pure ()
 answerToDatagramMsg
     ::  ManagerData md
     =>  PackageTraceRoutingAction md RequestPackage
-    =>  PackageTraceRoutingAction md ResponcePackage
+    =>  PackageTraceRoutingAction md ResponsePackage
     =>  BroadcastAction md
     =>  ManagerMsg msg
     =>  Chan msg
@@ -338,7 +338,7 @@ class BroadcastAction aManagerData where
 answerToPackagedMsg
     ::  ManagerData md
     =>  PackageTraceRoutingAction md RequestPackage
-    =>  PackageTraceRoutingAction md ResponcePackage
+    =>  PackageTraceRoutingAction md ResponsePackage
     =>  BroadcastAction md
     =>  ManagerMsg msg
     =>  NodeId
@@ -357,8 +357,8 @@ answerToPackagedMsg aId aChan aCipheredString@(CipheredString aStr) aMd = do
     whenJust aDecryptedPacage $ \case
         PackageTraceRoutingRequest aTraceRouting aRequestPackage ->
             makeAction aChan aMd aId aTraceRouting aRequestPackage
-        PackageTraceRoutingResponce aTraceRouting aResponcePackage ->
-            makeAction aChan aMd aId aTraceRouting aResponcePackage
+        PackageTraceRoutingResponse aTraceRouting aResponsePackage ->
+            makeAction aChan aMd aId aTraceRouting aResponsePackage
         BroadcastRequest aBroadcastSignature aBroadcastThing ->
             makeBroadcastAction aChan aMd aId aBroadcastSignature aBroadcastThing
 --answerToPackagedMsg _ _ _ _ = return ()
@@ -451,7 +451,7 @@ makePing aChan aHostAdress aPortNumber = void $ forkIO $ runClient
          aTimeStart <- getTime Realtime
          WS.sendBinaryData aConnect $ encode $ Unciphered PingRequest
          aMsg <- WS.receiveDataMessage aConnect
-         let Right (Unciphered (PongResponce aMyHostAdress)) = decode
+         let Right (Unciphered (PongResponse aMyHostAdress)) = decode
                 $ WS.fromDataMessage aMsg
          aTimeStop <- getTime Realtime
          let aPingTime = diffTimeSpec aTimeStart aTimeStop

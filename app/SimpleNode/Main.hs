@@ -35,6 +35,7 @@ main =  do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
                     metronomeS 1000000 (writeChan ch deleteOldestMsg)
+                    metronomeS 1000000 (writeChan ch deleteOldestPoW)
                     poa_in  <- try (getEnv "poaInPort") >>= \case
                             Right item              -> return $ read item
                             Left (_::SomeException) -> case simpleNodeBuildConfig conf of

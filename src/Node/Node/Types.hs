@@ -83,6 +83,7 @@ data MsgToMainActorFromPP
     | BroadcastRequestFromPP B.ByteString IdFrom NodeType
     | NewConnectWithPP UUID NodeType (Chan NNToPPMessage)
     | MsgResendingToPP IdFrom IdTo B.ByteString
+    | PoWListRequest IdFrom
   deriving (Show)
 
 dataConstruct "MsgToNodeManager" $
@@ -131,6 +132,7 @@ data ManagerNodeData = ManagerNodeData {
     ,   managerNodeDataNodeBaseData :: NodeBaseData
     ,   managerTransactions         :: Chan Transaction
     ,   managerHashMap              :: BI.Bimap TimeSpec B.ByteString
+    ,   managerPoWNodes             :: BI.Bimap TimeSpec UUID
     ,   managerPublicators          :: S.Set NodeId
     ,   managerSendedTransctions    :: BI.Bimap TimeSpec Transaction
   }
@@ -164,13 +166,14 @@ data NodeBaseData = NodeBaseData {
 
 
 
-makeNodeBaseData :: Chan ExitMsg
-                 -> BootNodeList
-                 -> Chan Answer
-                 -> Chan Microblock
-                 -> PortNumber
-                 -> Chan InfoMsg
-                 -> NodeBaseData
+makeNodeBaseData
+    ::  Chan ExitMsg
+    ->  BootNodeList
+    ->  Chan Answer
+    ->  Chan Microblock
+    ->  PortNumber
+    ->  Chan InfoMsg
+    ->  NodeBaseData
 makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan = NodeBaseData
     aExitChan M.empty M.empty aList aAnswerChan 0 Nothing aMicroblockChan
     Nothing Nothing False
@@ -260,7 +263,7 @@ class ToManagerData a where
 instance ToManagerData ManagerNodeData where
     toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aInfoChan aList aNodeConfig aOutPort = ManagerNodeData
         aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aOutPort aInfoChan)
-            aTransactionChan BI.empty S.empty BI.empty
+            aTransactionChan BI.empty BI.empty S.empty BI.empty
 
 
 makeNewNodeConfig :: MonadRandom m => m NodeConfig
@@ -280,10 +283,10 @@ makePackageSignature
 makePackageSignature aData aResponse = do
     aTime <- getTime Realtime
     let aNodeId = aData^.myNodeId
-    aResponceSignature <- signEncodeble
+    aResponseSignature <- signEncodeble
         (aData^.privateKey)
         (aNodeId, aTime, aResponse)
-    return $ PackageSignature aNodeId aTime aResponceSignature
+    return $ PackageSignature aNodeId aTime aResponseSignature
 
 
 lensInst "transactions" ["ManagerNodeData"]
@@ -298,6 +301,9 @@ lensInst "publicators" ["ManagerNodeData"] ["S.Set", "NodeId"]
 lensInst "sendedTransctions" ["ManagerNodeData"]
     ["BI.Bimap", "TimeSpec", "Transaction"] "managerSendedTransctions"
 
+
+lensInst "poWNodes" ["ManagerNodeData"] ["BI.Bimap", "TimeSpec", "UUID"]
+    "managerPoWNodes"
 
 makeNode :: Chan MsgToSender -> HostAddress -> PortNumber -> Node
 makeNode aChan aHostAdress aPortNumber = Node {

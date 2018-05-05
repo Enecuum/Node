@@ -65,6 +65,7 @@ managerMiningMsgListData = toList $ do
     "sendTargetedTransaction"       +: [["Transaction"], ["NodeId"]]
     "blockMadeMsg"                  +: [["Microblock"]]
     "deleteOldestMsg"               +: []
+    "deleteOldestPoW"               +: []
     "sendIAmPublicator"             +: []
     "sendRawData"                   +: [["B.ByteString"]]
     "sendTransactionToPublicator"   +: [["Transaction"]]

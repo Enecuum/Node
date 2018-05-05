@@ -366,7 +366,7 @@ addShardingIndex aShardIndex aShardingNode =
     aExistShards = indexToSet (aShardingNode^.nodeIndex)
 
 
-createShardingIndex :: Chan ShardingNodeResponce -> ShardingNode -> NodeId -> Word64 ->  IO ()
+createShardingIndex :: Chan ShardingNodeResponse -> ShardingNode -> NodeId -> Word64 ->  IO ()
 createShardingIndex aChanOfNetLevel aShardingNode aNodeId aRadiusOfCapture = do
     let aMaybeNeighbor = S.toList $ S.filter (\n -> n^.neighborId == aNodeId) $
             aShardingNode^.nodeNeighbors
@@ -389,7 +389,7 @@ checkShardIsInRadiusOfCaptureShardingNode aShardNode =
 
 sendShardsToNode ::
         ShardHash
-    ->  Chan ShardingNodeResponce
+    ->  Chan ShardingNodeResponse
     ->  IO ()
 sendShardsToNode aHashList aChanOfNetLevel = do
     aShards <- loadShards [aHashList]

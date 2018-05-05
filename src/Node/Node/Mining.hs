@@ -63,7 +63,7 @@ managerMining ch aMd = forever $ do
         opt isInitDatagram              $ answerToSendInitDatagram ch aMd
         opt isShardingNodeRequestMsg    $ answerToShardingNodeRequestMsg aMd
         opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
-
+        opt isDeleteOldestPoW           $ answerToDeleteOldestPoW aMd
         opt isMsgFromPP                 $ answeToMsgFromPP aMd
 
 answeToMsgFromPP :: IORef ManagerNodeData ->  ManagerMiningMsgBase ->  IO ()
@@ -87,8 +87,10 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
             let aRequest = RequestPPConnection aUUID
             makeAndSendTo aData (uuidToNodePosition aUUID) aRequest
 
-        BroadcastRequestFromPP aByteString aIdFrom aNodeType ->
-            sendBroadcast aMd (BroadcastPPMsg aByteString aNodeType aIdFrom)
+        BroadcastRequestFromPP aByteString aIdFrom@(IdFrom aUuid) aNodeType ->
+            whenJust (aData^.ppNodes.at aUuid) $ \aNode ->
+                sendBroadcast aMd $
+                    BroadcastPPMsg (aNode^.ppType) aByteString aNodeType aIdFrom
 
         MsgResendingToPP aIdFrom@(IdFrom aUuidFrom) aIdTo@(IdTo aId) aByteString
             | Just aNode <- aData^.ppNodes.at aId ->
@@ -96,12 +98,15 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
             | otherwise -> do
                 let aRequest = PPMessage aByteString aIdFrom aIdTo
                 makeAndSendTo aData (uuidToNodePosition aId) aRequest
+        PoWListRequest (IdFrom aUuidFrom) ->
+            whenJust (aData^.ppNodes.at aUuidFrom) $ \aPpNode -> do
+                let aUuids = takeEnd 5 (map snd (BI.toList $ aData^.poWNodes))
+                writeChan (aPpNode^.ppChan) $ ResponsePoWList aUuids
   where
     uuidToNodePosition :: UUID -> NodePosition
     uuidToNodePosition (UUID aPoint) = toNodePosition aPoint
 
 answeToMsgFromPP _ _ = error "answeToMsgFromPP"
-
 
 -- TODO: определение "места" где должа находиться PP нода. (переконект)
 
@@ -209,6 +214,18 @@ answerToDeleteOldestMsg aMd _ = do
     modifyIORef aMd $ hashMap %~ BI.filter
         (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs 3000000)
 
+--
+answerToDeleteOldestPoW
+    ::  IORef ManagerNodeData
+    ->  ManagerMiningMsgBase
+    ->  IO ()
+answerToDeleteOldestPoW aMd _ = do
+    aData <- readIORef aMd
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of index of PoW."
+    aTime <- getTime Realtime
+    modifyIORef aMd $ hashMap %~ BI.filter
+        (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs (5*60*10^9))
+
 
 instance BroadcastAction ManagerNodeData where
     makeBroadcastAction _ aMd _ aBroadcastSignature aBroadcastThing = do
@@ -220,30 +237,30 @@ instance BroadcastAction ManagerNodeData where
             processingOfBroadcastThing aMd aBroadcastThing
 
 
-instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
-    makeAction aChan md aNodeId aTraceRouting aResponcePackage = do
+instance PackageTraceRoutingAction ManagerNodeData ResponsePackage where
+    makeAction aChan md aNodeId aTraceRouting aResponsePackage = do
         aData <- readIORef md
-        writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Recived a responce package."
-        if verify (aTraceRouting, aResponcePackage) then if
-            | isItMyResponce aNodeId aTraceRouting  -> do
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info "The responce is for me. The processing of responce."
+        writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Recived a Response package."
+        if verify (aTraceRouting, aResponsePackage) then if
+            | isItMyResponse aNodeId aTraceRouting  -> do
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info "The Response is for me. The processing of Response."
                 aProcessingOfAction
             | otherwise -> aSendToNeighbor aData
         else writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
-            "The error of verification of responce package. The trace is a "
+            "The error of verification of Response package. The trace is a "
             ++ show aTraceRouting
-            ++ "the package is " ++ show aResponcePackage
+            ++ "the package is " ++ show aResponsePackage
       where
-        aProcessingOfAction = case aResponcePackage of
-            ResponceNetLvlPackage _ aResponse aSignature ->
+        aProcessingOfAction = case aResponsePackage of
+            ResponseNetLvlPackage _ aResponse aSignature ->
                 processing aChan md aSignature aTraceRouting aResponse
-            ResponceLogicLvlPackage _ aResponse aSignature ->
+            ResponseLogicLvlPackage _ aResponse aSignature ->
                 processing aChan md aSignature aTraceRouting aResponse
-            ResponceMiningLvlPackage _ aResponse aSignature ->
+            ResponseMiningLvlPackage _ aResponse aSignature ->
                 processing aChan md aSignature aTraceRouting aResponse
 
         aSendToNeighbor aData = do
-            writeLog (aData^.infoMsgChan) [NetLvlTag] Info "This is someone else's message. Resending of responce."
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info "This is someone else's message. Resending of Response."
             let (aNode, aNewTrace) = getClosedNode aTraceRouting aData
                 aMaybePoints = case aTraceRouting of
                     ToDirect aPointFrom aPointTo _
@@ -251,11 +268,11 @@ instance PackageTraceRoutingAction ManagerNodeData ResponcePackage where
                     _   -> Nothing
             whenJust aMaybePoints $ \(aPointFrom, aPointTo) ->
                 whenJust aNode $ sendToNode (makeResponse
-                    (ToDirect aPointFrom aPointTo aNewTrace) aResponcePackage)
+                    (ToDirect aPointFrom aPointTo aNewTrace) aResponsePackage)
 
 
-isItMyResponce :: NodeId -> TraceRouting -> Bool
-isItMyResponce aMyNodeId = \case
+isItMyResponse :: NodeId -> TraceRouting -> Bool
+isItMyResponse aMyNodeId = \case
     ToNode   _ (PackageSignature aNodeId _ _)
         | toNodeId aNodeId == aMyNodeId -> True
     ToDirect _ _ (last -> (PackageSignature (toNodeId -> aNodeId) _ _))

@@ -49,18 +49,18 @@ class Processing aNodeData aPackage where
         ->  aPackage
         ->  IO ()
 
-instance Processing (IORef ManagerNodeData) (Responce MiningLvl) where
+instance Processing (IORef ManagerNodeData) (Response MiningLvl) where
     processing _ aMd _ _ = \case
-        ResponcePPConnection aUuid (Connect aHost aOutPort) -> do
+        ResponsePPConnection aUuid (Connect aHost aOutPort) -> do
             aData <- readIORef aMd
             whenJust (aData^.ppNodes.at aUuid) $ \aPpNode ->
                 writeChan (aPpNode^.ppChan) $ MsgConnect aHost aOutPort
 
 
 -- | Обработка "ответа" для сетевого уровня.
-instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
+instance Processing (IORef ManagerNodeData) (Response NetLvl) where
     processing aChan aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
-        BroadcastListResponce aBroadcastListLogic aBroadcastList -> do
+        BroadcastListResponse aBroadcastListLogic aBroadcastList -> do
             aData <- readIORef aMd
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                 "Accepted lists of broadcasts and points of node."
@@ -87,7 +87,7 @@ instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
                     myNodePosition .= Just aMyNodePosition
                     shardingChan   .= Just aChanOfSharding)
 
-        HostAdressResponce _ -> return ()
+        HostAdressResponse _ -> return ()
 
         -- нода сказала, что она бродкаст меняем её статус в нашей памяти.
         IAmBroadcast          aBool          -> do
@@ -98,26 +98,26 @@ instance Processing (IORef ManagerNodeData) (Responce NetLvl) where
 
 
 -- обработка ответов для логического уровня.
-instance Processing (IORef ManagerNodeData) (Responce LogicLvl) where
+instance Processing (IORef ManagerNodeData) (Response LogicLvl) where
     processing _ aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ aResponse = do
         aData <- readIORef aMd
         case aResponse of
             -- Accepted the index of shards from the neighbor node.
-            ShardIndexResponce aShardHashList -> do
+            ShardIndexResponse aShardHashList -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Send from netLvl to sharding lvl the shards hashes list. "
                     ++ show aShardHashList
                 sendToShardingLvl aData $ T.ShardIndexAcceptAction aShardHashList
 
             -- Accepted the shard from the neighbor node.
-            ShardResponce      aShardes         -> do
+            ShardResponse      aShardes         -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Send from netLvl toSharding lvl the shards acepted from neighbor "
                     ++ "the list of shards is:" ++ show aShardes
                 forM_ aShardes $ sendToShardingLvl aData . T.ShardAcceptAction
 
             -- Accepted the node position of a neighbor node.
-            NodePositionResponcePackage (toNodePosition -> aNodePosition) -> do
+            NodePositionResponsePackage (toNodePosition -> aNodePosition) -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Accepted the node position of a neighbor node " ++ show aNodeId ++
                     " a new position is a " ++ show aNodePosition
@@ -146,7 +146,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
         aData <- readIORef aMd
         let aRequestPackage = RequestLogicLvlPackage aRequestLogicLvl aSignature
 
-            aRequestToNetLvl :: (a -> Responce LogicLvl) -> IO a -> IO ()
+            aRequestToNetLvl :: (a -> Response LogicLvl) -> IO a -> IO ()
             aRequestToNetLvl = requestToNetLvl aData aTraceRouting aRequestPackage
 
         case aRequestLogicLvl of
@@ -156,7 +156,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     ++ "Petitioner " ++ show aNodeId ++ " a domain = "
                     ++ show aDistance ++ "."
 
-                aRequestToNetLvl ShardIndexResponce $ do
+                aRequestToNetLvl ShardIndexResponse $ do
                     aChan <- newChan
                     sendToShardingLvl aData $
                         T.ShardIndexCreateAction aChan aNodeId aDistance
@@ -174,7 +174,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     "Sending request of shard to sharding lvl. "
                     ++ "Petitioner " ++ show aNodeId ++ " shardHash = "
                     ++ show aShardHash ++ "."
-                aRequestToNetLvl ShardResponce $ do
+                aRequestToNetLvl ShardResponse $ do
                     aChan <- newChan
                     sendToShardingLvl aData $
                         T.ShardLoadAction aChan aNodeId aShardHash
@@ -189,7 +189,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Sending request of node position to sharding lvl. "
                     ++ "Petitioner " ++ show aNodeId ++ "."
-                aRequestToNetLvl NodePositionResponcePackage $ do
+                aRequestToNetLvl NodePositionResponsePackage $ do
                     aChan <- newChan
                     sendToShardingLvl aData $
                         T.NodePositionAction aChan aNodeId
@@ -214,7 +214,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                         ++ show aJustNodeId ++ "."
                     aResponsePackageSignature <- makePackageSignature aData
                         (aNetLvlPackage, aRequestPackage)
-                    let aPackage = ResponceLogicLvlPackage
+                    let aPackage = ResponseLogicLvlPackage
                             aRequestPackage aNetLvlPackage aResponsePackageSignature
                     aTrace <- makeTraceRouting  aData aPackage
                         (ToNode aJustNodeId)
@@ -231,28 +231,28 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
         case aRequest of
             IsYouBrodcast -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                    "Send responce: I am broadcast " ++ show (aData^.iAmBroadcast)
+                    "Send Response: I am broadcast " ++ show (aData^.iAmBroadcast)
                     ++ "."
                 aSendNetLvlResponse (IAmBroadcast $ aData^.iAmBroadcast)
 
             HostAdressRequest -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                    "Send responce: I have host addres " ++ show (aData^.hostAddress) ++ "."
-                aSendNetLvlResponse (HostAdressResponce $ aData^.hostAddress)
+                    "Send Response: I have host addres " ++ show (aData^.hostAddress) ++ "."
+                aSendNetLvlResponse (HostAdressResponse $ aData^.hostAddress)
 
             BroadcastListRequest -> do
                 -- TEMP Think about move aBroadcastList to operacety memory.
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info
-                    "Send responce 'Broadcast list'."
+                    "Send Response 'Broadcast list'."
                 NodeInfoListNetLvl   aBroadcastList      <- readRecordsFromNodeListFile
                 NodeInfoListLogicLvl aBroadcastListLogic <- readRecordsFromNodeListFile
-                let aBroadcastListResponce = BroadcastListResponce
+                let aBroadcastListResponse = BroadcastListResponse
                         (NodeInfoListLogicLvl $ take 10 aBroadcastListLogic)
                         (NodeInfoListNetLvl   $ take 10 aBroadcastList)
 
                 -- шлём ответ через сеть.
                 -- +
-                aSendNetLvlResponse aBroadcastListResponce
+                aSendNetLvlResponse aBroadcastListResponse
 
 
 instance Processing (IORef ManagerNodeData) (Request MiningLvl) where
@@ -267,7 +267,7 @@ instance Processing (IORef ManagerNodeData) (Request MiningLvl) where
             RequestPPConnection aUuid -> whenJust (aData^.hostAddress) $ \aHost -> do
                 let aResponse = sendResponseTo
                         aTraceRouting aData aRequest aSignature
-                aResponse $ ResponcePPConnection aUuid (Connect aHost (aData^.outPort))
+                aResponse $ ResponsePPConnection aUuid (Connect aHost (aData^.outPort))
 
 
 sendToShardingLvl :: ManagerData md => md -> T.ShardingNodeAction -> IO ()
@@ -279,7 +279,7 @@ requestToNetLvl
     ::  ManagerNodeData
     ->  TraceRouting
     ->  RequestPackage
-    -> (a -> Responce LogicLvl)
+    -> (a -> Response LogicLvl)
     ->  IO a
     ->  IO ()
 requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
@@ -293,7 +293,7 @@ requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
 
         sendResponse aNode
             (makeNewTraceRouting aTrace aTraceRouting)
-            (ResponceLogicLvlPackage aRequestPackage aNetLevetPackage aResponsePackageSignature)
+            (ResponseLogicLvlPackage aRequestPackage aNetLevetPackage aResponsePackageSignature)
 
 
 --------------------------------------------------------------------------------
