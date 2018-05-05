@@ -3,7 +3,7 @@ module Service.Network.TCP.Server (runServer) where
 import Network.Socket
 import Control.Monad
 import Control.Concurrent (forkFinally)
-import Network (listenOn, PotID(..))
+import Network (listenOn, PortID(..))
 
 
 -- | Run TCP server.

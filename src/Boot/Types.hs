@@ -57,6 +57,7 @@ lensInst "checSet" ["NodeBootNodeData"] ["S.Set", "NodeId"]
     "nodeBootNodeDataChecSet"
 
 
+
 instance PackageTraceRoutingAction NodeBootNodeData RequestPackage where
     makeAction aChan aMd _ aTraceRouting aRequesPackage =
         case aRequesPackage of
