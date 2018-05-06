@@ -14,7 +14,6 @@ module Node.Crypto (
 
 import              Service.Network.Base (PortNumber)
 import              Node.Data.Key
-import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 
 

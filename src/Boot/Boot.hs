@@ -1,5 +1,5 @@
 {-# LANGUAGE ViewPatterns, MultiParamTypeClasses #-}
-module Boot.Boot where
+module Boot.Boot (managerBootNode) where
 
 import qualified    Data.Map                        as M
 import qualified    Data.Set                        as S
@@ -14,8 +14,8 @@ import              Boot.Types
 import              Node.Node.Base
 import              Node.Node.Types
 import              Service.Monad.Option
+import              Node.Data.Key
 
-import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Data.GlobalLoging
 import              Service.InfoMsg
@@ -33,9 +33,6 @@ managerBootNode ch md = forever $ do
         opt isDatagramMsg         $ answerToDatagramMsg ch md (mData^.myNodeId)
         opt isCheckBroadcastNodes $ answerToCheckBroadcastNodes md ch
         opt isCheckBroadcastNode  $ answerToCheckBroadcastNode ch md
-
-
-
 
 
 answerToCheckBroadcastNodes

@@ -1,4 +1,12 @@
-{-# LANGUAGE GADTs, DeriveGeneric, TemplateHaskell, LambdaCase, ViewPatterns, FlexibleInstances, MultiParamTypeClasses #-}
+{-# LANGUAGE
+        GADTs
+    ,   DeriveGeneric
+    ,   TemplateHaskell
+    ,   LambdaCase
+    ,   ViewPatterns
+    ,   FlexibleInstances
+    ,   MultiParamTypeClasses
+  #-}
 
 module Boot.Types where
 
@@ -18,10 +26,10 @@ import              Node.Node.Base
 import              Node.Data.MakeAndSendTraceRouting
 
 import              Node.Node.Processing
-import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Data.GlobalLoging
 import              Service.InfoMsg
+import              Node.Data.Key
 
 data NodeBootNodeData where
     NodeBootNodeData :: {

@@ -10,8 +10,6 @@
 
 module Node.Data.NetPackage where
 
-import Node.Data.NodeTypes
-
 import              Data.Serialize
 import              Data.ByteString as B
 import              System.Clock
@@ -26,6 +24,7 @@ import              Sharding.Types.ShardTypes
 import              Sharding.Space.Point as P
 import              Sharding.Space.Distance
 import              PoA.Types
+import              Node.Data.Key
 
 -- | Data for resending from NetNode A to NetNode B.
 data Package where

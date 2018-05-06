@@ -15,7 +15,6 @@
 -- Different nodes use mutually overlapping set of messages
 module Node.Node.Types where
 
-import              Network.Socket
 import              System.Clock
 import qualified    Data.Set                        as S
 import qualified    Data.ByteString                 as B
@@ -35,7 +34,6 @@ import              Lens.Micro.TH
 import              Node.Crypto
 import              Node.Data.Key
 import              Node.Data.NetPackage
-import              Node.Data.NodeTypes
 import              Node.Template.Constructor
 import              Sharding.Space.Point
 import qualified    Sharding.Types.Node as N
@@ -46,8 +44,24 @@ import              Data.Scientific (toRealFloat, Scientific)
 import              Data.Aeson
 import              Data.Aeson.TH
 import              Service.InfoMsg
-import              Service.Network.Base (ConnectInfo)
+import              Service.Network.Base (ConnectInfo, HostAddress, PortNumber)
 import              PoA.Types
+
+
+data NodeVariantRole where
+    BroadcastNode   :: NodeVariantRole
+    SimpleNode      :: NodeVariantRole
+    BootNode        :: NodeVariantRole
+    PublicatorNode  :: NodeVariantRole
+  deriving (Show, Eq, Ord, Generic)
+
+type NodeVariantRoles = [NodeVariantRole]
+
+instance Serialize NodeVariantRole
+
+
+type IdIpPort = (NodeId, HostAddress, PortNumber)
+type BootNodeList   = [IdIpPort]
 
 
 

@@ -16,8 +16,8 @@ import              Control.Concurrent
 import              Control.Exception
 import              Node.Node.Types
 import              Node.Crypto
-import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
+import              Node.Data.Key
 
 startServerActor :: ManagerMsg a => Chan a -> PortNumber -> IO ()
 startServerActor aOutputChan aPort =

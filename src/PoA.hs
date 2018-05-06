@@ -20,13 +20,13 @@ import qualified    Data.ByteString as B
 import              Data.Aeson as A
 import              Control.Exception
 import              Node.Node.Base
-import              Node.Data.NodeTypes
 import              Node.Data.GlobalLoging
 import              PoA.Types
 import              Control.Concurrent.MVar
 import              Control.Concurrent
 
 import              Control.Concurrent.Async
+import              Node.Data.Key
 
 myDecode :: B.ByteString -> Maybe PPToNNMessage
 myDecode = A.decode.fromString.show

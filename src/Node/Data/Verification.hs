@@ -1,12 +1,11 @@
 {-# LANGUAGE LambdaCase, FlexibleInstances #-}
-module Node.Data.Verification where
+module Node.Data.Verification (Verification(..)) where
 
+import Data.Serialize
 
 import Node.Data.NetPackage
 import Node.Crypto
-import Node.Data.NodeTypes
-import Data.Serialize
-
+import Node.Data.Key
 
 class Verification a where
   verify :: a -> Bool

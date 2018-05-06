@@ -39,7 +39,6 @@ import              Node.Crypto
 import              Node.Data.Key
 import              Node.Node.Types
 import              Node.Node.Base
-import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
@@ -316,11 +315,6 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
         aIsMiningLvlMsg = case aRequestPackage of
             RequestMiningLvlPackage{}  -> True
             _                          -> False
-
-isItRequestForMe :: ManagerNodeData -> TraceRouting -> Bool
-isItRequestForMe aData = \case
-    ToNode aNodeId _      -> toNodeId (aData^.myNodeId) == aNodeId
-    ToDirect {} -> False
 
 
 makeRequest

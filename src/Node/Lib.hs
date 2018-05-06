@@ -12,7 +12,6 @@ import qualified    Data.Aeson as A
 import              Lens.Micro
 import              Service.Types
 import              Network.Socket (tupleToHostAddress)
-import              Node.Data.NodeTypes
 import Node.FileDB.FileDB
 import Node.Node.Types
 import Node.Node.Config.Make
@@ -23,7 +22,7 @@ import Service.System.Directory (getTransactionFilePath)
 
 import System.Environment
 import Service.InfoMsg (InfoMsg)
-
+import Node.Data.Key
 --tmp
 import System.Directory (createDirectoryIfMissing)
 

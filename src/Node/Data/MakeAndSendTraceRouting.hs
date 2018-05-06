@@ -26,7 +26,6 @@ import              Sharding.Space.Point
 import              Node.Node.Types
 import              Node.Crypto
 import              Node.Data.Key
-import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Node.Data.MakeTraceRouting
 import              Sharding.Space.Distance
