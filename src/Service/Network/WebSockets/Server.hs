@@ -12,14 +12,10 @@ import qualified    Network.Socket  as S
 
 
 -- | Run a server app.
-runServer ::
-    HostAddress
-    -> Int
-    -> (HostAddress -> ServerApp)
-    -> IO ()
-runServer aHost aPort app = S.withSocketsDo $
+runServer :: PortNumber -> (HostAddress -> ServerApp) -> IO ()
+runServer aPort app = S.withSocketsDo $
   bracket
-  (makeListenSocket (show aHost) aPort)
+  (makeListenSocket "0" (fromEnum aPort))
   S.close
   (\sock ->
     mask_ $ forever $ do

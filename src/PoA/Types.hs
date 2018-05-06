@@ -18,7 +18,6 @@ import              Data.Hex
 import              Control.Monad.Extra
 import              Data.Either
 import qualified    Data.Serialize as S
-import              Sharding.Space.Point
 import              Service.Types (Microblock(..), Transaction)
 import              Service.Network.Base
 import              Data.IP
