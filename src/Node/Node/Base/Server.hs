@@ -21,7 +21,7 @@ import              Node.Data.Key
 
 startServerActor :: ManagerMsg a => Chan a -> PortNumber -> IO ()
 startServerActor aOutputChan aPort =
-    void $ forkIO $ runServer 0 (fromEnum aPort) $
+    void $ forkIO $ runServer aPort $
         \aHostAdress pending -> do
             aConnect <- WS.acceptRequest pending
             WS.forkPingThread aConnect 30
