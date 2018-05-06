@@ -50,9 +50,9 @@ class Processing aNodeData aPackage where
 
 instance Processing (IORef ManagerNodeData) (Response MiningLvl) where
     processing _ aMd _ _ = \case
-        ResponsePPConnection aUuid (Connect aHost aOutPort) -> do
+        ResponsePPConnection aPPId (Connect aHost aOutPort) -> do
             aData <- readIORef aMd
-            whenJust (aData^.ppNodes.at aUuid) $ \aPpNode ->
+            whenJust (aData^.ppNodes.at aPPId) $ \aPpNode ->
                 writeChan (aPpNode^.ppChan) $ MsgConnect aHost aOutPort
 
 
@@ -258,15 +258,15 @@ instance Processing (IORef ManagerNodeData) (Request MiningLvl) where
     processing _ aMd aSignature aTraceRouting aRequest = do
         aData <- readIORef aMd
         case aRequest of
-            PPMessage aByteString (IdFrom aUuidFrom) (IdTo aId)
+            PPMessage aByteString (IdFrom aPPIdFrom) (IdTo aId)
                 | Just aNode <- aData^.ppNodes.at aId ->
-                    writeChan (aNode^.ppChan) $ MsgMsgToPP aUuidFrom aByteString
+                    writeChan (aNode^.ppChan) $ MsgMsgToPP aPPIdFrom aByteString
                 | otherwise -> writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
                     "This PP does not exist: " ++ show aId
-            RequestPPConnection aUuid -> whenJust (aData^.hostAddress) $ \aHost -> do
+            RequestPPConnection aPPId -> whenJust (aData^.hostAddress) $ \aHost -> do
                 let aResponse = sendResponseTo
                         aTraceRouting aData aRequest aSignature
-                aResponse $ ResponsePPConnection aUuid (Connect aHost (aData^.outPort))
+                aResponse $ ResponsePPConnection aPPId (Connect aHost (aData^.outPort))
 
 
 sendToShardingLvl :: ManagerData md => md -> T.ShardingNodeAction -> IO ()

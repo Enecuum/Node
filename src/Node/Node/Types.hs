@@ -95,9 +95,9 @@ data MsgToSender where
     SenderTerminate :: MsgToSender
 
 data MsgToMainActorFromPP
-    = MicroblockFromPP Microblock UUID
+    = MicroblockFromPP Microblock PPId
     | BroadcastRequestFromPP B.ByteString IdFrom NodeType
-    | NewConnectWithPP UUID NodeType (Chan NNToPPMessage)
+    | NewConnectWithPP PPId NodeType (Chan NNToPPMessage)
     | MsgResendingToPP IdFrom IdTo B.ByteString
     | PoWListRequest IdFrom
   deriving (Show)
@@ -148,7 +148,7 @@ data ManagerNodeData = ManagerNodeData {
     ,   managerNodeDataNodeBaseData :: NodeBaseData
     ,   managerTransactions         :: Chan Transaction
     ,   managerHashMap              :: BI.Bimap TimeSpec B.ByteString
-    ,   managerPoWNodes             :: BI.Bimap TimeSpec UUID
+    ,   managerPoWNodes             :: BI.Bimap TimeSpec PPId
     ,   managerPublicators          :: S.Set NodeId
     ,   managerSendedTransctions    :: BI.Bimap TimeSpec Transaction
   }
@@ -167,7 +167,7 @@ data PPNode = PPNode {
 data NodeBaseData = NodeBaseData {
         nodeBaseDataExitChan            :: Chan ExitMsg
     ,   nodeBaseDataNodes               :: M.Map NodeId Node
-    ,   nodeBaseDataPpNodes             :: M.Map UUID PPNode
+    ,   nodeBaseDataPpNodes             :: M.Map PPId PPNode
     ,   nodeBaseDataBootNodes           :: BootNodeList
     ,   nodeBaseDataAnswerChan          :: Chan Answer
     ,   nodeBaseDataBroadcastNum        :: Int
@@ -318,7 +318,7 @@ lensInst "sendedTransctions" ["ManagerNodeData"]
     ["BI.Bimap", "TimeSpec", "Transaction"] "managerSendedTransctions"
 
 
-lensInst "poWNodes" ["ManagerNodeData"] ["BI.Bimap", "TimeSpec", "UUID"]
+lensInst "poWNodes" ["ManagerNodeData"] ["BI.Bimap", "TimeSpec", "PPId"]
     "managerPoWNodes"
 
 makeNode :: Chan MsgToSender -> HostAddress -> PortNumber -> Node

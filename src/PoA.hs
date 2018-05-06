@@ -99,7 +99,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
                         writeLog aInfoChan [ServePoATag] Info $ "Recived MBlock: " ++ show aMicroblock
                         sendMsgToNetLvlFromPP ch $ MicroblockFromPP aMicroblock aSenderId
                     | otherwise -> do
-                        writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without UUID " ++ show aMsg
+                        writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without PPId " ++ show aMsg
                         sendAll aSocket $ myEncode RequestNodeIdToPP
 
                 RequestBroadcast aRecipientType aBroadcastMsg
@@ -109,7 +109,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
                         sendMsgToNetLvlFromPP ch $
                             BroadcastRequestFromPP aBroadcastMsg (IdFrom aSenderId) aRecipientType
                     | otherwise -> do
-                        writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without UUID " ++ show aMsg
+                        writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without PPId " ++ show aMsg
                         sendAll aSocket $ myEncode RequestNodeIdToPP
                 RequestConnects -> do
                     NodeInfoListNetLvl aRecords <- readRecordsFromNodeListFile
@@ -126,16 +126,16 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
                         sendMsgToNetLvlFromPP ch $ PoWListRequest (IdFrom aSenderId)
 
                     | otherwise -> do
-                        writeLog aInfoChan [ServePoATag] Warning "Can't send request without UUID "
+                        writeLog aInfoChan [ServePoATag] Warning "Can't send request without PPId "
                         sendAll aSocket $ myEncode RequestNodeIdToPP
 
 
-                ResponseNodeIdToNN aUuid aNodeType -> do
-                    if aOk then putMVar aId aUuid else void $ swapMVar aId aUuid
+                ResponseNodeIdToNN aPPId aNodeType -> do
+                    if aOk then putMVar aId aPPId else void $ swapMVar aId aPPId
                     writeLog aInfoChan [ServePoATag] Info $
-                        "Accept UUID " ++ show aUuid ++ " with type " ++ show aNodeType
+                        "Accept PPId " ++ show aPPId ++ " with type " ++ show aNodeType
 
-                    sendMsgToNetLvlFromPP ch $ NewConnectWithPP aUuid aNodeType aNewChan
+                    sendMsgToNetLvlFromPP ch $ NewConnectWithPP aPPId aNodeType aNewChan
 
                 MsgMsgToNN aDestination aMsgToNN
                     | not aOk       -> do
@@ -144,7 +144,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
                             "Resending the msg from " ++ show aSenderId ++ " the msg is " ++ show aMsgToNN
                         sendMsgToNetLvlFromPP ch $ MsgResendingToPP (IdFrom aSenderId) (IdTo aDestination) aMsgToNN
                     | otherwise     -> do
-                        writeLog aInfoChan [ServePoATag] Warning $ "Can't send request without UUID " ++ show aMsgToNN
+                        writeLog aInfoChan [ServePoATag] Warning $ "Can't send request without PPId " ++ show aMsgToNN
                         sendAll aSocket $ myEncode RequestNodeIdToPP
 
             Nothing ->

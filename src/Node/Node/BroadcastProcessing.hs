@@ -80,11 +80,11 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
         aData <- readIORef aMd
         case aMsg of
             -- передаем полученные по сети сообщения PP
-            BroadcastPPMsg aSenderType aBroadcastMsg aNodeType aIdFrom@(IdFrom aUuid) -> do
+            BroadcastPPMsg aSenderType aBroadcastMsg aNodeType aIdFrom@(IdFrom aPPId) -> do
                 aTime <- getTime Realtime
 
                 when (aSenderType == PoW) $
-                    modifyIORef aMd $ poWNodes %~ BI.insert aTime aUuid
+                    modifyIORef aMd $ poWNodes %~ BI.insert aTime aPPId
 
                 let aFilteredNode :: [Chan NNToPPMessage]
                     aFilteredNode = do

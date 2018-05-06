@@ -22,6 +22,7 @@ import              Sharding.Space.Point
 import              Service.Types (Microblock(..), Transaction)
 import              Service.Network.Base
 import              Data.IP
+import              Node.Data.Key
 
 -- TODO: aception of msg from a PoA/PoW.
 -- ----: parsing - ok!
@@ -36,9 +37,6 @@ import              Data.IP
 
 -- TODO finding of optimal broadcast node for PoA/PoW node. ???
 
-newtype UUID    = UUID    Point deriving (Show, Ord, Eq, Generic, S.Serialize)
-newtype IdFrom  = IdFrom  UUID  deriving (Show, Ord, Eq, Generic, S.Serialize)
-newtype IdTo    = IdTo    UUID  deriving (Show, Ord, Eq, Generic, S.Serialize)
 
 
 data PPToNNMessage
@@ -59,16 +57,16 @@ data PPToNNMessage
     -- запрос на получение конектов.
     | RequestConnects
 
-    -- Ответы с UUID
+    -- Ответы с PPId
     | ResponseNodeIdToNN {
-        nodeId    :: UUID,
+        nodeId    :: PPId,
         nodeType  :: NodeType
     }
 
     -- Сообщения:
     -- Для другой PoA/PoW ноды.
     | MsgMsgToNN { ----
-        destination :: UUID,
+        destination :: PPId,
         msg :: B.ByteString
     }
 
@@ -76,8 +74,6 @@ data PPToNNMessage
     | MsgMicroblock {
         microblock :: Microblock
     }
-
-
     -- О том, что закрылся ма кроблок.
     -- | MsgMacroblock {
     --     macroblock :: Macroblock
@@ -86,8 +82,6 @@ data PPToNNMessage
 data NodeType = PoW | PoA deriving (Eq, Show, Ord, Generic)
 
 instance S.Serialize NodeType
-
-
 
 -- PP means PoW and PoA
 -- MsgToMainActorFromPP
@@ -105,7 +99,7 @@ data NNToPPMessage
 
     -- ответ со списком PoW нод
     | ResponsePoWList {
-        poWList :: [UUID]
+        poWList :: [PPId]
     }
 
     | MsgConnect {
@@ -114,7 +108,7 @@ data NNToPPMessage
     }
 
     | MsgMsgToPP {
-        sender :: UUID,
+        sender :: PPId,
         message :: B.ByteString
     }
 
@@ -124,17 +118,10 @@ data NNToPPMessage
     }
 
     | MsgNewNodeInNet {
-        id :: UUID,
+        id :: PPId,
         nodeType :: NodeType
     }
-{-
 
-{
-    "tag": "Response",
-    "type": "PoWList",
-    "poWList": [UUID]
-}
--}
 
 myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
 myUnhex aString = case unhex $ T.unpack aString of
@@ -171,17 +158,17 @@ instance FromJSON PPToNNMessage where
             ("Request","PoWList")     -> return RequestPoWList
 
             ("Response", "NodeId") -> do
-                aUuid :: T.Text <- aMessage .: "nodeId"
-                aPoint    <- myUnhex aUuid
+                aPPId :: T.Text <- aMessage .: "nodeId"
+                aPoint    <- myUnhex aPPId
                 aNodeType :: T.Text <- aMessage .: "nodeType"
-                return (ResponseNodeIdToNN (UUID aPoint) (readNodeType aNodeType))
+                return (ResponseNodeIdToNN (PPId aPoint) (readNodeType aNodeType))
 
             ("Msg", "MsgTo") -> do
                 aDestination :: T.Text <- aMessage .: "destination"
                 aMsg         :: T.Text <- aMessage .: "msg"
                 aPoint <- myUnhex aDestination
                 case myTextUnhex aMsg of
-                    Just aJustMsg -> return $ MsgMsgToNN (UUID aPoint) aJustMsg
+                    Just aJustMsg -> return $ MsgMsgToNN (PPId aPoint) aJustMsg
                     Nothing -> mzero
 
             ("Msg", "Microblock") -> do
@@ -218,10 +205,10 @@ instance ToJSON NNToPPMessage where
         "type"  .= ("NodeId"  :: String)
       ]
 
-    toJSON (MsgMsgToPP aUuid aMessage) = object [
+    toJSON (MsgMsgToPP aPPId aMessage) = object [
         "tag"       .= ("Msg"   :: String),
         "type"      .= ("MsgTo" :: String),
-        "sender"    .= uuidToString aUuid,
+        "sender"    .= ppIdToString aPPId,
         "messages"  .= (show.hex $ aMessage)
       ]
 
@@ -233,10 +220,10 @@ instance ToJSON NNToPPMessage where
 
     toJSON (MsgConnect aIp aPort) = toJSON $ Connect aIp aPort
 
-    toJSON (MsgNewNodeInNet aUuid aNodeType) = object [
+    toJSON (MsgNewNodeInNet aPPId aNodeType) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("NewNodeInNet"  :: String),
-        "id"        .= uuidToString aUuid,
+        "id"        .= ppIdToString aPPId,
         "nodeType"  .= show aNodeType
       ]
 
@@ -244,17 +231,17 @@ instance ToJSON NNToPPMessage where
         "transaction" .= (hex . show $ S.encode aTransaction)
       ]
 
-    toJSON (MsgBroadcastMsg aMessage (IdFrom aUuid)) = object [
+    toJSON (MsgBroadcastMsg aMessage (IdFrom aPPId)) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("BroadcastMsg"  :: String),
         "messages"  .= (show.hex $ aMessage),
-        "idFrom"    .= uuidToString aUuid
+        "idFrom"    .= ppIdToString aPPId
       ]
 
-    toJSON (ResponsePoWList aUUIDs) = object [
+    toJSON (ResponsePoWList aPPIds) = object [
         "tag"       .= ("Response"  :: String),
         "type"      .= ("PoWList"   :: String),
-        "poWList"   .=  map uuidToString aUUIDs
+        "poWList"   .=  map ppIdToString aPPIds
       ]
 
 instance ToJSON Connect where
@@ -264,9 +251,8 @@ instance ToJSON Connect where
       ]
 
 
-
-uuidToString :: UUID -> String
-uuidToString (UUID aPoint) = show . hex $ S.encode aPoint
+ppIdToString :: PPId -> String
+ppIdToString (PPId aPoint) = show . hex $ S.encode aPoint
 
 
 --------------------------------------------------------------------------------
