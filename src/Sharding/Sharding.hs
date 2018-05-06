@@ -57,10 +57,10 @@ import qualified    Data.Map            as M
 import              System.Clock
 import              Lens.Micro.Mtl
 
-import              Node.Data.NodeTypes
 import              Node.Data.GlobalLoging
 import              Service.InfoMsg
 import              Lens.Micro.GHC()
+import              Node.Data.Key
 
 sizeOfShardStore:: Int
 sizeOfShardStore = 500

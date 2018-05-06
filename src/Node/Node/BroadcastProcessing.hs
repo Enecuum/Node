@@ -28,13 +28,13 @@ import              Service.Types
 import              Service.InfoMsg
 import              Node.Node.Types
 import              Node.Node.Base
-import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 
 import qualified    Sharding.Types.Node as T
 import              Node.Node.Processing
 import              Sharding.Types.ShardTypes
 import              Node.Data.GlobalLoging
+import              Node.Data.Key
 
 -- обработка полученных по бродкасту сообщений, изменение своего внутреннего состояния
 -- на их основе.

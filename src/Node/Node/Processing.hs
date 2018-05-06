@@ -26,7 +26,6 @@ import              Service.Network.Base
 
 import              Node.Node.Base
 import              Node.Node.Types
-import              Node.Data.NodeTypes
 import              Node.Data.NetPackage
 import              Sharding.Sharding
 import qualified    Sharding.Types.Node as T
@@ -37,7 +36,7 @@ import              Node.Data.GlobalLoging
 import              Service.InfoMsg
 import              Data.Maybe
 import              PoA.Types
-
+import              Node.Data.Key
 
 class Processing aNodeData aPackage where
     processing

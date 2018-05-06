@@ -4,7 +4,6 @@
 
 module Sharding.Types.Node where
 
-import              Node.Data.NodeTypes
 import              Sharding.ShardDB.ShardIndex
 import              Sharding.Types.ShardTypes
 import              Sharding.Space.Point
@@ -17,6 +16,7 @@ import qualified    Data.Set            as S
 import qualified    Data.Map            as M
 import              System.Clock
 import              Service.InfoMsg
+import              Node.Data.Key
 
 
 data ShardingNode = ShardingNode {
