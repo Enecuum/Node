@@ -149,14 +149,14 @@ data instance Request MiningLvl where
         ->  IdFrom
         ->  IdTo
         ->  Request MiningLvl
-    RequestPPConnection :: UUID -> Request MiningLvl
+    RequestPPConnection :: PPId -> Request MiningLvl
   deriving (Eq, Show, Generic)
 
 data family Response a :: *
 
 --
 data instance Response MiningLvl where
-    ResponsePPConnection :: UUID -> Connect -> Response MiningLvl
+    ResponsePPConnection :: PPId -> Connect -> Response MiningLvl
   deriving (Eq, Show, Generic)
 
 

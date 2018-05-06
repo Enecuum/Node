@@ -9,6 +9,7 @@ module Sharding.Space.Point where
 
 import              Data.Serialize
 import              Data.Word
+import              Node.Data.Key
 import              GHC.Generics
 
 -- * Points in the testing space
@@ -35,6 +36,14 @@ newtype PointTo         = PointTo        Point
 
 class NodePositions a b where
     toNodePosition :: a -> b
+
+
+idToPoint :: NodeId -> Point
+idToPoint (NodeId aId) = Point x y
+  where
+    x        = fromInteger $ aId `mod` aMaxWord
+    y        = fromInteger $ aId `div` aMaxWord `mod` aMaxWord
+    aMaxWord = toInteger  (maxBound :: Word64)
 
 
 instance (Positions a, Positions b) => NodePositions a b where

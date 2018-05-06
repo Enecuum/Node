@@ -7,8 +7,12 @@
 
 module Node.Data.Key (
         StringKey(..)
+    ,   PublicKey(..)
     ,   NodeId(..)
     ,   MyNodeId(..)
+    ,   PPId(..)
+    ,   IdFrom(..)
+    ,   IdTo(..)
     ,   getStringKey
     ,   curve_256
     ,   toNodeId
@@ -17,7 +21,7 @@ module Node.Data.Key (
     ,   idToKey
   ) where
 
-
+import            GHC.Generics
 import            Crypto.PubKey.ECC.DH
 import            Crypto.PubKey.ECC.Types (
     getCurveByName,
@@ -38,6 +42,9 @@ import              Service.Types.PublicPrivateKeyPair (
 
 newtype NodeId     = NodeId     Integer deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)
 newtype MyNodeId   = MyNodeId   Integer deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)
+newtype PPId       = PPId       NodeId  deriving (Show, Ord, Eq, Generic, Serialize)
+newtype IdFrom     = IdFrom     PPId    deriving (Show, Ord, Eq, Generic, Serialize)
+newtype IdTo       = IdTo       PPId    deriving (Show, Ord, Eq, Generic, Serialize)
 
 newtype StringKey  = StringKey B.ByteString deriving (Eq, Show)
 

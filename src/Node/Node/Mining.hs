@@ -80,32 +80,34 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
             sendToShardingLvl aData $
                 T.ShardAcceptAction (microblockToShard aMicroblock)
 
-        NewConnectWithPP aUUID aNodeType aChanNNToPPMessage  -> do
+        NewConnectWithPP aPPId aNodeType aChanNNToPPMessage  -> do
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                "A new connect with PP node " ++ show aUUID ++ ", the type of node is " ++ show aNodeType
-            modifyIORef aMd $ ppNodes %~ M.insert aUUID
+                "A new connect with PP node " ++ show aPPId ++ ", the type of node is " ++ show aNodeType
+            modifyIORef aMd $ ppNodes %~ M.insert aPPId
                 (PPNode aNodeType aChanNNToPPMessage)
-            let aRequest = RequestPPConnection aUUID
-            makeAndSendTo aData (uuidToNodePosition aUUID) aRequest
+            let aRequest = RequestPPConnection aPPId
+            makeAndSendTo aData (ppIdToNodePosition aPPId) aRequest
 
-        BroadcastRequestFromPP aByteString aIdFrom@(IdFrom aUuid) aNodeType ->
-            whenJust (aData^.ppNodes.at aUuid) $ \aNode ->
+        BroadcastRequestFromPP aByteString aIdFrom@(IdFrom aPPId) aNodeType ->
+            whenJust (aData^.ppNodes.at aPPId) $ \aNode ->
                 sendBroadcast aMd $
                     BroadcastPPMsg (aNode^.ppType) aByteString aNodeType aIdFrom
 
-        MsgResendingToPP aIdFrom@(IdFrom aUuidFrom) aIdTo@(IdTo aId) aByteString
+        MsgResendingToPP aIdFrom@(IdFrom aPPIdFrom) aIdTo@(IdTo aId) aByteString
             | Just aNode <- aData^.ppNodes.at aId ->
-              writeChan (aNode^.ppChan) $ MsgMsgToPP aUuidFrom aByteString
+              writeChan (aNode^.ppChan) $ MsgMsgToPP aPPIdFrom aByteString
             | otherwise -> do
                 let aRequest = PPMessage aByteString aIdFrom aIdTo
-                makeAndSendTo aData (uuidToNodePosition aId) aRequest
-        PoWListRequest (IdFrom aUuidFrom) ->
-            whenJust (aData^.ppNodes.at aUuidFrom) $ \aPpNode -> do
-                let aUuids = takeEnd 5 (map snd (BI.toList $ aData^.poWNodes))
-                writeChan (aPpNode^.ppChan) $ ResponsePoWList aUuids
+                makeAndSendTo aData (ppIdToNodePosition aId) aRequest
+        PoWListRequest (IdFrom aPPIdFrom) ->
+            whenJust (aData^.ppNodes.at aPPIdFrom) $ \aPpNode -> do
+                let aPPIds = takeEnd 5 (map snd (BI.toList $ aData^.poWNodes))
+                writeChan (aPpNode^.ppChan) $ ResponsePoWList aPPIds
   where
-    uuidToNodePosition :: UUID -> NodePosition
-    uuidToNodePosition (UUID aPoint) = toNodePosition aPoint
+    ppIdToNodePosition :: PPId -> NodePosition
+    ppIdToNodePosition (PPId aPPId) = toNodePosition $ idToPoint aPPId
+
+
 
 answeToMsgFromPP _ _ = error "answeToMsgFromPP"
 
