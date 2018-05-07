@@ -1,0 +1,22 @@
+resolver: lts-11.1
+
+packages:
+- .
+
+extra-deps:
+- json-rpc-client-0.2.5.0
+- json-rpc-server-0.2.6.0
+- time-out-0.2
+- time-interval-0.1.1
+- time-units-1.0.0
+- base58-bytestring-0.1.0
+- HongoDB-0.0.1
+
+
+build:
+  haddock-arguments:
+    haddock-args:
+    - "--odir=./docs"
+
+docker:
+  enable: false
