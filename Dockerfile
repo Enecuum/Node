@@ -7,8 +7,8 @@ RUN cd Node && \
 EXPOSE 1554 1555 1556 1667
 ENTRYPOINT if [ "$bootnode" = true ] ; then \
              stack exec MakeConfigBootNode-exe && \
-             stack exec BootNode-exe \
+             stack exec BootNode-exe; \
            else \
              stack exec MakeConfigSimpleNode-exe && \
-             stack exec SimpleNode-exe \
+             stack exec SimpleNode-exe; \
            fi
