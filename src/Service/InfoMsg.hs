@@ -59,7 +59,7 @@ sendToServer h s = void $ sendTo (clientSocket h) s (clientAddress h)
 serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> Integer -> IO ()
 serveInfoMsg statsdInfo logsInfo chan aId = do
     putStrLn "Start of serveInfoMsg"
-    metricHandle <- openConnect (host statsdInfo) (port statsdInfo)
+    --metricHandle <- openConnect (host statsdInfo) (port statsdInfo)
     putStrLn "Metrics server connected"
     logHandle    <- openConnect (host logsInfo)   (port logsInfo)
     putStrLn "Logs server connected"
@@ -69,7 +69,7 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
     forever $ do
         m <- readChan chan
         case m of
-            Metric s -> sendToServer metricHandle s
+            Metric s -> return() --sendToServer metricHandle s
 
             Log aTags aMsgType aMsg -> do
                 let aTagsList = intercalate "," (show <$> aTags)
