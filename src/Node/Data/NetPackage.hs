@@ -187,7 +187,7 @@ data instance NodeInfoList LogicLvl where
 
 data instance NodeInfoList NetLvl where
     NodeInfoListNetLvl
-        ::  [(NodeId, HostAddress, PortNumber)]
+        ::  [(NodeId, Connect)]
         ->  NodeInfoList NetLvl
   deriving (Eq, Generic, Show)
 

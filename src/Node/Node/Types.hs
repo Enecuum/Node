@@ -44,8 +44,9 @@ import              Data.Scientific (toRealFloat, Scientific)
 import              Data.Aeson
 import              Data.Aeson.TH
 import              Service.InfoMsg
-import              Service.Network.Base (ConnectInfo, HostAddress, PortNumber)
+import              Service.Network.Base (ConnectInfo, HostAddress, PortNumber, Connect)
 import              PoA.Types
+import              Node.FileDB.FileServer
 
 
 data NodeVariantRole where
@@ -59,9 +60,7 @@ type NodeVariantRoles = [NodeVariantRole]
 
 instance Serialize NodeVariantRole
 
-
-type IdIpPort = (NodeId, HostAddress, PortNumber)
-type BootNodeList   = [IdIpPort]
+type BootNodeList   = [(NodeId, Connect)]
 
 
 
@@ -178,6 +177,7 @@ data NodeBaseData = NodeBaseData {
     ,   nodeBaseDataIAmBroadcast        :: Bool
     ,   nodeBaseDataOutPort             :: PortNumber
     ,   nodeBaseDataInfoMsgChan         :: Chan InfoMsg
+    ,   nodeBaseDataFileServerChan      :: Chan FileActorRequest
   }
 
 
@@ -189,6 +189,7 @@ makeNodeBaseData
     ->  Chan Microblock
     ->  PortNumber
     ->  Chan InfoMsg
+    ->  Chan FileActorRequest
     ->  NodeBaseData
 makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan = NodeBaseData
     aExitChan M.empty M.empty aList aAnswerChan 0 Nothing aMicroblockChan
@@ -271,14 +272,15 @@ class ToManagerData a where
         -> Chan ExitMsg
         -> Chan Answer
         -> Chan InfoMsg
+        -> Chan FileActorRequest
         -> BootNodeList
         -> NodeConfig
         -> PortNumber
         ->  a
 
 instance ToManagerData ManagerNodeData where
-    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aInfoChan aList aNodeConfig aOutPort = ManagerNodeData
-        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aOutPort aInfoChan)
+    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aInfoChan aFileRequesChan aList aNodeConfig aOutPort = ManagerNodeData
+        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aOutPort aInfoChan aFileRequesChan)
             aTransactionChan BI.empty BI.empty S.empty BI.empty
 
 

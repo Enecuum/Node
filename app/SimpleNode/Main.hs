@@ -12,7 +12,7 @@ import              Service.Timer
 import              Node.Lib
 import              Service.InfoMsg
 import              Service.Network.Base
-import              PoA
+import              PoA.PoAServer
 import              CLI.CLI (serveRpc)
 import              Control.Exception (try, SomeException())
 
@@ -31,7 +31,7 @@ main =  do
             aInfoCh   <- newChan
 
             void $ startNode conf
-                aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMyNodeId -> do
+                aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMyNodeId aFileChan -> do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
                     metronomeS 1000000 (writeChan ch deleteOldestMsg)
@@ -72,7 +72,7 @@ main =  do
 
                     void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh (toInteger aMyNodeId)
 
-                    void $ forkIO $ servePoA poa_in aMyNodeId ch aChan aInfoCh
+                    void $ forkIO $ servePoA poa_in aMyNodeId ch aChan aInfoCh aFileChan
                     void $ forkIO $ serveRpc rpc_p ch aInfoCh
 
                     writeChan aInfoCh $ Metric $ increment "cl.node.count"

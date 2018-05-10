@@ -10,7 +10,8 @@ import qualified    Data.Set            as S
 
 checkUnevenness :: MyNodePosition -> S.Set NodePosition -> Bool
 checkUnevenness aMyNodePosition aPositions =
-    minimum aDistances `div` 4 < maximum aDistances `div` 5
+  -- TODO CHECK (length aDistances == 4)
+    (length aDistances == 4) && (minimum aDistances `div` 4 < maximum aDistances `div` 5)
   where
     aDistances = distanceTo aMyNodePosition <$>
         findNearestNeighborPositions aMyNodePosition aPositions
@@ -31,6 +32,7 @@ findNearestNeighborPositions aMyNodePosition aPositions =
     aFilter aSupportPoint = S.filter
         (\aPosition -> distanceTo (NodePosition aSupportPoint) aPosition < fourthOfMaxBound)
         aPositions
+
 
 
 shiftToCenterOfMass :: MyNodePosition -> S.Set NodePosition -> MyNodePosition

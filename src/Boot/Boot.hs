@@ -19,6 +19,8 @@ import              Node.Data.Key
 import              Node.Data.NetPackage
 import              Node.Data.GlobalLoging
 import              Service.InfoMsg
+import              Service.Network.Base
+import              Node.FileDB.FileServer
 
 managerBootNode :: Chan ManagerBootNodeMsgBase -> IORef NodeBootNodeData -> IO ()
 managerBootNode ch md = forever $ do
@@ -77,10 +79,11 @@ answerToCheckBroadcastNodes aMd aChan _ = do
             writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info
                 "Addition the node to list of broadcast node."
             sendExitMsgToNode aNode
-            addRecordsToNodeListFile
-                (aData^.myNodeId)
-                (NodeInfoListNetLvl [
-                    (aNodeId, aNode^.nodeHost, aNode^.nodePort)])
+
+            writeChan (aData^.fileServerChan) $
+                    FileActorRequestNetLvl $ UpdateFile (aData^.myNodeId)
+                    (NodeInfoListNetLvl [(aNodeId, Connect (aNode^.nodeHost) (aNode^.nodePort))])
+
 
 answerToCheckBroadcastNode :: ManagerMsg a =>
     Chan a -> IORef NodeBootNodeData -> ManagerBootNodeMsgBase -> IO ()

@@ -11,6 +11,7 @@ import              Service.InfoMsg
 import              Service.Network.Base (ConnectInfo(..))
 import              System.Environment
 import              Node.Node.Types
+import              PoA.PoAServer
 
 import              Network.Socket()
 import qualified    Data.ByteString.Lazy as L
@@ -19,7 +20,6 @@ import              Boot.Boot
 import              Boot.Types
 import              Node.Lib
 import              Data.Aeson
-import              PoA
 
 main :: IO ()
 main =  do
@@ -56,8 +56,8 @@ main =  do
 
 
             void $ startNode conf
-              exitCh answerCh aInfoChan managerBootNode $ \ch _ aNodeId -> do
+              exitCh answerCh aInfoChan managerBootNode $ \ch _ aNodeId aFileChan -> do
                   metronomeS 100000 (writeChan ch checkBroadcastNodes)
-                  void $ forkIO $ serverPoABootNode poa_in aInfoChan
+                  void $ forkIO $ serverPoABootNode poa_in aInfoChan aFileChan
                   void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChan (toInteger aNodeId)
             void $ readChan exitCh
