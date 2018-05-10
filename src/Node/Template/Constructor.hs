@@ -99,6 +99,7 @@ nodeBaseDataList = toList $ do
     "iAmBroadcast"      !: ["Bool"]
     "outPort"           !: ["PortNumber"]
     "infoMsgChan"       !: ["Chan", "InfoMsg"]
+    "fileServerChan"    !: ["Chan", "FileActorRequest"]
 
 
 infixl 2 +:

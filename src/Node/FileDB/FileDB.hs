@@ -16,6 +16,7 @@ import Data.Serialize as S
 import System.Directory
 
 
+
 readDataFile :: Read a => FilePath -> IO [a]
 readDataFile aFilePath = do
     aDirectoryExist <- doesDirectoryExist "./data"

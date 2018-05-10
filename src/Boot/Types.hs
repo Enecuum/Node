@@ -29,6 +29,7 @@ import              Node.Data.NetPackage
 import              Node.Data.GlobalLoging
 import              Service.InfoMsg
 import              Node.Data.Key
+import              Node.FileDB.FileServer
 
 data NodeBootNodeData where
     NodeBootNodeData :: {
@@ -56,8 +57,8 @@ mapM (uncurry makeLensInstance') [
 instance ManagerData NodeBootNodeData
 
 instance ToManagerData NodeBootNodeData where
-    toManagerData _ aMicroblockChan aExitChan aAnswerChan aInfoChan aList aNodeConfig aPort = NodeBootNodeData
-        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aPort aInfoChan)
+    toManagerData _ aMicroblockChan aExitChan aAnswerChan aInfoChan aFileChan aList aNodeConfig aPort = NodeBootNodeData
+        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aPort aInfoChan aFileChan)
             S.empty
 
 lensInst "checSet" ["NodeBootNodeData"] ["S.Set", "NodeId"]
@@ -79,7 +80,11 @@ instance  Processing (IORef NodeBootNodeData) (Request NetLvl) where
             aData <- readIORef aMd
             let aSendNetLvlResponse = sendResponseTo
                     aTraceRouting aData BroadcastListRequest aSignature
-            NodeInfoListNetLvl aBroadcasts <- readRecordsFromNodeListFile
+
+            aConChan <- newChan
+            writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+            NodeInfoListNetLvl aBroadcasts <- readChan aConChan
+
             let aBroadcastListResponse = BroadcastListResponse
                     (NodeInfoListLogicLvl [])
                     (NodeInfoListNetLvl $ take 10 aBroadcasts)

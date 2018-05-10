@@ -19,10 +19,11 @@ import Node.Node.Config.Make
 import Node.Node.Base.Server
 
 import Service.System.Directory (getTransactionFilePath)
-
+import Service.Network.Base
 import System.Environment
 import Service.InfoMsg (InfoMsg)
 import Node.Data.Key
+import Node.FileDB.FileServer
 --tmp
 import System.Directory (createDirectoryIfMissing)
 
@@ -40,7 +41,7 @@ startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
     -> Chan Answer
     -> Chan InfoMsg
     -> (Chan a1 -> IORef s -> IO ())
-    -> (Chan a1 -> Chan Transaction -> MyNodeId -> IO a2)
+    -> (Chan a1 -> Chan Transaction -> MyNodeId -> Chan FileActorRequest -> IO a2)
     -> IO (Chan a1)
 startNode buildConf exitCh answerCh infoCh manager startDo = do
 
@@ -52,13 +53,14 @@ startNode buildConf exitCh answerCh infoCh manager startDo = do
     aTransactionChan <- newChan
     config  <- readNodeConfig
     bnList  <- readBootNodeList $ bootNodeList buildConf
+    aFileRequesChan <- newChan
     let port = extConnectPort buildConf
-    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh bnList config port
+    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aFileRequesChan bnList config port
     startServerActor managerChan port
     aFilePath <- getTransactionFilePath
     void $ forkIO $ microblockProc aMicroblockChan aFilePath
     void $ forkIO $ manager managerChan md
-    void $ startDo managerChan aTransactionChan (config^.myNodeId)
+    void $ startDo managerChan aTransactionChan (config^.myNodeId) aFileRequesChan
     return managerChan
 
 microblockProc :: Chan Microblock -> String -> IO b
@@ -92,7 +94,7 @@ readBootNodeList conf = do
             Left (_::SomeException) -> return conf
     toNormForm $ read bnList
      where
-       toNormForm aList = return $ (\(a,b,c) -> (NodeId a,tupleToHostAddress b, c))
+       toNormForm aList = return $ (\(a,b,c) -> (NodeId a, Connect (tupleToHostAddress b) c))
           <$> aList
 
 ---

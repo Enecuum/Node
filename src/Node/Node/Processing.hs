@@ -24,7 +24,6 @@ import              Control.Concurrent
 import              Control.Monad.Extra
 import              Service.Network.Base
 
-import              Node.Node.Base
 import              Node.Node.Types
 import              Node.Data.NetPackage
 import              Sharding.Sharding
@@ -37,6 +36,7 @@ import              Service.InfoMsg
 import              Data.Maybe
 import              PoA.Types
 import              Node.Data.Key
+import              Node.FileDB.FileServer
 
 class Processing aNodeData aPackage where
     processing
@@ -71,8 +71,11 @@ instance Processing (IORef ManagerNodeData) (Response NetLvl) where
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                 "Add node coordinate to coordinate list."
 
-            addRecordsToNodeListFile aMyNodeId aBroadcastListLogic
-            addRecordsToNodeListFile aMyNodeId aBroadcastList
+            writeChan (aData^.fileServerChan) $
+                FileActorRequestNetLvl $ UpdateFile aMyNodeId aBroadcastList
+            writeChan (aData^.fileServerChan) $
+                FileActorRequestLogicLvl $ UpdateFile aMyNodeId aBroadcastListLogic
+
             let NodeInfoListNetLvl aList = aBroadcastList
             when (null aList) $ do
                 aDeltaX <- randomIO
@@ -120,7 +123,9 @@ instance Processing (IORef ManagerNodeData) (Response LogicLvl) where
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Accepted the node position of a neighbor node " ++ show aNodeId ++
                     " a new position is a " ++ show aNodePosition
-                updateFile (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
+                writeChan (aData^.fileServerChan) $
+                    FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId)
+                        (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                     "Updating of node positions file."
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info
@@ -239,18 +244,23 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
                     "Send Response: I have host addres " ++ show (aData^.hostAddress) ++ "."
                 aSendNetLvlResponse (HostAdressResponse $ aData^.hostAddress)
 
-            BroadcastListRequest -> do
-                -- TEMP Think about move aBroadcastList to operacety memory.
+            BroadcastListRequest -> void $ forkIO $ do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                     "Send Response 'Broadcast list'."
-                NodeInfoListNetLvl   aBroadcastList      <- readRecordsFromNodeListFile
-                NodeInfoListLogicLvl aBroadcastListLogic <- readRecordsFromNodeListFile
+                aPosChan <- newChan
+                aConChan <- newChan
+                writeChan (aData^.fileServerChan) $
+                     FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+                writeChan (aData^.fileServerChan) $
+                     FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
+
+                NodeInfoListNetLvl   aBroadcastList      <- readChan aConChan
+                NodeInfoListLogicLvl aBroadcastListLogic <- readChan aPosChan
+
                 let aBroadcastListResponse = BroadcastListResponse
                         (NodeInfoListLogicLvl $ take 10 aBroadcastListLogic)
                         (NodeInfoListNetLvl   $ take 10 aBroadcastList)
 
-                -- шлём ответ через сеть.
-                -- +
                 aSendNetLvlResponse aBroadcastListResponse
 
 

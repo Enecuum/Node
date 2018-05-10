@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module PoA (
+module PoA.PoAServer (
         servePoA
     ,   serverPoABootNode
   )  where
@@ -20,11 +20,11 @@ import              Data.String
 import qualified    Data.ByteString as B
 import              Data.Aeson as A
 import              Control.Exception
-import              Node.Node.Base
 import              Node.Data.GlobalLoging
 import              PoA.Types
 import              Control.Concurrent.MVar
 import              Control.Concurrent
+import              Node.FileDB.FileServer
 
 import              Control.Concurrent.Async
 import              Node.Data.Key
@@ -36,17 +36,20 @@ myEncode :: NNToPPMessage -> B.ByteString
 myEncode = fromString.show.A.encode
 
 --
-serverPoABootNode :: PortNumber -> Chan InfoMsg -> IO ()
-serverPoABootNode aRecivePort aInfoChan = runServer aRecivePort $ \_ aPending -> do
+serverPoABootNode :: PortNumber -> Chan InfoMsg -> Chan FileActorRequest -> IO ()
+serverPoABootNode aRecivePort aInfoChan aFileServerChan = runServer aRecivePort $ \_ aPending -> do
     aConnect <- WS.acceptRequest aPending
     WS.forkPingThread aConnect 30
     aMsg <- WS.receiveData aConnect
     case myDecode aMsg of
         Just a -> case a of
             RequestConnects -> do
-                NodeInfoListNetLvl aRecords <- readRecordsFromNodeListFile
+                aConChan <- newChan
+                writeChan (aFileServerChan) $
+                     FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+                NodeInfoListNetLvl aRecords <- readChan aConChan
                 aShuffledRecords <- shuffleM aRecords
-                let aConnects = (\(_, b, c) -> Connect b c) <$> take 5 aShuffledRecords
+                let aConnects = snd <$> take 5 aShuffledRecords
                 writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
                 WS.sendBinaryData aConnect $ myEncode $ ResponseConnects aConnects
             _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
@@ -63,8 +66,9 @@ servePoA ::
     -> Chan ManagerMiningMsgBase
     -> Chan Transaction
     -> Chan InfoMsg
+    -> Chan FileActorRequest
     -> IO ()
-servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
+servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = runServer aRecivePort $
     \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
@@ -118,9 +122,12 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan = runServer aRecivePort $
                         writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without PPId " ++ show aMsg
                         WS.sendBinaryData aConnect $ myEncode RequestNodeIdToPP
                 RequestConnects -> do
-                    NodeInfoListNetLvl aRecords <- readRecordsFromNodeListFile
+                    aConChan <- newChan
+                    writeChan (aFileServerChan) $
+                         FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+                    NodeInfoListNetLvl aRecords <- readChan aConChan
                     aShuffledRecords <- shuffleM aRecords
-                    let aConnects = (\(_, b, c) -> Connect b c) <$> take 5 aShuffledRecords
+                    let aConnects = snd <$> take 5 aShuffledRecords
                     writeLog aInfoChan [ServePoATag] Info $ "Send connections " ++ show aConnects
                     WS.sendBinaryData aConnect $ myEncode $ ResponseConnects aConnects
 

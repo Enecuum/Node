@@ -27,7 +27,6 @@ import              PoA.Types
 import              Service.Types
 import              Service.InfoMsg
 import              Node.Node.Types
-import              Node.Node.Base
 import              Node.Data.NetPackage
 
 import qualified    Sharding.Types.Node as T
@@ -35,6 +34,9 @@ import              Node.Node.Processing
 import              Sharding.Types.ShardTypes
 import              Node.Data.GlobalLoging
 import              Node.Data.Key
+import              Node.FileDB.FileServer
+import              Service.Network.Base
+
 
 -- обработка полученных по бродкасту сообщений, изменение своего внутреннего состояния
 -- на их основе.
@@ -50,9 +52,9 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl NetLvl) 
             INeedNeighbors (toNodeId -> aNodeId) aHostAddress aPortNumber -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted msg from the " ++
                     show aNodeId ++ "that it need a neighbors. Addtition the node in the list of possible connects."
-                addRecordsToNodeListFile
-                    (aData^.myNodeId)
-                    (NodeInfoListNetLvl [(aNodeId, aHostAddress, aPortNumber)])
+
+                writeChan (aData^.fileServerChan) $
+                        FileActorRequestNetLvl $ UpdateFile (aData^.myNodeId) ( NodeInfoListNetLvl [(aNodeId, Connect aHostAddress aPortNumber)])
 
 instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl LogicLvl) where
     processingOfBroadcast aMd aMsg = do
@@ -69,8 +71,9 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl LogicLvl
             BroadcastPosition     aMyNodeId aNodePosition  -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted new position for the node." ++
                     "The node have position " ++ show aNodePosition ++ ", node id is " ++ show aMyNodeId
-                updateFile
-                    (NodeInfoListLogicLvl [(toNodeId aMyNodeId, aNodePosition)])
+                writeChan (aData^.fileServerChan) $
+                    FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId) (NodeInfoListLogicLvl [(toNodeId aMyNodeId, aNodePosition)])
+
                 sendToShardingLvl aData $
                     T.TheNodeHaveNewCoordinates (toNodeId aMyNodeId) aNodePosition
 

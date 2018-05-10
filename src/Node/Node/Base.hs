@@ -10,8 +10,7 @@
   #-}
 
 module Node.Node.Base (
-            FileDB (..)
-        ,   BroadcastAction(..)
+            BroadcastAction(..)
         ,   PackageTraceRoutingAction(..)
         ,   sendBroadcastThingToNodes
         ,   answerToSendInitDatagram
@@ -37,6 +36,7 @@ import              Lens.Micro.Mtl
 import              Lens.Micro
 import              Data.Hex
 
+import              Node.FileDB.FileServer
 import              Service.Network.WebSockets.Client
 import              Service.Network.Base
 import              Service.Monad.Option
@@ -46,7 +46,6 @@ import              Sharding.Sharding
 import              Node.Node.Types
 import              Node.Crypto
 import              Node.Data.Key
-import              Node.FileDB.FileDB
 import              Node.Data.NetPackage
 import              Node.Node.Base.Server
 import              Node.Data.MakeAndSendTraceRouting
@@ -106,14 +105,19 @@ answerToConnectivityQuery aChan aMd _ = do
         aBroadcastNum = length aBroadcasts
         aUnActiveNum  = M.size $ M.filter (\a -> a^.status /= Active) aNeighbors
 
-    NodeInfoListNetLvl aConnectList     <- readRecordsFromNodeListFile
-    NodeInfoListLogicLvl aPossitionList <- readRecordsFromNodeListFile
-    let aWait = aBroadcastNum >= preferedBroadcastCount{- || aBroadcastNum <= 6 -} || aUnActiveNum /= 0
+    aPosChan <- newChan
+    aConChan <- newChan
+    writeChan (aData^.fileServerChan) $
+         FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+    writeChan (aData^.fileServerChan) $
+         FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
 
-        aConnectMap   = M.fromList $ (\(a,b,c) -> (a, (b, c))) <$> aConnectList
-        aPossitionMap = M.fromList aPossitionList
-        aFilteredPositions = S.fromList . M.elems $
-            M.intersection aPossitionMap aConnectMap
+    NodeInfoListNetLvl   aConnectList   <- readChan aConChan
+    NodeInfoListLogicLvl aPossitionList <- readChan aPosChan
+
+    let aWait = aBroadcastNum >= preferedBroadcastCount{- || aBroadcastNum <= 6 -} || aUnActiveNum /= 0
+        aFilteredPositions = S.fromList . M.elems $ M.intersection
+            (M.fromList aPossitionList) (M.fromList aConnectList)
 
     if  | aWait             -> return ()
         | null aConnectList -> connectToBootNode aChan aData
@@ -164,11 +168,11 @@ connectTo
     ::  ManagerMsg msg
     =>  Chan msg
     ->  Int
-    ->  [(NodeId, HostAddress, PortNumber)]
+    ->  [(NodeId, Connect)]
     ->  IO ()
 connectTo aChan aNum aConnects = do
     aShuffledConnects <- shuffleM aConnects
-    forM_ (take aNum aShuffledConnects) $ \(aNodeId, aIp, aPort) ->
+    forM_ (take aNum aShuffledConnects) $ \(aNodeId, Connect aIp aPort) ->
         writeChan aChan $ sendInitDatagram aIp aPort aNodeId
 
 connectToBootNode :: (ManagerMsg msg, ManagerData md) => Chan msg -> md -> IO ()
@@ -421,69 +425,6 @@ sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing = do
     aMakeMsg = makeCipheredPackage
         (BroadcastRequest aBroadcastSignature aBroadcastThing)
 
-
-class FileDB a where
-    readRecordsFromNodeListFile :: IO (NodeInfoList a)
-    addRecordsToNodeListFile    :: MyNodeId -> NodeInfoList a -> IO ()
-    deleteFromFile              :: a -> NodeId -> IO ()
-    updateFile                  :: NodeInfoList a -> IO ()
-
-instance FileDB NetLvl where
-    readRecordsFromNodeListFile =
-        NodeInfoListNetLvl <$> readDataFile "./data/listOfConnects.txt"
-
-
-    addRecordsToNodeListFile aMyNodeId (NodeInfoListNetLvl aList) = do
-        NodeInfoListNetLvl aFileContent <- readRecordsFromNodeListFile
-        let aNotInFile  = (`notElem` aFileContent)
-            aNotIAm  a  = toMyNodeId (a^._1) /= aMyNodeId
-
-        addDataToFile "./data/listOfConnects.txt" $
-            filter (\a -> aNotInFile a && aNotIAm a) aList
-
-
-    deleteFromFile _ aNodeId = do
-        NodeInfoListNetLvl aRecords <-readRecordsFromNodeListFile
-        let aFilteredRecords = filter (\a -> a^._1 /= aNodeId) aRecords
-        writeDataToFile "./data/listOfConnects.txt" aFilteredRecords
-
-    updateFile (NodeInfoListNetLvl aNewRecords) = do
-        NodeInfoListNetLvl aRecords <-readRecordsFromNodeListFile
-        let aIdsForUpdate    = (^._1) <$> aNewRecords
-            aFilteredRecords = filter (\a -> a^._1 `notElem` aIdsForUpdate) aRecords
-            aUpdatedRecords  = aNewRecords ++ aFilteredRecords
-
-        writeDataToFile "./data/listOfConnects.txt" aUpdatedRecords
-
-
-instance FileDB LogicLvl where
-    readRecordsFromNodeListFile =
-        NodeInfoListLogicLvl <$> readDataFile "./data/listOfPositions.txt"
-
-
-    addRecordsToNodeListFile aMyNodeId (NodeInfoListLogicLvl aList) = do
-        NodeInfoListLogicLvl aFileContent <- readRecordsFromNodeListFile
-        let aFilteredRecords = filter
-                (\a -> aNotInFile a && aNotIAm a) aList
-            aNotInFile      a = a `notElem` aFileContent
-            aNotIAm         a = toMyNodeId (a^._1) /= aMyNodeId
-
-        addDataToFile "./data/listOfPositions.txt" aFilteredRecords
-
-
-    deleteFromFile _ aNodeId = do
-        NodeInfoListLogicLvl aRecords <- readRecordsFromNodeListFile
-        let aFilteredRecords = filter (\a -> a^._1 /= aNodeId) aRecords
-        writeDataToFile "./data/listOfPositions.txt" aFilteredRecords
-
-
-    updateFile (NodeInfoListLogicLvl aNewRecords) = do
-        NodeInfoListLogicLvl aRecords <-readRecordsFromNodeListFile
-        let aIdsForUpdate    = (^._1) <$> aNewRecords
-            aFilteredRecords = filter (\a -> a^._1 `notElem` aIdsForUpdate) aRecords
-            aUpdatedRecords  = aNewRecords ++ aFilteredRecords
-
-        writeDataToFile "./data/listOfPositions.txt" aUpdatedRecords
 --------------------------------------------------------------------------------
 
 whenRight :: Show a => Either a t -> (t -> IO ()) -> IO ()
