@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, LambdaCase, ScopedTypeVariables #-}
 
 module Service.InfoMsg (
   withRate,
@@ -24,7 +24,9 @@ import Service.Network.TCP.Client
 import Service.Metrics.Statsd
 
 import Control.Monad (void, forever)
+import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan
+import Control.Exception (try, SomeException)
 
 
 data MsgType = Info | Warning | Error
@@ -58,17 +60,19 @@ sendToServer h s = void $ sendTo (clientSocket h) s (clientAddress h)
 
 serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> Integer -> IO ()
 serveInfoMsg statsdInfo logsInfo chan aId = do
-    metricHandle <- openConnect (host statsdInfo) (port statsdInfo)
-    putStrLn "Metrics server connected"
-    logHandle    <- openConnect (host logsInfo)   (port logsInfo)
-    putStrLn "Logs server connected"
-    sendToServer logHandle $ "+node|" ++  show aId ++ "|" ++
+    mCh <- newChan
+    lCh <- newChan
+
+    _ <- forkIO $ serveMetrics statsdInfo mCh
+    _ <- forkIO $ serveLogs    logsInfo   lCh
+
+    writeChan lCh $ "+node|" ++  show aId ++ "|" ++
           intercalate "," (show <$> [ConnectingTag .. InitTag]) ++ "\r\n"
 
     forever $ do
         m <- readChan chan
         case m of
-            Metric s -> sendToServer metricHandle s
+            Metric s -> writeChan mCh s
 
             Log aTags aMsgType aMsg -> do
                 let aTagsList = intercalate "," (show <$> aTags)
@@ -79,5 +83,48 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                     aFileString = "  !  " ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
 
                 appendFile "log.txt" aFileString
-                sendToServer logHandle aString
+                writeChan lCh aString
 --------------------------------------------------------------------------------
+
+serveMetrics :: ConnectInfo -> Chan String -> IO ()
+serveMetrics statsdInfo chan = do
+  try (openConnect (host statsdInfo) (port statsdInfo)) >>= \case
+    Left (err :: SomeException) -> do
+      
+      putStrLn $ "Metrics server connection error: " ++ show err
+      loop
+      where loop = do
+              _ <- readChan chan
+              loop
+
+    Right metricHandle          -> do
+      
+      putStrLn "Metrics sever connected"
+      loop
+      where loop = do
+              m <- readChan chan
+              sendToServer metricHandle m 
+              loop
+
+
+
+serveLogs :: ConnectInfo -> Chan String -> IO ()
+serveLogs logsInfo chan = do
+  try (openConnect (host logsInfo) (port logsInfo)) >>= \case
+    Left (err :: SomeException) -> do
+
+      putStrLn $ "Logs server connection error: " ++ show err
+      loop
+      where loop = do
+              _ <- readChan chan
+              loop
+
+    Right logsHandle            -> do
+
+      putStrLn "Logs sever connected"
+      loop
+      where loop = do
+              m <- readChan chan
+              sendToServer logsHandle m
+              loop
+
