@@ -58,6 +58,7 @@ sendToServer h s = void $ sendTo (clientSocket h) s (clientAddress h)
 
 serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> Integer -> IO ()
 serveInfoMsg statsdInfo logsInfo chan aId = do
+    putStrLn "Start of serveInfoMsg"
     metricHandle <- openConnect (host statsdInfo) (port statsdInfo)
     putStrLn "Metrics server connected"
     logHandle    <- openConnect (host logsInfo)   (port logsInfo)
