@@ -61,15 +61,16 @@ instance Processing (IORef ManagerNodeData) (Response NetLvl) where
     processing aChan aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
         BroadcastListResponse aBroadcastListLogic aBroadcastList -> do
             aData <- readIORef aMd
-            writeLog (aData^.infoMsgChan) [NetLvlTag] Info
-                "Accepted lists of broadcasts and points of node."
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                "Accepted lists of broadcasts and points of node. " ++
+                show aBroadcastListLogic ++ show aBroadcastList
             let aMyNodeId = aData^.myNodeId
 
             -- добавление соответсвующих записей в списки коннектов и координат.
-            writeLog (aData^.infoMsgChan) [NetLvlTag] Info
-                "Add connects to list."
-            writeLog (aData^.infoMsgChan) [NetLvlTag] Info
-                "Add node coordinate to coordinate list."
+            -- writeLog (aData^.infoMsgChan) [NetLvlTag] Info
+            --     "Add connects to list."
+            -- writeLog (aData^.infoMsgChan) [NetLvlTag] Info
+            --     "Add node coordinate to coordinate list."
 
             writeChan (aData^.fileServerChan) $
                 FileActorRequestNetLvl $ UpdateFile aMyNodeId aBroadcastList

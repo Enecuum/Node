@@ -70,7 +70,11 @@ main =  do
                             Right item              -> return $ read item
                             Left (_::SomeException) -> return $ port $ logsBuildConfig conf
 
-                    void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh (toInteger aMyNodeId)
+                    log_id  <- try (getEnv "log_id") >>= \case
+                        Right item              -> return item
+                        Left (_::SomeException) -> return $ show aMyNodeId
+
+                    void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh log_id
 
                     void $ forkIO $ servePoA poa_in aMyNodeId ch aChan aInfoCh aFileChan
                     void $ forkIO $ serveRpc rpc_p ch aInfoCh
