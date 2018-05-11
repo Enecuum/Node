@@ -59,7 +59,7 @@ instance Processing (IORef ManagerNodeData) (Response MiningLvl) where
 -- | Обработка "ответа" для сетевого уровня.
 instance Processing (IORef ManagerNodeData) (Response NetLvl) where
     processing aChan aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
-        BroadcastListResponse aBroadcastListLogic aBroadcastList -> do
+        BroadcastListResponse aBroadcastListLogic aBroadcastList isBootNode -> do
             aData <- readIORef aMd
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                 "Accepted lists of broadcasts and points of node."
@@ -77,7 +77,7 @@ instance Processing (IORef ManagerNodeData) (Response NetLvl) where
                 FileActorRequestLogicLvl $ UpdateFile aMyNodeId aBroadcastListLogic
 
             let NodeInfoListNetLvl aList = aBroadcastList
-            when (null aList) $ do
+            when (null aList && isBootNode && isNothing (aData^.myNodePosition)) $ do
                 aDeltaX <- randomIO
                 aDeltaY <- randomIO
                 let aMyNodePosition = MyNodePosition $ Point aDeltaX aDeltaY
@@ -260,6 +260,7 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
                 let aBroadcastListResponse = BroadcastListResponse
                         (NodeInfoListLogicLvl $ take 10 aBroadcastListLogic)
                         (NodeInfoListNetLvl   $ take 10 aBroadcastList)
+                        False
 
                 aSendNetLvlResponse aBroadcastListResponse
 

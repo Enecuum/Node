@@ -88,6 +88,7 @@ instance  Processing (IORef NodeBootNodeData) (Request NetLvl) where
             let aBroadcastListResponse = BroadcastListResponse
                     (NodeInfoListLogicLvl [])
                     (NodeInfoListNetLvl $ take 10 aBroadcasts)
+                    True
             writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info $
                 "Send to node " ++ show aNodeId ++ " broadcast list Response " ++
                 show (take 10 aBroadcasts) ++ "."

@@ -164,6 +164,7 @@ data instance Response NetLvl where
     BroadcastListResponse
         ::  NodeInfoList LogicLvl
         ->  NodeInfoList NetLvl
+        ->  Bool
         ->  Response NetLvl
 
     HostAdressResponse
