@@ -54,6 +54,7 @@ startNode buildConf exitCh answerCh infoCh manager startDo = do
     config  <- readNodeConfig
     bnList  <- readBootNodeList $ bootNodeList buildConf
     aFileRequesChan <- newChan
+    void $ forkIO $ startFileServer aFileRequesChan
     let port = extConnectPort buildConf
     md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aFileRequesChan bnList config port
     startServerActor managerChan port
