@@ -44,6 +44,8 @@ answerToCheckBroadcastNodes
     ->  IO ()
 answerToCheckBroadcastNodes aMd aChan _ = do
     aData <- readIORef aMd
+    writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag, RegularTag] Info
+        "Checking of bradcasts"
     let
         -- активные ноды.
         aNodeIds :: [NodeId]
@@ -56,7 +58,7 @@ answerToCheckBroadcastNodes aMd aChan _ = do
             (\aId -> S.notMember aId $ aData^.checSet) aNodeIds
 
     forM_ aNeededInBroadcastList $ \aNodeId -> do
-        writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info $
+        writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag, RegularTag] Info $
             "Start of node check " ++ show aNodeId ++ ". Is it broadcast?"
         whenJust (aData^.nodes.at aNodeId) $ \aNode -> do
             sendExitMsgToNode aNode
@@ -64,19 +66,19 @@ answerToCheckBroadcastNodes aMd aChan _ = do
                 aNodeId (aNode^.nodeHost) (aNode^.nodePort)
 
     forM_ aBroadcastNodes $ \aNodeId -> do
-        writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info $
+        writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag, RegularTag] Info $
             "Ending of node check " ++ show aNodeId ++ ". Is it broadcast?"
         modifyIORef aMd $ checSet %~ S.delete aNodeId
 
         let aMaybeNode = aData^.nodes.at aNodeId
         when (isNothing aMaybeNode) $
-            writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info $
+            writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag, RegularTag] Info $
                 "The node " ++ show aNodeId ++ " doesn't a broadcast."
 
         whenJust aMaybeNode $ \aNode -> do
-            writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info $
+            writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag, RegularTag] Info $
                 "The node " ++ show aNodeId ++ " is broadcast."
-            writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info
+            writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag, RegularTag] Info
                 "Addition the node to list of broadcast node."
             sendExitMsgToNode aNode
 
