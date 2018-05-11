@@ -60,7 +60,7 @@ sendToServer h s = void $ sendTo (clientSocket h) s (clientAddress h)
 
 serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> String -> IO ()
 serveInfoMsg statsdInfo logsInfo chan aId = do
-    eithMHandler <- try (openConnect (host statsdInfo) (port statsdInfo)) 
+    eithMHandler <- try (openConnect (host statsdInfo) (port statsdInfo))
 
     case eithMHandler of
       Left (err :: SomeException) -> putStrLn $ "Metrics server connection error: " ++ show err
@@ -89,7 +89,7 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                                    ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
 
                          aFileString = "  !  " ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
- 
+                     putStrLn aFileString
                      case eithLHandler of
                           Left  _        -> appendFile "log.txt" aFileString
                           Right lHandler -> sendToServer lHandler aString
