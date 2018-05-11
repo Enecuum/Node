@@ -24,7 +24,6 @@ import Service.Network.TCP.Client
 import Service.Metrics.Statsd
 
 import Control.Monad (void, forever)
-import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan
 import Control.Exception (try, SomeException)
 
@@ -60,71 +59,39 @@ sendToServer h s = void $ sendTo (clientSocket h) s (clientAddress h)
 
 serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> Integer -> IO ()
 serveInfoMsg statsdInfo logsInfo chan aId = do
-    mCh <- newChan
-    lCh <- newChan
 
-    _ <- forkIO $ serveMetrics statsdInfo mCh
-    _ <- forkIO $ serveLogs    logsInfo   lCh
+    eithMHandler <- try (openConnect (host statsdInfo) (port statsdInfo)) 
 
-    writeChan lCh $ "+node|" ++  show aId ++ "|" ++
-          intercalate "," (show <$> [ConnectingTag .. InitTag]) ++ "\r\n"
+    case eithMHandler of
+      Left (err :: SomeException) -> putStrLn $ "Metrics server connection error: " ++ show err
+      Right _                     -> putStrLn "Metrics server connected"
+
+    eithLHandler <- try (openConnect (host logsInfo) (port logsInfo))
+
+    case eithLHandler of
+      Left (err :: SomeException) -> putStrLn $ "Logs server connection error: " ++ show err
+      Right lHandler              -> do
+            putStrLn "Logs server connected"
+            sendToServer lHandler $ "+node|" ++  show aId ++ "|" ++
+                      intercalate "," (show <$> [ConnectingTag .. InitTag]) ++ "\r\n"
 
     forever $ do
         m <- readChan chan
         case m of
-            Metric s -> writeChan mCh s
+            Metric s -> case eithMHandler of
+                          Left  _        -> return ()
+                          Right mHandler -> sendToServer mHandler s
 
-            Log aTags aMsgType aMsg -> do
-                let aTagsList = intercalate "," (show <$> aTags)
+            Log aTags aMsgType aMsg -> case eithLHandler of
+                          Left  _        -> return ()
+                          Right lHandler -> do
+                                let aTagsList = intercalate "," (show <$> aTags)
+ 
+                                    aString = "+log|" ++ aTagsList ++ "|" ++ show aId  ++ "|"
+                                          ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
 
-                    aString = "+log|" ++ aTagsList ++ "|" ++ show aId  ++ "|"
-                        ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
+                                    aFileString = "  !  " ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
 
-                    aFileString = "  !  " ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
-
-                appendFile "log.txt" aFileString
-                writeChan lCh aString
---------------------------------------------------------------------------------
-
-serveMetrics :: ConnectInfo -> Chan String -> IO ()
-serveMetrics statsdInfo chan = do
-  try (openConnect (host statsdInfo) (port statsdInfo)) >>= \case
-    Left (err :: SomeException) -> do
-      
-      putStrLn $ "Metrics server connection error: " ++ show err
-      loop
-      where loop = do
-              _ <- readChan chan
-              loop
-
-    Right metricHandle          -> do
-      
-      putStrLn "Metrics sever connected"
-      loop
-      where loop = do
-              m <- readChan chan
-              sendToServer metricHandle m 
-              loop
-
-
-
-serveLogs :: ConnectInfo -> Chan String -> IO ()
-serveLogs logsInfo chan = do
-  try (openConnect (host logsInfo) (port logsInfo)) >>= \case
-    Left (err :: SomeException) -> do
-
-      putStrLn $ "Logs server connection error: " ++ show err
-      loop
-      where loop = do
-              _ <- readChan chan
-              loop
-
-    Right logsHandle            -> do
-
-      putStrLn "Logs sever connected"
-      loop
-      where loop = do
-              m <- readChan chan
-              sendToServer logsHandle m
-              loop
+                                appendFile "log.txt" aFileString
+                                sendToServer lHandler aString
 
