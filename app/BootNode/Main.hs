@@ -55,9 +55,13 @@ main =  do
                     Left (_::SomeException) -> return $ port $ logsBuildConfig conf
 
 
+
             void $ startNode conf
               exitCh answerCh aInfoChan managerBootNode $ \ch _ aNodeId aFileChan -> do
+                  log_id  <- try (getEnv "logId") >>= \case
+                    Right item              -> return item
+                    Left (_::SomeException) -> return $ show aNodeId
                   metronomeS 100000 (writeChan ch checkBroadcastNodes)
                   void $ forkIO $ serverPoABootNode poa_in aInfoChan aFileChan
-                  void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChan (toInteger aNodeId)
+                  void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChan log_id
             void $ readChan exitCh
