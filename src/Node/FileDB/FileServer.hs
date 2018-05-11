@@ -62,7 +62,7 @@ class FileDB a where
 startFileServer :: Chan FileActorRequest -> IO ()
 startFileServer chan = aLoop $ FileActor M.empty M.empty
   where
-    aLoop aData = do
+    aLoop aData =
         readChan chan >>= \case
             FileActorRequestNetLvl a -> case a of
                 ReadRecordsFromNodeListFile aChan                   -> do
