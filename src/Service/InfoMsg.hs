@@ -61,16 +61,15 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
     putStrLn "Start of serveInfoMsg"
     --metricHandle <- openConnect (host statsdInfo) (port statsdInfo)
     putStrLn "Metrics server connected"
-    --logHandle    <- openConnect (host logsInfo)   (port logsInfo)
+    logHandle    <- openConnect (host logsInfo)   (port logsInfo)
     putStrLn "Logs server connected"
-    {-
     sendToServer logHandle $ "+node|" ++  show aId ++ "|" ++
           intercalate "," (show <$> [ConnectingTag .. InitTag]) ++ "\r\n"
--}
+
     forever $ do
         m <- readChan chan
         case m of
-            Metric s -> return() --sendToServer metricHandle s
+            Metric s -> return ()-- sendToServer metricHandle s
 
             Log aTags aMsgType aMsg -> do
                 let aTagsList = intercalate "," (show <$> aTags)
@@ -81,5 +80,5 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                     aFileString = "  !  " ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
 
                 putStrLn aFileString
-                --sendToServer logHandle aString
+                sendToServer logHandle aString
 --------------------------------------------------------------------------------
