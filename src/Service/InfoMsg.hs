@@ -56,14 +56,14 @@ data InfoMsg = Metric String | Log [LogingTag] MsgType String
 sendToServer :: ClientHandle -> String -> IO ()
 sendToServer h s = void $ sendTo (clientSocket h) s (clientAddress h)
 
-serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> Integer -> IO ()
+serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> String -> IO ()
 serveInfoMsg statsdInfo logsInfo chan aId = do
     putStrLn "Start of serveInfoMsg"
     --metricHandle <- openConnect (host statsdInfo) (port statsdInfo)
     putStrLn "Metrics server connected"
     logHandle    <- openConnect (host logsInfo)   (port logsInfo)
     putStrLn "Logs server connected"
-    sendToServer logHandle $ "+node|" ++  show aId ++ "|" ++
+    sendToServer logHandle $ "+node|" ++  aId ++ "|" ++
           intercalate "," (show <$> [ConnectingTag .. InitTag]) ++ "\r\n"
 
     forever $ do
@@ -74,7 +74,7 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
             Log aTags aMsgType aMsg -> do
                 let aTagsList = intercalate "," (show <$> aTags)
 
-                    aString = "+log|" ++ aTagsList ++ "|" ++ show aId  ++ "|"
+                    aString = "+log|" ++ aTagsList ++ "|" ++ aId  ++ "|"
                         ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
 
                     aFileString = "  !  " ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
