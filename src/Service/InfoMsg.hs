@@ -82,16 +82,16 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                           Left  _        -> return ()
                           Right mHandler -> sendToServer mHandler s
 
-            Log aTags aMsgType aMsg -> case eithLHandler of
-                          Left  _        -> return ()
-                          Right lHandler -> do
-                                let aTagsList = intercalate "," (show <$> aTags)
+            Log aTags aMsgType aMsg -> do
+
+                     let aTagsList = intercalate "," (show <$> aTags)
+
+                         aString = "+log|" ++ aTagsList ++ "|" ++ show aId  ++ "|"
+                                   ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
+
+                         aFileString = "  !  " ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
  
-                                    aString = "+log|" ++ aTagsList ++ "|" ++ show aId  ++ "|"
-                                          ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
-
-                                    aFileString = "  !  " ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
-
-                                appendFile "log.txt" aFileString
-                                sendToServer lHandler aString
+                     case eithLHandler of
+                          Left  _        -> appendFile "log.txt" aFileString
+                          Right lHandler -> sendToServer lHandler aString
 
