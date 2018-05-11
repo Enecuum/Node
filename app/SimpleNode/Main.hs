@@ -70,7 +70,7 @@ main =  do
                             Right item              -> return $ read item
                             Left (_::SomeException) -> return $ port $ logsBuildConfig conf
 
-                    log_id  <- try (getEnv "logId") >>= \case
+                    log_id  <- try (getEnv "log_id") >>= \case
                         Right item              -> return item
                         Left (_::SomeException) -> return $ show aMyNodeId
 
