@@ -41,6 +41,7 @@ data LogingTag
     | ServePoATag
     | ServerBootNodeTag
     | GCTag
+    | RegularTag
     | InitTag
   deriving (Show, Enum)
 
@@ -57,9 +58,8 @@ data InfoMsg = Metric String | Log [LogingTag] MsgType String
 sendToServer :: ClientHandle -> String -> IO ()
 sendToServer h s = void $ sendTo (clientSocket h) s (clientAddress h)
 
-serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> Integer -> IO ()
+serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> String -> IO ()
 serveInfoMsg statsdInfo logsInfo chan aId = do
-
     eithMHandler <- try (openConnect (host statsdInfo) (port statsdInfo)) 
 
     case eithMHandler of
@@ -72,7 +72,7 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
       Left (err :: SomeException) -> putStrLn $ "Logs server connection error: " ++ show err
       Right lHandler              -> do
             putStrLn "Logs server connected"
-            sendToServer lHandler $ "+node|" ++  show aId ++ "|" ++
+            sendToServer lHandler $ "+node|" ++  aId ++ "|" ++
                       intercalate "," (show <$> [ConnectingTag .. InitTag]) ++ "\r\n"
 
     forever $ do
@@ -83,10 +83,9 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                           Right mHandler -> sendToServer mHandler s
 
             Log aTags aMsgType aMsg -> do
-
                      let aTagsList = intercalate "," (show <$> aTags)
 
-                         aString = "+log|" ++ aTagsList ++ "|" ++ show aId  ++ "|"
+                         aString = "+log|" ++ aTagsList ++ "|" ++ aId  ++ "|"
                                    ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
 
                          aFileString = "  !  " ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
@@ -94,4 +93,3 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                      case eithLHandler of
                           Left  _        -> appendFile "log.txt" aFileString
                           Right lHandler -> sendToServer lHandler aString
-
