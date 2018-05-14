@@ -65,6 +65,7 @@ baseNodeOpts aChan aMd aData = do
     opt isSendInitDatagram      $ answerToSendInitDatagram aChan aMd
     opt isServerIsDead          $ answerToServerDead aChan defaultServerPort
     opt isConnectivityQuery     $ answerToConnectivityQuery aChan aMd
+    opt isQueryPositions        $ answerToQueryPositions aMd
     opt isDisconnectNode        $ answerToDisconnectNode    aData
 
 
@@ -87,8 +88,8 @@ pattern PositionOfFirst aPosition <- Head _ ((^.nodePosition) -> Just aPosition)
 preferedBroadcastCount :: Int
 preferedBroadcastCount = 4
 
-queryPositions :: ManagerData md =>  ManagerMsg msg => IORef md -> msg -> IO()
-queryPositions aMd msg = do
+answerToQueryPositions :: ManagerData md =>  ManagerMsg msg => IORef md -> msg -> IO()
+answerToQueryPositions aMd _ = do
     aData <- readIORef aMd
     makeAndSendTo aData [aId | (aId, aNode) <- M.toList $ aData^.nodes, isNothing $ aNode^.nodePosition] IsYouBrodcast
 

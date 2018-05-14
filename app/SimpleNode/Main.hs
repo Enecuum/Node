@@ -35,6 +35,7 @@ main =  do
                 aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMyNodeId aFileChan -> do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
+                    metronomeS 10000000 (writeChan ch queryPositions)
                     metronomeS 1000000 (writeChan ch deleteOldestMsg)
                     metronomeS 1000000 (writeChan ch deleteOldestPoW)
                     poa_in  <- try (getEnv "poaInPort") >>= \case
