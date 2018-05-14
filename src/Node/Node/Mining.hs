@@ -31,7 +31,7 @@ import              Control.Monad.Extra
 import              Crypto.Error
 import              Node.Node.BroadcastProcessing
 
-
+import              Node.FileDB.FileServer
 import              Sharding.Space.Distance
 import              Sharding.Types.ShardLogic
 import              Service.Monad.Option
@@ -69,7 +69,13 @@ managerMining ch aMd = forever $ do
 
 
 answerToTestBroadcastBlockIndex :: IORef ManagerNodeData -> ManagerMiningMsgBase ->  IO ()
-answerToTestBroadcastBlockIndex aMd _ = sendBroadcast aMd $ BroadcastBlockIndex "" Nothing
+answerToTestBroadcastBlockIndex aMd _ = do
+    aData <- readIORef aMd
+    aPosChan <- newChan
+    writeChan (aData^.fileServerChan) $ FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
+    NodeInfoListLogicLvl aPossitionList <- readChan aPosChan
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point list XXX: " ++ show aPossitionList
+
 
 
 answeToMsgFromPP :: IORef ManagerNodeData ->  ManagerMiningMsgBase ->  IO ()
