@@ -87,6 +87,12 @@ pattern PositionOfFirst aPosition <- Head _ ((^.nodePosition) -> Just aPosition)
 preferedBroadcastCount :: Int
 preferedBroadcastCount = 4
 
+queryPositions :: ManagerData md =>  ManagerMsg msg => IORef md -> msg -> IO()
+queryPositions aMd msg = do
+    aData <- readIORef aMd
+    makeAndSendTo aData [aId | (aId, aNode) <- M.toList $ aData^.nodes, isNothing $ aNode^.nodePosition] IsYouBrodcast
+
+
 -- TODO optimization by ping
 -- TODO optimization by routing
 answerToConnectivityQuery
