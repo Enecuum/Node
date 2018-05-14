@@ -62,6 +62,7 @@ managerMsgFuncListData = toList $ do
 managerMiningMsgListData :: [(Bool, String, [[String]])]
 managerMiningMsgListData = toList $ do
     "newTransaction"                +: [["Transaction"]]
+    "testBroadcastBlockIndex"       +: []
     "sendTargetedTransaction"       +: [["Transaction"], ["NodeId"]]
     "blockMadeMsg"                  +: [["Microblock"]]
     "deleteOldestMsg"               +: []
