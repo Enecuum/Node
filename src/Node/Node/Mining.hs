@@ -75,6 +75,7 @@ answerToTestBroadcastBlockIndex aMd _ = do
     writeChan (aData^.fileServerChan) $ FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
     NodeInfoListLogicLvl aPossitionList <- readChan aPosChan
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point list XXX: " ++ show aPossitionList
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point node list XXX: " ++ show ((^.nodePosition) <$> M.elems (aData^.nodes))
 
 
 
