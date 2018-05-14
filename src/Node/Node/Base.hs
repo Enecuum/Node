@@ -91,7 +91,9 @@ preferedBroadcastCount = 4
 answerToQueryPositions :: ManagerData md =>  ManagerMsg msg => IORef md -> msg -> IO()
 answerToQueryPositions aMd _ = do
     aData <- readIORef aMd
-    makeAndSendTo aData [aId | (aId, aNode) <- M.toList $ aData^.nodes, isNothing $ aNode^.nodePosition] IsYouBrodcast
+    let ids = [aId | (aId, aNode) <- M.toList $ aData^.nodes, isNothing $ aNode^.nodePosition]
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "node posiotion request: " ++ show ids
+    makeAndSendTo aData ids NodePositionRequestPackage
 
 
 -- TODO optimization by ping
