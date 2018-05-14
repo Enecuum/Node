@@ -1,10 +1,12 @@
 FROM terrorjack/meikyu:ghc-8.2.2
 ENV bootnode false
-WORKDIR /usr/src
-ADD . Node
-RUN cd Node && ls -lha && \
-    stack --stack-yaml=CI.stack.yaml build
+ADD . /usr/src/Node
+WORKDIR /usr/src/Node
+
+RUN stack --stack-yaml=CI.stack.yaml build
+
 EXPOSE 1554 1555 1556 1667
+
 ENTRYPOINT if [ "$bootnode" = true ] ; then \
              stack exec MakeConfigBootNode-exe && \
              stack exec BootNode-exe; \
