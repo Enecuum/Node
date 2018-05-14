@@ -59,13 +59,18 @@ managerMining ch aMd = forever $ do
         opt isDatagramMsg           $ answerToDatagramMsg ch aMd (mData^.myNodeId)
         opt isClientIsDisconnected $ miningNodeAnswerClientIsDisconnected aMd
 
+        opt isTestBroadcastBlockIndex   $ answerToTestBroadcastBlockIndex aMd
         opt isNewTransaction            $ answerToNewTransaction aMd
-        --opt isBlockMadeMsg              $ answerToBlockMadeMsg aMd
         opt isInitDatagram              $ answerToSendInitDatagram ch aMd
         opt isShardingNodeRequestMsg    $ answerToShardingNodeRequestMsg aMd
         opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
         opt isDeleteOldestPoW           $ answerToDeleteOldestPoW aMd
         opt isMsgFromPP                 $ answeToMsgFromPP aMd
+
+
+answerToTestBroadcastBlockIndex :: IORef ManagerNodeData -> ManagerMiningMsgBase ->  IO ()
+answerToTestBroadcastBlockIndex aMd _ = sendBroadcast aMd $ BroadcastBlockIndex "" Nothing
+
 
 answeToMsgFromPP :: IORef ManagerNodeData ->  ManagerMiningMsgBase ->  IO ()
 answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
