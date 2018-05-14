@@ -74,8 +74,8 @@ main =  do
                     void $ forkIO $ servePoA poa_in aMyNodeId ch aChan aInfoCh aFileChan
                     void $ forkIO $ serveRpc rpc_p ch aInfoCh
 
-                    when (takeEnd 3 log_id == "175") $
-                        metronomeS 10000000 (writeChan ch testBroadcastBlockIndex)
+                    --when (takeEnd 3 log_id == "175") $
+                    metronomeS 10000000 (writeChan ch testBroadcastBlockIndex)
 
 
                     writeChan aInfoCh $ Metric $ increment "cl.node.count"
