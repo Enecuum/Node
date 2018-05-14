@@ -1,4 +1,4 @@
-FROM fpco/stack-run
+FROM fpco/stack-build
 ENV bootnode false
 ADD . /usr/src/Node
 WORKDIR /usr/src/Node
