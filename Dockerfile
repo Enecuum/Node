@@ -3,7 +3,7 @@ ENV bootnode false
 ADD . /usr/src/Node
 WORKDIR /usr/src/Node
 
-RUN stack clean --full
+RUN stack clean --stack-yaml=CI.stack.yaml --full
 RUN stack --stack-yaml=CI.stack.yaml build
 
 EXPOSE 1554 1555 1556 1667
