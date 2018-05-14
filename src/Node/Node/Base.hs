@@ -122,7 +122,10 @@ answerToConnectivityQuery aChan aMd _ = do
     if  | aWait             -> return ()
         | null aConnectList -> connectToBootNode aChan aData
         | iDontHaveAPosition aData -> if
-            | aBroadcastNum == 0 -> connectTo aChan 1 aConnectList
+            | aBroadcastNum == 0 -> do
+                writeLog (aData^.infoMsgChan) [NetLvlTag] Info
+                    "Init. Connect to first broadcast node."
+                connectTo aChan 1 aConnectList
             | PositionOfFirst aPosition <- aBroadcasts -> do
                 aDeltaX <- randomRIO (0, 2000)
                 aDeltaY <- randomRIO (0, 2000)

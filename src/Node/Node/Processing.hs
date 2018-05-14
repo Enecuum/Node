@@ -127,6 +127,9 @@ instance Processing (IORef ManagerNodeData) (Response LogicLvl) where
                 writeChan (aData^.fileServerChan) $
                     FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId)
                         (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
+                whenJust (aData^.nodes.at aNodeId) $ \aNode ->
+                    modifyIORef aMd $ nodes %~ M.insert aNodeId
+                        (aNode & nodePosition ?~ aNodePosition)
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                     "Updating of node positions file."
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info
