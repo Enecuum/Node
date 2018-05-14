@@ -10,9 +10,9 @@ pipeline:
       status: [ success, failure ]
   publish:
     image: plugins/docker
-    secrets: [docker_username, docker_password]
-    registry: dev.enecuum.com:2087
-    repo: dev.enecuum.com:2087/testnet/node
+    secrets: [docker_username, docker_password, docker_repo]
+    registry: $DOCKER_REPO:2087
+    repo: $DOCKER_REPO:2087/testnet/node
     auto_tag: true
     when:
       branch:
