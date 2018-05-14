@@ -1,11 +1,9 @@
 FROM terrorjack/meikyu:ghc-8.2.2
 ENV bootnode false
-#ADD . /usr/src/Node
+ADD . /usr/src/Node
 WORKDIR /usr/src/Node
 
-RUN apk --no-cache add --virtual build-dependencies git
-RUN git clone git@github.com:Enecuum/Node.git .
-RUN apk del build-dependencies
+RUN stack clean --full
 RUN stack --stack-yaml=CI.stack.yaml build
 
 EXPOSE 1554 1555 1556 1667
