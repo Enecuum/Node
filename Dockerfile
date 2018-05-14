@@ -1,4 +1,4 @@
-FROM terrorjack/meikyu:ghc-8.2.2
+FROM fpco/stack-run
 ENV bootnode false
 ADD . /usr/src/Node
 WORKDIR /usr/src/Node
