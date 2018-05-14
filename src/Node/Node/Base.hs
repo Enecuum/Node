@@ -381,6 +381,7 @@ answerToInitiatorConnectingMsg aId aHostAdress aInputChan aPublicPoint aPortNumb
         aNewData <- readIORef aMd
         sendRemoteConnectDatagram aInputChan aNewData
         makeAndSendTo aNewData [aId] BroadcastListRequest
+        makeAndSendTo aNewData [aId] IsYouBrodcast
 
 
 answerToRemoteConnectingMsg
@@ -396,6 +397,7 @@ answerToRemoteConnectingMsg aId aPublicPoint aMd = do
     modifyIORef aMd $ nodes %~ M.adjust (&~ do
         mKey            .= Just (getStringKey (aData^.privateNumber) aPublicPoint)
         status          .= Active
+        isBroadcast     .= True
       ) aId
     aNewData <- readIORef aMd
     makeAndSendTo aNewData [aId] BroadcastListRequest
