@@ -3,6 +3,9 @@ pipeline:
     image: terrorjack/meikyu:ghc-8.2.2
     commands:
       - "stack --stack-yaml=CI.stack.yaml build"
+    when:
+      branch:
+        - master
   notify-build:
     image: dev.enecuum.com:2087/library/drone-telegram:v1.0.0
     secrets: [telegram_token, telegram_id]
