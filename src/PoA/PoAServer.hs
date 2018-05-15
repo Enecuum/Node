@@ -40,14 +40,14 @@ undead f = finally f (undead f)
 serverPoABootNode :: PortNumber -> Chan InfoMsg -> Chan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = runServer aRecivePort $ \_ aPending -> do
     aConnect <- WS.acceptRequest aPending
+    writeLog aInfoChan [ServerBootNodeTag] Info "ServerPoABootNode.Connect accepted."
     WS.forkPingThread aConnect 30
     aMsg <- WS.receiveData aConnect
     case myDecode aMsg of
         Just a -> case a of
             RequestConnects -> do
                 aConChan <- newChan
-                writeChan (aFileServerChan) $
-                     FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+                writeChan aFileServerChan $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
                 NodeInfoListNetLvl aRecords <- readChan aConChan
                 aShuffledRecords <- shuffleM aRecords
                 let aConnects = snd <$> take 5 aShuffledRecords

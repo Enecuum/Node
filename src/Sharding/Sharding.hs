@@ -297,7 +297,7 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMs
     metronome bigPeriod $ writeChan aChanRequest CleanNeededIndex
     metronome bigPeriod $ writeChan aChanRequest CleanRequestIndex
     metronome smallPeriod $ writeChan aChanRequest CheckOfShardLoadingList
-    metronome bigPeriod $ do
+    metronomeLinear smallPeriod bigPeriod $ do
         writeChan aChanRequest CheckTheNeighbors
         threadDelay smallPeriod
         writeChan aChanRequest ShiftAction
