@@ -40,7 +40,7 @@ undead f = finally f (undead f)
 serverPoABootNode :: PortNumber -> Chan InfoMsg -> Chan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
-        "Init. ServerPoABootNode: a port is" ++ show aRecivePort
+        "Init. ServerPoABootNode: a port is " ++ show aRecivePort
     runServer aRecivePort $ \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
         writeLog aInfoChan [ServerBootNodeTag] Info "ServerPoABootNode.Connect accepted."
@@ -73,8 +73,8 @@ servePoA ::
     -> Chan FileActorRequest
     -> IO ()
 servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
-    writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
-        "Init. servePoA: a port is" ++ show aRecivePort
+    writeLog aInfoChan [ServePoATag, InitTag] Info $
+        "Init. servePoA: a port is " ++ show aRecivePort
     runServer aRecivePort $ \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
