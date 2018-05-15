@@ -69,6 +69,7 @@ managerMiningMsgListData = toList $ do
     "deleteOldestMsg"               +: []
     "deleteOldestPoW"               +: []
     "sendIAmPublicator"             +: []
+    "initShardingLvl"               +: []
     "sendRawData"                   +: [["B.ByteString"]]
     "sendTransactionToPublicator"   +: [["Transaction"]]
     "resendTransactionToPublicator" +: []

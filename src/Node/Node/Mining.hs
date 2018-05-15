@@ -16,6 +16,7 @@ module Node.Node.Mining (
     managerMining
   ) where
 
+import              System.Random
 import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 
 import qualified    Data.Map                        as M
@@ -26,6 +27,7 @@ import              System.Clock
 import              Data.IORef
 import              Data.Serialize
 import              Lens.Micro
+import              Lens.Micro.Mtl
 import              Control.Concurrent
 import              Control.Monad.Extra
 import              Crypto.Error
@@ -48,25 +50,43 @@ import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.Verification
 import              Node.Data.GlobalLoging
 import              PoA.Types
+import              Sharding.Sharding
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
-managerMining ch aMd = forever $ do
+managerMining aChan aMd = forever $ do
     mData <- readIORef aMd
-    readChan ch >>= \a -> runOption a $ do
-        baseNodeOpts ch aMd mData
+    readChan aChan >>= \a -> runOption a $ do
+        baseNodeOpts aChan aMd mData
 
         opt isInitDatagram          $ answerToInitDatagram aMd
-        opt isDatagramMsg           $ answerToDatagramMsg ch aMd (mData^.myNodeId)
+        opt isDatagramMsg           $ answerToDatagramMsg aChan aMd (mData^.myNodeId)
         opt isClientIsDisconnected $ miningNodeAnswerClientIsDisconnected aMd
 
         opt isTestBroadcastBlockIndex   $ answerToTestBroadcastBlockIndex aMd
         opt isNewTransaction            $ answerToNewTransaction aMd
-        opt isInitDatagram              $ answerToSendInitDatagram ch aMd
+        opt isInitDatagram              $ answerToSendInitDatagram aChan aMd
         opt isShardingNodeRequestMsg    $ answerToShardingNodeRequestMsg aMd
         opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
         opt isDeleteOldestPoW           $ answerToDeleteOldestPoW aMd
         opt isMsgFromPP                 $ answeToMsgFromPP aMd
+        opt isInitShardingLvl       $ answerToInitShardingLvl aChan aMd
 
+--
+answerToInitShardingLvl aChan aMd _ = do
+    aData <- readIORef aMd
+    when (isNothing (aData^.myNodePosition)) $ do
+        writeLog (aData^.infoMsgChan)
+            [NetLvlTag, InitTag] Info
+            "Select new random coordinate because I am first node in net."
+
+        aY <- randomIO
+        aX <- randomIO
+        let aMyNodePosition = MyNodePosition $ Point aX aY
+        aChanOfSharding <- newChan
+        makeShardingNode (aData^.myNodeId) aChanOfSharding aChan aMyNodePosition (aData^.infoMsgChan)
+        modifyIORef aMd (&~ do
+            myNodePosition .= Just aMyNodePosition
+            shardingChan   .= Just aChanOfSharding)
 
 answerToTestBroadcastBlockIndex :: IORef ManagerNodeData -> ManagerMiningMsgBase ->  IO ()
 answerToTestBroadcastBlockIndex aMd _ = do
