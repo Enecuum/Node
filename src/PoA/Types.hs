@@ -185,7 +185,7 @@ instance FromJSON PPToNNMessage where
 
             _ -> mzero
 
-    parseJSON _ = mzero
+    parseJSON a = error $ show a
 
 readNodeType :: (IsString a, Eq a) => a -> NodeType
 readNodeType aNodeType = if aNodeType == "PoW" then PoW else PoA
