@@ -273,7 +273,8 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
             aLoop $ aShardingNode & nodeIndexOfReques %~
                 M.filter (\a -> diffTimeSpec (a^._1) aTime < fromNanoSecs (toInteger bigPeriod))
 
-        _                 -> error "Sharding.Sharding.makeShardingNode"
+        _                 ->
+            writeLog infoMsgChan [GCTag] Warning "Sharding.Sharding.makeShardingNode"
 
 
 --------------------------------------------------------------------------------
