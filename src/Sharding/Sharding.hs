@@ -99,7 +99,9 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
     void $ forkIO $ aLoop aShardingNode
   where
     aLoop :: ShardingNode -> IO ()
-    aLoop aShardingNode = readChan aChanRequest >>= \case
+    aLoop aShardingNode = do
+      writeLog infoMsgChan [ShardingLvlTag] Info "Sharding loop start."
+      readChan aChanRequest >>= \case
         CheckOfShardLoadingList -> do
             writeLog infoMsgChan [ShardingLvlTag] Info "Check loading sharding list."
             aNow <- getTime Realtime
@@ -273,9 +275,9 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
             aLoop $ aShardingNode & nodeIndexOfReques %~
                 M.filter (\a -> diffTimeSpec (a^._1) aTime < fromNanoSecs (toInteger bigPeriod))
 
-        _                 ->
-            writeLog infoMsgChan [GCTag] Warning "Sharding.Sharding.makeShardingNode"
-
+        _                 -> do
+            writeLog infoMsgChan [ShardingLvlTag] Warning "Sharding.Sharding.makeShardingNode"
+            aLoop aShardingNode
 
 --------------------------------------------------------------------------------
 --                              INTERNAL                                      --

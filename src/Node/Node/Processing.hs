@@ -268,7 +268,7 @@ instance Processing (IORef ManagerNodeData) (Request MiningLvl) where
 
 sendToShardingLvl :: ManagerData md => md -> T.ShardingNodeAction -> IO ()
 sendToShardingLvl aData aMsg = do
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Sending msg to sharding lvl"
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Sending msg to sharding lvl"
     whenJust (aData^.shardingChan) $ \aChan -> do
         writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Sended msg to sharding lvl"
         writeChan aChan aMsg
