@@ -64,34 +64,10 @@ instance Processing (IORef ManagerNodeData) (Response NetLvl) where
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "Accepted lists of broadcasts and points of node. " ++
                 show aBroadcastListLogic ++ show aBroadcastList
-            let aMyNodeId = aData^.myNodeId
-
-            -- добавление соответсвующих записей в списки коннектов и координат.
-            -- writeLog (aData^.infoMsgChan) [NetLvlTag] Info
-            --     "Add connects to list."
-            -- writeLog (aData^.infoMsgChan) [NetLvlTag] Info
-            --     "Add node coordinate to coordinate list."
-
             writeChan (aData^.fileServerChan) $
-                FileActorRequestNetLvl $ UpdateFile aMyNodeId aBroadcastList
+                FileActorRequestNetLvl $ UpdateFile (aData^.myNodeId) aBroadcastList
             writeChan (aData^.fileServerChan) $
-                FileActorRequestLogicLvl $ UpdateFile aMyNodeId aBroadcastListLogic
-
-            let NodeInfoListNetLvl aList = aBroadcastList
-            when (null aList && isBootNode && isNothing (aData^.myNodePosition)) $ do
-
-                writeLog (aData^.infoMsgChan)
-                    [NetLvlTag, InitTag] Info
-                    "Select new random coordinate because I am first node in net."
-
-                aY <- randomIO
-                aX <- randomIO
-                let aMyNodePosition = MyNodePosition $ Point aX aY
-                aChanOfSharding <- newChan
-                makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition (aData^.infoMsgChan)
-                modifyIORef aMd (&~ do
-                    myNodePosition .= Just aMyNodePosition
-                    shardingChan   .= Just aChanOfSharding)
+                FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId) aBroadcastListLogic
 
         HostAdressResponse _ -> return ()
 

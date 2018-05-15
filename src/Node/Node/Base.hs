@@ -17,6 +17,7 @@ module Node.Node.Base (
         ,   answerToDatagramMsg
         ,   answerToInitDatagram
         ,   baseNodeOpts
+        ,   initShading
         ,   sendExitMsgToNode
   ) where
 
@@ -138,19 +139,12 @@ answerToConnectivityQuery aChan aMd _ = do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                     "Init. Connect to first broadcast node."
                 connectTo aChan 1 aConnectList
-            | PositionOfFirst aPosition <- aBroadcasts -> do
+            | PositionOfFirst (NodePosition (Point x y)) <- aBroadcasts -> do
                 aDeltaX <- randomRIO (0, 2000)
                 aDeltaY <- randomRIO (0, 2000)
-                let aMyNodePosition = MyNodePosition $ Point
-                        (x + aDeltaX - 1000) (y + aDeltaY - 1000)
-                    NodePosition (Point x y) = aPosition
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                    "Init. Take new logic coordinates " ++ show aMyNodePosition ++ "."
-                aChanOfSharding <- newChan
-                makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition (aData^.infoMsgChan)
-                modifyIORef aMd (&~ do
-                    myNodePosition .= Just aMyNodePosition
-                    shardingChan   .= Just aChanOfSharding)
+                initShading aChan aMd $ MyNodePosition $ Point
+                    (x + aDeltaX - 1000) (y + aDeltaY - 1000)
+
             | Head aNodeId _ <- aBroadcasts -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Request of a node position of the " ++ show aNodeId ++ "."
@@ -174,6 +168,18 @@ answerToConnectivityQuery aChan aMd _ = do
       -- TODO: optimize by net and logic lvl
       --  | aBroadcastNum > 6     -> undefined
 
+
+initShading aChan aMd aPoint = do
+    aData <- readIORef aMd
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+        "Init. Take new logic coordinates " ++ show aPoint ++ "."
+
+    aChanOfSharding <- newChan
+    makeShardingNode (aData^.myNodeId) aChanOfSharding
+        aChan aPoint (aData^.infoMsgChan)
+    modifyIORef aMd (&~ do
+        myNodePosition .= Just aPoint
+        shardingChan   .= Just aChanOfSharding)
 
 iDontHaveAPosition :: ManagerData md => md -> Bool
 iDontHaveAPosition aData = isNothing $ aData^.myNodePosition

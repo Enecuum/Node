@@ -69,24 +69,17 @@ managerMining aChan aMd = forever $ do
         opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
         opt isDeleteOldestPoW           $ answerToDeleteOldestPoW aMd
         opt isMsgFromPP                 $ answeToMsgFromPP aMd
-        opt isInitShardingLvl       $ answerToInitShardingLvl aChan aMd
+        opt isInitShardingLvl           $ answerToInitShardingLvl aChan aMd
 
 --
 answerToInitShardingLvl aChan aMd _ = do
     aData <- readIORef aMd
     when (isNothing (aData^.myNodePosition)) $ do
-        writeLog (aData^.infoMsgChan)
-            [NetLvlTag, InitTag] Info
+        writeLog (aData^.infoMsgChan) [NetLvlTag, InitTag] Info
             "Select new random coordinate because I am first node in net."
 
-        aY <- randomIO
-        aX <- randomIO
-        let aMyNodePosition = MyNodePosition $ Point aX aY
-        aChanOfSharding <- newChan
-        makeShardingNode (aData^.myNodeId) aChanOfSharding aChan aMyNodePosition (aData^.infoMsgChan)
-        modifyIORef aMd (&~ do
-            myNodePosition .= Just aMyNodePosition
-            shardingChan   .= Just aChanOfSharding)
+        aPoint <- Point <$> randomIO <*> randomIO
+        initShading aChan aMd $ MyNodePosition aPoint
 
 answerToTestBroadcastBlockIndex :: IORef ManagerNodeData -> ManagerMiningMsgBase ->  IO ()
 answerToTestBroadcastBlockIndex aMd _ = do
