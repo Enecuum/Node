@@ -175,12 +175,15 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
             NodePositionRequestPackage -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Sending request of node position to sharding lvl. "
-                    ++ "Petitioner " ++ show aNodeId ++ "."
+                    ++ "Pesitioner " ++ show aNodeId ++ "."
                 aRequestToNetLvl NodePositionResponsePackage $ do
                     aChan <- newChan
                     sendToShardingLvl aData $
                         T.NodePositionAction aChan aNodeId
                     T.NodePositionResponse aMyNodePosition <- readChan aChan
+                    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                        "Accepted responce of node position from sharding lvl. "
+                        ++ show aMyNodePosition
                     modifyIORef aMd (myNodePosition ?~ aMyNodePosition)
                     return aMyNodePosition
 

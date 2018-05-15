@@ -227,7 +227,8 @@ answerToShardingNodeRequestMsg aMd
                             (\a -> distanceTo (a^._2) aNodePosition)
                             aListOfBroatcastPosition
                     aLogAboutAliveRequest aNodeId
-                    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $"Request to broadcast node about state (alive or dead) of " ++ show aNodeId
+                    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                        "Request to broadcast node about state (alive or dead) of " ++ show aNodeId
                     makeAndSendTo aData aBroadcastNodeId
                         (IsAliveTheNodeRequestPackage aNodeId)
 answerToShardingNodeRequestMsg _ _ = return ()
