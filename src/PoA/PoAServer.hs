@@ -6,7 +6,7 @@ module PoA.PoAServer (
 
 
 import              Node.Data.NetPackage
-import              Control.Monad (forM_, void, forever, unless)
+import              Control.Monad (forM_, void, forever, unless, when)
 import qualified    Network.WebSockets                  as WS
 --import              Network.Socket.ByteString(sendAll, recvFrom)
 import              Service.Network.Base
@@ -152,12 +152,13 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                         WS.sendTextData aConnect $ myEncode RequestNodeIdToPP
 
 
-                ResponseNodeIdToNN aPPId aNodeType -> do
-                    if aOk then putMVar aId aPPId else void $ swapMVar aId aPPId
-                    writeLog aInfoChan [ServePoATag] Info $
-                        "Accept PPId " ++ show aPPId ++ " with type " ++ show aNodeType
+                ResponseNodeIdToNN aPPId aNodeType ->
+                    when aOk $ do
+                        putMVar aId aPPId
+                        writeLog aInfoChan [ServePoATag] Info $
+                            "Accept PPId " ++ show aPPId ++ " with type " ++ show aNodeType
 
-                    sendMsgToNetLvlFromPP ch $ NewConnectWithPP aPPId aNodeType aNewChan
+                        sendMsgToNetLvlFromPP ch $ NewConnectWithPP aPPId aNodeType aNewChan
 
                 MsgMsgToNN aDestination aMsgToNN
                     | not aOk       -> do
@@ -169,10 +170,11 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                         writeLog aInfoChan [ServePoATag] Warning $ "Can't send request without PPId " ++ show aMsgToNN
                         WS.sendTextData aConnect $ myEncode RequestNodeIdToPP
 
-            Left a ->
+            Left a -> do
                 -- TODO: Вписать ID если такой есть.
                 writeLog aInfoChan [ServePoATag] Warning $
                     "Brouken message from PP " ++ show aMsg ++ " " ++ a
+                when (not aOk) $ WS.sendTextData aConnect $ myEncode RequestNodeIdToPP
 
 -- TODO class sendMsgToNetLvl
 sendMsgToNetLvlFromPP :: ManagerMsg a => Chan a -> MsgToMainActorFromPP -> IO ()
