@@ -38,7 +38,7 @@ myEncode = fromString.show.A.encode
 undead f = finally f (undead f)
 --
 serverPoABootNode :: PortNumber -> Chan InfoMsg -> Chan FileActorRequest -> IO ()
-serverPoABootNode aRecivePort aInfoChan aFileServerChan = undead $ runServer aRecivePort $ \_ aPending -> do
+serverPoABootNode aRecivePort aInfoChan aFileServerChan = runServer aRecivePort $ \_ aPending -> do
     aConnect <- WS.acceptRequest aPending
     WS.forkPingThread aConnect 30
     aMsg <- WS.receiveData aConnect
@@ -69,7 +69,7 @@ servePoA ::
     -> Chan InfoMsg
     -> Chan FileActorRequest
     -> IO ()
-servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = undead $ runServer aRecivePort $
+servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = runServer aRecivePort $
     \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
