@@ -51,6 +51,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
             case myDecode aMsg of
                 Right a -> case a of
                     RequestConnects -> do
+                        writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request of connections."
                         aConChan <- newChan
                         writeChan aFileServerChan $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
                         NodeInfoListNetLvl aRecords <- readChan aConChan
