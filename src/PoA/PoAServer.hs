@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables, OverloadedStrings #-}
 module PoA.PoAServer (
         servePoA
     ,   serverPoABootNode
@@ -28,9 +28,10 @@ import              Node.FileDB.FileServer
 
 import              Control.Concurrent.Async
 import              Node.Data.Key
+import              Data.Maybe
 
-myDecode :: B.ByteString -> Maybe PPToNNMessage
-myDecode = A.decode.fromString.show
+myDecode :: B.ByteString ->  Either String PPToNNMessage
+myDecode = A.eitherDecodeStrict
 
 myEncode :: NNToPPMessage -> B.ByteString
 myEncode = fromString.show.A.encode
@@ -47,7 +48,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
         WS.forkPingThread aConnect 30
         aMsg <- WS.receiveData aConnect
         case myDecode aMsg of
-            Just a -> case a of
+            Right a -> case a of
                 RequestConnects -> do
                     aConChan <- newChan
                     writeChan aFileServerChan $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
@@ -58,10 +59,10 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                     WS.sendBinaryData aConnect $ myEncode $ ResponseConnects aConnects
                 _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
                     "Brouken message from PP " ++ show aMsg
-            Nothing ->
+            Left a ->
                 -- TODO: Вписать ID если такой есть.
                 writeLog aInfoChan [ServerBootNodeTag] Warning $
-                    "Brouken message from PP " ++ show aMsg
+                    "Brouken message from PP " ++ show aMsg ++ " " ++ a
 
 
 servePoA ::
@@ -99,7 +100,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
         aMsg <- WS.receiveData aConnect
         aOk <- isEmptyMVar aId
         case myDecode aMsg of
-            Just a -> case a of
+            Right a -> case a of
                 -- REVIEW: Check fair distribution of transactions between nodes
                 RequestTransaction aNum -> void $ forkIO $ forM_ [1..aNum] $ \_  -> do
                         aTransaction <- readChan aRecvChan
@@ -166,10 +167,10 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                         writeLog aInfoChan [ServePoATag] Warning $ "Can't send request without PPId " ++ show aMsgToNN
                         WS.sendBinaryData aConnect $ myEncode RequestNodeIdToPP
 
-            Nothing ->
+            Left a ->
                 -- TODO: Вписать ID если такой есть.
                 writeLog aInfoChan [ServePoATag] Warning $
-                    "Brouken message from PP " ++ show aMsg
+                    "Brouken message from PP " ++ show aMsg ++ " " ++ a
 
 -- TODO class sendMsgToNetLvl
 sendMsgToNetLvlFromPP :: ManagerMsg a => Chan a -> MsgToMainActorFromPP -> IO ()
