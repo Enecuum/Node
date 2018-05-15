@@ -305,10 +305,12 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMs
     metronome bigPeriod $ writeChan aChanRequest CleanNeededIndex
     metronome bigPeriod $ writeChan aChanRequest CleanRequestIndex
     metronome smallPeriod $ writeChan aChanRequest CheckOfShardLoadingList
-    metronomeLinear smallPeriod bigPeriod $ do
-        writeChan aChanRequest CheckTheNeighbors
-        threadDelay smallPeriod
-        writeChan aChanRequest ShiftAction
+    void $ forkIO $ do
+        threadDelay $ smallPeriod * 20
+        metronomeLinear smallPeriod bigPeriod $ do
+            writeChan aChanRequest CheckTheNeighbors
+            threadDelay smallPeriod
+            writeChan aChanRequest ShiftAction
 
     enc <- L.readFile "configs/config.json"
     case A.decode enc of
