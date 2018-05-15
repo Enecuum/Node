@@ -65,7 +65,6 @@ data ShardingNodeAction =
     --  BUG the generation of TheNodeIsDead from net lvl.
     |   TheNodeIsDead               NodeId
 
-
 data ShardingNodeResponse where
     ShardIndexResponse    :: [ShardHash]    -> ShardingNodeResponse
     ShardResponse         :: [Shard]        -> ShardingNodeResponse
