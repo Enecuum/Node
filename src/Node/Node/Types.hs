@@ -64,8 +64,6 @@ type BootNodeList   = [(NodeId, Connect)]
 
 
 
-instance Show (Chan a) where
-    show _ = "Chan"
 
 data Msg where Msg :: B.ByteString -> Msg
 type Transactions = [Transaction]

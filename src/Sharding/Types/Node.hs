@@ -64,6 +64,11 @@ data ShardingNodeAction =
     ---- NeighborListRequest => NeighborListAcceptAction
     --  BUG the generation of TheNodeIsDead from net lvl.
     |   TheNodeIsDead               NodeId
+  deriving Show
+
+instance Show (Chan a) where
+      show _ = "Chan"
+
 
 data ShardingNodeResponse where
     ShardIndexResponse    :: [ShardHash]    -> ShardingNodeResponse
