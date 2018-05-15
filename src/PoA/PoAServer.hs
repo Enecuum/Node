@@ -98,7 +98,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                 aDeadId <- readMVar aId
                 writeChan ch $ ppNodeIsDisconected aDeadId)
 
-    aReceiver aId aConnect aNewChan = do
+    aReceiver aId aConnect aNewChan = forever $ do
         aMsg <- WS.receiveData aConnect
         aOk <- isEmptyMVar aId
         case myDecode aMsg of
