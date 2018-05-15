@@ -66,7 +66,7 @@ baseNodeOpts aChan aMd aData = do
     opt isServerIsDead          $ answerToServerDead aChan defaultServerPort
     opt isConnectivityQuery     $ answerToConnectivityQuery aChan aMd
     opt isQueryPositions        $ answerToQueryPositions aMd
-    opt isDisconnectNode        $ answerToDisconnectNode    aData
+    opt isDisconnectNode        $ answerToDisconnectNode  aData
 
 
 pattern Chan :: Chan MsgToSender -> Node
@@ -94,6 +94,9 @@ answerToQueryPositions aMd _ = do
     let ids = [aId | (aId, aNode) <- M.toList $ aData^.nodes, isNothing $ aNode^.nodePosition]
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "node posiotion request: " ++ show ids
     makeAndSendTo aData ids NodePositionRequestPackage
+
+
+
 
 
 -- TODO optimization by ping

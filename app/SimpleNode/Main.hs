@@ -70,6 +70,13 @@ main =  do
                         Right item              -> return item
                         Left (_::SomeException) -> return $ show aMyNodeId
 
+                    i_am_firs <- try (getEnv "isFirst") >>= \case
+                        Right "Yes" -> return True
+                        Right _   -> return False
+                        Left (_::SomeException) -> return False
+
+                    when i_am_firs $ writeChan ch InitShardingLvl
+
                     void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh log_id
 
                     void $ forkIO $ servePoA poa_in aMyNodeId ch aChan aInfoCh aFileChan
