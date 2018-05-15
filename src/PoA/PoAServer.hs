@@ -38,27 +38,30 @@ myEncode = fromString.show.A.encode
 undead f = finally f (undead f)
 --
 serverPoABootNode :: PortNumber -> Chan InfoMsg -> Chan FileActorRequest -> IO ()
-serverPoABootNode aRecivePort aInfoChan aFileServerChan = runServer aRecivePort $ \_ aPending -> do
-    aConnect <- WS.acceptRequest aPending
-    writeLog aInfoChan [ServerBootNodeTag] Info "ServerPoABootNode.Connect accepted."
-    WS.forkPingThread aConnect 30
-    aMsg <- WS.receiveData aConnect
-    case myDecode aMsg of
-        Just a -> case a of
-            RequestConnects -> do
-                aConChan <- newChan
-                writeChan aFileServerChan $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-                NodeInfoListNetLvl aRecords <- readChan aConChan
-                aShuffledRecords <- shuffleM aRecords
-                let aConnects = snd <$> take 5 aShuffledRecords
-                writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
-                WS.sendBinaryData aConnect $ myEncode $ ResponseConnects aConnects
-            _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
-                "Brouken message from PP " ++ show aMsg
-        Nothing ->
-            -- TODO: Вписать ID если такой есть.
-            writeLog aInfoChan [ServerBootNodeTag] Warning $
-                "Brouken message from PP " ++ show aMsg
+serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
+    writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
+        "Init. ServerPoABootNode: a port is" ++ show aRecivePort
+    runServer aRecivePort $ \_ aPending -> do
+        aConnect <- WS.acceptRequest aPending
+        writeLog aInfoChan [ServerBootNodeTag] Info "ServerPoABootNode.Connect accepted."
+        WS.forkPingThread aConnect 30
+        aMsg <- WS.receiveData aConnect
+        case myDecode aMsg of
+            Just a -> case a of
+                RequestConnects -> do
+                    aConChan <- newChan
+                    writeChan aFileServerChan $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+                    NodeInfoListNetLvl aRecords <- readChan aConChan
+                    aShuffledRecords <- shuffleM aRecords
+                    let aConnects = snd <$> take 5 aShuffledRecords
+                    writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
+                    WS.sendBinaryData aConnect $ myEncode $ ResponseConnects aConnects
+                _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
+                    "Brouken message from PP " ++ show aMsg
+            Nothing ->
+                -- TODO: Вписать ID если такой есть.
+                writeLog aInfoChan [ServerBootNodeTag] Warning $
+                    "Brouken message from PP " ++ show aMsg
 
 
 servePoA ::
@@ -69,8 +72,10 @@ servePoA ::
     -> Chan InfoMsg
     -> Chan FileActorRequest
     -> IO ()
-servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = runServer aRecivePort $
-    \_ aPending -> do
+servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
+    writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
+        "Init. servePoA: a port is" ++ show aRecivePort
+    runServer aRecivePort $ \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
 
