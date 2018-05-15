@@ -1,137 +1,53 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
+{-# LANGUAGE DeriveGeneric, LambdaCase #-}
 
-module CLI.CLI (serveRpc) where
 
-import Network.Socket (PortNumber)
-import Network.JsonRpc.Server
-import Network.Socket.ByteString (sendAllTo, recvFrom)
-import Service.Network.TCP.Server
-import Control.Monad (forever, replicateM)
-import Control.Monad.IO.Class
-import Control.Concurrent (threadDelay, forkIO)
-import Control.Concurrent.Chan
-import Data.ByteString.Lazy (fromStrict, toStrict)
-import Data.Time.Units
-import Data.Maybe (fromMaybe)
-import System.Random (randomRIO)
+module CLI.CLI (
+    serveCLI
+  ) where
 
-import CLI.Balance
-import CLI.TransactionsDAG
+import System.Console.GetOpt
+import Data.List.Split (splitOn)
+import Control.Monad (forever, forM_)
+import Control.Concurrent
 import Node.Node.Types
-import Service.Types
-import Service.Types.SerializeJSON ()
-import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
+import CLI.Common
 
-data TxChanMsg = NewTx Transaction
-               | GenTxNum Int
-               | GenTxUnlim
-
-
-serveRpc :: PortNumber -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
-serveRpc portNum ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
-    (aMsg, addr) <- recvFrom aSocket (1024*100)
-    txChan     <- newChan
-    ledgerRespChan <- newChan
-    ledgerReqChan <- newChan
-    _ <- forkIO $ txWait txChan ch aInfoCh
-    _ <- forkIO $ ledgerWait ledgerReqChan ledgerRespChan aInfoCh
-    runRpc txChan ledgerReqChan ledgerRespChan addr aSocket aMsg
-      where
-        runRpc txChan ledgerReqChan ledgerRespChan addr aSocket aMsg = do
-          response <- call methods (fromStrict aMsg)
-          sendAllTo aSocket (toStrict $ fromMaybe "" response) addr
-            where
-              methods = [createTx , createNTx, createUnlimTx, balanceReq ]
-
-              createTx = toMethod "new_tx" f (Required "x" :+: ())
-                where
-                  f :: Transaction -> RpcResult IO ()
-                  f tx = liftIO $ writeChan txChan $ NewTx tx
-
-              createNTx = toMethod "gen_n_tx" f (Required "x" :+: ())
-                where
-                  f :: Int -> RpcResult IO ()
-                  f num = liftIO $ writeChan txChan $ GenTxNum num
-
-              createUnlimTx = toMethod "gen_unlim_tx" f ()
-                where
-                  f :: RpcResult IO ()
-                  f = liftIO $ writeChan txChan GenTxUnlim
-
-              balanceReq = toMethod "get_balance" f (Required "x" :+: ())
-                where
-                  f :: PublicKey -> RpcResult IO Amount
-                  f key = liftIO $ do
-                    writeChan ledgerReqChan key
-                    resp <- readChan ledgerRespChan
-                    return resp
+data Flag = Key | ShowKey | Balance PubKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever deriving (Eq, Show)
 
 
-
-txWait :: Chan TxChanMsg -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
-txWait recvCh mngCh infoCh = do
-    msg <- readChan recvCh
-    case msg of
-      NewTx tx       -> do
-                        sendMetrics tx infoCh
-                        writeChan mngCh $ newTransaction tx
-      GenTxNum num   -> generateNTransactions num   mngCh infoCh
-      GenTxUnlim     -> generateTransactionsForever mngCh infoCh
-    txWait recvCh mngCh infoCh
+options :: [OptDescr Flag]
+options = [
+    Option ['K'] ["get-public-key"] (NoArg Key) "get public key"
+  , Option ['G'] ["generate-n-transactions"] (ReqArg (GenerateNTransactions . read) "qTx") "Generate N Transactions"
+  , Option ['F'] ["generate-transactions"] (NoArg GenerateTransactionsForever) "Generate Transactions forever"
+  , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
+  , Option ['B'] ["get-balance"] (ReqArg Balance "publicKey") "get balance for public key"
+  , Option ['S'] ["send-money-to-from"] (ReqArg (Send . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
+  ]
 
 
-ledgerWait :: Chan PublicKey -> Chan Amount -> Chan InfoMsg -> IO ()
-ledgerWait chReq chResp m = do
-    key <- readChan chReq
-    stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
-    result  <- countBalance key
-    endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
-    writeChan m $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
-    writeChan chResp result
-    ledgerWait chReq chResp m
-
-
-
-genNTx :: Int -> IO [Transaction]
-genNTx n = do
-   let quantityOfKeys = if qKeys <= 2 then 2 else qKeys
-                        where qKeys = div n 3
-   keys <- replicateM quantityOfKeys generateNewRandomAnonymousKeyPair
-   tx <- getTransactions keys n
-   return tx
-
-generateNTransactions :: ManagerMiningMsg a =>
-    Int -> Chan a -> Chan InfoMsg -> IO ()
-generateNTransactions qTx ch m = do
-  tx <- genNTx qTx
-  mapM_ (\x -> do
-          writeChan ch $ newTransaction x
-          sendMetrics x m
-        ) tx
-  putStrLn "Transactions are created"
-
-
-generateTransactionsForever :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO b
-generateTransactionsForever ch m = forever $ do
-                                quantityOfTranscations <- randomRIO (20,30)
-                                tx <- genNTx quantityOfTranscations
-                                mapM_ (\x -> do
-                                            writeChan ch $ newTransaction x
-                                            sendMetrics x m
-                                       ) tx
-                                threadDelay (10^(6 :: Int))
-                                putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
-
-sendMetrics :: Transaction -> Chan InfoMsg -> IO ()
-sendMetrics (WithTime _ tx) m = sendMetrics tx m
-sendMetrics (WithSignature tx _) m = sendMetrics tx m
-sendMetrics (RegisterPublicKey k b) m = do
-                           writeChan m $ Metric $ increment "cl.tx.count"
-                           writeChan m $ Metric $ set "cl.tx.wallet" k
-                           writeChan m $ Metric $ gauge "cl.tx.amount" b
-sendMetrics (SendAmountFromKeyToKey o r a) m = do
-                           writeChan m $ Metric $ increment "cl.tx.count"
-                           writeChan m $ Metric $ set "cl.tx.wallet" o
-                           writeChan m $ Metric $ set "cl.tx.wallet" r
-                           writeChan m $ Metric $ gauge "cl.tx.amount" a
+serveCLI :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO ()
+serveCLI ch aInfoCh = do
+      putStrLn $ usageInfo "Usage: " options
+      forever $ do
+               argv <- splitOn " " <$> getLine
+               case getOpt Permute options argv of
+                 (flags, _, []) -> dispatch flags
+                 (_, _, err)    -> putStrLn $ concat err ++ usageInfo "Usage: " options
+              
+    where
+          dispatch :: [Flag] -> IO ()
+          dispatch flags = do
+            case flags of
+              (Key : _)                        -> getNewKey ch aInfoCh >>= print
+              (GenerateNTransactions qTx: _)   -> generateNTransactions qTx ch aInfoCh
+              (GenerateTransactionsForever: _) -> generateTransactionsForever ch aInfoCh
+              (Send tx : _)                    -> sendTrans tx ch aInfoCh
+              (ShowKey : _)                    -> do
+                                                  keys <- getPublicKeys 
+                                                  forM_ keys print
+              (Balance aPublicKey : _)         -> getBalance aPublicKey aInfoCh >>= print
+              _                        -> putStrLn "Wrong argument"

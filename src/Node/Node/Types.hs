@@ -205,11 +205,22 @@ data NodeConfig = NodeConfig {
   deriving (Generic)
 $(deriveJSON defaultOptions ''NodeConfig)
 
+
+data RPCBuildConfig where
+     RPCBuildConfig :: {
+        rpcPort        :: PortNumber,
+        enableIP       :: [String],
+        accessToken    :: Maybe String
+  } -> RPCBuildConfig
+  deriving (Generic)
+
 data SimpleNodeBuildConfig where
      SimpleNodeBuildConfig :: {
         poaInPort      :: PortNumber,
         poaOutPort     :: PortNumber,
-        rpcPort        :: PortNumber
+        sharding       :: Bool,
+        cliMode        :: String,  -- "off", "rpc" or ""cli     
+        rpcBuildConfig :: Maybe RPCBuildConfig
   } -> SimpleNodeBuildConfig
   deriving (Generic)
 
@@ -224,6 +235,7 @@ instance FromJSON PortNumber where
     parseJSON _          = error "i've felt with the portnumber parsing"
 
 
+$(deriveJSON defaultOptions ''RPCBuildConfig)
 $(deriveJSON defaultOptions ''SimpleNodeBuildConfig)
 
 $(deriveJSON defaultOptions ''ConnectInfo)
@@ -232,7 +244,6 @@ data BuildConfig where
      BuildConfig :: {
         extConnectPort        :: PortNumber,
         bootNodeList          :: String,
-        sharding              :: String,
         simpleNodeBuildConfig :: Maybe SimpleNodeBuildConfig,
         statsdBuildConfig     :: ConnectInfo,
         logsBuildConfig       :: ConnectInfo

@@ -13,6 +13,9 @@ import qualified "cryptonite"   Crypto.PubKey.ECC.ECDSA     as ECDSA
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
 
+instance FromJSON CryptoCurrency
+instance ToJSON CryptoCurrency
+
 instance FromJSON PublicKey
 instance ToJSON PublicKey
 
