@@ -79,12 +79,15 @@ instance Processing (IORef ManagerNodeData) (Response NetLvl) where
 
             let NodeInfoListNetLvl aList = aBroadcastList
             when (null aList && isBootNode && isNothing (aData^.myNodePosition)) $ do
-                aDeltaX <- randomIO
-                aDeltaY <- randomIO
-                let aMyNodePosition = MyNodePosition $ Point aDeltaX aDeltaY
-                aChanOfSharding <- newChan
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info
+
+                writeLog (aData^.infoMsgChan)
+                    [NetLvlTag, InitTag] Info
                     "Select new random coordinate because I am first node in net."
+
+                aY <- randomIO
+                aX <- randomIO
+                let aMyNodePosition = MyNodePosition $ Point aX aY
+                aChanOfSharding <- newChan
                 makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition (aData^.infoMsgChan)
                 modifyIORef aMd (&~ do
                     myNodePosition .= Just aMyNodePosition
