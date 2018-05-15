@@ -347,12 +347,13 @@ answerToPackagedMsg
 
 answerToPackagedMsg aId aChan aCipheredString@(CipheredString aStr) aMd = do
     aData <- readIORef aMd
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-        "Received a message " ++ show (hex aStr) ++ " from " ++ show aId ++ "."
-    let aDecryptedPacage = do
+    let aDecryptedPackage = do
             key  <- _mKey =<< aData^.nodes.at aId
             decryptChipred key aCipheredString
-    whenJust aDecryptedPacage $ \case
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+        "Received a message " ++ show aDecryptedPackage ++ " from " ++ show aId ++ "."
+
+    whenJust aDecryptedPackage $ \case
         PackageTraceRoutingRequest aTraceRouting aRequestPackage ->
             makeAction aChan aMd aId aTraceRouting aRequestPackage
         PackageTraceRoutingResponse aTraceRouting aResponsePackage ->
