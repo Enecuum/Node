@@ -57,7 +57,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                         NodeInfoListNetLvl aRecords <- readChan aConChan
                         aShuffledRecords <- shuffleM aRecords
                         let aConnects = snd <$> take 5 aShuffledRecords
-                        WS.sendBinaryData aConnect $ myEncode $ ResponseConnects aConnects
+                        WS.sendTextData aConnect $ myEncode $ ResponseConnects aConnects
                         writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
                     _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
                         "Brouken message from PP " ++ show aMsg
@@ -82,7 +82,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
 
-        WS.sendBinaryData aConnect $ myEncode RequestNodeIdToPP
+        WS.sendTextData aConnect $ myEncode RequestNodeIdToPP
         aId <- newEmptyMVar
         aNewChan  <- newChan
         -- writeChan ch $ connecting to PoA, the PoA have id.
@@ -92,7 +92,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
   where
     aSender aId aConnect aNewChan = forever (do
         aMsg <- readChan aNewChan
-        WS.sendBinaryData aConnect $ myEncode aMsg) `finally` (do
+        WS.sendTextData aConnect $ myEncode aMsg) `finally` (do
             aIsEmpty <- isEmptyMVar aId
             unless aIsEmpty $ do
                 aDeadId <- readMVar aId
@@ -110,7 +110,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                             ("net.node." ++ show (toInteger aNodeId) ++ ".pending.amount")
                             (-1 :: Integer)
                         writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
-                        WS.sendBinaryData aConnect
+                        WS.sendTextData aConnect
                             (fromString.show $ A.encode $ ResponseTransaction aTransaction :: B.ByteString)
                 MsgMicroblock aMicroblock
                     | not aOk -> do
@@ -119,7 +119,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                         sendMsgToNetLvlFromPP ch $ MicroblockFromPP aMicroblock aSenderId
                     | otherwise -> do
                         writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without PPId " ++ show aMsg
-                        WS.sendBinaryData aConnect $ myEncode RequestNodeIdToPP
+                        WS.sendTextData aConnect $ myEncode RequestNodeIdToPP
 
                 RequestBroadcast aRecipientType aBroadcastMsg
                     | not aOk -> do
@@ -129,7 +129,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                             BroadcastRequestFromPP aBroadcastMsg (IdFrom aSenderId) aRecipientType
                     | otherwise -> do
                         writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without PPId " ++ show aMsg
-                        WS.sendBinaryData aConnect $ myEncode RequestNodeIdToPP
+                        WS.sendTextData aConnect $ myEncode RequestNodeIdToPP
                 RequestConnects -> do
                     aConChan <- newChan
                     writeChan (aFileServerChan) $
@@ -138,7 +138,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                     aShuffledRecords <- shuffleM aRecords
                     let aConnects = snd <$> take 5 aShuffledRecords
                     writeLog aInfoChan [ServePoATag] Info $ "Send connections " ++ show aConnects
-                    WS.sendBinaryData aConnect $ myEncode $ ResponseConnects aConnects
+                    WS.sendTextData aConnect $ myEncode $ ResponseConnects aConnects
 
                 RequestPoWList
                     | not aOk -> do
@@ -149,7 +149,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
 
                     | otherwise -> do
                         writeLog aInfoChan [ServePoATag] Warning "Can't send request without PPId "
-                        WS.sendBinaryData aConnect $ myEncode RequestNodeIdToPP
+                        WS.sendTextData aConnect $ myEncode RequestNodeIdToPP
 
 
                 ResponseNodeIdToNN aPPId aNodeType -> do
@@ -167,7 +167,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                         sendMsgToNetLvlFromPP ch $ MsgResendingToPP (IdFrom aSenderId) (IdTo aDestination) aMsgToNN
                     | otherwise     -> do
                         writeLog aInfoChan [ServePoATag] Warning $ "Can't send request without PPId " ++ show aMsgToNN
-                        WS.sendBinaryData aConnect $ myEncode RequestNodeIdToPP
+                        WS.sendTextData aConnect $ myEncode RequestNodeIdToPP
 
             Left a ->
                 -- TODO: Вписать ID если такой есть.
