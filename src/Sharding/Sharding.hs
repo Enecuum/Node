@@ -95,7 +95,7 @@ makeShardingNode :: T.ManagerMsg msg =>
                           -> IO ()
 makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgChan = do
     aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMsgChan
-    writeLog infoMsgChan [ShardingLvlTag] Info "Start of sharding lvl."
+    writeLog infoMsgChan [ShardingLvlTag, InitTag] Info "Start of sharding lvl."
     void $ forkIO $ aLoop aShardingNode
   where
     aLoop :: ShardingNode -> IO ()
@@ -287,7 +287,7 @@ initOfShardingNode :: T.ManagerMsg msg =>
                             -> Chan InfoMsg
                             -> IO ShardingNode
 initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMsgChan = do
-    writeLog infoMsgChan [InitTag] Info "Init sharding node"
+    writeLog infoMsgChan [ShardingLvlTag, InitTag] Info "Init sharding node"
     sendToNetLevet aChanOfNetLevel $ IamAwakeRequst aMyNodeId aMyNodePosition
     sendToNetLevet aChanOfNetLevel NeighborListRequest
 
