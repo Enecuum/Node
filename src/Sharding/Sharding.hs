@@ -128,10 +128,12 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
                         ShardListRequest (S.toList aShardHashes)
                     aLoop $ aShardingNode &
                         nodeIndex.shardNeededIndex.setOfHash %~ S.drop aNumberOfLoading
+            | otherwise -> aLoop aShardingNode
 
         ShiftAction | shiftIsNeed aShardingNode -> do
             writeLog infoMsgChan [ShardingLvlTag] Info "Try shift."
             shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode
+                    | otherwise -> aLoop aShardingNode
 
         CheckTheNeighbors -> do
             let aNodePositions      = (^.neighborPosition) `S.map` aNeighbors
@@ -218,12 +220,14 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
                 writeLog infoMsgChan [ShardingLvlTag] Info $
                     "This shard " ++ show aShard ++ " accepted and saved localy."
                 nodeSaveShard aShard aLoop aShardingNode
+            | otherwise -> aLoop aShardingNode
 
         NewShardInNetAction aShard
             | checkShardIsInRadiusOfCaptureShardingNode aShardingNode (shardToHash aShard) -> do
                 writeLog infoMsgChan [ShardingLvlTag] Info $
                     "New shard " ++ show aShard ++ " in net and save localy."
                 nodeSaveShard aShard aLoop aShardingNode
+            | otherwise -> aLoop aShardingNode
 
         ShardLoadAction aChan aNodeId aHashList -> do
             writeLog infoMsgChan [ShardingLvlTag] Info $
