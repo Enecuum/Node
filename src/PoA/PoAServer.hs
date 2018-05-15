@@ -33,8 +33,8 @@ import              Data.Maybe
 myDecode :: B.ByteString ->  Either String PPToNNMessage
 myDecode = A.eitherDecodeStrict
 
-myEncode :: NNToPPMessage -> B.ByteString
-myEncode = fromString.show.A.encode
+
+myEncode = A.encode
 
 undead f = finally f (undead f)
 --
