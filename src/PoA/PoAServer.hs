@@ -46,23 +46,24 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
         aConnect <- WS.acceptRequest aPending
         writeLog aInfoChan [ServerBootNodeTag] Info "ServerPoABootNode.Connect accepted."
         WS.forkPingThread aConnect 30
-        aMsg <- WS.receiveData aConnect
-        case myDecode aMsg of
-            Right a -> case a of
-                RequestConnects -> do
-                    aConChan <- newChan
-                    writeChan aFileServerChan $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-                    NodeInfoListNetLvl aRecords <- readChan aConChan
-                    aShuffledRecords <- shuffleM aRecords
-                    let aConnects = snd <$> take 5 aShuffledRecords
-                    writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
-                    WS.sendBinaryData aConnect $ myEncode $ ResponseConnects aConnects
-                _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
-                    "Brouken message from PP " ++ show aMsg
-            Left a ->
-                -- TODO: Вписать ID если такой есть.
-                writeLog aInfoChan [ServerBootNodeTag] Warning $
-                    "Brouken message from PP " ++ show aMsg ++ " " ++ a
+        forever $ do
+            aMsg <- WS.receiveData aConnect
+            case myDecode aMsg of
+                Right a -> case a of
+                    RequestConnects -> do
+                        aConChan <- newChan
+                        writeChan aFileServerChan $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+                        NodeInfoListNetLvl aRecords <- readChan aConChan
+                        aShuffledRecords <- shuffleM aRecords
+                        let aConnects = snd <$> take 5 aShuffledRecords
+                        WS.sendBinaryData aConnect $ myEncode $ ResponseConnects aConnects
+                        writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
+                    _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
+                        "Brouken message from PP " ++ show aMsg
+                Left a ->
+                    -- TODO: Вписать ID если такой есть.
+                    writeLog aInfoChan [ServerBootNodeTag] Warning $
+                        "Brouken message from PP " ++ show aMsg ++ " " ++ a
 
 
 servePoA ::
