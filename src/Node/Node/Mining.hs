@@ -53,7 +53,9 @@ import              PoA.Types
 import              Sharding.Sharding
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
-managerMining aChan aMd = forever $ do
+managerMining aChan aMd = do
+  modifyIORef aMd $ iAmBroadcast .~ True -- FIXME:!!!
+  forever $ do
     mData <- readIORef aMd
     readChan aChan >>= \a -> runOption a $ do
         baseNodeOpts aChan aMd mData

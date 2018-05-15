@@ -93,10 +93,8 @@ answerToQueryPositions :: ManagerData md =>  ManagerMsg msg => IORef md -> msg -
 answerToQueryPositions aMd _ = do
     aData <- readIORef aMd
     let ids = [aId | (aId, aNode) <- M.toList $ aData^.nodes, isNothing $ aNode^.nodePosition]
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "node posiotion request: " ++ show ids
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Node posiotion request: " ++ show ids
     makeAndSendTo aData ids NodePositionRequestPackage
-
-
 
 
 
