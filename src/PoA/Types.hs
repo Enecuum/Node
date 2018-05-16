@@ -5,6 +5,7 @@
     ,   FlexibleInstances
     ,   DeriveGeneric
     ,   GeneralizedNewtypeDeriving
+    ,   StandaloneDeriving
   #-}
 module PoA.Types where
 
@@ -14,7 +15,7 @@ import qualified    Data.ByteString.Char8 as CB
 import              Data.Aeson
 import              Data.String
 import              GHC.Generics
-import qualified    Data.Text.Lazy as T
+import qualified    Data.Text as T
 import              Data.Hex
 import              Control.Monad.Extra
 import              Data.Either
@@ -24,6 +25,9 @@ import              Service.Network.Base
 import              Data.IP
 import              Node.Data.Key
 import              Service.Types.SerializeInstances
+import qualified    Data.HashMap.Strict as H
+import qualified    Data.Vector as V
+import              Data.Scientific
 
 -- TODO: aception of msg from a PoA/PoW.
 -- ----: parsing - ok!
@@ -36,8 +40,28 @@ import              Service.Types.SerializeInstances
 -- ----     toJson
 -- TODO sending to PoA/PoW node.
 
+
 -- TODO finding of optimal broadcast node for PoA/PoW node. ???
 
+instance S.Serialize Scientific where
+    get = read <$> S.get
+    put = S.put . show
+
+
+instance S.Serialize T.Text where
+    get = T.pack <$> S.get
+    put = S.put . T.unpack
+
+instance S.Serialize Object where
+    get = fmap H.fromList S.get
+    put = S.put . H.toList
+
+
+instance S.Serialize a => S.Serialize (V.Vector a) where
+    get = fmap V.fromList S.get
+    put = S.put . V.toList
+
+instance S.Serialize Value
 
 
 data PPToNNMessage
@@ -161,12 +185,9 @@ instance FromJSON PPToNNMessage where
             ("Request", "Transaction") -> RequestTransaction <$> aMessage .: "number"
 
             ("Request", "Broadcast") -> do
-                aMsg :: T.Text <- aMessage .: "msg"
+                aMsg :: Value <- aMessage .: "msg"
                 aRecipientType :: T.Text <-  aMessage .: "aRecipientType"
-                case myTextUnhex aMsg of
-                    Just aUnxededMsg  -> return $
-                        RequestBroadcast (readNodeType aRecipientType) aUnxededMsg
-                    Nothing           -> mzero
+                return $ RequestBroadcast (readNodeType aRecipientType) (S.encode aMsg)
 
             ("Request","Connects")    -> return RequestConnects
             ("Request","PoWList")     -> return RequestPoWList
@@ -180,11 +201,9 @@ instance FromJSON PPToNNMessage where
 
             ("Msg", "MsgTo") -> do
                 aDestination :: T.Text <- aMessage .: "destination"
-                aMsg         :: T.Text <- aMessage .: "msg"
+                aMsg         :: Value <- aMessage .: "msg"
                 aPoint <- unhexNodeId aDestination
-                case myTextUnhex aMsg of
-                    Just aJustMsg -> return $ MsgMsgToNN (PPId aPoint) aJustMsg
-                    Nothing -> mzero
+                return $ MsgMsgToNN (PPId aPoint) (S.encode aMsg)
 
             ("Msg", "Microblock") -> do
                 aPreviousHash :: T.Text <- aMessage .: "previousHash"

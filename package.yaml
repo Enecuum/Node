@@ -59,6 +59,8 @@ dependencies:
 - extra
 - time
 - clock
+- vector
+- scientific
 - containers
 - random
 - free
@@ -78,6 +80,7 @@ dependencies:
 - ini
 - text
 - aeson-pretty
+- unordered-containers
 
 #tmp
 - scientific
