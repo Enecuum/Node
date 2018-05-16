@@ -77,20 +77,6 @@ sendExitMsgToNode (Chan aChan) = do
     writeChan       aChan SenderTerminate
 sendExitMsgToNode _ = error "Node.Node.Base.sendExitMsgToNode"
 
-pattern Head :: forall a b. a -> b -> [(a, b)]
-pattern Head aId aElem <- (aId, aElem):_
-
-pattern AnyId :: forall a b. a -> [(a, b)]
-pattern AnyId aId <- (aId, _):_
-
-pattern PositionOfFirst :: forall a. NodePosition -> [(a, Node)]
-pattern PositionOfFirst aPosition <- Head _ ((^.nodePosition) -> Just aPosition)
-
-pattern Snd a <- ((\k -> snd <$> k) -> a)
-pattern HaveAPosition p <- (filter (\a -> isJust (a^.nodePosition)) -> p)
-
-
-pattern AnyPosition aPosition <- Snd (HaveAPosition (((^.nodePosition) -> Just aPosition):_))
 
 preferedBroadcastCount :: Int
 preferedBroadcastCount = 4
@@ -101,7 +87,6 @@ answerToQueryPositions aMd _ = do
     let ids = [aId | (aId, aNode) <- M.toList $ aData^.nodes, isNothing $ aNode^.nodePosition]
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Node posiotion request: " ++ show ids
     makeAndSendTo aData ids NodePositionRequestPackage
-
 
 
 -- TODO optimization by ping
@@ -117,8 +102,6 @@ answerToConnectivityQuery aChan aMd _ = do
     aData <- readIORef aMd
     let aNeighbors    = aData^.nodes
         aBroadcasts   = filter (^._2.isBroadcast) $ M.toList aNeighbors
-
-        --aMyNodeId     = aData^.myNodeId
         aBroadcastNum = length aBroadcasts
         aUnActiveNum  = M.size $ M.filter (\a -> a^.status /= Active) aNeighbors
 
@@ -126,28 +109,11 @@ answerToConnectivityQuery aChan aMd _ = do
     aConChan <- newChan
     writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
     NodeInfoListNetLvl aConnectList <- readChan aConChan
-{-
-    aPosChan <- newChan
-    writeChan (aData^.fileServerChan) $
-         FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
-    NodeInfoListLogicLvl aPossitionList <- readChan aPosChan
--}
+
     let aWait = aBroadcastNum >= preferedBroadcastCount{- || aBroadcastNum <= 6 -} || aUnActiveNum /= 0
     if  | aWait             -> return ()
         | null aConnectList -> connectToBootNode aChan aData
-        | iDontHaveAPosition aData -> if
-            | aBroadcastNum == 0 -> do
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info
-                    "Init. Connect to first broadcast node."
-                connectTo aChan 1 aConnectList
-            | PositionOfFirst (NodePosition (Point x y)) <- aBroadcasts ->
-                initShading aChan aMd
-
-            | AnyId aNodeId <- aBroadcasts -> do
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                    "Request of a node position of the " ++ show aNodeId ++ "."
-                makeAndSendTo aData [aNodeId] NodePositionRequestPackage
-
+        | iDontHaveAPosition aData -> initShading aChan aMd
         |   aBroadcastNum < preferedBroadcastCount,
             Just aMyNodePosition <- aData^.myNodePosition -> do
             let aConnectsNum = preferedBroadcastCount - aBroadcastNum
