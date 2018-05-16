@@ -105,12 +105,11 @@ answerToConnectivityQuery aChan aMd _ = do
         aBroadcastNum = length aBroadcasts
         aUnActiveNum  = M.size $ M.filter (\a -> a^.status /= Active) aNeighbors
 
-
     aConChan <- newChan
     writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
     NodeInfoListNetLvl aConnectList <- readChan aConChan
 
-    let aWait = aBroadcastNum >= preferedBroadcastCount{- || aBroadcastNum <= 6 -} || aUnActiveNum /= 0
+    let aWait = aBroadcastNum >= preferedBroadcastCount {- || aBroadcastNum <= 6 -} || aUnActiveNum /= 0
     if  | aWait             -> return ()
         | null aConnectList -> connectToBootNode aChan aData
         | iDontHaveAPosition aData -> initShading aChan aMd
