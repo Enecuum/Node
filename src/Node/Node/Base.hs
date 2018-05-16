@@ -127,9 +127,6 @@ answerToConnectivityQuery aChan aMd _ = do
     NodeInfoListLogicLvl aPossitionList <- readChan aPosChan
 
     let aWait = aBroadcastNum >= preferedBroadcastCount{- || aBroadcastNum <= 6 -} || aUnActiveNum /= 0
-        aFilteredPositions = S.fromList . M.elems $ M.intersection
-            (M.fromList aPossitionList) (M.fromList aConnectList)
-
     if  | aWait             -> return ()
         | null aConnectList -> connectToBootNode aChan aData
         | iDontHaveAPosition aData -> if
@@ -150,21 +147,12 @@ answerToConnectivityQuery aChan aMd _ = do
 
         |   aBroadcastNum < preferedBroadcastCount,
             Just aMyNodePosition <- aData^.myNodePosition -> do
-
-            let aPositionOfPreferedConnect = findNearestNeighborPositions
-                    aMyNodePosition aFilteredPositions
-                isPreferedByPositon a = (a^._2) `elem`aPositionOfPreferedConnect
-                aNodesId = (^._1) <$> filter isPreferedByPositon aPossitionList
-                isPreferedById a = (a^._1)  `elem` aNodesId
-                aPreferedConnects = filter isPreferedById aConnectList
-                aConnectsNum = preferedBroadcastCount - aBroadcastNum
+            let aConnectsNum = preferedBroadcastCount - aBroadcastNum
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "Request of the " ++ show aConnectsNum ++ " connects."
-            connectTo aChan aConnectsNum aPreferedConnects
-        |   otherwise -> error $ "!!!!!!!!!!!" ++ show aBroadcastNum ++ " " ++ show aUnActiveNum
-      -- if we don't find anybody send message error
-      -- TODO: optimize by net and logic lvl
-      --  | aBroadcastNum > 6     -> undefined
+            connectTo aChan aConnectsNum aConnectList
+        |   otherwise -> error $ "!!!!!!!!!!!XXX" ++ show aBroadcastNum ++ " " ++ show aUnActiveNum
+
 
 
 initShading aChan aMd aPoint = do
