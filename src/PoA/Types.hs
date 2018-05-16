@@ -201,7 +201,7 @@ instance FromJSON PPToNNMessage where
 
             ("Msg", "MsgTo") -> do
                 aDestination :: T.Text <- aMessage .: "destination"
-                aMsg         :: Value <- aMessage .: "msg"
+                aMsg         :: Value  <- aMessage .: "msg"
                 aPoint <- unhexNodeId aDestination
                 return $ MsgMsgToNN (PPId aPoint) (S.encode aMsg)
 
