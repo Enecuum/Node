@@ -10,6 +10,7 @@ module PoA.Types where
 
 import              Data.Word()
 import qualified    Data.ByteString as B
+import qualified    Data.ByteString.Char8 as CB
 import              Data.Aeson
 import              Data.String
 import              GHC.Generics
@@ -22,6 +23,7 @@ import              Service.Types (Microblock(..), Transaction)
 import              Service.Network.Base
 import              Data.IP
 import              Node.Data.Key
+import              Service.Types.SerializeInstances
 
 -- TODO: aception of msg from a PoA/PoW.
 -- ----: parsing - ok!
@@ -124,10 +126,22 @@ data NNToPPMessage
 
 myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
 myUnhex aString = case unhex $ T.unpack aString of
-    Just aDecodeString  -> case S.decode $ fromString aDecodeString of
-        Right aJustVal  -> return aJustVal
-        Left _          -> mzero
+    Just aDecodeString  -> do
+        case S.decode $ fromString aDecodeString of
+            Right aJustVal  -> return aJustVal
+            Left _          -> mzero
     Nothing             -> mzero
+
+
+unhexNodeId :: MonadPlus m => T.Text -> m NodeId
+unhexNodeId aString = case unhex . fromString . T.unpack $ aString of
+    Just aDecodeString  -> return . NodeId . roll $ B.unpack aDecodeString
+    Nothing             -> mzero
+
+
+ppIdToString :: PPId -> String
+ppIdToString (PPId (NodeId aPoint)) = CB.unpack . hex . B.pack $ unroll aPoint
+
 
 myTextUnhex :: T.Text -> Maybe B.ByteString
 myTextUnhex aString = fromString <$> aUnxeded
@@ -142,6 +156,7 @@ instance FromJSON PPToNNMessage where
     parseJSON (Object aMessage) = do
         aTag  :: T.Text <- aMessage .: "tag"
         aType :: T.Text <- aMessage .: "type"
+        --error $ show aTag ++ " " ++ show aType
         case (T.unpack aTag, T.unpack aType) of
             ("Request", "Transaction") -> RequestTransaction <$> aMessage .: "number"
 
@@ -158,14 +173,15 @@ instance FromJSON PPToNNMessage where
 
             ("Response", "NodeId") -> do
                 aPPId :: T.Text <- aMessage .: "nodeId"
-                aPoint    <- myUnhex aPPId
+
+                aPoint   <- unhexNodeId aPPId
                 aNodeType :: T.Text <- aMessage .: "nodeType"
                 return (ResponseNodeIdToNN (PPId aPoint) (readNodeType aNodeType))
 
             ("Msg", "MsgTo") -> do
                 aDestination :: T.Text <- aMessage .: "destination"
                 aMsg         :: T.Text <- aMessage .: "msg"
-                aPoint <- myUnhex aDestination
+                aPoint <- unhexNodeId aDestination
                 case myTextUnhex aMsg of
                     Just aJustMsg -> return $ MsgMsgToNN (PPId aPoint) aJustMsg
                     Nothing -> mzero
@@ -185,7 +201,7 @@ instance FromJSON PPToNNMessage where
 
             _ -> mzero
 
-    parseJSON a = error $ show a
+    parseJSON a = mzero -- error $ show a
 
 readNodeType :: (IsString a, Eq a) => a -> NodeType
 readNodeType aNodeType = if aNodeType == "PoW" then PoW else PoA
@@ -248,10 +264,6 @@ instance ToJSON Connect where
         "ip"   .= show (fromHostAddress aHostAddress),
         "port" .= fromEnum aPortNumber
       ]
-
-
-ppIdToString :: PPId -> String
-ppIdToString (PPId aPoint) = show . hex $ S.encode aPoint
 
 
 --------------------------------------------------------------------------------
