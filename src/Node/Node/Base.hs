@@ -140,11 +140,8 @@ answerToConnectivityQuery aChan aMd _ = do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                     "Init. Connect to first broadcast node."
                 connectTo aChan 1 aConnectList
-            | PositionOfFirst (NodePosition (Point x y)) <- aBroadcasts -> do
-                aDeltaX <- randomRIO (0, 2000)
-                aDeltaY <- randomRIO (0, 2000)
-                initShading aChan aMd $ MyNodePosition $ Point
-                    (x + aDeltaX - 1000) (y + aDeltaY - 1000)
+            | PositionOfFirst (NodePosition (Point x y)) <- aBroadcasts ->
+                initShading aChan aMd
 
             | AnyId aNodeId <- aBroadcasts -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
@@ -161,9 +158,12 @@ answerToConnectivityQuery aChan aMd _ = do
 
 
 initShading :: (NodeConfigClass s, NodeBaseDataClass s, ManagerMsg msg) =>
-                    Chan msg -> IORef s -> MyNodePosition -> IO ()
-initShading aChan aMd aPoint = do
+    Chan msg -> IORef s -> IO ()
+initShading aChan aMd = do
     aData <- readIORef aMd
+    aX <- randomIO
+    aY <- randomIO
+    let aPoint = MyNodePosition $ Point aX aY
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
         "Init. Take new logic coordinates " ++ show aPoint ++ "."
 
