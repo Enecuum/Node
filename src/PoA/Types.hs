@@ -186,7 +186,7 @@ instance FromJSON PPToNNMessage where
 
             ("Request", "Broadcast") -> do
                 aMsg :: Value <- aMessage .: "msg"
-                aRecipientType :: T.Text <-  aMessage .: "aRecipientType"
+                aRecipientType :: T.Text <-  aMessage .: "recipientType"
                 return $ RequestBroadcast (readNodeType aRecipientType) (S.encode aMsg)
 
             ("Request","Connects")    -> return RequestConnects
