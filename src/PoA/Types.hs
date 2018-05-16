@@ -240,11 +240,15 @@ instance ToJSON NNToPPMessage where
       ]
 
     toJSON (MsgMsgToPP aPPId aMessage) = object [
-        "tag"       .= ("Msg"   :: String),
-        "type"      .= ("MsgTo" :: String),
-        "sender"    .= ppIdToString aPPId,
-        "messages"  .= (show.hex $ aMessage)
-      ]
+            "tag"       .= ("Msg"   :: String),
+            "type"      .= ("MsgTo" :: String),
+            "sender"    .= ppIdToString aPPId,
+            "messages"  .= aObj
+          ]
+      where
+        aObj = case S.decode aMessage of
+            Right (aObj :: Value)   -> aObj
+            Left aObj               -> String (T.pack aObj)
 
     toJSON (ResponseConnects aConnects) = object [
         "tag"       .= ("Response"  :: String),
@@ -268,9 +272,14 @@ instance ToJSON NNToPPMessage where
     toJSON (MsgBroadcastMsg aMessage (IdFrom aPPId)) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("BroadcastMsg"  :: String),
-        "messages"  .= (show.hex $ aMessage),
+        "messages"  .= aObj,
         "idFrom"    .= ppIdToString aPPId
       ]
+      where
+        aObj = case S.decode aMessage of
+          Right (aObj :: Value)   -> aObj
+          Left aObj               -> String (T.pack aObj)
+
 
     toJSON (ResponsePoWList aPPIds) = object [
         "tag"       .= ("Response"  :: String),
