@@ -124,9 +124,10 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
             makeAndSendTo aData (ppIdToNodePosition aPPId) aRequest
 
         BroadcastRequestFromPP aByteString aIdFrom@(IdFrom aPPId) aNodeType ->
-            whenJust (aData^.ppNodes.at aPPId) $ \aNode ->
-                sendBroadcast aMd $
-                    BroadcastPPMsg (aNode^.ppType) aByteString aNodeType aIdFrom
+            whenJust (aData^.ppNodes.at aPPId) $ \aNode -> do
+                let aMsg = BroadcastPPMsg (aNode^.ppType) aByteString aNodeType aIdFrom
+                sendBroadcast aMd aMsg
+                processingOfBroadcast aMd aMsg 
 
         MsgResendingToPP aIdFrom@(IdFrom aPPIdFrom) aIdTo@(IdTo aId) aByteString
             | Just aNode <- aData^.ppNodes.at aId ->
