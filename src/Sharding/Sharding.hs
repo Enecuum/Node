@@ -133,7 +133,9 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
         ShiftAction | shiftIsNeed aShardingNode -> do
             writeLog infoMsgChan [ShardingLvlTag] Info "Try shift."
             shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode
-                    | otherwise -> aLoop aShardingNode
+                    | otherwise -> do
+                        writeLog infoMsgChan [ShardingLvlTag] Info "Shift is not need."
+                        aLoop aShardingNode
 
         CheckTheNeighbors -> do
             let aNodePositions      = (^.neighborPosition) `S.map` aNeighbors

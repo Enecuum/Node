@@ -52,6 +52,7 @@ managerMsgFuncListData = toList $ do
     "datagramMsg"           +: [["B.ByteString"], ["NodeId"]]
     "initDatagram"          +: [["Chan", "MsgToSender"], ["HostAddress"], ["B.ByteString"]]
     "connectivityQuery"     +: []
+    "infoRequest"           +: []
     "queryPositions"        +: []
     "msgFromPP"             +: [["MsgToMainActorFromPP"]]
     "ppNodeIsDisconected"   +: [["PPId"]]
