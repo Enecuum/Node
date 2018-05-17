@@ -51,28 +51,32 @@ import              Node.Data.Verification
 import              Node.Data.GlobalLoging
 import              PoA.Types
 import              Sharding.Sharding()
+import              Node.BaseFunctions
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
 managerMining aChan aMd = do
   modifyIORef aMd $ iAmBroadcast .~ True -- FIXME:!!!
-  forever $ do
-    mData <- readIORef aMd
-    readChan aChan >>= \a -> runOption a $ do
-        baseNodeOpts aChan aMd mData
+  aData <- readIORef aMd
+  undead (writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
+      "managerMining. This node could be die!" ) 
+      $ forever $ do
+          mData <- readIORef aMd
+          readChan aChan >>= \a -> runOption a $ do
+            baseNodeOpts aChan aMd mData
 
-        opt isInitDatagram          $ answerToInitDatagram aMd
-        opt isDatagramMsg           $ answerToDatagramMsg aChan aMd (mData^.myNodeId)
-        opt isClientIsDisconnected $ miningNodeAnswerClientIsDisconnected aMd
+            opt isInitDatagram          $ answerToInitDatagram aMd
+            opt isDatagramMsg           $ answerToDatagramMsg aChan aMd (mData^.myNodeId)
+            opt isClientIsDisconnected $ miningNodeAnswerClientIsDisconnected aMd
 
-        opt isTestBroadcastBlockIndex   $ answerToTestBroadcastBlockIndex aMd
-        opt isNewTransaction            $ answerToNewTransaction aMd
-        opt isInitDatagram              $ answerToSendInitDatagram aChan aMd
-        opt isShardingNodeRequestMsg    $ answerToShardingNodeRequestMsg aMd
-        opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
-        opt isDeleteOldestPoW           $ answerToDeleteOldestPoW aMd
-        opt isMsgFromPP                 $ answeToMsgFromPP aMd
-        opt isInitShardingLvl           $ answerToInitShardingLvl aChan aMd
-        opt isInfoRequest               $ answerToInfoRequest aMd
+            opt isTestBroadcastBlockIndex   $ answerToTestBroadcastBlockIndex aMd
+            opt isNewTransaction            $ answerToNewTransaction aMd
+            opt isInitDatagram              $ answerToSendInitDatagram aChan aMd
+            opt isShardingNodeRequestMsg    $ answerToShardingNodeRequestMsg aMd
+            opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
+            opt isDeleteOldestPoW           $ answerToDeleteOldestPoW aMd
+            opt isMsgFromPP                 $ answeToMsgFromPP aMd
+            opt isInitShardingLvl           $ answerToInitShardingLvl aChan aMd
+            opt isInfoRequest               $ answerToInfoRequest aMd
 
 
 answerToInfoRequest :: ManagerData md => IORef md -> a -> IO ()

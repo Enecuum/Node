@@ -62,6 +62,7 @@ import              Service.InfoMsg
 import              Lens.Micro.GHC()
 import              Node.Data.Key
 
+
 sizeOfShardStore:: Int
 sizeOfShardStore = 500
 
@@ -431,8 +432,8 @@ findShardingNodeDomain aShardingNode = findNodeDomain
 
 
 shiftIsNeed :: ShardingNode -> Bool
-shiftIsNeed aShardingNode = checkUnevenness
-    (aShardingNode^.nodePosition) (neighborPositions aShardingNode)
+shiftIsNeed aShardingNode = True--checkUnevenness
+    --(aShardingNode^.nodePosition) (neighborPositions aShardingNode)
 
 
 sendToNetLevet :: T.ManagerMsg msg => Chan msg -> ShardingNodeRequestMsg -> IO ()
