@@ -307,6 +307,7 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMs
         metronomeLinear smallPeriod bigPeriod $ do
             writeChan aChanRequest CheckTheNeighbors
             threadDelay smallPeriod
+            writeLog infoMsgChan [ShardingLvlTag, InitTag] Info "ShiftAction write to chan"
             writeChan aChanRequest ShiftAction
 
     enc <- L.readFile "configs/config.json"
