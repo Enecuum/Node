@@ -110,10 +110,9 @@ answerToConnectivityQuery aChan aMd _ = do
     writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
     NodeInfoListNetLvl aConnectList <- readChan aConChan
 
-    when (length aConnectList > 6) $ whenJust (aData^.myNodePosition) $
-        \aMyPosition -> do
-            writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of a list of connects."
-            writeChan (aData^.fileServerChan) $ FileActorMyPosition aMyPosition
+    whenJust (aData^.myNodePosition) $ \aMyPosition -> do
+        writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of a list of connects."
+        writeChan (aData^.fileServerChan) $ FileActorMyPosition aMyPosition
 
     let aWait = aBroadcastNum >= preferedBroadcastCount {- || aBroadcastNum <= 6 -} || aUnActiveNum /= 0
     if  | aWait             -> return ()
