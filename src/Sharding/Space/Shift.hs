@@ -18,7 +18,7 @@ checkUnevenness aMyNodePosition aPositions =
 
 findNearestNeighborPositions :: MyNodePosition -> S.Set NodePosition -> [NodePosition]
 findNearestNeighborPositions aMyNodePosition aPositions =
-    head . sortOn (distanceTo aMyNodePosition) <$> aFilteredPositions
+    head . sortOn (distanceTo aMyNodePosition) <$> (filter (not.null)) aFilteredPositions
   where
     aFilteredPositions :: [[NodePosition]]
     aFilteredPositions = S.toList <$> filter (not . S.null) aSeparatedPositions
