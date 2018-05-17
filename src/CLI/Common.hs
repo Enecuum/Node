@@ -11,13 +11,8 @@ module CLI.Common (
   getNewKey,
   
   getBalance,
-  getPublicKeys,
+  getPublicKeys
 
-  Trans(..),
-  PubKey,
-  QuantityTx
-  
-   
   )where
 
 import Control.Monad (forever, replicateM)
@@ -26,9 +21,6 @@ import Control.Concurrent.Chan
 import Control.Exception (SomeException, try)
 import Data.Time.Units
 import Data.List.Split (splitOn)
-
-import Data.Aeson (FromJSON, ToJSON)
-import GHC.Generics
 
 import Data.Map (fromList, lookup, Map)
 import System.Random (randomRIO)
@@ -42,45 +34,29 @@ import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
 import Service.System.Directory (getTime, getKeyFilePath)
 
-type QuantityTx = Int
-type PubKey = String
-data Trans = Trans {
-        amount :: Amount
-      , recipientPubKey :: PubKey
-      , senderPubKey :: PubKey
-      , currency :: CryptoCurrency
-      } deriving (Eq, Show, Generic)
-
-instance ToJSON Trans
-instance FromJSON Trans
-
-instance Read Trans where
-    readsPrec _ value =
-        case splitOn ":" value of
-             [f1, f2, f3, f4] ->
-                 [(Trans (read f1) f2 f3 (read f4), [])]
-             x -> error $ "Invalid number of fields in input: " ++ show x
-
 sendMessageTo = undefined
 sendMessageForAll = undefined
 getMessages = undefined
 
 
-sendTrans :: ManagerMiningMsg a => Trans -> Chan a -> Chan InfoMsg -> IO ()
+sendTrans :: ManagerMiningMsg a => Trans -> Chan a -> Chan InfoMsg -> IO (Maybe Transaction)
 sendTrans trans ch aInfoCh = do
-  let moneyAmount = (CLI.Common.amount trans) :: Amount
-  let receiverPubKey = read (recipientPubKey trans) :: PublicKey
-  let ownerPubKey = read (senderPubKey trans) :: PublicKey
+  let moneyAmount = (Service.Types.txAmount trans) :: Amount
+  let receiverPubKey = read (show $ recipientPubKey trans) :: PublicKey
+  let ownerPubKey = read (show $ senderPubKey trans) :: PublicKey
   timePoint <- getTime
   keyPairs <- getSavedKeyPairs
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
   case (Data.Map.lookup ownerPubKey mapPubPriv) of
-    Nothing -> putStrLn "You don't own that public key"
+    Nothing -> do
+      putStrLn "You don't own that public key"
+      return Nothing       
     Just ownerPrivKey -> do
       sign  <- getSignature ownerPrivKey moneyAmount
       let tx  = WithSignature (WithTime timePoint (SendAmountFromKeyToKey ownerPubKey receiverPubKey moneyAmount)) sign
       sendMetrics tx aInfoCh
       writeChan ch $ newTransaction tx
+      return $ Just tx
 
 
 genNTx :: Int -> IO [Transaction]
@@ -102,7 +78,7 @@ generateNTransactions qTx ch m = do
   putStrLn "Transactions are created"
 
 
-generateTransactionsForever :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO b
+generateTransactionsForever :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO ()
 generateTransactionsForever ch m = forever $ do
                                 quantityOfTranscations <- randomRIO (20,30)
                                 tx <- genNTx quantityOfTranscations
@@ -113,7 +89,7 @@ generateTransactionsForever ch m = forever $ do
                                 threadDelay (10^(6 :: Int))
                                 putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
 
-getNewKey :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO PublicKey
+getNewKey :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO PubKey
 getNewKey ch aInfoCh = do
   (KeyPair aPublicKey aPrivateKey) <- generateNewRandomAnonymousKeyPair
   timePoint <- getTime
@@ -122,11 +98,11 @@ getNewKey ch aInfoCh = do
   writeChan ch $ newTransaction keyInitialTransaction
   getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
   sendMetrics keyInitialTransaction aInfoCh
-  return aPublicKey
+  return $ fromPublicKey256k1 aPublicKey
 
 getBalance :: PubKey -> Chan InfoMsg -> IO Amount
 getBalance key aInfoCh = do
-    let pKey = read key :: PublicKey
+    let pKey = publicKey256k1 key
     stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
     result  <- countBalance pKey
     endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
@@ -148,10 +124,10 @@ getSavedKeyPairs = do
           return pairs
 
 
-getPublicKeys :: IO [PublicKey]
+getPublicKeys :: IO [PubKey]
 getPublicKeys = do
   pairs <- getSavedKeyPairs
-  return $ map fst pairs
+  return $ map (fromPublicKey256k1 . fst) pairs
 
 
 sendMetrics :: Transaction -> Chan InfoMsg -> IO ()

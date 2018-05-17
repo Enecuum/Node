@@ -13,6 +13,7 @@ import Control.Monad (forever, forM_)
 import Control.Concurrent
 import Node.Node.Types
 import Service.InfoMsg
+import Service.Types
 import CLI.Common
 
 data Flag = Key | ShowKey | Balance PubKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever deriving (Eq, Show)
@@ -24,7 +25,7 @@ options = [
   , Option ['G'] ["generate-n-transactions"] (ReqArg (GenerateNTransactions . read) "qTx") "Generate N Transactions"
   , Option ['F'] ["generate-transactions"] (NoArg GenerateTransactionsForever) "Generate Transactions forever"
   , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
-  , Option ['B'] ["get-balance"] (ReqArg Balance "publicKey") "get balance for public key"
+  , Option ['B'] ["get-balance"] (ReqArg (Balance . read) "publicKey") "get balance for public key"
   , Option ['S'] ["send-money-to-from"] (ReqArg (Send . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
   ]
 
@@ -45,7 +46,7 @@ serveCLI ch aInfoCh = do
               (Key : _)                        -> getNewKey ch aInfoCh >>= print
               (GenerateNTransactions qTx: _)   -> generateNTransactions qTx ch aInfoCh
               (GenerateTransactionsForever: _) -> generateTransactionsForever ch aInfoCh
-              (Send tx : _)                    -> sendTrans tx ch aInfoCh
+              (Send tx : _)                    -> sendTrans tx ch aInfoCh >>= print
               (ShowKey : _)                    -> do
                                                   keys <- getPublicKeys 
                                                   forM_ keys print

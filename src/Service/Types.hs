@@ -1,5 +1,6 @@
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 {-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric, LambdaCase #-}
 module Service.Types where
 
 import              Data.Serialize
@@ -8,6 +9,25 @@ import              Service.Types.PublicPrivateKeyPair
 import              GHC.Generics
 import              Data.ByteString
 import qualified    Data.ByteString.Base16 as B16
+import              Data.List.Split (splitOn)
+
+type QuantityTx = Int
+type PubKey = Integer
+data Trans = Trans {
+        txAmount :: Amount
+      , recipientPubKey :: PubKey
+      , senderPubKey :: PubKey
+      , currency :: CryptoCurrency
+      } deriving (Eq, Show, Generic)
+
+
+instance Read Trans where
+    readsPrec _ value =
+        case splitOn ":" value of
+             [f1, f2, f3, f4] ->
+                 [(Trans (read f1) (read f2) (read f3) (read f4), [])]
+             x -> error $ "Invalid number of fields in input: " ++ show x
+
 
 data CryptoCurrency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
 

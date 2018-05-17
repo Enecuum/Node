@@ -5,7 +5,13 @@ module LightClient.RPC (
         newTx,
         genNTx,
         genUnlimTx,
+        genNewKey,
+        getKeys,
         reqLedger,
+
+        QuantityTx,
+        PubKey,
+        Trans(..)
      ) where
 
 import Network.JsonRpc.Client
@@ -15,29 +21,36 @@ import Network.Socket.ByteString (sendAllTo, recv)
 
 import Control.Timeout (timeout)
 import Data.Time.Units (Second)
-import Service.Types (Transaction)
+import Service.Types
 import Service.Types.PublicPrivateKeyPair hiding (Signature)
 import Service.Network.Base
 import Service.Types.SerializeJSON ()
+
 
 type Result a = RpcResult IO a
 
 
 -- Client-side function's signature
-newTxSig :: Signature (Transaction ::: ()) ()
+newTxSig :: Signature (Trans ::: ()) ()
 newTxSig = Signature "new_tx" ("x" ::: ())
 
-genNTxSig :: Signature (Int ::: ()) ()
+genNTxSig :: Signature (QuantityTx ::: ()) ()
 genNTxSig = Signature "gen_n_tx" ("x" ::: ())
 
 genUnlimTxSig :: Signature () ()
 genUnlimTxSig = Signature "gen_unlim_tx" ()
 
-reqLedgerSig :: Signature (PublicKey ::: ()) Amount
+genNewKeySig :: Signature () PubKey
+genNewKeySig = Signature "gen_new_key" ()
+
+getKeysSig :: Signature () [PubKey]
+getKeysSig = Signature "get_keys" ()
+
+reqLedgerSig :: Signature (PubKey ::: ()) Amount
 reqLedgerSig = Signature "get_balance" ("x" ::: ())
 
 -- Bind function signature with RPC connection
-newTx :: ClientHandle -> Transaction -> Result ()
+newTx :: ClientHandle -> Trans -> Result ()
 newTx h = toFunction (connectionWithTimeOut h) newTxSig
 
 genNTx :: ClientHandle -> Int -> Result ()
@@ -46,7 +59,13 @@ genNTx h = toFunction (connectionWithTimeOut h) genNTxSig
 genUnlimTx :: ClientHandle -> Result ()
 genUnlimTx h = toFunction (connectionWithTimeOut h) genUnlimTxSig
 
-reqLedger :: ClientHandle -> PublicKey -> Result Amount
+genNewKey :: ClientHandle -> Result PubKey
+genNewKey h = toFunction (connectionWithTimeOut h) genNewKeySig
+
+getKeys :: ClientHandle -> Result [PubKey]
+getKeys h = toFunction (connectionWithTimeOut h) getKeysSig
+
+reqLedger :: ClientHandle -> PubKey -> Result Amount
 reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
 
 
@@ -66,22 +85,3 @@ connection handle input = do
            (clientSocket handle) (B.toStrict input) (clientAddress handle)
     ans <- recv (clientSocket handle) (1024*10)
     return (Just (B.fromStrict ans))
-
-
-{-
-genTxDAG :: IO [Transaction]
-genTxDAG = do
-    keys <- replicateM 10 K.generateNewRandomAnonymousKeyPair
-    dag <- getTransactionDAG keys
-    forM (labEdges dag) $ \(_, _, tr) -> return tr
-
--- Usual sending signle tx
-runRpcs :: Result ()
-runRpcs = do
-   result <- reqLedger (publicKey256k1 0)
-   liftIO $ putStrLn $ show result
-
-main = do
-  result <- runExceptT runRpcs
-  return ()
--}
