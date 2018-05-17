@@ -328,6 +328,7 @@ shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan= do
     let
         aNeighborPositions :: S.Set NodePosition
         aNeighborPositions = neighborPositions aShardingNode
+
         aMyNodePosition :: MyNodePosition
         aMyNodePosition    = aShardingNode^.nodePosition
 
@@ -337,7 +338,7 @@ shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan= do
 
         aNewPosition :: MyNodePosition
         aNewPosition       = shiftToCenterOfMass aMyNodePosition aNearestPositions
-
+    writeLog infoMsgChan [ShardingLvlTag] Info $ "XXX!! ShiftAction start."
     writeLog infoMsgChan [ShardingLvlTag] Info $ "XXX!! ShiftAction aNeighborPositions: " ++ show aNeighborPositions
     writeLog infoMsgChan [ShardingLvlTag] Info $ "XXX!! ShiftAction aMyNodePosition:    " ++ show aMyNodePosition
     writeLog infoMsgChan [ShardingLvlTag] Info $ "XXX!! ShiftAction aNearestPositions:  " ++ show aNearestPositions
@@ -427,7 +428,8 @@ nodeSaveShard aShard aLoop aShardingNode = do
 
 
 neighborPositions :: ShardingNode -> S.Set NodePosition
-neighborPositions = S.map (^.neighborPosition) . (^.nodeNeighbors)
+neighborPositions aShardingNode =
+    S.map (^.neighborPosition) (aShardingNode^.nodeNeighbors)
 
 
 findShardingNodeDomain :: ShardingNode -> Distance Point
