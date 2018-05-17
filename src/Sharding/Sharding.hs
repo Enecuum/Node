@@ -281,11 +281,6 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
             aLoop $ aShardingNode & nodeIndexOfReques %~
                 M.filter (\a -> diffTimeSpec (a^._1) aTime < fromNanoSecs (toInteger bigPeriod))
 
-        aError                 -> do
-            writeLog infoMsgChan [ShardingLvlTag] Warning $
-                "Sharding.Sharding.makeShardingNode " ++ show aError
-            aLoop aShardingNode
-
 --------------------------------------------------------------------------------
 --                              INTERNAL                                      --
 --------------------------------------------------------------------------------

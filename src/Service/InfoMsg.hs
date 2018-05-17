@@ -15,7 +15,8 @@ module Service.InfoMsg (
   LogingTag(..)
 )  where
 
-import Network.Socket (sendTo)
+import qualified Data.ByteString.Char8 as BS
+import Network.Socket.ByteString (sendTo)
 import Data.List
 
 import System.Clock()
@@ -56,7 +57,7 @@ data InfoMsg = Metric String | Log [LogingTag] MsgType String
 
 
 sendToServer :: ClientHandle -> String -> IO ()
-sendToServer h s = void $ sendTo (clientSocket h) s (clientAddress h)
+sendToServer h s = void $ sendTo (clientSocket h) (BS.pack s) (clientAddress h)
 
 serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> String -> IO ()
 serveInfoMsg statsdInfo logsInfo chan aId = do

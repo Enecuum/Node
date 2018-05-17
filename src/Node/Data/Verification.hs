@@ -19,6 +19,10 @@ instance Verification ResponsePackage where
         ResponseLogicLvlPackage aRequestPackage aResponse aPackageSignature ->
             verify aRequestPackage &&
             verify (aPackageSignature, (aResponse, aRequestPackage))
+        ResponseMiningLvlPackage aRequestPackage aResponse aPackageSignature ->
+            verify aRequestPackage &&
+            -- TODO check MiningLvl verification
+            verify (aPackageSignature, (aResponse, aRequestPackage))
 
 
 instance Verification RequestPackage where

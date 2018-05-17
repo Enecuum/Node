@@ -113,8 +113,7 @@ answerToConnectivityQuery aChan aMd _ = do
     if  | aWait             -> return ()
         | null aConnectList -> connectToBootNode aChan aData
         | iDontHaveAPosition aData -> initShading aChan aMd
-        |   aBroadcastNum < preferedBroadcastCount,
-            Just aMyNodePosition <- aData^.myNodePosition -> do
+        |   aBroadcastNum < preferedBroadcastCount -> do
             let aConnectsNum = preferedBroadcastCount - aBroadcastNum
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "Request of the " ++ show aConnectsNum ++ " connects."
@@ -312,7 +311,7 @@ answerToPackagedMsg
     ->  IORef md
     ->  IO ()
 
-answerToPackagedMsg aId aChan aCipheredString@(CipheredString aStr) aMd = do
+answerToPackagedMsg aId aChan aCipheredString aMd = do
     aData <- readIORef aMd
     let aDecryptedPackage = do
             key  <- _mKey =<< aData^.nodes.at aId

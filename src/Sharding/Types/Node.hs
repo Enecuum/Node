@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, GADTs #-}
 --{-# OPTIONS_GHC -fno-Wtype-defaults #-}
-
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Sharding.Types.Node where
 

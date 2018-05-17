@@ -8,7 +8,6 @@ module PoA.PoAServer (
 import              Node.Data.NetPackage
 import              Control.Monad (forM_, void, forever, unless, when)
 import qualified    Network.WebSockets                  as WS
---import              Network.Socket.ByteString(sendAll, recvFrom)
 import              Service.Network.Base
 import              Service.Network.WebSockets.Server
 import              Control.Concurrent.Chan
@@ -28,13 +27,13 @@ import              Node.FileDB.FileServer
 
 import              Control.Concurrent.Async
 import              Node.Data.Key
-import              Data.Maybe
+import              Data.Maybe()
 
 
 -- :m PoA.PoAServer
 --
 
-undead f = finally f (undead f)
+--undead f = finally f (undead f)
 
 --
 serverPoABootNode :: PortNumber -> Chan InfoMsg -> Chan FileActorRequest -> IO ()
