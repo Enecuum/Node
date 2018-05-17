@@ -133,8 +133,8 @@ initShading aChan aMd = do
         "Init. Take new logic coordinates " ++ show aPoint ++ "."
 
     aChanOfSharding <- newChan
-    undead (writeLog (aData^.infoMsgChan) [ShardingLvlTag] Warning $
-        "initShading. This node could be die!" ) $ makeShardingNode
+    undead (writeLog (aData^.infoMsgChan) [ShardingLvlTag] Warning
+        "initShading. This node could be die!" >> threadDelay 100000000) $ makeShardingNode
         (aData^.myNodeId) aChanOfSharding aChan aPoint (aData^.infoMsgChan)
     modifyIORef aMd (&~ do
         myNodePosition .= Just aPoint

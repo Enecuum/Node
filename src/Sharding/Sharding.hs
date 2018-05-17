@@ -133,7 +133,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
 
         ShiftAction | shiftIsNeed aShardingNode -> do
             writeLog infoMsgChan [ShardingLvlTag] Info "Try shift."
-            shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode
+            shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan
                     | otherwise -> do
                         writeLog infoMsgChan [ShardingLvlTag] Info "Shift is not need."
                         aLoop aShardingNode
@@ -322,12 +322,12 @@ shiftTheShardingNode :: T.ManagerMsg msg =>
         Chan msg
     -> (ShardingNode ->  IO ())
     ->  ShardingNode
+    -> Chan InfoMsg
     ->  IO ()
-shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
+shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan= do
     let
         aNeighborPositions :: S.Set NodePosition
         aNeighborPositions = neighborPositions aShardingNode
-
         aMyNodePosition :: MyNodePosition
         aMyNodePosition    = aShardingNode^.nodePosition
 
@@ -337,6 +337,11 @@ shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
 
         aNewPosition :: MyNodePosition
         aNewPosition       = shiftToCenterOfMass aMyNodePosition aNearestPositions
+
+    writeLog infoMsgChan [ShardingLvlTag] Info $ "XXX!! ShiftAction aNeighborPositions: " ++ show aNeighborPositions
+    writeLog infoMsgChan [ShardingLvlTag] Info $ "XXX!! ShiftAction aMyNodePosition:    " ++ show aMyNodePosition
+    writeLog infoMsgChan [ShardingLvlTag] Info $ "XXX!! ShiftAction aNearestPositions:  " ++ show aNearestPositions
+    writeLog infoMsgChan [ShardingLvlTag] Info $ "XXX!! ShiftAction aNewPosition:       " ++ show aNewPosition
     writeLog (aShardingNode^.nodeInfoMsgChan) [ShardingLvlTag] Info $
           "Make shift action. "
         ++ "Neighbor positions: " ++ show (S.toList aNeighborPositions)
