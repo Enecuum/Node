@@ -325,7 +325,6 @@ shiftTheShardingNode :: T.ManagerMsg msg =>
     -> Chan InfoMsg
     ->  IO ()
 shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan = do
-    writeLog infoMsgChan [ShardingLvlTag] Info $ "YYY ShiftAction start."
     let
         aNeighborPositions :: S.Set NodePosition
         aNeighborPositions = neighborPositions aShardingNode
@@ -339,13 +338,8 @@ shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan = do
 
         aNewPosition :: MyNodePosition
         aNewPosition       = shiftToCenterOfMass aMyNodePosition aNearestPositions
-    writeLog infoMsgChan [ShardingLvlTag] Info $ "YYY ShiftAction aNeighborPositions: " ++ show aNeighborPositions
-    writeLog infoMsgChan [ShardingLvlTag] Info $ "YYY ShiftAction aMyNodePosition:    " ++ show aMyNodePosition
-    writeLog infoMsgChan [ShardingLvlTag] Info $ "YYY ShiftAction aNearestPositions:  " ++ show aNearestPositions
-    writeLog infoMsgChan [ShardingLvlTag] Info $ "YYY ShiftAction aNewPosition:       " ++ show aNewPosition
     writeLog (aShardingNode^.nodeInfoMsgChan) [ShardingLvlTag] Info $
-          "Make shift action. "
-        ++ "Neighbor positions: " ++ show (S.toList aNeighborPositions)
+        "Make shift action. Neighbor positions: " ++ show (S.toList aNeighborPositions)
         ++ ". My position: " ++ show aMyNodePosition
         ++ ". Nearest positions: " ++ show (S.toList aNearestPositions)
         ++ ". New position: " ++ show aNewPosition
@@ -439,8 +433,8 @@ findShardingNodeDomain aShardingNode = findNodeDomain
 
 
 shiftIsNeed :: ShardingNode -> Bool
-shiftIsNeed aShardingNode = True--checkUnevenness
-    --(aShardingNode^.nodePosition) (neighborPositions aShardingNode)
+shiftIsNeed aShardingNode = checkUnevenness
+    (aShardingNode^.nodePosition) (neighborPositions aShardingNode)
 
 
 sendToNetLevet :: T.ManagerMsg msg => Chan msg -> ShardingNodeRequestMsg -> IO ()
