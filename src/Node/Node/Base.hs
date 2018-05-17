@@ -110,6 +110,11 @@ answerToConnectivityQuery aChan aMd _ = do
     writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
     NodeInfoListNetLvl aConnectList <- readChan aConChan
 
+    when (length aConnectList > 6) $ whenJust (aData^.myNodePosition) $
+        \aMyPosition -> do
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of a list of connects."
+            writeChan (aData^.fileServerChan) $ FileActorMyPosition aMyPosition
+
     let aWait = aBroadcastNum >= preferedBroadcastCount {- || aBroadcastNum <= 6 -} || aUnActiveNum /= 0
     if  | aWait             -> return ()
         | null aConnectList -> connectToBootNode aChan aData
@@ -120,6 +125,11 @@ answerToConnectivityQuery aChan aMd _ = do
                 "Request of the " ++ show aConnectsNum ++ " connects."
             connectTo aChan aConnectsNum aConnectList
         |   otherwise -> error $ "!!!!!!!!!!!XXX" ++ show aBroadcastNum ++ " " ++ show aUnActiveNum
+
+
+-- 1. Отсекать лишнее.
+-- 2. Оставлять наиближайшие.
+-- 3. Искать оптимальные коннекты.
 
 
 initShading :: (NodeConfigClass s, NodeBaseDataClass s, ManagerMsg msg) =>

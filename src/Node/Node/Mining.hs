@@ -58,7 +58,7 @@ managerMining aChan aMd = do
   modifyIORef aMd $ iAmBroadcast .~ True -- FIXME:!!!
   aData <- readIORef aMd
   undead (writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
-      "managerMining. This node could be die!" ) 
+      "managerMining. This node could be die!" )
       $ forever $ do
           mData <- readIORef aMd
           readChan aChan >>= \a -> runOption a $ do
@@ -295,7 +295,7 @@ instance PackageTraceRoutingAction ManagerNodeData ResponsePackage where
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info "The Response is for me. The processing of Response."
                 aProcessingOfAction
             | otherwise -> aSendToNeighbor aData
-        else writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
+        else writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
             "The error of verification of Response package. The trace is a "
             ++ show aTraceRouting
             ++ "the package is " ++ show aResponsePackage
@@ -347,7 +347,7 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                 when (isNothing aMaybeNode) aProcessingOfAction
             ToNode aNodeId _
                 | toNodeId (aData^.myNodeId) == aNodeId -> aProcessingOfAction
-                | otherwise -> writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
+                | otherwise -> writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "The package is to " ++ show aNodeId ++ "but i am a " ++
                     show (aData^.myNodeId) ++ ". The package is a " ++ show aRequestPackage
 
