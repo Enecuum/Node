@@ -431,9 +431,8 @@ findShardingNodeDomain aShardingNode = findNodeDomain
 
 
 shiftIsNeed :: ShardingNode -> Bool
-shiftIsNeed aShardingNode = True
-  --checkUnevenness
-  --  (aShardingNode^.nodePosition) (neighborPositions aShardingNode)
+shiftIsNeed aShardingNode = checkUnevenness
+    (aShardingNode^.nodePosition) (neighborPositions aShardingNode)
 
 
 sendToNetLevet :: T.ManagerMsg msg => Chan msg -> ShardingNodeRequestMsg -> IO ()
