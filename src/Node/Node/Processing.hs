@@ -17,16 +17,16 @@ module Node.Node.Processing (
 import qualified    Data.Map                        as M
 import              Data.List.Extra()
 import              Data.IORef
-import              System.Random
+import              System.Random()
 import              Lens.Micro
-import              Lens.Micro.Mtl
+import              Lens.Micro.Mtl()
 import              Control.Concurrent
 import              Control.Monad.Extra
 import              Service.Network.Base
 
 import              Node.Node.Types
 import              Node.Data.NetPackage
-import              Sharding.Sharding
+import              Sharding.Sharding()
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Node.Data.MakeAndSendTraceRouting
@@ -58,8 +58,8 @@ instance Processing (IORef ManagerNodeData) (Response MiningLvl) where
 
 -- | Обработка "ответа" для сетевого уровня.
 instance Processing (IORef ManagerNodeData) (Response NetLvl) where
-    processing aChan aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
-        BroadcastListResponse aBroadcastListLogic aBroadcastList isBootNode -> do
+    processing _ aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
+        BroadcastListResponse aBroadcastListLogic aBroadcastList _ -> do
             aData <- readIORef aMd
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "Accepted lists of broadcasts and points of node. " ++

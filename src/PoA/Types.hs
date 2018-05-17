@@ -7,6 +7,7 @@
     ,   GeneralizedNewtypeDeriving
     ,   StandaloneDeriving
   #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module PoA.Types where
 
 import              Data.Word()
@@ -220,7 +221,7 @@ instance FromJSON PPToNNMessage where
 
             _ -> mzero
 
-    parseJSON a = mzero -- error $ show a
+    parseJSON _ = mzero -- error $ show a
 
 readNodeType :: (IsString a, Eq a) => a -> NodeType
 readNodeType aNodeType = if aNodeType == "PoW" then PoW else PoA
@@ -247,8 +248,8 @@ instance ToJSON NNToPPMessage where
           ]
       where
         aObj = case S.decode aMessage of
-            Right (aObj :: Value)   -> aObj
-            Left aObj               -> String (T.pack aObj)
+            Right (aObjValue :: Value)   -> aObjValue
+            Left aObjValue               -> String (T.pack aObjValue)
 
     toJSON (ResponseConnects aConnects) = object [
         "tag"       .= ("Response"  :: String),
@@ -277,8 +278,8 @@ instance ToJSON NNToPPMessage where
       ]
       where
         aObj = case S.decode aMessage of
-          Right (aObj :: Value)   -> aObj
-          Left aObj               -> String (T.pack aObj)
+          Right (aObjValue :: Value)   -> aObjValue
+          Left aObjValue               -> String (T.pack aObjValue)
 
 
     toJSON (ResponsePoWList aPPIds) = object [

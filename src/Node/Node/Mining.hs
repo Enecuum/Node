@@ -16,7 +16,7 @@ module Node.Node.Mining (
     managerMining
   ) where
 
-import              System.Random
+import              System.Random()
 import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 
 import qualified    Data.Map                        as M
@@ -27,7 +27,7 @@ import              System.Clock
 import              Data.IORef
 import              Data.Serialize
 import              Lens.Micro
-import              Lens.Micro.Mtl
+import              Lens.Micro.Mtl()
 import              Control.Concurrent
 import              Control.Monad.Extra
 import              Crypto.Error
@@ -50,7 +50,7 @@ import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.Verification
 import              Node.Data.GlobalLoging
 import              PoA.Types
-import              Sharding.Sharding
+import              Sharding.Sharding()
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
 managerMining aChan aMd = do
@@ -74,8 +74,8 @@ managerMining aChan aMd = do
         opt isInitShardingLvl           $ answerToInitShardingLvl aChan aMd
         opt isInfoRequest               $ answerToInfoRequest aMd
 
---
 
+answerToInfoRequest :: ManagerData md => IORef md -> a -> IO ()
 answerToInfoRequest aMd _ = do
     aData <- readIORef aMd
     let aIds = M.keys $ aData^.nodes
@@ -84,12 +84,15 @@ answerToInfoRequest aMd _ = do
     makeAndSendTo aData aIds BroadcastListRequest
 
 
+answerToInitShardingLvl :: (ManagerMsg msg, NodeConfigClass s, NodeBaseDataClass s) =>
+                            Chan msg -> IORef s -> p -> IO ()
 answerToInitShardingLvl aChan aMd _ = do
     aData <- readIORef aMd
     when (isNothing (aData^.myNodePosition)) $ do
         writeLog (aData^.infoMsgChan) [NetLvlTag, InitTag] Info
             "Select new random coordinate because I am first node in net."
         initShading aChan aMd
+
 
 answerToTestBroadcastBlockIndex :: IORef ManagerNodeData -> ManagerMiningMsgBase ->  IO ()
 answerToTestBroadcastBlockIndex aMd _ = do
@@ -125,9 +128,9 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
 
         BroadcastRequestFromPP aByteString aIdFrom@(IdFrom aPPId) aNodeType ->
             whenJust (aData^.ppNodes.at aPPId) $ \aNode -> do
-                let aMsg = BroadcastPPMsg (aNode^.ppType) aByteString aNodeType aIdFrom
-                sendBroadcast aMd aMsg
-                processingOfBroadcast aMd aMsg 
+                let aMessage = BroadcastPPMsg (aNode^.ppType) aByteString aNodeType aIdFrom
+                sendBroadcast aMd aMessage
+                processingOfBroadcast aMd aMessage
 
         MsgResendingToPP aIdFrom@(IdFrom aPPIdFrom) aIdTo@(IdTo aId) aByteString
             | Just aNode <- aData^.ppNodes.at aId ->
@@ -264,8 +267,10 @@ answerToDeleteOldestPoW aMd _ = do
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of index of PoW."
     aTime <- getTime Realtime
     modifyIORef aMd $ hashMap %~ BI.filter
-        (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs (5*60*10^9))
+        (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs timeLimit)
 
+timeLimit :: Integer
+timeLimit = 5*60*10^(9 :: Integer)
 
 instance BroadcastAction ManagerNodeData where
     makeBroadcastAction _ aMd _ aBroadcastSignature aBroadcastThing = do
