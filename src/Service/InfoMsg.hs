@@ -89,7 +89,7 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                          aString = "+log|" ++ aTagsList ++ "|" ++ aId  ++ "|"
                                    ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
 
-                         aFileString = "  !  " ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
+                         aFileString = "  !  " ++ aId ++ "|" ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
                      putStrLn aFileString
                      case eithLHandler of
                           Left  _        -> appendFile "log.txt" aFileString
