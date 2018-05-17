@@ -50,6 +50,7 @@ import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.GlobalLoging
 import              Service.InfoMsg
 import              Data.Maybe
+import              Node.BaseFunctions
 
 baseNodeOpts
     ::  ManagerData md2
@@ -132,8 +133,9 @@ initShading aChan aMd = do
         "Init. Take new logic coordinates " ++ show aPoint ++ "."
 
     aChanOfSharding <- newChan
-    makeShardingNode (aData^.myNodeId) aChanOfSharding
-        aChan aPoint (aData^.infoMsgChan)
+    undead (writeLog (aData^.infoMsgChan) [ShardingLvlTag] Warning $
+        "initShading. This node could be die!" ) $ makeShardingNode
+        (aData^.myNodeId) aChanOfSharding aChan aPoint (aData^.infoMsgChan)
     modifyIORef aMd (&~ do
         myNodePosition .= Just aPoint
         shardingChan   .= Just aChanOfSharding)

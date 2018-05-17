@@ -5,7 +5,7 @@ module Main where
 import              Control.Monad
 import              Control.Concurrent
 import              System.Environment (getEnv)
-import              Data.List.Extra
+import              Data.List.Extra()
 
 import              Node.Node.Mining
 import              Node.Node.Types
