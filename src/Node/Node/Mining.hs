@@ -80,7 +80,7 @@ answerToInfoRequest aMd _ = do
     aData <- readIORef aMd
     let aIds = M.keys $ aData^.nodes
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-        "answerToInfoRequest: Node broadcast list request to " ++ show (length aIds) ++ " nodes. My Id: "  ++ show (aData^.myNodeId)
+        "answerToInfoRequest: Node broadcast list request to " ++ show (length aIds) ++ " nodes."
     makeAndSendTo aData aIds BroadcastListRequest
 
 
