@@ -126,9 +126,19 @@ answerToConnectivityQuery aChan aMd _ = do
         |   otherwise -> error $ "!!!!!!!!!!!XXX" ++ show aBroadcastNum ++ " " ++ show aUnActiveNum
 
 
--- 1. Отсекать лишнее.
--- 2. Оставлять наиближайшие.
--- 3. Искать оптимальные коннекты.
+
+answerToFindBestConnects ::  ManagerData md =>  ManagerMsg msg =>
+        Chan msg ->  IORef md ->  msg ->  IO ()
+answerToFindBestConnects aChan aMd _ = do
+    aData <- readIORef aMd
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info "answerToFindBestConnects: start"
+    aPosChan <- newChan
+    writeChan (aData^.fileServerChan) $
+         FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
+
+    aConChan <- newChan
+    writeChan (aData^.fileServerChan) $
+         FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
 
 
 initShading :: (NodeConfigClass s, NodeBaseDataClass s, ManagerMsg msg) =>
