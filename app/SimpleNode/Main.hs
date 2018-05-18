@@ -5,11 +5,12 @@ module Main where
 import              Control.Monad
 import              Control.Concurrent
 import              System.Environment (getEnv)
-import              System.Random
 import              Data.Maybe (fromJust)
 
 import              Node.Node.Mining
 import              Node.Node.Types
+import              Node.Data.Key (generateKeyPair)
+import              Service.Types.PublicPrivateKeyPair (fromPublicKey256k1, compressPublicKey)
 import              Service.Timer
 import              Node.Lib
 import              Service.InfoMsg
@@ -119,9 +120,9 @@ main =  do
 
 
 
-updateConfigWithToken :: BuildConfig -> SimpleNodeBuildConfig -> RPCBuildConfig -> IO String
+updateConfigWithToken :: BuildConfig -> SimpleNodeBuildConfig -> RPCBuildConfig -> IO Token
 updateConfigWithToken conf snbc rpcbc = do
-      token <- take 32 <$> randomRs ('A', 'z') <$> newStdGen
+      token <- fromPublicKey256k1 <$> compressPublicKey <$> fst <$> generateKeyPair
       let newConfig = conf { simpleNodeBuildConfig = Just $ 
                                snbc  { rpcBuildConfig = Just $ 
                                  rpcbc { accessToken = Just token }

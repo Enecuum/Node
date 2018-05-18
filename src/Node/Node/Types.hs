@@ -205,12 +205,13 @@ data NodeConfig = NodeConfig {
   deriving (Generic)
 $(deriveJSON defaultOptions ''NodeConfig)
 
+type Token = Integer
 
 data RPCBuildConfig where
      RPCBuildConfig :: {
         rpcPort        :: PortNumber,
         enableIP       :: [String],
-        accessToken    :: Maybe String
+        accessToken    :: Maybe Token
   } -> RPCBuildConfig
   deriving (Generic)
 
@@ -297,7 +298,7 @@ instance ToManagerData ManagerNodeData where
 
 makeNewNodeConfig :: MonadRandom m => m NodeConfig
 makeNewNodeConfig = do
-    (aPublicKey,     aPrivateKey)  <- generate curve_256
+    (aPublicKey,     aPrivateKey)  <- generateKeyPair
     (aPrivateNumber, aPublicPoint) <- genKeyPair curve_256
     let aId = keyToId aPublicKey
     pure $ NodeConfig aPrivateNumber aPublicPoint aPrivateKey (toMyNodeId aId)
