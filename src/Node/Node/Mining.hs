@@ -21,7 +21,7 @@ import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 
 import qualified    Data.Map                        as M
 import qualified    Data.Bimap                      as BI
-import              Data.Maybe (isNothing)
+import              Data.Maybe (isNothing, catMaybes)
 import              Data.List.Extra
 import              System.Clock
 import              Data.IORef
@@ -102,11 +102,13 @@ answerToTestBroadcastBlockIndex :: IORef ManagerNodeData -> ManagerMiningMsgBase
 answerToTestBroadcastBlockIndex aMd _ = do
     aData <- readIORef aMd
     aPosChan <- newChan
+    let aPositionsOfNeibors  = (^.nodePosition) <$> M.elems (aData^.nodes)
     writeChan (aData^.fileServerChan) $ FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
     NodeInfoListLogicLvl aPossitionList <- readChan aPosChan
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point list XXX: " ++ show aPossitionList
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point node list XXX: " ++ show ((^.nodePosition) <$> M.elems (aData^.nodes))
-
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point node list XXX: " ++ show aPositionsOfNeibors
+    whenJust (aData^.myNodePosition) $ \aPosition -> do
+        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Data for drawign #" ++ show (toPoint aPosition, toPoint <$> catMaybes aPositionsOfNeibors)
 
 
 answeToMsgFromPP :: IORef ManagerNodeData ->  ManagerMiningMsgBase ->  IO ()
