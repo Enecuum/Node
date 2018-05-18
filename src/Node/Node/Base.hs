@@ -165,22 +165,6 @@ answerToFindBestConnects aChan aMd _ = do
 
 
 -- 1. Мы можем не знать их координаты.
-
-
-
-answerToFindBestConnects ::  ManagerData md =>  ManagerMsg msg =>
-        Chan msg ->  IORef md ->  msg ->  IO ()
-answerToFindBestConnects aChan aMd _ = do
-    aData <- readIORef aMd
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info "answerToFindBestConnects: start"
-    aPosChan <- newChan
-    writeChan (aData^.fileServerChan) $
-         FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
-
-    aConChan <- newChan
-    writeChan (aData^.fileServerChan) $
-         FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-
 -- 4 - выравнивания сети
 
 initShading :: (NodeConfigClass s, NodeBaseDataClass s, ManagerMsg msg) =>
