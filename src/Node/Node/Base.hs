@@ -34,7 +34,9 @@ import              Data.IORef
 import              Data.Serialize
 import              Lens.Micro.Mtl
 import              Lens.Micro
+import              Data.List.Extra
 
+import              Sharding.Space.Distance
 import              Node.FileDB.FileServer
 import              Service.Network.WebSockets.Client
 import              Service.Network.Base
@@ -114,22 +116,27 @@ answerToConnectivityQuery aChan aMd _ = do
         writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of a list of connects."
         writeChan (aData^.fileServerChan) $ FileActorMyPosition aMyPosition
 
-    let aWait = aBroadcastNum >= preferedBroadcastCount {- || aBroadcastNum <= 6 -} || aUnActiveNum /= 0
+    let aWait = (preferedBroadcastCount < aBroadcastNum && aBroadcastNum <= 6) || aUnActiveNum /= 0
     if  | aWait             -> return ()
         | null aConnectList -> connectToBootNode aChan aData
         | iDontHaveAPosition aData -> initShading aChan aMd
-        |   aBroadcastNum < preferedBroadcastCount -> do
+        | aBroadcastNum < preferedBroadcastCount -> do
             let aConnectsNum = preferedBroadcastCount - aBroadcastNum
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "Request of the " ++ show aConnectsNum ++ " connects."
             connectTo aChan aConnectsNum aConnectList
-        |   otherwise -> error $ "!!!!!!!!!!!XXX" ++ show aBroadcastNum ++ " " ++ show aUnActiveNum
+        | otherwise -> whenJust (aData^.myNodePosition) $ \aNodePosition -> do
+            let aMostClosed = drop 4 . sortOn (distanceTo aNodePosition . (^.nodePosition)). (snd <$>) $ aBroadcasts
+            forM_ aMostClosed sendExitMsgToNode
+
+-- 1. Мы можем не знать их координаты.
 
 
 -- 1. Отсекать лишнее.
 -- 2. Оставлять наиближайшие.
 -- 3. Искать оптимальные коннекты.
 
+-- 4 - выравнивания сети
 
 initShading :: (NodeConfigClass s, NodeBaseDataClass s, ManagerMsg msg) =>
     Chan msg -> IORef s -> IO ()
