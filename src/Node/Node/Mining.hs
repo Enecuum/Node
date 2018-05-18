@@ -57,7 +57,7 @@ managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
 managerMining aChan aMd = do
   modifyIORef aMd $ iAmBroadcast .~ True -- FIXME:!!!
   aData <- readIORef aMd
-  undead (writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
+  undead (writeLog (aData^.infoMsgChan) [NetLvlTag] Warning
       "managerMining. This node could be die!" )
       $ forever $ do
           mData <- readIORef aMd
@@ -107,7 +107,7 @@ answerToTestBroadcastBlockIndex aMd _ = do
     NodeInfoListLogicLvl aPossitionList <- readChan aPosChan
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point list XXX: " ++ show aPossitionList
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point node list XXX: " ++ show aPositionsOfNeibors
-    whenJust (aData^.myNodePosition) $ \aPosition -> do
+    whenJust (aData^.myNodePosition) $ \aPosition ->
         writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Data for drawign #" ++ show (toPoint aPosition, toPoint <$> catMaybes aPositionsOfNeibors)
 
 
