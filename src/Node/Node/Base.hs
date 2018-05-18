@@ -34,7 +34,9 @@ import              Data.IORef
 import              Data.Serialize
 import              Lens.Micro.Mtl
 import              Lens.Micro
+import              Data.List.Extra
 
+import              Sharding.Space.Distance
 import              Node.FileDB.FileServer
 import              Service.Network.WebSockets.Client
 import              Service.Network.Base
@@ -66,6 +68,7 @@ baseNodeOpts aChan aMd aData = do
     opt isConnectivityQuery     $ answerToConnectivityQuery aChan aMd
     opt isQueryPositions        $ answerToQueryPositions aMd
     opt isDisconnectNode        $ answerToDisconnectNode  aData
+    opt isFindBestConnects      $ answerToFindBestConnects aChan aMd
 
 
 pattern Chan :: Chan MsgToSender -> Node
@@ -110,20 +113,58 @@ answerToConnectivityQuery aChan aMd _ = do
     writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
     NodeInfoListNetLvl aConnectList <- readChan aConChan
 
-    whenJust (aData^.myNodePosition) $ \aMyPosition -> do
-        writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of a list of connects."
-        writeChan (aData^.fileServerChan) $ FileActorMyPosition aMyPosition
+    when (length aConnectList > 7) $
+        whenJust (aData^.myNodePosition) $ \aMyPosition -> do
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of a list of connects."
+            writeChan (aData^.fileServerChan) $ FileActorMyPosition aMyPosition
 
-    let aWait = aBroadcastNum >= preferedBroadcastCount {- || aBroadcastNum <= 6 -} || aUnActiveNum /= 0
+    let aWait = (preferedBroadcastCount < aBroadcastNum && aBroadcastNum <= 6) || aUnActiveNum /= 0
     if  | aWait             -> return ()
         | null aConnectList -> connectToBootNode aChan aData
         | iDontHaveAPosition aData -> initShading aChan aMd
-        |   aBroadcastNum < preferedBroadcastCount -> do
+        | aBroadcastNum < preferedBroadcastCount -> do
             let aConnectsNum = preferedBroadcastCount - aBroadcastNum
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "Request of the " ++ show aConnectsNum ++ " connects."
             connectTo aChan aConnectsNum aConnectList
-        |   otherwise -> error $ "!!!!!!!!!!!XXX" ++ show aBroadcastNum ++ " " ++ show aUnActiveNum
+        | otherwise -> whenJust (aData^.myNodePosition) $ \aNodePosition -> do
+            let aMostClosed = drop 4 . sortOn (distanceTo aNodePosition . (^.nodePosition)). (snd <$>) $ aBroadcasts
+            forM_ aMostClosed sendExitMsgToNode
+
+
+--
+answerToFindBestConnects ::  ManagerData md =>  ManagerMsg msg =>
+        Chan msg ->  IORef md ->  msg ->  IO ()
+answerToFindBestConnects aChan aMd _ = do
+    aData <- readIORef aMd
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info "answerToFindBestConnects: start"
+    whenJust (aData^.myNodePosition) $ \aMyNodePosition -> do
+        aPosChan <- newChan
+        aConChan <- newChan
+        writeChan (aData^.fileServerChan) $
+             FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+        writeChan (aData^.fileServerChan) $
+             FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
+
+        NodeInfoListNetLvl   aBroadcastList      <- readChan aConChan
+        NodeInfoListLogicLvl aBroadcastListLogic <- readChan aPosChan
+
+        let aPoints :: [(NodeId, NodePosition)]
+            aPoints = M.toList $ M.intersection (M.fromList aBroadcastListLogic) (M.fromList aBroadcastList)
+
+            aExistConnects :: M.Map NodeId NodePosition
+            aExistConnects = M.fromList [(aId, aPosition) |(aId, (^.nodePosition) -> Just aPosition) <- M.toList $ aData^.nodes]
+
+            aPrefferedConneсts :: M.Map NodeId NodePosition
+            aPrefferedConneсts = M.fromList . take 4 . sortOn (distanceTo aMyNodePosition.snd) $ aPoints
+
+            aNeadedConnects :: M.Map NodeId Connect
+            aNeadedConnects = M.intersection (M.fromList aBroadcastList) (M.difference aPrefferedConneсts aExistConnects)
+
+        connectTo aChan 4 (M.toList aNeadedConnects)
+
+
+-- 1. Мы можем не знать их координаты.
 
 
 
@@ -140,6 +181,7 @@ answerToFindBestConnects aChan aMd _ = do
     writeChan (aData^.fileServerChan) $
          FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
 
+-- 4 - выравнивания сети
 
 initShading :: (NodeConfigClass s, NodeBaseDataClass s, ManagerMsg msg) =>
     Chan msg -> IORef s -> IO ()

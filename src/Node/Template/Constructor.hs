@@ -49,6 +49,7 @@ managerMsgFuncListData = toList $ do
     "pingRequestInfo"       +: [["HostAddress"], ["PortNumber"], ["TimeSpec"], ["HostAddress"]]
     "clientIsDisconnected"  +: [["NodeId"], ["Chan", "MsgToSender"]]
     "serverIsDead"          +: []
+    "findBestConnects"      +: []
     "datagramMsg"           +: [["B.ByteString"], ["NodeId"]]
     "initDatagram"          +: [["Chan", "MsgToSender"], ["HostAddress"], ["B.ByteString"]]
     "connectivityQuery"     +: []
