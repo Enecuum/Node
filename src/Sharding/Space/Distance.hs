@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE FlexibleContexts#-}
 
 module Sharding.Space.Distance where
 
@@ -68,3 +69,10 @@ instance DistanceTo MyNodePosition ShardPosition where
         (MyNodePosition aMyNodePosition)
         (ShardPosition aShardPosition) =
             distance aMyNodePosition aShardPosition
+
+
+instance DistanceTo MyNodePosition a => DistanceTo MyNodePosition (Maybe a) where
+    distanceTo aPos (Just a) = distanceTo aPos a
+    distanceTo _ _ = maxBound
+
+--------------------------------------------------------------------------------
