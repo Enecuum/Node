@@ -39,6 +39,7 @@ main =  do
                     metronomeLinear 100000 100000000 (writeChan ch infoRequest)
                     metronomeS 1000000 (writeChan ch deleteOldestMsg)
                     metronomeS 1000000 (writeChan ch deleteOldestPoW)
+                    metronomeS 1000000 (writeChan ch findBestConnects)
                     poa_in  <- try (getEnv "poaInPort") >>= \case
                             Right item              -> return $ read item
                             Left (_::SomeException) -> case simpleNodeBuildConfig conf of
