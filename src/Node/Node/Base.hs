@@ -83,7 +83,7 @@ sendExitMsgToNode _ = error "Node.Node.Base.sendExitMsgToNode"
 
 
 preferedBroadcastCount :: Int
-preferedBroadcastCount = 4
+preferedBroadcastCount = 5
 
 answerToQueryPositions :: ManagerData md =>  ManagerMsg msg => IORef md -> msg -> IO()
 answerToQueryPositions aMd _ = do
@@ -113,12 +113,12 @@ answerToConnectivityQuery aChan aMd _ = do
     writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
     NodeInfoListNetLvl aConnectList <- readChan aConChan
 
-    when (length aConnectList > 7) $
+    when (length aConnectList > 8) $
         whenJust (aData^.myNodePosition) $ \aMyPosition -> do
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of a list of connects."
             writeChan (aData^.fileServerChan) $ FileActorMyPosition aMyPosition
 
-    let aWait = (preferedBroadcastCount < aBroadcastNum && aBroadcastNum <= 6) || aUnActiveNum /= 0
+    let aWait = (preferedBroadcastCount < aBroadcastNum && aBroadcastNum <= 7) || aUnActiveNum /= 0
     if  | aWait             -> return ()
         | null aConnectList -> connectToBootNode aChan aData
         | iDontHaveAPosition aData -> initShading aChan aMd
@@ -128,7 +128,7 @@ answerToConnectivityQuery aChan aMd _ = do
                 "Request of the " ++ show aConnectsNum ++ " connects."
             connectTo aChan aConnectsNum aConnectList
         | otherwise -> whenJust (aData^.myNodePosition) $ \aNodePosition -> do
-            let aMostClosed = drop 4 . sortOn (distanceTo aNodePosition . (^.nodePosition)). (snd <$>) $ aBroadcasts
+            let aMostClosed = drop preferedBroadcastCount . sortOn (distanceTo aNodePosition . (^.nodePosition)). (snd <$>) $ aBroadcasts
             forM_ aMostClosed sendExitMsgToNode
 
 
