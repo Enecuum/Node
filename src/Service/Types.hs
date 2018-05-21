@@ -20,6 +20,11 @@ data Trans = Trans {
       , currency :: CryptoCurrency
       } deriving (Eq, Show, Generic)
 
+type Id = Integer
+data MsgTo = MsgTo {
+        messageTo      :: Id
+      , messageContent :: String
+      } deriving (Eq, Show, Generic)
 
 instance Read Trans where
     readsPrec _ value =
@@ -28,6 +33,11 @@ instance Read Trans where
                  [(Trans (read f1) (read f2) (read f3) (read f4), [])]
              x -> error $ "Invalid number of fields in input: " ++ show x
 
+instance Read MsgTo where
+     readsPrec _ value = 
+        case splitOn " " value of
+             [t, m] ->  [(MsgTo (read t) m, [])]
+             x      -> error $ "Invalid number of fields in input: " ++ show x
 
 data CryptoCurrency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
 

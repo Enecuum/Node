@@ -2,8 +2,8 @@
 
 module CLI.Common (
   sendMessageTo,
-  sendMessageForAll,
-  getMessages,
+  sendMessageBroadcast,
+  loadMessages,
 
   sendTrans,
   generateNTransactions,
@@ -34,9 +34,14 @@ import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
 import Service.System.Directory (getTime, getKeyFilePath)
 
+sendMessageTo :: ManagerMiningMsg a => MsgTo -> Chan a -> IO ()
 sendMessageTo = undefined
-sendMessageForAll = undefined
-getMessages = undefined
+
+sendMessageBroadcast :: ManagerMiningMsg a => String -> Chan a -> IO ()
+sendMessageBroadcast = undefined
+
+loadMessages :: ManagerMiningMsg a => Chan a -> IO ([MsgTo])
+loadMessages = undefined
 
 
 sendTrans :: ManagerMiningMsg a => Trans -> Chan a -> Chan InfoMsg -> IO (Maybe Transaction)

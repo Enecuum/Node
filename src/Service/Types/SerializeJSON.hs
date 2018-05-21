@@ -16,6 +16,9 @@ import Service.Types
 instance FromJSON Trans
 instance ToJSON   Trans
 
+instance FromJSON MsgTo
+instance ToJSON MsgTo
+
 instance FromJSON CryptoCurrency
 instance ToJSON CryptoCurrency
 

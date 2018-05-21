@@ -29,7 +29,7 @@ serveRpc portNum ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
           response <- call methods (fromStrict aMsg)
           sendAllTo aSocket (toStrict $ fromMaybe "" response) addr
             where
-              methods = [createTx , createNTx, createUnlimTx, genNewKey, getKeys, balanceReq ]
+              methods = [createTx , createNTx, createUnlimTx, genNewKey, getKeys, balanceReq, sendMsgBroadcast, sendMsgTo, loadMsg ]
 
               createTx = toMethod "new_tx" f (Required "x" :+: ())
                 where
@@ -64,4 +64,20 @@ serveRpc portNum ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
                 where
                   f :: PubKey -> RpcResult IO Amount
                   f key = liftIO $ getBalance key aInfoCh
+
+              sendMsgBroadcast = toMethod "send_message_broadcast" f (Required "x" :+: ())
+                where
+                  f :: String -> RpcResult IO ()
+                  f m = liftIO $ sendMessageBroadcast m ch
+
+              sendMsgTo = toMethod "send_message_to" f (Required "x" :+: ())
+                where
+                  f :: MsgTo -> RpcResult IO ()
+                  f m = liftIO $ sendMessageTo m ch
+
+              loadMsg = toMethod "load_messages" f ()
+                where
+                  f :: RpcResult IO [MsgTo]
+                  f = liftIO $ loadMessages ch
+
 
