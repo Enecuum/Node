@@ -35,7 +35,7 @@ instance Read Trans where
 
 instance Read MsgTo where
      readsPrec _ value = 
-        case splitOn " " value of
+        case splitOn ":" value of
              [t, m] ->  [(MsgTo (read t) m, [])]
              x      -> error $ "Invalid number of fields in input: " ++ show x
 

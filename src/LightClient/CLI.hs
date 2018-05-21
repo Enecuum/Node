@@ -21,7 +21,7 @@ import Service.Network.TCP.Client
 import Service.Network.Base (ClientHandle)
 import LightClient.RPC
 
-data Flag = Key | ShowKey | Balance PubKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever | Quit deriving (Eq, Show)
+data Flag = Key | ShowKey | Balance PubKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages | Quit deriving (Eq, Show)
 
 data ArgFlag = Port PortNumber | Host HostName | Version deriving (Eq, Show)
 
@@ -40,6 +40,9 @@ options = [
   , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
   , Option ['B'] ["get-balance"] (ReqArg (Balance . read) "publicKey") "get balance for public key"
   , Option ['S'] ["send-money-to-from"] (ReqArg (Send . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
+  , Option ['A'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
+  , Option ['T'] ["send-message-to"] (ReqArg (SendMessageTo . read) "nodeId message") "Send message to the node"
+  , Option ['L'] ["load-new-messages"] (NoArg LoadMessages) "Load new recieved messages"
   , Option ['Q'] ["quit"] (NoArg Quit) "exit"
   ]
 
@@ -75,14 +78,17 @@ getRecipient defHost defPort (x:xs) = case x of
 dispatch :: [Flag] -> ClientHandle -> IO ()
 dispatch flags ch = do
     case flags of
-        (Key : _)                -> getKey ch
-        (GenerateNTransactions qTx: _) -> generateNTransactions ch qTx
+        (Key : _)                        -> getKey ch
+        (GenerateNTransactions qTx: _)   -> generateNTransactions ch qTx
         (GenerateTransactionsForever: _) -> generateTransactionsForever ch
-        (Send tx : _)            -> sendTrans ch tx
-        (ShowKey : _)            -> showPublicKey ch
-        (Balance aPublicKey : _) -> getBalance ch aPublicKey
-        (Quit : _)               -> closeAndExit ch
-        _                        -> putStrLn "Wrong argument"
+        (Send tx : _)                    -> sendTrans ch tx
+        (ShowKey : _)                    -> showPublicKey ch
+        (Balance aPublicKey : _)         -> getBalance ch aPublicKey
+        (SendMessageBroadcast m : _)     -> sendMessageBroadcast ch m
+        (SendMessageTo mTo : _)          -> sendMessageTo ch mTo
+        (LoadMessages : _)               -> loadMessages ch 
+        (Quit : _)                       -> closeAndExit ch
+        _                                -> putStrLn "Wrong argument"
 
 closeAndExit :: ClientHandle -> IO ()
 closeAndExit ch = do
@@ -135,3 +141,26 @@ generateTransactionsForever ch = do
   case result of
     (Left err) -> putStrLn $ "generateTransactionsForever error: " ++ show err
     (Right _ ) -> putStrLn   "Transactions request was sent"
+
+sendMessageBroadcast :: ClientHandle -> String -> IO ()
+sendMessageBroadcast ch m = do
+  result <- runExceptT $ newMsgBroadcast ch m
+  case result of
+    (Left err) -> putStrLn $ "sendMessageBroadcast error: " ++ show err
+    (Right _ ) -> putStrLn   "Broadcast message was sent"
+
+sendMessageTo :: ClientHandle -> MsgTo -> IO ()
+sendMessageTo ch mTo = do
+  result <- runExceptT $ newMsgTo ch mTo
+  case result of
+    (Left err) -> putStrLn $ "sendMessageTo error: " ++ show err
+    (Right _ ) -> putStrLn   "Message was sent"
+
+loadMessages :: ClientHandle -> IO ()
+loadMessages ch = do
+  result <- runExceptT $ loadNewMsg ch
+  case result of
+    (Left err)    -> putStrLn $ "sendMessageBroadcast error: " ++ show err
+    (Right msgs ) -> putStrLn $ "New messages: " ++ (unlines $ map showMsg msgs)
+                  where showMsg (MsgTo id m) = "Message from " ++ show id ++ ": " ++ m
+

@@ -8,6 +8,9 @@ module LightClient.RPC (
         genNewKey,
         getKeys,
         reqLedger,
+        newMsgBroadcast,
+        newMsgTo,
+        loadNewMsg,
 
         QuantityTx,
         PubKey,
@@ -49,6 +52,15 @@ getKeysSig = Signature "get_keys" ()
 reqLedgerSig :: Signature (PubKey ::: ()) Amount
 reqLedgerSig = Signature "get_balance" ("x" ::: ())
 
+newMsgBroadcastSig :: Signature (String ::: ()) ()
+newMsgBroadcastSig = Signature "send_message_broadcast" ("x" ::: ())
+
+newMsgToSig :: Signature (MsgTo ::: ()) ()
+newMsgToSig = Signature "send_message_to" ("x" ::: ())
+
+loadNewMsgSig :: Signature () [MsgTo]
+loadNewMsgSig = Signature "load_messages" ()
+
 -- Bind function signature with RPC connection
 newTx :: ClientHandle -> Trans -> Result Transaction
 newTx h = toFunction (connectionWithTimeOut h) newTxSig
@@ -68,7 +80,14 @@ getKeys h = toFunction (connectionWithTimeOut h) getKeysSig
 reqLedger :: ClientHandle -> PubKey -> Result Amount
 reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
 
+newMsgBroadcast :: ClientHandle -> String -> Result ()
+newMsgBroadcast h = toFunction (connectionWithTimeOut h) newMsgBroadcastSig
 
+newMsgTo :: ClientHandle -> MsgTo -> Result ()
+newMsgTo h = toFunction (connectionWithTimeOut h) newMsgToSig
+
+loadNewMsg :: ClientHandle -> Result [MsgTo]
+loadNewMsg h = toFunction (connectionWithTimeOut h) loadNewMsgSig
 
 
 connectionWithTimeOut :: ClientHandle -> Connection IO
