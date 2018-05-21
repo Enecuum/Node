@@ -87,13 +87,14 @@ numberOfNeededShards aShardingNode =
 -- COMBAK: Understand what is the problem.
 -- nodeIndex.shardNeededIndex.setOfHash
 
-makeShardingNode :: T.ManagerMsg msg =>
-                          MyNodeId
-                          -> Chan ShardingNodeAction
-                          -> Chan msg
-                          -> MyNodePosition
-                          -> Chan InfoMsg
-                          -> IO ()
+makeShardingNode
+    ::  T.ManagerMsg msg
+    =>  MyNodeId
+    ->  Chan ShardingNodeAction
+    ->  Chan msg
+    ->  MyNodePosition
+    ->  Chan InfoMsg
+    ->  IO ()
 makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgChan = do
     aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMsgChan
     writeLog infoMsgChan [ShardingLvlTag, InitTag] Info "Start of sharding lvl."
@@ -305,7 +306,7 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMs
     metronome smallPeriod $ writeChan aChanRequest CheckOfShardLoadingList
     void $ forkIO $ do
         threadDelay $ smallPeriod * 20
-        metronomeLinear smallPeriod bigPeriod $ do
+        metronomeLinear (10*smallPeriod) bigPeriod $ do
             writeChan aChanRequest CheckTheNeighbors
             threadDelay smallPeriod
             writeLog infoMsgChan [ShardingLvlTag, InitTag] Info "ShiftAction write to chan"
