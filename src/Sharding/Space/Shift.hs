@@ -30,7 +30,7 @@ findNearestNeighborPositions aMyNodePosition aPositions =
 
     aFilter :: Point -> S.Set NodePosition
     aFilter aSupportPoint = S.filter
-        (\aPosition -> distanceTo (NodePosition aSupportPoint) aPosition < fourthOfMaxBound)
+        (\aPosition -> distanceTo (NodePosition aSupportPoint) aPosition < maxBound`div`2)
         aPositions
 
 
@@ -46,10 +46,10 @@ shiftToCenterOfMass aMyNodePosition aNearestPositions =
         ((toInteger (aDiff + ah1) +
           toInteger (aDiff + ah2))`div`2) - aDiff
 
-    NodePosition (Point xh1 _) = aFind (Point (x1 + fourthOfMaxBound) x2) distX1
-    NodePosition (Point xh2 _) = aFind (Point (x1 - fourthOfMaxBound) x2) distX1
-    NodePosition (Point _ yh1) = aFind (Point x1 (x2 + fourthOfMaxBound)) distX2
-    NodePosition (Point _ yh2) = aFind (Point x1 (x2 - fourthOfMaxBound)) distX2
+    NodePosition (Point xh1 _) = aFind (Point (x1 + maxBound`div`2) x2) distX1
+    NodePosition (Point xh2 _) = aFind (Point (x1 - maxBound`div`2) x2) distX1
+    NodePosition (Point _ yh1) = aFind (Point x1 (x2 + maxBound`div`2)) distX2
+    NodePosition (Point _ yh2) = aFind (Point x1 (x2 - maxBound`div`2)) distX2
 
     aFind :: Point -> (Point -> Point -> Word64) -> NodePosition
     aFind aPositionPoint = findSuportNeighborPosition
@@ -70,7 +70,7 @@ findSuportNeighborPosition aMyNodePosition aNearestPositions aSupportPoint aDist
   where
     aIsInSupportFourthOfSpace :: NodePosition -> Bool
     aIsInSupportFourthOfSpace aNodePosition =
-        distanceTo aSupportPoint aNodePosition < fourthOfMaxBound
+        distanceTo aSupportPoint aNodePosition < maxBound`div`2
 
     aDistanceToMe :: NodePosition -> Distance Point
     aDistanceToMe (NodePosition aNeighborPosition) =
