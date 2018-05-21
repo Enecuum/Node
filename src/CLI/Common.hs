@@ -11,14 +11,17 @@ module CLI.Common (
   getNewKey,
   
   getBalance,
-  getPublicKeys
+  getPublicKeys,
+
+  CLIException(..),
+  Result
 
   )where
 
 import Control.Monad (forever, replicateM)
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Chan
-import Control.Exception (SomeException, try)
+import Control.Exception
 import Data.Time.Units
 import Data.List.Split (splitOn)
 
@@ -34,34 +37,42 @@ import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
 import Service.System.Directory (getTime, getKeyFilePath)
 
-sendMessageTo :: ManagerMiningMsg a => MsgTo -> Chan a -> IO ()
-sendMessageTo = undefined
+type Result a = Either CLIException a
 
-sendMessageBroadcast :: ManagerMiningMsg a => String -> Chan a -> IO ()
-sendMessageBroadcast = undefined
+data CLIException = WrongKeyOwnerException
+                  | NotImplementedException -- test
+                  | OtherException                   
+  deriving Show
 
-loadMessages :: ManagerMiningMsg a => Chan a -> IO ([MsgTo])
-loadMessages = undefined
+instance Exception CLIException
+
+sendMessageTo :: ManagerMiningMsg a => MsgTo -> Chan a -> IO (Result ())
+sendMessageTo ch = return $ return $ Left NotImplementedException
+
+sendMessageBroadcast :: ManagerMiningMsg a => String -> Chan a -> IO (Result ())
+sendMessageBroadcast ch = return $ return $ Left NotImplementedException
+
+loadMessages :: ManagerMiningMsg a => Chan a -> IO (Result [MsgTo])
+loadMessages ch = return $ Left NotImplementedException
 
 
-sendTrans :: ManagerMiningMsg a => Trans -> Chan a -> Chan InfoMsg -> IO (Maybe Transaction)
-sendTrans trans ch aInfoCh = do
+sendTrans :: ManagerMiningMsg a => Trans -> Chan a -> Chan InfoMsg -> IO (Result Transaction)
+sendTrans trans ch aInfoCh = try $ do
   let moneyAmount = (Service.Types.txAmount trans) :: Amount
-  let receiverPubKey = read (show $ recipientPubKey trans) :: PublicKey
-  let ownerPubKey = read (show $ senderPubKey trans) :: PublicKey
+  let receiverPubKey = read (recipientPubKey trans) :: PublicKey
+  let ownerPubKey = read (senderPubKey trans) :: PublicKey
   timePoint <- getTime
   keyPairs <- getSavedKeyPairs
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
   case (Data.Map.lookup ownerPubKey mapPubPriv) of
     Nothing -> do
-      putStrLn "You don't own that public key"
-      return Nothing       
+      throw WrongKeyOwnerException
     Just ownerPrivKey -> do
       sign  <- getSignature ownerPrivKey moneyAmount
       let tx  = WithSignature (WithTime timePoint (SendAmountFromKeyToKey ownerPubKey receiverPubKey moneyAmount)) sign
       sendMetrics tx aInfoCh
       writeChan ch $ newTransaction tx
-      return $ Just tx
+      return tx
 
 
 genNTx :: Int -> IO [Transaction]
@@ -73,8 +84,8 @@ genNTx n = do
    return tx
 
 generateNTransactions :: ManagerMiningMsg a =>
-    QuantityTx -> Chan a -> Chan InfoMsg -> IO ()
-generateNTransactions qTx ch m = do
+    QuantityTx -> Chan a -> Chan InfoMsg -> IO (Result ())
+generateNTransactions qTx ch m = try $ do
   tx <- genNTx qTx
   mapM_ (\x -> do
           writeChan ch $ newTransaction x
@@ -83,8 +94,8 @@ generateNTransactions qTx ch m = do
   putStrLn "Transactions are created"
 
 
-generateTransactionsForever :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO ()
-generateTransactionsForever ch m = forever $ do
+generateTransactionsForever :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO (Result ())
+generateTransactionsForever ch m = try $ forever $ do
                                 quantityOfTranscations <- randomRIO (20,30)
                                 tx <- genNTx quantityOfTranscations
                                 mapM_ (\x -> do
@@ -94,8 +105,8 @@ generateTransactionsForever ch m = forever $ do
                                 threadDelay (10^(6 :: Int))
                                 putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
 
-getNewKey :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO PubKey
-getNewKey ch aInfoCh = do
+getNewKey :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO (Result PubKey)
+getNewKey ch aInfoCh = try $ do
   (KeyPair aPublicKey aPrivateKey) <- generateNewRandomAnonymousKeyPair
   timePoint <- getTime
   let initialAmount = 0
@@ -103,11 +114,11 @@ getNewKey ch aInfoCh = do
   writeChan ch $ newTransaction keyInitialTransaction
   getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
   sendMetrics keyInitialTransaction aInfoCh
-  return $ fromPublicKey256k1 aPublicKey
+  return $ show aPublicKey
 
-getBalance :: PubKey -> Chan InfoMsg -> IO Amount
-getBalance key aInfoCh = do
-    let pKey = publicKey256k1 key
+getBalance :: PubKey -> Chan InfoMsg -> IO (Result Amount)
+getBalance key aInfoCh = try $ do
+    let pKey = read key
     stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
     result  <- countBalance pKey
     endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
@@ -129,10 +140,10 @@ getSavedKeyPairs = do
           return pairs
 
 
-getPublicKeys :: IO [PubKey]
-getPublicKeys = do
+getPublicKeys :: IO (Result [PubKey])
+getPublicKeys = try $ do
   pairs <- getSavedKeyPairs
-  return $ map (fromPublicKey256k1 . fst) pairs
+  return $ map (show . fst) pairs
 
 
 sendMetrics :: Transaction -> Chan InfoMsg -> IO ()

@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, LambdaCase #-}
+{-# LANGUAGE OverloadedStrings, LambdaCase, FlexibleContexts #-}
 
 module CLI.RPC (serveRpc) where
 
@@ -19,6 +19,7 @@ import Service.Types.SerializeJSON ()
 import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
 import Service.Types
+import Data.Text (pack)
 
 serveRpc :: PortNumber -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
 serveRpc portNum ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
@@ -29,55 +30,58 @@ serveRpc portNum ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
           response <- call methods (fromStrict aMsg)
           sendAllTo aSocket (toStrict $ fromMaybe "" response) addr
             where
+              handle f = do  
+                    mTx <- liftIO $ f
+                    case mTx of
+                      Left e  -> throwError $ rpcError  400 $ pack $ show e
+                      Right r -> liftIO $ return r
+
+
               methods = [createTx , createNTx, createUnlimTx, genNewKey, getKeys, balanceReq, sendMsgBroadcast, sendMsgTo, loadMsg ]
 
               createTx = toMethod "new_tx" f (Required "x" :+: ())
                 where
                   f :: Trans -> RpcResult IO Transaction
-                  f tx = do
-                    mTx <- liftIO $ sendTrans tx ch aInfoCh
-                    case mTx of
-                      Just tx -> liftIO $ return tx
-                      _       -> throwError $ rpcError 400 "You don't own that public key"
+                  f tx = handle $ sendTrans tx ch aInfoCh
 
               createNTx = toMethod "gen_n_tx" f (Required "x" :+: ())
                 where
                   f :: Int -> RpcResult IO ()
-                  f num = liftIO $ generateNTransactions num ch aInfoCh
+                  f num = handle $ generateNTransactions num ch aInfoCh
 
               createUnlimTx = toMethod "gen_unlim_tx" f ()
                 where
                   f :: RpcResult IO ()
-                  f = liftIO $ generateTransactionsForever ch aInfoCh
+                  f = handle $ generateTransactionsForever ch aInfoCh
 
               genNewKey = toMethod "gen_new_key" f ()
                 where
                   f :: RpcResult IO PubKey
-                  f = liftIO $ getNewKey ch aInfoCh
+                  f = handle $ getNewKey ch aInfoCh
 
               getKeys = toMethod "get_keys" f ()
                 where
                   f :: RpcResult IO [PubKey]
-                  f = liftIO $ getPublicKeys
+                  f = handle $ getPublicKeys
 
               balanceReq = toMethod "get_balance" f (Required "x" :+: ())
                 where
                   f :: PubKey -> RpcResult IO Amount
-                  f key = liftIO $ getBalance key aInfoCh
+                  f key = handle $ getBalance key aInfoCh
 
               sendMsgBroadcast = toMethod "send_message_broadcast" f (Required "x" :+: ())
                 where
                   f :: String -> RpcResult IO ()
-                  f m = liftIO $ sendMessageBroadcast m ch
+                  f m = handle $ sendMessageBroadcast m ch
 
               sendMsgTo = toMethod "send_message_to" f (Required "x" :+: ())
                 where
                   f :: MsgTo -> RpcResult IO ()
-                  f m = liftIO $ sendMessageTo m ch
+                  f m = handle $ sendMessageTo m ch
 
               loadMsg = toMethod "load_messages" f ()
                 where
                   f :: RpcResult IO [MsgTo]
-                  f = liftIO $ loadMessages ch
+                  f = handle $ loadMessages ch
 
 

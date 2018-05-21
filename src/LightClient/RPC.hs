@@ -31,7 +31,7 @@ type Result a = RpcResult IO a
 
 
 -- Client-side function's signature
-newTxSig :: Signature (Trans ::: ()) ()
+newTxSig :: Signature (Trans ::: ()) Transaction
 newTxSig = Signature "new_tx" ("x" ::: ())
 
 genNTxSig :: Signature (QuantityTx ::: ()) ()
@@ -50,7 +50,7 @@ reqLedgerSig :: Signature (PubKey ::: ()) Amount
 reqLedgerSig = Signature "get_balance" ("x" ::: ())
 
 -- Bind function signature with RPC connection
-newTx :: ClientHandle -> Trans -> Result ()
+newTx :: ClientHandle -> Trans -> Result Transaction
 newTx h = toFunction (connectionWithTimeOut h) newTxSig
 
 genNTx :: ClientHandle -> Int -> Result ()

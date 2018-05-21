@@ -9,7 +9,7 @@ module CLI.CLI (
 
 import System.Console.GetOpt
 import Data.List.Split (splitOn)
-import Control.Monad (forever, forM_)
+import Control.Monad (forever, mapM_)
 import Control.Concurrent
 import Node.Node.Types
 import Service.InfoMsg
@@ -46,15 +46,21 @@ serveCLI ch aInfoCh = do
           dispatch :: [Flag] -> IO ()
           dispatch flags = do
             case flags of
-              (Key : _)                        -> getNewKey ch aInfoCh >>= print
-              (GenerateNTransactions qTx: _)   -> generateNTransactions qTx ch aInfoCh
-              (GenerateTransactionsForever: _) -> generateTransactionsForever ch aInfoCh
-              (Send tx : _)                    -> sendTrans tx ch aInfoCh >>= print
-              (ShowKey : _)                    -> do
-                                                  keys <- getPublicKeys 
-                                                  forM_ keys print
-              (SendMessageBroadcast m : _)     -> sendMessageBroadcast m ch
-              (SendMessageTo mTo : _)          -> sendMessageTo mTo ch
-              (LoadMessages : _)               -> loadMessages ch >>= print
-              (Balance aPublicKey : _)         -> getBalance aPublicKey aInfoCh >>= print
-              _                        -> putStrLn "Wrong argument"
+              (Key : _)                        -> getNewKey ch aInfoCh >>= handle
+              (GenerateNTransactions qTx: _)   -> generateNTransactions qTx ch aInfoCh >>= handle
+              (GenerateTransactionsForever: _) -> generateTransactionsForever ch aInfoCh >>= handle
+              (Send tx : _)                    -> sendTrans tx ch aInfoCh >>= handle
+              (ShowKey : _)                    -> getPublicKeys >>= handleList
+              (SendMessageBroadcast m : _)     -> sendMessageBroadcast m ch >>= handle
+              (SendMessageTo mTo : _)          -> sendMessageTo mTo ch >>= handle
+              (LoadMessages : _)               -> loadMessages ch >>= handle
+              (Balance aPublicKey : _)         -> getBalance aPublicKey aInfoCh >>= handle
+              _                                -> putStrLn "Wrong argument"
+
+          handle :: Show a => Result a -> IO ()
+          handle (Left err) = putStrLn $ show err
+          handle (Right a)  = print a
+
+          handleList :: Show a => Result [a] -> IO ()
+          handleList (Left err) = putStrLn $ show err
+          handleList (Right a)  = mapM_ print a

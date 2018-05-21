@@ -12,7 +12,7 @@ import qualified    Data.ByteString.Base16 as B16
 import              Data.List.Split (splitOn)
 
 type QuantityTx = Int
-type PubKey = Integer
+type PubKey = String
 data Trans = Trans {
         txAmount :: Amount
       , recipientPubKey :: PubKey
@@ -30,7 +30,7 @@ instance Read Trans where
     readsPrec _ value =
         case splitOn ":" value of
              [f1, f2, f3, f4] ->
-                 [(Trans (read f1) (read f2) (read f3) (read f4), [])]
+                 [(Trans (read f1) f2 f3 (read f4), [])]
              x -> error $ "Invalid number of fields in input: " ++ show x
 
 instance Read MsgTo where
