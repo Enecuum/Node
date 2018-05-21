@@ -12,11 +12,14 @@ import System.Environment (getArgs)
 import System.Console.GetOpt
 import System.Exit
 import Data.List.Split (splitOn)
+import Data.Map (lookup, Map, fromList)
 import Control.Monad.Except (runExceptT, liftIO)
-import Control.Monad (forM_)
+import Control.Exception (SomeException, try)
 import Network.Socket (HostName, PortNumber)
 
 import Service.Types
+import Service.Types.PublicPrivateKeyPair
+import Service.System.Directory (getTime, getKeyFilePath)
 import Service.Network.TCP.Client
 import Service.Network.Base (ClientHandle)
 import LightClient.RPC
@@ -38,7 +41,7 @@ options = [
   , Option ['G'] ["generate-n-transactions"] (ReqArg (GenerateNTransactions . read) "qTx") "Generate N Transactions"
   , Option ['F'] ["generate-transactions"] (NoArg GenerateTransactionsForever) "Generate Transactions forever"
   , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
-  , Option ['B'] ["get-balance"] (ReqArg (Balance . read) "publicKey") "get balance for public key"
+  , Option ['B'] ["get-balance"] (ReqArg (Balance) "publicKey") "get balance for public key"
   , Option ['S'] ["send-money-to-from"] (ReqArg (Send . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
   , Option ['A'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
   , Option ['T'] ["send-message-to"] (ReqArg (SendMessageTo . read) "nodeId message") "Send message to the node"
@@ -82,7 +85,7 @@ dispatch flags ch = do
         (GenerateNTransactions qTx: _)   -> generateNTransactions ch qTx
         (GenerateTransactionsForever: _) -> generateTransactionsForever ch
         (Send tx : _)                    -> sendTrans ch tx
-        (ShowKey : _)                    -> showPublicKey ch
+        (ShowKey : _)                    -> showPublicKey
         (Balance aPublicKey : _)         -> getBalance ch aPublicKey
         (SendMessageBroadcast m : _)     -> sendMessageBroadcast ch m
         (SendMessageTo mTo : _)          -> sendMessageTo ch mTo
@@ -95,29 +98,58 @@ closeAndExit ch = do
         closeConnect ch
         exitWith ExitSuccess
 
-showPublicKey :: ClientHandle -> IO ()
-showPublicKey ch = do
-  result  <- runExceptT $ getKeys ch 
+showPublicKey :: IO ()
+showPublicKey = do
+  pairs <- getSavedKeyPairs
+  mapM_ (putStrLn . show . fst) pairs
+
+getKey :: ClientHandle -> IO ()
+getKey ch = do
+  (KeyPair aPublicKey aPrivateKey) <- generateNewRandomAnonymousKeyPair
+  timePoint <- getTime
+  let initialAmount = 0
+  let keyInitialTransaction = WithTime timePoint (RegisterPublicKey aPublicKey initialAmount)
+  result <- runExceptT $ newTx ch keyInitialTransaction
   case result of
-    (Left err) -> putStrLn $ "Keys request error: " ++ show err
-    (Right b ) -> putStrLn "Saved keys: " >> forM_ b print
+    (Left err) -> putStrLn $ "Key creation error: " ++ show err
+    (Right _ ) -> do
+           getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
+           putStrLn ("Public Key " ++ show aPublicKey ++ " was created")
 
 sendTrans :: ClientHandle -> Trans -> IO ()
 sendTrans ch trans = do
-  result  <- runExceptT $ newTx ch trans 
-  case result of
-    (Left err) -> putStrLn $ "Send balance error: " ++ show err
-    (Right b ) -> putStrLn $ "Transaction was signed and sent: " ++ show b
+  let moneyAmount = (txAmount trans) :: Amount
+  let receiverPubKey = read (recipientPubKey trans) :: PublicKey
+  let ownerPubKey = read (senderPubKey trans) :: PublicKey
+  timePoint <- getTime
+  keyPairs <- getSavedKeyPairs
+  let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
+  case (Data.Map.lookup ownerPubKey mapPubPriv) of
+    Nothing -> putStrLn "You don't own that public key"
+    Just ownerPrivKey -> do
+      sign  <- getSignature ownerPrivKey moneyAmount
+      let tx  = WithSignature (WithTime timePoint (SendAmountFromKeyToKey ownerPubKey receiverPubKey moneyAmount)) sign
+      result <- runExceptT $ newTx ch tx
+      case result of
+        (Left err) -> putStrLn $ "Send transaction error: " ++ show err
+        (Right _ ) -> putStrLn ("Transaction done: " ++ show trans)
 
 printVersion :: IO ()
 printVersion = putStrLn ("--" ++ "1.0.0" ++ "--")
 
-getKey :: ClientHandle -> IO ()
-getKey ch = do
-  result <- runExceptT $ genNewKey ch
+
+getSavedKeyPairs :: IO [(PublicKey, PrivateKey)]
+getSavedKeyPairs = do
+  result <- try $ getKeyFilePath >>= (\keyFileName -> readFile keyFileName)
   case result of
-     (Left err) -> putStrLn $ "new key request error: " ++ show err
-     (Right k)  -> putStrLn $ "New public key: " ++ show k
+    Left ( _ :: SomeException) -> do
+          putStrLn "There is no keys"
+          return []
+    Right keyFileContent       -> do
+          let rawKeys = lines keyFileContent
+          let keys = map (splitOn ":") rawKeys
+          let pairs = map (\x -> (,) (read (x !! 0) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
+          return pairs
 
 getBalance :: ClientHandle -> PubKey -> IO ()
 getBalance ch rawKey = do

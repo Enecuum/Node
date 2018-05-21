@@ -37,11 +37,11 @@ serveRpc portNum ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
                       Right r -> liftIO $ return r
 
 
-              methods = [createTx , createNTx, createUnlimTx, genNewKey, getKeys, balanceReq, sendMsgBroadcast, sendMsgTo, loadMsg ]
+              methods = [createTx , createNTx, createUnlimTx, balanceReq, sendMsgBroadcast, sendMsgTo, loadMsg ]
 
               createTx = toMethod "new_tx" f (Required "x" :+: ())
                 where
-                  f :: Trans -> RpcResult IO Transaction
+                  f :: Transaction -> RpcResult IO ()
                   f tx = handle $ sendTrans tx ch aInfoCh
 
               createNTx = toMethod "gen_n_tx" f (Required "x" :+: ())
@@ -53,16 +53,6 @@ serveRpc portNum ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
                 where
                   f :: RpcResult IO ()
                   f = handle $ generateTransactionsForever ch aInfoCh
-
-              genNewKey = toMethod "gen_new_key" f ()
-                where
-                  f :: RpcResult IO PubKey
-                  f = handle $ getNewKey ch aInfoCh
-
-              getKeys = toMethod "get_keys" f ()
-                where
-                  f :: RpcResult IO [PubKey]
-                  f = handle $ getPublicKeys
 
               balanceReq = toMethod "get_balance" f (Required "x" :+: ())
                 where

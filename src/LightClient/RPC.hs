@@ -5,8 +5,6 @@ module LightClient.RPC (
         newTx,
         genNTx,
         genUnlimTx,
-        genNewKey,
-        getKeys,
         reqLedger,
         newMsgBroadcast,
         newMsgTo,
@@ -34,7 +32,7 @@ type Result a = RpcResult IO a
 
 
 -- Client-side function's signature
-newTxSig :: Signature (Trans ::: ()) Transaction
+newTxSig :: Signature (Transaction ::: ()) ()
 newTxSig = Signature "new_tx" ("x" ::: ())
 
 genNTxSig :: Signature (QuantityTx ::: ()) ()
@@ -42,12 +40,6 @@ genNTxSig = Signature "gen_n_tx" ("x" ::: ())
 
 genUnlimTxSig :: Signature () ()
 genUnlimTxSig = Signature "gen_unlim_tx" ()
-
-genNewKeySig :: Signature () PubKey
-genNewKeySig = Signature "gen_new_key" ()
-
-getKeysSig :: Signature () [PubKey]
-getKeysSig = Signature "get_keys" ()
 
 reqLedgerSig :: Signature (PubKey ::: ()) Amount
 reqLedgerSig = Signature "get_balance" ("x" ::: ())
@@ -62,7 +54,7 @@ loadNewMsgSig :: Signature () [MsgTo]
 loadNewMsgSig = Signature "load_messages" ()
 
 -- Bind function signature with RPC connection
-newTx :: ClientHandle -> Trans -> Result Transaction
+newTx :: ClientHandle -> Transaction -> Result ()
 newTx h = toFunction (connectionWithTimeOut h) newTxSig
 
 genNTx :: ClientHandle -> Int -> Result ()
@@ -70,12 +62,6 @@ genNTx h = toFunction (connectionWithTimeOut h) genNTxSig
 
 genUnlimTx :: ClientHandle -> Result ()
 genUnlimTx h = toFunction (connectionWithTimeOut h) genUnlimTxSig
-
-genNewKey :: ClientHandle -> Result PubKey
-genNewKey h = toFunction (connectionWithTimeOut h) genNewKeySig
-
-getKeys :: ClientHandle -> Result [PubKey]
-getKeys h = toFunction (connectionWithTimeOut h) getKeysSig
 
 reqLedger :: ClientHandle -> PubKey -> Result Amount
 reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig

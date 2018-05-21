@@ -6,6 +6,7 @@ module CLI.Common (
   loadMessages,
 
   sendTrans,
+  sendNewTrans,
   generateNTransactions,
   generateTransactionsForever,
   getNewKey,
@@ -56,8 +57,13 @@ loadMessages :: ManagerMiningMsg a => Chan a -> IO (Result [MsgTo])
 loadMessages ch = return $ Left NotImplementedException
 
 
-sendTrans :: ManagerMiningMsg a => Trans -> Chan a -> Chan InfoMsg -> IO (Result Transaction)
-sendTrans trans ch aInfoCh = try $ do
+sendTrans :: ManagerMiningMsg a => Transaction -> Chan a -> Chan InfoMsg -> IO (Result ())
+sendTrans tx ch aInfoCh = try $ do
+  sendMetrics tx aInfoCh
+  writeChan ch $ newTransaction tx
+
+sendNewTrans :: ManagerMiningMsg a => Trans -> Chan a -> Chan InfoMsg -> IO (Result Transaction)
+sendNewTrans trans ch aInfoCh = try $ do
   let moneyAmount = (Service.Types.txAmount trans) :: Amount
   let receiverPubKey = read (recipientPubKey trans) :: PublicKey
   let ownerPubKey = read (senderPubKey trans) :: PublicKey
@@ -70,8 +76,7 @@ sendTrans trans ch aInfoCh = try $ do
     Just ownerPrivKey -> do
       sign  <- getSignature ownerPrivKey moneyAmount
       let tx  = WithSignature (WithTime timePoint (SendAmountFromKeyToKey ownerPubKey receiverPubKey moneyAmount)) sign
-      sendMetrics tx aInfoCh
-      writeChan ch $ newTransaction tx
+      sendTrans tx ch aInfoCh
       return tx
 
 
