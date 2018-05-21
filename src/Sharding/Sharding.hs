@@ -306,9 +306,9 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMs
     metronome smallPeriod $ writeChan aChanRequest CheckOfShardLoadingList
     void $ forkIO $ do
         threadDelay $ smallPeriod * 20
-        metronomeLinear (10*smallPeriod) bigPeriod $ do
-            writeChan aChanRequest CheckTheNeighbors
-            threadDelay smallPeriod
+        metronomeLinear (100*smallPeriod) bigPeriod $ do
+            --writeChan aChanRequest CheckTheNeighbors
+            --threadDelay smallPeriod
             writeLog infoMsgChan [ShardingLvlTag, InitTag] Info "ShiftAction write to chan"
             writeChan aChanRequest ShiftAction
 
