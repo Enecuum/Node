@@ -62,7 +62,7 @@ startFileServer chan = aLoop $ FileActor M.empty M.empty
     aLoop aData =
         readChan chan >>= \case
             FileActorMyPosition aNodePosition -> do
-                let aNewFilePositions = M.fromList . take 6 . sortOn (distanceTo aNodePosition.snd) . M.toList $ M.intersection
+                let aNewFilePositions = M.fromList . take 7 . sortOn (distanceTo aNodePosition.snd) . M.toList $ M.intersection
                         (aData^.filePositions) (aData^.fileConnects)
                     aNewFileConnects  = M.intersection (aData^.fileConnects) aNewFilePositions
                 aLoop $ FileActor aNewFilePositions aNewFileConnects
