@@ -6,6 +6,9 @@ import              Sharding.Space.Distance
 import              Data.List.Extra
 import              Data.Word
 import qualified    Data.Set            as S
+import              Service.InfoMsg
+import              Control.Concurrent.Chan
+import              Node.Data.GlobalLoging
 
 
 checkUnevenness :: MyNodePosition -> S.Set NodePosition -> Bool
@@ -35,9 +38,12 @@ findNearestNeighborPositions aMyNodePosition aPositions =
 
 
 
-shiftToCenterOfMass :: MyNodePosition -> S.Set NodePosition -> MyNodePosition
-shiftToCenterOfMass aMyNodePosition aNearestPositions =
-    MyNodePosition $ Point aX1 aX2
+shiftToCenterOfMass :: MyNodePosition -> S.Set NodePosition -> Chan InfoMsg -> IO MyNodePosition
+shiftToCenterOfMass aMyNodePosition aNearestPositions aInfoMsgChan = do
+    let point = Point aX1 aX2
+    writeLog aInfoMsgChan [ShardingLvlTag] Info $
+          "shiftToCenterOfMass: " ++ show aMyNodePosition ++ "  " ++ show point ++ "  " ++ show aNearestPositions
+    return $ MyNodePosition  point
   where
     aX1 = aFoonc (halfOfMaxBound - x1) xh1 xh2
     aX2 = aFoonc (halfOfMaxBound - x2) yh1 yh2
