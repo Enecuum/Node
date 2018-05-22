@@ -337,8 +337,7 @@ shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan = do
         aNearestPositions  = S.fromList $
             findNearestNeighborPositions aMyNodePosition aNeighborPositions
 
-        aNewPosition :: MyNodePosition
-        aNewPosition       = shiftToCenterOfMass aMyNodePosition aNearestPositions
+    aNewPosition <- shiftToCenterOfMass aMyNodePosition aNearestPositions infoMsgChan
     writeLog (aShardingNode^.nodeInfoMsgChan) [ShardingLvlTag] Info $
         "Make shift action. Neighbor positions: " ++ show (S.toList aNeighborPositions)
         ++ ". My position: " ++ show aMyNodePosition
