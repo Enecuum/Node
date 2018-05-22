@@ -305,7 +305,7 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMs
     metronome bigPeriod $ writeChan aChanRequest CleanRequestIndex
     metronome smallPeriod $ writeChan aChanRequest CheckOfShardLoadingList
     void $ forkIO $ do
-        threadDelay $ smallPeriod * 5
+        threadDelay $ smallPeriod
         metronomeLinear (smallPeriod) bigPeriod $ do
             --writeChan aChanRequest CheckTheNeighbors
             --threadDelay smallPeriod
@@ -337,7 +337,9 @@ shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan = do
         aNearestPositions  = S.fromList $
             findNearestNeighborPositions aMyNodePosition aNeighborPositions
 
-    aNewPosition <- shiftToCenterOfMass aMyNodePosition aNearestPositions infoMsgChan
+        aNewPosition :: MyNodePosition
+        aNewPosition = shiftToCenterOfMass aMyNodePosition aNearestPositions
+
     writeLog (aShardingNode^.nodeInfoMsgChan) [ShardingLvlTag] Info $
         "Make shift action. Neighbor positions: " ++ show (S.toList aNeighborPositions)
         ++ ". My position: " ++ show aMyNodePosition

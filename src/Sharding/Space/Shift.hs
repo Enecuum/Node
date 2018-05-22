@@ -38,12 +38,9 @@ findNearestNeighborPositions aMyNodePosition aPositions =
 
 
 
-shiftToCenterOfMass :: MyNodePosition -> S.Set NodePosition -> Chan InfoMsg -> IO MyNodePosition
-shiftToCenterOfMass aMyNodePosition aNearestPositions aInfoMsgChan = do
-    let point = Point aX1 aX2
-    writeLog aInfoMsgChan [ShardingLvlTag] Info $
-          "shiftToCenterOfMass: " ++ show aMyNodePosition ++ "  " ++ show point ++ "  " ++ show aNearestPositions
-    return $ MyNodePosition  point
+shiftToCenterOfMass :: MyNodePosition -> S.Set NodePosition -> MyNodePosition
+shiftToCenterOfMass aMyNodePosition aNearestPositions = do
+    MyNodePosition (Point aX1 aX2)
   where
     aX1 = aFoonc (halfOfMaxBound - x1) xh1 xh2
     aX2 = aFoonc (halfOfMaxBound - x2) yh1 yh2
@@ -52,10 +49,10 @@ shiftToCenterOfMass aMyNodePosition aNearestPositions aInfoMsgChan = do
         ((toInteger (aDiff + ah1) +
           toInteger (aDiff + ah2))`div`2) - aDiff
 
-    NodePosition (Point xh1 _) = aFind (Point (x1 + maxBound`div`2) x2) distX1
-    NodePosition (Point xh2 _) = aFind (Point (x1 - maxBound`div`2) x2) distX1
-    NodePosition (Point _ yh1) = aFind (Point x1 (x2 + maxBound`div`2)) distX2
-    NodePosition (Point _ yh2) = aFind (Point x1 (x2 - maxBound`div`2)) distX2
+    NodePosition (Point xh1 _) = aFind (Point (x1 + maxBound`div`4) x2) distX1
+    NodePosition (Point xh2 _) = aFind (Point (x1 - maxBound`div`4) x2) distX1
+    NodePosition (Point _ yh1) = aFind (Point x1 (x2 + maxBound`div`4)) distX2
+    NodePosition (Point _ yh2) = aFind (Point x1 (x2 - maxBound`div`4)) distX2
 
     aFind :: Point -> (Point -> Point -> Word64) -> NodePosition
     aFind aPositionPoint = findSuportNeighborPosition
