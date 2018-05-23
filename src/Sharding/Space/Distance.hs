@@ -22,7 +22,7 @@ class Points point where
 
 {-# INLINE dist #-}
 dist :: Word64 -> Word64 -> Word64
-dist x y = let d = x - y in max d (-d)
+dist x y = let d = x - y in min d (-d)
 
 distX1, distX2 :: Point -> Point -> Word64
 distX1 (Point x1 x2) (Point y1 y2) = dist x1 y1 + dist x2 y2 `div` 2
