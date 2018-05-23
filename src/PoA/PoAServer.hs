@@ -58,7 +58,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                         WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
                         writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
                     _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
-                        "Brouken message from PP " ++ show aMsg
+                        "Brouken message from PP " ++ show aMsg ++ "" ++ (show a)
                 Left a ->
                     -- TODO: Вписать ID если такой есть.
                     writeLog aInfoChan [ServerBootNodeTag] Warning $

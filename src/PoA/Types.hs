@@ -104,6 +104,7 @@ data PPToNNMessage
     -- | MsgMacroblock {
     --     macroblock :: Macroblock
     -- }
+    deriving (Show)
 
 data NodeType = PoW | PoA deriving (Eq, Show, Ord, Generic)
 
