@@ -49,10 +49,10 @@ shiftToCenterOfMass aMyNodePosition aNearestPositions = do
         ((toInteger (aDiff + ah1) +
           toInteger (aDiff + ah2))`div`2) - aDiff
 
-    NodePosition (Point xh1 _) = aFind (Point (x1 + maxBound`div`4) x2) distX1
-    NodePosition (Point xh2 _) = aFind (Point (x1 - maxBound`div`4) x2) distX1
-    NodePosition (Point _ yh1) = aFind (Point x1 (x2 + maxBound`div`4)) distX2
-    NodePosition (Point _ yh2) = aFind (Point x1 (x2 - maxBound`div`4)) distX2
+    NodePosition (Point xh1 _) = aFind (Point (x1 + maxBound`div`3) x2) distX1
+    NodePosition (Point xh2 _) = aFind (Point (x1 - maxBound`div`3) x2) distX1
+    NodePosition (Point _ yh1) = aFind (Point x1 (x2 + maxBound`div`3)) distX2
+    NodePosition (Point _ yh2) = aFind (Point x1 (x2 - maxBound`div`3)) distX2
 
     aFind :: Point -> (Point -> Point -> Word64) -> NodePosition
     aFind aPositionPoint = findSuportNeighborPosition
