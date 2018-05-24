@@ -22,11 +22,15 @@ class Points point where
 
 {-# INLINE dist #-}
 dist :: Word64 -> Word64 -> Word64
-dist x y = let d = x - y in min d (-d)
+dist x y = (max x y) `minusInWorld` (min x y)
+--dist x y = let d = x - y in min d (-d)
+--dist x y = (max x y) - (min x y)
 
 distX1, distX2 :: Point -> Point -> Word64
-distX1 (Point x1 x2) (Point y1 y2) = dist x1 y1 + dist x2 y2 `div` 2
-distX2 (Point x1 x2) (Point y1 y2) = dist x1 y1 `div` 2 + dist x2 y2
+distX1 (Point x1 x2) (Point y1 y2) = (dist x1 y1) `plusInWorld` (dist x2 y2 `div` 2)
+distX2 (Point x1 x2) (Point y1 y2) = (dist x1 y1 `div` 2) `plusInWorld` (dist x2 y2)
+distX3 (Point x1 x2) (Point y1 y2) = ((dist x1 x2) `div` 2) `plusInWorld` ((dist y1 y2) `div` 2)
+
 
 
 instance Points [Word64] where
@@ -45,7 +49,7 @@ instance Points Point where
     distance (Point x1 y1) (Point x2 y2) = max (dist x1 x2) (dist y1 y2)
 
     {-# INLINE rhombusDistance #-}
-    rhombusDistance (Point x1 y1) (Point x2 y2) = dist x1 x2 + dist y1 y2
+    rhombusDistance (Point x1 y1) (Point x2 y2) = (dist x1 x2) `plusInWorld` (dist y1 y2)
 
 
 class DistanceTo a b where
@@ -53,7 +57,7 @@ class DistanceTo a b where
 
 instance DistanceTo MyNodePosition PointTo where
     distanceTo (MyNodePosition aMyNodePosition) (PointTo point) =
-      rhombusDistance aMyNodePosition point
+        distance aMyNodePosition point
 
 instance DistanceTo MyNodePosition NodePosition where
     distanceTo (MyNodePosition aMyNodePosition) (NodePosition aNodePosition) =
