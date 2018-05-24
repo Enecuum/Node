@@ -63,11 +63,18 @@ instance Positions Point where
 {-# INLINE findSupportPoints #-}
 findSupportPoints :: Point -> [Point]
 findSupportPoints (Point x1 x2) = [
-    Point (x1 + fourthOfMaxBound) x2,
-    Point (x1 - fourthOfMaxBound) x2,
-    Point x1 (x2 + fourthOfMaxBound),
-    Point x1 (x2 - fourthOfMaxBound)]
+    Point (x1 `plusInWorld` fourthOfMaxBound) x2,
+    Point (x1 `minusInWorld` fourthOfMaxBound) x2,
+    Point x1 (x2 `plusInWorld` fourthOfMaxBound),
+    Point x1 (x2 `minusInWorld` fourthOfMaxBound)]
 
+plusInWorld :: Word64 -> Word64 -> Word64
+plusInWorld a b = minusInWorld a (maxBound - b)
+
+--
+minusInWorld :: Word64 -> Word64 -> Word64
+minusInWorld a b | a >= b = a - b
+                 | otherwise = maxBound - (b-a)
 
 halfOfMaxBound :: (Bounded num, Num num, Integral num) => num
 halfOfMaxBound = maxBound `div` 2
