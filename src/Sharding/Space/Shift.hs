@@ -85,22 +85,10 @@ moveToTriangle aMyNodePosition ((NodePosition (Point x1 y1)) : (NodePosition (Po
       ym3::Word64
       ym3 = plusInWorld (round $ (k3 * (fromIntegral xm3))) b
 
-
-      --
-      -- len = if lenLine <= 1
-      --       then 1000
-      --       else lenLine
-      --
-      -- xm :: Word64
-      -- xm  = x1 `plusInWorld` ((round $ len*0.5) ::Word64)
-      -- ym1 :: Word64
-      -- ym1 = (min y1 y2) `plusInWorld` ((round $ len*0.866)::Word64)
-      -- ym2 :: Word64
-      -- ym2 = y2 `plusInWorld` ((round $ len*0.866)::Word64)
 moveToTriangle a _ = a
 
 moveToSquere :: MyNodePosition -> [NodePosition] -> MyNodePosition
-moveToSquere aMyNodePosition aNodePositions = undefined
+moveToSquere aMyNodePosition aNodePositions = aMyNodePosition
 
 oneSixteenth :: (Bounded num, Num num, Integral num) => num
 oneSixteenth = maxBound `div` 16
