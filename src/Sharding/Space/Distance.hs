@@ -26,7 +26,7 @@ dist x y = (max x y) `minusInWorld` (min x y)
 --dist x y = let d = x - y in min d (-d)
 --dist x y = (max x y) - (min x y)
 
-distX1, distX2 :: Point -> Point -> Word64
+distX1, distX2, distX3 :: Point -> Point -> Word64
 distX1 (Point x1 x2) (Point y1 y2) = (dist x1 y1) `plusInWorld` (dist x2 y2 `div` 2)
 distX2 (Point x1 x2) (Point y1 y2) = (dist x1 y1 `div` 2) `plusInWorld` (dist x2 y2)
 distX3 (Point x1 x2) (Point y1 y2) = ((dist x1 x2) `div` 2) `plusInWorld` ((dist y1 y2) `div` 2)
