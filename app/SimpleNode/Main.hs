@@ -19,6 +19,7 @@ import              PoA.PoAServer
 import              CLI.CLI
 import              CLI.RPC
 import              Control.Exception (try, SomeException())
+import              Data.IP
 
 import              Data.Aeson (decode)
 import              Data.Aeson.Encode.Pretty (encodePretty)
@@ -91,9 +92,9 @@ main =  do
                                   Right item              -> return $ read item
                                   Left (_::SomeException) -> return $ rpcPort rpcbc
                             
-                            ip_en <- try (getEnv "enableIP") >>= \case
+                            ip_en <- join $ enableIPsList <$> (try (getEnv "enableIP") >>= \case
                                   Right item              -> return $ read item
-                                  Left (_::SomeException) -> return $ enableIP rpcbc
+                                  Left (_::SomeException) -> return $ enableIP rpcbc)
                             
                             token <- try (getEnv "token") >>= \case
                                   Right item              -> return $ read item
@@ -101,7 +102,7 @@ main =  do
                                        Just token -> return token
                                        Nothing    -> updateConfigWithToken conf snbc rpcbc
 
-                            serveRpc rpc_p ch aInfoCh
+                            serveRpc rpc_p ip_en ch aInfoCh
 
 
                       "cli" -> serveCLI ch aInfoCh
@@ -134,4 +135,13 @@ updateConfigWithToken conf snbc rpcbc = do
       L.writeFile configName $ encodePretty newConfig
  
       return token
-  
+
+enableIPsList :: [String] -> IO [IPRange]
+enableIPsList ips = sequence $ map (\ip_s -> try (readIO ip_s :: IO IPRange) >>= \case
+                            Right range_ip            -> return range_ip
+                            Left (_ :: SomeException) -> try (readIO ip_s :: IO IP) >>= \case
+                                 Right (IPv4 ipv4)          -> return $ IPv4Range $ makeAddrRange ipv4 32
+                                 Right (IPv6 ipv6)          -> return $ IPv6Range $ makeAddrRange ipv6 128
+                                 Left  (_ :: SomeException) -> error $ "Wrong IP format"
+                            )
+                               ips

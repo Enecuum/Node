@@ -13,6 +13,7 @@ import Control.Concurrent.Chan
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.Maybe (fromMaybe)
 
+import Data.IP
 import CLI.Common
 import Node.Node.Types
 import Service.Types.SerializeJSON ()
@@ -21,11 +22,24 @@ import Service.InfoMsg
 import Service.Types
 import Data.Text (pack)
 
-serveRpc :: PortNumber -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
-serveRpc portNum ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
+serveRpc :: PortNumber -> [IPRange] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
+serveRpc portNum ips ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
     (aMsg, addr) <- recvFrom aSocket (1024*100)
-    runRpc addr aSocket aMsg
+
+    if ipAccepted addr == False 
+    then return ()
+    else runRpc addr aSocket aMsg
       where
+--        ipAccepted :: SockAddr -> Bool
+        ipAccepted addr = do
+          case fromSockAddr addr of
+            Nothing      -> False
+            Just (ip, _) -> True
+{-                            foldl (\p ip_r -> case ip_r of
+                         IPv4Range r -> isMatchedTo ip (IPv4 r)
+                         IPv6Range r -> isMatchedTo ip (IPv6 r)
+                         ) False ips
+-}
         runRpc addr aSocket aMsg = do
           response <- call methods (fromStrict aMsg)
           sendAllTo aSocket (toStrict $ fromMaybe "" response) addr

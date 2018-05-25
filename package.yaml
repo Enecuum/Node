@@ -78,6 +78,7 @@ dependencies:
 - ini
 - text
 - aeson-pretty
+- iproute >= 1.7.4
 
 #tmp
 - scientific
