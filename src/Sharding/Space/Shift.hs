@@ -6,9 +6,6 @@ import              Sharding.Space.Distance
 import              Data.List.Extra
 import              Data.Word
 import qualified    Data.Set            as S
-import              Service.InfoMsg
-import              Control.Concurrent.Chan
-import              Node.Data.GlobalLoging
 
 
 checkUnevenness :: MyNodePosition -> S.Set NodePosition -> Bool
@@ -39,30 +36,74 @@ findNearestNeighborPositions aMyNodePosition aPositions =
 
 
 shiftToCenterOfMass :: MyNodePosition -> S.Set NodePosition -> MyNodePosition
-shiftToCenterOfMass aMyNodePosition aNearestPositions = do
-    MyNodePosition (Point aX1 aX2)
-  where
-    aX1 = aFoonc (halfOfMaxBound `minusInWorld` x1) xh1 xh2
-    aX2 = aFoonc (halfOfMaxBound `minusInWorld` x2) yh1 yh2
-
-    --aFoonc aDiff ah1 ah2 = fromInteger
-    --    ((toInteger (aDiff `plusInWorld` ah1) `plusInWorld`
-    --      toInteger (aDiff `plusInWorld` ah2))`div`2) `minusInWorld` aDiff
-
-    aFoonc aDiff ah1 ah2 = ((aDiff `plusInWorld` ah1) `plusInWorld` ((aDiff `plusInWorld` ah2) `div` 2)) `minusInWorld` aDiff
+shiftToCenterOfMass aMyNodePosition aNearestPositions
+      | S.size aNearestPositions == 0 = aMyNodePosition
+      | S.size aNearestPositions == 1 = moveToOneSixteenth aMyNodePosition (head $ S.elems aNearestPositions)
+      | S.size aNearestPositions == 2 = moveToTriangle aMyNodePosition $ S.toList aNearestPositions
+      | S.size aNearestPositions > 3  = moveToSquere aMyNodePosition $ take 3 $ sortOn (\a -> distanceTo aMyNodePosition a) $ S.toList aNearestPositions
 
 
-    NodePosition (Point xh1 _) = aFind (Point (x1 `plusInWorld` maxBound`div`4) x2) distX1
-    NodePosition (Point xh2 _) = aFind (Point (x1 `minusInWorld` maxBound`div`4) x2) distX1
-    NodePosition (Point _ yh1) = aFind (Point x1 (x2 `plusInWorld` maxBound`div`4)) distX2
-    NodePosition (Point _ yh2) = aFind (Point x1 (x2 `minusInWorld` maxBound`div`4)) distX2
 
-    aFind :: Point -> (Point -> Point -> Word64) -> NodePosition
-    aFind aPositionPoint = findSupportNeighborPosition
-        aMyNodePosition aNearestPositions (NodePosition aPositionPoint)
+moveToOneSixteenth :: MyNodePosition -> NodePosition -> MyNodePosition
+moveToOneSixteenth (MyNodePosition (Point x1 y1)) (NodePosition (Point x2 y2))
+      | x1 <= x2 && y1 <= y2 = MyNodePosition $ Point (x1 `minusInWorld` oneSixteenth) (y1 `minusInWorld` oneSixteenth)
+      | x1 > x2 && y1 <= y2  = MyNodePosition $ Point (x1 `plusInWorld` oneSixteenth) (y1 `minusInWorld` oneSixteenth)
+      | x1 <= x2 && y1 > y2  = MyNodePosition $ Point (x1 `minusInWorld` oneSixteenth) (y1 `plusInWorld` oneSixteenth)
+      | otherwise            = MyNodePosition $ Point (x1 `plusInWorld` oneSixteenth) (y1 `plusInWorld` oneSixteenth)
 
-    MyNodePosition (Point x1 x2) = aMyNodePosition
+moveToTriangle :: MyNodePosition -> [NodePosition] -> MyNodePosition
+moveToTriangle aMyNodePosition ((NodePosition (Point x1 y1)) : (NodePosition (Point x2 y2) :[])) =
+    if distanceTo aMyNodePosition (NodePosition $ Point xm2 ym2) > distanceTo aMyNodePosition (NodePosition $ Point xm3 ym3)
+    then MyNodePosition (Point xm3 ym3)
+    else MyNodePosition (Point xm2 ym2)
+    where
+      xm = (x1 `plusInWorld` x2) `div` 2
+      ym = (y1 `plusInWorld` y2) `div` 2
+      k1 ::Double
+      k1 = ((fromIntegral x1) - (fromIntegral x2)) / ((fromIntegral y1) - (fromIntegral y2))
+      k2 = - 1/k1
+      k3 = 1/k1
+      b :: Word64
+      b = (round $ ((fromIntegral ym) - k2 * (fromIntegral xm))) ::Word64
 
+      xdiff = (fromIntegral x1) - (fromIntegral x2)
+      ydiff = (fromIntegral y1) - (fromIntegral y2)
+      lenLine :: Double
+      lenLine = xdiff**2 + ydiff **2
+      len = if (lenLine < 18446744073709541115/16)
+            then lenLine * 1.2
+            else lenLine
+
+      xm2:: Word64
+      xm2 = minusInWorld (round $ sqrt $ len / (1 + k2 ** 2)) xm
+      --xm2 = - (fromIntegral xm) +
+      xm3:: Word64
+      xm3 = minusInWorld (round $ sqrt $ len / (1 + k3 ** 2)) xm
+      --xm3 = - (fromIntegral xm) + sqrt $ lenLine / (1 + k3 ** 2)
+      ym2::Word64
+      ym2 = plusInWorld (round $ (k2 * (fromIntegral xm2))) b
+      ym3::Word64
+      ym3 = plusInWorld (round $ (k3 * (fromIntegral xm3))) b
+
+
+      --
+      -- len = if lenLine <= 1
+      --       then 1000
+      --       else lenLine
+      --
+      -- xm :: Word64
+      -- xm  = x1 `plusInWorld` ((round $ len*0.5) ::Word64)
+      -- ym1 :: Word64
+      -- ym1 = (min y1 y2) `plusInWorld` ((round $ len*0.866)::Word64)
+      -- ym2 :: Word64
+      -- ym2 = y2 `plusInWorld` ((round $ len*0.866)::Word64)
+moveToTriangle a _ = a
+
+moveToSquere :: MyNodePosition -> [NodePosition] -> MyNodePosition
+moveToSquere aMyNodePosition aNodePositions = undefined
+
+oneSixteenth :: (Bounded num, Num num, Integral num) => num
+oneSixteenth = maxBound `div` 16
 
 findSupportNeighborPosition ::
         MyNodePosition
