@@ -136,12 +136,14 @@ updateConfigWithToken conf snbc rpcbc = do
  
       return token
 
-enableIPsList :: [String] -> IO [IPRange]
+enableIPsList :: [String] -> IO [AddrRange IPv6]
 enableIPsList ips = sequence $ map (\ip_s -> try (readIO ip_s :: IO IPRange) >>= \case
-                            Right range_ip            -> return range_ip
+                            Right range_ip            -> return $ case range_ip of
+                                  IPv4Range r -> ipv4RangeToIPv6 r
+                                  IPv6Range r -> r
                             Left (_ :: SomeException) -> try (readIO ip_s :: IO IP) >>= \case
-                                 Right (IPv4 ipv4)          -> return $ IPv4Range $ makeAddrRange ipv4 32
-                                 Right (IPv6 ipv6)          -> return $ IPv6Range $ makeAddrRange ipv6 128
+                                 Right (IPv4 ipv4)          -> return $ ipv4RangeToIPv6 $ makeAddrRange ipv4 32
+                                 Right (IPv6 ipv6)          -> return $ makeAddrRange ipv6 128
                                  Left  (_ :: SomeException) -> error $ "Wrong IP format"
                             )
                                ips

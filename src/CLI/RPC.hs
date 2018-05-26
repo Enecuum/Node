@@ -22,24 +22,26 @@ import Service.InfoMsg
 import Service.Types
 import Data.Text (pack)
 
-serveRpc :: PortNumber -> [IPRange] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
-serveRpc portNum ips ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
+serveRpc :: PortNumber -> [AddrRange IPv6] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
+serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
     (aMsg, addr) <- recvFrom aSocket (1024*100)
 
-    if ipAccepted addr == False 
-    then return ()
-    else runRpc addr aSocket aMsg
+
+    (ipAccepted addr) >>= \case
+      False -> putStrLn "Denied" >> return ()
+      True  -> putStrLn "Accepted" >> runRpc addr aSocket aMsg
       where
 --        ipAccepted :: SockAddr -> Bool
-        ipAccepted addr = do
+        ipAccepted addr = 
           case fromSockAddr addr of
-            Nothing      -> False
-            Just (ip, _) -> True
-{-                            foldl (\p ip_r -> case ip_r of
-                         IPv4Range r -> isMatchedTo ip (IPv4 r)
-                         IPv6Range r -> isMatchedTo ip (IPv6 r)
-                         ) False ips
--}
+            Nothing      -> return False
+            Just (ip, _) -> do
+                         putStrLn $ "Connection from: " ++ show ip
+                         return $ foldl (\p ip_r -> isMatchedTo (convert ip) ip_r) False ipRangeList
+          where convert ip = case ip of
+                   IPv4 i -> ipv4ToIPv6 i
+                   IPv6 i -> i
+
         runRpc addr aSocket aMsg = do
           response <- call methods (fromStrict aMsg)
           sendAllTo aSocket (toStrict $ fromMaybe "" response) addr
