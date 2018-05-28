@@ -39,9 +39,7 @@ shiftToCenterOfMass :: MyNodePosition -> S.Set NodePosition -> MyNodePosition
 shiftToCenterOfMass aMyNodePosition aNearestPositions
       | S.size aNearestPositions == 0 = aMyNodePosition
       | S.size aNearestPositions == 1 = moveToOneSixteenth aMyNodePosition (head $ S.elems aNearestPositions)
-      | S.size aNearestPositions == 2 = moveToTriangle aMyNodePosition $ S.toList aNearestPositions
-      | S.size aNearestPositions >= 3  = moveToSquere aMyNodePosition $ take 3 $ sortOn (\a -> distanceTo aMyNodePosition a) $ S.toList aNearestPositions
-
+      | S.size aNearestPositions >= 2 = moveToTriangle aMyNodePosition $ take 2 $ sortOn (\a -> distanceTo aMyNodePosition a) $ S.toList aNearestPositions
 
 
 moveToOneSixteenth :: MyNodePosition -> NodePosition -> MyNodePosition
@@ -66,8 +64,6 @@ moveToTriangle aMyNodePosition p1@((NodePosition (Point x1 y1)) : p2@(NodePositi
       ym2 = ((div my 2) `minusInWorld` (div (mx*866) 1000) ) `plusInWorld` x1
 moveToTriangle a _ = a
 
-moveToSquere :: MyNodePosition -> [NodePosition] -> MyNodePosition
-moveToSquere aMyNodePosition aNodePositions = aMyNodePosition
 
 oneSixteenth :: (Bounded num, Num num, Integral num) => num
 oneSixteenth = maxBound `div` 16
