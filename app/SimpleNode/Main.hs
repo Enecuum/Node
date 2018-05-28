@@ -142,8 +142,8 @@ enableIPsList ips = sequence $ map (\ip_s -> try (readIO ip_s :: IO IPRange) >>=
                                   IPv4Range r -> ipv4RangeToIPv6 r
                                   IPv6Range r -> r
                             Left (_ :: SomeException) -> try (readIO ip_s :: IO IP) >>= \case
-                                 Right (IPv4 ipv4)          -> return $ ipv4RangeToIPv6 $ makeAddrRange ipv4 32
-                                 Right (IPv6 ipv6)          -> return $ makeAddrRange ipv6 128
+                                 Right (IPv4 ipv4)          -> return $ ipv4RangeToIPv6 $ makeAddrRange ipv4 (if ipv4 == toIPv4 [0,0,0,0] then 0 else 32)
+                                 Right (IPv6 ipv6)          -> return $ makeAddrRange ipv6 (if ipv6 == (ipv4ToIPv6 $ toIPv4 [0,0,0,0]) then 0 else 128)
                                  Left  (_ :: SomeException) -> error $ "Wrong IP format"
                             )
                                ips

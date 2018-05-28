@@ -37,7 +37,7 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
             Nothing      -> return False
             Just (ip, _) -> do
                          putStrLn $ "Connection from: " ++ show ip
-                         return $ foldl (\p ip_r -> isMatchedTo (convert ip) ip_r) False ipRangeList
+                         return $ foldl (\p ip_r -> p || isMatchedTo (convert ip) ip_r) False ipRangeList
           where convert ip = case ip of
                    IPv4 i -> ipv4ToIPv6 i
                    IPv6 i -> i
