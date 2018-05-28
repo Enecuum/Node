@@ -38,7 +38,7 @@ findNearestNeighborPositions aMyNodePosition aPositions =
 shiftToCenterOfMass :: MyNodePosition -> S.Set NodePosition -> MyNodePosition
 shiftToCenterOfMass aMyNodePosition aNearestPositions
       | S.size aNearestPositions == 0 = aMyNodePosition
-      | S.size aNearestPositions == 1 = moveToOneSixteenth aMyNodePosition (head $ S.elems aNearestPositions)
+      | S.size aNearestPositions == 1 = moveToOneSixteenth aMyNodePosition (head $ S.toList aNearestPositions)
       | S.size aNearestPositions >= 2 = moveToTriangle aMyNodePosition $ take 2 $ sortOn (\a -> distanceTo aMyNodePosition a) $ S.toList aNearestPositions
 
 
@@ -65,8 +65,8 @@ moveToTriangle aMyNodePosition p1@((NodePosition (Point x1 y1)) : p2@(NodePositi
 moveToTriangle a _ = a
 
 
-oneSixteenth :: (Bounded num, Num num, Integral num) => num
-oneSixteenth = maxBound `div` 16
+oneSixteenth :: Word64
+oneSixteenth = maxBound `div` 32
 
 findSupportNeighborPosition ::
         MyNodePosition

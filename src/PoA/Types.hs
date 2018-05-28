@@ -268,6 +268,8 @@ instance ToJSON NNToPPMessage where
       ]
 
     toJSON (ResponseTransaction aTransaction) = object [
+        "tag"       .= ("Response"     :: String),
+        "type"      .= ("Transaction"  :: String),
         "transaction" .= (hex . show $ S.encode aTransaction)
       ]
 
