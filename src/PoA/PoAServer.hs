@@ -108,8 +108,8 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                             ("net.node." ++ show (toInteger aNodeId) ++ ".pending.amount")
                             (-1 :: Integer)
                         writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
-                        WS.sendTextData aConnect
-                            (fromString.show $ A.encode $ ResponseTransaction aTransaction :: B.ByteString)
+                        WS.sendTextData aConnect $ A.encode $ ResponseTransaction aTransaction
+                            --(fromString.show $  :: B.ByteString)
                 MsgMicroblock aMicroblock
                     | not aOk -> do
                         aSenderId <- readMVar aId
