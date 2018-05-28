@@ -58,10 +58,10 @@ moveToTriangle aMyNodePosition p1@((NodePosition (Point x1 y1)) : p2@(NodePositi
     where
       mx = x2 `minusInWorld` x1
       my = y2 `minusInWorld` y1
-      xm1 = ((div mx 2) `minusInWorld` (div (my*866) 1000) ) `plusInWorld` x1
-      xm2 = ((div mx 2) `plusInWorld`  (div (my*866) 1000) ) `plusInWorld` x1
-      ym1 = ((div my 2) `plusInWorld`  (div (mx*866) 1000) ) `plusInWorld` x1
-      ym2 = ((div my 2) `minusInWorld` (div (mx*866) 1000) ) `plusInWorld` x1
+      xm1 = ((div mx 2) `minusInWorld` (div (my*866) 1000)) `plusInWorld` x1
+      xm2 = ((div mx 2) `plusInWorld`  (div (my*866) 1000)) `plusInWorld` x1
+      ym1 = ((div my 2) `plusInWorld`  (div (mx*866) 1000)) `plusInWorld` y1
+      ym2 = ((div my 2) `minusInWorld` (div (mx*866) 1000)) `plusInWorld` y1
 moveToTriangle a _ = a
 
 
