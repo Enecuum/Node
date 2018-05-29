@@ -50,18 +50,20 @@ moveToOneSixteenth (MyNodePosition (Point x1 y1)) (NodePosition (Point x2 y2))
       | otherwise            = MyNodePosition $ Point (x1 `plusInWorld` oneSixteenth) (y1 `plusInWorld` oneSixteenth)
 
 moveToTriangle :: MyNodePosition -> [NodePosition] -> MyNodePosition
-moveToTriangle aMyNodePosition p1@((NodePosition (Point x1 y1)) : p2@(NodePosition (Point x2 y2) :[])) =
-    --if (distanceTo p1 p2) < ((distanceTo aMyNodePosition p1))
-    if distanceTo aMyNodePosition (NodePosition $ Point xm1 ym1) > distanceTo aMyNodePosition (NodePosition $ Point xm2 ym2)
-    then MyNodePosition (Point xm2 ym2)
-    else MyNodePosition (Point xm1 ym1)
-    where
-      mx = x2 `minusInWorld` x1
-      my = y2 `minusInWorld` y1
-      xm1 = ((div mx 2) `minusInWorld` (div (my*866) 1000)) `plusInWorld` x1
-      xm2 = ((div mx 2) `plusInWorld`  (div (my*866) 1000)) `plusInWorld` x1
-      ym1 = ((div my 2) `plusInWorld`  (div (mx*866) 1000)) `plusInWorld` y1
-      ym2 = ((div my 2) `minusInWorld` (div (mx*866) 1000)) `plusInWorld` y1
+moveToTriangle aMyNodePosition (p1@(NodePosition (Point x1 y1)) : p2@(NodePosition (Point x2 y2)) :[]) =
+    if (distanceTo p1 p2) < ((distanceTo aMyNodePosition p1)) || (distanceTo p1 p2) < ((distanceTo aMyNodePosition p2))
+    then aMyNodePosition
+    else
+        if distanceTo aMyNodePosition (NodePosition $ Point xm1 ym1) > distanceTo aMyNodePosition (NodePosition $ Point xm2 ym2)
+        then MyNodePosition (Point xm2 ym2)
+        else MyNodePosition (Point xm1 ym1)
+        where
+          mx = x2 `minusInWorld` x1
+          my = y2 `minusInWorld` y1
+          xm1 = ((div mx 2) `minusInWorld` (div (my*866) 1000)) `plusInWorld` x1
+          xm2 = ((div mx 2) `plusInWorld`  (div (my*866) 1000)) `plusInWorld` x1
+          ym1 = ((div my 2) `plusInWorld`  (div (mx*866) 1000)) `plusInWorld` y1
+          ym2 = ((div my 2) `minusInWorld` (div (mx*866) 1000)) `plusInWorld` y1
 moveToTriangle a _ = a
 
 
