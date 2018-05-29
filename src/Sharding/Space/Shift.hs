@@ -50,22 +50,27 @@ moveToOneSixteenth (MyNodePosition (Point x1 y1)) (NodePosition (Point x2 y2))
       | otherwise            = MyNodePosition $ Point (x1 `plusInWorld` oneSixteenth) (y1 `plusInWorld` oneSixteenth)
 
 moveToTriangle :: MyNodePosition -> [NodePosition] -> MyNodePosition
-moveToTriangle aMyNodePosition (p1@(NodePosition (Point x1 y1)) : p2@(NodePosition (Point x2 y2)) :[]) =
-    if (distanceTo p1 p2) < ((distanceTo aMyNodePosition p1)) || (distanceTo p1 p2) < ((distanceTo aMyNodePosition p2))
+moveToTriangle aMyNodePosition ((NodePosition p1@(Point x1 y1)) : (NodePosition p2@(Point x2 y2)) :[]) =
+    if (distanceTo (NodePosition p1) (NodePosition p2)) < ((distanceTo aMyNodePosition $ NodePosition p1)) || (distanceTo (NodePosition p1) (NodePosition p2)) < ((distanceTo aMyNodePosition $ NodePosition p2))
     then aMyNodePosition
     else
-        if distanceTo aMyNodePosition (NodePosition $ Point xm1 ym1) > distanceTo aMyNodePosition (NodePosition $ Point xm2 ym2)
-        then MyNodePosition (Point xm2 ym2)
-        else MyNodePosition (Point xm1 ym1)
+        if distanceTo aMyNodePosition (NodePosition $ point1) > distanceTo aMyNodePosition (NodePosition point2)
+        then MyNodePosition point2
+        else MyNodePosition point1
         where
-          mx = x2 `minusInWorld` x1
-          my = y2 `minusInWorld` y1
-          xm1 = ((div mx 2) `minusInWorld` (div (my*866) 1000)) `plusInWorld` x1
-          xm2 = ((div mx 2) `plusInWorld`  (div (my*866) 1000)) `plusInWorld` x1
-          ym1 = ((div my 2) `plusInWorld`  (div (mx*866) 1000)) `plusInWorld` y1
-          ym2 = ((div my 2) `minusInWorld` (div (mx*866) 1000)) `plusInWorld` y1
+          (point1, point2) = countPointInWorld p1 p2
 moveToTriangle a _ = a
 
+
+countPointInWorld :: Point -> Point-> (Point, Point)
+countPointInWorld (Point x1 y1) (Point x2 y2) = (Point (fromInteger xm1) (fromInteger ym1) , Point (fromInteger xm2) (fromInteger ym2) )
+    where
+      mx = (toInteger x2) - (toInteger x1)
+      my = (toInteger y2) - (toInteger y1)
+      xm1 = ((div mx 2) - (div (my*866) 1000)) + (toInteger x1)
+      xm2 = ((div mx 2) + (div (my*866) 1000)) + (toInteger x1)
+      ym1 = ((div my 2) + (div (mx*866) 1000)) + (toInteger y1)
+      ym2 = ((div my 2) - (div (mx*866) 1000)) + (toInteger y1)
 
 oneSixteenth :: Word64
 oneSixteenth = maxBound `div` 32
