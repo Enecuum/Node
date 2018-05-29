@@ -1,5 +1,7 @@
 {-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE StandaloneDeriving #-}
+
 module Service.Types where
 
 import              Data.Serialize
@@ -63,3 +65,9 @@ instance Show (LHistory INVALID) where
 instance Show (LHistory VALID) where
   show End = "End"
   show (Valid tm bl pr) = "Valid { valid = " ++ show tm ++ ", balance = " ++ show bl ++ ", prev = " ++ show pr ++ " }"
+
+
+type ToPublicKey  = PublicKey
+data MessageForSign = MessageForSign ToPublicKey Amount Time
+instance Serialize MessageForSign
+deriving instance Generic MessageForSign
