@@ -25,27 +25,27 @@ import Data.Text (pack)
 serveRpc :: PortNumber -> [AddrRange IPv6] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
 serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
     (aMsg, addr) <- recvFrom aSocket (1024*100)
+    runRpc addr aSocket aMsg
 
-
-    (ipAccepted addr) >>= \case
-      False -> putStrLn "Denied" >> return ()
-      True  -> putStrLn "Accepted" >> runRpc addr aSocket aMsg
       where
---        ipAccepted :: SockAddr -> Bool
-        ipAccepted addr = 
-          case fromSockAddr addr of
-            Nothing      -> return False
-            Just (ip, _) -> do
+        runRpc addr aSocket aMsg = do
+         response <- (ipAccepted addr) >>= \case
+             False -> putStrLn "Denied" >> return "Access denied: wrong IP"
+             True  -> putStrLn "Accepted" >> fromMaybe "" <$> (call methods (fromStrict aMsg))
+
+         sendAllTo aSocket (toStrict response) addr
+
+            where
+              ipAccepted addr = 
+                case fromSockAddr addr of
+                  Nothing      -> return False
+                  Just (ip, _) -> do
                          putStrLn $ "Connection from: " ++ show ip
                          return $ foldl (\p ip_r -> p || isMatchedTo (convert ip) ip_r) False ipRangeList
-          where convert ip = case ip of
-                   IPv4 i -> ipv4ToIPv6 i
-                   IPv6 i -> i
+                    where convert ip = case ip of
+                             IPv4 i -> ipv4ToIPv6 i
+                             IPv6 i -> i
 
-        runRpc addr aSocket aMsg = do
-          response <- call methods (fromStrict aMsg)
-          sendAllTo aSocket (toStrict $ fromMaybe "" response) addr
-            where
               handle f = do  
                     mTx <- liftIO $ f
                     case mTx of
