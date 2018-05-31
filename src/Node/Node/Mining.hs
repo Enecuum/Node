@@ -64,9 +64,9 @@ managerMining aChan aMd = do
           readChan aChan >>= \a -> runOption a $ do
             baseNodeOpts aChan aMd mData
 
-            opt isInitDatagram          $ answerToInitDatagram aMd
-            opt isDatagramMsg           $ answerToDatagramMsg aChan aMd (mData^.myNodeId)
-            opt isClientIsDisconnected $ miningNodeAnswerClientIsDisconnected aMd
+            opt isInitDatagram              $ answerToInitDatagram aMd
+            opt isDatagramMsg               $ answerToDatagramMsg aChan aMd (mData^.myNodeId)
+            opt isClientIsDisconnected      $ miningNodeAnswerClientIsDisconnected aMd
 
             opt isTestBroadcastBlockIndex   $ answerToTestBroadcastBlockIndex aMd
             opt isNewTransaction            $ answerToNewTransaction aMd

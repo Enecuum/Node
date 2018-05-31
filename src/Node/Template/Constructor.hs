@@ -50,6 +50,7 @@ managerMsgFuncListData = toList $ do
     "clientIsDisconnected"  +: [["NodeId"], ["Chan", "MsgToSender"]]
     "serverIsDead"          +: []
     "findBestConnects"      +: []
+    "testSendMessage"       +: [["NodeId"]]
     "datagramMsg"           +: [["B.ByteString"], ["NodeId"]]
     "initDatagram"          +: [["Chan", "MsgToSender"], ["HostAddress"], ["B.ByteString"]]
     "connectivityQuery"     +: []
@@ -58,6 +59,7 @@ managerMsgFuncListData = toList $ do
     "msgFromPP"             +: [["MsgToMainActorFromPP"]]
     "ppNodeIsDisconected"   +: [["PPId"]]
     "disconnectNode"        +: [["NodeId"]]
+    "testNode"              +: [["NodeId"]]
     "sendInitDatagram"      +: [["HostAddress"], ["PortNumber"], ["NodeId"]]
     "shardingNodeRequestMsg" +: [["N.ShardingNodeRequestMsg"]]
 

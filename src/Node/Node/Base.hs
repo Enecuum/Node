@@ -69,6 +69,7 @@ baseNodeOpts aChan aMd aData = do
     opt isQueryPositions        $ answerToQueryPositions aMd
     opt isDisconnectNode        $ answerToDisconnectNode  aData
     opt isFindBestConnects      $ answerToFindBestConnects aChan aMd
+    opt isTestSendMessage       $ answerToTestSendMessage aData
 
 
 pattern Chan :: Chan MsgToSender -> Node
@@ -254,6 +255,17 @@ answerToSendInitDatagram _ _ _ = pure ()
 
 answerToServerDead :: ManagerMsg a => Chan a -> PortNumber -> a -> IO ()
 answerToServerDead aChan aPort _ = void $ startServerActor aChan aPort
+
+answerToTestSendMessage
+    ::  ManagerData md
+    =>  ManagerMsg msg
+    =>  md
+    ->  msg
+    ->  IO ()
+answerToTestSendMessage aData (toManagerMsg -> TestNode aId) = do
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+        "answerToTestSendMessage: Node broadcast list request to " ++ show (aId) ++ " nodes."
+    makeAndSendTo aData [aId] IsYouBrodcast
 
 
 answerToDisconnectNode

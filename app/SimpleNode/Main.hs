@@ -6,7 +6,7 @@ import              Control.Monad
 import              Control.Concurrent
 import              System.Environment (getEnv)
 import              Data.List.Extra()
-
+import              Node.Data.Key
 import              Node.Node.Mining
 import              Node.Node.Types
 import              Service.Timer
@@ -16,7 +16,6 @@ import              Service.Network.Base
 import              PoA.PoAServer
 import              CLI.CLI (serveRpc)
 import              Control.Exception (try, SomeException())
-
 import              Data.Aeson
 import qualified    Data.ByteString.Lazy as L
 
@@ -71,6 +70,10 @@ main =  do
                     log_id  <- try (getEnv "log_id") >>= \case
                         Right item              -> return item
                         Left (_::SomeException) -> return $ show aMyNodeId
+
+                    try (getEnv "test_send_id") >>= \case
+                        Right idTo              -> (metronomeS 10000000 (writeChan ch (testSendMessage ((read idTo) :: NodeId))))
+                        Left (e::SomeException) -> print e
 
                     i_am_firs <- try (getEnv "isFirst") >>= \case
                         Right "Yes" -> return True
