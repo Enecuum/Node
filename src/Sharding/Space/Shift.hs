@@ -37,10 +37,9 @@ findNearestNeighborPositions aMyNodePosition aPositions =
 
 shiftToCenterOfMass :: MyNodePosition -> S.Set NodePosition -> MyNodePosition
 shiftToCenterOfMass aMyNodePosition aNearestPositions
-      | S.size aNearestPositions == 0 = aMyNodePosition
       | S.size aNearestPositions == 1 = moveToOneSixteenth aMyNodePosition (head $ S.toList aNearestPositions)
       | S.size aNearestPositions >= 2 = moveToTriangle aMyNodePosition $ take 2 $ sortOn (\a -> distanceTo aMyNodePosition a) $ S.toList aNearestPositions
-
+shiftToCenterOfMass aMyNodePosition _ = aMyNodePosition
 
 moveToOneSixteenth :: MyNodePosition -> NodePosition -> MyNodePosition
 moveToOneSixteenth (MyNodePosition (Point x1 y1)) (NodePosition (Point x2 y2))
@@ -50,7 +49,7 @@ moveToOneSixteenth (MyNodePosition (Point x1 y1)) (NodePosition (Point x2 y2))
       | otherwise            = MyNodePosition $ Point (x1 `plusInWorld` oneSixteenth) (y1 `plusInWorld` oneSixteenth)
 
 moveToTriangle :: MyNodePosition -> [NodePosition] -> MyNodePosition
-moveToTriangle aMyNodePosition ((NodePosition p1@(Point x1 y1)) : (NodePosition p2@(Point x2 y2)) :[]) =
+moveToTriangle aMyNodePosition ((NodePosition p1) : (NodePosition p2) :[]) =
     if (distanceTo (NodePosition p1) (NodePosition p2)) < ((distanceTo aMyNodePosition $ NodePosition p1)) || (distanceTo (NodePosition p1) (NodePosition p2)) < ((distanceTo aMyNodePosition $ NodePosition p2))
     then aMyNodePosition
     else

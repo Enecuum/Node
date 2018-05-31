@@ -325,7 +325,7 @@ shiftTheShardingNode :: T.ManagerMsg msg =>
     ->  ShardingNode
     -> Chan InfoMsg
     ->  IO ()
-shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan = do
+shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode _ = do
     let
         aNeighborPositions :: S.Set NodePosition
         aNeighborPositions = neighborPositions aShardingNode

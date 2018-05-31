@@ -15,8 +15,6 @@ import              Node.Node.Types
 import              Service.InfoMsg as I
 import              Service.Types
 import              System.Random.Shuffle
-import              Data.String
-import qualified    Data.ByteString as B
 import              Data.Aeson as A
 import              Control.Exception
 import              Node.Data.GlobalLoging
