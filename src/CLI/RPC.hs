@@ -12,6 +12,7 @@ import Control.Monad.Except (throwError)
 import Control.Concurrent.Chan
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.Maybe (fromMaybe)
+import System.IO.Unsafe (unsafePerformIO)
 
 import Data.IP
 import CLI.Common
@@ -22,6 +23,8 @@ import Service.InfoMsg
 import Service.Types
 import Data.Text (pack)
 
+import Network.Socket (SockAddr)
+
 serveRpc :: PortNumber -> [AddrRange IPv6] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
 serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
     (aMsg, addr) <- recvFrom aSocket (1024*100)
@@ -29,14 +32,13 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
 
       where
         runRpc addr aSocket aMsg = do
-         response <- (ipAccepted addr) >>= \case
-             False -> putStrLn "Denied" >> return "Access denied: wrong IP"
-             True  -> putStrLn "Accepted" >> fromMaybe "" <$> (call methods (fromStrict aMsg))
+         response <- fromMaybe "" <$> (call methods (fromStrict aMsg))
 
          sendAllTo aSocket (toStrict response) addr
 
             where
-              ipAccepted addr = 
+              ipAccepted :: SockAddr -> Bool
+              ipAccepted addr = unsafePerformIO $ do 
                 case fromSockAddr addr of
                   Nothing      -> return False
                   Just (ip, _) -> do
@@ -45,12 +47,18 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
                     where convert ip = case ip of
                              IPv4 i -> ipv4ToIPv6 i
                              IPv6 i -> i
-
+              
               handle f = do  
-                    mTx <- liftIO $ f
-                    case mTx of
-                      Left e  -> throwError $ rpcError  400 $ pack $ show e
-                      Right r -> liftIO $ return r
+                    case ipAccepted addr of
+                          False -> do
+                                liftIO $ putStrLn "Denied"
+                                throwError $ rpcError 401 $ pack "Access denied: wrong IP"
+                          True  -> do
+                                liftIO $ putStrLn "Accepted"
+                                mTx <- liftIO $ f
+                                case mTx of
+                                     Left e  -> throwError $ rpcError 400 $ pack $ show e
+                                     Right r -> liftIO $ return r
 
 
               methods = [createTx , createNTx, createUnlimTx, balanceReq, sendMsgBroadcast, sendMsgTo, loadMsg ]
