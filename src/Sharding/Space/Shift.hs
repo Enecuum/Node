@@ -30,47 +30,63 @@ findNearestNeighborPositions aMyNodePosition aPositions =
 
     aFilter :: Point -> S.Set NodePosition
     aFilter aSupportPoint = S.filter
-        (\aPosition -> distanceTo (NodePosition aSupportPoint) aPosition < fourthOfMaxBound)
+        (\aPosition -> distanceTo (NodePosition aSupportPoint) aPosition < maxBound`div`2)
         aPositions
 
 
 
 shiftToCenterOfMass :: MyNodePosition -> S.Set NodePosition -> MyNodePosition
-shiftToCenterOfMass aMyNodePosition aNearestPositions =
-    MyNodePosition $ Point aX1 aX2
-  where
-    aX1 = aFoonc (halfOfMaxBound - x1) xh1 xh2
-    aX2 = aFoonc (halfOfMaxBound - x2) yh1 yh2
+shiftToCenterOfMass aMyNodePosition aNearestPositions
+      | S.size aNearestPositions == 1 = moveToOneSixteenth aMyNodePosition (head $ S.toList aNearestPositions)
+      | S.size aNearestPositions >= 2 = moveToTriangle aMyNodePosition $ take 2 $ sortOn (\a -> distanceTo aMyNodePosition a) $ S.toList aNearestPositions
+shiftToCenterOfMass aMyNodePosition _ = aMyNodePosition
 
-    aFoonc aDiff ah1 ah2 = fromInteger
-        ((toInteger (aDiff + ah1) +
-          toInteger (aDiff + ah2))`div`2) - aDiff
+moveToOneSixteenth :: MyNodePosition -> NodePosition -> MyNodePosition
+moveToOneSixteenth (MyNodePosition (Point x1 y1)) (NodePosition (Point x2 y2))
+      | x1 <= x2 && y1 <= y2 = MyNodePosition $ Point (x1 `minusInWorld` oneSixteenth) (y1 `minusInWorld` oneSixteenth)
+      | x1 > x2 && y1 <= y2  = MyNodePosition $ Point (x1 `plusInWorld` oneSixteenth) (y1 `minusInWorld` oneSixteenth)
+      | x1 <= x2 && y1 > y2  = MyNodePosition $ Point (x1 `minusInWorld` oneSixteenth) (y1 `plusInWorld` oneSixteenth)
+      | otherwise            = MyNodePosition $ Point (x1 `plusInWorld` oneSixteenth) (y1 `plusInWorld` oneSixteenth)
 
-    NodePosition (Point xh1 _) = aFind (Point (x1 + fourthOfMaxBound) x2) distX1
-    NodePosition (Point xh2 _) = aFind (Point (x1 - fourthOfMaxBound) x2) distX1
-    NodePosition (Point _ yh1) = aFind (Point x1 (x2 + fourthOfMaxBound)) distX2
-    NodePosition (Point _ yh2) = aFind (Point x1 (x2 - fourthOfMaxBound)) distX2
+moveToTriangle :: MyNodePosition -> [NodePosition] -> MyNodePosition
+moveToTriangle aMyNodePosition ((NodePosition p1) : (NodePosition p2) :[]) =
+    if (distanceTo (NodePosition p1) (NodePosition p2)) < ((distanceTo aMyNodePosition $ NodePosition p1)) || (distanceTo (NodePosition p1) (NodePosition p2)) < ((distanceTo aMyNodePosition $ NodePosition p2))
+    then aMyNodePosition
+    else
+        if distanceTo aMyNodePosition (NodePosition $ point1) > distanceTo aMyNodePosition (NodePosition point2)
+        then MyNodePosition point2
+        else MyNodePosition point1
+        where
+          (point1, point2) = countPointInWorld p1 p2
+moveToTriangle a _ = a
 
-    aFind :: Point -> (Point -> Point -> Word64) -> NodePosition
-    aFind aPositionPoint = findSuportNeighborPosition
-        aMyNodePosition aNearestPositions (NodePosition aPositionPoint)
 
-    MyNodePosition (Point x1 x2) = aMyNodePosition
+countPointInWorld :: Point -> Point-> (Point, Point)
+countPointInWorld (Point x1 y1) (Point x2 y2) = (Point (fromInteger xm1) (fromInteger ym1) , Point (fromInteger xm2) (fromInteger ym2) )
+    where
+      mx = (toInteger x2) - (toInteger x1)
+      my = (toInteger y2) - (toInteger y1)
+      xm1 = ((div mx 2) - (div (my*866) 1000)) + (toInteger x1)
+      xm2 = ((div mx 2) + (div (my*866) 1000)) + (toInteger x1)
+      ym1 = ((div my 2) + (div (mx*866) 1000)) + (toInteger y1)
+      ym2 = ((div my 2) - (div (mx*866) 1000)) + (toInteger y1)
 
+oneSixteenth :: Word64
+oneSixteenth = maxBound `div` 32
 
-findSuportNeighborPosition ::
+findSupportNeighborPosition ::
         MyNodePosition
     ->  S.Set NodePosition
     ->  NodePosition
     -> (Point -> Point -> Word64)
     ->  NodePosition
-findSuportNeighborPosition aMyNodePosition aNearestPositions aSupportPoint aDist =
+findSupportNeighborPosition aMyNodePosition aNearestPositions aSupportPoint aDist =
     head $ sortOn aDistanceToMe $
     filter aIsInSupportFourthOfSpace $ S.elems aNearestPositions
   where
     aIsInSupportFourthOfSpace :: NodePosition -> Bool
     aIsInSupportFourthOfSpace aNodePosition =
-        distanceTo aSupportPoint aNodePosition < fourthOfMaxBound
+        distanceTo aSupportPoint aNodePosition < maxBound `div` 2
 
     aDistanceToMe :: NodePosition -> Distance Point
     aDistanceToMe (NodePosition aNeighborPosition) =

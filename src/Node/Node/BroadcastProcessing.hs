@@ -19,6 +19,7 @@ import              Data.Serialize
 import qualified    Data.Map as M
 import qualified    Data.Bimap as BI
 import              Lens.Micro
+import              Lens.Micro.Mtl()
 import              Control.Concurrent
 import              Control.Monad.Extra
 import              System.Clock
@@ -73,6 +74,10 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl LogicLvl
                     "The node have position " ++ show aNodePosition ++ ", node id is " ++ show aMyNodeId
                 writeChan (aData^.fileServerChan) $
                     FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId) (NodeInfoListLogicLvl [(toNodeId aMyNodeId, aNodePosition)])
+
+                whenJust (aData^.nodes.at (toNodeId aMyNodeId)) $ \aNode ->
+                    modifyIORef aMd $ nodes %~ M.insert (toNodeId aMyNodeId)
+                        (aNode & nodePosition ?~ aNodePosition)
 
                 sendToShardingLvl aData $
                     T.TheNodeHaveNewCoordinates (toNodeId aMyNodeId) aNodePosition

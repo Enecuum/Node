@@ -5,8 +5,8 @@ module Main where
 import              Control.Monad
 import              Control.Concurrent
 import              System.Environment (getEnv)
-import              Data.List.Extra
-
+import              Data.List.Extra()
+import              Node.Data.Key
 import              Node.Node.Mining
 import              Node.Node.Types
 import              Service.Timer
@@ -16,7 +16,6 @@ import              Service.Network.Base
 import              PoA.PoAServer
 import              CLI.CLI (serveRpc)
 import              Control.Exception (try, SomeException())
-
 import              Data.Aeson
 import qualified    Data.ByteString.Lazy as L
 
@@ -35,8 +34,11 @@ main =  do
                 aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMyNodeId aFileChan -> do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
+                    metronomeS 1000000 (writeChan ch queryPositions)
+                    metronomeLinear 100000 100000000 (writeChan ch infoRequest)
                     metronomeS 1000000 (writeChan ch deleteOldestMsg)
                     metronomeS 1000000 (writeChan ch deleteOldestPoW)
+                    metronomeS 1000000 (writeChan ch findBestConnects)
                     poa_in  <- try (getEnv "poaInPort") >>= \case
                             Right item              -> return $ read item
                             Left (_::SomeException) -> case simpleNodeBuildConfig conf of
@@ -68,6 +70,17 @@ main =  do
                     log_id  <- try (getEnv "log_id") >>= \case
                         Right item              -> return item
                         Left (_::SomeException) -> return $ show aMyNodeId
+
+                    try (getEnv "test_send_id") >>= \case
+                        Right idTo              -> (metronomeS 10000000 (writeChan ch (testSendMessage ((read idTo) :: NodeId))))
+                        Left (e::SomeException) -> print e
+
+                    i_am_firs <- try (getEnv "isFirst") >>= \case
+                        Right "Yes" -> return True
+                        Right _   -> return False
+                        Left (_::SomeException) -> return False
+
+                    when i_am_firs $ writeChan ch InitShardingLvl
 
                     void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh log_id
 

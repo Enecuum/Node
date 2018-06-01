@@ -17,16 +17,16 @@ module Node.Node.Processing (
 import qualified    Data.Map                        as M
 import              Data.List.Extra()
 import              Data.IORef
-import              System.Random
+import              System.Random()
 import              Lens.Micro
-import              Lens.Micro.Mtl
+import              Lens.Micro.Mtl()
 import              Control.Concurrent
 import              Control.Monad.Extra
 import              Service.Network.Base
 
 import              Node.Node.Types
 import              Node.Data.NetPackage
-import              Sharding.Sharding
+import              Sharding.Sharding()
 import qualified    Sharding.Types.Node as T
 import              Sharding.Space.Point
 import              Node.Data.MakeAndSendTraceRouting
@@ -58,37 +58,16 @@ instance Processing (IORef ManagerNodeData) (Response MiningLvl) where
 
 -- | Обработка "ответа" для сетевого уровня.
 instance Processing (IORef ManagerNodeData) (Response NetLvl) where
-    processing aChan aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
-        BroadcastListResponse aBroadcastListLogic aBroadcastList isBootNode -> do
+    processing _ aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
+        BroadcastListResponse aBroadcastListLogic aBroadcastList _ -> do
             aData <- readIORef aMd
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "Accepted lists of broadcasts and points of node. " ++
                 show aBroadcastListLogic ++ show aBroadcastList
-            let aMyNodeId = aData^.myNodeId
-
-            -- добавление соответсвующих записей в списки коннектов и координат.
-            -- writeLog (aData^.infoMsgChan) [NetLvlTag] Info
-            --     "Add connects to list."
-            -- writeLog (aData^.infoMsgChan) [NetLvlTag] Info
-            --     "Add node coordinate to coordinate list."
-
             writeChan (aData^.fileServerChan) $
-                FileActorRequestNetLvl $ UpdateFile aMyNodeId aBroadcastList
+                FileActorRequestNetLvl $ UpdateFile (aData^.myNodeId) aBroadcastList
             writeChan (aData^.fileServerChan) $
-                FileActorRequestLogicLvl $ UpdateFile aMyNodeId aBroadcastListLogic
-
-            let NodeInfoListNetLvl aList = aBroadcastList
-            when (null aList && isBootNode && isNothing (aData^.myNodePosition)) $ do
-                aDeltaX <- randomIO
-                aDeltaY <- randomIO
-                let aMyNodePosition = MyNodePosition $ Point aDeltaX aDeltaY
-                aChanOfSharding <- newChan
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info
-                    "Select new random coordinate because I am first node in net."
-                makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition (aData^.infoMsgChan)
-                modifyIORef aMd (&~ do
-                    myNodePosition .= Just aMyNodePosition
-                    shardingChan   .= Just aChanOfSharding)
+                FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId) aBroadcastListLogic
 
         HostAdressResponse _ -> return ()
 
@@ -196,12 +175,15 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
             NodePositionRequestPackage -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Sending request of node position to sharding lvl. "
-                    ++ "Petitioner " ++ show aNodeId ++ "."
+                    ++ "Pesitioner " ++ show aNodeId ++ "."
                 aRequestToNetLvl NodePositionResponsePackage $ do
                     aChan <- newChan
                     sendToShardingLvl aData $
                         T.NodePositionAction aChan aNodeId
                     T.NodePositionResponse aMyNodePosition <- readChan aChan
+                    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                        "Accepted responce of node position from sharding lvl. "
+                        ++ show aMyNodePosition
                     modifyIORef aMd (myNodePosition ?~ aMyNodePosition)
                     return aMyNodePosition
 
@@ -285,8 +267,11 @@ instance Processing (IORef ManagerNodeData) (Request MiningLvl) where
 
 
 sendToShardingLvl :: ManagerData md => md -> T.ShardingNodeAction -> IO ()
-sendToShardingLvl aData aMsg = whenJust (aData^.shardingChan) $ \aChan ->
-    writeChan aChan aMsg
+sendToShardingLvl aData aMsg = do
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Sending msg to sharding lvl"
+    whenJust (aData^.shardingChan) $ \aChan -> do
+        writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Sended msg to sharding lvl"
+        writeChan aChan aMsg
 
 
 requestToNetLvl
