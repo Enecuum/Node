@@ -29,6 +29,7 @@ import              Service.Types.SerializeInstances
 import qualified    Data.HashMap.Strict as H
 import qualified    Data.Vector as V
 import              Data.Scientific
+import              Data.Text.Internal.Unsafe.Char
 
 -- TODO: aception of msg from a PoA/PoW.
 -- ----: parsing - ok!
@@ -150,13 +151,12 @@ data NNToPPMessage
     }
 
 
-myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
+--myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
 myUnhex aString = case unhex $ T.unpack aString of
-    Just aDecodeString  -> do
-        case S.decode $ fromString aDecodeString of
-            Right aJustVal  -> return aJustVal
-            Left _          -> mzero
-    Nothing             -> mzero
+    Just aDecodeString  -> case S.decode $ fromString aDecodeString of
+        Right aJustVal  -> Right aJustVal
+        Left a          -> Left a
+    Nothing             -> Left "Nothing"
 
 
 unhexNodeId :: MonadPlus m => T.Text -> m NodeId
@@ -232,7 +232,7 @@ decodeList :: S.Serialize a => [T.Text] -> [a]
 decodeList aList
     | all isRight aDecodeList   = rights aDecodeList
     | otherwise                 = []
-    where aDecodeList = S.decode . fromString . T.unpack <$> aList
+    where aDecodeList = myUnhex <$> aList
 
 
 instance ToJSON NNToPPMessage where
@@ -270,7 +270,7 @@ instance ToJSON NNToPPMessage where
     toJSON (ResponseTransaction aTransaction) = object [
         "tag"       .= ("Response"     :: String),
         "type"      .= ("Transaction"  :: String),
-        "transaction" .= (hex . show $ S.encode aTransaction)
+        "transaction" .= (hex . (unsafeChr8 <$>). B.unpack $ S.encode aTransaction)
       ]
 
     toJSON (MsgBroadcastMsg aMessage (IdFrom aPPId)) = object [
