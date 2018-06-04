@@ -71,9 +71,10 @@ main =  do
                         Right item              -> return item
                         Left (_::SomeException) -> return $ show aMyNodeId
 
-                    try (getEnv "test_send_id") >>= \case
+                    test_send <- try (getEnv "test_send_id") >>= \case
                         Right idTo              -> (metronomeS 10000000 (writeChan ch (testSendMessage ((read idTo) :: NodeId))))
                         Left (e::SomeException) -> print e
+                    print test_send    
 
                     i_am_firs <- try (getEnv "isFirst") >>= \case
                         Right "Yes" -> return True
