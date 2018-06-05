@@ -32,7 +32,7 @@ data Transaction = WithTime { time :: Time, transaction :: Transaction }
 --                 | AccumulatorsToInductors { owner :: PublicKey, amount :: Amount }
 --                 | InductorsToAccumulators { owner :: PublicKey, amount :: Amount }
 --                 | SendInductorsFromKeyToKey { owner :: PublicKey, receiver :: PublicKey, amount :: Amount }
-  deriving ( Generic, Show, Eq, Ord)
+  deriving ( Generic, Show, Eq, Ord, Read)
 
 
 instance Serialize Transaction
