@@ -17,8 +17,6 @@ module Node.FileDB.FileServer (
     ,   FileActorRequestInternal(..)
   ) where
 
-import              Lens.Micro.GHC()
-
 import              Sharding.Space.Distance
 import              Data.List.Extra
 
