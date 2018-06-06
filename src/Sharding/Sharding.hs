@@ -61,6 +61,7 @@ import              Node.Data.GlobalLoging
 import              Service.InfoMsg
 import              Lens.Micro.GHC()
 import              Node.Data.Key
+import              Data.Maybe (fromJust)
 
 
 sizeOfShardStore:: Int
@@ -313,11 +314,14 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMs
             writeChan aChanRequest ShiftAction
 
     enc <- L.readFile "configs/config.json"
+
     case A.decode enc of
-        Nothing -> error "config not is valid"
-        Just aEnc
-            |  T.sharding aEnc == "off" -> return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan maxBound
-            | otherwise              ->  return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan 1
+        Nothing    -> error "config not is valid"
+        Just aEnc  -> do
+            let shardEnable = T.sharding $ fromJust $ T.simpleNodeBuildConfig aEnc
+            case shardEnable of
+              True ->  return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan 1
+              _    ->  return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan maxBound
 
 shiftTheShardingNode :: T.ManagerMsg msg =>
         Chan msg

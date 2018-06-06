@@ -5,23 +5,33 @@ module Main where
 import              Control.Monad
 import              Control.Concurrent
 import              System.Environment (getEnv)
-import              Data.List.Extra()
 import              Node.Data.Key
+
+import              Data.Maybe (fromJust)
 import              Node.Node.Mining
 import              Node.Node.Types
+import              Node.Data.Key (generateKeyPair)
+import              Service.Types.PublicPrivateKeyPair (fromPublicKey256k1, compressPublicKey)
 import              Service.Timer
 import              Node.Lib
 import              Service.InfoMsg
 import              Service.Network.Base
 import              PoA.PoAServer
-import              CLI.CLI (serveRpc)
+import              CLI.CLI
+import              CLI.RPC
 import              Control.Exception (try, SomeException())
-import              Data.Aeson
+import              Data.IP
+
+import              Data.Aeson (decode)
+import              Data.Aeson.Encode.Pretty (encodePretty)
 import qualified    Data.ByteString.Lazy as L
+
+configName :: String
+configName = "configs/config.json"
 
 main :: IO ()
 main =  do
-        enc <- L.readFile "configs/config.json"
+        enc <- L.readFile configName
         case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
           Just conf -> do
@@ -39,17 +49,14 @@ main =  do
                     metronomeS 1000000 (writeChan ch deleteOldestMsg)
                     metronomeS 1000000 (writeChan ch deleteOldestPoW)
                     metronomeS 1000000 (writeChan ch findBestConnects)
+
+                    snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case 
+                            Right item              -> return item
+                            Left (_::SomeException) -> error "Please, specify SimpleNodeBuildConfig" 
+
                     poa_in  <- try (getEnv "poaInPort") >>= \case
                             Right item              -> return $ read item
-                            Left (_::SomeException) -> case simpleNodeBuildConfig conf of
-                                 Nothing   -> error "Please, specify SimpleNodeConfig"
-                                 Just snbc -> return $ poaInPort snbc
-
-                    rpc_p   <- try (getEnv "rpcPort") >>= \case
-                            Right item              -> return $ read item
-                            Left (_::SomeException) -> case simpleNodeBuildConfig conf of
-                                 Nothing   -> error "Please, specify SimpleNodeConfig"
-                                 Just snbc -> return $ rpcPort snbc
+                            Left (_::SomeException) -> return $ poaInPort snbc
 
                     stat_h  <- try (getEnv "statsdHost") >>= \case
                             Right item              -> return item
@@ -67,9 +74,9 @@ main =  do
                             Right item              -> return $ read item
                             Left (_::SomeException) -> return $ port $ logsBuildConfig conf
 
-                    log_id  <- try (getEnv "log_id") >>= \case
-                        Right item              -> return item
-                        Left (_::SomeException) -> return $ show aMyNodeId
+                    log_id  <- try (getEnv "logId") >>= \case
+                            Right item              -> return item
+                            Left (_::SomeException) -> return $ show aMyNodeId
 
                     try (getEnv "test_send_id") >>= \case
                         Right idTo              -> (metronomeS 10000000 (writeChan ch (testSendMessage ((read idTo) :: NodeId))))
@@ -85,7 +92,39 @@ main =  do
                     void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh log_id
 
                     void $ forkIO $ servePoA poa_in aMyNodeId ch aChan aInfoCh aFileChan
-                    void $ forkIO $ serveRpc rpc_p ch aInfoCh
+
+                    cli_m   <- try (getEnv "cliMode") >>= \case
+                            Right item              -> return item
+                            Left (_::SomeException) -> return $ cliMode snbc                            
+
+                    void $ forkIO $ case cli_m of
+                      "rpc" -> do
+                            rpcbc <- try (pure $ fromJust $ rpcBuildConfig snbc) >>= \case
+                                       Right item              -> return item
+                                       Left (_::SomeException) -> error "Please, specify RPCBuildConfig"
+
+                            rpc_p <- try (getEnv "rpcPort") >>= \case
+                                  Right item              -> return $ read item
+                                  Left (_::SomeException) -> return $ rpcPort rpcbc
+                            
+                            ip_en <- join $ enableIPsList <$> (try (getEnv "enableIP") >>= \case
+                                  Right item              -> return $ read item
+                                  Left (_::SomeException) -> return $ enableIP rpcbc)
+                            
+                            token <- try (getEnv "token") >>= \case
+                                  Right item              -> return $ read item
+                                  Left (_::SomeException) -> case accessToken rpcbc of
+                                       Just token -> return token
+                                       Nothing    -> updateConfigWithToken conf snbc rpcbc
+
+                            serveRpc rpc_p ip_en ch aInfoCh
+
+
+                      "cli" -> serveCLI ch aInfoCh
+
+                      _     -> return ()
+
+
 
                     --when (takeEnd 3 log_id == "175") $
                     metronomeS 10000000 (writeChan ch testBroadcastBlockIndex)
@@ -94,3 +133,32 @@ main =  do
                     writeChan aInfoCh $ Metric $ increment "cl.node.count"
 
             void $ readChan aExitCh
+
+
+
+updateConfigWithToken :: BuildConfig -> SimpleNodeBuildConfig -> RPCBuildConfig -> IO Token
+updateConfigWithToken conf snbc rpcbc = do
+      token <- fromPublicKey256k1 <$> compressPublicKey <$> fst <$> generateKeyPair
+      let newConfig = conf { simpleNodeBuildConfig = Just $ 
+                               snbc  { rpcBuildConfig = Just $ 
+                                 rpcbc { accessToken = Just token }
+                                     }
+                           }
+
+      putStrLn $ "Access available with token: " ++ show token
+
+      L.writeFile configName $ encodePretty newConfig
+ 
+      return token
+
+enableIPsList :: [String] -> IO [AddrRange IPv6]
+enableIPsList ips = sequence $ map (\ip_s -> try (readIO ip_s :: IO IPRange) >>= \case
+                            Right range_ip            -> return $ case range_ip of
+                                  IPv4Range r -> ipv4RangeToIPv6 r
+                                  IPv6Range r -> r
+                            Left (_ :: SomeException) -> try (readIO ip_s :: IO IP) >>= \case
+                                 Right (IPv4 ipv4)          -> return $ ipv4RangeToIPv6 $ makeAddrRange ipv4 (if ipv4 == toIPv4 [0,0,0,0] then 0 else 32)
+                                 Right (IPv6 ipv6)          -> return $ makeAddrRange ipv6 (if ipv6 == (ipv4ToIPv6 $ toIPv4 [0,0,0,0]) then 0 else 128)
+                                 Left  (_ :: SomeException) -> error $ "Wrong IP format"
+                            )
+                               ips

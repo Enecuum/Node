@@ -81,6 +81,7 @@ dependencies:
 - text
 - aeson-pretty
 - unordered-containers
+- iproute >= 1.7.4
 
 #tmp
 - scientific

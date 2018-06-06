@@ -27,7 +27,6 @@ import              GHC.Generics (Generic)
 import              Control.Concurrent.Chan
 import              Crypto.Random.Types
 import              Crypto.PubKey.ECC.ECDSA         as ECDSA
-import              Crypto.PubKey.ECC.Generate
 import              Lens.Micro
 import              Lens.Micro.TH
 
@@ -203,11 +202,23 @@ data NodeConfig = NodeConfig {
   deriving (Generic)
 $(deriveJSON defaultOptions ''NodeConfig)
 
+type Token = Integer
+
+data RPCBuildConfig where
+     RPCBuildConfig :: {
+        rpcPort        :: PortNumber,
+        enableIP       :: [String],
+        accessToken    :: Maybe Token
+  } -> RPCBuildConfig
+  deriving (Generic)
+
 data SimpleNodeBuildConfig where
      SimpleNodeBuildConfig :: {
         poaInPort      :: PortNumber,
         poaOutPort     :: PortNumber,
-        rpcPort        :: PortNumber
+        sharding       :: Bool,
+        cliMode        :: String,  -- "off", "rpc" or ""cli     
+        rpcBuildConfig :: Maybe RPCBuildConfig
   } -> SimpleNodeBuildConfig
   deriving (Generic)
 
@@ -222,6 +233,7 @@ instance FromJSON PortNumber where
     parseJSON _          = error "i've felt with the portnumber parsing"
 
 
+$(deriveJSON defaultOptions ''RPCBuildConfig)
 $(deriveJSON defaultOptions ''SimpleNodeBuildConfig)
 
 $(deriveJSON defaultOptions ''ConnectInfo)
@@ -230,7 +242,6 @@ data BuildConfig where
      BuildConfig :: {
         extConnectPort        :: PortNumber,
         bootNodeList          :: String,
-        sharding              :: String,
         simpleNodeBuildConfig :: Maybe SimpleNodeBuildConfig,
         statsdBuildConfig     :: ConnectInfo,
         logsBuildConfig       :: ConnectInfo
@@ -284,7 +295,7 @@ instance ToManagerData ManagerNodeData where
 
 makeNewNodeConfig :: MonadRandom m => m NodeConfig
 makeNewNodeConfig = do
-    (aPublicKey,     aPrivateKey)  <- generate curve_256
+    (aPublicKey,     aPrivateKey)  <- generateKeyPair
     (aPrivateNumber, aPublicPoint) <- genKeyPair curve_256
     let aId = keyToId aPublicKey
     pure $ NodeConfig aPrivateNumber aPublicPoint aPrivateKey (toMyNodeId aId)

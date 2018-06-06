@@ -6,6 +6,13 @@ module LightClient.RPC (
         genNTx,
         genUnlimTx,
         reqLedger,
+        newMsgBroadcast,
+        newMsgTo,
+        loadNewMsg,
+
+        QuantityTx,
+        PubKey,
+        Trans(..)
      ) where
 
 import Network.JsonRpc.Client
@@ -15,10 +22,11 @@ import Network.Socket.ByteString (sendAllTo, recv)
 
 import Control.Timeout (timeout)
 import Data.Time.Units (Second)
-import Service.Types (Transaction)
+import Service.Types
 import Service.Types.PublicPrivateKeyPair hiding (Signature)
 import Service.Network.Base
 import Service.Types.SerializeJSON ()
+
 
 type Result a = RpcResult IO a
 
@@ -27,14 +35,23 @@ type Result a = RpcResult IO a
 newTxSig :: Signature (Transaction ::: ()) ()
 newTxSig = Signature "new_tx" ("x" ::: ())
 
-genNTxSig :: Signature (Int ::: ()) ()
+genNTxSig :: Signature (QuantityTx ::: ()) ()
 genNTxSig = Signature "gen_n_tx" ("x" ::: ())
 
 genUnlimTxSig :: Signature () ()
 genUnlimTxSig = Signature "gen_unlim_tx" ()
 
-reqLedgerSig :: Signature (PublicKey ::: ()) Amount
+reqLedgerSig :: Signature (PubKey ::: ()) Amount
 reqLedgerSig = Signature "get_balance" ("x" ::: ())
+
+newMsgBroadcastSig :: Signature (String ::: ()) ()
+newMsgBroadcastSig = Signature "send_message_broadcast" ("x" ::: ())
+
+newMsgToSig :: Signature (MsgTo ::: ()) ()
+newMsgToSig = Signature "send_message_to" ("x" ::: ())
+
+loadNewMsgSig :: Signature () [MsgTo]
+loadNewMsgSig = Signature "load_messages" ()
 
 -- Bind function signature with RPC connection
 newTx :: ClientHandle -> Transaction -> Result ()
@@ -46,10 +63,17 @@ genNTx h = toFunction (connectionWithTimeOut h) genNTxSig
 genUnlimTx :: ClientHandle -> Result ()
 genUnlimTx h = toFunction (connectionWithTimeOut h) genUnlimTxSig
 
-reqLedger :: ClientHandle -> PublicKey -> Result Amount
+reqLedger :: ClientHandle -> PubKey -> Result Amount
 reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
 
+newMsgBroadcast :: ClientHandle -> String -> Result ()
+newMsgBroadcast h = toFunction (connectionWithTimeOut h) newMsgBroadcastSig
 
+newMsgTo :: ClientHandle -> MsgTo -> Result ()
+newMsgTo h = toFunction (connectionWithTimeOut h) newMsgToSig
+
+loadNewMsg :: ClientHandle -> Result [MsgTo]
+loadNewMsg h = toFunction (connectionWithTimeOut h) loadNewMsgSig
 
 
 connectionWithTimeOut :: ClientHandle -> Connection IO
@@ -66,22 +90,3 @@ connection handle input = do
            (clientSocket handle) (B.toStrict input) (clientAddress handle)
     ans <- recv (clientSocket handle) (1024*10)
     return (Just (B.fromStrict ans))
-
-
-{-
-genTxDAG :: IO [Transaction]
-genTxDAG = do
-    keys <- replicateM 10 K.generateNewRandomAnonymousKeyPair
-    dag <- getTransactionDAG keys
-    forM (labEdges dag) $ \(_, _, tr) -> return tr
-
--- Usual sending signle tx
-runRpcs :: Result ()
-runRpcs = do
-   result <- reqLedger (publicKey256k1 0)
-   liftIO $ putStrLn $ show result
-
-main = do
-  result <- runExceptT runRpcs
-  return ()
--}

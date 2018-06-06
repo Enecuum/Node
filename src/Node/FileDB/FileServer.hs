@@ -18,18 +18,16 @@ module Node.FileDB.FileServer (
   ) where
 
 import              Lens.Micro.GHC()
-import              Lens.Micro.Mtl()
-import              Lens.Micro
-import              System.Directory()
-import              Lens.Micro.TH
-import              Control.Concurrent.Chan
-import              Control.Monad()
-import qualified    Data.Map as M
+
 import              Sharding.Space.Distance
 import              Data.List.Extra
 
+import              Lens.Micro
+import              Lens.Micro.TH
+import              Control.Concurrent.Chan
+import qualified    Data.Map as M
+
 import              Node.Data.NetPackage
-import              Node.FileDB.FileDB()
 import              Node.Data.Key
 import              Service.Network.Base
 import              Sharding.Space.Point
