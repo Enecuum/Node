@@ -82,7 +82,7 @@ dependencies:
 - aeson-pretty
 - unordered-containers
 - iproute >= 1.7.4
-- rocksdb-haskell
+# - rocksdb-haskell
 - data-default
 
 #tmp
