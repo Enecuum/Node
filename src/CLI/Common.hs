@@ -76,7 +76,7 @@ sendNewTrans trans ch aInfoCh = try $ do
     Just ownerPrivKey -> do
       sign  <- getSignature ownerPrivKey moneyAmount
       let tx  = WithSignature (WithTime timePoint (SendAmountFromKeyToKey ownerPubKey receiverPubKey moneyAmount)) sign
-      sendTrans tx ch aInfoCh
+      _ <- sendTrans tx ch aInfoCh
       return tx
 
 

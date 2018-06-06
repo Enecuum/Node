@@ -27,7 +27,6 @@ import              GHC.Generics (Generic)
 import              Control.Concurrent.Chan
 import              Crypto.Random.Types
 import              Crypto.PubKey.ECC.ECDSA         as ECDSA
-import              Crypto.PubKey.ECC.Generate
 import              Lens.Micro
 import              Lens.Micro.TH
 
