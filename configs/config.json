@@ -2,9 +2,9 @@
     "simpleNodeBuildConfig": {
         "sharding": false,
         "cliMode": "rpc",
-            "accessToken": 6.2533190491084504205709509886488473740247956566130191674009587586249496384515e76,
+        "rpcBuildConfig": {
             "enableIP": [
-                "127.0.0.1"
+                "0.0.0.0"
             ],
             "rpcPort": 1555
         },
