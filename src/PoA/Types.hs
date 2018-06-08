@@ -215,7 +215,7 @@ instance FromJSON PPToNNMessage where
                             []      -> mzero
                             aResult -> return . MsgMicroblock
                                 $ Microblock aHash1 aHash2 (map read aResult :: [Transaction])
-                    _   -> mzero
+                    _   -> error "Can not parse Microblock"
 
 
             _ -> mzero

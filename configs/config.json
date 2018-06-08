@@ -3,13 +3,14 @@
         "sharding": false,
         "cliMode": "rpc",
         "rpcBuildConfig": {
+            "accessToken": 1.82404005749814131932438859237272261655367697143327862433951559258976872954673e77,
             "enableIP": [
                 "0.0.0.0"
             ],
             "rpcPort": 1555
         },
         "poaInPort": 1554,
-        "poaOutPort": 1556
+        "poaOutPort": 1554
     },
     "statsdBuildConfig": {
         "host": "127.0.0.1",
