@@ -52,11 +52,11 @@ main =  do
 
                     snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case 
                             Right item              -> return item
-                            Left (_::SomeException) -> error "Please, specify SimpleNodeBuildConfig" 
+                            Left (_::SomeException) -> error "Please, specify simpleNodeBuildConfig" 
 
-                    poa_in  <- try (getEnv "poaInPort") >>= \case
+                    poa_p   <- try (getEnv "poaPort") >>= \case
                             Right item              -> return $ read item
-                            Left (_::SomeException) -> return $ poaInPort snbc
+                            Left (_::SomeException) -> return $ poaPort conf
 
                     stat_h  <- try (getEnv "statsdHost") >>= \case
                             Right item              -> return item
@@ -91,7 +91,7 @@ main =  do
 
                     void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh log_id
 
-                    void $ forkIO $ servePoA poa_in aMyNodeId ch aChan aInfoCh aFileChan
+                    void $ forkIO $ servePoA poa_p aMyNodeId ch aChan aInfoCh aFileChan
 
                     cli_m   <- try (getEnv "cliMode") >>= \case
                             Right item              -> return item

@@ -3,20 +3,18 @@
         "sharding": false,
         "cliMode": "rpc",
         "rpcBuildConfig": {
-            "accessToken": 1.82404005749814131932438859237272261655367697143327862433951559258976872954673e77,
             "enableIP": [
                 "0.0.0.0"
             ],
             "rpcPort": 1555
-        },
-        "poaInPort": 1554,
-        "poaOutPort": 1554
+        }
     },
     "statsdBuildConfig": {
         "host": "127.0.0.1",
         "port": 8125
     },
-    "bootNodeList": "[(1,(172,17,0,2),1667)]",
+    "bootNodeList": "[(1,(127,0,0,1),1667)]",
+    "poaPort": 1554,
     "logsBuildConfig": {
         "host": "127.0.0.1",
         "port": 28777

@@ -28,12 +28,6 @@ import              Node.Data.Key
 import              Data.Maybe()
 
 
--- :m PoA.PoAServer
---
-
---undead f = finally f (undead f)
-
---
 serverPoABootNode :: PortNumber -> Chan InfoMsg -> Chan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
@@ -56,11 +50,11 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                         WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
                         writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
                     _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
-                        "Brouken message from PP " ++ show aMsg
+                        "Broken message from PP " ++ show aMsg
                 Left a ->
-                    -- TODO: Вписать ID если такой есть.
+                    -- TODO: Include ID if exists.
                     writeLog aInfoChan [ServerBootNodeTag] Warning $
-                        "Brouken message from PP " ++ show aMsg ++ " " ++ a
+                        "Broken message from PP " ++ show aMsg ++ " " ++ a
 
 
 servePoA ::
@@ -71,10 +65,10 @@ servePoA ::
     -> Chan InfoMsg
     -> Chan FileActorRequest
     -> IO ()
-servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
+servePoA aPort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
-        "Init. servePoA: a port is " ++ show aRecivePort
-    runServer aRecivePort $ \_ aPending -> do
+        "Init. servePoA: a port is " ++ show aPort
+    runServer aPort $ \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
 
@@ -167,7 +161,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
 
             Left a -> do
-                -- TODO: Вписать ID если такой есть.
+                -- TODO: Include ID if exist.
                 writeLog aInfoChan [ServePoATag] Warning $
                     "Brouken message from PP " ++ show aMsg ++ " " ++ a
                 when (not aOk) $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
