@@ -193,7 +193,7 @@ answerToShardingNodeRequestMsg aMd
                         (aData^.myNodeId)
                         (toNodePosition aMyNodePosition))
 
-            T.IamAwakeRequst _ aMyNodePosition -> do
+            T.IamAwakeRequest _ aMyNodePosition -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $aLogMsg "awake logic lvl"
                 sendBroadcast aMd
                     (BroadcastPosition

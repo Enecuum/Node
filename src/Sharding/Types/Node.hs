@@ -78,7 +78,7 @@ data ShardingNodeResponse where
 
 
 data ShardingNodeRequestMsg =
-        IamAwakeRequst              MyNodeId MyNodePosition -- broadcast for all network
+        IamAwakeRequest              MyNodeId MyNodePosition -- broadcast for all network
     |   NeighborListRequest -- ask net level new neighbors
     |   ShardIndexRequest           Word64 [NodePosition]
     |   ShardListRequest            [ShardHash]
