@@ -67,6 +67,7 @@ startNode buildConf exitCh answerCh infoCh manager startDo = do
 microblockProc :: Chan Microblock -> String -> IO b
 microblockProc aMicroblockCh aFilePath = forever $ do
         aMicroblock <- readChan aMicroblockCh
+        putStrLn $ show aMicroblock
         aBlocksFile <- try $ readHashMsgFromFile aFilePath
         aBlocks <- case aBlocksFile of
             Right aBlocks      -> return aBlocks

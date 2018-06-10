@@ -10,7 +10,7 @@ module CLI.Common (
   generateNTransactions,
   generateTransactionsForever,
   getNewKey,
-  
+
   getBalance,
   getPublicKeys,
 
@@ -29,8 +29,8 @@ import Data.List.Split (splitOn)
 import Data.Map (fromList, lookup, Map)
 import System.Random (randomRIO)
 
-import CLI.Balance
-import CLI.TransactionsDAG
+import Service.Transaction.Balance
+import Service.Transaction.TransactionsDAG
 import Node.Node.Types
 import Service.Types
 import Service.Types.SerializeJSON ()
@@ -42,7 +42,7 @@ type Result a = Either CLIException a
 
 data CLIException = WrongKeyOwnerException
                   | NotImplementedException -- test
-                  | OtherException                   
+                  | OtherException
   deriving Show
 
 instance Exception CLIException

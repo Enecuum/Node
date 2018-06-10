@@ -80,7 +80,8 @@ dependencies:
 - text
 - aeson-pretty
 - unordered-containers
-# - rocksdb-haskell
+- cryptohash
+- rocksdb-haskell
 
 library:
   source-dirs: src
