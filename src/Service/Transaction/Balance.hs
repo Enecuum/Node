@@ -6,7 +6,7 @@ import Service.System.Directory (getTransactionFilePath)
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
 import Node.FileDB.FileDB (readHashMsgFromFile)
-import qualified "rocksdb-haskell" Database.RocksDB as Rocks
+--import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import  Data.ByteString.Char8 as BC hiding (map)
 
 getBalance :: PublicKey -> [Transaction] -> Amount

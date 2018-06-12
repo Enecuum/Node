@@ -151,7 +151,7 @@ data NNToPPMessage
 
 
 --myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
---myUnhex :: S.Serialize b => T.Text -> Either String b
+myUnhex :: IsString a => T.Text -> Either a String
 myUnhex aString = case unhex $ T.unpack aString of
     Just aDecodeString  -> Right aDecodeString
     Nothing             -> Left "Nothing"
@@ -225,7 +225,7 @@ instance FromJSON PPToNNMessage where
 readNodeType :: (IsString a, Eq a) => a -> NodeType
 readNodeType aNodeType = if aNodeType == "PoW" then PoW else PoA
 
-
+decodeList :: [T.Text] -> [String]
 decodeList aList
     | all isRight aDecodeList   = rights aDecodeList
     | otherwise                 = []

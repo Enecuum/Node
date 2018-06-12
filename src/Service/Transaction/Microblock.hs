@@ -12,6 +12,7 @@ import Service.Types (Microblock(..))
 
 type HashOfMicroblock = BC.ByteString
 
+genNMicroBlocks :: Int -> IO [Microblock]
 genNMicroBlocks n = evalStateT (replicateM n genMicroBlocks) BC.empty
 
 
