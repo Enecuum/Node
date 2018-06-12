@@ -43,7 +43,13 @@ data CryptoCurrency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
 type Time      = Double
 type DAG = Gr Transaction Transaction
 
-data Microblock = Microblock ByteString ByteString [Transaction] deriving (Eq, Generic, Ord, Read)
+
+
+data Microblock = Microblock
+                  ByteString -- hashCurrentMicroblock
+                  ByteString -- hashPreviousMicroblock
+                  [Transaction]
+                deriving (Eq, Generic, Ord, Read)
 instance Serialize Microblock
 
 instance Show Microblock where
