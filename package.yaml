@@ -81,7 +81,10 @@ dependencies:
 - aeson-pretty
 - unordered-containers
 - cryptohash
-# - rocksdb-haskell
+- rocksdb-haskell
+- data-default
+- hashtables
+- resourcet
 
 library:
   source-dirs: src
