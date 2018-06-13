@@ -90,9 +90,7 @@ You can define curstom values for variables in the /configs/config.json:
 
 | Variable | Description |
 |---------|---------|
-| poaIntPort | Port for incoming requests for transactions from PoA Nodes and receiving microblocks from them |
-| poaOutPort | Port for for sending transactions to PoA Nodes  |
-| rpcPort | Port for remote procedure calls |
+| rpcPort | Port for remote procedure calls to the node |
 
 * `statsdBuildConfig` is the config section for the server to collect metrics. 
 
@@ -103,6 +101,8 @@ You can define curstom values for variables in the /configs/config.json:
 
 
 * `bootNodeList` is the variable for the Boot Node to address when you enter the network the first time or after a while. `1` stands for the ID of the Boot Node, `172,17,0,2` - for the IP address Boot Node resides at (Docker's default IP address in this case). `1667` - port Boot Node receives requests to.
+
+* `poaPort` is the variable for communication with PoA Nodes (receiving requests for transactions, sending transactions, receiving microblocks. 
 
 * `logsBuildConfig` is the config section for the log server.
 
