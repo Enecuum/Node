@@ -16,7 +16,21 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 
 
-## How to Use
+## RCP-JSON API for Simple Node
+
+Send transaction to a node: `enq_sendTransaction`
+
+Request example:
+
+``` bash
+{"jsonrpc":"2.0","params":{"x":{"signature":{"sign_s":94223551497283667262425597401930625553013615916376364863948543283948993734318,"sign_r":28834183127673934019323833968330946475134237099239544917311924861094696131869},"amount":10, "time":53045.910023792, "owner_key":117770961709617055389350520036565206405403916684488363141903718453974738717275658,"receiver_key":117770961709617055389350520036565206405403916684488363141903718453974738717275658}}, "method":enq_sendTransaction, "id":1}
+```
+ Response example:
+ 
+`{"result":[],"jsonrpc":"2.0","id":1}`
+
+
+## Build and Install
 
 ### Install Haskell Stack
 
@@ -112,22 +126,6 @@ You can define curstom values for variables in the /configs/config.json:
 | port | Port of the server to send the data to |
 
 * `extConnectPort` is the variable that defines the port for commnunicating with the outer world (e.g. broadcasting). 
-
-
-## API for Simpe Node
-
-The API is RPC-based. 
-
-Send transaction to a node: `enq_sendTransaction`
-
-Request example:
-
-``` bash
-{"jsonrpc":"2.0","params":{"x":{"signature":{"sign_s":94223551497283667262425597401930625553013615916376364863948543283948993734318,"sign_r":28834183127673934019323833968330946475134237099239544917311924861094696131869},"amount":10, "time":53045.910023792, "owner_key":117770961709617055389350520036565206405403916684488363141903718453974738717275658,"receiver_key":117770961709617055389350520036565206405403916684488363141903718453974738717275658}}, "method":enq_sendTransaction, "id":1}
-```
- Response example:
- 
-`{"result":[],"jsonrpc":"2.0","id":1}`
 
 
 ## Use Cases
