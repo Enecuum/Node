@@ -10,6 +10,10 @@ module CLI.Common (
   generateNTransactions,
   generateTransactionsForever,
   getNewKey,
+
+  getBlockByHash,
+  getTransactionByHash,
+  getAllTransactions,
   
   getBalance,
   getPublicKeys,
@@ -25,7 +29,6 @@ import Control.Concurrent.Chan
 import Control.Exception
 import Data.Time.Units
 import Data.List.Split (splitOn)
-
 import Data.Map (fromList, lookup, Map)
 import System.Random (randomRIO)
 
@@ -55,6 +58,16 @@ sendMessageBroadcast ch = return $ return $ Left NotImplementedException
 
 loadMessages :: ManagerMiningMsg a => Chan a -> IO (Result [MsgTo])
 loadMessages ch = return $ Left NotImplementedException
+
+getBlockByHash :: ManagerMiningMsg a => Hash -> Chan a -> IO (Result Microblock)
+getBlockByHash hash ch = return $ Left NotImplementedException
+
+getTransactionByHash :: ManagerMiningMsg a => Hash -> Chan a -> IO (Result TransactionInfo)
+getTransactionByHash hash ch = return $ Left NotImplementedException
+
+getAllTransactions :: ManagerMiningMsg a => PubKey -> Chan a -> IO (Result [Transaction])
+getAllTransactions key ch = return $ Left NotImplementedException
+
 
 
 sendTrans :: ManagerMiningMsg a => Transaction -> Chan a -> Chan InfoMsg -> IO (Result ())

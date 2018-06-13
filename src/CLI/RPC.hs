@@ -23,6 +23,7 @@ import Service.InfoMsg
 import Service.Types
 import Data.Text (pack)
 
+import qualified Data.ByteString as B
 import Network.Socket (SockAddr)
 
 serveRpc :: PortNumber -> [AddrRange IPv6] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
@@ -61,13 +62,38 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
                                      Right r -> liftIO $ return r
 
 
-              methods = [createTx , createNTx, createUnlimTx, balanceReq, sendMsgBroadcast, sendMsgTo, loadMsg ]
+              methods = [createTx , balanceReq, getBlock, getTransaction, getFullWallet 
+-- test
+                       , createNTx, createUnlimTx, sendMsgBroadcast, sendMsgTo, loadMsg 
+                        ]
 
-              createTx = toMethod "new_tx" f (Required "x" :+: ())
+
+              createTx = toMethod "enq_sendTransaction" f (Required "tx" :+: ()) 
                 where
                   f :: Transaction -> RpcResult IO ()
                   f tx = handle $ sendTrans tx ch aInfoCh
 
+              balanceReq = toMethod "enq_getBalance" f (Required "address" :+: ())
+                where
+                  f :: PubKey -> RpcResult IO Amount
+                  f key = handle $ getBalance key aInfoCh
+
+              getBlock = toMethod "enq_getBlockByHash" f (Required "hash" :+: ())
+                where
+                  f :: Hash ->  RpcResult IO Microblock
+                  f hash = handle $ getBlockByHash hash ch
+
+              getTransaction = toMethod "enq_getTransactionByHash" f (Required "hash" :+:())
+                where
+                  f :: Hash -> RpcResult IO TransactionInfo
+                  f hash = handle $ getTransactionByHash hash ch
+
+              getFullWallet = toMethod "enq_getAllTransactions" f (Required "address" :+: ())
+                where
+                  f :: PubKey -> RpcResult IO [Transaction]
+                  f key = handle $ getAllTransactions key ch
+
+------------- test functions
               createNTx = toMethod "gen_n_tx" f (Required "x" :+: ())
                 where
                   f :: Int -> RpcResult IO ()
@@ -77,11 +103,6 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
                 where
                   f :: RpcResult IO ()
                   f = handle $ generateTransactionsForever ch aInfoCh
-
-              balanceReq = toMethod "get_balance" f (Required "x" :+: ())
-                where
-                  f :: PubKey -> RpcResult IO Amount
-                  f key = handle $ getBalance key aInfoCh
 
               sendMsgBroadcast = toMethod "send_message_broadcast" f (Required "x" :+: ())
                 where
