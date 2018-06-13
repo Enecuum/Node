@@ -56,19 +56,14 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 
 ### Initialize a Boot Node
-Execute the following commands to start a node:\
-`stack exec MakeConfigBootNode-exe`\
-`stack exec BootNode-exe`
 
-You can also use `stack exec MakeConfigBootNode-exe -- configs/config.json` where `configs/nameOfYourConfig.json` stands for the path to a custom configuration file. Otherwise, the default `configs/config.json` is used.
+
+`stack exec BootNode-exe`
 
 ### Initialize a Simple Node
 
-Execute the following commands:\
-`stack exec MakeConfigSimpleNode-exe`\
 `stack exec SimpleNode-exe`
 
-You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.json` where `configs/nameOfYourConfig.json` stands for the path to a custom configuration file. Otherwise, the default `configs/config.json` is used.
 
 ### Initialize Light Client
 
@@ -89,26 +84,34 @@ Execute `stack exec LightClient-exe`.
 
 ### (Optional) Set your own environment variables:
 
-Create a custom config file or use the /configs/config.json. Define values for the variables:
+You can define curstom values for variables in the /configs/config.json:
 
-* `[MakeConfigBootNode]` is the initial config section for a boot node, and `port=1666` is an example port used for communication with the node.
-
-* `[MakeConfigSimpleNode]` is the initial config section for a simple node, and `port=1667` is an example port used for communication with the node.
-
-* `[SimpleNode]` is the main config section for a simple node, and `poa_in=1554` `poa_out=1556` `rpc=1555` are example ports used for communication with the node.
+* `simpleNodeBuildConfig` is the config section for Simple Node.
 
 | Variable | Description |
 |---------|---------|
-| poa_in | Port for incoming requests to generate transactions and receiving microblocks |
-| poa_out | Port for for sending transactions and propagating microblocks to the network  |
-| rpc | Port for remote procedure calls |
+| poaIntPort | Port for incoming requests for transactions from PoA Nodes and receiving microblocks from them |
+| poaOutPort | Port for for sending transactions to PoA Nodes  |
+| rpcPort | Port for remote procedure calls |
 
-* `[Common]` is the config section for common variables, and `bootNodeList=[(1, (127,0,0,1), 1666)]` are examples of node ID, address and port set as environment variables before running a simple node.
+* `statsdBuildConfig` is the config section for the server to collect metrics. 
 
-* `[Statsd]` is the config section for the statistical service, and addr `addr=127.0.0.1` and `port=8125` are the address of the service and port to send statistical data to.
+| Variable | Description |
+|---------|---------|
+| host | IP of the stat server; you can write yours if you have one up and running |
+| port | Port of the server to send the data to |
 
-* `[Docker]` is the config section for the name of the node, and `name=node` is an example name of the Docker container to build.
 
+* `bootNodeList` is the variable for the Boot Node to address when you enter the network the first time or after a while. `1` stands for the ID of the Boot Node, `172,17,0,2` - for the IP address Boot Node resides at (Docker's default IP address in this case). `1667` - port Boot Node receives requests to.
+
+* `logsBuildConfig` is the config section for the log server.
+
+| Variable | Description |
+|---------|---------|
+| host | IP of the log server; you can write yours if you have one up and running |
+| port | Port of the server to send the data to |
+
+* `extConnectPort` is the variable that defines the port for commnunicating with the outer world (e.g. broadcasting). 
 
 ## Use Cases
 
