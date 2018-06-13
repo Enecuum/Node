@@ -31,6 +31,7 @@ configName = "configs/config.json"
 
 main :: IO ()
 main =  do
+        putStrLn "microblock 2018/06/13 11:40"
         enc <- L.readFile configName
         case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
@@ -50,9 +51,9 @@ main =  do
                     metronomeS 1000000 (writeChan ch deleteOldestPoW)
                     metronomeS 1000000 (writeChan ch findBestConnects)
 
-                    snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case 
+                    snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case
                             Right item              -> return item
-                            Left (_::SomeException) -> error "Please, specify simpleNodeBuildConfig" 
+                            Left (_::SomeException) -> error "Please, specify simpleNodeBuildConfig"
 
                     poa_p   <- try (getEnv "poaPort") >>= \case
                             Right item              -> return $ read item
@@ -95,7 +96,7 @@ main =  do
 
                     cli_m   <- try (getEnv "cliMode") >>= \case
                             Right item              -> return item
-                            Left (_::SomeException) -> return $ cliMode snbc                            
+                            Left (_::SomeException) -> return $ cliMode snbc
 
                     void $ forkIO $ case cli_m of
                       "rpc" -> do
@@ -106,11 +107,11 @@ main =  do
                             rpc_p <- try (getEnv "rpcPort") >>= \case
                                   Right item              -> return $ read item
                                   Left (_::SomeException) -> return $ rpcPort rpcbc
-                            
+
                             ip_en <- join $ enableIPsList <$> (try (getEnv "enableIP") >>= \case
                                   Right item              -> return $ read item
                                   Left (_::SomeException) -> return $ enableIP rpcbc)
-                            
+
                             token <- try (getEnv "token") >>= \case
                                   Right item              -> return $ read item
                                   Left (_::SomeException) -> case accessToken rpcbc of
@@ -139,8 +140,8 @@ main =  do
 updateConfigWithToken :: BuildConfig -> SimpleNodeBuildConfig -> RPCBuildConfig -> IO Token
 updateConfigWithToken conf snbc rpcbc = do
       token <- fromPublicKey256k1 <$> compressPublicKey <$> fst <$> generateKeyPair
-      let newConfig = conf { simpleNodeBuildConfig = Just $ 
-                               snbc  { rpcBuildConfig = Just $ 
+      let newConfig = conf { simpleNodeBuildConfig = Just $
+                               snbc  { rpcBuildConfig = Just $
                                  rpcbc { accessToken = Just token }
                                      }
                            }
@@ -148,7 +149,7 @@ updateConfigWithToken conf snbc rpcbc = do
       putStrLn $ "Access available with token: " ++ show token
 
       L.writeFile configName $ encodePretty newConfig
- 
+
       return token
 
 enableIPsList :: [String] -> IO [AddrRange IPv6]
