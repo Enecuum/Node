@@ -64,7 +64,7 @@ Execute the following commands to start a node:\
 
 You can also use `stack exec MakeConfigBootNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used.
 
-#### Initialize a Simple Node
+### Initialize a Simple Node
 
 Execute the following commands:\
 `stack exec MakeConfigSimpleNode-exe`\
@@ -72,7 +72,7 @@ Execute the following commands:\
 
 You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used.
 
-#### Initialize Light Client
+### Initialize Light Client
 
 Execute `stack exec LightClient-exe`.
 
