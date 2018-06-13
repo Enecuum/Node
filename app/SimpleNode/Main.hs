@@ -5,8 +5,9 @@ module Main where
 import              Control.Monad
 import              Control.Concurrent
 import              System.Environment (getEnv)
-import              Data.Maybe (fromJust)
+import              Node.Data.Key
 
+import              Data.Maybe (fromJust)
 import              Node.Node.Mining
 import              Node.Node.Types
 import              Node.Data.Key (generateKeyPair)
@@ -43,16 +44,19 @@ main =  do
                 aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMyNodeId aFileChan -> do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
+                    metronomeS 1000000 (writeChan ch queryPositions)
+                    metronomeLinear 100000 100000000 (writeChan ch infoRequest)
                     metronomeS 1000000 (writeChan ch deleteOldestMsg)
                     metronomeS 1000000 (writeChan ch deleteOldestPoW)
+                    metronomeS 1000000 (writeChan ch findBestConnects)
 
                     snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case 
                             Right item              -> return item
-                            Left (_::SomeException) -> error "Please, specify SimpleNodeBuildConfig" 
+                            Left (_::SomeException) -> error "Please, specify simpleNodeBuildConfig" 
 
-                    poa_in  <- try (getEnv "poaInPort") >>= \case
+                    poa_p   <- try (getEnv "poaPort") >>= \case
                             Right item              -> return $ read item
-                            Left (_::SomeException) -> return $ poaInPort snbc
+                            Left (_::SomeException) -> return $ poaPort conf
 
                     stat_h  <- try (getEnv "statsdHost") >>= \case
                             Right item              -> return item
@@ -74,9 +78,20 @@ main =  do
                             Right item              -> return item
                             Left (_::SomeException) -> return $ show aMyNodeId
 
+                    try (getEnv "test_send_id") >>= \case
+                        Right idTo              -> (metronomeS 10000000 (writeChan ch (testSendMessage ((read idTo) :: NodeId))))
+                        Left (e::SomeException) -> print e
+
+                    i_am_firs <- try (getEnv "isFirst") >>= \case
+                        Right "Yes" -> return True
+                        Right _   -> return False
+                        Left (_::SomeException) -> return False
+
+                    when i_am_firs $ writeChan ch InitShardingLvl
+
                     void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh log_id
 
-                    void $ forkIO $ servePoA poa_in aMyNodeId ch aChan aInfoCh aFileChan
+                    void $ forkIO $ servePoA poa_p aMyNodeId ch aChan aInfoCh aFileChan
 
                     cli_m   <- try (getEnv "cliMode") >>= \case
                             Right item              -> return item
@@ -137,13 +152,14 @@ updateConfigWithToken conf snbc rpcbc = do
       return token
 
 enableIPsList :: [String] -> IO [AddrRange IPv6]
+enableIPsList []  = return [ read "::/0" ]
 enableIPsList ips = sequence $ map (\ip_s -> try (readIO ip_s :: IO IPRange) >>= \case
-                            Right range_ip            -> return $ case range_ip of
-                                  IPv4Range r -> ipv4RangeToIPv6 r
-                                  IPv6Range r -> r
-                            Left (_ :: SomeException) -> try (readIO ip_s :: IO IP) >>= \case
-                                 Right (IPv4 ipv4)          -> return $ ipv4RangeToIPv6 $ makeAddrRange ipv4 (if ipv4 == toIPv4 [0,0,0,0] then 0 else 32)
-                                 Right (IPv6 ipv6)          -> return $ makeAddrRange ipv6 (if ipv6 == (ipv4ToIPv6 $ toIPv4 [0,0,0,0]) then 0 else 128)
-                                 Left  (_ :: SomeException) -> error $ "Wrong IP format"
+                            Right (IPv4Range r) -> if r == read "0.0.0.0"
+                                                   then return $ read "::/0"
+                                                   else return $ ipv4RangeToIPv6 r
+                            Right (IPv6Range r) -> if r == read "::"
+                                                   then return $ read "::/0"
+                                                   else return r
+                            Left (_ :: SomeException) -> error $ "Wrong IP format"
                             )
                                ips

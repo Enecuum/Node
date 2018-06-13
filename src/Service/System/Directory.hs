@@ -2,7 +2,8 @@ module Service.System.Directory (
     getTime,
     getKeyFilePath,
     getTransactionFilePath,
-    createFilesDirectory
+    createFilesDirectory,
+    getLedgerFilePath
   )where
 
 import System.FilePath.Posix (takeDirectory)
@@ -32,6 +33,11 @@ getTransactionFilePath :: IO String
 getTransactionFilePath = do
     enecuumDir <- getEnecuumDir
     return (enecuumDir ++ [pathSeparator] ++ "tx")
+
+getLedgerFilePath :: IO String
+getLedgerFilePath = do
+    enecuumDir <- getEnecuumDir
+    return (enecuumDir ++ [pathSeparator] ++ "ledger.db")
 
 createFilesDirectory :: FilePath -> IO ()
 createFilesDirectory path = createDirectoryIfMissing True $ takeDirectory path

@@ -53,15 +53,15 @@ startNode buildConf exitCh answerCh infoCh manager startDo = do
     aTransactionChan <- newChan
     config  <- readNodeConfig
     bnList  <- readBootNodeList $ bootNodeList buildConf
-    aFileRequesChan <- newChan
-    void $ forkIO $ startFileServer aFileRequesChan
-    let port = extConnectPort buildConf
-    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aFileRequesChan bnList config port
-    startServerActor managerChan port
+    aFileRequestChan <- newChan
+    void $ forkIO $ startFileServer aFileRequestChan
+    let portNumber = extConnectPort buildConf
+    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aFileRequestChan bnList config portNumber
+    startServerActor managerChan portNumber
     aFilePath <- getTransactionFilePath
     void $ forkIO $ microblockProc aMicroblockChan aFilePath
     void $ forkIO $ manager managerChan md
-    void $ startDo managerChan aTransactionChan (config^.myNodeId) aFileRequesChan
+    void $ startDo managerChan aTransactionChan (config^.myNodeId) aFileRequestChan
     return managerChan
 
 microblockProc :: Chan Microblock -> String -> IO b

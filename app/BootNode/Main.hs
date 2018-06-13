@@ -32,11 +32,9 @@ main =  do
             answerCh <- newChan
             aInfoChan <- newChan
 
-            poa_in  <- try (getEnv "poaInPort") >>= \case
+            poa_p   <- try (getEnv "poaPort") >>= \case
                     Right item              -> return $ read item
-                    Left (_::SomeException) -> case simpleNodeBuildConfig conf of
-                         Nothing   -> error "Please, specify SimpleNodeConfig"
-                         Just snbc -> return $ poaInPort snbc
+                    Left (_::SomeException) -> return $ poaPort conf
 
             stat_h  <- try (getEnv "statsdHost") >>= \case
                     Right item              -> return item
@@ -56,12 +54,12 @@ main =  do
 
 
 
-            void $ startNode conf
-              exitCh answerCh aInfoChan managerBootNode $ \ch _ aNodeId aFileChan -> do
-                  log_id  <- try (getEnv "log_id") >>= \case
-                    Right item              -> return item
-                    Left (_::SomeException) -> return $ show aNodeId
-                  metronomeS 100000 (writeChan ch checkBroadcastNodes)
-                  void $ forkIO $ serverPoABootNode poa_in aInfoChan aFileChan
-                  void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChan log_id
+            void $ startNode conf exitCh answerCh aInfoChan managerBootNode $
+                \ch _ aNodeId aFileChan -> do
+                    log_id  <- try (getEnv "log_id") >>= \case
+                        Right item              -> return item
+                        Left (_::SomeException) -> return $ show aNodeId
+                    metronomeS 100000 (writeChan ch checkBroadcastNodes)
+                    void $ forkIO $ serverPoABootNode poa_p aInfoChan aFileChan
+                    void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChan log_id
             void $ readChan exitCh

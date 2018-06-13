@@ -1,6 +1,5 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, DeriveGeneric, LambdaCase, StandaloneDeriving #-}
 {-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
-{-# LANGUAGE DeriveGeneric, LambdaCase #-}
 module Service.Types where
 
 import              Data.Serialize
@@ -68,7 +67,9 @@ data Transaction = WithTime { time :: Time, transaction :: Transaction }
 --                 | AccumulatorsToInductors { owner :: PublicKey, amount :: Amount }
 --                 | InductorsToAccumulators { owner :: PublicKey, amount :: Amount }
 --                 | SendInductorsFromKeyToKey { owner :: PublicKey, receiver :: PublicKey, amount :: Amount }
-  deriving ( Generic, Show, Eq, Ord)
+  deriving ( Generic, Show, Eq, Ord, Read)
+
+
 instance Serialize Transaction
 
 data TransactionInfo = TransactionInfo {
@@ -106,3 +107,9 @@ instance Show (LHistory INVALID) where
 instance Show (LHistory VALID) where
   show End = "End"
   show (Valid tm bl pr) = "Valid { valid = " ++ show tm ++ ", balance = " ++ show bl ++ ", prev = " ++ show pr ++ " }"
+
+
+type ToPublicKey  = PublicKey
+data MessageForSign = MessageForSign ToPublicKey Amount Time
+instance Serialize MessageForSign
+deriving instance Generic MessageForSign

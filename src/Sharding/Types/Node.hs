@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, GADTs #-}
 --{-# OPTIONS_GHC -fno-Wtype-defaults #-}
-
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Sharding.Types.Node where
 
@@ -64,6 +64,10 @@ data ShardingNodeAction =
     ---- NeighborListRequest => NeighborListAcceptAction
     --  BUG the generation of TheNodeIsDead from net lvl.
     |   TheNodeIsDead               NodeId
+  deriving Show
+
+instance Show (Chan a) where
+      show _ = "Chan"
 
 
 data ShardingNodeResponse where
@@ -74,7 +78,7 @@ data ShardingNodeResponse where
 
 
 data ShardingNodeRequestMsg =
-        IamAwakeRequst              MyNodeId MyNodePosition -- broadcast for all network
+        IamAwakeRequest              MyNodeId MyNodePosition -- broadcast for all network
     |   NeighborListRequest -- ask net level new neighbors
     |   ShardIndexRequest           Word64 [NodePosition]
     |   ShardListRequest            [ShardHash]

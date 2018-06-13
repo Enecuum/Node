@@ -63,8 +63,6 @@ type BootNodeList   = [(NodeId, Connect)]
 
 
 
-instance Show (Chan a) where
-    show _ = "Chan"
 
 data Msg where Msg :: B.ByteString -> Msg
 type Transactions = [Transaction]
@@ -194,7 +192,7 @@ makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan = NodeBaseData
     aExitChan M.empty M.empty aList aAnswerChan 0 Nothing aMicroblockChan
     Nothing Nothing False
 
--- | TODO: Нужно отрефакторить, уменьшить колво ключей.
+-- | TODO: shoud be refactord: reduce keys count.
 data NodeConfig = NodeConfig {
     nodeConfigPrivateNumber :: DH.PrivateNumber,
     nodeConfigPublicPoint   :: DH.PublicPoint,
@@ -216,8 +214,6 @@ data RPCBuildConfig where
 
 data SimpleNodeBuildConfig where
      SimpleNodeBuildConfig :: {
-        poaInPort      :: PortNumber,
-        poaOutPort     :: PortNumber,
         sharding       :: Bool,
         cliMode        :: String,  -- "off", "rpc" or ""cli     
         rpcBuildConfig :: Maybe RPCBuildConfig
@@ -243,6 +239,7 @@ $(deriveJSON defaultOptions ''ConnectInfo)
 data BuildConfig where
      BuildConfig :: {
         extConnectPort        :: PortNumber,
+        poaPort               :: PortNumber,
         bootNodeList          :: String,
         simpleNodeBuildConfig :: Maybe SimpleNodeBuildConfig,
         statsdBuildConfig     :: ConnectInfo,
@@ -290,8 +287,8 @@ class ToManagerData a where
         ->  a
 
 instance ToManagerData ManagerNodeData where
-    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aInfoChan aFileRequesChan aList aNodeConfig aOutPort = ManagerNodeData
-        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aOutPort aInfoChan aFileRequesChan)
+    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aInfoChan aFileRequestChan aList aNodeConfig aOutPort = ManagerNodeData
+        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aOutPort aInfoChan aFileRequestChan)
             aTransactionChan BI.empty BI.empty S.empty BI.empty
 
 

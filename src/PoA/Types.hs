@@ -5,15 +5,18 @@
     ,   FlexibleInstances
     ,   DeriveGeneric
     ,   GeneralizedNewtypeDeriving
+    ,   StandaloneDeriving
   #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module PoA.Types where
 
 import              Data.Word()
 import qualified    Data.ByteString as B
+import qualified    Data.ByteString.Char8 as CB
 import              Data.Aeson
 import              Data.String
 import              GHC.Generics
-import qualified    Data.Text.Lazy as T
+import qualified    Data.Text as T
 import              Data.Hex
 import              Control.Monad.Extra
 import              Data.Either
@@ -22,6 +25,10 @@ import              Service.Types (Microblock(..), Transaction)
 import              Service.Network.Base
 import              Data.IP
 import              Node.Data.Key
+import              Service.Types.SerializeInstances
+import qualified    Data.HashMap.Strict as H
+import qualified    Data.Vector as V
+import              Data.Scientific
 
 -- TODO: aception of msg from a PoA/PoW.
 -- ----: parsing - ok!
@@ -34,49 +41,70 @@ import              Node.Data.Key
 -- ----     toJson
 -- TODO sending to PoA/PoW node.
 
+
 -- TODO finding of optimal broadcast node for PoA/PoW node. ???
 
+instance S.Serialize Scientific where
+    get = read <$> S.get
+    put = S.put . show
+
+
+instance S.Serialize T.Text where
+    get = T.pack <$> S.get
+    put = S.put . T.unpack
+
+instance S.Serialize Object where
+    get = fmap H.fromList S.get
+    put = S.put . H.toList
+
+
+instance S.Serialize a => S.Serialize (V.Vector a) where
+    get = fmap V.fromList S.get
+    put = S.put . V.toList
+
+instance S.Serialize Value
 
 
 data PPToNNMessage
-    -- Запросы:
-    -- на получение транзакций.
+    -- Requests:
+    -- transactions receiving.
     = RequestTransaction { ---
         number :: Int
     }
 
-    -- запрос на получение списка PoW нод
+    -- receive PoW nodes' list
     | RequestPoWList
 
-    -- запрос на рассылку бродкаста.
+    -- send broadcast
     | RequestBroadcast { ---
         recipientType :: NodeType,
         msg           :: B.ByteString
     }
-    -- запрос на получение конектов.
+    -- get connects
     | RequestConnects
 
-    -- Ответы с PPId
+    -- responses with PPId
     | ResponseNodeIdToNN {
         nodeId    :: PPId,
         nodeType  :: NodeType
     }
 
-    -- Сообщения:
-    -- Для другой PoA/PoW ноды.
+    -- Messages:
+    -- For other PoA/PoW node.
     | MsgMsgToNN { ----
         destination :: PPId,
         msg :: B.ByteString
     }
 
-    -- О том, что намйнился микроблок.
+    -- new microblock was mined.
     | MsgMicroblock {
         microblock :: Microblock
     }
-    -- О том, что закрылся ма кроблок.
+    -- Macroblock was finallized.
     -- | MsgMacroblock {
     --     macroblock :: Macroblock
     -- }
+    deriving (Show)
 
 data NodeType = PoW | PoA deriving (Eq, Show, Ord, Generic)
 
@@ -96,7 +124,7 @@ data NNToPPMessage
         transaction :: Transaction
     }
 
-    -- ответ со списком PoW нод
+    -- request with PoW's list
     | ResponsePoWList {
         poWList :: [PPId]
     }
@@ -122,12 +150,22 @@ data NNToPPMessage
     }
 
 
-myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
+--myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
+--myUnhex :: S.Serialize b => T.Text -> Either String b
 myUnhex aString = case unhex $ T.unpack aString of
-    Just aDecodeString  -> case S.decode $ fromString aDecodeString of
-        Right aJustVal  -> return aJustVal
-        Left _          -> mzero
+    Just aDecodeString  -> Right aDecodeString
+    Nothing             -> Left "Nothing"
+
+
+unhexNodeId :: MonadPlus m => T.Text -> m NodeId
+unhexNodeId aString = case unhex . fromString . T.unpack $ aString of
+    Just aDecodeString  -> return . NodeId . roll $ B.unpack aDecodeString
     Nothing             -> mzero
+
+
+ppIdToString :: PPId -> String
+ppIdToString (PPId (NodeId aPoint)) = CB.unpack . hex . B.pack $ unroll aPoint
+
 
 myTextUnhex :: T.Text -> Maybe B.ByteString
 myTextUnhex aString = fromString <$> aUnxeded
@@ -142,33 +180,30 @@ instance FromJSON PPToNNMessage where
     parseJSON (Object aMessage) = do
         aTag  :: T.Text <- aMessage .: "tag"
         aType :: T.Text <- aMessage .: "type"
+        --error $ show aTag ++ " " ++ show aType
         case (T.unpack aTag, T.unpack aType) of
             ("Request", "Transaction") -> RequestTransaction <$> aMessage .: "number"
 
             ("Request", "Broadcast") -> do
-                aMsg :: T.Text <- aMessage .: "msg"
-                aRecipientType :: T.Text <-  aMessage .: "aRecipientType"
-                case myTextUnhex aMsg of
-                    Just aUnxededMsg  -> return $
-                        RequestBroadcast (readNodeType aRecipientType) aUnxededMsg
-                    Nothing           -> mzero
+                aMsg :: Value <- aMessage .: "msg"
+                aRecipientType :: T.Text <-  aMessage .: "recipientType"
+                return $ RequestBroadcast (readNodeType aRecipientType) (S.encode aMsg)
 
             ("Request","Connects")    -> return RequestConnects
             ("Request","PoWList")     -> return RequestPoWList
 
             ("Response", "NodeId") -> do
                 aPPId :: T.Text <- aMessage .: "nodeId"
-                aPoint    <- myUnhex aPPId
+
+                aPoint   <- unhexNodeId aPPId
                 aNodeType :: T.Text <- aMessage .: "nodeType"
                 return (ResponseNodeIdToNN (PPId aPoint) (readNodeType aNodeType))
 
             ("Msg", "MsgTo") -> do
                 aDestination :: T.Text <- aMessage .: "destination"
-                aMsg         :: T.Text <- aMessage .: "msg"
-                aPoint <- myUnhex aDestination
-                case myTextUnhex aMsg of
-                    Just aJustMsg -> return $ MsgMsgToNN (PPId aPoint) aJustMsg
-                    Nothing -> mzero
+                aMsg         :: Value  <- aMessage .: "msg"
+                aPoint <- unhexNodeId aDestination
+                return $ MsgMsgToNN (PPId aPoint) (S.encode aMsg)
 
             ("Msg", "Microblock") -> do
                 aPreviousHash :: T.Text <- aMessage .: "previousHash"
@@ -179,23 +214,22 @@ instance FromJSON PPToNNMessage where
                         case decodeList aListTransaction of
                             []      -> mzero
                             aResult -> return . MsgMicroblock
-                                $ Microblock aHash1 aHash2 aResult
-                    _   -> mzero
+                                $ Microblock aHash1 aHash2 (map read aResult :: [Transaction])
+                    _   -> error "Can not parse Microblock"
 
 
             _ -> mzero
 
-    parseJSON _ = mzero
+    parseJSON _ = mzero -- error $ show a
 
 readNodeType :: (IsString a, Eq a) => a -> NodeType
 readNodeType aNodeType = if aNodeType == "PoW" then PoW else PoA
 
-decodeList :: S.Serialize a => [T.Text] -> [a]
 
 decodeList aList
     | all isRight aDecodeList   = rights aDecodeList
     | otherwise                 = []
-    where aDecodeList = S.decode . fromString . T.unpack <$> aList
+    where aDecodeList = myUnhex <$> aList
 
 
 instance ToJSON NNToPPMessage where
@@ -205,11 +239,15 @@ instance ToJSON NNToPPMessage where
       ]
 
     toJSON (MsgMsgToPP aPPId aMessage) = object [
-        "tag"       .= ("Msg"   :: String),
-        "type"      .= ("MsgTo" :: String),
-        "sender"    .= ppIdToString aPPId,
-        "messages"  .= (show.hex $ aMessage)
-      ]
+            "tag"       .= ("Msg"   :: String),
+            "type"      .= ("MsgTo" :: String),
+            "sender"    .= ppIdToString aPPId,
+            "messages"  .= aObj
+          ]
+      where
+        aObj = case S.decode aMessage of
+            Right (aObjValue :: Value)   -> aObjValue
+            Left aObjValue               -> String (T.pack aObjValue)
 
     toJSON (ResponseConnects aConnects) = object [
         "tag"       .= ("Response"  :: String),
@@ -227,15 +265,22 @@ instance ToJSON NNToPPMessage where
       ]
 
     toJSON (ResponseTransaction aTransaction) = object [
-        "transaction" .= (hex . show $ S.encode aTransaction)
+        "tag"       .= ("Response"     :: String),
+        "type"      .= ("Transaction"  :: String),
+        "transaction" .= show(aTransaction)
       ]
 
     toJSON (MsgBroadcastMsg aMessage (IdFrom aPPId)) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("BroadcastMsg"  :: String),
-        "messages"  .= (show.hex $ aMessage),
+        "messages"  .= aObj,
         "idFrom"    .= ppIdToString aPPId
       ]
+      where
+        aObj = case S.decode aMessage of
+          Right (aObjValue :: Value)   -> aObjValue
+          Left aObjValue               -> String (T.pack aObjValue)
+
 
     toJSON (ResponsePoWList aPPIds) = object [
         "tag"       .= ("Response"  :: String),
@@ -248,10 +293,6 @@ instance ToJSON Connect where
         "ip"   .= show (fromHostAddress aHostAddress),
         "port" .= fromEnum aPortNumber
       ]
-
-
-ppIdToString :: PPId -> String
-ppIdToString (PPId aPoint) = show . hex $ S.encode aPoint
 
 
 --------------------------------------------------------------------------------

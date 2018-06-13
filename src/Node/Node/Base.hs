@@ -17,6 +17,7 @@ module Node.Node.Base (
         ,   answerToDatagramMsg
         ,   answerToInitDatagram
         ,   baseNodeOpts
+        ,   initShading
         ,   sendExitMsgToNode
   ) where
 
@@ -29,19 +30,18 @@ import              Control.Concurrent
 import              Crypto.Error
 import              Crypto.PubKey.ECC.ECDSA
 import qualified    Data.Map                        as M
-import qualified    Data.Set                        as S
 import              Data.IORef
 import              Data.Serialize
 import              Lens.Micro.Mtl
 import              Lens.Micro
-import              Data.Hex
+import              Data.List.Extra
 
+import              Sharding.Space.Distance
 import              Node.FileDB.FileServer
 import              Service.Network.WebSockets.Client
 import              Service.Network.Base
 import              Service.Monad.Option
 import              Sharding.Space.Point
-import              Sharding.Space.Shift
 import              Sharding.Sharding
 import              Node.Node.Types
 import              Node.Crypto
@@ -52,6 +52,7 @@ import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.GlobalLoging
 import              Service.InfoMsg
 import              Data.Maybe
+import              Node.BaseFunctions
 
 baseNodeOpts
     ::  ManagerData md2
@@ -65,7 +66,10 @@ baseNodeOpts aChan aMd aData = do
     opt isSendInitDatagram      $ answerToSendInitDatagram aChan aMd
     opt isServerIsDead          $ answerToServerDead aChan defaultServerPort
     opt isConnectivityQuery     $ answerToConnectivityQuery aChan aMd
-    opt isDisconnectNode        $ answerToDisconnectNode    aData
+    opt isQueryPositions        $ answerToQueryPositions aMd
+    opt isDisconnectNode        $ answerToDisconnectNode  aData
+    opt isFindBestConnects      $ answerToFindBestConnects aChan aMd
+    opt isTestSendMessage       $ answerToTestSendMessage aData
 
 
 pattern Chan :: Chan MsgToSender -> Node
@@ -78,14 +82,17 @@ sendExitMsgToNode (Chan aChan) = do
     writeChan       aChan SenderTerminate
 sendExitMsgToNode _ = error "Node.Node.Base.sendExitMsgToNode"
 
-pattern Head :: forall a b. a -> b -> [(a, b)]
-pattern Head aId aElem <- (aId, aElem):_
-
-pattern PositionOfFirst :: forall a. NodePosition -> [(a, Node)]
-pattern PositionOfFirst aPosition <- Head _ ((^.nodePosition) -> Just aPosition)
 
 preferedBroadcastCount :: Int
-preferedBroadcastCount = 4
+preferedBroadcastCount = 5
+
+answerToQueryPositions :: ManagerData md =>  ManagerMsg msg => IORef md -> msg -> IO()
+answerToQueryPositions aMd _ = do
+    aData <- readIORef aMd
+    let ids = [aId | (aId, aNode) <- M.toList $ aData^.nodes, isNothing $ aNode^.nodePosition]
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Node posiotion request: " ++ show ids
+    makeAndSendTo aData ids NodePositionRequestPackage
+
 
 -- TODO optimization by ping
 -- TODO optimization by routing
@@ -100,68 +107,84 @@ answerToConnectivityQuery aChan aMd _ = do
     aData <- readIORef aMd
     let aNeighbors    = aData^.nodes
         aBroadcasts   = filter (^._2.isBroadcast) $ M.toList aNeighbors
-
-        aMyNodeId     = aData^.myNodeId
         aBroadcastNum = length aBroadcasts
         aUnActiveNum  = M.size $ M.filter (\a -> a^.status /= Active) aNeighbors
 
-    aPosChan <- newChan
     aConChan <- newChan
-    writeChan (aData^.fileServerChan) $
-         FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-    writeChan (aData^.fileServerChan) $
-         FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
+    writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+    NodeInfoListNetLvl aConnectList <- readChan aConChan
 
-    NodeInfoListNetLvl   aConnectList   <- readChan aConChan
-    NodeInfoListLogicLvl aPossitionList <- readChan aPosChan
+    when (length aConnectList > 8) $
+        whenJust (aData^.myNodePosition) $ \aMyPosition -> do
+            writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of a list of connects."
+            writeChan (aData^.fileServerChan) $ FileActorMyPosition aMyPosition
 
-    let aWait = aBroadcastNum >= preferedBroadcastCount{- || aBroadcastNum <= 6 -} || aUnActiveNum /= 0
-        aFilteredPositions = S.fromList . M.elems $ M.intersection
-            (M.fromList aPossitionList) (M.fromList aConnectList)
-
+    let aWait = (preferedBroadcastCount < aBroadcastNum && aBroadcastNum <= 7) || aUnActiveNum /= 0
     if  | aWait             -> return ()
         | null aConnectList -> connectToBootNode aChan aData
-        | iDontHaveAPosition aData -> if
-            | aBroadcastNum == 0 -> do
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info
-                    "Init. Connect to first broadcast node."
-                connectTo aChan 1 aConnectList
-            | PositionOfFirst aPosition <- aBroadcasts -> do
-                aDeltaX <- randomRIO (0, 2000)
-                aDeltaY <- randomRIO (0, 2000)
-                let aMyNodePosition = MyNodePosition $ Point
-                        (x + aDeltaX - 1000) (y + aDeltaY - 1000)
-                    NodePosition (Point x y) = aPosition
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                    "Init. Take new logic coordinates " ++ show aMyNodePosition ++ "."
-                aChanOfSharding <- newChan
-                makeShardingNode aMyNodeId aChanOfSharding aChan aMyNodePosition (aData^.infoMsgChan)
-                modifyIORef aMd (&~ do
-                    myNodePosition .= Just aMyNodePosition
-                    shardingChan   .= Just aChanOfSharding)
-            | Head aNodeId _ <- aBroadcasts -> do
-                writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                    "Request of a node position of the " ++ show aNodeId ++ "."
-                makeAndSendTo aData [aNodeId] NodePositionRequestPackage
-
-        |   aBroadcastNum < preferedBroadcastCount,
-            Just aMyNodePosition <- aData^.myNodePosition -> do
-
-            let aPositionOfPreferedConnect = findNearestNeighborPositions
-                    aMyNodePosition aFilteredPositions
-                isPreferedByPositon a = (a^._2) `elem`aPositionOfPreferedConnect
-                aNodesId = (^._1) <$> filter isPreferedByPositon aPossitionList
-                isPreferedById a = (a^._1)  `elem` aNodesId
-                aPreferedConnects = filter isPreferedById aConnectList
-                aConnectsNum = preferedBroadcastCount - aBroadcastNum
+        | iDontHaveAPosition aData -> initShading aChan aMd
+        | aBroadcastNum < preferedBroadcastCount -> do
+            let aConnectsNum = preferedBroadcastCount - aBroadcastNum
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "Request of the " ++ show aConnectsNum ++ " connects."
-            connectTo aChan aConnectsNum aPreferedConnects
-        |   otherwise -> error $ "!!!!!!!!!!!" ++ show aBroadcastNum ++ " " ++ show aUnActiveNum
-      -- if we don't find anybody send message error
-      -- TODO: optimize by net and logic lvl
-      --  | aBroadcastNum > 6     -> undefined
+            connectTo aChan aConnectsNum aConnectList
+        | otherwise -> whenJust (aData^.myNodePosition) $ \aNodePosition -> do
+            let aMostClosed = drop preferedBroadcastCount . sortOn (distanceTo aNodePosition . (^.nodePosition)). (snd <$>) $ aBroadcasts
+            forM_ aMostClosed sendExitMsgToNode
 
+
+--
+answerToFindBestConnects ::  ManagerData md =>  ManagerMsg msg =>
+        Chan msg ->  IORef md ->  msg ->  IO ()
+answerToFindBestConnects aChan aMd _ = do
+    aData <- readIORef aMd
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info "answerToFindBestConnects: start"
+    whenJust (aData^.myNodePosition) $ \aMyNodePosition -> do
+        aPosChan <- newChan
+        aConChan <- newChan
+        writeChan (aData^.fileServerChan) $
+             FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+        writeChan (aData^.fileServerChan) $
+             FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
+
+        NodeInfoListNetLvl   aBroadcastList      <- readChan aConChan
+        NodeInfoListLogicLvl aBroadcastListLogic <- readChan aPosChan
+
+        let aPoints :: [(NodeId, NodePosition)]
+            aPoints = M.toList $ M.intersection (M.fromList aBroadcastListLogic) (M.fromList aBroadcastList)
+
+            aExistConnects :: M.Map NodeId NodePosition
+            aExistConnects = M.fromList [(aId, aPosition) |(aId, (^.nodePosition) -> Just aPosition) <- M.toList $ aData^.nodes]
+
+            aPrefferedConnects :: M.Map NodeId NodePosition
+            aPrefferedConnects = M.fromList . take 4 . sortOn (distanceTo aMyNodePosition.snd) $ aPoints
+
+            aNeadedConnects :: M.Map NodeId Connect
+            aNeadedConnects = M.intersection (M.fromList aBroadcastList) (M.difference aPrefferedConnects aExistConnects)
+
+        connectTo aChan 4 (M.toList aNeadedConnects)
+
+
+-- 1. We can have its coordinats unknown
+-- 4 - network alignment
+
+initShading :: (NodeConfigClass s, NodeBaseDataClass s, ManagerMsg msg) =>
+    Chan msg -> IORef s -> IO ()
+initShading aChan aMd = do
+    aData <- readIORef aMd
+    aX <- randomIO
+    aY <- randomIO
+    let aPoint = MyNodePosition $ Point aX aY
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+        "Init. Take new logic coordinates " ++ show aPoint ++ "."
+
+    aChanOfSharding <- newChan
+    void $ forkIO $ undead (writeLog (aData^.infoMsgChan) [ShardingLvlTag] Warning
+        "initShading. This node could be die!" >> threadDelay 100000000) $ makeShardingNode
+        (aData^.myNodeId) aChanOfSharding aChan aPoint (aData^.infoMsgChan)
+    modifyIORef aMd (&~ do
+        myNodePosition .= Just aPoint
+        shardingChan   .= Just aChanOfSharding)
 
 iDontHaveAPosition :: ManagerData md => md -> Bool
 iDontHaveAPosition aData = isNothing $ aData^.myNodePosition
@@ -232,6 +255,17 @@ answerToSendInitDatagram _ _ _ = pure ()
 
 answerToServerDead :: ManagerMsg a => Chan a -> PortNumber -> a -> IO ()
 answerToServerDead aChan aPort _ = void $ startServerActor aChan aPort
+
+answerToTestSendMessage
+    ::  ManagerData md
+    =>  ManagerMsg msg
+    =>  md
+    ->  msg
+    ->  IO ()
+answerToTestSendMessage aData (toManagerMsg -> TestNode aId) = do
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+        "answerToTestSendMessage: Node broadcast list request to " ++ show (aId) ++ " nodes."
+    makeAndSendTo aData [aId] IsYouBrodcast
 
 
 answerToDisconnectNode
@@ -336,14 +370,15 @@ answerToPackagedMsg
     ->  IORef md
     ->  IO ()
 
-answerToPackagedMsg aId aChan aCipheredString@(CipheredString aStr) aMd = do
+answerToPackagedMsg aId aChan aCipheredString aMd = do
     aData <- readIORef aMd
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-        "Received a message " ++ show (hex aStr) ++ " from " ++ show aId ++ "."
-    let aDecryptedPacage = do
+    let aDecryptedPackage = do
             key  <- _mKey =<< aData^.nodes.at aId
             decryptChipred key aCipheredString
-    whenJust aDecryptedPacage $ \case
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+        "Received a message " ++ show aDecryptedPackage ++ " from " ++ show aId ++ "."
+
+    whenJust aDecryptedPackage $ \case
         PackageTraceRoutingRequest aTraceRouting aRequestPackage ->
             makeAction aChan aMd aId aTraceRouting aRequestPackage
         PackageTraceRoutingResponse aTraceRouting aResponsePackage ->

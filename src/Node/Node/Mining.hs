@@ -16,16 +16,18 @@ module Node.Node.Mining (
     managerMining
   ) where
 
+import              System.Random()
 import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
 
 import qualified    Data.Map                        as M
 import qualified    Data.Bimap                      as BI
-import              Data.Maybe (isNothing)
+import              Data.Maybe (isNothing, catMaybes)
 import              Data.List.Extra
 import              System.Clock
 import              Data.IORef
 import              Data.Serialize
 import              Lens.Micro
+import              Lens.Micro.Mtl()
 import              Control.Concurrent
 import              Control.Monad.Extra
 import              Crypto.Error
@@ -48,35 +50,65 @@ import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.Verification
 import              Node.Data.GlobalLoging
 import              PoA.Types
+import              Sharding.Sharding()
+import              Node.BaseFunctions
 
 managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
-managerMining ch aMd = forever $ do
-    mData <- readIORef aMd
-    readChan ch >>= \a -> runOption a $ do
-        baseNodeOpts ch aMd mData
+managerMining aChan aMd = do
+  modifyIORef aMd $ iAmBroadcast .~ True -- FIXME:!!!
+  aData <- readIORef aMd
+  undead (writeLog (aData^.infoMsgChan) [NetLvlTag] Warning
+      "managerMining. This node could be die!" )
+      $ forever $ do
+          mData <- readIORef aMd
+          readChan aChan >>= \a -> runOption a $ do
+            baseNodeOpts aChan aMd mData
 
-        opt isInitDatagram          $ answerToInitDatagram aMd
-        opt isDatagramMsg           $ answerToDatagramMsg ch aMd (mData^.myNodeId)
-        opt isClientIsDisconnected $ miningNodeAnswerClientIsDisconnected aMd
+            opt isInitDatagram              $ answerToInitDatagram aMd
+            opt isDatagramMsg               $ answerToDatagramMsg aChan aMd (mData^.myNodeId)
+            opt isClientIsDisconnected      $ miningNodeAnswerClientIsDisconnected aMd
 
-        opt isTestBroadcastBlockIndex   $ answerToTestBroadcastBlockIndex aMd
-        opt isNewTransaction            $ answerToNewTransaction aMd
-        opt isInitDatagram              $ answerToSendInitDatagram ch aMd
-        opt isShardingNodeRequestMsg    $ answerToShardingNodeRequestMsg aMd
-        opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
-        opt isDeleteOldestPoW           $ answerToDeleteOldestPoW aMd
-        opt isMsgFromPP                 $ answeToMsgFromPP aMd
+            opt isTestBroadcastBlockIndex   $ answerToTestBroadcastBlockIndex aMd
+            opt isNewTransaction            $ answerToNewTransaction aMd
+            opt isInitDatagram              $ answerToSendInitDatagram aChan aMd
+            opt isShardingNodeRequestMsg    $ answerToShardingNodeRequestMsg aMd
+            opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
+            opt isDeleteOldestPoW           $ answerToDeleteOldestPoW aMd
+            opt isMsgFromPP                 $ answeToMsgFromPP aMd
+            opt isInitShardingLvl           $ answerToInitShardingLvl aChan aMd
+            opt isInfoRequest               $ answerToInfoRequest aMd
+
+
+answerToInfoRequest :: ManagerData md => IORef md -> a -> IO ()
+answerToInfoRequest aMd _ = do
+    aData <- readIORef aMd
+    let aIds = M.keys $ aData^.nodes
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+        "answerToInfoRequest: Node broadcast list request to " ++ show (length aIds) ++ " nodes."
+    makeAndSendTo aData aIds BroadcastListRequest
+
+
+answerToInitShardingLvl :: (ManagerMsg msg, NodeConfigClass s, NodeBaseDataClass s) =>
+                            Chan msg -> IORef s -> p -> IO ()
+answerToInitShardingLvl aChan aMd _ = do
+    aData <- readIORef aMd
+    when (isNothing (aData^.myNodePosition)) $ do
+        writeLog (aData^.infoMsgChan) [NetLvlTag, InitTag] Info
+            "Select new random coordinate because I am first node in net."
+        initShading aChan aMd
 
 
 answerToTestBroadcastBlockIndex :: IORef ManagerNodeData -> ManagerMiningMsgBase ->  IO ()
 answerToTestBroadcastBlockIndex aMd _ = do
     aData <- readIORef aMd
     aPosChan <- newChan
+    let aPositionsOfNeibors  = (^.nodePosition) <$> M.elems (aData^.nodes)
     writeChan (aData^.fileServerChan) $ FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
     NodeInfoListLogicLvl aPossitionList <- readChan aPosChan
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point list XXX: " ++ show aPossitionList
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point node list XXX: " ++ show ((^.nodePosition) <$> M.elems (aData^.nodes))
-
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point node list XXX: " ++ show aPositionsOfNeibors
+    whenJust (aData^.myNodePosition) $ \aPosition ->
+        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Data for drawign #" ++ show (toPoint aPosition, toPoint <$> catMaybes aPositionsOfNeibors)
 
 
 answeToMsgFromPP :: IORef ManagerNodeData ->  ManagerMiningMsgBase ->  IO ()
@@ -101,9 +133,10 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
             makeAndSendTo aData (ppIdToNodePosition aPPId) aRequest
 
         BroadcastRequestFromPP aByteString aIdFrom@(IdFrom aPPId) aNodeType ->
-            whenJust (aData^.ppNodes.at aPPId) $ \aNode ->
-                sendBroadcast aMd $
-                    BroadcastPPMsg (aNode^.ppType) aByteString aNodeType aIdFrom
+            whenJust (aData^.ppNodes.at aPPId) $ \aNode -> do
+                let aMessage = BroadcastPPMsg (aNode^.ppType) aByteString aNodeType aIdFrom
+                sendBroadcast aMd aMessage
+                processingOfBroadcast aMd aMessage
 
         MsgResendingToPP aIdFrom@(IdFrom aPPIdFrom) aIdTo@(IdTo aId) aByteString
             | Just aNode <- aData^.ppNodes.at aId ->
@@ -123,7 +156,7 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
 
 answeToMsgFromPP _ _ = error "answeToMsgFromPP"
 
--- TODO: определение "места" где должа находиться PP нода. (переконект)
+-- TODO: define the place where node should be (reconnect)
 
 miningNodeAnswerClientIsDisconnected
     ::  IORef ManagerNodeData
@@ -160,7 +193,7 @@ answerToShardingNodeRequestMsg aMd
                         (aData^.myNodeId)
                         (toNodePosition aMyNodePosition))
 
-            T.IamAwakeRequst _ aMyNodePosition -> do
+            T.IamAwakeRequest _ aMyNodePosition -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $aLogMsg "awake logic lvl"
                 sendBroadcast aMd
                     (BroadcastPosition
@@ -212,7 +245,8 @@ answerToShardingNodeRequestMsg aMd
                             (\a -> distanceTo (a^._2) aNodePosition)
                             aListOfBroatcastPosition
                     aLogAboutAliveRequest aNodeId
-                    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $"Request to broadcast node about state (alive or dead) of " ++ show aNodeId
+                    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
+                        "Request to broadcast node about state (alive or dead) of " ++ show aNodeId
                     makeAndSendTo aData aBroadcastNodeId
                         (IsAliveTheNodeRequestPackage aNodeId)
 answerToShardingNodeRequestMsg _ _ = return ()
@@ -239,8 +273,10 @@ answerToDeleteOldestPoW aMd _ = do
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of index of PoW."
     aTime <- getTime Realtime
     modifyIORef aMd $ hashMap %~ BI.filter
-        (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs (5*60*10^9))
+        (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs timeLimit)
 
+timeLimit :: Integer
+timeLimit = 5*60*10^(9 :: Integer)
 
 instance BroadcastAction ManagerNodeData where
     makeBroadcastAction _ aMd _ aBroadcastSignature aBroadcastThing = do
@@ -261,7 +297,7 @@ instance PackageTraceRoutingAction ManagerNodeData ResponsePackage where
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info "The Response is for me. The processing of Response."
                 aProcessingOfAction
             | otherwise -> aSendToNeighbor aData
-        else writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
+        else writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
             "The error of verification of Response package. The trace is a "
             ++ show aTraceRouting
             ++ "the package is " ++ show aResponsePackage
@@ -313,7 +349,7 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                 when (isNothing aMaybeNode) aProcessingOfAction
             ToNode aNodeId _
                 | toNodeId (aData^.myNodeId) == aNodeId -> aProcessingOfAction
-                | otherwise -> writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
+                | otherwise -> writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "The package is to " ++ show aNodeId ++ "but i am a " ++
                     show (aData^.myNodeId) ++ ". The package is a " ++ show aRequestPackage
 
@@ -376,7 +412,7 @@ answerToNewTransaction _ _ = error
     "answerToNewTransaction: something unexpected  has happened."
 
 
----- IDEA: Вынести в отдельный модуль????
+---- IDEA: replace to a separate module ???
 --------------------------------------------------------------------------------
 class SendBroadcast a where
     sendBroadcast :: IORef ManagerNodeData -> a -> IO ()

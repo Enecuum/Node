@@ -10,9 +10,9 @@
 --              |                             |
 --    toStore --+-- To NetLvl -> LogicLvl -> NetLvl
 
--- -> NetLevet: BlockRequest
--- NetLevet -> LogicLvl: BlockRequest (Chan for Response) BlockHash
--- LogicLvl -> NetLevet: BlockResponse (Maybe Block)
+-- -> NetLevel: BlockRequest
+-- NetLevel -> LogicLvl: BlockRequest (Chan for Response) BlockHash
+-- LogicLvl -> NetLevel: BlockResponse (Maybe Block)
     -- LogicLvl (local) -> LogicLvl (non local): BlockRequest (Maybe Block)
     -- LogicLvl (non local) -> LogicLvl (local): BlockResponse (Maybe Block)
 
@@ -63,6 +63,7 @@ import              Lens.Micro.GHC()
 import              Node.Data.Key
 import              Data.Maybe (fromJust)
 
+
 sizeOfShardStore:: Int
 sizeOfShardStore = 500
 
@@ -87,20 +88,23 @@ numberOfNeededShards aShardingNode =
 -- COMBAK: Understand what is the problem.
 -- nodeIndex.shardNeededIndex.setOfHash
 
-makeShardingNode :: T.ManagerMsg msg =>
-                          MyNodeId
-                          -> Chan ShardingNodeAction
-                          -> Chan msg
-                          -> MyNodePosition
-                          -> Chan InfoMsg
-                          -> IO ()
+makeShardingNode
+    ::  T.ManagerMsg msg
+    =>  MyNodeId
+    ->  Chan ShardingNodeAction
+    ->  Chan msg
+    ->  MyNodePosition
+    ->  Chan InfoMsg
+    ->  IO ()
 makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgChan = do
     aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMsgChan
-    writeLog infoMsgChan [ShardingLvlTag] Info "Start of sharding lvl."
+    writeLog infoMsgChan [ShardingLvlTag, InitTag] Info "Start of sharding lvl."
     void $ forkIO $ aLoop aShardingNode
   where
     aLoop :: ShardingNode -> IO ()
-    aLoop aShardingNode = readChan aChanRequest >>= \case
+    aLoop aShardingNode = do
+      writeLog infoMsgChan [ShardingLvlTag] Info "Sharding loop start."
+      readChan aChanRequest >>= \case
         CheckOfShardLoadingList -> do
             writeLog infoMsgChan [ShardingLvlTag] Info "Check loading sharding list."
             aNow <- getTime Realtime
@@ -123,14 +127,18 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
                             aShardingNode^.nodeIndex.shardNeededIndex.setOfHash
                     writeLog infoMsgChan [ShardingLvlTag] Info $
                         "Request shards by hash: " ++ show (S.toList aShardHashes)
-                    sendToNetLevet aChanOfNetLevel $
+                    sendToNetLevel aChanOfNetLevel $
                         ShardListRequest (S.toList aShardHashes)
                     aLoop $ aShardingNode &
                         nodeIndex.shardNeededIndex.setOfHash %~ S.drop aNumberOfLoading
+            | otherwise -> aLoop aShardingNode
 
         ShiftAction | shiftIsNeed aShardingNode -> do
             writeLog infoMsgChan [ShardingLvlTag] Info "Try shift."
-            shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode
+            shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode infoMsgChan
+                    | otherwise -> do
+                        writeLog infoMsgChan [ShardingLvlTag] Info "Shift is not need."
+                        aLoop aShardingNode
 
         CheckTheNeighbors -> do
             let aNodePositions      = (^.neighborPosition) `S.map` aNeighbors
@@ -147,7 +155,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
                 ++ ", Filtered neighbors positions: " ++ show aFilteredNeighbors
 
             forM_ aFilteredNeighbors $ \aNeighbor ->
-                sendToNetLevet aChanOfNetLevel $ IsTheNeighborAliveRequest
+                sendToNetLevel aChanOfNetLevel $ IsTheNeighborAliveRequest
                     (aNeighbor^.neighborId)
                     (aNeighbor^.neighborPosition)
             aLoop aShardingNode
@@ -188,7 +196,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
                     writeLog infoMsgChan [ShardingLvlTag] Info $
                         "This shard " ++ show aShardHash
                      ++ " doesn't store hire. Request neighbors of this shard."
-                    sendToNetLevet aChanOfNetLevel $ ShardListRequest [aShardHash]
+                    sendToNetLevel aChanOfNetLevel $ ShardListRequest [aShardHash]
                     aTime <- getTime Realtime
                     aLoop $ aShardingNode & nodeIndexOfReques %~
                         M.insert aShardHash (aTime, aChan)
@@ -217,12 +225,14 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
                 writeLog infoMsgChan [ShardingLvlTag] Info $
                     "This shard " ++ show aShard ++ " accepted and saved localy."
                 nodeSaveShard aShard aLoop aShardingNode
+            | otherwise -> aLoop aShardingNode
 
         NewShardInNetAction aShard
             | checkShardIsInRadiusOfCaptureShardingNode aShardingNode (shardToHash aShard) -> do
                 writeLog infoMsgChan [ShardingLvlTag] Info $
                     "New shard " ++ show aShard ++ " in net and save localy."
                 nodeSaveShard aShard aLoop aShardingNode
+            | otherwise -> aLoop aShardingNode
 
         ShardLoadAction aChan aNodeId aHashList -> do
             writeLog infoMsgChan [ShardingLvlTag] Info $
@@ -274,9 +284,6 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
             aLoop $ aShardingNode & nodeIndexOfReques %~
                 M.filter (\a -> diffTimeSpec (a^._1) aTime < fromNanoSecs (toInteger bigPeriod))
 
-        _                 -> error "Sharding.Sharding.makeShardingNode"
-
-
 --------------------------------------------------------------------------------
 --                              INTERNAL                                      --
 --------------------------------------------------------------------------------
@@ -288,9 +295,9 @@ initOfShardingNode :: T.ManagerMsg msg =>
                             -> Chan InfoMsg
                             -> IO ShardingNode
 initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMsgChan = do
-    writeLog infoMsgChan [InitTag] Info "Init sharding node"
-    sendToNetLevet aChanOfNetLevel $ IamAwakeRequst aMyNodeId aMyNodePosition
-    sendToNetLevet aChanOfNetLevel NeighborListRequest
+    writeLog infoMsgChan [ShardingLvlTag, InitTag] Info "Init sharding node"
+    sendToNetLevel aChanOfNetLevel $ IamAwakeRequest aMyNodeId aMyNodePosition
+    sendToNetLevel aChanOfNetLevel NeighborListRequest
 
     aMyShardsIndex <- loadMyShardIndex
 
@@ -298,15 +305,18 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMs
     metronome bigPeriod $ writeChan aChanRequest CleanNeededIndex
     metronome bigPeriod $ writeChan aChanRequest CleanRequestIndex
     metronome smallPeriod $ writeChan aChanRequest CheckOfShardLoadingList
-    metronome bigPeriod $ do
-        writeChan aChanRequest CheckTheNeighbors
-        threadDelay smallPeriod
-        writeChan aChanRequest ShiftAction
+    void $ forkIO $ do
+        threadDelay $ smallPeriod
+        metronomeLinear (smallPeriod) bigPeriod $ do
+            --writeChan aChanRequest CheckTheNeighbors
+            --threadDelay smallPeriod
+            writeLog infoMsgChan [ShardingLvlTag, InitTag] Info "ShiftAction write to chan"
+            writeChan aChanRequest ShiftAction
 
     enc <- L.readFile "configs/config.json"
 
     case A.decode enc of
-        Nothing    -> error "config not is valid"
+        Nothing    -> error "config is not valid"
         Just aEnc  -> do
             let shardEnable = T.sharding $ fromJust $ T.simpleNodeBuildConfig aEnc
             case shardEnable of
@@ -317,8 +327,9 @@ shiftTheShardingNode :: T.ManagerMsg msg =>
         Chan msg
     -> (ShardingNode ->  IO ())
     ->  ShardingNode
+    -> Chan InfoMsg
     ->  IO ()
-shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
+shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode _ = do
     let
         aNeighborPositions :: S.Set NodePosition
         aNeighborPositions = neighborPositions aShardingNode
@@ -331,16 +342,16 @@ shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode = do
             findNearestNeighborPositions aMyNodePosition aNeighborPositions
 
         aNewPosition :: MyNodePosition
-        aNewPosition       = shiftToCenterOfMass aMyNodePosition aNearestPositions
+        aNewPosition = shiftToCenterOfMass aMyNodePosition aNearestPositions
+
     writeLog (aShardingNode^.nodeInfoMsgChan) [ShardingLvlTag] Info $
-          "Make shift action. "
-        ++ "Neighbor positions: " ++ show (S.toList aNeighborPositions)
+        "Make shift action. Neighbor positions: " ++ show (S.toList aNeighborPositions)
         ++ ". My position: " ++ show aMyNodePosition
         ++ ". Nearest positions: " ++ show (S.toList aNearestPositions)
         ++ ". New position: " ++ show aNewPosition
 
-    sendToNetLevet aChanOfNetLevel $ NewPosiotionMsg aNewPosition
-    sendToNetLevet aChanOfNetLevel $ ShardIndexRequest
+    sendToNetLevel aChanOfNetLevel $ NewPosiotionMsg aNewPosition
+    sendToNetLevel aChanOfNetLevel $ ShardIndexRequest
         (findShardingNodeDomain aShardingNode)
         (S.toList aNearestPositions)
     aLoop $ aShardingNode & nodePosition .~ aNewPosition
@@ -417,7 +428,8 @@ nodeSaveShard aShard aLoop aShardingNode = do
 
 
 neighborPositions :: ShardingNode -> S.Set NodePosition
-neighborPositions = S.map (^.neighborPosition) . (^.nodeNeighbors)
+neighborPositions aShardingNode =
+    S.map (^.neighborPosition) (aShardingNode^.nodeNeighbors)
 
 
 findShardingNodeDomain :: ShardingNode -> Distance Point
@@ -431,8 +443,8 @@ shiftIsNeed aShardingNode = checkUnevenness
     (aShardingNode^.nodePosition) (neighborPositions aShardingNode)
 
 
-sendToNetLevet :: T.ManagerMsg msg => Chan msg -> ShardingNodeRequestMsg -> IO ()
-sendToNetLevet aChan aMsg = writeChan aChan $ T.shardingNodeRequestMsg aMsg
+sendToNetLevel :: T.ManagerMsg msg => Chan msg -> ShardingNodeRequestMsg -> IO ()
+sendToNetLevel aChan aMsg = writeChan aChan $ T.shardingNodeRequestMsg aMsg
 
 
 mul :: Word64 -> Word64 -> Word64
