@@ -97,7 +97,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
                 let aFilteredNode :: [Chan NNToPPMessage]
                     aFilteredNode = do
                         aNode <- snd <$> M.toList (aData^.ppNodes)
-                        guard $ aNode^.ppType == aNodeType
+                        guard $ aNodeType == All || aNode^.ppType == aNodeType
                         return $ aNode^.ppChan
 
                 forM_ aFilteredNode $ \aChan ->
