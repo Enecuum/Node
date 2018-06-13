@@ -15,6 +15,8 @@ Node supports multithreading. Each thread has its own data and can read data fro
 Node relies on actors. The central part of a node is the governing actor. It stores the main data, information about neighbor nodes and network status information. Other actors are reponsible for communication with the outside world processing incoming and outcoming messages.
 
 
+<br/>
+<br/>
 
 ## RCP-JSON API for Simple Node
 
@@ -29,6 +31,8 @@ Request example:
  
 `{"result":[],"jsonrpc":"2.0","id":1}`
 
+<br/>
+<br/>
 
 ## Build and Install
 
@@ -95,6 +99,8 @@ Execute `stack exec LightClient-exe`.
 | -B publicKey | --get-balance=publicKey | Get balance for a public key |
 | -S amount:to:from:currency | --send-money-to-from=amount:to:from:currency | Send currency from a public key to a public key (ENQ/ETH/DASH/BTC) |
 
+<br/>
+<br/>
 
 ### (Optional) Set your own environment variables:
 
@@ -106,6 +112,8 @@ You can define curstom values for variables in the /configs/config.json:
 |---------|---------|
 | rpcPort | Port for remote procedure calls to the node |
 
+<br/>
+
 * `statsdBuildConfig` is the config section for the server to collect metrics. 
 
 | Variable | Description |
@@ -113,10 +121,15 @@ You can define curstom values for variables in the /configs/config.json:
 | host | IP of the stat server; you can write yours if you have one up and running |
 | port | Port of the server to send the data to |
 
+<br/>
 
 * `bootNodeList` is the variable for the Boot Node to address when you enter the network the first time or after a while. `1` stands for the ID of the Boot Node, `172,17,0,2` - for the IP address Boot Node resides at (Docker's default IP address in this case). `1667` - port Boot Node receives requests to.
 
+<br/>
+
 * `poaPort` is the variable for communication with PoA Nodes (receiving requests for transactions, sending transactions, receiving microblocks. 
+
+<br/>
 
 * `logsBuildConfig` is the config section for the log server.
 
@@ -125,8 +138,12 @@ You can define curstom values for variables in the /configs/config.json:
 | host | IP of the log server; you can write yours if you have one up and running |
 | port | Port of the server to send the data to |
 
+<br/>
+
 * `extConnectPort` is the variable that defines the port for commnunicating with the outer world (e.g. broadcasting). 
 
+<br/>
+<br/>
 
 ## Use Cases
 
