@@ -44,11 +44,10 @@ type Time      = Double
 type DAG = Gr Transaction Transaction
 
 
-
-data Microblock = Microblock
-                  ByteString -- hashCurrentMicroblock
-                  ByteString -- hashPreviousMicroblock
-                  [Transaction]
+data Microblock = Microblock{
+                  hashCurrentMicroblock :: ByteString, -- hashCurrentMicroblock
+                  hashPreviousMicroblock :: ByteString, -- hashPreviousMicroblock
+                  trans :: [Transaction]}
                 deriving (Eq, Generic, Ord, Read)
 instance Serialize Microblock
 
