@@ -24,7 +24,7 @@ import Service.Network.TCP.Client
 import Service.Network.Base (ClientHandle)
 import LightClient.RPC
 
-data Flag = Key | ShowKey | Balance PubKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages | Quit deriving (Eq, Show)
+data Flag = Key | ShowKey | Balance PubKey | Send Trans | Block Hash | Tx Hash | Wallet PubKey | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages | Quit deriving (Eq, Show)
 
 data ArgFlag = Port PortNumber | Host HostName | Version deriving (Eq, Show)
 
@@ -38,15 +38,20 @@ args = [
 options :: [OptDescr Flag]
 options = [
     Option ['K'] ["get-public-key"] (NoArg Key) "get public key"
+  , Option ['B'] ["get-balance"] (ReqArg (Balance) "publicKey") "get balance for public key"
+  , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
+  , Option ['S'] ["send-money-to-from"] (ReqArg (Send . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
+  , Option ['L'] ["load-block"] (ReqArg (Block . read) "hash") "get block by hash"
+  , Option ['X'] ["get-tx"] (ReqArg (Tx . read) "hash") "get transaction by hash"
+  , Option ['W'] ["load-wallet"] (ReqArg (Wallet . read) "public key") "gat all transactions in wallet"
+-- test
   , Option ['G'] ["generate-n-transactions"] (ReqArg (GenerateNTransactions . read) "qTx") "Generate N Transactions"
   , Option ['F'] ["generate-transactions"] (NoArg GenerateTransactionsForever) "Generate Transactions forever"
-  , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
-  , Option ['B'] ["get-balance"] (ReqArg (Balance) "publicKey") "get balance for public key"
-  , Option ['S'] ["send-money-to-from"] (ReqArg (Send . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
   , Option ['A'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
   , Option ['T'] ["send-message-to"] (ReqArg (SendMessageTo . read) "nodeId message") "Send message to the node"
   , Option ['L'] ["load-new-messages"] (NoArg LoadMessages) "Load new recieved messages"
   , Option ['Q'] ["quit"] (NoArg Quit) "exit"
+ 
   ]
 
 

@@ -8,6 +8,7 @@ import              Service.Types.PublicPrivateKeyPair
 import              GHC.Generics
 import              Data.ByteString
 import qualified    Data.ByteString.Base16 as B16
+import qualified    Data.ByteString.Char8 as C
 import              Data.List.Split (splitOn)
 
 type QuantityTx = Int
@@ -46,6 +47,9 @@ type DAG = Gr Transaction Transaction
 
 newtype Hash = Hash ByteString deriving (Ord, Eq, Show, Generic)
 instance Serialize Hash
+
+instance Read Hash where
+       readsPrec _ value = return (Hash $ C.pack value,"")
 
 data Microblock = Microblock{
                   hashCurrentMicroblock :: ByteString, -- hashCurrentMicroblock

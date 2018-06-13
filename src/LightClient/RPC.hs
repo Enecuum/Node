@@ -3,9 +3,14 @@
 
 module LightClient.RPC (
         newTx,
+        reqLedger,
+        getBlock,
+        getTx,
+        getAllTxs,
+
+--test
         genNTx,
         genUnlimTx,
-        reqLedger,
         newMsgBroadcast,
         newMsgTo,
         loadNewMsg,
@@ -33,16 +38,26 @@ type Result a = RpcResult IO a
 
 -- Client-side function's signature
 newTxSig :: Signature (Transaction ::: ()) ()
-newTxSig = Signature "new_tx" ("x" ::: ())
+newTxSig = Signature "enq_sendTransaction" ("tx" ::: ())
 
+reqLedgerSig :: Signature (PubKey ::: ()) Amount
+reqLedgerSig = Signature "enq_getBalance" ("address" ::: ())
+
+reqGetBlockSig :: Signature (Hash ::: ()) Microblock
+reqGetBlockSig = Signature "enq_getBlockByHash" ("hash" ::: ())
+
+reqGetTxSig :: Signature (Hash ::: ()) TransactionInfo
+reqGetTxSig = Signature "enq_getTransactionByHash" ("hash" ::: ())
+
+reqGetAllTxsSig :: Signature (PubKey ::: ()) [Transaction]
+reqGetAllTxsSig = Signature "enq_getAllTransactions" ("address" ::: ())
+
+--test
 genNTxSig :: Signature (QuantityTx ::: ()) ()
 genNTxSig = Signature "gen_n_tx" ("x" ::: ())
 
 genUnlimTxSig :: Signature () ()
 genUnlimTxSig = Signature "gen_unlim_tx" ()
-
-reqLedgerSig :: Signature (PubKey ::: ()) Amount
-reqLedgerSig = Signature "get_balance" ("x" ::: ())
 
 newMsgBroadcastSig :: Signature (String ::: ()) ()
 newMsgBroadcastSig = Signature "send_message_broadcast" ("x" ::: ())
@@ -57,14 +72,25 @@ loadNewMsgSig = Signature "load_messages" ()
 newTx :: ClientHandle -> Transaction -> Result ()
 newTx h = toFunction (connectionWithTimeOut h) newTxSig
 
+reqLedger :: ClientHandle -> PubKey -> Result Amount
+reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
+
+getBlock :: ClientHandle -> Hash -> Result Microblock
+getBlock h = toFunction (connectionWithTimeOut h) reqGetBlockSig
+
+getTx :: ClientHandle -> Hash -> Result TransactionInfo
+getTx h = toFunction (connectionWithTimeOut h) reqGetTxSig
+
+getAllTxs :: ClientHandle -> PubKey -> Result [Transaction]
+getAllTxs h = toFunction (connectionWithTimeOut h) reqGetAllTxsSig
+
+
+--test
 genNTx :: ClientHandle -> Int -> Result ()
 genNTx h = toFunction (connectionWithTimeOut h) genNTxSig
 
 genUnlimTx :: ClientHandle -> Result ()
 genUnlimTx h = toFunction (connectionWithTimeOut h) genUnlimTxSig
-
-reqLedger :: ClientHandle -> PubKey -> Result Amount
-reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
 
 newMsgBroadcast :: ClientHandle -> String -> Result ()
 newMsgBroadcast h = toFunction (connectionWithTimeOut h) newMsgBroadcastSig
