@@ -1,36 +1,96 @@
 ## Node
 
-P2P Node for main  network protocol.
+P2P node for the main network protocol.
 
-The node acts as a carrier and data storage. Numerous nodes form a network to transmit arbitrtary data across: messages about new blocks, transactions, events, serialized specific messages, etc. All the data carried between nodes is ecnrypted (public-private key pair).
+The node acts as a carrier and data storage. Numerous nodes form a network to transmit arbitrtary data across: messages about new k-blocks, microblocks, transactions, events, etc. All the data carried between nodes is ecnrypted (asymmetric encryption).
 
-There are two types of nodes:
+Compiling the repo generates the following executables:
 
-* Boot nodes. They keep a list of arbitrary available connected nodes and give parts of that list on request to simple nodes connecting to the network.
-* Simple (basic) nodes receive transactions from clients and add them to the pending pool, give PoA nodes transactions from the pending pool, receive blocks from PoA nodes and propagate those blocks to other simple nodes, and calculate and send clients their balances. In the future it'll be used in the sharding implementation: data distribution management and fetching data on request.
+* BootNode-exe - a boot node that keeps a list of arbitrary available connected Simple Nodes and gives parts of that list on request to new Simple Nodes entering the network.
+* SimpleNode-exe - a basic role of a node that receives transactions from LighClient (user light client), adds them to the mempool, sends PoA Nodes (mobile nodes) transactions from the mempool, receives generated microblocks from PoA Nodes and propagates those blocks over the network to other Simple Nodes. Also,it can receive requests to calculate wallet balance, give information on transactions and microblocks, and then give responses to those requests. In the future, it'll be used in the sharding implementation: data distribution management and data fetchon request.
+* LightClien-exe - a user client that can generate new public keys (wallet addresses), generate transacations and send them to an arbitrary node (can be a local or remote node).
 
-Node supports multithreading. Each thread has its own data and can read data from another thread, change its (self) state, propagate messages to other actors and create new actors. This way we avoid numerous problems normally assosiated with multithreading and can process events in parallel balancing the available resources.
+Node supports multithreading. Each thread has its own data and can read data from another thread, change its (.self) state, propagate messages to other actors and create new actors. This way we avoid numerous problems normally assosiated with multithreading and can process events in parallel balancing the available resources.
 
-Node relies on actors. The central part of a node is the governing actor. It stores the main data, information about neighboring nodes and network status information. Other actors are reponsible for communication with the outside world processing incoming and outcoming messages.
+Node relies on actors. The central part of a node is the governing actor. It stores the main data, information about neighbor nodes and network status information. Other actors are reponsible for communication with the outside world processing incoming and outcoming messages.
 
-LightClient is a client allowing to connect to a node (local or remote), send transactions and calculate balance via the ledger.
+
 
 ## How to Use
 
-### In a Docker Container (Simple Node)
+### Install Haskell Stack
 
-#### Prelimiary steps
+1. Install the stack
+
+`curl -sSL https://get.haskellstack.org/ | sh`
+
+2. If needed, add the path to your profile
+
+`sudo nano ~/.profile` and append `export PATH=$PATH:$HOME/.local/bin` at the end.
+
+
+### Install Docker and Pull the Image
+
+1. Install Docker
+
 [Install Docker](https://docs.docker.com/install/linux/docker-ce/ubuntu/)
 
-Execute `stack docker pull` to download the Docker image.
+2. Add current user to the docker group
 
-Clone this repository.
+`sudo usermod -a -G docker $USER`
 
-#### Set permissions for the user, and login as root if needed
-`sudo usermod -a -G docker $USER`\
-`su $USER`
+3. Log out or reboot
 
-#### Set your own environment variables:
+4. Pull Docker image (warning, ~2.6 Gb)
+
+`stack docker pull`
+
+
+### Clone and Build Node
+
+1. Clone this repo
+
+`git clone git@github.com:Enecuum/Node.git`
+
+2. Build without docker
+
+`stack build --no-docker`
+
+
+### Initialize a Boot Node
+Execute the following commands to start a node:\
+`stack exec MakeConfigBootNode-exe`\
+`stack exec BootNode-exe`
+
+You can also use `stack exec MakeConfigBootNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used.
+
+#### Initialize a Simple Node
+
+Execute the following commands:\
+`stack exec MakeConfigSimpleNode-exe`\
+`stack exec SimpleNode-exe`
+
+You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used.
+
+#### Initialize Light Client
+
+Execute `stack exec LightClient-exe`.
+
+#### Available commands for Light Client
+
+| Command shortcut | Full command | Description |
+|---------|--------|---------|
+| -V, -? | --version | Show version number |
+| -K | --get-public-key | Create new public key |
+| -G qTx | --generate-n-transactions=qTx | Generate N transactions |
+| -F | --generate-transactions | Generate transactions forever |
+| -M | --show-my-keys | Show my public keys |
+| -B publicKey | --get-balance=publicKey | Get balance for a public key |
+| -S amount:to:from:currency | --send-money-to-from=amount:to:from:currency | Send currency from a public key to a public key (ENQ/ETH/DASH/BTC) |
+
+
+### (Optional) Set your own environment variables:
+
 Create a custom config file or use the /configs/config.ini. Define values for the variables:
 
 * `[MakeConfigBootNode]` is the initial config section for a boot node, and `port=1666` is an example port used for communication with the node.
@@ -50,85 +110,6 @@ Create a custom config file or use the /configs/config.ini. Define values for th
 * `[Statsd]` is the config section for the statistical service, and addr `addr=127.0.0.1` and `port=8125` are the address of the service and port to send statistical data to.
 
 * `[Docker]` is the config section for the name of the node, and `name=node` is an example name of the Docker container to build.
-
-#### Build container with a node
-
-Execute `./build.sh` to build stack and a container with a node in it.
-
-#### Run the container locally
-
-Execute `docker run -it node` where 'node' stands for the name of the Docker image to run.
-
-#### Initialization of a boot node
-Execute the following commands to start a node:\
-`stack exec MakeConfigBootNode-exe`\
-`stack exec BootNode-exe`
-
-You can also use `stack exec MakeConfigBootNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used.
-
-#### Initialization of a simple node
-
-Execute the following commands:\
-`stack exec MakeConfigSimpleNode-exe`\
-`stack exec SimpleNode-exe`
-
-You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used.
-
-#### Initialization of a light client
-
-Execute `stack exec LightClient-exe`.
-
-#### Available commands for a light client
-
-| Command shortcut | Full command | Description |
-|---------|--------|---------|
-| -V, -? | --version | Show version number |
-| -K | --get-public-key | Create new public key |
-| -G qTx | --generate-n-transactions=qTx | Generate N transactions |
-| -F | --generate-transactions | Generate transactions forever |
-| -M | --show-my-keys | Show my public keys |
-| -B publicKey | --get-balance=publicKey | Get balance for a public key |
-| -S amount:to:from:currency | --send-money-to-from=amount:to:from:currency | Send currency from a public key to a public key (ENQ/ETH/DASH/BTC) |
-
-
-### Without Docker (Boot and Simple Nodes)
-
-#### Preliminary steps
-Install Haskel stack\
-`curl -sSL https://get.haskellstack.org/ | sh`
-
-Clone this repository and execute `stack build`.
-
-#### Initialization of a boot node
-Execute the following commands to start a node:\
-`stack exec MakeConfigBootNode-exe`\
-`stack exec BootNode-exe`
-
-You can also use `stack exec MakeConfigBootNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used.
-
-#### Initialization of a simple node
-
-Execute the following commands:\
-`stack exec MakeConfigSimpleNode-exe`\
-`stack exec SimpleNode-exe`
-
-You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used.
-
-#### Initialization of a light client
-
-Execute `stack exec LightClient-exe`.
-
-#### Available commands for a light client
-
-| Command shortcut | Full command | Description |
-|---------|--------|---------|
-| -V, -? | --version | Show version number |
-| -K | --get-public-key | Create new public key |
-| -G qTx | --generate-n-transactions=qTx | Generate N transactions |
-| -F | --generate-transactions | Generate transactions forever |
-| -M | --show-my-keys | Show my public keys |
-| -B publicKey | --get-balance=publicKey | Get balance for a public key |
-| -S amount:to:from:currency | --send-money-to-from=amount:to:from:currency | Send currency from a public key to a public key (ENQ/ETH/DASH/BTC) |
 
 
 ### Use Cases
@@ -167,7 +148,7 @@ In the case you want to know the balance of a public key, you'd run `-B publicKe
 
 ### Testing
 
-Launch the node.\
+Launch a Boot Node or Simple Node.\
 Execute `stack test`
 
 ### UML
