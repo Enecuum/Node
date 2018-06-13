@@ -146,7 +146,7 @@ In the case you want to test this functionality, you'd run `-G qTx` where `qTx` 
 In the case you want to know the balance of a public key, you'd run `-B publicKey` where `publicKey` stands for the chosen public key.
 
 
-### Testing
+## Testing
 
 Launch a Boot Node or Simple Node.\
 Execute `stack test`
