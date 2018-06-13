@@ -85,7 +85,7 @@ Request example:
 
 ### Initialize Light Client
 
-Execute `stack exec LightClient-exe`.
+`stack exec LightClient-exe`.
 
 #### Available commands for Light Client
 
