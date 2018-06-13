@@ -33,6 +33,7 @@ instance Read Trans where
                  [(Trans (read f1) f2 f3 (read f4), [])]
              x -> error $ "Invalid number of fields in input: " ++ show x
 
+
 instance Read MsgTo where
      readsPrec _ value = 
         case splitOn ":" value of
@@ -44,7 +45,14 @@ data CryptoCurrency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
 type Time      = Double
 type DAG = Gr Transaction Transaction
 
-data Microblock = Microblock ByteString ByteString [Transaction] deriving (Eq, Generic, Ord)
+newtype Hash = Hash ByteString deriving (Ord, Eq, Show, Generic)
+instance Serialize Hash
+
+data Microblock = Microblock{
+                  hashCurrentMicroblock :: ByteString, -- hashCurrentMicroblock
+                  hashPreviousMicroblock :: ByteString, -- hashPreviousMicroblock
+                  trans :: [Transaction]}
+                deriving (Eq, Generic, Ord)
 instance Serialize Microblock
 
 instance Show Microblock where
@@ -61,9 +69,14 @@ data Transaction = WithTime { time :: Time, transaction :: Transaction }
 --                 | InductorsToAccumulators { owner :: PublicKey, amount :: Amount }
 --                 | SendInductorsFromKeyToKey { owner :: PublicKey, receiver :: PublicKey, amount :: Amount }
   deriving ( Generic, Show, Eq, Ord)
-
-
 instance Serialize Transaction
+
+data TransactionInfo = TransactionInfo {
+     tx    :: Transaction
+  ,  block :: ByteString
+  ,  index :: Int
+  } deriving (Generic, Show, Eq)
+instance Serialize TransactionInfo
 
 data Ledger = Ledger { currentTime :: Time, ltable :: [LedgerEntry] }
   deriving (Show, Generic)
