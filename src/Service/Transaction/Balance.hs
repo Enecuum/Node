@@ -1,13 +1,26 @@
 {-# LANGUAGE PackageImports #-}
-module Service.Transaction.Balance ( countBalance ) where
+module Service.Transaction.Balance ( countBalance, runLedger ) where
 
 --import Data.Monoid (mconcat)
-import Service.System.Directory (getTransactionFilePath)
+import Service.System.Directory (getTransactionFilePath,getLedgerFilePath)
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
 import Node.FileDB.FileDB (readHashMsgFromFile)
 --import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import  Data.ByteString.Char8 as BC hiding (map)
+import qualified "rocksdb-haskell" Database.RocksDB as Rocks
+import qualified Data.HashTable.IO as H
+import qualified "cryptohash" Crypto.Hash.SHA1 as SHA1
+import Control.Monad
+import Control.Monad.Trans.Class
+import Control.Monad.Trans.State
+import Data.Default (def)
+import Service.Transaction.Microblock (genNMicroBlocks)
+import Control.Monad.Trans.Resource
+
+type HashOfMicroblock = BC.ByteString
+type BalanceTable = H.BasicHashTable BC.ByteString Amount
+
 
 getBalance :: PublicKey -> [Transaction] -> Amount
 getBalance key transactions = sum $ map getAmount transactions
@@ -22,12 +35,8 @@ getBalance key transactions = sum $ map getAmount transactions
 
 countBalance :: PublicKey -> IO Amount
 countBalance key = getBalance key <$> (readTransactions =<< getTransactionFilePath)
--- countBalance key = do
---   pathLedger <- getLedgerFilePath
---   dbh <- Rocks.open pathLedger def{Rocks.createIfMissing=True}
---   Just v  <- Rocks.get dbh Rocks.defaultReadOptions $ transformKey key
---   Rocks.close dbh
---   return ( read (BC.unpack v) :: Amount)
+
+
 
 readTransactions :: String -> IO [Transaction]
 readTransactions fileName = do
@@ -36,3 +45,51 @@ readTransactions fileName = do
     return $ mconcat ts
 
 transformKey key = BC.pack . show $ key
+
+
+
+writeMicroblockDB :: Microblock -> StateT Rocks.DB IO ()
+writeMicroblockDB m = do
+  let hash = SHA1.hash $ BC.pack $ show m
+      val  = BC.pack $ show m
+  db <- get
+  Rocks.write db def{Rocks.sync = True} [ Rocks.Put hash val ]
+  put db
+
+
+updateBalanceTable :: BalanceTable -> Transaction -> IO ()
+updateBalanceTable ht tx = do
+  case transaction tx of
+    (RegisterPublicKey pbk b) -> do let key = BC.pack $ show pbk
+                                    H.insert ht key b
+    (WithTime _ change)       -> do let
+                                        o    = owner change
+                                        r    = receiver change
+                                        am   = amount change
+                                        key1 = BC.pack $ show o
+                                        key2 = BC.pack $ show r
+                                    v1 <- H.lookup ht key1
+                                    v2 <- H.lookup ht key2
+                                    case (v1,v2) of
+                                      (Nothing, _)       -> do return ()
+                                      (_, Nothing)       -> do return ()
+                                      (Just b1, Just b2) -> do H.insert ht key1 (b1-am)
+                                                               H.insert ht key2 (b1+am)
+
+
+getTxsMicroblock (Microblock _ _ txs) = txs
+
+
+
+getAllValues db = do
+  it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+  Rocks.iterFirst it
+  Rocks.iterValues it
+
+
+runLedger :: Rocks.DB -> Microblock -> IO ()
+runLedger db m  = do
+    ht      <- H.new
+    execStateT (writeMicroblockDB m) db
+    let txs = getTxsMicroblock m
+    mapM_ (updateBalanceTable ht) txs
