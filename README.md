@@ -112,7 +112,7 @@ Create a custom config file or use the /configs/config.ini. Define values for th
 * `[Docker]` is the config section for the name of the node, and `name=node` is an example name of the Docker container to build.
 
 
-### Use Cases
+## Use Cases
 
 #### Creating the initial identifying public key.
 
