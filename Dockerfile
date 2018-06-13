@@ -1,17 +1,15 @@
 FROM terrorjack/meikyu:ghc-8.2.2
-ENV bootnode false
-ADD . /usr/src/Node
-WORKDIR /usr/src/Node
 
-RUN stack clean --stack-yaml=CI.stack.yaml --full
-RUN stack --stack-yaml=CI.stack.yaml build
+ADD . /usr/src/app
+WORKDIR /usr/src/app
+
+RUN apk --no-cache add --virtual build-dependencies build-base linux-headers rocksdb-dev && \
+    stack build --no-docker && \
+    apk del build-dependencies
 
 EXPOSE 1554 1555 1556 1667
-
 ENTRYPOINT if [ "$bootnode" = true ] ; then \
-             stack exec MakeConfigBootNode-exe && \
              stack exec BootNode-exe; \
            else \
-             stack exec MakeConfigSimpleNode-exe && \
              stack exec SimpleNode-exe; \
            fi

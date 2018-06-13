@@ -56,7 +56,7 @@ instance Processing (IORef ManagerNodeData) (Response MiningLvl) where
                 writeChan (aPpNode^.ppChan) $ MsgConnect aHost aOutPort
 
 
--- | Обработка "ответа" для сетевого уровня.
+-- | Handling network layer's answer
 instance Processing (IORef ManagerNodeData) (Response NetLvl) where
     processing _ aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ = \case
         BroadcastListResponse aBroadcastListLogic aBroadcastList _ -> do
@@ -71,7 +71,7 @@ instance Processing (IORef ManagerNodeData) (Response NetLvl) where
 
         HostAdressResponse _ -> return ()
 
-        -- нода сказала, что она бродкаст меняем её статус в нашей памяти.
+        -- node report, that it is broadcast node. Change its status in our memory.
         IAmBroadcast          aBool          -> do
             aData <- readIORef aMd
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $"Node " ++ show aNodeId
@@ -79,7 +79,7 @@ instance Processing (IORef ManagerNodeData) (Response NetLvl) where
             modifyIORef aMd $ nodes %~ M.adjust (isBroadcast .~ aBool) aNodeId
 
 
--- обработка ответов для логического уровня.
+-- Logical layer answers' handling
 instance Processing (IORef ManagerNodeData) (Response LogicLvl) where
     processing _ aMd (PackageSignature (toNodeId -> aNodeId) _ _) _ aResponse = do
         aData <- readIORef aMd

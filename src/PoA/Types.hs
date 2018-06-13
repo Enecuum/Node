@@ -66,41 +66,41 @@ instance S.Serialize Value
 
 
 data PPToNNMessage
-    -- Запросы:
-    -- на получение транзакций.
+    -- Requests:
+    -- transactions receiving.
     = RequestTransaction { ---
         number :: Int
     }
 
-    -- запрос на получение списка PoW нод
+    -- receive PoW nodes' list
     | RequestPoWList
 
-    -- запрос на рассылку бродкаста.
+    -- send broadcast
     | RequestBroadcast { ---
         recipientType :: NodeType,
         msg           :: B.ByteString
     }
-    -- запрос на получение конектов.
+    -- get connects
     | RequestConnects
 
-    -- Ответы с PPId
+    -- responses with PPId
     | ResponseNodeIdToNN {
         nodeId    :: PPId,
         nodeType  :: NodeType
     }
 
-    -- Сообщения:
-    -- Для другой PoA/PoW ноды.
+    -- Messages:
+    -- For other PoA/PoW node.
     | MsgMsgToNN { ----
         destination :: PPId,
         msg :: B.ByteString
     }
 
-    -- О том, что намйнился микроблок.
+    -- new microblock was mined.
     | MsgMicroblock {
         microblock :: Microblock
     }
-    -- О том, что закрылся ма кроблок.
+    -- Macroblock was finallized.
     -- | MsgMacroblock {
     --     macroblock :: Macroblock
     -- }
@@ -124,7 +124,7 @@ data NNToPPMessage
         transaction :: Transaction
     }
 
-    -- ответ со списком PoW нод
+    -- request with PoW's list
     | ResponsePoWList {
         poWList :: [PPId]
     }
@@ -215,7 +215,7 @@ instance FromJSON PPToNNMessage where
                             []      -> mzero
                             aResult -> return . MsgMicroblock
                                 $ Microblock aHash1 aHash2 (map read aResult :: [Transaction])
-                    _   -> mzero
+                    _   -> error "Can not parse Microblock"
 
 
             _ -> mzero
