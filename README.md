@@ -20,7 +20,7 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 ### Install Haskell Stack
 
-1. Install the stack
+1. Install Haskell stack
 
 `curl -sSL https://get.haskellstack.org/ | sh`
 
@@ -31,24 +31,22 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 ### Install Docker and Pull the Image
 
-1. Install Docker
-
-[Install Docker](https://docs.docker.com/install/linux/docker-ce/ubuntu/)
+1. [Install Docker](https://docs.docker.com/install/linux/docker-ce/ubuntu/)
 
 2. Add current user to the docker group
 
 `sudo usermod -a -G docker $USER`
 
-3. Log out or reboot
+2.1 Log out or reboot
 
-4. Pull Docker image (warning, ~2.6 Gb)
+3. Pull Docker image (warning, ~2.6 Gb)
 
 `stack docker pull`
 
 
 ### Clone and Build Node
 
-1. Clone this repo
+1. Clone the repo
 
 `git clone git@github.com:Enecuum/Node.git`
 
@@ -62,7 +60,7 @@ Execute the following commands to start a node:\
 `stack exec MakeConfigBootNode-exe`\
 `stack exec BootNode-exe`
 
-You can also use `stack exec MakeConfigBootNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used.
+You can also use `stack exec MakeConfigBootNode-exe -- configs/config.json` where `configs/nameOfYourConfig.json` stands for the path to a custom configuration file. Otherwise, the default `configs/config.json` is used.
 
 ### Initialize a Simple Node
 
@@ -70,7 +68,7 @@ Execute the following commands:\
 `stack exec MakeConfigSimpleNode-exe`\
 `stack exec SimpleNode-exe`
 
-You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.ini` where `configs/nameOfYourConfig.ini` stands for the path to a custom configuration file. Otherwise, the default `configs/config.ini` is used.
+You can also use `stack exec MakeConfigSimpleNode-exe -- configs/config.json` where `configs/nameOfYourConfig.json` stands for the path to a custom configuration file. Otherwise, the default `configs/config.json` is used.
 
 ### Initialize Light Client
 
@@ -91,7 +89,7 @@ Execute `stack exec LightClient-exe`.
 
 ### (Optional) Set your own environment variables:
 
-Create a custom config file or use the /configs/config.ini. Define values for the variables:
+Create a custom config file or use the /configs/config.json. Define values for the variables:
 
 * `[MakeConfigBootNode]` is the initial config section for a boot node, and `port=1666` is an example port used for communication with the node.
 
