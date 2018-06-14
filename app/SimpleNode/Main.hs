@@ -21,6 +21,7 @@ import qualified    Data.ByteString.Lazy as L
 
 main :: IO ()
 main =  do
+        putStrLn "testNet 14/06/2017 08:10"
         enc <- L.readFile "configs/config.json"
         case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
@@ -74,7 +75,7 @@ main =  do
                     test_send <- try (getEnv "test_send_id") >>= \case
                         Right idTo              -> (metronomeS 10000000 (writeChan ch (testSendMessage ((read idTo) :: NodeId))))
                         Left (e::SomeException) -> print e
-                    print test_send    
+                    print test_send
 
                     i_am_firs <- try (getEnv "isFirst") >>= \case
                         Right "Yes" -> return True
