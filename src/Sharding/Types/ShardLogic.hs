@@ -9,7 +9,7 @@ import              Sharding.Types.ShardTypes
 import              Node.Crypto()
 
 import              Data.Serialize
-
+import              Service.Types (Hash(..))
 
 hashToPoint :: ShardHash -> Point
 hashToPoint (ShardHash _ x1 x2 _ _ _ _ _ _) = Point x1 x2

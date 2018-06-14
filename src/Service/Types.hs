@@ -8,6 +8,7 @@ import              Service.Types.PublicPrivateKeyPair
 import              GHC.Generics
 import              Data.ByteString
 import qualified    Data.ByteString.Base16 as B16
+import qualified    Data.ByteString.Char8 as C
 import              Data.List.Split (splitOn)
 
 type QuantityTx = Int
@@ -32,8 +33,9 @@ instance Read Trans where
                  [(Trans (read f1) f2 f3 (read f4), [])]
              x -> error $ "Invalid number of fields in input: " ++ show x
 
+
 instance Read MsgTo where
-     readsPrec _ value = 
+     readsPrec _ value =
         case splitOn ":" value of
              [t, m] ->  [(MsgTo (read t) m, [])]
              x      -> error $ "Invalid number of fields in input: " ++ show x
@@ -43,12 +45,19 @@ data CryptoCurrency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
 type Time      = Double
 type DAG = Gr Transaction Transaction
 
+newtype Hash = Hash ByteString deriving (Ord, Eq, Show, Generic)
+instance Serialize Hash
+
+instance Read Hash where
+       readsPrec _ value = return (Hash $ C.pack value,"")
+
 
 data Microblock = Microblock{
                   hashCurrentMicroblock :: ByteString, -- hashCurrentMicroblock
                   hashPreviousMicroblock :: ByteString, -- hashPreviousMicroblock
                   trans :: [Transaction]}
                 deriving (Eq, Generic, Ord, Read)
+
 instance Serialize Microblock
 
 instance Show Microblock where
@@ -68,6 +77,13 @@ data Transaction = WithTime { time :: Time, transaction :: Transaction }
 
 
 instance Serialize Transaction
+
+data TransactionInfo = TransactionInfo {
+     tx    :: Transaction
+  ,  block :: ByteString
+  ,  index :: Int
+  } deriving (Generic, Show, Eq)
+instance Serialize TransactionInfo
 
 data Ledger = Ledger { currentTime :: Time, ltable :: [LedgerEntry] }
   deriving (Show, Generic)

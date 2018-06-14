@@ -12,6 +12,13 @@ import              Data.Aeson.Types (typeMismatch)
 import qualified "cryptonite"   Crypto.PubKey.ECC.ECDSA     as ECDSA
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
+import Data.ByteString (ByteString)
+import Data.Text (Text)
+import qualified Data.ByteString.Base16 as B
+import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
+import Data.Hex
+import Data.Text (pack, unpack)
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 
 instance FromJSON Trans
 instance ToJSON   Trans
@@ -27,6 +34,33 @@ instance ToJSON PublicKey
 
 instance FromJSON PrivateKey
 instance ToJSON PrivateKey
+
+
+encodeToText :: ByteString -> Text
+encodeToText = T.decodeUtf8 . B.encode
+
+decodeFromText :: (Monad m) => Text -> m ByteString
+decodeFromText = return . fst . B.decode . T.encodeUtf8
+
+instance ToJSON Hash 
+
+instance FromJSON Hash 
+
+
+instance ToJSON ByteString where
+  toJSON h = String $ decodeUtf8 $ hex h
+
+
+instance FromJSON ByteString where
+  parseJSON (String s) = unhex $ encodeUtf8 s
+  parseJSON _          = error "Wrong object format"
+
+
+instance ToJSON TransactionInfo 
+instance FromJSON TransactionInfo 
+
+instance ToJSON Microblock 
+instance FromJSON Microblock 
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [
