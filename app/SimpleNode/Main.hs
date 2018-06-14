@@ -21,7 +21,7 @@ import qualified    Data.ByteString.Lazy as L
 
 main :: IO ()
 main =  do
-        putStrLn "testNet 14/06/2017 08:10"
+        putStrLn "testNet 14/06/2017 11:45"
         enc <- L.readFile "configs/config.json"
         case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
