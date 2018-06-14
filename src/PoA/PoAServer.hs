@@ -22,6 +22,7 @@ import              PoA.Types
 import              Control.Concurrent.MVar
 import              Control.Concurrent
 import              Node.FileDB.FileServer
+import              PoA.Pending
 
 import              Control.Concurrent.Async
 import              Node.Data.Key
@@ -61,7 +62,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                     -- TODO: Вписать ID если такой есть.
                     writeLog aInfoChan [ServerBootNodeTag] Warning $
                         "Brouken message from PP " ++ show aMsg ++ " " ++ a
-
+--pendingActor :: Chan PendingAction -> Chan Microblock -> Chan Transaction -> IO ()
 
 servePoA ::
        PortNumber
@@ -70,10 +71,13 @@ servePoA ::
     -> Chan Transaction
     -> Chan InfoMsg
     -> Chan FileActorRequest
+    -> Chan Microblock
     -> IO ()
-servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
+servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. servePoA: a port is " ++ show aRecivePort
+    aPendingChan <- newChan
+    pendingActor aPendingChan aMicroblockChan aRecvChan
     runServer aRecivePort $ \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
@@ -84,7 +88,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
         -- writeChan ch $ connecting to PoA, the PoA have id.
         void $ race
             (aSender aId aConnect aNewChan)
-            (aReceiver aId aConnect aNewChan)
+            (aReceiver aId aConnect aNewChan aPendingChan)
   where
     aSender aId aConnect aNewChan = forever (do
         aMsg <- readChan aNewChan
@@ -94,20 +98,19 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                 aDeadId <- readMVar aId
                 writeChan ch $ ppNodeIsDisconected aDeadId)
 
-    aReceiver aId aConnect aNewChan = forever $ do
+    aReceiver aId aConnect aNewChan aPendingChan = forever $ do
         aMsg <- WS.receiveData aConnect
         aOk <- isEmptyMVar aId
         case A.eitherDecodeStrict aMsg of
             Right a -> case a of
                 -- REVIEW: Check fair distribution of transactions between nodes
-                RequestTransaction aNum -> void $ forkIO $ forM_ [1..aNum] $ \_  -> do
-                        aTransaction <- readChan aRecvChan
-                        writeChan aInfoChan $ Metric $ add
-                            ("net.node." ++ show (toInteger aNodeId) ++ ".pending.amount")
-                            (-1 :: Integer)
+                RequestTransaction aNum -> void $ forkIO $ do
+                    aTmpChan <- newChan
+                    writeChan aPendingChan $ GetTransaction aNum aTmpChan
+                    aTransactions <- readChan aTmpChan
+                    forM_ (take aNum $ cycle aTransactions) $ \aTransaction  -> do
                         writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
                         WS.sendTextData aConnect $ A.encode $ ResponseTransaction aTransaction
-                            --(fromString.show $  :: B.ByteString)
                 MsgMicroblock aMicroblock
                     | not aOk -> do
                         aSenderId <- readMVar aId

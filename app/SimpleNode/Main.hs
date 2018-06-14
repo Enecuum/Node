@@ -32,7 +32,7 @@ main =  do
             aInfoCh   <- newChan
 
             void $ startNode conf
-                aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMyNodeId aFileChan -> do
+                aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMicroblockChan aMyNodeId aFileChan -> do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
                     metronomeS 1000000 (writeChan ch queryPositions)
@@ -86,7 +86,7 @@ main =  do
 
                     void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh log_id
 
-                    void $ forkIO $ servePoA poa_in aMyNodeId ch aChan aInfoCh aFileChan
+                    void $ forkIO $ servePoA poa_in aMyNodeId ch aChan aInfoCh aFileChan aMicroblockChan
                     void $ forkIO $ serveRpc rpc_p ch aInfoCh
 
                     --when (takeEnd 3 log_id == "175") $

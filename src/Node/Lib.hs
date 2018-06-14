@@ -41,7 +41,7 @@ startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
     -> Chan Answer
     -> Chan InfoMsg
     -> (Chan a1 -> IORef s -> IO ())
-    -> (Chan a1 -> Chan Transaction -> MyNodeId -> Chan FileActorRequest -> IO a2)
+    -> (Chan a1 -> Chan Transaction -> Chan Microblock -> MyNodeId -> Chan FileActorRequest -> IO a2)
     -> IO (Chan a1)
 startNode buildConf exitCh answerCh infoCh manager startDo = do
 
@@ -61,7 +61,7 @@ startNode buildConf exitCh answerCh infoCh manager startDo = do
     aFilePath <- getTransactionFilePath
     void $ forkIO $ microblockProc aMicroblockChan aFilePath
     void $ forkIO $ manager managerChan md
-    void $ startDo managerChan aTransactionChan (config^.myNodeId) aFileRequesChan
+    void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aFileRequesChan
     return managerChan
 
 microblockProc :: Chan Microblock -> String -> IO b
