@@ -16,6 +16,9 @@ import Data.ByteString (ByteString)
 import Data.Text (Text)
 import qualified Data.ByteString.Base16 as B
 import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
+import Data.Hex
+import Data.Text (pack, unpack)
+import Data.Text.Encoding (decodeUtf8)
 
 instance FromJSON Trans
 instance ToJSON   Trans
@@ -39,41 +42,25 @@ encodeToText = T.decodeUtf8 . B.encode
 decodeFromText :: (Monad m) => Text -> m ByteString
 decodeFromText = return . fst . B.decode . T.encodeUtf8
 
-instance ToJSON Hash where
-  toJSON (Hash h) = object [
-                  "hash" .= encodeToText h
-                ]
+instance ToJSON Hash 
 
-instance FromJSON Hash where
-  parseJSON (Object v) = Hash <$> ((v .: "hash") >>= decodeFromText)
+instance FromJSON Hash 
 
 
-instance ToJSON TransactionInfo where
-  toJSON info = object [
-                  "tx"    .= tx info
-                , "block" .= encodeToText (block info)
-                , "index" .= index info
-                ]
+instance ToJSON ByteString where
+  toJSON h = String $ decodeUtf8 $ hex h
 
-instance FromJSON TransactionInfo where
-  parseJSON (Object v) = TransactionInfo 
-                           <$> v .: "tx"
-                           <*> ((v .: "block") >>= decodeFromText)
-                           <*> v .: "index" 
 
-instance ToJSON Microblock where
-  toJSON block = object [
-                   "curr"  .= encodeToText (hashCurrentMicroblock block)
-                 , "prev"  .= encodeToText (hashPreviousMicroblock block)
-                 , "txs"   .= trans block
-                 ]
+instance FromJSON ByteString where
+  parseJSON (String s) = return . read . unpack $ s
+  parseJSON _          = error "Wrong object format"
 
-instance FromJSON Microblock where
-  parseJSON (Object v) = Microblock 
-                           <$> ((v .: "curr") >>= decodeFromText)
-                           <*> ((v .: "prev") >>= decodeFromText)
-                           <*> v .: "txs" 
 
+instance ToJSON TransactionInfo 
+instance FromJSON TransactionInfo 
+
+instance ToJSON Microblock 
+instance FromJSON Microblock 
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [

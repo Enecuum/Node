@@ -41,9 +41,9 @@ options = [
   , Option ['B'] ["get-balance"] (ReqArg (Balance) "publicKey") "get balance for public key"
   , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
   , Option ['S'] ["send-money-to-from"] (ReqArg (Send . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
-  , Option ['L'] ["load-block"] (ReqArg (Block . read) "hash") "get block by hash"
+  , Option ['U'] ["load-block"] (ReqArg (Block . read) "hash") "get block by hash"
   , Option ['X'] ["get-tx"] (ReqArg (Tx . read) "hash") "get transaction by hash"
-  , Option ['W'] ["load-wallet"] (ReqArg (Wallet . read) "public key") "gat all transactions in wallet"
+  , Option ['W'] ["load-wallet"] (ReqArg (Wallet) "public key") "gat all transactions in wallet"
 -- test
   , Option ['G'] ["generate-n-transactions"] (ReqArg (GenerateNTransactions . read) "qTx") "Generate N Transactions"
   , Option ['F'] ["generate-transactions"] (NoArg GenerateTransactionsForever) "Generate Transactions forever"
@@ -87,11 +87,16 @@ dispatch :: [Flag] -> ClientHandle -> IO ()
 dispatch flags ch = do
     case flags of
         (Key : _)                        -> getKey ch
-        (GenerateNTransactions qTx: _)   -> generateNTransactions ch qTx
-        (GenerateTransactionsForever: _) -> generateTransactionsForever ch
+        (Balance aPublicKey : _)         -> getBalance ch aPublicKey
         (Send tx : _)                    -> sendTrans ch tx
         (ShowKey : _)                    -> showPublicKey
-        (Balance aPublicKey : _)         -> getBalance ch aPublicKey
+        (Wallet key : _)                 -> getAllTransactions ch key
+        (Block hash : _)                 -> getBlockByHash ch hash
+        (Tx hash : _)                    -> getTransaction ch hash
+
+-- test
+        (GenerateNTransactions qTx: _)   -> generateNTransactions ch qTx
+        (GenerateTransactionsForever: _) -> generateTransactionsForever ch
         (SendMessageBroadcast m : _)     -> sendMessageBroadcast ch m
         (SendMessageTo mTo : _)          -> sendMessageTo ch mTo
         (LoadMessages : _)               -> loadMessages ch 
@@ -200,4 +205,28 @@ loadMessages ch = do
     (Left err)    -> putStrLn $ "sendMessageBroadcast error: " ++ show err
     (Right msgs ) -> putStrLn $ "New messages: " ++ (unlines $ map showMsg msgs)
                   where showMsg (MsgTo id m) = "Message from " ++ show id ++ ": " ++ m
+
+getAllTransactions :: ClientHandle -> PubKey -> IO ()
+getAllTransactions ch key = do
+  result <- runExceptT $ getAllTxs ch key
+  case result of
+    (Left err) -> putStrLn $ "getAllTransactions error: " ++ show err
+    (Right txs ) -> mapM_ print txs
+
+getTransaction :: ClientHandle -> Hash -> IO ()
+getTransaction ch hash = do
+  result <- runExceptT $ getTx ch hash
+  case result of
+    (Left err) -> putStrLn $ "getTransaction error: " ++ show err
+    (Right info ) -> print info
+
+getBlockByHash :: ClientHandle -> Hash -> IO ()
+getBlockByHash ch hash = do
+  result <- runExceptT $ getBlock ch hash
+  case result of
+    (Left err) -> putStrLn $ "getBlockByHash error: " ++ show err
+    (Right block) -> print block
+
+
+
 
