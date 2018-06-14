@@ -22,13 +22,8 @@ import Node.Data.Key
 import Node.FileDB.FileServer
 --tmp
 import System.Directory (createDirectoryIfMissing)
-import Service.System.Directory (getLedgerFilePath)
-import qualified "rocksdb-haskell" Database.RocksDB as Rocks
-import Data.Default (def)
-import qualified Data.HashTable.IO as H
-import Service.Types.PublicPrivateKeyPair
-import qualified Data.ByteString.Char8 as BC
 import Service.Transaction.Balance (runLedger)
+import Service.Transaction.Storage (DBdescriptor(..), startDB)
 
 -- code examples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html
@@ -61,19 +56,18 @@ startNode buildConf exitCh answerCh infoCh manager startDo = do
     let portNumber = extConnectPort buildConf
     md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aFileRequestChan bnList config portNumber
     startServerActor managerChan portNumber
-    aLedgerPath <- getLedgerFilePath
-    dbh <- Rocks.open aLedgerPath def{Rocks.createIfMissing=True}
-    void $ forkIO $ microblockProc dbh aMicroblockChan
+    descr <- startDB
+    void $ forkIO $ microblockProc descr aMicroblockChan
     void $ forkIO $ manager managerChan md
     void $ startDo managerChan aTransactionChan (config^.myNodeId) aFileRequestChan
     return managerChan
 
-type BalanceTable = H.BasicHashTable BC.ByteString Amount
 
-microblockProc :: Rocks.DB -> Chan Microblock -> IO b
-microblockProc db aMicroblockCh = forever $ do
+
+microblockProc :: DBdescriptor -> Chan Microblock -> IO b
+microblockProc descriptor aMicroblockCh = forever $ do
         aMicroblock <- readChan aMicroblockCh
-        runLedger db aMicroblock
+        runLedger descriptor aMicroblock
         -- putStrLn $ show aMicroblock
 
 

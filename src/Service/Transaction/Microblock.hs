@@ -9,8 +9,9 @@ import System.Random (randomRIO)
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, evalStateT, put, get)
-import Service.Types (Time, Microblock(..),Transaction(..))
-import Service.Types.PublicPrivateKeyPair (PublicKey(..), Signature, Amount)
+-- import Service.Types (Time, Microblock(..),Transaction(..))
+import Service.Types (Microblock(..),Transaction)
+import Service.Types.PublicPrivateKeyPair (PublicKey(..)) -- Signature)
 -- import Data.Aeson as A
 
 
@@ -22,15 +23,15 @@ genNMicroBlocks n = evalStateT (replicateM n genMicroBlock) BC.empty
 
 genMicroBlock :: StateT HashOfMicroblock IO Microblock
 genMicroBlock = do
-  hashPreviousMicroblock <- get
+  aHashPreviousMicroblock <- get
   n <- lift $ randomRIO (3,4) --(40,128) -- from 40 to 128 transactions per block
   tx <- lift $ genNNTx n
-  let hashCurrentMicroblock = (SHA1.hash . BC.pack . show) tx
-  put hashCurrentMicroblock
-  return (Microblock hashCurrentMicroblock hashPreviousMicroblock tx)
+  let aHashCurrentMicroblock = (SHA1.hash . BC.pack . show) tx
+  put aHashCurrentMicroblock
+  return (Microblock aHashCurrentMicroblock aHashPreviousMicroblock tx)
 
 
-
+w1 :: IO ()
 w1 = do
   let h01 = read "B0WvuBJEsQQ6RVqaEFaWoGXmW8sMG8xnBuxaCXJycRjyXN" :: PublicKey
   let h02 = "B0WvuBJEsQQ6RVqaEFaWoGXmW8sMG8xnBuxaCXJycRjyXN"

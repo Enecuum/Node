@@ -125,7 +125,7 @@ getBalance :: PubKey -> Chan InfoMsg -> IO (Result Amount)
 getBalance key aInfoCh = try $ do
     let pKey = read key
     stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
-    result  <- countBalance pKey
+    result  <- getBalanceForKey pKey
     endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
     writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
     return result
