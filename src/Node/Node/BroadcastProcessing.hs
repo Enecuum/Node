@@ -122,6 +122,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
 
                 -- FIXME: переписать show для Transaction и Microblock
                 --        так, чтобы они выводили только хеш и структуру.
+                writeChan (aData^.microblockChan) aMicroblock
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Addtition the mickroblock to shard DB. The mickroblock = "
                     ++ show aMicroblock

@@ -120,6 +120,7 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
             writeMetric (aData^.infoMsgChan)  $ increment "net.bl.count"
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "PP node " ++ show aSenderId ++ ", create a a microblock: " ++ show aMicroblock
+            writeChan (aData^.microblockChan) aMicroblock
             sendBroadcast aMd (BroadcastMicroBlock aMicroblock Nothing)
             sendToShardingLvl aData $
                 T.ShardAcceptAction (microblockToShard aMicroblock)

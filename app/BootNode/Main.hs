@@ -23,7 +23,7 @@ import              Data.Aeson
 
 main :: IO ()
 main =  do
-      putStrLn "testNet 14/06/2017 11:45"
+      putStrLn "testNet 14/06/2017 15:30"
       enc <- L.readFile "configs/config.json"
       case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
