@@ -77,7 +77,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. servePoA: a port is " ++ show aRecivePort
     aPendingChan <- newChan
-    pendingActor aPendingChan aMicroblockChan aRecvChan
+    void $ forkIO $ pendingActor aPendingChan aMicroblockChan aRecvChan
     runServer aRecivePort $ \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
