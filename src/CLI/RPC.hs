@@ -23,9 +23,11 @@ import Service.InfoMsg
 import Service.Types
 import Data.Text (pack)
 import Network.Socket (SockAddr)
+import Service.Transaction.Storage (DBdescriptor(..))
 
-serveRpc :: PortNumber -> [AddrRange IPv6] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
-serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
+
+serveRpc :: DBdescriptor -> PortNumber -> [AddrRange IPv6] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
+serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
     (aMsg, addr) <- recvFrom aSocket (1024*100)
     runRpc addr aSocket aMsg
 
@@ -74,7 +76,7 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
               balanceReq = toMethod "enq_getBalance" f (Required "address" :+: ())
                 where
                   f :: PubKey -> RpcResult IO Amount
-                  f key = handle $ getBalance key aInfoCh
+                  f key = handle $ getBalance descrDB key aInfoCh
 
               getBlock = toMethod "enq_getBlockByHash" f (Required "hash" :+: ())
                 where

@@ -1,53 +1,34 @@
 {-# LANGUAGE PackageImports #-}
 module Service.Transaction.Balance ( getBalanceForKey, runLedger ) where
 
---import Data.Monoid (mconcat)
-import Service.System.Directory (getTransactionFilePath,getLedgerFilePath)
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
-import Node.FileDB.FileDB (readHashMsgFromFile)
 import qualified Data.ByteString.Char8 as BC hiding (map)
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import qualified Data.HashTable.IO as H
 import qualified "cryptohash" Crypto.Hash.SHA1 as SHA1
 import Control.Monad
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.State
-import Data.Default (def)
-import Service.Transaction.Microblock (genNMicroBlocks)
-import Control.Monad.Trans.Resource
-import Service.System.Directory
-import Data.Default (def)
-import Data.Bits
---import Data.Hashable
-import qualified Data.ByteString.Lazy as L
-import Service.Types.SerializeInstances
-import Control.Monad.Zip
-import Control.Monad.IO.Class
-import Data.Typeable
 import Service.Transaction.Storage (DBdescriptor(..))
+import Data.Default (def)
 
 
-type HashOfMicroblock = BC.ByteString
 --type NBalanceTable = H.BasicHashTable PublicKey Amount
 type BalanceTable = H.BasicHashTable BC.ByteString Amount
 
 
 
 -- functions for CLI
-getBalanceForKey :: PublicKey -> IO Amount
-getBalanceForKey key = runResourceT $ do
-    pathL <- lift $ getLedgerFilePath
-    (_, db) <- Rocks.openBracket pathL def{Rocks.createIfMissing=False}
-    Just v  <- Rocks.get db Rocks.defaultReadOptions (rHash key)
-    lift $ return (read (BC.unpack v) :: Amount)
+getBalanceForKey :: DBdescriptor -> PublicKey -> IO Amount
+getBalanceForKey db key = do
+    Just v  <- Rocks.get (descrDBLedger db) Rocks.defaultReadOptions (htK key)
+    return (unHtA v)
 
 
--- for rocksdb
+-- for rocksdb Transaction and Microblock
 rHash key = SHA1.hash . BC.pack . show $ key
 rValue value = BC.pack $ show value
 
--- for BalanceTable
+-- for BalanceTable and Ledger
 htK key = BC.pack $ show key
 unHtK key = read (BC.unpack key) :: PublicKey
 unHtA key = read (BC.unpack key) :: Amount
@@ -67,14 +48,8 @@ updateBalanceTable ht aTransaction = do
                                                                                                H.insert ht (htK toKey) (balanceTo + am)
     _ -> error "Unsupported type of transaction"
 
-
+getTxsMicroblock :: Microblock -> [Transaction]
 getTxsMicroblock (Microblock _ _ txs) = txs
-
-
-getAllValues db = do
-  it    <- Rocks.iterOpen db Rocks.defaultReadOptions
-  Rocks.iterFirst it
-  Rocks.iterValues it
 
 
 getBalanceOfKeys :: Rocks.DB -> [Transaction] -> IO BalanceTable

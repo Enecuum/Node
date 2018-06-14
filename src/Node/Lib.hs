@@ -23,7 +23,7 @@ import Node.FileDB.FileServer
 --tmp
 import System.Directory (createDirectoryIfMissing)
 import Service.Transaction.Balance (runLedger)
-import Service.Transaction.Storage (DBdescriptor(..), startDB)
+import Service.Transaction.Storage (DBdescriptor(..))
 
 -- code examples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html
@@ -34,14 +34,15 @@ import Service.Transaction.Storage (DBdescriptor(..), startDB)
 
 -- | Standart function to launch a node.
 startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
-       BuildConfig
+       DBdescriptor
+    -> BuildConfig
     -> Chan ExitMsg
     -> Chan Answer
     -> Chan InfoMsg
     -> (Chan a1 -> IORef s -> IO ())
     -> (Chan a1 -> Chan Transaction -> MyNodeId -> Chan FileActorRequest -> IO a2)
     -> IO (Chan a1)
-startNode buildConf exitCh answerCh infoCh manager startDo = do
+startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
 
     --tmp
     createDirectoryIfMissing False "data"
@@ -56,8 +57,7 @@ startNode buildConf exitCh answerCh infoCh manager startDo = do
     let portNumber = extConnectPort buildConf
     md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aFileRequestChan bnList config portNumber
     startServerActor managerChan portNumber
-    descr <- startDB
-    void $ forkIO $ microblockProc descr aMicroblockChan
+    void $ forkIO $ microblockProc descrDB aMicroblockChan
     void $ forkIO $ manager managerChan md
     void $ startDo managerChan aTransactionChan (config^.myNodeId) aFileRequestChan
     return managerChan

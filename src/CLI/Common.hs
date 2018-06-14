@@ -38,6 +38,7 @@ import Service.Types.SerializeJSON ()
 import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
 import Service.System.Directory (getTime, getKeyFilePath)
+import Service.Transaction.Storage (DBdescriptor(..))
 
 type Result a = Either CLIException a
 
@@ -132,11 +133,11 @@ getNewKey ch aInfoCh = try $ do
   sendMetrics keyInitialTransaction aInfoCh
   return $ show aPublicKey
 
-getBalance :: PubKey -> Chan InfoMsg -> IO (Result Amount)
-getBalance key aInfoCh = try $ do
+getBalance :: DBdescriptor -> PubKey -> Chan InfoMsg -> IO (Result Amount)
+getBalance descrDB key aInfoCh = try $ do
     let pKey = read key
     stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
-    result  <- getBalanceForKey pKey
+    result  <- getBalanceForKey descrDB pKey
     endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
     writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
     return result

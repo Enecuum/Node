@@ -20,6 +20,8 @@ import              Boot.Boot
 import              Boot.Types
 import              Node.Lib
 import              Data.Aeson
+import              Service.Transaction.Storage (startDB)
+
 
 main :: IO ()
 main =  do
@@ -31,7 +33,7 @@ main =  do
             exitCh <- newChan
             answerCh <- newChan
             aInfoChan <- newChan
-
+            descrDB   <- startDB
             poa_p   <- try (getEnv "poaPort") >>= \case
                     Right item              -> return $ read item
                     Left (_::SomeException) -> return $ poaPort conf
@@ -54,7 +56,7 @@ main =  do
 
 
 
-            void $ startNode conf exitCh answerCh aInfoChan managerBootNode $
+            void $ startNode descrDB conf exitCh answerCh aInfoChan managerBootNode $
                 \ch _ aNodeId aFileChan -> do
                     log_id  <- try (getEnv "log_id") >>= \case
                         Right item              -> return item
