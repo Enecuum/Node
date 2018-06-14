@@ -22,8 +22,6 @@ import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
 import Service.Types
 import Data.Text (pack)
-
-import qualified Data.ByteString as B
 import Network.Socket (SockAddr)
 
 serveRpc :: PortNumber -> [AddrRange IPv6] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()

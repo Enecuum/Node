@@ -18,7 +18,7 @@ import qualified Data.ByteString.Base16 as B
 import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
 import Data.Hex
 import Data.Text (pack, unpack)
-import Data.Text.Encoding (decodeUtf8)
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 
 instance FromJSON Trans
 instance ToJSON   Trans
@@ -52,7 +52,7 @@ instance ToJSON ByteString where
 
 
 instance FromJSON ByteString where
-  parseJSON (String s) = return . read . unpack $ s
+  parseJSON (String s) = unhex $ encodeUtf8 s
   parseJSON _          = error "Wrong object format"
 
 
