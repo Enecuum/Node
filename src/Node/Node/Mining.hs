@@ -157,7 +157,7 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
 
 answeToMsgFromPP _ _ = error "answeToMsgFromPP"
 
--- TODO: определение "места" где должа находиться PP нода. (переконект)
+-- TODO: define the place where node should be (reconnect)
 
 miningNodeAnswerClientIsDisconnected
     ::  IORef ManagerNodeData
@@ -194,7 +194,7 @@ answerToShardingNodeRequestMsg aMd
                         (aData^.myNodeId)
                         (toNodePosition aMyNodePosition))
 
-            T.IamAwakeRequst _ aMyNodePosition -> do
+            T.IamAwakeRequest _ aMyNodePosition -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $aLogMsg "awake logic lvl"
                 sendBroadcast aMd
                     (BroadcastPosition
@@ -413,7 +413,7 @@ answerToNewTransaction _ _ = error
     "answerToNewTransaction: something unexpected  has happened."
 
 
----- IDEA: Вынести в отдельный модуль????
+---- IDEA: replace to a separate module ???
 --------------------------------------------------------------------------------
 class SendBroadcast a where
     sendBroadcast :: IORef ManagerNodeData -> a -> IO ()

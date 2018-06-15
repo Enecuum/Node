@@ -47,7 +47,7 @@ answerToCheckBroadcastNodes aMd aChan _ = do
     writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag, RegularTag] Info
         "Checking of bradcasts"
     let
-        -- активные ноды.
+        -- active nodes.
         aNodeIds :: [NodeId]
         aNodeIds = do
             (aId, aNode) <- M.toList $ aData^.nodes

@@ -11,7 +11,8 @@ extra-deps:
 - time-units-1.0.0
 - base58-bytestring-0.1.0
 - HongoDB-0.0.1
-
+- iproute-1.7.4
+# - rocksdb-haskell-1.0.1
 
 build:
   haddock-arguments:

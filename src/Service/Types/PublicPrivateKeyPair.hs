@@ -19,6 +19,8 @@ module Service.Types.PublicPrivateKeyPair(
     ,   KeyPair(..)
     ,   getSignature
     ,   generateNewRandomAnonymousKeyPair
+    ,   fromPublicKey256k1
+    ,   publicKey256k1
   ) where
 
 import Data.Maybe

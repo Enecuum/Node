@@ -77,13 +77,10 @@ dependencies:
 - json-rpc-client
 - json-rpc-server
 - time-out
-- ini
 - text
 - aeson-pretty
 - unordered-containers
-
-#tmp
-- scientific
+# - rocksdb-haskell
 
 library:
   source-dirs: src

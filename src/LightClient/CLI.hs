@@ -12,36 +12,19 @@ import System.Environment (getArgs)
 import System.Console.GetOpt
 import System.Exit
 import Data.List.Split (splitOn)
-import Data.Map (fromList, lookup, Map)
+import Data.Map (lookup, Map, fromList)
 import Control.Monad.Except (runExceptT, liftIO)
+import Control.Exception (SomeException, try)
 import Network.Socket (HostName, PortNumber)
-import Control.Exception
 
-import Service.Types.PublicPrivateKeyPair
 import Service.Types
+import Service.Types.PublicPrivateKeyPair
 import Service.System.Directory (getTime, getKeyFilePath)
 import Service.Network.TCP.Client
 import Service.Network.Base (ClientHandle)
 import LightClient.RPC
 
-type QuantityTx = Int
-type PubKey = String
-data Trans = Trans {
-        amount :: Amount
-      , recipientPubKey :: PubKey
-      , senderPubKey :: PubKey
-      , currency :: CryptoCurrency
-      } deriving (Eq, Show)
-
-
-instance Read Trans where
-    readsPrec _ value =
-        case splitOn ":" value of
-             [f1, f2, f3, f4] ->
-                 [(Trans (read f1) f2 f3 (read f4), [])]
-             x -> error $ "Invalid number of fields in input: " ++ show x
-
-data Flag = Key | ShowKey | Balance PubKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever | Quit deriving (Eq, Show)
+data Flag = Key | ShowKey | Balance PubKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages | Quit deriving (Eq, Show)
 
 data ArgFlag = Port PortNumber | Host HostName | Version deriving (Eq, Show)
 
@@ -58,8 +41,11 @@ options = [
   , Option ['G'] ["generate-n-transactions"] (ReqArg (GenerateNTransactions . read) "qTx") "Generate N Transactions"
   , Option ['F'] ["generate-transactions"] (NoArg GenerateTransactionsForever) "Generate Transactions forever"
   , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
-  , Option ['B'] ["get-balance"] (ReqArg Balance "publicKey") "get balance for public key"
+  , Option ['B'] ["get-balance"] (ReqArg (Balance) "publicKey") "get balance for public key"
   , Option ['S'] ["send-money-to-from"] (ReqArg (Send . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
+  , Option ['A'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
+  , Option ['T'] ["send-message-to"] (ReqArg (SendMessageTo . read) "nodeId message") "Send message to the node"
+  , Option ['L'] ["load-new-messages"] (NoArg LoadMessages) "Load new recieved messages"
   , Option ['Q'] ["quit"] (NoArg Quit) "exit"
   ]
 
@@ -95,14 +81,17 @@ getRecipient defHost defPort (x:xs) = case x of
 dispatch :: [Flag] -> ClientHandle -> IO ()
 dispatch flags ch = do
     case flags of
-        (Key : _)                -> getKey ch
-        (GenerateNTransactions qTx: _) -> generateNTransactions ch qTx
+        (Key : _)                        -> getKey ch
+        (GenerateNTransactions qTx: _)   -> generateNTransactions ch qTx
         (GenerateTransactionsForever: _) -> generateTransactionsForever ch
-        (Send tx : _)            -> sendTrans ch tx
-        (ShowKey : _)            -> showPublicKey
-        (Balance aPublicKey : _) -> getBalance ch aPublicKey
-        (Quit : _)               -> closeAndExit ch
-        _                        -> putStrLn "Wrong argument"
+        (Send tx : _)                    -> sendTrans ch tx
+        (ShowKey : _)                    -> showPublicKey
+        (Balance aPublicKey : _)         -> getBalance ch aPublicKey
+        (SendMessageBroadcast m : _)     -> sendMessageBroadcast ch m
+        (SendMessageTo mTo : _)          -> sendMessageTo ch mTo
+        (LoadMessages : _)               -> loadMessages ch 
+        (Quit : _)                       -> closeAndExit ch
+        _                                -> putStrLn "Wrong argument"
 
 closeAndExit :: ClientHandle -> IO ()
 closeAndExit ch = do
@@ -111,43 +100,8 @@ closeAndExit ch = do
 
 showPublicKey :: IO ()
 showPublicKey = do
-  pairs <- getSavedPublicKey
+  pairs <- getSavedKeyPairs
   mapM_ (putStrLn . show . fst) pairs
-
-getSavedPublicKey :: IO [(PublicKey, PrivateKey)]
-getSavedPublicKey = do
-  result <- try $ getKeyFilePath >>= (\keyFileName -> readFile keyFileName)
-  case result of
-    Left ( _ :: SomeException) -> do
-          putStrLn "There is no keys"
-          return []
-    Right keyFileContent       -> do
-          let rawKeys = lines keyFileContent
-          let keys = map (splitOn ":") rawKeys
-          let pairs = map (\x -> (,) (read (x !! 0) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
-          return pairs
-
-
-sendTrans :: ClientHandle -> Trans -> IO ()
-sendTrans ch trans = do
-  let moneyAmount = (LightClient.CLI.amount trans) :: Amount
-  let receiverPubKey = read (recipientPubKey trans) :: PublicKey
-  let ownerPubKey = read (senderPubKey trans) :: PublicKey
-  timePoint <- getTime
-  keyPairs <- getSavedPublicKey
-  let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
-  case (Data.Map.lookup ownerPubKey mapPubPriv) of
-    Nothing -> putStrLn "You don't own that public key"
-    Just ownerPrivKey -> do
-      sign  <- getSignature ownerPrivKey moneyAmount
-      let tx  = WithSignature (WithTime timePoint (SendAmountFromKeyToKey ownerPubKey receiverPubKey moneyAmount)) sign
-      result <- runExceptT $ newTx ch tx
-      case result of
-        (Left err) -> putStrLn $ "Send transaction error: " ++ show err
-        (Right _ ) -> putStrLn ("Transaction done: " ++ show trans)
-
-printVersion :: IO ()
-printVersion = putStrLn ("--" ++ "1.0.0" ++ "--")
 
 getKey :: ClientHandle -> IO ()
 getKey ch = do
@@ -162,16 +116,47 @@ getKey ch = do
            getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
            putStrLn ("Public Key " ++ show aPublicKey ++ " was created")
 
-getBalance :: ClientHandle -> String -> IO ()
+sendTrans :: ClientHandle -> Trans -> IO ()
+sendTrans ch trans = do
+  let moneyAmount = (txAmount trans) :: Amount
+  let receiverPubKey = read (recipientPubKey trans) :: PublicKey
+  let ownerPubKey = read (senderPubKey trans) :: PublicKey
+  timePoint <- getTime
+  keyPairs <- getSavedKeyPairs
+  let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
+  case (Data.Map.lookup ownerPubKey mapPubPriv) of
+    Nothing -> putStrLn "You don't own that public key"
+    Just ownerPrivKey -> do
+      sign  <- getSignature ownerPrivKey moneyAmount
+      let tx  = WithSignature (WithTime timePoint (SendAmountFromKeyToKey ownerPubKey receiverPubKey moneyAmount)) sign
+      result <- runExceptT $ newTx ch tx
+      case result of
+        (Left err) -> putStrLn $ "Send transaction error: " ++ show err
+        (Right _ ) -> putStrLn ("Transaction done: " ++ show trans)
+
+printVersion :: IO ()
+printVersion = putStrLn ("--" ++ "1.0.0" ++ "--")
+
+
+getSavedKeyPairs :: IO [(PublicKey, PrivateKey)]
+getSavedKeyPairs = do
+  result <- try $ getKeyFilePath >>= (\keyFileName -> readFile keyFileName)
+  case result of
+    Left ( _ :: SomeException) -> do
+          putStrLn "There is no keys"
+          return []
+    Right keyFileContent       -> do
+          let rawKeys = lines keyFileContent
+          let keys = map (splitOn ":") rawKeys
+          let pairs = map (\x -> (,) (read (x !! 0) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
+          return pairs
+
+getBalance :: ClientHandle -> PubKey -> IO ()
 getBalance ch rawKey = do
-  result  <- runExceptT $ reqLedger ch $ parseKey rawKey
+  result  <- runExceptT $ reqLedger ch rawKey
   case result of
     (Left err) -> putStrLn $ "Get Balance error: " ++ show err
     (Right b ) -> putStrLn $ "Balance: " ++ show b
-
-parseKey :: String -> PublicKey
-parseKey rawKey = (read rawKey :: PublicKey)
-
 
 
 generateNTransactions :: ClientHandle -> Int -> IO ()
@@ -188,3 +173,26 @@ generateTransactionsForever ch = do
   case result of
     (Left err) -> putStrLn $ "generateTransactionsForever error: " ++ show err
     (Right _ ) -> putStrLn   "Transactions request was sent"
+
+sendMessageBroadcast :: ClientHandle -> String -> IO ()
+sendMessageBroadcast ch m = do
+  result <- runExceptT $ newMsgBroadcast ch m
+  case result of
+    (Left err) -> putStrLn $ "sendMessageBroadcast error: " ++ show err
+    (Right _ ) -> putStrLn   "Broadcast message was sent"
+
+sendMessageTo :: ClientHandle -> MsgTo -> IO ()
+sendMessageTo ch mTo = do
+  result <- runExceptT $ newMsgTo ch mTo
+  case result of
+    (Left err) -> putStrLn $ "sendMessageTo error: " ++ show err
+    (Right _ ) -> putStrLn   "Message was sent"
+
+loadMessages :: ClientHandle -> IO ()
+loadMessages ch = do
+  result <- runExceptT $ loadNewMsg ch
+  case result of
+    (Left err)    -> putStrLn $ "sendMessageBroadcast error: " ++ show err
+    (Right msgs ) -> putStrLn $ "New messages: " ++ (unlines $ map showMsg msgs)
+                  where showMsg (MsgTo id m) = "Message from " ++ show id ++ ": " ++ m
+

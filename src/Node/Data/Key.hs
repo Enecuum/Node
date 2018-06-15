@@ -19,9 +19,12 @@ module Node.Data.Key (
     ,   toMyNodeId
     ,   keyToId
     ,   idToKey
+    ,   generateKeyPair
   ) where
 
 import            GHC.Generics
+import            Crypto.Random.Types (MonadRandom (..))
+import            Crypto.PubKey.ECC.Generate
 import            Crypto.PubKey.ECC.DH
 import            Crypto.PubKey.ECC.Types (
     getCurveByName,
@@ -78,5 +81,6 @@ keyToId key = case compressPublicKey key of
 idToKey :: NodeId -> ECDSA.PublicKey
 idToKey (NodeId aId) = getPublicKey . uncompressPublicKey $ PublicKey256k1 $ fromInteger aId
 
-
+generateKeyPair :: MonadRandom m =>  m (ECDSA.PublicKey, ECDSA.PrivateKey)
+generateKeyPair = generate curve_256
 --------------------------------------------------------------------------------

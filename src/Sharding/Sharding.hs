@@ -10,9 +10,9 @@
 --              |                             |
 --    toStore --+-- To NetLvl -> LogicLvl -> NetLvl
 
--- -> NetLevet: BlockRequest
--- NetLevet -> LogicLvl: BlockRequest (Chan for Response) BlockHash
--- LogicLvl -> NetLevet: BlockResponse (Maybe Block)
+-- -> NetLevel: BlockRequest
+-- NetLevel -> LogicLvl: BlockRequest (Chan for Response) BlockHash
+-- LogicLvl -> NetLevel: BlockResponse (Maybe Block)
     -- LogicLvl (local) -> LogicLvl (non local): BlockRequest (Maybe Block)
     -- LogicLvl (non local) -> LogicLvl (local): BlockResponse (Maybe Block)
 
@@ -61,6 +61,7 @@ import              Node.Data.GlobalLoging
 import              Service.InfoMsg
 import              Lens.Micro.GHC()
 import              Node.Data.Key
+import              Data.Maybe (fromJust)
 
 
 sizeOfShardStore:: Int
@@ -126,7 +127,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
                             aShardingNode^.nodeIndex.shardNeededIndex.setOfHash
                     writeLog infoMsgChan [ShardingLvlTag] Info $
                         "Request shards by hash: " ++ show (S.toList aShardHashes)
-                    sendToNetLevet aChanOfNetLevel $
+                    sendToNetLevel aChanOfNetLevel $
                         ShardListRequest (S.toList aShardHashes)
                     aLoop $ aShardingNode &
                         nodeIndex.shardNeededIndex.setOfHash %~ S.drop aNumberOfLoading
@@ -154,7 +155,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
                 ++ ", Filtered neighbors positions: " ++ show aFilteredNeighbors
 
             forM_ aFilteredNeighbors $ \aNeighbor ->
-                sendToNetLevet aChanOfNetLevel $ IsTheNeighborAliveRequest
+                sendToNetLevel aChanOfNetLevel $ IsTheNeighborAliveRequest
                     (aNeighbor^.neighborId)
                     (aNeighbor^.neighborPosition)
             aLoop aShardingNode
@@ -195,7 +196,7 @@ makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgC
                     writeLog infoMsgChan [ShardingLvlTag] Info $
                         "This shard " ++ show aShardHash
                      ++ " doesn't store hire. Request neighbors of this shard."
-                    sendToNetLevet aChanOfNetLevel $ ShardListRequest [aShardHash]
+                    sendToNetLevel aChanOfNetLevel $ ShardListRequest [aShardHash]
                     aTime <- getTime Realtime
                     aLoop $ aShardingNode & nodeIndexOfReques %~
                         M.insert aShardHash (aTime, aChan)
@@ -295,8 +296,8 @@ initOfShardingNode :: T.ManagerMsg msg =>
                             -> IO ShardingNode
 initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMsgChan = do
     writeLog infoMsgChan [ShardingLvlTag, InitTag] Info "Init sharding node"
-    sendToNetLevet aChanOfNetLevel $ IamAwakeRequst aMyNodeId aMyNodePosition
-    sendToNetLevet aChanOfNetLevel NeighborListRequest
+    sendToNetLevel aChanOfNetLevel $ IamAwakeRequest aMyNodeId aMyNodePosition
+    sendToNetLevel aChanOfNetLevel NeighborListRequest
 
     aMyShardsIndex <- loadMyShardIndex
 
@@ -313,11 +314,14 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMs
             writeChan aChanRequest ShiftAction
 
     enc <- L.readFile "configs/config.json"
+
     case A.decode enc of
-        Nothing -> error "config not is valid"
-        Just aEnc
-            |  T.sharding aEnc == "off" -> return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan maxBound
-            | otherwise              ->  return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan 1
+        Nothing    -> error "config is not valid"
+        Just aEnc  -> do
+            let shardEnable = T.sharding $ fromJust $ T.simpleNodeBuildConfig aEnc
+            case shardEnable of
+              True ->  return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan 1
+              _    ->  return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan maxBound
 
 shiftTheShardingNode :: T.ManagerMsg msg =>
         Chan msg
@@ -346,8 +350,8 @@ shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode _ = do
         ++ ". Nearest positions: " ++ show (S.toList aNearestPositions)
         ++ ". New position: " ++ show aNewPosition
 
-    sendToNetLevet aChanOfNetLevel $ NewPosiotionMsg aNewPosition
-    sendToNetLevet aChanOfNetLevel $ ShardIndexRequest
+    sendToNetLevel aChanOfNetLevel $ NewPosiotionMsg aNewPosition
+    sendToNetLevel aChanOfNetLevel $ ShardIndexRequest
         (findShardingNodeDomain aShardingNode)
         (S.toList aNearestPositions)
     aLoop $ aShardingNode & nodePosition .~ aNewPosition
@@ -439,8 +443,8 @@ shiftIsNeed aShardingNode = checkUnevenness
     (aShardingNode^.nodePosition) (neighborPositions aShardingNode)
 
 
-sendToNetLevet :: T.ManagerMsg msg => Chan msg -> ShardingNodeRequestMsg -> IO ()
-sendToNetLevet aChan aMsg = writeChan aChan $ T.shardingNodeRequestMsg aMsg
+sendToNetLevel :: T.ManagerMsg msg => Chan msg -> ShardingNodeRequestMsg -> IO ()
+sendToNetLevel aChan aMsg = writeChan aChan $ T.shardingNodeRequestMsg aMsg
 
 
 mul :: Word64 -> Word64 -> Word64

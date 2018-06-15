@@ -32,12 +32,6 @@ import              Data.Maybe()
 test :: Either String PPToNNMessage
 test = A.eitherDecodeStrict "{\"blockHash\":\"AAAA\",\"previousHash\":\"AAAA\",\"tag\":\"Msg\",\"transactions\":[\"0040E631E1AFED9DCA0221D6D72D6FEA914A63DD43135217580AADCB9BB6F85E8C5B9563EBDB271FFF423701000000000000001C\"],\"type\":\"Microblock\"}"
 
--- :m PoA.PoAServer
---
-
---undead f = finally f (undead f)
-
---
 serverPoABootNode :: PortNumber -> Chan InfoMsg -> Chan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
@@ -60,12 +54,11 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                         WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
                         writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
                     _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
-                        "Brouken message from PP " ++ show aMsg
+                        "Broken message from PP " ++ show aMsg
                 Left a ->
-                    -- TODO: Вписать ID если такой есть.
+                    -- TODO: Include ID if exists.
                     writeLog aInfoChan [ServerBootNodeTag] Warning $
                         "Brouken message from PP " ++ show aMsg ++ " " ++ a
---pendingActor :: Chan PendingAction -> Chan Microblock -> Chan Transaction -> IO ()
 
 servePoA ::
        PortNumber
@@ -174,7 +167,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
                         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
 
             Left a -> do
-                -- TODO: Вписать ID если такой есть.
+                -- TODO: Include ID if exist.
                 writeLog aInfoChan [ServePoATag] Warning $
                     "Brouken message from PP " ++ show aMsg ++ " " ++ a
                 when (not aOk) $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
