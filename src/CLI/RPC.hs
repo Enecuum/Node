@@ -80,7 +80,7 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
 
               getBlock = toMethod "enq_getBlockByHash" f (Required "hash" :+: ())
                 where
-                  f :: Hash ->  RpcResult IO Microblock
+                  f :: Hash ->  RpcResult IO MicroblockV1
                   f hash = handle $ getBlockByHash hash ch
 
               getTransaction = toMethod "enq_getTransactionByHash" f (Required "hash" :+:())

@@ -41,14 +41,14 @@ data PendingAction where
 data Pending = Pending (Seq (Transaction, TimeSpec)) (Seq (Transaction, TimeSpec))
 
 
-pendingActor :: Chan PendingAction -> Chan Microblock -> Chan Transaction -> IO ()
+pendingActor :: Chan PendingAction -> Chan MicroblockV1 -> Chan Transaction -> IO ()
 pendingActor aChan aMicroblockChan aTransactionChan = do
 
     void . forkIO $ do
         aBlockChan <- dupChan aMicroblockChan
         -- перепаковка блоков
         forever $ readChan aBlockChan >>= \case
-            Microblock _ _ aTransactions ->
+            MicroblockV1 _ _ aTransactions ->
                 writeChan aChan $ RemoveTransactions aTransactions
 
     -- перепаковка транзакций

@@ -61,15 +61,15 @@ instance FromJSON TransactionInfo where
                            <*> ((v .: "block") >>= decodeFromText)
                            <*> v .: "index" 
 
-instance ToJSON Microblock where
+instance ToJSON MicroblockV1 where
   toJSON block = object [
                    "curr"  .= encodeToText (hashCurrentMicroblock block)
                  , "prev"  .= encodeToText (hashPreviousMicroblock block)
                  , "txs"   .= trans block
                  ]
 
-instance FromJSON Microblock where
-  parseJSON (Object v) = Microblock 
+instance FromJSON MicroblockV1 where
+  parseJSON (Object v) = MicroblockV1 
                            <$> ((v .: "curr") >>= decodeFromText)
                            <*> ((v .: "prev") >>= decodeFromText)
                            <*> v .: "txs" 

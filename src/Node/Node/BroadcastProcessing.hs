@@ -119,7 +119,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
                 sendToShardingLvl aData $
                     T.ShardAcceptAction (microblockToShard aMicroblock)
 
-                -- FIXME: rewrite show for Transaction and Microblock for showing only hash and structure
+                -- FIXME: rewrite show for Transaction and MicroblockV1 for showing only hash and structure
                 writeChan (aData^.microblockChan) aMicroblock
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Addtition the mickroblock to shard DB. The mickroblock = "
@@ -133,8 +133,8 @@ idShow aMyNodeId = show (toInteger aMyNodeId)
 -- | Make microblock from a shard
 -- | It could be good to check that it has correct hash
 --  TODO: check that block's hash corresponds to the block. Think, when it would be better to check.
-microblockToShard :: Microblock -> Shard
-microblockToShard aMicroblock@(Microblock aHash _ _) =
+microblockToShard :: MicroblockV1 -> Shard
+microblockToShard aMicroblock@(MicroblockV1 aHash _ _) =
     Shard ShardType (Hash aHash) (encode aMicroblock)
 
 --------------------------------------------------------------------------------

@@ -59,7 +59,7 @@ sendMessageBroadcast ch = return $ return $ Left NotImplementedException
 loadMessages :: ManagerMiningMsg a => Chan a -> IO (Result [MsgTo])
 loadMessages ch = return $ Left NotImplementedException
 
-getBlockByHash :: ManagerMiningMsg a => Hash -> Chan a -> IO (Result Microblock)
+getBlockByHash :: ManagerMiningMsg a => Hash -> Chan a -> IO (Result MicroblockV1)
 getBlockByHash hash ch = return $ Left NotImplementedException
 
 getTransactionByHash :: ManagerMiningMsg a => Hash -> Chan a -> IO (Result TransactionInfo)
