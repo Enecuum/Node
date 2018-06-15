@@ -62,7 +62,47 @@ instance FromJSON TransactionInfo where
                            <*> v .: "index"
 
 instance ToJSON Microblock where
-  toJSON block = undefined
+  toJSON aBlock = undefined
+{-
+      object [
+        "msg" := object [
+            "K_hash"  := _keyBlock aBlock,
+            "wallets" := _teamKeys aBlock,
+            "Tx"      := _transactions aBlock,
+          ]
+    ]
+-}
+{-
+
+data Microblock = Microblock{
+    _keyBlock :: ByteString, -- hash of key-block
+    _signer :: PublicKey,
+    _sign :: Signature,  -- signature for {K_hash, [Tx],}
+    _teamKeys :: [PublicKey], -- for reward
+    _transactions :: [Transaction]}
+  deriving (Eq, Generic, Ord, Read)
+
+{
+    "msg":{
+        "K_hash":"SoMeBaSe64StRinG==",
+        "wallets":[
+            "SoMeBaSe64StRinG==",
+            "SoMeBaSe64StRinG==",
+            ...
+        ],
+        "Tx":[{
+                "from":"SoMeBaSe64StRinG==",
+                "to":"SoMeBaSe64StRinG==",
+                "amount":<uint>,
+                "uuid":"SoMeBaSe64StRinG=="
+            },
+            ...
+        ],
+        "i":<uint>
+    },
+    "sign":"SoMeBaSe64StRinG=="
+}
+-}
 {-
 object [
                    "curr"  .= encodeToText (hashCurrentMicroblock block)
