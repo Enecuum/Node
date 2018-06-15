@@ -214,10 +214,10 @@ instance FromJSON PPToNNMessage where
                 case (myTextUnhex aPreviousHash, myTextUnhex aBlockHash) of
                     (Just aHash1, Just aHash2) ->
                         case decodeList aListTransaction of
-                            []      -> error "Ошибка расшифровки списка транзакций"
+                            []      -> mzero
                             aResult -> return . MsgMicroblock
                                 $ Microblock aHash1 aHash2 aResult
-                    _   -> error "Ошибка взятия хешей"
+                    _   -> mzero
 
 
             _ -> mzero
