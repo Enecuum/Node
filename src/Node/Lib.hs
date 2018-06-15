@@ -40,7 +40,7 @@ startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
     -> Chan Answer
     -> Chan InfoMsg
     -> (Chan a1 -> IORef s -> IO ())
-    -> (Chan a1 -> Chan Transaction -> MyNodeId -> Chan FileActorRequest -> IO a2)
+    -> (Chan a1 -> Chan Transaction -> Chan Microblock -> MyNodeId -> Chan FileActorRequest -> IO a2)
     -> IO (Chan a1)
 startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
 
@@ -59,7 +59,7 @@ startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
     startServerActor managerChan portNumber
     void $ forkIO $ microblockProc descrDB aMicroblockChan
     void $ forkIO $ manager managerChan md
-    void $ startDo managerChan aTransactionChan (config^.myNodeId) aFileRequestChan
+    void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aFileRequestChan
     return managerChan
 
 

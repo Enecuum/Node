@@ -33,7 +33,7 @@ configName = "configs/config.json"
 
 main :: IO ()
 main =  do
-        putStrLn "microblock 2018/06/13 11:40"
+        putStrLn "testNet 15/06/2017 08:40"
         enc <- L.readFile configName
         case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
@@ -82,9 +82,10 @@ main =  do
                             Right item              -> return item
                             Left (_::SomeException) -> return $ show aMyNodeId
 
-                    try (getEnv "test_send_id") >>= \case
+                    test_send <- try (getEnv "test_send_id") >>= \case
                         Right idTo              -> (metronomeS 10000000 (writeChan ch (testSendMessage ((read idTo) :: NodeId))))
                         Left (e::SomeException) -> print e
+                    print test_send
 
                     i_am_firs <- try (getEnv "isFirst") >>= \case
                         Right "Yes" -> return True
@@ -95,7 +96,8 @@ main =  do
 
                     void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh log_id
 
-                    void $ forkIO $ servePoA poa_p aMyNodeId ch aChan aInfoCh aFileChan
+
+                    void $ forkIO $ servePoA poa_p aMyNodeId ch aChan aInfoCh aFileChan aMicroblockChan
 
                     cli_m   <- try (getEnv "cliMode") >>= \case
                             Right item              -> return item

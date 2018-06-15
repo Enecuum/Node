@@ -96,7 +96,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
                 let aFilteredNode :: [Chan NNToPPMessage]
                     aFilteredNode = do
                         aNode <- snd <$> M.toList (aData^.ppNodes)
-                        guard $ aNode^.ppType == aNodeType
+                        guard $ aNodeType == All || aNode^.ppType == aNodeType
                         return $ aNode^.ppChan
 
                 forM_ aFilteredNode $ \aChan ->
@@ -120,6 +120,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
                     T.ShardAcceptAction (microblockToShard aMicroblock)
                 writeChan (aData^.microblockChan) aMicroblock
                 -- FIXME: rewrite show for Transaction and Microblock for showing only hash and structure
+                writeChan (aData^.microblockChan) aMicroblock
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Addtition the mickroblock to shard DB. The mickroblock = "
                     ++ show aMicroblock
@@ -129,8 +130,8 @@ idShow :: Integral a => a -> String
 idShow aMyNodeId = show (toInteger aMyNodeId)
 
 
--- | Make microblock from a shard 
--- | It could be good to check that it has correct hash 
+-- | Make microblock from a shard
+-- | It could be good to check that it has correct hash
 --  TODO: check that block's hash corresponds to the block. Think, when it would be better to check.
 microblockToShard :: Microblock -> Shard
 microblockToShard aMicroblock@(Microblock aHash _ _) =

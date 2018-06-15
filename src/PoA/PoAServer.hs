@@ -2,6 +2,7 @@
 module PoA.PoAServer (
         servePoA
     ,   serverPoABootNode
+    ,   test
   )  where
 
 
@@ -22,11 +23,14 @@ import              PoA.Types
 import              Control.Concurrent.MVar
 import              Control.Concurrent
 import              Node.FileDB.FileServer
+import              PoA.Pending
 
 import              Control.Concurrent.Async
 import              Node.Data.Key
 import              Data.Maybe()
 
+test :: Either String PPToNNMessage
+test = A.eitherDecodeStrict "{\"blockHash\":\"AAAA\",\"previousHash\":\"AAAA\",\"tag\":\"Msg\",\"transactions\":[\"0040E631E1AFED9DCA0221D6D72D6FEA914A63DD43135217580AADCB9BB6F85E8C5B9563EBDB271FFF423701000000000000001C\"],\"type\":\"Microblock\"}"
 
 serverPoABootNode :: PortNumber -> Chan InfoMsg -> Chan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
@@ -54,8 +58,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                 Left a ->
                     -- TODO: Include ID if exists.
                     writeLog aInfoChan [ServerBootNodeTag] Warning $
-                        "Broken message from PP " ++ show aMsg ++ " " ++ a
-
+                        "Brouken message from PP " ++ show aMsg ++ " " ++ a
 
 servePoA ::
        PortNumber
@@ -64,11 +67,14 @@ servePoA ::
     -> Chan Transaction
     -> Chan InfoMsg
     -> Chan FileActorRequest
+    -> Chan Microblock
     -> IO ()
-servePoA aPort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
+servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
-        "Init. servePoA: a port is " ++ show aPort
-    runServer aPort $ \_ aPending -> do
+        "Init. servePoA: a port is " ++ show aRecivePort
+    aPendingChan <- newChan
+    void $ forkIO $ pendingActor aPendingChan aMicroblockChan aRecvChan
+    runServer aRecivePort $ \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
 
@@ -78,7 +84,7 @@ servePoA aPort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
         -- writeChan ch $ connecting to PoA, the PoA have id.
         void $ race
             (aSender aId aConnect aNewChan)
-            (aReceiver aId aConnect aNewChan)
+            (aReceiver aId aConnect aNewChan aPendingChan)
   where
     aSender aId aConnect aNewChan = forever (do
         aMsg <- readChan aNewChan
@@ -88,20 +94,20 @@ servePoA aPort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                 aDeadId <- readMVar aId
                 writeChan ch $ ppNodeIsDisconected aDeadId)
 
-    aReceiver aId aConnect aNewChan = forever $ do
+    aReceiver aId aConnect aNewChan aPendingChan = forever $ do
         aMsg <- WS.receiveData aConnect
+        writeLog aInfoChan [ServePoATag] Info $ "Raw msg: " ++ show aMsg
         aOk <- isEmptyMVar aId
         case A.eitherDecodeStrict aMsg of
             Right a -> case a of
                 -- REVIEW: Check fair distribution of transactions between nodes
-                RequestTransaction aNum -> void $ forkIO $ forM_ [1..aNum] $ \_  -> do
-                        aTransaction <- readChan aRecvChan
-                        writeChan aInfoChan $ Metric $ add
-                            ("net.node." ++ show (toInteger aNodeId) ++ ".pending.amount")
-                            (-1 :: Integer)
+                RequestTransaction aNum -> void $ forkIO $ do
+                    aTmpChan <- newChan
+                    writeChan aPendingChan $ GetTransaction aNum aTmpChan
+                    aTransactions <- readChan aTmpChan
+                    forM_ (take aNum $ cycle aTransactions) $ \aTransaction  -> do
                         writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
                         WS.sendTextData aConnect $ A.encode $ ResponseTransaction aTransaction
-                            --(fromString.show $  :: B.ByteString)
                 MsgMicroblock aMicroblock
                     | not aOk -> do
                         aSenderId <- readMVar aId
