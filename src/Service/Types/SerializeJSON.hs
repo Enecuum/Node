@@ -65,37 +65,22 @@ instance FromJSON TransactionInfo where
                            <*> ((v .: "block") >>= decodeFromText)
                            <*> v .: "index"
 
-instance ToJSON MicroblockV1 where
-  toJSON block = object [
+instance ToJSON Microblock where
+  toJSON block = undefined
+{-
+object [
                    "curr"  .= encodeToText (hashCurrentMicroblock block)
                  , "prev"  .= encodeToText (hashPreviousMicroblock block)
                  , "txs"   .= trans block
                  ]
-
-instance FromJSON MicroblockV1 where
-  parseJSON (Object v) = MicroblockV1
+-}
+instance FromJSON Microblock where
+  parseJSON (Object v) = undefined
+      {-MicroblockV1
                            <$> ((v .: "curr") >>= decodeFromText)
                            <*> ((v .: "prev") >>= decodeFromText)
                            <*> v .: "txs"
-
-
--- instance FromJSON Hash
-
-
-instance ToJSON ByteString where
-  toJSON h = String $ decodeUtf8 $ hex h
-
-
-instance FromJSON ByteString where
-  parseJSON (String s) = unhex $ encodeUtf8 s
-  parseJSON _          = error "Wrong object format"
-
-
--- instance ToJSON TransactionInfo
--- instance FromJSON TransactionInfo
-
--- instance ToJSON Microblock
--- instance FromJSON Microblock
+-}
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [

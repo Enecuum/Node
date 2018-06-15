@@ -7,7 +7,6 @@ import              Data.Graph.Inductive
 import              Service.Types.PublicPrivateKeyPair
 import              GHC.Generics
 import              Data.ByteString
-import qualified    Data.ByteString.Base16 as B16
 import              Data.List.Split (splitOn)
 
 type QuantityTx = Int
@@ -51,8 +50,7 @@ data MicroblockV1 = MicroblockV1{
                   hashCurrentMicroblock :: ByteString, -- hashCurrentMicroblock
                   hashPreviousMicroblock :: ByteString, -- hashPreviousMicroblock
                   trans :: [Transaction]}
-                deriving (Eq, Generic, Ord)
-instance Serialize MicroblockV1
+                deriving (Eq, Generic, Ord, Show)
 
 data Microblock = Microblock{
     _keyBlock :: ByteString, -- hash of key-block
@@ -62,11 +60,9 @@ data Microblock = Microblock{
     _transactions :: [Transaction]}
   deriving (Eq, Generic, Ord, Read)
 
-instance Show MicroblockV1 where
-    show (MicroblockV1 aByteString1 aByteString2 tr) =
-        " hash1: " ++ show (B16.encode aByteString1) ++
-        " hash2: " ++ show (B16.encode aByteString2) ++
-        " transactions: " ++ show tr
+instance Serialize Microblock
+instance Show Microblock where
+    show _ = "Microblock ??"
 
 data Transaction = WithTime { time :: Time, transaction :: Transaction }
                  | WithSignature { transaction :: Transaction, signature :: Signature }

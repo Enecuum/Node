@@ -36,7 +36,7 @@ import              Node.Data.NetPackage
 import              Node.Template.Constructor
 import              Sharding.Space.Point
 import qualified    Sharding.Types.Node as N
-import              Service.Types (Transaction, MicroblockV1)
+import              Service.Types (Transaction, Microblock)
 import              Sharding.Space.Distance
 
 import              Data.Scientific (toRealFloat, Scientific)
@@ -91,7 +91,7 @@ data MsgToSender where
     SenderTerminate :: MsgToSender
 
 data MsgToMainActorFromPP
-    = MicroblockFromPP MicroblockV1 PPId
+    = MicroblockFromPP Microblock PPId
     | BroadcastRequestFromPP B.ByteString IdFrom NodeType
     | NewConnectWithPP PPId NodeType (Chan NNToPPMessage)
     | MsgResendingToPP IdFrom IdTo B.ByteString
@@ -168,7 +168,7 @@ data NodeBaseData = NodeBaseData {
     ,   nodeBaseDataAnswerChan          :: Chan Answer
     ,   nodeBaseDataBroadcastNum        :: Int
     ,   nodeBaseDataHostAddress         :: Maybe HostAddress
-    ,   nodeBaseDataMicroblockChan      :: Chan MicroblockV1
+    ,   nodeBaseDataMicroblockChan      :: Chan Microblock
     ,   nodeBaseDataMyNodePosition      :: Maybe MyNodePosition
     ,   nodeBaseDataShardingChan        :: MaybeChan N.ShardingNodeAction
     ,   nodeBaseDataIAmBroadcast        :: Bool
@@ -183,7 +183,7 @@ makeNodeBaseData
     ::  Chan ExitMsg
     ->  BootNodeList
     ->  Chan Answer
-    ->  Chan MicroblockV1
+    ->  Chan Microblock
     ->  PortNumber
     ->  Chan InfoMsg
     ->  Chan FileActorRequest
@@ -215,7 +215,7 @@ data RPCBuildConfig where
 data SimpleNodeBuildConfig where
      SimpleNodeBuildConfig :: {
         sharding       :: Bool,
-        cliMode        :: String,  -- "off", "rpc" or ""cli     
+        cliMode        :: String,  -- "off", "rpc" or ""cli
         rpcBuildConfig :: Maybe RPCBuildConfig
   } -> SimpleNodeBuildConfig
   deriving (Generic)
@@ -276,7 +276,7 @@ instance Serialize PrivateKey where
 class ToManagerData a where
     toManagerData
         :: Chan Transaction
-        -> Chan MicroblockV1
+        -> Chan Microblock
         -> Chan ExitMsg
         -> Chan Answer
         -> Chan InfoMsg

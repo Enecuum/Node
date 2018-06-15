@@ -67,7 +67,7 @@ servePoA ::
     -> Chan Transaction
     -> Chan InfoMsg
     -> Chan FileActorRequest
-    -> Chan MicroblockV1
+    -> Chan Microblock
     -> IO ()
 servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
