@@ -14,7 +14,7 @@ module CLI.Common (
   getBlockByHash,
   getTransactionByHash,
   getAllTransactions,
-  
+
   getBalance,
   getPublicKeys,
 
@@ -45,7 +45,7 @@ type Result a = Either CLIException a
 
 data CLIException = WrongKeyOwnerException
                   | NotImplementedException -- test
-                  | OtherException                   
+                  | OtherException
   deriving Show
 
 instance Exception CLIException
@@ -59,7 +59,7 @@ sendMessageBroadcast ch = return $ return $ Left NotImplementedException
 loadMessages :: ManagerMiningMsg a => Chan a -> IO (Result [MsgTo])
 loadMessages ch = return $ Left NotImplementedException
 
-getBlockByHash :: ManagerMiningMsg a => Hash -> Chan a -> IO (Result MicroblockV1)
+getBlockByHash :: ManagerMiningMsg a => Hash -> Chan a -> IO (Result Microblock)
 getBlockByHash hash ch = return $ Left NotImplementedException
 
 getTransactionByHash :: ManagerMiningMsg a => Hash -> Chan a -> IO (Result TransactionInfo)

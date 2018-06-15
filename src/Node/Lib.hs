@@ -41,7 +41,7 @@ startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
     -> Chan Answer
     -> Chan InfoMsg
     -> (Chan a1 -> IORef s -> IO ())
-    -> (Chan a1 -> Chan Transaction -> Chan MicroblockV1 -> MyNodeId -> Chan FileActorRequest -> IO a2)
+    -> (Chan a1 -> Chan Transaction -> Chan Microblock -> MyNodeId -> Chan FileActorRequest -> IO a2)
     -> IO (Chan a1)
 startNode buildConf exitCh answerCh infoCh manager startDo = do
 
@@ -64,14 +64,14 @@ startNode buildConf exitCh answerCh infoCh manager startDo = do
     void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aFileRequestChan
     return managerChan
 
-microblockProc :: Chan MicroblockV1 -> String -> IO b
+microblockProc :: Chan Microblock -> String -> IO b
 microblockProc aMicroblockCh aFilePath = forever $ do
         aMicroblock <- readChan aMicroblockCh
         aBlocksFile <- try $ readHashMsgFromFile aFilePath
         aBlocks <- case aBlocksFile of
             Right aBlocks      -> return aBlocks
             Left (_ :: SomeException) -> do
-                 B.writeFile aFilePath $ S.encode ([] :: [MicroblockV1])
+                 B.writeFile aFilePath $ S.encode ([] :: [Microblock])
                  return []
         B.writeFile aFilePath $ S.encode (aBlocks ++ [aMicroblock])
 
@@ -102,13 +102,13 @@ readBootNodeList conf = do
 
 
 
-mergeMBlocks :: [MicroblockV1] -> [MicroblockV1] -> [MicroblockV1] -- new old result
+mergeMBlocks :: [Microblock] -> [Microblock] -> [Microblock] -- new old result
 mergeMBlocks [] old = old
 mergeMBlocks (x:xs) olds = if containMBlock x olds
     then mergeMBlocks xs olds
     else mergeMBlocks xs (x : olds)
 
 
-containMBlock :: MicroblockV1 -> [MicroblockV1] -> Bool
-containMBlock el elements = or $ (\(MicroblockV1 h1 _ _) (MicroblockV1 h2 _ _) -> h1 == h2 ) <$> [el] <*> elements
+containMBlock :: Microblock -> [Microblock] -> Bool
+containMBlock el elements = or $ (==) <$> [el] <*> elements
 -------------------------------------------------------

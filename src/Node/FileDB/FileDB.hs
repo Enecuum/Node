@@ -67,7 +67,7 @@ writeDataToFile aFilePath aElems = do
     writeFile aFilePath . unlines $ show <$> aElems
 -}
 
-readHashMsgFromFile :: String -> IO [MicroblockV1]
+readHashMsgFromFile :: String -> IO [Microblock]
 readHashMsgFromFile filename = do
     result <- try $ B.readFile filename
     case result of

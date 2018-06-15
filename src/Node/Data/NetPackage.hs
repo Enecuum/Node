@@ -18,7 +18,7 @@ import              Crypto.PubKey.ECC.ECDSA (Signature(..))
 import              Crypto.PubKey.ECC.DH
 
 import              Service.Network.Base
-import              Service.Types (Transaction, MicroblockV1)
+import              Service.Types (Transaction, Microblock)
 
 import              Sharding.Types.ShardTypes
 import              Sharding.Space.Point as P
@@ -246,7 +246,7 @@ data instance BroadcastThingLvl MiningLvl where
         ->  BroadcastThingLvl MiningLvl
 
     BroadcastMicroBlock
-        ::  MicroblockV1
+        ::  Microblock
         ->  Maybe NodeId
         ->  BroadcastThingLvl MiningLvl
 

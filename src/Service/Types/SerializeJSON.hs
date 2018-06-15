@@ -56,24 +56,27 @@ instance ToJSON TransactionInfo where
                 ]
 
 instance FromJSON TransactionInfo where
-  parseJSON (Object v) = TransactionInfo 
+  parseJSON (Object v) = TransactionInfo
                            <$> v .: "tx"
                            <*> ((v .: "block") >>= decodeFromText)
-                           <*> v .: "index" 
+                           <*> v .: "index"
 
-instance ToJSON MicroblockV1 where
-  toJSON block = object [
+instance ToJSON Microblock where
+  toJSON block = undefined
+{-
+object [
                    "curr"  .= encodeToText (hashCurrentMicroblock block)
                  , "prev"  .= encodeToText (hashPreviousMicroblock block)
                  , "txs"   .= trans block
                  ]
-
-instance FromJSON MicroblockV1 where
-  parseJSON (Object v) = MicroblockV1 
+-}
+instance FromJSON Microblock where
+  parseJSON (Object v) = undefined
+      {-MicroblockV1
                            <$> ((v .: "curr") >>= decodeFromText)
                            <*> ((v .: "prev") >>= decodeFromText)
-                           <*> v .: "txs" 
-
+                           <*> v .: "txs"
+-}
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [

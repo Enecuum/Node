@@ -39,7 +39,7 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
 
             where
               ipAccepted :: SockAddr -> Bool
-              ipAccepted addr = unsafePerformIO $ do 
+              ipAccepted addr = unsafePerformIO $ do
                 case fromSockAddr addr of
                   Nothing      -> return False
                   Just (ip, _) -> do
@@ -48,8 +48,8 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
                     where convert ip = case ip of
                              IPv4 i -> ipv4ToIPv6 i
                              IPv6 i -> i
-              
-              handle f = do  
+
+              handle f = do
                     case ipAccepted addr of
                           False -> do
                                 liftIO $ putStrLn "Denied"
@@ -62,13 +62,13 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
                                      Right r -> liftIO $ return r
 
 
-              methods = [createTx , balanceReq, getBlock, getTransaction, getFullWallet 
+              methods = [createTx , balanceReq, getBlock, getTransaction, getFullWallet
 -- test
-                       , createNTx, createUnlimTx, sendMsgBroadcast, sendMsgTo, loadMsg 
+                       , createNTx, createUnlimTx, sendMsgBroadcast, sendMsgTo, loadMsg
                         ]
 
 
-              createTx = toMethod "enq_sendTransaction" f (Required "tx" :+: ()) 
+              createTx = toMethod "enq_sendTransaction" f (Required "tx" :+: ())
                 where
                   f :: Transaction -> RpcResult IO ()
                   f tx = handle $ sendTrans tx ch aInfoCh
@@ -80,7 +80,7 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
 
               getBlock = toMethod "enq_getBlockByHash" f (Required "hash" :+: ())
                 where
-                  f :: Hash ->  RpcResult IO MicroblockV1
+                  f :: Hash ->  RpcResult IO Microblock
                   f hash = handle $ getBlockByHash hash ch
 
               getTransaction = toMethod "enq_getTransactionByHash" f (Required "hash" :+:())
@@ -118,5 +118,3 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
                 where
                   f :: RpcResult IO [MsgTo]
                   f = handle $ loadMessages ch
-
-

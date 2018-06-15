@@ -133,8 +133,8 @@ idShow aMyNodeId = show (toInteger aMyNodeId)
 -- | Make microblock from a shard
 -- | It could be good to check that it has correct hash
 --  TODO: check that block's hash corresponds to the block. Think, when it would be better to check.
-microblockToShard :: MicroblockV1 -> Shard
-microblockToShard aMicroblock@(MicroblockV1 aHash _ _) =
-    Shard ShardType (Hash aHash) (encode aMicroblock)
+microblockToShard :: Microblock -> Shard
+microblockToShard aMicroblock@(Microblock _ _ _ _ _) = undefined
+--    Shard ShardType (Hash "aaaa") (encode aMicroblock)
 
 --------------------------------------------------------------------------------
