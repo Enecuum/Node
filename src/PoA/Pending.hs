@@ -48,7 +48,7 @@ pendingActor aChan aMicroblockChan aTransactionChan = do
         aBlockChan <- dupChan aMicroblockChan
         -- перепаковка блоков
         forever $ readChan aBlockChan >>= \case
-            Microblock _ _ _ _ aTransactions ->
+            Microblock _ _ _ _ aTransactions _ ->
                 writeChan aChan $ RemoveTransactions aTransactions
 
     -- перепаковка транзакций

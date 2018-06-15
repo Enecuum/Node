@@ -43,7 +43,7 @@ newTxSig = Signature "enq_sendTransaction" ("tx" ::: ())
 reqLedgerSig :: Signature (PubKey ::: ()) Amount
 reqLedgerSig = Signature "enq_getBalance" ("address" ::: ())
 
-reqGetBlockSig :: Signature (Hash ::: ()) MicroblockV1
+reqGetBlockSig :: Signature (Hash ::: ()) Microblock
 reqGetBlockSig = Signature "enq_getBlockByHash" ("hash" ::: ())
 
 reqGetTxSig :: Signature (Hash ::: ()) TransactionInfo
@@ -75,7 +75,7 @@ newTx h = toFunction (connectionWithTimeOut h) newTxSig
 reqLedger :: ClientHandle -> PubKey -> Result Amount
 reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
 
-getBlock :: ClientHandle -> Hash -> Result MicroblockV1
+getBlock :: ClientHandle -> Hash -> Result Microblock
 getBlock h = toFunction (connectionWithTimeOut h) reqGetBlockSig
 
 getTx :: ClientHandle -> Hash -> Result TransactionInfo

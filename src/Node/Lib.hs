@@ -63,7 +63,7 @@ startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
     return managerChan
 
 
-microblockProc :: DBdescriptor -> Chan MicroblockV1 -> IO b
+microblockProc :: DBdescriptor -> Chan Microblock -> IO b
 microblockProc descriptor aMicroblockCh = forever $ do
         aMicroblock <- readChan aMicroblockCh
         runLedger descriptor aMicroblock

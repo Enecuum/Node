@@ -75,8 +75,11 @@ microblockIsExpected :: MicroblockV1 -> Bool
 microblockIsExpected = undefined
 
 
-runLedger :: DBdescriptor -> MicroblockV1 -> IO ()
-runLedger (DBdescriptor dbTx dbMb dbLedger) m  = if (not $ microblockIsExpected m) then error "We are exepecting another microblock" else do
+runLedger :: DBdescriptor -> Microblock -> IO ()
+runLedger = undefined
+
+runLedgerV1 :: DBdescriptor -> MicroblockV1 -> IO ()
+runLedgerV1 (DBdescriptor dbTx dbMb dbLedger) m  = if (not $ microblockIsExpected m) then error "We are exepecting another microblock" else do
     let txs = getTxsMicroblock m
     ht      <- getBalanceOfKeys dbLedger txs
     mapM_ (updateBalanceTable ht) txs
