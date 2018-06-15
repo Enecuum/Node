@@ -45,7 +45,7 @@ main =  do
             descrDB   <- startDB
 
             void $ startNode descrDB conf
-                aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMyNodeId aFileChan -> do
+                aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMicroblockChan aMyNodeId aFileChan -> do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
                     metronomeS 1000000 (writeChan ch queryPositions)
