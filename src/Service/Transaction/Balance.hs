@@ -48,8 +48,8 @@ updateBalanceTable ht aTransaction = do
                                                                                                H.insert ht (htK toKey) (balanceTo + am)
     _ -> error "Unsupported type of transaction"
 
-getTxsMicroblock :: MicroblockV1 -> [Transaction]
-getTxsMicroblock (MicroblockV1 _ _ txs) = txs
+getTxsMicroblock :: Microblock -> [Transaction]
+getTxsMicroblock (Microblock _ _ _ _ txs _) = txs
 
 
 getBalanceOfKeys :: Rocks.DB -> [Transaction] -> IO BalanceTable
@@ -71,15 +71,15 @@ getPubKeys (RegisterPublicKey aKey _) = [aKey]
 getPubKeys (SendAmountFromKeyToKey fromKey toKey _) = [fromKey, toKey]
 
 
-microblockIsExpected :: MicroblockV1 -> Bool
+microblockIsExpected :: Microblock -> Bool
 microblockIsExpected = undefined
 
 
-runLedger :: DBdescriptor -> Microblock -> IO ()
-runLedger = undefined
+run :: Microblock -> DBdescriptor -> Microblock -> IO ()
+run m = if (not $ microblockIsExpected m) then error "We are exepecting another microblock" else runLedger
 
-runLedgerV1 :: DBdescriptor -> MicroblockV1 -> IO ()
-runLedgerV1 (DBdescriptor dbTx dbMb dbLedger) m  = if (not $ microblockIsExpected m) then error "We are exepecting another microblock" else do
+runLedger :: DBdescriptor -> Microblock -> IO ()
+runLedger (DBdescriptor dbTx dbMb dbLedger) m  =  do
     let txs = getTxsMicroblock m
     ht      <- getBalanceOfKeys dbLedger txs
     mapM_ (updateBalanceTable ht) txs
@@ -89,7 +89,7 @@ runLedgerV1 (DBdescriptor dbTx dbMb dbLedger) m  = if (not $ microblockIsExpecte
     writeLedgerDB dbLedger ht
 
 
-writeMicroblockDB :: Rocks.DB -> MicroblockV1 -> IO ()
+writeMicroblockDB :: Rocks.DB -> Microblock -> IO ()
 writeMicroblockDB db m = do
   let key = rHash m
       val  = rValue m
