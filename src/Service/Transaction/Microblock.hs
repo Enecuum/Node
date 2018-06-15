@@ -10,25 +10,25 @@ import Control.Monad (replicateM)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.State (StateT, evalStateT, put, get)
 -- import Service.Types (Time, Microblock(..),Transaction(..))
-import Service.Types (Microblock(..),Transaction)
+import Service.Types (MicroblockV1(..),Transaction)
 import Service.Types.PublicPrivateKeyPair (PublicKey(..)) -- Signature)
 -- import Data.Aeson as A
 
 
 type HashOfMicroblock = BC.ByteString
 
-genNMicroBlocks :: Int -> IO [Microblock]
+genNMicroBlocks :: Int -> IO [MicroblockV1]
 genNMicroBlocks n = evalStateT (replicateM n genMicroBlock) BC.empty
 
 
-genMicroBlock :: StateT HashOfMicroblock IO Microblock
+genMicroBlock :: StateT HashOfMicroblock IO MicroblockV1
 genMicroBlock = do
   aHashPreviousMicroblock <- get
   n <- lift $ randomRIO (3,4) --(40,128) -- from 40 to 128 transactions per block
   tx <- lift $ genNNTx n
   let aHashCurrentMicroblock = (SHA1.hash . BC.pack . show) tx
   put aHashCurrentMicroblock
-  return (Microblock aHashCurrentMicroblock aHashPreviousMicroblock tx)
+  return (MicroblockV1 aHashCurrentMicroblock aHashPreviousMicroblock tx)
 
 
 w1 :: IO ()

@@ -36,7 +36,7 @@ import              Node.Data.NetPackage
 import              Node.Template.Constructor
 import              Sharding.Space.Point
 import qualified    Sharding.Types.Node as N
-import              Service.Types (Transaction, Microblock)
+import              Service.Types (Transaction, MicroblockV1)
 import              Sharding.Space.Distance
 
 import              Data.Scientific (toRealFloat, Scientific)
@@ -91,7 +91,7 @@ data MsgToSender where
     SenderTerminate :: MsgToSender
 
 data MsgToMainActorFromPP
-    = MicroblockFromPP Microblock PPId
+    = MicroblockFromPP MicroblockV1 PPId
     | BroadcastRequestFromPP B.ByteString IdFrom NodeType
     | NewConnectWithPP PPId NodeType (Chan NNToPPMessage)
     | MsgResendingToPP IdFrom IdTo B.ByteString
@@ -168,7 +168,7 @@ data NodeBaseData = NodeBaseData {
     ,   nodeBaseDataAnswerChan          :: Chan Answer
     ,   nodeBaseDataBroadcastNum        :: Int
     ,   nodeBaseDataHostAddress         :: Maybe HostAddress
-    ,   nodeBaseDataMicroblockChan      :: Chan Microblock
+    ,   nodeBaseDataMicroblockChan      :: Chan MicroblockV1
     ,   nodeBaseDataMyNodePosition      :: Maybe MyNodePosition
     ,   nodeBaseDataShardingChan        :: MaybeChan N.ShardingNodeAction
     ,   nodeBaseDataIAmBroadcast        :: Bool
@@ -183,7 +183,7 @@ makeNodeBaseData
     ::  Chan ExitMsg
     ->  BootNodeList
     ->  Chan Answer
-    ->  Chan Microblock
+    ->  Chan MicroblockV1
     ->  PortNumber
     ->  Chan InfoMsg
     ->  Chan FileActorRequest
@@ -276,7 +276,7 @@ instance Serialize PrivateKey where
 class ToManagerData a where
     toManagerData
         :: Chan Transaction
-        -> Chan Microblock
+        -> Chan MicroblockV1
         -> Chan ExitMsg
         -> Chan Answer
         -> Chan InfoMsg

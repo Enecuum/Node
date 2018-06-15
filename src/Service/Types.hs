@@ -8,7 +8,6 @@ import              Service.Types.PublicPrivateKeyPair
 import              GHC.Generics
 import              Data.ByteString
 import qualified    Data.ByteString.Base16 as B16
-import qualified    Data.ByteString.Char8 as C
 import              Data.List.Split (splitOn)
 
 type QuantityTx = Int
@@ -48,20 +47,23 @@ type DAG = Gr Transaction Transaction
 newtype Hash = Hash ByteString deriving (Ord, Eq, Show, Generic)
 instance Serialize Hash
 
-instance Read Hash where
-       readsPrec _ value = return (Hash $ C.pack value,"")
-
-
-data Microblock = Microblock{
+data MicroblockV1 = MicroblockV1{
                   hashCurrentMicroblock :: ByteString, -- hashCurrentMicroblock
                   hashPreviousMicroblock :: ByteString, -- hashPreviousMicroblock
                   trans :: [Transaction]}
-                deriving (Eq, Generic, Ord, Read)
+                deriving (Eq, Generic, Ord)
+instance Serialize MicroblockV1
 
-instance Serialize Microblock
+data Microblock = Microblock{
+    _keyBlock :: ByteString, -- hash of key-block
+    _signer :: PublicKey,
+    _sign :: Signature,  -- signature for {K_hash, [Tx],}
+    _teamKeys :: [PublicKey], -- for reward
+    _transactions :: [Transaction]}
+  deriving (Eq, Generic, Ord, Read)
 
-instance Show Microblock where
-    show (Microblock aByteString1 aByteString2 tr) =
+instance Show MicroblockV1 where
+    show (MicroblockV1 aByteString1 aByteString2 tr) =
         " hash1: " ++ show (B16.encode aByteString1) ++
         " hash2: " ++ show (B16.encode aByteString2) ++
         " transactions: " ++ show tr

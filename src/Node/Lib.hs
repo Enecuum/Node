@@ -40,7 +40,7 @@ startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
     -> Chan Answer
     -> Chan InfoMsg
     -> (Chan a1 -> IORef s -> IO ())
-    -> (Chan a1 -> Chan Transaction -> Chan Microblock -> MyNodeId -> Chan FileActorRequest -> IO a2)
+    -> (Chan a1 -> Chan Transaction -> Chan MicroblockV1 -> MyNodeId -> Chan FileActorRequest -> IO a2)
     -> IO (Chan a1)
 startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
 
@@ -63,13 +63,11 @@ startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
     return managerChan
 
 
-
-microblockProc :: DBdescriptor -> Chan Microblock -> IO b
+microblockProc :: DBdescriptor -> Chan MicroblockV1 -> IO b
 microblockProc descriptor aMicroblockCh = forever $ do
         aMicroblock <- readChan aMicroblockCh
         runLedger descriptor aMicroblock
         -- putStrLn $ show aMicroblock
-
 
 readNodeConfig :: IO NodeConfig
 readNodeConfig =
@@ -97,13 +95,13 @@ readBootNodeList conf = do
 
 
 
-mergeMBlocks :: [Microblock] -> [Microblock] -> [Microblock] -- new old result
+mergeMBlocks :: [MicroblockV1] -> [MicroblockV1] -> [MicroblockV1] -- new old result
 mergeMBlocks [] old = old
 mergeMBlocks (x:xs) olds = if containMBlock x olds
     then mergeMBlocks xs olds
     else mergeMBlocks xs (x : olds)
 
 
-containMBlock :: Microblock -> [Microblock] -> Bool
-containMBlock el elements = or $ (\(Microblock h1 _ _) (Microblock h2 _ _) -> h1 == h2 ) <$> [el] <*> elements
+containMBlock :: MicroblockV1 -> [MicroblockV1] -> Bool
+containMBlock el elements = or $ (\(MicroblockV1 h1 _ _) (MicroblockV1 h2 _ _) -> h1 == h2 ) <$> [el] <*> elements
 -------------------------------------------------------

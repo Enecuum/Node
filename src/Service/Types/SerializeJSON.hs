@@ -42,9 +42,44 @@ encodeToText = T.decodeUtf8 . B.encode
 decodeFromText :: (Monad m) => Text -> m ByteString
 decodeFromText = return . fst . B.decode . T.encodeUtf8
 
-instance ToJSON Hash 
 
-instance FromJSON Hash 
+instance ToJSON Hash where
+  toJSON (Hash h) = object [
+                  "hash" .= encodeToText h
+                ]
+
+instance FromJSON Hash where
+  parseJSON (Object v) = Hash <$> ((v .: "hash") >>= decodeFromText)
+
+
+instance ToJSON TransactionInfo where
+  toJSON info = object [
+                  "tx"    .= tx info
+                , "block" .= encodeToText (block info)
+                , "index" .= index info
+                ]
+
+instance FromJSON TransactionInfo where
+  parseJSON (Object v) = TransactionInfo
+                           <$> v .: "tx"
+                           <*> ((v .: "block") >>= decodeFromText)
+                           <*> v .: "index"
+
+instance ToJSON MicroblockV1 where
+  toJSON block = object [
+                   "curr"  .= encodeToText (hashCurrentMicroblock block)
+                 , "prev"  .= encodeToText (hashPreviousMicroblock block)
+                 , "txs"   .= trans block
+                 ]
+
+instance FromJSON MicroblockV1 where
+  parseJSON (Object v) = MicroblockV1
+                           <$> ((v .: "curr") >>= decodeFromText)
+                           <*> ((v .: "prev") >>= decodeFromText)
+                           <*> v .: "txs"
+
+
+-- instance FromJSON Hash
 
 
 instance ToJSON ByteString where
@@ -56,11 +91,11 @@ instance FromJSON ByteString where
   parseJSON _          = error "Wrong object format"
 
 
-instance ToJSON TransactionInfo 
-instance FromJSON TransactionInfo 
+-- instance ToJSON TransactionInfo
+-- instance FromJSON TransactionInfo
 
-instance ToJSON Microblock 
-instance FromJSON Microblock 
+-- instance ToJSON Microblock
+-- instance FromJSON Microblock
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [

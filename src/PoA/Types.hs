@@ -21,7 +21,7 @@ import              Data.Hex
 import              Control.Monad.Extra
 -- import              Data.Either
 import qualified    Data.Serialize as S
-import              Service.Types (Microblock(..), Transaction)
+import              Service.Types (MicroblockV1(..), Transaction)
 import              Service.Network.Base
 import              Data.IP
 import              Node.Data.Key
@@ -98,7 +98,7 @@ data PPToNNMessage
 
     -- new microblock was mined.
     | MsgMicroblock {
-        microblock :: Microblock
+        microblock :: MicroblockV1
     }
     -- Macroblock was finallized.
     -- | MsgMacroblock {
@@ -205,7 +205,7 @@ instance FromJSON PPToNNMessage where
                 aPoint <- unhexNodeId aDestination
                 return $ MsgMsgToNN (PPId aPoint) (S.encode aMsg)
 
-            ("Msg", "Microblock") -> do
+            ("Msg", "MicroblockV1") -> do
                 aPreviousHash :: T.Text <- aMessage .: "previousHash"
                 aBlockHash    :: T.Text <- aMessage .: "blockHash"
                 aListTransaction  <- aMessage .: "transactions"
@@ -214,8 +214,8 @@ instance FromJSON PPToNNMessage where
                         case decodeList aListTransaction of
                             []      -> error "Can not parse Transactions in Microblock"
                             aResult -> return . MsgMicroblock
-                                $ Microblock aHash1 aHash2 (map read aResult :: [Transaction])
-                    _   -> error "Can not parse Microblock"
+                                $ MicroblockV1 aHash1 aHash2 (map read aResult :: [Transaction])
+                    _   -> error "Can not parse MicroblockV1"
 
 
             _ -> mzero
