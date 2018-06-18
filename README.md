@@ -228,7 +228,7 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 2. Build without docker
 
-`stack build --no-docker`
+`stack build`
 
 
 ### Initialize a Boot Node
