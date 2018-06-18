@@ -245,17 +245,23 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 `stack exec LightClient-exe`
 
+Hint: you need to run a local Simple Node in case you haven't 
+
 #### Available commands for Light Client
 
 | Command shortcut | Full command | Description |
 |---------|--------|---------|
-| -V, -? | --version | Show version number |
-| -K | --get-public-key | Create new public key |
-| -G qTx | --generate-n-transactions=qTx | Generate N transactions |
-| -F | --generate-transactions | Generate transactions forever |
-| -M | --show-my-keys | Show my public keys |
-| -B publicKey | --get-balance=publicKey | Get balance for a public key |
-| -S amount:to:from:currency | --send-money-to-from=amount:to:from:currency | Send currency from a public key to a public key (ENQ/ETH/DASH/BTC) |
+|  -K | --get-public-key | get public key |
+|  -G qTx | --generate-n-transactions=qTx | Generate N Transactions |
+|  -F | --generate-transactions | Generate Transactions forever |
+|  -M | --show-my-keys | show my public keys
+|  -B publicKey | --get-balance=publicKey | get balance for public key |
+|  -S amount:to:from:currency  | --send-money-to-from=amount:to:from:currency | send money to wallet from wallet (ENQ | ETH | DASH | BTC) |
+|  -A message | --send-message-for-all=message | Send broadcast message |
+|  -T nodeId message | --send-message-to=nodeId message | Send message to the node |
+|  -L | --load-new-messages | Load new recieved messages |
+|  -Q | --quit | exit |
+
 
 <br/>
 <br/>
