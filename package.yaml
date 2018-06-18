@@ -49,6 +49,7 @@ dependencies:
 - cryptonite
 - base16-bytestring
 - base58-bytestring
+- base64-bytestring
 - arithmoi
 - directory
 - filepath

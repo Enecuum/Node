@@ -49,11 +49,10 @@ instance Serialize Hash
 
 data Microblock = Microblock{
     _keyBlock :: ByteString, -- hash of key-block
-    _signer :: PublicKey,
     _sign :: Signature,  -- signature for {K_hash, [Tx],}
     _teamKeys :: [PublicKey], -- for reward
     _transactions :: [Transaction],
-    _numOfBlock   :: Int
+    _numOfBlock   :: Integer
   }
   deriving (Eq, Generic, Ord, Read)
 

@@ -32,7 +32,7 @@ countBalance key = getBalance key <$> (readTransactions =<< getTransactionFilePa
 readTransactions :: String -> IO [Transaction]
 readTransactions fileName = do
     mblocks <-  readHashMsgFromFile fileName
-    let ts =  [trs | (Microblock _ _ _ _ trs _) <- mblocks]
+    let ts =  [trs | (Microblock _ _ _ trs _) <- mblocks]
     return $ mconcat ts
 
 transformKey key = BC.pack . show $ key
