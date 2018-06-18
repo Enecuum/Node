@@ -204,19 +204,11 @@ instance FromJSON PPToNNMessage where
                 aMsg         :: Value  <- aMessage .: "msg"
                 aPoint <- unhexNodeId aDestination
                 return $ MsgMsgToNN (PPId aPoint) (S.encode aMsg)
-{-
+
             ("Msg", "MicroblockV1") -> do
                 aPreviousHash :: T.Text <- aMessage .: "previousHash"
                 aBlockHash    :: T.Text <- aMessage .: "blockHash"
-                aListTransaction  <- aMessage .: "transactions"
-                case (myTextUnhex aPreviousHash, myTextUnhex aBlockHash) of
-                    (Just aHash1, Just aHash2) ->
-                        case decodeList aListTransaction of
-                            []      -> mzero
-                            aResult -> return . MsgMicroblock
-                                $ Microblock aHash1 aHash2 (map read aResult :: [Transaction])
-                    _   -> error "Can not parse MicroblockV1"
--}
+                aMessage .: "microblock"
 
             _ -> mzero
 
