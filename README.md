@@ -245,8 +245,8 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 `stack exec LightClient-exe`
 
-Hint: to run an instance of LightClient, you need to first start a local Simple Node in the background.
-Alternatively, you can run LightClient with additional parameters `addr` and `port` to connect to a remote Simple Node, e.g.:
+Hint: to run an instance of LightClient, you need to first start a local Simple Node in the background.\
+Alternatively, you can run LightClient with additional parameters `addr` and `port` to connect to a remote Simple Node, e.g.:\
 `stack exec LightClient-exe-- --addr=245.217.53.5 --port=1555`
 
 #### Available commands for Light Client
