@@ -278,8 +278,11 @@ You can define curstom values for variables in the /configs/config.json:
 
 | Variable | Description |
 |---------|---------|
+| enableIP | IP addresses that are allowed to connect to the node |
 | rpcPort | Port for remote procedure calls to the node |
 
+Hint: setting `enableIP` to `0.0.0.0` or leaving it blank allows any IP addresses. This field allows IPV6 subnet masks as well as IP addresses separated by commas.
+ 
 <br/>
 
 * `statsdBuildConfig` is the config section for the server to collect metrics. 
