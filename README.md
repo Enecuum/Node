@@ -17,6 +17,7 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 <br/>
 <br/>
+<br/>
 
 ## RCP-JSON API for Simple Node
 
