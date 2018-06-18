@@ -1,3 +1,4 @@
+{-# LANGUAGE ViewPatterns #-}
 module Sharding.Space.Shift where
 
 import              Sharding.Space.Point
@@ -33,7 +34,15 @@ findNearestNeighborPositions aMyNodePosition aPositions =
         (\aPosition -> distanceTo (NodePosition aSupportPoint) aPosition < maxBound`div`2)
         aPositions
 
-
+-- distanceEast, distanceWest, distanceSout, distanceNorth
+findNearestNeighborPositionsByDirect :: MyNodePosition -> S.Set NodePosition -> [NodePosition]
+findNearestNeighborPositionsByDirect
+    (MyNodePosition aMyNodePosition) (S.toList -> aPositions) = aElect <$> [
+        distanceEast, distanceWest, distanceSout, distanceNorth]
+  where
+    aElect :: (Point -> Point -> Word64) -> NodePosition
+    aElect aDistance = minimumOn
+        (\(NodePosition aPoint) -> aDistance aMyNodePosition aPoint) aPositions
 
 shiftToCenterOfMass :: MyNodePosition -> S.Set NodePosition -> MyNodePosition
 shiftToCenterOfMass aMyNodePosition aNearestPositions

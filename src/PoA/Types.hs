@@ -25,6 +25,7 @@ import              Service.Types (Microblock(..), Transaction)
 import              Service.Network.Base
 import              Data.IP
 import              Node.Data.Key
+import              Service.Types.SerializeJSON
 import              Service.Types.SerializeInstances
 import qualified    Data.HashMap.Strict as H
 import qualified    Data.Vector as V
@@ -259,7 +260,7 @@ instance ToJSON NNToPPMessage where
     toJSON (ResponseTransaction aTransaction) = object [
         "tag"       .= ("Response"     :: String),
         "type"      .= ("Transaction"  :: String),
-        "transaction" .= show(aTransaction)
+        "transaction" .= aTransaction
       ]
 
     toJSON (MsgBroadcastMsg aMessage (IdFrom aPPId)) = object [
