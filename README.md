@@ -22,6 +22,18 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 **Send transaction to a node: `enq_sendTransaction`**
 
+Parameters:
+
+- signature - ECDSA signature 
+- sign_s - represents [R output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature  
+- sign_r - represents [S output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature 
+- amount - amount intended for transfer
+- owner_key - sender's public key (a.k.a your address in the network)
+- receiver_key - receiver's public key (a.k.a their address in the network)
+- method - target API method
+- jsonrpc - JSON-RCP version
+- id - auto-assigned JSON-RPC ID (used to match the response object with the request object)
+
 Request example:
 
 `{"jsonrpc":"2.0","params":{"x":{"signature":{"sign_s":94223551497283667262425597401930625553013615916376364863948543283948993734318,"sign_r":28834183127673934019323833968330946475134237099239544917311924861094696131869},"amount":10, "time":53045.910023792, "owner_key":117770961709617055389350520036565206405403916684488363141903718453974738717275658,"receiver_key":117770961709617055389350520036565206405403916684488363141903718453974738717275658}}, "method":enq_sendTransaction, "id":1}`
@@ -34,6 +46,21 @@ Response example:
 <br>
 
 **Get information about transaction: `enq_getTransactionByHash`**
+
+Parameters:
+
+- signature - ECDSA signature 
+- sign_s - represents [R output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature  
+- sign_r - represents [S output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature 
+- amount - amount intended for transfer
+- amount - amount intended for transfer
+- owner_key - sender's public key (a.k.a your address in the network)
+- receiver_key - receiver's public key (a.k.a their address in the network)
+- block - hash of the target (micro)block
+- index - index of the transaction in the target (micro)block
+- method - target API method
+- jsonrpc - JSON-RCP version
+- id - auto-assigned JSON-RPC ID (used to match the response object with the request object)
 
 Request example:
 
@@ -48,18 +75,40 @@ Response example:
 
 **Get information about block: `enq_getBlockByHash`**
 
+Parameters:
+
+- signature - ECDSA signature 
+- sign_s - represents [R output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature  
+- sign_r - represents [S output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature 
+- amount - amount intended for transfer
+- amount - amount intended for transfer 
+- owner_key - sender's public key (a.k.a your address in the network)
+- receiver_key - receiver's public key (a.k.a their address in the network)
+- hashPreviousMicroblock - hash of the previous (micro)block
+- hashCurrentMicroblock - hash of the target (micro)block
+- method - target API method
+- jsonrpc - JSON-RCP version
+- id - auto-assigned JSON-RPC ID (used to match the response object with the request object)
+
 Request example:
 
-`{"jsonrpc":"2.0","params":{"hash":"6668736C666B68"},"method":"enq_getTransactionByHash","id":1}`
+`{"jsonrpc":"2.0","params":{"hash":"68646A66686C666A6B686C"},"method":"enq_getBlockByHash","id":1}`
 
 Response example:
 
-`{"result":{"tx":{"signature":{"sign_s":9801959209846992852311330047916112131397328350695846174818753987431086006404,"sign_r":51905750445091806981764453120165643019701345224570532370988964470189867234685},"amount":10,"time":58944.703034014,"owner_key":98123844696921525574085363646516869903415165222879705991840115754920922153509,"receiver_key":7390378781922706300737074641115163931396417816966376357730577494300556106681},"block":"7364666C6A736B6668676C6B6A6864","index":10},"jsonrpc":"2.0","id":1}`
+`{"result":{"trans":[{"signature":{"sign_s":9801959209846992852311330047916112131397328350695846174818753987431086006404,"sign_r":51905750445091806981764453120165643019701345224570532370988964470189867234685},"amount":10,"time":58944.703034014,"owner_key":98123844696921525574085363646516869903415165222879705991840115754920922153509,"receiver_key":7390378781922706300737074641115163931396417816966376357730577494300556106681}],"hashPreviousMicroblock":"64666A736B676A6C6A73","hashCurrentMicroblock":"6664736C6B6A68666C6B"},"jsonrpc":"2.0","id":1}`
 
 <br>
 <br>
 
 **Get wallet balance: `enq_getBalance`**
+
+Parameters:
+
+- address - target address (a.k.a. public key)
+- method - target API method
+- jsonrpc - JSON-RCP version
+- id - auto-assigned JSON-RPC ID (used to match the response object with the request object)
  
 Request example: 
 
@@ -73,6 +122,19 @@ Response example:
 <br>
 
 **Get transaction history for a wallet: `enq_getAllTransactions`**
+
+Parameters:
+
+- signature - ECDSA signature 
+- sign_s - represents [R output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature  
+- sign_r - represents [S output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature 
+- amount - amount intended for transfer
+- amount - amount intended for transfer 
+- owner_key - sender's public key (a.k.a your address in the network)
+- receiver_key - receiver's public key (a.k.a their address in the network)
+- method - target API method
+- jsonrpc - JSON-RCP version
+- id - auto-assigned JSON-RPC ID (used to match the response object with the request object)
 
 Request example:
 
