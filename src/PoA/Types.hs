@@ -206,8 +206,9 @@ instance FromJSON PPToNNMessage where
                 aPoint <- unhexNodeId aDestination
                 return $ MsgMsgToNN (PPId aPoint) (S.encode aMsg)
 
-            ("Msg", "Microblock") ->
-                MsgMicroblock <$> aMessage .: "microblock"
+            ("Msg", "Microblock") -> do
+                aMicroblock <- aMessage .: "microblock"
+                return $ MsgMicroblock aMicroblock
 
             _ -> mzero
 

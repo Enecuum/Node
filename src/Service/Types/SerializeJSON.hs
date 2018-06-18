@@ -41,11 +41,10 @@ encodeToText = T.decodeUtf8 . B.encode
 decodeFromText :: (MonadPlus m) => Text -> m ByteString
 decodeFromText aStr = case B.decode . T.encodeUtf8 $ aStr of
     Right a -> return a
-    Left a  -> mzero
-
+    Left _  -> mzero
 
 instance ToJSON Hash where
-  toJSON (Hash h) = object ["hash" .= encodeToText h]
+  toJSON (Hash h) = object ["hash" .= encodeToText  h]
 
 instance FromJSON Hash where
   parseJSON (Object v) = Hash <$> ((v .: "hash") >>= decodeFromText)
@@ -82,12 +81,13 @@ instance FromJSON Microblock where
       aSign <- v .: "sign"
       case aMsg of
         Object aBlock -> do
-            aKhash   <- decodeFromText =<< aBlock .: "K_hash"
             aWallets <- aBlock .: "wallets"
             aTx      <- aBlock .: "Tx"
-            aUuid    <- aBlock .: "uuid"
+            aUuid    <- aBlock .: "i"
+            aKhash   <- decodeFromText =<< aBlock .: "K_hash"
             return $ Microblock aKhash aSign aWallets aTx aUuid
-        _ -> mzero
+        a -> mzero
+  parseJSON _ = mzero
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [
