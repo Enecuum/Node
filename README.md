@@ -18,7 +18,7 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 <br/>
 <br/>
 
-## RCP-JSON API for Simple Node
+## JSON-RPC API for Simple Node
 
 **Sends transaction to a node: `enq_sendTransaction`**
 
