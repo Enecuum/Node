@@ -30,7 +30,7 @@ import              Node.Data.Key
 import              Data.Maybe()
 
 test :: Either String PPToNNMessage
-test = A.eitherDecodeStrict "{\"blockHash\":\"AAAA\",\"previousHash\":\"AAAA\",\"tag\":\"Msg\",\"transactions\":[\"0040E631E1AFED9DCA0221D6D72D6FEA914A63DD43135217580AADCB9BB6F85E8C5B9563EBDB271FFF423701000000000000001C\"],\"type\":\"MicroblockV1\"}"
+test = A.eitherDecodeStrict "{\"microblock\":{\"K_hash\":\"StartBlock\",\"i\":-1548419644,\"sign\":\"SoMeBaSe64StRinG\\u003d\\u003d\",\"transactions\":[{\"amount\":1,\"from\":\"SoMeBaSe64StRinG\\u003d\\u003d\",\"to\":\"SoMeBaSe64StRinG\\u003d\\u003d\",\"uuid\":\"5c300af5641d4981ac2469c9c33d76db\"}],\"wallets\":[\"SoMeBaSe64StRinG\\u003d\\u003d\",\"SoMeBaSe64StRinG\\u003d\\u003d\"]},\"tag\":\"Msg\",\"type\":\"Microblock\"}"
 
 serverPoABootNode :: PortNumber -> Chan InfoMsg -> Chan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
