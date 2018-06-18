@@ -243,7 +243,7 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 ### Initialize Light Client
 
-`stack exec LightClient-exe`.
+`stack exec LightClient-exe`
 
 #### Available commands for Light Client
 
