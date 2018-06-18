@@ -33,7 +33,7 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 ##### Response parameters
 
- - none if the transaction successfully got to the mempool. In case the node is down there is no response at all 
+ - none if the transaction successfully got to the mempool. In case the node is down there is no response at all.
 
 ###### Misc:
 
