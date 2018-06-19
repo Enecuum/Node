@@ -44,7 +44,7 @@ updateBalanceTable ht aTransaction = do
     _ -> error "Unsupported type of transaction"
 
 getTxsMicroblock :: Microblock -> [Transaction]
-getTxsMicroblock (Microblock _ _ _ _ txs _) = txs
+getTxsMicroblock (Microblock _ _ _ txs _) = txs
 
 --something = do
 getBalanceOfKeys :: Rocks.DB -> [Transaction] -> IO BalanceTable
