@@ -88,7 +88,6 @@ dependencies:
 - resourcet
 - retry
 - exceptions
-- MonadCatchIO-transformers
 
 library:
   source-dirs: src

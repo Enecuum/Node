@@ -8,7 +8,7 @@ import Control.Monad.Trans.Resource
 import Control.Retry
 import Control.Exception
 import qualified Control.Monad.Catch as E
-import qualified Control.Monad.CatchIO as I
+--import qualified Control.Monad.CatchIO as I
 import Control.Monad.IO.Class
 import Control.Retry
 import Data.Maybe

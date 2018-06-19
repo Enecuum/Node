@@ -13,9 +13,7 @@ extra-deps:
 - HongoDB-0.0.1
 - iproute-1.7.4
 - rocksdb-haskell-1.0.1
-- MonadCatchIO-transformers-0.3.1.3
-# - transformers-0.3.1.0
-#  cabal-helper-0.7.3.0
+
 
 build:
   haddock-arguments:
@@ -29,7 +27,6 @@ allow-newer: true
 image:
   container:
     name: docker-node
-    base: fpco/stack-run
     add:
       configs: /configs
 #      static: /app/static
