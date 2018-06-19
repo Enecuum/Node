@@ -21,12 +21,11 @@ import qualified Data.Aeson as A
 import Control.Monad
 import "cryptonite" Crypto.PubKey.ECC.ECDSA
 import "cryptonite" Crypto.PubKey.ECC.Types
-
+import Data.Hashable
 import Data.Aeson.TH
 
 newtype CompactInteger = CompactInteger Integer
-    deriving (Eq, Show, Enum, Num, Integral, Real, Ord, Bits, A.ToJSON, A.FromJSON)
-
+    deriving (Eq, Show, Enum, Num, Integral, Real, Ord, Bits, A.ToJSON, A.FromJSON, Hashable)
 -- The first number encode length and sign, assuming that we don't have numbers
 -- longer that we can encode to 128 byte
 instance Serialize CompactInteger where

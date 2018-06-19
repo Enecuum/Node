@@ -10,22 +10,23 @@ import qualified Data.ByteString.Char8 as BC hiding (map)
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import qualified Data.HashTable.IO as H
 import Control.Monad
-import Service.Transaction.Storage (DBdescriptor(..),rHash, rValue, urValue, htK, unHtK, unHtA)
+import Service.Transaction.Storage (DBdescriptor(..),rHash, rValue, urValue, unHtK, unHtA)
 import Data.Default (def)
+import Data.Hashable
 
-
---type NBalanceTable = H.BasicHashTable PublicKey Amount
-type BalanceTable = H.BasicHashTable BC.ByteString Amount
+type BalanceTable = H.BasicHashTable PublicKey Amount
+-- type BalanceTable = H.BasicHashTable BC.ByteString Amount
 
 
 
 -- functions for CLI
 getBalanceForKey :: DBdescriptor -> PublicKey -> IO Amount
 getBalanceForKey db key = do
-    Just v  <- Rocks.get (descrDBLedger db) Rocks.defaultReadOptions (htK key)
+    Just v  <- Rocks.get (descrDBLedger db) Rocks.defaultReadOptions (rValue key)
     return (unHtA v)
 
 
+instance Hashable PublicKey
 
 
 updateBalanceTable :: BalanceTable -> Transaction -> IO ()
@@ -33,14 +34,14 @@ updateBalanceTable ht aTransaction = do
   case aTransaction of
     (WithSignature t _)        -> updateBalanceTable ht t
     (WithTime _ t)             -> updateBalanceTable ht t
-    (RegisterPublicKey aKey aBalance) -> H.insert ht (htK aKey) aBalance
-    (SendAmountFromKeyToKey fromKey toKey am) -> do v1 <- H.lookup ht $ htK fromKey
-                                                    v2 <- H.lookup ht $ htK toKey
+    (RegisterPublicKey aKey aBalance) -> H.insert ht aKey aBalance
+    (SendAmountFromKeyToKey fromKey toKey am) -> do v1 <- H.lookup ht $ fromKey
+                                                    v2 <- H.lookup ht $ toKey
                                                     case (v1,v2) of
                                                       (Nothing, _)       -> do return ()
                                                       (_, Nothing)       -> do return ()
-                                                      (Just balanceFrom, Just balanceTo) -> do H.insert ht (htK fromKey) (balanceFrom - am)
-                                                                                               H.insert ht (htK toKey) (balanceTo + am)
+                                                      (Just balanceFrom, Just balanceTo) -> do H.insert ht fromKey (balanceFrom - am)
+                                                                                               H.insert ht toKey (balanceTo + am)
     _ -> error "Unsupported type of transaction"
 
 getTxsMicroblock :: Microblock -> [Transaction]
@@ -49,12 +50,11 @@ getTxsMicroblock (Microblock _ _ _ _ txs _) = txs
 --something = do
 getBalanceOfKeys :: Rocks.DB -> [Transaction] -> IO BalanceTable
 getBalanceOfKeys dbLedger tx = do
-  let keys = concatMap getPubKeys tx
-  let hashKeys = map htK keys
+  let hashKeys = concatMap getPubKeys tx
   balance  <- do
-                let readKey k = (Rocks.get dbLedger Rocks.defaultReadOptions k)
+                let getBalanceByKey k = (Rocks.get dbLedger Rocks.defaultReadOptions (rValue k))
                 let toTuple k (Just b) = (,) k (unHtA b)
-                mapM (\k -> liftM (toTuple k ) (readKey k)) hashKeys
+                mapM (\k -> liftM (toTuple k ) (getBalanceByKey k)) hashKeys
   aBalanceTable <- H.fromList balance
   return aBalanceTable
 
@@ -71,18 +71,27 @@ microblockIsExpected = undefined
 
 
 run :: Microblock -> DBdescriptor -> Microblock -> IO ()
-run m = if (not $ microblockIsExpected m) then error "We are exepecting another microblock" else runLedger
+run m = if (not $ microblockIsExpected m) then error "We are expecting another microblock" else runLedger
 
-runLedger = undefined
-addMicroblockToDB :: DBdescriptor -> Microblock -> IO ()
-addMicroblockToDB (DBdescriptor dbTx dbMb dbLedger) m  =  do
+-- run :: DBdescriptor -> [Microblock] -> IO ()
+-- run db m = do
+--   let keys = _teamKeys
+
+runLedger :: DBdescriptor -> Microblock -> IO ()
+runLedger (DBdescriptor _ _ dbLedger) m = do
     let txs = getTxsMicroblock m
     ht      <- getBalanceOfKeys dbLedger txs
     mapM_ (updateBalanceTable ht) txs
+    writeLedgerDB dbLedger ht
+
+
+addMicroblockToDB :: DBdescriptor -> Microblock -> IO ()
+addMicroblockToDB (DBdescriptor dbTx dbMb dbLedger) m  =  do
+    let txs = getTxsMicroblock m
 -- Write to db atomically
     writeMicroblockDB dbMb m
     writeTransactionDB dbTx txs
-    writeLedgerDB dbLedger ht
+
 
 
 writeMicroblockDB :: Rocks.DB -> Microblock -> IO ()
@@ -101,5 +110,6 @@ writeTransactionDB db tx = do
 writeLedgerDB ::  Rocks.DB -> BalanceTable -> IO ()
 writeLedgerDB db bt = do
   ledgerKV <- H.toList bt
-  let ledgerKeyValue = map (\(k,v)-> ((rHash . unHtK) k, rValue v)) ledgerKV
+  -- let ledgerKeyValue = map (\(k,v)-> (rHash k, rValue v)) ledgerKV
+  let ledgerKeyValue = map (\(k,v)-> (rValue k, rValue v)) ledgerKV
   Rocks.write db def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) ledgerKeyValue)

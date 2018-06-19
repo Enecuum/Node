@@ -24,12 +24,19 @@ data DBdescriptor = DBdescriptor {
   , descrDBLedger :: Rocks.DB }
 
 
+data MacroblockDB = MacroblockDB {
+  keyBlock :: BC.ByteString,
+  microblockNumber :: Int,
+  requiredNumberOfMicroblocks :: Int,
+  hashOfMicroblock :: BC.ByteString
+                                 }
+
 -- for rocksdb Transaction and Microblock
 rHash key = SHA1.hash . BC.pack . show $ key
 rValue value = BC.pack $ show value
 urValue value = BC.unpack value
 
--- for BalanceTable and Ledger
+-- for Balance Table and Ledger
 htK key = BC.pack $ show key
 unHtK key = read (BC.unpack key) :: PublicKey
 unHtA key = read (BC.unpack key) :: Amount
@@ -43,9 +50,9 @@ startDB = do
     dbMb <- Rocks.open aMicroblockPath def{Rocks.createIfMissing=True}
     dbTx <- Rocks.open aTransactionPath def{Rocks.createIfMissing=True}
     dbLedger <- Rocks.open aLedgerPath def{Rocks.createIfMissing=True}
-    putStrLn "StartDB"
-    sleepMs 5000
-    throw DBTransactionException
+    -- putStrLn "StartDB"
+    -- sleepMs 5000
+    -- throw DBTransactionException
     return (DBdescriptor dbTx dbMb dbLedger)
 
 
@@ -70,6 +77,9 @@ instance Exception SuperException
 --retry :: RetryPolicyM IO -> IO a -> IO a
 --retry :: IO DBdescriptor
 retry = recovering def handler . const $ ( startDB)   --`I.finally` closeDesc)
+hmm = retrying def (const $ return . isNothing) f
+f _ = putStrLn "Running action" >> return Nothing
+
 
 
 
@@ -80,6 +90,7 @@ closeDesc db = do
   Rocks.close $ descrDBLedger db
 
 --SomeException
+handler :: [p -> E.Handler IO Bool]
 handler =
     [ \_ -> E.Handler $ \(_ :: SuperException) -> do
         return True
@@ -88,8 +99,7 @@ handler =
         return True
     ]
 
-f _ = putStrLn "Running action" >> return Nothing
-hmm = retrying def (const $ return . isNothing) f
+
 
 -- handlers :: Monad m => [a -> Handler m Bool]
 -- handlers =
@@ -107,3 +117,17 @@ hmm = retrying def (const $ return . isNothing) f
 
 -- A utility function - threadDelay takes microseconds, which is slightly annoying.
 sleepMs n = threadDelay (n * 1000)
+
+
+getBlockByHashDB :: DBdescriptor -> Hash -> IO Microblock
+getBlockByHashDB db mHash = do
+  let (Hash key) = mHash
+  (Just v)  <- Rocks.get (descrDBMicroblock db) Rocks.defaultReadOptions key
+  return (read (urValue v) :: Microblock)
+
+
+getTransactionByHashDB :: DBdescriptor -> Hash -> IO TransactionInfo --Transaction
+getTransactionByHashDB db tHash = do
+  let (Hash key) = tHash
+  (Just v)  <- Rocks.get (descrDBTransaction db) Rocks.defaultReadOptions key
+  return (read (urValue v) :: TransactionInfo)

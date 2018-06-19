@@ -22,8 +22,8 @@ import Node.Data.Key
 import Node.FileDB.FileServer
 --tmp
 import System.Directory (createDirectoryIfMissing)
-import Service.Transaction.Balance (addMicroblockToDB)
-import Service.Transaction.Storage (DBdescriptor(..))
+import Service.Transaction.Common (addMicroblockToDB, DBdescriptor(..))
+
 
 -- code examples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html

@@ -88,6 +88,7 @@ dependencies:
 - retry
 - exceptions
 - MonadCatchIO-transformers
+- hashable
 
 library:
   source-dirs: src
