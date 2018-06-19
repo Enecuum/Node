@@ -1,9 +1,10 @@
 module Service.System.Directory (
     getTime,
     getKeyFilePath,
-    getTransactionFilePath,
     createFilesDirectory,
-    getLedgerFilePath
+    getTransactionFilePath,
+    getLedgerFilePath,
+    getMicroblockFilePath
   )where
 
 import System.FilePath.Posix (takeDirectory)
@@ -32,12 +33,18 @@ getKeyFilePath = do
 getTransactionFilePath :: IO String
 getTransactionFilePath = do
     enecuumDir <- getEnecuumDir
-    return (enecuumDir ++ [pathSeparator] ++ "tx")
+    return (enecuumDir ++ [pathSeparator] ++ "tx.db")
 
 getLedgerFilePath :: IO String
 getLedgerFilePath = do
     enecuumDir <- getEnecuumDir
     return (enecuumDir ++ [pathSeparator] ++ "ledger.db")
+
+getMicroblockFilePath :: IO String
+getMicroblockFilePath = do
+    enecuumDir <- getEnecuumDir
+    return (enecuumDir ++ [pathSeparator] ++ "microblock.db")
+
 
 createFilesDirectory :: FilePath -> IO ()
 createFilesDirectory path = createDirectoryIfMissing True $ takeDirectory path

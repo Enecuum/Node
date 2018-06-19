@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables, PackageImports, LambdaCase #-}
 module Node.Crypto (
         makeConnectingRequest
     ,   verifyConnectingRequest
@@ -21,7 +21,7 @@ import              System.Clock
 import              Crypto.Error
 import              Crypto.Cipher.Types
 import              Crypto.Random.Types
-import              Crypto.Hash
+import "cryptonite" Crypto.Hash
 import              Crypto.PubKey.ECC.DH
 import              Crypto.PubKey.ECC.ECDSA
 

@@ -7,7 +7,6 @@ import              Data.Graph.Inductive
 import              Service.Types.PublicPrivateKeyPair
 import              GHC.Generics
 import              Data.ByteString
-import qualified    Data.ByteString.Base16 as B16
 import              Data.List.Split (splitOn)
 
 type QuantityTx = Int
@@ -44,8 +43,15 @@ data CryptoCurrency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
 type Time      = Double
 type DAG = Gr Transaction Transaction
 
-newtype Hash = Hash ByteString deriving (Ord, Eq, Show, Generic)
+newtype Hash = Hash ByteString deriving (Ord, Eq, Show, Generic, Read)
 instance Serialize Hash
+
+
+data MicroblockV1 = MicroblockV1{
+                  hashCurrentMicroblock :: ByteString, -- hashCurrentMicroblock
+                  hashPreviousMicroblock :: ByteString, -- hashPreviousMicroblock
+                  trans :: [Transaction]}
+                deriving (Eq, Generic, Ord, Show)
 
 data Microblock = Microblock{
     _keyBlock :: ByteString, -- hash of key-block
@@ -76,7 +82,7 @@ data TransactionInfo = TransactionInfo {
      tx    :: Transaction
   ,  block :: ByteString
   ,  index :: Int
-  } deriving (Generic, Show, Eq)
+  } deriving (Generic, Show, Eq, Read)
 instance Serialize TransactionInfo
 
 data Ledger = Ledger { currentTime :: Time, ltable :: [LedgerEntry] }

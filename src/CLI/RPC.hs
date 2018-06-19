@@ -4,13 +4,11 @@ module CLI.RPC (serveRpc) where
 
 import Network.Socket (PortNumber)
 import Network.JsonRpc.Server
-import Network.Socket.ByteString (sendAllTo, recvFrom)
-import Service.Network.TCP.Server
+import Service.Network.WebSockets.Server
 import Control.Monad (forever)
 import Control.Monad.IO.Class
 import Control.Monad.Except (throwError)
 import Control.Concurrent.Chan
-import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.Maybe (fromMaybe)
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -22,20 +20,23 @@ import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
 import Service.Types
 import Data.Text (pack)
-
-import qualified Data.ByteString as B
 import Network.Socket (SockAddr)
+import qualified Network.WebSockets as WS
+import Service.Transaction.Storage (DBdescriptor(..))
 
-serveRpc :: PortNumber -> [AddrRange IPv6] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
-serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
-    (aMsg, addr) <- recvFrom aSocket (1024*100)
-    runRpc addr aSocket aMsg
 
-      where
-        runRpc addr aSocket aMsg = do
-         response <- fromMaybe "" <$> (call methods (fromStrict aMsg))
+serveRpc :: DBdescriptor -> PortNumber -> [AddrRange IPv6] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
+serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPending -> do
+    aConnect <- WS.acceptRequest aPending
+    WS.forkPingThread aConnect 30
+    forever $ do
+      aMsg <- WS.receiveData aConnect
+      runRpc aConnect aMsg
 
-         sendAllTo aSocket (toStrict response) addr
+     where
+        runRpc aConnect aMsg = do
+         response <- fromMaybe "" <$> (call methods aMsg)
+         WS.sendTextData aConnect response
 
             where
               ipAccepted :: SockAddr -> Bool
@@ -50,7 +51,7 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
                              IPv6 i -> i
 
               handle f = do
-                    case ipAccepted addr of
+                    case {-ipAccepted addr-} True of
                           False -> do
                                 liftIO $ putStrLn "Denied"
                                 throwError $ rpcError 401 $ pack "Access denied: wrong IP"
@@ -76,17 +77,17 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
               balanceReq = toMethod "enq_getBalance" f (Required "address" :+: ())
                 where
                   f :: PubKey -> RpcResult IO Amount
-                  f key = handle $ getBalance key aInfoCh
+                  f key = handle $ getBalance descrDB key aInfoCh
 
               getBlock = toMethod "enq_getBlockByHash" f (Required "hash" :+: ())
                 where
                   f :: Hash ->  RpcResult IO Microblock
-                  f hash = handle $ getBlockByHash hash ch
+                  f hash = handle $ getBlockByHash descrDB hash ch
 
               getTransaction = toMethod "enq_getTransactionByHash" f (Required "hash" :+:())
                 where
                   f :: Hash -> RpcResult IO TransactionInfo
-                  f hash = handle $ getTransactionByHash hash ch
+                  f hash = handle $ getTransactionByHash descrDB hash ch
 
               getFullWallet = toMethod "enq_getAllTransactions" f (Required "address" :+: ())
                 where

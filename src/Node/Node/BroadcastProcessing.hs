@@ -118,8 +118,8 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
             BroadcastMicroBlock aMicroblock _ -> do
                 sendToShardingLvl aData $
                     T.ShardAcceptAction (microblockToShard aMicroblock)
-
-                -- FIXME: rewrite show for Transaction and MicroblockV1 for showing only hash and structure
+                writeChan (aData^.microblockChan) aMicroblock
+                -- FIXME: rewrite show for Transaction and Microblock for showing only hash and structure
                 writeChan (aData^.microblockChan) aMicroblock
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Addtition the mickroblock to shard DB. The mickroblock = "

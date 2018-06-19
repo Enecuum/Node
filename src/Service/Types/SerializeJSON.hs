@@ -17,6 +17,8 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base64 as B
 import Data.Text (Text)
 import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
+import Data.Hex
+
 
 instance FromJSON Trans
 instance ToJSON   Trans
@@ -43,6 +45,7 @@ decodeFromText aStr = case B.decode . T.encodeUtf8 $ aStr of
     Right a -> return a
     Left _  -> mzero
 
+
 instance ToJSON Hash where
   toJSON (Hash h) = object ["hash" .= encodeToText  h]
 
@@ -62,6 +65,9 @@ instance FromJSON TransactionInfo where
                            <$> v .: "tx"
                            <*> ((v .: "block") >>= decodeFromText)
                            <*> v .: "index"
+
+
+
 
 instance ToJSON Microblock where
   toJSON aBlock = object [

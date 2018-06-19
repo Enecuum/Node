@@ -15,7 +15,8 @@ import Node.Node.Types
 import Service.InfoMsg
 import Service.Types
 import CLI.Common
- 
+import Service.Transaction.Storage (DBdescriptor(..))
+
 data Flag = Key | ShowKey | Balance PubKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages deriving (Eq, Show)
 
 
@@ -33,15 +34,15 @@ options = [
   ]
 
 
-serveCLI :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO ()
-serveCLI ch aInfoCh = do
+serveCLI :: ManagerMiningMsg a => DBdescriptor -> Chan a -> Chan InfoMsg -> IO ()
+serveCLI descrDB ch aInfoCh = do
       putStrLn $ usageInfo "Usage: " options
       forever $ do
                argv <- splitOn " " <$> getLine
                case getOpt Permute options argv of
                  (flags, _, []) -> dispatch flags
                  (_, _, err)    -> putStrLn $ concat err ++ usageInfo "Usage: " options
-              
+
     where
           dispatch :: [Flag] -> IO ()
           dispatch flags = do
@@ -54,7 +55,7 @@ serveCLI ch aInfoCh = do
               (SendMessageBroadcast m : _)     -> sendMessageBroadcast m ch >>= handle
               (SendMessageTo mTo : _)          -> sendMessageTo mTo ch >>= handle
               (LoadMessages : _)               -> loadMessages ch >>= handle
-              (Balance aPublicKey : _)         -> getBalance aPublicKey aInfoCh >>= handle
+              (Balance aPublicKey : _)         -> getBalance descrDB aPublicKey aInfoCh >>= handle
               _                                -> putStrLn "Wrong argument"
 
           handle :: Show a => Result a -> IO ()

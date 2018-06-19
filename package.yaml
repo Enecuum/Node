@@ -81,7 +81,14 @@ dependencies:
 - text
 - aeson-pretty
 - unordered-containers
-# - rocksdb-haskell
+- cryptohash
+- rocksdb-haskell
+- data-default
+- hashtables
+- resourcet
+- retry
+- exceptions
+- MonadCatchIO-transformers
 
 library:
   source-dirs: src

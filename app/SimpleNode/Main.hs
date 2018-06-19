@@ -25,6 +25,8 @@ import              Data.IP
 import              Data.Aeson (decode)
 import              Data.Aeson.Encode.Pretty (encodePretty)
 import qualified    Data.ByteString.Lazy as L
+import              Service.Transaction.Storage (startDB) --(DBdescriptor(..), startDB)
+
 
 configName :: String
 configName = "configs/config.json"
@@ -40,8 +42,9 @@ main =  do
             aExitCh   <- newChan
             aAnswerCh <- newChan
             aInfoCh   <- newChan
+            descrDB   <- startDB
 
-            void $ startNode conf
+            void $ startNode descrDB conf
                 aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMicroblockChan aMyNodeId aFileChan -> do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
@@ -120,10 +123,10 @@ main =  do
                                        Just token -> return token
                                        Nothing    -> updateConfigWithToken conf snbc rpcbc
 
-                            serveRpc rpc_p ip_en ch aInfoCh
+                            serveRpc descrDB rpc_p ip_en ch aInfoCh
 
 
-                      "cli" -> serveCLI ch aInfoCh
+                      "cli" -> serveCLI descrDB ch aInfoCh
 
                       _     -> return ()
 

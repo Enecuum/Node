@@ -58,7 +58,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                 Left a ->
                     -- TODO: Include ID if exists.
                     writeLog aInfoChan [ServerBootNodeTag] Warning $
-                        "Brouken message from PP " ++ show aMsg ++ " " ++ a
+                        "Broken message from PP " ++ show aMsg ++ " " ++ a
 
 servePoA ::
        PortNumber
@@ -169,7 +169,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
             Left a -> do
                 -- TODO: Include ID if exist.
                 writeLog aInfoChan [ServePoATag] Warning $
-                    "Brouken message from PP " ++ show aMsg ++ " " ++ a
+                    "Broken message from PP " ++ show aMsg ++ " " ++ a
                 when (not aOk) $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
 
 -- TODO class sendMsgToNetLvl

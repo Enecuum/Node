@@ -19,7 +19,7 @@ import              GHC.Generics
 import qualified    Data.Text as T
 import              Data.Hex
 import              Control.Monad.Extra
-import              Data.Either
+-- import              Data.Either
 import qualified    Data.Serialize as S
 import              Service.Types (Microblock(..), Transaction)
 import              Service.Network.Base
@@ -152,7 +152,7 @@ data NNToPPMessage
 
 
 --myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
---myUnhex :: S.Serialize b => T.Text -> Either String b
+
 myUnhex :: IsString a => T.Text -> Either a String
 myUnhex aString = case unhex $ T.unpack aString of
     Just aDecodeString  -> Right aDecodeString
@@ -211,6 +211,7 @@ instance FromJSON PPToNNMessage where
                 aMicroblock <- aMessage .: "microblock"
                 return $ MsgMicroblock aMicroblock
 
+
             _ -> mzero
 
     parseJSON _ = mzero -- error $ show a
@@ -223,6 +224,7 @@ decodeList aList
     | all isRight aDecodeList   = rights aDecodeList
     | otherwise                 = []
     where aDecodeList = myUnhex <$> aList
+
 
 
 instance ToJSON NNToPPMessage where
