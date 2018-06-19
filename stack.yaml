@@ -26,6 +26,7 @@ allow-newer: true
 
 image:
   container:
+    base: fpco/stack-build 
     name: docker-node
     add:
       configs: /configs
