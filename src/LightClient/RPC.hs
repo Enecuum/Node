@@ -21,15 +21,13 @@ module LightClient.RPC (
      ) where
 
 import Network.JsonRpc.Client
-import qualified Data.ByteString.Lazy as B
 import Control.Monad (void)
-import Network.Socket.ByteString (sendAllTo, recv)
+import qualified Network.WebSockets as WS
 
 import Control.Timeout (timeout)
 import Data.Time.Units (Second)
 import Service.Types
 import Service.Types.PublicPrivateKeyPair hiding (Signature)
-import Service.Network.Base
 import Service.Types.SerializeJSON ()
 
 
@@ -69,40 +67,39 @@ loadNewMsgSig :: Signature () [MsgTo]
 loadNewMsgSig = Signature "load_messages" ()
 
 -- Bind function signature with RPC connection
-newTx :: ClientHandle -> Transaction -> Result ()
+newTx :: WS.Connection -> Transaction -> Result ()
 newTx h = toFunction (connectionWithTimeOut h) newTxSig
 
-reqLedger :: ClientHandle -> PubKey -> Result Amount
+reqLedger :: WS.Connection -> PubKey -> Result Amount
 reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
 
-getBlock :: ClientHandle -> Hash -> Result Microblock
+getBlock :: WS.Connection -> Hash -> Result Microblock
 getBlock h = toFunction (connectionWithTimeOut h) reqGetBlockSig
 
-getTx :: ClientHandle -> Hash -> Result TransactionInfo
+getTx :: WS.Connection -> Hash -> Result TransactionInfo
 getTx h = toFunction (connectionWithTimeOut h) reqGetTxSig
 
-getAllTxs :: ClientHandle -> PubKey -> Result [Transaction]
+getAllTxs :: WS.Connection -> PubKey -> Result [Transaction]
 getAllTxs h = toFunction (connectionWithTimeOut h) reqGetAllTxsSig
 
 
 --test
-genNTx :: ClientHandle -> Int -> Result ()
+genNTx :: WS.Connection -> Int -> Result ()
 genNTx h = toFunction (connectionWithTimeOut h) genNTxSig
 
-genUnlimTx :: ClientHandle -> Result ()
+genUnlimTx :: WS.Connection -> Result ()
 genUnlimTx h = toFunction (connectionWithTimeOut h) genUnlimTxSig
 
-newMsgBroadcast :: ClientHandle -> String -> Result ()
+newMsgBroadcast :: WS.Connection -> String -> Result ()
 newMsgBroadcast h = toFunction (connectionWithTimeOut h) newMsgBroadcastSig
 
-newMsgTo :: ClientHandle -> MsgTo -> Result ()
+newMsgTo :: WS.Connection -> MsgTo -> Result ()
 newMsgTo h = toFunction (connectionWithTimeOut h) newMsgToSig
 
-loadNewMsg :: ClientHandle -> Result [MsgTo]
+loadNewMsg :: WS.Connection -> Result [MsgTo]
 loadNewMsg h = toFunction (connectionWithTimeOut h) loadNewMsgSig
 
-
-connectionWithTimeOut :: ClientHandle -> Connection IO
+connectionWithTimeOut :: WS.Connection -> Connection IO
 connectionWithTimeOut h input = do
   result <- timeout (5 :: Second) $ connection h input
   case result of
@@ -110,9 +107,9 @@ connectionWithTimeOut h input = do
     Nothing -> return (error "Connection error: out of time-out")
 
 -- Connect to a server
-connection :: ClientHandle -> Connection IO
+connection :: WS.Connection -> Connection IO
 connection handle input = do
-    void $ sendAllTo
-           (clientSocket handle) (B.toStrict input) (clientAddress handle)
-    ans <- recv (clientSocket handle) (1024*10)
-    return (Just (B.fromStrict ans))
+    void $ WS.sendTextData handle input
+    ans <- WS.receiveData handle
+    return (Just ans)
+
