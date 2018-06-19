@@ -79,4 +79,23 @@ instance DistanceTo MyNodePosition a => DistanceTo MyNodePosition (Maybe a) wher
     distanceTo aPos (Just a) = distanceTo aPos a
     distanceTo _ _ = maxBound
 
+-- !!! Данные меры предназначены для сравнения внутри себя на ближе дальше, линейно с другими
+-- расстояниями не стыкаются.
+distanceEast, distanceWest, distanceSout, distanceNorth :: Point -> Point -> Word64
+distanceEast (Point x0 y0) p@(Point x y) = if
+  | rhombusDistance (Point 0 0) p' < maxBound`div`2 && x' < maxBound`div`2 ->
+      rhombusDistance (Point 0 (maxBound`div`2)) (Point (x'`div`3 + maxBound `div` 3) y')
+  | otherwise -> rhombusDistance (Point 0 (maxBound`div`2)) (Point (x'`div`3) y')
+    where
+      -- сдвигаем поле
+      p'@(Point x' y') = Point (x - x0) (y - y0 + maxBound`div`2)
+
+
+distanceWest (Point x0 y0) (Point x y) = distanceEast
+    (Point (-1*x0) y0) (Point (-1*x) y)
+
+distanceSout (Point x0 y0) (Point x y) = distanceEast
+    (Point (-1*y0) x0) (Point (-1*y) x)
+
+distanceNorth (Point x0 y0) (Point x y) = distanceEast (Point y0 x0) (Point y x)
 --------------------------------------------------------------------------------

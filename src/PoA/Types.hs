@@ -25,11 +25,11 @@ import              Service.Types (Microblock(..), Transaction)
 import              Service.Network.Base
 import              Data.IP
 import              Node.Data.Key
+import              Service.Types.SerializeJSON
 import              Service.Types.SerializeInstances
 import qualified    Data.HashMap.Strict as H
 import qualified    Data.Vector as V
 import              Data.Scientific
-import              Data.Text.Internal.Unsafe.Char
 
 -- TODO: aception of msg from a PoA/PoW.
 -- ----: parsing - ok!
@@ -67,47 +67,47 @@ instance S.Serialize Value
 
 
 data PPToNNMessage
-    -- Запросы:
-    -- на получение транзакций.
+    -- Requests:
+    -- transactions receiving.
     = RequestTransaction { ---
         number :: Int
     }
 
-    -- запрос на получение списка PoW нод
+    -- receive PoW nodes' list
     | RequestPoWList
 
-    -- запрос на рассылку бродкаста.
+    -- send broadcast
     | RequestBroadcast { ---
         recipientType :: NodeType,
         msg           :: B.ByteString
     }
-    -- запрос на получение конектов.
+    -- get connects
     | RequestConnects
 
-    -- Ответы с PPId
+    -- responses with PPId
     | ResponseNodeIdToNN {
         nodeId    :: PPId,
         nodeType  :: NodeType
     }
 
-    -- Сообщения:
-    -- Для другой PoA/PoW ноды.
+    -- Messages:
+    -- For other PoA/PoW node.
     | MsgMsgToNN { ----
         destination :: PPId,
         msg :: B.ByteString
     }
 
-    -- О том, что намйнился микроблок.
+    -- new microblock was mined.
     | MsgMicroblock {
         microblock :: Microblock
     }
-    -- О том, что закрылся ма кроблок.
+    -- Macroblock was finallized.
     -- | MsgMacroblock {
     --     macroblock :: Macroblock
     -- }
     deriving (Show)
 
-data NodeType = PoW | PoA deriving (Eq, Show, Ord, Generic)
+data NodeType = PoW | PoA | All deriving (Eq, Show, Ord, Generic)
 
 instance S.Serialize NodeType
 
@@ -125,7 +125,7 @@ data NNToPPMessage
         transaction :: Transaction
     }
 
-    -- ответ со списком PoW нод
+    -- request with PoW's list
     | ResponsePoWList {
         poWList :: [PPId]
     }
@@ -152,10 +152,9 @@ data NNToPPMessage
 
 
 --myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
+--myUnhex :: S.Serialize b => T.Text -> Either String b
 myUnhex aString = case unhex $ T.unpack aString of
-    Just aDecodeString  -> case S.decode $ fromString aDecodeString of
-        Right aJustVal  -> Right aJustVal
-        Left a          -> Left a
+    Just aDecodeString  -> Right aDecodeString
     Nothing             -> Left "Nothing"
 
 
@@ -208,17 +207,8 @@ instance FromJSON PPToNNMessage where
                 return $ MsgMsgToNN (PPId aPoint) (S.encode aMsg)
 
             ("Msg", "Microblock") -> do
-                aPreviousHash :: T.Text <- aMessage .: "previousHash"
-                aBlockHash    :: T.Text <- aMessage .: "blockHash"
-                aListTransaction  <- aMessage .: "transactions"
-                case (myTextUnhex aPreviousHash, myTextUnhex aBlockHash) of
-                    (Just aHash1, Just aHash2) ->
-                        case decodeList aListTransaction of
-                            []      -> mzero
-                            aResult -> return . MsgMicroblock
-                                $ Microblock aHash1 aHash2 aResult
-                    _   -> mzero
-
+                aMicroblock <- aMessage .: "microblock"
+                return $ MsgMicroblock aMicroblock
 
             _ -> mzero
 
@@ -227,7 +217,6 @@ instance FromJSON PPToNNMessage where
 readNodeType :: (IsString a, Eq a) => a -> NodeType
 readNodeType aNodeType = if aNodeType == "PoW" then PoW else PoA
 
-decodeList :: S.Serialize a => [T.Text] -> [a]
 
 decodeList aList
     | all isRight aDecodeList   = rights aDecodeList
@@ -270,7 +259,7 @@ instance ToJSON NNToPPMessage where
     toJSON (ResponseTransaction aTransaction) = object [
         "tag"       .= ("Response"     :: String),
         "type"      .= ("Transaction"  :: String),
-        "transaction" .= (hex . (unsafeChr8 <$>). B.unpack $ S.encode aTransaction)
+        "transaction" .= aTransaction
       ]
 
     toJSON (MsgBroadcastMsg aMessage (IdFrom aPPId)) = object [

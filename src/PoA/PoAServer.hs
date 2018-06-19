@@ -2,6 +2,7 @@
 module PoA.PoAServer (
         servePoA
     ,   serverPoABootNode
+    ,   test
   )  where
 
 
@@ -22,18 +23,15 @@ import              PoA.Types
 import              Control.Concurrent.MVar
 import              Control.Concurrent
 import              Node.FileDB.FileServer
+import              PoA.Pending
 
 import              Control.Concurrent.Async
 import              Node.Data.Key
 import              Data.Maybe()
 
+test :: Either String PPToNNMessage
+test = A.eitherDecodeStrict "{\"microblock\":{\"msg\":{\"K_hash\":\"eHh4\",\"Tx\":[{\"amount\":1,\"from\":\"SoMeBaSe64StRinG\\u003d\\u003d\",\"to\":\"SoMeBaSe64StRinG\\u003d\\u003d\",\"uuid\":\"5c300af5641d4981ac2469c9c33d76db\"}],\"i\":1330942378,\"wallets\":[123421, 123432, 1223432]},\"sign\":{\"sign_r\":34,\"sign_s\":43}},\"tag\":\"Msg\",\"type\":\"Microblock\"}"
 
--- :m PoA.PoAServer
---
-
---undead f = finally f (undead f)
-
---
 serverPoABootNode :: PortNumber -> Chan InfoMsg -> Chan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
@@ -56,12 +54,11 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                         WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
                         writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
                     _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
-                        "Brouken message from PP " ++ show aMsg
+                        "Broken message from PP " ++ show aMsg
                 Left a ->
-                    -- TODO: Вписать ID если такой есть.
+                    -- TODO: Include ID if exists.
                     writeLog aInfoChan [ServerBootNodeTag] Warning $
                         "Brouken message from PP " ++ show aMsg ++ " " ++ a
-
 
 servePoA ::
        PortNumber
@@ -70,10 +67,13 @@ servePoA ::
     -> Chan Transaction
     -> Chan InfoMsg
     -> Chan FileActorRequest
+    -> Chan Microblock
     -> IO ()
-servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
+servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. servePoA: a port is " ++ show aRecivePort
+    aPendingChan <- newChan
+    void $ forkIO $ pendingActor aPendingChan aMicroblockChan aRecvChan
     runServer aRecivePort $ \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
@@ -84,7 +84,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
         -- writeChan ch $ connecting to PoA, the PoA have id.
         void $ race
             (aSender aId aConnect aNewChan)
-            (aReceiver aId aConnect aNewChan)
+            (aReceiver aId aConnect aNewChan aPendingChan)
   where
     aSender aId aConnect aNewChan = forever (do
         aMsg <- readChan aNewChan
@@ -94,20 +94,20 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                 aDeadId <- readMVar aId
                 writeChan ch $ ppNodeIsDisconected aDeadId)
 
-    aReceiver aId aConnect aNewChan = forever $ do
+    aReceiver aId aConnect aNewChan aPendingChan = forever $ do
         aMsg <- WS.receiveData aConnect
+        writeLog aInfoChan [ServePoATag] Info $ "Raw msg: " ++ show aMsg
         aOk <- isEmptyMVar aId
         case A.eitherDecodeStrict aMsg of
             Right a -> case a of
                 -- REVIEW: Check fair distribution of transactions between nodes
-                RequestTransaction aNum -> void $ forkIO $ forM_ [1..aNum] $ \_  -> do
-                        aTransaction <- readChan aRecvChan
-                        writeChan aInfoChan $ Metric $ add
-                            ("net.node." ++ show (toInteger aNodeId) ++ ".pending.amount")
-                            (-1 :: Integer)
+                RequestTransaction aNum -> void $ forkIO $ do
+                    aTmpChan <- newChan
+                    writeChan aPendingChan $ GetTransaction aNum aTmpChan
+                    aTransactions <- readChan aTmpChan
+                    forM_ (take aNum $ cycle aTransactions) $ \aTransaction  -> do
                         writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
                         WS.sendTextData aConnect $ A.encode $ ResponseTransaction aTransaction
-                            --(fromString.show $  :: B.ByteString)
                 MsgMicroblock aMicroblock
                     | not aOk -> do
                         aSenderId <- readMVar aId
@@ -167,7 +167,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
 
             Left a -> do
-                -- TODO: Вписать ID если такой есть.
+                -- TODO: Include ID if exist.
                 writeLog aInfoChan [ServePoATag] Warning $
                     "Brouken message from PP " ++ show aMsg ++ " " ++ a
                 when (not aOk) $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP

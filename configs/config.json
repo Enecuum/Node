@@ -1,18 +1,23 @@
 {
     "simpleNodeBuildConfig": {
-        "poaInPort": 1554,
-        "rpcPort": 1555,
-        "poaOutPort": 1556
+        "sharding": false,
+        "cliMode": "rpc",
+        "rpcBuildConfig": {
+            "enableIP": [
+                "0.0.0.0"
+            ],
+            "rpcPort": 1555
+        }
     },
     "statsdBuildConfig": {
-        "port": 8125,
-        "host": "127.0.0.1"
+        "host": "127.0.0.1",
+        "port": 8125
     },
+    "bootNodeList": "[(1,(127,0,0,1),1667)]",
+    "poaPort": 1554,
     "logsBuildConfig": {
-        "port": 28777,
-        "host": "127.0.0.1"
+        "host": "127.0.0.1",
+        "port": 28777
     },
-    "bootNodeList": "[(1,(172,17,0,2),1667)]",
-    "extConnectPort": 1667,
-    "sharding": "off"
+    "extConnectPort": 1667
 }

@@ -12,12 +12,82 @@ import              Data.Aeson.Types (typeMismatch)
 import qualified "cryptonite"   Crypto.PubKey.ECC.ECDSA     as ECDSA
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
+import Control.Monad
+import Data.ByteString (ByteString)
+import qualified Data.ByteString.Base64 as B
+import Data.Text (Text)
+import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
+
+instance FromJSON Trans
+instance ToJSON   Trans
+
+instance FromJSON MsgTo
+instance ToJSON MsgTo
+
+instance FromJSON CryptoCurrency
+instance ToJSON CryptoCurrency
 
 instance FromJSON PublicKey
 instance ToJSON PublicKey
 
 instance FromJSON PrivateKey
 instance ToJSON PrivateKey
+
+
+encodeToText :: ByteString -> Text
+encodeToText = T.decodeUtf8 . B.encode
+
+
+decodeFromText :: (MonadPlus m) => Text -> m ByteString
+decodeFromText aStr = case B.decode . T.encodeUtf8 $ aStr of
+    Right a -> return a
+    Left _  -> mzero
+
+instance ToJSON Hash where
+  toJSON (Hash h) = object ["hash" .= encodeToText  h]
+
+instance FromJSON Hash where
+  parseJSON (Object v) = Hash <$> ((v .: "hash") >>= decodeFromText)
+
+
+instance ToJSON TransactionInfo where
+  toJSON info = object [
+                  "tx"    .= tx info
+                , "block" .= encodeToText (block info)
+                , "index" .= index info
+                ]
+
+instance FromJSON TransactionInfo where
+  parseJSON (Object v) = TransactionInfo
+                           <$> v .: "tx"
+                           <*> ((v .: "block") >>= decodeFromText)
+                           <*> v .: "index"
+
+instance ToJSON Microblock where
+  toJSON aBlock = object [
+        "msg" .= object [
+            "K_hash"  .= encodeToText (_keyBlock aBlock),
+            "wallets" .= _teamKeys aBlock,
+            "Tx"      .= _transactions aBlock,
+            "uuid"    .= _numOfBlock aBlock
+          ],
+        "sign" .= _sign aBlock
+    ]
+
+
+instance FromJSON Microblock where
+  parseJSON (Object v) = do
+      aMsg  <- v .: "msg"
+      aSign <- v .: "sign"
+      case aMsg of
+        Object aBlock -> do
+            aWallets <- aBlock .: "wallets"
+            aTx      <- aBlock .: "Tx"
+            aUuid    <- aBlock .: "i"
+            aKhash   <- decodeFromText =<< aBlock .: "K_hash"
+            return $ Microblock aKhash aSign aWallets aTx aUuid
+        a -> mzero
+  parseJSON _ = mzero
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [

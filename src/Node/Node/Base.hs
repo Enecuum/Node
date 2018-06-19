@@ -156,17 +156,17 @@ answerToFindBestConnects aChan aMd _ = do
             aExistConnects :: M.Map NodeId NodePosition
             aExistConnects = M.fromList [(aId, aPosition) |(aId, (^.nodePosition) -> Just aPosition) <- M.toList $ aData^.nodes]
 
-            aPrefferedConneсts :: M.Map NodeId NodePosition
-            aPrefferedConneсts = M.fromList . take 4 . sortOn (distanceTo aMyNodePosition.snd) $ aPoints
+            aPrefferedConnects :: M.Map NodeId NodePosition
+            aPrefferedConnects = M.fromList . take 4 . sortOn (distanceTo aMyNodePosition.snd) $ aPoints
 
             aNeadedConnects :: M.Map NodeId Connect
-            aNeadedConnects = M.intersection (M.fromList aBroadcastList) (M.difference aPrefferedConneсts aExistConnects)
+            aNeadedConnects = M.intersection (M.fromList aBroadcastList) (M.difference aPrefferedConnects aExistConnects)
 
         connectTo aChan 4 (M.toList aNeadedConnects)
 
 
--- 1. Мы можем не знать их координаты.
--- 4 - выравнивания сети
+-- 1. We can have its coordinats unknown
+-- 4 - network alignment
 
 initShading :: (NodeConfigClass s, NodeBaseDataClass s, ManagerMsg msg) =>
     Chan msg -> IORef s -> IO ()
@@ -452,14 +452,15 @@ sendRemoteConnectDatagram aChan aData = do
 sendBroadcastThingToNodes
     ::  ManagerData md
     =>  IORef md
+    ->  NodeId
     ->  PackageSignature
     ->  BroadcastThing
     ->  IO ()
-sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing = do
+sendBroadcastThingToNodes aMd aNodeId aBroadcastSignature aBroadcastThing = do
     aData <- readIORef aMd
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
         "Broadcasting to neighbors a " ++ show aBroadcastThing ++ "."
-    forM_ (M.elems $ aData^.nodes) (sendToNode aMakeMsg)
+    forM_ (M.elems $ M.delete aNodeId (aData^.nodes)) (sendToNode aMakeMsg)
   where
     aMakeMsg :: StringKey -> CryptoFailable Package
     aMakeMsg = makeCipheredPackage

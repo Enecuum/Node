@@ -9,7 +9,7 @@ import Data.Monoid
 import Data.Maybe
 import Control.Monad
 import System.Directory
-
+import Service.Types (Hash(..))
 import Sharding.Types.ShardTypes
 
 class ShardName a where

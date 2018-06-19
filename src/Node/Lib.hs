@@ -41,7 +41,7 @@ startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
     -> Chan Answer
     -> Chan InfoMsg
     -> (Chan a1 -> IORef s -> IO ())
-    -> (Chan a1 -> Chan Transaction -> MyNodeId -> Chan FileActorRequest -> IO a2)
+    -> (Chan a1 -> Chan Transaction -> Chan Microblock -> MyNodeId -> Chan FileActorRequest -> IO a2)
     -> IO (Chan a1)
 startNode buildConf exitCh answerCh infoCh manager startDo = do
 
@@ -53,15 +53,15 @@ startNode buildConf exitCh answerCh infoCh manager startDo = do
     aTransactionChan <- newChan
     config  <- readNodeConfig
     bnList  <- readBootNodeList $ bootNodeList buildConf
-    aFileRequesChan <- newChan
-    void $ forkIO $ startFileServer aFileRequesChan
+    aFileRequestChan <- newChan
+    void $ forkIO $ startFileServer aFileRequestChan
     let portNumber = extConnectPort buildConf
-    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aFileRequesChan bnList config portNumber
+    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aFileRequestChan bnList config portNumber
     startServerActor managerChan portNumber
     aFilePath <- getTransactionFilePath
     void $ forkIO $ microblockProc aMicroblockChan aFilePath
     void $ forkIO $ manager managerChan md
-    void $ startDo managerChan aTransactionChan (config^.myNodeId) aFileRequesChan
+    void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aFileRequestChan
     return managerChan
 
 microblockProc :: Chan Microblock -> String -> IO b
@@ -110,5 +110,5 @@ mergeMBlocks (x:xs) olds = if containMBlock x olds
 
 
 containMBlock :: Microblock -> [Microblock] -> Bool
-containMBlock el elements = or $ (\(Microblock h1 _ _) (Microblock h2 _ _) -> h1 == h2 ) <$> [el] <*> elements
+containMBlock el elements = or $ (==) <$> [el] <*> elements
 -------------------------------------------------------

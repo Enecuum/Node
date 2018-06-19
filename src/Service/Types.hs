@@ -1,5 +1,5 @@
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, DeriveGeneric, LambdaCase, StandaloneDeriving #-}
 {-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
-{-# LANGUAGE DeriveGeneric #-}
 module Service.Types where
 
 import              Data.Serialize
@@ -8,20 +8,57 @@ import              Service.Types.PublicPrivateKeyPair
 import              GHC.Generics
 import              Data.ByteString
 import qualified    Data.ByteString.Base16 as B16
+import              Data.List.Split (splitOn)
+
+type QuantityTx = Int
+type PubKey = String
+data Trans = Trans {
+        txAmount :: Amount
+      , recipientPubKey :: PubKey
+      , senderPubKey :: PubKey
+      , currency :: CryptoCurrency
+      } deriving (Eq, Show, Generic)
+
+type Id = Integer
+data MsgTo = MsgTo {
+        messageTo      :: Id
+      , messageContent :: String
+      } deriving (Eq, Show, Generic)
+
+instance Read Trans where
+    readsPrec _ value =
+        case splitOn ":" value of
+             [f1, f2, f3, f4] ->
+                 [(Trans (read f1) f2 f3 (read f4), [])]
+             x -> error $ "Invalid number of fields in input: " ++ show x
+
+
+instance Read MsgTo where
+     readsPrec _ value =
+        case splitOn ":" value of
+             [t, m] ->  [(MsgTo (read t) m, [])]
+             x      -> error $ "Invalid number of fields in input: " ++ show x
 
 data CryptoCurrency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
 
 type Time      = Double
 type DAG = Gr Transaction Transaction
 
-data Microblock = Microblock ByteString ByteString [Transaction] deriving (Eq, Generic, Ord)
-instance Serialize Microblock
+newtype Hash = Hash ByteString deriving (Ord, Eq, Show, Generic)
+instance Serialize Hash
 
+data Microblock = Microblock{
+    _keyBlock :: ByteString, -- hash of key-block
+    _sign :: Signature,  -- signature for {K_hash, [Tx],}
+    _teamKeys :: [PublicKey], -- for reward
+    _transactions :: [Transaction],
+    _numOfBlock   :: Integer
+  }
+  deriving (Eq, Generic, Ord, Read)
+
+instance Serialize Microblock
 instance Show Microblock where
-    show (Microblock aByteString1 aByteString2 tr) =
-        " hash1: " ++ show (B16.encode aByteString1) ++
-        " hash2: " ++ show (B16.encode aByteString2) ++
-        " transactions: " ++ show tr
+    show _ = "Microblock ??"
 
 data Transaction = WithTime { time :: Time, transaction :: Transaction }
                  | WithSignature { transaction :: Transaction, signature :: Signature }
@@ -30,10 +67,17 @@ data Transaction = WithTime { time :: Time, transaction :: Transaction }
 --                 | AccumulatorsToInductors { owner :: PublicKey, amount :: Amount }
 --                 | InductorsToAccumulators { owner :: PublicKey, amount :: Amount }
 --                 | SendInductorsFromKeyToKey { owner :: PublicKey, receiver :: PublicKey, amount :: Amount }
-  deriving ( Generic, Show, Eq, Ord)
+  deriving ( Generic, Show, Eq, Ord, Read)
 
 
 instance Serialize Transaction
+
+data TransactionInfo = TransactionInfo {
+     tx    :: Transaction
+  ,  block :: ByteString
+  ,  index :: Int
+  } deriving (Generic, Show, Eq)
+instance Serialize TransactionInfo
 
 data Ledger = Ledger { currentTime :: Time, ltable :: [LedgerEntry] }
   deriving (Show, Generic)
@@ -63,3 +107,9 @@ instance Show (LHistory INVALID) where
 instance Show (LHistory VALID) where
   show End = "End"
   show (Valid tm bl pr) = "Valid { valid = " ++ show tm ++ ", balance = " ++ show bl ++ ", prev = " ++ show pr ++ " }"
+
+
+type ToPublicKey  = PublicKey
+data MessageForSign = MessageForSign ToPublicKey Amount Time
+instance Serialize MessageForSign
+deriving instance Generic MessageForSign
