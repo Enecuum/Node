@@ -17,8 +17,6 @@ import Data.Text (Text)
 import qualified Data.ByteString.Base16 as B
 import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
 import Data.Hex
-import Data.Text (pack, unpack)
-import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 
 
 instance FromJSON Trans
