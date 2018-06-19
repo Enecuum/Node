@@ -120,6 +120,10 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
             writeMetric (aData^.infoMsgChan)  $ increment "net.bl.count"
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "PP node " ++ show aSenderId ++ ", create a a microblock: " ++ show aMicroblock
+            -- (head <$> genNMicroBlocks 1) >>= writeChan (aData^.microblockChan)
+            -- putStrLn $ show $ aData^.microblockChan
+            -- putStrLn $ show $ aMicroblock
+            writeChan (aData^.microblockChan) aMicroblock
             sendBroadcast aMd (BroadcastMicroBlock aMicroblock Nothing)
             sendToShardingLvl aData $
                 T.ShardAcceptAction (microblockToShard aMicroblock)
@@ -261,7 +265,7 @@ answerToDeleteOldestMsg aMd _ = do
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of index of bradcasted msg."
     aTime <- getTime Realtime
     modifyIORef aMd $ hashMap %~ BI.filter
-        (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs 3000000)
+        (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs 3000000000)
 
 --
 answerToDeleteOldestPoW
@@ -272,19 +276,19 @@ answerToDeleteOldestPoW aMd _ = do
     aData <- readIORef aMd
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of index of PoW."
     aTime <- getTime Realtime
-    modifyIORef aMd $ hashMap %~ BI.filter
+    modifyIORef aMd $ poWNodes %~ BI.filter
         (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs timeLimit)
 
 timeLimit :: Integer
 timeLimit = 5*60*10^(9 :: Integer)
 
 instance BroadcastAction ManagerNodeData where
-    makeBroadcastAction _ aMd _ aBroadcastSignature aBroadcastThing = do
+    makeBroadcastAction _ aMd aNodeId aBroadcastSignature aBroadcastThing = do
         aData <- readIORef aMd
         writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Recived the broadcast msg " ++ show aBroadcastThing ++ "."
         when (notInIndex aData aBroadcastThing) $ do
             addInIndex aBroadcastThing aMd
-            sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing
+            sendBroadcastThingToNodes aMd aNodeId aBroadcastSignature aBroadcastThing
             processingOfBroadcastThing aMd aBroadcastThing
 
 
@@ -422,7 +426,7 @@ instance SendBroadcast BroadcastThing where
         aData <- readIORef aMd
         addInIndex aBroadcastThing aMd
         aPackageSignature <- makePackageSignature aData aBroadcastThing
-        sendBroadcastThingToNodes aMd aPackageSignature aBroadcastThing
+        sendBroadcastThingToNodes aMd (NodeId 0) aPackageSignature aBroadcastThing
 
 instance SendBroadcast (BroadcastThingLvl NetLvl) where
     sendBroadcast aMd = sendBroadcast aMd . BroadcastNet

@@ -20,9 +20,12 @@ import              Boot.Boot
 import              Boot.Types
 import              Node.Lib
 import              Data.Aeson
+import              Service.Transaction.Storage (startDB)
+
 
 main :: IO ()
 main =  do
+      putStrLn "testNet 15/06/2017 08:40"
       enc <- L.readFile "configs/config.json"
       case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
@@ -31,7 +34,7 @@ main =  do
             exitCh <- newChan
             answerCh <- newChan
             aInfoChan <- newChan
-
+            descrDB   <- startDB
             poa_p   <- try (getEnv "poaPort") >>= \case
                     Right item              -> return $ read item
                     Left (_::SomeException) -> return $ poaPort conf
@@ -54,8 +57,8 @@ main =  do
 
 
 
-            void $ startNode conf exitCh answerCh aInfoChan managerBootNode $
-                \ch _ aNodeId aFileChan -> do
+            void $ startNode descrDB conf exitCh answerCh aInfoChan managerBootNode $
+                \ch _ _ aNodeId aFileChan -> do
                     log_id  <- try (getEnv "log_id") >>= \case
                         Right item              -> return item
                         Left (_::SomeException) -> return $ show aNodeId

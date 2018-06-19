@@ -215,7 +215,7 @@ data RPCBuildConfig where
 data SimpleNodeBuildConfig where
      SimpleNodeBuildConfig :: {
         sharding       :: Bool,
-        cliMode        :: String,  -- "off", "rpc" or ""cli     
+        cliMode        :: String,  -- "off", "rpc" or ""cli
         rpcBuildConfig :: Maybe RPCBuildConfig
   } -> SimpleNodeBuildConfig
   deriving (Generic)

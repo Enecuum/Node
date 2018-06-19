@@ -25,12 +25,15 @@ import              Data.IP
 import              Data.Aeson (decode)
 import              Data.Aeson.Encode.Pretty (encodePretty)
 import qualified    Data.ByteString.Lazy as L
+import              Service.Transaction.Storage (startDB) --(DBdescriptor(..), startDB)
+
 
 configName :: String
 configName = "configs/config.json"
 
 main :: IO ()
 main =  do
+        putStrLn "testNet 15/06/2017 08:40"
         enc <- L.readFile configName
         case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
@@ -39,9 +42,10 @@ main =  do
             aExitCh   <- newChan
             aAnswerCh <- newChan
             aInfoCh   <- newChan
+            descrDB   <- startDB
 
-            void $ startNode conf
-                aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMyNodeId aFileChan -> do
+            void $ startNode descrDB conf
+                aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMicroblockChan aMyNodeId aFileChan -> do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
                     metronomeS 1000000 (writeChan ch queryPositions)
@@ -50,9 +54,9 @@ main =  do
                     metronomeS 1000000 (writeChan ch deleteOldestPoW)
                     metronomeS 1000000 (writeChan ch findBestConnects)
 
-                    snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case 
+                    snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case
                             Right item              -> return item
-                            Left (_::SomeException) -> error "Please, specify simpleNodeBuildConfig" 
+                            Left (_::SomeException) -> error "Please, specify simpleNodeBuildConfig"
 
                     poa_p   <- try (getEnv "poaPort") >>= \case
                             Right item              -> return $ read item
@@ -78,9 +82,10 @@ main =  do
                             Right item              -> return item
                             Left (_::SomeException) -> return $ show aMyNodeId
 
-                    try (getEnv "test_send_id") >>= \case
+                    test_send <- try (getEnv "test_send_id") >>= \case
                         Right idTo              -> (metronomeS 10000000 (writeChan ch (testSendMessage ((read idTo) :: NodeId))))
                         Left (e::SomeException) -> print e
+                    print test_send
 
                     i_am_firs <- try (getEnv "isFirst") >>= \case
                         Right "Yes" -> return True
@@ -91,11 +96,12 @@ main =  do
 
                     void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh log_id
 
-                    void $ forkIO $ servePoA poa_p aMyNodeId ch aChan aInfoCh aFileChan
+
+                    void $ forkIO $ servePoA poa_p aMyNodeId ch aChan aInfoCh aFileChan aMicroblockChan
 
                     cli_m   <- try (getEnv "cliMode") >>= \case
                             Right item              -> return item
-                            Left (_::SomeException) -> return $ cliMode snbc                            
+                            Left (_::SomeException) -> return $ cliMode snbc
 
                     void $ forkIO $ case cli_m of
                       "rpc" -> do
@@ -106,21 +112,21 @@ main =  do
                             rpc_p <- try (getEnv "rpcPort") >>= \case
                                   Right item              -> return $ read item
                                   Left (_::SomeException) -> return $ rpcPort rpcbc
-                            
+
                             ip_en <- join $ enableIPsList <$> (try (getEnv "enableIP") >>= \case
                                   Right item              -> return $ read item
                                   Left (_::SomeException) -> return $ enableIP rpcbc)
-                            
+
                             token <- try (getEnv "token") >>= \case
                                   Right item              -> return $ read item
                                   Left (_::SomeException) -> case accessToken rpcbc of
                                        Just token -> return token
                                        Nothing    -> updateConfigWithToken conf snbc rpcbc
 
-                            serveRpc rpc_p ip_en ch aInfoCh
+                            serveRpc descrDB rpc_p ip_en ch aInfoCh
 
 
-                      "cli" -> serveCLI ch aInfoCh
+                      "cli" -> serveCLI descrDB ch aInfoCh
 
                       _     -> return ()
 
@@ -139,8 +145,8 @@ main =  do
 updateConfigWithToken :: BuildConfig -> SimpleNodeBuildConfig -> RPCBuildConfig -> IO Token
 updateConfigWithToken conf snbc rpcbc = do
       token <- fromPublicKey256k1 <$> compressPublicKey <$> fst <$> generateKeyPair
-      let newConfig = conf { simpleNodeBuildConfig = Just $ 
-                               snbc  { rpcBuildConfig = Just $ 
+      let newConfig = conf { simpleNodeBuildConfig = Just $
+                               snbc  { rpcBuildConfig = Just $
                                  rpcbc { accessToken = Just token }
                                      }
                            }
@@ -148,7 +154,7 @@ updateConfigWithToken conf snbc rpcbc = do
       putStrLn $ "Access available with token: " ++ show token
 
       L.writeFile configName $ encodePretty newConfig
- 
+
       return token
 
 enableIPsList :: [String] -> IO [AddrRange IPv6]

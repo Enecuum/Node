@@ -23,9 +23,11 @@ import Service.InfoMsg
 import Service.Types
 import Data.Text (pack)
 import Network.Socket (SockAddr)
+import Service.Transaction.Storage (DBdescriptor(..))
 
-serveRpc :: PortNumber -> [AddrRange IPv6] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
-serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
+
+serveRpc :: DBdescriptor -> PortNumber -> [AddrRange IPv6] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
+serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> forever $ do
     (aMsg, addr) <- recvFrom aSocket (1024*100)
     runRpc addr aSocket aMsg
 
@@ -37,7 +39,7 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
 
             where
               ipAccepted :: SockAddr -> Bool
-              ipAccepted addr = unsafePerformIO $ do 
+              ipAccepted addr = unsafePerformIO $ do
                 case fromSockAddr addr of
                   Nothing      -> return False
                   Just (ip, _) -> do
@@ -46,8 +48,8 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
                     where convert ip = case ip of
                              IPv4 i -> ipv4ToIPv6 i
                              IPv6 i -> i
-              
-              handle f = do  
+
+              handle f = do
                     case ipAccepted addr of
                           False -> do
                                 liftIO $ putStrLn "Denied"
@@ -60,13 +62,13 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
                                      Right r -> liftIO $ return r
 
 
-              methods = [createTx , balanceReq, getBlock, getTransaction, getFullWallet 
+              methods = [createTx , balanceReq, getBlock, getTransaction, getFullWallet
 -- test
-                       , createNTx, createUnlimTx, sendMsgBroadcast, sendMsgTo, loadMsg 
+                       , createNTx, createUnlimTx, sendMsgBroadcast, sendMsgTo, loadMsg
                         ]
 
 
-              createTx = toMethod "enq_sendTransaction" f (Required "tx" :+: ()) 
+              createTx = toMethod "enq_sendTransaction" f (Required "tx" :+: ())
                 where
                   f :: Transaction -> RpcResult IO ()
                   f tx = handle $ sendTrans tx ch aInfoCh
@@ -74,17 +76,17 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
               balanceReq = toMethod "enq_getBalance" f (Required "address" :+: ())
                 where
                   f :: PubKey -> RpcResult IO Amount
-                  f key = handle $ getBalance key aInfoCh
+                  f key = handle $ getBalance descrDB key aInfoCh
 
               getBlock = toMethod "enq_getBlockByHash" f (Required "hash" :+: ())
                 where
                   f :: Hash ->  RpcResult IO Microblock
-                  f hash = handle $ getBlockByHash hash ch
+                  f hash = handle $ getBlockByHash descrDB hash ch
 
               getTransaction = toMethod "enq_getTransactionByHash" f (Required "hash" :+:())
                 where
                   f :: Hash -> RpcResult IO TransactionInfo
-                  f hash = handle $ getTransactionByHash hash ch
+                  f hash = handle $ getTransactionByHash descrDB hash ch
 
               getFullWallet = toMethod "enq_getAllTransactions" f (Required "address" :+: ())
                 where
@@ -116,5 +118,3 @@ serveRpc portNum ipRangeList ch aInfoCh = runServer portNum $ \aSocket -> foreve
                 where
                   f :: RpcResult IO [MsgTo]
                   f = handle $ loadMessages ch
-
-

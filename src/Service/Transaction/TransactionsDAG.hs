@@ -1,6 +1,6 @@
 {-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
 
-module CLI.TransactionsDAG where
+module Service.Transaction.TransactionsDAG where
 
 import Data.Graph.Inductive
 import Control.Monad (replicateM)
@@ -8,7 +8,7 @@ import Service.Types.PublicPrivateKeyPair
 import System.Random
 import Service.System.Directory (getTime)
 import Service.Types
-import CLI.Skelet (getSkeletDAG)
+import Service.Transaction.Skelet (getSkeletDAG)
 
 type QuantityOfTransactions = Int
 

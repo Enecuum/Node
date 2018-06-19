@@ -452,14 +452,15 @@ sendRemoteConnectDatagram aChan aData = do
 sendBroadcastThingToNodes
     ::  ManagerData md
     =>  IORef md
+    ->  NodeId
     ->  PackageSignature
     ->  BroadcastThing
     ->  IO ()
-sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing = do
+sendBroadcastThingToNodes aMd aNodeId aBroadcastSignature aBroadcastThing = do
     aData <- readIORef aMd
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
         "Broadcasting to neighbors a " ++ show aBroadcastThing ++ "."
-    forM_ (M.elems $ aData^.nodes) (sendToNode aMakeMsg)
+    forM_ (M.elems $ M.delete aNodeId (aData^.nodes)) (sendToNode aMakeMsg)
   where
     aMakeMsg :: StringKey -> CryptoFailable Package
     aMakeMsg = makeCipheredPackage

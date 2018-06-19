@@ -19,7 +19,7 @@ import              GHC.Generics
 import qualified    Data.Text as T
 import              Data.Hex
 import              Control.Monad.Extra
-import              Data.Either
+-- import              Data.Either
 import qualified    Data.Serialize as S
 import              Service.Types (Microblock(..), Transaction)
 import              Service.Network.Base
@@ -106,7 +106,7 @@ data PPToNNMessage
     -- }
     deriving (Show)
 
-data NodeType = PoW | PoA deriving (Eq, Show, Ord, Generic)
+data NodeType = PoW | PoA | All deriving (Eq, Show, Ord, Generic)
 
 instance S.Serialize NodeType
 
@@ -151,7 +151,7 @@ data NNToPPMessage
 
 
 --myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
---myUnhex :: S.Serialize b => T.Text -> Either String b
+myUnhex :: IsString a => T.Text -> Either a String
 myUnhex aString = case unhex $ T.unpack aString of
     Just aDecodeString  -> Right aDecodeString
     Nothing             -> Left "Nothing"
@@ -204,19 +204,19 @@ instance FromJSON PPToNNMessage where
                 aMsg         :: Value  <- aMessage .: "msg"
                 aPoint <- unhexNodeId aDestination
                 return $ MsgMsgToNN (PPId aPoint) (S.encode aMsg)
-
-            ("Msg", "Microblock") -> do
+{-
+            ("Msg", "MicroblockV1") -> do
                 aPreviousHash :: T.Text <- aMessage .: "previousHash"
                 aBlockHash    :: T.Text <- aMessage .: "blockHash"
                 aListTransaction  <- aMessage .: "transactions"
                 case (myTextUnhex aPreviousHash, myTextUnhex aBlockHash) of
                     (Just aHash1, Just aHash2) ->
                         case decodeList aListTransaction of
-                            []      -> mzero
+                            []      -> error "Can not parse Transactions in Microblock"
                             aResult -> return . MsgMicroblock
                                 $ Microblock aHash1 aHash2 (map read aResult :: [Transaction])
-                    _   -> error "Can not parse Microblock"
-
+                    _   -> error "Can not parse MicroblockV1"
+-}
 
             _ -> mzero
 
@@ -225,11 +225,11 @@ instance FromJSON PPToNNMessage where
 readNodeType :: (IsString a, Eq a) => a -> NodeType
 readNodeType aNodeType = if aNodeType == "PoW" then PoW else PoA
 
-
-decodeList aList
-    | all isRight aDecodeList   = rights aDecodeList
-    | otherwise                 = []
-    where aDecodeList = myUnhex <$> aList
+decodeList :: [T.Text] -> [String]
+decodeList aList = map T.unpack aList
+    -- | all isRight aDecodeList   = rights aDecodeList
+    -- | otherwise                 = error "Can not decode all transactions in Microblock"
+    -- where aDecodeList = myUnhex <$> aList
 
 
 instance ToJSON NNToPPMessage where

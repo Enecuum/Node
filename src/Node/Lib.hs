@@ -1,24 +1,20 @@
 {-# LANGUAGE ScopedTypeVariables, LambdaCase #-}
+{-# LANGUAGE PackageImports #-}
 module Node.Lib where
 
 import              Control.Monad
 import              Control.Exception
 import              Control.Concurrent
-import qualified    Data.ByteString             as B
 import qualified    Data.ByteString.Lazy        as L
-import              Data.Serialize              as S
 import              Data.IORef
 import qualified    Data.Aeson as A
 import              Lens.Micro
 import              Service.Types
 import              Network.Socket (tupleToHostAddress)
-import Node.FileDB.FileDB
 import Node.Node.Types
 import Node.Node.Config.Make
 
 import Node.Node.Base.Server
-
-import Service.System.Directory (getTransactionFilePath)
 import Service.Network.Base
 import System.Environment
 import Service.InfoMsg (InfoMsg)
@@ -26,8 +22,10 @@ import Node.Data.Key
 import Node.FileDB.FileServer
 --tmp
 import System.Directory (createDirectoryIfMissing)
+import Service.Transaction.Balance (addMicroblockToDB)
+import Service.Transaction.Storage (DBdescriptor(..))
 
--- code exemples:
+-- code examples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html
 -- docs:
 -- https://github.com/ethereum/devp2p/blob/master/rlpx.md
@@ -36,14 +34,15 @@ import System.Directory (createDirectoryIfMissing)
 
 -- | Standart function to launch a node.
 startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
-       BuildConfig
+       DBdescriptor
+    -> BuildConfig
     -> Chan ExitMsg
     -> Chan Answer
     -> Chan InfoMsg
     -> (Chan a1 -> IORef s -> IO ())
-    -> (Chan a1 -> Chan Transaction -> MyNodeId -> Chan FileActorRequest -> IO a2)
+    -> (Chan a1 -> Chan Transaction -> Chan Microblock -> MyNodeId -> Chan FileActorRequest -> IO a2)
     -> IO (Chan a1)
-startNode buildConf exitCh answerCh infoCh manager startDo = do
+startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
 
     --tmp
     createDirectoryIfMissing False "data"
@@ -58,23 +57,17 @@ startNode buildConf exitCh answerCh infoCh manager startDo = do
     let portNumber = extConnectPort buildConf
     md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aFileRequestChan bnList config portNumber
     startServerActor managerChan portNumber
-    aFilePath <- getTransactionFilePath
-    void $ forkIO $ microblockProc aMicroblockChan aFilePath
+    void $ forkIO $ microblockProc descrDB aMicroblockChan
     void $ forkIO $ manager managerChan md
-    void $ startDo managerChan aTransactionChan (config^.myNodeId) aFileRequestChan
+    void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aFileRequestChan
     return managerChan
 
-microblockProc :: Chan Microblock -> String -> IO b
-microblockProc aMicroblockCh aFilePath = forever $ do
-        aMicroblock <- readChan aMicroblockCh
-        aBlocksFile <- try $ readHashMsgFromFile aFilePath
-        aBlocks <- case aBlocksFile of
-            Right aBlocks      -> return aBlocks
-            Left (_ :: SomeException) -> do
-                 B.writeFile aFilePath $ S.encode ([] :: [Microblock])
-                 return []
-        B.writeFile aFilePath $ S.encode (aBlocks ++ [aMicroblock])
 
+microblockProc :: DBdescriptor -> Chan Microblock -> IO b
+microblockProc descriptor aMicroblockCh = forever $ do
+        aMicroblock <- readChan aMicroblockCh
+        addMicroblockToDB descriptor aMicroblock
+        -- putStrLn $ show aMicroblock
 
 readNodeConfig :: IO NodeConfig
 readNodeConfig =
@@ -110,5 +103,5 @@ mergeMBlocks (x:xs) olds = if containMBlock x olds
 
 
 containMBlock :: Microblock -> [Microblock] -> Bool
-containMBlock el elements = or $ (\(Microblock h1 _ _) (Microblock h2 _ _) -> h1 == h2 ) <$> [el] <*> elements
+containMBlock el elements = or $ (==) <$> [el] <*> elements
 -------------------------------------------------------

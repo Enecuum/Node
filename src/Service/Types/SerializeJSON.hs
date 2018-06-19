@@ -20,6 +20,7 @@ import Data.Hex
 import Data.Text (pack, unpack)
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 
+
 instance FromJSON Trans
 instance ToJSON   Trans
 
@@ -42,25 +43,96 @@ encodeToText = T.decodeUtf8 . B.encode
 decodeFromText :: (Monad m) => Text -> m ByteString
 decodeFromText = return . fst . B.decode . T.encodeUtf8
 
-instance ToJSON Hash 
 
-instance FromJSON Hash 
+instance ToJSON Hash where
+  toJSON (Hash h) = object [
+                  "hash" .= encodeToText h
+                ]
 
-
-instance ToJSON ByteString where
-  toJSON h = String $ decodeUtf8 $ hex h
-
-
-instance FromJSON ByteString where
-  parseJSON (String s) = unhex $ encodeUtf8 s
-  parseJSON _          = error "Wrong object format"
+instance FromJSON Hash where
+  parseJSON (Object v) = Hash <$> ((v .: "hash") >>= decodeFromText)
 
 
-instance ToJSON TransactionInfo 
-instance FromJSON TransactionInfo 
+instance ToJSON TransactionInfo where
+  toJSON info = object [
+                  "tx"    .= tx info
+                , "block" .= encodeToText (block info)
+                , "index" .= index info
+                ]
 
-instance ToJSON Microblock 
-instance FromJSON Microblock 
+instance FromJSON TransactionInfo where
+  parseJSON (Object v) = TransactionInfo
+                           <$> v .: "tx"
+                           <*> ((v .: "block") >>= decodeFromText)
+                           <*> v .: "index"
+
+
+
+
+instance ToJSON Microblock where
+  toJSON aBlock = undefined
+{-
+      object [
+        "msg" := object [
+            "K_hash"  := _keyBlock aBlock,
+            "wallets" := _teamKeys aBlock,
+            "Tx"      := _transactions aBlock,
+          ]
+    ]
+-}
+{-
+
+data Microblock = Microblock{
+    _keyBlock :: ByteString, -- hash of key-block
+    _signer :: PublicKey,
+    _sign :: Signature,  -- signature for {K_hash, [Tx],}
+    _teamKeys :: [PublicKey], -- for reward
+    _transactions :: [Transaction]}
+  deriving (Eq, Generic, Ord, Read)
+
+{
+    "msg":{
+        "K_hash":"SoMeBaSe64StRinG==",
+        "wallets":[
+            "SoMeBaSe64StRinG==",
+            "SoMeBaSe64StRinG==",
+            ...
+        ],
+        "Tx":[{
+                "from":"SoMeBaSe64StRinG==",
+                "to":"SoMeBaSe64StRinG==",
+                "amount":<uint>,
+                "uuid":"SoMeBaSe64StRinG=="
+            },
+            ...
+        ],
+        "i":<uint>
+    },
+    "sign":"SoMeBaSe64StRinG=="
+}
+-}
+{-
+object [
+                   "curr"  .= encodeToText (hashCurrentMicroblock block)
+                 , "prev"  .= encodeToText (hashPreviousMicroblock block)
+                 , "txs"   .= trans block
+                 ]
+-}
+instance FromJSON MicroblockV1 where
+  parseJSON (Object v) = undefined
+      {-MicroblockV1
+                           <$> ((v .: "curr") >>= decodeFromText)
+                           <*> ((v .: "prev") >>= decodeFromText)
+                           <*> v .: "txs"
+-}
+
+instance FromJSON Microblock where
+  parseJSON (Object v) = undefined
+      {-MicroblockV1
+                           <$> ((v .: "curr") >>= decodeFromText)
+                           <*> ((v .: "prev") >>= decodeFromText)
+                           <*> v .: "txs"
+-}
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [
