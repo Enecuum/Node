@@ -45,7 +45,7 @@ startDB = do
     dbLedger <- Rocks.open aLedgerPath def{Rocks.createIfMissing=True}
     putStrLn "StartDB"
     sleepMs 5000
-    throw DBTransactionException
+--    throw DBTransactionException
     return (DBdescriptor dbTx dbMb dbLedger)
 
 
