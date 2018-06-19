@@ -85,6 +85,9 @@ dependencies:
 - data-default
 - hashtables
 - resourcet
+- retry
+- exceptions
+- MonadCatchIO-transformers
 
 library:
   source-dirs: src

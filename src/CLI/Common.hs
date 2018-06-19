@@ -39,6 +39,7 @@ import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
 import Service.System.Directory (getTime, getKeyFilePath)
 import Service.Transaction.Storage (DBdescriptor(..))
+import Service.Transaction.Common as B (getBlockByHashDB, getTransactionByHashDB)
 
 type Result a = Either CLIException a
 
@@ -58,11 +59,13 @@ sendMessageBroadcast ch = return $ return $ Left NotImplementedException
 loadMessages :: ManagerMiningMsg a => Chan a -> IO (Result [MsgTo])
 loadMessages ch = return $ Left NotImplementedException
 
-getBlockByHash :: ManagerMiningMsg a => Hash -> Chan a -> IO (Result Microblock)
-getBlockByHash hash ch = return $ Left NotImplementedException
+getBlockByHash :: ManagerMiningMsg a => DBdescriptor -> Hash -> Chan a -> IO (Result Microblock)
+getBlockByHash db hash ch = return =<< Right <$> B.getBlockByHashDB db hash
 
-getTransactionByHash :: ManagerMiningMsg a => Hash -> Chan a -> IO (Result TransactionInfo)
-getTransactionByHash hash ch = return $ Left NotImplementedException
+
+getTransactionByHash :: ManagerMiningMsg a => DBdescriptor -> Hash -> Chan a -> IO (Result TransactionInfo)
+getTransactionByHash db hash ch = return =<< Right <$> B.getTransactionByHashDB db hash
+
 
 getAllTransactions :: ManagerMiningMsg a => PubKey -> Chan a -> IO (Result [Transaction])
 getAllTransactions key ch = return $ Left NotImplementedException

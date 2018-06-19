@@ -22,7 +22,7 @@ import Node.Data.Key
 import Node.FileDB.FileServer
 --tmp
 import System.Directory (createDirectoryIfMissing)
-import Service.Transaction.Balance (runLedger)
+import Service.Transaction.Balance (addMicroblockToDB)
 import Service.Transaction.Storage (DBdescriptor(..))
 
 -- code examples:
@@ -66,7 +66,7 @@ startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
 microblockProc :: DBdescriptor -> Chan Microblock -> IO b
 microblockProc descriptor aMicroblockCh = forever $ do
         aMicroblock <- readChan aMicroblockCh
-        runLedger descriptor aMicroblock
+        addMicroblockToDB descriptor aMicroblock
         -- putStrLn $ show aMicroblock
 
 readNodeConfig :: IO NodeConfig

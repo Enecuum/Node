@@ -1,14 +1,16 @@
 {-# LANGUAGE PackageImports #-}
-module Service.Transaction.Balance ( getBalanceForKey, runLedger ) where
+module Service.Transaction.Balance
+  ( getBalanceForKey,
+    addMicroblockToDB,
+    runLedger) where
 
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
 import qualified Data.ByteString.Char8 as BC hiding (map)
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import qualified Data.HashTable.IO as H
-import qualified "cryptohash" Crypto.Hash.SHA1 as SHA1
 import Control.Monad
-import Service.Transaction.Storage (DBdescriptor(..))
+import Service.Transaction.Storage (DBdescriptor(..),rHash, rValue, urValue, htK, unHtK, unHtA)
 import Data.Default (def)
 
 
@@ -24,14 +26,7 @@ getBalanceForKey db key = do
     return (unHtA v)
 
 
--- for rocksdb Transaction and Microblock
-rHash key = SHA1.hash . BC.pack . show $ key
-rValue value = BC.pack $ show value
 
--- for BalanceTable and Ledger
-htK key = BC.pack $ show key
-unHtK key = read (BC.unpack key) :: PublicKey
-unHtA key = read (BC.unpack key) :: Amount
 
 updateBalanceTable :: BalanceTable -> Transaction -> IO ()
 updateBalanceTable ht aTransaction = do
@@ -51,7 +46,7 @@ updateBalanceTable ht aTransaction = do
 getTxsMicroblock :: Microblock -> [Transaction]
 getTxsMicroblock (Microblock _ _ _ _ txs _) = txs
 
-
+--something = do
 getBalanceOfKeys :: Rocks.DB -> [Transaction] -> IO BalanceTable
 getBalanceOfKeys dbLedger tx = do
   let keys = concatMap getPubKeys tx
@@ -78,8 +73,9 @@ microblockIsExpected = undefined
 run :: Microblock -> DBdescriptor -> Microblock -> IO ()
 run m = if (not $ microblockIsExpected m) then error "We are exepecting another microblock" else runLedger
 
-runLedger :: DBdescriptor -> Microblock -> IO ()
-runLedger (DBdescriptor dbTx dbMb dbLedger) m  =  do
+runLedger = undefined
+addMicroblockToDB :: DBdescriptor -> Microblock -> IO ()
+addMicroblockToDB (DBdescriptor dbTx dbMb dbLedger) m  =  do
     let txs = getTxsMicroblock m
     ht      <- getBalanceOfKeys dbLedger txs
     mapM_ (updateBalanceTable ht) txs
