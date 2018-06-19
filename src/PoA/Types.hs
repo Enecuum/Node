@@ -25,7 +25,7 @@ import              Service.Types (Microblock(..), Transaction)
 import              Service.Network.Base
 import              Data.IP
 import              Node.Data.Key
-import              Service.Types.SerializeJSON
+import              Service.Types.SerializeJSON()
 import              Service.Types.SerializeInstances
 import qualified    Data.HashMap.Strict as H
 import qualified    Data.Vector as V
@@ -153,6 +153,7 @@ data NNToPPMessage
 
 --myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
 --myUnhex :: S.Serialize b => T.Text -> Either String b
+myUnhex :: IsString a => T.Text -> Either a String
 myUnhex aString = case unhex $ T.unpack aString of
     Just aDecodeString  -> Right aDecodeString
     Nothing             -> Left "Nothing"
@@ -217,7 +218,7 @@ instance FromJSON PPToNNMessage where
 readNodeType :: (IsString a, Eq a) => a -> NodeType
 readNodeType aNodeType = if aNodeType == "PoW" then PoW else PoA
 
-
+decodeList :: [T.Text] -> [String]
 decodeList aList
     | all isRight aDecodeList   = rights aDecodeList
     | otherwise                 = []
@@ -234,7 +235,7 @@ instance ToJSON NNToPPMessage where
             "tag"       .= ("Msg"   :: String),
             "type"      .= ("MsgTo" :: String),
             "sender"    .= ppIdToString aPPId,
-            "messages"  .= aObj
+            "msg"       .= aObj
           ]
       where
         aObj = case S.decode aMessage of
@@ -264,8 +265,8 @@ instance ToJSON NNToPPMessage where
 
     toJSON (MsgBroadcastMsg aMessage (IdFrom aPPId)) = object [
         "tag"       .= ("Msg"           :: String),
-        "type"      .= ("BroadcastMsg"  :: String),
-        "messages"  .= aObj,
+        "type"      .= ("Broadcast"  :: String),
+        "mgs"       .= aObj,
         "idFrom"    .= ppIdToString aPPId
       ]
       where
