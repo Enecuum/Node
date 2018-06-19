@@ -224,8 +224,7 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 1. Choose the appropriate local folder, clone the repo and change to the cloned repository folder
 
-`git clone git@github.com:Enecuum/Node.git`
-` cd Node`
+`git clone git@github.com:Enecuum/Node.git && cd Node`
 
 2. Build without docker
 
