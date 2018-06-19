@@ -82,12 +82,12 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
               getBlock = toMethod "enq_getBlockByHash" f (Required "hash" :+: ())
                 where
                   f :: Hash ->  RpcResult IO Microblock
-                  f hash = handle $ getBlockByHash hash ch
+                  f hash = handle $ getBlockByHash descrDB hash ch
 
               getTransaction = toMethod "enq_getTransactionByHash" f (Required "hash" :+:())
                 where
                   f :: Hash -> RpcResult IO TransactionInfo
-                  f hash = handle $ getTransactionByHash hash ch
+                  f hash = handle $ getTransactionByHash descrDB hash ch
 
               getFullWallet = toMethod "enq_getAllTransactions" f (Required "address" :+: ())
                 where

@@ -83,7 +83,7 @@ data TransactionInfo = TransactionInfo {
      tx    :: Transaction
   ,  block :: ByteString
   ,  index :: Int
-  } deriving (Generic, Show, Eq)
+  } deriving (Generic, Show, Eq, Read)
 instance Serialize TransactionInfo
 
 data Ledger = Ledger { currentTime :: Time, ltable :: [LedgerEntry] }
