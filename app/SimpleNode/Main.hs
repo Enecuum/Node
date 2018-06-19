@@ -33,7 +33,7 @@ configName = "configs/config.json"
 
 main :: IO ()
 main =  do
-        putStrLn "testNet 15/06/2017 08:40"
+        putStrLn "testNet 18/06/2017 10:50"
         enc <- L.readFile configName
         case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
@@ -78,7 +78,7 @@ main =  do
                             Right item              -> return $ read item
                             Left (_::SomeException) -> return $ port $ logsBuildConfig conf
 
-                    log_id  <- try (getEnv "logId") >>= \case
+                    log_id  <- try (getEnv "log_id") >>= \case
                             Right item              -> return item
                             Left (_::SomeException) -> return $ show aMyNodeId
 

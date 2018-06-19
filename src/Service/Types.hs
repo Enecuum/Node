@@ -9,6 +9,7 @@ import              GHC.Generics
 import              Data.ByteString
 import              Data.List.Split (splitOn)
 
+
 type QuantityTx = Int
 type PubKey = String
 data Trans = Trans {
@@ -59,7 +60,7 @@ data Microblock = Microblock{
     _sign :: Signature,  -- signature for {K_hash, [Tx],}
     _teamKeys :: [PublicKey], -- for reward
     _transactions :: [Transaction],
-    _numOfBlock   :: Int
+    _numOfBlock   :: Integer
   }
   deriving (Eq, Generic, Ord, Read)
 

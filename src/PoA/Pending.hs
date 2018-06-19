@@ -13,21 +13,21 @@ import Data.Foldable
 
 import Control.Monad.Fix
 import Service.Types.PublicPrivateKeyPair
--- актор
--- данные актора
--- команды для актора:
+-- actor
+-- actor's data
+-- commands for actor
 --
--- добавить транзакцию
--- получить n транзакций (или меньше если n нет)
--- имеется микроблок (удалить те что есть в микроблоке)
--- очистка транзакций (перегруз по памяти)
+-- add transaction
+-- get n transaction (or less than n)
+-- delete transaction from microblock
+-- get rid of transactions (out of memory)
 
 -- если транзакций много, то запускать функцию очистки, если их не много, то и фиг с ними.
 -- определение памяти (пока 1k транзакций в пендинге)
--- структура пендинга 2 очериди.
+-- pending structure () структура пендинга 2 очериди.
 
 -- структура dupChan (микроблок чан)
--- вытаскивать из канала транзакций и перепаковывать
+-- get from transaction chan and pack into the message of another type
 -- Block -> RemoveTransactions [Transactions]
 -- Transaction -> AddTransaction Transaction
 

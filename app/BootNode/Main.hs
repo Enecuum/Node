@@ -25,7 +25,7 @@ import              Service.Transaction.Storage (startDB)
 
 main :: IO ()
 main =  do
-      putStrLn "testNet 15/06/2017 08:40"
+      putStrLn  "testNet 18/06/2017 10:50"
       enc <- L.readFile "configs/config.json"
       case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
