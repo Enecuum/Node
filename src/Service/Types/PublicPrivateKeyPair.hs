@@ -88,49 +88,29 @@ getPrivateKey  (PrivateKey256k1 n)    =
 getPublicKey :: (Integer, Integer) -> ECDSA.PublicKey
 getPublicKey (n1, n2) = ECDSA.PublicKey (getCurveByName SEC_p256k1) (Point n1 n2)
 
---data KeyPair    = KeyPair PublicKey PrivateKey
 data KeyPair    = KeyPair { getPub :: PublicKey, getPriv :: PrivateKey }
   deriving (Show, Generic)
 
-{-
-instance Read PublicKey where
-    readsPrec _ ('B':'0':xs) = do
-        let v = base58ToInteger xs
-        return (publicKey256k1 v, "")
-    readsPrec _ xs = error $ "error: readsPrec PublicKey" ++ xs
-
-instance Read PrivateKey where
-    readsPrec _ ('P':'0':xs) = do
-        let v = base58ToInteger xs
-        return (PrivateKey256k1 v, "")
-    readsPrec _ xs = error $ "error: eadsPrec PrivateKey " ++ xs
--}
 
 instance Read PublicKey where
     readPrec =
         parens
-        ( do (Ident s) <- lexP
-             case s of
-               ('B':'0':xs) -> do let v = base58ToInteger xs
-                                  return (publicKey256k1 v)
-               _            -> do error $ "error: readsPrec PublicKey" ++ s  )
-
+        ( do (Ident s) <- lexP 
+             return (publicKey256k1 $ base58ToInteger s)
+        )
+            
 instance Read PrivateKey where
     readPrec =
         parens
         ( do (Ident s) <- lexP
-             case s of
-               ('P':'0':xs) -> do let v = base58ToInteger xs
-                                  return (PrivateKey256k1 v)
-               _            -> do error $ "error: readsPrec PrivateKey" ++ s )
+             return $ PrivateKey256k1 $  base58ToInteger s
+        )
 
 instance Show PublicKey where
-  show a = "B" ++ if length b == 20 then b else "0" ++ b
-   where b = integerToBase58 $ fromPublicKey256k1 a
+  show a = integerToBase58 $ fromPublicKey256k1 a
 
 instance Show PrivateKey where
-  show (PrivateKey256k1 a) = "P" ++ if length b == 20 then b else "0" ++ b
-   where b = integerToBase58 a
+  show (PrivateKey256k1 a) = integerToBase58 a
 
 integerToBase58 :: Integer -> String
 integerToBase58 = BC.unpack . encodeBase58I bitcoinAlphabet

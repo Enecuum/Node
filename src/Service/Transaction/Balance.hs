@@ -10,7 +10,7 @@ import qualified Data.ByteString.Char8 as BC hiding (map)
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import qualified Data.HashTable.IO as H
 import Control.Monad
-import Service.Transaction.Storage (DBdescriptor(..),rHash, rValue, urValue, htK, unHtK, unHtA)
+import Service.Transaction.Storage (DBdescriptor(..),rHash, rValue, htK, unHtK, unHtA)
 import Data.Default (def)
 
 

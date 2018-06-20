@@ -10,24 +10,21 @@ import Control.Concurrent
 import Service.Types
 import System.Clock
 import Data.Foldable
-
-import Control.Monad.Fix
-import Service.Types.PublicPrivateKeyPair
--- актор
--- данные актора
--- команды для актора:
+-- Actor
+-- Actor's data
+-- Commands for actor
 --
--- добавить транзакцию
--- получить n транзакций (или меньше если n нет)
--- имеется микроблок (удалить те что есть в микроблоке)
--- очистка транзакций (перегруз по памяти)
+-- add transaction
+-- get n transactions (or less if don't exist)
+-- microblock exists (remove transactions which exist in microblock)
+-- clear transactions (mem overflow)
 
--- если транзакций много, то запускать функцию очистки, если их не много, то и фиг с ними.
--- определение памяти (пока 1k транзакций в пендинге)
--- структура пендинга 2 очериди.
+-- run transactions cleaning if there are a lot
+-- memory check (now - 1k txs in pending)
+-- 2 queues ni a pending structure
 
--- структура dupChan (микроблок чан)
--- вытаскивать из канала транзакций и перепаковывать
+-- dupChan structure (microblock chan)
+-- take transactions from the chan and re-pack it
 -- Block -> RemoveTransactions [Transactions]
 -- Transaction -> AddTransaction Transaction
 
@@ -46,16 +43,16 @@ pendingActor aChan aMicroblockChan aTransactionChan = do
 
     void . forkIO $ do
         aBlockChan <- dupChan aMicroblockChan
-        -- перепаковка блоков
+        -- blocks re-pack
         forever $ readChan aBlockChan >>= \case
             Microblock _ _ _ _ aTransactions _ ->
                 writeChan aChan $ RemoveTransactions aTransactions
 
-    -- перепаковка транзакций
+    -- transactions re-pack
     void . forkIO $ forever $ forever $ readChan aTransactionChan >>=
         writeChan aChan . AddTransaction
 
-    -- основное тело актора
+    -- actor's main body
     void $ loop $ Pending Empty Empty
   where
     loop (Pending aNewTransaactions aOldTransactions) = readChan aChan >>= \case
@@ -82,33 +79,33 @@ pendingActor aChan aMicroblockChan aTransactionChan = do
                         (aFilter aNewTransaactions :|> (aTransaction, aNaw))
                         (aFilter aOldTransactions)
 
-        -- Чистка транзакций по признаку вхождения в блок
+        -- transactions cleaning by the reason of including to block
         RemoveTransactions  aTransactions           -> do
             let aFilter = S.filter (\(t, _) -> t `notElem` aTransactions)
             loop $ Pending (aFilter aNewTransaactions) (aFilter aOldTransactions)
 
-        -- запрос транзакции
+        -- transactions request
         GetTransaction      aCount aResponseChan    -> do
             let aSizeOfOldTransactions = S.length aOldTransactions
                 aSizeOfNewTransactions = S.length aNewTransaactions
                 aSize = aSizeOfNewTransactions + aSizeOfOldTransactions
-                -- если есть достаточно новых транзакций
+                -- if there are a lot of transactions
             if  | aCount < aSizeOfNewTransactions -> do
-                    -- отправить n новых транзакций и переложить их в старые
+                    -- send n new transactions and replace it to "old"
                     let (aHead, aTail) = S.splitAt aCount aNewTransaactions
                     writeChan aResponseChan $ fst <$> toList aHead
                     loop $ Pending aTail (aOldTransactions >< aHead)
 
-                -- иначе
+               
                 | otherwise -> do
-                    -- взять из старых недостающее число транзакций
-                    -- добавить в старые новые
-                    -- взятые использованые старые и переложить в конец
+                    -- take from "old" needed count of txs
+                    -- add new txs from "new" to "old"
+                    -- used "old" txs and put it to the end
                     let (aHead, aTail) = S.splitAt (aCount - aSizeOfNewTransactions) aOldTransactions
                     writeChan aResponseChan $ fst <$> (toList $ aNewTransaactions >< aHead)
                     loop $ Pending Empty (aTail >< aNewTransaactions >< aHead)
 
--- в первую очереь
+-- at first
 
 average :: Seq (Transaction, TimeSpec) -> TimeSpec -> Integer
 average aTransactions aTime = sum $ average' aTime <$> aTransactions
@@ -117,18 +114,18 @@ average aTransactions aTime = sum $ average' aTime <$> aTransactions
 average' :: TimeSpec -> (Transaction, TimeSpec) -> Integer
 average' aTime (aTr, aT) = aTimeDiff `div` aAmount
   where
-    -- используем усреднённый показатель
+    -- using average
     aAmount   = toInteger (fromEnum (log $ toEnum $ fromEnum $ _amount aTr :: Double)) + 1
     aTimeDiff = toNanoSecs $ diffTimeSpec aTime aT
 
 
 -- sum ((time - now) / log mount)
--- удаление транзакций в зависимости от приоритета
--- удаление транзакций в зависимости от возраста
+-- delete transactions depends on priority
+-- delete transactions depends on their "age"
 -- if time / log mount then time * log mount
 
--- а есть ли у нас уже такая транзакция?
--- а есть ли у нас место под новую транзакцию?
+-- do we have the same transaction?
+-- do we have a space for a new transaction?
 
 
 --------------------------------------------------------------------------------

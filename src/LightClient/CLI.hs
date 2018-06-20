@@ -82,24 +82,34 @@ getRecipient defHost defPort (x:xs) = case x of
          Host h   -> getRecipient h defPort xs
 
 dispatch :: [Flag] -> HostName -> PortNumber -> IO ()
-dispatch flags h p = do
-    runClient h (fromEnum p) "" $ \ ch ->
+dispatch flags h p = 
       case flags of
         (Key : _)                        -> getKey
-        (Balance aPublicKey : _)         -> getBalance ch aPublicKey
-        (Send tx : _)                    -> sendTrans ch tx
+        (Balance aPublicKey : _)         -> runClient h (fromEnum p) "" $ \ ch ->
+                                         getBalance ch aPublicKey
+        (Send tx : _)                    -> runClient h (fromEnum p) "" $ \ ch ->
+                                         sendTrans ch tx
         (ShowKey : _)                    -> showPublicKey
-        (Wallet key : _)                 -> getAllTransactions ch key
-        (Block hash : _)                 -> getBlockByHash ch hash
-        (Tx hash : _)                    -> getTransaction ch hash
+        (Wallet key : _)                 -> runClient h (fromEnum p) "" $ \ ch ->
+                                         getAllTransactions ch key
+        (Block hash : _)                 -> runClient h (fromEnum p) "" $ \ ch ->
+                                         getBlockByHash ch hash
+        (Tx hash : _)                    -> runClient h (fromEnum p) "" $ \ ch ->
+                                         getTransaction ch hash
 
 -- test
-        (GenerateNTransactions qTx: _)   -> generateNTransactions ch qTx
-        (GenerateTransactionsForever: _) -> generateTransactionsForever ch
-        (SendMessageBroadcast m : _)     -> sendMessageBroadcast ch m
-        (SendMessageTo mTo : _)          -> sendMessageTo ch mTo
-        (LoadMessages : _)               -> loadMessages ch 
-        (Quit : _)                       -> closeAndExit ch
+        (GenerateNTransactions qTx: _)   -> runClient h (fromEnum p) "" $ \ ch ->
+                                         generateNTransactions ch qTx
+        (GenerateTransactionsForever: _) -> runClient h (fromEnum p) "" $ \ ch ->
+                                         generateTransactionsForever ch
+        (SendMessageBroadcast m : _)     -> runClient h (fromEnum p) "" $ \ ch ->
+                                         sendMessageBroadcast ch m
+        (SendMessageTo mTo : _)          -> runClient h (fromEnum p) "" $ \ ch ->
+                                         sendMessageTo ch mTo
+        (LoadMessages : _)               -> runClient h (fromEnum p) "" $ \ ch ->
+                                         loadMessages ch 
+        (Quit : _)                       -> runClient h (fromEnum p) "" $ \ ch ->
+                                         closeAndExit ch
         _                                -> putStrLn "Wrong argument"
 
 closeAndExit :: WS.Connection -> IO ()

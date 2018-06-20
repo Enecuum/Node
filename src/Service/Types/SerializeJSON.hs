@@ -13,11 +13,9 @@ import qualified "cryptonite"   Crypto.PubKey.ECC.ECDSA     as ECDSA
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
 import Data.ByteString (ByteString)
-import Data.Text (Text)
+import Data.Text (Text, pack, unpack)
 import qualified Data.ByteString.Base16 as B
 import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
-import Data.Hex
-
 
 instance FromJSON Trans
 instance ToJSON   Trans
@@ -28,8 +26,12 @@ instance ToJSON MsgTo
 instance FromJSON Currency
 instance ToJSON Currency
 
-instance FromJSON PublicKey
-instance ToJSON PublicKey
+instance FromJSON PublicKey where
+  parseJSON (String s) = return $ read $ unpack s
+  parseJSON _          = error "PublicKey JSON parse error"
+
+instance ToJSON PublicKey where
+  toJSON key = String $ pack $ show key
 
 instance FromJSON PrivateKey
 instance ToJSON PrivateKey
@@ -49,6 +51,7 @@ instance ToJSON Hash where
 
 instance FromJSON Hash where
   parseJSON (Object v) = Hash <$> ((v .: "hash") >>= decodeFromText)
+  parseJSON _          = error "Hash JSON parse error"
 
 
 instance ToJSON TransactionInfo where
@@ -63,7 +66,7 @@ instance FromJSON TransactionInfo where
                            <$> v .: "tx"
                            <*> ((v .: "block") >>= decodeFromText)
                            <*> v .: "index"
-
+  parseJSON _          = error "TransactionInfo JSON parse error"
 
 
 
