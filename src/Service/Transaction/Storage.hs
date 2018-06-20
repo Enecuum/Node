@@ -1,4 +1,4 @@
-{-# LANGUAGE PackageImports, ScopedTypeVariables #-}
+{-# LANGUAGE PackageImports, ScopedTypeVariables, FlexibleContexts #-}
 module Service.Transaction.Storage where
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import Service.System.Directory (getLedgerFilePath, getTransactionFilePath, getMicroblockFilePath)
@@ -20,6 +20,7 @@ import Data.Pool
 import Data.Time.Clock (getCurrentTime, UTCTime)
 -- import qualified Database.Persist.Postgresql as Post
 -- import qualified Database.PostgreSQL.Simple as Post
+import qualified Data.ByteString.Internal as BSI
 
 data DBPoolDescriptor = DBPoolDescriptor {
     poolTransaction :: Pool Rocks.DB
@@ -53,20 +54,33 @@ connectDB = do
   aTx <- getTransactionFilePath
   aMb <- getMicroblockFilePath
   aLd <- getLedgerFilePath
+  let pathTimeMicroblockArrived = ""
   poolTransaction <- createPool (Rocks.open aTx def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
   poolMicroblock  <- createPool (Rocks.open aMb def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
   poolLedger      <- createPool (Rocks.open aLd def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
-  -- poolMacroblock  <- createPool (newConn) Post.close 1 32 16
---   putStrLn "DBTransactionException"
--- --  sleepMs 5000
---   throw DBTransactionException
+  -- putStrLn "DBTransactionException"
+  -- sleepMs 5000
+  -- throw DBTransactionException
   return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger)
---  fun pool
 
 
+getAllTransactions ::  IO [BSI.ByteString]
+getAllTransactions = runResourceT $ do
+  let pathT = "/tmp/haskell-rocksDB6"
+  (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
+  getAllValues db
+
+test01 = do
+  let path = "/tmp/haskell-rocksDB6"
+  db <- Rocks.open path def{Rocks.createIfMissing=True}
+  Rocks.write db def{Rocks.sync = True} [ Rocks.Put (BC.pack "a") (BC.pack "one")
+                                        , Rocks.Put (BC.pack "b") (BC.pack "two")
+                                        , Rocks.Put (BC.pack "c") (BC.pack "three") ]
+  result <- Rocks.get db Rocks.defaultReadOptions (BC.pack "a")
+  Rocks.close db
+  putStrLn $ show result
 
 
-getAllValues :: MonadResource m => Rocks.DB -> m [BC.ByteString]
 getAllValues db = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterFirst it
@@ -87,7 +101,7 @@ instance Exception SuperException
 connectOrRecoveryConnect = recovering def handler . const $ connectDB
 
 
---SomeException
+--catch all exceptions and retry connections
 handler :: [p -> E.Handler IO Bool]
 handler =
     [ \_ -> E.Handler $ \(_ :: SomeException) -> do
@@ -114,3 +128,17 @@ getTransactionByHashDB db tHash = do
   let fun = \db -> Rocks.get db Rocks.defaultReadOptions key
   (Just v)  <- withResource (poolTransaction db) fun
   return (read (urValue v) :: TransactionInfo)
+
+
+deleteMicroblocksByHash :: DBPoolDescriptor -> [BC.ByteString] -> IO ()
+deleteMicroblocksByHash db hashes = deleteByHash (poolMicroblock db) hashes
+
+
+deleteTransactionsByHash :: DBPoolDescriptor -> [BC.ByteString] -> IO ()
+deleteTransactionsByHash db hashes = deleteByHash (poolTransaction db) hashes
+
+
+deleteByHash :: Pool Rocks.DB -> [BC.ByteString] -> IO ()
+deleteByHash pool tHash = do
+  let fun k = (\db -> Rocks.delete db def{Rocks.sync = True} k)
+  mapM_ (\k ->  withResource pool (fun k)) tHash
