@@ -85,7 +85,7 @@ dispatch :: [Flag] -> HostName -> PortNumber -> IO ()
 dispatch flags h p = do
     runClient h (fromEnum p) "" $ \ ch ->
       case flags of
-        (Key : _)                        -> getKey ch
+        (Key : _)                        -> getKey
         (Balance aPublicKey : _)         -> getBalance ch aPublicKey
         (Send tx : _)                    -> sendTrans ch tx
         (ShowKey : _)                    -> showPublicKey
@@ -110,18 +110,11 @@ showPublicKey = do
   pairs <- getSavedKeyPairs
   mapM_ (putStrLn . show . fst) pairs
 
-getKey :: WS.Connection -> IO ()
-getKey ch = do
+getKey :: IO ()
+getKey = do
   (KeyPair aPublicKey aPrivateKey) <- generateNewRandomAnonymousKeyPair
-  timePoint <- getTime
-  let initialAmount = 0
-  let keyInitialTransaction = WithTime timePoint (RegisterPublicKey aPublicKey initialAmount)
-  result <- runExceptT $ newTx ch keyInitialTransaction
-  case result of
-    (Left err) -> putStrLn $ "Key creation error: " ++ show err
-    (Right _ ) -> do
-           getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
-           putStrLn ("Public Key " ++ show aPublicKey ++ " was created")
+  getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
+  putStrLn ("Public Key " ++ show aPublicKey ++ " was created")
 
 sendTrans :: WS.Connection -> Trans -> IO ()
 sendTrans ch trans = do
@@ -132,10 +125,10 @@ sendTrans ch trans = do
   keyPairs <- getSavedKeyPairs
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
   case (Data.Map.lookup ownerPubKey mapPubPriv) of
-    Nothing -> putStrLn "You don't own that public key"
+    Nothing -> putStrLn "You don't own this public key"
     Just ownerPrivKey -> do
       sign  <- getSignature ownerPrivKey moneyAmount
-      let tx  = WithSignature (WithTime timePoint (SendAmountFromKeyToKey ownerPubKey receiverPubKey moneyAmount)) sign
+      let tx  = Transaction ownerPubKey receiverPubKey moneyAmount ENQ timePoint sign
       result <- runExceptT $ newTx ch tx
       case result of
         (Left err) -> putStrLn $ "Send transaction error: " ++ show err

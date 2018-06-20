@@ -47,7 +47,7 @@ serveCLI descrDB ch aInfoCh = do
           dispatch :: [Flag] -> IO ()
           dispatch flags = do
             case flags of
-              (Key : _)                        -> getNewKey ch aInfoCh >>= handle
+              (Key : _)                        -> getNewKey >>= handle
               (GenerateNTransactions qTx: _)   -> generateNTransactions qTx ch aInfoCh >>= handle
               (GenerateTransactionsForever: _) -> generateTransactionsForever ch aInfoCh >>= handle
               (Send tx : _)                    -> sendNewTrans tx ch aInfoCh >>= handle
