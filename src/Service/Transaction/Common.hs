@@ -1,6 +1,6 @@
 {-# LANGUAGE PackageImports #-}
 module Service.Transaction.Common (
-  connectAndRecoverRocks,
+  connectOrRecoveryConnect,
   getBlockByHashDB,
   getTransactionByHashDB,
   getBalanceForKey,
@@ -9,5 +9,5 @@ module Service.Transaction.Common (
 --  DBdescriptor(..),
   DBPoolDescriptor(..)
   ) where
-import Service.Transaction.Storage (connectAndRecoverRocks, getBlockByHashDB, getTransactionByHashDB,  DBPoolDescriptor(..))  -- startDB, DBdescriptor(..),
+import Service.Transaction.Storage (connectOrRecoveryConnect, getBlockByHashDB, getTransactionByHashDB,  DBPoolDescriptor(..))  -- startDB, DBdescriptor(..),
 import Service.Transaction.Balance   ( getBalanceForKey,  addMicroblockToDB, runLedger)

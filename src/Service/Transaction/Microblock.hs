@@ -13,7 +13,7 @@ import Control.Monad.Trans.State (StateT, evalStateT, put, get)
 import Service.Types (MicroblockV1(..), Microblock(..), Transaction)
 import Service.Types.PublicPrivateKeyPair (KeyPair(..), PublicKey(..), generateNewRandomAnonymousKeyPair, getSignature) -- Signature)
 -- import Data.Aeson as A
-import Service.Transaction.Common (runLedger, connectAndRecoverRocks, addMicroblockToDB)
+import Service.Transaction.Common (runLedger, connectOrRecoveryConnect, addMicroblockToDB)
 
 type HashOfMicroblock = BC.ByteString
 

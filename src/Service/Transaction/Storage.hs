@@ -17,8 +17,8 @@ import qualified "cryptohash" Crypto.Hash.SHA1 as SHA1
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
 import Data.Pool
-
-
+import Data.Time.Clock (getCurrentTime, UTCTime)
+import Database.Persist.Postgresql
 
 
 data DBPoolDescriptor = DBPoolDescriptor {
@@ -30,7 +30,8 @@ data MacroblockDB = MacroblockDB {
   keyBlock :: BC.ByteString,
   microblockNumber :: Int,
   requiredNumberOfMicroblocks :: Int,
-  hashOfMicroblock :: BC.ByteString
+  hashOfMicroblock :: BC.ByteString,
+  timeOfMicroblockArrived :: UTCTime
                                  }
 
 -- for rocksdb Transaction and Microblock
@@ -45,27 +46,9 @@ unHtA key = read (BC.unpack key) :: Amount
 
 
 
--- data DBdescriptor = DBdescriptor {
---     descrDBTransaction :: Rocks.DB
---   , descrDBMicroblock :: Rocks.DB
---   , descrDBLedger :: Rocks.DB }
 
-
--- startDB :: IO DBdescriptor
--- startDB = do
---     aMicroblockPath <- getMicroblockFilePath
---     aTransactionPath <- getTransactionFilePath
---     aLedgerPath <- getLedgerFilePath
---     dbMb <- Rocks.open aMicroblockPath def{Rocks.createIfMissing=True}
---     dbTx <- Rocks.open aTransactionPath def{Rocks.createIfMissing=True}
---     dbLedger <- Rocks.open aLedgerPath def{Rocks.createIfMissing=True}
---     -- putStrLn "StartDB"
---     -- sleepMs 5000
---     -- throw DBTransactionException
---     return (DBdescriptor dbTx dbMb dbLedger)
-
-connectRocks :: IO DBPoolDescriptor
-connectRocks = do
+connectDB :: IO DBPoolDescriptor
+connectDB = do
   aTx <- getTransactionFilePath
   aMb <- getMicroblockFilePath
   aLd <- getLedgerFilePath
@@ -74,6 +57,8 @@ connectRocks = do
   poolLedger      <- createPool (Rocks.open aLd def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
   return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger)
 --  fun pool
+
+
 
 
 getAllValues :: MonadResource m => Rocks.DB -> m [BC.ByteString]
@@ -91,10 +76,10 @@ data SuperException = DBTransactionException
 
 instance Exception SuperException
 
---run = retry startDB
 
 
-connectAndRecoverRocks = recovering def handler . const $ connectRocks
+-- FIX change def
+connectOrRecoveryConnect = recovering def handler . const $ connectDB
 hmm = retrying def (const $ return . isNothing) f
 f _ = putStrLn "Running action" >> return Nothing
 
