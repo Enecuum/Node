@@ -90,7 +90,7 @@ sendNewTrans trans ch aInfoCh = try $ do
       throw WrongKeyOwnerException
     Just ownerPrivKey -> do
       sign  <- getSignature ownerPrivKey moneyAmount
-      let tx  = WithSignature (WithTime timePoint (SendAmountFromKeyToKey ownerPubKey receiverPubKey moneyAmount)) sign
+      let tx  = Transaction ownerPubKey receiverPubKey moneyAmount ENQ timePoint sign
       _ <- sendTrans tx ch aInfoCh
       return tx
 
@@ -125,16 +125,13 @@ generateTransactionsForever ch m = try $ forever $ do
                                 threadDelay (10^(6 :: Int))
                                 putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
 
-getNewKey :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO (Result PubKey)
-getNewKey ch aInfoCh = try $ do
+getNewKey :: IO (Result PubKey)
+getNewKey = try $ do
   (KeyPair aPublicKey aPrivateKey) <- generateNewRandomAnonymousKeyPair
-  timePoint <- getTime
-  let initialAmount = 0
-  let keyInitialTransaction = WithTime timePoint (RegisterPublicKey aPublicKey initialAmount)
-  writeChan ch $ newTransaction keyInitialTransaction
   getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
-  sendMetrics keyInitialTransaction aInfoCh
+  putStrLn ("Public Key " ++ show aPublicKey ++ " was created")
   return $ show aPublicKey
+
 
 getBalance :: DBPoolDescriptor -> PubKey -> Chan InfoMsg -> IO (Result Amount)
 getBalance descrDB key aInfoCh = try $ do
@@ -167,13 +164,7 @@ getPublicKeys = try $ do
 
 
 sendMetrics :: Transaction -> Chan InfoMsg -> IO ()
-sendMetrics (WithTime _ tx) m = sendMetrics tx m
-sendMetrics (WithSignature tx _) m = sendMetrics tx m
-sendMetrics (RegisterPublicKey k b) m = do
-                           writeChan m $ Metric $ increment "cl.tx.count"
-                           writeChan m $ Metric $ set "cl.tx.wallet" k
-                           writeChan m $ Metric $ gauge "cl.tx.amount" b
-sendMetrics (SendAmountFromKeyToKey o r a) m = do
+sendMetrics (Transaction o r a _ _ _) m = do
                            writeChan m $ Metric $ increment "cl.tx.count"
                            writeChan m $ Metric $ set "cl.tx.wallet" o
                            writeChan m $ Metric $ set "cl.tx.wallet" r

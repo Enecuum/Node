@@ -26,8 +26,8 @@ instance ToJSON   Trans
 instance FromJSON MsgTo
 instance ToJSON MsgTo
 
-instance FromJSON CryptoCurrency
-instance ToJSON CryptoCurrency
+instance FromJSON Currency
+instance ToJSON Currency
 
 instance FromJSON PublicKey
 instance ToJSON PublicKey
@@ -118,38 +118,21 @@ instance FromJSON ECDSA.Signature where
  parseJSON inv        = typeMismatch "Signature" inv
 
 instance ToJSON Transaction where
-    toJSON trans = object $ txToJSON trans
-        where
-        txToJSON (WithTime aTime tx)
-            = ("time" .= aTime) : txToJSON tx
-        txToJSON (WithSignature tx sign)                   = txToJSON tx ++ [ "signature" .= sign ]
-        txToJSON (RegisterPublicKey key aBalance)
-            = [ "public_key" .= key, "start_balance" .= aBalance]
-        txToJSON (SendAmountFromKeyToKey own aRec anAmount) = [
-            "owner_key"     .= own,
-            "receiver_key"  .= aRec,
-            "amount"        .= anAmount
+    toJSON tx = object  [
+            "owner"     .= _owner tx,
+            "receiver"  .= _receiver tx,
+            "amount"    .= _amount tx,
+            "currency"  .= _currency tx,
+            "timestamp" .= _time tx,
+            "sign"       .= _signature tx
           ]
 
 instance FromJSON Transaction where
-    parseJSON (Object o) = do
-               aTime    <- o .:? "time"
-               sign     <- o .:? "signature"
-               p_key    <- o .:? "public_key"
-               aBalance <- o .:? "start_balance"
-               o_key    <- o .:? "owner_key"
-               r_key    <- o .:? "receiver_key"
-               anAmount <- o .:? "amount"
-               return $ appTime aTime
-                      $ appSign sign
-                      $ pack p_key aBalance o_key r_key anAmount
-                 where
-                   pack (Just p) (Just b) _ _ _ = RegisterPublicKey p b
-                   pack _ _ (Just aO) (Just r) (Just a) = SendAmountFromKeyToKey aO r a
-                   pack _ _ _ _ _ = error "Service.Types.SerializeJSON.parseJSON.pack"
-
-                   appTime (Just t) trans = WithTime t trans
-                   appTime  _ trans       = trans
-                   appSign (Just s) trans = WithSignature trans s
-                   appSign  _ trans       = trans
+    parseJSON (Object o) = Transaction
+               <$> o .: "owner"
+               <*> o .: "receiver" 
+               <*> o .: "amount"
+               <*> o .: "currency"
+               <*> o .: "timestamp"
+               <*> o .: "sign"
     parseJSON inv         = typeMismatch "Transaction" inv

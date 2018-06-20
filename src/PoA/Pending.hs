@@ -118,16 +118,8 @@ average' :: TimeSpec -> (Transaction, TimeSpec) -> Integer
 average' aTime (aTr, aT) = aTimeDiff `div` aAmount
   where
     -- используем усреднённый показатель
-    aAmount   = toInteger (fromEnum (log $ toEnum $ fromEnum $ getAmount aTr :: Double)) + 1
+    aAmount   = toInteger (fromEnum (log $ toEnum $ fromEnum $ _amount aTr :: Double)) + 1
     aTimeDiff = toNanoSecs $ diffTimeSpec aTime aT
-
-
-getAmount :: Transaction -> Amount
-getAmount = \case
-    WithTime _ aTransaction            -> getAmount aTransaction
-    WithSignature aTransaction _       -> getAmount aTransaction
-    RegisterPublicKey _ aAmount        -> aAmount
-    SendAmountFromKeyToKey _ _ aAmount -> aAmount
 
 
 -- sum ((time - now) / log mount)

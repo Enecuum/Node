@@ -16,7 +16,7 @@ data Trans = Trans {
         txAmount :: Amount
       , recipientPubKey :: PubKey
       , senderPubKey :: PubKey
-      , currency :: CryptoCurrency
+      , currency :: Currency
       } deriving (Eq, Show, Generic)
 
 type Id = Integer
@@ -39,7 +39,8 @@ instance Read MsgTo where
              [t, m] ->  [(MsgTo (read t) m, [])]
              x      -> error $ "Invalid number of fields in input: " ++ show x
 
-data CryptoCurrency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
+data Currency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
+instance Serialize Currency
 
 type Time      = Double
 type DAG = Gr Transaction Transaction
@@ -68,14 +69,14 @@ instance Serialize Microblock
 instance Show Microblock where
     show _ = "Microblock ??"
 
-data Transaction = WithTime { time :: Time, transaction :: Transaction }
-                 | WithSignature { transaction :: Transaction, signature :: Signature }
-                 | RegisterPublicKey { pubKey :: PublicKey, startWithBalance :: Amount }
-                 | SendAmountFromKeyToKey { owner :: PublicKey, receiver :: PublicKey, amount :: Amount }
---                 | AccumulatorsToInductors { owner :: PublicKey, amount :: Amount }
---                 | InductorsToAccumulators { owner :: PublicKey, amount :: Amount }
---                 | SendInductorsFromKeyToKey { owner :: PublicKey, receiver :: PublicKey, amount :: Amount }
-  deriving ( Generic, Show, Eq, Ord, Read)
+data Transaction = Transaction {
+  _owner     :: PublicKey,
+  _receiver  :: PublicKey,
+  _amount    :: Amount,
+  _currency  :: Currency,
+  _time      :: Int, -- UnixTime format
+  _signature :: Signature
+}  deriving ( Generic, Show, Eq, Ord, Read)
 
 
 instance Serialize Transaction

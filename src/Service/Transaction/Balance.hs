@@ -27,19 +27,15 @@ getBalanceForKey db key = do
 
 
 updateBalanceTable :: BalanceTable -> Transaction -> IO ()
-updateBalanceTable ht aTransaction = do
-  case aTransaction of
-    (WithSignature t _)        -> updateBalanceTable ht t
-    (WithTime _ t)             -> updateBalanceTable ht t
-    (RegisterPublicKey aKey aBalance) -> H.insert ht aKey aBalance
-    (SendAmountFromKeyToKey fromKey toKey am) -> do v1 <- H.lookup ht $ fromKey
+updateBalanceTable ht (Transaction fromKey toKey am _ _ _) = do
+                                                    v1 <- H.lookup ht $ fromKey
                                                     v2 <- H.lookup ht $ toKey
                                                     case (v1,v2) of
                                                       (Nothing, _)       -> do return ()
                                                       (_, Nothing)       -> do return ()
                                                       (Just balanceFrom, Just balanceTo) -> do H.insert ht fromKey (balanceFrom - am)
                                                                                                H.insert ht toKey (balanceTo + am)
-    _ -> error "Unsupported type of transaction"
+
 
 
 getTxsMicroblock :: Microblock -> [Transaction]
@@ -59,10 +55,7 @@ getBalanceOfKeys db tx = do
 
 
 getPubKeys :: Transaction -> [PublicKey]
-getPubKeys (WithSignature t _) = getPubKeys t
-getPubKeys (WithTime _ t) = getPubKeys t
-getPubKeys (RegisterPublicKey aKey _) = [aKey]
-getPubKeys (SendAmountFromKeyToKey fromKey toKey _) = [fromKey, toKey]
+getPubKeys (Transaction fromKey toKey _ _ _ _) = [fromKey, toKey]
 
 
 microblockIsExpected :: Microblock -> Bool
