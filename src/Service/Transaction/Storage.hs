@@ -19,13 +19,14 @@ import Service.Types
 import Data.Pool
 import Data.Time.Clock (getCurrentTime, UTCTime)
 -- import qualified Database.Persist.Postgresql as Post
-import qualified Database.PostgreSQL.Simple as Post
+-- import qualified Database.PostgreSQL.Simple as Post
 
 data DBPoolDescriptor = DBPoolDescriptor {
     poolTransaction :: Pool Rocks.DB
   , poolMicroblock :: Pool Rocks.DB
   , poolLedger :: Pool Rocks.DB
-  , poolMacroblock :: Pool Post.Connection}
+  -- , poolMacroblock :: Pool Post.Connection
+  }
 
 data MacroblockDB = MacroblockDB {
   keyBlock :: BC.ByteString,
@@ -46,15 +47,6 @@ unHtK key = read (BC.unpack key) :: PublicKey
 unHtA key = read (BC.unpack key) :: Amount
 
 
--- newConn :: IO Post.Connection
-newConn = Post.connect Post.defaultConnectInfo
-  -- {
-  --       		            connectDatabase = "postgres",
-  --       		            connectPassword = "iamadminpostgres",
-  --       		            connectUser = "postgres",
-  --       		            connectPort = 5432,
-  --       		            connectHost = "localhost"
-  --       	        	}
 
 connectDB :: IO DBPoolDescriptor
 connectDB = do
@@ -64,11 +56,11 @@ connectDB = do
   poolTransaction <- createPool (Rocks.open aTx def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
   poolMicroblock  <- createPool (Rocks.open aMb def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
   poolLedger      <- createPool (Rocks.open aLd def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
-  poolMacroblock  <- createPool (newConn) Post.close 1 32 16
---   putStrLn "connectDB"
+  -- poolMacroblock  <- createPool (newConn) Post.close 1 32 16
+--   putStrLn "DBTransactionException"
 -- --  sleepMs 5000
 --   throw DBTransactionException
-  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger poolMacroblock)
+  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger)
 --  fun pool
 
 
@@ -91,11 +83,8 @@ instance Exception SuperException
 
 
 
--- FIX change def
+-- FIX change def (5 times)
 connectOrRecoveryConnect = recovering def handler . const $ connectDB
-hmm = retrying def (const $ return . isNothing) f
-f _ = putStrLn "Running action" >> return Nothing
-
 
 
 --SomeException
@@ -103,25 +92,8 @@ handler :: [p -> E.Handler IO Bool]
 handler =
     [ \_ -> E.Handler $ \(_ :: SomeException) -> do
         return True
-    -- , \_ -> E.Handler $ \(e :: SuperException) -> do
-    --     putStrLn ("GOT ERROR: " ++ show e)
-    --     return True
     ]
 
-
-
--- handlers :: Monad m => [a -> Handler m Bool]
--- handlers =
---     [ const . Handler $ \(e :: RedisError) -> case e of
---         RedisError msg -> pure $ "READONLY" `isPrefixOf` msg
---         _              -> pure False
---     , const . Handler $ \(_ :: ConnectionError) -> pure True
---     , const . Handler $ \(_ ::         Timeout) -> pure True
---     , const . Handler $ \e ->
---         case e of
---             TransactionAborted -> pure True
---             _                  -> pure False
---     ]
 
 
 -- A utility function - threadDelay takes microseconds, which is slightly annoying.

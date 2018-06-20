@@ -90,9 +90,9 @@ dependencies:
 - exceptions
 - MonadCatchIO-transformers
 - hashable
-- postgresql-simple
+#- postgresql-simple
 - resource-pool
-- persistent-postgresql
+#- persistent-postgresql
 #- mysql
 - unix-time
 
