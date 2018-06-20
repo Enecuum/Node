@@ -18,13 +18,14 @@ import Service.Types.PublicPrivateKeyPair
 import Service.Types
 import Data.Pool
 import Data.Time.Clock (getCurrentTime, UTCTime)
-import Database.Persist.Postgresql
-
+-- import qualified Database.Persist.Postgresql as Post
+import qualified Database.PostgreSQL.Simple as Post
 
 data DBPoolDescriptor = DBPoolDescriptor {
     poolTransaction :: Pool Rocks.DB
   , poolMicroblock :: Pool Rocks.DB
-  , poolLedger :: Pool Rocks.DB }
+  , poolLedger :: Pool Rocks.DB
+  , poolMacroblock :: Pool Post.Connection}
 
 data MacroblockDB = MacroblockDB {
   keyBlock :: BC.ByteString,
@@ -45,7 +46,15 @@ unHtK key = read (BC.unpack key) :: PublicKey
 unHtA key = read (BC.unpack key) :: Amount
 
 
-
+-- newConn :: IO Post.Connection
+newConn = Post.connect Post.defaultConnectInfo
+  -- {
+  --       		            connectDatabase = "postgres",
+  --       		            connectPassword = "iamadminpostgres",
+  --       		            connectUser = "postgres",
+  --       		            connectPort = 5432,
+  --       		            connectHost = "localhost"
+  --       	        	}
 
 connectDB :: IO DBPoolDescriptor
 connectDB = do
@@ -55,7 +64,11 @@ connectDB = do
   poolTransaction <- createPool (Rocks.open aTx def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
   poolMicroblock  <- createPool (Rocks.open aMb def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
   poolLedger      <- createPool (Rocks.open aLd def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
-  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger)
+  poolMacroblock  <- createPool (newConn) Post.close 1 32 16
+--   putStrLn "connectDB"
+-- --  sleepMs 5000
+--   throw DBTransactionException
+  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger poolMacroblock)
 --  fun pool
 
 
@@ -88,11 +101,11 @@ f _ = putStrLn "Running action" >> return Nothing
 --SomeException
 handler :: [p -> E.Handler IO Bool]
 handler =
-    [ \_ -> E.Handler $ \(_ :: SuperException) -> do
+    [ \_ -> E.Handler $ \(_ :: SomeException) -> do
         return True
-    , \_ -> E.Handler $ \(e :: SuperException) -> do
-        putStrLn ("GOT ERROR: " ++ show e)
-        return True
+    -- , \_ -> E.Handler $ \(e :: SuperException) -> do
+    --     putStrLn ("GOT ERROR: " ++ show e)
+    --     return True
     ]
 
 
