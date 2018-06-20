@@ -20,7 +20,7 @@ import              Boot.Boot
 import              Boot.Types
 import              Node.Lib
 import              Data.Aeson
-import              Service.Transaction.Common (connectRocks)
+import              Service.Transaction.Common (connectAndRecoverRocks)
 
 
 main :: IO ()
@@ -34,7 +34,7 @@ main =  do
             exitCh <- newChan
             answerCh <- newChan
             aInfoChan <- newChan
-            descrDB   <- connectRocks
+            descrDB   <- connectAndRecoverRocks
             poa_p   <- try (getEnv "poaPort") >>= \case
                     Right item              -> return $ read item
                     Left (_::SomeException) -> return $ poaPort conf

@@ -25,7 +25,7 @@ import              Data.IP
 import              Data.Aeson (decode)
 import              Data.Aeson.Encode.Pretty (encodePretty)
 import qualified    Data.ByteString.Lazy as L
-import              Service.Transaction.Storage (connectRocks)
+import              Service.Transaction.Storage (connectAndRecoverRocks)
 
 
 configName :: String
@@ -42,7 +42,7 @@ main =  do
             aExitCh   <- newChan
             aAnswerCh <- newChan
             aInfoCh   <- newChan
-            rocksDB   <- connectRocks
+            rocksDB   <- connectAndRecoverRocks
 
             void $ startNode rocksDB conf
                 aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMicroblockChan aMyNodeId aFileChan -> do

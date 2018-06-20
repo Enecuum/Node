@@ -93,10 +93,8 @@ instance Exception SuperException
 
 --run = retry startDB
 
---retry :: (MonadIO m, E.MonadMask m) => RetryPolicyM m -> m a -> m a
---retry :: RetryPolicyM IO -> IO a -> IO a
---retry :: IO DBdescriptor
-retry = recovering def handler . const $ connectRocks  --( startDB)   --`I.finally` closeDesc)
+
+connectAndRecoverRocks = recovering def handler . const $ connectRocks
 hmm = retrying def (const $ return . isNothing) f
 f _ = putStrLn "Running action" >> return Nothing
 
