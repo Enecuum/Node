@@ -13,7 +13,7 @@ import Control.Monad.Trans.State (StateT, evalStateT, put, get)
 import Service.Types (MicroblockV1(..), Microblock(..), Transaction)
 import Service.Types.PublicPrivateKeyPair (KeyPair(..), PublicKey(..), generateNewRandomAnonymousKeyPair, getSignature) -- Signature)
 -- import Data.Aeson as A
-import Service.Transaction.Common (runLedger, startDB, addMicroblockToDB)
+import Service.Transaction.Common (runLedger, connectRocks, addMicroblockToDB)
 
 type HashOfMicroblock = BC.ByteString
 
@@ -45,29 +45,29 @@ writeTxToFile quantityOfTx = do
   tx <- genNNTx quantityOfTx
   writeFile "txforcli.txt" $ unlines $ map show tx
 
-runLedgerForTx = do
-  content <- lines <$> readFile "txforcli.txt"
-  let tx = map (\t -> read t :: Transaction) content
-  (KeyPair signerPublicKey signerPrivateKey) <- generateNewRandomAnonymousKeyPair
-  keys <- replicateM 64 generateNewRandomAnonymousKeyPair
-  let teamKeys = map (\(KeyPair pub _) -> pub) keys
-  sign  <- getSignature signerPrivateKey (unlines (map show tx))
-  let mb = Microblock {_keyBlock = BC.pack "321",
-                       _signer = signerPublicKey,
-                       _sign = sign,
-                       _teamKeys = teamKeys,
-                       _transactions = tx,
-                       _numOfBlock = 123}
-  db <- startDB
-  addMicroblockToDB db mb
-  runLedger db mb
-  -- putStrLn ht
+-- runLedgerForTx = do
+--   content <- lines <$> readFile "txforcli.txt"
+--   let tx = map (\t -> read t :: Transaction) content
+--   (KeyPair signerPublicKey signerPrivateKey) <- generateNewRandomAnonymousKeyPair
+--   keys <- replicateM 64 generateNewRandomAnonymousKeyPair
+--   let teamKeys = map (\(KeyPair pub _) -> pub) keys
+--   sign  <- getSignature signerPrivateKey (unlines (map show tx))
+--   let mb = Microblock {_keyBlock = BC.pack "321",
+--                        _signer = signerPublicKey,
+--                        _sign = sign,
+--                        _teamKeys = teamKeys,
+--                        _transactions = tx,
+--                        _numOfBlock = 123}
+--   db <- connectRocks
+--   addMicroblockToDB db mb
+--   runLedger db mb
+--   -- putStrLn ht
 
 -- writeMicroblockToFile = undefined
 -- runLedgerForMB = undefined
 
 
-calculateLedgerForTransaction = writeTxToFile 20 >> runLedgerForTx
+-- calculateLedgerForTransaction = writeTxToFile 20 >> runLedgerForTx
 -- calculateLedgerForMicroblock = writeMicroblockToFile 4 1 >> runLedgerForMB
 
 

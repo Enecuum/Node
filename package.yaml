@@ -90,6 +90,10 @@ dependencies:
 - exceptions
 - MonadCatchIO-transformers
 - hashable
+- postgresql-simple
+- resource-pool
+- persistent-postgresql
+#- mysql
 
 library:
   source-dirs: src

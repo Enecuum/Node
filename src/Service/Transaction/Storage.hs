@@ -16,13 +16,15 @@ import Control.Concurrent (forkIO, threadDelay)
 import qualified "cryptohash" Crypto.Hash.SHA1 as SHA1
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
+import Data.Pool
 
 
-data DBdescriptor = DBdescriptor {
-    descrDBTransaction :: Rocks.DB
-  , descrDBMicroblock :: Rocks.DB
-  , descrDBLedger :: Rocks.DB }
 
+
+data DBPoolDescriptor = DBPoolDescriptor {
+    poolTransaction :: Pool Rocks.DB
+  , poolMicroblock :: Pool Rocks.DB
+  , poolLedger :: Pool Rocks.DB }
 
 data MacroblockDB = MacroblockDB {
   keyBlock :: BC.ByteString,
@@ -42,18 +44,36 @@ unHtK key = read (BC.unpack key) :: PublicKey
 unHtA key = read (BC.unpack key) :: Amount
 
 
-startDB :: IO DBdescriptor
-startDB = do
-    aMicroblockPath <- getMicroblockFilePath
-    aTransactionPath <- getTransactionFilePath
-    aLedgerPath <- getLedgerFilePath
-    dbMb <- Rocks.open aMicroblockPath def{Rocks.createIfMissing=True}
-    dbTx <- Rocks.open aTransactionPath def{Rocks.createIfMissing=True}
-    dbLedger <- Rocks.open aLedgerPath def{Rocks.createIfMissing=True}
-    -- putStrLn "StartDB"
-    -- sleepMs 5000
-    -- throw DBTransactionException
-    return (DBdescriptor dbTx dbMb dbLedger)
+
+-- data DBdescriptor = DBdescriptor {
+--     descrDBTransaction :: Rocks.DB
+--   , descrDBMicroblock :: Rocks.DB
+--   , descrDBLedger :: Rocks.DB }
+
+
+-- startDB :: IO DBdescriptor
+-- startDB = do
+--     aMicroblockPath <- getMicroblockFilePath
+--     aTransactionPath <- getTransactionFilePath
+--     aLedgerPath <- getLedgerFilePath
+--     dbMb <- Rocks.open aMicroblockPath def{Rocks.createIfMissing=True}
+--     dbTx <- Rocks.open aTransactionPath def{Rocks.createIfMissing=True}
+--     dbLedger <- Rocks.open aLedgerPath def{Rocks.createIfMissing=True}
+--     -- putStrLn "StartDB"
+--     -- sleepMs 5000
+--     -- throw DBTransactionException
+--     return (DBdescriptor dbTx dbMb dbLedger)
+
+connectRocks :: IO DBPoolDescriptor
+connectRocks = do
+  aTx <- getTransactionFilePath
+  aMb <- getMicroblockFilePath
+  aLd <- getLedgerFilePath
+  poolTransaction <- createPool (Rocks.open aTx def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
+  poolMicroblock  <- createPool (Rocks.open aMb def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
+  poolLedger      <- createPool (Rocks.open aLd def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
+  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger)
+--  fun pool
 
 
 getAllValues :: MonadResource m => Rocks.DB -> m [BC.ByteString]
@@ -76,18 +96,11 @@ instance Exception SuperException
 --retry :: (MonadIO m, E.MonadMask m) => RetryPolicyM m -> m a -> m a
 --retry :: RetryPolicyM IO -> IO a -> IO a
 --retry :: IO DBdescriptor
-retry = recovering def handler . const $ ( startDB)   --`I.finally` closeDesc)
+retry = recovering def handler . const $ connectRocks  --( startDB)   --`I.finally` closeDesc)
 hmm = retrying def (const $ return . isNothing) f
 f _ = putStrLn "Running action" >> return Nothing
 
 
-
-
---closeDesc :: MonadIO m => DBdescriptor -> m ()
-closeDesc db = do
-  Rocks.close $ descrDBTransaction db
-  Rocks.close $ descrDBMicroblock db
-  Rocks.close $ descrDBLedger db
 
 --SomeException
 handler :: [p -> E.Handler IO Bool]
@@ -119,15 +132,17 @@ handler =
 sleepMs n = threadDelay (n * 1000)
 
 
-getBlockByHashDB :: DBdescriptor -> Hash -> IO Microblock
+getBlockByHashDB :: DBPoolDescriptor -> Hash -> IO Microblock
 getBlockByHashDB db mHash = do
   let (Hash key) = mHash
-  (Just v)  <- Rocks.get (descrDBMicroblock db) Rocks.defaultReadOptions key
+  let fun = \db -> Rocks.get db Rocks.defaultReadOptions key
+  (Just v)  <- withResource (poolMicroblock db) fun
   return (read (urValue v) :: Microblock)
 
 
-getTransactionByHashDB :: DBdescriptor -> Hash -> IO TransactionInfo --Transaction
+getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO TransactionInfo --Transaction
 getTransactionByHashDB db tHash = do
   let (Hash key) = tHash
-  (Just v)  <- Rocks.get (descrDBTransaction db) Rocks.defaultReadOptions key
+  let fun = \db -> Rocks.get db Rocks.defaultReadOptions key
+  (Just v)  <- withResource (poolTransaction db) fun
   return (read (urValue v) :: TransactionInfo)

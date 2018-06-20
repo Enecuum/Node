@@ -10,9 +10,10 @@ import qualified Data.ByteString.Char8 as BC hiding (map)
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import qualified Data.HashTable.IO as H
 import Control.Monad
-import Service.Transaction.Storage (DBdescriptor(..),rHash, rValue, urValue, unHtK, unHtA)
+import Service.Transaction.Storage (DBPoolDescriptor(..),DBPoolDescriptor(..),rHash, rValue, urValue, unHtK, unHtA)
 import Data.Default (def)
 import Data.Hashable
+import Data.Pool
 
 type BalanceTable = H.BasicHashTable PublicKey Amount
 -- type BalanceTable = H.BasicHashTable BC.ByteString Amount
@@ -20,9 +21,10 @@ type BalanceTable = H.BasicHashTable PublicKey Amount
 
 
 -- functions for CLI
-getBalanceForKey :: DBdescriptor -> PublicKey -> IO Amount
+getBalanceForKey :: DBPoolDescriptor -> PublicKey -> IO Amount
 getBalanceForKey db key = do
-    Just v  <- Rocks.get (descrDBLedger db) Rocks.defaultReadOptions (rValue key)
+    let fun = (\db -> Rocks.get db Rocks.defaultReadOptions (rValue key))
+    Just v  <- withResource (poolLedger db) fun
     return (unHtA v)
 
 
@@ -47,16 +49,17 @@ updateBalanceTable ht aTransaction = do
 getTxsMicroblock :: Microblock -> [Transaction]
 getTxsMicroblock (Microblock _ _ _ _ txs _) = txs
 
---something = do
-getBalanceOfKeys :: Rocks.DB -> [Transaction] -> IO BalanceTable
-getBalanceOfKeys dbLedger tx = do
-  let hashKeys = concatMap getPubKeys tx
-  balance  <- do
-                let getBalanceByKey k = (Rocks.get dbLedger Rocks.defaultReadOptions (rValue k))
-                let toTuple k (Just b) = (,) k (unHtA b)
-                mapM (\k -> liftM (toTuple k ) (getBalanceByKey k)) hashKeys
-  aBalanceTable <- H.fromList balance
-  return aBalanceTable
+
+getBalanceOfKeys :: Pool Rocks.DB -> [Transaction] -> IO BalanceTable
+getBalanceOfKeys = undefined
+-- getBalanceOfKeys db tx = do
+--   let hashKeys = concatMap getPubKeys tx
+--   let fun k = (\db -> Rocks.get db Rocks.defaultReadOptions (rValue k))
+--   let getBalanceByKey k = withResource db (fun k)
+--   let toTuple k (Just b) = (,) k (unHtA b)
+--   balance  <- mapM (\k -> liftM (toTuple k ) (getBalanceByKey k)) hashKeys
+--   aBalanceTable <- H.fromList balance
+--   return aBalanceTable
 
 
 getPubKeys :: Transaction -> [PublicKey]
@@ -70,23 +73,23 @@ microblockIsExpected :: Microblock -> Bool
 microblockIsExpected = undefined
 
 
-run :: Microblock -> DBdescriptor -> Microblock -> IO ()
+run :: Microblock -> DBPoolDescriptor -> Microblock -> IO ()
 run m = if (not $ microblockIsExpected m) then error "We are expecting another microblock" else runLedger
 
--- run :: DBdescriptor -> [Microblock] -> IO ()
+-- run :: DBPoolDescriptor -> [Microblock] -> IO ()
 -- run db m = do
 --   let keys = _teamKeys
 
-runLedger :: DBdescriptor -> Microblock -> IO ()
-runLedger (DBdescriptor _ _ dbLedger) m = do
+runLedger :: DBPoolDescriptor -> Microblock -> IO ()
+runLedger (DBPoolDescriptor _ _ poolLedger) m = do
     let txs = getTxsMicroblock m
-    ht      <- getBalanceOfKeys dbLedger txs
+    ht      <- getBalanceOfKeys poolLedger txs
     mapM_ (updateBalanceTable ht) txs
-    writeLedgerDB dbLedger ht
+    writeLedgerDB poolLedger ht
 
 
-addMicroblockToDB :: DBdescriptor -> Microblock -> IO ()
-addMicroblockToDB (DBdescriptor dbTx dbMb dbLedger) m  =  do
+addMicroblockToDB :: DBPoolDescriptor -> Microblock -> IO ()
+addMicroblockToDB (DBPoolDescriptor dbTx dbMb dbLedger) m  =  do
     let txs = getTxsMicroblock m
 -- Write to db atomically
     writeMicroblockDB dbMb m
@@ -94,22 +97,22 @@ addMicroblockToDB (DBdescriptor dbTx dbMb dbLedger) m  =  do
 
 
 
-writeMicroblockDB :: Rocks.DB -> Microblock -> IO ()
+writeMicroblockDB :: Pool Rocks.DB -> Microblock -> IO ()
 writeMicroblockDB db m = do
   let key = rHash m
       val  = rValue m
-  Rocks.write db def{Rocks.sync = True} [ Rocks.Put key val ]
+  let fun = (\db -> Rocks.write db def{Rocks.sync = True} [ Rocks.Put key val ])
+  withResource db fun
 
-
-writeTransactionDB :: Rocks.DB -> [Transaction] -> IO ()
+writeTransactionDB :: Pool Rocks.DB -> [Transaction] -> IO ()
 writeTransactionDB db tx = do
   let txKeyValue = map (\t -> (rHash t, rValue t) ) tx
-  Rocks.write db def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) txKeyValue)
+  let fun = (\db -> Rocks.write db def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) txKeyValue))
+  withResource db fun
 
-
-writeLedgerDB ::  Rocks.DB -> BalanceTable -> IO ()
+writeLedgerDB ::  Pool Rocks.DB -> BalanceTable -> IO ()
 writeLedgerDB db bt = do
   ledgerKV <- H.toList bt
-  -- let ledgerKeyValue = map (\(k,v)-> (rHash k, rValue v)) ledgerKV
   let ledgerKeyValue = map (\(k,v)-> (rValue k, rValue v)) ledgerKV
-  Rocks.write db def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) ledgerKeyValue)
+  let fun = (\db -> Rocks.write db def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) ledgerKeyValue))
+  withResource db fun

@@ -38,7 +38,7 @@ import Service.Types.SerializeJSON ()
 import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
 import Service.System.Directory (getTime, getKeyFilePath)
-import Service.Transaction.Storage (DBdescriptor(..))
+import Service.Transaction.Storage (DBPoolDescriptor(..))
 import Service.Transaction.Common as B (getBlockByHashDB, getTransactionByHashDB)
 
 type Result a = Either CLIException a
@@ -59,11 +59,11 @@ sendMessageBroadcast ch = return $ return $ Left NotImplementedException
 loadMessages :: ManagerMiningMsg a => Chan a -> IO (Result [MsgTo])
 loadMessages ch = return $ Left NotImplementedException
 
-getBlockByHash :: ManagerMiningMsg a => DBdescriptor -> Hash -> Chan a -> IO (Result Microblock)
+getBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result Microblock)
 getBlockByHash db hash ch = return =<< Right <$> B.getBlockByHashDB db hash
 
 
-getTransactionByHash :: ManagerMiningMsg a => DBdescriptor -> Hash -> Chan a -> IO (Result TransactionInfo)
+getTransactionByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result TransactionInfo)
 getTransactionByHash db hash ch = return =<< Right <$> B.getTransactionByHashDB db hash
 
 
@@ -136,7 +136,7 @@ getNewKey ch aInfoCh = try $ do
   sendMetrics keyInitialTransaction aInfoCh
   return $ show aPublicKey
 
-getBalance :: DBdescriptor -> PubKey -> Chan InfoMsg -> IO (Result Amount)
+getBalance :: DBPoolDescriptor -> PubKey -> Chan InfoMsg -> IO (Result Amount)
 getBalance descrDB key aInfoCh = try $ do
     let pKey = read key
     stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )

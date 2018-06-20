@@ -22,10 +22,10 @@ import Service.Types
 import Data.Text (pack)
 import Network.Socket (SockAddr)
 import qualified Network.WebSockets as WS
-import Service.Transaction.Storage (DBdescriptor(..))
+import Service.Transaction.Storage (DBPoolDescriptor(..))
 
 
-serveRpc :: DBdescriptor -> PortNumber -> [AddrRange IPv6] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
+serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
 serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPending -> do
     aConnect <- WS.acceptRequest aPending
     WS.forkPingThread aConnect 30
