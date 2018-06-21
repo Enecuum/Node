@@ -20,14 +20,4 @@ build:
     haddock-args:
     - "--odir=./docs"
 
-allow-newer: true
-# docker:
-#  enable: true
 
-image:
-  container:
-    base: fpco/stack-build 
-    name: docker-node
-    add:
-      configs: /configs
-#      static: /app/static
