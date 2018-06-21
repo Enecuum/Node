@@ -15,7 +15,6 @@ module Node.Node.BroadcastProcessing (
 
 --
 import              Data.IORef
-import              Data.Serialize
 import qualified    Data.Map as M
 import qualified    Data.Bimap as BI
 import              Lens.Micro

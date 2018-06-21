@@ -67,7 +67,7 @@ getTransactionByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a
 getTransactionByHash db hash ch = return =<< Right <$> B.getTransactionByHashDB db hash
 
 
-getAllTransactions :: ManagerMiningMsg a => PubKey -> Chan a -> IO (Result [Transaction])
+getAllTransactions :: ManagerMiningMsg a => PublicKey -> Chan a -> IO (Result [Transaction])
 getAllTransactions key ch = return $ Left NotImplementedException
 
 
@@ -80,8 +80,8 @@ sendTrans tx ch aInfoCh = try $ do
 sendNewTrans :: ManagerMiningMsg a => Trans -> Chan a -> Chan InfoMsg -> IO (Result Transaction)
 sendNewTrans trans ch aInfoCh = try $ do
   let moneyAmount = (Service.Types.txAmount trans) :: Amount
-  let receiverPubKey = read (recipientPubKey trans) :: PublicKey
-  let ownerPubKey = read (senderPubKey trans) :: PublicKey
+  let receiverPubKey = recipientPubKey trans
+  let ownerPubKey = senderPubKey trans
   timePoint <- getTime
   keyPairs <- getSavedKeyPairs
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
@@ -125,17 +125,16 @@ generateTransactionsForever ch m = try $ forever $ do
                                 threadDelay (10^(6 :: Int))
                                 putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
 
-getNewKey :: IO (Result PubKey)
+getNewKey :: IO (Result PublicKey)
 getNewKey = try $ do
   (KeyPair aPublicKey aPrivateKey) <- generateNewRandomAnonymousKeyPair
   getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
   putStrLn ("Public Key " ++ show aPublicKey ++ " was created")
-  return $ show aPublicKey
+  return aPublicKey
 
 
-getBalance :: DBPoolDescriptor -> PubKey -> Chan InfoMsg -> IO (Result Amount)
+getBalance :: DBPoolDescriptor -> PublicKey -> Chan InfoMsg -> IO (Result Amount)
 getBalance descrDB key aInfoCh = try $ do
-    let pKey = read key
     stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
     result  <- getBalanceForKey descrDB pKey
     endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
@@ -157,10 +156,10 @@ getSavedKeyPairs = do
           return pairs
 
 
-getPublicKeys :: IO (Result [PubKey])
+getPublicKeys :: IO (Result [PublicKey])
 getPublicKeys = try $ do
   pairs <- getSavedKeyPairs
-  return $ map (show . fst) pairs
+  return $ map fst pairs
 
 
 sendMetrics :: Transaction -> Chan InfoMsg -> IO ()

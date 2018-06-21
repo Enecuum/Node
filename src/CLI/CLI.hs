@@ -14,10 +14,11 @@ import Control.Concurrent
 import Node.Node.Types
 import Service.InfoMsg
 import Service.Types
+import Service.Types.PublicPrivateKeyPair (PublicKey)
 import CLI.Common
 import Service.Transaction.Storage (DBPoolDescriptor(..))
 
-data Flag = Key | ShowKey | Balance PubKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages deriving (Eq, Show)
+data Flag = Key | ShowKey | Balance PublicKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages deriving (Eq, Show)
 
 
 options :: [OptDescr Flag]
