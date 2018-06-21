@@ -113,7 +113,7 @@ addMicroblockToDB db m  =  do
     (macroblockClosed, microblockNew) <- checkMacroblock db (_keyBlock m) (rHash m)
     if microblockNew then do
       writeMicroblockDB (poolMicroblock db) m
-      writeTransactionDB (poolTransaction db) txs
+      writeTransactionDB (poolTransaction db) txs (rHash m)
       if macroblockClosed then do
         runLedger db m
         deleteMacroblockDB db (_keyBlock m) -- delete entry from Macroblock table
@@ -135,9 +135,10 @@ writeMicroblockDB db m = do
   withResource db fun
 
 
-writeTransactionDB :: Pool Rocks.DB -> [Transaction] -> IO ()
-writeTransactionDB dbTransaction tx = do
-  let txKeyValue = map (\t -> (rHash t, rValue t) ) tx
+writeTransactionDB :: Pool Rocks.DB -> [Transaction] -> BC.ByteString -> IO ()
+writeTransactionDB dbTransaction tx hashOfMicroblock = do
+  let txInfo = \tx1 num -> TransactionInfo tx1 hashOfMicroblock num
+  let txKeyValue = map (\t,n -> (rHash t, rValue (txInfo t n)) ) zip tx [1..]
   let fun = (\db -> Rocks.write db def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) txKeyValue))
   withResource dbTransaction fun
 
