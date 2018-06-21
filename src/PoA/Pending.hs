@@ -51,7 +51,8 @@ pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
         aBlockChan <- dupChan aMicroblockChan
         -- перепаковка блоков
         forever $ readChan aBlockChan >>= \case
-            Microblock _ _ _ aTransactions _ ->
+            Microblock _ _ _ aTransactions _ -> do
+                writeLog aInfoChan [PendingTag, InitTag] Info "Repacking of transactions"
                 writeChan aChan $ RemoveTransactions aTransactions
 
     -- перепаковка транзакций
