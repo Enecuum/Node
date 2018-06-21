@@ -42,6 +42,7 @@ data LogingTag
     | ServePoATag
     | ServerBootNodeTag
     | GCTag
+    | PendingTag
     | RegularTag
     | InitTag
   deriving (Show, Enum)

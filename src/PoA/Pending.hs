@@ -13,6 +13,8 @@ import Data.Foldable
 
 import Control.Monad.Fix
 import Service.Types.PublicPrivateKeyPair
+import Service.InfoMsg
+import Node.Data.GlobalLoging
 -- актор
 -- данные актора
 -- команды для актора:
@@ -41,25 +43,32 @@ data PendingAction where
 data Pending = Pending (Seq (Transaction, TimeSpec)) (Seq (Transaction, TimeSpec))
 
 
-pendingActor :: Chan PendingAction -> Chan Microblock -> Chan Transaction -> IO ()
-pendingActor aChan aMicroblockChan aTransactionChan = do
-
+pendingActor :: Chan PendingAction -> Chan Microblock -> Chan Transaction -> Chan InfoMsg -> IO ()
+pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
+{-
+    writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for microblocs"
     void . forkIO $ do
         aBlockChan <- dupChan aMicroblockChan
         -- перепаковка блоков
         forever $ readChan aBlockChan >>= \case
-            Microblock _ _ _ aTransactions _ ->
+            Microblock _ _ _ aTransactions _ -> do
+                writeLog aInfoChan [PendingTag, InitTag] Info "Repacking of transactions"
                 writeChan aChan $ RemoveTransactions aTransactions
-
+-}
     -- перепаковка транзакций
+    writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for transactions"
     void . forkIO $ forever $ forever $ readChan aTransactionChan >>=
         writeChan aChan . AddTransaction
 
     -- основное тело актора
+    writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for commands"
+
     void $ loop $ Pending Empty Empty
   where
     loop (Pending aNewTransaactions aOldTransactions) = readChan aChan >>= \case
         AddTransaction aTransaction -> do
+            writeLog aInfoChan [PendingTag] Info $
+                "Add transaction to pending" ++ show aTransaction
             aNaw <- getTime Realtime
             let aSizeOfOldTransactions = S.length aOldTransactions
                 aSizeOfNewTransactions = S.length aNewTransaactions
@@ -69,26 +78,31 @@ pendingActor aChan aMicroblockChan aTransactionChan = do
                 aFilter :: Seq (Transaction, TimeSpec) -> Seq (Transaction, TimeSpec)
                 aFilter = S.filter (\s -> average' aNaw s < aAverage)
 
-            if  | aSize < 500                  ->
+            if  | aSize < 500                  -> do
+                    writeLog aInfoChan [PendingTag] Info "Pending size < 500"
                     loop $ Pending
                         (aNewTransaactions :|> (aTransaction, aNaw))
                         aOldTransactions
-                | aSizeOfOldTransactions > 400 ->
+                | aSizeOfOldTransactions > 400 -> do
+                    writeLog aInfoChan [PendingTag] Info "A sizi of old transaction < 400"
                     loop $ Pending
                         (aNewTransaactions :|> (aTransaction, aNaw))
                         (aFilter aOldTransactions)
-                | otherwise                    ->
+                | otherwise                    -> do
+                    writeLog aInfoChan [PendingTag] Info "Clearing of pending"
                     loop $ Pending
                         (aFilter aNewTransaactions :|> (aTransaction, aNaw))
                         (aFilter aOldTransactions)
-
+{-
         -- Чистка транзакций по признаку вхождения в блок
         RemoveTransactions  aTransactions           -> do
+            writeLog aInfoChan [PendingTag] Info $ "Remove transactions from pending. From pendig."
             let aFilter = S.filter (\(t, _) -> t `notElem` aTransactions)
             loop $ Pending (aFilter aNewTransaactions) (aFilter aOldTransactions)
-
+-}
         -- запрос транзакции
         GetTransaction      aCount aResponseChan    -> do
+            writeLog aInfoChan [PendingTag] Info $ "Request " ++ show aCount ++ " transactions from pending"
             let aSizeOfOldTransactions = S.length aOldTransactions
                 aSizeOfNewTransactions = S.length aNewTransaactions
                 aSize = aSizeOfNewTransactions + aSizeOfOldTransactions

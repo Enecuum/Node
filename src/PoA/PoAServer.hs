@@ -70,7 +70,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. servePoA: a port is " ++ show aRecivePort
     aPendingChan <- newChan
-    void $ forkIO $ pendingActor aPendingChan aMicroblockChan aRecvChan
+    void $ forkIO $ pendingActor aPendingChan aMicroblockChan aRecvChan aInfoChan
     runServer aRecivePort $ \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
@@ -102,9 +102,10 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
                     aTmpChan <- newChan
                     writeChan aPendingChan $ GetTransaction aNum aTmpChan
                     aTransactions <- readChan aTmpChan
-                    forM_ (take aNum $ cycle aTransactions) $ \aTransaction  -> do
-                        writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
-                        WS.sendTextData aConnect $ A.encode $ ResponseTransaction aTransaction
+                    when (not $ null aTransactions) $ do
+                        forM_ (take aNum $ cycle aTransactions) $ \aTransaction  -> do
+                            writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
+                            WS.sendTextData aConnect $ A.encode $ ResponseTransaction aTransaction
                 MsgMicroblock aMicroblock
                     | not aOk -> do
                         aSenderId <- readMVar aId
