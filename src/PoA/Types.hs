@@ -17,6 +17,7 @@ import              Data.Aeson
 import              Data.String
 import              GHC.Generics
 import qualified    Data.Text as T
+import              Data.Either
 import              Data.Hex
 import              Control.Monad.Extra
 -- import              Data.Either
@@ -153,6 +154,10 @@ data NNToPPMessage
 
 
 
+
+--myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
+
+
 myUnhex :: IsString a => T.Text -> Either a String
 myUnhex aString = case unhex $ T.unpack aString of
     Just aDecodeString  -> Right aDecodeString
@@ -211,6 +216,7 @@ instance FromJSON PPToNNMessage where
                 aMicroblock <- aMessage .: "microblock"
                 return $ MsgMicroblock aMicroblock
 
+
             _ -> mzero
 
     parseJSON _ = mzero -- error $ show a
@@ -223,6 +229,7 @@ decodeList aList
     | all isRight aDecodeList   = rights aDecodeList
     | otherwise                 = error "Can not decode all transactions in Microblock"
     where aDecodeList = myUnhex <$> aList
+
 
 
 instance ToJSON NNToPPMessage where
@@ -266,7 +273,7 @@ instance ToJSON NNToPPMessage where
     toJSON (MsgBroadcastMsg aMessage (IdFrom aPPId)) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("Broadcast"  :: String),
-        "mgs"       .= aObj,
+        "msg"       .= aObj,
         "idFrom"    .= ppIdToString aPPId
       ]
       where

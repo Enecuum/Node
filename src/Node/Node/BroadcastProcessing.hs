@@ -102,6 +102,13 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
                 forM_ aFilteredNode $ \aChan ->
                     writeChan aChan $ MsgBroadcastMsg aBroadcastMsg aIdFrom
 
+
+            BroadcastPPMsgId aBroadcastMsg aIdFrom@(IdFrom aIdPPFrom) aIdTo@(IdTo aIdPPTo) -> do
+                aTime <- getTime Realtime
+
+                whenJust (aData^.ppNodes.at (aIdPPTo)) $ \aNode -> do
+                    writeChan (aNode^.ppChan) $ MsgMsgToPP aIdPPTo aBroadcastMsg
+
             -- add new transaction in pending
             BroadcastTransaction aTransaction _ -> do
                 writeChan (aData^.transactions) aTransaction
