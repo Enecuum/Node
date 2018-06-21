@@ -3,9 +3,8 @@ FROM terrorjack/meikyu:ghc-8.2.2
 ADD . /usr/src/app
 WORKDIR /usr/src/app
 
-RUN apk --no-cache add --virtual build-dependencies build-base linux-headers rocksdb-dev && \
-    stack build --no-docker && \
-    apk del build-dependencies
+RUN apk --no-cache add rocksdb-dev
+RUN stack build --no-docker
 
 
 ENTRYPOINT if [ "$bootnode" = true ] ; then \
