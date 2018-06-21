@@ -1,4 +1,4 @@
-{-# LANGUAGE PackageImports, ScopedTypeVariables, FlexibleContexts #-}
+{-# LANGUAGE PackageImports, ScopedTypeVariables, FlexibleContexts, DeriveGeneric, DeriveAnyClass #-}
 module Service.Transaction.Storage where
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import Service.System.Directory (getLedgerFilePath, getTransactionFilePath, getMicroblockFilePath)
@@ -21,21 +21,29 @@ import Data.Time.Clock (getCurrentTime, UTCTime)
 -- import qualified Database.Persist.Postgresql as Post
 -- import qualified Database.PostgreSQL.Simple as Post
 import qualified Data.ByteString.Internal as BSI
+import Control.Monad.Trans.State (StateT, evalStateT, put, get)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad (replicateM)
+import Data.Aeson
+import GHC.Generics
+
 
 data DBPoolDescriptor = DBPoolDescriptor {
     poolTransaction :: Pool Rocks.DB
   , poolMicroblock :: Pool Rocks.DB
   , poolLedger :: Pool Rocks.DB
-  -- , poolMacroblock :: Pool Post.Connection
+  , poolMacroblock :: Pool Rocks.DB
   }
 
-data MacroblockDB = MacroblockDB {
+data Macroblock = Macroblock {
   keyBlock :: BC.ByteString,
-  microblockNumber :: Int,
-  requiredNumberOfMicroblocks :: Int,
-  hashOfMicroblock :: BC.ByteString,
-  timeOfMicroblockArrived :: UTCTime
-                                 }
+  -- microblockNumber :: Int,
+  -- requiredNumberOfMicroblocks :: Int,
+  hashOfMicroblock :: [BC.ByteString]
+  -- timeOfMicroblockArrived :: UTCTime
+                                 } --deriving (Generic, Eq, Ord, Show, ToJSON, FromJSON)
+
+
 
 -- for rocksdb Transaction and Microblock
 rHash key = SHA1.hash . BC.pack . show $ key
@@ -54,21 +62,26 @@ connectDB = do
   aTx <- getTransactionFilePath
   aMb <- getMicroblockFilePath
   aLd <- getLedgerFilePath
-  let pathTimeMicroblockArrived = ""
+  let aMacroblock = ""
   poolTransaction <- createPool (Rocks.open aTx def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
   poolMicroblock  <- createPool (Rocks.open aMb def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
   poolLedger      <- createPool (Rocks.open aLd def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
+  poolMacroblock  <- createPool (Rocks.open aMacroblock def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
   -- putStrLn "DBTransactionException"
   -- sleepMs 5000
   -- throw DBTransactionException
-  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger)
+  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger poolMacroblock)
 
 
-getAllTransactions ::  IO [BSI.ByteString]
-getAllTransactions = runResourceT $ do
-  let pathT = "/tmp/haskell-rocksDB6"
+
+
+
+
+getNTransactions ::  IO [BSI.ByteString]
+getNTransactions = runResourceT $ do
+  let pathT = "./try.here" --"/tmp/haskell-rocksDB6"
   (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
-  getAllValues db
+  getNValues db 100
 
 test01 = do
   let path = "/tmp/haskell-rocksDB6"
@@ -76,9 +89,36 @@ test01 = do
   Rocks.write db def{Rocks.sync = True} [ Rocks.Put (BC.pack "a") (BC.pack "one")
                                         , Rocks.Put (BC.pack "b") (BC.pack "two")
                                         , Rocks.Put (BC.pack "c") (BC.pack "three") ]
+  Rocks.write db def{Rocks.sync = True} [ Rocks.Put (BC.pack "a") (BC.pack "4")]
   result <- Rocks.get db Rocks.defaultReadOptions (BC.pack "a")
   Rocks.close db
   putStrLn $ show result
+
+
+--genNMicroBlocksV1 :: Int -> IO [MicroblockV1]
+-- getNValuesTN n = evalStateT (replicateM n getNValuesT) BC.empty
+
+
+getNValuesT :: StateT Rocks.Iterator IO BSI.ByteString
+getNValuesT = do
+  it <- get
+  Just v <- lift $ Rocks.iterValue it
+  lift $ Rocks.iterNext it
+  put it
+  return v
+
+getNValues :: MonadResource m => Rocks.DB -> p -> m [BSI.ByteString]
+getNValues db n = do
+  it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+  Rocks.iterFirst it
+  Just v1 <- Rocks.iterValue it
+
+  -- vs <- evalStateT (replicateM n getNValuesT) it
+  -- return vs
+
+  Rocks.iterNext it
+  Just v2 <- Rocks.iterValue it
+  return [v1,v2]
 
 
 getAllValues db = do
@@ -88,13 +128,20 @@ getAllValues db = do
 
 
 
+
+
+
+
+
+
+
+
 data SuperException = DBTransactionException
-                  | NotImplementedException -- test
-                  | OtherException
+                    | NotImplementedException -- test
+                    | OtherException
                   deriving (Show)
 
 instance Exception SuperException
-
 
 
 -- FIX change def (5 times)

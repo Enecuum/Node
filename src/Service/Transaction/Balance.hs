@@ -1,4 +1,4 @@
-{-# LANGUAGE PackageImports, FlexibleContexts #-}
+{-# LANGUAGE PackageImports, FlexibleContexts, LambdaCase #-}
 module Service.Transaction.Balance
   ( getBalanceForKey,
     addMicroblockToDB,
@@ -10,7 +10,7 @@ import qualified Data.ByteString.Char8 as BC hiding (map)
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import qualified Data.HashTable.IO as H
 import Control.Monad
-import Service.Transaction.Storage (DBPoolDescriptor(..),DBPoolDescriptor(..),rHash, rValue, urValue, unHtK, unHtA)
+import Service.Transaction.Storage (DBPoolDescriptor(..),DBPoolDescriptor(..),rHash, rValue, urValue, unHtK, unHtA, Macroblock(..))
 import Data.Default (def)
 import Data.Hashable
 import Data.Pool
@@ -28,13 +28,13 @@ getBalanceForKey db key = do
 
 updateBalanceTable :: BalanceTable -> Transaction -> IO ()
 updateBalanceTable ht (Transaction fromKey toKey am _ _ _) = do
-                                                    v1 <- H.lookup ht $ fromKey
-                                                    v2 <- H.lookup ht $ toKey
-                                                    case (v1,v2) of
-                                                      (Nothing, _)       -> do return ()
-                                                      (_, Nothing)       -> do return ()
-                                                      (Just balanceFrom, Just balanceTo) -> do H.insert ht fromKey (balanceFrom - am)
-                                                                                               H.insert ht toKey (balanceTo + am)
+  v1 <- H.lookup ht $ fromKey
+  v2 <- H.lookup ht $ toKey
+  case (v1,v2) of
+    (Nothing, _)       -> do return ()
+    (_, Nothing)       -> do return ()
+    (Just balanceFrom, Just balanceTo) -> do H.insert ht fromKey (balanceFrom - am)
+                                             H.insert ht toKey (balanceTo + am)
 
 
 
@@ -58,18 +58,6 @@ getPubKeys :: Transaction -> [PublicKey]
 getPubKeys (Transaction fromKey toKey _ _ _ _) = [fromKey, toKey]
 
 
-microblockIsExpected :: Microblock -> Bool
-microblockIsExpected = undefined
-
-
-run :: Microblock -> DBPoolDescriptor -> Microblock -> IO ()
-run m = if (not $ microblockIsExpected m) then error "We are expecting another microblock" else runLedger
-
-
--- run :: DBPoolDescriptor -> [Microblock] -> IO ()
--- run db m = do
---   let keys = _teamKeys
-
 
 runLedger :: DBPoolDescriptor -> Microblock -> IO ()
 runLedger db m = do
@@ -79,12 +67,45 @@ runLedger db m = do
     writeLedgerDB (poolLedger db) ht
 
 
+checkMacroblock :: DBPoolDescriptor -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool)
+checkMacroblock db keyBlockHash blockHash = do --undefined
+    let fun = (\db -> Rocks.get db Rocks.defaultReadOptions keyBlockHash)
+    v  <- withResource (poolMacroblock db) fun
+    case v of Nothing -> do
+                           let key = keyBlockHash
+                               val = blockHash
+                           let fun = (\db -> Rocks.write db def{Rocks.sync = True} [ Rocks.Put key val ])
+                           withResource (poolMacroblock db) fun
+                           return (False, True)
+              Just a -> do
+                           let microblockIsAlreadyInMacroblock = True
+                           if microblockIsAlreadyInMacroblock
+                             then return (False, False)
+                             else do
+                                     return (False, False)
+
+
 addMicroblockToDB :: DBPoolDescriptor -> Microblock -> IO ()
 addMicroblockToDB db m  =  do
+-- FIX: verify signature
     let txs = getTxsMicroblock m
+
 -- Write to db atomically
-    writeMicroblockDB (poolMicroblock db) m
-    writeTransactionDB (poolTransaction db) txs
+    (macroblockClosed, microblockNew) <- checkMacroblock db (_keyBlock m) (rHash m)
+    if microblockNew then do
+      writeMicroblockDB (poolMicroblock db) m
+      writeTransactionDB (poolTransaction db) txs
+      if macroblockClosed then do
+        runLedger db m
+        deleteMacroblockDB db (_keyBlock m) -- delete entry from Macroblock table
+      else return ()
+    else return ()
+
+
+deleteMacroblockDB :: DBPoolDescriptor -> BC.ByteString -> IO ()
+deleteMacroblockDB db keyBlockHash = do --undefined
+    let fun = (\db -> Rocks.delete db Rocks.defaultWriteOptions keyBlockHash)
+    withResource (poolMacroblock db) fun
 
 
 writeMicroblockDB :: Pool Rocks.DB -> Microblock -> IO ()
