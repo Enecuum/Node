@@ -76,7 +76,7 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
 
               balanceReq = toMethod "enq_getBalance" f (Required "address" :+: ())
                 where
-                  f :: PubKey -> RpcResult IO Amount
+                  f :: PublicKey -> RpcResult IO Amount
                   f key = handle $ getBalance descrDB key aInfoCh
 
               getBlock = toMethod "enq_getBlockByHash" f (Required "hash" :+: ())
@@ -91,7 +91,7 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
 
               getFullWallet = toMethod "enq_getAllTransactions" f (Required "address" :+: ())
                 where
-                  f :: PubKey -> RpcResult IO [Transaction]
+                  f :: PublicKey -> RpcResult IO [Transaction]
                   f key = handle $ getAllTransactions key ch
 
 ------------- test functions

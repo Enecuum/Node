@@ -93,11 +93,7 @@ data KeyPair    = KeyPair { getPub :: PublicKey, getPriv :: PrivateKey }
 
 
 instance Read PublicKey where
-    readPrec =
-        parens
-        ( do (Ident s) <- lexP 
-             return (publicKey256k1 $ base58ToInteger s)
-        )
+    readsPrec _ value = [(publicKey256k1 $ base58ToInteger value,[])]
             
 instance Read PrivateKey where
     readPrec =

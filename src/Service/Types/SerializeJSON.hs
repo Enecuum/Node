@@ -13,8 +13,11 @@ import qualified "cryptonite"   Crypto.PubKey.ECC.ECDSA     as ECDSA
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
 import Data.ByteString (ByteString)
+import Data.Maybe (fromJust)
 import Data.Text (Text, pack, unpack)
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import qualified Data.ByteString.Base16 as B
+import           Data.ByteString.Base58 
 import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
 
 instance FromJSON Trans
@@ -44,15 +47,15 @@ decodeFromText :: (Monad m) => Text -> m ByteString
 decodeFromText = return . fst . B.decode . T.encodeUtf8
 
 
-instance ToJSON Hash where
-  toJSON (Hash h) = object [
-                  "hash" .= encodeToText h
-                ]
+instance ToJSON Hash
+instance FromJSON Hash
 
-instance FromJSON Hash where
-  parseJSON (Object v) = Hash <$> ((v .: "hash") >>= decodeFromText)
-  parseJSON _          = error "Hash JSON parse error"
+instance ToJSON ByteString where
+  toJSON h = String $ decodeUtf8 $ encodeBase58 bitcoinAlphabet h
 
+instance FromJSON ByteString where	 
+  parseJSON (String s) = return $ fromJust $ decodeBase58 bitcoinAlphabet $ encodeUtf8 s
+  parseJSON _          = error "Wrong object format"
 
 instance ToJSON TransactionInfo where
   toJSON info = object [

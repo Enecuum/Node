@@ -25,7 +25,7 @@ import Service.System.Directory (getTime, getKeyFilePath)
 import Service.Network.WebSockets.Client
 import LightClient.RPC
 
-data Flag = Key | ShowKey | Balance PubKey | Send Trans | Block Hash | Tx Hash | Wallet PubKey | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages | Quit deriving (Eq, Show)
+data Flag = Key | ShowKey | Balance PublicKey | Send Trans | Block Hash | Tx Hash | Wallet PublicKey | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages | Quit deriving (Eq, Show)
 
 data ArgFlag = Port PortNumber | Host HostName | Version deriving (Eq, Show)
 
@@ -39,12 +39,12 @@ args = [
 options :: [OptDescr Flag]
 options = [
     Option ['K'] ["get-public-key"] (NoArg Key) "get public key"
-  , Option ['B'] ["get-balance"] (ReqArg (Balance) "publicKey") "get balance for public key"
+  , Option ['B'] ["get-balance"] (ReqArg (Balance . read) "publicKey") "get balance for public key"
   , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
   , Option ['S'] ["send-money-to-from"] (ReqArg (Send . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
   , Option ['U'] ["load-block"] (ReqArg (Block . read) "hash") "get block by hash"
   , Option ['X'] ["get-tx"] (ReqArg (Tx . read) "hash") "get transaction by hash"
-  , Option ['W'] ["load-wallet"] (ReqArg (Wallet) "public key") "gat all transactions in wallet"
+  , Option ['W'] ["load-wallet"] (ReqArg (Wallet . read) "publicKey") "gat all transactions in wallet"
 -- test
   , Option ['G'] ["generate-n-transactions"] (ReqArg (GenerateNTransactions . read) "qTx") "Generate N Transactions"
   , Option ['F'] ["generate-transactions"] (NoArg GenerateTransactionsForever) "Generate Transactions forever"
@@ -128,9 +128,9 @@ getKey = do
 
 sendTrans :: WS.Connection -> Trans -> IO ()
 sendTrans ch trans = do
-  let moneyAmount = (txAmount trans) :: Amount
-  let receiverPubKey = read (recipientPubKey trans) :: PublicKey
-  let ownerPubKey = read (senderPubKey trans) :: PublicKey
+  let moneyAmount = txAmount trans
+  let receiverPubKey = recipientPubKey trans
+  let ownerPubKey = senderPubKey trans
   timePoint <- getTime
   keyPairs <- getSavedKeyPairs
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
@@ -139,6 +139,7 @@ sendTrans ch trans = do
     Just ownerPrivKey -> do
       sign  <- getSignature ownerPrivKey moneyAmount
       let tx  = Transaction ownerPubKey receiverPubKey moneyAmount ENQ timePoint sign
+      print tx
       result <- runExceptT $ newTx ch tx
       case result of
         (Left err) -> putStrLn $ "Send transaction error: " ++ show err
@@ -161,7 +162,7 @@ getSavedKeyPairs = do
           let pairs = map (\x -> (,) (read (x !! 0) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
           return pairs
 
-getBalance :: WS.Connection -> PubKey -> IO ()
+getBalance :: WS.Connection -> PublicKey -> IO ()
 getBalance ch rawKey = do
   result  <- runExceptT $ reqLedger ch rawKey
   case result of
@@ -206,7 +207,7 @@ loadMessages ch = do
     (Right msgs ) -> putStrLn $ "New messages: " ++ (unlines $ map showMsg msgs)
                   where showMsg (MsgTo id m) = "Message from " ++ show id ++ ": " ++ m
 
-getAllTransactions :: WS.Connection -> PubKey -> IO ()
+getAllTransactions :: WS.Connection -> PublicKey -> IO ()
 getAllTransactions ch key = do
   result <- runExceptT $ getAllTxs ch key
   case result of
