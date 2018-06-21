@@ -45,7 +45,7 @@ data Pending = Pending (Seq (Transaction, TimeSpec)) (Seq (Transaction, TimeSpec
 
 pendingActor :: Chan PendingAction -> Chan Microblock -> Chan Transaction -> Chan InfoMsg -> IO ()
 pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
-
+{-
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for microblocs"
     void . forkIO $ do
         aBlockChan <- dupChan aMicroblockChan
@@ -54,7 +54,7 @@ pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
             Microblock _ _ _ aTransactions _ -> do
                 writeLog aInfoChan [PendingTag, InitTag] Info "Repacking of transactions"
                 writeChan aChan $ RemoveTransactions aTransactions
-
+-}
     -- перепаковка транзакций
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for transactions"
     void . forkIO $ forever $ forever $ readChan aTransactionChan >>=
@@ -93,13 +93,13 @@ pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
                     loop $ Pending
                         (aFilter aNewTransaactions :|> (aTransaction, aNaw))
                         (aFilter aOldTransactions)
-
+{-
         -- Чистка транзакций по признаку вхождения в блок
         RemoveTransactions  aTransactions           -> do
             writeLog aInfoChan [PendingTag] Info $ "Remove transactions from pending. From pendig."
             let aFilter = S.filter (\(t, _) -> t `notElem` aTransactions)
             loop $ Pending (aFilter aNewTransaactions) (aFilter aOldTransactions)
-
+-}
         -- запрос транзакции
         GetTransaction      aCount aResponseChan    -> do
             writeLog aInfoChan [PendingTag] Info $ "Request " ++ show aCount ++ " transactions from pending"
