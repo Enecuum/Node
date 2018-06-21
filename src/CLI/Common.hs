@@ -134,7 +134,7 @@ getNewKey = try $ do
 
 
 getBalance :: DBPoolDescriptor -> PublicKey -> Chan InfoMsg -> IO (Result Amount)
-getBalance descrDB key aInfoCh = try $ do
+getBalance descrDB pKey aInfoCh = try $ do
     stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
     result  <- getBalanceForKey descrDB pKey
     endTime <- ( getCPUTimeWithUnit :: IO Millisecond )

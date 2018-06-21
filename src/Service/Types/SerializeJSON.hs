@@ -17,8 +17,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base64 as B
 import Data.Maybe (fromJust)
 import Data.Text (Text, pack, unpack)
-import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import qualified Data.ByteString.Base16 
+import Data.Text.Encoding (decodeUtf8, encodeUtf8) 
 import           Data.ByteString.Base58 
 import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
 
