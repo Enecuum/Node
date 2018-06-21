@@ -139,7 +139,7 @@ writeMicroblockDB db m = do
 writeTransactionDB :: Pool Rocks.DB -> [Transaction] -> BC.ByteString -> IO ()
 writeTransactionDB dbTransaction tx hashOfMicroblock = do
   let txInfo = \tx1 num -> TransactionInfo tx1 hashOfMicroblock num
-  let txKeyValue = map (\t,n -> (rHash t, rValue (txInfo t n)) ) zip tx [1..]
+  let txKeyValue = map (\(t,n) -> (rHash t, rValue (txInfo t n)) ) (zip tx [1..])
   let fun = (\db -> Rocks.write db def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) txKeyValue))
   withResource dbTransaction fun
 
