@@ -79,7 +79,6 @@ genMicroBlock quantityOfTx = do
   let teamKeys = map (\(KeyPair pub _) -> pub) keys
   sign  <- getSignature signerPrivateKey (unlines (map show tx))
   let mb = Microblock {_keyBlock = BC.pack "321",
-                       _signer = signerPublicKey,
                        _sign = sign,
                        _teamKeys = teamKeys,
                        _transactions = tx,

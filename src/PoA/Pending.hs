@@ -49,7 +49,7 @@ pendingActor aChan aMicroblockChan aTransactionChan = do
         aBlockChan <- dupChan aMicroblockChan
         -- blocks re-pack
         forever $ readChan aBlockChan >>= \case
-            Microblock _ _ _ _ aTransactions _ ->
+            Microblock _ _ _ aTransactions _ ->
                 writeChan aChan $ RemoveTransactions aTransactions
 
     -- transactions re-pack

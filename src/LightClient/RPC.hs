@@ -5,8 +5,10 @@ module LightClient.RPC (
         newTx,
         reqLedger,
         getBlock,
+        getMicroblock,
         getTx,
         getAllTxs,
+        getChainInfo,
 
 --test
         genNTx,
@@ -40,14 +42,20 @@ newTxSig = Signature "enq_sendTransaction" ("tx" ::: ())
 reqLedgerSig :: Signature (PublicKey ::: ()) Amount
 reqLedgerSig = Signature "enq_getBalance" ("address" ::: ())
 
-reqGetBlockSig :: Signature (Hash ::: ()) Microblock
+reqGetBlockSig :: Signature (Hash ::: ()) Macroblock
 reqGetBlockSig = Signature "enq_getBlockByHash" ("hash" ::: ())
+
+reqGetMicroblockSig :: Signature (Hash ::: ()) Microblock
+reqGetMicroblockSig = Signature "enq_getMicroblockByHash" ("hash" ::: ())
 
 reqGetTxSig :: Signature (Hash ::: ()) TransactionInfo
 reqGetTxSig = Signature "enq_getTransactionByHash" ("hash" ::: ())
 
 reqGetAllTxsSig :: Signature (PublicKey ::: ()) [Transaction]
 reqGetAllTxsSig = Signature "enq_getAllTransactions" ("address" ::: ())
+
+reqChainInfoSig :: Signature () ChainInfo
+reqChainInfoSig = Signature "enq_getChainInfo" ()
 
 --test
 genNTxSig :: Signature (QuantityTx ::: ()) ()
@@ -72,14 +80,20 @@ newTx h = toFunction (connectionWithTimeOut h) newTxSig
 reqLedger :: WS.Connection -> PublicKey -> Result Amount
 reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
 
-getBlock :: WS.Connection -> Hash -> Result Microblock
+getBlock :: WS.Connection -> Hash -> Result Macroblock
 getBlock h = toFunction (connectionWithTimeOut h) reqGetBlockSig
+
+getMicroblock :: WS.Connection -> Hash -> Result Microblock
+getMicroblock h = toFunction (connectionWithTimeOut h) reqGetMicroblockSig
 
 getTx :: WS.Connection -> Hash -> Result TransactionInfo
 getTx h = toFunction (connectionWithTimeOut h) reqGetTxSig
 
 getAllTxs :: WS.Connection -> PublicKey -> Result [Transaction]
 getAllTxs h = toFunction (connectionWithTimeOut h) reqGetAllTxsSig
+
+getChainInfo :: WS.Connection -> Result ChainInfo
+getChainInfo h = toFunction (connectionWithTimeOut h) reqChainInfoSig
 
 
 --test

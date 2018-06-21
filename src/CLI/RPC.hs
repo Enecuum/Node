@@ -63,7 +63,8 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
                                      Right r -> liftIO $ return r
 
 
-              methods = [createTx , balanceReq, getBlock, getTransaction, getFullWallet
+              methods = [createTx , balanceReq, getBlock, getMicroblock
+                       , getTransaction, getFullWallet, getSystemInfo
 -- test
                        , createNTx, createUnlimTx, sendMsgBroadcast, sendMsgTo, loadMsg
                         ]
@@ -81,6 +82,11 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
 
               getBlock = toMethod "enq_getBlockByHash" f (Required "hash" :+: ())
                 where
+                  f :: Hash ->  RpcResult IO Macroblock
+                  f hash = handle $ getKeyBlockByHash descrDB hash ch
+
+              getMicroblock = toMethod "enq_getMicroblockByHash" f (Required "hash" :+: ())
+                where
                   f :: Hash ->  RpcResult IO Microblock
                   f hash = handle $ getBlockByHash descrDB hash ch
 
@@ -93,6 +99,11 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
                 where
                   f :: PublicKey -> RpcResult IO [Transaction]
                   f key = handle $ getAllTransactions key ch
+
+              getSystemInfo = toMethod "enq_getChainInfo" f ()
+                where
+                  f :: RpcResult IO ChainInfo
+                  f = handle $ getChainInfo ch
 
 ------------- test functions
               createNTx = toMethod "gen_n_tx" f (Required "x" :+: ())

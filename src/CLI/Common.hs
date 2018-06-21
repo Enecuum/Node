@@ -11,9 +11,11 @@ module CLI.Common (
   generateTransactionsForever,
   getNewKey,
   getBlockByHash,
+  getKeyBlockByHash,
   getTransactionByHash,
   getAllTransactions,
   getBalance,
+  getChainInfo,
   getPublicKeys,
 
   CLIException(..),
@@ -61,6 +63,13 @@ loadMessages ch = return $ Left NotImplementedException
 
 getBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result Microblock)
 getBlockByHash db hash ch = return =<< Right <$> B.getBlockByHashDB db hash
+
+getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result Macroblock)
+getKeyBlockByHash db hash ch = return $ Left NotImplementedException
+ --return =<< Right <$> B.getBlockByHashDB db hash
+
+getChainInfo :: ManagerMiningMsg a => Chan a -> IO (Result ChainInfo)
+getChainInfo ch = return $ Left NotImplementedException
 
 
 getTransactionByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result TransactionInfo)

@@ -25,7 +25,11 @@ import Service.System.Directory (getTime, getKeyFilePath)
 import Service.Network.WebSockets.Client
 import LightClient.RPC
 
-data Flag = Key | ShowKey | Balance PublicKey | Send Trans | Block Hash | Tx Hash | Wallet PublicKey | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages | Quit deriving (Eq, Show)
+data Flag = Key | ShowKey | Balance PublicKey | Send Trans 
+          | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey 
+          | GenerateNTransactions QuantityTx | GenerateTransactionsForever 
+          | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages 
+          | Info | Quit deriving (Eq, Show)
 
 data ArgFlag = Port PortNumber | Host HostName | Version deriving (Eq, Show)
 
@@ -42,7 +46,8 @@ options = [
   , Option ['B'] ["get-balance"] (ReqArg (Balance . read) "publicKey") "get balance for public key"
   , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
   , Option ['S'] ["send-money-to-from"] (ReqArg (Send . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
-  , Option ['U'] ["load-block"] (ReqArg (Block . read) "hash") "get block by hash"
+  , Option ['U'] ["load-block"] (ReqArg (Block . read) "hash") "get keyblock by hash"
+  , Option ['O'] ["load-microblock"] (ReqArg (MBlock . read) "hash") "get microblock by hash"
   , Option ['X'] ["get-tx"] (ReqArg (Tx . read) "hash") "get transaction by hash"
   , Option ['W'] ["load-wallet"] (ReqArg (Wallet . read) "publicKey") "gat all transactions in wallet"
 -- test
@@ -51,6 +56,7 @@ options = [
   , Option ['A'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
   , Option ['T'] ["send-message-to"] (ReqArg (SendMessageTo . read) "nodeId message") "Send message to the node"
   , Option ['L'] ["load-new-messages"] (NoArg LoadMessages) "Load new recieved messages"
+  , Option ['I'] ["chain-info"] (NoArg Info) "Get total chain info"
   , Option ['Q'] ["quit"] (NoArg Quit) "exit"
  
   ]
@@ -85,35 +91,25 @@ dispatch :: [Flag] -> HostName -> PortNumber -> IO ()
 dispatch flags h p = 
       case flags of
         (Key : _)                        -> getKey
-        (Balance aPublicKey : _)         -> runClient h (fromEnum p) "" $ \ ch ->
-                                         getBalance ch aPublicKey
-        (Send tx : _)                    -> runClient h (fromEnum p) "" $ \ ch ->
-                                         sendTrans ch tx
+        (Balance aPublicKey : _)         -> withClient $ getBalance aPublicKey
+        (Send tx : _)                    -> withClient $ sendTrans tx
         (ShowKey : _)                    -> showPublicKey
-        (Wallet key : _)                 -> runClient h (fromEnum p) "" $ \ ch ->
-                                         getAllTransactions ch key
-        (Block hash : _)                 -> runClient h (fromEnum p) "" $ \ ch ->
-                                         getBlockByHash ch hash
-        (Tx hash : _)                    -> runClient h (fromEnum p) "" $ \ ch ->
-                                         getTransaction ch hash
+        (Wallet key : _)                 -> withClient $ getAllTransactions key
+        (Block hash : _)                 -> withClient $ getBlockByHash hash
+        (MBlock hash : _)                -> withClient $ getMicroblockByHash hash
+        (Tx hash : _)                    -> withClient $ getTransaction hash
 
 -- test
-        (GenerateNTransactions qTx: _)   -> runClient h (fromEnum p) "" $ \ ch ->
-                                         generateNTransactions ch qTx
-        (GenerateTransactionsForever: _) -> runClient h (fromEnum p) "" $ \ ch ->
-                                         generateTransactionsForever ch
-        (SendMessageBroadcast m : _)     -> runClient h (fromEnum p) "" $ \ ch ->
-                                         sendMessageBroadcast ch m
-        (SendMessageTo mTo : _)          -> runClient h (fromEnum p) "" $ \ ch ->
-                                         sendMessageTo ch mTo
-        (LoadMessages : _)               -> runClient h (fromEnum p) "" $ \ ch ->
-                                         loadMessages ch 
-        (Quit : _)                       -> runClient h (fromEnum p) "" $ \ ch ->
-                                         closeAndExit ch
+        (GenerateNTransactions qTx: _)   -> withClient $ generateNTransactions qTx
+        (GenerateTransactionsForever: _) -> withClient   generateTransactionsForever
+        (SendMessageBroadcast m : _)     -> withClient $ sendMessageBroadcast m
+        (SendMessageTo mTo : _)          -> withClient $ sendMessageTo mTo
+        (LoadMessages : _)               -> withClient   loadMessages 
+        (Info : _)                       -> withClient   getInfo
+        (Quit : _)                       -> exitWith ExitSuccess
         _                                -> putStrLn "Wrong argument"
 
-closeAndExit :: WS.Connection -> IO ()
-closeAndExit ch = exitWith ExitSuccess
+  where withClient f = runClient h (fromEnum p) "" $ \ ch -> f ch
 
 showPublicKey :: IO ()
 showPublicKey = do
@@ -126,8 +122,8 @@ getKey = do
   getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
   putStrLn ("Public Key " ++ show aPublicKey ++ " was created")
 
-sendTrans :: WS.Connection -> Trans -> IO ()
-sendTrans ch trans = do
+sendTrans :: Trans -> WS.Connection -> IO ()
+sendTrans trans ch = do
   let moneyAmount = txAmount trans
   let receiverPubKey = recipientPubKey trans
   let ownerPubKey = senderPubKey trans
@@ -162,16 +158,16 @@ getSavedKeyPairs = do
           let pairs = map (\x -> (,) (read (x !! 0) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
           return pairs
 
-getBalance :: WS.Connection -> PublicKey -> IO ()
-getBalance ch rawKey = do
+getBalance :: PublicKey -> WS.Connection -> IO ()
+getBalance rawKey ch = do
   result  <- runExceptT $ reqLedger ch rawKey
   case result of
     (Left err) -> putStrLn $ "Get Balance error: " ++ show err
     (Right b ) -> putStrLn $ "Balance: " ++ show b
 
 
-generateNTransactions :: WS.Connection -> Int -> IO ()
-generateNTransactions ch qTx = do
+generateNTransactions :: Int -> WS.Connection -> IO ()
+generateNTransactions qTx ch = do
   result <- runExceptT $ genNTx ch qTx
   case result of
     (Left err) -> putStrLn $ "generateNTransactions error: " ++ show err
@@ -185,15 +181,15 @@ generateTransactionsForever ch = do
     (Left err) -> putStrLn $ "generateTransactionsForever error: " ++ show err
     (Right _ ) -> putStrLn   "Transactions request was sent"
 
-sendMessageBroadcast :: WS.Connection -> String -> IO ()
-sendMessageBroadcast ch m = do
+sendMessageBroadcast :: String -> WS.Connection -> IO ()
+sendMessageBroadcast m ch = do
   result <- runExceptT $ newMsgBroadcast ch m
   case result of
     (Left err) -> putStrLn $ "sendMessageBroadcast error: " ++ show err
     (Right _ ) -> putStrLn   "Broadcast message was sent"
 
-sendMessageTo :: WS.Connection -> MsgTo -> IO ()
-sendMessageTo ch mTo = do
+sendMessageTo :: MsgTo -> WS.Connection -> IO ()
+sendMessageTo mTo ch = do
   result <- runExceptT $ newMsgTo ch mTo
   case result of
     (Left err) -> putStrLn $ "sendMessageTo error: " ++ show err
@@ -207,27 +203,38 @@ loadMessages ch = do
     (Right msgs ) -> putStrLn $ "New messages: " ++ (unlines $ map showMsg msgs)
                   where showMsg (MsgTo id m) = "Message from " ++ show id ++ ": " ++ m
 
-getAllTransactions :: WS.Connection -> PublicKey -> IO ()
-getAllTransactions ch key = do
+getAllTransactions :: PublicKey -> WS.Connection -> IO ()
+getAllTransactions key ch = do
   result <- runExceptT $ getAllTxs ch key
   case result of
     (Left err) -> putStrLn $ "getAllTransactions error: " ++ show err
     (Right txs ) -> mapM_ print txs
 
-getTransaction :: WS.Connection -> Hash -> IO ()
-getTransaction ch hash = do
+getTransaction :: Hash -> WS.Connection -> IO ()
+getTransaction hash ch = do
   result <- runExceptT $ getTx ch hash
   case result of
     (Left err) -> putStrLn $ "getTransaction error: " ++ show err
     (Right info ) -> print info
 
-getBlockByHash :: WS.Connection -> Hash -> IO ()
-getBlockByHash ch hash = do
+getBlockByHash :: Hash -> WS.Connection -> IO ()
+getBlockByHash hash ch = do
   result <- runExceptT $ getBlock ch hash
   case result of
     (Left err) -> putStrLn $ "getBlockByHash error: " ++ show err
     (Right block) -> print block
 
+getMicroblockByHash :: Hash -> WS.Connection -> IO ()
+getMicroblockByHash hash ch = do
+  result <- runExceptT $ getMicroblock ch hash
+  case result of
+    (Left err) -> putStrLn $ "getMicroblockByHash error: " ++ show err
+    (Right block) -> print block
 
-
+getInfo :: WS.Connection -> IO ()
+getInfo ch = do
+  result <- runExceptT $ getChainInfo ch
+  case result of
+    (Left err) -> putStrLn $ "getChainInfo error: " ++ show err
+    (Right info) -> print info
 
