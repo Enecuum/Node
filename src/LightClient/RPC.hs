@@ -16,7 +16,6 @@ module LightClient.RPC (
         loadNewMsg,
 
         QuantityTx,
-        PubKey,
         Trans(..)
      ) where
 
@@ -38,7 +37,7 @@ type Result a = RpcResult IO a
 newTxSig :: Signature (Transaction ::: ()) ()
 newTxSig = Signature "enq_sendTransaction" ("tx" ::: ())
 
-reqLedgerSig :: Signature (PubKey ::: ()) Amount
+reqLedgerSig :: Signature (PublicKey ::: ()) Amount
 reqLedgerSig = Signature "enq_getBalance" ("address" ::: ())
 
 reqGetBlockSig :: Signature (Hash ::: ()) Microblock
@@ -47,7 +46,7 @@ reqGetBlockSig = Signature "enq_getBlockByHash" ("hash" ::: ())
 reqGetTxSig :: Signature (Hash ::: ()) TransactionInfo
 reqGetTxSig = Signature "enq_getTransactionByHash" ("hash" ::: ())
 
-reqGetAllTxsSig :: Signature (PubKey ::: ()) [Transaction]
+reqGetAllTxsSig :: Signature (PublicKey ::: ()) [Transaction]
 reqGetAllTxsSig = Signature "enq_getAllTransactions" ("address" ::: ())
 
 --test
@@ -70,7 +69,7 @@ loadNewMsgSig = Signature "load_messages" ()
 newTx :: WS.Connection -> Transaction -> Result ()
 newTx h = toFunction (connectionWithTimeOut h) newTxSig
 
-reqLedger :: WS.Connection -> PubKey -> Result Amount
+reqLedger :: WS.Connection -> PublicKey -> Result Amount
 reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
 
 getBlock :: WS.Connection -> Hash -> Result Microblock
@@ -79,7 +78,7 @@ getBlock h = toFunction (connectionWithTimeOut h) reqGetBlockSig
 getTx :: WS.Connection -> Hash -> Result TransactionInfo
 getTx h = toFunction (connectionWithTimeOut h) reqGetTxSig
 
-getAllTxs :: WS.Connection -> PubKey -> Result [Transaction]
+getAllTxs :: WS.Connection -> PublicKey -> Result [Transaction]
 getAllTxs h = toFunction (connectionWithTimeOut h) reqGetAllTxsSig
 
 

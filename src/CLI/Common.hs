@@ -38,7 +38,7 @@ import Service.Types.SerializeJSON ()
 import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
 import Service.System.Directory (getTime, getKeyFilePath)
-import Service.Transaction.Storage (DBdescriptor(..))
+import Service.Transaction.Storage (DBPoolDescriptor(..))
 import Service.Transaction.Common as B (getBlockByHashDB, getTransactionByHashDB)
 
 type Result a = Either CLIException a
@@ -59,15 +59,15 @@ sendMessageBroadcast ch = return $ return $ Left NotImplementedException
 loadMessages :: ManagerMiningMsg a => Chan a -> IO (Result [MsgTo])
 loadMessages ch = return $ Left NotImplementedException
 
-getBlockByHash :: ManagerMiningMsg a => DBdescriptor -> Hash -> Chan a -> IO (Result Microblock)
+getBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result Microblock)
 getBlockByHash db hash ch = return =<< Right <$> B.getBlockByHashDB db hash
 
 
-getTransactionByHash :: ManagerMiningMsg a => DBdescriptor -> Hash -> Chan a -> IO (Result TransactionInfo)
+getTransactionByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result TransactionInfo)
 getTransactionByHash db hash ch = return =<< Right <$> B.getTransactionByHashDB db hash
 
 
-getAllTransactions :: ManagerMiningMsg a => PubKey -> Chan a -> IO (Result [Transaction])
+getAllTransactions :: ManagerMiningMsg a => PublicKey -> Chan a -> IO (Result [Transaction])
 getAllTransactions key ch = return $ Left NotImplementedException
 
 
@@ -80,8 +80,8 @@ sendTrans tx ch aInfoCh = try $ do
 sendNewTrans :: ManagerMiningMsg a => Trans -> Chan a -> Chan InfoMsg -> IO (Result Transaction)
 sendNewTrans trans ch aInfoCh = try $ do
   let moneyAmount = (Service.Types.txAmount trans) :: Amount
-  let receiverPubKey = read (recipientPubKey trans) :: PublicKey
-  let ownerPubKey = read (senderPubKey trans) :: PublicKey
+  let receiverPubKey = recipientPubKey trans
+  let ownerPubKey = senderPubKey trans
   timePoint <- getTime
   keyPairs <- getSavedKeyPairs
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
@@ -90,7 +90,7 @@ sendNewTrans trans ch aInfoCh = try $ do
       throw WrongKeyOwnerException
     Just ownerPrivKey -> do
       sign  <- getSignature ownerPrivKey moneyAmount
-      let tx  = WithSignature (WithTime timePoint (SendAmountFromKeyToKey ownerPubKey receiverPubKey moneyAmount)) sign
+      let tx  = Transaction ownerPubKey receiverPubKey moneyAmount ENQ timePoint sign
       _ <- sendTrans tx ch aInfoCh
       return tx
 
@@ -125,22 +125,18 @@ generateTransactionsForever ch m = try $ forever $ do
                                 threadDelay (10^(6 :: Int))
                                 putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
 
-getNewKey :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO (Result PubKey)
-getNewKey ch aInfoCh = try $ do
+getNewKey :: IO (Result PublicKey)
+getNewKey = try $ do
   (KeyPair aPublicKey aPrivateKey) <- generateNewRandomAnonymousKeyPair
-  timePoint <- getTime
-  let initialAmount = 0
-  let keyInitialTransaction = WithTime timePoint (RegisterPublicKey aPublicKey initialAmount)
-  writeChan ch $ newTransaction keyInitialTransaction
   getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
-  sendMetrics keyInitialTransaction aInfoCh
-  return $ show aPublicKey
+  putStrLn ("Public Key " ++ show aPublicKey ++ " was created")
+  return aPublicKey
 
-getBalance :: DBdescriptor -> PubKey -> Chan InfoMsg -> IO (Result Amount)
+
+getBalance :: DBPoolDescriptor -> PublicKey -> Chan InfoMsg -> IO (Result Amount)
 getBalance descrDB key aInfoCh = try $ do
-    let pKey = read key
     stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
-    result  <- getBalanceForKey descrDB pKey
+    result  <- getBalanceForKey descrDB key
     endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
     writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
     return result
@@ -160,20 +156,14 @@ getSavedKeyPairs = do
           return pairs
 
 
-getPublicKeys :: IO (Result [PubKey])
+getPublicKeys :: IO (Result [PublicKey])
 getPublicKeys = try $ do
   pairs <- getSavedKeyPairs
-  return $ map (show . fst) pairs
+  return $ map fst pairs
 
 
 sendMetrics :: Transaction -> Chan InfoMsg -> IO ()
-sendMetrics (WithTime _ tx) m = sendMetrics tx m
-sendMetrics (WithSignature tx _) m = sendMetrics tx m
-sendMetrics (RegisterPublicKey k b) m = do
-                           writeChan m $ Metric $ increment "cl.tx.count"
-                           writeChan m $ Metric $ set "cl.tx.wallet" k
-                           writeChan m $ Metric $ gauge "cl.tx.amount" b
-sendMetrics (SendAmountFromKeyToKey o r a) m = do
+sendMetrics (Transaction o r a _ _ _) m = do
                            writeChan m $ Metric $ increment "cl.tx.count"
                            writeChan m $ Metric $ set "cl.tx.wallet" o
                            writeChan m $ Metric $ set "cl.tx.wallet" r

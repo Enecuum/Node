@@ -8,14 +8,15 @@ import              Service.Types.PublicPrivateKeyPair
 import              GHC.Generics
 import              Data.ByteString
 import              Data.List.Split (splitOn)
+import qualified    Data.ByteString.Char8 as C
+
 
 type QuantityTx = Int
-type PubKey = String
 data Trans = Trans {
         txAmount :: Amount
-      , recipientPubKey :: PubKey
-      , senderPubKey :: PubKey
-      , currency :: CryptoCurrency
+      , recipientPubKey :: PublicKey
+      , senderPubKey :: PublicKey
+      , currency :: Currency
       } deriving (Eq, Show, Generic)
 
 type Id = Integer
@@ -28,7 +29,7 @@ instance Read Trans where
     readsPrec _ value =
         case splitOn ":" value of
              [f1, f2, f3, f4] ->
-                 [(Trans (read f1) f2 f3 (read f4), [])]
+                 [(Trans (read f1) (read f2) (read f3) (read f4), [])]
              x -> error $ "Invalid number of fields in input: " ++ show x
 
 
@@ -38,14 +39,17 @@ instance Read MsgTo where
              [t, m] ->  [(MsgTo (read t) m, [])]
              x      -> error $ "Invalid number of fields in input: " ++ show x
 
-data CryptoCurrency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
+data Currency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
+instance Serialize Currency
 
-type Time      = Double
+type Time      = Int -- UnixTimestamp
 type DAG = Gr Transaction Transaction
 
-newtype Hash = Hash ByteString deriving (Ord, Eq, Show, Generic, Read)
+newtype Hash = Hash ByteString deriving (Ord, Eq, Show, Generic)
 instance Serialize Hash
 
+instance Read Hash where
+       readsPrec _ value = return (Hash $ C.pack value,"")
 
 data MicroblockV1 = MicroblockV1{
                   hashCurrentMicroblock :: ByteString, -- hashCurrentMicroblock
@@ -55,6 +59,7 @@ data MicroblockV1 = MicroblockV1{
 
 data Microblock = Microblock{
     _keyBlock :: ByteString, -- hash of key-block
+    _signer :: PublicKey,
     _sign :: Signature,  -- signature for {K_hash, [Tx],}
     _teamKeys :: [PublicKey], -- for reward
     _transactions :: [Transaction],
@@ -66,14 +71,14 @@ instance Serialize Microblock
 instance Show Microblock where
     show _ = "Microblock ??"
 
-data Transaction = WithTime { time :: Time, transaction :: Transaction }
-                 | WithSignature { transaction :: Transaction, signature :: Signature }
-                 | RegisterPublicKey { pubKey :: PublicKey, startWithBalance :: Amount }
-                 | SendAmountFromKeyToKey { owner :: PublicKey, receiver :: PublicKey, amount :: Amount }
---                 | AccumulatorsToInductors { owner :: PublicKey, amount :: Amount }
---                 | InductorsToAccumulators { owner :: PublicKey, amount :: Amount }
---                 | SendInductorsFromKeyToKey { owner :: PublicKey, receiver :: PublicKey, amount :: Amount }
-  deriving ( Generic, Show, Eq, Ord, Read)
+data Transaction = Transaction {
+  _owner     :: PublicKey,
+  _receiver  :: PublicKey,
+  _amount    :: Amount,
+  _currency  :: Currency,
+  _time      :: Time, -- UnixTime format
+  _signature :: Signature
+}  deriving ( Generic, Show, Eq, Ord, Read)
 
 
 instance Serialize Transaction

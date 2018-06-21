@@ -14,10 +14,11 @@ import Control.Concurrent
 import Node.Node.Types
 import Service.InfoMsg
 import Service.Types
+import Service.Types.PublicPrivateKeyPair (PublicKey)
 import CLI.Common
-import Service.Transaction.Storage (DBdescriptor(..))
+import Service.Transaction.Storage (DBPoolDescriptor(..))
 
-data Flag = Key | ShowKey | Balance PubKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages deriving (Eq, Show)
+data Flag = Key | ShowKey | Balance PublicKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages deriving (Eq, Show)
 
 
 options :: [OptDescr Flag]
@@ -34,7 +35,7 @@ options = [
   ]
 
 
-serveCLI :: ManagerMiningMsg a => DBdescriptor -> Chan a -> Chan InfoMsg -> IO ()
+serveCLI :: ManagerMiningMsg a => DBPoolDescriptor -> Chan a -> Chan InfoMsg -> IO ()
 serveCLI descrDB ch aInfoCh = do
       putStrLn $ usageInfo "Usage: " options
       forever $ do
@@ -47,7 +48,7 @@ serveCLI descrDB ch aInfoCh = do
           dispatch :: [Flag] -> IO ()
           dispatch flags = do
             case flags of
-              (Key : _)                        -> getNewKey ch aInfoCh >>= handle
+              (Key : _)                        -> getNewKey >>= handle
               (GenerateNTransactions qTx: _)   -> generateNTransactions qTx ch aInfoCh >>= handle
               (GenerateTransactionsForever: _) -> generateTransactionsForever ch aInfoCh >>= handle
               (Send tx : _)                    -> sendNewTrans tx ch aInfoCh >>= handle

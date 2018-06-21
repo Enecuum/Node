@@ -10,11 +10,11 @@ module Service.System.Directory (
 import System.FilePath.Posix (takeDirectory)
 import System.Directory      (getHomeDirectory, createDirectoryIfMissing)
 import System.FilePath       (pathSeparator)
-import Data.Time.Clock       (getCurrentTime, utctDayTime)
+import Data.UnixTime        
 
 
-getTime :: IO Double
-getTime = fromRational . toRational . utctDayTime <$> getCurrentTime
+getTime :: IO Int
+getTime = fromEnum <$> utSeconds <$> getUnixTime
 
 getEnecuumDir :: IO String
 getEnecuumDir = do
