@@ -269,7 +269,7 @@ instance ToJSON NNToPPMessage where
     toJSON (MsgBroadcastMsg aMessage (IdFrom aPPId)) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("Broadcast"  :: String),
-        "mgs"       .= aObj,
+        "msg"       .= aObj,
         "idFrom"    .= ppIdToString aPPId
       ]
       where
