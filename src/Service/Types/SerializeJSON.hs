@@ -12,11 +12,13 @@ import              Data.Aeson.Types (typeMismatch)
 import qualified "cryptonite"   Crypto.PubKey.ECC.ECDSA     as ECDSA
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
+import Control.Monad
 import Data.ByteString (ByteString)
+import qualified Data.ByteString.Base64 as B
 import Data.Maybe (fromJust)
 import Data.Text (Text, pack, unpack)
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import qualified Data.ByteString.Base16 as B
+import qualified Data.ByteString.Base16 
 import           Data.ByteString.Base58 
 import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
 
@@ -43,8 +45,11 @@ instance ToJSON PrivateKey
 encodeToText :: ByteString -> Text
 encodeToText = T.decodeUtf8 . B.encode
 
-decodeFromText :: (Monad m) => Text -> m ByteString
-decodeFromText = return . fst . B.decode . T.encodeUtf8
+
+decodeFromText :: (MonadPlus m) => Text -> m ByteString
+decodeFromText aStr = case B.decode . T.encodeUtf8 $ aStr of
+    Right a -> return a
+    Left _  -> mzero
 
 
 instance ToJSON Hash
@@ -74,54 +79,18 @@ instance FromJSON TransactionInfo where
 
 
 instance ToJSON Microblock where
-  toJSON aBlock = undefined
-{-
-      object [
-        "msg" := object [
-            "K_hash"  := _keyBlock aBlock,
-            "wallets" := _teamKeys aBlock,
-            "Tx"      := _transactions aBlock,
-          ]
+  toJSON aBlock = object [
+        "msg" .= object [
+            "K_hash"  .= encodeToText (_keyBlock aBlock),
+            "signer"  .= _signer aBlock,
+            "wallets" .= _teamKeys aBlock,
+            "Tx"      .= _transactions aBlock,
+            "uuid"    .= _numOfBlock aBlock
+          ],
+        "sign" .= _sign aBlock
     ]
--}
-{-
 
-data Microblock = Microblock{
-    _keyBlock :: ByteString, -- hash of key-block
-    _signer :: PublicKey,
-    _sign :: Signature,  -- signature for {K_hash, [Tx],}
-    _teamKeys :: [PublicKey], -- for reward
-    _transactions :: [Transaction]}
-  deriving (Eq, Generic, Ord, Read)
 
-{
-    "msg":{
-        "K_hash":"SoMeBaSe64StRinG==",
-        "wallets":[
-            "SoMeBaSe64StRinG==",
-            "SoMeBaSe64StRinG==",
-            ...
-        ],
-        "Tx":[{
-                "from":"SoMeBaSe64StRinG==",
-                "to":"SoMeBaSe64StRinG==",
-                "amount":<uint>,
-                "uuid":"SoMeBaSe64StRinG=="
-            },
-            ...
-        ],
-        "i":<uint>
-    },
-    "sign":"SoMeBaSe64StRinG=="
-}
--}
-{-
-object [
-                   "curr"  .= encodeToText (hashCurrentMicroblock block)
-                 , "prev"  .= encodeToText (hashPreviousMicroblock block)
-                 , "txs"   .= trans block
-                 ]
--}
 instance FromJSON MicroblockV1 where
   parseJSON (Object v) = undefined
       {-MicroblockV1
@@ -130,13 +99,21 @@ instance FromJSON MicroblockV1 where
                            <*> v .: "txs"
 -}
 
+
 instance FromJSON Microblock where
-  parseJSON (Object v) = undefined
-      {-MicroblockV1
-                           <$> ((v .: "curr") >>= decodeFromText)
-                           <*> ((v .: "prev") >>= decodeFromText)
-                           <*> v .: "txs"
--}
+  parseJSON (Object v) = do
+      aMsg  <- v .: "msg"
+      aSign <- v .: "sign"
+      case aMsg of
+        Object aBlock -> do
+            aWallets <- aBlock .: "wallets"
+            aTx      <- aBlock .: "Tx"
+            aUuid    <- aBlock .: "i"
+            aSigner  <- aBlock .: "signer"
+            aKhash   <- decodeFromText =<< aBlock .: "K_hash"
+            return $ Microblock aKhash aSigner aSign aWallets aTx aUuid
+        a -> mzero
+  parseJSON _ = mzero
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [

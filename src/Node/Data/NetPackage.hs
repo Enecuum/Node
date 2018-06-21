@@ -240,6 +240,12 @@ data instance BroadcastThingLvl MiningLvl where
         -> IdFrom
         -> BroadcastThingLvl MiningLvl
 
+    BroadcastPPMsgId
+        :: B.ByteString
+        -> IdFrom
+        -> IdTo
+        -> BroadcastThingLvl MiningLvl
+
     BroadcastTransaction
         ::  Transaction
         ->  Maybe NodeId

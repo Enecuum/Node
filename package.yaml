@@ -49,6 +49,7 @@ dependencies:
 - cryptonite
 - base16-bytestring
 - base58-bytestring
+- base64-bytestring
 - arithmoi
 - directory
 - filepath
@@ -87,8 +88,14 @@ dependencies:
 - resourcet
 - retry
 - exceptions
-- MonadCatchIO-transformers
+# - MonadCatchIO-transformers
+- hashable
+#- postgresql-simple
+- resource-pool
+#- persistent-postgresql
+#- mysql
 - unix-time
+
 
 library:
   source-dirs: src

@@ -16,7 +16,7 @@ import Service.InfoMsg
 import Service.Types
 import Service.Types.PublicPrivateKeyPair (PublicKey)
 import CLI.Common
-import Service.Transaction.Storage (DBdescriptor(..))
+import Service.Transaction.Storage (DBPoolDescriptor(..))
 
 data Flag = Key | ShowKey | Balance PublicKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages deriving (Eq, Show)
 
@@ -35,7 +35,7 @@ options = [
   ]
 
 
-serveCLI :: ManagerMiningMsg a => DBdescriptor -> Chan a -> Chan InfoMsg -> IO ()
+serveCLI :: ManagerMiningMsg a => DBPoolDescriptor -> Chan a -> Chan InfoMsg -> IO ()
 serveCLI descrDB ch aInfoCh = do
       putStrLn $ usageInfo "Usage: " options
       forever $ do

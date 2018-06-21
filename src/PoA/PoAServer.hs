@@ -2,7 +2,6 @@
 module PoA.PoAServer (
         servePoA
     ,   serverPoABootNode
-    ,   test
   )  where
 
 
@@ -29,8 +28,6 @@ import              Control.Concurrent.Async
 import              Node.Data.Key
 import              Data.Maybe()
 
-test :: Either String PPToNNMessage
-test = A.eitherDecodeStrict "{\"blockHash\":\"AAAA\",\"previousHash\":\"AAAA\",\"tag\":\"Msg\",\"transactions\":[\"0040E631E1AFED9DCA0221D6D72D6FEA914A63DD43135217580AADCB9BB6F85E8C5B9563EBDB271FFF423701000000000000001C\"],\"type\":\"MicroblockV1\"}"
 
 serverPoABootNode :: PortNumber -> Chan InfoMsg -> Chan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do

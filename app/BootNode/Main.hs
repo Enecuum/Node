@@ -20,12 +20,12 @@ import              Boot.Boot
 import              Boot.Types
 import              Node.Lib
 import              Data.Aeson
-import              Service.Transaction.Storage (startDB)
+import              Service.Transaction.Common (connectOrRecoveryConnect)
 
 
 main :: IO ()
 main =  do
-      putStrLn "testNet 15/06/2017 08:40"
+      putStrLn  "testNet 18/06/2017 10:50"
       enc <- L.readFile "configs/config.json"
       case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
@@ -34,7 +34,7 @@ main =  do
             exitCh <- newChan
             answerCh <- newChan
             aInfoChan <- newChan
-            descrDB   <- startDB
+            descrDB   <- connectOrRecoveryConnect
             poa_p   <- try (getEnv "poaPort") >>= \case
                     Right item              -> return $ read item
                     Left (_::SomeException) -> return $ poaPort conf

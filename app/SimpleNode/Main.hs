@@ -25,7 +25,7 @@ import              Data.IP
 import              Data.Aeson (decode)
 import              Data.Aeson.Encode.Pretty (encodePretty)
 import qualified    Data.ByteString.Lazy as L
-import              Service.Transaction.Storage (startDB) --(DBdescriptor(..), startDB)
+import              Service.Transaction.Storage (connectOrRecoveryConnect)
 
 
 configName :: String
@@ -33,7 +33,7 @@ configName = "configs/config.json"
 
 main :: IO ()
 main =  do
-        putStrLn "testNet 15/06/2017 08:40"
+        putStrLn "testNet 18/06/2017 10:50"
         enc <- L.readFile configName
         case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
@@ -42,9 +42,9 @@ main =  do
             aExitCh   <- newChan
             aAnswerCh <- newChan
             aInfoCh   <- newChan
-            descrDB   <- startDB
+            rocksDB   <- connectOrRecoveryConnect
 
-            void $ startNode descrDB conf
+            void $ startNode rocksDB conf
                 aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMicroblockChan aMyNodeId aFileChan -> do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
@@ -54,45 +54,9 @@ main =  do
                     metronomeS 1000000 (writeChan ch deleteOldestPoW)
                     metronomeS 1000000 (writeChan ch findBestConnects)
 
-                    snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case
-                            Right item              -> return item
-                            Left (_::SomeException) -> error "Please, specify simpleNodeBuildConfig"
+                    (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id, i_am_first) <- getConfigParameters aMyNodeId conf ch
 
-                    poa_p   <- try (getEnv "poaPort") >>= \case
-                            Right item              -> return $ read item
-                            Left (_::SomeException) -> return $ poaPort conf
-
-                    stat_h  <- try (getEnv "statsdHost") >>= \case
-                            Right item              -> return item
-                            Left (_::SomeException) -> return $ host $ statsdBuildConfig conf
-
-                    stat_p  <- try (getEnv "statsdPort") >>= \case
-                            Right item              -> return $ read item
-                            Left (_::SomeException) -> return $ port $ statsdBuildConfig conf
-
-                    logs_h  <- try (getEnv "logHost") >>= \case
-                            Right item              -> return item
-                            Left (_::SomeException) -> return $ host $ logsBuildConfig conf
-
-                    logs_p  <- try (getEnv "logPort") >>= \case
-                            Right item              -> return $ read item
-                            Left (_::SomeException) -> return $ port $ logsBuildConfig conf
-
-                    log_id  <- try (getEnv "logId") >>= \case
-                            Right item              -> return item
-                            Left (_::SomeException) -> return $ show aMyNodeId
-
-                    test_send <- try (getEnv "test_send_id") >>= \case
-                        Right idTo              -> (metronomeS 10000000 (writeChan ch (testSendMessage ((read idTo) :: NodeId))))
-                        Left (e::SomeException) -> print e
-                    print test_send
-
-                    i_am_firs <- try (getEnv "isFirst") >>= \case
-                        Right "Yes" -> return True
-                        Right _   -> return False
-                        Left (_::SomeException) -> return False
-
-                    when i_am_firs $ writeChan ch InitShardingLvl
+                    when i_am_first $ writeChan ch InitShardingLvl
 
                     void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh log_id
 
@@ -123,10 +87,10 @@ main =  do
                                        Just token -> return token
                                        Nothing    -> updateConfigWithToken conf snbc rpcbc
 
-                            serveRpc descrDB rpc_p ip_en ch aInfoCh
+                            serveRpc rocksDB rpc_p ip_en ch aInfoCh
 
 
-                      "cli" -> serveCLI descrDB ch aInfoCh
+                      "cli" -> serveCLI rocksDB ch aInfoCh
 
                       _     -> return ()
 
@@ -169,3 +133,51 @@ enableIPsList ips = sequence $ map (\ip_s -> try (readIO ip_s :: IO IPRange) >>=
                             Left (_ :: SomeException) -> error $ "Wrong IP format"
                             )
                                ips
+
+getConfigParameters
+  :: (Show a1, ManagerMsg a2) =>
+     a1
+     -> BuildConfig
+     -> Chan a2
+     -> IO
+          (SimpleNodeBuildConfig, PortNumber, String, PortNumber, String,
+           PortNumber, String, Bool)
+getConfigParameters aMyNodeId conf ch = do
+  snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case
+          Right item              -> return item
+          Left (_::SomeException) -> error "Please, specify simpleNodeBuildConfig"
+
+  poa_p   <- try (getEnv "poaPort") >>= \case
+          Right item              -> return $ read item
+          Left (_::SomeException) -> return $ poaPort conf
+
+  stat_h  <- try (getEnv "statsdHost") >>= \case
+          Right item              -> return item
+          Left (_::SomeException) -> return $ host $ statsdBuildConfig conf
+
+  stat_p  <- try (getEnv "statsdPort") >>= \case
+          Right item              -> return $ read item
+          Left (_::SomeException) -> return $ port $ statsdBuildConfig conf
+
+  logs_h  <- try (getEnv "logHost") >>= \case
+          Right item              -> return item
+          Left (_::SomeException) -> return $ host $ logsBuildConfig conf
+
+  logs_p  <- try (getEnv "logPort") >>= \case
+          Right item              -> return $ read item
+          Left (_::SomeException) -> return $ port $ logsBuildConfig conf
+
+  log_id  <- try (getEnv "log_id") >>= \case
+          Right item              -> return item
+          Left (_::SomeException) -> return $ show aMyNodeId
+
+  test_send <- try (getEnv "test_send_id") >>= \case
+      Right idTo              -> (metronomeS 10000000 (writeChan ch (testSendMessage ((read idTo) :: NodeId))))
+      Left (e::SomeException) -> print e
+  print test_send
+
+  i_am_first <- try (getEnv "isFirst") >>= \case
+      Right "Yes" -> return True
+      Right _   -> return False
+      Left (_::SomeException) -> return False
+  return (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id, i_am_first)

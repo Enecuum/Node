@@ -10,21 +10,25 @@ import Control.Concurrent
 import Service.Types
 import System.Clock
 import Data.Foldable
--- Actor
--- Actor's data
--- Commands for actor
+
+import Control.Monad.Fix
+import Service.Types.PublicPrivateKeyPair
+-- actor
+-- actor's data
+-- commands for actor
 --
 -- add transaction
--- get n transactions (or less if don't exist)
--- microblock exists (remove transactions which exist in microblock)
--- clear transactions (mem overflow)
+-- get n transaction (or less than n)
+-- delete transaction from microblock
+-- get rid of transactions (out of memory)
 
 -- run transactions cleaning if there are a lot
 -- memory check (now - 1k txs in pending)
 -- 2 queues ni a pending structure
 
 -- dupChan structure (microblock chan)
--- take transactions from the chan and re-pack it
+-- get from transaction chan and pack into the message of another type
+
 -- Block -> RemoveTransactions [Transactions]
 -- Transaction -> AddTransaction Transaction
 

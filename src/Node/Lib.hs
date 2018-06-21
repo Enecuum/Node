@@ -22,8 +22,8 @@ import Node.Data.Key
 import Node.FileDB.FileServer
 --tmp
 import System.Directory (createDirectoryIfMissing)
-import Service.Transaction.Balance (addMicroblockToDB)
-import Service.Transaction.Storage (DBdescriptor(..))
+import Service.Transaction.Common (addMicroblockToDB, DBPoolDescriptor(..))
+
 
 -- code examples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html
@@ -34,7 +34,7 @@ import Service.Transaction.Storage (DBdescriptor(..))
 
 -- | Standart function to launch a node.
 startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
-       DBdescriptor
+       DBPoolDescriptor
     -> BuildConfig
     -> Chan ExitMsg
     -> Chan Answer
@@ -63,7 +63,7 @@ startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
     return managerChan
 
 
-microblockProc :: DBdescriptor -> Chan Microblock -> IO b
+microblockProc :: DBPoolDescriptor -> Chan Microblock -> IO b
 microblockProc descriptor aMicroblockCh = forever $ do
         aMicroblock <- readChan aMicroblockCh
         addMicroblockToDB descriptor aMicroblock
