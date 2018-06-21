@@ -102,9 +102,10 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
                     aTmpChan <- newChan
                     writeChan aPendingChan $ GetTransaction aNum aTmpChan
                     aTransactions <- readChan aTmpChan
-                    forM_ (take aNum $ cycle aTransactions) $ \aTransaction  -> do
-                        writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
-                        WS.sendTextData aConnect $ A.encode $ ResponseTransaction aTransaction
+                    when (not $ null aTransactions) $ do
+                        forM_ (take aNum $ cycle aTransactions) $ \aTransaction  -> do
+                            writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
+                            WS.sendTextData aConnect $ A.encode $ ResponseTransaction aTransaction
                 MsgMicroblock aMicroblock
                     | not aOk -> do
                         aSenderId <- readMVar aId

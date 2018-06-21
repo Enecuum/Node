@@ -96,7 +96,7 @@ pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
 
         -- Чистка транзакций по признаку вхождения в блок
         RemoveTransactions  aTransactions           -> do
-            writeLog aInfoChan [PendingTag] Info $ "Remove transactions from pending. From pendig" ++ show aTransactions
+            writeLog aInfoChan [PendingTag] Info $ "Remove transactions from pending. From pendig."
             let aFilter = S.filter (\(t, _) -> t `notElem` aTransactions)
             loop $ Pending (aFilter aNewTransaactions) (aFilter aOldTransactions)
 
