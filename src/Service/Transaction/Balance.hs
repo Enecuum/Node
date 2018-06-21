@@ -14,6 +14,8 @@ import Service.Transaction.Storage (DBPoolDescriptor(..),DBPoolDescriptor(..),rH
 import Data.Default (def)
 import Data.Hashable
 import Data.Pool
+import Data.Serialize (decode, encode)
+import Data.Either
 
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
@@ -67,22 +69,39 @@ runLedger db m = do
     writeLedgerDB (poolLedger db) ht
 
 
+hashedMb hashesOfMicroblock = encode $ show hashesOfMicroblock
+
 checkMacroblock :: DBPoolDescriptor -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool)
 checkMacroblock db keyBlockHash blockHash = do --undefined
     let fun = (\db -> Rocks.get db Rocks.defaultReadOptions keyBlockHash)
     v  <- withResource (poolMacroblock db) fun
-    case v of Nothing -> do
+    case v of Nothing -> do -- If Macroblock is not already in the table, than insert it into the table
                            let key = keyBlockHash
-                               val = blockHash
+                               val = hashedMb [blockHash]
                            let fun = (\db -> Rocks.write db def{Rocks.sync = True} [ Rocks.Put key val ])
                            withResource (poolMacroblock db) fun
                            return (False, True)
-              Just a -> do
-                           let microblockIsAlreadyInMacroblock = True
+              Just a -> do -- If Macroblock already in the table
+                           -- let hashes = map (fromRight . decode) a -- (read a :: [BC.ByteString])
+                           let hashes = case (decode a) of
+                                         Right r -> (read r :: [BC.ByteString])
+                                         Left _ -> [BC.empty]
+                           -- let hashes = [BC.empty]
+                           -- Check is Microblock already in Macroblock
+                           let microblockIsAlreadyInMacroblock = blockHash `elem` hashes
                            if microblockIsAlreadyInMacroblock
-                             then return (False, False)
-                             else do
-                                     return (False, False)
+                             then return (False, False)  -- Microblock already in Macroblock - Nothing
+                             else do -- write microblock (_ , True)
+                                     -- add this Microblock to value of Macroblock
+                                     let key = keyBlockHash
+                                         val = hashedMb (blockHash : hashes)
+                                     let fun = (\db -> Rocks.write db def{Rocks.sync = True} [ Rocks.Put key val ])
+                                     withResource (poolMacroblock db) fun
+                                     -- Check quantity of microblocks, can we close Macroblock?
+                                     if (length hashes >= 63)
+                                       then return (True, True)
+                                     else return (False, True)
+
 
 
 addMicroblockToDB :: DBPoolDescriptor -> Microblock -> IO ()
@@ -90,7 +109,7 @@ addMicroblockToDB db m  =  do
 -- FIX: verify signature
     let txs = getTxsMicroblock m
 
--- Write to db atomically
+-- FIX: Write to db atomically
     (macroblockClosed, microblockNew) <- checkMacroblock db (_keyBlock m) (rHash m)
     if microblockNew then do
       writeMicroblockDB (poolMicroblock db) m

@@ -26,7 +26,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad (replicateM)
 import Data.Aeson
 import GHC.Generics
-
+import Data.Serialize (Serialize)
 
 data DBPoolDescriptor = DBPoolDescriptor {
     poolTransaction :: Pool Rocks.DB
@@ -41,7 +41,7 @@ data Macroblock = Macroblock {
   -- requiredNumberOfMicroblocks :: Int,
   hashOfMicroblock :: [BC.ByteString]
   -- timeOfMicroblockArrived :: UTCTime
-                                 } --deriving (Generic, Eq, Ord, Show, ToJSON, FromJSON)
+                                 } deriving (Generic, Eq, Ord, Show, Serialize)
 
 
 
