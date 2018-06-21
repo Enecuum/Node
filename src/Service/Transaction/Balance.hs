@@ -11,6 +11,7 @@ import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import qualified Data.HashTable.IO as H
 import Control.Monad
 import Service.Transaction.Storage (DBPoolDescriptor(..),DBPoolDescriptor(..),rHash, rValue, urValue, unHtK, unHtA, Macroblock(..))
+
 import Data.Default (def)
 import Data.Hashable
 import Data.Pool

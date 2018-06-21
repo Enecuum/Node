@@ -15,10 +15,12 @@ import Service.Types
 import Control.Monad
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base64 as B
-import Data.Text (Text)
+import Data.Maybe (fromJust)
+import Data.Text (Text, pack, unpack)
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import qualified Data.ByteString.Base16 
+import           Data.ByteString.Base58 
 import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
-import Data.Hex
-
 
 instance FromJSON Trans
 instance ToJSON   Trans
@@ -29,8 +31,12 @@ instance ToJSON MsgTo
 instance FromJSON Currency
 instance ToJSON Currency
 
-instance FromJSON PublicKey
-instance ToJSON PublicKey
+instance FromJSON PublicKey where
+  parseJSON (String s) = return $ read $ unpack s
+  parseJSON _          = error "PublicKey JSON parse error"
+
+instance ToJSON PublicKey where
+  toJSON key = String $ pack $ show key
 
 instance FromJSON PrivateKey
 instance ToJSON PrivateKey
@@ -46,12 +52,15 @@ decodeFromText aStr = case B.decode . T.encodeUtf8 $ aStr of
     Left _  -> mzero
 
 
-instance ToJSON Hash where
-  toJSON (Hash h) = object ["hash" .= encodeToText  h]
+instance ToJSON Hash
+instance FromJSON Hash
 
-instance FromJSON Hash where
-  parseJSON (Object v) = Hash <$> ((v .: "hash") >>= decodeFromText)
+instance ToJSON ByteString where
+  toJSON h = String $ decodeUtf8 $ encodeBase58 bitcoinAlphabet h
 
+instance FromJSON ByteString where	 
+  parseJSON (String s) = return $ fromJust $ decodeBase58 bitcoinAlphabet $ encodeUtf8 s
+  parseJSON _          = error "Wrong object format"
 
 instance ToJSON TransactionInfo where
   toJSON info = object [
@@ -65,7 +74,7 @@ instance FromJSON TransactionInfo where
                            <$> v .: "tx"
                            <*> ((v .: "block") >>= decodeFromText)
                            <*> v .: "index"
-
+  parseJSON _          = error "TransactionInfo JSON parse error"
 
 
 
