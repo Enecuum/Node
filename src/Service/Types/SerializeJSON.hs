@@ -141,7 +141,7 @@ instance FromJSON Microblock where
        Object aBlock -> do
            aWallets <- aBlock .: "wallets"
            aTx      <- aBlock .: "Tx"
-           aUuid    <- aBlock .: "uuid"
+           -- aUuid    <- aBlock .: "uuid"
            aKhash   <- decodeFromText =<< aBlock .: "K_hash"
            return $ Microblock aKhash aSign aWallets aTx aUuid
        a -> mzero
