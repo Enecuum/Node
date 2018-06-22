@@ -33,7 +33,7 @@ getBalanceForKey db key = do
 
 
 updateBalanceTable :: BalanceTable -> Transaction -> IO ()
-updateBalanceTable ht (Transaction fromKey toKey am _ _ _) = do
+updateBalanceTable ht (Transaction fromKey toKey am _ _ _ _) = do
   v1 <- H.lookup ht $ fromKey
   v2 <- H.lookup ht $ toKey
   case (v1,v2) of
@@ -61,7 +61,7 @@ getBalanceOfKeys db tx = do
 
 
 getPubKeys :: Transaction -> [PublicKey]
-getPubKeys (Transaction fromKey toKey _ _ _ _) = [fromKey, toKey]
+getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
 

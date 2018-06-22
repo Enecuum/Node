@@ -88,7 +88,8 @@ data Transaction = Transaction {
   _amount    :: Amount,
   _currency  :: Currency,
   _time      :: Time, -- UnixTime format
-  _signature :: Signature
+  _signature :: Signature,
+  _uuid      :: Int
 }  deriving ( Generic, Show, Eq, Ord, Read)
 
 

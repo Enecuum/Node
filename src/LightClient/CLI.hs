@@ -24,11 +24,11 @@ import Service.Types.PublicPrivateKeyPair
 import Service.System.Directory (getTime, getKeyFilePath)
 import Service.Network.WebSockets.Client
 import LightClient.RPC
-
-data Flag = Key | ShowKey | Balance PublicKey | Send Trans 
-          | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey 
-          | GenerateNTransactions QuantityTx | GenerateTransactionsForever 
-          | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages 
+import System.Random
+data Flag = Key | ShowKey | Balance PublicKey | Send Trans
+          | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey
+          | GenerateNTransactions QuantityTx | GenerateTransactionsForever
+          | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
           | Info | Quit deriving (Eq, Show)
 
 data ArgFlag = Port PortNumber | Host HostName | Version deriving (Eq, Show)
@@ -58,7 +58,7 @@ options = [
   , Option ['L'] ["load-new-messages"] (NoArg LoadMessages) "Load new recieved messages"
   , Option ['I'] ["chain-info"] (NoArg Info) "Get total chain info"
   , Option ['Q'] ["quit"] (NoArg Quit) "exit"
- 
+
   ]
 
 
@@ -88,7 +88,7 @@ getRecipient defHost defPort (x:xs) = case x of
          Host h   -> getRecipient h defPort xs
 
 dispatch :: [Flag] -> HostName -> PortNumber -> IO ()
-dispatch flags h p = 
+dispatch flags h p =
       case flags of
         (Key : _)                        -> getKey
         (Balance aPublicKey : _)         -> withClient $ getBalance aPublicKey
@@ -104,7 +104,7 @@ dispatch flags h p =
         (GenerateTransactionsForever: _) -> withClient   generateTransactionsForever
         (SendMessageBroadcast m : _)     -> withClient $ sendMessageBroadcast m
         (SendMessageTo mTo : _)          -> withClient $ sendMessageTo mTo
-        (LoadMessages : _)               -> withClient   loadMessages 
+        (LoadMessages : _)               -> withClient   loadMessages
         (Info : _)                       -> withClient   getInfo
         (Quit : _)                       -> exitWith ExitSuccess
         _                                -> putStrLn "Wrong argument"
@@ -134,7 +134,8 @@ sendTrans trans ch = do
     Nothing -> putStrLn "You don't own this public key"
     Just ownerPrivKey -> do
       sign  <- getSignature ownerPrivKey moneyAmount
-      let tx  = Transaction ownerPubKey receiverPubKey moneyAmount ENQ timePoint sign
+      uuid <- randomRIO (1,25)
+      let tx  = Transaction ownerPubKey receiverPubKey moneyAmount ENQ timePoint sign uuid
       print tx
       result <- runExceptT $ newTx ch tx
       case result of
@@ -237,4 +238,3 @@ getInfo ch = do
   case result of
     (Left err) -> putStrLn $ "getChainInfo error: " ++ show err
     (Right info) -> print info
-

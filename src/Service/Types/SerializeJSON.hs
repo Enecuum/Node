@@ -106,7 +106,8 @@ instance ToJSON Transaction where
             "amount"    .= _amount tx,
             "currency"  .= _currency tx,
             "timestamp" .= _time tx,
-            "sign"       .= _signature tx
+            "sign"      .= _signature tx,
+            "uuid"      .= _uuid tx
           ]
 
 instance FromJSON Transaction where
@@ -117,6 +118,7 @@ instance FromJSON Transaction where
                <*> o .: "currency"
                <*> o .: "timestamp"
                <*> o .: "sign"
+               <*> o .: "uuid"
     parseJSON inv         = typeMismatch "Transaction" inv
 
 instance ToJSON Microblock where
@@ -124,8 +126,8 @@ instance ToJSON Microblock where
        "msg" .= object [
            "K_hash"  .= encodeToText (_keyBlock aBlock),
            "wallets" .= _teamKeys aBlock,
-           "Tx"      .= _transactions aBlock,
-           "uuid"    .= _numOfBlock aBlock
+           "Tx"      .= _transactions aBlock
+--           "uuid"    .= _numOfBlock aBlock
          ],
        "sign" .= _sign aBlock
    ]

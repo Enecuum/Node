@@ -9,7 +9,7 @@ import System.Random
 import Service.System.Directory (getTime)
 import Service.Types
 import Service.Transaction.Skelet (getSkeletDAG)
-
+import System.Random
 type QuantityOfTransactions = Int
 
 getLabsNodes :: [LNode a] -> [a]
@@ -30,8 +30,9 @@ getSignTransactions quantityOfTx keys'ns (x,y) = do
   sums   <- replicateM n $ randomRIO (x,y)
   points <- replicateM n getTime
   signs  <- mapM (\(KeyPair _ priv, s) -> getSignature priv (fromIntegral s :: Amount)) (zip keys sums)
-  let sts  = [Transaction pub1 pub2 (fromIntegral aSum) ENQ p sign |
-              p <- points, ((_, KeyPair pub1 _), (_, KeyPair pub2 _) ) <- skel, aSum <- sums, sign <- signs]
+  uuids <- replicateM n $ randomRIO (1,25)
+  let sts  = [Transaction pub1 pub2 (fromIntegral aSum) ENQ p sign uuid |
+              p <- points, ((_, KeyPair pub1 _), (_, KeyPair pub2 _) ) <- skel, aSum <- sums, sign <- signs, uuid <- uuids ]
   return (take quantityOfTx sts)
 
 getTransactions :: [KeyPair] -> QuantityOfTransactions-> IO [Transaction] --IO DAG
