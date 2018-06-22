@@ -63,7 +63,7 @@ sendMessageBroadcast ch = return $ return $ Left NotImplementedException
 loadMessages :: ManagerMiningMsg a => Chan a -> IO (Result [MsgTo])
 loadMessages ch = return $ Left NotImplementedException
 
-getBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result Microblock)
+getBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result MicroblockAPI)
 getBlockByHash db hash ch = return =<< Right <$> B.getBlockByHashDB db hash
 
 getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result Macroblock)

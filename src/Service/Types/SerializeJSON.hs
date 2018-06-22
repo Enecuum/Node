@@ -1,6 +1,7 @@
 {-# LANGUAGE
         OverloadedStrings
     ,   PackageImports
+    ,   DisambiguateRecordFields
     ,   DuplicateRecordFields
   #-}
 
@@ -122,6 +123,28 @@ instance FromJSON Transaction where
                <*> o .: "uuid"
     parseJSON inv         = typeMismatch "Transaction" inv
 
+
+instance ToJSON MicroblockAPI where
+    toJSON bl = object  [
+            "k_block"      .= _keyBlockAPI bl
+         ,  "index"        .= _numOfBlockAPI bl
+         ,  "publishers"   .= _teamKeysAPI bl
+         ,  "reward"       .= (1 :: Integer)  -- fix or remove
+         ,  "sign"         .= _signAPI bl
+         ,  "txs_cnt"      .= length (_transactionsAPI bl)
+         ,  "transactions" .= _transactionsAPI bl
+       ]
+
+instance FromJSON MicroblockAPI where
+    parseJSON (Object o) = MicroblockAPI
+               <$> o .: "k_block"
+               <*> o .: "sign"
+               <*> o .: "publishers"
+               <*> o .: "transactions"
+               <*> o .: "index"
+    parseJSON inv         = typeMismatch "Microblock" inv
+
+
 instance ToJSON Microblock where
  toJSON aBlock = object [
        "msg" .= object [
@@ -147,26 +170,6 @@ instance FromJSON Microblock where
            return $ Microblock aKhash aSign aWallets aTx 0
        a -> mzero
 parseJSON _ = mzero
-
--- instance ToJSON MicroblockAPI where
---     toJSON bl = object  [
---             "k_block"      .= _keyBlock bl
---          ,  "index"        .= _numOfBlock bl
---          ,  "publishers"   .= _teamKeys bl
---          ,  "reward"       .= (1 :: Integer)  -- fix or remove
---          ,  "sign"         .= _sign bl
---          ,  "txs_cnt"      .= Prelude.length (_transactions bl)
---          ,  "transactions" .= _transactions bl
---        ]
-
--- instance FromJSON MicroblockAPI where
---     parseJSON (Object o) = MicroblockAPI
---                <$> o .: "k_block"
---                <*> o .: "sign"
---                <*> o .: "publishers"
---                <*> o .: "transactions"
---                <*> o .: "index"
---     parseJSON inv         = typeMismatch "Microblock" inv
 
 
 instance ToJSON Macroblock where

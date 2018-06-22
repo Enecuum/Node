@@ -1,4 +1,4 @@
-{-# LANGUAGE PackageImports, FlexibleContexts, LambdaCase #-}
+{-# LANGUAGE PackageImports, FlexibleContexts, LambdaCase, DisambiguateRecordFields, DuplicateRecordFields #-}
 module Service.Transaction.Balance
   ( getBalanceForKey,
     addMicroblockToDB,
