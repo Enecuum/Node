@@ -39,8 +39,11 @@ updateBalanceTable ht (Transaction fromKey toKey am _ _ _ _) = do
   case (v1,v2) of
     (Nothing, _)       -> do return ()
     (_, Nothing)       -> do return ()
-    (Just balanceFrom, Just balanceTo) -> do H.insert ht fromKey (balanceFrom - am)
-                                             H.insert ht toKey (balanceTo + am)
+    (Just balanceFrom, Just balanceTo) -> if (balanceFrom - am) > 0
+                                          then do
+                                                  H.insert ht fromKey (balanceFrom - am)
+                                                  H.insert ht toKey (balanceTo + am)
+                                          else do return ()
 
 
 
