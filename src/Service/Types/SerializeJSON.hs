@@ -120,24 +120,32 @@ instance FromJSON Transaction where
     parseJSON inv         = typeMismatch "Transaction" inv
 
 instance ToJSON Microblock where
-    toJSON bl = object  [
-            "k_block"      .= _keyBlock bl
-         ,  "index"        .= _numOfBlock bl
-         ,  "publishers"   .= _teamKeys bl
-         ,  "reward"       .= (1 :: Integer)  -- fix or remove
-         ,  "sign"         .= _sign bl
-         ,  "txs_cnt"      .= length (_transactions bl)
-         ,  "transactions" .= _transactions bl
-       ]
+ toJSON aBlock = object [
+       "msg" .= object [
+           "K_hash"  .= encodeToText (_keyBlock aBlock),
+           "signer"  .= _signer aBlock,
+           "wallets" .= _teamKeys aBlock,
+           "Tx"      .= _transactions aBlock,
+           "uuid"    .= _numOfBlock aBlock
+         ],
+       "sign" .= _sign aBlock
+   ]
+
 
 instance FromJSON Microblock where
-    parseJSON (Object o) = Microblock
-               <$> o .: "k_block"
-               <*> o .: "sign"
-               <*> o .: "publishers"
-               <*> o .: "transactions"
-               <*> o .: "index"
-    parseJSON inv         = typeMismatch "Microblock" inv
+ parseJSON (Object v) = do
+     aMsg  <- v .: "msg"
+     aSign <- v .: "sign"
+     case aMsg of
+       Object aBlock -> do
+           aWallets <- aBlock .: "wallets"
+           aTx      <- aBlock .: "Tx"
+           aUuid    <- aBlock .: "i"
+           aSigner  <- aBlock .: "signer"
+           aKhash   <- decodeFromText =<< aBlock .: "K_hash"
+           return $ Microblock aKhash aSigner aSign aWallets aTx aUuid
+       a -> mzero
+parseJSON _ = mzero
 
 
 instance ToJSON Macroblock where
