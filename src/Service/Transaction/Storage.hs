@@ -1,7 +1,7 @@
 {-# LANGUAGE PackageImports, ScopedTypeVariables, FlexibleContexts, DeriveGeneric, DeriveAnyClass #-}
 module Service.Transaction.Storage where
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
-import Service.System.Directory (getLedgerFilePath, getTransactionFilePath, getMicroblockFilePath)
+import Service.System.Directory (getLedgerFilePath, getTransactionFilePath, getMicroblockFilePath, getMacroblockFilePath)
 import Data.Default (def)
 import qualified Data.ByteString.Char8 as BC
 import Control.Monad.Trans.Resource
@@ -61,7 +61,7 @@ connectDB = do
   aTx <- getTransactionFilePath
   aMb <- getMicroblockFilePath
   aLd <- getLedgerFilePath
-  let aMacroblock = ""
+  aMacroblock <- getMacroblockFilePath
   poolTransaction <- createPool (Rocks.open aTx def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
   poolMicroblock  <- createPool (Rocks.open aMb def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
   poolLedger      <- createPool (Rocks.open aLd def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
