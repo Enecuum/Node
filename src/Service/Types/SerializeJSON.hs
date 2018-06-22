@@ -125,7 +125,7 @@ instance ToJSON Microblock where
            "K_hash"  .= encodeToText (_keyBlock aBlock),
            "wallets" .= _teamKeys aBlock,
            "Tx"      .= _transactions aBlock,
-           "uuid"    .= _numOfBlock aBlock
+           "i"    .= _numOfBlock aBlock
          ],
        "sign" .= _sign aBlock
    ]
