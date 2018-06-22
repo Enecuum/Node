@@ -55,6 +55,7 @@ getBalanceOfKeys db tx = do
   let fun k = (\db -> Rocks.get db Rocks.defaultReadOptions (rValue k))
   let getBalanceByKey k = withResource db (fun k)
   let toTuple k (Just b) = (,) k (unHtA b)
+  let toTuple k Nothing = (,) k 0
   balance  <- mapM (\k -> liftM (toTuple k ) (getBalanceByKey k)) hashKeys
   aBalanceTable <- H.fromList balance
   return aBalanceTable
