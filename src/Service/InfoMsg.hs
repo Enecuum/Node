@@ -42,8 +42,10 @@ data LogingTag
     | ServePoATag
     | ServerBootNodeTag
     | GCTag
+    | PendingTag
     | RegularTag
     | InitTag
+    | BDTag
   deriving (Show, Enum)
 
 
@@ -90,6 +92,7 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                                    ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
 
                          aFileString = "  !  " ++ aId ++ "|" ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
+                     putStrLn aFileString
                      case eithLHandler of
                           Left  _        -> appendFile "log.txt" aFileString
                           Right lHandler -> sendToServer lHandler aString

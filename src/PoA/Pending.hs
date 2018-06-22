@@ -13,6 +13,8 @@ import Data.Foldable
 
 import Control.Monad.Fix
 import Service.Types.PublicPrivateKeyPair
+import Service.InfoMsg
+import Node.Data.GlobalLoging
 -- actor
 -- actor's data
 -- commands for actor
@@ -42,25 +44,31 @@ data PendingAction where
 data Pending = Pending (Seq (Transaction, TimeSpec)) (Seq (Transaction, TimeSpec))
 
 
-pendingActor :: Chan PendingAction -> Chan Microblock -> Chan Transaction -> IO ()
-pendingActor aChan aMicroblockChan aTransactionChan = do
-
+pendingActor :: Chan PendingAction -> Chan Microblock -> Chan Transaction -> Chan InfoMsg -> IO ()
+pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
+{-
+    writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for microblocs"
     void . forkIO $ do
         aBlockChan <- dupChan aMicroblockChan
         -- blocks re-pack
         forever $ readChan aBlockChan >>= \case
             Microblock _ _ _ aTransactions _ ->
                 writeChan aChan $ RemoveTransactions aTransactions
-
+-}
     -- transactions re-pack
+    writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for transactions"
     void . forkIO $ forever $ forever $ readChan aTransactionChan >>=
         writeChan aChan . AddTransaction
 
     -- actor's main body
+    writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for commands"
+
     void $ loop $ Pending Empty Empty
   where
     loop (Pending aNewTransaactions aOldTransactions) = readChan aChan >>= \case
         AddTransaction aTransaction -> do
+            writeLog aInfoChan [PendingTag] Info $
+                "Add transaction to pending" ++ show aTransaction
             aNaw <- getTime Realtime
             let aSizeOfOldTransactions = S.length aOldTransactions
                 aSizeOfNewTransactions = S.length aNewTransaactions
@@ -70,26 +78,33 @@ pendingActor aChan aMicroblockChan aTransactionChan = do
                 aFilter :: Seq (Transaction, TimeSpec) -> Seq (Transaction, TimeSpec)
                 aFilter = S.filter (\s -> average' aNaw s < aAverage)
 
-            if  | aSize < 500                  ->
+            if  | aSize < 500                  -> do
+                    writeLog aInfoChan [PendingTag] Info "Pending size < 500"
                     loop $ Pending
                         (aNewTransaactions :|> (aTransaction, aNaw))
                         aOldTransactions
-                | aSizeOfOldTransactions > 400 ->
+                | aSizeOfOldTransactions > 400 -> do
+                    writeLog aInfoChan [PendingTag] Info "A sizi of old transaction < 400"
                     loop $ Pending
                         (aNewTransaactions :|> (aTransaction, aNaw))
                         (aFilter aOldTransactions)
-                | otherwise                    ->
+                | otherwise                    -> do
+                    writeLog aInfoChan [PendingTag] Info "Clearing of pending"
                     loop $ Pending
                         (aFilter aNewTransaactions :|> (aTransaction, aNaw))
                         (aFilter aOldTransactions)
-
+{-
         -- transactions cleaning by the reason of including to block
+
         RemoveTransactions  aTransactions           -> do
+            writeLog aInfoChan [PendingTag] Info $ "Remove transactions from pending. From pendig."
             let aFilter = S.filter (\(t, _) -> t `notElem` aTransactions)
             loop $ Pending (aFilter aNewTransaactions) (aFilter aOldTransactions)
-
+-}
         -- transactions request
+
         GetTransaction      aCount aResponseChan    -> do
+            writeLog aInfoChan [PendingTag] Info $ "Request " ++ show aCount ++ " transactions from pending"
             let aSizeOfOldTransactions = S.length aOldTransactions
                 aSizeOfNewTransactions = S.length aNewTransaactions
                 aSize = aSizeOfNewTransactions + aSizeOfOldTransactions
@@ -100,7 +115,7 @@ pendingActor aChan aMicroblockChan aTransactionChan = do
                     writeChan aResponseChan $ fst <$> toList aHead
                     loop $ Pending aTail (aOldTransactions >< aHead)
 
-               
+
                 | otherwise -> do
                     -- take from "old" needed count of txs
                     -- add new txs from "new" to "old"

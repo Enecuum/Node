@@ -42,6 +42,7 @@ import Service.InfoMsg
 import Service.System.Directory (getTime, getKeyFilePath)
 import Service.Transaction.Storage (DBPoolDescriptor(..))
 import Service.Transaction.Common as B (getBlockByHashDB, getTransactionByHashDB)
+import System.Random
 
 type Result a = Either CLIException a
 
@@ -98,8 +99,9 @@ sendNewTrans trans ch aInfoCh = try $ do
     Nothing -> do
       throw WrongKeyOwnerException
     Just ownerPrivKey -> do
-      sign  <- getSignature ownerPrivKey moneyAmount
-      let tx  = Transaction ownerPubKey receiverPubKey moneyAmount ENQ timePoint sign
+      sign <- getSignature ownerPrivKey moneyAmount
+      uuid <- randomRIO (1,25)
+      let tx  = Transaction ownerPubKey receiverPubKey moneyAmount ENQ timePoint sign uuid
       _ <- sendTrans tx ch aInfoCh
       return tx
 
@@ -172,7 +174,7 @@ getPublicKeys = try $ do
 
 
 sendMetrics :: Transaction -> Chan InfoMsg -> IO ()
-sendMetrics (Transaction o r a _ _ _) m = do
+sendMetrics (Transaction o r a _ _ _ _) m = do
                            writeChan m $ Metric $ increment "cl.tx.count"
                            writeChan m $ Metric $ set "cl.tx.wallet" o
                            writeChan m $ Metric $ set "cl.tx.wallet" r

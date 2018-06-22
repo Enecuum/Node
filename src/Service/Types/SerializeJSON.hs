@@ -17,8 +17,8 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base64 as B
 import Data.Maybe (fromJust)
 import Data.Text (Text, pack, unpack)
-import Data.Text.Encoding (decodeUtf8, encodeUtf8) 
-import           Data.ByteString.Base58 
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import           Data.ByteString.Base58
 import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
 
 instance FromJSON Trans
@@ -57,7 +57,7 @@ instance FromJSON Hash
 instance ToJSON ByteString where
   toJSON h = String $ decodeUtf8 $ encodeBase58 bitcoinAlphabet h
 
-instance FromJSON ByteString where	 
+instance FromJSON ByteString where
   parseJSON (String s) = return $ fromJust $ decodeBase58 bitcoinAlphabet $ encodeUtf8 s
   parseJSON _          = error "Wrong object format"
 
@@ -87,6 +87,7 @@ instance FromJSON MicroblockV1 where
 -}
 
 
+
 instance ToJSON ECDSA.Signature where
   toJSON t = object [
     "sign_r" .= ECDSA.sign_r t,
@@ -105,38 +106,46 @@ instance ToJSON Transaction where
             "amount"    .= _amount tx,
             "currency"  .= _currency tx,
             "timestamp" .= _time tx,
-            "sign"       .= _signature tx
+            "sign"      .= _signature tx,
+            "uuid"      .= _uuid tx
           ]
 
 instance FromJSON Transaction where
     parseJSON (Object o) = Transaction
                <$> o .: "owner"
-               <*> o .: "receiver" 
+               <*> o .: "receiver"
                <*> o .: "amount"
                <*> o .: "currency"
                <*> o .: "timestamp"
                <*> o .: "sign"
+               <*> o .: "uuid"
     parseJSON inv         = typeMismatch "Transaction" inv
 
 instance ToJSON Microblock where
-    toJSON bl = object  [
-            "k_block"      .= _keyBlock bl
-         ,  "index"        .= _numOfBlock bl
-         ,  "publishers"   .= _teamKeys bl
-         ,  "reward"       .= (1 :: Integer)  -- fix or remove
-         ,  "sign"         .= _sign bl
-         ,  "txs_cnt"      .= length (_transactions bl)
-         ,  "transactions" .= _transactions bl
-       ]
+ toJSON aBlock = object [
+       "msg" .= object [
+           "K_hash"  .= encodeToText (_keyBlock aBlock),
+           "wallets" .= _teamKeys aBlock,
+           "Tx"      .= _transactions aBlock
+--           "uuid"    .= _numOfBlock aBlock
+         ],
+       "sign" .= _sign aBlock
+   ]
+
 
 instance FromJSON Microblock where
-    parseJSON (Object o) = Microblock
-               <$> o .: "k_block"
-               <*> o .: "sign"
-               <*> o .: "publishers"
-               <*> o .: "transactions"
-               <*> o .: "index"
-    parseJSON inv         = typeMismatch "Microblock" inv
+ parseJSON (Object v) = do
+     aMsg  <- v .: "msg"
+     aSign <- v .: "sign"
+     case aMsg of
+       Object aBlock -> do
+           aWallets <- aBlock .: "wallets"
+           aTx      <- aBlock .: "Tx"
+           -- aUuid    <- aBlock .: "uuid"
+           aKhash   <- decodeFromText =<< aBlock .: "K_hash"
+           return $ Microblock aKhash aSign aWallets aTx aUuid
+       a -> mzero
+parseJSON _ = mzero
 
 
 instance ToJSON Macroblock where

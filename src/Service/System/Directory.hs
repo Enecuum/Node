@@ -4,13 +4,14 @@ module Service.System.Directory (
     createFilesDirectory,
     getTransactionFilePath,
     getLedgerFilePath,
-    getMicroblockFilePath
+    getMicroblockFilePath,
+    getMacroblockFilePath
   )where
 
 import System.FilePath.Posix (takeDirectory)
 import System.Directory      (getHomeDirectory, createDirectoryIfMissing)
 import System.FilePath       (pathSeparator)
-import Data.UnixTime        
+import Data.UnixTime
 
 
 getTime :: IO Int
@@ -44,6 +45,11 @@ getMicroblockFilePath :: IO String
 getMicroblockFilePath = do
     enecuumDir <- getEnecuumDir
     return (enecuumDir ++ [pathSeparator] ++ "microblock.db")
+
+getMacroblockFilePath :: IO String
+getMacroblockFilePath = do
+    enecuumDir <- getEnecuumDir
+    return (enecuumDir ++ [pathSeparator] ++ "macroblock.db")
 
 
 createFilesDirectory :: FilePath -> IO ()
