@@ -5,7 +5,7 @@ module Service.Transaction.Balance
     runLedger) where
 
 import Service.Types.PublicPrivateKeyPair
-import Service.Types
+import Service.Types hiding (MicroblockAPI(..))
 import qualified Data.ByteString.Char8 as BC hiding (map)
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import qualified Data.HashTable.IO as H
@@ -39,8 +39,11 @@ updateBalanceTable ht (Transaction fromKey toKey am _ _ _ _) = do
   case (v1,v2) of
     (Nothing, _)       -> do return ()
     (_, Nothing)       -> do return ()
-    (Just balanceFrom, Just balanceTo) -> do H.insert ht fromKey (balanceFrom - am)
-                                             H.insert ht toKey (balanceTo + am)
+    (Just balanceFrom, Just balanceTo) -> if (balanceFrom - am) > 0
+                                          then do
+                                                  H.insert ht fromKey (balanceFrom - am)
+                                                  H.insert ht toKey (balanceTo + am)
+                                          else do return ()
 
 
 
@@ -55,6 +58,7 @@ getBalanceOfKeys db tx = do
   let fun k = (\db -> Rocks.get db Rocks.defaultReadOptions (rValue k))
   let getBalanceByKey k = withResource db (fun k)
   let toTuple k (Just b) = (,) k (unHtA b)
+  let toTuple k Nothing = (,) k 0
   balance  <- mapM (\k -> liftM (toTuple k ) (getBalanceByKey k)) hashKeys
   aBalanceTable <- H.fromList balance
   return aBalanceTable

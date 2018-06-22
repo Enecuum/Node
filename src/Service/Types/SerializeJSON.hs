@@ -171,6 +171,7 @@ instance FromJSON Microblock where
        a -> mzero
 parseJSON _ = mzero
 
+
 instance ToJSON Macroblock where
     toJSON bl = object  [
             "prev_hash"         .= _prevBlock bl
