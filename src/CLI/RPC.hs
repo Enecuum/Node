@@ -87,7 +87,7 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
 
               getMicroblock = toMethod "enq_getMicroblockByHash" f (Required "hash" :+: ())
                 where
-                  f :: Hash ->  RpcResult IO Microblock
+                  f :: Hash ->  RpcResult IO MicroblockAPI
                   f hash = handle $ getBlockByHash descrDB hash ch
 
               getTransaction = toMethod "enq_getTransactionByHash" f (Required "hash" :+:())
