@@ -64,11 +64,9 @@ data Microblock = Microblock{
     _transactions :: [Transaction],
     _numOfBlock   :: Integer
   }
-  deriving (Eq, Generic, Ord, Read)
+  deriving (Eq, Generic, Ord, Read, Show)
 
 instance Serialize Microblock
-instance Show Microblock where
-    show _ = "Microblock ??"
 
 -- data MicroblockAPI = MicroblockAPI{
 --     _keyBlock :: ByteString, -- hash of key-block
