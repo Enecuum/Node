@@ -57,18 +57,15 @@ data MicroblockV1 = MicroblockV1{
                   trans :: [Transaction]}
                 deriving (Eq, Generic, Ord, Show)
 
-data Microblock = Microblock{
-    _keyBlock :: ByteString, -- hash of key-block
-    _sign :: Signature,  -- signature for {K_hash, [Tx],}
-    _teamKeys :: [PublicKey], -- for reward
-    _transactions :: [Transaction],
-    _numOfBlock   :: Integer
+data MicroblockAPI = MicroblockAPI {
+    _keyBlockAPI :: ByteString, -- hash of key-block
+    _signAPI :: Signature,  -- signature for {K_hash, [Tx],}
+    _teamKeysAPI :: [PublicKey], -- for reward
+    _transactionsAPI :: [Transaction],
+    _numOfBlockAPI   :: Integer
   }
-  deriving (Eq, Generic, Ord, Read)
-
-instance Serialize Microblock
-instance Show Microblock where
-    show _ = "Microblock ??"
+  deriving (Eq, Generic, Ord, Read, Show)
+instance Serialize MicroblockAPI
 
 data Macroblock = Macroblock {
     _prevBlock :: ByteString
@@ -81,6 +78,16 @@ data Macroblock = Macroblock {
 } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize Macroblock
 
+data Microblock = Microblock{
+    _keyBlock :: ByteString, -- hash of key-block
+    _sign :: Signature,  -- signature for {K_hash, [Tx],}
+    _teamKeys :: [PublicKey], -- for reward
+    _transactions :: [Transaction],
+    _numOfBlock   :: Integer
+  }
+  deriving (Eq, Generic, Ord, Read, Show)
+
+instance Serialize Microblock
 
 data Transaction = Transaction {
   _owner     :: PublicKey,
