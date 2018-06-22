@@ -59,7 +59,6 @@ data MicroblockV1 = MicroblockV1{
 
 data Microblock = Microblock{
     _keyBlock :: ByteString, -- hash of key-block
-    _signer :: PublicKey,
     _sign :: Signature,  -- signature for {K_hash, [Tx],}
     _teamKeys :: [PublicKey], -- for reward
     _transactions :: [Transaction],
