@@ -42,7 +42,7 @@ updateBalanceTable ht (Transaction fromKey toKey am _ _ _) = do
 
 
 getTxsMicroblock :: Microblock -> [Transaction]
-getTxsMicroblock (Microblock _ _ _ _ txs _) = txs
+getTxsMicroblock (Microblock _ _ _ txs _) = txs
 
 
 getBalanceOfKeys :: Pool Rocks.DB -> [Transaction] -> IO BalanceTable

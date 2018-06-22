@@ -59,7 +59,6 @@ data MicroblockV1 = MicroblockV1{
 
 data Microblock = Microblock{
     _keyBlock :: ByteString, -- hash of key-block
-    _signer :: PublicKey,
     _sign :: Signature,  -- signature for {K_hash, [Tx],}
     _teamKeys :: [PublicKey], -- for reward
     _transactions :: [Transaction],
@@ -70,6 +69,18 @@ data Microblock = Microblock{
 instance Serialize Microblock
 instance Show Microblock where
     show _ = "Microblock ??"
+
+data Macroblock = Macroblock {
+    _prevBlock :: ByteString
+  ,  _difficulty :: Integer
+  ,  _height :: Integer
+  ,  _solver :: ByteString
+  ,  _reward :: Integer
+  ,  _txs_cnt :: Integer
+  ,  _mblocks :: [ByteString]
+} deriving (Eq, Generic, Ord, Read, Show)
+instance Serialize Macroblock
+
 
 data Transaction = Transaction {
   _owner     :: PublicKey,
@@ -84,9 +95,9 @@ data Transaction = Transaction {
 instance Serialize Transaction
 
 data TransactionInfo = TransactionInfo {
-     tx    :: Transaction
-  ,  block :: ByteString
-  ,  index :: Int
+     _tx    :: Transaction
+  ,  _block :: ByteString
+  ,  _index :: Int
   } deriving (Generic, Show, Eq, Read)
 instance Serialize TransactionInfo
 
@@ -124,3 +135,13 @@ type ToPublicKey  = PublicKey
 data MessageForSign = MessageForSign ToPublicKey Amount Time
 instance Serialize MessageForSign
 deriving instance Generic MessageForSign
+
+
+data ChainInfo = ChainInfo {
+      _emission        :: Integer
+    , _curr_difficulty :: Integer
+    , _blocks_num      :: Integer
+    , _txs_num         :: Integer
+    , _nodes_num       :: Integer
+  } deriving  (Generic, Show, Eq, Read)
+instance Serialize ChainInfo

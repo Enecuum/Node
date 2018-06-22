@@ -18,7 +18,6 @@ import qualified Data.ByteString.Base64 as B
 import Data.Maybe (fromJust)
 import Data.Text (Text, pack, unpack)
 import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import qualified Data.ByteString.Base16
 import           Data.ByteString.Base58
 import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
 
@@ -64,9 +63,9 @@ instance FromJSON ByteString where
 
 instance ToJSON TransactionInfo where
   toJSON info = object [
-                  "tx"    .= tx info
-                , "block" .= encodeToText (block info)
-                , "index" .= index info
+                  "tx"    .= _tx info
+                , "block" .= encodeToText (_block info)
+                , "index" .= _index info
                 ]
 
 instance FromJSON TransactionInfo where
@@ -78,33 +77,16 @@ instance FromJSON TransactionInfo where
 
 
 
-instance ToJSON Microblock where
-  toJSON aBlock = object [
-        "msg" .= object [
-            "K_hash"  .= encodeToText (_keyBlock aBlock),
-            "signer"  .= _signer aBlock,
-            "wallets" .= _teamKeys aBlock,
-            "Tx"      .= _transactions aBlock,
-            "uuid"    .= _numOfBlock aBlock
-          ],
-        "sign" .= _sign aBlock
-    ]
+
+instance FromJSON MicroblockV1 where
+  parseJSON (Object v) = undefined
+      {-MicroblockV1
+                           <$> ((v .: "curr") >>= decodeFromText)
+                           <*> ((v .: "prev") >>= decodeFromText)
+                           <*> v .: "txs"
+-}
 
 
-instance FromJSON Microblock where
-  parseJSON (Object v) = do
-      aMsg  <- v .: "msg"
-      aSign <- v .: "sign"
-      case aMsg of
-        Object aBlock -> do
-            aWallets <- aBlock .: "wallets"
-            aTx      <- aBlock .: "Tx"
-            aUuid    <- aBlock .: "i"
-            aSigner  <- aBlock .: "signer"
-            aKhash   <- decodeFromText =<< aBlock .: "K_hash"
-            return $ Microblock aKhash aSigner aSign aWallets aTx aUuid
-        a -> mzero
-  parseJSON _ = mzero
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [
@@ -136,3 +118,66 @@ instance FromJSON Transaction where
                <*> o .: "timestamp"
                <*> o .: "sign"
     parseJSON inv         = typeMismatch "Transaction" inv
+
+instance ToJSON Microblock where
+    toJSON bl = object  [
+            "k_block"      .= _keyBlock bl
+         ,  "index"        .= _numOfBlock bl
+         ,  "publishers"   .= _teamKeys bl
+         ,  "reward"       .= (1 :: Integer)  -- fix or remove
+         ,  "sign"         .= _sign bl
+         ,  "txs_cnt"      .= length (_transactions bl)
+         ,  "transactions" .= _transactions bl
+       ]
+
+instance FromJSON Microblock where
+    parseJSON (Object o) = Microblock
+               <$> o .: "k_block"
+               <*> o .: "sign"
+               <*> o .: "publishers"
+               <*> o .: "transactions"
+               <*> o .: "index"
+    parseJSON inv         = typeMismatch "Microblock" inv
+
+
+instance ToJSON Macroblock where
+    toJSON bl = object  [
+            "prev_hash"         .= _prevBlock bl
+         ,  "difficulty"        .= _difficulty bl
+         ,  "height"            .= _height bl
+         ,  "solver"            .= _solver bl
+         ,  "reward"            .= _reward bl
+         ,  "txs_cnt"           .= _txs_cnt bl
+         ,  "microblocks_cnt"   .= length (_mblocks bl)
+         ,  "microblocks"       .= _mblocks bl
+       ]
+
+instance FromJSON Macroblock where
+    parseJSON (Object o) = Macroblock
+               <$> o .: "prev_hash"
+               <*> o .: "difficulty"
+               <*> o .: "height"
+               <*> o .: "solver"
+               <*> o .: "reward"
+               <*> o .: "txs_cnt"
+               <*> o .: "microblocks"
+    parseJSON inv         = typeMismatch "Macroblock" inv
+
+
+instance ToJSON ChainInfo where
+    toJSON info = object  [
+          "emission"   .= _emission info
+        , "difficulty" .= _curr_difficulty info
+        , "blocks_num" .= _blocks_num info
+        , "txs_num"    .= _txs_num info
+        , "nodes_num"  .= _nodes_num info
+      ]
+
+instance FromJSON ChainInfo where
+    parseJSON (Object o) = ChainInfo
+               <$> o .: "emission"
+               <*> o .: "difficulty"
+               <*> o .: "blocks_num"
+               <*> o .: "txs_num"
+               <*> o .: "nodes_num"
+    parseJSON inv        = typeMismatch "ChainInfo" inv
