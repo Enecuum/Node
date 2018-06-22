@@ -2,6 +2,7 @@
         OverloadedStrings
     ,   PackageImports
     ,   DuplicateRecordFields
+    ,   ScopedTypeVariables
   #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -101,25 +102,40 @@ instance FromJSON ECDSA.Signature where
  parseJSON inv        = typeMismatch "Signature" inv
 
 instance ToJSON Transaction where
-    toJSON tx = object  [
-            "owner"     .= _owner tx,
-            "receiver"  .= _receiver tx,
-            "amount"    .= _amount tx,
-            "currency"  .= _currency tx,
-            "timestamp" .= _time tx,
-            "sign"      .= _signature tx,
-            "uuid"      .= _uuid tx
+    toJSON (Transaction aOwner aReceiver aAmount aCurrency aTimestamp aUuid aSign) = object  [
+            "owner"     .= aOwner,
+            "receiver"  .= aReceiver,
+            "amount"    .= aAmount,
+            "currency"  .= aCurrency,
+            "timestamp" .= aTimestamp,
+            "sign"      .= aSign,
+            "uuid"      .= aUuid
           ]
 
+    toJSON (TransactionStart aReceiver aAmount aCurrency aTimestamp aUuid) = object [
+        "receiver"  .= aReceiver,
+        "amount"    .= aAmount,
+        "currency"  .= aCurrency,
+        "timestamp" .= aTimestamp,
+        "uuid"      .= aUuid
+      ]
+
+
+
 instance FromJSON Transaction where
-    parseJSON (Object o) = Transaction
-               <$> o .: "owner"
-               <*> o .: "receiver"
-               <*> o .: "amount"
-               <*> o .: "currency"
-               <*> o .: "timestamp"
-               <*> o .: "sign"
-               <*> o .: "uuid"
+    parseJSON (Object o) = do
+        aOwner      <- o .:? "owner"
+        aReceiver   <- o .: "receiver"
+        aAmount     <- o .: "amount"
+        aCurrency   <- o .: "currency"
+        aTimestamp  <- o .: "timestamp"
+        (aUuid :: Int)       <- o .: "uuid"
+        aSign       <- o .:? "sign"
+        case (aOwner, aSign) of
+            (Just aJustOwner, Just aJustSign) ->
+                return $ Transaction aJustOwner aReceiver aAmount aCurrency aTimestamp aJustSign aUuid
+            _ ->return $ TransactionStart aReceiver aAmount aCurrency aTimestamp aUuid
+
     parseJSON inv         = typeMismatch "Transaction" inv
 
 instance ToJSON Microblock where
