@@ -125,7 +125,7 @@ instance ToJSON Microblock where
            "K_hash"  .= encodeToText (_keyBlock aBlock),
            "wallets" .= _teamKeys aBlock,
            "Tx"      .= _transactions aBlock,
-           "i"    .= _numOfBlock aBlock
+           "uuid"    .= _numOfBlock aBlock
          ],
        "sign" .= _sign aBlock
    ]
@@ -139,7 +139,7 @@ instance FromJSON Microblock where
        Object aBlock -> do
            aWallets <- aBlock .: "wallets"
            aTx      <- aBlock .: "Tx"
-           aUuid    <- aBlock .: "i"
+           aUuid    <- aBlock .: "uuid"
            aKhash   <- decodeFromText =<< aBlock .: "K_hash"
            return $ Microblock aKhash aSign aWallets aTx aUuid
        a -> mzero
