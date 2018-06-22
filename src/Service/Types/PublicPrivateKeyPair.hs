@@ -77,7 +77,7 @@ publicKey256k1 = PublicKey256k1 . CompactInteger
 fromPublicKey256k1 :: PublicKey -> Integer
 fromPublicKey256k1 (PublicKey256k1 (CompactInteger i)) = i
 
-newtype PublicKey  = PublicKey256k1 CompactInteger deriving (Generic, Serialize, Eq, Ord)
+newtype PublicKey  = PublicKey256k1 CompactInteger deriving (Generic, Serialize, Eq, Ord, Num, Enum)
 newtype PrivateKey = PrivateKey256k1 Integer deriving (Generic, Serialize, Eq, Ord)
 
 
@@ -94,7 +94,7 @@ data KeyPair    = KeyPair { getPub :: PublicKey, getPriv :: PrivateKey }
 
 instance Read PublicKey where
     readsPrec _ value = [(publicKey256k1 $ base58ToInteger value,[])]
-            
+
 instance Read PrivateKey where
     readPrec =
         parens
