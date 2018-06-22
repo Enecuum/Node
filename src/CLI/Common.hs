@@ -43,6 +43,7 @@ import Service.System.Directory (getTime, getKeyFilePath)
 import Service.Transaction.Storage (DBPoolDescriptor(..))
 import Service.Transaction.Common as B (getBlockByHashDB, getTransactionByHashDB)
 import System.Random
+import Service.Transaction.TransactionsDAG (genNTx)
 
 type Result a = Either CLIException a
 
@@ -106,13 +107,7 @@ sendNewTrans trans ch aInfoCh = try $ do
       return tx
 
 
-genNTx :: Int -> IO [Transaction]
-genNTx n = do
-   let quantityOfKeys = if qKeys <= 2 then 2 else qKeys
-                        where qKeys = div n 3
-   keys <- replicateM quantityOfKeys generateNewRandomAnonymousKeyPair
-   tx <- getTransactions keys n
-   return tx
+
 
 generateNTransactions :: ManagerMiningMsg a =>
     QuantityTx -> Chan a -> Chan InfoMsg -> IO (Result ())
