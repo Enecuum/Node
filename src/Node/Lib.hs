@@ -57,16 +57,16 @@ startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
     let portNumber = extConnectPort buildConf
     md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aFileRequestChan bnList config portNumber
     startServerActor managerChan portNumber
-    void $ forkIO $ microblockProc descrDB aMicroblockChan
+    void $ forkIO $ microblockProc descrDB aMicroblockChan infoCh
     void $ forkIO $ manager managerChan md
     void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aFileRequestChan
     return managerChan
 
 
-microblockProc :: DBPoolDescriptor -> Chan Microblock -> IO b
-microblockProc descriptor aMicroblockCh = forever $ do
+microblockProc :: DBPoolDescriptor -> Chan Microblock -> Chan InfoMsg -> IO b
+microblockProc descriptor aMicroblockCh aInfoCh = forever $ do
         aMicroblock <- readChan aMicroblockCh
-        addMicroblockToDB descriptor aMicroblock
+        addMicroblockToDB descriptor aMicroblock aInfoCh
         -- putStrLn $ show aMicroblock
 
 readNodeConfig :: IO NodeConfig

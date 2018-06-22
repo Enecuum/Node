@@ -45,6 +45,7 @@ data LogingTag
     | PendingTag
     | RegularTag
     | InitTag
+    | BDTag
   deriving (Show, Enum)
 
 
