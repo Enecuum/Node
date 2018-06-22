@@ -70,6 +70,23 @@ instance Serialize Microblock
 instance Show Microblock where
     show _ = "Microblock ??"
 
+-- data MicroblockAPI = MicroblockAPI{
+--     _keyBlock :: ByteString, -- hash of key-block
+--     _sign :: Signature,  -- signature for {K_hash, [Tx],}
+--     _teamKeys :: [PublicKey], -- for reward
+--     _transactions :: [Transaction],
+--     _numOfBlock   :: Integer
+--   }
+--   deriving (Eq, Generic, Ord, Read)
+
+-- instance Serialize MicroblockAPI
+-- instance Show MicroblockAPI where
+--     show _ = "MicroblockAPI ??"
+
+
+
+
+
 data Macroblock = Macroblock {
     _prevBlock :: ByteString
   ,  _difficulty :: Integer

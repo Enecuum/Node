@@ -5,7 +5,7 @@ module Service.Transaction.Balance
     runLedger) where
 
 import Service.Types.PublicPrivateKeyPair
-import Service.Types
+import Service.Types hiding (MicroblockAPI(..))
 import qualified Data.ByteString.Char8 as BC hiding (map)
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import qualified Data.HashTable.IO as H

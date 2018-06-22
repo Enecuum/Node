@@ -1,6 +1,7 @@
 {-# LANGUAGE
         OverloadedStrings
     ,   PackageImports
+    ,   DuplicateRecordFields
   #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -143,9 +144,29 @@ instance FromJSON Microblock where
            aTx      <- aBlock .: "Tx"
            -- aUuid    <- aBlock .: "uuid"
            aKhash   <- decodeFromText =<< aBlock .: "K_hash"
-           return $ Microblock aKhash aSign aWallets aTx aUuid
+           return $ Microblock aKhash aSign aWallets aTx 0
        a -> mzero
 parseJSON _ = mzero
+
+-- instance ToJSON MicroblockAPI where
+--     toJSON bl = object  [
+--             "k_block"      .= _keyBlock bl
+--          ,  "index"        .= _numOfBlock bl
+--          ,  "publishers"   .= _teamKeys bl
+--          ,  "reward"       .= (1 :: Integer)  -- fix or remove
+--          ,  "sign"         .= _sign bl
+--          ,  "txs_cnt"      .= Prelude.length (_transactions bl)
+--          ,  "transactions" .= _transactions bl
+--        ]
+
+-- instance FromJSON MicroblockAPI where
+--     parseJSON (Object o) = MicroblockAPI
+--                <$> o .: "k_block"
+--                <*> o .: "sign"
+--                <*> o .: "publishers"
+--                <*> o .: "transactions"
+--                <*> o .: "index"
+--     parseJSON inv         = typeMismatch "Microblock" inv
 
 
 instance ToJSON Macroblock where
