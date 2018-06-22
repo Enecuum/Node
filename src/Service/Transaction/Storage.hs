@@ -160,13 +160,13 @@ handler =
 sleepMs n = threadDelay (n * 1000)
 
 
-getBlockByHashDB :: DBPoolDescriptor -> Hash -> IO Microblock
-getBlockByHashDB db mHash = do
+getBlockByHashDB :: DBPoolDescriptor -> Hash -> IO MicroblockAPI
+getBlockByHashDB db mHash = undefined {-do
   let (Hash key) = mHash
   let fun = \db -> Rocks.get db Rocks.defaultReadOptions key
   (Just v)  <- withResource (poolMicroblock db) fun
   return (read (urValue v) :: Microblock)
-
+-}
 
 getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO TransactionInfo --Transaction
 getTransactionByHashDB db tHash = do

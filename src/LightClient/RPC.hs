@@ -45,7 +45,7 @@ reqLedgerSig = Signature "enq_getBalance" ("address" ::: ())
 reqGetBlockSig :: Signature (Hash ::: ()) Macroblock
 reqGetBlockSig = Signature "enq_getBlockByHash" ("hash" ::: ())
 
-reqGetMicroblockSig :: Signature (Hash ::: ()) Microblock
+reqGetMicroblockSig :: Signature (Hash ::: ()) MicroblockAPI
 reqGetMicroblockSig = Signature "enq_getMicroblockByHash" ("hash" ::: ())
 
 reqGetTxSig :: Signature (Hash ::: ()) TransactionInfo
@@ -83,7 +83,7 @@ reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
 getBlock :: WS.Connection -> Hash -> Result Macroblock
 getBlock h = toFunction (connectionWithTimeOut h) reqGetBlockSig
 
-getMicroblock :: WS.Connection -> Hash -> Result Microblock
+getMicroblock :: WS.Connection -> Hash -> Result MicroblockAPI
 getMicroblock h = toFunction (connectionWithTimeOut h) reqGetMicroblockSig
 
 getTx :: WS.Connection -> Hash -> Result TransactionInfo
