@@ -17,20 +17,266 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 <br/>
 <br/>
-<br/>
 
-## RCP-JSON API for Simple Node
+## JSON-RPC API for Simple Node
 
-Send transaction to a node: `enq_sendTransaction`
+**Sends transaction to a node: `enq_sendTransaction`**
 
-Request example:
+##### Request parameters
 
-``` bash
-{"jsonrpc":"2.0","params":{"x":{"signature":{"sign_s":94223551497283667262425597401930625553013615916376364863948543283948993734318,"sign_r":28834183127673934019323833968330946475134237099239544917311924861094696131869},"amount":10, "time":53045.910023792, "owner_key":117770961709617055389350520036565206405403916684488363141903718453974738717275658,"receiver_key":117770961709617055389350520036565206405403916684488363141903718453974738717275658}}, "method":enq_sendTransaction, "id":1}
-```
- Response example:
+- `amount` - amount intended for transfer
+- `uuid` - unique identifier for the transaction
+- `owner` - sender's public key (a.k.a your address in the network)
+- `receiver` - receiver's public key (a.k.a their address in the network)
+- `currency` - currency itended for transfer
+- `sign` - ECDSA signature 
+- `sign_s` - represents [R output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature  
+- `sign_r` - represents [S output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature 
+- `timestamp` - current time (will be deprecated soon)
+
+##### Response parameters
+
+ - none if the transaction successfully got to the mempool. In case the node is down there is no response at all.
+
+###### Misc:
+
+- `method` - target API method
+- `id` - auto-assigned JSON-RPC ID (used to match the response object with the request object)
+- `jsonrpc` - JSON-RCP version
+
+##### Request example:
+
+`{
+  "jsonrpc":"2.0",
+  "params":
+   {"tx":{"amount":10,"uuid":11,"owner":"4mGYpcwycV9aWBurroUo2UMvCx5NL5RrGbdKacMoPZuX","receiver":"5YXZXhM9MMafhS5fdzanWbimKEpAnmrqabD5BcMm8TxS","currency":"ENQ","sign":    {"sign_s":53851544468490237432689794264655477248827276839794535462123667385563675641643,"sign_r":32540351665388188734732260127968413635181826340120448422375467318877505024005},"timestamp":1529677285}},"method":"enq_sendTransaction","id":1}`
+
+##### Response example:
+
+###### Success:
  
 `{"result":[],"jsonrpc":"2.0","id":1}`
+
+###### Error: failed to parse the JSON object:
+
+`{"error":{"code":-32700,"message":"Invalid JSON"},"jsonrpc":"2.0","id":null}`
+
+###### Error: access from a restricted IP address
+
+`{"error":{"code":401,"message":"Access denied: wrong IP"},"jsonrpc":"2.0","id":1}`
+
+<br>
+<br>
+
+**Get information about transaction: `enq_getTransactionByHash`**
+
+##### Request parameters
+
+- `hash` - hash of the target transaction
+
+##### Response parameters
+
+- `amount` - amount intended for transfer
+- `uuid` - unique identifier for the transaction
+- `owner` - sender's public key (a.k.a your address in the network)
+- `receiver` - receiver's public key (a.k.a their address in the network)
+- `currency` - currency itended for transfer
+- `sign` - ECDSA signature 
+- `sign_s` - represents [R output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature  
+- `sign_r` - represents [S output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature 
+- `timestamp` - current time (will be deprecated soon)
+- `block` - has of the microblock this transaction is published (mined) in
+
+###### Misc:
+
+- `method` - target API method
+- `id` - auto-assigned JSON-RPC ID (used to match the response object with the request object)
+- `jsonrpc` - JSON-RCP version
+
+##### Response example:
+
+`{"jsonrpc":"2.0","params":{"hash":"JM47wo87CqMVtVvit1gWfYdcdGrJM6kRmdMiLh8Jdi7AQdqWvXnrcLXskPFx"},"method":"enq_getTransactionByHash","id":1}`
+
+##### Response example:
+
+`{"result":{"tx":{"amount":15,"uuid":12,"owner":"UGkX5YaDQ2p9tJE4FWK81QmTg3bDsgrW6NWdRbZg1Rzh","receiver":"JW7ecwuBk3mBUsYFbrNzdWFtzg2gZjQfovUhfzFrT9NA","currency":"ENQ","sign":{"sign_s":108896698171168516308183867426676890214358078525015061253627796254851838899532,"sign_r":96833102483162253818415606073695362365268968710929065084732226015632032994116},"timestamp":1529681873},"block":"S005QWNzTmNrM1M4NHlDRllEU2hOZ3dwaVloYVpZMTJzMVp2dkxndlVxbmM=","index":5},"jsonrpc":"2.0","id":1}`
+
+<br>
+<br>
+
+**Get information about macroblock: `enq_getBlockByHash`**
+
+##### Request parameters
+
+- `hash` - hash of the target block
+
+##### Response parameters
+
+- `height` - number of blocks from the genesis to the current one 
+- `solver` - public key of the PoW solver who opened this macroblock (mined the k-block)
+- `txs_cn` - number of transactions in the macroblock
+- `prev_hash` - hash of the previous macroblock
+- `reward` - reward to the PoW miner for opening the macroblock (mining the k-block)
+- `microblocks` - hashes of microblocks inside the macroblock
+- `difficulty` - current difficulty level for opening a macroblock (mining a k-block)
+- `microblocks_cnt` - number of microblocks inside the macroblock
+
+###### Misc:
+
+- `method` - target API method
+- `id` - auto-assigned JSON-RPC ID (used to match the response object with the request object)
+- `jsonrpc` - JSON-RCP version
+
+##### Request example:
+
+`{"jsonrpc":"2.0","params":{"hash":"JM47wo87CqMVtVvit1gWfYdcdGrJM6kRmdMiLh8Jdi7AQdqWvXnrcLXskPFx"},"method":"enq_getBlockByHash","id":1}`
+
+##### Response example:
+
+`{"result":{"height":2,"solver":"RV36deizV55S3MnHTUzg3jEirHSDsDEMR89fNAzMadNZ4Fm4dG9PeQm2TAQA","txs_cnt":512,"prev_hash":"W4g6hWkxQhUQrXWmHoLkQocrLzrSgRZvjkm4ASsq4jt3Vqj5aSt3j8jiiTfV","reward":100,"microblocks":["RV36deizV55S3MnHTUzg3jEirHSDsDEMR89fNAzMadNZ4Fm4dG9PeQm2TAQA","JM47wo87CqMVtVvit1gWfYdcdGrJM6kRmdMiLh8Jdi7AQdqWvXnrcLXskPFx","J3fXPmZfaEzu9dp3kJsf8RuQzzRuzEBtCu8ciBiN6mmNkNj6HqSobgwtJ4W3","W4g6hWkxQhUQrXWmHoLkQocrLzrSgRZvjkm4ASsq4jt3Vqj5aSt3j8jiiTfV"],"difficulty":1,"microblocks_cnt":4},"jsonrpc":"2.0","id":1}`
+
+<br>
+<br>
+
+
+**Get information about microblock: `enq_getMicroblockByHash`**
+
+##### Request parameters
+
+- `hash` - hash of the target block
+
+##### Response parameters
+
+- `transactions` - start of an array of transactions in the microblock
+- `amount` - amount intended for transfer
+- `uuid` - unique identifier for the transaction
+- `owner` - sender's public key (a.k.a your address in the network)
+- `receiver` - receiver's public key (a.k.a their address in the network)
+- `currency` - currency itended for transfer
+- `sign` - ECDSA signature 
+- `sign_s` - represents [R output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature  
+- `sign_r` - represents [S output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature 
+- `timestamp` - current time (will be deprecated soon)
+- `k_block` - hash of the k-block (k-block is the opening part of a macroblock) this microblock is linked to
+- `txs_cnt` - number of transactions in the microblock
+- `reward` - reward for publishing a microblock
+- `publishers` - public keys (addresses) of PoA Nodes in the PoA Team (used for indexing microblocks in the macroblock)
+- `sign` - ECDSA signature of the PoA Node that published the microblock
+- `sign_s` - represents [R output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature  
+- `sign_r` - represents [S output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature 
+- `index` - index of the microblock in the macroblock 
+
+
+###### Misc:
+
+- `method` - target API method
+- `id` - auto-assigned JSON-RPC ID (used to match the response object with the request object)
+- `jsonrpc` - JSON-RCP version
+
+
+##### Request example:
+
+`{"jsonrpc":"2.0","params":{"hash":"JM47wo87CqMVtVvit1gWfYdcdGrJM6kRmdMiLh8Jdi7AQdqWvXnrcLXskPFx"},"method":"enq_getMicroblockByHash","id":1}`
+
+##### Response example:
+
+`{"result":{"transactions":[{"amount":10,"uuid":15,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":111453389016965411942432161422836677977682117261774497318558333020708965069823,"sign_r":34802528517330025474056637040554169615944272750680678430210531325764022406021},"timestamp":1529681025},{"amount":19,"uuid":12,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":36702896446615718903997830217307609909443281366110703304854624965337681147887,"sign_r":7367170092931138165337844383547165997062478109283580450989454932653837213781},"timestamp":1529681025},{"amount":14,"uuid":19,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":98414524750868806711785718518430616768375010094240450345905375658581001458859,"sign_r":95027401014124111353895671545669534279352130813036148099458965611942353578063},"timestamp":1529681025}],"k_block":"W4g6hWkxQhUQrXWmHoLkQocrLzrSgRZvjkm4ASsq4jt3Vqj5aSt3j8jiiTfV","txs_cnt":3,"reward":1,"publishers":[],"sign":{"sign_s":111453389016965411942432161422836677977682117261774497318558333020708965069823,"sign_r":34802528517330025474056637040554169615944272750680678430210531325764022406021},"index":4},"jsonrpc":"2.0","id":1}`
+
+<br>
+<br>
+
+**Get stats on the global state: `enq_getChainInfo`**
+
+##### Request parameters
+
+- none specific parameters
+
+##### Response parameters
+
+- `nodes_num` - total number of mining nodes
+- `blocks_num` - total number of mined macroblocks
+- `difficulty` - current difficulty level of opening a macroblock (mining k-block)
+- `emission` - total emission 
+
+###### Misc:
+
+- `method` - target API method
+- `id` - auto-assigned JSON-RPC ID (used to match the response object with the request object)
+- `jsonrpc` - JSON-RCP version
+
+
+##### Request example:
+
+`{"jsonrpc":"2.0","method":"enq_getChainInfo","id":1}`
+
+##### Response example:
+
+`{"result":{"nodes_num":4,"blocks_num":10,"difficulty":1,"txs_num":512,"emission":10000},"jsonrpc":"2.0","id":1}`
+
+<br>
+<br>
+
+
+
+**Get wallet balance: `enq_getBalance`**
+
+##### Request parameters
+
+- `address` - target address (a.k.a. public key)
+
+##### Response parameters
+
+- `result` contains the wallet balance (int64). For the testnet version, this int64 evaluates to ENQ, later smaller thing is going to be presented (e.g. ENQBit).
+
+###### Misc:
+
+- `method` - target API method
+- `id` - auto-assigned JSON-RPC ID (used to match the response object with the request object)
+- `jsonrpc` - JSON-RCP version
+
+ 
+##### Request example: 
+
+`{"jsonrpc":"2.0","params":{"address":"4mGYpcwycV9aWBurroUo2UMvCx5NL5RrGbdKacMoPZuX"},"method":"enq_getBalance","id":1}`
+
+##### Response example:
+
+`{"result":0,"jsonrpc":"2.0","id":1}`
+
+<br>
+<br>
+
+**Get transaction history for a wallet: `enq_getAllTransactions`**
+
+##### Request parameters
+
+- `address` - target address (a.k.a. public key)
+
+##### Response parameters
+
+- `amount` - amount intended for transfer
+- `uuid` - unique identifier for the transaction
+- `owner` - sender's public key (a.k.a your address in the network)
+- `receiver` - receiver's public key (a.k.a their address in the network)
+- `currency` - currency itended for transfer
+- `sign` - ECDSA signature 
+- `sign_s` - represents [R output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature  
+- `sign_r` - represents [S output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature 
+- `timestamp` - current time (will be deprecated soon)
+
+###### Misc:
+
+- `method` - target API method
+- `id` - auto-assigned JSON-RPC ID (used to match the response object with the request object)
+- `jsonrpc` - JSON-RCP version
+
+##### Request example:
+
+`{"jsonrpc":"2.0","params":{"address":"5YXZXhM9MMafhS5fdzanWbimKEpAnmrqabD5BcMm8TxS"},"method":"enq_getAllTransactions","id":1}`
+
+##### Response example:
+
+ `{"result":[{"amount":10,"uuid":15,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":111453389016965411942432161422836677977682117261774497318558333020708965069823,"sign_r":34802528517330025474056637040554169615944272750680678430210531325764022406021},"timestamp":1529681025},{"amount":19,"uuid":12,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":36702896446615718903997830217307609909443281366110703304854624965337681147887,"sign_r":7367170092931138165337844383547165997062478109283580450989454932653837213781},"timestamp":1529681025},{"amount":14,"uuid":19,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":98414524750868806711785718518430616768375010094240450345905375658581001458859,"sign_r":95027401014124111353895671545669534279352130813036148099458965611942353578063},"timestamp":1529681025}],"jsonrpc":"2.0","id":1}`
 
 <br/>
 <br/>
@@ -65,13 +311,13 @@ Request example:
 
 ### Clone and Build Node
 
-1. Clone the repo
+1. Choose the appropriate local folder, clone the repo and change to the cloned repository folder
 
-`git clone git@github.com:Enecuum/Node.git`
+`git clone git@github.com:Enecuum/Node.git && cd Node`
 
 2. Build without docker
 
-`stack build --no-docker`
+`stack build`
 
 
 ### Initialize a Boot Node
@@ -86,19 +332,29 @@ Request example:
 
 ### Initialize Light Client
 
-`stack exec LightClient-exe`.
+`stack exec LightClient-exe`
+
+<br>
+
+Hint: to run an instance of LightClient, you need to first start a local Simple Node in the background.\
+Alternatively, you can run LightClient with additional parameters `addr` and `port` to connect to a remote Simple Node, e.g.: `stack exec LightClient-exe-- --addr=245.217.53.5 --port=1555`
+<br>
 
 #### Available commands for Light Client
 
 | Command shortcut | Full command | Description |
 |---------|--------|---------|
-| -V, -? | --version | Show version number |
-| -K | --get-public-key | Create new public key |
-| -G qTx | --generate-n-transactions=qTx | Generate N transactions |
-| -F | --generate-transactions | Generate transactions forever |
-| -M | --show-my-keys | Show my public keys |
-| -B publicKey | --get-balance=publicKey | Get balance for a public key |
-| -S amount:to:from:currency | --send-money-to-from=amount:to:from:currency | Send currency from a public key to a public key (ENQ/ETH/DASH/BTC) |
+|  -K | --get-public-key | get public key |
+|  -G qTx | --generate-n-transactions=qTx | Generate N Transactions |
+|  -F | --generate-transactions | Generate Transactions forever |
+|  -M | --show-my-keys | show my public keys
+|  -B publicKey | --get-balance=publicKey | get balance for public key |
+|  -S amount:to:from:currency  | --send-money-to-from=amount:to:from:currency | send money to wallet from wallet (ENQ | ETH | DASH | BTC) |
+|  -A message | --send-message-for-all=message | Send broadcast message |
+|  -T nodeId message | --send-message-to=nodeId message | Send message to the node |
+|  -L | --load-new-messages | Load new recieved messages |
+|  -Q | --quit | exit |
+
 
 <br/>
 <br/>
@@ -111,8 +367,11 @@ You can define curstom values for variables in the /configs/config.json:
 
 | Variable | Description |
 |---------|---------|
+| enableIP | IP addresses that are allowed to connect to the node |
 | rpcPort | Port for remote procedure calls to the node |
 
+Hint: setting `enableIP` to `0.0.0.0` or leaving it blank allows any IP addresses. This field allows IPV6 subnet masks as well as IP addresses separated by commas.
+ 
 <br/>
 
 * `statsdBuildConfig` is the config section for the server to collect metrics. 
