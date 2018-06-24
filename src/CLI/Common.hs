@@ -40,7 +40,7 @@ import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
 import Service.System.Directory (getTime, getKeyFilePath)
 import Service.Transaction.Storage (DBPoolDescriptor(..))
-import Service.Transaction.Common as B (getBalanceForKey, getMicroBlockByHashDB, getTransactionByHashDB, getKeyBlockByHashDB, getAllTransactionsDB)
+import Service.Transaction.Common as B (getBalanceForKey, getBlockByHashDB, getTransactionByHashDB, getKeyBlockByHashDB, getAllTransactionsDB)
 import System.Random
 import Service.Transaction.TransactionsDAG (genNTx)
 
@@ -71,7 +71,7 @@ loadMessages ch = return $ Left NotImplementedException
 
 getBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result MicroblockAPI)
 getBlockByHash db hash ch = do
-  mb <- B.getMicroBlockByHashDB db hash
+  mb <- B.getBlockByHashDB db hash
   case mb of
     Nothing -> return (Left NoSuchMicroBlockDB)
     Just m -> return (Right m)
