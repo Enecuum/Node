@@ -17,8 +17,6 @@ import Service.Types.PublicPrivateKeyPair
 import Service.Types
 import Data.Pool
 import Data.Time.Clock (getCurrentTime, UTCTime)
--- import qualified Database.Persist.Postgresql as Post
--- import qualified Database.PostgreSQL.Simple as Post
 import qualified Data.ByteString.Internal as BSI
 import Control.Monad.Trans.State (StateT, evalStateT, put, get)
 import Control.Monad.Trans.Class (lift)
@@ -27,12 +25,60 @@ import Data.Aeson
 import GHC.Generics
 import Data.Serialize (Serialize)
 
+--------------------------------------
+-- begin of the Connection section
 data DBPoolDescriptor = DBPoolDescriptor {
     poolTransaction :: Pool Rocks.DB
   , poolMicroblock :: Pool Rocks.DB
   , poolLedger :: Pool Rocks.DB
   , poolMacroblock :: Pool Rocks.DB
   }
+
+-- FIX change def (5 times)
+connectOrRecoveryConnect = recovering def handler . const $ connectDB
+
+
+connectDB :: IO DBPoolDescriptor
+connectDB = do
+  aTx <- getTransactionFilePath
+  aMb <- getMicroblockFilePath
+  aLd <- getLedgerFilePath
+  aMacroblock <- getMacroblockFilePath
+  poolTransaction <- createPool (Rocks.open aTx def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
+  poolMicroblock  <- createPool (Rocks.open aMb def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
+  poolLedger      <- createPool (Rocks.open aLd def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
+  poolMacroblock  <- createPool (Rocks.open aMacroblock def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
+  -- putStrLn "DBTransactionException"
+  -- sleepMs 5000
+  -- throw DBTransactionException
+  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger poolMacroblock)
+
+
+data SuperException = DBTransactionException
+                    | NotImplementedException -- test
+                    | OtherException
+                  deriving (Show)
+
+instance Exception SuperException
+
+
+--catch all exceptions and retry connections
+handler :: [p -> E.Handler IO Bool]
+handler =
+    [ \_ -> E.Handler $ \(_ :: SomeException) -> do
+        return True
+    ]
+
+
+-- -- A utility function - threadDelay takes microseconds, which is slightly annoying.
+-- sleepMs n = threadDelay (n * 1000)
+
+-- End of the Connection section
+--------------------------------------
+
+
+--------------------------------------
+-- begin of the Database structure  section
 
 data Macroblock = Macroblock {
   keyBlock :: BC.ByteString,
@@ -55,26 +101,29 @@ unHtK key = read (BC.unpack key) :: PublicKey
 unHtA key = read (BC.unpack key) :: Amount
 
 
-
-connectDB :: IO DBPoolDescriptor
-connectDB = do
-  aTx <- getTransactionFilePath
-  aMb <- getMicroblockFilePath
-  aLd <- getLedgerFilePath
-  aMacroblock <- getMacroblockFilePath
-  poolTransaction <- createPool (Rocks.open aTx def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
-  poolMicroblock  <- createPool (Rocks.open aMb def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
-  poolLedger      <- createPool (Rocks.open aLd def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
-  poolMacroblock  <- createPool (Rocks.open aMacroblock def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
-  -- putStrLn "DBTransactionException"
-  -- sleepMs 5000
-  -- throw DBTransactionException
-  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger poolMacroblock)
+-- end of the Database structure  section
+--------------------------------------
 
 
 
 
+--------------------------------------
+-- begin of the Query section
 
+-- get all values from the table via iterator
+-- getAllValues :: MonadResource m => Rocks.DB -> m [BSI.ByteString]
+getAllValues db = do
+  it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+  Rocks.iterFirst it
+  Rocks.iterValues it
+
+
+getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [Transaction]
+getAllTransactionsDB = undefined
+
+
+-- end of the Query section
+--------------------------------------
 
 getNTransactions ::  IO [BSI.ByteString]
 getNTransactions = runResourceT $ do
@@ -120,60 +169,35 @@ getNValues db n = do
   return [v1,v2]
 
 
-getAllValues db = do
-  it    <- Rocks.iterOpen db Rocks.defaultReadOptions
-  Rocks.iterFirst it
-  Rocks.iterValues it
 
 
 
 
 
+--------------------------------------
+-- begin of the Test section
+-- end of the Test section
+--------------------------------------
+
+getMicroBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe MicroblockAPI)
+getMicroBlockByHashDB db mHash = do
+  mbByte <- getByHash (poolMicroblock db) mHash
+  let mb = case mbByte of Nothing -> Nothing
+                          Just m -> Just (read (urValue m) :: Microblock)
+  -- let mb = read (urValue mbByte) :: Maybe Microblock
+  let mbAPI = read (show mb) :: Maybe MicroblockAPI
+  return mbAPI
 
 
+getKeyBlockByHashDB = undefined
 
 
-
-
-data SuperException = DBTransactionException
-                    | NotImplementedException -- test
-                    | OtherException
-                  deriving (Show)
-
-instance Exception SuperException
-
-
--- FIX change def (5 times)
-connectOrRecoveryConnect = recovering def handler . const $ connectDB
-
-
---catch all exceptions and retry connections
-handler :: [p -> E.Handler IO Bool]
-handler =
-    [ \_ -> E.Handler $ \(_ :: SomeException) -> do
-        return True
-    ]
-
-
-
--- A utility function - threadDelay takes microseconds, which is slightly annoying.
-sleepMs n = threadDelay (n * 1000)
-
-
-getBlockByHashDB :: DBPoolDescriptor -> Hash -> IO MicroblockAPI
-getBlockByHashDB db mHash = undefined {-do
-  let (Hash key) = mHash
-  let fun = \db -> Rocks.get db Rocks.defaultReadOptions key
-  (Just v)  <- withResource (poolMicroblock db) fun
-  return (read (urValue v) :: Microblock)
--}
-
-getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO TransactionInfo --Transaction
+getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo) --Transaction
 getTransactionByHashDB db tHash = do
-  let (Hash key) = tHash
-  let fun = \db -> Rocks.get db Rocks.defaultReadOptions key
-  (Just v)  <- withResource (poolTransaction db) fun
-  return (read (urValue v) :: TransactionInfo)
+  tx <- getByHash (poolTransaction db) tHash
+  let t = case tx of Nothing -> Nothing
+                     Just t -> Just (read (urValue t) :: TransactionInfo)
+  return t
 
 
 deleteMicroblocksByHash :: DBPoolDescriptor -> [BC.ByteString] -> IO ()
@@ -184,7 +208,16 @@ deleteTransactionsByHash :: DBPoolDescriptor -> [BC.ByteString] -> IO ()
 deleteTransactionsByHash db hashes = deleteByHash (poolTransaction db) hashes
 
 
+
+
+getByHash :: Pool Rocks.DB -> Hash -> IO (Maybe BSI.ByteString)
+getByHash pool hash = do
+  let (Hash key) = hash
+  let fun = \db -> Rocks.get db Rocks.defaultReadOptions key
+  withResource pool fun
+
+
 deleteByHash :: Pool Rocks.DB -> [BC.ByteString] -> IO ()
-deleteByHash pool tHash = do
+deleteByHash pool hash = do
   let fun k = (\db -> Rocks.delete db def{Rocks.sync = True} k)
-  mapM_ (\k ->  withResource pool (fun k)) tHash
+  mapM_ (\k ->  withResource pool (fun k)) hash

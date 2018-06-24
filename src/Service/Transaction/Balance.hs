@@ -46,13 +46,11 @@ updateBalanceTable ht (Transaction fromKey toKey am _ _ _ _) = do
                                           else do return ()
 
 
-
 getTxsMicroblock :: Microblock -> [Transaction]
 getTxsMicroblock (Microblock _ _ _ txs _) = txs
 
 
 getBalanceOfKeys :: Pool Rocks.DB -> [Transaction] -> IO BalanceTable
--- getBalanceOfKeys = undefined
 getBalanceOfKeys db tx = do
   let hashKeys = concatMap getPubKeys tx
   let fun k = (\db -> Rocks.get db Rocks.defaultReadOptions (rValue k))
@@ -68,7 +66,6 @@ getPubKeys :: Transaction -> [PublicKey]
 getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
-
 runLedger :: DBPoolDescriptor -> Chan InfoMsg -> Microblock -> IO ()
 runLedger db aInfoChan m = do
     let txs = getTxsMicroblock m
@@ -78,6 +75,7 @@ runLedger db aInfoChan m = do
 
 
 hashedMb hashesOfMicroblock = encode $ show hashesOfMicroblock
+
 
 checkMacroblock :: DBPoolDescriptor -> Chan InfoMsg -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool)
 checkMacroblock db aInfoChan keyBlockHash blockHash = do --undefined
@@ -114,7 +112,6 @@ checkMacroblock db aInfoChan keyBlockHash blockHash = do --undefined
                                      else return (False, True)
 
 
-
 addMicroblockToDB :: DBPoolDescriptor -> Microblock -> Chan InfoMsg -> IO ()
 addMicroblockToDB db m aInfoChan =  do
 -- FIX: verify signature
@@ -141,6 +138,7 @@ deleteMacroblockDB db aInfoChan keyBlockHash = do --undefined
     withResource (poolMacroblock db) fun
     writeLog aInfoChan [BDTag] Info ("Delete Macroblock "  ++ show keyBlockHash)
 
+
 writeMicroblockDB :: Pool Rocks.DB -> Chan InfoMsg -> Microblock -> IO ()
 writeMicroblockDB db aInfoChan m = do
   let key = rHash m
@@ -149,6 +147,7 @@ writeMicroblockDB db aInfoChan m = do
   withResource db fun
   writeLog aInfoChan [BDTag] Info ("Write Microblock "  ++ show key ++ "to Microblock table")
 
+
 writeTransactionDB :: Pool Rocks.DB -> Chan InfoMsg -> [Transaction] -> BC.ByteString -> IO ()
 writeTransactionDB dbTransaction aInfoChan tx hashOfMicroblock = do
   let txInfo = \tx1 num -> TransactionInfo tx1 hashOfMicroblock num
@@ -156,6 +155,7 @@ writeTransactionDB dbTransaction aInfoChan tx hashOfMicroblock = do
   let fun = (\db -> Rocks.write db def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) txKeyValue))
   withResource dbTransaction fun
   writeLog aInfoChan [BDTag] Info ("Write Transactions to Transaction table")
+
 
 writeLedgerDB ::  Pool Rocks.DB -> Chan InfoMsg -> BalanceTable -> IO ()
 writeLedgerDB dbLedger aInfoChan bt = do
