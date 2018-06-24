@@ -10,7 +10,7 @@ import qualified Data.ByteString.Char8 as BC hiding (map)
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import qualified Data.HashTable.IO as H
 import Control.Monad
-import Service.Transaction.Storage (DBPoolDescriptor(..),DBPoolDescriptor(..),rHash, rValue, urValue, unHtK, unHtA, Macroblock(..))
+import Service.Transaction.Storage (DBPoolDescriptor(..),DBPoolDescriptor(..),rHash, rValue, urValue, Macroblock(..), unA)
 
 import Data.Default (def)
 import Data.Hashable
@@ -25,11 +25,13 @@ instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
 
 
-getBalanceForKey :: DBPoolDescriptor -> PublicKey -> IO Amount
+getBalanceForKey :: DBPoolDescriptor -> PublicKey -> IO (Maybe Amount)
 getBalanceForKey db key = do
     let fun = (\db -> Rocks.get db Rocks.defaultReadOptions (rValue key))
-    Just v  <- withResource (poolLedger db) fun
-    return (unHtA v)
+    val  <- withResource (poolLedger db) fun
+    result <- case val of Nothing -> return Nothing --putStrLn "There is no such key"
+                          Just v -> unA v
+    return result
 
 
 updateBalanceTable :: BalanceTable -> Transaction -> IO ()
@@ -55,15 +57,25 @@ getBalanceOfKeys db tx = do
   let hashKeys = concatMap getPubKeys tx
   let fun k = (\db -> Rocks.get db Rocks.defaultReadOptions (rValue k))
   let getBalanceByKey k = withResource db (fun k)
-  let toTuple k (Just b) = (,) k (unHtA b)
-  let toTuple k Nothing = (,) k 0
+  let toTuple k b = (,) k b
   balance  <- mapM (\k -> liftM (toTuple k ) (getBalanceByKey k)) hashKeys
-  aBalanceTable <- H.fromList balance
+  --   balance (key Maybe(rValue Amount))
+
+  -- initialize keys which does'not exist yet with initial balance = 100
+  let keysWhichDoesNotExistYet = filter (\(k,v) -> v == Nothing) balance
+  let initialBalance = map (\(k,v) ->  (rValue k, rValue (100 :: Amount))) keysWhichDoesNotExistYet
+  let iBalance = map (\(key, val) -> Rocks.Put key val) initialBalance
+  let fun2 = (\db -> Rocks.write db def{Rocks.sync = True} iBalance)
+  withResource db fun2
+  --
+  let fun3 = \(k,v) -> case v of Nothing -> (k, 100 :: Amount)
+                                 Just balance -> case (urValue balance :: Either String Amount) of
+                                   Left _ -> (k, 0)
+                                   Right b -> (k, b)
+
+  let newBalance = map fun3 balance
+  aBalanceTable <- H.fromList newBalance
   return aBalanceTable
-
-
-getPubKeys :: Transaction -> [PublicKey]
-getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
 runLedger :: DBPoolDescriptor -> Chan InfoMsg -> Microblock -> IO ()
@@ -74,11 +86,15 @@ runLedger db aInfoChan m = do
     writeLedgerDB (poolLedger db) aInfoChan ht
 
 
+getPubKeys :: Transaction -> [PublicKey]
+getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
+
+
 hashedMb hashesOfMicroblock = encode $ show hashesOfMicroblock
 
 
 checkMacroblock :: DBPoolDescriptor -> Chan InfoMsg -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool)
-checkMacroblock db aInfoChan keyBlockHash blockHash = do --undefined
+checkMacroblock db aInfoChan keyBlockHash blockHash = do
     let fun = (\db -> Rocks.get db Rocks.defaultReadOptions keyBlockHash)
     v  <- withResource (poolMacroblock db) fun
     case v of Nothing -> do -- If Macroblock is not already in the table, than insert it into the table
@@ -133,7 +149,7 @@ addMicroblockToDB db m aInfoChan =  do
 
 
 deleteMacroblockDB :: DBPoolDescriptor -> Chan InfoMsg -> BC.ByteString -> IO ()
-deleteMacroblockDB db aInfoChan keyBlockHash = do --undefined
+deleteMacroblockDB db aInfoChan keyBlockHash = do
     let fun = (\db -> Rocks.delete db Rocks.defaultWriteOptions keyBlockHash)
     withResource (poolMacroblock db) fun
     writeLog aInfoChan [BDTag] Info ("Delete Macroblock "  ++ show keyBlockHash)

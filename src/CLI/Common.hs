@@ -49,6 +49,7 @@ type Result a = Either CLIException a
 
 data CLIException = WrongKeyOwnerException
                   | NotImplementedException -- test
+                  | NoSuchPublicKeyInDB
                   | OtherException
   deriving Show
 
@@ -158,9 +159,12 @@ getNewKey = try $ do
 getBalance :: DBPoolDescriptor -> PublicKey -> Chan InfoMsg -> IO (Result Amount)
 getBalance descrDB pKey aInfoCh = try $ do
     stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
-    result  <- getBalanceForKey descrDB pKey
+    Just result  <- getBalanceForKey descrDB pKey
     endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
     writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
+    -- case result of Nothing -> return $ Left NoSuchPublicKeyInDB
+    -- --putStrLn "There is no such key in database"
+    --                Just r -> return $ Right r
     return result
 
 

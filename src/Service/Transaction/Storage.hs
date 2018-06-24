@@ -23,7 +23,9 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad (replicateM)
 import Data.Aeson
 import GHC.Generics
-import Data.Serialize (Serialize)
+import qualified Data.Serialize as S (Serialize, encode, decode)
+import Service.Transaction.TransactionsDAG (genNNTx)
+import Data.Typeable
 
 --------------------------------------
 -- begin of the Connection section
@@ -86,19 +88,22 @@ data Macroblock = Macroblock {
   -- requiredNumberOfMicroblocks :: Int,
   hashOfMicroblock :: [BC.ByteString]
   -- timeOfMicroblockArrived :: UTCTime
-                                 } deriving (Generic, Eq, Ord, Show, Serialize)
+                                 } deriving (Generic, Eq, Ord, Show, S.Serialize)
 
 
 
 -- for rocksdb Transaction and Microblock
-rHash key = SHA1.hash . BC.pack . show $ key
-rValue value = BC.pack $ show value
-urValue value = BC.unpack value
+rHash key = SHA1.hash . rValue $ key
+rValue value = S.encode value
+urValue value = S.decode value
 
 -- for Balance Table and Ledger
-htK key = BC.pack $ show key
-unHtK key = read (BC.unpack key) :: PublicKey
-unHtA key = read (BC.unpack key) :: Amount
+htK key = S.encode key
+unA balance = case (urValue balance) of Left _ -> error "Can not decode balance"
+                                        Right b -> return $ Just (read b :: Amount)
+
+-- unHtK key = read (S.decode key) :: PublicKey
+-- unHtA key = read (S.decode key) :: Amount
 
 
 -- end of the Database structure  section
@@ -107,23 +112,7 @@ unHtA key = read (BC.unpack key) :: Amount
 
 
 
---------------------------------------
--- begin of the Query section
 
--- get all values from the table via iterator
--- getAllValues :: MonadResource m => Rocks.DB -> m [BSI.ByteString]
-getAllValues db = do
-  it    <- Rocks.iterOpen db Rocks.defaultReadOptions
-  Rocks.iterFirst it
-  Rocks.iterValues it
-
-
-getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [Transaction]
-getAllTransactionsDB = undefined
-
-
--- end of the Query section
---------------------------------------
 
 getNTransactions ::  IO [BSI.ByteString]
 getNTransactions = runResourceT $ do
@@ -155,6 +144,7 @@ getNValuesT = do
   put it
   return v
 
+
 getNValues :: MonadResource m => Rocks.DB -> p -> m [BSI.ByteString]
 getNValues db n = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
@@ -172,8 +162,6 @@ getNValues db n = do
 
 
 
-
-
 --------------------------------------
 -- begin of the Test section
 -- end of the Test section
@@ -183,7 +171,9 @@ getMicroBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe MicroblockAPI)
 getMicroBlockByHashDB db mHash = do
   mbByte <- getByHash (poolMicroblock db) mHash
   let mb = case mbByte of Nothing -> Nothing
-                          Just m -> Just (read (urValue m) :: Microblock)
+                          Just m -> case (urValue m) of
+                            Left _ -> error "Can not decode Microblock"
+                            Right mt -> Just (read mt :: Microblock)
   -- let mb = read (urValue mbByte) :: Maybe Microblock
   let mbAPI = read (show mb) :: Maybe MicroblockAPI
   return mbAPI
@@ -196,7 +186,9 @@ getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo)
 getTransactionByHashDB db tHash = do
   tx <- getByHash (poolTransaction db) tHash
   let t = case tx of Nothing -> Nothing
-                     Just t -> Just (read (urValue t) :: TransactionInfo)
+                     Just t -> case (urValue t) of
+                       Left _ -> error "Can not decode TransactionInfo"
+                       Right rt -> Just (read rt :: TransactionInfo)
   return t
 
 
@@ -221,3 +213,32 @@ deleteByHash :: Pool Rocks.DB -> [BC.ByteString] -> IO ()
 deleteByHash pool hash = do
   let fun k = (\db -> Rocks.delete db def{Rocks.sync = True} k)
   mapM_ (\k ->  withResource pool (fun k)) hash
+
+
+--------------------------------------
+-- begin of the Query section
+
+-- get all values from the table via iterator
+-- getAllValues :: MonadResource m => Rocks.DB -> m [BSI.ByteString]
+getAllValues db = runResourceT $ getAllValues1 db
+getAllValues1 db = do
+  it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+  Rocks.iterFirst it
+  Rocks.iterValues it
+
+
+
+-- getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [Transaction]
+getAllTransactionsDB = undefined
+-- getAllTransactionsDB descr pubKey = do
+--   txByte <- withResource (poolTransaction descr) getAllValues
+--   -- let txInfo = case txByte of [] -> []
+--   --                             tInfo -> read (urValue tInfo) :: [TransactionInfo]
+--   tx <- genNNTx 5
+--   return tx
+--   -- return txByte
+
+
+
+-- end of the Query section
+--------------------------------------
