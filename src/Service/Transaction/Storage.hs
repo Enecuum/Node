@@ -99,8 +99,9 @@ urValue value = S.decode value
 
 -- for Balance Table and Ledger
 htK key = S.encode key
-unA balance = case (urValue balance) of Left _ -> error "Can not decode balance"
-                                        Right b -> return $ Just (read b :: Amount)
+unA balance = case (urValue balance :: Either String Amount ) of
+  Left _ -> error ("Can not decode balance" ++ show balance)
+  Right b -> return $ Just b
 
 -- unHtK key = read (S.decode key) :: PublicKey
 -- unHtA key = read (S.decode key) :: Amount

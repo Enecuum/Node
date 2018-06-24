@@ -32,7 +32,6 @@ import Data.List.Split (splitOn)
 import Data.Map (fromList, lookup, Map)
 import System.Random (randomRIO)
 
-import Service.Transaction.Balance
 import Service.Transaction.TransactionsDAG
 import Node.Node.Types
 import Service.Types
@@ -41,7 +40,7 @@ import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
 import Service.System.Directory (getTime, getKeyFilePath)
 import Service.Transaction.Storage (DBPoolDescriptor(..))
-import Service.Transaction.Common as B (getMicroBlockByHashDB, getTransactionByHashDB, getKeyBlockByHashDB, getAllTransactionsDB)
+import Service.Transaction.Common as B (getBalanceForKey, getMicroBlockByHashDB, getTransactionByHashDB, getKeyBlockByHashDB, getAllTransactionsDB)
 import System.Random
 import Service.Transaction.TransactionsDAG (genNTx)
 
@@ -50,6 +49,8 @@ type Result a = Either CLIException a
 data CLIException = WrongKeyOwnerException
                   | NotImplementedException -- test
                   | NoSuchPublicKeyInDB
+                  | NoSuchMicroBlockDB
+                  | NoSuchTransactionDB
                   | OtherException
   deriving Show
 
@@ -72,7 +73,7 @@ getBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO
 getBlockByHash db hash ch = do
   mb <- B.getMicroBlockByHashDB db hash
   case mb of
-    Nothing -> return (Left OtherException)
+    Nothing -> return (Left NoSuchMicroBlockDB)
     Just m -> return (Right m)
 
 
@@ -89,7 +90,7 @@ getTransactionByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a
 getTransactionByHash db hash ch = do
   tx <- B.getTransactionByHashDB db hash
   case tx of
-    Nothing -> return (Left OtherException)
+    Nothing -> return (Left NoSuchTransactionDB)
     Just t -> return (Right t)
 
 
@@ -157,15 +158,16 @@ getNewKey = try $ do
 
 
 getBalance :: DBPoolDescriptor -> PublicKey -> Chan InfoMsg -> IO (Result Amount)
-getBalance descrDB pKey aInfoCh = try $ do
+getBalance descrDB pKey aInfoCh = do
     stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
-    Just result  <- getBalanceForKey descrDB pKey
+    balance  <- B.getBalanceForKey descrDB pKey
     endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
     writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
-    -- case result of Nothing -> return $ Left NoSuchPublicKeyInDB
-    -- --putStrLn "There is no such key in database"
-    --                Just r -> return $ Right r
-    return result
+    case balance of
+      Nothing -> return (Left NoSuchPublicKeyInDB)
+      Just b -> return (Right b)
+    --putStrLn "There is no such key in database"
+    -- return result
 
 
 getSavedKeyPairs :: IO [(PublicKey, PrivateKey)]
