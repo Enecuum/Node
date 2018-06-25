@@ -1,7 +1,9 @@
 {-#LANGUAGE FlexibleInstances, UndecidableInstances#-}
 module Node.Data.GlobalLoging where
 
-import              Control.Concurrent.Chan
+
+import qualified    Control.Concurrent.Chan          as C
+import              Control.Concurrent.Chan.Unagi.Bounded
 import              Sharding.Space.Distance
 import              Sharding.Space.Point
 import              Sharding.Types.ShardTypes
@@ -15,13 +17,13 @@ data LogInfoMsg = LogInfoMsg MyNodeId MyNodePosition ConnectList  ShardCount (Di
 
 
 -- | Write ligs into the channel, where it will be redirected to server.
-writeMetric :: Chan InfoMsg ->  String ->  IO ()
+writeMetric :: InChan InfoMsg ->  String ->  IO ()
 writeMetric aChan metric = writeChan aChan $ Metric metric
 
 
 --writeLog aChan aMsg = writeChan aChan $ Log [] Info aMsg
 
-writeLog :: Chan InfoMsg -> [LogingTag] -> MsgType -> String -> IO ()
+writeLog :: InChan InfoMsg -> [LogingTag] -> MsgType -> String -> IO ()
 writeLog aChan aTags aTypes aMsg = writeChan aChan $ Log aTags aTypes aMsg
 
 

@@ -25,7 +25,8 @@ import Service.Network.TCP.Client
 import Service.Metrics.Statsd
 
 import Control.Monad (void, forever)
-import Control.Concurrent.Chan
+import qualified    Control.Concurrent as C
+import              Control.Concurrent.Chan.Unagi.Bounded
 import Control.Exception (try, SomeException)
 
 
@@ -61,7 +62,7 @@ data InfoMsg = Metric String | Log [LogingTag] MsgType String
 sendToServer :: ClientHandle -> String -> IO ()
 sendToServer h s = void $ sendTo (clientSocket h) (BS.pack s) (clientAddress h)
 
-serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> String -> IO ()
+serveInfoMsg :: ConnectInfo -> ConnectInfo -> OutChan InfoMsg -> String -> IO ()
 serveInfoMsg statsdInfo logsInfo chan aId = do
     eithMHandler <- try (openConnect (host statsdInfo) (port statsdInfo))
 

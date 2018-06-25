@@ -44,12 +44,12 @@ import              Sharding.ShardDB.ShardStore
 
 
 import              Control.Concurrent.Chan.Unagi.Bounded
+import qualified    Control.Concurrent as C
 import              Control.Monad.State.Lazy
 import qualified    Node.Node.Types     as T
 import qualified    Data.ByteString.Lazy as L
 import qualified    Data.Aeson as A
 import              Data.List.Extra
-import qualified    Control.Concurrent as C
 import              Lens.Micro
 import              Data.Word
 import              Service.Timer
@@ -95,7 +95,7 @@ makeShardingNode
     ->  C.Chan ShardingNodeAction
     ->  InChan msg
     ->  MyNodePosition
-    ->  C.Chan InfoMsg
+    ->  InChan InfoMsg
     ->  IO ()
 makeShardingNode aMyNodeId aChanRequest aChanOfNetLevel aMyNodePosition infoMsgChan = do
     aShardingNode <- initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMsgChan
@@ -293,7 +293,7 @@ initOfShardingNode :: T.ManagerMsg msg =>
                             -> C.Chan ShardingNodeAction
                             -> MyNodeId
                             -> MyNodePosition
-                            -> C.Chan InfoMsg
+                            -> InChan InfoMsg
                             -> IO ShardingNode
 initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMsgChan = do
     writeLog infoMsgChan [ShardingLvlTag, InitTag] Info "Init sharding node"
@@ -328,7 +328,7 @@ shiftTheShardingNode :: T.ManagerMsg msg =>
         InChan msg
     -> (ShardingNode ->  IO ())
     ->  ShardingNode
-    -> C.Chan InfoMsg
+    ->  InChan InfoMsg
     ->  IO ()
 shiftTheShardingNode aChanOfNetLevel aLoop aShardingNode _ = do
     let

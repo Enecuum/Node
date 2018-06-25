@@ -17,7 +17,8 @@ import Data.Hashable
 import Data.Pool
 import Data.Serialize (decode, encode)
 import Data.Either
-import Control.Concurrent
+import qualified    Control.Concurrent          as C
+import              Control.Concurrent.Chan.Unagi.Bounded
 import Service.InfoMsg (InfoMsg(..), LogingTag(..), MsgType(..))
 import Node.Data.GlobalLoging
 import Data.Maybe
@@ -80,7 +81,7 @@ getBalanceOfKeys db tx = do
   return aBalanceTable
 
 
-runLedger :: DBPoolDescriptor -> Chan InfoMsg -> Microblock -> IO ()
+runLedger :: DBPoolDescriptor -> InChan InfoMsg -> Microblock -> IO ()
 runLedger db aInfoChan m = do
     let txs = getTxsMicroblock m
     ht      <- getBalanceOfKeys (poolLedger db) txs
@@ -95,7 +96,7 @@ getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 hashedMb hashesOfMicroblock = encode $ show hashesOfMicroblock
 
 type HashOfMicroblock = BC.ByteString
-checkMacroblock :: DBPoolDescriptor -> Chan InfoMsg -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, [HashOfMicroblock])
+checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, [HashOfMicroblock])
 checkMacroblock db aInfoChan keyBlockHash blockHash = do
     let quantityMicroblocksInMacroblock = 2
     let fun = (\db -> Rocks.get db Rocks.defaultReadOptions keyBlockHash)
@@ -135,7 +136,7 @@ checkMacroblock db aInfoChan keyBlockHash blockHash = do
 
 
 
-addMicroblockToDB :: DBPoolDescriptor -> Microblock -> Chan InfoMsg -> IO ()
+addMicroblockToDB :: DBPoolDescriptor -> Microblock -> InChan InfoMsg -> IO ()
 addMicroblockToDB db m aInfoChan =  do
 -- FIX: verify signature
     let txs = getTxsMicroblock m
@@ -163,14 +164,14 @@ addMicroblockToDB db m aInfoChan =  do
     else return ()
 
 
-deleteMacroblockDB :: DBPoolDescriptor -> Chan InfoMsg -> BC.ByteString -> IO ()
+deleteMacroblockDB :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> IO ()
 deleteMacroblockDB db aInfoChan keyBlockHash = do
     let fun = (\db -> Rocks.delete db Rocks.defaultWriteOptions keyBlockHash)
     withResource (poolMacroblock db) fun
     writeLog aInfoChan [BDTag] Info ("Delete Macroblock "  ++ show keyBlockHash)
 
 
-writeMicroblockDB :: Pool Rocks.DB -> Chan InfoMsg -> Microblock -> IO ()
+writeMicroblockDB :: Pool Rocks.DB -> InChan InfoMsg -> Microblock -> IO ()
 writeMicroblockDB db aInfoChan m = do
   let key = rHash m
       val  = rValue m
@@ -179,7 +180,7 @@ writeMicroblockDB db aInfoChan m = do
   writeLog aInfoChan [BDTag] Info ("Write Microblock "  ++ show key ++ "to Microblock table")
 
 
-writeTransactionDB :: Pool Rocks.DB -> Chan InfoMsg -> [Transaction] -> BC.ByteString -> IO ()
+writeTransactionDB :: Pool Rocks.DB -> InChan InfoMsg -> [Transaction] -> BC.ByteString -> IO ()
 writeTransactionDB dbTransaction aInfoChan tx hashOfMicroblock = do
   let txInfo = \tx1 num -> TransactionInfo tx1 hashOfMicroblock num
   let txKeyValue = map (\(t,n) -> (rHash t, rValue (txInfo t n)) ) (zip tx [1..])
@@ -188,7 +189,7 @@ writeTransactionDB dbTransaction aInfoChan tx hashOfMicroblock = do
   writeLog aInfoChan [BDTag] Info ("Write Transactions to Transaction table")
 
 
-writeLedgerDB ::  Pool Rocks.DB -> Chan InfoMsg -> BalanceTable -> IO ()
+writeLedgerDB ::  Pool Rocks.DB -> InChan InfoMsg -> BalanceTable -> IO ()
 writeLedgerDB dbLedger aInfoChan bt = do
   ledgerKV <- H.toList bt
   let ledgerKeyValue = map (\(k,v)-> (rValue k, rValue v)) ledgerKV

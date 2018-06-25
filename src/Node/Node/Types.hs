@@ -177,7 +177,7 @@ data NodeBaseData = NodeBaseData {
     ,   nodeBaseDataShardingChan        :: MaybeChan N.ShardingNodeAction
     ,   nodeBaseDataIAmBroadcast        :: Bool
     ,   nodeBaseDataOutPort             :: PortNumber
-    ,   nodeBaseDataInfoMsgChan         :: C.Chan InfoMsg
+    ,   nodeBaseDataInfoMsgChan         :: InChan InfoMsg
     ,   nodeBaseDataFileServerChan      :: C.Chan FileActorRequest
   }
 
@@ -189,7 +189,7 @@ makeNodeBaseData
     ->  C.Chan Answer
     ->  C.Chan Microblock
     ->  PortNumber
-    ->  C.Chan InfoMsg
+    ->  InChan InfoMsg
     ->  C.Chan FileActorRequest
     ->  NodeBaseData
 makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan = NodeBaseData
@@ -283,7 +283,7 @@ class ToManagerData a where
         -> C.Chan Microblock
         -> C.Chan ExitMsg
         -> C.Chan Answer
-        -> C.Chan InfoMsg
+        -> InChan InfoMsg
         -> C.Chan FileActorRequest
         -> BootNodeList
         -> NodeConfig

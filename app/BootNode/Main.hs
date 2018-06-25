@@ -34,7 +34,7 @@ main =  do
 
             exitCh <- C.newChan
             answerCh <- C.newChan
-            aInfoChan <- C.newChan
+            (aInfoChanIn, aInfoChanOut) <- newChan (2^5)
             descrDB   <- connectOrRecoveryConnect
             poa_p   <- try (getEnv "poaPort") >>= \case
                     Right item              -> return $ read item
@@ -58,12 +58,12 @@ main =  do
 
 
 
-            void $ startNode descrDB conf exitCh answerCh aInfoChan managerBootNode $
+            void $ startNode descrDB conf exitCh answerCh aInfoChanIn  managerBootNode $
                 \(ch, outCh) _ _ aNodeId aFileChan -> do
                     log_id  <- try (getEnv "log_id") >>= \case
                         Right item              -> return item
                         Left (_::SomeException) -> return $ show aNodeId
                     metronomeS 100000 (writeChan ch checkBroadcastNodes)
-                    void $ C.forkIO $ serverPoABootNode poa_p aInfoChan aFileChan
-                    void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChan log_id
+                    void $ C.forkIO $ serverPoABootNode poa_p aInfoChanIn aFileChan
+                    void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id
             void $ C.readChan exitCh

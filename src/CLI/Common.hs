@@ -102,13 +102,13 @@ getAllTransactions pool key ch = do
     [] -> return (Left OtherException)
     t -> return (Right t)
 
-sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> C.Chan InfoMsg -> IO (Result ())
+sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> IO (Result ())
 sendTrans tx ch aInfoCh = try $ do
   sendMetrics tx aInfoCh
   writeChan ch $ newTransaction tx
 
 
-sendNewTrans :: ManagerMiningMsg a => Trans -> InChan a -> C.Chan InfoMsg -> IO (Result Transaction)
+sendNewTrans :: ManagerMiningMsg a => Trans -> InChan a -> InChan InfoMsg -> IO (Result Transaction)
 sendNewTrans trans ch aInfoCh = try $ do
   let moneyAmount = (Service.Types.txAmount trans) :: Amount
   let receiverPubKey = recipientPubKey trans
@@ -128,7 +128,7 @@ sendNewTrans trans ch aInfoCh = try $ do
 
 
 generateNTransactions :: ManagerMiningMsg a =>
-    QuantityTx -> InChan a -> C.Chan InfoMsg -> IO (Result ())
+    QuantityTx -> InChan a -> InChan InfoMsg -> IO (Result ())
 generateNTransactions qTx ch m = try $ do
   tx <- genNTx qTx
   mapM_ (\x -> do
@@ -138,7 +138,7 @@ generateNTransactions qTx ch m = try $ do
   putStrLn "Transactions are created"
 
 
-generateTransactionsForever :: ManagerMiningMsg a => InChan a -> C.Chan InfoMsg -> IO (Result ())
+generateTransactionsForever :: ManagerMiningMsg a => InChan a -> InChan InfoMsg -> IO (Result ())
 generateTransactionsForever ch m = try $ forever $ do
                                 quantityOfTranscations <- randomRIO (20,30)
                                 tx <- genNTx quantityOfTranscations
@@ -158,12 +158,12 @@ getNewKey = try $ do
   return aPublicKey
 
 
-getBalance :: DBPoolDescriptor -> PublicKey -> C.Chan InfoMsg -> IO (Result Amount)
+getBalance :: DBPoolDescriptor -> PublicKey -> InChan InfoMsg -> IO (Result Amount)
 getBalance descrDB pKey aInfoCh = do
     stTime  <- getCPUTimeWithUnit :: IO Millisecond
     balance <- B.getBalanceForKey descrDB pKey
     endTime <- getCPUTimeWithUnit :: IO Millisecond
-    C.writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
+    writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
     case balance of
       Nothing -> return (Left NoSuchPublicKeyInDB)
       Just b -> return (Right b)
@@ -191,9 +191,9 @@ getPublicKeys = try $ do
   return $ map fst pairs
 
 
-sendMetrics :: Transaction -> C.Chan InfoMsg -> IO ()
+sendMetrics :: Transaction -> InChan InfoMsg -> IO ()
 sendMetrics (Transaction o r a _ _ _ _) m = do
-    C.writeChan m $ Metric $ increment "cl.tx.count"
-    C.writeChan m $ Metric $ set "cl.tx.wallet" o
-    C.writeChan m $ Metric $ set "cl.tx.wallet" r
-    C.writeChan m $ Metric $ gauge "cl.tx.amount" a
+    writeChan m $ Metric $ increment "cl.tx.count"
+    writeChan m $ Metric $ set "cl.tx.wallet" o
+    writeChan m $ Metric $ set "cl.tx.wallet" r
+    writeChan m $ Metric $ gauge "cl.tx.amount" a

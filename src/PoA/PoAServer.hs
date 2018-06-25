@@ -30,7 +30,7 @@ import              Node.Data.Key
 import              Data.Maybe()
 
 
-serverPoABootNode :: PortNumber -> C.Chan InfoMsg -> C.Chan FileActorRequest -> IO ()
+serverPoABootNode :: PortNumber -> InChan InfoMsg -> C.Chan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
         "Init. ServerPoABootNode: a port is " ++ show aRecivePort
@@ -63,7 +63,7 @@ servePoA ::
     -> MyNodeId
     -> InChan ManagerMiningMsgBase
     -> C.Chan Transaction
-    -> C.Chan InfoMsg
+    -> InChan InfoMsg
     -> C.Chan FileActorRequest
     -> C.Chan Microblock
     -> IO ()

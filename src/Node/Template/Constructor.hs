@@ -105,7 +105,7 @@ nodeBaseDataList = toList $ do
     "shardingChan"      !: ["MaybeChan", "N.ShardingNodeAction"]
     "iAmBroadcast"      !: ["Bool"]
     "outPort"           !: ["PortNumber"]
-    "infoMsgChan"       !: ["C.Chan", "InfoMsg"]
+    "infoMsgChan"       !: ["InChan", "InfoMsg"]
     "fileServerChan"    !: ["C.Chan", "FileActorRequest"]
 
 

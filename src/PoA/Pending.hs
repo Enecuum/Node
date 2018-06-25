@@ -4,9 +4,13 @@
 module PoA.Pending where
 
 import Data.Sequence as S
-import Control.Concurrent.Chan
+
 import Control.Monad
-import Control.Concurrent
+
+import              Control.Concurrent.Chan.Unagi.Bounded
+import qualified    Control.Concurrent as C
+import qualified    Control.Concurrent.Chan as C
+
 import Service.Types
 import System.Clock
 import Data.Foldable
@@ -38,13 +42,13 @@ import Node.Data.GlobalLoging
 data PendingAction where
     RemoveTransactions  :: [Transaction]           -> PendingAction
     AddTransaction      :: Transaction              -> PendingAction
-    GetTransaction      :: Int -> Chan [Transaction]-> PendingAction
+    GetTransaction      :: Int -> C.Chan [Transaction]-> PendingAction
 
 
 data Pending = Pending (Seq (Transaction, TimeSpec)) (Seq (Transaction, TimeSpec))
 
 
-pendingActor :: Chan PendingAction -> Chan Microblock -> Chan Transaction -> Chan InfoMsg -> IO ()
+pendingActor :: C.Chan PendingAction -> C.Chan Microblock -> C.Chan Transaction -> InChan InfoMsg -> IO ()
 pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
 {-
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for microblocs"
@@ -57,15 +61,15 @@ pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
 -}
     -- transactions re-pack
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for transactions"
-    void . forkIO $ forever $ forever $ readChan aTransactionChan >>=
-        writeChan aChan . AddTransaction
+    void . C.forkIO $ forever $ forever $ C.readChan aTransactionChan >>=
+        C.writeChan aChan . AddTransaction
 
     -- actor's main body
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for commands"
 
     void $ loop $ Pending Empty Empty
   where
-    loop (Pending aNewTransaactions aOldTransactions) = readChan aChan >>= \case
+    loop (Pending aNewTransaactions aOldTransactions) = C.readChan aChan >>= \case
         AddTransaction aTransaction -> do
             writeLog aInfoChan [PendingTag] Info $
                 "Add transaction to pending" ++ show aTransaction
@@ -112,7 +116,7 @@ pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
             if  | aCount < aSizeOfNewTransactions -> do
                     -- send n new transactions and replace it to "old"
                     let (aHead, aTail) = S.splitAt aCount aNewTransaactions
-                    writeChan aResponseChan $ fst <$> toList aHead
+                    C.writeChan aResponseChan $ fst <$> toList aHead
                     loop $ Pending aTail (aOldTransactions >< aHead)
 
 
@@ -121,7 +125,7 @@ pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
                     -- add new txs from "new" to "old"
                     -- used "old" txs and put it to the end
                     let (aHead, aTail) = S.splitAt (aCount - aSizeOfNewTransactions) aOldTransactions
-                    writeChan aResponseChan $ fst <$> (toList $ aNewTransaactions >< aHead)
+                    C.writeChan aResponseChan $ fst <$> (toList $ aNewTransaactions >< aHead)
                     loop $ Pending Empty (aTail >< aNewTransaactions >< aHead)
 
 -- at first

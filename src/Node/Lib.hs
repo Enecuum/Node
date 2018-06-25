@@ -39,7 +39,7 @@ startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
     -> BuildConfig
     -> C.Chan ExitMsg
     -> C.Chan Answer
-    -> C.Chan InfoMsg
+    -> InChan InfoMsg
     -> ((InChan a1, OutChan a1) -> IORef s -> IO ())
     -> ((InChan a1, OutChan a1) -> C.Chan Transaction -> C.Chan Microblock -> MyNodeId -> C.Chan FileActorRequest -> IO a2)
     -> IO (InChan a1, OutChan a1)
@@ -64,7 +64,7 @@ startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
     return managerChan
 
 
-microblockProc :: DBPoolDescriptor -> C.Chan Microblock -> C.Chan InfoMsg -> IO b
+microblockProc :: DBPoolDescriptor -> C.Chan Microblock -> InChan InfoMsg -> IO b
 microblockProc descriptor aMicroblockCh aInfoCh = forever $ do
         aMicroblock <- C.readChan aMicroblockCh
         addMicroblockToDB descriptor aMicroblock aInfoCh

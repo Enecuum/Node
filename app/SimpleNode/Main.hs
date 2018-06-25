@@ -44,11 +44,11 @@ main =  do
 
             aExitCh   <- C.newChan
             aAnswerCh <- C.newChan
-            aInfoCh   <- C.newChan
+            (aInfoChanIn, aInfoChanOut) <- newChan (2^5)
             rocksDB   <- connectOrRecoveryConnect
 
             void $ startNode rocksDB conf
-                aExitCh aAnswerCh aInfoCh managerMining $ \(ch, outCh) aChan aMicroblockChan aMyNodeId aFileChan -> do
+                aExitCh aAnswerCh aInfoChanIn managerMining $ \(ch, outCh) aChan aMicroblockChan aMyNodeId aFileChan -> do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
                     metronomeS 1000000 (writeChan ch queryPositions)
@@ -61,10 +61,10 @@ main =  do
 
                     when i_am_first $ writeChan ch InitShardingLvl
 
-                    void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh log_id
+                    void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id
 
 
-                    void $ C.forkIO $ servePoA poa_p aMyNodeId ch aChan aInfoCh aFileChan aMicroblockChan
+                    void $ C.forkIO $ servePoA poa_p aMyNodeId ch aChan aInfoChanIn aFileChan aMicroblockChan
 
                     cli_m   <- try (getEnv "cliMode") >>= \case
                             Right item              -> return item
@@ -90,10 +90,10 @@ main =  do
                                        Just token -> return token
                                        Nothing    -> updateConfigWithToken conf snbc rpcbc
 
-                            serveRpc rocksDB rpc_p ip_en ch aInfoCh
+                            serveRpc rocksDB rpc_p ip_en ch aInfoChanIn
 
 
-                      "cli" -> serveCLI rocksDB ch aInfoCh
+                      "cli" -> serveCLI rocksDB ch aInfoChanIn
 
                       _     -> return ()
 
@@ -103,7 +103,7 @@ main =  do
                     metronomeS 10000000 (writeChan ch testBroadcastBlockIndex)
 
 
-                    C.writeChan aInfoCh $ Metric $ increment "cl.node.count"
+                    writeChan aInfoChanIn $ Metric $ increment "cl.node.count"
 
             void $ C.readChan aExitCh
 

@@ -26,7 +26,7 @@ import qualified Network.WebSockets as WS
 import Service.Transaction.Storage (DBPoolDescriptor(..))
 
 
-serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan ManagerMiningMsgBase -> C.Chan InfoMsg -> IO ()
+serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan ManagerMiningMsgBase -> InChan InfoMsg -> IO ()
 serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPending -> do
     aConnect <- WS.acceptRequest aPending
     WS.forkPingThread aConnect 30

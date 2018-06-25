@@ -8,7 +8,8 @@ import              Sharding.ShardDB.ShardIndex
 import              Sharding.Types.ShardTypes
 import              Sharding.Space.Point
 
-import              Control.Concurrent.Chan
+import              Control.Concurrent.Chan.Unagi.Bounded
+import qualified    Control.Concurrent.Chan as C
 
 import              Lens.Micro.TH
 import              Data.Word
@@ -24,8 +25,8 @@ data ShardingNode = ShardingNode {
     ,   _shardingNodeId     :: MyNodeId
     ,   _nodePosition       :: MyNodePosition
     ,   _nodeIndex          :: ShardIndex
-    ,   _nodeIndexOfReques  :: M.Map ShardHash (TimeSpec, Chan Shard)
-    ,   _nodeInfoMsgChan    :: Chan InfoMsg
+    ,   _nodeIndexOfReques  :: M.Map ShardHash (TimeSpec, C.Chan Shard)
+    ,   _nodeInfoMsgChan    :: InChan InfoMsg
     ,   _nodeDistance       :: Word64 -- think
   }
   deriving Eq
@@ -43,11 +44,11 @@ makeLenses ''Neighbor
 
 
 data ShardingNodeAction =
-        ShardRequestAction          ShardHash (Chan Shard)
+        ShardRequestAction          ShardHash (C.Chan Shard)
     |   ShardIndexAcceptAction      [ShardHash]
-    |   ShardIndexCreateAction      (Chan ShardingNodeResponse) NodeId Word64
-    |   ShardLoadAction             (Chan ShardingNodeResponse) NodeId ShardHash
-    |   NodePositionAction          (Chan ShardingNodeResponse) NodeId
+    |   ShardIndexCreateAction      (C.Chan ShardingNodeResponse) NodeId Word64
+    |   ShardLoadAction             (C.Chan ShardingNodeResponse) NodeId ShardHash
+    |   NodePositionAction          (C.Chan ShardingNodeResponse) NodeId
     |   ShardAcceptAction           Shard
     ---
     |   NewShardInNetAction         Shard
@@ -66,7 +67,7 @@ data ShardingNodeAction =
     |   TheNodeIsDead               NodeId
   deriving Show
 
-instance Show (Chan a) where
+instance Show (C.Chan a) where
       show _ = "Chan"
 
 
@@ -88,7 +89,7 @@ data ShardingNodeRequestMsg =
   deriving (Show)
 
 
-makeEmptyShardingNode :: S.Set Neighbor ->  MyNodeId -> MyNodePosition -> ShardIndex -> Chan InfoMsg -> Word64 -> ShardingNode
+makeEmptyShardingNode :: S.Set Neighbor ->  MyNodeId -> MyNodePosition -> ShardIndex -> InChan InfoMsg -> Word64 -> ShardingNode
 makeEmptyShardingNode aNeighbors aMyNodeId aMyPosition aMyShardIndex infoMsgChan aNodeDistance = ShardingNode {
         _nodeNeighbors      = aNeighbors
     ,   _shardingNodeId     = aMyNodeId
