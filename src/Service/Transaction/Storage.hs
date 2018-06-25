@@ -323,12 +323,6 @@ getAllMicroblockKV = do
   let result2 = map (\(k,v) -> (k, func v)) result
   -- putStrLn $ show result2
   return result2
-
-
-
-
-
-
 -- end of the Query Iterator section
 --------------------------------------
 
@@ -338,7 +332,8 @@ getAllMicroblockKV = do
 
 getOneMicroblock = do
   c <- connectDB
-  let h = Hash ("\248\198\199\178e\ETXt\186T\148y\223\224t-\168p\162\138\&1" :: BSI.ByteString)
+  let h = Hash ("\247\206\247\163v\n\176g\222Jl\202\DC1s\179\189aY\145h" :: BSI.ByteString)
+  -- let h = Hash ("\248\198\199\178e\ETXt\186T\148y\223\224t-\168p\162\138\&1" :: BSI.ByteString)
   mb <- getMicroBlockByHashDB c h
   print mb
 
@@ -355,5 +350,5 @@ getTransactionsByKey = do
   tx <- getAllTransactionsDB c (read "QYy3AT4a3Z88MpEoGDixRgxtWW8v3RfSbJLFQEyFZwMe" :: PublicKey)
   print tx
 
--- begin test cli
+-- end test cli
 --------------------------------------
