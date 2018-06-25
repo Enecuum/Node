@@ -10,10 +10,9 @@ extra-deps:
 - time-interval-0.1.1
 - time-units-1.0.0
 - base58-bytestring-0.1.0
-- HongoDB-0.0.1
 - iproute-1.7.4
 - rocksdb-haskell-1.0.1
-
+- unagi-chan-0.4.1.0
 
 build:
   haddock-arguments:
