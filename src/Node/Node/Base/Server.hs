@@ -43,6 +43,14 @@ startServerActor aOutputChan aPort =
                         PongResponse aHostAdress
                 _     -> pure ()
 
+{-
+aFileContent <- try $ unsafeReadDataFile aFilePath
+case aFileContent of
+    Right aJustFileContent    -> pure aJustFileContent
+    Left (_ :: SomeException) -> do
+        writeFile aFilePath ""
+        return []
+-}
 
 socketActor
     ::  ManagerMsg a
@@ -53,7 +61,9 @@ socketActor
     ->  WS.Connection
     ->  IO ()
 socketActor _ aId aChan aInputChan aConnect =
-    void (race sender receiver) `finally`
+    (try (race sender receiver) >>= \case
+        Right _ -> return ()
+        Left (_ :: SomeException) -> return ()) `finally`
         writeChan aChan (clientIsDisconnected aId aInputChan)
   where
     sender :: IO ()
