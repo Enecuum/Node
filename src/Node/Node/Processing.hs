@@ -54,7 +54,7 @@ instance Processing (IORef ManagerNodeData) (Response MiningLvl) where
         ResponsePPConnection aPPId (Connect aHost aOutPort) -> do
             aData <- readIORef aMd
             whenJust (aData^.ppNodes.at aPPId) $ \aPpNode ->
-                C.writeChan (aPpNode^.ppChan) $ MsgConnect aHost aOutPort
+                writeChan (aPpNode^.ppChan) $ MsgConnect aHost aOutPort
 
 
 -- | Handling network layer's answer
@@ -258,7 +258,7 @@ instance Processing (IORef ManagerNodeData) (Request MiningLvl) where
         case aRequest of
             PPMessage aByteString (IdFrom aPPIdFrom) (IdTo aId)
                 | Just aNode <- aData^.ppNodes.at aId ->
-                    C.writeChan (aNode^.ppChan) $ MsgMsgToPP aPPIdFrom aByteString
+                    writeChan (aNode^.ppChan) $ MsgMsgToPP aPPIdFrom aByteString
                 | otherwise -> writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
                     "This PP does not exist: " ++ show aId
             RequestPPConnection aPPId -> whenJust (aData^.hostAddress) $ \aHost -> do

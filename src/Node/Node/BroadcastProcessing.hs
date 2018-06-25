@@ -19,7 +19,8 @@ import qualified    Data.Map as M
 import qualified    Data.Bimap as BI
 import              Lens.Micro
 import              Lens.Micro.Mtl()
-import              Control.Concurrent
+import qualified    Control.Concurrent as C
+import              Control.Concurrent.Chan.Unagi.Bounded
 import              Control.Monad.Extra
 import              System.Clock
 
@@ -52,7 +53,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl NetLvl) 
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted msg from the " ++
                     show aNodeId ++ "that it need a neighbors. Addtition the node in the list of possible connects."
 
-                writeChan (aData^.fileServerChan) $
+                C.writeChan (aData^.fileServerChan) $
                         FileActorRequestNetLvl $ UpdateFile (aData^.myNodeId) ( NodeInfoListNetLvl [(aNodeId, Connect aHostAddress aPortNumber)])
 
 instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl LogicLvl) where
@@ -64,13 +65,13 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl LogicLvl
             BroadcastShard aShard -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted new shard from broadcast. The shard is " ++ show aShard
                 whenJust (aData^.shardingChan) $ \aChan ->
-                    writeChan aChan $ T.NewShardInNetAction aShard
+                    C.writeChan aChan $ T.NewShardInNetAction aShard
 
             -- handle received data that some node change its position.
             BroadcastPosition     aMyNodeId aNodePosition  -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted new position for the node." ++
                     "The node have position " ++ show aNodePosition ++ ", node id is " ++ show aMyNodeId
-                writeChan (aData^.fileServerChan) $
+                C.writeChan (aData^.fileServerChan) $
                     FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId) (NodeInfoListLogicLvl [(toNodeId aMyNodeId, aNodePosition)])
 
                 whenJust (aData^.nodes.at (toNodeId aMyNodeId)) $ \aNode ->
@@ -92,7 +93,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
                 when (aSenderType == PoW) $
                     modifyIORef aMd $ poWNodes %~ BI.insert aTime aPPId
 
-                let aFilteredNode :: [Chan NNToPPMessage]
+                let aFilteredNode :: [InChan NNToPPMessage]
                     aFilteredNode = do
                         aNode <- snd <$> M.toList (aData^.ppNodes)
                         guard $ aNodeType == All || aNode^.ppType == aNodeType
@@ -110,7 +111,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
 
             -- add new transaction in pending
             BroadcastTransaction aTransaction _ -> do
-                writeChan (aData^.transactions) aTransaction
+                C.writeChan (aData^.transactions) aTransaction
 
                 -- logging and metrics
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
@@ -124,9 +125,9 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
             BroadcastMicroBlock aMicroblock _ -> do
                 sendToShardingLvl aData $
                     T.ShardAcceptAction (microblockToShard aMicroblock)
-                writeChan (aData^.microblockChan) aMicroblock
+                C.writeChan (aData^.microblockChan) aMicroblock
                 -- FIXME: rewrite show for Transaction and Microblock for showing only hash and structure
-                writeChan (aData^.microblockChan) aMicroblock
+                C.writeChan (aData^.microblockChan) aMicroblock
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Addtition the mickroblock to shard DB. The mickroblock = "
                     ++ show aMicroblock

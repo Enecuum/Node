@@ -78,14 +78,14 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
 
         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
         aId <- newEmptyMVar
-        aNewChan  <- C.newChan
+        (aInpChan, aOutChan) <- newChan (2^4)
         -- writeChan ch $ connecting to PoA, the PoA have id.
         void $ race
-            (aSender aId aConnect aNewChan)
-            (aReceiver aId aConnect aNewChan aPendingChan)
+            (aSender aId aConnect aOutChan)
+            (aReceiver aId aConnect aInpChan aPendingChan)
   where
     aSender aId aConnect aNewChan = forever (do
-        aMsg <- C.readChan aNewChan
+        aMsg <- readChan aNewChan
         WS.sendTextData aConnect $ A.encode aMsg) `finally` (do
             aIsEmpty <- isEmptyMVar aId
             unless aIsEmpty $ do

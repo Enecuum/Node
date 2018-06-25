@@ -146,7 +146,7 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
 
         MsgResendingToPP aIdFrom@(IdFrom aPPIdFrom) aIdTo@(IdTo aId) aByteString
             | Just aNode <- aData^.ppNodes.at aId ->
-              C.writeChan (aNode^.ppChan) $ MsgMsgToPP aPPIdFrom aByteString
+                writeChan (aNode^.ppChan) $ MsgMsgToPP aPPIdFrom aByteString
             | otherwise -> do
                 let aMessage = BroadcastPPMsgId aByteString aIdFrom aIdTo
                 sendBroadcast aMd aMessage
@@ -161,7 +161,7 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
         PoWListRequest (IdFrom aPPIdFrom) ->
             whenJust (aData^.ppNodes.at aPPIdFrom) $ \aPpNode -> do
                 let aPPIds = takeEnd 5 (map snd (BI.toList $ aData^.poWNodes))
-                C.writeChan (aPpNode^.ppChan) $ ResponsePoWList aPPIds
+                writeChan (aPpNode^.ppChan) $ ResponsePoWList aPPIds
   where
     ppIdToNodePosition :: PPId -> NodePosition
     ppIdToNodePosition (PPId aPPId) = toNodePosition $ idToPoint aPPId
