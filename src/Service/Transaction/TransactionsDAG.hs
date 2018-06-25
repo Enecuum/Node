@@ -44,6 +44,17 @@ getTransactions keys quantityTx = do
   basicTx <- loopTransaction keys'ns quantityBasicTx
   return basicTx
 
+
+-- accumulate Transcations in acc until it satisfies required Quantity Of Transactions
+loopTransaction :: [LNode KeyPair] -> Int -> IO [Transaction]
+loopTransaction keys'ns requiredQuantityOfTransactions = loop []
+  where
+   loop acc = do
+     let amountRange = (10,20)
+     tx <- getSignTransactions requiredQuantityOfTransactions keys'ns amountRange
+     if length acc >= requiredQuantityOfTransactions then return acc else loop (tx ++ acc)
+
+
 -- generate N transactions
 genNNTx :: Int -> IO [Transaction]
 genNNTx quantityOfTx = do
@@ -55,11 +66,11 @@ genNNTx quantityOfTx = do
     getTransactions keys quantityOfTx
 
 
--- accumulate Transcations in acc until it satisfies required Quantity Of Transactions
-loopTransaction :: [LNode KeyPair] -> Int -> IO [Transaction]
-loopTransaction keys'ns requiredQuantityOfTransactions = loop []
-  where
-   loop acc = do
-     let amountRange = (10,20)
-     tx <- getSignTransactions requiredQuantityOfTransactions keys'ns amountRange
-     if length acc >= requiredQuantityOfTransactions then return acc else loop (tx ++ acc)
+-- generate N transactions
+genNTx :: Int -> IO [Transaction]
+genNTx n = do
+   let quantityOfKeys = if qKeys <= 2 then 2 else qKeys
+                        where qKeys = div n 3
+   keys <- replicateM quantityOfKeys generateNewRandomAnonymousKeyPair
+   tx <- getTransactions keys n
+   return tx

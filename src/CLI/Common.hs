@@ -32,7 +32,6 @@ import Data.List.Split (splitOn)
 import Data.Map (fromList, lookup, Map)
 import System.Random (randomRIO)
 
-import Service.Transaction.Balance
 import Service.Transaction.TransactionsDAG
 import Node.Node.Types
 import Service.Types
@@ -41,51 +40,72 @@ import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
 import Service.System.Directory (getTime, getKeyFilePath)
 import Service.Transaction.Storage (DBPoolDescriptor(..))
-import Service.Transaction.Common as B (getBlockByHashDB, getTransactionByHashDB)
+import Service.Transaction.Common as B (getBalanceForKey, getBlockByHashDB, getTransactionByHashDB, getKeyBlockByHashDB, getAllTransactionsDB)
 import System.Random
+import Service.Transaction.TransactionsDAG (genNTx)
 
 type Result a = Either CLIException a
 
 data CLIException = WrongKeyOwnerException
                   | NotImplementedException -- test
+                  | NoSuchPublicKeyInDB
+                  | NoSuchMicroBlockDB
+                  | NoSuchTransactionDB
                   | OtherException
   deriving Show
 
 instance Exception CLIException
 
+
 sendMessageTo :: ManagerMiningMsg a => MsgTo -> Chan a -> IO (Result ())
 sendMessageTo ch = return $ return $ Left NotImplementedException
+
 
 sendMessageBroadcast :: ManagerMiningMsg a => String -> Chan a -> IO (Result ())
 sendMessageBroadcast ch = return $ return $ Left NotImplementedException
 
+
 loadMessages :: ManagerMiningMsg a => Chan a -> IO (Result [MsgTo])
 loadMessages ch = return $ Left NotImplementedException
 
+
 getBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result MicroblockAPI)
-getBlockByHash db hash ch = return =<< Right <$> B.getBlockByHashDB db hash
+getBlockByHash db hash ch = do
+  mb <- B.getBlockByHashDB db hash
+  case mb of
+    Nothing -> return (Left NoSuchMicroBlockDB)
+    Just m -> return (Right m)
+
 
 getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result Macroblock)
 getKeyBlockByHash db hash ch = return $ Left NotImplementedException
  --return =<< Right <$> B.getBlockByHashDB db hash
+
 
 getChainInfo :: ManagerMiningMsg a => Chan a -> IO (Result ChainInfo)
 getChainInfo ch = return $ Left NotImplementedException
 
 
 getTransactionByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result TransactionInfo)
-getTransactionByHash db hash ch = return =<< Right <$> B.getTransactionByHashDB db hash
+getTransactionByHash db hash ch = do
+  tx <- B.getTransactionByHashDB db hash
+  case tx of
+    Nothing -> return (Left NoSuchTransactionDB)
+    Just t -> return (Right t)
 
 
-getAllTransactions :: ManagerMiningMsg a => PublicKey -> Chan a -> IO (Result [Transaction])
-getAllTransactions key ch = return $ Left NotImplementedException
-
-
+getAllTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> Chan a -> IO (Result [Transaction])
+getAllTransactions pool key ch = do
+  tx <- B.getAllTransactionsDB pool key
+  case tx of
+    [] -> return (Left OtherException)
+    t -> return (Right t)
 
 sendTrans :: ManagerMiningMsg a => Transaction -> Chan a -> Chan InfoMsg -> IO (Result ())
 sendTrans tx ch aInfoCh = try $ do
   sendMetrics tx aInfoCh
   writeChan ch $ newTransaction tx
+
 
 sendNewTrans :: ManagerMiningMsg a => Trans -> Chan a -> Chan InfoMsg -> IO (Result Transaction)
 sendNewTrans trans ch aInfoCh = try $ do
@@ -105,14 +125,6 @@ sendNewTrans trans ch aInfoCh = try $ do
       _ <- sendTrans tx ch aInfoCh
       return tx
 
-
-genNTx :: Int -> IO [Transaction]
-genNTx n = do
-   let quantityOfKeys = if qKeys <= 2 then 2 else qKeys
-                        where qKeys = div n 3
-   keys <- replicateM quantityOfKeys generateNewRandomAnonymousKeyPair
-   tx <- getTransactions keys n
-   return tx
 
 generateNTransactions :: ManagerMiningMsg a =>
     QuantityTx -> Chan a -> Chan InfoMsg -> IO (Result ())
@@ -136,6 +148,7 @@ generateTransactionsForever ch m = try $ forever $ do
                                 threadDelay (10^(6 :: Int))
                                 putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
 
+
 getNewKey :: IO (Result PublicKey)
 getNewKey = try $ do
   (KeyPair aPublicKey aPrivateKey) <- generateNewRandomAnonymousKeyPair
@@ -145,12 +158,16 @@ getNewKey = try $ do
 
 
 getBalance :: DBPoolDescriptor -> PublicKey -> Chan InfoMsg -> IO (Result Amount)
-getBalance descrDB pKey aInfoCh = try $ do
+getBalance descrDB pKey aInfoCh = do
     stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
-    result  <- getBalanceForKey descrDB pKey
+    balance  <- B.getBalanceForKey descrDB pKey
     endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
     writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
-    return result
+    case balance of
+      Nothing -> return (Left NoSuchPublicKeyInDB)
+      Just b -> return (Right b)
+    --putStrLn "There is no such key in database"
+    -- return result
 
 
 getSavedKeyPairs :: IO [(PublicKey, PrivateKey)]

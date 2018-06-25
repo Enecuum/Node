@@ -98,7 +98,7 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
               getFullWallet = toMethod "enq_getAllTransactions" f (Required "address" :+: ())
                 where
                   f :: PublicKey -> RpcResult IO [Transaction]
-                  f key = handle $ getAllTransactions key ch
+                  f key = handle $ getAllTransactions descrDB key ch
 
               getSystemInfo = toMethod "enq_getChainInfo" f ()
                 where

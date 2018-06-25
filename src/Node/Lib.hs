@@ -67,7 +67,7 @@ microblockProc :: DBPoolDescriptor -> Chan Microblock -> Chan InfoMsg -> IO b
 microblockProc descriptor aMicroblockCh aInfoCh = forever $ do
         aMicroblock <- readChan aMicroblockCh
         addMicroblockToDB descriptor aMicroblock aInfoCh
-        -- putStrLn $ show aMicroblock
+
 
 readNodeConfig :: IO NodeConfig
 readNodeConfig =
