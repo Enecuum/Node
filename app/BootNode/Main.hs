@@ -5,7 +5,8 @@ module Main where
 
 import              Control.Monad
 import              Control.Exception(SomeException, try)
-import              Control.Concurrent
+import qualified    Control.Concurrent as C
+import              Control.Concurrent.Chan.Unagi.Bounded
 import              Service.Timer
 import              Service.InfoMsg
 import              Service.Network.Base (ConnectInfo(..))
@@ -25,15 +26,15 @@ import              Service.Transaction.Common (connectOrRecoveryConnect)
 
 main :: IO ()
 main =  do
-      putStrLn  "testNet 18/06/2017 10:50"
+      putStrLn  "Dev 25/06/2018 17:00"
       enc <- L.readFile "configs/config.json"
       case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
           Just conf -> do
 
-            exitCh <- newChan
-            answerCh <- newChan
-            aInfoChan <- newChan
+            exitCh <- C.newChan
+            answerCh <- C.newChan
+            aInfoChan <- C.newChan
             descrDB   <- connectOrRecoveryConnect
             poa_p   <- try (getEnv "poaPort") >>= \case
                     Right item              -> return $ read item
@@ -58,11 +59,11 @@ main =  do
 
 
             void $ startNode descrDB conf exitCh answerCh aInfoChan managerBootNode $
-                \ch _ _ aNodeId aFileChan -> do
+                \(ch, outCh) _ _ aNodeId aFileChan -> do
                     log_id  <- try (getEnv "log_id") >>= \case
                         Right item              -> return item
                         Left (_::SomeException) -> return $ show aNodeId
                     metronomeS 100000 (writeChan ch checkBroadcastNodes)
-                    void $ forkIO $ serverPoABootNode poa_p aInfoChan aFileChan
-                    void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChan log_id
-            void $ readChan exitCh
+                    void $ C.forkIO $ serverPoABootNode poa_p aInfoChan aFileChan
+                    void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChan log_id
+            void $ C.readChan exitCh

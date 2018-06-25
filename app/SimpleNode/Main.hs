@@ -3,9 +3,12 @@
 module Main where
 
 import              Control.Monad
-import              Control.Concurrent
+import qualified    Control.Concurrent as C
 import              System.Environment (getEnv)
 import              Node.Data.Key
+
+import              Control.Concurrent.Chan.Unagi.Bounded
+
 
 import              Data.Maybe (fromJust)
 import              Node.Node.Mining
@@ -33,19 +36,19 @@ configName = "configs/config.json"
 
 main :: IO ()
 main =  do
-        putStrLn "testNet 18/06/2017 10:50"
+        putStrLn  "Dev 25/06/2018 17:00"
         enc <- L.readFile configName
         case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
           Just conf -> do
 
-            aExitCh   <- newChan
-            aAnswerCh <- newChan
-            aInfoCh   <- newChan
+            aExitCh   <- C.newChan
+            aAnswerCh <- C.newChan
+            aInfoCh   <- C.newChan
             rocksDB   <- connectOrRecoveryConnect
 
             void $ startNode rocksDB conf
-                aExitCh aAnswerCh aInfoCh managerMining $ \ch aChan aMicroblockChan aMyNodeId aFileChan -> do
+                aExitCh aAnswerCh aInfoCh managerMining $ \(ch, outCh) aChan aMicroblockChan aMyNodeId aFileChan -> do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
                     metronomeS 1000000 (writeChan ch queryPositions)
@@ -58,16 +61,16 @@ main =  do
 
                     when i_am_first $ writeChan ch InitShardingLvl
 
-                    void $ forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh log_id
+                    void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoCh log_id
 
 
-                    void $ forkIO $ servePoA poa_p aMyNodeId ch aChan aInfoCh aFileChan aMicroblockChan
+                    void $ C.forkIO $ servePoA poa_p aMyNodeId ch aChan aInfoCh aFileChan aMicroblockChan
 
                     cli_m   <- try (getEnv "cliMode") >>= \case
                             Right item              -> return item
                             Left (_::SomeException) -> return $ cliMode snbc
 
-                    void $ forkIO $ case cli_m of
+                    void $ C.forkIO $ case cli_m of
                       "rpc" -> do
                             rpcbc <- try (pure $ fromJust $ rpcBuildConfig snbc) >>= \case
                                        Right item              -> return item
@@ -100,9 +103,9 @@ main =  do
                     metronomeS 10000000 (writeChan ch testBroadcastBlockIndex)
 
 
-                    writeChan aInfoCh $ Metric $ increment "cl.node.count"
+                    C.writeChan aInfoCh $ Metric $ increment "cl.node.count"
 
-            void $ readChan aExitCh
+            void $ C.readChan aExitCh
 
 
 
@@ -138,7 +141,7 @@ getConfigParameters
   :: (Show a1, ManagerMsg a2) =>
      a1
      -> BuildConfig
-     -> Chan a2
+     -> InChan a2
      -> IO
           (SimpleNodeBuildConfig, PortNumber, String, PortNumber, String,
            PortNumber, String, Bool)

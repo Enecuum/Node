@@ -43,6 +43,7 @@ dependencies:
 - time-units
 - network
 - websockets
+- unagi-chan    
 - aeson
 - cereal
 - mtl

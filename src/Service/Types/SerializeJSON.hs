@@ -57,6 +57,9 @@ decodeFromText aStr = case B.decode . T.encodeUtf8 $ aStr of
 instance ToJSON Hash
 instance FromJSON Hash
 
+
+
+
 instance ToJSON ByteString where
   toJSON h = String $ decodeUtf8 $ encodeBase58 bitcoinAlphabet h
 
@@ -64,19 +67,10 @@ instance FromJSON ByteString where
   parseJSON (String s) = return $ fromJust $ decodeBase58 bitcoinAlphabet $ encodeUtf8 s
   parseJSON _          = error "Wrong object format"
 
-instance ToJSON TransactionInfo where
-  toJSON info = object [
-                  "tx"    .= _tx info
-                , "block" .= encodeToText (_block info)
-                , "index" .= _index info
-                ]
+instance ToJSON TransactionInfo
+instance FromJSON TransactionInfo
 
-instance FromJSON TransactionInfo where
-  parseJSON (Object v) = TransactionInfo
-                           <$> v .: "tx"
-                           <*> ((v .: "block") >>= decodeFromText)
-                           <*> v .: "index"
-  parseJSON _          = error "TransactionInfo JSON parse error"
+
 
 
 
@@ -102,42 +96,28 @@ instance FromJSON ECDSA.Signature where
                     <*> v .: "sign_s"
  parseJSON inv        = typeMismatch "Signature" inv
 
+
+
 instance ToJSON Transaction where
-    toJSON (Transaction aOwner aReceiver aAmount aCurrency aTimestamp aUuid aSign) = object  [
-            "owner"     .= aOwner,
-            "receiver"  .= aReceiver,
-            "amount"    .= aAmount,
-            "currency"  .= aCurrency,
-            "timestamp" .= aTimestamp,
-            "sign"      .= aSign,
-            "uuid"      .= aUuid
-          ]
-
-    toJSON (TransactionStart aReceiver aAmount aCurrency aTimestamp aUuid) = object [
-        "receiver"  .= aReceiver,
-        "amount"    .= aAmount,
-        "currency"  .= aCurrency,
-        "timestamp" .= aTimestamp,
-        "uuid"      .= aUuid
-      ]
-
-
+   toJSON tx = object  [
+           "owner"     .= _owner tx,
+           "receiver"  .= _receiver tx,
+           "amount"    .= _amount tx,
+           "currency"  .= _currency tx,
+           "timestamp" .= _time tx,
+           "sign"      .= _signature tx,
+           "uuid"      .= _uuid tx
+           ]
 
 instance FromJSON Transaction where
-    parseJSON (Object o) = do
-        aOwner      <- o .:? "owner"
-        aReceiver   <- o .: "receiver"
-        aAmount     <- o .: "amount"
-        aCurrency   <- o .: "currency"
-        aTimestamp  <- o .: "timestamp"
-        (aUuid :: Int)       <- o .: "uuid"
-        aSign       <- o .:? "sign"
-        case (aOwner, aSign) of
-            (Just aJustOwner, Just aJustSign) ->
-                return $ Transaction aJustOwner aReceiver aAmount aCurrency aTimestamp aJustSign aUuid
-            _ ->return $ TransactionStart aReceiver aAmount aCurrency aTimestamp aUuid
-
-    parseJSON inv         = typeMismatch "Transaction" inv
+   parseJSON (Object o) = Transaction
+              <$> o .: "owner"
+              <*> o .: "receiver"
+              <*> o .: "amount"
+              <*> o .: "currency"
+              <*> o .: "timestamp"
+              <*> o .: "sign"
+              <*> o .: "uuid"
 
 
 instance ToJSON MicroblockAPI where
