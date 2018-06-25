@@ -1,4 +1,4 @@
-{-# LANGUAGE PackageImports, ScopedTypeVariables, FlexibleContexts, DeriveGeneric, DeriveAnyClass #-}
+{-# LANGUAGE PackageImports, ScopedTypeVariables, FlexibleContexts, DeriveGeneric, DeriveAnyClass, OverloadedStrings #-}
 module Service.Transaction.Storage where
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import Service.System.Directory (getLedgerFilePath, getTransactionFilePath, getMicroblockFilePath, getMacroblockFilePath)
@@ -171,7 +171,6 @@ getNValues db n = do
 getMicroBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe Microblock)
 getMicroBlockByHashDB db mHash = do
   mbByte <- getByHash (poolMicroblock db) mHash
-  putStrLn ("got something" ++ show mbByte)
   let mb = case mbByte of Nothing -> Nothing
                           Just m -> case (S.decode m :: Either String Microblock) of
                             Left _ -> error "Can not decode Microblock"
@@ -192,9 +191,9 @@ getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo)
 getTransactionByHashDB db tHash = do
   tx <- getByHash (poolTransaction db) tHash
   let t = case tx of Nothing -> Nothing
-                     Just t -> case (urValue t) of
+                     Just j -> case (S.decode j :: Either String  TransactionInfo) of
                        Left _ -> error "Can not decode TransactionInfo"
-                       Right rt -> Just (read rt :: TransactionInfo)
+                       Right rt -> Just rt
   return t
 
 
@@ -210,9 +209,6 @@ deleteTransactionsByHash db hashes = deleteByHash (poolTransaction db) hashes
 getByHash :: Pool Rocks.DB -> Hash -> IO (Maybe BSI.ByteString)
 getByHash pool hash = do
   let (Hash key) = hash
-  putStrLn ("Go to db " ++ show hash)
-  BC.putStrLn key
-  putStrLn ("print key")
   let fun = \db -> Rocks.get db Rocks.defaultReadOptions key
   withResource pool fun
 
@@ -221,6 +217,9 @@ deleteByHash :: Pool Rocks.DB -> [BC.ByteString] -> IO ()
 deleteByHash pool hash = do
   let fun k = (\db -> Rocks.delete db def{Rocks.sync = True} k)
   mapM_ (\k ->  withResource pool (fun k)) hash
+
+
+
 
 
 --------------------------------------
@@ -239,28 +238,34 @@ getAllItems db = do
   Rocks.iterFirst it
   Rocks.iterItems it
 
--- getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [Transaction]
--- getAllTransactionsDB = undefined
+
 getAllTransactionsDB descr pubKey = do
   txByte <- withResource (poolTransaction descr) getAllValues
-  -- let txInfo = case txByte of [] -> []
-  --                             tInfo -> read (urValue tInfo) :: [TransactionInfo]
-  tx <- genNNTx 5
-  return tx
---   -- return txByte
+  let fun = \t -> case (S.decode t :: Either String TransactionInfo) of
+                       Left _ -> error "Can not decode TransactionInfo"
+                       Right rt -> Just rt
 
+  let txInfo = map fun txByte
+  let txWithouMaybe = map fromJust (filter (isJust) txInfo)
+  let tx = map _tx txWithouMaybe
+  let txWithKey = filter (\t -> (_owner t == pubKey || _receiver t == pubKey)) tx
+  return txWithKey
 
-
--- end of the Query Iterator section
---------------------------------------
-
-
+getAllTransactions = do
+  result <- getAll =<< getTransactionFilePath
+  let func res = case (S.decode res :: Either String Transaction) of
+        Right r -> r
+        Left _ -> error "Can not decode Transaction"
+  let result2 = map func result
+  -- putStrLn $ show result2
+  return result2
 
 
 getAll ::  String -> IO [BSI.ByteString]
 getAll path = runResourceT $ do
   (_, db) <- Rocks.openBracket path def{Rocks.createIfMissing=False}
   getAllValues db
+
 
 getAllKV ::  String -> IO [(BSI.ByteString,BSI.ByteString)]
 getAllKV path = runResourceT $ do
@@ -279,13 +284,7 @@ getAllLedger = do
   putStrLn $ show result2
 
 
-getAllTransactions = do
-  result <- getAll =<< getTransactionFilePath
-  let func res = case (S.decode res :: Either String Transaction) of
-        Right r -> r
-        Left _ -> error "Can not decode Transaction"
-  let result2 = map func result
-  putStrLn $ show result2
+
 
 
 getAllMicroblocks = do
@@ -325,9 +324,36 @@ getAllMicroblockKV = do
   -- putStrLn $ show result2
   return result2
 
-tryMine = do
+
+
+
+
+
+-- end of the Query Iterator section
+--------------------------------------
+
+
+--------------------------------------
+-- begin test cli
+
+getOneMicroblock = do
   c <- connectDB
-  let h = Hash (read "\248\198\199\178e\ETXt\186T\148y\223\224t-\168p\162\138\&1" :: BSI.ByteString)
-  putStrLn "Let's try to find block"
+  let h = Hash ("\248\198\199\178e\ETXt\186T\148y\223\224t-\168p\162\138\&1" :: BSI.ByteString)
   mb <- getMicroBlockByHashDB c h
   print mb
+
+
+getOneTransaction = do
+  c <- connectDB
+  let h = Hash ("\244\US%\FS`\243\202\192\171\136m\235\237\199\224A\171\212C\149" :: BSI.ByteString)
+  tx <- getTransactionByHashDB c h
+  print tx
+
+
+getTransactionsByKey = do
+  c <- connectDB
+  tx <- getAllTransactionsDB c (read "QYy3AT4a3Z88MpEoGDixRgxtWW8v3RfSbJLFQEyFZwMe" :: PublicKey)
+  print tx
+
+-- begin test cli
+--------------------------------------
