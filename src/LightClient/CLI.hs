@@ -182,6 +182,7 @@ generateTransactionsForever ch = do
     (Left err) -> putStrLn $ "generateTransactionsForever error: " ++ show err
     (Right _ ) -> putStrLn   "Transactions request was sent"
 
+
 sendMessageBroadcast :: String -> WS.Connection -> IO ()
 sendMessageBroadcast m ch = do
   result <- runExceptT $ newMsgBroadcast ch m
@@ -189,12 +190,14 @@ sendMessageBroadcast m ch = do
     (Left err) -> putStrLn $ "sendMessageBroadcast error: " ++ show err
     (Right _ ) -> putStrLn   "Broadcast message was sent"
 
+
 sendMessageTo :: MsgTo -> WS.Connection -> IO ()
 sendMessageTo mTo ch = do
   result <- runExceptT $ newMsgTo ch mTo
   case result of
     (Left err) -> putStrLn $ "sendMessageTo error: " ++ show err
     (Right _ ) -> putStrLn   "Message was sent"
+
 
 loadMessages :: WS.Connection -> IO ()
 loadMessages ch = do
@@ -204,12 +207,14 @@ loadMessages ch = do
     (Right msgs ) -> putStrLn $ "New messages: " ++ (unlines $ map showMsg msgs)
                   where showMsg (MsgTo id m) = "Message from " ++ show id ++ ": " ++ m
 
+
 getAllTransactions :: PublicKey -> WS.Connection -> IO ()
 getAllTransactions key ch = do
   result <- runExceptT $ getAllTxs ch key
   case result of
     (Left err) -> putStrLn $ "getAllTransactions error: " ++ show err
     (Right txs ) -> mapM_ print txs
+
 
 getTransaction :: Hash -> WS.Connection -> IO ()
 getTransaction hash ch = do
@@ -218,6 +223,7 @@ getTransaction hash ch = do
     (Left err) -> putStrLn $ "getTransaction error: " ++ show err
     (Right info ) -> print info
 
+
 getBlockByHash :: Hash -> WS.Connection -> IO ()
 getBlockByHash hash ch = do
   result <- runExceptT $ getBlock ch hash
@@ -225,12 +231,14 @@ getBlockByHash hash ch = do
     (Left err) -> putStrLn $ "getBlockByHash error: " ++ show err
     (Right block) -> print block
 
+
 getMicroblockByHash :: Hash -> WS.Connection -> IO ()
 getMicroblockByHash hash ch = do
   result <- runExceptT $ getMicroblock ch hash
   case result of
     (Left err) -> putStrLn $ "getMicroblockByHash error: " ++ show err
     (Right block) -> print block
+
 
 getInfo :: WS.Connection -> IO ()
 getInfo ch = do

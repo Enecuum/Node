@@ -20,7 +20,8 @@ import              Data.IORef
 import              System.Random()
 import              Lens.Micro
 import              Lens.Micro.Mtl()
-import              Control.Concurrent
+import qualified    Control.Concurrent as C
+import              Control.Concurrent.Chan.Unagi.Bounded
 import              Control.Monad.Extra
 import              Service.Network.Base
 
@@ -41,7 +42,7 @@ import              Node.FileDB.FileServer
 class Processing aNodeData aPackage where
     processing
         ::  ManagerMsg msg
-        =>  Chan msg
+        =>  InChan msg
         ->  aNodeData
         ->  PackageSignature
         ->  TraceRouting
@@ -53,7 +54,7 @@ instance Processing (IORef ManagerNodeData) (Response MiningLvl) where
         ResponsePPConnection aPPId (Connect aHost aOutPort) -> do
             aData <- readIORef aMd
             whenJust (aData^.ppNodes.at aPPId) $ \aPpNode ->
-                writeChan (aPpNode^.ppChan) $ MsgConnect aHost aOutPort
+                C.writeChan (aPpNode^.ppChan) $ MsgConnect aHost aOutPort
 
 
 -- | Handling network layer's answer
@@ -64,9 +65,9 @@ instance Processing (IORef ManagerNodeData) (Response NetLvl) where
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "Accepted lists of broadcasts and points of node. " ++
                 show aBroadcastListLogic ++ show aBroadcastList
-            writeChan (aData^.fileServerChan) $
+            C.writeChan (aData^.fileServerChan) $
                 FileActorRequestNetLvl $ UpdateFile (aData^.myNodeId) aBroadcastList
-            writeChan (aData^.fileServerChan) $
+            C.writeChan (aData^.fileServerChan) $
                 FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId) aBroadcastListLogic
 
         HostAdressResponse _ -> return ()
@@ -103,7 +104,7 @@ instance Processing (IORef ManagerNodeData) (Response LogicLvl) where
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Accepted the node position of a neighbor node " ++ show aNodeId ++
                     " a new position is a " ++ show aNodePosition
-                writeChan (aData^.fileServerChan) $
+                C.writeChan (aData^.fileServerChan) $
                     FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId)
                         (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
                 whenJust (aData^.nodes.at aNodeId) $ \aNode ->
@@ -144,10 +145,10 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     ++ show aDistance ++ "."
 
                 aRequestToNetLvl ShardIndexResponse $ do
-                    aChan <- newChan
+                    aChan <- C.newChan
                     sendToShardingLvl aData $
                         T.ShardIndexCreateAction aChan aNodeId aDistance
-                    T.ShardIndexResponse aShardIndex <- readChan aChan
+                    T.ShardIndexResponse aShardIndex <- C.readChan aChan
 
                     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                         "Recived response from sharding lvl. The sharding index for "
@@ -162,10 +163,10 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     ++ "Petitioner " ++ show aNodeId ++ " shardHash = "
                     ++ show aShardHash ++ "."
                 aRequestToNetLvl ShardResponse $ do
-                    aChan <- newChan
+                    aChan <- C.newChan
                     sendToShardingLvl aData $
                         T.ShardLoadAction aChan aNodeId aShardHash
-                    T.ShardResponse aShard <- readChan aChan
+                    T.ShardResponse aShard <- C.readChan aChan
                     writeLog (aData^.infoMsgChan) [NetLvlTag, LoadingShardsTag] Info $
                         "Recived response from sharding lvl. The shard for "
                         ++ show aNodeId ++ " is " ++ show aShard ++ "."
@@ -177,10 +178,10 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     "Sending request of node position to sharding lvl. "
                     ++ "Pesitioner " ++ show aNodeId ++ "."
                 aRequestToNetLvl NodePositionResponsePackage $ do
-                    aChan <- newChan
+                    aChan <- C.newChan
                     sendToShardingLvl aData $
                         T.NodePositionAction aChan aNodeId
-                    T.NodePositionResponse aMyNodePosition <- readChan aChan
+                    T.NodePositionResponse aMyNodePosition <- C.readChan aChan
                     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                         "Accepted responce of node position from sharding lvl. "
                         ++ show aMyNodePosition
@@ -230,18 +231,18 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
                     "Send Response: I have host addres " ++ show (aData^.hostAddress) ++ "."
                 aSendNetLvlResponse (HostAdressResponse $ aData^.hostAddress)
 
-            BroadcastListRequest -> void $ forkIO $ do
+            BroadcastListRequest -> void $ C.forkIO $ do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                     "Send Response 'Broadcast list'."
-                aPosChan <- newChan
-                aConChan <- newChan
-                writeChan (aData^.fileServerChan) $
+                aPosChan <- C.newChan
+                aConChan <- C.newChan
+                C.writeChan (aData^.fileServerChan) $
                      FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-                writeChan (aData^.fileServerChan) $
+                C.writeChan (aData^.fileServerChan) $
                      FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
 
-                NodeInfoListNetLvl   aBroadcastList      <- readChan aConChan
-                NodeInfoListLogicLvl aBroadcastListLogic <- readChan aPosChan
+                NodeInfoListNetLvl   aBroadcastList      <- C.readChan aConChan
+                NodeInfoListLogicLvl aBroadcastListLogic <- C.readChan aPosChan
 
                 let aBroadcastListResponse = BroadcastListResponse
                         (NodeInfoListLogicLvl $ take 10 aBroadcastListLogic)
@@ -257,7 +258,7 @@ instance Processing (IORef ManagerNodeData) (Request MiningLvl) where
         case aRequest of
             PPMessage aByteString (IdFrom aPPIdFrom) (IdTo aId)
                 | Just aNode <- aData^.ppNodes.at aId ->
-                    writeChan (aNode^.ppChan) $ MsgMsgToPP aPPIdFrom aByteString
+                    C.writeChan (aNode^.ppChan) $ MsgMsgToPP aPPIdFrom aByteString
                 | otherwise -> writeLog (aData^.infoMsgChan) [NetLvlTag] Warning $
                     "This PP does not exist: " ++ show aId
             RequestPPConnection aPPId -> whenJust (aData^.hostAddress) $ \aHost -> do
@@ -271,7 +272,7 @@ sendToShardingLvl aData aMsg = do
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Sending msg to sharding lvl"
     whenJust (aData^.shardingChan) $ \aChan -> do
         writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Sended msg to sharding lvl"
-        writeChan aChan aMsg
+        C.writeChan aChan aMsg
 
 
 requestToNetLvl
@@ -282,7 +283,7 @@ requestToNetLvl
     ->  IO a
     ->  IO ()
 requestToNetLvl aData aTraceRouting aRequestPackage aConstructor aLogicRequest =
-    void $ forkIO $ do
+    void $ C.forkIO $ do
         aResultOfRequest <- aLogicRequest
         let (aNode, aTrace) = getClosedNode aTraceRouting aData
             aNetLevetPackage = aConstructor aResultOfRequest

@@ -28,7 +28,9 @@ import              Data.IORef
 import              Data.Serialize
 import              Lens.Micro
 import              Lens.Micro.Mtl()
-import              Control.Concurrent
+import qualified    Control.Concurrent              as C
+import              Control.Concurrent.Chan.Unagi.Bounded
+
 import              Control.Monad.Extra
 import              Crypto.Error
 import              Node.Node.BroadcastProcessing
@@ -53,15 +55,15 @@ import              PoA.Types
 import              Sharding.Sharding()
 import              Node.BaseFunctions
 
-managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
-managerMining aChan aMd = do
+managerMining :: (InChan ManagerMiningMsgBase, OutChan ManagerMiningMsgBase) -> IORef ManagerNodeData -> IO ()
+managerMining (aChan, aOutChan) aMd = do
   modifyIORef aMd $ iAmBroadcast .~ True -- FIXME:!!!
   aData <- readIORef aMd
   undead (writeLog (aData^.infoMsgChan) [NetLvlTag] Warning
       "managerMining. This node could be die!" )
       $ forever $ do
           mData <- readIORef aMd
-          readChan aChan >>= \a -> runOption a $ do
+          readChan aOutChan >>= \a -> runOption a $ do
             baseNodeOpts aChan aMd mData
 
             opt isInitDatagram              $ answerToInitDatagram aMd
@@ -89,7 +91,7 @@ answerToInfoRequest aMd _ = do
 
 
 answerToInitShardingLvl :: (ManagerMsg msg, NodeConfigClass s, NodeBaseDataClass s) =>
-                            Chan msg -> IORef s -> p -> IO ()
+                            InChan msg -> IORef s -> p -> IO ()
 answerToInitShardingLvl aChan aMd _ = do
     aData <- readIORef aMd
     when (isNothing (aData^.myNodePosition)) $ do
@@ -101,10 +103,10 @@ answerToInitShardingLvl aChan aMd _ = do
 answerToTestBroadcastBlockIndex :: IORef ManagerNodeData -> ManagerMiningMsgBase ->  IO ()
 answerToTestBroadcastBlockIndex aMd _ = do
     aData <- readIORef aMd
-    aPosChan <- newChan
+    aPosChan <- C.newChan
     let aPositionsOfNeibors  = (^.nodePosition) <$> M.elems (aData^.nodes)
-    writeChan (aData^.fileServerChan) $ FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
-    NodeInfoListLogicLvl aPossitionList <- readChan aPosChan
+    C.writeChan (aData^.fileServerChan) $ FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
+    NodeInfoListLogicLvl aPossitionList <- C.readChan aPosChan
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point list XXX: " ++ show aPossitionList
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point node list XXX: " ++ show aPositionsOfNeibors
     whenJust (aData^.myNodePosition) $ \aPosition ->
@@ -123,7 +125,7 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
             -- (head <$> genNMicroBlocks 1) >>= writeChan (aData^.microblockChan)
             -- putStrLn $ show $ aData^.microblockChan
             -- putStrLn $ show $ aMicroblock
-            writeChan (aData^.microblockChan) aMicroblock
+            C.writeChan (aData^.microblockChan) aMicroblock
             sendBroadcast aMd (BroadcastMicroBlock aMicroblock Nothing)
             sendToShardingLvl aData $
                 T.ShardAcceptAction (microblockToShard aMicroblock)
@@ -144,7 +146,7 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
 
         MsgResendingToPP aIdFrom@(IdFrom aPPIdFrom) aIdTo@(IdTo aId) aByteString
             | Just aNode <- aData^.ppNodes.at aId ->
-              writeChan (aNode^.ppChan) $ MsgMsgToPP aPPIdFrom aByteString
+              C.writeChan (aNode^.ppChan) $ MsgMsgToPP aPPIdFrom aByteString
             | otherwise -> do
                 let aMessage = BroadcastPPMsgId aByteString aIdFrom aIdTo
                 sendBroadcast aMd aMessage
@@ -159,7 +161,7 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
         PoWListRequest (IdFrom aPPIdFrom) ->
             whenJust (aData^.ppNodes.at aPPIdFrom) $ \aPpNode -> do
                 let aPPIds = takeEnd 5 (map snd (BI.toList $ aData^.poWNodes))
-                writeChan (aPpNode^.ppChan) $ ResponsePoWList aPPIds
+                C.writeChan (aPpNode^.ppChan) $ ResponsePoWList aPPIds
   where
     ppIdToNodePosition :: PPId -> NodePosition
     ppIdToNodePosition (PPId aPPId) = toNodePosition $ idToPoint aPPId
@@ -417,7 +419,7 @@ answerToNewTransaction aMd (NewTransaction aTransaction) = do
         ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount")
         (1 :: Integer)
 
-    writeChan (aData^.transactions) aTransaction
+    C.writeChan (aData^.transactions) aTransaction
 
 
 answerToNewTransaction _ _ = error

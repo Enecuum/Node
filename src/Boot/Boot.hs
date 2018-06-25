@@ -7,7 +7,8 @@ import              Data.List
 import              Data.IORef
 import              Control.Monad.Extra
 import              Lens.Micro
-import              Control.Concurrent.Chan
+import qualified    Control.Concurrent.Chan as C
+import              Control.Concurrent.Chan.Unagi.Bounded
 import              Data.Maybe
 
 import              Boot.Types
@@ -22,10 +23,10 @@ import              Service.InfoMsg
 import              Service.Network.Base
 import              Node.FileDB.FileServer
 
-managerBootNode :: Chan ManagerBootNodeMsgBase -> IORef NodeBootNodeData -> IO ()
-managerBootNode ch md = forever $ do
+managerBootNode :: (InChan ManagerBootNodeMsgBase, OutChan ManagerBootNodeMsgBase) -> IORef NodeBootNodeData -> IO ()
+managerBootNode (ch, outCh) md = forever $ do
     mData <- readIORef md
-    aMsg <- readChan ch
+    aMsg <- readChan outCh
     runOption aMsg $ do
         baseNodeOpts ch md mData
 
@@ -39,7 +40,7 @@ managerBootNode ch md = forever $ do
 
 answerToCheckBroadcastNodes
     ::  IORef NodeBootNodeData
-    ->  Chan ManagerBootNodeMsgBase
+    ->  InChan ManagerBootNodeMsgBase
     ->  ManagerBootNodeMsgBase
     ->  IO ()
 answerToCheckBroadcastNodes aMd aChan _ = do
@@ -82,13 +83,13 @@ answerToCheckBroadcastNodes aMd aChan _ = do
                 "Addition the node to list of broadcast node."
             sendExitMsgToNode aNode
 
-            writeChan (aData^.fileServerChan) $
+            C.writeChan (aData^.fileServerChan) $
                     FileActorRequestNetLvl $ UpdateFile (aData^.myNodeId)
                     (NodeInfoListNetLvl [(aNodeId, Connect (aNode^.nodeHost) (aNode^.nodePort))])
 
 
 answerToCheckBroadcastNode :: ManagerMsg a =>
-    Chan a -> IORef NodeBootNodeData -> ManagerBootNodeMsgBase -> IO ()
+    InChan a -> IORef NodeBootNodeData -> ManagerBootNodeMsgBase -> IO ()
 answerToCheckBroadcastNode aChan aMd (CheckBroadcastNode aNodeId aIp aPort) = do
     aData <- readIORef aMd
     writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag] Info $

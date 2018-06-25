@@ -4,13 +4,14 @@ module Node.Lib where
 
 import              Control.Monad
 import              Control.Exception
-import              Control.Concurrent
+import qualified    Control.Concurrent          as C
 import qualified    Data.ByteString.Lazy        as L
 import              Data.IORef
 import qualified    Data.Aeson as A
 import              Lens.Micro
 import              Service.Types
 import              Network.Socket (tupleToHostAddress)
+import              Control.Concurrent.Chan.Unagi.Bounded
 import Node.Node.Types
 import Node.Node.Config.Make
 
@@ -36,36 +37,36 @@ import Service.Transaction.Common (addMicroblockToDB, DBPoolDescriptor(..))
 startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
        DBPoolDescriptor
     -> BuildConfig
-    -> Chan ExitMsg
-    -> Chan Answer
-    -> Chan InfoMsg
-    -> (Chan a1 -> IORef s -> IO ())
-    -> (Chan a1 -> Chan Transaction -> Chan Microblock -> MyNodeId -> Chan FileActorRequest -> IO a2)
-    -> IO (Chan a1)
+    -> C.Chan ExitMsg
+    -> C.Chan Answer
+    -> C.Chan InfoMsg
+    -> ((InChan a1, OutChan a1) -> IORef s -> IO ())
+    -> ((InChan a1, OutChan a1) -> C.Chan Transaction -> C.Chan Microblock -> MyNodeId -> C.Chan FileActorRequest -> IO a2)
+    -> IO (InChan a1, OutChan a1)
 startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
 
     --tmp
     createDirectoryIfMissing False "data"
 
-    managerChan <- newChan
-    aMicroblockChan <- newChan
-    aTransactionChan <- newChan
+    managerChan@(inChanManager, _) <- newChan (2^7)
+    aMicroblockChan <- C.newChan
+    aTransactionChan <- C.newChan
     config  <- readNodeConfig
     bnList  <- readBootNodeList $ bootNodeList buildConf
-    aFileRequestChan <- newChan
-    void $ forkIO $ startFileServer aFileRequestChan
+    aFileRequestChan <- C.newChan
+    void $ C.forkIO $ startFileServer aFileRequestChan
     let portNumber = extConnectPort buildConf
     md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aFileRequestChan bnList config portNumber
-    startServerActor managerChan portNumber
-    void $ forkIO $ microblockProc descrDB aMicroblockChan infoCh
-    void $ forkIO $ manager managerChan md
+    startServerActor inChanManager portNumber
+    void $ C.forkIO $ microblockProc descrDB aMicroblockChan infoCh
+    void $ C.forkIO $ manager managerChan md
     void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aFileRequestChan
     return managerChan
 
 
-microblockProc :: DBPoolDescriptor -> Chan Microblock -> Chan InfoMsg -> IO b
+microblockProc :: DBPoolDescriptor -> C.Chan Microblock -> C.Chan InfoMsg -> IO b
 microblockProc descriptor aMicroblockCh aInfoCh = forever $ do
-        aMicroblock <- readChan aMicroblockCh
+        aMicroblock <- C.readChan aMicroblockCh
         addMicroblockToDB descriptor aMicroblock aInfoCh
 
 

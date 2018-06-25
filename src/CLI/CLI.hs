@@ -10,7 +10,8 @@ module CLI.CLI (
 import System.Console.GetOpt
 import Data.List.Split (splitOn)
 import Control.Monad (forever, mapM_)
-import Control.Concurrent
+import qualified    Control.Concurrent as C
+import              Control.Concurrent.Chan.Unagi.Bounded
 import Node.Node.Types
 import Service.InfoMsg
 import Service.Types
@@ -35,7 +36,7 @@ options = [
   ]
 
 
-serveCLI :: ManagerMiningMsg a => DBPoolDescriptor -> Chan a -> Chan InfoMsg -> IO ()
+serveCLI :: ManagerMiningMsg a => DBPoolDescriptor -> InChan a -> C.Chan InfoMsg -> IO ()
 serveCLI descrDB ch aInfoCh = do
       putStrLn $ usageInfo "Usage: " options
       forever $ do

@@ -10,7 +10,8 @@ import              Control.Monad (forM_, void, forever, unless, when)
 import qualified    Network.WebSockets                  as WS
 import              Service.Network.Base
 import              Service.Network.WebSockets.Server
-import              Control.Concurrent.Chan
+import qualified    Control.Concurrent.Chan as C
+import              Control.Concurrent.Chan.Unagi.Bounded
 import              Node.Node.Types
 import              Service.InfoMsg as I
 import              Service.Types
@@ -20,7 +21,7 @@ import              Control.Exception
 import              Node.Data.GlobalLoging
 import              PoA.Types
 import              Control.Concurrent.MVar
-import              Control.Concurrent
+import qualified    Control.Concurrent as C
 import              Node.FileDB.FileServer
 import              PoA.Pending
 
@@ -29,7 +30,7 @@ import              Node.Data.Key
 import              Data.Maybe()
 
 
-serverPoABootNode :: PortNumber -> Chan InfoMsg -> Chan FileActorRequest -> IO ()
+serverPoABootNode :: PortNumber -> C.Chan InfoMsg -> C.Chan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
         "Init. ServerPoABootNode: a port is " ++ show aRecivePort
@@ -43,9 +44,9 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                 Right a -> case a of
                     RequestConnects -> do
                         writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request of connections."
-                        aConChan <- newChan
-                        writeChan aFileServerChan $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-                        NodeInfoListNetLvl aRecords <- readChan aConChan
+                        aConChan <- C.newChan
+                        C.writeChan aFileServerChan $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+                        NodeInfoListNetLvl aRecords <- C.readChan aConChan
                         aShuffledRecords <- shuffleM aRecords
                         let aConnects = snd <$> take 5 aShuffledRecords
                         WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
@@ -60,31 +61,31 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
 servePoA ::
        PortNumber
     -> MyNodeId
-    -> Chan ManagerMiningMsgBase
-    -> Chan Transaction
-    -> Chan InfoMsg
-    -> Chan FileActorRequest
-    -> Chan Microblock
+    -> InChan ManagerMiningMsgBase
+    -> C.Chan Transaction
+    -> C.Chan InfoMsg
+    -> C.Chan FileActorRequest
+    -> C.Chan Microblock
     -> IO ()
 servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. servePoA: a port is " ++ show aRecivePort
-    aPendingChan <- newChan
-    void $ forkIO $ pendingActor aPendingChan aMicroblockChan aRecvChan aInfoChan
+    aPendingChan <- C.newChan
+    void $ C.forkIO $ pendingActor aPendingChan aMicroblockChan aRecvChan aInfoChan
     runServer aRecivePort $ \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
 
         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
         aId <- newEmptyMVar
-        aNewChan  <- newChan
+        aNewChan  <- C.newChan
         -- writeChan ch $ connecting to PoA, the PoA have id.
         void $ race
             (aSender aId aConnect aNewChan)
             (aReceiver aId aConnect aNewChan aPendingChan)
   where
     aSender aId aConnect aNewChan = forever (do
-        aMsg <- readChan aNewChan
+        aMsg <- C.readChan aNewChan
         WS.sendTextData aConnect $ A.encode aMsg) `finally` (do
             aIsEmpty <- isEmptyMVar aId
             unless aIsEmpty $ do
@@ -98,11 +99,11 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
         case A.eitherDecodeStrict aMsg of
             Right a -> case a of
                 -- REVIEW: Check fair distribution of transactions between nodes
-                RequestTransaction aNum -> void $ forkIO $ do
-                    aTmpChan <- newChan
-                    writeChan aPendingChan $ GetTransaction aNum aTmpChan
-                    aTransactions <- readChan aTmpChan
-                    when (not $ null aTransactions) $ do
+                RequestTransaction aNum -> void $ C.forkIO $ do
+                    aTmpChan <- C.newChan
+                    C.writeChan aPendingChan $ GetTransaction aNum aTmpChan
+                    aTransactions <- C.readChan aTmpChan
+                    when (not $ null aTransactions) $
                         forM_ (take aNum $ cycle aTransactions) $ \aTransaction  -> do
                             writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
                             WS.sendTextData aConnect $ A.encode $ ResponseTransaction aTransaction
@@ -125,10 +126,10 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
                         writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without PPId " ++ show aMsg
                         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
                 RequestConnects -> do
-                    aConChan <- newChan
-                    writeChan (aFileServerChan) $
+                    aConChan <- C.newChan
+                    C.writeChan aFileServerChan $
                          FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-                    NodeInfoListNetLvl aRecords <- readChan aConChan
+                    NodeInfoListNetLvl aRecords <- C.readChan aConChan
                     aShuffledRecords <- shuffleM aRecords
                     let aConnects = snd <$> take 5 aShuffledRecords
                     writeLog aInfoChan [ServePoATag] Info $ "Send connections " ++ show aConnects
@@ -171,5 +172,5 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
                 when (not aOk) $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
 
 -- TODO class sendMsgToNetLvl
-sendMsgToNetLvlFromPP :: ManagerMsg a => Chan a -> MsgToMainActorFromPP -> IO ()
+sendMsgToNetLvlFromPP :: ManagerMsg a => InChan a -> MsgToMainActorFromPP -> IO ()
 sendMsgToNetLvlFromPP aChan aMsg = writeChan aChan $ msgFromPP aMsg

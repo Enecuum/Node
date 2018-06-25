@@ -25,7 +25,8 @@ module CLI.Common (
 
 import Control.Monad (forever, replicateM)
 import Control.Concurrent (threadDelay)
-import Control.Concurrent.Chan
+import qualified    Control.Concurrent.Chan as C
+import              Control.Concurrent.Chan.Unagi.Bounded
 import Control.Exception
 import Data.Time.Units
 import Data.List.Split (splitOn)
@@ -57,19 +58,19 @@ data CLIException = WrongKeyOwnerException
 instance Exception CLIException
 
 
-sendMessageTo :: ManagerMiningMsg a => MsgTo -> Chan a -> IO (Result ())
+sendMessageTo :: ManagerMiningMsg a => MsgTo -> InChan a -> IO (Result ())
 sendMessageTo ch = return $ return $ Left NotImplementedException
 
 
-sendMessageBroadcast :: ManagerMiningMsg a => String -> Chan a -> IO (Result ())
+sendMessageBroadcast :: ManagerMiningMsg a => String -> InChan a -> IO (Result ())
 sendMessageBroadcast ch = return $ return $ Left NotImplementedException
 
 
-loadMessages :: ManagerMiningMsg a => Chan a -> IO (Result [MsgTo])
+loadMessages :: ManagerMiningMsg a => InChan a -> IO (Result [MsgTo])
 loadMessages ch = return $ Left NotImplementedException
 
 
-getBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result MicroblockAPI)
+getBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result MicroblockAPI)
 getBlockByHash db hash ch = do
   mb <- B.getBlockByHashDB db hash
   case mb of
@@ -77,16 +78,16 @@ getBlockByHash db hash ch = do
     Just m -> return (Right m)
 
 
-getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result Macroblock)
+getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result Macroblock)
 getKeyBlockByHash db hash ch = return $ Left NotImplementedException
  --return =<< Right <$> B.getBlockByHashDB db hash
 
 
-getChainInfo :: ManagerMiningMsg a => Chan a -> IO (Result ChainInfo)
+getChainInfo :: ManagerMiningMsg a => InChan a -> IO (Result ChainInfo)
 getChainInfo ch = return $ Left NotImplementedException
 
 
-getTransactionByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> Chan a -> IO (Result TransactionInfo)
+getTransactionByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result TransactionInfo)
 getTransactionByHash db hash ch = do
   tx <- B.getTransactionByHashDB db hash
   case tx of
@@ -94,20 +95,20 @@ getTransactionByHash db hash ch = do
     Just t -> return (Right t)
 
 
-getAllTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> Chan a -> IO (Result [Transaction])
+getAllTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> InChan a -> IO (Result [Transaction])
 getAllTransactions pool key ch = do
   tx <- B.getAllTransactionsDB pool key
   case tx of
     [] -> return (Left OtherException)
     t -> return (Right t)
 
-sendTrans :: ManagerMiningMsg a => Transaction -> Chan a -> Chan InfoMsg -> IO (Result ())
+sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> C.Chan InfoMsg -> IO (Result ())
 sendTrans tx ch aInfoCh = try $ do
   sendMetrics tx aInfoCh
   writeChan ch $ newTransaction tx
 
 
-sendNewTrans :: ManagerMiningMsg a => Trans -> Chan a -> Chan InfoMsg -> IO (Result Transaction)
+sendNewTrans :: ManagerMiningMsg a => Trans -> InChan a -> C.Chan InfoMsg -> IO (Result Transaction)
 sendNewTrans trans ch aInfoCh = try $ do
   let moneyAmount = (Service.Types.txAmount trans) :: Amount
   let receiverPubKey = recipientPubKey trans
@@ -127,7 +128,7 @@ sendNewTrans trans ch aInfoCh = try $ do
 
 
 generateNTransactions :: ManagerMiningMsg a =>
-    QuantityTx -> Chan a -> Chan InfoMsg -> IO (Result ())
+    QuantityTx -> InChan a -> C.Chan InfoMsg -> IO (Result ())
 generateNTransactions qTx ch m = try $ do
   tx <- genNTx qTx
   mapM_ (\x -> do
@@ -137,7 +138,7 @@ generateNTransactions qTx ch m = try $ do
   putStrLn "Transactions are created"
 
 
-generateTransactionsForever :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO (Result ())
+generateTransactionsForever :: ManagerMiningMsg a => InChan a -> C.Chan InfoMsg -> IO (Result ())
 generateTransactionsForever ch m = try $ forever $ do
                                 quantityOfTranscations <- randomRIO (20,30)
                                 tx <- genNTx quantityOfTranscations
@@ -157,12 +158,12 @@ getNewKey = try $ do
   return aPublicKey
 
 
-getBalance :: DBPoolDescriptor -> PublicKey -> Chan InfoMsg -> IO (Result Amount)
+getBalance :: DBPoolDescriptor -> PublicKey -> C.Chan InfoMsg -> IO (Result Amount)
 getBalance descrDB pKey aInfoCh = do
-    stTime  <- ( getCPUTimeWithUnit :: IO Millisecond )
-    balance  <- B.getBalanceForKey descrDB pKey
-    endTime <- ( getCPUTimeWithUnit :: IO Millisecond )
-    writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
+    stTime  <- getCPUTimeWithUnit :: IO Millisecond
+    balance <- B.getBalanceForKey descrDB pKey
+    endTime <- getCPUTimeWithUnit :: IO Millisecond
+    C.writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
     case balance of
       Nothing -> return (Left NoSuchPublicKeyInDB)
       Just b -> return (Right b)
@@ -190,9 +191,9 @@ getPublicKeys = try $ do
   return $ map fst pairs
 
 
-sendMetrics :: Transaction -> Chan InfoMsg -> IO ()
+sendMetrics :: Transaction -> C.Chan InfoMsg -> IO ()
 sendMetrics (Transaction o r a _ _ _ _) m = do
-                           writeChan m $ Metric $ increment "cl.tx.count"
-                           writeChan m $ Metric $ set "cl.tx.wallet" o
-                           writeChan m $ Metric $ set "cl.tx.wallet" r
-                           writeChan m $ Metric $ gauge "cl.tx.amount" a
+    C.writeChan m $ Metric $ increment "cl.tx.count"
+    C.writeChan m $ Metric $ set "cl.tx.wallet" o
+    C.writeChan m $ Metric $ set "cl.tx.wallet" r
+    C.writeChan m $ Metric $ gauge "cl.tx.amount" a

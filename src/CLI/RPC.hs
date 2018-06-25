@@ -8,7 +8,8 @@ import Service.Network.WebSockets.Server
 import Control.Monad (forever)
 import Control.Monad.IO.Class
 import Control.Monad.Except (throwError)
-import Control.Concurrent.Chan
+import qualified    Control.Concurrent.Chan as C
+import              Control.Concurrent.Chan.Unagi.Bounded
 import Data.Maybe (fromMaybe)
 import System.IO.Unsafe (unsafePerformIO)
 
@@ -25,7 +26,7 @@ import qualified Network.WebSockets as WS
 import Service.Transaction.Storage (DBPoolDescriptor(..))
 
 
-serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> Chan ManagerMiningMsgBase -> Chan InfoMsg -> IO ()
+serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan ManagerMiningMsgBase -> C.Chan InfoMsg -> IO ()
 serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPending -> do
     aConnect <- WS.acceptRequest aPending
     WS.forkPingThread aConnect 30
