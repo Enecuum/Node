@@ -26,6 +26,8 @@ import GHC.Generics
 import qualified Data.Serialize as S (Serialize, encode, decode)
 import Service.Transaction.TransactionsDAG (genNNTx)
 import Data.Typeable
+import Service.Types.SerializeJSON
+import qualified Data.Serialize as S
 
 --------------------------------------
 -- begin of the Connection section
@@ -241,6 +243,7 @@ getAllItems db = do
 
 getAllTransactionsDB descr pubKey = do
   txByte <- withResource (poolTransaction descr) getAllValues
+  putStrLn $ show txByte
   let fun = \t -> case (S.decode t :: Either String TransactionInfo) of
                        Left _ -> error "Can not decode TransactionInfo"
                        Right rt -> Just rt
@@ -253,12 +256,12 @@ getAllTransactionsDB descr pubKey = do
 
 getAllTransactions = do
   result <- getAll =<< getTransactionFilePath
-  let func res = case (S.decode res :: Either String Transaction) of
+  let func res = case (S.decode res :: Either String TransactionInfo) of
         Right r -> r
         Left _ -> error "Can not decode Transaction"
   let result2 = map func result
-  -- putStrLn $ show result2
-  return result2
+  putStrLn $ show result2
+  -- return result2
 
 
 getAll ::  String -> IO [BSI.ByteString]
@@ -332,7 +335,7 @@ getAllMicroblockKV = do
 
 getOneMicroblock = do
   c <- connectDB
-  let h = Hash ("\247\206\247\163v\n\176g\222Jl\202\DC1s\179\189aY\145h" :: BSI.ByteString)
+  let h = Hash ("w\168A6\"O\230\214\214\142\&7\212`\245\ETB\202\189\SOY\t" :: BSI.ByteString)
   -- let h = Hash ("\248\198\199\178e\ETXt\186T\148y\223\224t-\168p\162\138\&1" :: BSI.ByteString)
   mb <- getMicroBlockByHashDB c h
   print mb
@@ -340,7 +343,7 @@ getOneMicroblock = do
 
 getOneTransaction = do
   c <- connectDB
-  let h = Hash ("\244\US%\FS`\243\202\192\171\136m\235\237\199\224A\171\212C\149" :: BSI.ByteString)
+  let h = Hash ("a\167\156\bU\215&.\251\187a\NAK\179\253\216\236\229\191\144R" :: BSI.ByteString)
   tx <- getTransactionByHashDB c h
   print tx
 
@@ -352,3 +355,23 @@ getTransactionsByKey = do
 
 -- end test cli
 --------------------------------------
+
+
+tryParseTXInfoJson = do
+  tx <- genNNTx 5
+  let ti = TransactionInfo (tx !! 0) (BC.pack "123") 2
+  let eti = Data.Aeson.encode ti
+  print eti
+  let res = Data.Aeson.decode eti :: Maybe TransactionInfo
+  -- return t
+  print $ res
+
+
+tryParseTXInfoBin = do
+  tx <- genNNTx 5
+  let ti = TransactionInfo (tx !! 0) (BC.pack "123") 2
+  let eti = S.encode ti
+  print eti
+  let res = S.decode eti :: Either String TransactionInfo
+  -- return t
+  print $ res

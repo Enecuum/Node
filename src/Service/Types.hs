@@ -97,16 +97,11 @@ data Transaction = Transaction {
   _time      :: Time, -- UnixTime format
   _signature :: Signature,
   _uuid      :: Int
-} | TransactionStart {
-  _receiver  :: PublicKey,
-  _amount    :: Amount,
-  _currency  :: Currency,
-  _time      :: Time, -- UnixTime format
-  _uuid      :: Int
 } deriving ( Generic, Show, Eq, Ord, Read)
 
 
 instance Serialize Transaction
+
 
 data TransactionInfo = TransactionInfo {
      _tx    :: Transaction
