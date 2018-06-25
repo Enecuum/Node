@@ -45,11 +45,11 @@ instance Serialize Currency
 type Time      = Int -- UnixTimestamp
 type DAG = Gr Transaction Transaction
 
-newtype Hash = Hash ByteString deriving (Ord, Eq, Show, Generic)
+newtype Hash = Hash ByteString deriving (Ord, Eq, Show, Generic, Read)
 instance Serialize Hash
 
-instance Read Hash where
-       readsPrec _ value = return (Hash $ C.pack value,"")
+-- instance Read Hash where
+--        readsPrec _ value = return (Hash $ C.pack value,"")
 
 data MicroblockV1 = MicroblockV1{
                   hashCurrentMicroblock :: ByteString, -- hashCurrentMicroblock

@@ -171,6 +171,7 @@ getNValues db n = do
 getMicroBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe Microblock)
 getMicroBlockByHashDB db mHash = do
   mbByte <- getByHash (poolMicroblock db) mHash
+  putStrLn ("got something" ++ show mbByte)
   let mb = case mbByte of Nothing -> Nothing
                           Just m -> case (S.decode m :: Either String Microblock) of
                             Left _ -> error "Can not decode Microblock"
@@ -209,6 +210,9 @@ deleteTransactionsByHash db hashes = deleteByHash (poolTransaction db) hashes
 getByHash :: Pool Rocks.DB -> Hash -> IO (Maybe BSI.ByteString)
 getByHash pool hash = do
   let (Hash key) = hash
+  putStrLn ("Go to db " ++ show hash)
+  BC.putStrLn key
+  putStrLn ("print key")
   let fun = \db -> Rocks.get db Rocks.defaultReadOptions key
   withResource pool fun
 
@@ -324,5 +328,6 @@ getAllMicroblockKV = do
 tryMine = do
   c <- connectDB
   let h = Hash (read "\248\198\199\178e\ETXt\186T\148y\223\224t-\168p\162\138\&1" :: BSI.ByteString)
+  putStrLn "Let's try to find block"
   mb <- getMicroBlockByHashDB c h
   print mb
