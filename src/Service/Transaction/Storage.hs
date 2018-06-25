@@ -220,7 +220,7 @@ deleteByHash pool hash = do
 
 
 --------------------------------------
--- begin of the Query section
+-- begin of the Query Iterator section
 
 -- get all values from the table via iterator
 -- getAllValues :: MonadResource m => Rocks.DB -> m [BSI.ByteString]
@@ -247,8 +247,10 @@ getAllTransactionsDB descr pubKey = do
 
 
 
--- end of the Query section
+-- end of the Query Iterator section
 --------------------------------------
+
+
 
 
 getAll ::  String -> IO [BSI.ByteString]
@@ -281,13 +283,6 @@ getAllTransactions = do
   let result2 = map func result
   putStrLn $ show result2
 
-getAllTransactions2 = do
-  result <- getAllKV =<< getTransactionFilePath
-  let func res = case (S.decode res :: Either String Transaction) of
-        Right r -> r
-        Left _ -> error "Can not decode Transaction"
-  let result2 = map (\(k,v) -> (k, func v)) result
-  putStrLn $ show result2
 
 getAllMicroblocks = do
   result <- getAll =<< getMicroblockFilePath
@@ -296,3 +291,38 @@ getAllMicroblocks = do
         Left _ -> error "Can not decode Microblock"
   let result2 = map func result
   putStrLn $ show result2
+
+
+getAllLedgerKV = do
+  result <- getAllKV =<< getLedgerFilePath
+  -- let result2 = map (\res -> S.decode res :: Either String PublicKey) result
+  let func res = case (S.decode res :: Either String Amount) of
+        Right r -> r
+        Left _ -> error "Can not decode Ledger"
+  let result2 = map (\(k,v) -> (k, func v)) result
+  putStrLn $ show result2
+
+
+getAllTransactionsKV = do
+  result <- getAllKV =<< getTransactionFilePath
+  let func res = case (S.decode res :: Either String Transaction) of
+        Right r -> r
+        Left _ -> error "Can not decode Transaction"
+  let result2 = map (\(k,v) -> (k, func v)) result
+  putStrLn $ show result2
+
+
+getAllMicroblockKV = do
+  result <- getAllKV =<< getMicroblockFilePath
+  let func res = case (S.decode res :: Either String Microblock) of
+        Right r -> r
+        Left _ -> error "Can not decode Microblock"
+  let result2 = map (\(k,v) -> (k, func v)) result
+  -- putStrLn $ show result2
+  return result2
+
+tryMine = do
+  c <- connectDB
+  let h = Hash (read "\248\198\199\178e\ETXt\186T\148y\223\224t-\168p\162\138\&1" :: BSI.ByteString)
+  mb <- getMicroBlockByHashDB c h
+  print mb

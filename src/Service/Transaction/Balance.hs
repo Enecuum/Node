@@ -119,16 +119,15 @@ checkMacroblock db aInfoChan keyBlockHash blockHash = do
                              then return (False, False, hashes)  -- Microblock already in Macroblock - Nothing
                              else do -- write microblock (_ , True)
                                      -- add this Microblock to value of Macroblock
-                                     let microblockHashes = blockHash : hashes
                                      let key = keyBlockHash
-                                         val = hashedMb microblockHashes
+                                         val = hashedMb $ blockHash : hashes
                                      let fun = (\db -> Rocks.write db def{Rocks.sync = True} [ Rocks.Put key val ])
                                      withResource (poolMacroblock db) fun
                                      writeLog aInfoChan [BDTag] Info ("Write Microblock "  ++ show key ++ "to Macroblock table")
                                      -- Check quantity of microblocks, can we close Macroblock?
                                      if (length hashes >= 3) -- 4 Microblocks in Macroblock is enough
-                                       then return (True, True, microblockHashes)
-                                     else return (False, True, microblockHashes)
+                                       then return (True, True, hashes)
+                                     else return (False, True, hashes)
 
 
 
@@ -146,9 +145,10 @@ addMicroblockToDB db m aInfoChan =  do
       writeMicroblockDB (poolMicroblock db) aInfoChan m
       writeTransactionDB (poolTransaction db) aInfoChan txs microblockHash
       if macroblockClosed then do
-        -- get all microblocks for macroblock
+        -- get all microblocks (without last one) for macroblock
         mb <- mapM (\h -> getMicroBlockByHashDB db (Hash h))  microblockHashes
-        realMb = map fromJust (filter (isJust) mb)
+        let realMb = map fromJust (filter (isJust) mb) ++ [m]
+
         writeLog aInfoChan [BDTag] Info ("Will Write Ledger "  ++ show (length realMb))
         mapM (runLedger db aInfoChan) realMb
         deleteMacroblockDB db aInfoChan (_keyBlock m) -- delete entry from Macroblock table
