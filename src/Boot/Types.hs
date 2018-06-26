@@ -14,7 +14,7 @@ import              Data.Monoid
 import              Lens.Micro
 import              System.Clock
 import              Network.Socket
-import              Control.Concurrent.Chan
+import qualified    Control.Concurrent.Chan         as C
 import              Node.Template.Constructor
 import qualified    Data.Set                        as S
 import qualified    Data.ByteString                 as B
@@ -81,9 +81,9 @@ instance  Processing (IORef NodeBootNodeData) (Request NetLvl) where
             let aSendNetLvlResponse = sendResponseTo
                     aTraceRouting aData BroadcastListRequest aSignature
 
-            aConChan <- newChan
-            writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-            NodeInfoListNetLvl aBroadcasts <- readChan aConChan
+            aConChan <- C.newChan
+            C.writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+            NodeInfoListNetLvl aBroadcasts <- C.readChan aConChan
 
             let aBroadcastListResponse = BroadcastListResponse
                     (NodeInfoListLogicLvl [])

@@ -43,12 +43,14 @@ dependencies:
 - time-units
 - network
 - websockets
+- unagi-chan    
 - aeson
 - cereal
 - mtl
 - cryptonite
 - base16-bytestring
 - base58-bytestring
+- base64-bytestring
 - arithmoi
 - directory
 - filepath
@@ -80,7 +82,21 @@ dependencies:
 - text
 - aeson-pretty
 - unordered-containers
-# - rocksdb-haskell
+- cryptohash
+- rocksdb-haskell
+- data-default
+- hashtables
+- resourcet
+- retry
+- exceptions
+# - MonadCatchIO-transformers
+- hashable
+#- postgresql-simple
+- resource-pool
+#- persistent-postgresql
+#- mysql
+- unix-time
+
 
 library:
   source-dirs: src

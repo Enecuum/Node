@@ -10,7 +10,8 @@ import              Control.Monad (forM_, void, forever, unless, when)
 import qualified    Network.WebSockets                  as WS
 import              Service.Network.Base
 import              Service.Network.WebSockets.Server
-import              Control.Concurrent.Chan
+import qualified    Control.Concurrent.Chan as C
+import              Control.Concurrent.Chan.Unagi.Bounded
 import              Node.Node.Types
 import              Service.InfoMsg as I
 import              Service.Types
@@ -20,15 +21,16 @@ import              Control.Exception
 import              Node.Data.GlobalLoging
 import              PoA.Types
 import              Control.Concurrent.MVar
-import              Control.Concurrent
+import qualified    Control.Concurrent as C
 import              Node.FileDB.FileServer
+import              PoA.Pending
 
 import              Control.Concurrent.Async
 import              Node.Data.Key
 import              Data.Maybe()
 
 
-serverPoABootNode :: PortNumber -> Chan InfoMsg -> Chan FileActorRequest -> IO ()
+serverPoABootNode :: PortNumber -> InChan InfoMsg -> C.Chan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
         "Init. ServerPoABootNode: a port is " ++ show aRecivePort
@@ -42,9 +44,9 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                 Right a -> case a of
                     RequestConnects -> do
                         writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request of connections."
-                        aConChan <- newChan
-                        writeChan aFileServerChan $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-                        NodeInfoListNetLvl aRecords <- readChan aConChan
+                        aConChan <- C.newChan
+                        C.writeChan aFileServerChan $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+                        NodeInfoListNetLvl aRecords <- C.readChan aConChan
                         aShuffledRecords <- shuffleM aRecords
                         let aConnects = snd <$> take 5 aShuffledRecords
                         WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
@@ -56,29 +58,31 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                     writeLog aInfoChan [ServerBootNodeTag] Warning $
                         "Broken message from PP " ++ show aMsg ++ " " ++ a
 
-
 servePoA ::
        PortNumber
     -> MyNodeId
-    -> Chan ManagerMiningMsgBase
-    -> Chan Transaction
-    -> Chan InfoMsg
-    -> Chan FileActorRequest
+    -> InChan ManagerMiningMsgBase
+    -> C.Chan Transaction
+    -> InChan InfoMsg
+    -> C.Chan FileActorRequest
+    -> C.Chan Microblock
     -> IO ()
-servePoA aPort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
+servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
-        "Init. servePoA: a port is " ++ show aPort
-    runServer aPort $ \_ aPending -> do
+        "Init. servePoA: a port is " ++ show aRecivePort
+    aPendingChan <- C.newChan
+    void $ C.forkIO $ pendingActor aPendingChan aMicroblockChan aRecvChan aInfoChan
+    runServer aRecivePort $ \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
 
         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
         aId <- newEmptyMVar
-        aNewChan  <- newChan
+        (aInpChan, aOutChan) <- newChan (2^4)
         -- writeChan ch $ connecting to PoA, the PoA have id.
         void $ race
-            (aSender aId aConnect aNewChan)
-            (aReceiver aId aConnect aNewChan)
+            (aSender aId aConnect aOutChan)
+            (aReceiver aId aConnect aInpChan aPendingChan)
   where
     aSender aId aConnect aNewChan = forever (do
         aMsg <- readChan aNewChan
@@ -88,20 +92,21 @@ servePoA aPort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                 aDeadId <- readMVar aId
                 writeChan ch $ ppNodeIsDisconected aDeadId)
 
-    aReceiver aId aConnect aNewChan = forever $ do
+    aReceiver aId aConnect aNewChan aPendingChan = forever $ do
         aMsg <- WS.receiveData aConnect
+        writeLog aInfoChan [ServePoATag] Info $ "Raw msg: " ++ show aMsg
         aOk <- isEmptyMVar aId
         case A.eitherDecodeStrict aMsg of
             Right a -> case a of
                 -- REVIEW: Check fair distribution of transactions between nodes
-                RequestTransaction aNum -> void $ forkIO $ forM_ [1..aNum] $ \_  -> do
-                        aTransaction <- readChan aRecvChan
-                        writeChan aInfoChan $ Metric $ add
-                            ("net.node." ++ show (toInteger aNodeId) ++ ".pending.amount")
-                            (-1 :: Integer)
-                        writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
-                        WS.sendTextData aConnect $ A.encode $ ResponseTransaction aTransaction
-                            --(fromString.show $  :: B.ByteString)
+                RequestTransaction aNum -> void $ C.forkIO $ do
+                    aTmpChan <- C.newChan
+                    C.writeChan aPendingChan $ GetTransaction aNum aTmpChan
+                    aTransactions <- C.readChan aTmpChan
+                    when (not $ null aTransactions) $
+                        forM_ (take aNum $ cycle aTransactions) $ \aTransaction  -> do
+                            writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
+                            WS.sendTextData aConnect $ A.encode $ ResponseTransaction aTransaction
                 MsgMicroblock aMicroblock
                     | not aOk -> do
                         aSenderId <- readMVar aId
@@ -121,10 +126,10 @@ servePoA aPort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
                         writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without PPId " ++ show aMsg
                         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
                 RequestConnects -> do
-                    aConChan <- newChan
-                    writeChan (aFileServerChan) $
+                    aConChan <- C.newChan
+                    C.writeChan aFileServerChan $
                          FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-                    NodeInfoListNetLvl aRecords <- readChan aConChan
+                    NodeInfoListNetLvl aRecords <- C.readChan aConChan
                     aShuffledRecords <- shuffleM aRecords
                     let aConnects = snd <$> take 5 aShuffledRecords
                     writeLog aInfoChan [ServePoATag] Info $ "Send connections " ++ show aConnects
@@ -163,9 +168,9 @@ servePoA aPort aNodeId ch aRecvChan aInfoChan aFileServerChan = do
             Left a -> do
                 -- TODO: Include ID if exist.
                 writeLog aInfoChan [ServePoATag] Warning $
-                    "Brouken message from PP " ++ show aMsg ++ " " ++ a
+                    "Broken message from PP " ++ show aMsg ++ " " ++ a
                 when (not aOk) $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
 
 -- TODO class sendMsgToNetLvl
-sendMsgToNetLvlFromPP :: ManagerMsg a => Chan a -> MsgToMainActorFromPP -> IO ()
+sendMsgToNetLvlFromPP :: ManagerMsg a => InChan a -> MsgToMainActorFromPP -> IO ()
 sendMsgToNetLvlFromPP aChan aMsg = writeChan aChan $ msgFromPP aMsg

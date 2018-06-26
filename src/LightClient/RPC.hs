@@ -3,28 +3,30 @@
 
 module LightClient.RPC (
         newTx,
-        genNTx,
-        genUnlimTx,
         reqLedger,
+        getBlock,
+        getMicroblock,
+        getTx,
+        getAllTxs,
+        getChainInfo,
+
+--test
         newMsgBroadcast,
         newMsgTo,
         loadNewMsg,
 
         QuantityTx,
-        PubKey,
         Trans(..)
      ) where
 
 import Network.JsonRpc.Client
-import qualified Data.ByteString.Lazy as B
 import Control.Monad (void)
-import Network.Socket.ByteString (sendAllTo, recv)
+import qualified Network.WebSockets as WS
 
 import Control.Timeout (timeout)
 import Data.Time.Units (Second)
 import Service.Types
 import Service.Types.PublicPrivateKeyPair hiding (Signature)
-import Service.Network.Base
 import Service.Types.SerializeJSON ()
 
 
@@ -33,17 +35,27 @@ type Result a = RpcResult IO a
 
 -- Client-side function's signature
 newTxSig :: Signature (Transaction ::: ()) ()
-newTxSig = Signature "new_tx" ("x" ::: ())
+newTxSig = Signature "enq_sendTransaction" ("tx" ::: ())
 
-genNTxSig :: Signature (QuantityTx ::: ()) ()
-genNTxSig = Signature "gen_n_tx" ("x" ::: ())
+reqLedgerSig :: Signature (PublicKey ::: ()) Amount
+reqLedgerSig = Signature "enq_getBalance" ("address" ::: ())
 
-genUnlimTxSig :: Signature () ()
-genUnlimTxSig = Signature "gen_unlim_tx" ()
+reqGetBlockSig :: Signature (Hash ::: ()) Macroblock
+reqGetBlockSig = Signature "enq_getBlockByHash" ("hash" ::: ())
 
-reqLedgerSig :: Signature (PubKey ::: ()) Amount
-reqLedgerSig = Signature "get_balance" ("x" ::: ())
+reqGetMicroblockSig :: Signature (Hash ::: ()) MicroblockAPI
+reqGetMicroblockSig = Signature "enq_getMicroblockByHash" ("hash" ::: ())
 
+reqGetTxSig :: Signature (Hash ::: ()) TransactionInfo
+reqGetTxSig = Signature "enq_getTransactionByHash" ("hash" ::: ())
+
+reqGetAllTxsSig :: Signature (PublicKey ::: ()) [Transaction]
+reqGetAllTxsSig = Signature "enq_getAllTransactions" ("address" ::: ())
+
+reqChainInfoSig :: Signature () ChainInfo
+reqChainInfoSig = Signature "enq_getChainInfo" ()
+
+--test
 newMsgBroadcastSig :: Signature (String ::: ()) ()
 newMsgBroadcastSig = Signature "send_message_broadcast" ("x" ::: ())
 
@@ -54,29 +66,39 @@ loadNewMsgSig :: Signature () [MsgTo]
 loadNewMsgSig = Signature "load_messages" ()
 
 -- Bind function signature with RPC connection
-newTx :: ClientHandle -> Transaction -> Result ()
+newTx :: WS.Connection -> Transaction -> Result ()
 newTx h = toFunction (connectionWithTimeOut h) newTxSig
 
-genNTx :: ClientHandle -> Int -> Result ()
-genNTx h = toFunction (connectionWithTimeOut h) genNTxSig
-
-genUnlimTx :: ClientHandle -> Result ()
-genUnlimTx h = toFunction (connectionWithTimeOut h) genUnlimTxSig
-
-reqLedger :: ClientHandle -> PubKey -> Result Amount
+reqLedger :: WS.Connection -> PublicKey -> Result Amount
 reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
 
-newMsgBroadcast :: ClientHandle -> String -> Result ()
+getBlock :: WS.Connection -> Hash -> Result Macroblock
+getBlock h = toFunction (connectionWithTimeOut h) reqGetBlockSig
+
+getMicroblock :: WS.Connection -> Hash -> Result MicroblockAPI
+getMicroblock h = toFunction (connectionWithTimeOut h) reqGetMicroblockSig
+
+getTx :: WS.Connection -> Hash -> Result TransactionInfo
+getTx h = toFunction (connectionWithTimeOut h) reqGetTxSig
+
+getAllTxs :: WS.Connection -> PublicKey -> Result [Transaction]
+getAllTxs h = toFunction (connectionWithTimeOut h) reqGetAllTxsSig
+
+getChainInfo :: WS.Connection -> Result ChainInfo
+getChainInfo h = toFunction (connectionWithTimeOut h) reqChainInfoSig
+
+
+--test
+newMsgBroadcast :: WS.Connection -> String -> Result ()
 newMsgBroadcast h = toFunction (connectionWithTimeOut h) newMsgBroadcastSig
 
-newMsgTo :: ClientHandle -> MsgTo -> Result ()
+newMsgTo :: WS.Connection -> MsgTo -> Result ()
 newMsgTo h = toFunction (connectionWithTimeOut h) newMsgToSig
 
-loadNewMsg :: ClientHandle -> Result [MsgTo]
+loadNewMsg :: WS.Connection -> Result [MsgTo]
 loadNewMsg h = toFunction (connectionWithTimeOut h) loadNewMsgSig
 
-
-connectionWithTimeOut :: ClientHandle -> Connection IO
+connectionWithTimeOut :: WS.Connection -> Connection IO
 connectionWithTimeOut h input = do
   result <- timeout (5 :: Second) $ connection h input
   case result of
@@ -84,9 +106,9 @@ connectionWithTimeOut h input = do
     Nothing -> return (error "Connection error: out of time-out")
 
 -- Connect to a server
-connection :: ClientHandle -> Connection IO
+connection :: WS.Connection -> Connection IO
 connection handle input = do
-    void $ sendAllTo
-           (clientSocket handle) (B.toStrict input) (clientAddress handle)
-    ans <- recv (clientSocket handle) (1024*10)
-    return (Just (B.fromStrict ans))
+    void $ WS.sendTextData handle input
+    ans <- WS.receiveData handle
+    return (Just ans)
+

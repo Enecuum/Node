@@ -8,7 +8,7 @@ Compiling the repo generates the following executables:
 
 * BootNode-exe - a boot node that keeps a list of arbitrary available connected Simple Nodes and gives parts of that list on request to new Simple Nodes entering the network.
 * SimpleNode-exe - a basic role of a node that receives transactions from LighClient (user light client), adds them to the mempool, sends PoA Nodes (mobile nodes) transactions from the mempool, receives generated microblocks from PoA Nodes and propagates those blocks over the network to other Simple Nodes. Also,it can receive requests to calculate wallet balance, give information on transactions and microblocks, and then give responses to those requests. In the future, it'll be used in the sharding implementation: data distribution management and data fetchon request.
-* LightClien-exe - a user client that can generate new public keys (wallet addresses), generate transacations and send them to an arbitrary node (can be a local or remote node).
+* LightClient-exe - a user client that can generate new public keys (wallet addresses), generate transacations and send them to an arbitrary node (can be a local or remote node).
 
 Node supports multithreading. Each thread has its own data and can read data from another thread, change its (.self) state, propagate messages to other actors and create new actors. This way we avoid numerous problems normally assosiated with multithreading and can process events in parallel balancing the available resources.
 
@@ -24,12 +24,15 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 ##### Request parameters
 
-- `signature` - ECDSA signature 
+- `amount` - amount intended for transfer
+- `uuid` - unique identifier for the transaction
+- `owner` - sender's public key (a.k.a your address in the network)
+- `receiver` - receiver's public key (a.k.a their address in the network)
+- `currency` - currency itended for transfer
+- `sign` - ECDSA signature 
 - `sign_s` - represents [R output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature  
 - `sign_r` - represents [S output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature 
-- `amount` - amount intended for transfer
-- `owner_key` - sender's public key (a.k.a your address in the network)
-- `receiver_key` - receiver's public key (a.k.a their address in the network)
+- `timestamp` - current time (will be deprecated soon)
 
 ##### Response parameters
 
@@ -43,7 +46,10 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 ##### Request example:
 
-`{"jsonrpc":"2.0","params":{"x":{"signature":{"sign_s":94223551497283667262425597401930625553013615916376364863948543283948993734318,"sign_r":28834183127673934019323833968330946475134237099239544917311924861094696131869},"amount":10, "time":53045.910023792, "owner_key":117770961709617055389350520036565206405403916684488363141903718453974738717275658,"receiver_key":117770961709617055389350520036565206405403916684488363141903718453974738717275658}}, "method":enq_sendTransaction, "id":1}`
+`{
+  "jsonrpc":"2.0",
+  "params":
+   {"tx":{"amount":10,"uuid":11,"owner":"4mGYpcwycV9aWBurroUo2UMvCx5NL5RrGbdKacMoPZuX","receiver":"5YXZXhM9MMafhS5fdzanWbimKEpAnmrqabD5BcMm8TxS","currency":"ENQ","sign":    {"sign_s":53851544468490237432689794264655477248827276839794535462123667385563675641643,"sign_r":32540351665388188734732260127968413635181826340120448422375467318877505024005},"timestamp":1529677285}},"method":"enq_sendTransaction","id":1}`
 
 ##### Response example:
 
@@ -70,14 +76,16 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 ##### Response parameters
 
-- `signature` - ECDSA signature 
+- `amount` - amount intended for transfer
+- `uuid` - unique identifier for the transaction
+- `owner` - sender's public key (a.k.a your address in the network)
+- `receiver` - receiver's public key (a.k.a their address in the network)
+- `currency` - currency itended for transfer
+- `sign` - ECDSA signature 
 - `sign_s` - represents [R output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature  
 - `sign_r` - represents [S output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature 
-- `amount` - amount intended for transfer
-- `owner_key` - sender's public key (a.k.a your address in the network)
-- `receiver_key` - receiver's public key (a.k.a their address in the network)
-- `block` - hash of the target (micro)block
-- `index` - index of the transaction in the target (micro)block
+- `timestamp` - current time (will be deprecated soon)
+- `block` - has of the microblock this transaction is published (mined) in
 
 ###### Misc:
 
@@ -87,16 +95,16 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 ##### Response example:
 
-`"jsonrpc":"2.0","params":{"hash":"6668736C666B68"},"method":"enq_getTransactionByHash","id":1}`
+`{"jsonrpc":"2.0","params":{"hash":"JM47wo87CqMVtVvit1gWfYdcdGrJM6kRmdMiLh8Jdi7AQdqWvXnrcLXskPFx"},"method":"enq_getTransactionByHash","id":1}`
 
 ##### Response example:
 
-`{"result":{"tx":{"signature":{"sign_s":9801959209846992852311330047916112131397328350695846174818753987431086006404,"sign_r":51905750445091806981764453120165643019701345224570532370988964470189867234685},"amount":10,"time":58944.703034014,"owner_key":98123844696921525574085363646516869903415165222879705991840115754920922153509,"receiver_key":7390378781922706300737074641115163931396417816966376357730577494300556106681},"block":"7364666C6A736B6668676C6B6A6864","index":10},"jsonrpc":"2.0","id":1}`
+`{"result":{"tx":{"amount":15,"uuid":12,"owner":"UGkX5YaDQ2p9tJE4FWK81QmTg3bDsgrW6NWdRbZg1Rzh","receiver":"JW7ecwuBk3mBUsYFbrNzdWFtzg2gZjQfovUhfzFrT9NA","currency":"ENQ","sign":{"sign_s":108896698171168516308183867426676890214358078525015061253627796254851838899532,"sign_r":96833102483162253818415606073695362365268968710929065084732226015632032994116},"timestamp":1529681873},"block":"S005QWNzTmNrM1M4NHlDRllEU2hOZ3dwaVloYVpZMTJzMVp2dkxndlVxbmM=","index":5},"jsonrpc":"2.0","id":1}`
 
 <br>
 <br>
 
-**Get information about block: `enq_getBlockByHash`**
+**Get information about macroblock: `enq_getBlockByHash`**
 
 ##### Request parameters
 
@@ -104,14 +112,59 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 ##### Response parameters
 
-- `signature` - ECDSA signature 
+- `height` - number of blocks from the genesis to the current one 
+- `solver` - public key of the PoW solver who opened this macroblock (mined the k-block)
+- `txs_cn` - number of transactions in the macroblock
+- `prev_hash` - hash of the previous macroblock
+- `reward` - reward to the PoW miner for opening the macroblock (mining the k-block)
+- `microblocks` - hashes of microblocks inside the macroblock
+- `difficulty` - current difficulty level for opening a macroblock (mining a k-block)
+- `microblocks_cnt` - number of microblocks inside the macroblock
+
+###### Misc:
+
+- `method` - target API method
+- `id` - auto-assigned JSON-RPC ID (used to match the response object with the request object)
+- `jsonrpc` - JSON-RCP version
+
+##### Request example:
+
+`{"jsonrpc":"2.0","params":{"hash":"JM47wo87CqMVtVvit1gWfYdcdGrJM6kRmdMiLh8Jdi7AQdqWvXnrcLXskPFx"},"method":"enq_getBlockByHash","id":1}`
+
+##### Response example:
+
+`{"result":{"height":2,"solver":"RV36deizV55S3MnHTUzg3jEirHSDsDEMR89fNAzMadNZ4Fm4dG9PeQm2TAQA","txs_cnt":512,"prev_hash":"W4g6hWkxQhUQrXWmHoLkQocrLzrSgRZvjkm4ASsq4jt3Vqj5aSt3j8jiiTfV","reward":100,"microblocks":["RV36deizV55S3MnHTUzg3jEirHSDsDEMR89fNAzMadNZ4Fm4dG9PeQm2TAQA","JM47wo87CqMVtVvit1gWfYdcdGrJM6kRmdMiLh8Jdi7AQdqWvXnrcLXskPFx","J3fXPmZfaEzu9dp3kJsf8RuQzzRuzEBtCu8ciBiN6mmNkNj6HqSobgwtJ4W3","W4g6hWkxQhUQrXWmHoLkQocrLzrSgRZvjkm4ASsq4jt3Vqj5aSt3j8jiiTfV"],"difficulty":1,"microblocks_cnt":4},"jsonrpc":"2.0","id":1}`
+
+<br>
+<br>
+
+
+**Get information about microblock: `enq_getMicroblockByHash`**
+
+##### Request parameters
+
+- `hash` - hash of the target block
+
+##### Response parameters
+
+- `transactions` - start of an array of transactions in the microblock
+- `amount` - amount intended for transfer
+- `uuid` - unique identifier for the transaction
+- `owner` - sender's public key (a.k.a your address in the network)
+- `receiver` - receiver's public key (a.k.a their address in the network)
+- `currency` - currency itended for transfer
+- `sign` - ECDSA signature 
 - `sign_s` - represents [R output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature  
 - `sign_r` - represents [S output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature 
-- `amount` - amount intended for transfer 
-- `owner_key` - sender's public key (a.k.a your address in the network)
-- `receiver_key` - receiver's public key (a.k.a their address in the network)
-- `hashPreviousMicroblock` - hash of the previous (micro)block
-- `hashCurrentMicroblock` - hash of the target (micro)block
+- `timestamp` - current time (will be deprecated soon)
+- `k_block` - hash of the k-block (k-block is the opening part of a macroblock) this microblock is linked to
+- `txs_cnt` - number of transactions in the microblock
+- `reward` - reward for publishing a microblock
+- `publishers` - public keys (addresses) of PoA Nodes in the PoA Team (used for indexing microblocks in the macroblock)
+- `sign` - ECDSA signature of the PoA Node that published the microblock
+- `sign_s` - represents [R output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature  
+- `sign_r` - represents [S output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature 
+- `index` - index of the microblock in the macroblock 
 
 
 ###### Misc:
@@ -123,14 +176,47 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 ##### Request example:
 
-`{"jsonrpc":"2.0","params":{"hash":"68646A66686C666A6B686C"},"method":"enq_getBlockByHash","id":1}`
+`{"jsonrpc":"2.0","params":{"hash":"JM47wo87CqMVtVvit1gWfYdcdGrJM6kRmdMiLh8Jdi7AQdqWvXnrcLXskPFx"},"method":"enq_getMicroblockByHash","id":1}`
 
 ##### Response example:
 
-`{"result":{"trans":[{"signature":{"sign_s":9801959209846992852311330047916112131397328350695846174818753987431086006404,"sign_r":51905750445091806981764453120165643019701345224570532370988964470189867234685},"amount":10,"time":58944.703034014,"owner_key":98123844696921525574085363646516869903415165222879705991840115754920922153509,"receiver_key":7390378781922706300737074641115163931396417816966376357730577494300556106681}],"hashPreviousMicroblock":"64666A736B676A6C6A73","hashCurrentMicroblock":"6664736C6B6A68666C6B"},"jsonrpc":"2.0","id":1}`
+`{"result":{"transactions":[{"amount":10,"uuid":15,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":111453389016965411942432161422836677977682117261774497318558333020708965069823,"sign_r":34802528517330025474056637040554169615944272750680678430210531325764022406021},"timestamp":1529681025},{"amount":19,"uuid":12,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":36702896446615718903997830217307609909443281366110703304854624965337681147887,"sign_r":7367170092931138165337844383547165997062478109283580450989454932653837213781},"timestamp":1529681025},{"amount":14,"uuid":19,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":98414524750868806711785718518430616768375010094240450345905375658581001458859,"sign_r":95027401014124111353895671545669534279352130813036148099458965611942353578063},"timestamp":1529681025}],"k_block":"W4g6hWkxQhUQrXWmHoLkQocrLzrSgRZvjkm4ASsq4jt3Vqj5aSt3j8jiiTfV","txs_cnt":3,"reward":1,"publishers":[],"sign":{"sign_s":111453389016965411942432161422836677977682117261774497318558333020708965069823,"sign_r":34802528517330025474056637040554169615944272750680678430210531325764022406021},"index":4},"jsonrpc":"2.0","id":1}`
 
 <br>
 <br>
+
+**Get stats on the global state: `enq_getChainInfo`**
+
+##### Request parameters
+
+- none specific parameters
+
+##### Response parameters
+
+- `nodes_num` - total number of mining nodes
+- `blocks_num` - total number of mined macroblocks
+- `difficulty` - current difficulty level of opening a macroblock (mining k-block)
+- `emission` - total emission 
+
+###### Misc:
+
+- `method` - target API method
+- `id` - auto-assigned JSON-RPC ID (used to match the response object with the request object)
+- `jsonrpc` - JSON-RCP version
+
+
+##### Request example:
+
+`{"jsonrpc":"2.0","method":"enq_getChainInfo","id":1}`
+
+##### Response example:
+
+`{"result":{"nodes_num":4,"blocks_num":10,"difficulty":1,"txs_num":512,"emission":10000},"jsonrpc":"2.0","id":1}`
+
+<br>
+<br>
+
+
 
 **Get wallet balance: `enq_getBalance`**
 
@@ -151,7 +237,7 @@ Node relies on actors. The central part of a node is the governing actor. It sto
  
 ##### Request example: 
 
-`{"jsonrpc":"2.0","params":{"address":"B026nJ7HB2nPtPjxkTrH2V5PzhgsWWab1gpi29oLsfiTKv"},"method":"enq_getBalance","id":1}`
+`{"jsonrpc":"2.0","params":{"address":"4mGYpcwycV9aWBurroUo2UMvCx5NL5RrGbdKacMoPZuX"},"method":"enq_getBalance","id":1}`
 
 ##### Response example:
 
@@ -168,12 +254,15 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 ##### Response parameters
 
-- `signature` - ECDSA signature 
+- `amount` - amount intended for transfer
+- `uuid` - unique identifier for the transaction
+- `owner` - sender's public key (a.k.a your address in the network)
+- `receiver` - receiver's public key (a.k.a their address in the network)
+- `currency` - currency itended for transfer
+- `sign` - ECDSA signature 
 - `sign_s` - represents [R output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature  
 - `sign_r` - represents [S output](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm#Signature_generation_algorithm) in the signature 
-- `amount` - amount intended for transfer 
-- `owner_key` - sender's public key (a.k.a your address in the network)
-- `receiver_key` - receiver's public key (a.k.a their address in the network)
+- `timestamp` - current time (will be deprecated soon)
 
 ###### Misc:
 
@@ -183,11 +272,11 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 
 ##### Request example:
 
-`{"jsonrpc":"2.0","params":{"address":"B026nJ7HB2nPtPjxkTrH2V5PzhgsWWab1gpi29oLsfiTKv"},"method":"enq_getAllTransactions","id":1}`
+`{"jsonrpc":"2.0","params":{"address":"5YXZXhM9MMafhS5fdzanWbimKEpAnmrqabD5BcMm8TxS"},"method":"enq_getAllTransactions","id":1}`
 
 ##### Response example:
 
-`{"result":[{"signature":{"sign_s":9801959209846992852311330047916112131397328350695846174818753987431086006404,"sign_r":51905750445091806981764453120165643019701345224570532370988964470189867234685},"amount":10,"time":58944.703034014,"owner_key":98123844696921525574085363646516869903415165222879705991840115754920922153509,"receiver_key":7390378781922706300737074641115163931396417816966376357730577494300556106681},{"signature":{"sign_s":9801959209846992852311330047916112131397328350695846174818753987431086006404,"sign_r":51905750445091806981764453120165643019701345224570532370988964470189867234685},"amount":10,"time":58944.703034014,"owner_key":98123844696921525574085363646516869903415165222879705991840115754920922153509,"receiver_key":7390378781922706300737074641115163931396417816966376357730577494300556106681}],"jsonrpc":"2.0","id":1}`
+ `{"result":[{"amount":10,"uuid":15,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":111453389016965411942432161422836677977682117261774497318558333020708965069823,"sign_r":34802528517330025474056637040554169615944272750680678430210531325764022406021},"timestamp":1529681025},{"amount":19,"uuid":12,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":36702896446615718903997830217307609909443281366110703304854624965337681147887,"sign_r":7367170092931138165337844383547165997062478109283580450989454932653837213781},"timestamp":1529681025},{"amount":14,"uuid":19,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":98414524750868806711785718518430616768375010094240450345905375658581001458859,"sign_r":95027401014124111353895671545669534279352130813036148099458965611942353578063},"timestamp":1529681025}],"jsonrpc":"2.0","id":1}`
 
 <br/>
 <br/>

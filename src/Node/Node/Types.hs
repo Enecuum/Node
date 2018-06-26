@@ -24,7 +24,9 @@ import              Data.Monoid
 import qualified    Data.Map                        as M
 import qualified    Crypto.PubKey.ECC.DH            as DH
 import              GHC.Generics (Generic)
-import              Control.Concurrent.Chan
+import qualified    Control.Concurrent.Chan         as C
+import              Control.Concurrent.Chan.Unagi.Bounded
+
 import              Crypto.Random.Types
 import              Crypto.PubKey.ECC.ECDSA         as ECDSA
 import              Lens.Micro
@@ -57,6 +59,8 @@ data NodeVariantRole where
 
 type NodeVariantRoles = [NodeVariantRole]
 
+instance Show (InChan a) where
+    show _ = "InChan"
 instance Serialize NodeVariantRole
 
 type BootNodeList   = [(NodeId, Connect)]
@@ -93,7 +97,7 @@ data MsgToSender where
 data MsgToMainActorFromPP
     = MicroblockFromPP Microblock PPId
     | BroadcastRequestFromPP B.ByteString IdFrom NodeType
-    | NewConnectWithPP PPId NodeType (Chan NNToPPMessage)
+    | NewConnectWithPP PPId NodeType (InChan NNToPPMessage)
     | MsgResendingToPP IdFrom IdTo B.ByteString
     | PoWListRequest IdFrom
   deriving (Show)
@@ -129,7 +133,7 @@ data NodeStatus = Active | Noactive deriving (Show, Eq)
 data Node = Node {
         _status          :: NodeStatus
     ,   _mKey            :: Maybe StringKey
-    ,   _chan            :: Chan MsgToSender
+    ,   _chan            :: C.Chan MsgToSender
     ,   _nodePosition    :: Maybe NodePosition
     ,   _nodePort        :: PortNumber
     ,   _isBroadcast     :: Bool
@@ -142,51 +146,51 @@ makeLenses ''Node
 data ManagerNodeData = ManagerNodeData {
         managerNodeDataNodeConfig   :: NodeConfig
     ,   managerNodeDataNodeBaseData :: NodeBaseData
-    ,   managerTransactions         :: Chan Transaction
+    ,   managerTransactions         :: C.Chan Transaction
     ,   managerHashMap              :: BI.Bimap TimeSpec B.ByteString
     ,   managerPoWNodes             :: BI.Bimap TimeSpec PPId
     ,   managerPublicators          :: S.Set NodeId
     ,   managerSendedTransctions    :: BI.Bimap TimeSpec Transaction
   }
 
-type ShardingChan = Chan N.ShardingNodeAction
-type MaybeChan a = Maybe (Chan a)
+type ShardingChan = C.Chan N.ShardingNodeAction
+type MaybeChan a = Maybe (C.Chan a)
 
 data PPNode = PPNode {
         _ppType :: NodeType
-    ,   _ppChan :: Chan NNToPPMessage
+    ,   _ppChan :: InChan NNToPPMessage
   }
   deriving (Eq)
 
 
 
 data NodeBaseData = NodeBaseData {
-        nodeBaseDataExitChan            :: Chan ExitMsg
+        nodeBaseDataExitChan            :: C.Chan ExitMsg
     ,   nodeBaseDataNodes               :: M.Map NodeId Node
     ,   nodeBaseDataPpNodes             :: M.Map PPId PPNode
     ,   nodeBaseDataBootNodes           :: BootNodeList
-    ,   nodeBaseDataAnswerChan          :: Chan Answer
+    ,   nodeBaseDataAnswerChan          :: C.Chan Answer
     ,   nodeBaseDataBroadcastNum        :: Int
     ,   nodeBaseDataHostAddress         :: Maybe HostAddress
-    ,   nodeBaseDataMicroblockChan      :: Chan Microblock
+    ,   nodeBaseDataMicroblockChan      :: C.Chan Microblock
     ,   nodeBaseDataMyNodePosition      :: Maybe MyNodePosition
     ,   nodeBaseDataShardingChan        :: MaybeChan N.ShardingNodeAction
     ,   nodeBaseDataIAmBroadcast        :: Bool
     ,   nodeBaseDataOutPort             :: PortNumber
-    ,   nodeBaseDataInfoMsgChan         :: Chan InfoMsg
-    ,   nodeBaseDataFileServerChan      :: Chan FileActorRequest
+    ,   nodeBaseDataInfoMsgChan         :: InChan InfoMsg
+    ,   nodeBaseDataFileServerChan      :: C.Chan FileActorRequest
   }
 
 
 
 makeNodeBaseData
-    ::  Chan ExitMsg
+    ::  C.Chan ExitMsg
     ->  BootNodeList
-    ->  Chan Answer
-    ->  Chan Microblock
+    ->  C.Chan Answer
+    ->  C.Chan Microblock
     ->  PortNumber
-    ->  Chan InfoMsg
-    ->  Chan FileActorRequest
+    ->  InChan InfoMsg
+    ->  C.Chan FileActorRequest
     ->  NodeBaseData
 makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan = NodeBaseData
     aExitChan M.empty M.empty aList aAnswerChan 0 Nothing aMicroblockChan
@@ -215,7 +219,7 @@ data RPCBuildConfig where
 data SimpleNodeBuildConfig where
      SimpleNodeBuildConfig :: {
         sharding       :: Bool,
-        cliMode        :: String,  -- "off", "rpc" or ""cli     
+        cliMode        :: String,  -- "off", "rpc" or ""cli
         rpcBuildConfig :: Maybe RPCBuildConfig
   } -> SimpleNodeBuildConfig
   deriving (Generic)
@@ -275,12 +279,12 @@ instance Serialize PrivateKey where
 
 class ToManagerData a where
     toManagerData
-        :: Chan Transaction
-        -> Chan Microblock
-        -> Chan ExitMsg
-        -> Chan Answer
-        -> Chan InfoMsg
-        -> Chan FileActorRequest
+        :: C.Chan Transaction
+        -> C.Chan Microblock
+        -> C.Chan ExitMsg
+        -> C.Chan Answer
+        -> InChan InfoMsg
+        -> C.Chan FileActorRequest
         -> BootNodeList
         -> NodeConfig
         -> PortNumber
@@ -316,7 +320,7 @@ makePackageSignature aData aResponse = do
 
 
 lensInst "transactions" ["ManagerNodeData"]
-    ["Chan", "Transaction"] "managerTransactions"
+    ["C.Chan", "Transaction"] "managerTransactions"
 
 lensInst "hashMap" ["ManagerNodeData"]
     ["BI.Bimap", "TimeSpec", "B.ByteString"] "managerHashMap"
@@ -331,7 +335,7 @@ lensInst "sendedTransctions" ["ManagerNodeData"]
 lensInst "poWNodes" ["ManagerNodeData"] ["BI.Bimap", "TimeSpec", "PPId"]
     "managerPoWNodes"
 
-makeNode :: Chan MsgToSender -> HostAddress -> PortNumber -> Node
+makeNode :: C.Chan MsgToSender -> HostAddress -> PortNumber -> Node
 makeNode aChan aHostAdress aPortNumber = Node {
         _status         = Noactive
     ,   _mKey           = Nothing

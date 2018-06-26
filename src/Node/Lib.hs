@@ -1,24 +1,21 @@
 {-# LANGUAGE ScopedTypeVariables, LambdaCase #-}
+{-# LANGUAGE PackageImports #-}
 module Node.Lib where
 
 import              Control.Monad
 import              Control.Exception
-import              Control.Concurrent
-import qualified    Data.ByteString             as B
+import qualified    Control.Concurrent          as C
 import qualified    Data.ByteString.Lazy        as L
-import              Data.Serialize              as S
 import              Data.IORef
 import qualified    Data.Aeson as A
 import              Lens.Micro
 import              Service.Types
 import              Network.Socket (tupleToHostAddress)
-import Node.FileDB.FileDB
+import              Control.Concurrent.Chan.Unagi.Bounded
 import Node.Node.Types
 import Node.Node.Config.Make
 
 import Node.Node.Base.Server
-
-import Service.System.Directory (getTransactionFilePath)
 import Service.Network.Base
 import System.Environment
 import Service.InfoMsg (InfoMsg)
@@ -26,8 +23,10 @@ import Node.Data.Key
 import Node.FileDB.FileServer
 --tmp
 import System.Directory (createDirectoryIfMissing)
+import Service.Transaction.Common (addMicroblockToDB, DBPoolDescriptor(..))
 
--- code exemples:
+
+-- code examples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html
 -- docs:
 -- https://github.com/ethereum/devp2p/blob/master/rlpx.md
@@ -36,44 +35,39 @@ import System.Directory (createDirectoryIfMissing)
 
 -- | Standart function to launch a node.
 startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
-       BuildConfig
-    -> Chan ExitMsg
-    -> Chan Answer
-    -> Chan InfoMsg
-    -> (Chan a1 -> IORef s -> IO ())
-    -> (Chan a1 -> Chan Transaction -> MyNodeId -> Chan FileActorRequest -> IO a2)
-    -> IO (Chan a1)
-startNode buildConf exitCh answerCh infoCh manager startDo = do
+       DBPoolDescriptor
+    -> BuildConfig
+    -> C.Chan ExitMsg
+    -> C.Chan Answer
+    -> InChan InfoMsg
+    -> ((InChan a1, OutChan a1) -> IORef s -> IO ())
+    -> ((InChan a1, OutChan a1) -> C.Chan Transaction -> C.Chan Microblock -> MyNodeId -> C.Chan FileActorRequest -> IO a2)
+    -> IO (InChan a1, OutChan a1)
+startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
 
     --tmp
     createDirectoryIfMissing False "data"
 
-    managerChan <- newChan
-    aMicroblockChan <- newChan
-    aTransactionChan <- newChan
+    managerChan@(inChanManager, _) <- newChan (2^7)
+    aMicroblockChan <- C.newChan
+    aTransactionChan <- C.newChan
     config  <- readNodeConfig
     bnList  <- readBootNodeList $ bootNodeList buildConf
-    aFileRequestChan <- newChan
-    void $ forkIO $ startFileServer aFileRequestChan
+    aFileRequestChan <- C.newChan
+    void $ C.forkIO $ startFileServer aFileRequestChan
     let portNumber = extConnectPort buildConf
     md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aFileRequestChan bnList config portNumber
-    startServerActor managerChan portNumber
-    aFilePath <- getTransactionFilePath
-    void $ forkIO $ microblockProc aMicroblockChan aFilePath
-    void $ forkIO $ manager managerChan md
-    void $ startDo managerChan aTransactionChan (config^.myNodeId) aFileRequestChan
+    startServerActor inChanManager portNumber
+    void $ C.forkIO $ microblockProc descrDB aMicroblockChan infoCh
+    void $ C.forkIO $ manager managerChan md
+    void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aFileRequestChan
     return managerChan
 
-microblockProc :: Chan Microblock -> String -> IO b
-microblockProc aMicroblockCh aFilePath = forever $ do
-        aMicroblock <- readChan aMicroblockCh
-        aBlocksFile <- try $ readHashMsgFromFile aFilePath
-        aBlocks <- case aBlocksFile of
-            Right aBlocks      -> return aBlocks
-            Left (_ :: SomeException) -> do
-                 B.writeFile aFilePath $ S.encode ([] :: [Microblock])
-                 return []
-        B.writeFile aFilePath $ S.encode (aBlocks ++ [aMicroblock])
+
+microblockProc :: DBPoolDescriptor -> C.Chan Microblock -> InChan InfoMsg -> IO b
+microblockProc descriptor aMicroblockCh aInfoCh = forever $ do
+        aMicroblock <- C.readChan aMicroblockCh
+        addMicroblockToDB descriptor aMicroblock aInfoCh
 
 
 readNodeConfig :: IO NodeConfig
@@ -110,5 +104,5 @@ mergeMBlocks (x:xs) olds = if containMBlock x olds
 
 
 containMBlock :: Microblock -> [Microblock] -> Bool
-containMBlock el elements = or $ (\(Microblock h1 _ _) (Microblock h2 _ _) -> h1 == h2 ) <$> [el] <*> elements
+containMBlock el elements = or $ (==) <$> [el] <*> elements
 -------------------------------------------------------

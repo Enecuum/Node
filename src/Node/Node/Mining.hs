@@ -28,7 +28,9 @@ import              Data.IORef
 import              Data.Serialize
 import              Lens.Micro
 import              Lens.Micro.Mtl()
-import              Control.Concurrent
+import qualified    Control.Concurrent              as C
+import              Control.Concurrent.Chan.Unagi.Bounded
+
 import              Control.Monad.Extra
 import              Crypto.Error
 import              Node.Node.BroadcastProcessing
@@ -53,15 +55,15 @@ import              PoA.Types
 import              Sharding.Sharding()
 import              Node.BaseFunctions
 
-managerMining :: Chan ManagerMiningMsgBase -> IORef ManagerNodeData -> IO ()
-managerMining aChan aMd = do
+managerMining :: (InChan ManagerMiningMsgBase, OutChan ManagerMiningMsgBase) -> IORef ManagerNodeData -> IO ()
+managerMining (aChan, aOutChan) aMd = do
   modifyIORef aMd $ iAmBroadcast .~ True -- FIXME:!!!
   aData <- readIORef aMd
   undead (writeLog (aData^.infoMsgChan) [NetLvlTag] Warning
       "managerMining. This node could be die!" )
       $ forever $ do
           mData <- readIORef aMd
-          readChan aChan >>= \a -> runOption a $ do
+          readChan aOutChan >>= \a -> runOption a $ do
             baseNodeOpts aChan aMd mData
 
             opt isInitDatagram              $ answerToInitDatagram aMd
@@ -89,7 +91,7 @@ answerToInfoRequest aMd _ = do
 
 
 answerToInitShardingLvl :: (ManagerMsg msg, NodeConfigClass s, NodeBaseDataClass s) =>
-                            Chan msg -> IORef s -> p -> IO ()
+                            InChan msg -> IORef s -> p -> IO ()
 answerToInitShardingLvl aChan aMd _ = do
     aData <- readIORef aMd
     when (isNothing (aData^.myNodePosition)) $ do
@@ -101,10 +103,10 @@ answerToInitShardingLvl aChan aMd _ = do
 answerToTestBroadcastBlockIndex :: IORef ManagerNodeData -> ManagerMiningMsgBase ->  IO ()
 answerToTestBroadcastBlockIndex aMd _ = do
     aData <- readIORef aMd
-    aPosChan <- newChan
+    aPosChan <- C.newChan
     let aPositionsOfNeibors  = (^.nodePosition) <$> M.elems (aData^.nodes)
-    writeChan (aData^.fileServerChan) $ FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
-    NodeInfoListLogicLvl aPossitionList <- readChan aPosChan
+    C.writeChan (aData^.fileServerChan) $ FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
+    NodeInfoListLogicLvl aPossitionList <- C.readChan aPosChan
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point list XXX: " ++ show aPossitionList
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point node list XXX: " ++ show aPositionsOfNeibors
     whenJust (aData^.myNodePosition) $ \aPosition ->
@@ -120,6 +122,10 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
             writeMetric (aData^.infoMsgChan)  $ increment "net.bl.count"
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "PP node " ++ show aSenderId ++ ", create a a microblock: " ++ show aMicroblock
+            -- (head <$> genNMicroBlocks 1) >>= writeChan (aData^.microblockChan)
+            -- putStrLn $ show $ aData^.microblockChan
+            -- putStrLn $ show $ aMicroblock
+            C.writeChan (aData^.microblockChan) aMicroblock
             sendBroadcast aMd (BroadcastMicroBlock aMicroblock Nothing)
             sendToShardingLvl aData $
                 T.ShardAcceptAction (microblockToShard aMicroblock)
@@ -140,10 +146,18 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
 
         MsgResendingToPP aIdFrom@(IdFrom aPPIdFrom) aIdTo@(IdTo aId) aByteString
             | Just aNode <- aData^.ppNodes.at aId ->
-              writeChan (aNode^.ppChan) $ MsgMsgToPP aPPIdFrom aByteString
+                writeChan (aNode^.ppChan) $ MsgMsgToPP aPPIdFrom aByteString
+            | otherwise -> do
+                let aMessage = BroadcastPPMsgId aByteString aIdFrom aIdTo
+                sendBroadcast aMd aMessage
+                processingOfBroadcast aMd aMessage
+
+{- don't delete
             | otherwise -> do
                 let aRequest = PPMessage aByteString aIdFrom aIdTo
                 makeAndSendTo aData (ppIdToNodePosition aId) aRequest
+-}
+
         PoWListRequest (IdFrom aPPIdFrom) ->
             whenJust (aData^.ppNodes.at aPPIdFrom) $ \aPpNode -> do
                 let aPPIds = takeEnd 5 (map snd (BI.toList $ aData^.poWNodes))
@@ -261,7 +275,7 @@ answerToDeleteOldestMsg aMd _ = do
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of index of bradcasted msg."
     aTime <- getTime Realtime
     modifyIORef aMd $ hashMap %~ BI.filter
-        (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs 3000000)
+        (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs 3000000000)
 
 --
 answerToDeleteOldestPoW
@@ -272,19 +286,19 @@ answerToDeleteOldestPoW aMd _ = do
     aData <- readIORef aMd
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of index of PoW."
     aTime <- getTime Realtime
-    modifyIORef aMd $ hashMap %~ BI.filter
+    modifyIORef aMd $ poWNodes %~ BI.filter
         (\aOldTime _ -> diffTimeSpec aOldTime aTime < fromNanoSecs timeLimit)
 
 timeLimit :: Integer
 timeLimit = 5*60*10^(9 :: Integer)
 
 instance BroadcastAction ManagerNodeData where
-    makeBroadcastAction _ aMd _ aBroadcastSignature aBroadcastThing = do
+    makeBroadcastAction _ aMd aNodeId aBroadcastSignature aBroadcastThing = do
         aData <- readIORef aMd
         writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Recived the broadcast msg " ++ show aBroadcastThing ++ "."
         when (notInIndex aData aBroadcastThing) $ do
             addInIndex aBroadcastThing aMd
-            sendBroadcastThingToNodes aMd aBroadcastSignature aBroadcastThing
+            sendBroadcastThingToNodes aMd aNodeId aBroadcastSignature aBroadcastThing
             processingOfBroadcastThing aMd aBroadcastThing
 
 
@@ -405,7 +419,7 @@ answerToNewTransaction aMd (NewTransaction aTransaction) = do
         ("net.node." ++ show (toInteger $ aData^.myNodeId) ++ ".pending.amount")
         (1 :: Integer)
 
-    writeChan (aData^.transactions) aTransaction
+    C.writeChan (aData^.transactions) aTransaction
 
 
 answerToNewTransaction _ _ = error
@@ -422,7 +436,7 @@ instance SendBroadcast BroadcastThing where
         aData <- readIORef aMd
         addInIndex aBroadcastThing aMd
         aPackageSignature <- makePackageSignature aData aBroadcastThing
-        sendBroadcastThingToNodes aMd aPackageSignature aBroadcastThing
+        sendBroadcastThingToNodes aMd (NodeId 0) aPackageSignature aBroadcastThing
 
 instance SendBroadcast (BroadcastThingLvl NetLvl) where
     sendBroadcast aMd = sendBroadcast aMd . BroadcastNet

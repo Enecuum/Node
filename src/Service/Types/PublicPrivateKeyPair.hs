@@ -14,13 +14,12 @@ module Service.Types.PublicPrivateKeyPair(
     ,   compressPublicKey
     ,   uncompressPublicKey
     ,   getPublicKey
+    ,   fromPublicKey256k1
     ,   PublicKey(..)
     ,   PrivateKey(..)
     ,   KeyPair(..)
     ,   getSignature
     ,   generateNewRandomAnonymousKeyPair
-    ,   fromPublicKey256k1
-    ,   publicKey256k1
   ) where
 
 import Data.Maybe
@@ -40,6 +39,9 @@ import              Data.ByteString.Base58
 
 import              Math.NumberTheory.Moduli
 import Data.Int (Int64)
+
+import Text.Read
+
 type Amount = Int64
 
 deriving instance Ord ECDSA.Signature
@@ -75,7 +77,7 @@ publicKey256k1 = PublicKey256k1 . CompactInteger
 fromPublicKey256k1 :: PublicKey -> Integer
 fromPublicKey256k1 (PublicKey256k1 (CompactInteger i)) = i
 
-newtype PublicKey  = PublicKey256k1 CompactInteger deriving (Generic, Serialize, Eq, Ord)
+newtype PublicKey  = PublicKey256k1 CompactInteger deriving (Generic, Serialize, Eq, Ord, Num, Enum)
 newtype PrivateKey = PrivateKey256k1 Integer deriving (Generic, Serialize, Eq, Ord)
 
 
@@ -86,31 +88,25 @@ getPrivateKey  (PrivateKey256k1 n)    =
 getPublicKey :: (Integer, Integer) -> ECDSA.PublicKey
 getPublicKey (n1, n2) = ECDSA.PublicKey (getCurveByName SEC_p256k1) (Point n1 n2)
 
-
-
---data KeyPair    = KeyPair PublicKey PrivateKey
 data KeyPair    = KeyPair { getPub :: PublicKey, getPriv :: PrivateKey }
   deriving (Show, Generic)
 
+
 instance Read PublicKey where
-    readsPrec _ ('B':'0':xs) = do
-        let v = base58ToInteger xs
-        return (publicKey256k1 v, "")
-    readsPrec _ xs = error $ "error: readsPrec PublicKey" ++ xs
+    readsPrec _ value = [(publicKey256k1 $ base58ToInteger value,[])]
 
 instance Read PrivateKey where
-    readsPrec _ ('P':'0':xs) = do
-        let v = base58ToInteger xs
-        return (PrivateKey256k1 v, "")
-    readsPrec _ xs = error $ "error: eadsPrec PrivateKey " ++ xs
+    readPrec =
+        parens
+        ( do (Ident s) <- lexP
+             return $ PrivateKey256k1 $  base58ToInteger s
+        )
 
 instance Show PublicKey where
-  show a = "B" ++ if length b == 20 then b else "0" ++ b
-   where b = integerToBase58 $ fromPublicKey256k1 a
+  show a = integerToBase58 $ fromPublicKey256k1 a
 
 instance Show PrivateKey where
-  show (PrivateKey256k1 a) = "P" ++ if length b == 20 then b else "0" ++ b
-   where b = integerToBase58 a
+  show (PrivateKey256k1 a) = integerToBase58 a
 
 integerToBase58 :: Integer -> String
 integerToBase58 = BC.unpack . encodeBase58I bitcoinAlphabet
@@ -118,12 +114,10 @@ integerToBase58 = BC.unpack . encodeBase58I bitcoinAlphabet
 base58ToInteger :: String -> Integer
 base58ToInteger = fromJust . decodeBase58I bitcoinAlphabet . BC.pack
 
-
 generateNewRandomAnonymousKeyPair :: MonadRandom m => m KeyPair
 generateNewRandomAnonymousKeyPair = do
     (pub, priv) <- generate (getCurveByName SEC_p256k1)
     pure $ KeyPair (compressPublicKey pub) (PrivateKey256k1 $ ECDSA.private_d priv)
-
 
 -- | Previous version of function was replaced by more generic function
 getSignature :: (Serialize msg, MonadRandom m) => PrivateKey -> msg -> m ECDSA.Signature

@@ -13,18 +13,22 @@ import System.Console.GetOpt
 import System.Exit
 import Data.List.Split (splitOn)
 import Data.Map (lookup, Map, fromList)
+import Control.Monad (forever)
 import Control.Monad.Except (runExceptT, liftIO)
 import Control.Exception (SomeException, try)
 import Network.Socket (HostName, PortNumber)
+import qualified Network.WebSockets as WS
 
 import Service.Types
 import Service.Types.PublicPrivateKeyPair
 import Service.System.Directory (getTime, getKeyFilePath)
-import Service.Network.TCP.Client
-import Service.Network.Base (ClientHandle)
+import Service.Network.WebSockets.Client
 import LightClient.RPC
-
-data Flag = Key | ShowKey | Balance PubKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages | Quit deriving (Eq, Show)
+import System.Random
+data Flag = Key | ShowKey | Balance PublicKey | Send Trans
+          | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey
+          | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
+          | Info | Quit deriving (Eq, Show)
 
 data ArgFlag = Port PortNumber | Host HostName | Version deriving (Eq, Show)
 
@@ -38,15 +42,20 @@ args = [
 options :: [OptDescr Flag]
 options = [
     Option ['K'] ["get-public-key"] (NoArg Key) "get public key"
-  , Option ['G'] ["generate-n-transactions"] (ReqArg (GenerateNTransactions . read) "qTx") "Generate N Transactions"
-  , Option ['F'] ["generate-transactions"] (NoArg GenerateTransactionsForever) "Generate Transactions forever"
+  , Option ['B'] ["get-balance"] (ReqArg (Balance . read) "publicKey") "get balance for public key"
   , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
-  , Option ['B'] ["get-balance"] (ReqArg (Balance) "publicKey") "get balance for public key"
   , Option ['S'] ["send-money-to-from"] (ReqArg (Send . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
+  , Option ['U'] ["load-block"] (ReqArg (Block . read) "hash") "get keyblock by hash"
+  , Option ['O'] ["load-microblock"] (ReqArg (MBlock . read) "hash") "get microblock by hash"
+  , Option ['X'] ["get-tx"] (ReqArg (Tx . read) "hash") "get transaction by hash"
+  , Option ['W'] ["load-wallet"] (ReqArg (Wallet . read) "publicKey") "get all transactions for wallet"
+-- test
   , Option ['A'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
   , Option ['T'] ["send-message-to"] (ReqArg (SendMessageTo . read) "nodeId message") "Send message to the node"
   , Option ['L'] ["load-new-messages"] (NoArg LoadMessages) "Load new recieved messages"
+  , Option ['I'] ["chain-info"] (NoArg Info) "Get total chain info"
   , Option ['Q'] ["quit"] (NoArg Quit) "exit"
+
   ]
 
 
@@ -58,16 +67,13 @@ control = do
       (_, _, err) -> ioError (userError (concat err ++ usageInfo "Usage: enq-cli [OPTION...]" args))
     where parseArgs a = do
             (h,p)  <- getRecipient "localhost" 1555 a
-            aHandle <- openConnect h p
+
             putStrLn $ usageInfo "Usage: " options
-            loop aHandle
-              where
-                loop aHandle = do
+            forever $ do
                   argv <- splitOn " " <$> getLine
                   case getOpt Permute options argv of
-                    (flags, _, []) -> dispatch flags aHandle
+                    (flags, _, []) -> dispatch flags h p
                     (_, _, err)    -> putStrLn $ concat err ++ usageInfo "Usage: " options
-                  loop aHandle
 
 getRecipient :: HostName -> PortNumber -> [ArgFlag] -> IO (HostName, PortNumber)
 getRecipient defHost defPort []     = return (defHost, defPort)
@@ -78,57 +84,54 @@ getRecipient defHost defPort (x:xs) = case x of
          Port p   -> getRecipient defHost p xs
          Host h   -> getRecipient h defPort xs
 
-dispatch :: [Flag] -> ClientHandle -> IO ()
-dispatch flags ch = do
-    case flags of
-        (Key : _)                        -> getKey ch
-        (GenerateNTransactions qTx: _)   -> generateNTransactions ch qTx
-        (GenerateTransactionsForever: _) -> generateTransactionsForever ch
-        (Send tx : _)                    -> sendTrans ch tx
+dispatch :: [Flag] -> HostName -> PortNumber -> IO ()
+dispatch flags h p =
+      case flags of
+        (Key : _)                        -> getKey
+        (Balance aPublicKey : _)         -> withClient $ getBalance aPublicKey
+        (Send tx : _)                    -> withClient $ sendTrans tx
         (ShowKey : _)                    -> showPublicKey
-        (Balance aPublicKey : _)         -> getBalance ch aPublicKey
-        (SendMessageBroadcast m : _)     -> sendMessageBroadcast ch m
-        (SendMessageTo mTo : _)          -> sendMessageTo ch mTo
-        (LoadMessages : _)               -> loadMessages ch 
-        (Quit : _)                       -> closeAndExit ch
+        (Wallet key : _)                 -> withClient $ getAllTransactions key
+        (Block hash : _)                 -> withClient $ getBlockByHash hash
+        (MBlock hash : _)                -> withClient $ getMicroblockByHash hash
+        (Tx hash : _)                    -> withClient $ getTransaction hash
+
+-- test
+        (SendMessageBroadcast m : _)     -> withClient $ sendMessageBroadcast m
+        (SendMessageTo mTo : _)          -> withClient $ sendMessageTo mTo
+        (LoadMessages : _)               -> withClient   loadMessages
+        (Info : _)                       -> withClient   getInfo
+        (Quit : _)                       -> exitWith ExitSuccess
         _                                -> putStrLn "Wrong argument"
 
-closeAndExit :: ClientHandle -> IO ()
-closeAndExit ch = do
-        closeConnect ch
-        exitWith ExitSuccess
+  where withClient f = runClient h (fromEnum p) "" $ \ ch -> f ch
 
 showPublicKey :: IO ()
 showPublicKey = do
   pairs <- getSavedKeyPairs
   mapM_ (putStrLn . show . fst) pairs
 
-getKey :: ClientHandle -> IO ()
-getKey ch = do
+getKey :: IO ()
+getKey = do
   (KeyPair aPublicKey aPrivateKey) <- generateNewRandomAnonymousKeyPair
-  timePoint <- getTime
-  let initialAmount = 0
-  let keyInitialTransaction = WithTime timePoint (RegisterPublicKey aPublicKey initialAmount)
-  result <- runExceptT $ newTx ch keyInitialTransaction
-  case result of
-    (Left err) -> putStrLn $ "Key creation error: " ++ show err
-    (Right _ ) -> do
-           getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
-           putStrLn ("Public Key " ++ show aPublicKey ++ " was created")
+  getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
+  putStrLn ("Public Key " ++ show aPublicKey ++ " was created")
 
-sendTrans :: ClientHandle -> Trans -> IO ()
-sendTrans ch trans = do
-  let moneyAmount = (txAmount trans) :: Amount
-  let receiverPubKey = read (recipientPubKey trans) :: PublicKey
-  let ownerPubKey = read (senderPubKey trans) :: PublicKey
+sendTrans :: Trans -> WS.Connection -> IO ()
+sendTrans trans ch = do
+  let moneyAmount = txAmount trans
+  let receiverPubKey = recipientPubKey trans
+  let ownerPubKey = senderPubKey trans
   timePoint <- getTime
   keyPairs <- getSavedKeyPairs
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
   case (Data.Map.lookup ownerPubKey mapPubPriv) of
-    Nothing -> putStrLn "You don't own that public key"
+    Nothing -> putStrLn "You don't own this public key"
     Just ownerPrivKey -> do
       sign  <- getSignature ownerPrivKey moneyAmount
-      let tx  = WithSignature (WithTime timePoint (SendAmountFromKeyToKey ownerPubKey receiverPubKey moneyAmount)) sign
+      uuid <- randomRIO (1,25)
+      let tx  = Transaction ownerPubKey receiverPubKey moneyAmount ENQ timePoint sign uuid
+      print tx
       result <- runExceptT $ newTx ch tx
       case result of
         (Left err) -> putStrLn $ "Send transaction error: " ++ show err
@@ -151,44 +154,31 @@ getSavedKeyPairs = do
           let pairs = map (\x -> (,) (read (x !! 0) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
           return pairs
 
-getBalance :: ClientHandle -> PubKey -> IO ()
-getBalance ch rawKey = do
+getBalance :: PublicKey -> WS.Connection -> IO ()
+getBalance rawKey ch = do
   result  <- runExceptT $ reqLedger ch rawKey
   case result of
     (Left err) -> putStrLn $ "Get Balance error: " ++ show err
     (Right b ) -> putStrLn $ "Balance: " ++ show b
 
 
-generateNTransactions :: ClientHandle -> Int -> IO ()
-generateNTransactions ch qTx = do
-  result <- runExceptT $ genNTx ch qTx
-  case result of
-    (Left err) -> putStrLn $ "generateNTransactions error: " ++ show err
-    (Right _ ) -> putStrLn   "Transactions request was sent"
-
-
-generateTransactionsForever :: ClientHandle -> IO ()
-generateTransactionsForever ch = do
-  result <- runExceptT $ genUnlimTx ch
-  case result of
-    (Left err) -> putStrLn $ "generateTransactionsForever error: " ++ show err
-    (Right _ ) -> putStrLn   "Transactions request was sent"
-
-sendMessageBroadcast :: ClientHandle -> String -> IO ()
-sendMessageBroadcast ch m = do
+sendMessageBroadcast :: String -> WS.Connection -> IO ()
+sendMessageBroadcast m ch = do
   result <- runExceptT $ newMsgBroadcast ch m
   case result of
     (Left err) -> putStrLn $ "sendMessageBroadcast error: " ++ show err
     (Right _ ) -> putStrLn   "Broadcast message was sent"
 
-sendMessageTo :: ClientHandle -> MsgTo -> IO ()
-sendMessageTo ch mTo = do
+
+sendMessageTo :: MsgTo -> WS.Connection -> IO ()
+sendMessageTo mTo ch = do
   result <- runExceptT $ newMsgTo ch mTo
   case result of
     (Left err) -> putStrLn $ "sendMessageTo error: " ++ show err
     (Right _ ) -> putStrLn   "Message was sent"
 
-loadMessages :: ClientHandle -> IO ()
+
+loadMessages :: WS.Connection -> IO ()
 loadMessages ch = do
   result <- runExceptT $ loadNewMsg ch
   case result of
@@ -196,3 +186,42 @@ loadMessages ch = do
     (Right msgs ) -> putStrLn $ "New messages: " ++ (unlines $ map showMsg msgs)
                   where showMsg (MsgTo id m) = "Message from " ++ show id ++ ": " ++ m
 
+
+getAllTransactions :: PublicKey -> WS.Connection -> IO ()
+getAllTransactions key ch = do
+  result <- runExceptT $ getAllTxs ch key
+  case result of
+    (Left err) -> putStrLn $ "getAllTransactions error: " ++ show err
+    (Right txs ) -> mapM_ print txs
+
+
+getTransaction :: Hash -> WS.Connection -> IO ()
+getTransaction hash ch = do
+  result <- runExceptT $ getTx ch hash
+  case result of
+    (Left err) -> putStrLn $ "getTransaction error: " ++ show err
+    (Right info ) -> print info
+
+
+getBlockByHash :: Hash -> WS.Connection -> IO ()
+getBlockByHash hash ch = do
+  result <- runExceptT $ getBlock ch hash
+  case result of
+    (Left err) -> putStrLn $ "getBlockByHash error: " ++ show err
+    (Right block) -> print block
+
+
+getMicroblockByHash :: Hash -> WS.Connection -> IO ()
+getMicroblockByHash hash ch = do
+  result <- runExceptT $ getMicroblock ch hash
+  case result of
+    (Left err) -> putStrLn $ "getMicroblockByHash error: " ++ show err
+    (Right block) -> print block
+
+
+getInfo :: WS.Connection -> IO ()
+getInfo ch = do
+  result <- runExceptT $ getChainInfo ch
+  case result of
+    (Left err) -> putStrLn $ "getChainInfo error: " ++ show err
+    (Right info) -> print info

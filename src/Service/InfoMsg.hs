@@ -25,7 +25,7 @@ import Service.Network.TCP.Client
 import Service.Metrics.Statsd
 
 import Control.Monad (void, forever)
-import Control.Concurrent.Chan
+import              Control.Concurrent.Chan.Unagi.Bounded
 import Control.Exception (try, SomeException)
 
 
@@ -42,8 +42,10 @@ data LogingTag
     | ServePoATag
     | ServerBootNodeTag
     | GCTag
+    | PendingTag
     | RegularTag
     | InitTag
+    | BDTag
   deriving (Show, Enum)
 
 
@@ -59,7 +61,7 @@ data InfoMsg = Metric String | Log [LogingTag] MsgType String
 sendToServer :: ClientHandle -> String -> IO ()
 sendToServer h s = void $ sendTo (clientSocket h) (BS.pack s) (clientAddress h)
 
-serveInfoMsg :: ConnectInfo -> ConnectInfo -> Chan InfoMsg -> String -> IO ()
+serveInfoMsg :: ConnectInfo -> ConnectInfo -> OutChan InfoMsg -> String -> IO ()
 serveInfoMsg statsdInfo logsInfo chan aId = do
     eithMHandler <- try (openConnect (host statsdInfo) (port statsdInfo))
 
@@ -90,7 +92,7 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                                    ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
 
                          aFileString = "  !  " ++ aId ++ "|" ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
-                     appendFile "log.txt" aFileString
+--                     putStrLn aFileString
                      case eithLHandler of
                           Left  _        -> appendFile "log.txt" aFileString
                           Right lHandler -> sendToServer lHandler aString
