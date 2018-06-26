@@ -5,7 +5,6 @@ module Service.Transaction.TransactionsDAG where
 import Data.Graph.Inductive
 import Control.Monad (replicateM)
 import Service.Types.PublicPrivateKeyPair
-import System.Random
 import Service.System.Directory (getTime)
 import Service.Types
 import Service.Transaction.Skelet (getSkeletDAG)

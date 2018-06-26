@@ -59,7 +59,7 @@ main =  do
 
 
             void $ startNode descrDB conf exitCh answerCh aInfoChanIn  managerBootNode $
-                \(ch, outCh) _ _ aNodeId aFileChan -> do
+                \(ch, _) _ _ aNodeId aFileChan -> do
                     log_id  <- try (getEnv "log_id") >>= \case
                         Right item              -> return item
                         Left (_::SomeException) -> return $ show aNodeId

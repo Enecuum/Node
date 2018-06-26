@@ -48,7 +48,7 @@ main =  do
             rocksDB   <- connectOrRecoveryConnect
 
             void $ startNode rocksDB conf
-                aExitCh aAnswerCh aInfoChanIn managerMining $ \(ch, outCh) aChan aMicroblockChan aMyNodeId aFileChan -> do
+                aExitCh aAnswerCh aInfoChanIn managerMining $ \(ch, _) aChan aMicroblockChan aMyNodeId aFileChan -> do
                     -- periodically check current state compare to the whole network state
                     metronomeS 400000 (writeChan ch connectivityQuery)
                     metronomeS 1000000 (writeChan ch queryPositions)
@@ -84,7 +84,7 @@ main =  do
                                   Right item              -> return $ read item
                                   Left (_::SomeException) -> return $ enableIP rpcbc)
 
-                            token <- try (getEnv "token") >>= \case
+                            _     <- try (getEnv "token") >>= \case
                                   Right item              -> return $ read item
                                   Left (_::SomeException) -> case accessToken rpcbc of
                                        Just token -> return token

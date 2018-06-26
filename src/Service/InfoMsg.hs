@@ -25,7 +25,6 @@ import Service.Network.TCP.Client
 import Service.Metrics.Statsd
 
 import Control.Monad (void, forever)
-import qualified    Control.Concurrent as C
 import              Control.Concurrent.Chan.Unagi.Bounded
 import Control.Exception (try, SomeException)
 

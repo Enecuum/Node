@@ -23,9 +23,8 @@ module CLI.Common (
 
   )where
 
-import Control.Monad (forever, replicateM)
+import Control.Monad (forever)
 import Control.Concurrent (threadDelay)
-import qualified    Control.Concurrent.Chan as C
 import              Control.Concurrent.Chan.Unagi.Bounded
 import Control.Exception
 import Data.Time.Units
@@ -33,7 +32,6 @@ import Data.List.Split (splitOn)
 import Data.Map (fromList, lookup, Map)
 import System.Random (randomRIO)
 
-import Service.Transaction.TransactionsDAG
 import Node.Node.Types
 import Service.Types
 import Service.Types.SerializeJSON ()
@@ -42,7 +40,6 @@ import Service.InfoMsg
 import Service.System.Directory (getTime, getKeyFilePath)
 import Service.Transaction.Storage (DBPoolDescriptor(..))
 import Service.Transaction.Common as B (getBalanceForKey, getBlockByHashDB, getTransactionByHashDB, getKeyBlockByHashDB, getAllTransactionsDB)
-import System.Random
 import Service.Transaction.TransactionsDAG (genNTx)
 
 type Result a = Either CLIException a
@@ -71,11 +68,11 @@ loadMessages ch = return $ Left NotImplementedException
 
 
 getBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result MicroblockAPI)
-getBlockByHash db hash ch = do
+getBlockByHash db hash ch = try $ do
   mb <- B.getBlockByHashDB db hash
   case mb of
-    Nothing -> return (Left NoSuchMicroBlockDB)
-    Just m -> return (Right m)
+    Nothing -> throw NoSuchMicroBlockDB
+    Just m -> return m
 
 
 getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result Macroblock)
@@ -88,19 +85,19 @@ getChainInfo ch = return $ Left NotImplementedException
 
 
 getTransactionByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result TransactionInfo)
-getTransactionByHash db hash ch = do
+getTransactionByHash db hash ch = try $ do
   tx <- B.getTransactionByHashDB db hash
   case tx of
-    Nothing -> return (Left NoSuchTransactionDB)
-    Just t -> return (Right t)
+    Nothing -> throw  NoSuchTransactionDB
+    Just t -> return t
 
 
 getAllTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> InChan a -> IO (Result [Transaction])
-getAllTransactions pool key ch = do
+getAllTransactions pool key ch = try $ do
   tx <- B.getAllTransactionsDB pool key
   case tx of
-    [] -> return (Left OtherException)
-    t -> return (Right t)
+    [] -> throw OtherException
+    t -> return t
 
 sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> IO (Result ())
 sendTrans tx ch aInfoCh = try $ do
@@ -159,14 +156,14 @@ getNewKey = try $ do
 
 
 getBalance :: DBPoolDescriptor -> PublicKey -> InChan InfoMsg -> IO (Result Amount)
-getBalance descrDB pKey aInfoCh = do
+getBalance descrDB pKey aInfoCh = try $ do
     stTime  <- getCPUTimeWithUnit :: IO Millisecond
     balance <- B.getBalanceForKey descrDB pKey
     endTime <- getCPUTimeWithUnit :: IO Millisecond
     writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
     case balance of
-      Nothing -> return (Left NoSuchPublicKeyInDB)
-      Just b -> return (Right b)
+      Nothing -> throw NoSuchPublicKeyInDB
+      Just b -> return b
     --putStrLn "There is no such key in database"
     -- return result
 

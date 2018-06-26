@@ -267,6 +267,7 @@ answerToTestSendMessage aData (toManagerMsg -> TestNode aId) = do
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
         "answerToTestSendMessage: Node broadcast list request to " ++ show (aId) ++ " nodes."
     makeAndSendTo aData [aId] IsYouBrodcast
+answerToTestSendMessage _ _ = error "incompatible types"
 
 
 answerToDisconnectNode

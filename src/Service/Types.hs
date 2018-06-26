@@ -8,7 +8,6 @@ import              Service.Types.PublicPrivateKeyPair
 import              GHC.Generics
 import              Data.ByteString
 import              Data.List.Split (splitOn)
-import qualified    Data.ByteString.Char8 as C
 
 
 type QuantityTx = Int

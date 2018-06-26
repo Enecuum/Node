@@ -10,8 +10,7 @@ module CLI.CLI (
 import System.Console.GetOpt
 import Data.List.Split (splitOn)
 import Control.Monad (forever, mapM_)
-import qualified    Control.Concurrent as C
-import              Control.Concurrent.Chan.Unagi.Bounded
+import Control.Concurrent.Chan.Unagi.Bounded
 import Node.Node.Types
 import Service.InfoMsg
 import Service.Types

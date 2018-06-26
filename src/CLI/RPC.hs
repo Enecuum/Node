@@ -8,8 +8,7 @@ import Service.Network.WebSockets.Server
 import Control.Monad (forever)
 import Control.Monad.IO.Class
 import Control.Monad.Except (throwError)
-import qualified    Control.Concurrent.Chan as C
-import              Control.Concurrent.Chan.Unagi.Bounded
+import Control.Concurrent.Chan.Unagi.Bounded
 import Data.Maybe (fromMaybe)
 import System.IO.Unsafe (unsafePerformIO)
 

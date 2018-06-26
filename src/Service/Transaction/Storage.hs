@@ -8,27 +8,19 @@ import Control.Monad.Trans.Resource
 import Control.Retry
 import Control.Exception
 import qualified Control.Monad.Catch as E
-import Control.Monad.IO.Class
-import Control.Retry
 import Data.Maybe
-import Control.Concurrent (forkIO, threadDelay)
 import qualified "cryptohash" Crypto.Hash.SHA1 as SHA1
 import Service.Types.PublicPrivateKeyPair
 import Service.Types
 import Data.Pool
-import Data.Time.Clock (getCurrentTime, UTCTime)
 import qualified Data.ByteString.Internal as BSI
-import Control.Monad.Trans.State (StateT, evalStateT, put, get)
+import Control.Monad.Trans.State (StateT, put, get)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad (replicateM)
 import Data.Aeson
 import GHC.Generics
 import qualified Data.Serialize as S (Serialize, encode, decode)
 import Service.Transaction.TransactionsDAG (genNNTx)
-import Data.Typeable
-import Service.Types.SerializeJSON
-import qualified Data.Serialize as S
-
+import Service.Types.SerializeJSON()
 --------------------------------------
 -- begin of the Connection section
 data DBPoolDescriptor = DBPoolDescriptor {
@@ -39,6 +31,7 @@ data DBPoolDescriptor = DBPoolDescriptor {
   }
 
 -- FIX change def (5 times)
+connectOrRecoveryConnect :: IO DBPoolDescriptor
 connectOrRecoveryConnect = recovering def handler . const $ connectDB
 
 
@@ -95,12 +88,20 @@ data Macroblock = Macroblock {
 
 
 -- for rocksdb Transaction and Microblock
+rHash :: S.Serialize a => a -> BSI.ByteString
 rHash key = SHA1.hash . rValue $ key
+
+rValue :: S.Serialize a => a -> BSI.ByteString
 rValue value = S.encode value
+
+urValue :: S.Serialize a => BSI.ByteString -> Either String a  
 urValue value = S.decode value
 
 -- for Balance Table and Ledger
+htK :: S.Serialize a => a -> BSI.ByteString
 htK key = S.encode key
+
+unA :: Monad m => BSI.ByteString -> m (Maybe Amount)
 unA balance = case (urValue balance :: Either String Amount ) of
   Left _ -> error ("Can not decode balance" ++ show balance)
   Right b -> return $ Just b
@@ -186,6 +187,7 @@ getBlockByHashDB db hash = do
   let mbAPI = read (show mb) :: Maybe MicroblockAPI
   return mbAPI
 
+getKeyBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe a)
 getKeyBlockByHashDB = undefined
 
 
@@ -229,18 +231,23 @@ deleteByHash pool hash = do
 
 -- get all values from the table via iterator
 -- getAllValues :: MonadResource m => Rocks.DB -> m [BSI.ByteString]
+
+getAllValues :: MonadUnliftIO m => Rocks.DB -> m [BSI.ByteString]
 getAllValues db = runResourceT $ getAllValues1 db
+
+getAllValues1 :: MonadResource m => Rocks.DB -> m [BSI.ByteString]
 getAllValues1 db = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterFirst it
   Rocks.iterValues it
 
+getAllItems :: MonadResource m => Rocks.DB -> m [(BSI.ByteString, BSI.ByteString)]
 getAllItems db = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterFirst it
   Rocks.iterItems it
 
-
+getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [Transaction]
 getAllTransactionsDB descr pubKey = do
   txByte <- withResource (poolTransaction descr) getAllValues
   putStrLn $ show txByte
@@ -254,6 +261,7 @@ getAllTransactionsDB descr pubKey = do
   let txWithKey = filter (\t -> (_owner t == pubKey || _receiver t == pubKey)) tx
   return txWithKey
 
+getAllTransactions :: IO ()
 getAllTransactions = do
   result <- getAll =<< getTransactionFilePath
   let func res = case (S.decode res :: Either String TransactionInfo) of
@@ -276,7 +284,7 @@ getAllKV path = runResourceT $ do
   getAllItems db
 
 
-
+getAllLedger :: IO ()
 getAllLedger = do
   result <- getAll =<< getLedgerFilePath
   -- let result2 = map (\res -> S.decode res :: Either String PublicKey) result
@@ -289,7 +297,7 @@ getAllLedger = do
 
 
 
-
+getAllMicroblocks :: IO ()
 getAllMicroblocks = do
   result <- getAll =<< getMicroblockFilePath
   let func res = case (S.decode res :: Either String Microblock) of
@@ -299,6 +307,7 @@ getAllMicroblocks = do
   putStrLn $ show result2
 
 
+getAllLedgerKV :: IO ()
 getAllLedgerKV = do
   result <- getAllKV =<< getLedgerFilePath
   -- let result2 = map (\res -> S.decode res :: Either String PublicKey) result
@@ -309,6 +318,7 @@ getAllLedgerKV = do
   putStrLn $ show result2
 
 
+getAllTransactionsKV :: IO ()
 getAllTransactionsKV = do
   result <- getAllKV =<< getTransactionFilePath
   let func res = case (S.decode res :: Either String Transaction) of
@@ -318,6 +328,7 @@ getAllTransactionsKV = do
   putStrLn $ show result2
 
 
+getAllMicroblockKV :: IO [(BSI.ByteString, Microblock)]
 getAllMicroblockKV = do
   result <- getAllKV =<< getMicroblockFilePath
   let func res = case (S.decode res :: Either String Microblock) of
@@ -333,6 +344,7 @@ getAllMicroblockKV = do
 --------------------------------------
 -- begin test cli
 
+getOneMicroblock :: IO ()
 getOneMicroblock = do
   c <- connectDB
   let h = Hash ("w\168A6\"O\230\214\214\142\&7\212`\245\ETB\202\189\SOY\t" :: BSI.ByteString)
@@ -341,6 +353,7 @@ getOneMicroblock = do
   print mb
 
 
+getOneTransaction :: IO ()
 getOneTransaction = do
   c <- connectDB
   let h = Hash ("a\167\156\bU\215&.\251\187a\NAK\179\253\216\236\229\191\144R" :: BSI.ByteString)
@@ -348,6 +361,7 @@ getOneTransaction = do
   print tx
 
 
+getTransactionsByKey :: IO ()
 getTransactionsByKey = do
   c <- connectDB
   tx <- getAllTransactionsDB c (read "QYy3AT4a3Z88MpEoGDixRgxtWW8v3RfSbJLFQEyFZwMe" :: PublicKey)
@@ -356,7 +370,7 @@ getTransactionsByKey = do
 -- end test cli
 --------------------------------------
 
-
+tryParseTXInfoJson :: IO ()
 tryParseTXInfoJson = do
   tx <- genNNTx 5
   let ti = TransactionInfo (tx !! 0) (BC.pack "123") 2
@@ -367,6 +381,7 @@ tryParseTXInfoJson = do
   print $ res
 
 
+tryParseTXInfoBin :: IO ()
 tryParseTXInfoBin = do
   tx <- genNNTx 5
   let ti = TransactionInfo (tx !! 0) (BC.pack "123") 2

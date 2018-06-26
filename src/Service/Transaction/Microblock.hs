@@ -13,7 +13,7 @@ import Control.Monad.Trans.State (StateT, evalStateT, put, get)
 import Service.Types (MicroblockV1(..), Microblock(..), Transaction)
 import Service.Types.PublicPrivateKeyPair (KeyPair(..), PublicKey(..), generateNewRandomAnonymousKeyPair, getSignature) -- Signature)
 -- import Data.Aeson as A
-import Service.Transaction.Common (runLedger, connectOrRecoveryConnect, addMicroblockToDB)
+--import Service.Transaction.Common (runLedger, connectOrRecoveryConnect, addMicroblockToDB)
 
 type HashOfMicroblock = BC.ByteString
 
@@ -40,7 +40,7 @@ testParseTx = do
   let tx1 = "WithTime {time = 48813.639349002, transaction = RegisterPublicKey {pubKey = B0WvuBJEsQQ6RVqaEFaWoGXmW8sMG8xnBuxaCXJycRjyXN, startWithBalance = 25}}"
   putStrLn $ show $ (read tx1 :: Transaction)
 
-
+writeTxToFile :: Int -> IO ()
 writeTxToFile quantityOfTx = do
   tx <- genNNTx quantityOfTx
   writeFile "txforcli.txt" $ unlines $ map show tx
@@ -71,7 +71,10 @@ writeTxToFile quantityOfTx = do
 -- calculateLedgerForMicroblock = writeMicroblockToFile 4 1 >> runLedgerForMB
 
 
+genNMicroBlocks :: Int -> Int -> [IO Microblock]
 genNMicroBlocks n = replicateM n genMicroBlock
+
+genMicroBlock :: Int -> IO Microblock
 genMicroBlock quantityOfTx = do
   tx <- genNNTx quantityOfTx
   (KeyPair signerPublicKey signerPrivateKey) <- generateNewRandomAnonymousKeyPair

@@ -8,7 +8,7 @@ Compiling the repo generates the following executables:
 
 * BootNode-exe - a boot node that keeps a list of arbitrary available connected Simple Nodes and gives parts of that list on request to new Simple Nodes entering the network.
 * SimpleNode-exe - a basic role of a node that receives transactions from LighClient (user light client), adds them to the mempool, sends PoA Nodes (mobile nodes) transactions from the mempool, receives generated microblocks from PoA Nodes and propagates those blocks over the network to other Simple Nodes. Also,it can receive requests to calculate wallet balance, give information on transactions and microblocks, and then give responses to those requests. In the future, it'll be used in the sharding implementation: data distribution management and data fetchon request.
-* LightClien-exe - a user client that can generate new public keys (wallet addresses), generate transacations and send them to an arbitrary node (can be a local or remote node).
+* LightClient-exe - a user client that can generate new public keys (wallet addresses), generate transacations and send them to an arbitrary node (can be a local or remote node).
 
 Node supports multithreading. Each thread has its own data and can read data from another thread, change its (.self) state, propagate messages to other actors and create new actors. This way we avoid numerous problems normally assosiated with multithreading and can process events in parallel balancing the available resources.
 

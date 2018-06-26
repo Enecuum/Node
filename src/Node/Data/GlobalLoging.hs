@@ -2,7 +2,6 @@
 module Node.Data.GlobalLoging where
 
 
-import qualified    Control.Concurrent.Chan          as C
 import              Control.Concurrent.Chan.Unagi.Bounded
 import              Sharding.Space.Distance
 import              Sharding.Space.Point

@@ -4,9 +4,8 @@ module Service.Transaction.Reward where
 
 
 import qualified Data.ByteString.Char8 as BC
-import Data.Serialize (Serialize, encode, decode)
-import Data.Either
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
+import Data.Serialize (encode, decode)
 import Data.Default (def)
 import Data.Typeable
 
@@ -29,6 +28,7 @@ ma1 = Macroblock key hashes
   -- putStrLn $ BC.unpack result
   -- putStrLn "hello"
 
+writeToDB :: Macroblock -> IO ()
 writeToDB ma = do
   let hashes2 = hashOfMicroblock ma
   let hashValue = encode $ show hashes2

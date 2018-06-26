@@ -17,7 +17,6 @@ import              Data.Aeson
 import              Data.String
 import              GHC.Generics
 import qualified    Data.Text as T
-import              Data.Either
 import              Data.Hex
 import              Control.Monad.Extra
 -- import              Data.Either

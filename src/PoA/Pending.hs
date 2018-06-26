@@ -7,16 +7,13 @@ import Data.Sequence as S
 
 import Control.Monad
 
-import              Control.Concurrent.Chan.Unagi.Bounded
-import qualified    Control.Concurrent as C
-import qualified    Control.Concurrent.Chan as C
+import           Control.Concurrent.Chan.Unagi.Bounded
+import qualified Control.Concurrent as C
 
 import Service.Types
 import System.Clock
 import Data.Foldable
 
-import Control.Monad.Fix
-import Service.Types.PublicPrivateKeyPair
 import Service.InfoMsg
 import Node.Data.GlobalLoging
 -- actor

@@ -4,20 +4,19 @@ module Service.Transaction.Balance
     addMicroblockToDB,
     runLedger) where
 
+import Service.Transaction.Storage
 import Service.Types.PublicPrivateKeyPair
 import Service.Types hiding (MicroblockAPI(..))
 import qualified Data.ByteString.Char8 as BC hiding (map)
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import qualified Data.HashTable.IO as H
 import Control.Monad
-import Service.Transaction.Storage (DBPoolDescriptor(..),DBPoolDescriptor(..),rHash, rValue, urValue, Macroblock(..), unA, getMicroBlockByHashDB)
+--import Service.Transaction.Storage (DBPoolDescriptor(..),DBPoolDescriptor(..),rHash, rValue, urValue, Macroblock(..), unA, getMicroBlockByHashDB)
 
 import Data.Default (def)
 import Data.Hashable
 import Data.Pool
 import Data.Serialize (decode, encode)
-import Data.Either
-import qualified    Control.Concurrent          as C
 import              Control.Concurrent.Chan.Unagi.Bounded
 import Service.InfoMsg (InfoMsg(..), LogingTag(..), MsgType(..))
 import Node.Data.GlobalLoging
@@ -93,6 +92,7 @@ getPubKeys :: Transaction -> [PublicKey]
 getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
+hashedMb :: Show a => a -> BC.ByteString
 hashedMb hashesOfMicroblock = encode $ show hashesOfMicroblock
 
 type HashOfMicroblock = BC.ByteString
@@ -157,7 +157,7 @@ addMicroblockToDB db m aInfoChan =  do
         let realMb = map fromJust (filter (isJust) mb) ++ [m]
 
         writeLog aInfoChan [BDTag] Info ("Will Write Ledger "  ++ show (length realMb))
-        mapM (runLedger db aInfoChan) realMb
+        _ <- mapM (runLedger db aInfoChan) realMb
         return ()
         -- deleteMacroblockDB db aInfoChan (_keyBlock m) -- delete entry from Macroblock table
       else return ()
