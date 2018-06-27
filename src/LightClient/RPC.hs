@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module LightClient.RPC (
         newTx,
@@ -11,6 +11,8 @@ module LightClient.RPC (
         getChainInfo,
 
 --test
+        genNTx,
+        genUnlimTx,
         newMsgBroadcast,
         newMsgTo,
         loadNewMsg,
@@ -19,15 +21,15 @@ module LightClient.RPC (
         Trans(..)
      ) where
 
-import Network.JsonRpc.Client
-import Control.Monad (void)
-import qualified Network.WebSockets as WS
+import           Control.Monad                      (void)
+import           Network.JsonRpc.Client
+import qualified Network.WebSockets                 as WS
 
-import Control.Timeout (timeout)
-import Data.Time.Units (Second)
-import Service.Types
-import Service.Types.PublicPrivateKeyPair hiding (Signature)
-import Service.Types.SerializeJSON ()
+import           Control.Timeout                    (timeout)
+import           Data.Time.Units                    (Second)
+import           Service.Types
+import           Service.Types.PublicPrivateKeyPair hiding (Signature)
+import           Service.Types.SerializeJSON        ()
 
 
 type Result a = RpcResult IO a
@@ -56,6 +58,12 @@ reqChainInfoSig :: Signature () ChainInfo
 reqChainInfoSig = Signature "enq_getChainInfo" ()
 
 --test
+genNTxSig :: Signature (QuantityTx ::: ()) ()
+genNTxSig = Signature "gen_n_tx" ("x" ::: ())
+
+genUnlimTxSig :: Signature () ()
+genUnlimTxSig = Signature "gen_unlim_tx" ()
+
 newMsgBroadcastSig :: Signature (String ::: ()) ()
 newMsgBroadcastSig = Signature "send_message_broadcast" ("x" ::: ())
 
@@ -89,6 +97,12 @@ getChainInfo h = toFunction (connectionWithTimeOut h) reqChainInfoSig
 
 
 --test
+genNTx :: WS.Connection -> Int -> Result ()
+genNTx h = toFunction (connectionWithTimeOut h) genNTxSig
+
+genUnlimTx :: WS.Connection -> Result ()
+genUnlimTx h = toFunction (connectionWithTimeOut h) genUnlimTxSig
+
 newMsgBroadcast :: WS.Connection -> String -> Result ()
 newMsgBroadcast h = toFunction (connectionWithTimeOut h) newMsgBroadcastSig
 
@@ -102,7 +116,7 @@ connectionWithTimeOut :: WS.Connection -> Connection IO
 connectionWithTimeOut h input = do
   result <- timeout (5 :: Second) $ connection h input
   case result of
-    Just a -> return a
+    Just a  -> return a
     Nothing -> return (error "Connection error: out of time-out")
 
 -- Connect to a server
@@ -111,4 +125,3 @@ connection handle input = do
     void $ WS.sendTextData handle input
     ans <- WS.receiveData handle
     return (Just ans)
-

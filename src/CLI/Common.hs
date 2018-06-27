@@ -1,4 +1,6 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module CLI.Common (
   sendMessageTo,
@@ -7,6 +9,8 @@ module CLI.Common (
 
   sendTrans,
   sendNewTrans,
+  generateNTransactions,
+  generateTransactionsForever,
   getNewKey,
   getBlockByHash,
   getKeyBlockByHash,
@@ -21,24 +25,29 @@ module CLI.Common (
 
   )where
 
-import Control.Monad (forever)
-import Control.Concurrent (threadDelay)
-import              Control.Concurrent.Chan.Unagi.Bounded
-import Control.Exception
-import Data.Time.Units
-import Data.List.Split (splitOn)
-import Data.Map (fromList, lookup, Map)
-import System.Random (randomRIO)
+import           Control.Concurrent                    (threadDelay)
+-- import           Control.Concurrent.Chan
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Exception
+import           Control.Monad                         (forever)
+import           Data.List.Split                       (splitOn)
+import           Data.Map                              (Map, fromList, lookup)
+import           Data.Time.Units
+import           System.Random                         (randomRIO)
 
-import Node.Node.Types
-import Service.Types
-import Service.Types.SerializeJSON ()
-import Service.Types.PublicPrivateKeyPair
-import Service.InfoMsg
-import Service.System.Directory (getTime, getKeyFilePath)
-import Service.Transaction.Storage (DBPoolDescriptor(..))
-import Service.Transaction.Common as B (getBalanceForKey, getBlockByHashDB, getTransactionByHashDB, getKeyBlockByHashDB, getAllTransactionsDB)
-import Service.Transaction.TransactionsDAG (genNTx)
+import           Node.Node.Types
+import           Service.InfoMsg
+import           Service.System.Directory              (getKeyFilePath, getTime)
+import           Service.Transaction.Common            as B (getAllTransactionsDB,
+                                                             getBalanceForKey,
+                                                             getBlockByHashDB,
+                                                             getKeyBlockByHashDB,
+                                                             getTransactionByHashDB)
+import           Service.Transaction.Storage           (DBPoolDescriptor (..))
+import           Service.Transaction.TransactionsDAG   (genNTx)
+import           Service.Types
+import           Service.Types.PublicPrivateKeyPair
+import           Service.Types.SerializeJSON           ()
 
 type Result a = Either CLIException a
 
@@ -70,7 +79,7 @@ getBlockByHash db hash ch = try $ do
   mb <- B.getBlockByHashDB db hash
   case mb of
     Nothing -> throw NoSuchMicroBlockDB
-    Just m -> return m
+    Just m  -> return m
 
 
 getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result Macroblock)
@@ -87,7 +96,7 @@ getTransactionByHash db hash ch = try $ do
   tx <- B.getTransactionByHashDB db hash
   case tx of
     Nothing -> throw  NoSuchTransactionDB
-    Just t -> return t
+    Just t  -> return t
 
 
 getAllTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> InChan a -> IO (Result [Transaction])
@@ -95,7 +104,7 @@ getAllTransactions pool key ch = try $ do
   tx <- B.getAllTransactionsDB pool key
   case tx of
     [] -> throw OtherException
-    t -> return t
+    t  -> return t
 
 sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> IO (Result ())
 sendTrans tx ch aInfoCh = try $ do
@@ -139,7 +148,7 @@ getBalance descrDB pKey aInfoCh = try $ do
     writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
     case balance of
       Nothing -> throw NoSuchPublicKeyInDB
-      Just b -> return b
+      Just b  -> return b
     --putStrLn "There is no such key in database"
     -- return result
 
@@ -170,3 +179,26 @@ sendMetrics (Transaction o r a _ _ _ _) m = do
     writeChan m $ Metric $ set "cl.tx.wallet" o
     writeChan m $ Metric $ set "cl.tx.wallet" r
     writeChan m $ Metric $ gauge "cl.tx.amount" a
+
+
+-- generateNTransactions :: ManagerMiningMsg a => QuantityTx -> Chan a -> Chan InfoMsg -> IO (Result ())
+generateNTransactions :: ManagerMiningMsg a => QuantityTx -> InChan a -> InChan InfoMsg -> IO (Result ())
+generateNTransactions qTx ch m = try $ do
+  tx <- genNTx qTx
+  mapM_ (\x -> do
+          writeChan ch $ newTransaction x
+          sendMetrics x m
+        ) tx
+  putStrLn "Transactions are created"
+
+generateTransactionsForever :: ManagerMiningMsg a => InChan a -> InChan InfoMsg -> IO (Result ())
+-- generateTransactionsForever :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO (Result ())
+generateTransactionsForever ch m = try $ forever $ do
+                                quantityOfTranscations <- randomRIO (20,30)
+                                tx <- genNTx quantityOfTranscations
+                                mapM_ (\x -> do
+                                            writeChan ch $ newTransaction x
+                                            sendMetrics x m
+                                       ) tx
+                                threadDelay (10^(6 :: Int))
+                                putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
