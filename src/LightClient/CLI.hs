@@ -235,19 +235,3 @@ getInfo ch = do
   case result of
     (Left err)   -> putStrLn $ "getChainInfo error: " ++ show err
     (Right info) -> print info
-
-
-generateNTransactions :: Int -> WS.Connection -> IO ()
-generateNTransactions qTx ch = do
-  result <- runExceptT $ genNTx ch qTx
-  case result of
-    (Left err) -> putStrLn $ "generateNTransactions error: " ++ show err
-    (Right _ ) -> putStrLn   "Transactions request was sent"
-
-
-generateTransactionsForever :: WS.Connection -> IO ()
-generateTransactionsForever ch = do
-  result <- runExceptT $ genUnlimTx ch
-  case result of
-    (Left err) -> putStrLn $ "generateTransactionsForever error: " ++ show err
-    (Right _ ) -> putStrLn   "Transactions request was sent"
