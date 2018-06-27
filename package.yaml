@@ -96,7 +96,7 @@ dependencies:
 #- persistent-postgresql
 #- mysql
 - unix-time
-
+- derive
 
 library:
   source-dirs: src

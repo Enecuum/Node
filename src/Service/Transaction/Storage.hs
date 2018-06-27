@@ -21,6 +21,11 @@ import GHC.Generics
 import qualified Data.Serialize as S (Serialize, encode, decode)
 import Service.Transaction.TransactionsDAG (genNNTx)
 import Service.Types.SerializeJSON()
+
+
+import Data.Text.Encoding (decodeUtf8)
+import Data.Text (Text)
+import Data.ByteString.Base58
 --------------------------------------
 -- begin of the Connection section
 data DBPoolDescriptor = DBPoolDescriptor {
@@ -340,6 +345,10 @@ getAllMicroblockKV = do
 -- end of the Query Iterator section
 --------------------------------------
 
+showAllMicroblockKV :: IO [(Text, Microblock)]
+showAllMicroblockKV = do 
+          mbs <- getAllMicroblockKV 
+          return $ map (\(bs, mb) -> (decodeUtf8 $ encodeBase58 bitcoinAlphabet bs, mb)) mbs
 
 --------------------------------------
 -- begin test cli
