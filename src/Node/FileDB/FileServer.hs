@@ -22,7 +22,8 @@ import              Data.List.Extra
 
 import              Lens.Micro
 import              Lens.Micro.TH
-import              Control.Concurrent.Chan
+import              Control.Concurrent.MVar
+import              Control.Concurrent.Chan.Unagi.Bounded
 import qualified    Data.Map as M
 
 import              Node.Data.NetPackage
@@ -46,17 +47,17 @@ data FileActorRequest where
 
 
 data FileActorRequestInternal a where
-    ReadRecordsFromNodeListFile :: Chan (NodeInfoList a) -> FileActorRequestInternal a
+    ReadRecordsFromNodeListFile :: MVar (NodeInfoList a) -> FileActorRequestInternal a
     DeleteFromFile              :: NodeId -> FileActorRequestInternal a
     UpdateFile                  :: MyNodeId -> NodeInfoList a -> FileActorRequestInternal a
 
 
 
-startFileServer :: Chan FileActorRequest -> IO ()
-startFileServer chan = aLoop $ FileActor M.empty M.empty
+startFileServer :: OutChan FileActorRequest -> IO ()
+startFileServer aChan = aLoop $ FileActor M.empty M.empty
   where
     aLoop aData =
-        readChan chan >>= \case
+        readChan aChan >>= \case
             FileActorMyPosition aNodePosition -> do
                 let aNewFilePositions = M.fromList . take 7 . sortOn (distanceTo aNodePosition.snd) . M.toList $ M.intersection
                         (aData^.filePositions) (aData^.fileConnects)
@@ -64,8 +65,8 @@ startFileServer chan = aLoop $ FileActor M.empty M.empty
                 aLoop $ FileActor aNewFilePositions aNewFileConnects
 
             FileActorRequestNetLvl a -> case a of
-                ReadRecordsFromNodeListFile aChan                   -> do
-                    writeChan aChan $ NodeInfoListNetLvl $ M.toList (aData^.fileConnects)
+                ReadRecordsFromNodeListFile aMVar                   -> do
+                    putMVar aMVar $ NodeInfoListNetLvl $ M.toList (aData^.fileConnects)
                     aLoop aData
                 DeleteFromFile aNodeId                              ->
                     aLoop $ aData & fileConnects %~ M.delete aNodeId
@@ -74,8 +75,8 @@ startFileServer chan = aLoop $ FileActor M.empty M.empty
                         (M.delete (toNodeId aMyNodeId) (M.fromList aNodeInfoList))
 
             FileActorRequestLogicLvl a -> case a of
-                ReadRecordsFromNodeListFile aChan                   -> do
-                    writeChan aChan $ NodeInfoListLogicLvl $ M.toList (aData^.filePositions)
+                ReadRecordsFromNodeListFile aMVar                   -> do
+                    putMVar aMVar $ NodeInfoListLogicLvl $ M.toList (aData^.filePositions)
                     aLoop aData
                 DeleteFromFile aNodeId                              ->
                     aLoop $ aData & filePositions %~ M.delete aNodeId

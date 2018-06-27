@@ -47,14 +47,15 @@ data Pending = Pending (Seq (Transaction, TimeSpec)) (Seq (Transaction, TimeSpec
 
 pendingActor :: C.Chan PendingAction -> C.Chan Microblock -> C.Chan Transaction -> InChan InfoMsg -> IO ()
 pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
-{-
+
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for microblocs"
-    void . forkIO $ do
-        aBlockChan <- dupChan aMicroblockChan
+{-
+    void . C.forkIO $ do
+        aBlockChan <- C.dupChan aMicroblockChan
         -- blocks re-pack
-        forever $ readChan aBlockChan >>= \case
+        forever $ C.readChan aBlockChan >>= \case
             Microblock _ _ _ aTransactions _ ->
-                writeChan aChan $ RemoveTransactions aTransactions
+                C.writeChan aChan $ RemoveTransactions aTransactions
 -}
     -- transactions re-pack
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for transactions"
@@ -94,11 +95,11 @@ pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
                     loop $ Pending
                         (aFilter aNewTransaactions :|> (aTransaction, aNaw))
                         (aFilter aOldTransactions)
-{-
-        -- transactions cleaning by the reason of including to block
 
+        -- transactions cleaning by the reason of including to block
+{-
         RemoveTransactions  aTransactions           -> do
-            writeLog aInfoChan [PendingTag] Info $ "Remove transactions from pending. From pendig."
+            writeLog aInfoChan [PendingTag] Info "Remove transactions from pending. From pendig."
             let aFilter = S.filter (\(t, _) -> t `notElem` aTransactions)
             loop $ Pending (aFilter aNewTransaactions) (aFilter aOldTransactions)
 -}
@@ -106,9 +107,7 @@ pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
 
         GetTransaction      aCount aResponseChan    -> do
             writeLog aInfoChan [PendingTag] Info $ "Request " ++ show aCount ++ " transactions from pending"
-            let aSizeOfOldTransactions = S.length aOldTransactions
-                aSizeOfNewTransactions = S.length aNewTransaactions
-                aSize = aSizeOfNewTransactions + aSizeOfOldTransactions
+            let aSizeOfNewTransactions = S.length aNewTransaactions
                 -- if there are a lot of transactions
             if  | aCount < aSizeOfNewTransactions -> do
                     -- send n new transactions and replace it to "old"
@@ -122,7 +121,7 @@ pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
                     -- add new txs from "new" to "old"
                     -- used "old" txs and put it to the end
                     let (aHead, aTail) = S.splitAt (aCount - aSizeOfNewTransactions) aOldTransactions
-                    C.writeChan aResponseChan $ fst <$> (toList $ aNewTransaactions >< aHead)
+                    C.writeChan aResponseChan $ fst <$> toList (aNewTransaactions >< aHead)
                     loop $ Pending Empty (aTail >< aNewTransaactions >< aHead)
 
 -- at first
