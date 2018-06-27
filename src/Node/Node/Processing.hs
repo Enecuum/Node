@@ -29,6 +29,7 @@ import              Node.Node.Types
 import              Node.Data.NetPackage
 import              Sharding.Sharding()
 import qualified    Sharding.Types.Node as T
+import              Control.Concurrent.MVar
 import              Sharding.Space.Point
 import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.MakeTraceRouting
@@ -65,9 +66,9 @@ instance Processing (IORef ManagerNodeData) (Response NetLvl) where
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "Accepted lists of broadcasts and points of node. " ++
                 show aBroadcastListLogic ++ show aBroadcastList
-            C.writeChan (aData^.fileServerChan) $
+            writeChan (aData^.fileServerChan) $
                 FileActorRequestNetLvl $ UpdateFile (aData^.myNodeId) aBroadcastList
-            C.writeChan (aData^.fileServerChan) $
+            writeChan (aData^.fileServerChan) $
                 FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId) aBroadcastListLogic
 
         HostAdressResponse _ -> return ()
@@ -104,7 +105,7 @@ instance Processing (IORef ManagerNodeData) (Response LogicLvl) where
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Accepted the node position of a neighbor node " ++ show aNodeId ++
                     " a new position is a " ++ show aNodePosition
-                C.writeChan (aData^.fileServerChan) $
+                writeChan (aData^.fileServerChan) $
                     FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId)
                         (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
                 whenJust (aData^.nodes.at aNodeId) $ \aNode ->
@@ -234,15 +235,15 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
             BroadcastListRequest -> void $ C.forkIO $ do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                     "Send Response 'Broadcast list'."
-                aPosChan <- C.newChan
-                aConChan <- C.newChan
-                C.writeChan (aData^.fileServerChan) $
+                aPosChan <- newEmptyMVar
+                aConChan <- newEmptyMVar
+                writeChan (aData^.fileServerChan) $
                      FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-                C.writeChan (aData^.fileServerChan) $
+                writeChan (aData^.fileServerChan) $
                      FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
 
-                NodeInfoListNetLvl   aBroadcastList      <- C.readChan aConChan
-                NodeInfoListLogicLvl aBroadcastListLogic <- C.readChan aPosChan
+                NodeInfoListNetLvl   aBroadcastList      <- takeMVar aConChan
+                NodeInfoListLogicLvl aBroadcastListLogic <- takeMVar aPosChan
 
                 let aBroadcastListResponse = BroadcastListResponse
                         (NodeInfoListLogicLvl $ take 10 aBroadcastListLogic)

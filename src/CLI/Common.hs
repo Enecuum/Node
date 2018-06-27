@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module CLI.Common (
   sendMessageTo,
@@ -23,24 +24,28 @@ module CLI.Common (
 
   )where
 
-import Control.Monad (forever)
-import Control.Concurrent (threadDelay)
-import              Control.Concurrent.Chan.Unagi.Bounded
-import Control.Exception
-import Data.Time.Units
-import Data.List.Split (splitOn)
-import Data.Map (fromList, lookup, Map)
-import System.Random (randomRIO)
+import           Control.Concurrent                    (threadDelay)
+-- import           Control.Concurrent.Chan
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Exception
+import           Control.Monad                         (forever)
+import           Data.List.Split                       (splitOn)
+import           Data.Map                              (Map, fromList, lookup)
+import           Data.Time.Units
+import           System.Random                         (randomRIO)
 
-import Node.Node.Types
-import Service.Types
-import Service.Types.SerializeJSON ()
-import Service.Types.PublicPrivateKeyPair
-import Service.InfoMsg
-import Service.System.Directory (getTime, getKeyFilePath)
-import Service.Transaction.Storage (DBPoolDescriptor(..))
-import Service.Transaction.Common as B (getBalanceForKey, getBlockByHashDB, getTransactionByHashDB, getKeyBlockByHashDB, getAllTransactionsDB)
-import Service.Transaction.TransactionsDAG (genNTx)
+import           Node.Node.Types
+import           Service.InfoMsg
+import           Service.System.Directory              (getKeyFilePath, getTime)
+import           Service.Transaction.Common            as B (getAllTransactionsDB,
+                                                             getBalanceForKey,
+                                                             getBlockByHashDB,
+                                                             getTransactionByHashDB)
+import           Service.Transaction.Storage           (DBPoolDescriptor (..))
+import           Service.Transaction.TransactionsDAG   (genNTx)
+import           Service.Types
+import           Service.Types.PublicPrivateKeyPair
+import           Service.Types.SerializeJSON           ()
 
 type Result a = Either CLIException a
 
@@ -56,48 +61,48 @@ instance Exception CLIException
 
 
 sendMessageTo :: ManagerMiningMsg a => MsgTo -> InChan a -> IO (Result ())
-sendMessageTo ch = return $ return $ Left NotImplementedException
+sendMessageTo _ = return $ return $ Left NotImplementedException
 
 
 sendMessageBroadcast :: ManagerMiningMsg a => String -> InChan a -> IO (Result ())
-sendMessageBroadcast ch = return $ return $ Left NotImplementedException
+sendMessageBroadcast _ = return $ return $ Left NotImplementedException
 
 
 loadMessages :: ManagerMiningMsg a => InChan a -> IO (Result [MsgTo])
-loadMessages ch = return $ Left NotImplementedException
+loadMessages _ = return $ Left NotImplementedException
 
 
 getBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result MicroblockAPI)
-getBlockByHash db hash ch = try $ do
+getBlockByHash db hash _ = try $ do
   mb <- B.getBlockByHashDB db hash
   case mb of
     Nothing -> throw NoSuchMicroBlockDB
-    Just m -> return m
+    Just m  -> return m
 
 
 getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result Macroblock)
-getKeyBlockByHash db hash ch = return $ Left NotImplementedException
+getKeyBlockByHash _ _ _ = return $ Left NotImplementedException
  --return =<< Right <$> B.getBlockByHashDB db hash
 
 
 getChainInfo :: ManagerMiningMsg a => InChan a -> IO (Result ChainInfo)
-getChainInfo ch = return $ Left NotImplementedException
+getChainInfo _ = return $ Left NotImplementedException
 
 
 getTransactionByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result TransactionInfo)
-getTransactionByHash db hash ch = try $ do
+getTransactionByHash db hash _ = try $ do
   tx <- B.getTransactionByHashDB db hash
   case tx of
     Nothing -> throw  NoSuchTransactionDB
-    Just t -> return t
+    Just t  -> return t
 
 
 getAllTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> InChan a -> IO (Result [Transaction])
-getAllTransactions pool key ch = try $ do
+getAllTransactions pool key _ = try $ do
   tx <- B.getAllTransactionsDB pool key
   case tx of
     [] -> throw OtherException
-    t -> return t
+    t  -> return t
 
 sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> IO (Result ())
 sendTrans tx ch aInfoCh = try $ do
@@ -106,16 +111,15 @@ sendTrans tx ch aInfoCh = try $ do
 
 
 sendNewTrans :: ManagerMiningMsg a => Trans -> InChan a -> InChan InfoMsg -> IO (Result Transaction)
-sendNewTrans trans ch aInfoCh = try $ do
-  let moneyAmount = (Service.Types.txAmount trans) :: Amount
-  let receiverPubKey = recipientPubKey trans
-  let ownerPubKey = senderPubKey trans
+sendNewTrans aTrans ch aInfoCh = try $ do
+  let moneyAmount = Service.Types.txAmount aTrans :: Amount
+  let receiverPubKey = recipientPubKey aTrans
+  let ownerPubKey = senderPubKey aTrans
   timePoint <- getTime
   keyPairs <- getSavedKeyPairs
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
-  case (Data.Map.lookup ownerPubKey mapPubPriv) of
-    Nothing -> do
-      throw WrongKeyOwnerException
+  case Data.Map.lookup ownerPubKey mapPubPriv of
+    Nothing -> throw WrongKeyOwnerException
     Just ownerPrivKey -> do
       sign <- getSignature ownerPrivKey moneyAmount
       uuid <- randomRIO (1,25)
@@ -123,28 +127,6 @@ sendNewTrans trans ch aInfoCh = try $ do
       _ <- sendTrans tx ch aInfoCh
       return tx
 
-
-generateNTransactions :: ManagerMiningMsg a =>
-    QuantityTx -> InChan a -> InChan InfoMsg -> IO (Result ())
-generateNTransactions qTx ch m = try $ do
-  tx <- genNTx qTx
-  mapM_ (\x -> do
-          writeChan ch $ newTransaction x
-          sendMetrics x m
-        ) tx
-  putStrLn "Transactions are created"
-
-
-generateTransactionsForever :: ManagerMiningMsg a => InChan a -> InChan InfoMsg -> IO (Result ())
-generateTransactionsForever ch m = try $ forever $ do
-                                quantityOfTranscations <- randomRIO (20,30)
-                                tx <- genNTx quantityOfTranscations
-                                mapM_ (\x -> do
-                                            writeChan ch $ newTransaction x
-                                            sendMetrics x m
-                                       ) tx
-                                threadDelay (10^(6 :: Int))
-                                putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
 
 
 getNewKey :: IO (Result PublicKey)
@@ -158,19 +140,19 @@ getNewKey = try $ do
 getBalance :: DBPoolDescriptor -> PublicKey -> InChan InfoMsg -> IO (Result Amount)
 getBalance descrDB pKey aInfoCh = try $ do
     stTime  <- getCPUTimeWithUnit :: IO Millisecond
-    balance <- B.getBalanceForKey descrDB pKey
+    aBalance <- B.getBalanceForKey descrDB pKey
     endTime <- getCPUTimeWithUnit :: IO Millisecond
     writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
-    case balance of
+    case aBalance of
       Nothing -> throw NoSuchPublicKeyInDB
-      Just b -> return b
+      Just b  -> return b
     --putStrLn "There is no such key in database"
     -- return result
 
 
 getSavedKeyPairs :: IO [(PublicKey, PrivateKey)]
 getSavedKeyPairs = do
-  result <- try $ getKeyFilePath >>= (\keyFileName -> readFile keyFileName)
+  result <- try $ getKeyFilePath >>= readFile
   case result of
     Left ( _ :: SomeException) -> do
           putStrLn "There is no keys"
@@ -178,14 +160,12 @@ getSavedKeyPairs = do
     Right keyFileContent       -> do
           let rawKeys = lines keyFileContent
           let keys = map (splitOn ":") rawKeys
-          let pairs = map (\x -> (,) (read (x !! 0) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
+          let pairs = map (\x -> (,) (read (head x) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
           return pairs
 
 
 getPublicKeys :: IO (Result [PublicKey])
-getPublicKeys = try $ do
-  pairs <- getSavedKeyPairs
-  return $ map fst pairs
+getPublicKeys = try $ map fst <$> getSavedKeyPairs
 
 
 sendMetrics :: Transaction -> InChan InfoMsg -> IO ()
@@ -194,3 +174,26 @@ sendMetrics (Transaction o r a _ _ _ _) m = do
     writeChan m $ Metric $ set "cl.tx.wallet" o
     writeChan m $ Metric $ set "cl.tx.wallet" r
     writeChan m $ Metric $ gauge "cl.tx.amount" a
+
+
+-- generateNTransactions :: ManagerMiningMsg a => QuantityTx -> Chan a -> Chan InfoMsg -> IO (Result ())
+generateNTransactions :: ManagerMiningMsg a => QuantityTx -> InChan a -> InChan InfoMsg -> IO (Result ())
+generateNTransactions qTx ch m = try $ do
+  tx <- genNTx qTx
+  mapM_ (\x -> do
+          writeChan ch $ newTransaction x
+          sendMetrics x m
+        ) tx
+  putStrLn "Transactions are created"
+
+generateTransactionsForever :: ManagerMiningMsg a => InChan a -> InChan InfoMsg -> IO (Result ())
+-- generateTransactionsForever :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO (Result ())
+generateTransactionsForever ch m = try $ forever $ do
+                                quantityOfTranscations <- randomRIO (20,30)
+                                tx <- genNTx quantityOfTranscations
+                                mapM_ (\x -> do
+                                            writeChan ch $ newTransaction x
+                                            sendMetrics x m
+                                       ) tx
+                                threadDelay (10^(6 :: Int))
+                                putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")

@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, LambdaCase #-}
-{-# LANGUAGE PackageImports #-}
+
 module Node.Lib where
 
 import              Control.Monad
@@ -41,7 +41,7 @@ startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
     -> C.Chan Answer
     -> InChan InfoMsg
     -> ((InChan a1, OutChan a1) -> IORef s -> IO ())
-    -> ((InChan a1, OutChan a1) -> C.Chan Transaction -> C.Chan Microblock -> MyNodeId -> C.Chan FileActorRequest -> IO a2)
+    -> ((InChan a1, OutChan a1) -> C.Chan Transaction -> C.Chan Microblock -> MyNodeId -> InChan FileActorRequest -> IO a2)
     -> IO (InChan a1, OutChan a1)
 startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
 
@@ -53,14 +53,14 @@ startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
     aTransactionChan <- C.newChan
     config  <- readNodeConfig
     bnList  <- readBootNodeList $ bootNodeList buildConf
-    aFileRequestChan <- C.newChan
-    void $ C.forkIO $ startFileServer aFileRequestChan
+    (aInFileRequestChan, aOutFileRequestChan) <- newChan (2^4)
+    void $ C.forkIO $ startFileServer aOutFileRequestChan
     let portNumber = extConnectPort buildConf
-    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aFileRequestChan bnList config portNumber
+    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aInFileRequestChan bnList config portNumber
     startServerActor inChanManager portNumber
     void $ C.forkIO $ microblockProc descrDB aMicroblockChan infoCh
     void $ C.forkIO $ manager managerChan md
-    void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aFileRequestChan
+    void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aInFileRequestChan
     return managerChan
 
 

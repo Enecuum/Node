@@ -1,24 +1,33 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
-{-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
-{-# LANGUAGE DeriveGeneric, LambdaCase #-}
+{-# LANGUAGE DeriveGeneric             #-}
+{-# LANGUAGE DisambiguateRecordFields  #-}
+{-# LANGUAGE DuplicateRecordFields     #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances         #-}
+{-# LANGUAGE GADTs                     #-}
+{-# LANGUAGE LambdaCase                #-}
+{-# LANGUAGE OverloadedStrings         #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
 
 
 module CLI.CLI (
     serveCLI
   ) where
 
-import System.Console.GetOpt
-import Data.List.Split (splitOn)
-import Control.Monad (forever, mapM_)
-import Control.Concurrent.Chan.Unagi.Bounded
-import Node.Node.Types
-import Service.InfoMsg
-import Service.Types
-import Service.Types.PublicPrivateKeyPair (PublicKey)
-import CLI.Common
-import Service.Transaction.Storage (DBPoolDescriptor(..))
+import           CLI.Common
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Monad                         (forever, mapM_)
+import           Data.List.Split                       (splitOn)
+import           Node.Node.Types
+import           Service.InfoMsg
+import           Service.Transaction.Storage           (DBPoolDescriptor (..))
+import           Service.Types
+import           Service.Types.PublicPrivateKeyPair    (PublicKey)
+import           System.Console.GetOpt
 
-data Flag = Key | ShowKey | Balance PublicKey | Send Trans | GenerateNTransactions QuantityTx | GenerateTransactionsForever | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages deriving (Eq, Show)
+
+data Flag = Key | ShowKey | Balance PublicKey | Send Trans
+           | GenerateNTransactions QuantityTx | GenerateTransactionsForever
+           | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages deriving (Eq, Show)
 
 
 options :: [OptDescr Flag]

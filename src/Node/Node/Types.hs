@@ -178,7 +178,7 @@ data NodeBaseData = NodeBaseData {
     ,   nodeBaseDataIAmBroadcast        :: Bool
     ,   nodeBaseDataOutPort             :: PortNumber
     ,   nodeBaseDataInfoMsgChan         :: InChan InfoMsg
-    ,   nodeBaseDataFileServerChan      :: C.Chan FileActorRequest
+    ,   nodeBaseDataFileServerChan      :: InChan FileActorRequest
   }
 
 
@@ -190,7 +190,7 @@ makeNodeBaseData
     ->  C.Chan Microblock
     ->  PortNumber
     ->  InChan InfoMsg
-    ->  C.Chan FileActorRequest
+    ->  InChan FileActorRequest
     ->  NodeBaseData
 makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan = NodeBaseData
     aExitChan M.empty M.empty aList aAnswerChan 0 Nothing aMicroblockChan
@@ -284,7 +284,7 @@ class ToManagerData a where
         -> C.Chan ExitMsg
         -> C.Chan Answer
         -> InChan InfoMsg
-        -> C.Chan FileActorRequest
+        -> InChan FileActorRequest
         -> BootNodeList
         -> NodeConfig
         -> PortNumber

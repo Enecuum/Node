@@ -1,28 +1,29 @@
-{-# LANGUAGE OverloadedStrings, LambdaCase, FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module CLI.RPC (serveRpc) where
 
-import Network.Socket (PortNumber)
-import Network.JsonRpc.Server
-import Service.Network.WebSockets.Server
-import Control.Monad (forever)
-import Control.Monad.IO.Class
-import Control.Monad.Except (throwError)
-import Control.Concurrent.Chan.Unagi.Bounded
-import Data.Maybe (fromMaybe)
-import System.IO.Unsafe (unsafePerformIO)
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Monad                         (forever)
+import           Control.Monad.Except                  (throwError)
+import           Control.Monad.IO.Class
+import           Data.Maybe                            (fromMaybe)
+import           Network.JsonRpc.Server
+import           Service.Network.WebSockets.Server
+import           System.IO.Unsafe                      (unsafePerformIO)
 
-import Data.IP
-import CLI.Common
-import Node.Node.Types
-import Service.Types.SerializeJSON ()
-import Service.Types.PublicPrivateKeyPair
-import Service.InfoMsg
-import Service.Types
-import Data.Text (pack)
-import Network.Socket (SockAddr)
-import qualified Network.WebSockets as WS
-import Service.Transaction.Storage (DBPoolDescriptor(..))
+import           CLI.Common
+import           Data.IP
+import           Data.Text                             (pack)
+import           Network.Socket                        (SockAddr, PortNumber)
+import qualified Network.WebSockets                    as WS
+import           Node.Node.Types
+import           Service.InfoMsg
+import           Service.Transaction.Storage           (DBPoolDescriptor (..))
+import           Service.Types
+import           Service.Types.PublicPrivateKeyPair
+import           Service.Types.SerializeJSON           ()
 
 
 serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan ManagerMiningMsgBase -> InChan InfoMsg -> IO ()
@@ -35,12 +36,12 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
 
      where
         runRpc aConnect aMsg = do
-         response <- fromMaybe "" <$> (call methods aMsg)
+         response <- fromMaybe "" <$> call methods aMsg
          WS.sendTextData aConnect response
 
             where
               ipAccepted :: SockAddr -> Bool
-              ipAccepted addr = unsafePerformIO $ do
+              ipAccepted addr = unsafePerformIO $
                 case fromSockAddr addr of
                   Nothing      -> return False
                   Just (ip, _) -> do
@@ -50,7 +51,7 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
                              IPv4 i -> ipv4ToIPv6 i
                              IPv6 i -> i
 
-              handle f = do
+              handle f = 
                     case {-ipAccepted addr-} True of
                           False -> do
                                 liftIO $ putStrLn "Denied"

@@ -7,7 +7,6 @@ import              Data.List
 import              Data.IORef
 import              Control.Monad.Extra
 import              Lens.Micro
-import qualified    Control.Concurrent.Chan as C
 import              Control.Concurrent.Chan.Unagi.Bounded
 import              Data.Maybe
 
@@ -83,7 +82,7 @@ answerToCheckBroadcastNodes aMd aChan _ = do
                 "Addition the node to list of broadcast node."
             sendExitMsgToNode aNode
 
-            C.writeChan (aData^.fileServerChan) $
+            writeChan (aData^.fileServerChan) $
                     FileActorRequestNetLvl $ UpdateFile (aData^.myNodeId)
                     (NodeInfoListNetLvl [(aNodeId, Connect (aNode^.nodeHost) (aNode^.nodePort))])
 

@@ -1,6 +1,13 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
-{-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
-{-# LANGUAGE DeriveGeneric, LambdaCase, TemplateHaskell #-}
+{-# LANGUAGE DeriveGeneric             #-}
+{-# LANGUAGE DisambiguateRecordFields  #-}
+{-# LANGUAGE DuplicateRecordFields     #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances         #-}
+{-# LANGUAGE GADTs                     #-}
+{-# LANGUAGE LambdaCase                #-}
+{-# LANGUAGE OverloadedStrings         #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE TemplateHaskell           #-}
 
 
 module LightClient.CLI (
@@ -109,6 +116,7 @@ dispatch flags h p =
         (Version: _)                     -> printVersion
         _                                -> putStrLn "Wrong argument"
 
+
   where withClient f = runClient h (fromEnum p) "" $ \ ch -> f ch
 
 showPublicKey :: String -> IO ()
@@ -193,7 +201,7 @@ getAllTransactions :: PublicKey -> WS.Connection -> IO ()
 getAllTransactions key ch = do
   result <- runExceptT $ getAllTxs ch key
   case result of
-    (Left err) -> putStrLn $ "getAllTransactions error: " ++ show err
+    (Left err)   -> putStrLn $ "getAllTransactions error: " ++ show err
     (Right txs ) -> mapM_ print txs
 
 
@@ -201,7 +209,7 @@ getTransaction :: Hash -> WS.Connection -> IO ()
 getTransaction hash ch = do
   result <- runExceptT $ getTx ch hash
   case result of
-    (Left err) -> putStrLn $ "getTransaction error: " ++ show err
+    (Left err)    -> putStrLn $ "getTransaction error: " ++ show err
     (Right info ) -> print info
 
 
@@ -209,7 +217,7 @@ getBlockByHash :: Hash -> WS.Connection -> IO ()
 getBlockByHash hash ch = do
   result <- runExceptT $ getBlock ch hash
   case result of
-    (Left err) -> putStrLn $ "getBlockByHash error: " ++ show err
+    (Left err)    -> putStrLn $ "getBlockByHash error: " ++ show err
     (Right block) -> print block
 
 
@@ -217,7 +225,7 @@ getMicroblockByHash :: Hash -> WS.Connection -> IO ()
 getMicroblockByHash hash ch = do
   result <- runExceptT $ getMicroblock ch hash
   case result of
-    (Left err) -> putStrLn $ "getMicroblockByHash error: " ++ show err
+    (Left err)    -> putStrLn $ "getMicroblockByHash error: " ++ show err
     (Right block) -> print block
 
 
@@ -225,5 +233,21 @@ getInfo :: WS.Connection -> IO ()
 getInfo ch = do
   result <- runExceptT $ getChainInfo ch
   case result of
-    (Left err) -> putStrLn $ "getChainInfo error: " ++ show err
+    (Left err)   -> putStrLn $ "getChainInfo error: " ++ show err
     (Right info) -> print info
+
+
+generateNTransactions :: Int -> WS.Connection -> IO ()
+generateNTransactions qTx ch = do
+  result <- runExceptT $ genNTx ch qTx
+  case result of
+    (Left err) -> putStrLn $ "generateNTransactions error: " ++ show err
+    (Right _ ) -> putStrLn   "Transactions request was sent"
+
+
+generateTransactionsForever :: WS.Connection -> IO ()
+generateTransactionsForever ch = do
+  result <- runExceptT $ genUnlimTx ch
+  case result of
+    (Left err) -> putStrLn $ "generateTransactionsForever error: " ++ show err
+    (Right _ ) -> putStrLn   "Transactions request was sent"

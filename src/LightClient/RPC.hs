@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module LightClient.RPC (
         newTx,
@@ -19,15 +19,15 @@ module LightClient.RPC (
         Trans(..)
      ) where
 
-import Network.JsonRpc.Client
-import Control.Monad (void)
-import qualified Network.WebSockets as WS
+import           Control.Monad                      (void)
+import           Network.JsonRpc.Client
+import qualified Network.WebSockets                 as WS
 
-import Control.Timeout (timeout)
-import Data.Time.Units (Second)
-import Service.Types
-import Service.Types.PublicPrivateKeyPair hiding (Signature)
-import Service.Types.SerializeJSON ()
+import           Control.Timeout                    (timeout)
+import           Data.Time.Units                    (Second)
+import           Service.Types
+import           Service.Types.PublicPrivateKeyPair hiding (Signature)
+import           Service.Types.SerializeJSON        ()
 
 
 type Result a = RpcResult IO a
@@ -102,7 +102,7 @@ connectionWithTimeOut :: WS.Connection -> Connection IO
 connectionWithTimeOut h input = do
   result <- timeout (5 :: Second) $ connection h input
   case result of
-    Just a -> return a
+    Just a  -> return a
     Nothing -> return (error "Connection error: out of time-out")
 
 -- Connect to a server
@@ -111,4 +111,3 @@ connection handle input = do
     void $ WS.sendTextData handle input
     ans <- WS.receiveData handle
     return (Just ans)
-
