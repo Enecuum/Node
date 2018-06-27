@@ -11,8 +11,6 @@ module LightClient.RPC (
         getChainInfo,
 
 --test
-        genNTx,
-        genUnlimTx,
         newMsgBroadcast,
         newMsgTo,
         loadNewMsg,
@@ -58,12 +56,6 @@ reqChainInfoSig :: Signature () ChainInfo
 reqChainInfoSig = Signature "enq_getChainInfo" ()
 
 --test
-genNTxSig :: Signature (QuantityTx ::: ()) ()
-genNTxSig = Signature "gen_n_tx" ("x" ::: ())
-
-genUnlimTxSig :: Signature () ()
-genUnlimTxSig = Signature "gen_unlim_tx" ()
-
 newMsgBroadcastSig :: Signature (String ::: ()) ()
 newMsgBroadcastSig = Signature "send_message_broadcast" ("x" ::: ())
 
@@ -97,12 +89,6 @@ getChainInfo h = toFunction (connectionWithTimeOut h) reqChainInfoSig
 
 
 --test
-genNTx :: WS.Connection -> Int -> Result ()
-genNTx h = toFunction (connectionWithTimeOut h) genNTxSig
-
-genUnlimTx :: WS.Connection -> Result ()
-genUnlimTx h = toFunction (connectionWithTimeOut h) genUnlimTxSig
-
 newMsgBroadcast :: WS.Connection -> String -> Result ()
 newMsgBroadcast h = toFunction (connectionWithTimeOut h) newMsgBroadcastSig
 

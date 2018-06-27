@@ -10,19 +10,17 @@ module LightClient.CLI (
 
 import System.Environment (getArgs)
 import System.Console.GetOpt
-import System.Exit
 import Data.List.Split (splitOn)
 import Data.List (find)
 import Data.Map (lookup, Map, fromList)
-import Control.Monad (forever, forM_, replicateM_)
-import Control.Monad.Except (runExceptT, liftIO)
-import Control.Exception (SomeException, try)
+import Control.Monad (forM_, replicateM_)
+import Control.Monad.Except (runExceptT)
 import Network.Socket (HostName, PortNumber)
 import qualified Network.WebSockets as WS
 
 import Service.Types
 import Service.Types.PublicPrivateKeyPair
-import Service.System.Directory (getTime, getKeyFilePath)
+import Service.System.Directory (getTime)
 import Service.Network.WebSockets.Client
 import LightClient.RPC
 import System.Random
@@ -164,22 +162,6 @@ getBalance rawKey ch = do
   case result of
     (Left err) -> putStrLn $ "Get Balance error: " ++ show err
     (Right b ) -> putStrLn $ "Balance: " ++ show b
-
-
-generateNTransactions :: Int -> WS.Connection -> IO ()
-generateNTransactions qTx ch = do
-  result <- runExceptT $ genNTx ch qTx
-  case result of
-    (Left err) -> putStrLn $ "generateNTransactions error: " ++ show err
-    (Right _ ) -> putStrLn   "Transactions request was sent"
-
-
-generateTransactionsForever :: WS.Connection -> IO ()
-generateTransactionsForever ch = do
-  result <- runExceptT $ genUnlimTx ch
-  case result of
-    (Left err) -> putStrLn $ "generateTransactionsForever error: " ++ show err
-    (Right _ ) -> putStrLn   "Transactions request was sent"
 
 
 sendMessageBroadcast :: String -> WS.Connection -> IO ()
