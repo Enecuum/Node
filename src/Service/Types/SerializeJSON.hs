@@ -57,9 +57,6 @@ decodeFromText aStr = case B.decode . T.encodeUtf8 $ aStr of
 instance ToJSON Hash
 instance FromJSON Hash
 
-
-
-
 instance ToJSON ByteString where
   toJSON h = String $ decodeUtf8 $ encodeBase58 bitcoinAlphabet h
 
