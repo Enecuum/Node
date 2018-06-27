@@ -41,12 +41,12 @@ args = [
     Option ['P'] ["port"]    (ReqArg (Port . read) "port") "port number"
   , Option ['A'] ["addr"]    (ReqArg Host "hostAddr")  "host address"
 
-  , Option ['W'] ["wallets"] (ReqArg WalletsFile "wallets") "csv file contains wallets"
-  , Option ['T'] ["transactions"] (ReqArg TransactionsFile "transactions") "csv file contains transactions"
-  , Option ['G'] ["gen-keys"] (ReqArg (KeyGen . read) "keysCount") "generate N key pairs"
+  , Option ['F'] ["wallets"] (ReqArg WalletsFile "walletsFile") "csv file contains wallets"
+  , Option ['S'] ["transactions"] (ReqArg TransactionsFile "transactionsFile") "csv file contains transactions should be sent"
+  , Option ['K'] ["gen-keys"] (ReqArg (KeyGen . read) "keysCount") "generate N key pairs"
 
   , Option ['B'] ["get-balance"] (ReqArg (Balance . read) "publicKey") "get balance for public key"
-  , Option ['M'] ["show-my-keys"] (ReqArg (ShowKey . read) "wallets") "show my public keys"
+  , Option ['M'] ["show-my-keys"] (ReqArg ShowKey "wallets") "show my public keys"
 
   , Option ['U'] ["load-block"] (ReqArg (Block . read) "hash") "get keyblock by hash"
   , Option ['O'] ["load-microblock"] (ReqArg (MBlock . read) "hash") "get microblock by hash"
@@ -67,7 +67,6 @@ control :: IO ()
 control = do
     argv   <- getArgs
     case getOpt Permute args argv of
-      (_, _, err)    -> ioError (userError (concat err ++ usageInfo "Usage: enq-cli [OPTION...]" args))
       (flags, _, []) -> do 
         addr <- case find isHost flags of
                  Just (Host a) -> return a
@@ -78,6 +77,7 @@ control = do
                  Nothing       -> return 1555
         
         dispatch (filter (\e -> not (isPort e || isHost e)) flags) addr port
+      (_, _, err)    -> ioError (userError (concat err ++ usageInfo "Usage: enq-cli [OPTION...]" args))
 
 dispatch :: [Flag] -> HostName -> PortNumber -> IO ()
 dispatch flags h p =
@@ -121,7 +121,7 @@ showPublicKey f = do
 genKeys :: Int -> IO ()
 genKeys n = replicateM_ n $ do
   (KeyPair aPublicKey aPrivateKey) <- generateNewRandomAnonymousKeyPair
-  putStrLn $ show aPublicKey ++ ";" ++ show aPrivateKey ++ "\n"
+  putStrLn $ show aPublicKey ++ ";" ++ show aPrivateKey
 
 sendTrans :: String -> String -> WS.Connection -> IO ()
 sendTrans transactionsFile walletsFile ch = do
@@ -155,7 +155,7 @@ getSavedKeyPairs f = do
   result <- readFile f
   let rawKeys = lines result
   let keys = map (splitOn ";") rawKeys
-  let pairs = map (\x -> (,) (read (x !! 0) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
+  let pairs = map (\[x,y] -> (read x :: PublicKey, read y :: PrivateKey)) keys
   return pairs
 
 getBalance :: PublicKey -> WS.Connection -> IO ()
