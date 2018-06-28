@@ -19,6 +19,7 @@ import              System.Clock
 import qualified    Data.Set                        as S
 import qualified    Data.ByteString                 as B
 import qualified    Data.Bimap                      as BI
+import qualified    Data.Aeson                      as A
 import              Data.Serialize
 import              Data.Monoid
 import qualified    Data.Map                        as M
@@ -173,6 +174,7 @@ data NodeBaseData = NodeBaseData {
     ,   nodeBaseDataBroadcastNum        :: Int
     ,   nodeBaseDataHostAddress         :: Maybe HostAddress
     ,   nodeBaseDataMicroblockChan      :: C.Chan Microblock
+    ,   nodeBaseDataValueChan           :: C.Chan A.Value
     ,   nodeBaseDataMyNodePosition      :: Maybe MyNodePosition
     ,   nodeBaseDataShardingChan        :: MaybeChan N.ShardingNodeAction
     ,   nodeBaseDataIAmBroadcast        :: Bool
@@ -188,12 +190,13 @@ makeNodeBaseData
     ->  BootNodeList
     ->  C.Chan Answer
     ->  C.Chan Microblock
+    ->  C.Chan A.Value
     ->  PortNumber
     ->  InChan InfoMsg
     ->  C.Chan FileActorRequest
     ->  NodeBaseData
-makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan = NodeBaseData
-    aExitChan M.empty M.empty aList aAnswerChan 0 Nothing aMicroblockChan
+makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aVlalueChan = NodeBaseData
+    aExitChan M.empty M.empty aList aAnswerChan 0 Nothing aMicroblockChan aVlalueChan
     Nothing Nothing False
 
 -- | TODO: shoud be refactord: reduce keys count.
@@ -281,6 +284,7 @@ class ToManagerData a where
     toManagerData
         :: C.Chan Transaction
         -> C.Chan Microblock
+        -> C.Chan A.Value
         -> C.Chan ExitMsg
         -> C.Chan Answer
         -> InChan InfoMsg
@@ -291,8 +295,8 @@ class ToManagerData a where
         ->  a
 
 instance ToManagerData ManagerNodeData where
-    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aInfoChan aFileRequestChan aList aNodeConfig aOutPort = ManagerNodeData
-        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aOutPort aInfoChan aFileRequestChan)
+    toManagerData aTransactionChan aMicroblockChan aVlalueChan aExitChan aAnswerChan aInfoChan aFileRequestChan aList aNodeConfig aOutPort = ManagerNodeData
+        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aVlalueChan aOutPort aInfoChan aFileRequestChan)
             aTransactionChan BI.empty BI.empty S.empty BI.empty
 
 

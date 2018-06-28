@@ -49,25 +49,32 @@ startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
     createDirectoryIfMissing False "data"
 
     managerChan@(inChanManager, _) <- newChan (2^7)
-    aMicroblockChan <- C.newChan
+    aMicroblockChan  <- C.newChan
+    aVlalueChan      <- C.newChan
     aTransactionChan <- C.newChan
     config  <- readNodeConfig
     bnList  <- readBootNodeList $ bootNodeList buildConf
     aFileRequestChan <- C.newChan
     void $ C.forkIO $ startFileServer aFileRequestChan
     let portNumber = extConnectPort buildConf
-    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aFileRequestChan bnList config portNumber
+    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan aVlalueChan exitCh answerCh infoCh aFileRequestChan bnList config portNumber
     startServerActor inChanManager portNumber
-    void $ C.forkIO $ microblockProc descrDB aMicroblockChan infoCh
+    void $ C.forkIO $ microblockProc descrDB aMicroblockChan aVlalueChan infoCh
     void $ C.forkIO $ manager managerChan md
     void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aFileRequestChan
     return managerChan
 
 
-microblockProc :: DBPoolDescriptor -> C.Chan Microblock -> InChan InfoMsg -> IO b
-microblockProc descriptor aMicroblockCh aInfoCh = forever $ do
+microblockProc :: DBPoolDescriptor -> C.Chan Microblock -> C.Chan A.Value -> InChan InfoMsg -> IO ()
+microblockProc descriptor aMicroblockCh aVlalueChan aInfoCh = do
+    void $ C.forkIO $ forever $ do
         aMicroblock <- C.readChan aMicroblockCh
         addMicroblockToDB descriptor aMicroblock aInfoCh
+    forever $ do
+        aVlalue <- C.readChan aVlalueChan
+        addValueToDB descriptor aVlalue aInfoCh
+
+addValueToDB = undefined
 
 
 readNodeConfig :: IO NodeConfig

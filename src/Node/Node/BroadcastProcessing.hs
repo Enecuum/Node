@@ -99,6 +99,8 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
                         guard $ aNodeType == All || aNode^.ppType == aNodeType
                         return $ aNode^.ppChan
 
+                C.writeChan (aData^.valueChan) undefined
+
                 forM_ aFilteredNode $ \aChan ->
                     writeChan aChan $ MsgBroadcastMsg aBroadcastMsg aIdFrom
 
