@@ -27,7 +27,7 @@ socketActor aConnect = do
   where
     sender :: IO ()
     sender = forever $ do
-        threadDelay 3000
+        threadDelay 1000
         WS.sendBinaryData aConnect ("{\"tag\": \"Request\", \"type\": \"Broadcast\", \"recipientType\" : \"PoA\", \"msg\" : { \"str\": \"000000000\"}}" :: T.Text)
 
     receiver :: Int -> IO ()

@@ -100,7 +100,8 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
                             return $ aNode^.ppChan
 
                     forM_ aFilteredNode $ \aChan ->
-                        writeChan aChan $ MsgBroadcastMsg aBroadcastMsg aIdFrom
+                        tryWriteChan aChan $ MsgBroadcastMsg aBroadcastMsg aIdFrom
+
 
 
             BroadcastPPMsgId aBroadcastMsg _ (IdTo aIdPPTo) ->
