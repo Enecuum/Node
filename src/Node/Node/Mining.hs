@@ -140,7 +140,7 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
             makeAndSendTo aData (ppIdToNodePosition aPPId) aRequest
 
         BroadcastRequestFromPP aByteString aIdFrom@(IdFrom aPPId) aNodeType ->
-            whenJust (aData^.ppNodes.at aPPId) $ \aNode -> do
+            void $ C.forkIO $ whenJust (aData^.ppNodes.at aPPId) $ \aNode -> do
                 let aMessage = BroadcastPPMsg (aNode^.ppType) aByteString aNodeType aIdFrom
                 sendBroadcast aMd aMessage
                 processingOfBroadcast aMd aMessage
