@@ -174,4 +174,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
 
 -- TODO class sendMsgToNetLvl
 sendMsgToNetLvlFromPP :: ManagerMsg a => InChan a -> MsgToMainActorFromPP -> IO ()
-sendMsgToNetLvlFromPP aChan aMsg = writeChan aChan $ msgFromPP aMsg
+sendMsgToNetLvlFromPP aChan aMsg = do
+    aOk <- tryWriteChan aChan $ msgFromPP aMsg
+    C.threadDelay 10000
+    unless aOk $ sendMsgToNetLvlFromPP aChan aMsg

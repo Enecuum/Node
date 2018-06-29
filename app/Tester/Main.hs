@@ -6,6 +6,7 @@ import Service.Network.WebSockets.Client
 import System.Environment (getArgs)
 import Control.Monad
 import Control.Concurrent.Async
+import Control.Concurrent
 import qualified Data.Text as T
 
 import qualified    Network.WebSockets                  as WS
@@ -25,7 +26,8 @@ socketActor aConnect = do
     void $ race sender (receiver 0)
   where
     sender :: IO ()
-    sender = forever $
+    sender = forever $ do
+        threadDelay 3000
         WS.sendBinaryData aConnect ("{\"tag\": \"Request\", \"type\": \"Broadcast\", \"recipientType\" : \"PoA\", \"msg\" : { \"str\": \"000000000\"}}" :: T.Text)
 
     receiver :: Int -> IO ()
