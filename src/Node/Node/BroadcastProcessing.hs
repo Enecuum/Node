@@ -89,10 +89,10 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
             -- send network received PP messages
             BroadcastPPMsg aSenderType aBroadcastMsg aNodeType aIdFrom@(IdFrom aPPId) -> do
                 aTime <- getTime Realtime
-                void $ C.forkIO $ do
-                    when (aSenderType == PoW) $
-                        modifyIORef aMd $ poWNodes %~ BI.insert aTime aPPId
+                when (aSenderType == PoW) $
+                    modifyIORef aMd $ poWNodes %~ BI.insert aTime aPPId
 
+                void $ C.forkIO $ do
                     let aFilteredNode :: [InChan NNToPPMessage]
                         aFilteredNode = do
                             aNode <- snd <$> M.toList (aData^.ppNodes)
