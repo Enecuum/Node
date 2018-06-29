@@ -89,18 +89,18 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
             -- send network received PP messages
             BroadcastPPMsg aSenderType aBroadcastMsg aNodeType aIdFrom@(IdFrom aPPId) -> do
                 aTime <- getTime Realtime
+                void $ C.forkIO $ do
+                    when (aSenderType == PoW) $
+                        modifyIORef aMd $ poWNodes %~ BI.insert aTime aPPId
 
-                when (aSenderType == PoW) $
-                    modifyIORef aMd $ poWNodes %~ BI.insert aTime aPPId
+                    let aFilteredNode :: [InChan NNToPPMessage]
+                        aFilteredNode = do
+                            aNode <- snd <$> M.toList (aData^.ppNodes)
+                            guard $ aNodeType == All || aNode^.ppType == aNodeType
+                            return $ aNode^.ppChan
 
-                let aFilteredNode :: [InChan NNToPPMessage]
-                    aFilteredNode = do
-                        aNode <- snd <$> M.toList (aData^.ppNodes)
-                        guard $ aNodeType == All || aNode^.ppType == aNodeType
-                        return $ aNode^.ppChan
-
-                forM_ aFilteredNode $ \aChan ->
-                    writeChan aChan $ MsgBroadcastMsg aBroadcastMsg aIdFrom
+                    forM_ aFilteredNode $ \aChan ->
+                        writeChan aChan $ MsgBroadcastMsg aBroadcastMsg aIdFrom
 
 
             BroadcastPPMsgId aBroadcastMsg _ (IdTo aIdPPTo) ->
