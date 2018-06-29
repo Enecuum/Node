@@ -1,30 +1,35 @@
-{-# LANGUAGE ScopedTypeVariables, LambdaCase #-}
-{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE PackageImports      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Node.Lib where
 
-import              Control.Monad
-import              Control.Exception
-import qualified    Control.Concurrent          as C
-import qualified    Data.ByteString.Lazy        as L
-import              Data.IORef
-import qualified    Data.Aeson as A
-import              Lens.Micro
-import              Service.Types
-import              Network.Socket (tupleToHostAddress)
-import              Control.Concurrent.Chan.Unagi.Bounded
-import Node.Node.Types
-import Node.Node.Config.Make
+import qualified Control.Concurrent                    as C
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Exception
+import           Control.Monad
+import qualified Data.Aeson                            as A
+import qualified Data.ByteString.Lazy                  as L
+import           Data.IORef
+import           Lens.Micro
+import           Network.Socket                        (tupleToHostAddress)
+import           Node.Node.Config.Make
+import           Node.Node.Types
+import           Service.Types
 
-import Node.Node.Base.Server
-import Service.Network.Base
-import System.Environment
-import Service.InfoMsg (InfoMsg)
-import Node.Data.Key
-import Node.FileDB.FileServer
+import           Node.Data.Key
+import           Node.FileDB.FileServer
+import           Node.Node.Base.Server
+import           Service.InfoMsg                       (InfoMsg)
+import           Service.Network.Base
+import           System.Environment
 --tmp
-import System.Directory (createDirectoryIfMissing)
-import Service.Transaction.Common (addMicroblockToDB, DBPoolDescriptor(..))
-
+import           Node.Data.GlobalLoging
+import           Service.InfoMsg                       (InfoMsg (..),
+                                                        LogingTag (..),
+                                                        MsgType (..))
+import           Service.Transaction.Common            (DBPoolDescriptor (..),
+                                                        addMicroblockToDB)
+import           System.Directory                      (createDirectoryIfMissing)
 
 -- code examples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html
@@ -74,7 +79,10 @@ microblockProc descriptor aMicroblockCh aVlalueChan aInfoCh = do
         aVlalue <- C.readChan aVlalueChan
         addValueToDB descriptor aVlalue aInfoCh
 
-addValueToDB = undefined
+-- addValueToDB = undefined
+addValueToDB :: DBPoolDescriptor -> A.Value -> InChan InfoMsg -> IO ()
+addValueToDB desc aValue aInfoChan = do --undefined
+  writeLog aInfoChan [BDTag] Info ("A.Value is " ++ show aValue)
 
 
 readNodeConfig :: IO NodeConfig

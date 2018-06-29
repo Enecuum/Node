@@ -1,42 +1,41 @@
-{-# LANGUAGE
-        OverloadedStrings
-    ,   MultiWayIf
-    ,   MultiParamTypeClasses
-    ,   ViewPatterns
-    ,   TypeSynonymInstances
-    ,   FlexibleContexts
-    ,   TypeFamilies
-    ,   FlexibleInstances
-  #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiWayIf            #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE ViewPatterns          #-}
 module Node.Node.BroadcastProcessing (
         BroadcastProcessing(..)
     ,   microblockToShard
   ) where
 
 --
-import              Data.IORef
-import qualified    Data.Map as M
-import qualified    Data.Bimap as BI
-import              Lens.Micro
-import              Lens.Micro.Mtl()
-import qualified    Control.Concurrent as C
-import              Control.Concurrent.Chan.Unagi.Bounded
-import              Control.Monad.Extra
-import              System.Clock
+import qualified Control.Concurrent                    as C
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Monad.Extra
+import qualified Data.Aeson                            as A
+import qualified Data.Bimap                            as BI
+import           Data.IORef
+import qualified Data.Map                              as M
+import           Lens.Micro
+import           Lens.Micro.Mtl                        ()
+import           System.Clock
 
-import              PoA.Types
-import              Service.Types
-import              Service.InfoMsg
-import              Node.Node.Types
-import              Node.Data.NetPackage
+import           Node.Data.NetPackage
+import           Node.Node.Types
+import           PoA.Types
+import           Service.InfoMsg
+import           Service.Types
 
-import qualified    Sharding.Types.Node as T
-import              Node.Node.Processing
-import              Sharding.Types.ShardTypes
-import              Node.Data.GlobalLoging
-import              Node.Data.Key
-import              Node.FileDB.FileServer
-import              Service.Network.Base
+import           Node.Data.GlobalLoging
+import           Node.Data.Key
+import           Node.FileDB.FileServer
+import           Node.Node.Processing
+import           Service.Network.Base
+import qualified Sharding.Types.Node                   as T
+import           Sharding.Types.ShardTypes
 
 
 -- Handling received broadcast messages and change internal state based on it.
@@ -99,7 +98,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
                         guard $ aNodeType == All || aNode^.ppType == aNodeType
                         return $ aNode^.ppChan
 
-                C.writeChan (aData^.valueChan) undefined
+                C.writeChan (aData^.valueChan) (A.toJSON (MsgBroadcastMsg aBroadcastMsg (IdFrom aPPId)))
 
                 forM_ aFilteredNode $ \aChan ->
                     writeChan aChan $ MsgBroadcastMsg aBroadcastMsg aIdFrom

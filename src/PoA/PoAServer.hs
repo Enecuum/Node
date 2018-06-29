@@ -1,34 +1,36 @@
-{-# LANGUAGE ScopedTypeVariables, OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module PoA.PoAServer (
         servePoA
     ,   serverPoABootNode
   )  where
 
 
-import              Node.Data.NetPackage
-import              Control.Monad (forM_, void, forever, unless, when)
-import qualified    Network.WebSockets                  as WS
-import              Service.Network.Base
-import              Service.Network.WebSockets.Server
-import qualified    Control.Concurrent.Chan as C
-import              Control.Concurrent.Chan.Unagi.Bounded
-import              Node.Node.Types
-import              Service.InfoMsg as I
-import              Service.Types
-import              System.Random.Shuffle
-import              Data.Aeson as A
-import              Control.Exception
-import              Node.Data.GlobalLoging
-import              PoA.Types
-import              Control.Concurrent.MVar
-import qualified    Control.Concurrent as C
-import              Node.FileDB.FileServer
-import              PoA.Pending
+import qualified Control.Concurrent                    as C
+import qualified Control.Concurrent.Chan               as C
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Concurrent.MVar
+import           Control.Exception
+import           Control.Monad                         (forM_, forever, unless,
+                                                        void, when)
+import           Data.Aeson                            as A
+import qualified Network.WebSockets                    as WS
+import           Node.Data.GlobalLoging
+import           Node.Data.NetPackage
+import           Node.FileDB.FileServer
+import           Node.Node.Types
+import           PoA.Pending
+import           PoA.Types
+import           Service.InfoMsg                       as I
+import           Service.Network.Base
+import           Service.Network.WebSockets.Server
+import           Service.Types
+import           System.Random.Shuffle
 
-import              Control.Concurrent.Async
-import              Node.Data.Key
-import              Data.Maybe()
-
+import           Control.Concurrent.Async
+import qualified Data.ByteString.Char8                 as BC
+import           Data.Maybe                            ()
+import           Node.Data.Key
 
 serverPoABootNode :: PortNumber -> InChan InfoMsg -> C.Chan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
@@ -169,7 +171,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
                 -- TODO: Include ID if exist.
                 writeLog aInfoChan [ServePoATag] Warning $
                     "Broken message from PP " ++ show aMsg ++ " " ++ a
-                when aOk $ WS.sendTextData aConnect $ "{msgBroken: " ++ show aMsg ++ "}"
+                when aOk $ WS.sendTextData aConnect $ BC.pack ("{msgBroken: " ++ show aMsg ++ "}")
                 when aOk $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
 
 -- TODO class sendMsgToNetLvl
