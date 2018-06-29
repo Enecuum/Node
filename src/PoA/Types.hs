@@ -181,6 +181,7 @@ myTextUnhex aString = fromString <$> aUnxeded
         aNewString :: String
         aNewString = T.unpack aString
 
+
 instance FromJSON PPToNNMessage where
     parseJSON (Object aMessage) = do
         aTag  :: T.Text <- aMessage .: "tag"

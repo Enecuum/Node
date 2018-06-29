@@ -169,7 +169,8 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
                 -- TODO: Include ID if exist.
                 writeLog aInfoChan [ServePoATag] Warning $
                     "Broken message from PP " ++ show aMsg ++ " " ++ a
-                when (not aOk) $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
+                when aOk $ WS.sendTextData aConnect $ "{msgBroken: " ++ show aMsg ++ "}"
+                when aOk $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
 
 -- TODO class sendMsgToNetLvl
 sendMsgToNetLvlFromPP :: ManagerMsg a => InChan a -> MsgToMainActorFromPP -> IO ()
