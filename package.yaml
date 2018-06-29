@@ -43,7 +43,7 @@ dependencies:
 - time-units
 - network
 - websockets
-- unagi-chan    
+- unagi-chan
 - aeson
 - cereal
 - mtl
@@ -134,6 +134,14 @@ executables:
   LightClient-exe:
     main:                Main.hs
     source-dirs:         app/LightClient
+    ghc-options:
+    - -Wall
+    - -O2
+    dependencies:
+    - Node
+  Tester-exe:
+    main:                Main.hs
+    source-dirs:         app/Tester
     ghc-options:
     - -Wall
     - -O2
