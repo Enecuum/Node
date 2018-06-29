@@ -40,8 +40,6 @@ import              Data.ByteString.Base58
 import              Math.NumberTheory.Moduli
 import Data.Int (Int64)
 
-import Text.Read
-
 type Amount = Int64
 
 deriving instance Ord ECDSA.Signature
@@ -96,11 +94,7 @@ instance Read PublicKey where
     readsPrec _ value = [(publicKey256k1 $ base58ToInteger value,[])]
 
 instance Read PrivateKey where
-    readPrec =
-        parens
-        ( do (Ident s) <- lexP
-             return $ PrivateKey256k1 $  base58ToInteger s
-        )
+    readsPrec _ value = [(PrivateKey256k1 $ base58ToInteger value,[])]
 
 instance Show PublicKey where
   show a = integerToBase58 $ fromPublicKey256k1 a
