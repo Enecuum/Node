@@ -14,6 +14,7 @@ import qualified    Control.Concurrent.Chan as C
 import              Control.Concurrent.Chan.Unagi.Bounded
 import              Node.Node.Types
 import              Service.InfoMsg as I
+import qualified    Data.Text as T
 import              Service.Types
 import              System.Random.Shuffle
 import              Data.Aeson as A
@@ -168,7 +169,8 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 -- TODO: Include ID if exist.
                 writeLog aInfoChan [ServePoATag] Warning $
                     "Broken message from PP " ++ show aMsg ++ " " ++ a
-                unless aOk $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
+                WS.sendTextData aConnect ("{\"error\":\"broken message.\"}" :: T.Text)
+                when aOk $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
 
 -- TODO class sendMsgToNetLvl
 sendMsgToNetLvlFromPP :: ManagerMsg a => InChan a -> MsgToMainActorFromPP -> IO ()

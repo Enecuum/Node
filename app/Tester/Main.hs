@@ -25,10 +25,11 @@ socketActor aConnect = do
     void $ race sender (receiver 0)
   where
     sender :: IO ()
-    sender = forever $ WS.sendBinaryData aConnect ("{\"tag\": \"Request\", \"type\": \"Broadcast\", \"recipientType\" : \"All\", \"msg\" : { \"str\": \"000000000\"}}" :: T.Text)
+    sender = forever $
+        WS.sendBinaryData aConnect ("{\"tag\": \"Request\", \"type\": \"Broadcast\", \"recipientType\" : \"PoA\", \"msg\" : { \"str\": \"000000000\"}}" :: T.Text)
 
     receiver :: Int -> IO ()
     receiver i = do
         void $ WS.receiveDataMessage aConnect
-        when (i `mod` 10000 == 0) $ print i
+        print i
         receiver $ i + 1
