@@ -57,25 +57,29 @@ data MicroblockV1 = MicroblockV1{
                 deriving (Eq, Generic, Ord, Show)
 
 data MicroblockAPI = MicroblockAPI {
-    _keyBlockAPI :: ByteString, -- hash of key-block
-    _signAPI :: Signature,  -- signature for {K_hash, [Tx],}
-    _teamKeysAPI :: [PublicKey], -- for reward
-    _transactionsAPI :: [Transaction],
-    _numOfBlockAPI   :: Integer
+     _prevBlockAPI    :: ByteString  -- hash of the previous microblock if exists
+    ,_nextBlockAPI    :: ByteString  -- hash of the next microblock if exists
+    ,_keyBlockAPI     :: ByteString  -- hash of key-block
+    ,_signAPI         :: Signature   -- signature for {K_hash, [Tx],}
+    ,_teamKeysAPI     :: [PublicKey] -- for reward
+    ,_publisherAPI    :: PublicKey
+    ,_transactionsAPI :: [TransactionAPI]
+    ,_numOfBlockAPI   :: Integer
   }
   deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize MicroblockAPI
 
-data Macroblock = Macroblock {
-    _prevBlock :: ByteString
-  ,  _difficulty :: Integer
-  ,  _height :: Integer
-  ,  _solver :: ByteString
-  ,  _reward :: Integer
-  ,  _txs_cnt :: Integer
-  ,  _mblocks :: [ByteString]
+data MacroblockAPI = MacroblockAPI {
+     _prevKBlockAPI  :: ByteString
+  ,  _nextKBlockAPI  :: ByteString
+  ,  _difficultyAPI :: Integer
+  ,  _heightAPI     :: Integer
+  ,  _solverAPI     :: ByteString
+  ,  _rewardAPI     :: Integer
+  ,  _txsCntAPI     :: Integer
+  ,  _mblocksAPI    :: [ByteString]
 } deriving (Eq, Generic, Ord, Read, Show)
-instance Serialize Macroblock
+instance Serialize MacroblockAPI
 
 data Microblock = Microblock{
     _keyBlock :: ByteString, -- hash of key-block
@@ -87,6 +91,12 @@ data Microblock = Microblock{
   deriving (Eq, Generic, Ord, Read, Show)
 
 instance Serialize Microblock
+
+data TransactionAPI = TransactionAPI {
+    _txAPI     :: Transaction
+  , _txHashAPI :: ByteString
+  } deriving (Generic, Show, Eq, Ord, Read)
+instance Serialize TransactionAPI
 
 data Transaction = Transaction {
   _owner     :: PublicKey,
