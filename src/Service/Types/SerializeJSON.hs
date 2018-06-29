@@ -18,11 +18,11 @@ import Service.Types
 import Control.Monad
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base64 as B
-import Data.Maybe (fromJust)
 import Data.Text (Text, pack, unpack)
-import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import           Data.ByteString.Base58
 import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
+
+import           Data.ByteString.Conversion
+
 
 instance FromJSON Trans
 instance ToJSON   Trans
@@ -53,15 +53,25 @@ decodeFromText aStr = case B.decode . T.encodeUtf8 $ aStr of
     Right a -> return a
     Left _  -> mzero
 
+intToBase64Text :: Integer -> Text
+intToBase64Text i = encodeToText $ toByteString' i
+
+base64TextToInt :: (MonadPlus m) => Text -> m Integer
+base64TextToInt b = do
+     bs <- decodeFromText b 
+     case fromByteString bs of
+       Just i -> return i
+       _      -> mzero
+           
 
 instance ToJSON Hash
 instance FromJSON Hash
 
 instance ToJSON ByteString where
-  toJSON h = String $ decodeUtf8 $ encodeBase58 bitcoinAlphabet h
+  toJSON h = String $ encodeToText h
 
 instance FromJSON ByteString where
-  parseJSON (String s) = return $ fromJust $ decodeBase58 bitcoinAlphabet $ encodeUtf8 s
+  parseJSON (String s) = decodeFromText s
   parseJSON _          = error "Wrong object format"
 
 instance ToJSON TransactionInfo
@@ -84,15 +94,15 @@ instance FromJSON MicroblockV1 where
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [
-    "sign_r" .= ECDSA.sign_r t,
-    "sign_s" .= ECDSA.sign_s t ]
+    "sign_r" .= intToBase64Text  (ECDSA.sign_r t),
+    "sign_s" .= intToBase64Text  (ECDSA.sign_s t) ]
 
 instance FromJSON ECDSA.Signature where
- parseJSON (Object v) =
-    ECDSA.Signature <$> v .: "sign_r"
-                    <*> v .: "sign_s"
- parseJSON inv        = typeMismatch "Signature" inv
-
+  parseJSON (Object v) = do
+    s_r <- base64TextToInt =<< v .: "sign_r"
+    s_s <- base64TextToInt =<< v .: "sign_s"
+    return $ ECDSA.Signature s_r s_s  
+  parseJSON inv        = typeMismatch "Signature" inv
 
 
 instance ToJSON Transaction where

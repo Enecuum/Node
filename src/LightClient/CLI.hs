@@ -59,7 +59,7 @@ args = [
   , Option ['W'] ["load-wallet"] (ReqArg (Wallet . read) "publicKey") "get all transactions for wallet"
   , Option ['I'] ["chain-info"] (NoArg Info) "Get total chain info"
 -- test
-  , Option ['A'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
+  , Option ['R'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
   , Option ['T'] ["send-message-to"] (ReqArg (SendMessageTo . read) "nodeId message") "Send message to the node"
   , Option ['L'] ["load-new-messages"] (NoArg LoadMessages) "Load new recieved messages"
 
