@@ -47,7 +47,8 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                         writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request of connections."
                         aShuffledRecords <- shuffleM =<< getRecords aFileServerChan
                         let aConnects = snd <$> take 5 aShuffledRecords
-                        WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
+                        WS.sendTextData aConnect $ A.encode $ ResponseConnects
+                            ((\(Connect ip _) -> Connect ip 1554) <$> aConnects)
                         writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
                     _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
                         "Broken message from PP " ++ show aMsg
@@ -133,7 +134,8 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                     aShuffledRecords <- shuffleM =<< getRecords aFileServerChan
                     let aConnects = snd <$> take 5 aShuffledRecords
                     writeLog aInfoChan [ServePoATag] Info $ "Send connections " ++ show aConnects
-                    WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
+                    WS.sendTextData aConnect $ A.encode $ ResponseConnects
+                        ((\(Connect ip _) -> Connect ip 1554) <$> aConnects)
 
                 RequestPoWList
                     | not aOk -> do
