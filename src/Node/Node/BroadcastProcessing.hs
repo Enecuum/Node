@@ -88,8 +88,8 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
         case aMsg of
             -- send network received PP messages
             BroadcastPPMsg aSenderType aBroadcastMsg aNodeType aIdFrom@(IdFrom aPPId) -> do
-                aTime <- getTime Realtime
-                when (aSenderType == PoW) $
+                when (aSenderType == PoW) $ do
+                    aTime <- getTime Realtime
                     modifyIORef aMd $ poWNodes %~ BI.insert aTime aPPId
 
                 void $ C.forkIO $ do
