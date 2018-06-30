@@ -144,7 +144,6 @@ instance ToJSON MicroblockAPI where
             "prev_block"   .= _prevBlockAPI bl
          ,  "next_block"   .= _nextBlockAPI bl 
          ,  "k_block"      .= _keyBlockAPI bl
-         ,  "index"        .= _numOfBlockAPI bl
          ,  "team"         .= _teamKeysAPI bl
          ,  "publisher"    .= _publisherAPI bl
          ,  "sign"         .= _signAPI bl
@@ -161,7 +160,6 @@ instance FromJSON MicroblockAPI where
                <*> o .: "team"
                <*> o .: "publisher"
                <*> o .: "transactions"
-               <*> o .: "index"
     parseJSON inv         = typeMismatch "Microblock" inv
 
 

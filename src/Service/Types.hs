@@ -64,7 +64,6 @@ data MicroblockAPI = MicroblockAPI {
     ,_teamKeysAPI     :: [PublicKey] -- for reward
     ,_publisherAPI    :: PublicKey
     ,_transactionsAPI :: [TransactionAPI]
-    ,_numOfBlockAPI   :: Integer
   }
   deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize MicroblockAPI
