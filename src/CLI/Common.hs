@@ -37,11 +37,12 @@ import           System.Random                         (randomRIO)
 import           Node.Node.Types
 import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
-import           Service.Transaction.Common            as B (getAllTransactionsDB,
+import           Service.Transaction.Common            as B (DBPoolDescriptor (..),
+                                                             getAllTransactionsDB,
                                                              getBalanceForKey,
                                                              getBlockByHashDB,
+                                                             getKeyBlockByHashDB,
                                                              getTransactionByHashDB)
-import           Service.Transaction.Storage           (DBPoolDescriptor (..))
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
@@ -53,6 +54,7 @@ data CLIException = WrongKeyOwnerException
                   | NotImplementedException -- test
                   | NoSuchPublicKeyInDB
                   | NoSuchMicroBlockDB
+                  | NoSuchMacroBlockDB
                   | NoSuchTransactionDB
                   | OtherException
   deriving Show
@@ -81,8 +83,11 @@ getBlockByHash db hash _ = try $ do
 
 
 getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result MacroblockAPI)
-getKeyBlockByHash _ _ _ = return $ Left NotImplementedException
- --return =<< Right <$> B.getBlockByHashDB db hash
+getKeyBlockByHash db hash _ = try $ do
+  mb <- B.getKeyBlockByHashDB db hash
+  case mb of
+    Nothing -> throw NoSuchMacroBlockDB
+    Just m  -> return m
 
 
 getChainInfo :: ManagerMiningMsg a => InChan a -> IO (Result ChainInfo)

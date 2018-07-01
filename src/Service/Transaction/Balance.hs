@@ -19,9 +19,12 @@ import           Data.Aeson
 import           Data.Aeson.Types                      (parseMaybe)
 import qualified Data.ByteString.Char8                 as BC
 import           Data.Default                          (def)
+import           Data.Either
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
+import           Data.List                             (sortBy)
 import           Data.Maybe
+import           Data.Ord                              (comparing)
 import           Data.Pool
 import qualified Data.Serialize                        as S (Serialize, decode,
                                                              encode)
@@ -61,9 +64,21 @@ updateBalanceTable ht (Transaction fromKey toKey am _ _ _ _) = do
                                                   H.insert ht toKey (balanceTo + am)
                                           else do return ()
 
-
-getTxsMicroblock :: Microblock -> [Transaction]
-getTxsMicroblock (Microblock _ _ _ txs _) = txs
+-- getTxsMicroblock = undefined
+getTxsMicroblock :: DBPoolDescriptor -> Microblock -> IO [Transaction]
+getTxsMicroblock db (Microblock _ _ _ txHashes _) = do
+  let fun kTransactionHash = (\db -> Rocks.get db Rocks.defaultReadOptions kTransactionHash)
+  maybeTxUntiped  <- mapM (\k -> withResource (poolTransaction db) (fun k)) txHashes
+  let txDoesNotExist = filter (\t -> t /= Nothing) maybeTxUntiped
+  if null txDoesNotExist
+    then error "Some of transactions can not be found"
+    else do
+         let txUntiped = map fromJust (filter (isJust) maybeTxUntiped)
+             extract t = case S.decode t :: Either String TransactionInfo of
+                            Left _  -> error "Can not decode TransactionInfo"
+                            Right r -> r
+             tx = map (_tx . extract) txUntiped
+         return tx
 
 
 getBalanceOfKeys :: Pool Rocks.DB -> [Transaction] -> IO BalanceTable
@@ -94,7 +109,7 @@ getBalanceOfKeys db tx = do
 
 runLedger :: DBPoolDescriptor -> InChan InfoMsg -> Microblock -> IO ()
 runLedger db aInfoChan m = do
-    let txs = getTxsMicroblock m
+    txs <- getTxsMicroblock db m
     ht      <- getBalanceOfKeys (poolLedger db) txs
     mapM_ (updateBalanceTable ht) txs
     writeLedgerDB (poolLedger db) aInfoChan ht
@@ -141,7 +156,7 @@ checkMacroblock db aInfoChan keyBlockHash blockHash = do
 addMicroblockToDB :: DBPoolDescriptor -> Microblock -> InChan InfoMsg -> IO ()
 addMicroblockToDB db m aInfoChan =  do
 -- FIX: verify signature
-    let txs = getTxsMicroblock m
+    txs <- getTxsMicroblock db m
     let microblockHash = rHash m
     writeLog aInfoChan [BDTag] Info ("New Microblock came" ++ show(microblockHash))
 
@@ -159,7 +174,7 @@ addMicroblockToDB db m aInfoChan =  do
         let aMacroblock = fromJust macroblock
         let microblockHashes = tail $ _mblocks aMacroblock
         mb <- mapM (\h -> getMicroBlockByHashDB db (Hash h))  microblockHashes
-        let realMb = map fromJust (filter (isJust) mb) ++ [m]
+        let realMb = sortBy (comparing _sign) $ map fromJust (filter (isJust) mb) ++ [m]
 
         writeLog aInfoChan [BDTag] Info ("Start calculate Ledger "  ++ show (length realMb))
         mapM_ (runLedger db aInfoChan) realMb

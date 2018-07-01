@@ -11,6 +11,7 @@ import           Control.Monad.Trans.State           (StateT, evalStateT, get,
                                                       put)
 import           System.Random                       (randomRIO)
 -- import Service.Types (Time, Microblock(..),Transaction(..))
+import           Service.Transaction.Storage         (rHash)
 import           Service.Types                       (Microblock (..),
                                                       MicroblockV1 (..),
                                                       Transaction)
@@ -18,8 +19,6 @@ import           Service.Types.PublicPrivateKeyPair  (KeyPair (..),
                                                       PublicKey (..),
                                                       generateNewRandomAnonymousKeyPair,
                                                       getSignature)
--- import Data.Aeson as A
---import Service.Transaction.Common (runLedger, connectOrRecoveryConnect, addMicroblockToDB)
 
 type HashOfMicroblock = BC.ByteString
 
@@ -87,9 +86,10 @@ genMicroBlock quantityOfTx = do
   keys <- replicateM 64 generateNewRandomAnonymousKeyPair
   let teamKeys = map (\(KeyPair pub _) -> pub) keys
   sign  <- getSignature signerPrivateKey (unlines (map show tx))
+  let txHashes = map rHash tx
   let mb = Microblock {_keyBlock = BC.pack "321",
                        _sign = sign,
                        _teamKeys = teamKeys,
-                       _transactions = tx,
+                       _transactions = txHashes,
                        _numOfBlock = 123}
   return mb

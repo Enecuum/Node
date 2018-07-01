@@ -200,12 +200,34 @@ getMicroBlockByHashDB db mHash = do
 getBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe MicroblockAPI)
 getBlockByHashDB db hash = do
   mb <- getMicroBlockByHashDB db hash
-  let mbAPI = read (show mb) :: Maybe MicroblockAPI
-  return mbAPI
+  case mb of
+    Nothing -> return Nothing
+    Just m -> do
+      let keyBlock = _keyBlock m
+          sign = _sign m
+          teamKeys = _teamKeys m
+          transactions = _transactions m
+          -- transactionsAPI = zip (rHash )
+      let mbAPI = read (show mb) :: Maybe MicroblockAPI
+      return mbAPI
 
-getKeyBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe a)
-getKeyBlockByHashDB = undefined
+getKeyBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe MacroblockAPI)
+getKeyBlockByHashDB db kHash = do
+  kb <- getByHash (poolMacroblock db) kHash
+  let t = case kb of Nothing -> Nothing
+                     Just j -> case (S.decode j :: Either String Macroblock) of
+                       Left _  -> error "Can not decode Macroblock"
+                       Right r -> Just a
+                         where a = MacroblockAPI {
+                                 _prevKBlockAPI = _prevBlock r,
+                                 _difficultyAPI = _difficulty r,
+                                 _heightAPI = _height r,
+                                 _solverAPI = _solver r,
+                                 _rewardAPI = _reward r,
+                                 _mblocksAPI = _mblocks r
+                                 }
 
+  return t
 
 getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo) --Transaction
 getTransactionByHashDB db tHash = do
