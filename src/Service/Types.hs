@@ -80,7 +80,9 @@ data Macroblock = Macroblock {
   ,  _height     :: Integer -- block number in the chain
   ,  _solver     :: PublicKey
   ,  _reward     :: Integer
-  -- ,  _txs_cnt    :: Integer
+  ,  _timeK      :: Integer
+  ,  _numberK    :: Integer
+  ,  _nonce      :: Integer
   ,  _mblocks    :: [ByteString]
 } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize Macroblock

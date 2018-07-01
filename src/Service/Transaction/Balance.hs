@@ -76,7 +76,7 @@ getBalanceOfKeys db tx = do
   --   balance (key Maybe(rValue Amount))
 
   -- initialize keys which does'not exist yet with initial balance = 100
-  let keysWhichDoesNotExistYet = filter (\(k,v) -> v == Nothing) balance
+  let keysWhichDoesNotExistYet = filter (\(_,v) -> v == Nothing) balance
   let initialBalance = map (\(k,_) ->  (rValue k, rValue (100 :: Amount))) keysWhichDoesNotExistYet
   let iBalance = map (\(key, val) -> Rocks.Put key val) initialBalance
   let fun2 = (\db -> Rocks.write db def{Rocks.sync = True} iBalance)
@@ -105,7 +105,7 @@ getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
 type HashOfMicroblock = BC.ByteString
-checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, Macroblock)
+checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, Maybe Macroblock)
 checkMacroblock db aInfoChan keyBlockHash blockHash = do
     let quantityMicroblocksInMacroblock = 2
     let fun = (\db -> Rocks.get db Rocks.defaultReadOptions keyBlockHash)
@@ -115,27 +115,27 @@ checkMacroblock db aInfoChan keyBlockHash blockHash = do
       Nothing -> do -- If Macroblock is not already in the table, than insert it into the table
                     let aMacroBlock = dummyMacroblock {_mblocks = [blockHash]}
                     writeMacroblockToDB db aInfoChan keyBlockHash aMacroBlock
-                    return (False, True, True, aMacroBlock)
+                    return (False, True, True, Nothing)
       Just a -> -- If Macroblock already in the table
         case urValue a :: Either String Macroblock of
           Left _  -> error "Can not decode Macroblock"
           Right bdMacroblock -> do
                    let hashes = _mblocks bdMacroblock
                    if length hashes >= quantityMicroblocksInMacroblock
-                   then return (True, True, False, bdMacroblock)
+                   then return (True, True, False, Just bdMacroblock)
                    else do
                      -- Check is Microblock already in Macroblock
                      let microblockIsAlreadyInMacroblock = blockHash `elem` hashes
                      writeLog aInfoChan [BDTag] Info ("Microblock is already in macroblock: " ++ show microblockIsAlreadyInMacroblock)
                      if microblockIsAlreadyInMacroblock
-                       then return (False, False, True, bdMacroblock)  -- Microblock already in Macroblock - Nothing
+                       then return (False, False, True, Nothing)  -- Microblock already in Macroblock - Nothing
                        else do -- add this Microblock to the value of Macroblock
                                let aMacroBlock = bdMacroblock {  _mblocks = blockHash : hashes}
                                writeMacroblockToDB db aInfoChan keyBlockHash aMacroBlock
                              -- Check quantity of microblocks, can we close Macroblock?
                                if (length hashes >= (quantityMicroblocksInMacroblock - 1))
-                                       then return (True, True, True, bdMacroblock)
-                                       else return (False, True, True, bdMacroblock)
+                                       then return (True, True, True, Just bdMacroblock)
+                                       else return (False, True, True, Nothing)
 
 
 addMicroblockToDB :: DBPoolDescriptor -> Microblock -> InChan InfoMsg -> IO ()
@@ -156,13 +156,14 @@ addMicroblockToDB db m aInfoChan =  do
 
       if macroblockClosed then do
         -- get all microblocks (without the last added) for macroblock
-        let microblockHashes = tail $ _mblocks macroblock
+        let aMacroblock = fromJust macroblock
+        let microblockHashes = tail $ _mblocks aMacroblock
         mb <- mapM (\h -> getMicroBlockByHashDB db (Hash h))  microblockHashes
         let realMb = map fromJust (filter (isJust) mb) ++ [m]
 
         writeLog aInfoChan [BDTag] Info ("Start calculate Ledger "  ++ show (length realMb))
         mapM_ (runLedger db aInfoChan) realMb
-        -- writeMacroblockToDB db aInfoChan (_keyBlock m) (macroblock {_txs_cnt = 20}
+        writeMacroblockToDB db aInfoChan (_keyBlock m) (aMacroblock {_reward = 10})
       else return ()
     else return ()
 
@@ -208,31 +209,44 @@ addMacroblockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> IO ()
 addMacroblockToDB db aValue aInfoChan = do
   -- writeLog aInfoChan [BDTag] Info ("A.Value is " ++ show aValue)
   let (Object v) = aValue
-  let keyBlockInfoObject = case parseMaybe extractKeyBlockInfo v of
-        Nothing     -> error "Can not parse KeyBlockInfo" --Data.Map.empty
-        Just kBlock -> kBlock :: KeyBlockInfo --Map T.Text Value
-        where extractKeyBlockInfo = \info -> info .: "msg"
-                                    >>=
-                                    \msg -> msg .: "body"
+  let keyBlock = case parseMaybe extractKeyBlock v of
+        Nothing     -> error "Can not parse KeyBlock" --Data.Map.empty
+        Just kBlock -> kBlock :: String --Map T.Text Value
+        where extractKeyBlock = \info -> info .: "msg"
+                                 >>=
+                                \msg -> msg .: "verb"
+  if (keyBlock /= "kblock")
+    then return ()
+  else do
+    let keyBlockInfoObject = case parseMaybe extractKeyBlockInfo v of
+                                  Nothing     -> error "Can not parse KeyBlockInfo" --Data.Map.empty
+                                  Just kBlock -> kBlock :: KeyBlockInfo --Map T.Text Value
+                             where extractKeyBlockInfo = \info -> info .: "msg"
+                                                         >>=
+                                                         \msg -> msg .: "body"
 
-  writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
-  let keyBlockHash = rHash keyBlockInfoObject
+    writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
+    let keyBlockHash = rHash keyBlockInfoObject
 
-  -- get data about macroblock from DB
-  let fun = (\db -> Rocks.get db Rocks.defaultReadOptions keyBlockHash)
-  val  <- withResource (poolMacroblock db) fun
-  aMacroblock <- case val of Nothing -> return dummyMacroblock
-                             Just v  -> case urValue v :: Either String Macroblock of
-                               Left _  -> error "Can not decode Macroblock"
-                               Right r -> return r
+    -- get data about macroblock from DB
+    let fun = (\db -> Rocks.get db Rocks.defaultReadOptions keyBlockHash)
+    val  <- withResource (poolMacroblock db) fun
+    aMacroblock <- case val of Nothing -> return dummyMacroblock
+                               Just v  -> case urValue v :: Either String Macroblock of
+                                 Left _  -> error "Can not decode Macroblock"
+                                 Right r -> return r
 
-  -- fill data for key block
-  let prevHash = read (prev_hash keyBlockInfoObject) :: BC.ByteString
-  let aSolver = solver keyBlockInfoObject
-  let fMacroblock = aMacroblock { _prevBlock = prevHash, _difficulty = 20, _solver = aSolver }
-  writeMacroblockToDB db aInfoChan keyBlockHash fMacroblock
+    -- fill data for key block
+    let prevHash = read (prev_hash keyBlockInfoObject) :: BC.ByteString
+        aSolver = solver keyBlockInfoObject
+        atimeK = time keyBlockInfoObject
+        aNumberK = number keyBlockInfoObject
+        aNonce = nonce keyBlockInfoObject
+    let fMacroblock = aMacroblock { _prevBlock = prevHash, _difficulty = 20, _solver = aSolver, _timeK = atimeK, _numberK = aNumberK, _nonce = aNonce }
+
+    writeMacroblockToDB db aInfoChan keyBlockHash fMacroblock
 
 
 dummyMacroblock :: Macroblock
-dummyMacroblock = Macroblock { _prevBlock = "", _difficulty = 0, _height = 0, _solver = aSolver, _reward = 0, _txs_cnt = 0, _mblocks = []}
+dummyMacroblock = Macroblock { _prevBlock = "", _difficulty = 0, _height = 0, _solver = aSolver, _reward = 0, _mblocks = [], _timeK = 0, _numberK = 0, _nonce = 0}
   where aSolver = read "" :: PublicKey

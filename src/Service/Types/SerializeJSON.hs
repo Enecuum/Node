@@ -174,7 +174,9 @@ instance ToJSON Macroblock where
          ,  "height"            .= _height bl
          ,  "solver"            .= _solver bl
          ,  "reward"            .= _reward bl
-         ,  "txs_cnt"           .= _txs_cnt bl
+         ,  "timeK"              .= _timeK bl
+         ,  "numberK"            .= _numberK bl
+         ,  "nonce"             .= _nonce bl
          ,  "microblocks_cnt"   .= length (_mblocks bl)
          ,  "microblocks"       .= _mblocks bl
        ]
@@ -186,7 +188,9 @@ instance FromJSON Macroblock where
                <*> o .: "height"
                <*> o .: "solver"
                <*> o .: "reward"
-               <*> o .: "txs_cnt"
+               <*> o .: "timeK"
+               <*> o .: "numberK"
+               <*> o .: "nonce"
                <*> o .: "microblocks"
     parseJSON inv         = typeMismatch "Macroblock" inv
 
