@@ -7,15 +7,18 @@ module Service.Transaction.Common (
   getAllTransactionsDB,
   getBalanceForKey,
   addMicroblockToDB,
+  addMacroblockToDB,
   runLedger,
+  rHash,
 --  DBdescriptor(..),
   DBPoolDescriptor(..)
   ) where
-import           Service.Transaction.Balance (addMicroblockToDB,
+import           Service.Transaction.Balance (addMacroblockToDB,
+                                              addMicroblockToDB,
                                               getBalanceForKey, runLedger)
 import           Service.Transaction.Storage (DBPoolDescriptor (..),
                                               connectOrRecoveryConnect,
                                               getAllTransactionsDB,
                                               getBlockByHashDB,
                                               getKeyBlockByHashDB,
-                                              getTransactionByHashDB)
+                                              getTransactionByHashDB, rHash)

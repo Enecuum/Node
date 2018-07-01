@@ -9,10 +9,8 @@ import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
 import           Control.Monad
 import           Data.Aeson
-import           Data.Aeson.Types
 import qualified Data.ByteString.Lazy                  as L
 import           Data.IORef
-import qualified Data.Text                             as T
 import           Lens.Micro
 import           Network.Socket                        (tupleToHostAddress)
 import           Node.Data.Key
@@ -22,24 +20,13 @@ import           Node.Node.Config.Make
 import           Node.Node.Types
 import           Service.InfoMsg                       (InfoMsg)
 import           Service.Network.Base
-import           Service.Types
-import           Service.Types.SerializeJSON
-import           System.Environment
---tmp
-import qualified Data.ByteString.Char8                 as BC
-import           Data.Map
-import           Data.Typeable
-import           Node.Data.GlobalLoging
-import           PoA.Types
-import           Service.InfoMsg                       (InfoMsg (..),
-                                                        LogingTag (..),
-                                                        MsgType (..))
-import           Service.Transaction.Balance           (writeMacroblockToDB)
 import           Service.Transaction.Common            (DBPoolDescriptor (..),
+                                                        addMacroblockToDB,
                                                         addMicroblockToDB)
-import           Service.Transaction.Storage           (rHash)
-import           Service.Types                         (KeyBlockInfo)
+import           Service.Types                         (Microblock, Transaction)
 import           System.Directory                      (createDirectoryIfMissing)
+import           System.Environment
+
 -- code examples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html
 -- docs:
@@ -86,27 +73,7 @@ microblockProc descriptor aMicroblockCh aVlalueChan aInfoCh = do
         addMicroblockToDB descriptor aMicroblock aInfoCh
     forever $ do
         aVlalue <- C.readChan aVlalueChan
-        addValueToDB descriptor aVlalue aInfoCh
-
-
-addValueToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> IO ()
-addValueToDB db aValue aInfoChan = do
-  -- writeLog aInfoChan [BDTag] Info ("A.Value is " ++ show aValue)
-  let (Object v) = aValue
-  let keyBlockInfoObject = case parseMaybe extractKeyBlockInfo v of
-        Nothing     -> error "Can not parse KeyBlockInfo" --Data.Map.empty
-        Just kBlock -> kBlock :: KeyBlockInfo --Map T.Text Value
-        where extractKeyBlockInfo = \info -> info .: "msg"
-                                    >>=
-                                    \msg -> msg .: "body"
-
-  writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
-  let prevHash = BC.pack $ prev_hash keyBlockInfoObject
-  let keyBlockHash = rHash keyBlockInfoObject
-  let aMacroblock = Macroblock { _prevBlock = prevHash, _difficulty = 0, _height = 0, _solver = BC.pack "", _reward = 0, _txs_cnt = 0, _mblocks = [BC.pack ""]}
-  writeMacroblockToDB db aInfoChan BC.empty aMacroblock
-
-
+        addMacroblockToDB descriptor aVlalue aInfoCh
 
 
 readNodeConfig :: IO NodeConfig

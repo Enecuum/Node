@@ -2,36 +2,40 @@
 {-# LANGUAGE DuplicateRecordFields    #-}
 {-# LANGUAGE FlexibleContexts         #-}
 {-# LANGUAGE LambdaCase               #-}
+{-# LANGUAGE OverloadedStrings        #-}
 {-# LANGUAGE PackageImports           #-}
+
 module Service.Transaction.Balance
   ( getBalanceForKey,
     addMicroblockToDB,
+    addMacroblockToDB,
     runLedger,
     writeMacroblockToDB
     ) where
 
-import           Control.Monad
-import qualified Data.ByteString.Char8                 as BC hiding (map)
-import qualified Data.HashTable.IO                     as H
-import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
-import           Service.Transaction.Storage
-import           Service.Types                         hiding
-                                                        (MicroblockAPI (..))
-import           Service.Types.PublicPrivateKeyPair
---import Service.Transaction.Storage (DBPoolDescriptor(..),DBPoolDescriptor(..),rHash, rValue, urValue, Macroblock(..), unA, getMicroBlockByHashDB)
-
 import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Monad
+import           Data.Aeson
+import           Data.Aeson.Types                      (parseMaybe)
+-- import qualified Data.ByteString.Char8                 as BC hiding (map)
+import qualified Data.ByteString.Char8                 as BC
 import           Data.Default                          (def)
 import           Data.Hashable
+import qualified Data.HashTable.IO                     as H
 import           Data.Maybe
 import           Data.Pool
-import           Data.Serialize                        (decode, encode)
+import qualified Data.Serialize                        as S (Serialize, decode,
+                                                             encode)
+import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
 import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
+import           Service.Transaction.Storage
+import           Service.Types                         hiding
+                                                        (MicroblockAPI (..))
+import           Service.Types.PublicPrivateKeyPair
 
-import           Data.Serialize
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
 
@@ -74,7 +78,7 @@ getBalanceOfKeys db tx = do
 
   -- initialize keys which does'not exist yet with initial balance = 100
   let keysWhichDoesNotExistYet = filter (\(k,v) -> v == Nothing) balance
-  let initialBalance = map (\(k,v) ->  (rValue k, rValue (100 :: Amount))) keysWhichDoesNotExistYet
+  let initialBalance = map (\(k,_) ->  (rValue k, rValue (100 :: Amount))) keysWhichDoesNotExistYet
   let iBalance = map (\(key, val) -> Rocks.Put key val) initialBalance
   let fun2 = (\db -> Rocks.write db def{Rocks.sync = True} iBalance)
   withResource db fun2
@@ -101,36 +105,33 @@ getPubKeys :: Transaction -> [PublicKey]
 getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
-hashedMb :: Data.Serialize.Serialize a => a -> BC.ByteString
-hashedMb hashesOfMicroblock = rValue hashesOfMicroblock
-
 type HashOfMicroblock = BC.ByteString
 checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, [HashOfMicroblock])
 checkMacroblock db aInfoChan keyBlockHash blockHash = do
     let quantityMicroblocksInMacroblock = 2
     let fun = (\db -> Rocks.get db Rocks.defaultReadOptions keyBlockHash)
     v  <- withResource (poolMacroblock db) fun
+
     case v of
       Nothing -> do -- If Macroblock is not already in the table, than insert it into the table
-                    let aMacroBlock = Macroblock { _prevBlock = BC.pack "", _difficulty = 0, _height = 0, _solver = BC.pack "", _reward = 0, _txs_cnt = 0, _mblocks = [blockHash]}
+                    let aMacroBlock = dummyMacroblock {_mblocks = [blockHash]}
                     writeMacroblockToDB db aInfoChan keyBlockHash aMacroBlock
                     return (False, True, True, [])
-      Just a -> do -- If Macroblock already in the table
-                   -- let hashes = map (fromRight . decode) a -- (read a :: [BC.ByteString])
-                   let hashes = case (decode a) of
-                                 Right r -> (read r :: [BC.ByteString])
-                                 Left _ -> error "Can not decode hashes of microblock "
+      Just a -> -- If Macroblock already in the table
+        case urValue a :: Either String Macroblock of
+          Left _  -> error "Can not decode Macroblock"
+          Right bdMacroblock -> do
+                   let hashes = _mblocks bdMacroblock
                    if length hashes >= quantityMicroblocksInMacroblock
                    then return (True, True, False, [])
                    else do
-                     -- let hashes = [BC.empty]
                      -- Check is Microblock already in Macroblock
                      let microblockIsAlreadyInMacroblock = blockHash `elem` hashes
                      writeLog aInfoChan [BDTag] Info ("Microblock is already in macroblock: " ++ show microblockIsAlreadyInMacroblock)
                      if microblockIsAlreadyInMacroblock
                        then return (False, False, True, hashes)  -- Microblock already in Macroblock - Nothing
                        else do -- add this Microblock to the value of Macroblock
-                               let aMacroBlock = Macroblock { _prevBlock = BC.pack "", _difficulty = 0, _height = 0, _solver = BC.pack "", _reward = 0, _txs_cnt = 0, _mblocks = blockHash : hashes}
+                               let aMacroBlock = bdMacroblock {  _mblocks = blockHash : hashes}
                                writeMacroblockToDB db aInfoChan keyBlockHash aMacroBlock
                              -- Check quantity of microblocks, can we close Macroblock?
                                if (length hashes >= (quantityMicroblocksInMacroblock - 1))
@@ -175,11 +176,11 @@ addMicroblockToDB db m aInfoChan =  do
     else return ()
 
 
-deleteMacroblockDB :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> IO ()
-deleteMacroblockDB db aInfoChan keyBlockHash = do
-    let fun = (\db -> Rocks.delete db Rocks.defaultWriteOptions keyBlockHash)
-    withResource (poolMacroblock db) fun
-    writeLog aInfoChan [BDTag] Info ("Delete Macroblock "  ++ show keyBlockHash)
+-- deleteMacroblockDB :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> IO ()
+-- deleteMacroblockDB db aInfoChan keyBlockHash = do
+--     let fun = (\db -> Rocks.delete db Rocks.defaultWriteOptions keyBlockHash)
+--     withResource (poolMacroblock db) fun
+--     writeLog aInfoChan [BDTag] Info ("Delete Macroblock "  ++ show keyBlockHash)
 
 
 writeMicroblockDB :: Pool Rocks.DB -> InChan InfoMsg -> Microblock -> IO ()
@@ -207,3 +208,38 @@ writeLedgerDB dbLedger aInfoChan bt = do
   let fun = (\db -> Rocks.write db def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) ledgerKeyValue))
   withResource dbLedger fun
   writeLog aInfoChan [BDTag] Info ("Write Ledger "  ++ show bt)
+
+
+
+addMacroblockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> IO ()
+addMacroblockToDB db aValue aInfoChan = do
+  -- writeLog aInfoChan [BDTag] Info ("A.Value is " ++ show aValue)
+  let (Object v) = aValue
+  let keyBlockInfoObject = case parseMaybe extractKeyBlockInfo v of
+        Nothing     -> error "Can not parse KeyBlockInfo" --Data.Map.empty
+        Just kBlock -> kBlock :: KeyBlockInfo --Map T.Text Value
+        where extractKeyBlockInfo = \info -> info .: "msg"
+                                    >>=
+                                    \msg -> msg .: "body"
+
+  writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
+  let keyBlockHash = rHash keyBlockInfoObject
+
+  -- get data about macroblock from DB
+  let fun = (\db -> Rocks.get db Rocks.defaultReadOptions keyBlockHash)
+  val  <- withResource (poolMacroblock db) fun
+  aMacroblock <- case val of Nothing -> return dummyMacroblock
+                             Just v  -> case urValue v :: Either String Macroblock of
+                               Left _  -> error "Can not decode Macroblock"
+                               Right r -> return r
+
+  -- fill data for key block
+  let prevHash = read (prev_hash keyBlockInfoObject) :: BC.ByteString
+  let aSolver = solver keyBlockInfoObject
+  let bMacroblock = aMacroblock { _prevBlock = prevHash, _difficulty = 20, _solver = aSolver }
+  writeMacroblockToDB db aInfoChan keyBlockHash bMacroblock
+
+
+dummyMacroblock :: Macroblock
+dummyMacroblock = Macroblock { _prevBlock = "", _difficulty = 0, _height = 0, _solver = aSolver, _reward = 0, _txs_cnt = 0, _mblocks = []}
+  where aSolver = read "" :: PublicKey

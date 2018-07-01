@@ -10,7 +10,7 @@
 {-# LANGUAGE StandaloneDeriving        #-}
 module Service.Types where
 
-import           Data.Aeson
+-- import           Data.Aeson
 import           Data.ByteString
 import           Data.Graph.Inductive
 import           Data.List.Split                    (splitOn)
@@ -77,8 +77,8 @@ instance Serialize MicroblockAPI
 data Macroblock = Macroblock {
      _prevBlock  :: ByteString
   ,  _difficulty :: Integer --
-  ,  _height     :: Integer -- номер блока в цепочке
-  ,  _solver     :: ByteString
+  ,  _height     :: Integer -- block number in the chain
+  ,  _solver     :: PublicKey
   ,  _reward     :: Integer
   ,  _txs_cnt    :: Integer
   ,  _mblocks    :: [ByteString]
@@ -91,7 +91,7 @@ data KeyBlockInfo = KeyBlockInfo {
   , number    :: Integer
   , nonce     :: Integer
   , solver    :: PublicKey
-  } deriving  (Generic, Show, Eq, Read)
+  } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize KeyBlockInfo
 
 data Microblock = Microblock{
