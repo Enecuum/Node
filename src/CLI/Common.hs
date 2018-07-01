@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -41,7 +40,6 @@ import           Service.System.Directory              (getKeyFilePath, getTime)
 import           Service.Transaction.Common            as B (getAllTransactionsDB,
                                                              getBalanceForKey,
                                                              getBlockByHashDB,
-                                                             getKeyBlockByHashDB,
                                                              getTransactionByHashDB)
 import           Service.Transaction.Storage           (DBPoolDescriptor (..))
 import           Service.Transaction.TransactionsDAG   (genNTx)
@@ -63,48 +61,50 @@ instance Exception CLIException
 
 
 sendMessageTo :: ManagerMiningMsg a => MsgTo -> InChan a -> IO (Result ())
-sendMessageTo ch = return $ return $ Left NotImplementedException
+sendMessageTo _ = return $ return $ Left NotImplementedException
 
 
 sendMessageBroadcast :: ManagerMiningMsg a => String -> InChan a -> IO (Result ())
-sendMessageBroadcast ch = return $ return $ Left NotImplementedException
+sendMessageBroadcast _ = return $ return $ Left NotImplementedException
 
 
 loadMessages :: ManagerMiningMsg a => InChan a -> IO (Result [MsgTo])
-loadMessages ch = return $ Left NotImplementedException
+loadMessages _ = return $ Left NotImplementedException
 
 
 getBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result MicroblockAPI)
-getBlockByHash db hash ch = try $ do
+getBlockByHash db hash _ = try $ do
   mb <- B.getBlockByHashDB db hash
   case mb of
     Nothing -> throw NoSuchMicroBlockDB
     Just m  -> return m
 
 
-getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result Macroblock)
-getKeyBlockByHash db hash ch = return $ Left NotImplementedException
+getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result MacroblockAPI)
+getKeyBlockByHash _ _ _ = return $ Left NotImplementedException
  --return =<< Right <$> B.getBlockByHashDB db hash
 
 
 getChainInfo :: ManagerMiningMsg a => InChan a -> IO (Result ChainInfo)
-getChainInfo ch = return $ Left NotImplementedException
+getChainInfo _ = return $ Left NotImplementedException
 
 
 getTransactionByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result TransactionInfo)
-getTransactionByHash db hash ch = try $ do
+getTransactionByHash db hash _ = try $ do
   tx <- B.getTransactionByHashDB db hash
   case tx of
     Nothing -> throw  NoSuchTransactionDB
     Just t  -> return t
 
 
-getAllTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> InChan a -> IO (Result [Transaction])
-getAllTransactions pool key ch = try $ do
+getAllTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> InChan a -> IO (Result [TransactionAPI])
+getAllTransactions pool key _ = return $ Left NotImplementedException
+{-try $ do
   tx <- B.getAllTransactionsDB pool key
   case tx of
     [] -> throw OtherException
     t  -> return t
+-}
 
 sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> IO (Result ())
 sendTrans tx ch aInfoCh = try $ do
@@ -113,16 +113,15 @@ sendTrans tx ch aInfoCh = try $ do
 
 
 sendNewTrans :: ManagerMiningMsg a => Trans -> InChan a -> InChan InfoMsg -> IO (Result Transaction)
-sendNewTrans trans ch aInfoCh = try $ do
-  let moneyAmount = (Service.Types.txAmount trans) :: Amount
-  let receiverPubKey = recipientPubKey trans
-  let ownerPubKey = senderPubKey trans
+sendNewTrans aTrans ch aInfoCh = try $ do
+  let moneyAmount = Service.Types.txAmount aTrans :: Amount
+  let receiverPubKey = recipientPubKey aTrans
+  let ownerPubKey = senderPubKey aTrans
   timePoint <- getTime
   keyPairs <- getSavedKeyPairs
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
-  case (Data.Map.lookup ownerPubKey mapPubPriv) of
-    Nothing -> do
-      throw WrongKeyOwnerException
+  case Data.Map.lookup ownerPubKey mapPubPriv of
+    Nothing -> throw WrongKeyOwnerException
     Just ownerPrivKey -> do
       sign <- getSignature ownerPrivKey moneyAmount
       uuid <- randomRIO (1,25)
@@ -143,10 +142,10 @@ getNewKey = try $ do
 getBalance :: DBPoolDescriptor -> PublicKey -> InChan InfoMsg -> IO (Result Amount)
 getBalance descrDB pKey aInfoCh = try $ do
     stTime  <- getCPUTimeWithUnit :: IO Millisecond
-    balance <- B.getBalanceForKey descrDB pKey
+    aBalance <- B.getBalanceForKey descrDB pKey
     endTime <- getCPUTimeWithUnit :: IO Millisecond
     writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
-    case balance of
+    case aBalance of
       Nothing -> throw NoSuchPublicKeyInDB
       Just b  -> return b
     --putStrLn "There is no such key in database"
@@ -155,7 +154,7 @@ getBalance descrDB pKey aInfoCh = try $ do
 
 getSavedKeyPairs :: IO [(PublicKey, PrivateKey)]
 getSavedKeyPairs = do
-  result <- try $ getKeyFilePath >>= (\keyFileName -> readFile keyFileName)
+  result <- try $ getKeyFilePath >>= readFile
   case result of
     Left ( _ :: SomeException) -> do
           putStrLn "There is no keys"
@@ -163,14 +162,12 @@ getSavedKeyPairs = do
     Right keyFileContent       -> do
           let rawKeys = lines keyFileContent
           let keys = map (splitOn ":") rawKeys
-          let pairs = map (\x -> (,) (read (x !! 0) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
+          let pairs = map (\x -> (,) (read (head x) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
           return pairs
 
 
 getPublicKeys :: IO (Result [PublicKey])
-getPublicKeys = try $ do
-  pairs <- getSavedKeyPairs
-  return $ map fst pairs
+getPublicKeys = try $ map fst <$> getSavedKeyPairs
 
 
 sendMetrics :: Transaction -> InChan InfoMsg -> IO ()

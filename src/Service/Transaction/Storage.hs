@@ -5,13 +5,13 @@
 {-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Service.Transaction.Storage where
+
 import           Control.Exception
 import qualified Control.Monad.Catch                 as E
 import           Control.Monad.Trans.Class           (lift)
 import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.State           (StateT, get, put)
 import           Control.Retry
--- import qualified "cryptohash" Crypto.Hash.SHA1       as SHA1
 import qualified Crypto.Hash.SHA256                  as SHA
 import           Data.Aeson
 import qualified Data.ByteString.Char8               as BC
@@ -31,6 +31,12 @@ import           Service.Transaction.TransactionsDAG (genNNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON         ()
+
+
+import           Data.ByteString.Base58
+import           Data.Text                           (Text)
+import           Data.Text.Encoding                  (decodeUtf8)
+
 --------------------------------------
 -- begin of the Connection section
 data DBPoolDescriptor = DBPoolDescriptor {
@@ -350,6 +356,10 @@ getAllMicroblockKV = do
 -- end of the Query Iterator section
 --------------------------------------
 
+showAllMicroblockKV :: IO [(Text, Microblock)]
+showAllMicroblockKV = do
+          mbs <- getAllMicroblockKV
+          return $ map (\(bs, mb) -> (decodeUtf8 $ encodeBase58 bitcoinAlphabet bs, mb)) mbs
 
 --------------------------------------
 -- begin test cli

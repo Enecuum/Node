@@ -7,6 +7,7 @@ module PoA.PoAServer (
 
 
 import qualified Control.Concurrent                    as C
+import           Control.Concurrent.Async
 import qualified Control.Concurrent.Chan               as C
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
@@ -14,8 +15,12 @@ import           Control.Exception
 import           Control.Monad                         (forM_, forever, unless,
                                                         void, when)
 import           Data.Aeson                            as A
+import qualified Data.ByteString.Char8                 as BC
+import           Data.Maybe                            ()
+import qualified Data.Text                             as T
 import qualified Network.WebSockets                    as WS
 import           Node.Data.GlobalLoging
+import           Node.Data.Key
 import           Node.Data.NetPackage
 import           Node.FileDB.FileServer
 import           Node.Node.Types
@@ -27,12 +32,7 @@ import           Service.Network.WebSockets.Server
 import           Service.Types
 import           System.Random.Shuffle
 
-import           Control.Concurrent.Async
-import qualified Data.ByteString.Char8                 as BC
-import           Data.Maybe                            ()
-import           Node.Data.Key
-
-serverPoABootNode :: PortNumber -> InChan InfoMsg -> C.Chan FileActorRequest -> IO ()
+serverPoABootNode :: PortNumber -> InChan InfoMsg -> InChan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
         "Init. ServerPoABootNode: a port is " ++ show aRecivePort
@@ -46,12 +46,10 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                 Right a -> case a of
                     RequestConnects -> do
                         writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request of connections."
-                        aConChan <- C.newChan
-                        C.writeChan aFileServerChan $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-                        NodeInfoListNetLvl aRecords <- C.readChan aConChan
-                        aShuffledRecords <- shuffleM aRecords
+                        aShuffledRecords <- shuffleM =<< getRecords aFileServerChan
                         let aConnects = snd <$> take 5 aShuffledRecords
-                        WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
+                        WS.sendTextData aConnect $ A.encode $ ResponseConnects
+                            ((\(Connect ip _) -> Connect ip 1554) <$> aConnects)
                         writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
                     _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
                         "Broken message from PP " ++ show aMsg
@@ -60,16 +58,22 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                     writeLog aInfoChan [ServerBootNodeTag] Warning $
                         "Broken message from PP " ++ show aMsg ++ " " ++ a
 
+getRecords :: InChan FileActorRequest -> IO [(NodeId, Connect)]
+getRecords aChan = do
+    aTmpRef <- newEmptyMVar
+    writeChan aChan $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aTmpRef
+    NodeInfoListNetLvl aRecords <- takeMVar aTmpRef
+    return aRecords
+
 servePoA ::
        PortNumber
-    -> MyNodeId
     -> InChan ManagerMiningMsgBase
     -> C.Chan Transaction
     -> InChan InfoMsg
-    -> C.Chan FileActorRequest
+    -> InChan FileActorRequest
     -> C.Chan Microblock
     -> IO ()
-servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
+servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. servePoA: a port is " ++ show aRecivePort
     aPendingChan <- C.newChan
@@ -80,7 +84,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
 
         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
         aId <- newEmptyMVar
-        (aInpChan, aOutChan) <- newChan (2^4)
+        (aInpChan, aOutChan) <- newChan 64
         -- writeChan ch $ connecting to PoA, the PoA have id.
         void $ race
             (aSender aId aConnect aOutChan)
@@ -105,7 +109,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
                     aTmpChan <- C.newChan
                     C.writeChan aPendingChan $ GetTransaction aNum aTmpChan
                     aTransactions <- C.readChan aTmpChan
-                    when (not $ null aTransactions) $
+                    unless (null aTransactions) $
                         forM_ (take aNum $ cycle aTransactions) $ \aTransaction  -> do
                             writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
                             WS.sendTextData aConnect $ A.encode $ ResponseTransaction aTransaction
@@ -128,14 +132,11 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
                         writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without PPId " ++ show aMsg
                         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
                 RequestConnects -> do
-                    aConChan <- C.newChan
-                    C.writeChan aFileServerChan $
-                         FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-                    NodeInfoListNetLvl aRecords <- C.readChan aConChan
-                    aShuffledRecords <- shuffleM aRecords
+                    aShuffledRecords <- shuffleM =<< getRecords aFileServerChan
                     let aConnects = snd <$> take 5 aShuffledRecords
                     writeLog aInfoChan [ServePoATag] Info $ "Send connections " ++ show aConnects
-                    WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
+                    WS.sendTextData aConnect $ A.encode $ ResponseConnects
+                        ((\(Connect ip _) -> Connect ip 1554) <$> aConnects)
 
                 RequestPoWList
                     | not aOk -> do
@@ -176,4 +177,7 @@ servePoA aRecivePort aNodeId ch aRecvChan aInfoChan aFileServerChan aMicroblockC
 
 -- TODO class sendMsgToNetLvl
 sendMsgToNetLvlFromPP :: ManagerMsg a => InChan a -> MsgToMainActorFromPP -> IO ()
-sendMsgToNetLvlFromPP aChan aMsg = writeChan aChan $ msgFromPP aMsg
+sendMsgToNetLvlFromPP aChan aMsg = do
+    aOk <- tryWriteChan aChan $ msgFromPP aMsg
+    C.threadDelay 10000
+    unless aOk $ sendMsgToNetLvlFromPP aChan aMsg

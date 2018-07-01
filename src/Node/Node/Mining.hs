@@ -30,6 +30,7 @@ import              Lens.Micro
 import              Lens.Micro.Mtl()
 import qualified    Control.Concurrent              as C
 import              Control.Concurrent.Chan.Unagi.Bounded
+import              Control.Concurrent.MVar
 
 import              Control.Monad.Extra
 import              Crypto.Error
@@ -103,10 +104,10 @@ answerToInitShardingLvl aChan aMd _ = do
 answerToTestBroadcastBlockIndex :: IORef ManagerNodeData -> ManagerMiningMsgBase ->  IO ()
 answerToTestBroadcastBlockIndex aMd _ = do
     aData <- readIORef aMd
-    aPosChan <- C.newChan
+    aPosChan <- newEmptyMVar
     let aPositionsOfNeibors  = (^.nodePosition) <$> M.elems (aData^.nodes)
-    C.writeChan (aData^.fileServerChan) $ FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
-    NodeInfoListLogicLvl aPossitionList <- C.readChan aPosChan
+    writeChan (aData^.fileServerChan) $ FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
+    NodeInfoListLogicLvl aPossitionList <- takeMVar aPosChan
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point list XXX: " ++ show aPossitionList
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point node list XXX: " ++ show aPositionsOfNeibors
     whenJust (aData^.myNodePosition) $ \aPosition ->
@@ -141,16 +142,16 @@ answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
         BroadcastRequestFromPP aByteString aIdFrom@(IdFrom aPPId) aNodeType ->
             whenJust (aData^.ppNodes.at aPPId) $ \aNode -> do
                 let aMessage = BroadcastPPMsg (aNode^.ppType) aByteString aNodeType aIdFrom
-                sendBroadcast aMd aMessage
                 processingOfBroadcast aMd aMessage
+                sendBroadcast aMd aMessage
 
         MsgResendingToPP aIdFrom@(IdFrom aPPIdFrom) aIdTo@(IdTo aId) aByteString
             | Just aNode <- aData^.ppNodes.at aId ->
                 writeChan (aNode^.ppChan) $ MsgMsgToPP aPPIdFrom aByteString
             | otherwise -> do
                 let aMessage = BroadcastPPMsgId aByteString aIdFrom aIdTo
-                sendBroadcast aMd aMessage
                 processingOfBroadcast aMd aMessage
+                sendBroadcast aMd aMessage
 
 {- don't delete
             | otherwise -> do

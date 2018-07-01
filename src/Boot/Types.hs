@@ -19,9 +19,11 @@ import              Node.Template.Constructor
 import qualified    Data.Set                        as S
 import qualified    Data.ByteString                 as B
 import              Node.Node.Types
+import              Control.Concurrent.Chan.Unagi.Bounded
 import              Sharding.Types.Node as N
 import              Data.IORef
 import              Node.Node.Base
+import              Control.Concurrent.MVar
 import              Node.Data.MakeAndSendTraceRouting
 
 import              Node.Node.Processing
@@ -81,9 +83,9 @@ instance  Processing (IORef NodeBootNodeData) (Request NetLvl) where
             let aSendNetLvlResponse = sendResponseTo
                     aTraceRouting aData BroadcastListRequest aSignature
 
-            aConChan <- C.newChan
-            C.writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-            NodeInfoListNetLvl aBroadcasts <- C.readChan aConChan
+            aConChan <- newEmptyMVar
+            writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+            NodeInfoListNetLvl aBroadcasts <- takeMVar aConChan
 
             let aBroadcastListResponse = BroadcastListResponse
                     (NodeInfoListLogicLvl [])

@@ -52,7 +52,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl NetLvl) 
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted msg from the " ++
                     show aNodeId ++ "that it need a neighbors. Addtition the node in the list of possible connects."
 
-                C.writeChan (aData^.fileServerChan) $
+                writeChan (aData^.fileServerChan) $
                         FileActorRequestNetLvl $ UpdateFile (aData^.myNodeId) ( NodeInfoListNetLvl [(aNodeId, Connect aHostAddress aPortNumber)])
 
 instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl LogicLvl) where
@@ -70,7 +70,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl LogicLvl
             BroadcastPosition     aMyNodeId aNodePosition  -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted new position for the node." ++
                     "The node have position " ++ show aNodePosition ++ ", node id is " ++ show aMyNodeId
-                C.writeChan (aData^.fileServerChan) $
+                writeChan (aData^.fileServerChan) $
                     FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId) (NodeInfoListLogicLvl [(toNodeId aMyNodeId, aNodePosition)])
 
                 whenJust (aData^.nodes.at (toNodeId aMyNodeId)) $ \aNode ->
@@ -87,28 +87,24 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
         case aMsg of
             -- send network received PP messages
             BroadcastPPMsg aSenderType aBroadcastMsg aNodeType aIdFrom@(IdFrom aPPId) -> do
-                aTime <- getTime Realtime
-
-                when (aSenderType == PoW) $
+                when (aSenderType == PoW) $ do
+                    aTime <- getTime Realtime
                     modifyIORef aMd $ poWNodes %~ BI.insert aTime aPPId
 
-                let aFilteredNode :: [InChan NNToPPMessage]
-                    aFilteredNode = do
-                        aNode <- snd <$> M.toList (aData^.ppNodes)
-                        guard $ aNodeType == All || aNode^.ppType == aNodeType
-                        return $ aNode^.ppChan
+                void $ C.forkIO $ do
+                    let aFilteredNode :: [InChan NNToPPMessage]
+                        aFilteredNode = do
+                            aNode <- snd <$> M.toList (aData^.ppNodes)
+                            guard $ aNodeType == All || aNode^.ppType == aNodeType
+                            return $ aNode^.ppChan
 
-                C.writeChan (aData^.valueChan) (A.toJSON (MsgBroadcastMsg aBroadcastMsg (IdFrom aPPId)))
-                -- C.writeChan (aData^.valueChan) (A.toJSON aBroadcastMsg)
-
-                forM_ aFilteredNode $ \aChan ->
-                    writeChan aChan $ MsgBroadcastMsg aBroadcastMsg aIdFrom
+                    C.writeChan (aData^.valueChan) (A.toJSON (MsgBroadcastMsg aBroadcastMsg (IdFrom aPPId)))
+                    forM_ aFilteredNode $ \aChan ->
+                        tryWriteChan aChan $ MsgBroadcastMsg aBroadcastMsg aIdFrom
 
 
-            BroadcastPPMsgId aBroadcastMsg aIdFrom@(IdFrom aIdPPFrom) aIdTo@(IdTo aIdPPTo) -> do
-                aTime <- getTime Realtime
-
-                whenJust (aData^.ppNodes.at (aIdPPTo)) $ \aNode -> do
+            BroadcastPPMsgId aBroadcastMsg _ (IdTo aIdPPTo) ->
+                whenJust (aData^.ppNodes.at aIdPPTo) $ \aNode ->
                     writeChan (aNode^.ppChan) $ MsgMsgToPP aIdPPTo aBroadcastMsg
 
             -- add new transaction in pending

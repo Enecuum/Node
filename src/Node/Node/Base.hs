@@ -36,6 +36,7 @@ import              Lens.Micro.Mtl
 import              Lens.Micro
 import              Data.List.Extra
 import              Control.Concurrent.Chan.Unagi.Bounded
+import              Control.Concurrent.MVar
 
 import              Sharding.Space.Distance
 import              Node.FileDB.FileServer
@@ -111,14 +112,14 @@ answerToConnectivityQuery aChan aMd _ = do
         aBroadcastNum = length aBroadcasts
         aUnActiveNum  = M.size $ M.filter (\a -> a^.status /= Active) aNeighbors
 
-    aConChan <- C.newChan
-    C.writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-    NodeInfoListNetLvl aConnectList <- C.readChan aConChan
+    aConChan <- newEmptyMVar
+    writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+    NodeInfoListNetLvl aConnectList <- takeMVar aConChan
 
     when (length aConnectList > 8) $
         whenJust (aData^.myNodePosition) $ \aMyPosition -> do
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of a list of connects."
-            C.writeChan (aData^.fileServerChan) $ FileActorMyPosition aMyPosition
+            writeChan (aData^.fileServerChan) $ FileActorMyPosition aMyPosition
 
     let aWait = (preferedBroadcastCount < aBroadcastNum && aBroadcastNum <= 7) || aUnActiveNum /= 0
     if  | aWait             -> return ()
@@ -141,15 +142,15 @@ answerToFindBestConnects aChan aMd _ = do
     aData <- readIORef aMd
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info "answerToFindBestConnects: start"
     whenJust (aData^.myNodePosition) $ \aMyNodePosition -> do
-        aPosChan <- C.newChan
-        aConChan <- C.newChan
-        C.writeChan (aData^.fileServerChan) $
+        aPosChan <- newEmptyMVar
+        aConChan <- newEmptyMVar
+        writeChan (aData^.fileServerChan) $
              FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
-        C.writeChan (aData^.fileServerChan) $
+        writeChan (aData^.fileServerChan) $
              FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
 
-        NodeInfoListNetLvl   aBroadcastList      <- C.readChan aConChan
-        NodeInfoListLogicLvl aBroadcastListLogic <- C.readChan aPosChan
+        NodeInfoListNetLvl   aBroadcastList      <- takeMVar aConChan
+        NodeInfoListLogicLvl aBroadcastListLogic <- takeMVar aPosChan
 
         let aPoints :: [(NodeId, NodePosition)]
             aPoints = M.toList $ M.intersection (M.fromList aBroadcastListLogic) (M.fromList aBroadcastList)

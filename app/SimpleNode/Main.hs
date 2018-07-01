@@ -44,7 +44,7 @@ main =  do
 
             aExitCh   <- C.newChan
             aAnswerCh <- C.newChan
-            (aInfoChanIn, aInfoChanOut) <- newChan (2^5)
+            (aInfoChanIn, aInfoChanOut) <- newChan 64
             rocksDB   <- connectOrRecoveryConnect
 
             void $ startNode rocksDB conf
@@ -64,7 +64,7 @@ main =  do
                     void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id
 
 
-                    void $ C.forkIO $ servePoA poa_p aMyNodeId ch aChan aInfoChanIn aFileChan aMicroblockChan
+                    void $ C.forkIO $ servePoA poa_p ch aChan aInfoChanIn aFileChan aMicroblockChan
 
                     cli_m   <- try (getEnv "cliMode") >>= \case
                             Right item              -> return item

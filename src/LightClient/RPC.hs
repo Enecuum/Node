@@ -11,8 +11,6 @@ module LightClient.RPC (
         getChainInfo,
 
 --test
-        genNTx,
-        genUnlimTx,
         newMsgBroadcast,
         newMsgTo,
         loadNewMsg,
@@ -42,7 +40,7 @@ newTxSig = Signature "enq_sendTransaction" ("tx" ::: ())
 reqLedgerSig :: Signature (PublicKey ::: ()) Amount
 reqLedgerSig = Signature "enq_getBalance" ("address" ::: ())
 
-reqGetBlockSig :: Signature (Hash ::: ()) Macroblock
+reqGetBlockSig :: Signature (Hash ::: ()) MacroblockAPI
 reqGetBlockSig = Signature "enq_getBlockByHash" ("hash" ::: ())
 
 reqGetMicroblockSig :: Signature (Hash ::: ()) MicroblockAPI
@@ -51,19 +49,13 @@ reqGetMicroblockSig = Signature "enq_getMicroblockByHash" ("hash" ::: ())
 reqGetTxSig :: Signature (Hash ::: ()) TransactionInfo
 reqGetTxSig = Signature "enq_getTransactionByHash" ("hash" ::: ())
 
-reqGetAllTxsSig :: Signature (PublicKey ::: ()) [Transaction]
+reqGetAllTxsSig :: Signature (PublicKey ::: ()) [TransactionAPI]
 reqGetAllTxsSig = Signature "enq_getAllTransactions" ("address" ::: ())
 
 reqChainInfoSig :: Signature () ChainInfo
 reqChainInfoSig = Signature "enq_getChainInfo" ()
 
 --test
-genNTxSig :: Signature (QuantityTx ::: ()) ()
-genNTxSig = Signature "gen_n_tx" ("x" ::: ())
-
-genUnlimTxSig :: Signature () ()
-genUnlimTxSig = Signature "gen_unlim_tx" ()
-
 newMsgBroadcastSig :: Signature (String ::: ()) ()
 newMsgBroadcastSig = Signature "send_message_broadcast" ("x" ::: ())
 
@@ -80,7 +72,7 @@ newTx h = toFunction (connectionWithTimeOut h) newTxSig
 reqLedger :: WS.Connection -> PublicKey -> Result Amount
 reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
 
-getBlock :: WS.Connection -> Hash -> Result Macroblock
+getBlock :: WS.Connection -> Hash -> Result MacroblockAPI
 getBlock h = toFunction (connectionWithTimeOut h) reqGetBlockSig
 
 getMicroblock :: WS.Connection -> Hash -> Result MicroblockAPI
@@ -89,7 +81,7 @@ getMicroblock h = toFunction (connectionWithTimeOut h) reqGetMicroblockSig
 getTx :: WS.Connection -> Hash -> Result TransactionInfo
 getTx h = toFunction (connectionWithTimeOut h) reqGetTxSig
 
-getAllTxs :: WS.Connection -> PublicKey -> Result [Transaction]
+getAllTxs :: WS.Connection -> PublicKey -> Result [TransactionAPI]
 getAllTxs h = toFunction (connectionWithTimeOut h) reqGetAllTxsSig
 
 getChainInfo :: WS.Connection -> Result ChainInfo
@@ -97,12 +89,6 @@ getChainInfo h = toFunction (connectionWithTimeOut h) reqChainInfoSig
 
 
 --test
-genNTx :: WS.Connection -> Int -> Result ()
-genNTx h = toFunction (connectionWithTimeOut h) genNTxSig
-
-genUnlimTx :: WS.Connection -> Result ()
-genUnlimTx h = toFunction (connectionWithTimeOut h) genUnlimTxSig
-
 newMsgBroadcast :: WS.Connection -> String -> Result ()
 newMsgBroadcast h = toFunction (connectionWithTimeOut h) newMsgBroadcastSig
 
