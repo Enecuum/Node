@@ -127,7 +127,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLv
                 -- FIXME: rewrite show for Transaction and Microblock for showing only hash and structure
                 C.writeChan (aData^.microblockChan) aMicroblock
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                    "Addtition the mickroblock to shard DB. The mickroblock = "
+                    "Addtition the microblock to shard DB. The microblock = "
                     ++ show aMicroblock
             _ -> return ()
 

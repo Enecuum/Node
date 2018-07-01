@@ -116,7 +116,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 MsgMicroblock aMicroblock
                     | not aOk -> do
                         aSenderId <- readMVar aId
-                        writeLog aInfoChan [ServePoATag] Info $ "Recived MBlock: " ++ show aMicroblock
+                        writeLog aInfoChan [ServePoATag] Info $ "Received MBlock: " ++ show aMicroblock
                         sendMsgToNetLvlFromPP ch $ MicroblockFromPP aMicroblock aSenderId
                     | otherwise -> do
                         writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without PPId " ++ show aMsg
