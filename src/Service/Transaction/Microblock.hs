@@ -1,34 +1,40 @@
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE PackageImports        #-}
 
 module Service.Transaction.Microblock where
-import Service.Transaction.TransactionsDAG (genNNTx)
-import qualified Data.ByteString.Char8 as BC
-import qualified "cryptohash" Crypto.Hash.SHA1 as SHA1
-import System.Random (randomRIO)
-import Control.Monad (replicateM)
-import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.State (StateT, evalStateT, put, get)
+import qualified Data.ByteString.Char8               as BC
+import           Service.Transaction.TransactionsDAG (genNNTx)
+-- import qualified "cryptohash" Crypto.Hash.SHA1 as SHA1
+import           Control.Monad                       (replicateM)
+import           Control.Monad.Trans.Class           (lift)
+import           Control.Monad.Trans.State           (StateT, evalStateT, get,
+                                                      put)
+import           System.Random                       (randomRIO)
 -- import Service.Types (Time, Microblock(..),Transaction(..))
-import Service.Types (MicroblockV1(..), Microblock(..), Transaction)
-import Service.Types.PublicPrivateKeyPair (KeyPair(..), PublicKey(..), generateNewRandomAnonymousKeyPair, getSignature) -- Signature)
+import           Service.Types                       (Microblock (..),
+                                                      MicroblockV1 (..),
+                                                      Transaction)
+import           Service.Types.PublicPrivateKeyPair  (KeyPair (..),
+                                                      PublicKey (..),
+                                                      generateNewRandomAnonymousKeyPair,
+                                                      getSignature)
 -- import Data.Aeson as A
 --import Service.Transaction.Common (runLedger, connectOrRecoveryConnect, addMicroblockToDB)
 
 type HashOfMicroblock = BC.ByteString
 
-genNMicroBlocksV1 :: Int -> IO [MicroblockV1]
-genNMicroBlocksV1 n = evalStateT (replicateM n genMicroBlockV1) BC.empty
+-- genNMicroBlocksV1 :: Int -> IO [MicroblockV1]
+-- genNMicroBlocksV1 n = evalStateT (replicateM n genMicroBlockV1) BC.empty
 
 
-genMicroBlockV1 :: StateT HashOfMicroblock IO MicroblockV1
-genMicroBlockV1 = do
-  aHashPreviousMicroblock <- get
-  n <- lift $ randomRIO (3,4) --(40,128) -- from 40 to 128 transactions per block
-  tx <- lift $ genNNTx n
-  let aHashCurrentMicroblock = (SHA1.hash . BC.pack . show) tx
-  put aHashCurrentMicroblock
-  return (MicroblockV1 aHashCurrentMicroblock aHashPreviousMicroblock tx)
+-- genMicroBlockV1 :: StateT HashOfMicroblock IO MicroblockV1
+-- genMicroBlockV1 = do
+--   aHashPreviousMicroblock <- get
+--   n <- lift $ randomRIO (3,4) --(40,128) -- from 40 to 128 transactions per block
+--   tx <- lift $ genNNTx n
+--   let aHashCurrentMicroblock = (SHA1.hash . BC.pack . show) tx
+--   put aHashCurrentMicroblock
+--   return (MicroblockV1 aHashCurrentMicroblock aHashPreviousMicroblock tx)
 
 
 testParseTx :: IO ()

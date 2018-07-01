@@ -1,33 +1,43 @@
-{-# LANGUAGE PackageImports, ScopedTypeVariables, FlexibleContexts, DeriveGeneric, DeriveAnyClass, OverloadedStrings #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE PackageImports      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Service.Transaction.Storage where
-import qualified "rocksdb-haskell" Database.RocksDB as Rocks
-import Service.System.Directory (getLedgerFilePath, getTransactionFilePath, getMicroblockFilePath, getMacroblockFilePath)
-import Data.Default (def)
-import qualified Data.ByteString.Char8 as BC
-import Control.Monad.Trans.Resource
-import Control.Retry
-import Control.Exception
-import qualified Control.Monad.Catch as E
-import Data.Maybe
-import qualified "cryptohash" Crypto.Hash.SHA1 as SHA1
-import Service.Types.PublicPrivateKeyPair
-import Service.Types
-import Data.Pool
-import qualified Data.ByteString.Internal as BSI
-import Control.Monad.Trans.State (StateT, put, get)
-import Control.Monad.Trans.Class (lift)
-import Data.Aeson
-import GHC.Generics
-import qualified Data.Serialize as S (Serialize, encode, decode)
-import Service.Transaction.TransactionsDAG (genNNTx)
-import Service.Types.SerializeJSON()
+import           Control.Exception
+import qualified Control.Monad.Catch                 as E
+import           Control.Monad.Trans.Class           (lift)
+import           Control.Monad.Trans.Resource
+import           Control.Monad.Trans.State           (StateT, get, put)
+import           Control.Retry
+-- import qualified "cryptohash" Crypto.Hash.SHA1       as SHA1
+import qualified Crypto.Hash.SHA256                  as SHA
+import           Data.Aeson
+import qualified Data.ByteString.Char8               as BC
+import qualified Data.ByteString.Internal            as BSI
+import           Data.Default                        (def)
+import           Data.Maybe
+import           Data.Pool
+import qualified Data.Serialize                      as S (Serialize, decode,
+                                                           encode)
+import qualified "rocksdb-haskell" Database.RocksDB  as Rocks
+import           GHC.Generics
+import           Service.System.Directory            (getLedgerFilePath,
+                                                      getMacroblockFilePath,
+                                                      getMicroblockFilePath,
+                                                      getTransactionFilePath)
+import           Service.Transaction.TransactionsDAG (genNNTx)
+import           Service.Types
+import           Service.Types.PublicPrivateKeyPair
+import           Service.Types.SerializeJSON         ()
 --------------------------------------
 -- begin of the Connection section
 data DBPoolDescriptor = DBPoolDescriptor {
     poolTransaction :: Pool Rocks.DB
-  , poolMicroblock :: Pool Rocks.DB
-  , poolLedger :: Pool Rocks.DB
-  , poolMacroblock :: Pool Rocks.DB
+  , poolMicroblock  :: Pool Rocks.DB
+  , poolLedger      :: Pool Rocks.DB
+  , poolMacroblock  :: Pool Rocks.DB
   }
 
 -- FIX change def (5 times)
@@ -77,24 +87,24 @@ handler =
 --------------------------------------
 -- begin of the Database structure  section
 
-data Macroblock = Macroblock {
-  keyBlock :: BC.ByteString,
-  -- microblockNumber :: Int,
-  -- requiredNumberOfMicroblocks :: Int,
-  hashOfMicroblock :: [BC.ByteString]
-  -- timeOfMicroblockArrived :: UTCTime
-                                 } deriving (Generic, Eq, Ord, Show, S.Serialize)
+-- data Macroblock = Macroblock {
+--   keyBlock :: BC.ByteString,
+--   -- microblockNumber :: Int,
+--   -- requiredNumberOfMicroblocks :: Int,
+--   hashOfMicroblock :: [BC.ByteString]
+--   -- timeOfMicroblockArrived :: UTCTime
+--                                  } deriving (Generic, Eq, Ord, Show, S.Serialize)
 
 
 
 -- for rocksdb Transaction and Microblock
 rHash :: S.Serialize a => a -> BSI.ByteString
-rHash key = SHA1.hash . rValue $ key
+rHash key = SHA.hash . rValue $ key
 
 rValue :: S.Serialize a => a -> BSI.ByteString
 rValue value = S.encode value
 
-urValue :: S.Serialize a => BSI.ByteString -> Either String a  
+urValue :: S.Serialize a => BSI.ByteString -> Either String a
 urValue value = S.decode value
 
 -- for Balance Table and Ledger
@@ -103,7 +113,7 @@ htK key = S.encode key
 
 unA :: Monad m => BSI.ByteString -> m (Maybe Amount)
 unA balance = case (urValue balance :: Either String Amount ) of
-  Left _ -> error ("Can not decode balance" ++ show balance)
+  Left _  -> error ("Can not decode balance" ++ show balance)
   Right b -> return $ Just b
 
 -- unHtK key = read (S.decode key) :: PublicKey
@@ -176,7 +186,7 @@ getMicroBlockByHashDB db mHash = do
   mbByte <- getByHash (poolMicroblock db) mHash
   let mb = case mbByte of Nothing -> Nothing
                           Just m -> case (S.decode m :: Either String Microblock) of
-                            Left _ -> error "Can not decode Microblock"
+                            Left _   -> error "Can not decode Microblock"
                             Right rm -> Just rm
 
   return mb
@@ -196,7 +206,7 @@ getTransactionByHashDB db tHash = do
   tx <- getByHash (poolTransaction db) tHash
   let t = case tx of Nothing -> Nothing
                      Just j -> case (S.decode j :: Either String  TransactionInfo) of
-                       Left _ -> error "Can not decode TransactionInfo"
+                       Left _   -> error "Can not decode TransactionInfo"
                        Right rt -> Just rt
   return t
 
@@ -252,7 +262,7 @@ getAllTransactionsDB descr pubKey = do
   txByte <- withResource (poolTransaction descr) getAllValues
   putStrLn $ show txByte
   let fun = \t -> case (S.decode t :: Either String TransactionInfo) of
-                       Left _ -> error "Can not decode TransactionInfo"
+                       Left _   -> error "Can not decode TransactionInfo"
                        Right rt -> Just rt
 
   let txInfo = map fun txByte
@@ -266,7 +276,7 @@ getAllTransactions = do
   result <- getAll =<< getTransactionFilePath
   let func res = case (S.decode res :: Either String TransactionInfo) of
         Right r -> r
-        Left _ -> error "Can not decode Transaction"
+        Left _  -> error "Can not decode Transaction"
   let result2 = map func result
   putStrLn $ show result2
   -- return result2
@@ -290,7 +300,7 @@ getAllLedger = do
   -- let result2 = map (\res -> S.decode res :: Either String PublicKey) result
   let func res = case (S.decode res :: Either String Amount) of
         Right r -> r
-        Left _ -> error "Can not decode Ledger"
+        Left _  -> error "Can not decode Ledger"
   let result2 = map func result
   putStrLn $ show result2
 
@@ -302,7 +312,7 @@ getAllMicroblocks = do
   result <- getAll =<< getMicroblockFilePath
   let func res = case (S.decode res :: Either String Microblock) of
         Right r -> r
-        Left _ -> error "Can not decode Microblock"
+        Left _  -> error "Can not decode Microblock"
   let result2 = map func result
   putStrLn $ show result2
 
@@ -313,7 +323,7 @@ getAllLedgerKV = do
   -- let result2 = map (\res -> S.decode res :: Either String PublicKey) result
   let func res = case (S.decode res :: Either String Amount) of
         Right r -> r
-        Left _ -> error "Can not decode Ledger"
+        Left _  -> error "Can not decode Ledger"
   let result2 = map (\(k,v) -> (k, func v)) result
   putStrLn $ show result2
 
@@ -323,7 +333,7 @@ getAllTransactionsKV = do
   result <- getAllKV =<< getTransactionFilePath
   let func res = case (S.decode res :: Either String Transaction) of
         Right r -> r
-        Left _ -> error "Can not decode Transaction"
+        Left _  -> error "Can not decode Transaction"
   let result2 = map (\(k,v) -> (k, func v)) result
   putStrLn $ show result2
 
@@ -333,7 +343,7 @@ getAllMicroblockKV = do
   result <- getAllKV =<< getMicroblockFilePath
   let func res = case (S.decode res :: Either String Microblock) of
         Right r -> r
-        Left _ -> error "Can not decode Microblock"
+        Left _  -> error "Can not decode Microblock"
   let result2 = map (\(k,v) -> (k, func v)) result
   -- putStrLn $ show result2
   return result2

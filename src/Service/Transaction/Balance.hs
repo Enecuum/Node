@@ -1,28 +1,37 @@
-{-# LANGUAGE PackageImports, FlexibleContexts, LambdaCase, DisambiguateRecordFields, DuplicateRecordFields #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE DuplicateRecordFields    #-}
+{-# LANGUAGE FlexibleContexts         #-}
+{-# LANGUAGE LambdaCase               #-}
+{-# LANGUAGE PackageImports           #-}
 module Service.Transaction.Balance
   ( getBalanceForKey,
     addMicroblockToDB,
-    runLedger) where
+    runLedger,
+    writeMacroblockToDB
+    ) where
 
-import Service.Transaction.Storage
-import Service.Types.PublicPrivateKeyPair
-import Service.Types hiding (MicroblockAPI(..))
-import qualified Data.ByteString.Char8 as BC hiding (map)
-import qualified "rocksdb-haskell" Database.RocksDB as Rocks
-import qualified Data.HashTable.IO as H
-import Control.Monad
+import           Control.Monad
+import qualified Data.ByteString.Char8                 as BC hiding (map)
+import qualified Data.HashTable.IO                     as H
+import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
+import           Service.Transaction.Storage
+import           Service.Types                         hiding
+                                                        (MicroblockAPI (..))
+import           Service.Types.PublicPrivateKeyPair
 --import Service.Transaction.Storage (DBPoolDescriptor(..),DBPoolDescriptor(..),rHash, rValue, urValue, Macroblock(..), unA, getMicroBlockByHashDB)
 
-import Data.Default (def)
-import Data.Hashable
-import Data.Pool
-import Data.Serialize (decode, encode)
-import              Control.Concurrent.Chan.Unagi.Bounded
-import Service.InfoMsg (InfoMsg(..), LogingTag(..), MsgType(..))
-import Node.Data.GlobalLoging
-import Data.Maybe
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Data.Default                          (def)
+import           Data.Hashable
+import           Data.Maybe
+import           Data.Pool
+import           Data.Serialize                        (decode, encode)
+import           Node.Data.GlobalLoging
+import           Service.InfoMsg                       (InfoMsg (..),
+                                                        LogingTag (..),
+                                                        MsgType (..))
 
-
+import           Data.Serialize
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
 
@@ -32,7 +41,7 @@ getBalanceForKey db key = do
     let fun = (\db -> Rocks.get db Rocks.defaultReadOptions (rValue key))
     val  <- withResource (poolLedger db) fun
     result <- case val of Nothing -> return Nothing --putStrLn "There is no such key"
-                          Just v -> unA v
+                          Just v  -> unA v
     return result
 
 
@@ -72,7 +81,7 @@ getBalanceOfKeys db tx = do
   --
   let fun3 = \(k,v) -> case v of Nothing -> (k, 100 :: Amount)
                                  Just balance -> case (urValue balance :: Either String Amount) of
-                                   Left _ -> (k, 0)
+                                   Left _  -> (k, 0)
                                    Right b -> (k, b)
 
   let newBalance = map fun3 balance
@@ -92,8 +101,8 @@ getPubKeys :: Transaction -> [PublicKey]
 getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
-hashedMb :: Show a => a -> BC.ByteString
-hashedMb hashesOfMicroblock = encode $ show hashesOfMicroblock
+hashedMb :: Data.Serialize.Serialize a => a -> BC.ByteString
+hashedMb hashesOfMicroblock = rValue hashesOfMicroblock
 
 type HashOfMicroblock = BC.ByteString
 checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, [HashOfMicroblock])
@@ -101,39 +110,41 @@ checkMacroblock db aInfoChan keyBlockHash blockHash = do
     let quantityMicroblocksInMacroblock = 2
     let fun = (\db -> Rocks.get db Rocks.defaultReadOptions keyBlockHash)
     v  <- withResource (poolMacroblock db) fun
-    case v of Nothing -> do -- If Macroblock is not already in the table, than insert it into the table
-                           let key = keyBlockHash
-                               val = hashedMb [blockHash]
-                           let fun = (\db -> Rocks.write db def{Rocks.sync = True} [ Rocks.Put key val ])
-                           withResource (poolMacroblock db) fun
-                           writeLog aInfoChan [BDTag] Info ("Write Macroblock " ++ show key ++ "to DB")
-                           return (False, True, True, [])
-              Just a -> do -- If Macroblock already in the table
-                           -- let hashes = map (fromRight . decode) a -- (read a :: [BC.ByteString])
-                           let hashes = case (decode a) of
-                                         Right r -> (read r :: [BC.ByteString])
-                                         Left _ -> error "Can not decode hashes of microblock "
-                           if length hashes >= quantityMicroblocksInMacroblock
-                           then return (True, True, False, [])
-                           else do
-                             -- let hashes = [BC.empty]
-                             -- Check is Microblock already in Macroblock
-                             let microblockIsAlreadyInMacroblock = blockHash `elem` hashes
-                             writeLog aInfoChan [BDTag] Info ("Microblock is already in macroblock: " ++ show microblockIsAlreadyInMacroblock)
-                             if microblockIsAlreadyInMacroblock
-                               then return (False, False, True, hashes)  -- Microblock already in Macroblock - Nothing
-                               else do -- write microblock (_ , True)
-                                       -- add this Microblock to value of Macroblock
-                                       let key = keyBlockHash
-                                           val = hashedMb $ blockHash : hashes
-                                       let fun = (\db -> Rocks.write db def{Rocks.sync = True} [ Rocks.Put key val ])
-                                       withResource (poolMacroblock db) fun
-                                       writeLog aInfoChan [BDTag] Info ("Write Microblock "  ++ show key ++ "to Macroblock table")
-                                     -- Check quantity of microblocks, can we close Macroblock?
-                                       if (length hashes >= (quantityMicroblocksInMacroblock - 1))
+    case v of
+      Nothing -> do -- If Macroblock is not already in the table, than insert it into the table
+                    let aMacroBlock = Macroblock { _prevBlock = BC.pack "", _difficulty = 0, _height = 0, _solver = BC.pack "", _reward = 0, _txs_cnt = 0, _mblocks = [blockHash]}
+                    writeMacroblockToDB db aInfoChan keyBlockHash aMacroBlock
+                    return (False, True, True, [])
+      Just a -> do -- If Macroblock already in the table
+                   -- let hashes = map (fromRight . decode) a -- (read a :: [BC.ByteString])
+                   let hashes = case (decode a) of
+                                 Right r -> (read r :: [BC.ByteString])
+                                 Left _ -> error "Can not decode hashes of microblock "
+                   if length hashes >= quantityMicroblocksInMacroblock
+                   then return (True, True, False, [])
+                   else do
+                     -- let hashes = [BC.empty]
+                     -- Check is Microblock already in Macroblock
+                     let microblockIsAlreadyInMacroblock = blockHash `elem` hashes
+                     writeLog aInfoChan [BDTag] Info ("Microblock is already in macroblock: " ++ show microblockIsAlreadyInMacroblock)
+                     if microblockIsAlreadyInMacroblock
+                       then return (False, False, True, hashes)  -- Microblock already in Macroblock - Nothing
+                       else do -- add this Microblock to the value of Macroblock
+                               let aMacroBlock = Macroblock { _prevBlock = BC.pack "", _difficulty = 0, _height = 0, _solver = BC.pack "", _reward = 0, _txs_cnt = 0, _mblocks = blockHash : hashes}
+                               writeMacroblockToDB db aInfoChan keyBlockHash aMacroBlock
+                             -- Check quantity of microblocks, can we close Macroblock?
+                               if (length hashes >= (quantityMicroblocksInMacroblock - 1))
                                        then return (True, True, True, hashes)
                                        else return (False, True, True, hashes)
 
+
+writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> Macroblock -> IO ()
+writeMacroblockToDB desc aInfoChan keyBlock aMacroblock = do
+  let key = keyBlock
+      val = rValue aMacroblock
+      fun = (\db -> Rocks.write db def{Rocks.sync = True} [ Rocks.Put key val ])
+  withResource (poolMacroblock desc) fun
+  writeLog aInfoChan [BDTag] Info ("Write Macroblock " ++ show key ++ "to DB")
 
 
 addMicroblockToDB :: DBPoolDescriptor -> Microblock -> InChan InfoMsg -> IO ()

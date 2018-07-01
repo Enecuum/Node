@@ -43,7 +43,7 @@ dependencies:
 - time-units
 - network
 - websockets
-- unagi-chan    
+- unagi-chan
 - aeson
 - cereal
 - mtl
@@ -82,7 +82,7 @@ dependencies:
 - text
 - aeson-pretty
 - unordered-containers
-- cryptohash
+# - cryptohash
 - rocksdb-haskell
 - data-default
 - hashtables
@@ -96,7 +96,7 @@ dependencies:
 #- persistent-postgresql
 #- mysql
 - unix-time
-
+- cryptohash-sha256
 
 library:
   source-dirs: src

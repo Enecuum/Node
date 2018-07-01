@@ -1,28 +1,27 @@
-{-# LANGUAGE
-        OverloadedStrings
-    ,   PackageImports
-    ,   DisambiguateRecordFields
-    ,   DuplicateRecordFields
-    ,   ScopedTypeVariables
-  #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE DuplicateRecordFields    #-}
+{-# LANGUAGE OverloadedStrings        #-}
+{-# LANGUAGE PackageImports           #-}
+{-# LANGUAGE ScopedTypeVariables      #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Service.Types.SerializeJSON where
 
-import              Data.Aeson
-import              Data.Aeson.Types (typeMismatch)
-import qualified "cryptonite"   Crypto.PubKey.ECC.ECDSA     as ECDSA
-import Service.Types.PublicPrivateKeyPair
-import Service.Types
-import Control.Monad
-import Data.ByteString (ByteString)
-import qualified Data.ByteString.Base64 as B
-import Data.Maybe (fromJust)
-import Data.Text (Text, pack, unpack)
-import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import           Control.Monad
+import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA as ECDSA
+import           Data.Aeson
+import           Data.Aeson.Types                     (typeMismatch)
+import           Data.ByteString                      (ByteString)
 import           Data.ByteString.Base58
-import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
+import qualified Data.ByteString.Base64               as B
+import           Data.Maybe                           (fromJust)
+import           Data.Text                            (Text, pack, unpack)
+import           Data.Text.Encoding                   (decodeUtf8, encodeUtf8)
+import qualified Data.Text.Encoding                   as T (decodeUtf8,
+                                                            encodeUtf8)
+import           Service.Types
+import           Service.Types.PublicPrivateKeyPair
 
 instance FromJSON Trans
 instance ToJSON   Trans
@@ -209,3 +208,13 @@ instance FromJSON ChainInfo where
                <*> o .: "txs_num"
                <*> o .: "nodes_num"
     parseJSON inv        = typeMismatch "ChainInfo" inv
+
+
+instance FromJSON KeyBlockInfo where
+  parseJSON (Object v) = KeyBlockInfo
+                         <$> (v .: "time")
+                         <*> (v .: "prev_hash")
+                         <*> (v .: "number")
+                         <*> (v .: "nonce")
+                         <*> (v .: "solver")
+  parseJSON inv        = typeMismatch "KeyBlockInfo" inv

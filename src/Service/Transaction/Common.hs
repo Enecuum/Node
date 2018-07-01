@@ -11,5 +11,11 @@ module Service.Transaction.Common (
 --  DBdescriptor(..),
   DBPoolDescriptor(..)
   ) where
-import Service.Transaction.Storage (connectOrRecoveryConnect, getAllTransactionsDB, getBlockByHashDB, getTransactionByHashDB, getKeyBlockByHashDB,  DBPoolDescriptor(..))
-import Service.Transaction.Balance   (getBalanceForKey,  addMicroblockToDB, runLedger)
+import           Service.Transaction.Balance (addMicroblockToDB,
+                                              getBalanceForKey, runLedger)
+import           Service.Transaction.Storage (DBPoolDescriptor (..),
+                                              connectOrRecoveryConnect,
+                                              getAllTransactionsDB,
+                                              getBlockByHashDB,
+                                              getKeyBlockByHashDB,
+                                              getTransactionByHashDB)

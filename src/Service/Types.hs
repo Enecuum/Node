@@ -1,21 +1,29 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, DeriveGeneric, LambdaCase, StandaloneDeriving #-}
-{-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
+{-# LANGUAGE DeriveGeneric             #-}
+{-# LANGUAGE DisambiguateRecordFields  #-}
+{-# LANGUAGE DuplicateRecordFields     #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances         #-}
+{-# LANGUAGE GADTs                     #-}
+{-# LANGUAGE LambdaCase                #-}
+{-# LANGUAGE OverloadedStrings         #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE StandaloneDeriving        #-}
 module Service.Types where
 
-import              Data.Serialize
-import              Data.Graph.Inductive
-import              Service.Types.PublicPrivateKeyPair
-import              GHC.Generics
-import              Data.ByteString
-import              Data.List.Split (splitOn)
-
+import           Data.Aeson
+import           Data.ByteString
+import           Data.Graph.Inductive
+import           Data.List.Split                    (splitOn)
+import           Data.Serialize
+import           GHC.Generics
+import           Service.Types.PublicPrivateKeyPair
 
 type QuantityTx = Int
 data Trans = Trans {
-        txAmount :: Amount
+        txAmount        :: Amount
       , recipientPubKey :: PublicKey
-      , senderPubKey :: PublicKey
-      , currency :: Currency
+      , senderPubKey    :: PublicKey
+      , currency        :: Currency
       } deriving (Eq, Show, Generic)
 
 type Id = Integer
@@ -51,15 +59,15 @@ instance Serialize Hash
 --        readsPrec _ value = return (Hash $ C.pack value,"")
 
 data MicroblockV1 = MicroblockV1{
-                  hashCurrentMicroblock :: ByteString, -- hashCurrentMicroblock
+                  hashCurrentMicroblock  :: ByteString, -- hashCurrentMicroblock
                   hashPreviousMicroblock :: ByteString, -- hashPreviousMicroblock
-                  trans :: [Transaction]}
+                  trans                  :: [Transaction]}
                 deriving (Eq, Generic, Ord, Show)
 
 data MicroblockAPI = MicroblockAPI {
-    _keyBlockAPI :: ByteString, -- hash of key-block
-    _signAPI :: Signature,  -- signature for {K_hash, [Tx],}
-    _teamKeysAPI :: [PublicKey], -- for reward
+    _keyBlockAPI     :: ByteString, -- hash of key-block
+    _signAPI         :: Signature,  -- signature for {K_hash, [Tx],}
+    _teamKeysAPI     :: [PublicKey], -- for reward
     _transactionsAPI :: [Transaction],
     _numOfBlockAPI   :: Integer
   }
@@ -67,20 +75,29 @@ data MicroblockAPI = MicroblockAPI {
 instance Serialize MicroblockAPI
 
 data Macroblock = Macroblock {
-    _prevBlock :: ByteString
-  ,  _difficulty :: Integer
-  ,  _height :: Integer
-  ,  _solver :: ByteString
-  ,  _reward :: Integer
-  ,  _txs_cnt :: Integer
-  ,  _mblocks :: [ByteString]
+     _prevBlock  :: ByteString
+  ,  _difficulty :: Integer --
+  ,  _height     :: Integer -- номер блока в цепочке
+  ,  _solver     :: ByteString
+  ,  _reward     :: Integer
+  ,  _txs_cnt    :: Integer
+  ,  _mblocks    :: [ByteString]
 } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize Macroblock
 
+data KeyBlockInfo = KeyBlockInfo {
+    time      :: Integer
+  , prev_hash :: String
+  , number    :: Integer
+  , nonce     :: Integer
+  , solver    :: PublicKey
+  } deriving  (Generic, Show, Eq, Read)
+instance Serialize KeyBlockInfo
+
 data Microblock = Microblock{
-    _keyBlock :: ByteString, -- hash of key-block
-    _sign :: Signature,  -- signature for {K_hash, [Tx],}
-    _teamKeys :: [PublicKey], -- for reward
+    _keyBlock     :: ByteString, -- hash of key-block
+    _sign         :: Signature,  -- signature for {K_hash, [Tx],}
+    _teamKeys     :: [PublicKey], -- for reward
     _transactions :: [Transaction],
     _numOfBlock   :: Integer
   }
