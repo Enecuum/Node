@@ -168,7 +168,6 @@ addMicroblockToDB db m aInfoChan =  do
     let txs = _transactions m
     let microblockHash = rHash m
     writeLog aInfoChan [BDTag] Info ("New Microblock came" ++ show(microblockHash))
-
 -- FIX: Write to db atomically
     (macroblockClosed, microblockNew, macroblockNew, macroblock ) <- checkMacroblock db aInfoChan (_keyBlock m) microblockHash
     writeLog aInfoChan [BDTag] Info ("Macroblock - New is " ++ show macroblockNew)
@@ -275,4 +274,4 @@ addMacroblockToDB db aValue aInfoChan = do
 
 dummyMacroblock :: Macroblock
 dummyMacroblock = Macroblock { _prevBlock = "", _difficulty = 0, _height = 0, _solver = aSolver, _reward = 0, _mblocks = [], _timeK = 0, _numberK = 0, _nonce = 0}
-  where aSolver = read "" :: PublicKey
+  where aSolver = read "1" :: PublicKey
