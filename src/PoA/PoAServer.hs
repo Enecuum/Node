@@ -166,6 +166,23 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                     | otherwise     -> do
                         writeLog aInfoChan [ServePoATag] Warning $ "Can't send request without PPId " ++ show aMsgToNN
                         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
+                --
+                IsInPendingRequest aTransaction -> do
+                    aTmpChan <- C.newChan
+                    C.writeChan aPendingChan $ IsInPending aTransaction aTmpChan
+                    aTransactions <- C.readChan aTmpChan
+                    WS.sendTextData aConnect $ A.encode $ ResponseIsInPending aTransactions
+
+                GetPendingRequest -> do
+                    aTmpChan <- C.newChan
+                    C.writeChan aPendingChan $ GetPending aTmpChan
+                    aTransactions <- C.readChan aTmpChan
+                    WS.sendTextData aConnect $ A.encode $ ResponsePendingTransactions aTransactions
+
+                AddTransactionRequest aTransaction -> do
+                    aOk <- tryWriteChan ch $ newTransaction aTransaction
+                    WS.sendTextData aConnect $ A.encode $ ResponseTransactionValid aOk
+
 
             Left a -> do
                 -- TODO: Include ID if exist.

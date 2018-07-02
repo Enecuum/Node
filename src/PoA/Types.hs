@@ -106,6 +106,11 @@ data PPToNNMessage
     -- | MsgMacroblock {
     --     macroblock :: Macroblock
     -- }
+
+    | IsInPendingRequest Transaction
+    | GetPendingRequest
+    | AddTransactionRequest Transaction
+
     deriving (Show)
 
 data NodeType = PoW | PoA | All deriving (Eq, Show, Ord, Generic)
@@ -151,6 +156,9 @@ data NNToPPMessage
         nodeType :: NodeType
     }
 
+    | ResponsePendingTransactions [Transaction]
+    | ResponseIsInPending Bool
+    | ResponseTransactionValid Bool
 
 
 
@@ -210,10 +218,18 @@ instance FromJSON PPToNNMessage where
                 aPoint <- unhexNodeId aDestination
                 return $ MsgMsgToNN (PPId aPoint) (S.encode aMsg)
 
-            ("Msg", "Microblock") -> do
-                aMicroblock <- aMessage .: "microblock"
-                return $ MsgMicroblock aMicroblock
+            ("Msg", "Microblock") ->
+                MsgMicroblock <$> aMessage .: "microblock"
 
+            -- testing functions!!!
+            ("Request", "Pending") -> do
+                aMaybeTransaction <- aMessage .:? "transaction"
+                return $ case aMaybeTransaction of
+                    Just aTransaction -> IsInPendingRequest aTransaction
+                    Nothing           -> GetPendingRequest
+
+            ("Request", "PendingAdd") ->
+                AddTransactionRequest <$> aMessage .: "transaction"
 
             _ -> mzero
 
@@ -289,6 +305,21 @@ instance ToJSON NNToPPMessage where
         "type"      .= ("PoWList"   :: String),
         "poWList"   .=  map ppIdToString aPPIds
       ]
+    toJSON (ResponsePendingTransactions aTransactions) = object [
+        "tag"       .= ("Response"  :: String),
+        "type"      .= ("Pending"   :: String),
+        "transactions" .= aTransactions
+      ]
+    toJSON (ResponseIsInPending aBool) = object [
+        "tag"       .= ("Response"  :: String),
+        "type"      .= ("Pending"   :: String),
+        "msg"       .= show aBool
+      ]
+    toJSON (ResponseTransactionValid aBool) = object [
+        "tag"       .= ("Response"  :: String),
+        "type"      .= ("PendingAdd"   :: String),
+        "msg"       .= show aBool
+       ]
 
 instance ToJSON Connect where
     toJSON (Connect aHostAddress aPortNumber) = object [
