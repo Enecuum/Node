@@ -14,6 +14,8 @@ import           Control.Monad.Trans.State           (StateT, get, put)
 import           Control.Retry
 import qualified Crypto.Hash.SHA256                  as SHA
 import           Data.Aeson
+import           Data.ByteString.Base58
+import qualified Data.ByteString.Base64              as Base64
 import qualified Data.ByteString.Char8               as BC
 import qualified Data.ByteString.Internal            as BSI
 import           Data.Default                        (def)
@@ -21,6 +23,8 @@ import           Data.Maybe
 import           Data.Pool
 import qualified Data.Serialize                      as S (Serialize, decode,
                                                            encode)
+import           Data.Text                           (Text)
+import           Data.Text.Encoding                  (decodeUtf8)
 import qualified "rocksdb-haskell" Database.RocksDB  as Rocks
 import           GHC.Generics
 import           Service.System.Directory            (getLedgerFilePath,
@@ -31,11 +35,6 @@ import           Service.Transaction.TransactionsDAG (genNNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON         ()
-
-
-import           Data.ByteString.Base58
-import           Data.Text                           (Text)
-import           Data.Text.Encoding                  (decodeUtf8)
 
 --------------------------------------
 -- begin of the Connection section
@@ -105,7 +104,7 @@ handler =
 
 -- for rocksdb Transaction and Microblock
 rHash :: S.Serialize a => a -> BSI.ByteString
-rHash key = SHA.hash . rValue $ key
+rHash key = Base64.encode . SHA.hash . rValue $ key
 
 rValue :: S.Serialize a => a -> BSI.ByteString
 rValue value = S.encode value
@@ -132,7 +131,20 @@ unA balance = case (urValue balance :: Either String Amount ) of
 
 
 
-
+getTxsMicroblock :: DBPoolDescriptor -> MicroblockBD -> IO [Transaction]
+getTxsMicroblock db (MicroblockBD _ _ _ txHashes _) = do
+  let fun kTransactionHash = (\db -> Rocks.get db Rocks.defaultReadOptions kTransactionHash)
+  maybeTxUntiped  <- mapM (\k -> withResource (poolTransaction db) (fun k)) txHashes
+  let txDoesNotExist = filter (\t -> t /= Nothing) maybeTxUntiped
+  if null txDoesNotExist
+    then error "Some of transactions can not be found"
+    else do
+         let txUntiped = map fromJust (filter (isJust) maybeTxUntiped)
+             extract t = case S.decode t :: Either String TransactionInfo of
+                            Left _  -> error "Can not decode TransactionInfo"
+                            Right r -> r
+             tx = map (_tx . extract) txUntiped
+         return tx
 
 getNTransactions ::  IO [BSI.ByteString]
 getNTransactions = runResourceT $ do
@@ -197,19 +209,26 @@ getMicroBlockByHashDB db mHash = do
 
   return mb
 
+
 getBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe MicroblockAPI)
 getBlockByHashDB db hash = do
   mb <- getMicroBlockByHashDB db hash
   case mb of
     Nothing -> return Nothing
     Just m -> do
-      let keyBlock = _keyBlockBD m
-          sign = _signBD m
-          teamKeys = _teamKeysBD m
-          transactions = _transactionsBD m
-          -- transactionsAPI = zip (rHash )
-      let mbAPI = read (show mb) :: Maybe MicroblockAPI
-      return mbAPI
+      tx <- getTxsMicroblock db m
+      let txAPI = map (\t -> TransactionAPI {_txAPI = t, _txHashAPI = rHash t}) tx
+      let mbAPI = MicroblockAPI {
+            _prevBlockAPI = "",
+            _nextBlockAPI = "",
+            _keyBlockAPI = _keyBlockBD m,
+            _signAPI = _signBD m,
+            _teamKeysAPI = _teamKeysBD m,
+            _publisherAPI = read "1" :: PublicKey,
+            _transactionsAPI = txAPI
+            }
+      return (Just mbAPI)
+
 
 getKeyBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe MacroblockAPI)
 getKeyBlockByHashDB db kHash = do
@@ -220,14 +239,17 @@ getKeyBlockByHashDB db kHash = do
                        Right r -> Just a
                          where a = MacroblockAPI {
                                  _prevKBlockAPI = _prevBlock r,
+                                 _nextKBlockAPI = "",
                                  _difficultyAPI = _difficulty r,
                                  _heightAPI = _height r,
                                  _solverAPI = _solver r,
                                  _rewardAPI = _reward r,
+                                 _txsCntAPI = 0,
                                  _mblocksAPI = _mblocks r
                                  }
 
   return t
+
 
 getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo) --Transaction
 getTransactionByHashDB db tHash = do
@@ -367,22 +389,35 @@ getAllTransactionsKV = do
   putStrLn $ show result2
 
 
-getAllMicroblockKV :: IO [(BSI.ByteString, Microblock)]
+getAllMicroblockKV :: IO [(BSI.ByteString, MicroblockBD)]
 getAllMicroblockKV = do
   result <- getAllKV =<< getMicroblockFilePath
-  let func res = case (S.decode res :: Either String Microblock) of
+  let func res = case (S.decode res :: Either String MicroblockBD) of
         Right r -> r
         Left _  -> error "Can not decode Microblock"
   let result2 = map (\(k,v) -> (k, func v)) result
   -- putStrLn $ show result2
   return result2
+
+
+getAllMacroblockKV :: IO ()
+getAllMacroblockKV = do
+  result <- getAllKV =<< getMacroblockFilePath
+  let func res = case (S.decode res :: Either String Macroblock) of
+        Right r -> r
+        Left _  -> error "Can not decode Macroblock"
+  let result2 = map (\(k,v) -> (k, func v)) result
+  putStrLn $ show result2
+
+
+
 -- end of the Query Iterator section
 --------------------------------------
 
-showAllMicroblockKV :: IO [(Text, Microblock)]
-showAllMicroblockKV = do
-          mbs <- getAllMicroblockKV
-          return $ map (\(bs, mb) -> (decodeUtf8 $ encodeBase58 bitcoinAlphabet bs, mb)) mbs
+-- showAllMicroblockKV :: IO [(Text, MicroblockBD)]
+-- showAllMicroblockKV = do
+--           mbs <- getAllMicroblockKV
+--           return $ map (\(bs, mb) -> (decodeUtf8 $ encodeBase58 bitcoinAlphabet bs, mb)) mbs
 
 --------------------------------------
 -- begin test cli
@@ -390,16 +425,16 @@ showAllMicroblockKV = do
 getOneMicroblock :: IO ()
 getOneMicroblock = do
   c <- connectDB
-  let h = Hash ("w\168A6\"O\230\214\214\142\&7\212`\245\ETB\202\189\SOY\t" :: BSI.ByteString)
+  let h = Hash ("LGseiNy5K6dk989PB7ICNQ0XqAoZwc776EO74x5oucE=" :: BSI.ByteString)
   -- let h = Hash ("\248\198\199\178e\ETXt\186T\148y\223\224t-\168p\162\138\&1" :: BSI.ByteString)
-  mb <- getMicroBlockByHashDB c h
+  mb <- getBlockByHashDB c h
   print mb
 
 
 getOneTransaction :: IO ()
 getOneTransaction = do
   c <- connectDB
-  let h = Hash ("\227\NULV\178W\131\DLEs\210DF\DELUL\144\r#\CAN'+\215e\164\228\RS`\251\250\143X\240\SUB" :: BSI.ByteString)
+  let h = Hash ("JafY+7bQi3E1/9EMGe2hrrYqGRKWI8isi5giKkEkf0c=" :: BSI.ByteString)
   tx <- getTransactionByHashDB c h
   print tx
 
@@ -412,6 +447,13 @@ getTransactionsByKey = do
 
 -- end test cli
 --------------------------------------
+
+
+-- getOneKeyBlock :: IO ()
+getOneKeyBlock = do
+  c <- connectDB
+  let h = Hash ("XXX" :: BSI.ByteString)
+  getKeyBlockByHashDB c h
 
 tryParseTXInfoJson :: IO ()
 tryParseTXInfoJson = do

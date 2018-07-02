@@ -15,23 +15,24 @@ module LightClient.CLI (
     Trans(..),
   ) where
 
-import System.Environment (getArgs)
-import System.Console.GetOpt
-import Data.List.Split (splitOn)
-import Data.List (find)
-import Data.Map (lookup, Map, fromList)
-import Control.Monad (forM_, replicateM_)
-import Control.Monad.Except (runExceptT)
-import Network.Socket (HostName, PortNumber)
-import qualified Network.WebSockets as WS
+import           Control.Monad                      (forM_, replicateM_)
+import           Control.Monad.Except               (runExceptT)
+import           Data.List                          (find)
+import           Data.List.Split                    (splitOn)
+import           Data.Map                           (Map, fromList, lookup)
+import           Network.Socket                     (HostName, PortNumber)
+import qualified Network.WebSockets                 as WS
+import           System.Console.GetOpt
+import           System.Environment                 (getArgs)
 
-import Service.Types
-import Service.Types.PublicPrivateKeyPair
-import Service.System.Directory (getTime)
-import Service.Network.WebSockets.Client
-import LightClient.RPC
-import System.Random
-import Data.DeriveTH
+import qualified Data.ByteString.Internal           as BSI
+import           Data.DeriveTH
+import           LightClient.RPC
+import           Service.Network.WebSockets.Client
+import           Service.System.Directory           (getTime)
+import           Service.Types
+import           Service.Types.PublicPrivateKeyPair
+import           System.Random
 
 data Flag = Port PortNumber | Host HostName | Version | Help
           | WalletsFile String | TransactionsFile String | KeyGen Int
@@ -72,15 +73,15 @@ control :: IO ()
 control = do
     argv   <- getArgs
     case getOpt Permute args argv of
-      (flags, _, []) -> do 
+      (flags, _, []) -> do
         addr <- case find isHost flags of
                  Just (Host a) -> return a
-                 Nothing        -> return "127.0.0.1"
+                 Nothing       -> return "127.0.0.1"
 
         port <- case find isPort flags of
                  Just (Port p) -> return p
                  Nothing       -> return 1555
-        
+
         dispatch (filter (\e -> not (isPort e || isHost e)) flags) addr port
       (_, _, err)    -> ioError (userError (concat err ++ usageInfo "Usage: enq-cli [OPTION...]" args))
 
@@ -133,9 +134,9 @@ sendTrans :: String -> String -> WS.Connection -> IO ()
 sendTrans transactionsFile walletsFile ch = do
   keyPairs  <- getSavedKeyPairs walletsFile
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
-  
+
   rawTransactions <- lines <$> readFile transactionsFile
-  let transactions = map (\[x,y,z] ->(read x :: PublicKey, read y :: PublicKey, read z :: Amount)) $ 
+  let transactions = map (\[x,y,z] ->(read x :: PublicKey, read y :: PublicKey, read z :: Amount)) $
                      map (splitOn ";") rawTransactions
 
   forM_ transactions $ \(from, to, am) -> do

@@ -27,6 +27,7 @@ import           Data.Ord                              (comparing)
 import           Data.Pool
 import qualified Data.Serialize                        as S (Serialize, decode,
                                                              encode)
+import           Data.Typeable
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
 import           Service.InfoMsg                       (InfoMsg (..),
@@ -63,21 +64,7 @@ updateBalanceTable ht (Transaction fromKey toKey am _ _ _ _) = do
                                                   H.insert ht toKey (balanceTo + am)
                                           else do return ()
 
--- getTxsMicroblock = undefined
-getTxsMicroblock :: DBPoolDescriptor -> MicroblockBD -> IO [Transaction]
-getTxsMicroblock db (MicroblockBD _ _ _ txHashes _) = do
-  let fun kTransactionHash = (\db -> Rocks.get db Rocks.defaultReadOptions kTransactionHash)
-  maybeTxUntiped  <- mapM (\k -> withResource (poolTransaction db) (fun k)) txHashes
-  let txDoesNotExist = filter (\t -> t /= Nothing) maybeTxUntiped
-  if null txDoesNotExist
-    then error "Some of transactions can not be found"
-    else do
-         let txUntiped = map fromJust (filter (isJust) maybeTxUntiped)
-             extract t = case S.decode t :: Either String TransactionInfo of
-                            Left _  -> error "Can not decode TransactionInfo"
-                            Right r -> r
-             tx = map (_tx . extract) txUntiped
-         return tx
+
 
 
 getBalanceOfKeys :: Pool Rocks.DB -> [Transaction] -> IO BalanceTable
@@ -116,7 +103,6 @@ runLedger db aInfoChan m = do
 
 getPubKeys :: Transaction -> [PublicKey]
 getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
-
 
 -- type HashOfMicroblock = BC.ByteString
 checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, Bool, Macroblock)
@@ -167,8 +153,8 @@ addMicroblockToDB db m aInfoChan =  do
                 writeLog aInfoChan [BDTag] Info ("Macroblock - New is " ++ show macroblockNew)
                 writeLog aInfoChan [BDTag] Info ("Microblock - New is " ++ show microblockNew)
                 writeLog aInfoChan [BDTag] Info ("Macroblock closed is " ++ show macroblockClosed)
-                if (macroblockNew && microblockNew) then do
-                  writeMicroblockDB (poolMicroblock db) aInfoChan m
+                when (macroblockNew && microblockNew) $ do
+                  writeMicroblockDB (poolMicroblock db) aInfoChan (transform m)
                   writeTransactionDB (poolTransaction db) aInfoChan txs microblockHash
                   -- let aMacroblock = fromJust macroblock
 
@@ -185,7 +171,6 @@ addMicroblockToDB db m aInfoChan =  do
                     writeMacroblockToDB db aInfoChan (_keyBlock m) (macroblock {_reward = 10})
                   else do
                     writeMacroblockToDB db aInfoChan (_keyBlock m) macroblock
-                else return ()
 
 
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> Macroblock -> IO ()
@@ -197,12 +182,13 @@ writeMacroblockToDB desc aInfoChan keyBlock aMacroblock = do
   writeLog aInfoChan [BDTag] Info ("Write Macroblock " ++ show key ++ "to DB")
 
 
-writeMicroblockDB :: Pool Rocks.DB -> InChan InfoMsg -> Microblock -> IO ()
+writeMicroblockDB :: Pool Rocks.DB -> InChan InfoMsg -> MicroblockBD -> IO ()
 writeMicroblockDB db aInfoChan m = do
   let key = rHash m
       val  = rValue m
       fun = (\db -> Rocks.write db def{Rocks.sync = True} [ Rocks.Put key val ])
   withResource db fun
+  writeLog aInfoChan [BDTag] Info ("typeOf Microblock "  ++ (show (typeOf m)))
   writeLog aInfoChan [BDTag] Info ("Write Microblock "  ++ show key ++ "to Microblock table")
 
 
@@ -282,3 +268,12 @@ transformation db m = do
   _transactions  = tx,
   _numOfBlock    = _numOfBlockBD m
   }
+
+
+transform :: Microblock -> MicroblockBD
+transform m = MicroblockBD {
+  _keyBlockBD = _keyBlock m,
+  _signBD = _sign m,
+  _teamKeysBD = _teamKeys m,
+  _transactionsBD = map rHash (_transactions m),
+  _numOfBlockBD = _numOfBlock m }

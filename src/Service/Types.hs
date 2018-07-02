@@ -65,16 +65,7 @@ data MicroblockV1 = MicroblockV1{
                 deriving (Eq, Generic, Ord, Show)
 
 
--- data MicroblockPoA = MicroblockPoA{
---     _keyBlockPoA     :: ByteString, -- hash of key-block
---     _signPoA         :: Signature,  -- signature for {K_hash, [Tx],}
---     _teamKeysPoA     :: [PublicKey], -- for reward
---     _transactionsPoA :: [Transaction],
---     _numOfBlockPoA   :: Integer
---   }
---   deriving (Eq, Generic, Ord, Read, Show)
--- instance Serialize MicroblockPoA
-
+-- MicroblockPoA
 data Microblock = Microblock{
     _keyBlock     :: ByteString, -- hash of key-block
     _sign         :: Signature,  -- signature for {K_hash, [Tx],}
