@@ -52,6 +52,7 @@ type Result a = Either CLIException a
 
 data CLIException = WrongKeyOwnerException
                   | NotImplementedException -- test
+                  | NoTransactionsForPublicKey
                   | NoSuchPublicKeyInDB
                   | NoSuchMicroBlockDB
                   | NoSuchMacroBlockDB
@@ -103,13 +104,12 @@ getTransactionByHash db hash _ = try $ do
 
 
 getAllTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> InChan a -> IO (Result [TransactionAPI])
-getAllTransactions pool key _ = return $ Left NotImplementedException
-{-try $ do
+getAllTransactions pool key _ = try $ do
   tx <- B.getAllTransactionsDB pool key
   case tx of
-    [] -> throw OtherException
+    [] -> throw NoTransactionsForPublicKey
     t  -> return t
--}
+
 
 sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> IO (Result ())
 sendTrans tx ch aInfoCh = try $ do

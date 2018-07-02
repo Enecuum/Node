@@ -285,19 +285,20 @@ getAllItems db = do
   Rocks.iterFirst it
   Rocks.iterItems it
 
-getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [Transaction]
+getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [TransactionAPI]
 getAllTransactionsDB descr pubKey = do
   txByte <- withResource (poolTransaction descr) getAllValues
-  putStrLn $ show txByte
+  -- putStrLn $ show txByte
   let fun = \t -> case (S.decode t :: Either String TransactionInfo) of
                        Left _   -> error "Can not decode TransactionInfo"
                        Right rt -> Just rt
 
-  let txInfo = map fun txByte
-  let txWithouMaybe = map fromJust (filter (isJust) txInfo)
-  let tx = map _tx txWithouMaybe
-  let txWithKey = filter (\t -> (_owner t == pubKey || _receiver t == pubKey)) tx
-  return txWithKey
+      txInfo = map fun txByte
+      txWithouMaybe = map fromJust (filter (isJust) txInfo)
+      tx = map _tx txWithouMaybe
+      txWithKey = filter (\t -> (_owner t == pubKey || _receiver t == pubKey)) tx
+      txAPI = map (\t -> TransactionAPI { _txAPI = t, _txHashAPI = rHash t}) txWithKey
+  return txAPI
 
 getAllTransactions :: IO ()
 getAllTransactions = do
@@ -398,7 +399,7 @@ getOneMicroblock = do
 getOneTransaction :: IO ()
 getOneTransaction = do
   c <- connectDB
-  let h = Hash ("a\167\156\bU\215&.\251\187a\NAK\179\253\216\236\229\191\144R" :: BSI.ByteString)
+  let h = Hash ("\227\NULV\178W\131\DLEs\210DF\DELUL\144\r#\CAN'+\215e\164\228\RS`\251\250\143X\240\SUB" :: BSI.ByteString)
   tx <- getTransactionByHashDB c h
   print tx
 
