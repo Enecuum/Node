@@ -100,7 +100,7 @@ loadNewMsg h = toFunction (connectionWithTimeOut h) loadNewMsgSig
 
 connectionWithTimeOut :: WS.Connection -> Connection IO
 connectionWithTimeOut h input = do
-  result <- timeout (5 :: Second) $ connection h input
+  result <- timeout (10 :: Second) $ connection h input
   case result of
     Just a  -> return a
     Nothing -> return (error "Connection error: out of time-out")
