@@ -114,7 +114,7 @@ dispatch flags h p =
         (LoadMessages : _)               -> withClient   loadMessages
         (Help : _)                       -> putStrLn $ usageInfo "Usage: " args
         (Version: _)                     -> printVersion
-        _                                -> putStrLn "Wrong argument"
+        _                                -> putStrLn $ usageInfo "Wrong input.\nUsage: " args
 
 
   where withClient f = runClient h (fromEnum p) "" $ \ ch -> f ch

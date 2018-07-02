@@ -73,7 +73,7 @@ data MacroblockAPI = MacroblockAPI {
   ,  _nextKBlockAPI  :: ByteString
   ,  _difficultyAPI :: Integer
   ,  _heightAPI     :: Integer
-  ,  _solverAPI     :: ByteString
+  ,  _solverAPI     :: PublicKey
   ,  _rewardAPI     :: Integer
   ,  _txsCntAPI     :: Integer
   ,  _mblocksAPI    :: [ByteString]
