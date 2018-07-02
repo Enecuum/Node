@@ -1,60 +1,58 @@
-{-# LANGUAGE
-    OverloadedStrings,
-    MultiWayIf,
-    LambdaCase,
-    MultiParamTypeClasses,
-    ViewPatterns,
-    StandaloneDeriving,
-    TypeSynonymInstances,
-    FlexibleContexts,
-    TypeFamilies,
-    FlexibleInstances
-     #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiWayIf            #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE StandaloneDeriving    #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE ViewPatterns          #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Node.Node.Mining (
     managerMining
   ) where
 
-import              System.Random()
-import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
+import qualified Crypto.PubKey.ECC.ECDSA               as ECDSA
+import           System.Random                         ()
 
-import qualified    Data.Map                        as M
-import qualified    Data.Bimap                      as BI
-import              Data.Maybe (isNothing, catMaybes)
-import              Data.List.Extra
-import              System.Clock
-import              Data.IORef
-import              Data.Serialize
-import              Lens.Micro
-import              Lens.Micro.Mtl()
-import qualified    Control.Concurrent              as C
-import              Control.Concurrent.Chan.Unagi.Bounded
-import              Control.Concurrent.MVar
+import qualified Control.Concurrent                    as C
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Concurrent.MVar
+import qualified Data.Bimap                            as BI
+import           Data.IORef
+import           Data.List.Extra
+import qualified Data.Map                              as M
+import           Data.Maybe                            (catMaybes, isNothing)
+import           Data.Serialize
+import           Lens.Micro
+import           Lens.Micro.Mtl                        ()
+import           System.Clock
 
-import              Control.Monad.Extra
-import              Crypto.Error
-import              Node.Node.BroadcastProcessing
+import           Control.Monad.Extra
+import           Crypto.Error
+import           Node.Node.BroadcastProcessing
 
-import              Node.FileDB.FileServer
-import              Sharding.Space.Distance
-import              Sharding.Types.ShardLogic
-import              Service.Monad.Option
-import              Node.Crypto
-import              Node.Data.Key
-import              Node.Node.Types
-import              Node.Node.Base
-import              Node.Data.NetPackage
-import qualified    Sharding.Types.Node as T
-import              Sharding.Space.Point
-import              Node.Node.Processing
-import              Service.InfoMsg
-import              Node.Data.MakeAndSendTraceRouting
-import              Node.Data.Verification
-import              Node.Data.GlobalLoging
-import              PoA.Types
-import              Sharding.Sharding()
-import              Node.BaseFunctions
+import           Node.BaseFunctions
+import           Node.Crypto
+import           Node.Data.GlobalLoging
+import           Node.Data.Key
+import           Node.Data.MakeAndSendTraceRouting
+import           Node.Data.NetPackage
+import           Node.Data.Verification
+import           Node.FileDB.FileServer
+import           Node.Node.Base
+import           Node.Node.Processing
+import           Node.Node.Types
+import           PoA.Types
+import           Service.InfoMsg
+import           Service.Monad.Option
+import           Sharding.Sharding                     ()
+import           Sharding.Space.Distance
+import           Sharding.Space.Point
+import qualified Sharding.Types.Node                   as T
+import           Sharding.Types.ShardLogic
 
 managerMining :: (InChan ManagerMiningMsgBase, OutChan ManagerMiningMsgBase) -> IORef ManagerNodeData -> IO ()
 managerMining (aChan, aOutChan) aMd = do
@@ -117,7 +115,7 @@ answerToTestBroadcastBlockIndex aMd _ = do
 answeToMsgFromPP :: IORef ManagerNodeData ->  ManagerMiningMsgBase ->  IO ()
 answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do
     aData <- readIORef aMd
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $  "Recived msg from PP " ++ show aMsg
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $  "Received msg from PP " ++ show aMsg
     case aMsg of
         MicroblockFromPP aMicroblock aSenderId -> do
             writeMetric (aData^.infoMsgChan)  $ increment "net.bl.count"
@@ -296,7 +294,7 @@ timeLimit = 5*60*10^(9 :: Integer)
 instance BroadcastAction ManagerNodeData where
     makeBroadcastAction _ aMd aNodeId aBroadcastSignature aBroadcastThing = do
         aData <- readIORef aMd
-        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Recived the broadcast msg " ++ show aBroadcastThing ++ "."
+        writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Received the broadcast msg " ++ show aBroadcastThing ++ "."
         when (notInIndex aData aBroadcastThing) $ do
             addInIndex aBroadcastThing aMd
             sendBroadcastThingToNodes aMd aNodeId aBroadcastSignature aBroadcastThing
@@ -306,7 +304,7 @@ instance BroadcastAction ManagerNodeData where
 instance PackageTraceRoutingAction ManagerNodeData ResponsePackage where
     makeAction aChan md aNodeId aTraceRouting aResponsePackage = do
         aData <- readIORef md
-        writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Recived a Response package."
+        writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Received a Response package."
         if verify (aTraceRouting, aResponsePackage) then if
             | isItMyResponse aNodeId aTraceRouting  -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info "The Response is for me. The processing of Response."
@@ -378,8 +376,8 @@ instance PackageTraceRoutingAction ManagerNodeData RequestPackage where
                 processing aChan md aSignature aTraceRouting aRequest
 
         aIsMiningLvlMsg = case aRequestPackage of
-            RequestMiningLvlPackage{}  -> True
-            _                          -> False
+            RequestMiningLvlPackage{} -> True
+            _                         -> False
 
 
 makeRequest
@@ -463,7 +461,7 @@ addInIndex aMsg aMd = do
 processingOfBroadcastThing :: IORef ManagerNodeData -> BroadcastThing -> IO ()
 processingOfBroadcastThing aMd aBroadcastThing = do
     aData <- readIORef aMd
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Recived " ++ show aBroadcastThing
+    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Received " ++ show aBroadcastThing
     case aBroadcastThing of
         BroadcastNet    aMsg -> processingOfBroadcast aMd aMsg
         BroadcastLogic  aMsg -> processingOfBroadcast aMd aMsg
