@@ -47,6 +47,9 @@ import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
 
+import           Control.Timeout
+import           Data.Time.Units (Second)
+
 type Result a = Either CLIException a
 
 data CLIException = WrongKeyOwnerException
@@ -54,6 +57,7 @@ data CLIException = WrongKeyOwnerException
                   | NoSuchPublicKeyInDB
                   | NoSuchMicroBlockDB
                   | NoSuchTransactionDB
+                  | TransactionChanBusyException
                   | OtherException
   deriving Show
 
@@ -107,9 +111,15 @@ getAllTransactions pool key _ = return $ Left NotImplementedException
 -}
 
 sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> IO (Result ())
-sendTrans tx ch aInfoCh = try $ do
-  sendMetrics tx aInfoCh
-  writeChan ch $ newTransaction tx
+sendTrans tx ch aInfoCh = try $ do 
+  exp <- (timeout (5 :: Second) $ do
+           sendMetrics tx aInfoCh
+           writeChan ch $ newTransaction tx)
+  case exp of
+    Just _   -> return ()
+    Nothing  -> throw TransactionChanBusyException
+     
+ 
 
 
 sendNewTrans :: ManagerMiningMsg a => Trans -> InChan a -> InChan InfoMsg -> IO (Result Transaction)
