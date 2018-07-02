@@ -187,11 +187,11 @@ getNValues db n = do
 -- end of the Test section
 --------------------------------------
 
-getMicroBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe Microblock)
+getMicroBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe MicroblockBD)
 getMicroBlockByHashDB db mHash = do
   mbByte <- getByHash (poolMicroblock db) mHash
   let mb = case mbByte of Nothing -> Nothing
-                          Just m -> case (S.decode m :: Either String Microblock) of
+                          Just m -> case (S.decode m :: Either String MicroblockBD) of
                             Left _   -> error "Can not decode Microblock"
                             Right rm -> Just rm
 
@@ -203,10 +203,10 @@ getBlockByHashDB db hash = do
   case mb of
     Nothing -> return Nothing
     Just m -> do
-      let keyBlock = _keyBlock m
-          sign = _sign m
-          teamKeys = _teamKeys m
-          transactions = _transactions m
+      let keyBlock = _keyBlockBD m
+          sign = _signBD m
+          teamKeys = _teamKeysBD m
+          transactions = _transactionsBD m
           -- transactionsAPI = zip (rHash )
       let mbAPI = read (show mb) :: Maybe MicroblockAPI
       return mbAPI

@@ -19,7 +19,6 @@ import           Data.Aeson
 import           Data.Aeson.Types                      (parseMaybe)
 import qualified Data.ByteString.Char8                 as BC
 import           Data.Default                          (def)
-import           Data.Either
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
 import           Data.List                             (sortBy)
@@ -65,8 +64,8 @@ updateBalanceTable ht (Transaction fromKey toKey am _ _ _ _) = do
                                           else do return ()
 
 -- getTxsMicroblock = undefined
-getTxsMicroblock :: DBPoolDescriptor -> Microblock -> IO [Transaction]
-getTxsMicroblock db (Microblock _ _ _ txHashes _) = do
+getTxsMicroblock :: DBPoolDescriptor -> MicroblockBD -> IO [Transaction]
+getTxsMicroblock db (MicroblockBD _ _ _ txHashes _) = do
   let fun kTransactionHash = (\db -> Rocks.get db Rocks.defaultReadOptions kTransactionHash)
   maybeTxUntiped  <- mapM (\k -> withResource (poolTransaction db) (fun k)) txHashes
   let txDoesNotExist = filter (\t -> t /= Nothing) maybeTxUntiped
@@ -109,7 +108,7 @@ getBalanceOfKeys db tx = do
 
 runLedger :: DBPoolDescriptor -> InChan InfoMsg -> Microblock -> IO ()
 runLedger db aInfoChan m = do
-    txs <- getTxsMicroblock db m
+    let txs = _transactions m
     ht      <- getBalanceOfKeys (poolLedger db) txs
     mapM_ (updateBalanceTable ht) txs
     writeLedgerDB (poolLedger db) aInfoChan ht
@@ -119,7 +118,7 @@ getPubKeys :: Transaction -> [PublicKey]
 getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
-type HashOfMicroblock = BC.ByteString
+-- type HashOfMicroblock = BC.ByteString
 checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, Maybe Macroblock)
 checkMacroblock db aInfoChan keyBlockHash blockHash = do
     let quantityMicroblocksInMacroblock = 2
@@ -145,18 +144,28 @@ checkMacroblock db aInfoChan keyBlockHash blockHash = do
                      if microblockIsAlreadyInMacroblock
                        then return (False, False, True, Nothing)  -- Microblock already in Macroblock - Nothing
                        else do -- add this Microblock to the value of Macroblock
-                               let aMacroBlock = bdMacroblock {  _mblocks = blockHash : hashes}
+                               let aMacroBlock = bdMacroblock {  _mblocks = hashes ++ [blockHash] }
                                writeMacroblockToDB db aInfoChan keyBlockHash aMacroBlock
                              -- Check quantity of microblocks, can we close Macroblock?
                                if (length hashes >= (quantityMicroblocksInMacroblock - 1))
                                        then return (True, True, True, Just bdMacroblock)
                                        else return (False, True, True, Nothing)
 
+transformation :: DBPoolDescriptor -> MicroblockBD -> IO Microblock
+transformation db m = do
+  tx <- getTxsMicroblock db m
+  return Microblock {
+  _keyBlock      = _keyBlockBD m,
+  _sign          = _signBD m,
+  _teamKeys      = _teamKeysBD m,
+  _transactions  = tx,
+  _numOfBlock    = _numOfBlockBD m
+  }
 
 addMicroblockToDB :: DBPoolDescriptor -> Microblock -> InChan InfoMsg -> IO ()
 addMicroblockToDB db m aInfoChan =  do
 -- FIX: verify signature
-    txs <- getTxsMicroblock db m
+    let txs = _transactions m
     let microblockHash = rHash m
     writeLog aInfoChan [BDTag] Info ("New Microblock came" ++ show(microblockHash))
 
@@ -172,12 +181,14 @@ addMicroblockToDB db m aInfoChan =  do
       if macroblockClosed then do
         -- get all microblocks (without the last added) for macroblock
         let aMacroblock = fromJust macroblock
-        let microblockHashes = tail $ _mblocks aMacroblock
-        mb <- mapM (\h -> getMicroBlockByHashDB db (Hash h))  microblockHashes
-        let realMb = sortBy (comparing _sign) $ map fromJust (filter (isJust) mb) ++ [m]
+        let microblockHashes = init $ _mblocks aMacroblock
+        mbBD <- mapM (\h -> getMicroBlockByHashDB db (Hash h))  microblockHashes
+        let realMb =  map fromJust (filter (isJust) mbBD)
+        mbWithTx <- mapM (transformation db) realMb
 
-        writeLog aInfoChan [BDTag] Info ("Start calculate Ledger "  ++ show (length realMb))
-        mapM_ (runLedger db aInfoChan) realMb
+        let sortedMb = sortBy (comparing _sign) $ mbWithTx ++ [m]
+        writeLog aInfoChan [BDTag] Info ("Start calculate Ledger "  ++ show (length sortedMb))
+        mapM_ (runLedger db aInfoChan) sortedMb
         writeMacroblockToDB db aInfoChan (_keyBlock m) (aMacroblock {_reward = 10})
       else return ()
     else return ()
