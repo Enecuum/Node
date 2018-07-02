@@ -80,7 +80,7 @@ getBlockByHash db hash _ = try $ do
     Just m  -> return m
 
 
-getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result Macroblock)
+getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result MacroblockAPI)
 getKeyBlockByHash _ _ _ = return $ Left NotImplementedException
  --return =<< Right <$> B.getBlockByHashDB db hash
 
@@ -97,12 +97,14 @@ getTransactionByHash db hash _ = try $ do
     Just t  -> return t
 
 
-getAllTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> InChan a -> IO (Result [Transaction])
-getAllTransactions pool key _ = try $ do
+getAllTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> InChan a -> IO (Result [TransactionAPI])
+getAllTransactions pool key _ = return $ Left NotImplementedException
+{-try $ do
   tx <- B.getAllTransactionsDB pool key
   case tx of
     [] -> throw OtherException
     t  -> return t
+-}
 
 sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> IO (Result ())
 sendTrans tx ch aInfoCh = try $ do

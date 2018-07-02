@@ -18,11 +18,11 @@ import Service.Types
 import Control.Monad
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base64 as B
-import Data.Maybe (fromJust)
 import Data.Text (Text, pack, unpack)
-import Data.Text.Encoding (decodeUtf8, encodeUtf8)
-import           Data.ByteString.Base58
 import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
+
+import           Data.ByteString.Conversion
+
 
 instance FromJSON Trans
 instance ToJSON   Trans
@@ -53,15 +53,25 @@ decodeFromText aStr = case B.decode . T.encodeUtf8 $ aStr of
     Right a -> return a
     Left _  -> mzero
 
+intToBase64Text :: Integer -> Text
+intToBase64Text i = encodeToText $ toByteString' i
+
+base64TextToInt :: (MonadPlus m) => Text -> m Integer
+base64TextToInt b = do
+     bs <- decodeFromText b 
+     case fromByteString bs of
+       Just i -> return i
+       _      -> mzero
+           
 
 instance ToJSON Hash
 instance FromJSON Hash
 
 instance ToJSON ByteString where
-  toJSON h = String $ decodeUtf8 $ encodeBase58 bitcoinAlphabet h
+  toJSON h = String $ encodeToText h
 
 instance FromJSON ByteString where
-  parseJSON (String s) = return $ fromJust $ decodeBase58 bitcoinAlphabet $ encodeUtf8 s
+  parseJSON (String s) = decodeFromText s
   parseJSON _          = error "Wrong object format"
 
 instance ToJSON TransactionInfo
@@ -84,16 +94,28 @@ instance FromJSON MicroblockV1 where
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [
-    "sign_r" .= ECDSA.sign_r t,
-    "sign_s" .= ECDSA.sign_s t ]
+    "sign_r" .= intToBase64Text  (ECDSA.sign_r t),
+    "sign_s" .= intToBase64Text  (ECDSA.sign_s t) ]
 
 instance FromJSON ECDSA.Signature where
- parseJSON (Object v) =
-    ECDSA.Signature <$> v .: "sign_r"
-                    <*> v .: "sign_s"
- parseJSON inv        = typeMismatch "Signature" inv
+  parseJSON (Object v) = do
+    s_r <- base64TextToInt =<< v .: "sign_r"
+    s_s <- base64TextToInt =<< v .: "sign_s"
+    return $ ECDSA.Signature s_r s_s  
+  parseJSON inv        = typeMismatch "Signature" inv
 
 
+instance ToJSON TransactionAPI where
+   toJSON tx = object  [
+             "tx"   .= _txAPI tx
+           , "hash" .= _txHashAPI tx
+           ]
+
+instance FromJSON TransactionAPI where
+   parseJSON (Object o) = TransactionAPI
+           <$> o .: "tx"
+           <*> o .: "hash"
+   parseJSON inv        = typeMismatch "TransactionAPI" inv 
 
 instance ToJSON Transaction where
    toJSON tx = object  [
@@ -119,22 +141,25 @@ instance FromJSON Transaction where
 
 instance ToJSON MicroblockAPI where
     toJSON bl = object  [
-            "k_block"      .= _keyBlockAPI bl
-         ,  "index"        .= _numOfBlockAPI bl
-         ,  "publishers"   .= _teamKeysAPI bl
-         ,  "reward"       .= (1 :: Integer)  -- fix or remove
+            "prev_block"   .= _prevBlockAPI bl
+         ,  "next_block"   .= _nextBlockAPI bl 
+         ,  "k_block"      .= _keyBlockAPI bl
+         ,  "team"         .= _teamKeysAPI bl
+         ,  "publisher"    .= _publisherAPI bl
          ,  "sign"         .= _signAPI bl
-         ,  "txs_cnt"      .= length (_transactionsAPI bl)
+--         ,  "txs_cnt"      .= length (_transactionsAPI bl)
          ,  "transactions" .= _transactionsAPI bl
        ]
 
 instance FromJSON MicroblockAPI where
     parseJSON (Object o) = MicroblockAPI
-               <$> o .: "k_block"
+               <$> o .: "prev_block"
+               <*> o .: "next_block"
+               <*> o .: "k_block"
                <*> o .: "sign"
-               <*> o .: "publishers"
+               <*> o .: "team"
+               <*> o .: "publisher"
                <*> o .: "transactions"
-               <*> o .: "index"
     parseJSON inv         = typeMismatch "Microblock" inv
 
 
@@ -165,21 +190,23 @@ instance FromJSON Microblock where
 parseJSON _ = mzero
 
 
-instance ToJSON Macroblock where
+instance ToJSON MacroblockAPI where
     toJSON bl = object  [
-            "prev_hash"         .= _prevBlock bl
-         ,  "difficulty"        .= _difficulty bl
-         ,  "height"            .= _height bl
-         ,  "solver"            .= _solver bl
-         ,  "reward"            .= _reward bl
-         ,  "txs_cnt"           .= _txs_cnt bl
-         ,  "microblocks_cnt"   .= length (_mblocks bl)
-         ,  "microblocks"       .= _mblocks bl
+            "prev_hash"         .= _prevKBlockAPI bl
+         ,  "next_hash"         .= _nextKBlockAPI bl
+         ,  "difficulty"        .= _difficultyAPI bl
+         ,  "height"            .= _heightAPI bl
+         ,  "solver"            .= _solverAPI bl
+         ,  "reward"            .= _rewardAPI bl
+         ,  "txs_cnt"           .= _txsCntAPI bl
+--         ,  "microblocks_cnt"   .= length (_mblocksAPI bl)
+         ,  "microblocks"       .= _mblocksAPI bl
        ]
 
-instance FromJSON Macroblock where
-    parseJSON (Object o) = Macroblock
+instance FromJSON MacroblockAPI where
+    parseJSON (Object o) = MacroblockAPI
                <$> o .: "prev_hash"
+               <*> o .: "next_hash"
                <*> o .: "difficulty"
                <*> o .: "height"
                <*> o .: "solver"
