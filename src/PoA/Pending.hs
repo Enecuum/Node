@@ -37,9 +37,11 @@ import Node.Data.GlobalLoging
 
 
 data PendingAction where
-    RemoveTransactions  :: [Transaction]           -> PendingAction
-    AddTransaction      :: Transaction              -> PendingAction
+    RemoveTransactions  :: [Transaction]              -> PendingAction
+    AddTransaction      :: Transaction                -> PendingAction
     GetTransaction      :: Int -> C.Chan [Transaction]-> PendingAction
+    GetPending          :: C.Chan [Transaction]       -> PendingAction
+    IsInPending         :: Transaction -> C.Chan Bool -> PendingAction
 
 
 data Pending = Pending (Seq (Transaction, TimeSpec)) (Seq (Transaction, TimeSpec))
@@ -123,6 +125,15 @@ pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
                     let (aHead, aTail) = S.splitAt (aCount - aSizeOfNewTransactions) aOldTransactions
                     C.writeChan aResponseChan $ fst <$> toList (aNewTransaactions >< aHead)
                     loop $ Pending Empty (aTail >< aNewTransaactions >< aHead)
+--
+        GetPending aResponseChan                -> do
+            C.writeChan aResponseChan $ fst <$> toList (aNewTransaactions >< aOldTransactions)
+            loop $ Pending aNewTransaactions aOldTransactions
+
+        IsInPending aTransaction aResponseChan  -> do
+            C.writeChan aResponseChan $ (aTransaction `elem`) $ fst <$> toList (aNewTransaactions >< aOldTransactions)
+            loop $ Pending aNewTransaactions aOldTransactions
+
 
 -- at first
 
