@@ -115,7 +115,7 @@ data PPToNNMessage
 
     deriving (Show)
 
-data NodeType = PoW | PoA | All deriving (Eq, Show, Ord, Generic)
+data NodeType = PoW | PoA | All | NN deriving (Eq, Show, Ord, Generic)
 
 instance S.Serialize NodeType
 

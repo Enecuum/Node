@@ -16,17 +16,14 @@
 module Node.Node.Types where
 
 import              System.Clock
-import qualified    Data.Set                        as S
 import qualified    Data.ByteString                 as B
-import qualified    Data.Bimap                      as BI
 import              Data.Serialize
-import              Data.Monoid
 import qualified    Data.Map                        as M
-import qualified    Crypto.PubKey.ECC.DH            as DH
 import              GHC.Generics (Generic)
 import qualified    Control.Concurrent.Chan         as C
 import              Control.Concurrent.Chan.Unagi.Bounded
 
+import              Service.Network.Base
 import              Crypto.Random.Types
 import              Crypto.PubKey.ECC.ECDSA         as ECDSA
 import              Lens.Micro
@@ -35,31 +32,33 @@ import              Lens.Micro.TH
 import              Node.Crypto
 import              Node.Data.Key
 import              Node.Data.NetPackage
-import              Node.Template.Constructor
-import              Sharding.Space.Point
 import qualified    Sharding.Types.Node as N
 import              Service.Types (Transaction, Microblock)
-import              Sharding.Space.Distance
 
 import              Data.Scientific (toRealFloat, Scientific)
 import              Data.Aeson
 import              Data.Aeson.TH
 import              Service.InfoMsg
-import              Service.Network.Base (ConnectInfo, HostAddress, PortNumber, Connect)
 import              PoA.Types
 import              Node.FileDB.FileServer
 
 
-
 instance Show (InChan a) where
     show _ = "InChan"
-instance Serialize NodeVariantRole
 
 
 type Transactions = [Transaction]
 
 data ExitMsg where
     ExitMsg :: ExitMsg
+
+data MsgToCentralActor where
+    ClientIsDisconnected    :: NodeId                   -> MsgToCentralActor
+    MakeConnect             :: Connect                  -> MsgToCentralActor
+    MsgFromNode             :: MsgToMainActorFromPP     -> MsgToCentralActor
+    MsgFromSharding         :: N.ShardingNodeRequestMsg -> MsgToCentralActor
+    CleanAction             :: MsgToCentralActor
+    NewTransaction          :: Transaction              -> MsgToCentralActor
 
 
 data MsgToMainActorFromPP
@@ -95,7 +94,7 @@ makeLenses ''NodeInfo
 data NetworkNodeData = NetworkNodeData {
         _connects           :: M.Map NodeId NodeInfo
     ,   _nodeConfig         :: NodeConfig
-    ,   _bootNodeList       :: [Connect]
+    ,   _bootConnects       :: [Connect]
     ,   _shardingChan       :: Maybe (C.Chan N.ShardingNodeAction)
     ,   _logChan            :: InChan InfoMsg
     ,   _fileServerChan     :: InChan FileActorRequest
@@ -106,7 +105,7 @@ makeLenses ''NetworkNodeData
 
 
 makeNetworkData
-    ::  BootNodeList
+    ::  [Connect]
     ->  NodeConfig
     ->  InChan InfoMsg
     ->  InChan FileActorRequest
@@ -164,35 +163,11 @@ data BuildConfig where
 
 deriveJSON defaultOptions ''BuildConfig
 
-
-
 instance Serialize NodeConfig
-
-class (NodeConfigClass a, NodeBaseDataClass a) => ManagerData a
-instance ManagerData ManagerNodeData
-
 
 instance Serialize PrivateKey where
     get = PrivateKey <$> get <*> get
     put (PrivateKey a b)= put a >> put b
-
-class ToManagerData a where
-    toManagerData
-        :: C.Chan Transaction
-        -> C.Chan Microblock
-        -> C.Chan ExitMsg
-        -> InChan InfoMsg
-        -> InChan FileActorRequest
-        -> BootNodeList
-        -> NodeConfig
-        -> PortNumber
-        ->  a
-
-instance ToManagerData ManagerNodeData where
-    toManagerData aTransactionChan aMicroblockChan aExitChan aAnswerChan aInfoChan aFileRequestChan aList aNodeConfig aOutPort = ManagerNodeData
-        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aOutPort aInfoChan aFileRequestChan)
-            aTransactionChan BI.empty BI.empty S.empty BI.empty
-
 
 makeNewNodeConfig :: MonadRandom m => m NodeConfig
 makeNewNodeConfig = do
@@ -203,15 +178,14 @@ makeNewNodeConfig = do
 -- FIXME: find a right place.
 makePackageSignature
     ::  Serialize aPackage
-    =>  ManagerData md
-    =>  md
+    =>  NetworkNodeData
     ->  aPackage
     ->  IO PackageSignature
 makePackageSignature aData aResponse = do
     aTime <- getTime Realtime
-    let aNodeId = aData^.myNodeId
+    let aNodeId = aData^.nodeConfig.myNodeId
     aResponseSignature <- signEncodeble
-        (aData^.privateKey)
+        (aData^.nodeConfig.privateKey)
         (aNodeId, aTime, aResponse)
     return $ PackageSignature aNodeId aTime aResponseSignature
 
