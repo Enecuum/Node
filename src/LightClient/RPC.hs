@@ -8,6 +8,7 @@ module LightClient.RPC (
         getMicroblock,
         getTx,
         getAllTxs,
+        getPartTxs,
         getChainInfo,
 
 --test
@@ -52,6 +53,9 @@ reqGetTxSig = Signature "enq_getTransactionByHash" ("hash" ::: ())
 reqGetAllTxsSig :: Signature (PublicKey ::: ()) [TransactionAPI]
 reqGetAllTxsSig = Signature "enq_getAllTransactions" ("address" ::: ())
 
+reqGetPartTxsSig :: Signature (PublicKey ::: Integer ::: Integer ::: ()) [TransactionAPI]
+reqGetPartTxsSig = Signature "enq_getTransactionsByWallet" ("address" ::: "offset" ::: "count" ::: ())
+
 reqChainInfoSig :: Signature () ChainInfo
 reqChainInfoSig = Signature "enq_getChainInfo" ()
 
@@ -83,6 +87,9 @@ getTx h = toFunction (connectionWithTimeOut h) reqGetTxSig
 
 getAllTxs :: WS.Connection -> PublicKey -> Result [TransactionAPI]
 getAllTxs h = toFunction (connectionWithTimeOut h) reqGetAllTxsSig
+
+getPartTxs :: WS.Connection -> PublicKey -> Integer -> Integer -> Result [TransactionAPI]
+getPartTxs h = toFunction (connectionWithTimeOut h) reqGetPartTxsSig
 
 getChainInfo :: WS.Connection -> Result ChainInfo
 getChainInfo h = toFunction (connectionWithTimeOut h) reqChainInfoSig

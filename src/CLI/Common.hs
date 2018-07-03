@@ -15,6 +15,7 @@ module CLI.Common (
   getKeyBlockByHash,
   getTransactionByHash,
   getAllTransactions,
+  getPartTransactions,
   getBalance,
   getChainInfo,
   getPublicKeys,
@@ -113,6 +114,10 @@ getAllTransactions pool key _ = try $ do
   case tx of
     [] -> throw NoTransactionsForPublicKey
     t  -> return t
+
+getPartTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> Integer -> Integer -> InChan a -> IO (Result [TransactionAPI])
+getPartTransactions pool key offset count _ = return $ Left NotImplementedException
+
 
 
 sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> IO (Result ())

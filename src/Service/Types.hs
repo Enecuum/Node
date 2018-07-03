@@ -49,6 +49,22 @@ instance Read MsgTo where
 data Currency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
 instance Serialize Currency
 
+
+data PartWalletReq = PartWalletReq {
+    _key    :: PublicKey
+  , _offset :: Integer
+  , _count  :: Integer
+  } deriving (Eq, Show, Ord)
+
+instance Read PartWalletReq where
+    readsPrec _ value =
+        case splitOn ":" value of
+             [f1, f2, f3] ->
+                 [(PartWalletReq (read f1) (read f2) (read f3), [])]
+             x -> error $ "Invalid number of fields in input: " ++ show x
+
+
+
 type Time      = Int -- UnixTimestamp
 type DAG = Gr Transaction Transaction
 

@@ -34,10 +34,11 @@ import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           System.Random
 
+
 data Flag = Port PortNumber | Host HostName | Version | Help
           | WalletsFile String | TransactionsFile String | KeyGen Int
           | ShowKey String | Balance PublicKey | Info
-          | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey
+          | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey | PartWallet PartWalletReq
           | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
      deriving (Eq, Ord, Show)
 derive makeIs ''Flag
@@ -58,6 +59,7 @@ args = [
   , Option ['O'] ["load-microblock"] (ReqArg (MBlock . read) "hash") "get microblock by hash"
   , Option ['X'] ["get-tx"] (ReqArg (Tx . read) "hash") "get transaction by hash"
   , Option ['W'] ["load-wallet"] (ReqArg (Wallet . read) "publicKey") "get all transactions for wallet"
+  , Option ['Q'] ["load-txs-from-wallet"] (ReqArg (PartWallet . read) "publicKey:offset:count") "get n transactions from k'th tx for given wallet"
   , Option ['I'] ["chain-info"] (NoArg Info) "Get total chain info"
 -- test
   , Option ['R'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
@@ -104,6 +106,8 @@ dispatch flags h p =
         (Balance aPublicKey : _)         -> withClient $ getBalance aPublicKey
         (ShowKey f: _)                   -> showPublicKey f
         (Wallet key : _)                 -> withClient $ getAllTransactions key
+        (PartWallet req : _)             -> withClient $ getPartTransactions req
+
         (Block hash : _)                 -> withClient $ getBlockByHash hash
         (MBlock hash : _)                -> withClient $ getMicroblockByHash hash
         (Tx hash : _)                    -> withClient $ getTransaction hash
@@ -203,6 +207,14 @@ getAllTransactions key ch = do
   result <- runExceptT $ getAllTxs ch key
   case result of
     (Left err)   -> putStrLn $ "getAllTransactions error: " ++ show err
+    (Right txs ) -> mapM_ print txs
+
+
+getPartTransactions :: PartWalletReq -> WS.Connection -> IO ()
+getPartTransactions req ch = do
+  result <- runExceptT $ getPartTxs ch (_key req) (_offset req) (_count req)
+  case result of
+    (Left err)   -> putStrLn $ "getTransactionsByWallet error: " ++ show err
     (Right txs ) -> mapM_ print txs
 
 

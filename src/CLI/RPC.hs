@@ -65,7 +65,7 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
 
 
               methods = [createTx , balanceReq, getBlock, getMicroblock
-                       , getTransaction, getFullWallet, getSystemInfo
+                       , getTransaction, getFullWallet, getPartWallet, getSystemInfo
 -- test
                        , createNTx, createUnlimTx, sendMsgBroadcast, sendMsgTo, loadMsg
                         ]
@@ -100,6 +100,11 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
                 where
                   f :: PublicKey -> RpcResult IO [TransactionAPI]
                   f key = handle $ getAllTransactions descrDB key ch
+
+              getPartWallet = toMethod "enq_getTransactionsByWallet" f (Required "address" :+: Required "offset" :+: Required "count" :+: ())
+                where
+                  f :: PublicKey -> Integer -> Integer -> RpcResult IO [TransactionAPI]
+                  f key offset cnt = handle $ getPartTransactions descrDB key offset cnt ch
 
               getSystemInfo = toMethod "enq_getChainInfo" f ()
                 where
