@@ -68,13 +68,13 @@ startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
 
 
 microblockProc :: DBPoolDescriptor -> C.Chan Microblock -> C.Chan Value -> InChan InfoMsg -> IO ()
-microblockProc descriptor aMicroblockCh aVlalueChan aInfoCh = do
+microblockProc descriptor aMicroblockCh aValueChan aInfoCh = do
     void $ C.forkIO $ forever $ do
         aMicroblock <- C.readChan aMicroblockCh
         addMicroblockToDB descriptor aMicroblock aInfoCh
     forever $ do
-        aVlalue <- C.readChan aVlalueChan
-        addMacroblockToDB descriptor aVlalue aInfoCh
+        aValue <- C.readChan aValueChan
+        addMacroblockToDB descriptor aValue aInfoCh
 
 
 readNodeConfig :: IO NodeConfig
