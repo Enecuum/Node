@@ -29,7 +29,6 @@ import qualified Data.ByteString.Internal           as BSI
 import           Data.DeriveTH
 import           LightClient.RPC
 import           Service.Network.WebSockets.Client
-import           Service.System.Directory           (getTime)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           System.Random
@@ -144,18 +143,19 @@ sendTrans transactionsFile walletsFile ch = do
                      map (splitOn ";") rawTransactions
 
   forM_ transactions $ \(from, to, am) -> do
-    timePoint <- getTime
     case (Data.Map.lookup from mapPubPriv) of
       Nothing -> putStrLn $ "You don't own public key:" ++ show from
       Just ownerPrivKey -> do
-        sign  <- getSignature ownerPrivKey am
         uuid <- randomRIO (1,25)
-        let tx  = Transaction from to am ENQ timePoint sign uuid
+        let tx  = Transaction from to am ENQ Nothing Nothing uuid
+         
+        sign  <- getSignature ownerPrivKey tx
+        let signTx  = tx { _signature = Just sign } 
 
-        result <- runExceptT $ newTx ch tx
+        result <- runExceptT $ newTx ch signTx
         case result of
           (Left err) -> putStrLn $ "Send transaction error: " ++ show err
-          (Right _ ) -> putStrLn ("Transaction done: " ++ show tx)
+          (Right _ ) -> putStrLn ("Transaction done: " ++ show signTx)
 
 printVersion :: IO ()
 printVersion = putStrLn ("--" ++ "2.0.0" ++ "--")

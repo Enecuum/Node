@@ -165,8 +165,8 @@ data Transaction = Transaction {
   _receiver  :: PublicKey,
   _amount    :: Amount,
   _currency  :: Currency,
-  _time      :: Time, -- UnixTime format
-  _signature :: Signature,
+  _time      :: Maybe Time, -- UnixTime format
+  _signature :: Maybe Signature,
   _uuid      :: Int
 } deriving ( Generic, Show, Eq, Ord, Read)
 
