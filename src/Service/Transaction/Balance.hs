@@ -36,7 +36,7 @@ import           Service.InfoMsg                       (InfoMsg (..),
 import           Service.Transaction.Storage
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
-
+import           Service.System.Directory              (getTime)
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
 
@@ -191,9 +191,11 @@ writeMicroblockDB db aInfoChan m = do
 
 
 writeTransactionDB :: Pool Rocks.DB -> InChan InfoMsg -> [Transaction] -> BC.ByteString -> IO ()
-writeTransactionDB dbTransaction aInfoChan tx hashOfMicroblock = do
-  let txInfo = \tx1 num -> TransactionInfo tx1 hashOfMicroblock num
-      txKeyValue = map (\(t,n) -> (rHash t, rValue (txInfo t n)) ) (zip tx [1..])
+writeTransactionDB dbTransaction aInfoChan txs hashOfMicroblock = do
+  cTime <- getTime
+  let txWithTime = map (\ tx -> tx { _time = Just cTime }) txs
+      txInfo = \tx1 num -> TransactionInfo tx1 hashOfMicroblock num
+      txKeyValue = map (\(t,n) -> (rHash t, rValue (txInfo t n)) ) (zip txWithTime [1..])
       fun = (\db -> Rocks.write db def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) txKeyValue))
   withResource dbTransaction fun
   writeLog aInfoChan [BDTag] Info ("Write Transactions to Transaction table")

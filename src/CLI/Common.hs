@@ -143,11 +143,12 @@ sendNewTrans aTrans ch aInfoCh = try $ do
   case Data.Map.lookup ownerPubKey mapPubPriv of
     Nothing -> throw WrongKeyOwnerException
     Just ownerPrivKey -> do
-      sign <- getSignature ownerPrivKey moneyAmount
       uuid <- randomRIO (1,25)
-      let tx  = Transaction ownerPubKey receiverPubKey moneyAmount ENQ timePoint sign uuid
-      _ <- sendTrans tx ch aInfoCh
-      return tx
+      let tx  = Transaction ownerPubKey receiverPubKey moneyAmount ENQ Nothing Nothing uuid
+      sign <- getSignature ownerPrivKey tx
+      let signTx  = tx { _signature = Just sign }
+      _ <- sendTrans signTx ch aInfoCh
+      return signTx
 
 
 

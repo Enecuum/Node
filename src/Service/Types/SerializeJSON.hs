@@ -117,25 +117,30 @@ instance FromJSON TransactionAPI where
    parseJSON inv        = typeMismatch "TransactionAPI" inv
 
 instance ToJSON Transaction where
-   toJSON tx = object  [
+   toJSON tx = object $ [
            "owner"     .= _owner tx,
            "receiver"  .= _receiver tx,
            "amount"    .= _amount tx,
            "currency"  .= _currency tx,
-           "timestamp" .= _time tx,
-           "sign"      .= _signature tx,
            "uuid"      .= _uuid tx
            ]
+       ++ case _time tx of
+            Nothing -> []
+            Just t  -> [ "timestamp" .= t ]
+
+       ++ case _signature tx of
+            Nothing -> []
+            Just s  -> [ "sign" .= s ]
 
 instance FromJSON Transaction where
    parseJSON (Object o) = Transaction
-              <$> o .: "owner"
-              <*> o .: "receiver"
-              <*> o .: "amount"
-              <*> o .: "currency"
-              <*> o .: "timestamp"
-              <*> o .: "sign"
-              <*> o .: "uuid"
+              <$> o .:  "owner"
+              <*> o .:  "receiver"
+              <*> o .:  "amount"
+              <*> o .:  "currency"
+              <*> o .:? "timestamp"
+              <*> o .:? "sign"
+              <*> o .:  "uuid"
 
 
 instance ToJSON MicroblockAPI where
