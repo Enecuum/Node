@@ -1,9 +1,11 @@
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE PackageImports      #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE PackageImports        #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+
 module Service.Transaction.Storage where
 
 import           Control.Exception
@@ -221,8 +223,8 @@ getBlockByHashDB db hash = do
       let mbAPI = MicroblockAPI {
             _prevBlockAPI = "",
             _nextBlockAPI = "",
-            _keyBlockAPI = _keyBlockBD m,
-            _signAPI = _signBD m,
+            _keyBlockAPI = _keyBlock (m :: MicroblockBD),
+            _signAPI = _signBD (m :: MicroblockBD),
             _teamKeysAPI = _teamKeysBD m,
             _publisherAPI = read "1" :: PublicKey,
             _transactionsAPI = txAPI

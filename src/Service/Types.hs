@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE StandaloneDeriving        #-}
+
 module Service.Types where
 
 import           Data.ByteString
@@ -78,7 +79,7 @@ data Microblock = Microblock{
 instance Serialize Microblock
 
 data MicroblockBD = MicroblockBD{
-    _keyBlockBD     :: ByteString, -- hash of key-block
+    _keyBlock       :: ByteString, -- hash of key-block
     _signBD         :: Signature,  -- signature for {K_hash, [Tx],}
     _teamKeysBD     :: [PublicKey], -- for reward
     _transactionsBD :: [ByteString], -- hashes of [Transaction],

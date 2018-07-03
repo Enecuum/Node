@@ -34,8 +34,7 @@ import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
 import           Service.Transaction.Storage
-import           Service.Types                         hiding
-                                                        (MicroblockAPI (..))
+import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 
 instance Hashable PublicKey
@@ -147,7 +146,7 @@ addMicroblockToDB db m aInfoChan =  do
     let microblockHash = rHash m
     writeLog aInfoChan [BDTag] Info ("New Microblock came" ++ show(microblockHash))
 -- FIX: Write to db atomically
-    (goOn, macroblockClosed, microblockNew, macroblockNew, macroblock ) <- checkMacroblock db aInfoChan (_keyBlock m) microblockHash
+    (goOn, macroblockClosed, microblockNew, macroblockNew, macroblock ) <- checkMacroblock db aInfoChan (_keyBlock (m :: Microblock)) microblockHash
     writeLog aInfoChan [BDTag] Info ("Macroblock - already closed " ++ show (not goOn))
     when goOn $ do
                 writeLog aInfoChan [BDTag] Info ("Macroblock - New is " ++ show macroblockNew)
@@ -164,13 +163,12 @@ addMicroblockToDB db m aInfoChan =  do
                     mbBD <- mapM (\h -> getMicroBlockByHashDB db (Hash h))  microblockHashes
                     let realMb =  map fromJust (filter (isJust) mbBD)
                     mbWithTx <- mapM (transformation db) realMb
-
-                    let sortedMb = sortBy (comparing _sign) $ mbWithTx ++ [m]
-                    writeLog aInfoChan [BDTag] Info ("Start calculate Ledger "  ++ show (length sortedMb))
-                    mapM_ (runLedger db aInfoChan) sortedMb
-                    writeMacroblockToDB db aInfoChan (_keyBlock m) (macroblock {_reward = 10})
+                    let sortedMb = sortBy (comparing _sign) ((mbWithTx ++ [m]) :: [Microblock])
+                    writeLog aInfoChan [BDTag] Info ("Start calculate Ledger "  ++ show (length (sortedMb :: [Microblock])))
+                    mapM_ (runLedger db aInfoChan) (sortedMb :: [Microblock])
+                    writeMacroblockToDB db aInfoChan (_keyBlock (m :: Microblock)) (macroblock {_reward = 10})
                   else do
-                    writeMacroblockToDB db aInfoChan (_keyBlock m) macroblock
+                    writeMacroblockToDB db aInfoChan (_keyBlock (m :: Microblock)) macroblock
 
 
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> Macroblock -> IO ()
@@ -262,8 +260,8 @@ transformation :: DBPoolDescriptor -> MicroblockBD -> IO Microblock
 transformation db m = do
   tx <- getTxsMicroblock db m
   return Microblock {
-  _keyBlock      = _keyBlockBD m,
-  _sign          = _signBD m,
+  _keyBlock      = _keyBlock (m :: MicroblockBD),
+  _sign          = _signBD (m :: MicroblockBD),
   _teamKeys      = _teamKeysBD m,
   _transactions  = tx,
   _numOfBlock    = _numOfBlockBD m
@@ -272,8 +270,8 @@ transformation db m = do
 
 transform :: Microblock -> MicroblockBD
 transform m = MicroblockBD {
-  _keyBlockBD = _keyBlock m,
-  _signBD = _sign m,
+  _keyBlock = _keyBlock ( m :: Microblock) ,
+  _signBD = _sign ( m :: Microblock),
   _teamKeysBD = _teamKeys m,
   _transactionsBD = map rHash (_transactions m),
   _numOfBlockBD = _numOfBlock m }

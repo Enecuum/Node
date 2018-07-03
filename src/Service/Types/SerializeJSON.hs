@@ -165,12 +165,12 @@ instance FromJSON MicroblockAPI where
 instance ToJSON Microblock where
  toJSON aBlock = object [
        "msg" .= object [
-           "K_hash"  .= encodeToText (_keyBlock aBlock),
+           "K_hash"  .= encodeToText (_keyBlock (aBlock :: Microblock)),
            "wallets" .= _teamKeys aBlock,
            "Tx"      .= _transactions aBlock
 --           "uuid"    .= _numOfBlock aBlock
          ],
-       "sign" .= _sign aBlock
+       "sign" .= _sign (aBlock :: Microblock)
    ]
 
 
