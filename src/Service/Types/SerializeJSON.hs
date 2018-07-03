@@ -1,27 +1,26 @@
-{-# LANGUAGE
-        OverloadedStrings
-    ,   PackageImports
-    ,   DisambiguateRecordFields
-    ,   DuplicateRecordFields
-    ,   ScopedTypeVariables
-  #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE DuplicateRecordFields    #-}
+{-# LANGUAGE OverloadedStrings        #-}
+{-# LANGUAGE PackageImports           #-}
+{-# LANGUAGE ScopedTypeVariables      #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Service.Types.SerializeJSON where
 
-import              Data.Aeson
-import              Data.Aeson.Types (typeMismatch)
-import qualified "cryptonite"   Crypto.PubKey.ECC.ECDSA     as ECDSA
-import Service.Types.PublicPrivateKeyPair
-import Service.Types
-import Control.Monad
-import Data.ByteString (ByteString)
-import qualified Data.ByteString.Base64 as B
-import Data.Text (Text, pack, unpack)
-import qualified Data.Text.Encoding as T (encodeUtf8, decodeUtf8)
 
+import           Control.Monad
+import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA as ECDSA
+import           Data.Aeson
+import           Data.Aeson.Types                     (typeMismatch)
+import           Data.ByteString                      (ByteString)
+import qualified Data.ByteString.Base64               as B
 import           Data.ByteString.Conversion
+import           Data.Text                            (Text, pack, unpack)
+import qualified Data.Text.Encoding                   as T (decodeUtf8,
+                                                            encodeUtf8)
+import           Service.Types
+import           Service.Types.PublicPrivateKeyPair
 
 
 instance FromJSON Trans
@@ -58,11 +57,11 @@ intToBase64Text i = encodeToText $ toByteString' i
 
 base64TextToInt :: (MonadPlus m) => Text -> m Integer
 base64TextToInt b = do
-     bs <- decodeFromText b 
+     bs <- decodeFromText b
      case fromByteString bs of
        Just i -> return i
        _      -> mzero
-           
+
 
 instance ToJSON Hash
 instance FromJSON Hash
@@ -101,7 +100,7 @@ instance FromJSON ECDSA.Signature where
   parseJSON (Object v) = do
     s_r <- base64TextToInt =<< v .: "sign_r"
     s_s <- base64TextToInt =<< v .: "sign_s"
-    return $ ECDSA.Signature s_r s_s  
+    return $ ECDSA.Signature s_r s_s
   parseJSON inv        = typeMismatch "Signature" inv
 
 
@@ -115,7 +114,7 @@ instance FromJSON TransactionAPI where
    parseJSON (Object o) = TransactionAPI
            <$> o .: "tx"
            <*> o .: "hash"
-   parseJSON inv        = typeMismatch "TransactionAPI" inv 
+   parseJSON inv        = typeMismatch "TransactionAPI" inv
 
 instance ToJSON Transaction where
    toJSON tx = object  [
@@ -142,7 +141,7 @@ instance FromJSON Transaction where
 instance ToJSON MicroblockAPI where
     toJSON bl = object  [
             "prev_block"   .= _prevBlockAPI bl
-         ,  "next_block"   .= _nextBlockAPI bl 
+         ,  "next_block"   .= _nextBlockAPI bl
          ,  "k_block"      .= _keyBlockAPI bl
          ,  "team"         .= _teamKeysAPI bl
          ,  "publisher"    .= _publisherAPI bl
@@ -187,7 +186,35 @@ instance FromJSON Microblock where
            aKhash   <- decodeFromText =<< aBlock .: "K_hash"
            return $ Microblock aKhash aSign aWallets aTx 0
        a -> mzero
-parseJSON _ = mzero
+ parseJSON _ = mzero
+
+
+instance ToJSON Macroblock where
+    toJSON bl = object  [
+            "prev_hash"         .= _prevBlock bl
+         ,  "difficulty"        .= _difficulty bl
+         ,  "height"            .= _height bl
+         ,  "solver"            .= _solver bl
+         ,  "reward"            .= _reward bl
+         ,  "timeK"              .= _timeK bl
+         ,  "numberK"            .= _numberK bl
+         ,  "nonce"             .= _nonce bl
+         -- ,  "microblocks_cnt"   .= length (_mblocks bl)
+         ,  "microblocks"       .= _mblocks bl
+       ]
+
+instance FromJSON Macroblock where
+    parseJSON (Object o) = Macroblock
+               <$> o .: "prev_hash"
+               <*> o .: "difficulty"
+               <*> o .: "height"
+               <*> o .: "solver"
+               <*> o .: "reward"
+               <*> o .: "timeK"
+               <*> o .: "numberK"
+               <*> o .: "nonce"
+               <*> o .: "microblocks"
+    parseJSON inv         = typeMismatch "Macroblock" inv
 
 
 instance ToJSON MacroblockAPI where
@@ -213,8 +240,7 @@ instance FromJSON MacroblockAPI where
                <*> o .: "reward"
                <*> o .: "txs_cnt"
                <*> o .: "microblocks"
-    parseJSON inv         = typeMismatch "Macroblock" inv
-
+    parseJSON inv         = typeMismatch "MacroblockAPI" inv
 
 instance ToJSON ChainInfo where
     toJSON info = object  [
@@ -233,3 +259,13 @@ instance FromJSON ChainInfo where
                <*> o .: "txs_num"
                <*> o .: "nodes_num"
     parseJSON inv        = typeMismatch "ChainInfo" inv
+
+
+instance FromJSON KeyBlockInfo where
+  parseJSON (Object v) = KeyBlockInfo
+                         <$> (v .: "time")
+                         <*> (v .: "prev_hash")
+                         <*> (v .: "number")
+                         <*> (v .: "nonce")
+                         <*> (v .: "solver")
+  parseJSON inv        = typeMismatch "KeyBlockInfo" inv

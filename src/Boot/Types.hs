@@ -59,8 +59,8 @@ mapM (uncurry makeLensInstance') [
 instance ManagerData NodeBootNodeData
 
 instance ToManagerData NodeBootNodeData where
-    toManagerData _ aMicroblockChan aExitChan aAnswerChan aInfoChan aFileChan aList aNodeConfig aPort = NodeBootNodeData
-        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aPort aInfoChan aFileChan)
+    toManagerData _ aMicroblockChan aVlalueChan aExitChan aAnswerChan aInfoChan aFileChan aList aNodeConfig aPort = NodeBootNodeData
+        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aVlalueChan aPort aInfoChan aFileChan)
             S.empty
 
 lensInst "checSet" ["NodeBootNodeData"] ["S.Set", "NodeId"]

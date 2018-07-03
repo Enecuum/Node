@@ -1,30 +1,32 @@
-{-# LANGUAGE ScopedTypeVariables, LambdaCase #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE PackageImports      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Node.Lib where
 
-import              Control.Monad
-import              Control.Exception
-import qualified    Control.Concurrent          as C
-import qualified    Data.ByteString.Lazy        as L
-import              Data.IORef
-import qualified    Data.Aeson as A
-import              Lens.Micro
-import              Service.Types
-import              Network.Socket (tupleToHostAddress)
-import              Control.Concurrent.Chan.Unagi.Bounded
-import Node.Node.Types
-import Node.Node.Config.Make
-
-import Node.Node.Base.Server
-import Service.Network.Base
-import System.Environment
-import Service.InfoMsg (InfoMsg)
-import Node.Data.Key
-import Node.FileDB.FileServer
---tmp
-import System.Directory (createDirectoryIfMissing)
-import Service.Transaction.Common (addMicroblockToDB, DBPoolDescriptor(..))
-
+import qualified Control.Concurrent                    as C
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Exception
+import           Control.Monad
+import           Data.Aeson
+import qualified Data.ByteString.Lazy                  as L
+import           Data.IORef
+import           Lens.Micro
+import           Network.Socket                        (tupleToHostAddress)
+import           Node.Data.Key
+import           Node.FileDB.FileServer
+import           Node.Node.Base.Server
+import           Node.Node.Config.Make
+import           Node.Node.Types
+import           Service.InfoMsg                       (InfoMsg)
+import           Service.Network.Base
+import           Service.Transaction.Common            (DBPoolDescriptor (..),
+                                                        addMacroblockToDB,
+                                                        addMicroblockToDB)
+import           Service.Types                         (Microblock, Transaction)
+import           System.Directory                      (createDirectoryIfMissing)
+import           System.Environment
 
 -- code examples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html
@@ -49,31 +51,36 @@ startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
     createDirectoryIfMissing False "data"
 
     managerChan@(inChanManager, _) <- newChan (2^7)
-    aMicroblockChan <- C.newChan
+    aMicroblockChan  <- C.newChan
+    aVlalueChan      <- C.newChan
     aTransactionChan <- C.newChan
     config  <- readNodeConfig
     bnList  <- readBootNodeList $ bootNodeList buildConf
     (aInFileRequestChan, aOutFileRequestChan) <- newChan (2^4)
     void $ C.forkIO $ startFileServer aOutFileRequestChan
     let portNumber = extConnectPort buildConf
-    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aInFileRequestChan bnList config portNumber
+    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan aVlalueChan exitCh answerCh infoCh aInFileRequestChan bnList config portNumber
     startServerActor inChanManager portNumber
-    void $ C.forkIO $ microblockProc descrDB aMicroblockChan infoCh
+    void $ C.forkIO $ microblockProc descrDB aMicroblockChan aVlalueChan infoCh
     void $ C.forkIO $ manager managerChan md
     void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aInFileRequestChan
     return managerChan
 
 
-microblockProc :: DBPoolDescriptor -> C.Chan Microblock -> InChan InfoMsg -> IO b
-microblockProc descriptor aMicroblockCh aInfoCh = forever $ do
+microblockProc :: DBPoolDescriptor -> C.Chan Microblock -> C.Chan Value -> InChan InfoMsg -> IO ()
+microblockProc descriptor aMicroblockCh aVlalueChan aInfoCh = do
+    void $ C.forkIO $ forever $ do
         aMicroblock <- C.readChan aMicroblockCh
         addMicroblockToDB descriptor aMicroblock aInfoCh
+    forever $ do
+        aVlalue <- C.readChan aVlalueChan
+        addMacroblockToDB descriptor aVlalue aInfoCh
 
 
 readNodeConfig :: IO NodeConfig
 readNodeConfig =
     try (L.readFile "configs/nodeInfo.json") >>= \case
-        Right nodeConfigMsg         -> case A.decode nodeConfigMsg of
+        Right nodeConfigMsg         -> case decode nodeConfigMsg of
             Just nodeConfigData     -> return nodeConfigData
             Nothing                 -> putStrLn "Config file can not be readed. New one will be created" >> config
         Left (_ :: SomeException)   -> putStrLn "ConfigFile will be created." >> config

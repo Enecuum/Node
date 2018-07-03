@@ -37,11 +37,12 @@ import           System.Random                         (randomRIO)
 import           Node.Node.Types
 import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
-import           Service.Transaction.Common            as B (getAllTransactionsDB,
+import           Service.Transaction.Common            as B (DBPoolDescriptor (..),
+                                                             getAllTransactionsDB,
                                                              getBalanceForKey,
                                                              getBlockByHashDB,
+                                                             getKeyBlockByHashDB,
                                                              getTransactionByHashDB)
-import           Service.Transaction.Storage           (DBPoolDescriptor (..))
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
@@ -54,8 +55,10 @@ type Result a = Either CLIException a
 
 data CLIException = WrongKeyOwnerException
                   | NotImplementedException -- test
+                  | NoTransactionsForPublicKey
                   | NoSuchPublicKeyInDB
                   | NoSuchMicroBlockDB
+                  | NoSuchMacroBlockDB
                   | NoSuchTransactionDB
                   | TransactionChanBusyException
                   | OtherException
@@ -85,8 +88,11 @@ getBlockByHash db hash _ = try $ do
 
 
 getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result MacroblockAPI)
-getKeyBlockByHash _ _ _ = return $ Left NotImplementedException
- --return =<< Right <$> B.getBlockByHashDB db hash
+getKeyBlockByHash db hash _ = try $ do
+  mb <- B.getKeyBlockByHashDB db hash
+  case mb of
+    Nothing -> throw NoSuchMacroBlockDB
+    Just m  -> return m
 
 
 getChainInfo :: ManagerMiningMsg a => InChan a -> IO (Result ChainInfo)
@@ -102,13 +108,12 @@ getTransactionByHash db hash _ = try $ do
 
 
 getAllTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> InChan a -> IO (Result [TransactionAPI])
-getAllTransactions pool key _ = return $ Left NotImplementedException
-{-try $ do
+getAllTransactions pool key _ = try $ do
   tx <- B.getAllTransactionsDB pool key
   case tx of
-    [] -> throw OtherException
+    [] -> throw NoTransactionsForPublicKey
     t  -> return t
--}
+
 
 sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> IO (Result ())
 sendTrans tx ch aInfoCh = try $ do 

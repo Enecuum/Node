@@ -1,44 +1,42 @@
-{-# LANGUAGE
-    OverloadedStrings,
-    MultiWayIf,
-    LambdaCase,
-    MultiParamTypeClasses,
-    ViewPatterns,
-    TypeSynonymInstances,
-    FlexibleContexts,
-    TypeFamilies,
-    FlexibleInstances
-  #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiWayIf            #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE ViewPatterns          #-}
 module Node.Node.Processing (
         Processing(..)
     ,   sendToShardingLvl
   ) where
 
-import qualified    Data.Map                        as M
-import              Data.List.Extra()
-import              Data.IORef
-import              System.Random()
-import              Lens.Micro
-import              Lens.Micro.Mtl()
-import qualified    Control.Concurrent as C
-import              Control.Concurrent.Chan.Unagi.Bounded
-import              Control.Monad.Extra
-import              Service.Network.Base
+import qualified Control.Concurrent                    as C
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Monad.Extra
+import           Data.IORef
+import           Data.List.Extra                       ()
+import qualified Data.Map                              as M
+import           Lens.Micro
+import           Lens.Micro.Mtl                        ()
+import           Service.Network.Base
+import           System.Random                         ()
 
-import              Node.Node.Types
-import              Node.Data.NetPackage
-import              Sharding.Sharding()
-import qualified    Sharding.Types.Node as T
-import              Control.Concurrent.MVar
-import              Sharding.Space.Point
-import              Node.Data.MakeAndSendTraceRouting
-import              Node.Data.MakeTraceRouting
-import              Node.Data.GlobalLoging
-import              Service.InfoMsg
-import              Data.Maybe
-import              PoA.Types
-import              Node.Data.Key
-import              Node.FileDB.FileServer
+import           Control.Concurrent.MVar
+import           Data.Maybe
+import           Node.Data.GlobalLoging
+import           Node.Data.Key
+import           Node.Data.MakeAndSendTraceRouting
+import           Node.Data.MakeTraceRouting
+import           Node.Data.NetPackage
+import           Node.FileDB.FileServer
+import           Node.Node.Types
+import           PoA.Types
+import           Service.InfoMsg
+import           Sharding.Sharding                     ()
+import           Sharding.Space.Point
+import qualified Sharding.Types.Node                   as T
 
 class Processing aNodeData aPackage where
     processing
@@ -152,7 +150,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                     T.ShardIndexResponse aShardIndex <- C.readChan aChan
 
                     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                        "Recived response from sharding lvl. The sharding index for "
+                        "Received response from sharding lvl. The sharding index for "
                         ++ show aNodeId ++ " is " ++ show aShardIndex ++ "."
                         ++ " Sending the sharding index."
 
@@ -169,7 +167,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
                         T.ShardLoadAction aChan aNodeId aShardHash
                     T.ShardResponse aShard <- C.readChan aChan
                     writeLog (aData^.infoMsgChan) [NetLvlTag, LoadingShardsTag] Info $
-                        "Recived response from sharding lvl. The shard for "
+                        "Received response from sharding lvl. The shard for "
                         ++ show aNodeId ++ " is " ++ show aShard ++ "."
                         ++ " Sending the shard."
                     return aShard
@@ -191,7 +189,7 @@ instance Processing (IORef ManagerNodeData) (Request LogicLvl) where
 
             IsAliveTheNodeRequestPackage aId -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-                    "Recived request of alive status the node " ++ show aId
+                    "Received request of alive status the node " ++ show aId
                     ++ " from the " ++ show aNodeId ++ "."
                 let aMaybeNodeId = case aTraceRouting of
                         ToNode _ (PackageSignature (toNodeId -> aAliveId) _ _)
@@ -219,7 +217,7 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
         let aSendNetLvlResponse = sendResponseTo
                 aTraceRouting aData aRequest aSignature
         writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-            "Recived the  " ++ show aRequest  ++ "."
+            "Received the  " ++ show aRequest  ++ "."
         case aRequest of
             IsYouBrodcast -> do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $

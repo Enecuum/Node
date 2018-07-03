@@ -82,7 +82,7 @@ dependencies:
 - text
 - aeson-pretty
 - unordered-containers
-- cryptohash
+# - cryptohash
 - rocksdb-haskell
 - data-default
 - hashtables
@@ -96,8 +96,10 @@ dependencies:
 #- persistent-postgresql
 #- mysql
 - unix-time
+- cryptohash-sha256
 - derive
 - bytestring-conversion
+
 
 library:
   source-dirs: src
