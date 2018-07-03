@@ -140,12 +140,12 @@ instance FromJSON Transaction where
 
 instance ToJSON MicroblockAPI where
     toJSON bl = object  [
-            "prev_block"   .= _prevBlockAPI bl
-         ,  "next_block"   .= _nextBlockAPI bl
-         ,  "k_block"      .= _keyBlockAPI bl
-         ,  "team"         .= _teamKeysAPI bl
-         ,  "publisher"    .= _publisherAPI bl
-         ,  "sign"         .= _signAPI bl
+            "prev_block"   .= _prevMicroblock bl
+         ,  "next_block"   .= _nextMicroblock bl
+         ,  "k_block"      .= _keyBlock (bl :: MicroblockAPI)
+         ,  "team"         .= _teamKeys (bl :: MicroblockAPI)
+         ,  "publisher"    .= _publisher (bl :: MicroblockAPI)
+         ,  "sign"         .= _signAPI (bl :: MicroblockAPI)
 --         ,  "txs_cnt"      .= length (_transactionsAPI bl)
          ,  "transactions" .= _transactionsAPI bl
        ]
@@ -166,7 +166,7 @@ instance ToJSON Microblock where
  toJSON aBlock = object [
        "msg" .= object [
            "K_hash"  .= encodeToText (_keyBlock (aBlock :: Microblock)),
-           "wallets" .= _teamKeys aBlock,
+           "wallets" .= _teamKeys (aBlock :: Microblock),
            "Tx"      .= _transactions aBlock
 --           "uuid"    .= _numOfBlock aBlock
          ],
@@ -191,16 +191,16 @@ instance FromJSON Microblock where
 
 instance ToJSON Macroblock where
     toJSON bl = object  [
-            "prev_hash"         .= _prevBlock bl
-         ,  "difficulty"        .= _difficulty bl
-         ,  "height"            .= _height bl
-         ,  "solver"            .= _solver bl
-         ,  "reward"            .= _reward bl
-         ,  "timeK"              .= _timeK bl
-         ,  "numberK"            .= _numberK bl
-         ,  "nonce"             .= _nonce bl
+            "prev_hash"         .= _prevKBlock (bl :: Macroblock)
+         ,  "difficulty"        .= _difficulty (bl :: Macroblock)
+         ,  "height"            .= _height (bl :: Macroblock)
+         ,  "solver"            .= _solver (bl :: Macroblock)
+         ,  "reward"            .= _reward (bl :: Macroblock)
+         ,  "timeK"              .= _timeK (bl :: Macroblock)
+         ,  "numberK"            .= _numberK (bl :: Macroblock)
+         ,  "nonce"             .= _nonce (bl :: Macroblock)
          -- ,  "microblocks_cnt"   .= length (_mblocks bl)
-         ,  "microblocks"       .= _mblocks bl
+         ,  "microblocks"       .= _mblocks (bl :: Macroblock)
        ]
 
 instance FromJSON Macroblock where
@@ -219,15 +219,15 @@ instance FromJSON Macroblock where
 
 instance ToJSON MacroblockAPI where
     toJSON bl = object  [
-            "prev_hash"         .= _prevKBlockAPI bl
-         ,  "next_hash"         .= _nextKBlockAPI bl
-         ,  "difficulty"        .= _difficultyAPI bl
-         ,  "height"            .= _heightAPI bl
-         ,  "solver"            .= _solverAPI bl
-         ,  "reward"            .= _rewardAPI bl
-         ,  "txs_cnt"           .= _txsCntAPI bl
+            "prev_hash"         .= _prevKBlock (bl :: MacroblockAPI)
+         ,  "next_hash"         .= _nextKBlock (bl :: MacroblockAPI)
+         ,  "difficulty"        .= _difficulty (bl :: MacroblockAPI)
+         ,  "height"            .= _height (bl :: MacroblockAPI)
+         ,  "solver"            .= _solver (bl :: MacroblockAPI)
+         ,  "reward"            .= _reward (bl :: MacroblockAPI)
+         ,  "txs_cnt"           .= _txsCnt (bl :: MacroblockAPI)
 --         ,  "microblocks_cnt"   .= length (_mblocksAPI bl)
-         ,  "microblocks"       .= _mblocksAPI bl
+         ,  "microblocks"       .= _mblocks (bl :: MacroblockAPI)
        ]
 
 instance FromJSON MacroblockAPI where

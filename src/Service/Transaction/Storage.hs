@@ -2,8 +2,10 @@
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE PackageImports        #-}
+{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 
 module Service.Transaction.Storage where
@@ -221,12 +223,12 @@ getBlockByHashDB db hash = do
       tx <- getTxsMicroblock db m
       let txAPI = map (\t -> TransactionAPI {_txAPI = t, _txHashAPI = rHash t}) tx
       let mbAPI = MicroblockAPI {
-            _prevBlockAPI = "",
-            _nextBlockAPI = "",
-            _keyBlockAPI = _keyBlock (m :: MicroblockBD),
+            _prevMicroblock = "",
+            _nextMicroblock = "",
+            _keyBlock = _keyBlock (m :: MicroblockBD),
             _signAPI = _signBD (m :: MicroblockBD),
-            _teamKeysAPI = _teamKeysBD m,
-            _publisherAPI = read "1" :: PublicKey,
+            _teamKeys = _teamKeys (m :: MicroblockBD),
+            _publisher = read "1" :: PublicKey,
             _transactionsAPI = txAPI
             }
       return (Just mbAPI)
@@ -238,16 +240,16 @@ getKeyBlockByHashDB db kHash = do
   let t = case kb of Nothing -> Nothing
                      Just j -> case (S.decode j :: Either String Macroblock) of
                        Left _  -> error "Can not decode Macroblock"
-                       Right r -> Just a
+                       Right (Macroblock {..}) -> Just a
                          where a = MacroblockAPI {
-                                 _prevKBlockAPI = _prevBlock r,
-                                 _nextKBlockAPI = "",
-                                 _difficultyAPI = _difficulty r,
-                                 _heightAPI = _height r,
-                                 _solverAPI = _solver r,
-                                 _rewardAPI = _reward r,
-                                 _txsCntAPI = 0,
-                                 _mblocksAPI = _mblocks r
+                                 _prevKBlock,
+                                 _nextKBlock = "",
+                                 _difficulty,
+                                 _height,
+                                 _solver,
+                                 _reward,
+                                 _txsCnt = 0,
+                                 _mblocks
                                  }
 
   return t
