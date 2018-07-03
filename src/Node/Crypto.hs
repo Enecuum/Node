@@ -3,7 +3,6 @@ module Node.Crypto where
 
 import              Service.Network.Base (PortNumber)
 import              Node.Data.Key hiding (PublicKey(..))
-import              Node.Data.NetPackage
 
 
 import              System.Clock

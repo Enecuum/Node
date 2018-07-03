@@ -82,7 +82,7 @@ getRecords aChan = do
 
 servePoA ::
        PortNumber
-    -> InChan ManagerMiningMsgBase
+    -> InChan MsgToCentralActor
     -> C.Chan Transaction
     -> InChan InfoMsg
     -> InChan FileActorRequest

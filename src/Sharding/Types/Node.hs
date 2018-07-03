@@ -36,6 +36,34 @@ data ShardingNodeRequestMsg =
 --    |   IsTheNeighborAliveRequest   NodeId NodePosition
   deriving (Show)
 
+--
+data ShardingNodeAction =
+        ShardRequestAction          ShardHash (C.Chan Shard)
+    |   ShardIndexAcceptAction      [ShardHash]
+    |   ShardIndexCreateAction      (C.Chan ShardingNodeResponse) NodeId Word64
+    |   ShardLoadAction             (C.Chan ShardingNodeResponse) NodeId ShardHash
+    |   NodePositionAction          (C.Chan ShardingNodeResponse) NodeId
+    |   ShardAcceptAction           Shard
+    ---
+    |   NewShardInNetAction         Shard
+--    |   NeighborListAcceptAction    [(NodeId, NodePosition)]
+    |   CleanShardsAction
+    |   CheckOfShardLoadingList
+    |   CleanNeededIndex
+    |   CleanRequestIndex
+    |   ShardCheckLoading
+    --- ShiftAction => NewPosiotionResponse
+    |   ShiftAction
+    |   CheckTheNeighbors
+--    |   TheNodeHaveNewCoordinates   NodeId NodePosition
+    ---- NeighborListRequest => NeighborListAcceptAction
+    --  BUG the generation of TheNodeIsDead from net lvl.
+    |   TheNodeIsDead               NodeId
+  deriving Show
+
+instance Show (C.Chan a) where
+      show _ = "Chan"
+
 
 {-
 
@@ -59,32 +87,6 @@ makeLenses ''ShardingNode
 makeLenses ''Neighbor
 
 
-data ShardingNodeAction =
-        ShardRequestAction          ShardHash (C.Chan Shard)
-    |   ShardIndexAcceptAction      [ShardHash]
-    |   ShardIndexCreateAction      (C.Chan ShardingNodeResponse) NodeId Word64
-    |   ShardLoadAction             (C.Chan ShardingNodeResponse) NodeId ShardHash
-    |   NodePositionAction          (C.Chan ShardingNodeResponse) NodeId
-    |   ShardAcceptAction           Shard
-    ---
-    |   NewShardInNetAction         Shard
-    |   NeighborListAcceptAction    [(NodeId, NodePosition)]
-    |   CleanShardsAction
-    |   CheckOfShardLoadingList
-    |   CleanNeededIndex
-    |   CleanRequestIndex
-    |   ShardCheckLoading
-    --- ShiftAction => NewPosiotionResponse
-    |   ShiftAction
-    |   CheckTheNeighbors
-    |   TheNodeHaveNewCoordinates   NodeId NodePosition
-    ---- NeighborListRequest => NeighborListAcceptAction
-    --  BUG the generation of TheNodeIsDead from net lvl.
-    |   TheNodeIsDead               NodeId
-  deriving Show
-
-instance Show (C.Chan a) where
-      show _ = "Chan"
 
 
 

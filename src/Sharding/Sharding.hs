@@ -62,14 +62,12 @@ import              Lens.Micro.GHC()
 import              Node.Data.Key
 import              Data.Maybe (fromJust)
 makeShardingNode
-    ::  T.ManagerMsg msg
-    =>  MyNodeId
+    ::  MyNodeId
     ->  C.Chan ShardingNodeAction
-    ->  InChan msg
-    ->  MyNodePosition
+    ->  InChan T.MsgToCentralActor
     ->  InChan InfoMsg
     ->  IO ()
-makeShardingNode _ _ _ _ _ = return ()
+makeShardingNode _ _ _ _ = return ()
 {-
 
 sizeOfShardStore:: Int

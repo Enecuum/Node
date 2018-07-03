@@ -26,7 +26,6 @@ import              Control.Concurrent.Chan.Unagi.Bounded
 import qualified    Data.Map as M
 import qualified    Data.Set as S
 
-import              Node.Data.NetPackage
 import              Node.Data.Key
 import              Service.Network.Base
 

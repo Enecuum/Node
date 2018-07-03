@@ -15,7 +15,7 @@ import              Control.Concurrent.Chan.Unagi.Bounded
 import Node.Node.Types
 import Node.Node.Config.Make
 
-import Node.Node.Base.Server
+
 import Service.Network.Base
 import System.Environment
 import Service.InfoMsg (InfoMsg)
@@ -82,7 +82,7 @@ readNodeConfig =
         makeFileConfig
         readNodeConfig
 
-readBootNodeList :: String -> IO BootNodeList
+readBootNodeList :: String -> IO [Connect]
 readBootNodeList conf = do
     bnList  <- try (getEnv "bootNodeList") >>= \case
             Right item              -> return item

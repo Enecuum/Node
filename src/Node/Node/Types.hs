@@ -31,7 +31,6 @@ import              Lens.Micro.TH
 
 import              Node.Crypto
 import              Node.Data.Key
-import              Node.Data.NetPackage
 import qualified    Sharding.Types.Node as N
 import              Service.Types (Transaction, Microblock)
 
@@ -174,20 +173,6 @@ makeNewNodeConfig = do
     (aPublicKey,     aPrivateKey)  <- generateKeyPair
     let aId = keyToId aPublicKey
     return $ NodeConfig aPrivateKey (toMyNodeId aId)
-
--- FIXME: find a right place.
-makePackageSignature
-    ::  Serialize aPackage
-    =>  NetworkNodeData
-    ->  aPackage
-    ->  IO PackageSignature
-makePackageSignature aData aResponse = do
-    aTime <- getTime Realtime
-    let aNodeId = aData^.nodeConfig.myNodeId
-    aResponseSignature <- signEncodeble
-        (aData^.nodeConfig.privateKey)
-        (aNodeId, aTime, aResponse)
-    return $ PackageSignature aNodeId aTime aResponseSignature
 
 
 

@@ -64,19 +64,19 @@ data CLIException = WrongKeyOwnerException
 instance Exception CLIException
 
 
-sendMessageTo :: ManagerMiningMsg a => MsgTo -> InChan a -> IO (Result ())
+sendMessageTo :: InChan MsgToCentralActor -> IO (Result ())
 sendMessageTo _ = return $ return $ Left NotImplementedException
 
 
-sendMessageBroadcast :: ManagerMiningMsg a => String -> InChan a -> IO (Result ())
+sendMessageBroadcast :: String -> InChan MsgToCentralActor -> IO (Result ())
 sendMessageBroadcast _ = return $ return $ Left NotImplementedException
 
 
-loadMessages :: ManagerMiningMsg a => InChan a -> IO (Result [MsgTo])
+loadMessages :: InChan MsgToCentralActor -> IO (Result [MsgTo])
 loadMessages _ = return $ Left NotImplementedException
 
 
-getBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result MicroblockAPI)
+getBlockByHash :: DBPoolDescriptor -> Hash -> InChan MsgToCentralActor -> IO (Result MicroblockAPI)
 getBlockByHash db hash _ = try $ do
   mb <- B.getBlockByHashDB db hash
   case mb of
@@ -84,16 +84,16 @@ getBlockByHash db hash _ = try $ do
     Just m  -> return m
 
 
-getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result MacroblockAPI)
+getKeyBlockByHash :: DBPoolDescriptor -> Hash -> InChan MsgToCentralActor -> IO (Result MacroblockAPI)
 getKeyBlockByHash _ _ _ = return $ Left NotImplementedException
  --return =<< Right <$> B.getBlockByHashDB db hash
 
 
-getChainInfo :: ManagerMiningMsg a => InChan a -> IO (Result ChainInfo)
+getChainInfo :: InChan MsgToCentralActor -> IO (Result ChainInfo)
 getChainInfo _ = return $ Left NotImplementedException
 
 
-getTransactionByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result TransactionInfo)
+getTransactionByHash :: DBPoolDescriptor -> Hash -> InChan MsgToCentralActor -> IO (Result TransactionInfo)
 getTransactionByHash db hash _ = try $ do
   tx <- B.getTransactionByHashDB db hash
   case tx of
@@ -101,7 +101,7 @@ getTransactionByHash db hash _ = try $ do
     Just t  -> return t
 
 
-getAllTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> InChan a -> IO (Result [TransactionAPI])
+getAllTransactions :: DBPoolDescriptor -> PublicKey -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
 getAllTransactions pool key _ = return $ Left NotImplementedException
 {-try $ do
   tx <- B.getAllTransactionsDB pool key
@@ -110,19 +110,19 @@ getAllTransactions pool key _ = return $ Left NotImplementedException
     t  -> return t
 -}
 
-sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> IO (Result ())
-sendTrans tx ch aInfoCh = try $ do 
+sendTrans :: Transaction -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
+sendTrans tx ch aInfoCh = try $ do
   exp <- (timeout (5 :: Second) $ do
            sendMetrics tx aInfoCh
            writeChan ch $ newTransaction tx)
   case exp of
     Just _   -> return ()
     Nothing  -> throw TransactionChanBusyException
-     
- 
 
 
-sendNewTrans :: ManagerMiningMsg a => Trans -> InChan a -> InChan InfoMsg -> IO (Result Transaction)
+
+
+sendNewTrans :: Trans -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result Transaction)
 sendNewTrans aTrans ch aInfoCh = try $ do
   let moneyAmount = Service.Types.txAmount aTrans :: Amount
   let receiverPubKey = recipientPubKey aTrans
@@ -189,7 +189,7 @@ sendMetrics (Transaction o r a _ _ _ _) m = do
 
 
 -- generateNTransactions :: ManagerMiningMsg a => QuantityTx -> Chan a -> Chan InfoMsg -> IO (Result ())
-generateNTransactions :: ManagerMiningMsg a => QuantityTx -> InChan a -> InChan InfoMsg -> IO (Result ())
+generateNTransactions :: QuantityTx -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
 generateNTransactions qTx ch m = try $ do
   tx <- genNTx qTx
   mapM_ (\x -> do
@@ -198,7 +198,7 @@ generateNTransactions qTx ch m = try $ do
         ) tx
   putStrLn "Transactions are created"
 
-generateTransactionsForever :: ManagerMiningMsg a => InChan a -> InChan InfoMsg -> IO (Result ())
+generateTransactionsForever :: InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
 -- generateTransactionsForever :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO (Result ())
 generateTransactionsForever ch m = try $ forever $ do
                                 quantityOfTranscations <- randomRIO (20,30)
