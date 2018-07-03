@@ -130,56 +130,39 @@ data MsgToServer where
 
 data NodeStatus = Active | Noactive deriving (Show, Eq)
 
-data Node = Node {
-        _status          :: NodeStatus
-    ,   _mKey            :: Maybe StringKey
-    ,   _chan            :: C.Chan MsgToSender
-    ,   _nodePosition    :: Maybe NodePosition
-    ,   _nodePort        :: PortNumber
-    ,   _isBroadcast     :: Bool
-    ,   _nodeHost        :: HostAddress
-  }
-  deriving (Eq)
-
-makeLenses ''Node
-
-data ManagerNodeData = ManagerNodeData {
-        managerNodeDataNodeConfig   :: NodeConfig
-    ,   managerNodeDataNodeBaseData :: NodeBaseData
-    ,   managerTransactions         :: C.Chan Transaction
-    ,   managerHashMap              :: BI.Bimap TimeSpec B.ByteString
-    ,   managerPoWNodes             :: BI.Bimap TimeSpec PPId
-    ,   managerPublicators          :: S.Set NodeId
-    ,   managerSendedTransctions    :: BI.Bimap TimeSpec Transaction
-  }
 
 type ShardingChan = C.Chan N.ShardingNodeAction
 type MaybeChan a = Maybe (C.Chan a)
 
-data PPNode = PPNode {
-        _ppType :: NodeType
-    ,   _ppChan :: InChan NNToPPMessage
+-- | TODO: shoud be refactord: reduce keys count.
+data NodeConfig = NodeConfig {
+        _privateKey    :: PrivateKey
+    ,   _myNodeId      :: MyNodeId
   }
-  deriving (Eq)
+  deriving (Generic)
+
+deriveJSON defaultOptions ''NodeConfig
+makeLenses ''NodeConfig
 
 
-
-data NodeBaseData = NodeBaseData {
-        nodeBaseDataExitChan            :: C.Chan ExitMsg
-    ,   nodeBaseDataNodes               :: M.Map NodeId Node
-    ,   nodeBaseDataPpNodes             :: M.Map PPId PPNode
-    ,   nodeBaseDataBootNodes           :: BootNodeList
-    ,   nodeBaseDataAnswerChan          :: C.Chan Answer
-    ,   nodeBaseDataBroadcastNum        :: Int
-    ,   nodeBaseDataHostAddress         :: Maybe HostAddress
-    ,   nodeBaseDataMicroblockChan      :: C.Chan Microblock
-    ,   nodeBaseDataMyNodePosition      :: Maybe MyNodePosition
-    ,   nodeBaseDataShardingChan        :: MaybeChan N.ShardingNodeAction
-    ,   nodeBaseDataIAmBroadcast        :: Bool
-    ,   nodeBaseDataOutPort             :: PortNumber
-    ,   nodeBaseDataInfoMsgChan         :: InChan InfoMsg
-    ,   nodeBaseDataFileServerChan      :: InChan FileActorRequest
+data NodeInfo = NodeInfo {
+        _nodeChan :: InChan NNToPPMessage
+    ,   _nodeType :: NodeType
   }
+makeLenses ''NodeInfo
+
+
+data NetworkNodeData = NetworkNodeData {
+        _connects           :: M.Map NodeId NodeInfo
+    ,   _nodeConfig         :: NodeConfig
+    ,   _shardingChan       :: MaybeChan N.ShardingNodeAction
+    ,   _logChan            :: InChan InfoMsg
+    ,   _fileServerChan     :: InChan FileActorRequest
+    ,   _microblockChan     :: InChan Microblock
+    ,   _transactionsChan   :: InChan Transaction
+  }
+makeLenses ''NetworkNodeData
+
 
 
 
@@ -196,15 +179,7 @@ makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan = NodeBaseData
     aExitChan M.empty M.empty aList aAnswerChan 0 Nothing aMicroblockChan
     Nothing Nothing False
 
--- | TODO: shoud be refactord: reduce keys count.
-data NodeConfig = NodeConfig {
-    nodeConfigPrivateNumber :: DH.PrivateNumber,
-    nodeConfigPublicPoint   :: DH.PublicPoint,
-    nodeConfigPrivateKey    :: PrivateKey,
-    nodeConfigMyNodeId      :: MyNodeId
-  }
-  deriving (Generic)
-$(deriveJSON defaultOptions ''NodeConfig)
+
 
 type Token = Integer
 
@@ -235,10 +210,10 @@ instance FromJSON PortNumber where
     parseJSON _          = error "i've felt with the portnumber parsing"
 
 
-$(deriveJSON defaultOptions ''RPCBuildConfig)
-$(deriveJSON defaultOptions ''SimpleNodeBuildConfig)
+deriveJSON defaultOptions ''RPCBuildConfig
+deriveJSON defaultOptions ''SimpleNodeBuildConfig
 
-$(deriveJSON defaultOptions ''ConnectInfo)
+deriveJSON defaultOptions ''ConnectInfo
 
 data BuildConfig where
      BuildConfig :: {
@@ -251,7 +226,7 @@ data BuildConfig where
   } -> BuildConfig
   deriving (Generic)
 
-$(deriveJSON defaultOptions ''BuildConfig)
+deriveJSON defaultOptions ''BuildConfig
 
 
 
@@ -299,9 +274,8 @@ instance ToManagerData ManagerNodeData where
 makeNewNodeConfig :: MonadRandom m => m NodeConfig
 makeNewNodeConfig = do
     (aPublicKey,     aPrivateKey)  <- generateKeyPair
-    (aPrivateNumber, aPublicPoint) <- genKeyPair curve_256
     let aId = keyToId aPublicKey
-    pure $ NodeConfig aPrivateNumber aPublicPoint aPrivateKey (toMyNodeId aId)
+    return $ NodeConfig aPrivateKey (toMyNodeId aId)
 
 -- FIXME: find a right place.
 makePackageSignature
@@ -319,47 +293,6 @@ makePackageSignature aData aResponse = do
     return $ PackageSignature aNodeId aTime aResponseSignature
 
 
-lensInst "transactions" ["ManagerNodeData"]
-    ["C.Chan", "Transaction"] "managerTransactions"
-
-lensInst "hashMap" ["ManagerNodeData"]
-    ["BI.Bimap", "TimeSpec", "B.ByteString"] "managerHashMap"
-
-lensInst "publicators" ["ManagerNodeData"] ["S.Set", "NodeId"]
-    "managerPublicators"
-
-lensInst "sendedTransctions" ["ManagerNodeData"]
-    ["BI.Bimap", "TimeSpec", "Transaction"] "managerSendedTransctions"
-
-
-lensInst "poWNodes" ["ManagerNodeData"] ["BI.Bimap", "TimeSpec", "PPId"]
-    "managerPoWNodes"
-
-makeNode :: C.Chan MsgToSender -> HostAddress -> PortNumber -> Node
-makeNode aChan aHostAdress aPortNumber = Node {
-        _status         = Noactive
-    ,   _mKey           = Nothing
-    ,   _chan           = aChan
-    ,   _nodePosition   = Nothing
-    ,   _nodePort       = aPortNumber
-    ,   _isBroadcast    = False
-    ,   _nodeHost       = aHostAdress
-  }
-
 
 defaultServerPort :: PortNumber
 defaultServerPort = 3000
-
-
-makeLenses ''PPNode
-
---
---
-instance DistanceTo Node Point where
-    distanceTo aNode aPoint = if
-        | Just aPosition <- aNode^.nodePosition ->
-            distanceTo aPosition  (NodePosition aPoint)
-        | otherwise                             -> maxBound
-
-instance DistanceTo Node PointTo where
-    distanceTo aNode aPoint = distanceTo aNode (toPoint aPoint)
