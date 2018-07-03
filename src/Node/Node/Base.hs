@@ -38,7 +38,6 @@ import              Data.List.Extra
 import              Control.Concurrent.Chan.Unagi.Bounded
 import              Control.Concurrent.MVar
 
-import              Sharding.Space.Distance
 import              Node.FileDB.FileServer
 import              Service.Network.WebSockets.Client
 import              Service.Network.Base
@@ -48,9 +47,6 @@ import              Sharding.Sharding
 import              Node.Node.Types
 import              Node.Crypto
 import              Node.Data.Key
-import              Node.Data.NetPackage
-import              Node.Node.Base.Server
-import              Node.Data.MakeAndSendTraceRouting
 import              Node.Data.GlobalLoging
 import              Service.InfoMsg
 import              Data.Maybe

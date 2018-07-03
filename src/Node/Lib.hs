@@ -34,31 +34,28 @@ import Service.Transaction.Common (addMicroblockToDB, DBPoolDescriptor(..))
 -- https://www.stackage.org/haddock/lts-10.3/network-2.6.3.2/Network-Socket-ByteString.html
 
 -- | Standart function to launch a node.
-startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
-       DBPoolDescriptor
+startNode
+    :: DBPoolDescriptor
     -> BuildConfig
-    -> C.Chan ExitMsg
-    -> C.Chan Answer
     -> InChan InfoMsg
-    -> ((InChan a1, OutChan a1) -> IORef s -> IO ())
-    -> ((InChan a1, OutChan a1) -> C.Chan Transaction -> C.Chan Microblock -> MyNodeId -> InChan FileActorRequest -> IO a2)
-    -> IO (InChan a1, OutChan a1)
-startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
+    -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ())
+    -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> InChan Transaction -> InChan Microblock -> MyNodeId -> InChan FileActorRequest -> IO MsgToCentralActor)
+    -> IO (InChan MsgToCentralActor, OutChan MsgToCentralActor)
+startNode descrDB buildConf infoCh manager startDo = do
 
     --tmp
     createDirectoryIfMissing False "data"
 
     managerChan@(inChanManager, _) <- newChan (2^7)
-    aMicroblockChan <- C.newChan
-    aTransactionChan <- C.newChan
+    (aMicroblockChan, outMicroblockChan) <- newChan (2^7)
+    (aTransactionChan, outTransactionChan) <- newChan (2^7)
     config  <- readNodeConfig
     bnList  <- readBootNodeList $ bootNodeList buildConf
     (aInFileRequestChan, aOutFileRequestChan) <- newChan (2^4)
     void $ C.forkIO $ startFileServer aOutFileRequestChan
     let portNumber = extConnectPort buildConf
-    md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan exitCh answerCh infoCh aInFileRequestChan bnList config portNumber
-    startServerActor inChanManager portNumber
-    void $ C.forkIO $ microblockProc descrDB aMicroblockChan infoCh
+    md      <- newIORef $ makeNetworkData bnList config infoCh aInFileRequestChan aMicroblockChan aTransactionChan
+    void $ C.forkIO $ microblockProc descrDB outMicroblockChan infoCh
     void $ C.forkIO $ manager managerChan md
     void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aInFileRequestChan
     return managerChan
@@ -89,7 +86,7 @@ readBootNodeList conf = do
             Left (_::SomeException) -> return conf
     toNormForm $ read bnList
      where
-       toNormForm aList = return $ (\(a,b,c) -> (NodeId a, Connect (tupleToHostAddress b) c))
+       toNormForm aList = return $ (\(b,c) -> Connect (tupleToHostAddress b) c)
           <$> aList
 
 ---
