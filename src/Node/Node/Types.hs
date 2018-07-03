@@ -50,49 +50,17 @@ import              PoA.Types
 import              Node.FileDB.FileServer
 
 
-data NodeVariantRole where
-    BroadcastNode   :: NodeVariantRole
-    SimpleNode      :: NodeVariantRole
-    BootNode        :: NodeVariantRole
-    PublicatorNode  :: NodeVariantRole
-  deriving (Show, Eq, Ord, Generic)
-
-type NodeVariantRoles = [NodeVariantRole]
 
 instance Show (InChan a) where
     show _ = "InChan"
 instance Serialize NodeVariantRole
 
-type BootNodeList   = [(NodeId, Connect)]
 
-
-
-
-data Msg where Msg :: B.ByteString -> Msg
 type Transactions = [Transaction]
-
---
-idLens :: Lens' a a
-idLens = lens Prelude.id (\_ a -> a)
-
-data Answer where
-    StateRequestAnswer ::
-        NodeVariantRoles
-        -> MyNodeId
-        -> Int
-        -> Int
-        -> Int
-        -> Answer
-    RawPackege :: B.ByteString -> Answer
-  deriving Show
 
 data ExitMsg where
     ExitMsg :: ExitMsg
 
-data MsgToSender where
-    MsgToSender     :: B.ByteString -> MsgToSender
-    SenderExit      :: B.ByteString -> MsgToSender
-    SenderTerminate :: MsgToSender
 
 data MsgToMainActorFromPP
     = MicroblockFromPP Microblock PPId
@@ -102,37 +70,9 @@ data MsgToMainActorFromPP
     | PoWListRequest IdFrom
   deriving (Show)
 
-dataConstruct "MsgToNodeManager" $
-    ((_1 .~ False) <$> managerMsgFuncListData) <>
-    ((_1 .~ False) <$> managerMiningMsgListData)
-
-dataConstruct "ManagerMsgBase" managerMsgFuncListData
-
-dataConstruct "ManagerMiningMsgBase" $
-    ((_1 .~ False) <$> managerMsgFuncListData) <>
-    managerMiningMsgListData
-
-msgClass []             "ManagerMsg" managerMsgFuncListFull
-msgClass ["ManagerMsg"] "ManagerMiningMsg" managerMiningMsgListFull
-
-
-baseMsgInstance "ManagerMsg" "ManagerMsgBase" managerMsgFuncList
-baseMsgInstance "ManagerMiningMsg" "ManagerMiningMsgBase" managerMiningMsgList
-
-
-derivativeMsgInstance "ManagerMsg" "MsgToNodeManager" managerMsgFuncList
-derivativeMsgInstance "ManagerMsg" "ManagerMiningMsgBase" managerMsgFuncList
-
-derivativeMsgInstance "ManagerMiningMsg" "MsgToNodeManager" managerMiningMsgList
-
 data MsgToServer where
     KillMsg       :: MsgToServer
 
-data NodeStatus = Active | Noactive deriving (Show, Eq)
-
-
-type ShardingChan = C.Chan N.ShardingNodeAction
-type MaybeChan a = Maybe (C.Chan a)
 
 -- | TODO: shoud be refactord: reduce keys count.
 data NodeConfig = NodeConfig {
@@ -155,7 +95,8 @@ makeLenses ''NodeInfo
 data NetworkNodeData = NetworkNodeData {
         _connects           :: M.Map NodeId NodeInfo
     ,   _nodeConfig         :: NodeConfig
-    ,   _shardingChan       :: MaybeChan N.ShardingNodeAction
+    ,   _bootNodeList       :: [Connect]
+    ,   _shardingChan       :: Maybe (C.Chan N.ShardingNodeAction)
     ,   _logChan            :: InChan InfoMsg
     ,   _fileServerChan     :: InChan FileActorRequest
     ,   _microblockChan     :: InChan Microblock
@@ -164,20 +105,15 @@ data NetworkNodeData = NetworkNodeData {
 makeLenses ''NetworkNodeData
 
 
-
-
-makeNodeBaseData
-    ::  C.Chan ExitMsg
-    ->  BootNodeList
-    ->  C.Chan Answer
-    ->  C.Chan Microblock
-    ->  PortNumber
+makeNetworkData
+    ::  BootNodeList
+    ->  NodeConfig
     ->  InChan InfoMsg
     ->  InChan FileActorRequest
-    ->  NodeBaseData
-makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan = NodeBaseData
-    aExitChan M.empty M.empty aList aAnswerChan 0 Nothing aMicroblockChan
-    Nothing Nothing False
+    ->  InChan Microblock
+    ->  InChan Transaction
+    ->  NetworkNodeData
+makeNetworkData aBootNodeList aNodeConfig = NetworkNodeData M.empty aNodeConfig aBootNodeList Nothing
 
 
 
@@ -230,22 +166,10 @@ deriveJSON defaultOptions ''BuildConfig
 
 
 
-genDataClass        "nodeConfig" nodeConfigList
-genBazeDataInstance "nodeConfig" (fst <$> nodeConfigList)
-
-genDataClass        "nodeBaseData" nodeBaseDataList
-genBazeDataInstance "nodeBaseData" (fst <$> nodeBaseDataList)
-
 instance Serialize NodeConfig
 
 class (NodeConfigClass a, NodeBaseDataClass a) => ManagerData a
 instance ManagerData ManagerNodeData
-
-
-mapM (uncurry makeLensInstance') [
-        ("nodeConfig", "managerNodeData")
-    ,   ("nodeBaseData", "managerNodeData")
-    ]
 
 
 instance Serialize PrivateKey where
@@ -257,7 +181,6 @@ class ToManagerData a where
         :: C.Chan Transaction
         -> C.Chan Microblock
         -> C.Chan ExitMsg
-        -> C.Chan Answer
         -> InChan InfoMsg
         -> InChan FileActorRequest
         -> BootNodeList
