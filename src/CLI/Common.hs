@@ -48,6 +48,7 @@ import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
+import           Service.System.Directory              (getTime)
 
 import           Control.Timeout
 import           Data.Time.Units (Second)
@@ -124,7 +125,8 @@ sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> 
 sendTrans tx ch aInfoCh = try $ do 
   exp <- (timeout (5 :: Second) $ do
            sendMetrics tx aInfoCh
-           writeChan ch $ newTransaction tx)
+           cTime <- getTime
+           writeChan ch $ newTransaction (tx { _time = Just cTime } ))
   case exp of
     Just _   -> return ()
     Nothing  -> throw TransactionChanBusyException
