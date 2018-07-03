@@ -103,16 +103,18 @@ answerToInitShardingLvl aChan aMd _ = do
 
 answerToTestBroadcastBlockIndex :: IORef ManagerNodeData -> ManagerMiningMsgBase ->  IO ()
 answerToTestBroadcastBlockIndex aMd _ = do
+    undefined
+{-
     aData <- readIORef aMd
-    aPosChan <- newEmptyMVar
+    --aPosChan <- newEmptyMVar
     let aPositionsOfNeibors  = (^.nodePosition) <$> M.elems (aData^.nodes)
-    writeChan (aData^.fileServerChan) $ FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
-    NodeInfoListLogicLvl aPossitionList <- takeMVar aPosChan
+    --writeChan (aData^.fileServerChan) $ FileActorRequestLogicLvl $ ReadRecordsFromNodeListFile aPosChan
+    --NodeInfoListLogicLvl aPossitionList <- takeMVar aPosChan
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point list XXX: " ++ show aPossitionList
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Point node list XXX: " ++ show aPositionsOfNeibors
     whenJust (aData^.myNodePosition) $ \aPosition ->
         writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Data for drawign #" ++ show (toPoint aPosition, toPoint <$> catMaybes aPositionsOfNeibors)
-
+-}
 
 answeToMsgFromPP :: IORef ManagerNodeData ->  ManagerMiningMsgBase ->  IO ()
 answeToMsgFromPP aMd (toManagerMsg -> MsgFromPP aMsg) = do

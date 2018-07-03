@@ -49,13 +49,13 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl NetLvl) 
         aData <- readIORef aMd
         case aMsg of
             -- handle an event that someone need a neighbour.
-            INeedNeighbors (toNodeId -> aNodeId) aHostAddress aPortNumber -> do
+            INeedNeighbors (toNodeId -> aNodeId) aHostAddress aPortNumber -> 
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted msg from the " ++
                     show aNodeId ++ "that it need a neighbors. Addtition the node in the list of possible connects."
-
+{-
                 writeChan (aData^.fileServerChan) $
                         FileActorRequestNetLvl $ UpdateFile (aData^.myNodeId) ( NodeInfoListNetLvl [(aNodeId, Connect aHostAddress aPortNumber)])
-
+-}
 instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl LogicLvl) where
     processingOfBroadcast aMd aMsg = do
         aData <- readIORef aMd
@@ -68,9 +68,10 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl LogicLvl
                     C.writeChan aChan $ T.NewShardInNetAction aShard
 
             -- handle received data that some node change its position.
-            BroadcastPosition     aMyNodeId aNodePosition  -> do
+            BroadcastPosition     aMyNodeId aNodePosition  ->
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $ "Accepted new position for the node." ++
                     "The node have position " ++ show aNodePosition ++ ", node id is " ++ show aMyNodeId
+{-
                 writeChan (aData^.fileServerChan) $
                     FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId) (NodeInfoListLogicLvl [(toNodeId aMyNodeId, aNodePosition)])
 
@@ -80,7 +81,7 @@ instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl LogicLvl
 
                 sendToShardingLvl aData $
                     T.TheNodeHaveNewCoordinates (toNodeId aMyNodeId) aNodePosition
-
+-}
 -- handle sharding layer broadcast message (where to put)
 instance BroadcastProcessing (IORef ManagerNodeData) (BroadcastThingLvl MiningLvl) where
     processingOfBroadcast aMd aMsg = do

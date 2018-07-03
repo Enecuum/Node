@@ -66,11 +66,13 @@ instance Processing (IORef ManagerNodeData) (Response NetLvl) where
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                 "Accepted lists of broadcasts and points of node. " ++
                 show aBroadcastListLogic ++ show aBroadcastList
+{-
             writeChan (aData^.fileServerChan) $
                 FileActorRequestNetLvl $ UpdateFile (aData^.myNodeId) aBroadcastList
+
             writeChan (aData^.fileServerChan) $
                 FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId) aBroadcastListLogic
-
+-}
         HostAdressResponse _ -> return ()
 
         -- node report, that it is broadcast node. Change its status in our memory.
@@ -105,9 +107,11 @@ instance Processing (IORef ManagerNodeData) (Response LogicLvl) where
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
                     "Accepted the node position of a neighbor node " ++ show aNodeId ++
                     " a new position is a " ++ show aNodePosition
+                {-
                 writeChan (aData^.fileServerChan) $
                     FileActorRequestLogicLvl $ UpdateFile (aData^.myNodeId)
                         (NodeInfoListLogicLvl [(aNodeId, aNodePosition)])
+                -}
                 whenJust (aData^.nodes.at aNodeId) $ \aNode ->
                     modifyIORef aMd $ nodes %~ M.insert aNodeId
                         (aNode & nodePosition ?~ aNodePosition)
@@ -235,6 +239,7 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
             BroadcastListRequest -> void $ C.forkIO $ do
                 writeLog (aData^.infoMsgChan) [NetLvlTag] Info
                     "Send Response 'Broadcast list'."
+{-
                 aPosChan <- newEmptyMVar
                 aConChan <- newEmptyMVar
                 writeChan (aData^.fileServerChan) $
@@ -244,10 +249,10 @@ instance Processing (IORef ManagerNodeData) (Request NetLvl) where
 
                 NodeInfoListNetLvl   aBroadcastList      <- takeMVar aConChan
                 NodeInfoListLogicLvl aBroadcastListLogic <- takeMVar aPosChan
-
+-}
                 let aBroadcastListResponse = BroadcastListResponse
-                        (NodeInfoListLogicLvl $ take 10 aBroadcastListLogic)
-                        (NodeInfoListNetLvl   $ take 10 aBroadcastList)
+                        (NodeInfoListLogicLvl [])
+                        (NodeInfoListNetLvl   [])
                         False
 
                 aSendNetLvlResponse aBroadcastListResponse

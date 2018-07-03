@@ -18,6 +18,7 @@ import              Data.String
 import              GHC.Generics
 import qualified    Data.Text as T
 import              Data.Hex
+import              Data.Maybe
 import              Control.Monad.Extra
 -- import              Data.Either
 import qualified    Data.Serialize as S
@@ -83,7 +84,7 @@ data PPToNNMessage
         msg           :: B.ByteString
     }
     -- get connects
-    | RequestConnects
+    | RequestConnects Bool
 
     -- responses with PPId
     | ResponseNodeIdToNN {
@@ -110,6 +111,7 @@ data PPToNNMessage
     | IsInPendingRequest Transaction
     | GetPendingRequest
     | AddTransactionRequest Transaction
+    | ActionAddToListOfConnects Int
 
     deriving (Show)
 
@@ -202,7 +204,10 @@ instance FromJSON PPToNNMessage where
                 aRecipientType :: T.Text <-  aMessage .: "recipientType"
                 return $ RequestBroadcast (readNodeType aRecipientType) (S.encode aMsg)
 
-            ("Request","Connects")    -> return RequestConnects
+            ("Request","Connects")    -> do
+                aFull :: Maybe T.Text <- aMessage .:? "full"
+                return $ RequestConnects (isJust aFull)
+
             ("Request","PoWList")     -> return RequestPoWList
 
             ("Response", "NodeId") -> do
@@ -230,8 +235,10 @@ instance FromJSON PPToNNMessage where
 
             ("Request", "PendingAdd") ->
                 AddTransactionRequest <$> aMessage .: "transaction"
-
+            ("Action", "AddToListOfConnects") ->
+                ActionAddToListOfConnects <$> aMessage .: "port"
             _ -> mzero
+
 
     parseJSON _ = mzero -- error $ show a
 

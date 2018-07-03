@@ -111,19 +111,21 @@ answerToConnectivityQuery aChan aMd _ = do
         aBroadcasts   = filter (^._2.isBroadcast) $ M.toList aNeighbors
         aBroadcastNum = length aBroadcasts
         aUnActiveNum  = M.size $ M.filter (\a -> a^.status /= Active) aNeighbors
-
+{-
     aConChan <- newEmptyMVar
     writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
     NodeInfoListNetLvl aConnectList <- takeMVar aConChan
-
+-}
+{-
     when (length aConnectList > 8) $
-        whenJust (aData^.myNodePosition) $ \aMyPosition -> do
+        whenJust (aData^.myNodePosition) $ \aMyPosition ->
             writeLog (aData^.infoMsgChan) [NetLvlTag] Info "Cleaning of a list of connects."
             writeChan (aData^.fileServerChan) $ FileActorMyPosition aMyPosition
-
+-}
     let aWait = (preferedBroadcastCount < aBroadcastNum && aBroadcastNum <= 7) || aUnActiveNum /= 0
     if  | aWait             -> return ()
-        | null aConnectList -> connectToBootNode aChan aData
+        | {-null aConnectList -} otherwise -> connectToBootNode aChan aData
+{-
         | iDontHaveAPosition aData -> initShading aChan aMd
         | aBroadcastNum < preferedBroadcastCount -> do
             let aConnectsNum = preferedBroadcastCount - aBroadcastNum
@@ -133,17 +135,19 @@ answerToConnectivityQuery aChan aMd _ = do
         | otherwise -> whenJust (aData^.myNodePosition) $ \aNodePosition -> do
             let aMostClosed = drop preferedBroadcastCount . sortOn (distanceTo aNodePosition . (^.nodePosition)). (snd <$>) $ aBroadcasts
             forM_ aMostClosed sendExitMsgToNode
-
+-}
 
 --
 answerToFindBestConnects ::  ManagerData md =>  ManagerMsg msg =>
         InChan msg ->  IORef md ->  msg ->  IO ()
-answerToFindBestConnects aChan aMd _ = do
+answerToFindBestConnects aChan aMd _ = return ()
+{-
     aData <- readIORef aMd
     writeLog (aData^.infoMsgChan) [NetLvlTag] Info "answerToFindBestConnects: start"
     whenJust (aData^.myNodePosition) $ \aMyNodePosition -> do
         aPosChan <- newEmptyMVar
         aConChan <- newEmptyMVar
+
         writeChan (aData^.fileServerChan) $
              FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
         writeChan (aData^.fileServerChan) $
@@ -164,8 +168,8 @@ answerToFindBestConnects aChan aMd _ = do
             aNeadedConnects :: M.Map NodeId Connect
             aNeadedConnects = M.intersection (M.fromList aBroadcastList) (M.difference aPrefferedConnects aExistConnects)
 
-        connectTo aChan 4 (M.toList aNeadedConnects)
-
+        connectTo aChan 4 []
+-}
 
 -- 1. We can have its coordinats unknown
 -- 4 - network alignment

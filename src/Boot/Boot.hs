@@ -74,7 +74,7 @@ answerToCheckBroadcastNodes aMd aChan _ = do
         when (isNothing aMaybeNode) $
             writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag, RegularTag] Info $
                 "The node " ++ show aNodeId ++ " doesn't a broadcast."
-
+{-
         whenJust aMaybeNode $ \aNode -> do
             writeLog (aData^.infoMsgChan) [BootNodeTag, NetLvlTag, RegularTag] Info $
                 "The node " ++ show aNodeId ++ " is broadcast."
@@ -85,7 +85,7 @@ answerToCheckBroadcastNodes aMd aChan _ = do
             writeChan (aData^.fileServerChan) $
                     FileActorRequestNetLvl $ UpdateFile (aData^.myNodeId)
                     (NodeInfoListNetLvl [(aNodeId, Connect (aNode^.nodeHost) (aNode^.nodePort))])
-
+-}
 
 answerToCheckBroadcastNode :: ManagerMsg a =>
     InChan a -> IORef NodeBootNodeData -> ManagerBootNodeMsgBase -> IO ()

@@ -78,13 +78,15 @@ instance PackageTraceRoutingAction NodeBootNodeData RequestPackage where
 
 instance  Processing (IORef NodeBootNodeData) (Request NetLvl) where
     processing _ aMd aSignature@(PackageSignature (toNodeId -> aNodeId) _ _) aTraceRouting = \case
-        BroadcastListRequest -> do
+        BroadcastListRequest -> return ()
+        {-
+            do
             aData <- readIORef aMd
             let aSendNetLvlResponse = sendResponseTo
                     aTraceRouting aData BroadcastListRequest aSignature
 
             aConChan <- newEmptyMVar
-            writeChan (aData^.fileServerChan) $ FileActorRequestNetLvl $ ReadRecordsFromNodeListFile aConChan
+            writeChan (aData^.fileServerChan) $  aConChan
             NodeInfoListNetLvl aBroadcasts <- takeMVar aConChan
 
             let aBroadcastListResponse = BroadcastListResponse
@@ -95,6 +97,7 @@ instance  Processing (IORef NodeBootNodeData) (Request NetLvl) where
                 "Send to node " ++ show aNodeId ++ " broadcast list Response " ++
                 show (take 10 aBroadcasts) ++ "."
             aSendNetLvlResponse aBroadcastListResponse
+            -}
         _ -> return ()
 
 
