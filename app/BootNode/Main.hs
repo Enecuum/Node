@@ -13,12 +13,12 @@ import              Service.Network.Base (ConnectInfo(..))
 import              System.Environment
 import              Node.Node.Types
 import              PoA.PoAServer
+import              Node.FileDB.FileServer
 
 import              Network.Socket()
 import qualified    Data.ByteString.Lazy as L
 
-import              Boot.Boot
-import              Boot.Types
+
 import              Node.Lib
 import              Data.Aeson
 import              Service.Transaction.Common (connectOrRecoveryConnect)
@@ -56,14 +56,12 @@ main =  do
                     Right item              -> return $ read item
                     Left (_::SomeException) -> return $ port $ logsBuildConfig conf
 
+            log_id  <- try (getEnv "log_id") >>= \case
+                Right item              -> return item
+                Left (_::SomeException) -> return "0"
+            (aFileChan, aOutFileRequestChan) <- newChan (2^4)
+            void $ C.forkIO $ startFileServer aOutFileRequestChan
+            void $ C.forkIO $ serverPoABootNode poa_p aInfoChanIn aFileChan
+            void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id
 
-
-            void $ startNode descrDB conf exitCh answerCh aInfoChanIn  managerBootNode $
-                \(ch, _) _ _ aNodeId aFileChan -> do
-                    log_id  <- try (getEnv "log_id") >>= \case
-                        Right item              -> return item
-                        Left (_::SomeException) -> return $ show aNodeId
-                    metronomeS 100000 (writeChan ch checkBroadcastNodes)
-                    void $ C.forkIO $ serverPoABootNode poa_p aInfoChanIn aFileChan
-                    void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id
             void $ C.readChan exitCh
