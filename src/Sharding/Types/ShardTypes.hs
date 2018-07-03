@@ -6,8 +6,6 @@ module Sharding.Types.ShardTypes where
 
 import              Service.Types (Hash(..))
 
-import              Sharding.Space.Distance()
-import              Sharding.Space.Point()
 
 import              GHC.Generics
 

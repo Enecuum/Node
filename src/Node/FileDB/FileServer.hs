@@ -16,7 +16,7 @@ module Node.FileDB.FileServer (
     ,   FileActorRequest(..)
   ) where
 
-import              Sharding.Space.Distance
+
 import              Data.List.Extra
 
 import              Lens.Micro
@@ -29,7 +29,6 @@ import qualified    Data.Set as S
 import              Node.Data.NetPackage
 import              Node.Data.Key
 import              Service.Network.Base
-import              Sharding.Space.Point
 
 
 data FileActorRequest where

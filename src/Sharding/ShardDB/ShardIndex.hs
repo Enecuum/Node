@@ -18,9 +18,7 @@ import              GHC.Generics
 
 import              Sharding.Types.ShardTypes
 import              Sharding.Types.ShardLogic
-import              Sharding.Space.Distance
-import              Sharding.Space.Point
-
+{-
 data ShardExistIndex   = ShardExistIndex {
       _baseSnapshots  :: [SpaceSnapshot]
     , _lastSnapshot   :: SpaceSnapshot
@@ -209,6 +207,6 @@ instance Emptable SpaceSnapshot where
 instance Emptable ShardNeededIndex where
     empty = ShardNeededIndex S.empty
 
-
+-}
 
 ---

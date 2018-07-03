@@ -21,11 +21,10 @@ import              Service.Network.Base
 import              Service.Types (Transaction, Microblock)
 
 import              Sharding.Types.ShardTypes
-import              Sharding.Space.Point as P
-import              Sharding.Space.Distance
 import              PoA.Types
 import              Node.Data.Key
 
+{-
 -- | Data for resending from NetNode A to NetNode B.
 data Package where
     Ciphered   :: CipheredString -> Package
@@ -342,7 +341,7 @@ instance IsByteString CipheredString where
 instance Serialize TimeSpec where
     put (TimeSpec a b) = put a *> put b
     get = TimeSpec <$> get <*> get
-
+-}
 --------
 -- 1.
 -- A, B -- don't have white ip.

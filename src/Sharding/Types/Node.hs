@@ -6,7 +6,6 @@ module Sharding.Types.Node where
 
 import              Sharding.ShardDB.ShardIndex
 import              Sharding.Types.ShardTypes
-import              Sharding.Space.Point
 
 import              Control.Concurrent.Chan.Unagi.Bounded
 import qualified    Control.Concurrent.Chan as C
@@ -20,11 +19,29 @@ import              Service.InfoMsg
 import              Node.Data.Key
 
 
+data ShardingNodeResponse where
+    ShardIndexResponse    :: [ShardHash]    -> ShardingNodeResponse
+    ShardResponse         :: [Shard]        -> ShardingNodeResponse
+--    NodePositionResponse  :: MyNodePosition -> ShardingNodeResponse
+  deriving (Show)
+
+
+data ShardingNodeRequestMsg =
+--        IamAwakeRequest              MyNodeId MyNodePosition -- broadcast for all network
+       NeighborListRequest -- ask net level new neighbors
+--    |   ShardIndexRequest           Word64 [NodePosition]
+    |   ShardListRequest            [ShardHash]
+    --  ShiftAction => NewPosiotionResponse
+--    |   NewPosiotionMsg             MyNodePosition
+--    |   IsTheNeighborAliveRequest   NodeId NodePosition
+  deriving (Show)
+
+
+{-
+
 data ShardingNode = ShardingNode {
         _nodeNeighbors      :: S.Set Neighbor
     ,   _shardingNodeId     :: MyNodeId
-    ,   _nodePosition       :: MyNodePosition
-    ,   _nodeIndex          :: ShardIndex
     ,   _nodeIndexOfReques  :: M.Map ShardHash (TimeSpec, C.Chan Shard)
     ,   _nodeInfoMsgChan    :: InChan InfoMsg
     ,   _nodeDistance       :: Word64 -- think
@@ -33,8 +50,7 @@ data ShardingNode = ShardingNode {
 
 
 data Neighbor = Neighbor {
-        _neighborPosition   :: NodePosition
-    ,   _neighborId         :: NodeId
+      _neighborId         :: NodeId
   }
   deriving (Show, Eq, Ord)
 
@@ -71,22 +87,6 @@ instance Show (C.Chan a) where
       show _ = "Chan"
 
 
-data ShardingNodeResponse where
-    ShardIndexResponse    :: [ShardHash]    -> ShardingNodeResponse
-    ShardResponse         :: [Shard]        -> ShardingNodeResponse
-    NodePositionResponse  :: MyNodePosition -> ShardingNodeResponse
-  deriving (Show)
-
-
-data ShardingNodeRequestMsg =
-        IamAwakeRequest              MyNodeId MyNodePosition -- broadcast for all network
-    |   NeighborListRequest -- ask net level new neighbors
-    |   ShardIndexRequest           Word64 [NodePosition]
-    |   ShardListRequest            [ShardHash]
-    --  ShiftAction => NewPosiotionResponse
-    |   NewPosiotionMsg             MyNodePosition
-    |   IsTheNeighborAliveRequest   NodeId NodePosition
-  deriving (Show)
 
 
 makeEmptyShardingNode :: S.Set Neighbor ->  MyNodeId -> MyNodePosition -> ShardIndex -> InChan InfoMsg -> Word64 -> ShardingNode
@@ -102,11 +102,9 @@ makeEmptyShardingNode aNeighbors aMyNodeId aMyPosition aMyShardIndex infoMsgChan
 
 
 makeEmptyNeighbor :: NodePosition -> NodeId -> Neighbor
-makeEmptyNeighbor aPosition aNodeId = Neighbor {
-        _neighborPosition   = aPosition
-    ,   _neighborId         = aNodeId
-  }
+makeEmptyNeighbor aPosition aNodeId = Neighbor aNodeId
 
 
 neighborsMemoryDistanse :: Word64
 neighborsMemoryDistanse = 6
+-}

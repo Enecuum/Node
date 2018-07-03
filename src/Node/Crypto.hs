@@ -1,16 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, PackageImports, LambdaCase #-}
-module Node.Crypto (
-        makeConnectingRequest
-    ,   verifyConnectingRequest
-    ,   disconnectRequest
-    ,   makeCipheredPackage
-    ,   makeBroadcastRequest
-    ,   cryptoHash
-    ,   genKeyPair
-    ,   signEncodeble
-    ,   verifyEncodeble
-    ,   decryptChipred
-  ) where
+module Node.Crypto where
 
 import              Service.Network.Base (PortNumber)
 import              Node.Data.Key hiding (PublicKey(..))
@@ -31,7 +20,7 @@ import              Data.ByteArray (unpack)
 
 import              Data.ByteString (ByteString, pack)
 import              Data.Serialize
-
+{-
 makeConnectingRequest
     ::  MyNodeId
     ->  PublicPoint
@@ -80,7 +69,7 @@ decryptChipred aSecretKey aChipredString = case decode <$> aDecryptedString of
   where
     aDecryptedString = maybeCryptoError $
         encrypt aSecretKey (toByteString aChipredString)
-
+-}
 
 verifyEncodeble :: Serialize msg => PublicKey -> Signature -> msg -> Bool
 verifyEncodeble aPublicKey aSignature aMsg = verify SHA3_256

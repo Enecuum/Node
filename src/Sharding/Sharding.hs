@@ -33,9 +33,7 @@
 
 module Sharding.Sharding where
 
-import              Sharding.Space.Distance
-import              Sharding.Space.Point
-import              Sharding.Space.Shift
+
 import              Sharding.Types.ShardTypes
 import              Sharding.Types.ShardLogic
 import              Sharding.Types.Node
@@ -63,7 +61,16 @@ import              Service.InfoMsg
 import              Lens.Micro.GHC()
 import              Node.Data.Key
 import              Data.Maybe (fromJust)
-
+makeShardingNode
+    ::  T.ManagerMsg msg
+    =>  MyNodeId
+    ->  C.Chan ShardingNodeAction
+    ->  InChan msg
+    ->  MyNodePosition
+    ->  InChan InfoMsg
+    ->  IO ()
+makeShardingNode _ _ _ _ _ = return ()
+{-
 
 sizeOfShardStore:: Int
 sizeOfShardStore = 500
@@ -454,3 +461,4 @@ mul x y
     | otherwise = fromInteger aResult
   where
     aResult = (toInteger x * toInteger y) `div` distanceNormalizedCapture
+-}
