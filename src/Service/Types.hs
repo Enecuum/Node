@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE StandaloneDeriving        #-}
+
 module Service.Types where
 
 import           Data.ByteString
@@ -78,23 +79,23 @@ data Microblock = Microblock{
 instance Serialize Microblock
 
 data MicroblockBD = MicroblockBD{
-    _keyBlockBD     :: ByteString, -- hash of key-block
+    _keyBlock       :: ByteString, -- hash of key-block
     _signBD         :: Signature,  -- signature for {K_hash, [Tx],}
-    _teamKeysBD     :: [PublicKey], -- for reward
+    _teamKeys       :: [PublicKey], -- for reward
     _transactionsBD :: [ByteString], -- hashes of [Transaction],
-    _numOfBlockBD   :: Integer
+    _numOfBlock     :: Integer
   }
   deriving (Eq, Generic, Ord, Read, Show)
 
 instance Serialize MicroblockBD
 
 data MicroblockAPI = MicroblockAPI {
-     _prevBlockAPI    :: ByteString  -- hash of the previous microblock if exists
-    ,_nextBlockAPI    :: ByteString  -- hash of the next microblock if exists
-    ,_keyBlockAPI     :: ByteString  -- hash of key-block
+     _prevMicroblock  :: ByteString  -- hash of the previous microblock if exists
+    ,_nextMicroblock  :: ByteString  -- hash of the next microblock if exists
+    ,_keyBlock        :: ByteString  -- hash of key-block
     ,_signAPI         :: Signature   -- signature for {K_hash, [Tx],}
-    ,_teamKeysAPI     :: [PublicKey] -- for reward
-    ,_publisherAPI    :: PublicKey
+    ,_teamKeys        :: [PublicKey] -- for reward
+    ,_publisher       :: PublicKey
     ,_transactionsAPI :: [TransactionAPI]
   }
   deriving (Eq, Generic, Ord, Read, Show)
@@ -102,7 +103,7 @@ instance Serialize MicroblockAPI
 
 
 data Macroblock = Macroblock {
-     _prevBlock  :: ByteString
+     _prevKBlock :: ByteString
   ,  _difficulty :: Integer --
   ,  _height     :: Integer -- block number in the chain
   ,  _solver     :: PublicKey
@@ -115,14 +116,14 @@ data Macroblock = Macroblock {
 instance Serialize Macroblock
 
 data MacroblockAPI = MacroblockAPI {
-     _prevKBlockAPI :: ByteString
-  ,  _nextKBlockAPI :: ByteString
-  ,  _difficultyAPI :: Integer
-  ,  _heightAPI     :: Integer
-  ,  _solverAPI     :: PublicKey
-  ,  _rewardAPI     :: Integer
-  ,  _txsCntAPI     :: Integer
-  ,  _mblocksAPI    :: [ByteString]
+     _prevKBlock :: ByteString
+  ,  _nextKBlock :: ByteString
+  ,  _difficulty :: Integer
+  ,  _height     :: Integer
+  ,  _solver     :: PublicKey
+  ,  _reward     :: Integer
+  ,  _txsCnt     :: Integer
+  ,  _mblocks    :: [ByteString]
 
 } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize MacroblockAPI

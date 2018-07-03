@@ -34,8 +34,7 @@ import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
 import           Service.Transaction.Storage
-import           Service.Types                         hiding
-                                                        (MicroblockAPI (..))
+import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 
 instance Hashable PublicKey
@@ -113,13 +112,13 @@ checkMacroblock db aInfoChan keyBlockHash blockHash = do
 
     case v of
       Nothing -> do -- If Macroblock is not already in the table, than insert it into the table
-                    let aMacroBlock = dummyMacroblock {_mblocks = [blockHash]}
+                    let aMacroBlock = dummyMacroblock {_mblocks = [blockHash]} :: Macroblock
                     return (True, False, True, True, aMacroBlock)
       Just a -> -- If Macroblock already in the table
         case urValue a :: Either String Macroblock of
           Left _  -> error "Can not decode Macroblock"
           Right bdMacroblock -> do
-                   let hashes = _mblocks bdMacroblock
+                   let hashes = _mblocks ( bdMacroblock :: Macroblock)
                    writeLog aInfoChan [BDTag] Info ("length hashes" ++ show(length hashes) ++ " " ++ show hashes)
                    if length hashes >= quantityMicroblocksInMacroblock
                    then if (length hashes == quantityMicroblocksInMacroblock)
@@ -132,7 +131,7 @@ checkMacroblock db aInfoChan keyBlockHash blockHash = do
                      if microblockIsAlreadyInMacroblock
                        then return (True, False, False, True, bdMacroblock)  -- Microblock already in Macroblock - Nothing
                        else do -- add this Microblock to the value of Macroblock
-                               let aMacroBlock = bdMacroblock {  _mblocks = hashes ++ [blockHash] }
+                               let aMacroBlock = bdMacroblock {  _mblocks = hashes ++ [blockHash] } :: Macroblock
                                writeMacroblockToDB db aInfoChan keyBlockHash aMacroBlock
                              -- Check quantity of microblocks, can we close Macroblock?
                                if (length hashes >= (quantityMicroblocksInMacroblock - 1))
@@ -147,7 +146,7 @@ addMicroblockToDB db m aInfoChan =  do
     let microblockHash = rHash m
     writeLog aInfoChan [BDTag] Info ("New Microblock came" ++ show(microblockHash))
 -- FIX: Write to db atomically
-    (goOn, macroblockClosed, microblockNew, macroblockNew, macroblock ) <- checkMacroblock db aInfoChan (_keyBlock m) microblockHash
+    (goOn, macroblockClosed, microblockNew, macroblockNew, macroblock ) <- checkMacroblock db aInfoChan (_keyBlock (m :: Microblock)) microblockHash
     writeLog aInfoChan [BDTag] Info ("Macroblock - already closed " ++ show (not goOn))
     when goOn $ do
                 writeLog aInfoChan [BDTag] Info ("Macroblock - New is " ++ show macroblockNew)
@@ -160,17 +159,16 @@ addMicroblockToDB db m aInfoChan =  do
 
                   if macroblockClosed then do
                     -- get all microblocks (without the last added) for macroblock
-                    let microblockHashes = init $ _mblocks macroblock
+                    let microblockHashes = init $ _mblocks (macroblock :: Macroblock)
                     mbBD <- mapM (\h -> getMicroBlockByHashDB db (Hash h))  microblockHashes
                     let realMb =  map fromJust (filter (isJust) mbBD)
                     mbWithTx <- mapM (transformation db) realMb
-
-                    let sortedMb = sortBy (comparing _sign) $ mbWithTx ++ [m]
-                    writeLog aInfoChan [BDTag] Info ("Start calculate Ledger "  ++ show (length sortedMb))
-                    mapM_ (runLedger db aInfoChan) sortedMb
-                    writeMacroblockToDB db aInfoChan (_keyBlock m) (macroblock {_reward = 10})
+                    let sortedMb = sortBy (comparing _sign) ((mbWithTx ++ [m]) :: [Microblock])
+                    writeLog aInfoChan [BDTag] Info ("Start calculate Ledger "  ++ show (length (sortedMb :: [Microblock])))
+                    mapM_ (runLedger db aInfoChan) (sortedMb :: [Microblock])
+                    writeMacroblockToDB db aInfoChan (_keyBlock (m :: Microblock)) (macroblock {_reward = 10})
                   else do
-                    writeMacroblockToDB db aInfoChan (_keyBlock m) macroblock
+                    writeMacroblockToDB db aInfoChan (_keyBlock (m :: Microblock)) macroblock
 
 
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> Macroblock -> IO ()
@@ -248,13 +246,13 @@ addMacroblockToDB db aValue aInfoChan = do
         atimeK = time keyBlockInfoObject
         aNumberK = number keyBlockInfoObject
         aNonce = nonce keyBlockInfoObject
-        fMacroblock = aMacroblock { _prevBlock = prevHash, _difficulty = 20, _solver = aSolver, _timeK = atimeK, _numberK = aNumberK, _nonce = aNonce }
+        fMacroblock = aMacroblock { _prevKBlock = prevHash, _difficulty = 20, _solver = aSolver, _timeK = atimeK, _numberK = aNumberK, _nonce = aNonce }
 
     writeMacroblockToDB db aInfoChan keyBlockHash fMacroblock
 
 
 dummyMacroblock :: Macroblock
-dummyMacroblock = Macroblock { _prevBlock = "", _difficulty = 0, _height = 0, _solver = aSolver, _reward = 0, _mblocks = [], _timeK = 0, _numberK = 0, _nonce = 0}
+dummyMacroblock = Macroblock { _prevKBlock = "", _difficulty = 0, _height = 0, _solver = aSolver, _reward = 0, _mblocks = [], _timeK = 0, _numberK = 0, _nonce = 0}
   where aSolver = read "1" :: PublicKey
 
 
@@ -262,18 +260,18 @@ transformation :: DBPoolDescriptor -> MicroblockBD -> IO Microblock
 transformation db m = do
   tx <- getTxsMicroblock db m
   return Microblock {
-  _keyBlock      = _keyBlockBD m,
-  _sign          = _signBD m,
-  _teamKeys      = _teamKeysBD m,
+  _keyBlock      = _keyBlock (m :: MicroblockBD),
+  _sign          = _signBD (m :: MicroblockBD),
+  _teamKeys      = _teamKeys (m :: MicroblockBD),
   _transactions  = tx,
-  _numOfBlock    = _numOfBlockBD m
+  _numOfBlock    = _numOfBlock (m :: MicroblockBD)
   }
 
 
 transform :: Microblock -> MicroblockBD
 transform m = MicroblockBD {
-  _keyBlockBD = _keyBlock m,
-  _signBD = _sign m,
-  _teamKeysBD = _teamKeys m,
+  _keyBlock = _keyBlock ( m :: Microblock) ,
+  _signBD = _sign ( m :: Microblock),
+  _teamKeys = _teamKeys ( m :: Microblock),
   _transactionsBD = map rHash (_transactions m),
-  _numOfBlockBD = _numOfBlock m }
+  _numOfBlock = _numOfBlock ( m :: Microblock) }
