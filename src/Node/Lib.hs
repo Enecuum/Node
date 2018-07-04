@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables, LambdaCase, OverloadedStrings #-}
 
 module Node.Lib where
 
@@ -8,13 +8,15 @@ import qualified    Control.Concurrent          as C
 import qualified    Data.ByteString.Lazy        as L
 import              Data.IORef
 import qualified    Data.Aeson as A
+import qualified    Data.Text as T
 import              Lens.Micro
 import              Service.Types
 import              Network.Socket (tupleToHostAddress)
 import              Control.Concurrent.Chan.Unagi.Bounded
 import Node.Node.Types
 import Node.Node.Config.Make
-
+import Service.Network.WebSockets.Client
+import qualified    Network.WebSockets                  as WS
 
 import Service.Network.Base
 import System.Environment
@@ -50,7 +52,9 @@ startNode descrDB buildConf infoCh manager startDo = do
     (aMicroblockChan, outMicroblockChan) <- newChan (2^7)
     (aTransactionChan, outTransactionChan) <- newChan (2^7)
     config  <- readNodeConfig
-    bnList  <- readBootNodeList $ bootNodeList buildConf
+    bnList@[Connect aBootIp aBootPort]  <- readBootNodeList $ bootNodeList buildConf
+    runClient (showHostAddress aBootIp) (fromEnum aBootPort) "/" $ \aConnect -> do
+        WS.sendTextData aConnect ("{\"type\":\"Action\",\"tage\":\"AddToListOfConnects\",\"port\": 1554}" :: T.Text)
     (aInFileRequestChan, aOutFileRequestChan) <- newChan (2^4)
     void $ C.forkIO $ startFileServer aOutFileRequestChan
     let portNumber = extConnectPort buildConf

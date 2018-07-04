@@ -45,7 +45,6 @@ main =  do
           Just conf -> do
 
             aExitCh   <- C.newChan
-            aAnswerCh <- C.newChan
             (aInfoChanIn, aInfoChanOut) <- newChan 64
             rocksDB   <- connectOrRecoveryConnect
 
