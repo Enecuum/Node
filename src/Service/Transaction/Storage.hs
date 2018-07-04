@@ -120,9 +120,8 @@ htK key = S.encode key
 -- end of the Database structure  section
 --------------------------------------
 
-
-getTxsMicroblock :: DBPoolDescriptor -> MicroblockBD -> IO [Transaction]
-getTxsMicroblock db (MicroblockBD _ _ _ txHashes _) = do
+getTxs :: DBPoolDescriptor -> MicroblockBD -> IO [TransactionInfo]
+getTxs db (MicroblockBD _ _ _ txHashes _) = do
   let fun kTransactionHash = (\db -> Rocks.get db Rocks.defaultReadOptions kTransactionHash)
   maybeTxUntiped  <- mapM (\k -> withResource (poolTransaction db) (fun k)) txHashes
   let txDoesNotExist = filter (\t -> t /= Nothing) maybeTxUntiped
@@ -135,7 +134,14 @@ getTxsMicroblock db (MicroblockBD _ _ _ txHashes _) = do
                             Right r -> r
              txDecoded = map extract txUntiped
              tx = map (\t -> _tx  (t :: TransactionInfo)) txDecoded
-         return tx
+         return txDecoded
+
+
+getTxsMicroblock :: DBPoolDescriptor -> MicroblockBD -> IO [Transaction]
+getTxsMicroblock db mb@(MicroblockBD _ _ _ txHashes _) = do
+  txDecoded <- getTxs db mb
+  let tx = map (\t -> _tx  (t :: TransactionInfo)) txDecoded
+  return tx
 
 
 getNTransactions ::  IO [BSI.ByteString]
@@ -143,6 +149,7 @@ getNTransactions = runResourceT $ do
   let pathT = "./try.here" --"/tmp/haskell-rocksDB6"
   (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
   getNFirstValues db 100
+
 
 test01 = do
   let path = "/tmp/haskell-rocksDB6"
@@ -256,6 +263,19 @@ getMicroBlockByHashDB db mHash = do
   return mb
 
 
+getTransactionByMicroblockHash :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo)
+-- getTransactionByMicroblockHash = undefined
+getTransactionByMicroblockHash db aHash = do
+  mb <- getMicroBlockByHashDB db aHash
+  case mb of
+    Nothing -> return Nothing
+    Just m@(MicroblockBD {..}) -> do
+      -- txInfo <- getTxsMicroblock db m
+      -- let txInfo = map (\t -> TransactionAPI {_tx = t, _txHash = rHash t}) tx
+      let txInfo = undefined
+      return (Just txInfo)
+
+
 getBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe MicroblockAPI)
 getBlockByHashDB db hash = do
   mb <- getMicroBlockByHashDB db hash
@@ -305,6 +325,8 @@ getTransactionByHashDB db tHash = do
                        Left _   -> error "Can not decode TransactionInfo"
                        Right rt -> Just rt
   return t
+
+
 
 
 deleteMicroblocksByHash :: DBPoolDescriptor -> [BC.ByteString] -> IO ()

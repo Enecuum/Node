@@ -2,7 +2,7 @@
 module Service.Transaction.Common (
   connectOrRecoveryConnect,
   getBlockByHashDB,
-  getTransactionByHashDB,
+  getTransactionByMicroblockHash,
   getKeyBlockByHashDB,
   getAllTransactionsDB,
   getBalanceForKey,
@@ -24,4 +24,5 @@ import           Service.Transaction.Storage (DBPoolDescriptor (..),
                                               getBlockByHashDB,
                                               getKeyBlockByHashDB,
                                               getLastTransactions,
-                                              getTransactionByHashDB, rHash)
+                                              getTransactionByMicroblockHash,
+                                              rHash)

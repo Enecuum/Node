@@ -45,7 +45,7 @@ import           Service.Transaction.Common            as B (DBPoolDescriptor (.
                                                              getBlockByHashDB,
                                                              getKeyBlockByHashDB,
                                                              getLastTransactions,
-                                                             getTransactionByHashDB)
+                                                             getTransactionByMicroblockHash)
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
@@ -104,9 +104,9 @@ getChainInfo _ = return $ Left NotImplementedException
 
 getTransactionByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result TransactionInfo)
 getTransactionByHash db hash _ = try $ do
-  tx <- B.getTransactionByHashDB db hash
+  tx <- B.getTransactionByMicroblockHash db hash
   case tx of
-    Nothing -> throw  NoSuchTransactionDB
+    Nothing -> throw  NoSuchMicroBlockDB
     Just t  -> return t
 
 
