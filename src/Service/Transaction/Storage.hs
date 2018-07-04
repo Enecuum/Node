@@ -98,16 +98,6 @@ handler =
 --------------------------------------
 -- begin of the Database structure  section
 
--- data Macroblock = Macroblock {
---   keyBlock :: BC.ByteString,
---   -- microblockNumber :: Int,
---   -- requiredNumberOfMicroblocks :: Int,
---   hashOfMicroblock :: [BC.ByteString]
---   -- timeOfMicroblockArrived :: UTCTime
---                                  } deriving (Generic, Eq, Ord, Show, S.Serialize)
-
-
-
 -- for rocksdb Transaction and Microblock
 rHash :: S.Serialize a => a -> BSI.ByteString
 rHash key = Base64.encode . SHA.hash . rValue $ key
@@ -189,15 +179,10 @@ getNLastValuesT :: StateT Rocks.Iterator IO BSI.ByteString
 getNLastValuesT = do
   it <- get
   Just v <- lift $ Rocks.iterValue it
-  -- v <- lift $ Rocks.iterValue it
-  -- case v of Left _ -> return Nothing
-  --           Right r -> do
-  --             lift $ Rocks.iterPrev it
-  --             put it
-  --             return v
   lift $ Rocks.iterPrev it
   put it
   return v
+
 
 getNLastValues db n = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
@@ -205,6 +190,28 @@ getNLastValues db n = do
   vs <- lift $ evalStateT (replicateM n getNLastValuesT) it
   return vs
 
+
+
+
+getFirst db offset count = drop offset <$> getNFirstValues db (offset + count )
+getLast db  offset count = drop offset <$> getNLastValues db (offset + count )
+
+
+
+getLastTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> IO [TransactionAPI]
+getLastTransactions descr pubKey offset count = do
+  -- let fun = \db -> getLast db offset count
+  -- rawTxInfo <- withResource (poolTransaction descr) fun
+  let rawTxInfo = undefined
+  let txAPI = decodeTransactionsAndFilterByKey rawTxInfo pubKey
+  return txAPI
+
+
+--------------------------------------
+-- begin of the Test section
+
+-- goF = goFirst 4 1
+-- goL = goLast 4 1
 
 test02 = do
   let path = "/tmp/haskell-rocksDB5"
@@ -231,20 +238,10 @@ test03 fun n  = runResourceT $ do
   (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
   fun db n
 
-goFirst count offset = drop offset <$> test03 getNFirstValues (offset + count )
-goLast count offset = drop offset <$> test03 getNLastValues  (offset + count )
-
 goGetAll = do
   result <- getAll "/tmp/haskell-rocksDB5"
   print result
 
-
--- goF = goFirst 4 1
--- goL = goLast 4 1
-
-
---------------------------------------
--- begin of the Test section
 -- end of the Test section
 --------------------------------------
 
@@ -356,20 +353,26 @@ getAllItems db = do
   Rocks.iterFirst it
   Rocks.iterItems it
 
-getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [TransactionAPI]
-getAllTransactionsDB descr pubKey = do
-  txByte <- withResource (poolTransaction descr) getAllValues
-  -- putStrLn $ show txByte
-  let fun = \t -> case (S.decode t :: Either String TransactionInfo) of
+
+decodeTransactionsAndFilterByKey :: [BSI.ByteString] -> PublicKey -> [TransactionAPI]
+decodeTransactionsAndFilterByKey rawTx pubKey = txAPI
+  where fun = \t -> case (S.decode t :: Either String TransactionInfo) of
                        Left _   -> error "Can not decode TransactionInfo"
                        Right rt -> Just rt
 
-      txInfo = map fun txByte
-      txWithouMaybe = map fromJust (filter (isJust) txInfo)
-      tx = map (\t -> _tx (t  :: TransactionInfo) ) txWithouMaybe
-      txWithKey = filter (\t -> (_owner t == pubKey || _receiver t == pubKey)) tx
-      txAPI = map (\t -> TransactionAPI { _tx = t, _txHash = rHash t}) txWithKey
+        txInfo = map fun rawTx
+        txWithouMaybe = map fromJust (filter (isJust) txInfo)
+        tx = map (\t -> _tx (t  :: TransactionInfo) ) txWithouMaybe
+        txWithKey = filter (\t -> (_owner t == pubKey || _receiver t == pubKey)) tx
+        txAPI = map (\t -> TransactionAPI { _tx = t, _txHash = rHash t}) txWithKey
+
+
+getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [TransactionAPI]
+getAllTransactionsDB descr pubKey = do
+  txByte <- withResource (poolTransaction descr) getAllValues
+  let txAPI = decodeTransactionsAndFilterByKey txByte pubKey
   return txAPI
+
 
 getAllTransactions :: IO ()
 getAllTransactions = do

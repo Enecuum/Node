@@ -16,7 +16,7 @@ import           System.IO.Unsafe                      (unsafePerformIO)
 import           CLI.Common
 import           Data.IP
 import           Data.Text                             (pack)
-import           Network.Socket                        (SockAddr, PortNumber)
+import           Network.Socket                        (PortNumber, SockAddr)
 import qualified Network.WebSockets                    as WS
 import           Node.Node.Types
 import           Service.InfoMsg
@@ -51,7 +51,7 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
                              IPv4 i -> ipv4ToIPv6 i
                              IPv6 i -> i
 
-              handle f = 
+              handle f =
                     case {-ipAccepted addr-} True of
                           False -> do
                                 liftIO $ putStrLn "Denied"
@@ -103,7 +103,7 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
 
               getPartWallet = toMethod "enq_getTransactionsByWallet" f (Required "address" :+: Required "offset" :+: Required "count" :+: ())
                 where
-                  f :: PublicKey -> Integer -> Integer -> RpcResult IO [TransactionAPI]
+                  f :: PublicKey -> Int -> Int -> RpcResult IO [TransactionAPI]
                   f key offset cnt = handle $ getPartTransactions descrDB key offset cnt ch
 
               getSystemInfo = toMethod "enq_getChainInfo" f ()

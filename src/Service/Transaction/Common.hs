@@ -10,6 +10,7 @@ module Service.Transaction.Common (
   addMacroblockToDB,
   runLedger,
   rHash,
+  getLastTransactions,
   getKeyBlockByHashDB,
 --  DBdescriptor(..),
   DBPoolDescriptor(..)
@@ -22,4 +23,5 @@ import           Service.Transaction.Storage (DBPoolDescriptor (..),
                                               getAllTransactionsDB,
                                               getBlockByHashDB,
                                               getKeyBlockByHashDB,
+                                              getLastTransactions,
                                               getTransactionByHashDB, rHash)

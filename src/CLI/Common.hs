@@ -44,6 +44,7 @@ import           Service.Transaction.Common            as B (DBPoolDescriptor (.
                                                              getBalanceForKey,
                                                              getBlockByHashDB,
                                                              getKeyBlockByHashDB,
+                                                             getLastTransactions,
                                                              getTransactionByHashDB)
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
@@ -116,10 +117,12 @@ getAllTransactions pool key _ = try $ do
     [] -> throw NoTransactionsForPublicKey
     t  -> return t
 
-getPartTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> Integer -> Integer -> InChan a -> IO (Result [TransactionAPI])
-getPartTransactions pool key offset count _ = return $ Left NotImplementedException
-
-
+getPartTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> Int -> Int -> InChan a -> IO (Result [TransactionAPI])
+getPartTransactions pool key offset count _ = try $ do --return $ Left NotImplementedException
+  tx <- B.getLastTransactions pool key offset count
+  case tx of
+    [] -> throw NoTransactionsForPublicKey
+    t  -> return t
 
 sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> IO (Result ())
 sendTrans tx ch aInfoCh = try $ do
