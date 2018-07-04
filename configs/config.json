@@ -11,13 +11,13 @@
         }
     },
     "statsdBuildConfig": {
-        "host": "127.0.0.1",
+        "host": "195.201.41.200",
         "port": 8125
     },
-    "bootNodeList": "[(1,(127,0,0,1),1667)]",
+    "bootNodeList": "[((195,201,226,28), 1554)]",
     "poaPort": 1554,
     "logsBuildConfig": {
-        "host": "127.0.0.1",
+        "host": "195.201.41.200",
         "port": 28777
     },
     "extConnectPort": 1667

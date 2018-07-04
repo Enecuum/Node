@@ -60,7 +60,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                 _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
                     "Broken message from PP " ++ show aMsg
             Left a -> do
-                WS.sendTextData aConnect ("{\"msg\": \"Broken msg\"}" :: T.Text)
+                WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"Error\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
                 writeLog aInfoChan [ServerBootNodeTag] Warning $
                     "Broken message from PP " ++ show aMsg ++ " " ++ a
 
@@ -194,7 +194,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
 
                 AddTransactionRequest aTransaction -> do
                     writeInChan ch $ NewTransaction aTransaction
-                    WS.sendTextData aConnect $ A.encode $ ResponseTransactionValid aOk
+                    WS.sendTextData aConnect $ A.encode $ ResponseTransactionValid True
 
                 ActionAddToListOfConnects _ -> undefined
 
@@ -202,7 +202,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 -- TODO: Include ID if exist.
                 writeLog aInfoChan [ServePoATag] Warning $
                     "Broken message from PP " ++ show aMsg ++ " " ++ a
-                when aOk $ WS.sendTextData aConnect $ T.pack ("{msgBroken: " ++ show aMsg ++ "}")
+                WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"Error\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
                 when aOk $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
 
 writeInChan :: InChan t -> t -> IO ()

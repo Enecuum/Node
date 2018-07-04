@@ -217,45 +217,39 @@ writeLedgerDB dbLedger aInfoChan bt = do
 
 
 addMacroblockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> IO ()
-addMacroblockToDB db aValue aInfoChan = do
-  -- writeLog aInfoChan [BDTag] Info ("A.Value is " ++ show aValue)
-  let (Object v) = aValue
-      keyBlock = case parseMaybe extractKeyBlock v of
-        Nothing     -> error "Can not parse KeyBlock" --Data.Map.empty
+addMacroblockToDB db (Object aValue) aInfoChan = do
+  let keyBlock = case parseMaybe (.: "verb") aValue of
+        Nothing     -> ""
         Just kBlock -> kBlock :: String --Map T.Text Value
-        where extractKeyBlock = \info -> info .: "msg"
-                                 >>=
-                                \msg -> msg .: "verb"
-  if (keyBlock /= "kblock")
-    then return ()
+
+  if keyBlock /= "kblock" then return ()
   else do
-    let keyBlockInfoObject@(KeyBlockInfo {..}) = case parseMaybe extractKeyBlockInfo v of
-                                  Nothing     -> error "Can not parse KeyBlockInfo" --Data.Map.empty
-                                  Just kBlock -> kBlock :: KeyBlockInfo --Map T.Text Value
-                             where extractKeyBlockInfo = \info -> info .: "msg"
-                                                         >>=
-                                                         \msg -> msg .: "body"
+    let keyBlockInfoObject@(KeyBlockInfo {..}) = case parseMaybe (.: "body") aValue of
+            Nothing     -> error "Can not parse KeyBlockInfo" --Data.Map.empty
+            Just kBlock -> kBlock :: KeyBlockInfo --Map T.Text Value
+
+        keyBlockHash = rHash keyBlockInfoObject
+        fun local_db = Rocks.get local_db Rocks.defaultReadOptions keyBlockHash
 
     writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
-    let keyBlockHash = rHash keyBlockInfoObject
 
-    -- get data about macroblock from DB
-    let fun = (\local_db -> Rocks.get local_db Rocks.defaultReadOptions keyBlockHash)
     val  <- withResource (poolMacroblock db) fun
-    aMacroblock <- case val of Nothing -> return dummyMacroblock
-                               Just va  -> case urValue va :: Either String Macroblock of
-                                 Left _  -> error "Can not decode Macroblock"
-                                 Right r -> return r
+    aMacroblock <- case val of
+        Nothing -> return dummyMacroblock
+        Just va  -> case urValue va :: Either String Macroblock of
+            Left _  -> error "Can not decode Macroblock"
+            Right r -> return r
 
     -- fill data for key block
     let prevHash = read prev_hash :: BC.ByteString
         fMacroblock = aMacroblock {
-                                    _prevKBlock = prevHash,
-                                    _difficulty = 20,
-                                    _solver,
-                                    _time,
-                                    _number,
-                                    _nonce}
+            _prevKBlock = prevHash,
+            _difficulty = 20,
+            _solver,
+            _time,
+            _number,
+            _nonce
+          }
 
     writeMacroblockToDB db aInfoChan keyBlockHash fMacroblock
 
