@@ -44,7 +44,6 @@ main =  do
           Nothing   -> error "Please, specify config file correctly"
           Just conf -> do
 
-            aExitCh   <- C.newChan
             (aInfoChanIn, aInfoChanOut) <- newChan 64
             rocksDB   <- connectOrRecoveryConnect
 
@@ -85,7 +84,7 @@ main =  do
                             serveRpc rocksDB rpc_p ip_en ch aInfoChanIn
                       "cli" -> serveCLI rocksDB ch aInfoChanIn
                       _     -> return ()
-            void $ C.readChan aExitCh
+            forever $ C.threadDelay 10000000000
 
 
 updateConfigWithToken :: BuildConfig -> SimpleNodeBuildConfig -> RPCBuildConfig -> IO Token

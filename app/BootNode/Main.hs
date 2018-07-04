@@ -32,7 +32,6 @@ main =  do
           Nothing   -> error "Please, specify config file correctly"
           Just conf -> do
 
-            exitCh <- C.newChan
             answerCh <- C.newChan
             (aInfoChanIn, aInfoChanOut) <- newChan (2^5)
             descrDB   <- connectOrRecoveryConnect
@@ -64,4 +63,4 @@ main =  do
             void $ C.forkIO $ serverPoABootNode poa_p aInfoChanIn aFileChan
             void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id
 
-            void $ C.readChan exitCh
+            forever $ C.threadDelay 10000000000
