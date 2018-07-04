@@ -7,7 +7,7 @@ import              Control.Monad
 import              Control.Exception(SomeException, try)
 import qualified    Control.Concurrent as C
 import              Control.Concurrent.Chan.Unagi.Bounded
-import              Service.Timer
+
 import              Service.InfoMsg
 import              Service.Network.Base (ConnectInfo(..))
 import              System.Environment
@@ -17,12 +17,7 @@ import              Node.FileDB.FileServer
 
 import              Network.Socket()
 import qualified    Data.ByteString.Lazy as L
-
-
-import              Node.Lib
 import              Data.Aeson
-import              Service.Transaction.Common (connectOrRecoveryConnect)
-
 
 main :: IO ()
 main =  do
@@ -32,9 +27,9 @@ main =  do
           Nothing   -> error "Please, specify config file correctly"
           Just conf -> do
 
-            answerCh <- C.newChan
-            (aInfoChanIn, aInfoChanOut) <- newChan (2^5)
-            descrDB   <- connectOrRecoveryConnect
+            --answerCh <- C.newChan
+            (aInfoChanIn, aInfoChanOut) <- newChan 32
+            --descrDB   <- connectOrRecoveryConnect
             poa_p   <- try (getEnv "poaPort") >>= \case
                     Right item              -> return $ read item
                     Left (_::SomeException) -> return $ poaPort conf
@@ -58,7 +53,7 @@ main =  do
             log_id  <- try (getEnv "log_id") >>= \case
                 Right item              -> return item
                 Left (_::SomeException) -> return "0"
-            (aFileChan, aOutFileRequestChan) <- newChan (2^4)
+            (aFileChan, aOutFileRequestChan) <- newChan 16
             void $ C.forkIO $ startFileServer aOutFileRequestChan
             void $ C.forkIO $ serverPoABootNode poa_p aInfoChanIn aFileChan
             void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id

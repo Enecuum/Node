@@ -37,8 +37,7 @@ import           System.Random                         (randomRIO)
 import           Node.Node.Types
 import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
-import           Service.Transaction.Common            as B (getAllTransactionsDB,
-                                                             getBalanceForKey,
+import           Service.Transaction.Common            as B (getBalanceForKey,
                                                              getBlockByHashDB,
                                                              getTransactionByHashDB)
 import           Service.Transaction.Storage           (DBPoolDescriptor (..))
@@ -102,7 +101,7 @@ getTransactionByHash db hash _ = try $ do
 
 
 getAllTransactions :: DBPoolDescriptor -> PublicKey -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
-getAllTransactions pool key _ = return $ Left NotImplementedException
+getAllTransactions _ _ _ = return $ Left NotImplementedException
 {-try $ do
   tx <- B.getAllTransactionsDB pool key
   case tx of
