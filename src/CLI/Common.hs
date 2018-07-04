@@ -64,8 +64,8 @@ data CLIException = WrongKeyOwnerException
 instance Exception CLIException
 
 
-sendMessageTo :: InChan MsgToCentralActor -> IO (Result ())
-sendMessageTo _ = return $ return $ Left NotImplementedException
+sendMessageTo :: MsgTo -> InChan MsgToCentralActor -> IO (Result ())
+sendMessageTo _ _ = return $ return undefined
 
 
 sendMessageBroadcast :: String -> InChan MsgToCentralActor -> IO (Result ())
@@ -114,7 +114,7 @@ sendTrans :: Transaction -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Re
 sendTrans tx ch aInfoCh = try $ do
   exp <- (timeout (5 :: Second) $ do
            sendMetrics tx aInfoCh
-           writeChan ch $ newTransaction tx)
+           writeChan ch $ NewTransaction tx)
   case exp of
     Just _   -> return ()
     Nothing  -> throw TransactionChanBusyException
@@ -193,7 +193,7 @@ generateNTransactions :: QuantityTx -> InChan MsgToCentralActor -> InChan InfoMs
 generateNTransactions qTx ch m = try $ do
   tx <- genNTx qTx
   mapM_ (\x -> do
-          writeChan ch $ newTransaction x
+          writeChan ch $ NewTransaction x
           sendMetrics x m
         ) tx
   putStrLn "Transactions are created"
@@ -204,7 +204,7 @@ generateTransactionsForever ch m = try $ forever $ do
                                 quantityOfTranscations <- randomRIO (20,30)
                                 tx <- genNTx quantityOfTranscations
                                 mapM_ (\x -> do
-                                            writeChan ch $ newTransaction x
+                                            writeChan ch $ NewTransaction x
                                             sendMetrics x m
                                        ) tx
                                 threadDelay (10^(6 :: Int))

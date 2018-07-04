@@ -5,7 +5,6 @@ module PoA.PoAServer (
   )  where
 
 
-import              Node.Data.NetPackage
 import              Control.Monad (forM_, void, forever, unless, when)
 import qualified    Network.WebSockets                  as WS
 import              Service.Network.Base
@@ -83,15 +82,15 @@ getRecords aChan = do
 servePoA ::
        PortNumber
     -> InChan MsgToCentralActor
-    -> C.Chan Transaction
+    -> OutChan Transaction
     -> InChan InfoMsg
     -> InChan FileActorRequest
-    -> C.Chan Microblock
+    -> OutChan Microblock
     -> IO ()
 servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. servePoA: a port is " ++ show aRecivePort
-    aPendingChan <- C.newChan
+    aPendingChan@(inChanPending, _) <- newChan 120
     void $ C.forkIO $ pendingActor aPendingChan aMicroblockChan aRecvChan aInfoChan
     runServer aRecivePort $ \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
@@ -103,7 +102,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
         -- writeChan ch $ connecting to PoA, the PoA have id.
         void $ race
             (aSender aId aConnect aOutChan)
-            (aReceiver aId aConnect aInpChan aPendingChan)
+            (aReceiver aId aConnect aInpChan inChanPending)
   where
     aSender aId aConnect aNewChan = forever (do
         aMsg <- readChan aNewChan
@@ -111,7 +110,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
             aIsEmpty <- isEmptyMVar aId
             unless aIsEmpty $ do
                 aDeadId <- readMVar aId
-                writeChan ch $ ppNodeIsDisconected aDeadId)
+                writeChan ch $ NodeIsDisconnected aDeadId)
 
     aReceiver aId aConnect aNewChan aPendingChan = forever $ do
         aMsg <- WS.receiveData aConnect
@@ -122,7 +121,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 -- REVIEW: Check fair distribution of transactions between nodes
                 RequestTransaction aNum -> void $ C.forkIO $ do
                     aTmpChan <- C.newChan
-                    C.writeChan aPendingChan $ GetTransaction aNum aTmpChan
+                    writeInChan aPendingChan $ GetTransaction aNum aTmpChan
                     aTransactions <- C.readChan aTmpChan
                     unless (null aTransactions) $
                         forM_ (take aNum $ cycle aTransactions) $ \aTransaction  -> do
@@ -132,7 +131,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                     | not aOk -> do
                         aSenderId <- readMVar aId
                         writeLog aInfoChan [ServePoATag] Info $ "Recived MBlock: " ++ show aMicroblock
-                        sendMsgToNetLvlFromPP ch $ MicroblockFromPP aMicroblock aSenderId
+                        sendMsgToCentralActor ch $ AcceptedMicroblock aMicroblock aSenderId
                     | otherwise -> do
                         writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without PPId " ++ show aMsg
                         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
@@ -141,8 +140,8 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                     | not aOk -> do
                         aSenderId <- readMVar aId
                         writeLog aInfoChan [ServePoATag] Info $ "Broadcast request " ++ show aMsg
-                        sendMsgToNetLvlFromPP ch $
-                            BroadcastRequestFromPP aBroadcastMsg (IdFrom aSenderId) aRecipientType
+                        sendMsgToCentralActor ch $
+                            BroadcastRequest aBroadcastMsg (IdFrom aSenderId) aRecipientType
                     | otherwise -> do
                         writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without PPId " ++ show aMsg
                         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
@@ -158,7 +157,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                         aSenderId <- readMVar aId
                         writeLog aInfoChan [ServePoATag] Info $
                             "PoWListRequest the msg from " ++ show aSenderId
-                        sendMsgToNetLvlFromPP ch $ PoWListRequest (IdFrom aSenderId)
+                        sendMsgToCentralActor ch $ PoWListRequest (IdFrom aSenderId)
 
                     | otherwise -> do
                         writeLog aInfoChan [ServePoATag] Warning "Can't send request without PPId "
@@ -171,32 +170,32 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                         writeLog aInfoChan [ServePoATag] Info $
                             "Accept PPId " ++ show aPPId ++ " with type " ++ show aNodeType
 
-                        sendMsgToNetLvlFromPP ch $ NewConnectWithPP aPPId aNodeType aNewChan
+                        sendMsgToCentralActor ch $ NewConnect aPPId aNodeType aNewChan
 
                 MsgMsgToNN aDestination aMsgToNN
                     | not aOk       -> do
                         aSenderId <- readMVar aId
                         writeLog aInfoChan [ServePoATag] Info $
                             "Resending the msg from " ++ show aSenderId ++ " the msg is " ++ show aMsgToNN
-                        sendMsgToNetLvlFromPP ch $ MsgResendingToPP (IdFrom aSenderId) (IdTo aDestination) aMsgToNN
+                        sendMsgToCentralActor ch $ MsgResending (IdFrom aSenderId) (IdTo aDestination) aMsgToNN
                     | otherwise     -> do
                         writeLog aInfoChan [ServePoATag] Warning $ "Can't send request without PPId " ++ show aMsgToNN
                         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
                 --
                 IsInPendingRequest aTransaction -> do
                     aTmpChan <- C.newChan
-                    C.writeChan aPendingChan $ IsInPending aTransaction aTmpChan
+                    writeInChan aPendingChan $ IsInPending aTransaction aTmpChan
                     aTransactions <- C.readChan aTmpChan
                     WS.sendTextData aConnect $ A.encode $ ResponseIsInPending aTransactions
 
                 GetPendingRequest -> do
                     aTmpChan <- C.newChan
-                    C.writeChan aPendingChan $ GetPending aTmpChan
+                    writeInChan aPendingChan $ GetPending aTmpChan
                     aTransactions <- C.readChan aTmpChan
                     WS.sendTextData aConnect $ A.encode $ ResponsePendingTransactions aTransactions
 
                 AddTransactionRequest aTransaction -> do
-                    aOk <- tryWriteChan ch $ newTransaction aTransaction
+                    writeInChan ch $ NewTransaction aTransaction
                     WS.sendTextData aConnect $ A.encode $ ResponseTransactionValid aOk
 
 
@@ -207,9 +206,10 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 WS.sendTextData aConnect ("{\"error\":\"broken message.\"}" :: T.Text)
                 when aOk $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
 
--- TODO class sendMsgToNetLvl
-sendMsgToNetLvlFromPP :: ManagerMsg a => InChan a -> MsgToMainActorFromPP -> IO ()
-sendMsgToNetLvlFromPP aChan aMsg = do
-    aOk <- tryWriteChan aChan $ msgFromPP aMsg
+writeInChan aChan aMsg = do
+    aOk <- tryWriteChan aChan aMsg
     C.threadDelay 10000
-    unless aOk $ sendMsgToNetLvlFromPP aChan aMsg
+    unless aOk $ writeInChan aChan aMsg
+
+sendMsgToCentralActor :: InChan MsgToCentralActor -> MsgFromNode -> IO ()
+sendMsgToCentralActor aChan aMsg = writeInChan aChan (MsgFromNode aMsg)

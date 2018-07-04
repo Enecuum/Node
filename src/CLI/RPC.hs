@@ -26,7 +26,7 @@ import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
 
 
-serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan ManagerMiningMsgBase -> InChan InfoMsg -> IO ()
+serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan MsgToCentralActor -> InChan InfoMsg -> IO ()
 serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPending -> do
     aConnect <- WS.acceptRequest aPending
     WS.forkPingThread aConnect 30
@@ -51,7 +51,7 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
                              IPv4 i -> ipv4ToIPv6 i
                              IPv6 i -> i
 
-              handle f = 
+              handle f =
                     case {-ipAccepted addr-} True of
                           False -> do
                                 liftIO $ putStrLn "Denied"

@@ -87,15 +87,12 @@ data PPToNNMessage
     | RequestConnects Bool
 
     -- responses with PPId
-    | ResponseNodeIdToNN {
-        nodeId    :: PPId,
-        nodeType  :: NodeType
-    }
+    | ResponseNodeIdToNN NodeId NodeType
 
     -- Messages:
     -- For other PoA/PoW node.
     | MsgMsgToNN { ----
-        destination :: PPId,
+        destination :: NodeId,
         msg :: B.ByteString
     }
 
@@ -125,17 +122,14 @@ instance S.Serialize NodeType
 data NNToPPMessage
     = RequestNodeIdToPP
 
-    | ResponseConnects {
-      connects  :: [Connect]
-    }
-
+    | ResponseConnects [Connect]
     | ResponseTransaction {
         transaction :: Transaction
     }
 
     -- request with PoW's list
     | ResponsePoWList {
-        poWList :: [PPId]
+        poWList :: [NodeId]
     }
 
     | MsgConnect {
@@ -144,7 +138,7 @@ data NNToPPMessage
     }
 
     | MsgMsgToPP {
-        sender :: PPId,
+        sender :: NodeId,
         message :: B.ByteString
     }
 
@@ -153,11 +147,7 @@ data NNToPPMessage
         idFrom  :: IdFrom
     }
 
-    | MsgNewNodeInNet {
-        id :: PPId,
-        nodeType :: NodeType
-    }
-
+    | MsgNewNodeInNet NodeId NodeType
     | ResponsePendingTransactions [Transaction]
     | ResponseIsInPending Bool
     | ResponseTransactionValid Bool
@@ -178,8 +168,8 @@ unhexNodeId aString = case unhex . fromString . T.unpack $ aString of
     Nothing             -> mzero
 
 
-ppIdToString :: PPId -> String
-ppIdToString (PPId (NodeId aPoint)) = CB.unpack . hex . B.pack $ unroll aPoint
+ppIdToString :: NodeId -> String
+ppIdToString (NodeId aPoint) = CB.unpack . hex . B.pack $ unroll aPoint
 
 
 myTextUnhex :: T.Text -> Maybe B.ByteString
@@ -213,15 +203,15 @@ instance FromJSON PPToNNMessage where
             ("Response", "NodeId") -> do
                 aPPId :: T.Text <- aMessage .: "nodeId"
 
-                aPoint   <- unhexNodeId aPPId
+                aNodeId   <- unhexNodeId aPPId
                 aNodeType :: T.Text <- aMessage .: "nodeType"
-                return (ResponseNodeIdToNN (PPId aPoint) (readNodeType aNodeType))
+                return (ResponseNodeIdToNN aNodeId (readNodeType aNodeType))
 
             ("Msg", "MsgTo") -> do
                 aDestination :: T.Text <- aMessage .: "destination"
                 aMsg         :: Value  <- aMessage .: "msg"
-                aPoint <- unhexNodeId aDestination
-                return $ MsgMsgToNN (PPId aPoint) (S.encode aMsg)
+                aNodeId <- unhexNodeId aDestination
+                return $ MsgMsgToNN aNodeId (S.encode aMsg)
 
             ("Msg", "Microblock") ->
                 MsgMicroblock <$> aMessage .: "microblock"

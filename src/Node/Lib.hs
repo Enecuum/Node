@@ -39,7 +39,7 @@ startNode
     -> BuildConfig
     -> InChan InfoMsg
     -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ())
-    -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> InChan Transaction -> InChan Microblock -> MyNodeId -> InChan FileActorRequest -> IO MsgToCentralActor)
+    -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> OutChan Transaction -> OutChan Microblock -> MyNodeId -> InChan FileActorRequest -> IO ())
     -> IO (InChan MsgToCentralActor, OutChan MsgToCentralActor)
 startNode descrDB buildConf infoCh manager startDo = do
 
@@ -57,13 +57,13 @@ startNode descrDB buildConf infoCh manager startDo = do
     md      <- newIORef $ makeNetworkData bnList config infoCh aInFileRequestChan aMicroblockChan aTransactionChan
     void $ C.forkIO $ microblockProc descrDB outMicroblockChan infoCh
     void $ C.forkIO $ manager managerChan md
-    void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aInFileRequestChan
+    void $ startDo managerChan outTransactionChan outMicroblockChan (config^.myNodeId) aInFileRequestChan
     return managerChan
 
 
-microblockProc :: DBPoolDescriptor -> C.Chan Microblock -> InChan InfoMsg -> IO b
+microblockProc :: DBPoolDescriptor -> OutChan Microblock -> InChan InfoMsg -> IO b
 microblockProc descriptor aMicroblockCh aInfoCh = forever $ do
-        aMicroblock <- C.readChan aMicroblockCh
+        aMicroblock <- readChan aMicroblockCh
         addMicroblockToDB descriptor aMicroblock aInfoCh
 
 

@@ -48,23 +48,21 @@ instance Show (InChan a) where
 
 type Transactions = [Transaction]
 
-data ExitMsg where
-    ExitMsg :: ExitMsg
+data ExitMsg where ExitMsg :: ExitMsg
 
 data MsgToCentralActor where
-    ClientIsDisconnected    :: NodeId                   -> MsgToCentralActor
-    MakeConnect             :: Connect                  -> MsgToCentralActor
-    MsgFromNode             :: MsgToMainActorFromPP     -> MsgToCentralActor
+    NodeIsDisconnected      :: NodeId                   -> MsgToCentralActor
+    MsgFromNode             :: MsgFromNode              -> MsgToCentralActor
     MsgFromSharding         :: N.ShardingNodeRequestMsg -> MsgToCentralActor
     CleanAction             :: MsgToCentralActor
     NewTransaction          :: Transaction              -> MsgToCentralActor
 
 
-data MsgToMainActorFromPP
-    = MicroblockFromPP Microblock PPId
-    | BroadcastRequestFromPP B.ByteString IdFrom NodeType
-    | NewConnectWithPP PPId NodeType (InChan NNToPPMessage)
-    | MsgResendingToPP IdFrom IdTo B.ByteString
+data MsgFromNode
+    = AcceptedMicroblock Microblock NodeId
+    | BroadcastRequest B.ByteString IdFrom NodeType
+    | NewConnect NodeId NodeType (InChan NNToPPMessage)
+    | MsgResending IdFrom IdTo B.ByteString
     | PoWListRequest IdFrom
   deriving (Show)
 
