@@ -60,7 +60,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                 _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
                     "Broken message from PP " ++ show aMsg
             Left a -> do
-                WS.sendTextData aConnect ("{\"msg\": \"Broken msg\"}" :: T.Text)
+                WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"Error\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
                 writeLog aInfoChan [ServerBootNodeTag] Warning $
                     "Broken message from PP " ++ show aMsg ++ " " ++ a
 
@@ -202,7 +202,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 -- TODO: Include ID if exist.
                 writeLog aInfoChan [ServePoATag] Warning $
                     "Broken message from PP " ++ show aMsg ++ " " ++ a
-                WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"Error\", \"Reason\":\"" ++ a ++ "\", \"Msg\":\"" ++ show aMsg ++" \"}")
+                WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"Error\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
                 when aOk $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
 
 writeInChan :: InChan t -> t -> IO ()
