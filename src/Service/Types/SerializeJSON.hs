@@ -122,7 +122,7 @@ instance ToJSON Transaction where
            "receiver"  .= _receiver tx,
            "amount"    .= _amount tx,
            "currency"  .= _currency tx,
-           "timestamp" .= _time tx,
+           "timestamp" .= _time (tx :: Transaction),
            "sign"      .= _signature tx,
            "uuid"      .= _uuid tx
            ]
@@ -185,7 +185,7 @@ instance FromJSON Microblock where
            -- aUuid    <- aBlock .: "uuid"
            aKhash   <- decodeFromText =<< aBlock .: "K_hash"
            return $ Microblock aKhash aSign aWallets aTx 0
-       a -> mzero
+       _ -> mzero
  parseJSON _ = mzero
 
 
@@ -196,8 +196,8 @@ instance ToJSON Macroblock where
          ,  "height"            .= _height (bl :: Macroblock)
          ,  "solver"            .= _solver (bl :: Macroblock)
          ,  "reward"            .= _reward (bl :: Macroblock)
-         ,  "timeK"              .= _timeK (bl :: Macroblock)
-         ,  "numberK"            .= _numberK (bl :: Macroblock)
+         ,  "timeK"             .= _time (bl :: Macroblock)
+         ,  "numberK"           .= _number (bl :: Macroblock)
          ,  "nonce"             .= _nonce (bl :: Macroblock)
          -- ,  "microblocks_cnt"   .= length (_mblocks bl)
          ,  "microblocks"       .= _mblocks (bl :: Macroblock)

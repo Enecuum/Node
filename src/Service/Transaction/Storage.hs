@@ -11,10 +11,12 @@
 module Service.Transaction.Storage where
 
 import           Control.Exception
+import           Control.Monad                       (replicateM)
 import qualified Control.Monad.Catch                 as E
 import           Control.Monad.Trans.Class           (lift)
 import           Control.Monad.Trans.Resource
-import           Control.Monad.Trans.State           (StateT, get, put)
+import           Control.Monad.Trans.State           (StateT, evalStateT, get,
+                                                      put)
 import           Control.Retry
 import qualified Crypto.Hash.SHA256                  as SHA
 import           Data.Aeson
@@ -120,10 +122,6 @@ urValue value = S.decode value
 htK :: S.Serialize a => a -> BSI.ByteString
 htK key = S.encode key
 
-unA :: Monad m => BSI.ByteString -> m (Maybe Amount)
-unA balance = case (urValue balance :: Either String Amount ) of
-  Left _  -> error ("Can not decode balance" ++ show balance)
-  Right b -> return $ Just b
 
 -- unHtK key = read (S.decode key) :: PublicKey
 -- unHtA key = read (S.decode key) :: Amount
@@ -154,7 +152,7 @@ getNTransactions ::  IO [BSI.ByteString]
 getNTransactions = runResourceT $ do
   let pathT = "./try.here" --"/tmp/haskell-rocksDB6"
   (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
-  getNValues db 100
+  getNFirstValues db 100
 
 test01 = do
   let path = "/tmp/haskell-rocksDB6"
@@ -171,9 +169,8 @@ test01 = do
 --genNMicroBlocksV1 :: Int -> IO [MicroblockV1]
 -- getNValuesTN n = evalStateT (replicateM n getNValuesT) BC.empty
 
-
-getNValuesT :: StateT Rocks.Iterator IO BSI.ByteString
-getNValuesT = do
+getNFirstValuesT :: StateT Rocks.Iterator IO BSI.ByteString
+getNFirstValuesT = do
   it <- get
   Just v <- lift $ Rocks.iterValue it
   lift $ Rocks.iterNext it
@@ -181,21 +178,69 @@ getNValuesT = do
   return v
 
 
-getNValues :: MonadResource m => Rocks.DB -> p -> m [BSI.ByteString]
-getNValues db n = do
+getNFirstValues db n = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterFirst it
-  Just v1 <- Rocks.iterValue it
-
-  -- vs <- evalStateT (replicateM n getNValuesT) it
-  -- return vs
-
-  Rocks.iterNext it
-  Just v2 <- Rocks.iterValue it
-  return [v1,v2]
+  vs <- lift $ evalStateT (replicateM n getNFirstValuesT) it
+  return vs
 
 
+getNLastValuesT :: StateT Rocks.Iterator IO BSI.ByteString
+getNLastValuesT = do
+  it <- get
+  Just v <- lift $ Rocks.iterValue it
+  -- v <- lift $ Rocks.iterValue it
+  -- case v of Left _ -> return Nothing
+  --           Right r -> do
+  --             lift $ Rocks.iterPrev it
+  --             put it
+  --             return v
+  lift $ Rocks.iterPrev it
+  put it
+  return v
 
+getNLastValues db n = do
+  it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+  Rocks.iterLast it
+  vs <- lift $ evalStateT (replicateM n getNLastValuesT) it
+  return vs
+
+
+test02 = do
+  let path = "/tmp/haskell-rocksDB5"
+  db <- Rocks.open path def{Rocks.createIfMissing=True}
+  Rocks.write db def{Rocks.sync = True} [ Rocks.Put "-" "zero"]
+  Rocks.write db def{Rocks.sync = True} [ Rocks.Put "a" "one"
+                                        , Rocks.Put "b" "two"
+                                        , Rocks.Put "c" "three"
+                                        , Rocks.Put "d" "four"]
+  Rocks.write db def{Rocks.sync = True} [ Rocks.Put "e" "five"]
+  Rocks.write db def{Rocks.sync = True} [ Rocks.Put "f" "six"]
+  Rocks.write db def{Rocks.sync = True} [ Rocks.Put "g" "seven"]
+  Rocks.write db def{Rocks.sync = True} [ Rocks.Put "h" "eight"]
+  Rocks.write db def{Rocks.sync = True} [ Rocks.Put "j" "nine"]
+  result <- Rocks.get db  Rocks.defaultReadOptions "a"
+  Rocks.close db
+  putStrLn $ show result
+
+
+
+-- test03 ::  IO [BSI.ByteString]
+test03 fun n  = runResourceT $ do
+  let pathT = "/tmp/haskell-rocksDB5"
+  (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
+  fun db n
+
+goFirst count offset = drop offset <$> test03 getNFirstValues (offset + count )
+goLast count offset = drop offset <$> test03 getNLastValues  (offset + count )
+
+goGetAll = do
+  result <- getAll "/tmp/haskell-rocksDB5"
+  print result
+
+
+-- goF = goFirst 4 1
+-- goL = goLast 4 1
 
 
 --------------------------------------
@@ -219,15 +264,15 @@ getBlockByHashDB db hash = do
   mb <- getMicroBlockByHashDB db hash
   case mb of
     Nothing -> return Nothing
-    Just m -> do
+    Just m@(MicroblockBD {..}) -> do
       tx <- getTxsMicroblock db m
       let txAPI = map (\t -> TransactionAPI {_txAPI = t, _txHashAPI = rHash t}) tx
       let mbAPI = MicroblockAPI {
             _prevMicroblock = "",
             _nextMicroblock = "",
-            _keyBlock = _keyBlock (m :: MicroblockBD),
-            _signAPI = _signBD (m :: MicroblockBD),
-            _teamKeys = _teamKeys (m :: MicroblockBD),
+            _keyBlock,
+            _signAPI = _signBD,
+            _teamKeys,
             _publisher = read "1" :: PublicKey,
             _transactionsAPI = txAPI
             }
