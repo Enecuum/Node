@@ -263,17 +263,14 @@ getMicroBlockByHashDB db mHash = do
   return mb
 
 
-getTransactionByMicroblockHash :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo)
--- getTransactionByMicroblockHash = undefined
-getTransactionByMicroblockHash db aHash = do
+getTransactionsByMicroblockHash :: DBPoolDescriptor -> Hash -> IO (Maybe [TransactionInfo])
+getTransactionsByMicroblockHash db aHash = do
   mb <- getMicroBlockByHashDB db aHash
   case mb of
     Nothing -> return Nothing
     Just m@(MicroblockBD {..}) -> do
-      -- txInfo <- getTxsMicroblock db m
-      -- let txInfo = map (\t -> TransactionAPI {_tx = t, _txHash = rHash t}) tx
-      let txInfo = undefined
-      return (Just txInfo)
+      txInfo <- getTxs db m
+      return $ Just txInfo
 
 
 getBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe MicroblockAPI)
