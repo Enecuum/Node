@@ -81,7 +81,7 @@ data PPToNNMessage
     -- send broadcast
     | RequestBroadcast { ---
         recipientType :: NodeType,
-        msg           :: B.ByteString
+        msg           :: Value
     }
     -- get connects
     | RequestConnects Bool
@@ -93,7 +93,7 @@ data PPToNNMessage
     -- For other PoA/PoW node.
     | MsgMsgToNN { ----
         destination :: NodeId,
-        msg :: B.ByteString
+        msg :: Value
     }
 
     -- new microblock was mined.
@@ -139,11 +139,11 @@ data NNToPPMessage
 
     | MsgMsgToPP {
         sender :: NodeId,
-        message :: B.ByteString
+        message :: Value
     }
 
     | MsgBroadcastMsg {
-        message :: B.ByteString,
+        message :: Value,
         idFrom  :: IdFrom
     }
 
@@ -193,7 +193,7 @@ instance FromJSON PPToNNMessage where
             ("Request", "Broadcast") -> do
                 aMsg :: Value <- aMessage .: "msg"
                 aRecipientType :: T.Text <-  aMessage .: "recipientType"
-                return $ RequestBroadcast (readNodeType aRecipientType) (S.encode aMsg)
+                return $ RequestBroadcast (readNodeType aRecipientType) aMsg
 
             ("Request","Connects")    -> do
                 aFull :: Maybe T.Text <- aMessage .:? "full"
@@ -212,7 +212,7 @@ instance FromJSON PPToNNMessage where
                 aDestination :: T.Text <- aMessage .: "destination"
                 aMsg         :: Value  <- aMessage .: "msg"
                 aNodeId <- unhexNodeId aDestination
-                return $ MsgMsgToNN aNodeId (S.encode aMsg)
+                return $ MsgMsgToNN aNodeId aMsg
 
             ("Msg", "Microblock") ->
                 MsgMicroblock <$> aMessage .: "microblock"
@@ -258,12 +258,8 @@ instance ToJSON NNToPPMessage where
             "tag"       .= ("Msg"   :: String),
             "type"      .= ("MsgTo" :: String),
             "sender"    .= ppIdToString aPPId,
-            "msg"       .= aObj
+            "msg"       .= aMessage
           ]
-      where
-        aObj = case S.decode aMessage of
-            Right (aObjValue :: Value)   -> aObjValue
-            Left aObjValue               -> String (T.pack aObjValue)
 
     toJSON (ResponseConnects aConnects) = object [
         "tag"       .= ("Response"  :: String),
@@ -289,14 +285,9 @@ instance ToJSON NNToPPMessage where
     toJSON (MsgBroadcastMsg aMessage (IdFrom aPPId)) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("Broadcast"  :: String),
-        "msg"       .= aObj,
+        "msg"       .= aMessage,
         "idFrom"    .= ppIdToString aPPId
       ]
-      where
-        aObj = case S.decode aMessage of
-          Right (aObjValue :: Value)   -> aObjValue
-          Left aObjValue               -> String (T.pack aObjValue)
-
 
     toJSON (ResponsePoWList aPPIds) = object [
         "tag"       .= ("Response"  :: String),

@@ -17,11 +17,6 @@ module Node.Node.Types where
 
 import              System.Clock
 import qualified    Data.ByteString                 as B
-<<<<<<< HEAD
-import qualified    Data.Bimap                      as BI
-import qualified    Data.Aeson                      as A
-=======
->>>>>>> feature/BN_new_format
 import              Data.Serialize
 import qualified    Data.Map                        as M
 import              GHC.Generics (Generic)
@@ -65,9 +60,9 @@ data MsgToCentralActor where
 
 data MsgFromNode
     = AcceptedMicroblock Microblock NodeId
-    | BroadcastRequest B.ByteString IdFrom NodeType
+    | BroadcastRequest Value IdFrom NodeType
     | NewConnect NodeId NodeType (InChan NNToPPMessage)
-    | MsgResending IdFrom IdTo B.ByteString
+    | MsgResending IdFrom IdTo Value
     | PoWListRequest IdFrom
   deriving (Show)
 
@@ -90,28 +85,7 @@ data NodeInfo = NodeInfo {
         _nodeChan :: InChan NNToPPMessage
     ,   _nodeType :: NodeType
   }
-<<<<<<< HEAD
   deriving (Eq)
-
-
-
-data NodeBaseData = NodeBaseData {
-        nodeBaseDataExitChan            :: C.Chan ExitMsg
-    ,   nodeBaseDataNodes               :: M.Map NodeId Node
-    ,   nodeBaseDataPpNodes             :: M.Map PPId PPNode
-    ,   nodeBaseDataBootNodes           :: BootNodeList
-    ,   nodeBaseDataAnswerChan          :: C.Chan Answer
-    ,   nodeBaseDataBroadcastNum        :: Int
-    ,   nodeBaseDataHostAddress         :: Maybe HostAddress
-    ,   nodeBaseDataMicroblockChan      :: C.Chan Microblock
-    ,   nodeBaseDataValueChan           :: C.Chan A.Value
-    ,   nodeBaseDataMyNodePosition      :: Maybe MyNodePosition
-    ,   nodeBaseDataShardingChan        :: MaybeChan N.ShardingNodeAction
-    ,   nodeBaseDataIAmBroadcast        :: Bool
-    ,   nodeBaseDataOutPort             :: PortNumber
-    ,   nodeBaseDataInfoMsgChan         :: InChan InfoMsg
-    ,   nodeBaseDataFileServerChan      :: InChan FileActorRequest
-=======
 makeLenses ''NodeInfo
 
 
@@ -124,27 +98,11 @@ data NetworkNodeData = NetworkNodeData {
     ,   _fileServerChan     :: InChan FileActorRequest
     ,   _microblockChan     :: InChan Microblock
     ,   _transactionsChan   :: InChan Transaction
->>>>>>> feature/BN_new_format
+    ,   _valueChan          :: InChan Value
   }
+
 makeLenses ''NetworkNodeData
 
-
-<<<<<<< HEAD
-
-makeNodeBaseData
-    ::  C.Chan ExitMsg
-    ->  BootNodeList
-    ->  C.Chan Answer
-    ->  C.Chan Microblock
-    ->  C.Chan A.Value
-    ->  PortNumber
-    ->  InChan InfoMsg
-    ->  InChan FileActorRequest
-    ->  NodeBaseData
-makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aVlalueChan = NodeBaseData
-    aExitChan M.empty M.empty aList aAnswerChan 0 Nothing aMicroblockChan aVlalueChan
-    Nothing Nothing False
-=======
 makeNetworkData
     ::  [Connect]
     ->  NodeConfig
@@ -152,10 +110,9 @@ makeNetworkData
     ->  InChan FileActorRequest
     ->  InChan Microblock
     ->  InChan Transaction
+    ->  InChan Value
     ->  NetworkNodeData
 makeNetworkData aBootNodeList aNodeConfig = NetworkNodeData M.empty aNodeConfig aBootNodeList Nothing
-
->>>>>>> feature/BN_new_format
 
 
 type Token = Integer
@@ -211,29 +168,6 @@ instance Serialize PrivateKey where
     get = PrivateKey <$> get <*> get
     put (PrivateKey a b)= put a >> put b
 
-<<<<<<< HEAD
-class ToManagerData a where
-    toManagerData
-        :: C.Chan Transaction
-        -> C.Chan Microblock
-        -> C.Chan A.Value
-        -> C.Chan ExitMsg
-        -> C.Chan Answer
-        -> InChan InfoMsg
-        -> InChan FileActorRequest
-        -> BootNodeList
-        -> NodeConfig
-        -> PortNumber
-        ->  a
-
-instance ToManagerData ManagerNodeData where
-    toManagerData aTransactionChan aMicroblockChan aVlalueChan aExitChan aAnswerChan aInfoChan aFileRequestChan aList aNodeConfig aOutPort = ManagerNodeData
-        aNodeConfig (makeNodeBaseData aExitChan aList aAnswerChan aMicroblockChan aVlalueChan aOutPort aInfoChan aFileRequestChan)
-            aTransactionChan BI.empty BI.empty S.empty BI.empty
-
-
-=======
->>>>>>> feature/BN_new_format
 makeNewNodeConfig :: MonadRandom m => m NodeConfig
 makeNewNodeConfig = do
     (aPublicKey,     aPrivateKey)  <- generateKeyPair

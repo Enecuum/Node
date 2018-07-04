@@ -38,14 +38,9 @@ import           System.Random                         (randomRIO)
 import           Node.Node.Types
 import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
-<<<<<<< HEAD
-import           Service.System.Directory              (getTime)
-import           Service.Transaction.Common            as B (DBPoolDescriptor (..),
-                                                             getAllTransactionsDB,
-                                                             getBalanceForKey,
-=======
+import           Service.Transaction.Storage            (DBPoolDescriptor, getAllTransactionsDB)
 import           Service.Transaction.Common            as B (getBalanceForKey,
->>>>>>> feature/BN_new_format
+
                                                              getBlockByHashDB,
                                                              getKeyBlockByHashDB,
                                                              getTransactionByHashDB)
@@ -93,18 +88,12 @@ getBlockByHash db hash _ = try $ do
     Just m  -> return m
 
 
-<<<<<<< HEAD
-getKeyBlockByHash :: ManagerMiningMsg a => DBPoolDescriptor -> Hash -> InChan a -> IO (Result MacroblockAPI)
+getKeyBlockByHash :: DBPoolDescriptor -> Hash -> InChan MsgToCentralActor -> IO (Result MacroblockAPI)
 getKeyBlockByHash db hash _ = try $ do
   mb <- B.getKeyBlockByHashDB db hash
   case mb of
     Nothing -> throw NoSuchMacroBlockDB
     Just m  -> return m
-=======
-getKeyBlockByHash :: DBPoolDescriptor -> Hash -> InChan MsgToCentralActor -> IO (Result MacroblockAPI)
-getKeyBlockByHash _ _ _ = return $ Left NotImplementedException
- --return =<< Right <$> B.getBlockByHashDB db hash
->>>>>>> feature/BN_new_format
 
 
 getChainInfo :: InChan MsgToCentralActor -> IO (Result ChainInfo)
@@ -119,46 +108,27 @@ getTransactionByHash db hash _ = try $ do
     Just t  -> return t
 
 
-<<<<<<< HEAD
-getAllTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> InChan a -> IO (Result [TransactionAPI])
-getAllTransactions pool key _ = try $ do
-=======
 getAllTransactions :: DBPoolDescriptor -> PublicKey -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
-getAllTransactions _ _ _ = return $ Left NotImplementedException
-{-try $ do
->>>>>>> feature/BN_new_format
-  tx <- B.getAllTransactionsDB pool key
+getAllTransactions pool key _ = try $ do
+  tx <- getAllTransactionsDB pool key
   case tx of
     [] -> throw NoTransactionsForPublicKey
     t  -> return t
 
-getPartTransactions :: ManagerMiningMsg a => DBPoolDescriptor -> PublicKey -> Integer -> Integer -> InChan a -> IO (Result [TransactionAPI])
+getPartTransactions :: DBPoolDescriptor -> PublicKey -> Integer -> Integer -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
 getPartTransactions pool key offset count _ = return $ Left NotImplementedException
 
 
 
-<<<<<<< HEAD
-sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> IO (Result ())
-sendTrans tx ch aInfoCh = try $ do
-  exp <- (timeout (5 :: Second) $ do
-           sendMetrics tx aInfoCh
-           cTime <- getTime
-           writeChan ch $ newTransaction (tx { _timeMaybe = Just cTime } ))
-  case exp of
-    Just _  -> return ()
-    Nothing -> throw TransactionChanBusyException
-
-
-=======
 sendTrans :: Transaction -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
 sendTrans tx ch aInfoCh = try $ do
   exp <- (timeout (5 :: Second) $ do
            sendMetrics tx aInfoCh
-           writeChan ch $ NewTransaction tx)
+           cTime <- getTime
+           writeChan ch $ NewTransaction (tx { _timeMaybe = Just cTime } ))
   case exp of
-    Just _   -> return ()
-    Nothing  -> throw TransactionChanBusyException
->>>>>>> feature/BN_new_format
+    Just _  -> return ()
+    Nothing -> throw TransactionChanBusyException
 
 
 

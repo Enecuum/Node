@@ -6,33 +6,7 @@ module PoA.PoAServer (
   )  where
 
 
-<<<<<<< HEAD
-import qualified Control.Concurrent                    as C
-import           Control.Concurrent.Async
-import qualified Control.Concurrent.Chan               as C
-import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Concurrent.MVar
-import           Control.Exception
-import           Control.Monad                         (forM_, forever, unless,
-                                                        void, when)
-import           Data.Aeson                            as A
-import qualified Data.ByteString.Char8                 as BC
-import           Data.Maybe                            ()
-import qualified Data.Text                             as T
-import qualified Network.WebSockets                    as WS
-import           Node.Data.GlobalLoging
-import           Node.Data.Key
-import           Node.Data.NetPackage
-import           Node.FileDB.FileServer
-import           Node.Node.Types
-import           PoA.Pending
-import           PoA.Types
-import           Service.InfoMsg                       as I
-import           Service.Network.Base
-import           Service.Network.WebSockets.Server
-import           Service.Types
-import           System.Random.Shuffle
-=======
+
 import              Control.Monad (forM_, void, forever, unless, when)
 import qualified    Network.WebSockets                  as WS
 import              Service.Network.Base
@@ -57,7 +31,6 @@ import              Control.Concurrent.Async
 import              Node.Data.Key
 import              Data.Maybe()
 
->>>>>>> feature/BN_new_format
 
 serverPoABootNode :: PortNumber -> InChan InfoMsg -> InChan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
@@ -155,13 +128,8 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 MsgMicroblock aMicroblock
                     | not aOk -> do
                         aSenderId <- readMVar aId
-<<<<<<< HEAD
-                        writeLog aInfoChan [ServePoATag] Info $ "Received MBlock: " ++ show aMicroblock
-                        sendMsgToNetLvlFromPP ch $ MicroblockFromPP aMicroblock aSenderId
-=======
                         writeLog aInfoChan [ServePoATag] Info $ "Recived MBlock: " ++ show aMicroblock
                         sendMsgToCentralActor ch $ AcceptedMicroblock aMicroblock aSenderId
->>>>>>> feature/BN_new_format
                     | otherwise -> do
                         writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without PPId " ++ show aMsg
                         WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
@@ -233,7 +201,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 -- TODO: Include ID if exist.
                 writeLog aInfoChan [ServePoATag] Warning $
                     "Broken message from PP " ++ show aMsg ++ " " ++ a
-                when aOk $ WS.sendTextData aConnect $ BC.pack ("{msgBroken: " ++ show aMsg ++ "}")
+                when aOk $ WS.sendTextData aConnect $ T.pack ("{msgBroken: " ++ show aMsg ++ "}")
                 when aOk $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
 
 writeInChan aChan aMsg = do
