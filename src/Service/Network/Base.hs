@@ -35,7 +35,7 @@ instance Serialize PortNumber where
     put aPortNumber = put (toEnum.fromEnum $ aPortNumber :: Word32)
 
 
-data Connect = Connect HostAddress PortNumber deriving (Show, Eq, Generic)
+data Connect = Connect HostAddress PortNumber deriving (Show, Eq, Generic, Ord)
 
 instance Serialize Connect
 

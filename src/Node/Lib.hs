@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE PackageImports      #-}
@@ -27,6 +28,37 @@ import           Service.Transaction.Common            (DBPoolDescriptor (..),
 import           Service.Types                         (Microblock, Transaction)
 import           System.Directory                      (createDirectoryIfMissing)
 import           System.Environment
+=======
+{-# LANGUAGE ScopedTypeVariables, LambdaCase, OverloadedStrings #-}
+
+module Node.Lib where
+
+import              Control.Monad
+import              Control.Exception
+import qualified    Control.Concurrent          as C
+import qualified    Data.ByteString.Lazy        as L
+import              Data.IORef
+import qualified    Data.Aeson as A
+import qualified    Data.Text as T
+import              Lens.Micro
+import              Service.Types
+import              Network.Socket (tupleToHostAddress)
+import              Control.Concurrent.Chan.Unagi.Bounded
+import Node.Node.Types
+import Node.Node.Config.Make
+import Service.Network.WebSockets.Client
+import qualified    Network.WebSockets                  as WS
+
+import Service.Network.Base
+import System.Environment
+import Service.InfoMsg (InfoMsg)
+import Node.Data.Key
+import Node.FileDB.FileServer
+--tmp
+import System.Directory (createDirectoryIfMissing)
+import Service.Transaction.Common (addMicroblockToDB, DBPoolDescriptor(..))
+
+>>>>>>> feature/BN_new_format
 
 -- code examples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html
@@ -36,41 +68,57 @@ import           System.Environment
 -- https://www.stackage.org/haddock/lts-10.3/network-2.6.3.2/Network-Socket-ByteString.html
 
 -- | Standart function to launch a node.
-startNode :: (NodeConfigClass s, ManagerMsg a1, ToManagerData s) =>
-       DBPoolDescriptor
+startNode
+    :: DBPoolDescriptor
     -> BuildConfig
-    -> C.Chan ExitMsg
-    -> C.Chan Answer
     -> InChan InfoMsg
-    -> ((InChan a1, OutChan a1) -> IORef s -> IO ())
-    -> ((InChan a1, OutChan a1) -> C.Chan Transaction -> C.Chan Microblock -> MyNodeId -> InChan FileActorRequest -> IO a2)
-    -> IO (InChan a1, OutChan a1)
-startNode descrDB buildConf exitCh answerCh infoCh manager startDo = do
+    -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ())
+    -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> OutChan Transaction -> OutChan Microblock -> MyNodeId -> InChan FileActorRequest -> IO ())
+    -> IO (InChan MsgToCentralActor, OutChan MsgToCentralActor)
+startNode descrDB buildConf infoCh manager startDo = do
 
     --tmp
     createDirectoryIfMissing False "data"
 
     managerChan@(inChanManager, _) <- newChan (2^7)
+<<<<<<< HEAD
     aMicroblockChan  <- C.newChan
     aVlalueChan      <- C.newChan
     aTransactionChan <- C.newChan
+=======
+    (aMicroblockChan, outMicroblockChan) <- newChan (2^7)
+    (aTransactionChan, outTransactionChan) <- newChan (2^7)
+>>>>>>> feature/BN_new_format
     config  <- readNodeConfig
-    bnList  <- readBootNodeList $ bootNodeList buildConf
+    bnList@[Connect aBootIp aBootPort]  <- readBootNodeList $ bootNodeList buildConf
+    runClient (showHostAddress aBootIp) (fromEnum aBootPort) "/" $ \aConnect -> do
+        WS.sendTextData aConnect ("{\"tag\":\"Action\",\"type\":\"AddToListOfConnects\",\"port\": 1554}" :: T.Text)
     (aInFileRequestChan, aOutFileRequestChan) <- newChan (2^4)
     void $ C.forkIO $ startFileServer aOutFileRequestChan
     let portNumber = extConnectPort buildConf
+<<<<<<< HEAD
     md      <- newIORef $ toManagerData aTransactionChan aMicroblockChan aVlalueChan exitCh answerCh infoCh aInFileRequestChan bnList config portNumber
     startServerActor inChanManager portNumber
     void $ C.forkIO $ microblockProc descrDB aMicroblockChan aVlalueChan infoCh
+=======
+    md      <- newIORef $ makeNetworkData bnList config infoCh aInFileRequestChan aMicroblockChan aTransactionChan
+    void $ C.forkIO $ microblockProc descrDB outMicroblockChan infoCh
+>>>>>>> feature/BN_new_format
     void $ C.forkIO $ manager managerChan md
-    void $ startDo managerChan aTransactionChan aMicroblockChan (config^.myNodeId) aInFileRequestChan
+    void $ startDo managerChan outTransactionChan outMicroblockChan (config^.myNodeId) aInFileRequestChan
     return managerChan
 
 
+<<<<<<< HEAD
 microblockProc :: DBPoolDescriptor -> C.Chan Microblock -> C.Chan Value -> InChan InfoMsg -> IO ()
 microblockProc descriptor aMicroblockCh aValueChan aInfoCh = do
     void $ C.forkIO $ forever $ do
         aMicroblock <- C.readChan aMicroblockCh
+=======
+microblockProc :: DBPoolDescriptor -> OutChan Microblock -> InChan InfoMsg -> IO b
+microblockProc descriptor aMicroblockCh aInfoCh = forever $ do
+        aMicroblock <- readChan aMicroblockCh
+>>>>>>> feature/BN_new_format
         addMicroblockToDB descriptor aMicroblock aInfoCh
     forever $ do
         aValue <- C.readChan aValueChan
@@ -89,14 +137,14 @@ readNodeConfig =
         makeFileConfig
         readNodeConfig
 
-readBootNodeList :: String -> IO BootNodeList
+readBootNodeList :: String -> IO [Connect]
 readBootNodeList conf = do
     bnList  <- try (getEnv "bootNodeList") >>= \case
             Right item              -> return item
             Left (_::SomeException) -> return conf
     toNormForm $ read bnList
      where
-       toNormForm aList = return $ (\(a,b,c) -> (NodeId a, Connect (tupleToHostAddress b) c))
+       toNormForm aList = return $ (\(b,c) -> Connect (tupleToHostAddress b) c)
           <$> aList
 
 ---

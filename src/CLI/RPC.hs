@@ -11,12 +11,11 @@ import           Control.Monad.IO.Class
 import           Data.Maybe                            (fromMaybe)
 import           Network.JsonRpc.Server
 import           Service.Network.WebSockets.Server
-import           System.IO.Unsafe                      (unsafePerformIO)
 
 import           CLI.Common
 import           Data.IP
 import           Data.Text                             (pack)
-import           Network.Socket                        (SockAddr, PortNumber)
+import           Network.Socket                        (PortNumber)
 import qualified Network.WebSockets                    as WS
 import           Node.Node.Types
 import           Service.InfoMsg
@@ -26,8 +25,8 @@ import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
 
 
-serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan ManagerMiningMsgBase -> InChan InfoMsg -> IO ()
-serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPending -> do
+serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan MsgToCentralActor -> InChan InfoMsg -> IO ()
+serveRpc descrDB portNum _ ch aInfoCh = runServer portNum $ \_ aPending -> do
     aConnect <- WS.acceptRequest aPending
     WS.forkPingThread aConnect 30
     forever $ do
@@ -40,18 +39,18 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
          WS.sendTextData aConnect response
 
             where
-              ipAccepted :: SockAddr -> Bool
-              ipAccepted addr = unsafePerformIO $
-                case fromSockAddr addr of
-                  Nothing      -> return False
-                  Just (ip, _) -> do
-                         putStrLn $ "Connection from: " ++ show ip
-                         return $ foldl (\p ip_r -> p || isMatchedTo (convert ip) ip_r) False ipRangeList
-                    where convert ip = case ip of
-                             IPv4 i -> ipv4ToIPv6 i
-                             IPv6 i -> i
+              -- ipAccepted :: SockAddr -> Bool
+              -- ipAccepted addr = unsafePerformIO $
+              --   case fromSockAddr addr of
+              --     Nothing      -> return False
+              --     Just (ip, _) -> do
+              --            putStrLn $ "Connection from: " ++ show ip
+              --            return $ foldl (\p ip_r -> p || isMatchedTo (convert ip) ip_r) False ipRangeList
+              --       where convert ip = case ip of
+              --                IPv4 i -> ipv4ToIPv6 i
+              --                IPv6 i -> i
 
-              handle f = 
+              handle f =
                     case {-ipAccepted addr-} True of
                           False -> do
                                 liftIO $ putStrLn "Denied"

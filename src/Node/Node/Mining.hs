@@ -11,9 +11,10 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Node.Node.Mining (
-    managerMining
+    networkNodeStart
   ) where
 
+<<<<<<< HEAD
 import qualified Crypto.PubKey.ECC.ECDSA               as ECDSA
 import           System.Random                         ()
 
@@ -53,46 +54,29 @@ import           Sharding.Space.Distance
 import           Sharding.Space.Point
 import qualified Sharding.Types.Node                   as T
 import           Sharding.Types.ShardLogic
+=======
+import              System.Random()
 
-managerMining :: (InChan ManagerMiningMsgBase, OutChan ManagerMiningMsgBase) -> IORef ManagerNodeData -> IO ()
-managerMining (aChan, aOutChan) aMd = do
-  modifyIORef aMd $ iAmBroadcast .~ True -- FIXME:!!!
-  aData <- readIORef aMd
-  undead (writeLog (aData^.infoMsgChan) [NetLvlTag] Warning
-      "managerMining. This node could be die!" )
-      $ forever $ do
-          mData <- readIORef aMd
-          readChan aOutChan >>= \a -> runOption a $ do
-            baseNodeOpts aChan aMd mData
+import qualified    Data.Map                        as M
+import              Data.Maybe (isNothing)
+import              Data.IORef
+import              Lens.Micro
+import              Lens.Micro.Mtl()
+import              Control.Concurrent.Chan.Unagi.Bounded
+import              Control.Monad.Extra
+import              Node.Data.Key
+import              Node.Node.Types
+import              Service.InfoMsg
+import              Node.Data.GlobalLoging
+import              PoA.Types
+import              Sharding.Sharding()
+import              Node.BaseFunctions
+>>>>>>> feature/BN_new_format
 
-            opt isInitDatagram              $ answerToInitDatagram aMd
-            opt isDatagramMsg               $ answerToDatagramMsg aChan aMd (mData^.myNodeId)
-            opt isClientIsDisconnected      $ miningNodeAnswerClientIsDisconnected aMd
-
-            opt isTestBroadcastBlockIndex   $ answerToTestBroadcastBlockIndex aMd
-            opt isNewTransaction            $ answerToNewTransaction aMd
-            opt isInitDatagram              $ answerToSendInitDatagram aChan aMd
-            opt isShardingNodeRequestMsg    $ answerToShardingNodeRequestMsg aMd
-            opt isDeleteOldestMsg           $ answerToDeleteOldestMsg aMd
-            opt isDeleteOldestPoW           $ answerToDeleteOldestPoW aMd
-            opt isMsgFromPP                 $ answeToMsgFromPP aMd
-            opt isInitShardingLvl           $ answerToInitShardingLvl aChan aMd
-            opt isInfoRequest               $ answerToInfoRequest aMd
-
-
-answerToInfoRequest :: ManagerData md => IORef md -> a -> IO ()
-answerToInfoRequest aMd _ = do
+networkNodeStart :: (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()
+networkNodeStart (_, aOutChan) aMd = do
     aData <- readIORef aMd
-    let aIds = M.keys $ aData^.nodes
-    writeLog (aData^.infoMsgChan) [NetLvlTag] Info $
-        "answerToInfoRequest: Node broadcast list request to " ++ show (length aIds) ++ " nodes."
-    makeAndSendTo aData aIds BroadcastListRequest
-
-
-answerToInitShardingLvl :: (ManagerMsg msg, NodeConfigClass s, NodeBaseDataClass s) =>
-                            InChan msg -> IORef s -> p -> IO ()
-answerToInitShardingLvl aChan aMd _ = do
-    aData <- readIORef aMd
+<<<<<<< HEAD
     when (isNothing (aData^.myNodePosition)) $ do
         writeLog (aData^.infoMsgChan) [NetLvlTag, InitTag] Info
             "Select new random coordinate because I am first node in net."
@@ -466,5 +450,52 @@ processingOfBroadcastThing aMd aBroadcastThing = do
         BroadcastNet    aMsg -> processingOfBroadcast aMd aMsg
         BroadcastLogic  aMsg -> processingOfBroadcast aMd aMsg
         BroadcastMining aMsg -> processingOfBroadcast aMd aMsg
+=======
+    undead (writeLog (aData^.logChan) [NetLvlTag] Warning "networkNodeStart. This node could be die!" )
+      $ forever $ do
+          aData <- readIORef aMd
+          readChan aOutChan >>= \case
+            NodeIsDisconnected      aNodeId                   ->
+                whenJust (aData^.connects.at aNodeId) $ \_ -> do
+                    writeLog (aData^.logChan) [NetLvlTag] Info $  "The node " ++ show aNodeId ++ " is disconnected."
+                    modifyIORef aMd $ connects %~ M.delete aNodeId
+
+            MsgFromNode  aMsgFromNode -> case aMsgFromNode of
+                    AcceptedMicroblock aMicroblock aSenderId -> do
+                        writeMetric (aData^.logChan) $ increment "net.bl.count"
+                        writeLog (aData^.logChan) [NetLvlTag] Info $
+                            "PP node " ++ show aSenderId ++ ", create a a microblock: " ++ show aMicroblock
+                        writeChan (aData^.microblockChan) aMicroblock
+
+                    NewConnect aNodeId aNodeType aChan  -> do
+                        writeLog (aData^.logChan) [NetLvlTag] Info $
+                            "A new connect with PP node " ++ show aNodeId ++ ", the type of node is " ++ show aNodeType
+                        when (isNothing $ aData^.connects.at aNodeId) $
+                            modifyIORef aMd $ connects %~ M.insert aNodeId
+                                (NodeInfo aChan aNodeType)
+
+                    BroadcastRequest aByteString aIdFrom aNodeType ->
+                        forM_ (aData^.connects) $ \aNode -> when
+                            (aNodeType == aNode^.nodeType || aNodeType == All) $
+                            void $ tryWriteChan (aNode^.nodeChan) $ MsgBroadcastMsg aByteString aIdFrom
+
+                    MsgResending (IdFrom aPPIdFrom) (IdTo aId) aByteString ->
+                        whenJust (aData^.connects.at aId) $ \aNode ->
+                            void $ tryWriteChan (aNode^.nodeChan) $
+                                MsgMsgToPP aPPIdFrom aByteString
+
+
+                    PoWListRequest (IdFrom aNodeId) ->
+                        whenJust (aData^.connects.at aNodeId) $ \aNode -> do
+                            let aPPIds = M.filter (\a -> a^.nodeType == PoW) (aData^.connects)
+                            writeChan (aNode^.nodeChan) $ ResponsePoWList $ M.keys aPPIds
+            MsgFromSharding         _   -> return ()
+            CleanAction                 -> return ()
+
+            NewTransaction          aTransaction  -> do
+                writeLog (aData^.logChan) [NetLvlTag] Info "I create a transaction."
+                writeChan (aData^.transactionsChan) aTransaction
+
+>>>>>>> feature/BN_new_format
 
 --------------------------------------------------------------------------------

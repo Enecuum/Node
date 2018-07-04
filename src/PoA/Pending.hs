@@ -47,8 +47,8 @@ data PendingAction where
 data Pending = Pending (Seq (Transaction, TimeSpec)) (Seq (Transaction, TimeSpec))
 
 
-pendingActor :: C.Chan PendingAction -> C.Chan Microblock -> C.Chan Transaction -> InChan InfoMsg -> IO ()
-pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
+pendingActor :: (InChan PendingAction, OutChan PendingAction) -> OutChan Microblock -> OutChan Transaction -> InChan InfoMsg -> IO ()
+pendingActor (aInChan, aOutChan) aMicroblockChan aTransactionChan aInfoChan = do
 
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for microblocs"
 {-
@@ -61,15 +61,15 @@ pendingActor aChan aMicroblockChan aTransactionChan aInfoChan = do
 -}
     -- transactions re-pack
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for transactions"
-    void . C.forkIO $ forever $ forever $ C.readChan aTransactionChan >>=
-        C.writeChan aChan . AddTransaction
+    void . C.forkIO $ forever $ forever $ readChan aTransactionChan >>=
+        writeChan aInChan . AddTransaction
 
     -- actor's main body
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for commands"
 
     void $ loop $ Pending Empty Empty
   where
-    loop (Pending aNewTransaactions aOldTransactions) = C.readChan aChan >>= \case
+    loop (Pending aNewTransaactions aOldTransactions) = readChan aOutChan >>= \case
         AddTransaction aTransaction -> do
             writeLog aInfoChan [PendingTag] Info $
                 "Add transaction to pending" ++ show aTransaction

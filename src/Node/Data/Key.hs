@@ -10,7 +10,6 @@ module Node.Data.Key (
     ,   PublicKey(..)
     ,   NodeId(..)
     ,   MyNodeId(..)
-    ,   PPId(..)
     ,   IdFrom(..)
     ,   IdTo(..)
     ,   getStringKey
@@ -45,9 +44,8 @@ import              Service.Types.PublicPrivateKeyPair (
 
 newtype NodeId     = NodeId     Integer deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)
 newtype MyNodeId   = MyNodeId   Integer deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)
-newtype PPId       = PPId       NodeId  deriving (Show, Ord, Eq, Generic, Serialize)
-newtype IdFrom     = IdFrom     PPId    deriving (Show, Ord, Eq, Generic, Serialize)
-newtype IdTo       = IdTo       PPId    deriving (Show, Ord, Eq, Generic, Serialize)
+newtype IdFrom     = IdFrom     NodeId  deriving (Show, Ord, Eq, Generic, Serialize)
+newtype IdTo       = IdTo       NodeId  deriving (Show, Ord, Eq, Generic, Serialize)
 
 newtype StringKey  = StringKey B.ByteString deriving (Eq, Show)
 

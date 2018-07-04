@@ -12,6 +12,7 @@ import qualified Data.Text as T
 import qualified    Network.WebSockets                  as WS
 
 
+
 main = do
     aArgs <- getArgs
     if null aArgs then print "Add ip to args!!!"
