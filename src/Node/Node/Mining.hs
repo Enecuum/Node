@@ -30,15 +30,10 @@ import              Lens.Micro
 import              Lens.Micro.Mtl()
 import qualified    Control.Concurrent              as C
 import              Control.Concurrent.Chan.Unagi.Bounded
-import              Control.Concurrent.MVar
 
 import              Control.Monad.Extra
 import              Crypto.Error
 
-import              Node.FileDB.FileServer
-import              Sharding.Types.ShardLogic
-import              Service.Monad.Option
-import              Node.Crypto
 import              Node.Data.Key
 import              Node.Node.Types
 import qualified    Sharding.Types.Node as T

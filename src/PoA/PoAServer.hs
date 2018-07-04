@@ -44,25 +44,21 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                     | aFull -> do
                         writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request full list of connections."
                         aConnects <- getRecords aFileServerChan
-                        WS.sendTextData aConnect $ A.encode $ ResponseConnects
-                            ((\(Connect ip _) -> Connect ip 1554) <$> aConnects)
-                        writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
+                        WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
 
                     | otherwise -> do
                         writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request of connections."
                         aShuffledRecords <- shuffleM =<< getRecords aFileServerChan
                         let aConnects = take 5 aShuffledRecords
-                        WS.sendTextData aConnect $ A.encode $ ResponseConnects
-                            ((\(Connect ip _) -> Connect ip 1554) <$> aConnects)
-                        writeLog aInfoChan [ServerBootNodeTag] Info $ "Send connections " ++ show aConnects
+                        WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
 
                 ActionAddToListOfConnects aPort ->
                     writeChan aFileServerChan $ AddToFile [Connect aHostAdress (toEnum aPort)]
 
                 _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
                     "Broken message from PP " ++ show aMsg
-            Left a ->
-
+            Left a -> do
+                WS.sendTextData aConnect ("{\"msg\": \"Broken msg\"}" :: T.Text)
                 writeLog aInfoChan [ServerBootNodeTag] Warning $
                     "Broken message from PP " ++ show aMsg ++ " " ++ a
 
