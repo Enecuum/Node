@@ -4,20 +4,10 @@
 
 module Sharding.Types.Node where
 
-import              Sharding.ShardDB.ShardIndex
 import              Sharding.Types.ShardTypes
-
-import              Control.Concurrent.Chan.Unagi.Bounded
 import qualified    Control.Concurrent.Chan as C
-
-import              Lens.Micro.TH
 import              Data.Word
-import qualified    Data.Set            as S
-import qualified    Data.Map            as M
-import              System.Clock
-import              Service.InfoMsg
 import              Node.Data.Key
-
 
 data ShardingNodeResponse where
     ShardIndexResponse    :: [ShardHash]    -> ShardingNodeResponse

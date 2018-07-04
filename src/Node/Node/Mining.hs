@@ -35,8 +35,8 @@ import              Node.BaseFunctions
 
 networkNodeStart :: (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()
 networkNodeStart (_, aOutChan) aMd = do
-    aData <- readIORef aMd
-    undead (writeLog (aData^.logChan) [NetLvlTag] Warning "networkNodeStart. This node could be die!" )
+    aDataMain <- readIORef aMd
+    undead (writeLog (aDataMain^.logChan) [NetLvlTag] Warning "networkNodeStart. This node could be die!" )
       $ forever $ do
           aData <- readIORef aMd
           readChan aOutChan >>= \case

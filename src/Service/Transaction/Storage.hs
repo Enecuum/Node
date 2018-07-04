@@ -13,26 +13,21 @@ module Service.Transaction.Storage where
 import           Control.Exception
 import           Control.Monad                       (replicateM)
 import qualified Control.Monad.Catch                 as E
-import           Control.Monad.Trans.Class           (lift)
+import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.State           (StateT, evalStateT, get,
                                                       put)
 import           Control.Retry
 import qualified Crypto.Hash.SHA256                  as SHA
 import           Data.Aeson
-import           Data.ByteString.Base58
 import qualified Data.ByteString.Base64              as Base64
 import qualified Data.ByteString.Char8               as BC
 import qualified Data.ByteString.Internal            as BSI
 import           Data.Default                        (def)
 import           Data.Maybe
 import           Data.Pool
-import qualified Data.Serialize                      as S (Serialize, decode,
-                                                           encode)
-import           Data.Text                           (Text)
-import           Data.Text.Encoding                  (decodeUtf8)
+import qualified Data.Serialize                      as S (Serialize, decode, encode)
 import qualified "rocksdb-haskell" Database.RocksDB  as Rocks
-import           GHC.Generics
 import           Service.System.Directory            (getLedgerFilePath,
                                                       getMacroblockFilePath,
                                                       getMicroblockFilePath,
@@ -133,7 +128,7 @@ htK key = S.encode key
 
 getTxsMicroblock :: DBPoolDescriptor -> MicroblockBD -> IO [Transaction]
 getTxsMicroblock db (MicroblockBD _ _ _ txHashes _) = do
-  let fun kTransactionHash = (\db -> Rocks.get db Rocks.defaultReadOptions kTransactionHash)
+  let fun kTransactionHash = (\local_db -> Rocks.get local_db Rocks.defaultReadOptions kTransactionHash)
   maybeTxUntiped  <- mapM (\k -> withResource (poolTransaction db) (fun k)) txHashes
   let txDoesNotExist = filter (\t -> t /= Nothing) maybeTxUntiped
   if null txDoesNotExist
@@ -154,6 +149,7 @@ getNTransactions = runResourceT $ do
   (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
   getNFirstValues db 100
 
+test01 :: IO ()
 test01 = do
   let path = "/tmp/haskell-rocksDB6"
   db <- Rocks.open path def{Rocks.createIfMissing=True}
@@ -177,7 +173,8 @@ getNFirstValuesT = do
   put it
   return v
 
-
+getNFirstValues :: (Control.Monad.Trans.Class.MonadTrans t, MonadResource (t IO)) =>
+                           Rocks.DB -> Int -> t IO [BSI.ByteString]
 getNFirstValues db n = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterFirst it
@@ -198,14 +195,15 @@ getNLastValuesT = do
   lift $ Rocks.iterPrev it
   put it
   return v
-
+getNLastValues :: (Control.Monad.Trans.Class.MonadTrans t, MonadResource (t IO)) =>
+                          Rocks.DB -> Int -> t IO [BSI.ByteString]
 getNLastValues db n = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterLast it
   vs <- lift $ evalStateT (replicateM n getNLastValuesT) it
   return vs
 
-
+test02 :: IO ()
 test02 = do
   let path = "/tmp/haskell-rocksDB5"
   db <- Rocks.open path def{Rocks.createIfMissing=True}
@@ -226,14 +224,18 @@ test02 = do
 
 
 -- test03 ::  IO [BSI.ByteString]
+test03 :: MonadUnliftIO m => (Rocks.DB -> t -> ResourceT m a) -> t -> m a
 test03 fun n  = runResourceT $ do
   let pathT = "/tmp/haskell-rocksDB5"
   (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
   fun db n
 
+goFirst :: Int -> Int -> IO [BSI.ByteString]
 goFirst count offset = drop offset <$> test03 getNFirstValues (offset + count )
+goLast :: Int -> Int -> IO [BSI.ByteString]
 goLast count offset = drop offset <$> test03 getNLastValues  (offset + count )
 
+goGetAll :: IO ()
 goGetAll = do
   result <- getAll "/tmp/haskell-rocksDB5"
   print result
@@ -498,7 +500,7 @@ getTransactionsByKey = do
 --------------------------------------
 
 
--- getOneKeyBlock :: IO ()
+getOneKeyBlock :: IO (Maybe MacroblockAPI)
 getOneKeyBlock = do
   c <- connectDB
   let h = Hash ("XXX" :: BSI.ByteString)

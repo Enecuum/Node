@@ -148,7 +148,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                     let aConnects = take 5 aShuffledRecords
                     writeLog aInfoChan [ServePoATag] Info $ "Send connections " ++ show aConnects
                     WS.sendTextData aConnect $ A.encode $ ResponseConnects
-                        ((\(Connect ip _) -> Connect ip 1554) <$> aConnects)
+                        ((\(Connect this_ip _) -> Connect this_ip 1554) <$> aConnects)
 
                 RequestPoWList
                     | not aOk -> do
@@ -196,6 +196,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                     writeInChan ch $ NewTransaction aTransaction
                     WS.sendTextData aConnect $ A.encode $ ResponseTransactionValid aOk
 
+                ActionAddToListOfConnects _ -> undefined
 
             Left a -> do
                 -- TODO: Include ID if exist.
@@ -204,6 +205,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 when aOk $ WS.sendTextData aConnect $ T.pack ("{msgBroken: " ++ show aMsg ++ "}")
                 when aOk $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
 
+writeInChan :: InChan t -> t -> IO ()
 writeInChan aChan aMsg = do
     aOk <- tryWriteChan aChan aMsg
     C.threadDelay 10000

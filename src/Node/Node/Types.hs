@@ -15,8 +15,6 @@
 -- Different nodes use mutually overlapping set of messages
 module Node.Node.Types where
 
-import              System.Clock
-import qualified    Data.ByteString                 as B
 import              Data.Serialize
 import qualified    Data.Map                        as M
 import              GHC.Generics (Generic)
@@ -26,10 +24,8 @@ import              Control.Concurrent.Chan.Unagi.Bounded
 import              Service.Network.Base
 import              Crypto.Random.Types
 import              Crypto.PubKey.ECC.ECDSA         as ECDSA
-import              Lens.Micro
 import              Lens.Micro.TH
 
-import              Node.Crypto
 import              Node.Data.Key
 import qualified    Sharding.Types.Node as N
 import              Service.Types (Transaction, Microblock)

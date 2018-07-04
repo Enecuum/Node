@@ -5,10 +5,8 @@ module Main where
 import              Control.Monad
 import qualified    Control.Concurrent as C
 import              System.Environment (getEnv)
-import              Node.Data.Key
 
 import              Control.Concurrent.Chan.Unagi.Bounded
-
 
 import              Data.Maybe (fromJust)
 import              Node.Node.Mining

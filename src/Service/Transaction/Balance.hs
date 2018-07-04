@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings        #-}
 {-# LANGUAGE PackageImports           #-}
 {-# LANGUAGE RecordWildCards          #-}
+{-# OPTIONS_GHC -fno-warn-orphans     #-}
 
 module Service.Transaction.Balance
   ( getBalanceForKey,
@@ -28,8 +29,6 @@ import           Data.List                             (sortBy)
 import           Data.Maybe
 import           Data.Ord                              (comparing)
 import           Data.Pool
-import qualified Data.Serialize                        as S (Serialize, decode,
-                                                             encode)
 import           Data.Typeable
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
@@ -45,7 +44,7 @@ type BalanceTable = H.BasicHashTable PublicKey Amount
 
 getBalanceForKey :: DBPoolDescriptor -> PublicKey -> IO (Maybe Amount)
 getBalanceForKey db key = do
-    let fun = (\db -> Rocks.get db Rocks.defaultReadOptions (rValue key))
+    let fun = (\local_db -> Rocks.get local_db Rocks.defaultReadOptions (rValue key))
     val  <- withResource (poolLedger db) fun
     result <- case val of Nothing -> return Nothing --putStrLn "There is no such key"
                           Just v  -> unA v
@@ -77,7 +76,7 @@ updateBalanceTable ht (Transaction fromKey toKey am _ _ _ _) = do
 getBalanceOfKeys :: Pool Rocks.DB -> [Transaction] -> IO BalanceTable
 getBalanceOfKeys db tx = do
   let hashKeys = concatMap getPubKeys tx
-      fun k = (\db -> Rocks.get db Rocks.defaultReadOptions (rValue k))
+      fun k = (\local_db -> Rocks.get local_db Rocks.defaultReadOptions (rValue k))
       getBalanceByKey k = withResource db (fun k)
       toTuple k b = (,) k b
   balance  <- mapM (\k -> liftM (toTuple k ) (getBalanceByKey k)) hashKeys
@@ -87,11 +86,11 @@ getBalanceOfKeys db tx = do
   let keysWhichDoesNotExistYet = filter (\(_,v) -> v == Nothing) balance
       initialBalance = map (\(k,_) ->  (rValue k, rValue (100 :: Amount))) keysWhichDoesNotExistYet
       iBalance = map (\(key, val) -> Rocks.Put key val) initialBalance
-      fun2 = (\db -> Rocks.write db def{Rocks.sync = True} iBalance)
+      fun2 = (\local_db -> Rocks.write local_db def{Rocks.sync = True} iBalance)
   withResource db fun2
   --
   let fun3 = \(k,v) -> case v of Nothing -> (k, 100 :: Amount)
-                                 Just balance -> case (urValue balance :: Either String Amount) of
+                                 Just aBalance -> case (urValue aBalance :: Either String Amount) of
                                    Left _  -> (k, 0)
                                    Right b -> (k, b)
 
@@ -115,7 +114,7 @@ getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, Bool, Macroblock)
 checkMacroblock db aInfoChan keyBlockHash blockHash = do
     let quantityMicroblocksInMacroblock = 2
-        fun = (\db -> Rocks.get db Rocks.defaultReadOptions keyBlockHash)
+        fun = (\local_db -> Rocks.get local_db Rocks.defaultReadOptions keyBlockHash)
     v  <- withResource (poolMacroblock db) fun
 
     case v of
@@ -192,7 +191,7 @@ writeMicroblockDB :: Pool Rocks.DB -> InChan InfoMsg -> MicroblockBD -> IO ()
 writeMicroblockDB db aInfoChan m = do
   let key = rHash m
       val  = rValue m
-      fun = (\db -> Rocks.write db def{Rocks.sync = True} [ Rocks.Put key val ])
+      fun = (\local_db -> Rocks.write local_db def{Rocks.sync = True} [ Rocks.Put key val ])
   withResource db fun
   writeLog aInfoChan [BDTag] Info ("typeOf Microblock "  ++ (show (typeOf m)))
   writeLog aInfoChan [BDTag] Info ("Write Microblock "  ++ show key ++ "to Microblock table")
@@ -241,10 +240,10 @@ addMacroblockToDB db aValue aInfoChan = do
     let keyBlockHash = rHash keyBlockInfoObject
 
     -- get data about macroblock from DB
-    let fun = (\db -> Rocks.get db Rocks.defaultReadOptions keyBlockHash)
+    let fun = (\local_db -> Rocks.get local_db Rocks.defaultReadOptions keyBlockHash)
     val  <- withResource (poolMacroblock db) fun
     aMacroblock <- case val of Nothing -> return dummyMacroblock
-                               Just v  -> case urValue v :: Either String Macroblock of
+                               Just va  -> case urValue va :: Either String Macroblock of
                                  Left _  -> error "Can not decode Macroblock"
                                  Right r -> return r
 

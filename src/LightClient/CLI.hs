@@ -25,7 +25,6 @@ import qualified Network.WebSockets                 as WS
 import           System.Console.GetOpt
 import           System.Environment                 (getArgs)
 
-import qualified Data.ByteString.Internal           as BSI
 import           Data.DeriveTH
 import           LightClient.RPC
 import           Service.Network.WebSockets.Client
@@ -148,9 +147,9 @@ sendTrans transactionsFile walletsFile ch = do
       Just ownerPrivKey -> do
         uuid <- randomRIO (1,25)
         let tx  = Transaction from to am ENQ Nothing Nothing uuid
-         
+
         sign  <- getSignature ownerPrivKey tx
-        let signTx  = tx { _signature = Just sign } 
+        let signTx  = tx { _signature = Just sign }
 
         result <- runExceptT $ newTx ch signTx
         case result of
