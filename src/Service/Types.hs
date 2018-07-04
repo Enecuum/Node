@@ -124,8 +124,8 @@ data Macroblock = Macroblock {
   ,  _height     :: Integer -- block number in the chain
   ,  _solver     :: PublicKey
   ,  _reward     :: Integer
-  ,  _timeK      :: Integer
-  ,  _numberK    :: Integer
+  ,  _time       :: Integer
+  ,  _number     :: Integer
   ,  _nonce      :: Integer
   ,  _mblocks    :: [ByteString]
   } deriving (Eq, Generic, Ord, Read, Show)
@@ -145,18 +145,18 @@ data MacroblockAPI = MacroblockAPI {
 instance Serialize MacroblockAPI
 
 data KeyBlockInfo = KeyBlockInfo {
-    time      :: Integer
+    _time     :: Integer
   , prev_hash :: String
-  , number    :: Integer
-  , nonce     :: Integer
-  , solver    :: PublicKey
+  , _number   :: Integer
+  , _nonce    :: Integer
+  , _solver   :: PublicKey
   } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize KeyBlockInfo
 
 
 data TransactionAPI = TransactionAPI {
-    _txAPI     :: Transaction
-  , _txHashAPI :: ByteString
+    _tx     :: Transaction
+  , _txHash :: ByteString
   } deriving (Generic, Show, Eq, Ord, Read)
 instance Serialize TransactionAPI
 
@@ -165,7 +165,7 @@ data Transaction = Transaction {
   _receiver  :: PublicKey,
   _amount    :: Amount,
   _currency  :: Currency,
-  _time      :: Maybe Time, -- UnixTime format
+  _timeMaybe :: Maybe Time, -- UnixTime format
   _signature :: Maybe Signature,
   _uuid      :: Int
 } deriving ( Generic, Show, Eq, Ord, Read)

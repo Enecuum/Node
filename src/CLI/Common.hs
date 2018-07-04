@@ -38,6 +38,7 @@ import           System.Random                         (randomRIO)
 import           Node.Node.Types
 import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
+import           Service.System.Directory              (getTime)
 import           Service.Transaction.Common            as B (DBPoolDescriptor (..),
                                                              getAllTransactionsDB,
                                                              getBalanceForKey,
@@ -48,10 +49,9 @@ import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
-import           Service.System.Directory              (getTime)
 
 import           Control.Timeout
-import           Data.Time.Units (Second)
+import           Data.Time.Units                       (Second)
 
 type Result a = Either CLIException a
 
@@ -122,16 +122,16 @@ getPartTransactions pool key offset count _ = return $ Left NotImplementedExcept
 
 
 sendTrans :: ManagerMiningMsg a => Transaction -> InChan a -> InChan InfoMsg -> IO (Result ())
-sendTrans tx ch aInfoCh = try $ do 
+sendTrans tx ch aInfoCh = try $ do
   exp <- (timeout (5 :: Second) $ do
            sendMetrics tx aInfoCh
            cTime <- getTime
-           writeChan ch $ newTransaction (tx { _time = Just cTime } ))
+           writeChan ch $ newTransaction (tx { _timeMaybe = Just cTime } ))
   case exp of
-    Just _   -> return ()
-    Nothing  -> throw TransactionChanBusyException
-     
- 
+    Just _  -> return ()
+    Nothing -> throw TransactionChanBusyException
+
+
 
 
 sendNewTrans :: ManagerMiningMsg a => Trans -> InChan a -> InChan InfoMsg -> IO (Result Transaction)

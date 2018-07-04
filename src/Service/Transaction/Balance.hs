@@ -2,8 +2,10 @@
 {-# LANGUAGE DuplicateRecordFields    #-}
 {-# LANGUAGE FlexibleContexts         #-}
 {-# LANGUAGE LambdaCase               #-}
+{-# LANGUAGE NamedFieldPuns           #-}
 {-# LANGUAGE OverloadedStrings        #-}
 {-# LANGUAGE PackageImports           #-}
+{-# LANGUAGE RecordWildCards          #-}
 
 module Service.Transaction.Balance
   ( getBalanceForKey,
@@ -18,6 +20,7 @@ import           Control.Monad
 import           Data.Aeson
 import           Data.Aeson.Types                      (parseMaybe)
 import qualified Data.ByteString.Char8                 as BC
+import qualified Data.ByteString.Internal              as BSI
 import           Data.Default                          (def)
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
@@ -47,6 +50,12 @@ getBalanceForKey db key = do
     result <- case val of Nothing -> return Nothing --putStrLn "There is no such key"
                           Just v  -> unA v
     return result
+
+
+unA :: Monad m => BSI.ByteString -> m (Maybe Amount)
+unA balance = case (urValue balance :: Either String Amount ) of
+  Left _  -> error ("Can not decode balance" ++ show balance)
+  Right b -> return $ Just b
 
 
 updateBalanceTable :: BalanceTable -> Transaction -> IO ()
@@ -221,7 +230,7 @@ addMacroblockToDB db aValue aInfoChan = do
   if (keyBlock /= "kblock")
     then return ()
   else do
-    let keyBlockInfoObject = case parseMaybe extractKeyBlockInfo v of
+    let keyBlockInfoObject@(KeyBlockInfo {..}) = case parseMaybe extractKeyBlockInfo v of
                                   Nothing     -> error "Can not parse KeyBlockInfo" --Data.Map.empty
                                   Just kBlock -> kBlock :: KeyBlockInfo --Map T.Text Value
                              where extractKeyBlockInfo = \info -> info .: "msg"
@@ -240,37 +249,48 @@ addMacroblockToDB db aValue aInfoChan = do
                                  Right r -> return r
 
     -- fill data for key block
-    let prevHash = read (prev_hash keyBlockInfoObject) :: BC.ByteString
-        aSolver = solver keyBlockInfoObject
-        atimeK = time keyBlockInfoObject
-        aNumberK = number keyBlockInfoObject
-        aNonce = nonce keyBlockInfoObject
-        fMacroblock = aMacroblock { _prevKBlock = prevHash, _difficulty = 20, _solver = aSolver, _timeK = atimeK, _numberK = aNumberK, _nonce = aNonce }
+    let prevHash = read prev_hash :: BC.ByteString
+        fMacroblock = aMacroblock {
+                                    _prevKBlock = prevHash,
+                                    _difficulty = 20,
+                                    _solver,
+                                    _time,
+                                    _number,
+                                    _nonce}
 
     writeMacroblockToDB db aInfoChan keyBlockHash fMacroblock
 
 
 dummyMacroblock :: Macroblock
-dummyMacroblock = Macroblock { _prevKBlock = "", _difficulty = 0, _height = 0, _solver = aSolver, _reward = 0, _mblocks = [], _timeK = 0, _numberK = 0, _nonce = 0}
+dummyMacroblock = Macroblock {
+  _prevKBlock = "",
+  _difficulty = 0,
+  _height = 0,
+  _solver = aSolver,
+  _reward = 0,
+  _mblocks = [],
+  _time = 0,
+  _number = 0,
+  _nonce = 0}
   where aSolver = read "1" :: PublicKey
 
 
 transformation :: DBPoolDescriptor -> MicroblockBD -> IO Microblock
-transformation db m = do
+transformation db m@(MicroblockBD {..}) = do
   tx <- getTxsMicroblock db m
   return Microblock {
-  _keyBlock      = _keyBlock (m :: MicroblockBD),
-  _sign          = _signBD (m :: MicroblockBD),
-  _teamKeys      = _teamKeys (m :: MicroblockBD),
+  _keyBlock,
+  _sign          = _signBD,
+  _teamKeys,
   _transactions  = tx,
-  _numOfBlock    = _numOfBlock (m :: MicroblockBD)
+  _numOfBlock
   }
 
 
 transform :: Microblock -> MicroblockBD
-transform m = MicroblockBD {
-  _keyBlock = _keyBlock ( m :: Microblock) ,
-  _signBD = _sign ( m :: Microblock),
-  _teamKeys = _teamKeys ( m :: Microblock),
-  _transactionsBD = map rHash (_transactions m),
-  _numOfBlock = _numOfBlock ( m :: Microblock) }
+transform (Microblock {..}) = MicroblockBD {
+  _keyBlock,
+  _signBD = _sign,
+  _teamKeys,
+  _transactionsBD = map rHash _transactions,
+  _numOfBlock }

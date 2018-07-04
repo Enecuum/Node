@@ -106,8 +106,8 @@ instance FromJSON ECDSA.Signature where
 
 instance ToJSON TransactionAPI where
    toJSON tx = object  [
-             "tx"   .= _txAPI tx
-           , "hash" .= _txHashAPI tx
+             "tx"   .= _tx (tx :: TransactionAPI)
+           , "hash" .= _txHash tx
            ]
 
 instance FromJSON TransactionAPI where
@@ -122,13 +122,15 @@ instance ToJSON Transaction where
            "receiver"  .= _receiver tx,
            "amount"    .= _amount tx,
            "currency"  .= _currency tx,
+           -- "timestamp" .= _time (tx :: Transaction),
+           -- "sign"      .= _signature tx,
            "uuid"      .= _uuid tx
            ]
-       ++ case _time tx of
+       ++ case _timeMaybe (tx :: Transaction) of
             Nothing -> []
             Just t  -> [ "timestamp" .= t ]
 
-       ++ case _signature tx of
+       ++ case _signature (tx :: Transaction) of
             Nothing -> []
             Just s  -> [ "sign" .= s ]
 
@@ -190,7 +192,7 @@ instance FromJSON Microblock where
            -- aUuid    <- aBlock .: "uuid"
            aKhash   <- decodeFromText =<< aBlock .: "K_hash"
            return $ Microblock aKhash aSign aWallets aTx 0
-       a -> mzero
+       _ -> mzero
  parseJSON _ = mzero
 
 
@@ -201,8 +203,8 @@ instance ToJSON Macroblock where
          ,  "height"            .= _height (bl :: Macroblock)
          ,  "solver"            .= _solver (bl :: Macroblock)
          ,  "reward"            .= _reward (bl :: Macroblock)
-         ,  "timeK"              .= _timeK (bl :: Macroblock)
-         ,  "numberK"            .= _numberK (bl :: Macroblock)
+         ,  "timeK"             .= _time (bl :: Macroblock)
+         ,  "numberK"           .= _number (bl :: Macroblock)
          ,  "nonce"             .= _nonce (bl :: Macroblock)
          -- ,  "microblocks_cnt"   .= length (_mblocks bl)
          ,  "microblocks"       .= _mblocks (bl :: Macroblock)
