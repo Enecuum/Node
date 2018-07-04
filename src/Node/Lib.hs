@@ -54,7 +54,7 @@ startNode descrDB buildConf infoCh manager startDo = do
     config  <- readNodeConfig
     bnList@[Connect aBootIp aBootPort]  <- readBootNodeList $ bootNodeList buildConf
     runClient (showHostAddress aBootIp) (fromEnum aBootPort) "/" $ \aConnect -> do
-        WS.sendTextData aConnect ("{\"type\":\"Action\",\"tage\":\"AddToListOfConnects\",\"port\": 1554}" :: T.Text)
+        WS.sendTextData aConnect ("{\"tag\":\"Action\",\"type\":\"AddToListOfConnects\",\"port\": 1554}" :: T.Text)
     (aInFileRequestChan, aOutFileRequestChan) <- newChan (2^4)
     void $ C.forkIO $ startFileServer aOutFileRequestChan
     let portNumber = extConnectPort buildConf
