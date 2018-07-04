@@ -101,12 +101,13 @@ nodeBaseDataList = toList $ do
     "broadcastNum"      !: ["Int"]
     "hostAddress"       !: ["Maybe", "HostAddress"]
     "microblockChan"    !: ["C.Chan", "Microblock"]
+    "valueChan"         !: ["C.Chan", "A.Value"]
     "myNodePosition"    !: ["Maybe", "MyNodePosition"]
     "shardingChan"      !: ["MaybeChan", "N.ShardingNodeAction"]
     "iAmBroadcast"      !: ["Bool"]
     "outPort"           !: ["PortNumber"]
     "infoMsgChan"       !: ["InChan", "InfoMsg"]
-    "fileServerChan"    !: ["C.Chan", "FileActorRequest"]
+    "fileServerChan"    !: ["InChan", "FileActorRequest"]
 
 
 infixl 2 +:

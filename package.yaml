@@ -43,7 +43,7 @@ dependencies:
 - time-units
 - network
 - websockets
-- unagi-chan    
+- unagi-chan
 - aeson
 - cereal
 - mtl
@@ -82,7 +82,7 @@ dependencies:
 - text
 - aeson-pretty
 - unordered-containers
-- cryptohash
+# - cryptohash
 - rocksdb-haskell
 - data-default
 - hashtables
@@ -96,6 +96,9 @@ dependencies:
 #- persistent-postgresql
 #- mysql
 - unix-time
+- cryptohash-sha256
+- derive
+- bytestring-conversion
 
 
 library:
@@ -134,6 +137,14 @@ executables:
   LightClient-exe:
     main:                Main.hs
     source-dirs:         app/LightClient
+    ghc-options:
+    - -Wall
+    - -O2
+    dependencies:
+    - Node
+  Tester-exe:
+    main:                Main.hs
+    source-dirs:         app/Tester
     ghc-options:
     - -Wall
     - -O2

@@ -1,26 +1,7 @@
 {-# LANGUAGE TemplateHaskell, DeriveGeneric, ScopedTypeVariables, MultiWayIf #-}
 
 module Sharding.ShardDB.ShardIndex where
-
-import              Control.Exception
-import              Lens.Micro.TH
-import              Lens.Micro
-import              Lens.Micro.Mtl
-
-import              System.Clock
-import              Data.Serialize
-import qualified    Data.ByteString as B
-import              Data.Monoid
-import              Data.List.Extra
-
-import qualified    Data.Set as S
-import              GHC.Generics
-
-import              Sharding.Types.ShardTypes
-import              Sharding.Types.ShardLogic
-import              Sharding.Space.Distance
-import              Sharding.Space.Point
-
+{-
 data ShardExistIndex   = ShardExistIndex {
       _baseSnapshots  :: [SpaceSnapshot]
     , _lastSnapshot   :: SpaceSnapshot
@@ -209,6 +190,6 @@ instance Emptable SpaceSnapshot where
 instance Emptable ShardNeededIndex where
     empty = ShardNeededIndex S.empty
 
-
+-}
 
 ---

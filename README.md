@@ -8,7 +8,7 @@ Compiling the repo generates the following executables:
 
 * BootNode-exe - a boot node that keeps a list of arbitrary available connected Simple Nodes and gives parts of that list on request to new Simple Nodes entering the network.
 * SimpleNode-exe - a basic role of a node that receives transactions from LighClient (user light client), adds them to the mempool, sends PoA Nodes (mobile nodes) transactions from the mempool, receives generated microblocks from PoA Nodes and propagates those blocks over the network to other Simple Nodes. Also,it can receive requests to calculate wallet balance, give information on transactions and microblocks, and then give responses to those requests. In the future, it'll be used in the sharding implementation: data distribution management and data fetchon request.
-* LightClient-exe - a user client that can generate new public keys (wallet addresses), generate transacations and send them to an arbitrary node (can be a local or remote node).
+* LightClien-exe - a user client that can generate new public keys (wallet addresses), generate transacations and send them to an arbitrary node (can be a local or remote node).
 
 Node supports multithreading. Each thread has its own data and can read data from another thread, change its (.self) state, propagate messages to other actors and create new actors. This way we avoid numerous problems normally assosiated with multithreading and can process events in parallel balancing the available resources.
 
@@ -93,7 +93,7 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 - `id` - auto-assigned JSON-RPC ID (used to match the response object with the request object)
 - `jsonrpc` - JSON-RCP version
 
-##### Response example:
+##### Request example:
 
 `{"jsonrpc":"2.0","params":{"hash":"JM47wo87CqMVtVvit1gWfYdcdGrJM6kRmdMiLh8Jdi7AQdqWvXnrcLXskPFx"},"method":"enq_getTransactionByHash","id":1}`
 
@@ -342,18 +342,25 @@ Alternatively, you can run LightClient with additional parameters `addr` and `po
 
 #### Available commands for Light Client
 
-| Command shortcut | Full command | Description |
+| Command shortcut | Full command | Description of the command and parameters |
 |---------|--------|---------|
-|  -K | --get-public-key | get public key |
-|  -G qTx | --generate-n-transactions=qTx | Generate N Transactions |
-|  -F | --generate-transactions | Generate Transactions forever |
-|  -M | --show-my-keys | show my public keys
-|  -B publicKey | --get-balance=publicKey | get balance for public key |
-|  -S amount:to:from:currency  | --send-money-to-from=amount:to:from:currency | send money to wallet from wallet (ENQ | ETH | DASH | BTC) |
-|  -A message | --send-message-for-all=message | Send broadcast message |
-|  -T nodeId message | --send-message-to=nodeId message | Send message to the node |
-|  -L | --load-new-messages | Load new recieved messages |
-|  -Q | --quit | exit |
+| -P port | --port=port | port number |
+| -A hostAddr | --addr=hostAddr |  host address |
+| -F walletsFile | --wallets=walletsFile | csv file containing wallets |
+| -S transactionsFile | --transactions=transactionsFile | csv file containing transactions to be sent |
+|  -K keysCount       |  --gen-keys=keysCount           |   generate N key pairs |
+|  -B publicKey       |  --get-balance=publicKey        |  get balance for public key |
+|  -M wallets         |  --show-my-keys=wallets         | show my public keys |
+|  -U hash            |  --load-block=hash              |   get keyblock by hash |
+|  -O hash            |  --load-microblock=hash         |   get microblock by hash |
+|  -X hash            |  --get-tx=hash                  |   get transaction by hash |
+|  -W publicKey       |  --load-wallet=publicKey        |   get all transactions for a wallet |
+|  -I                 |  --chain-info                   |   get total chain info |
+|  -R message         |  --send-message-for-all=message |   send broadcast message |
+|  -T nodeId message  |  --send-message-to=nodeId message |  send message to the node |
+|  -L                 |  --load-new-messages            |   load new recieved messages |
+|  -V                 |  --version                      |   show LightClient version |
+|  -H, -?             |  --help                         |   help |
 
 
 <br/>

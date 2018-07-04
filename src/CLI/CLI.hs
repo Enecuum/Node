@@ -44,7 +44,7 @@ options = [
   ]
 
 
-serveCLI :: ManagerMiningMsg a => DBPoolDescriptor -> InChan a -> InChan InfoMsg -> IO ()
+serveCLI :: DBPoolDescriptor -> InChan MsgToCentralActor -> InChan InfoMsg -> IO ()
 serveCLI descrDB ch aInfoCh = do
       putStrLn $ usageInfo "Usage: " options
       forever $ do

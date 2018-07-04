@@ -29,41 +29,24 @@
 --      netLvl    ->  ->    netLvl
 --
 --   2 request with id 1 -> node -> block 1
-
-
 module Sharding.Sharding where
 
-import              Sharding.Space.Distance
-import              Sharding.Space.Point
-import              Sharding.Space.Shift
-import              Sharding.Types.ShardTypes
-import              Sharding.Types.ShardLogic
 import              Sharding.Types.Node
-import              Sharding.ShardDB.ShardIndex
-import              Sharding.ShardDB.ShardStore
-
-
 import              Control.Concurrent.Chan.Unagi.Bounded
 import qualified    Control.Concurrent as C
-import              Control.Monad.State.Lazy
 import qualified    Node.Node.Types     as T
-import qualified    Data.ByteString.Lazy as L
-import qualified    Data.Aeson as A
-import              Data.List.Extra
-import              Lens.Micro
-import              Data.Word
-import              Service.Timer
-import qualified    Data.Set            as S
-import qualified    Data.Map            as M
-import              System.Clock
-import              Lens.Micro.Mtl
-
-import              Node.Data.GlobalLoging
 import              Service.InfoMsg
 import              Lens.Micro.GHC()
 import              Node.Data.Key
-import              Data.Maybe (fromJust)
 
+makeShardingNode
+    ::  MyNodeId
+    ->  C.Chan ShardingNodeAction
+    ->  InChan T.MsgToCentralActor
+    ->  InChan InfoMsg
+    ->  IO ()
+makeShardingNode _ _ _ _ = return ()
+{-
 
 sizeOfShardStore:: Int
 sizeOfShardStore = 500
@@ -454,3 +437,4 @@ mul x y
     | otherwise = fromInteger aResult
   where
     aResult = (toInteger x * toInteger y) `div` distanceNormalizedCapture
+-}

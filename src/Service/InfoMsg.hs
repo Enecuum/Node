@@ -18,6 +18,7 @@ module Service.InfoMsg (
 import qualified Data.ByteString.Char8 as BS
 import Network.Socket.ByteString (sendTo)
 import Data.List
+import Node.BaseFunctions
 
 import System.Clock()
 import Service.Network.Base
@@ -78,7 +79,7 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
             sendToServer lHandler $ "+node|" ++  aId ++ "|" ++
                       intercalate "," (show <$> [ConnectingTag .. InitTag]) ++ "\r\n"
 
-    forever $ do
+    undead (print "dead of log :))) ") $ forever $ do
         m <- readChan chan
         case m of
             Metric s -> case eithMHandler of
@@ -92,7 +93,8 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                                    ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
 
                          aFileString = "  !  " ++ aId ++ "|" ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
---                     putStrLn aFileString
+                     putStrLn aFileString
+                     appendFile "log.txt" aFileString
                      case eithLHandler of
-                          Left  _        -> appendFile "log.txt" aFileString
+                          Left  _        -> return ()
                           Right lHandler -> sendToServer lHandler aString

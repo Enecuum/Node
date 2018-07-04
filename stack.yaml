@@ -13,6 +13,7 @@ extra-deps:
 - iproute-1.7.4
 - rocksdb-haskell-1.0.1
 - unagi-chan-0.4.1.0
+- derive-2.6.4
 
 build:
   haddock-arguments:

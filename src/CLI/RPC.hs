@@ -10,14 +10,12 @@ import           Control.Monad.Except                  (throwError)
 import           Control.Monad.IO.Class
 import           Data.Maybe                            (fromMaybe)
 import           Network.JsonRpc.Server
-import           Network.Socket                        (PortNumber)
 import           Service.Network.WebSockets.Server
-import           System.IO.Unsafe                      (unsafePerformIO)
 
 import           CLI.Common
 import           Data.IP
 import           Data.Text                             (pack)
-import           Network.Socket                        (SockAddr)
+import           Network.Socket                        (PortNumber)
 import qualified Network.WebSockets                    as WS
 import           Node.Node.Types
 import           Service.InfoMsg
@@ -27,8 +25,8 @@ import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
 
 
-serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan ManagerMiningMsgBase -> InChan InfoMsg -> IO ()
-serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPending -> do
+serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan MsgToCentralActor -> InChan InfoMsg -> IO ()
+serveRpc descrDB portNum _ ch aInfoCh = runServer portNum $ \_ aPending -> do
     aConnect <- WS.acceptRequest aPending
     WS.forkPingThread aConnect 30
     forever $ do
@@ -37,22 +35,22 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
 
      where
         runRpc aConnect aMsg = do
-         response <- fromMaybe "" <$> (call methods aMsg)
+         response <- fromMaybe "" <$> call methods aMsg
          WS.sendTextData aConnect response
 
             where
-              ipAccepted :: SockAddr -> Bool
-              ipAccepted addr = unsafePerformIO $ do
-                case fromSockAddr addr of
-                  Nothing      -> return False
-                  Just (ip, _) -> do
-                         putStrLn $ "Connection from: " ++ show ip
-                         return $ foldl (\p ip_r -> p || isMatchedTo (convert ip) ip_r) False ipRangeList
-                    where convert ip = case ip of
-                             IPv4 i -> ipv4ToIPv6 i
-                             IPv6 i -> i
+              -- ipAccepted :: SockAddr -> Bool
+              -- ipAccepted addr = unsafePerformIO $
+              --   case fromSockAddr addr of
+              --     Nothing      -> return False
+              --     Just (ip, _) -> do
+              --            putStrLn $ "Connection from: " ++ show ip
+              --            return $ foldl (\p ip_r -> p || isMatchedTo (convert ip) ip_r) False ipRangeList
+              --       where convert ip = case ip of
+              --                IPv4 i -> ipv4ToIPv6 i
+              --                IPv6 i -> i
 
-              handle f = do
+              handle f =
                     case {-ipAccepted addr-} True of
                           False -> do
                                 liftIO $ putStrLn "Denied"
@@ -66,7 +64,7 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
 
 
               methods = [createTx , balanceReq, getBlock, getMicroblock
-                       , getTransaction, getFullWallet, getSystemInfo
+                       , getTransaction, getFullWallet, getPartWallet, getSystemInfo
 -- test
                        , createNTx, createUnlimTx, sendMsgBroadcast, sendMsgTo, loadMsg
                         ]
@@ -84,7 +82,7 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
 
               getBlock = toMethod "enq_getBlockByHash" f (Required "hash" :+: ())
                 where
-                  f :: Hash ->  RpcResult IO Macroblock
+                  f :: Hash ->  RpcResult IO MacroblockAPI
                   f hash = handle $ getKeyBlockByHash descrDB hash ch
 
               getMicroblock = toMethod "enq_getMicroblockByHash" f (Required "hash" :+: ())
@@ -99,8 +97,13 @@ serveRpc descrDB portNum ipRangeList ch aInfoCh = runServer portNum $ \_ aPendin
 
               getFullWallet = toMethod "enq_getAllTransactions" f (Required "address" :+: ())
                 where
-                  f :: PublicKey -> RpcResult IO [Transaction]
+                  f :: PublicKey -> RpcResult IO [TransactionAPI]
                   f key = handle $ getAllTransactions descrDB key ch
+
+              getPartWallet = toMethod "enq_getTransactionsByWallet" f (Required "address" :+: Required "offset" :+: Required "count" :+: ())
+                where
+                  f :: PublicKey -> Integer -> Integer -> RpcResult IO [TransactionAPI]
+                  f key offset cnt = handle $ getPartTransactions descrDB key offset cnt ch
 
               getSystemInfo = toMethod "enq_getChainInfo" f ()
                 where

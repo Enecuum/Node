@@ -18,6 +18,7 @@ import              Data.String
 import              GHC.Generics
 import qualified    Data.Text as T
 import              Data.Hex
+import              Data.Maybe
 import              Control.Monad.Extra
 -- import              Data.Either
 import qualified    Data.Serialize as S
@@ -80,22 +81,19 @@ data PPToNNMessage
     -- send broadcast
     | RequestBroadcast { ---
         recipientType :: NodeType,
-        msg           :: B.ByteString
+        msg           :: Value
     }
     -- get connects
-    | RequestConnects
+    | RequestConnects Bool
 
     -- responses with PPId
-    | ResponseNodeIdToNN {
-        nodeId    :: PPId,
-        nodeType  :: NodeType
-    }
+    | ResponseNodeIdToNN NodeId NodeType
 
     -- Messages:
     -- For other PoA/PoW node.
     | MsgMsgToNN { ----
-        destination :: PPId,
-        msg :: B.ByteString
+        destination :: NodeId,
+        msg :: Value
     }
 
     -- new microblock was mined.
@@ -106,9 +104,15 @@ data PPToNNMessage
     -- | MsgMacroblock {
     --     macroblock :: Macroblock
     -- }
+
+    | IsInPendingRequest Transaction
+    | GetPendingRequest
+    | AddTransactionRequest Transaction
+    | ActionAddToListOfConnects Int
+
     deriving (Show)
 
-data NodeType = PoW | PoA | All deriving (Eq, Show, Ord, Generic)
+data NodeType = PoW | PoA | All | NN deriving (Eq, Show, Ord, Generic)
 
 instance S.Serialize NodeType
 
@@ -118,17 +122,14 @@ instance S.Serialize NodeType
 data NNToPPMessage
     = RequestNodeIdToPP
 
-    | ResponseConnects {
-      connects  :: [Connect]
-    }
-
+    | ResponseConnects [Connect]
     | ResponseTransaction {
         transaction :: Transaction
     }
 
     -- request with PoW's list
     | ResponsePoWList {
-        poWList :: [PPId]
+        poWList :: [NodeId]
     }
 
     | MsgConnect {
@@ -137,20 +138,19 @@ data NNToPPMessage
     }
 
     | MsgMsgToPP {
-        sender :: PPId,
-        message :: B.ByteString
+        sender :: NodeId,
+        message :: Value
     }
 
     | MsgBroadcastMsg {
-        message :: B.ByteString,
+        message :: Value,
         idFrom  :: IdFrom
     }
 
-    | MsgNewNodeInNet {
-        id :: PPId,
-        nodeType :: NodeType
-    }
-
+    | MsgNewNodeInNet NodeId NodeType
+    | ResponsePendingTransactions [Transaction]
+    | ResponseIsInPending Bool
+    | ResponseTransactionValid Bool
 
 
 
@@ -168,8 +168,8 @@ unhexNodeId aString = case unhex . fromString . T.unpack $ aString of
     Nothing             -> mzero
 
 
-ppIdToString :: PPId -> String
-ppIdToString (PPId (NodeId aPoint)) = CB.unpack . hex . B.pack $ unroll aPoint
+ppIdToString :: NodeId -> String
+ppIdToString (NodeId aPoint) = CB.unpack . hex . B.pack $ unroll aPoint
 
 
 myTextUnhex :: T.Text -> Maybe B.ByteString
@@ -180,6 +180,7 @@ myTextUnhex aString = fromString <$> aUnxeded
 
         aNewString :: String
         aNewString = T.unpack aString
+
 
 instance FromJSON PPToNNMessage where
     parseJSON (Object aMessage) = do
@@ -192,30 +193,43 @@ instance FromJSON PPToNNMessage where
             ("Request", "Broadcast") -> do
                 aMsg :: Value <- aMessage .: "msg"
                 aRecipientType :: T.Text <-  aMessage .: "recipientType"
-                return $ RequestBroadcast (readNodeType aRecipientType) (S.encode aMsg)
+                return $ RequestBroadcast (readNodeType aRecipientType) aMsg
 
-            ("Request","Connects")    -> return RequestConnects
+            ("Request","Connects")    -> do
+                aFull :: Maybe T.Text <- aMessage .:? "full"
+                return $ RequestConnects (isJust aFull)
+
             ("Request","PoWList")     -> return RequestPoWList
 
             ("Response", "NodeId") -> do
                 aPPId :: T.Text <- aMessage .: "nodeId"
 
-                aPoint   <- unhexNodeId aPPId
+                aNodeId   <- unhexNodeId aPPId
                 aNodeType :: T.Text <- aMessage .: "nodeType"
-                return (ResponseNodeIdToNN (PPId aPoint) (readNodeType aNodeType))
+                return (ResponseNodeIdToNN aNodeId (readNodeType aNodeType))
 
             ("Msg", "MsgTo") -> do
                 aDestination :: T.Text <- aMessage .: "destination"
                 aMsg         :: Value  <- aMessage .: "msg"
-                aPoint <- unhexNodeId aDestination
-                return $ MsgMsgToNN (PPId aPoint) (S.encode aMsg)
+                aNodeId <- unhexNodeId aDestination
+                return $ MsgMsgToNN aNodeId aMsg
 
-            ("Msg", "Microblock") -> do
-                aMicroblock <- aMessage .: "microblock"
-                return $ MsgMicroblock aMicroblock
+            ("Msg", "Microblock") ->
+                MsgMicroblock <$> aMessage .: "microblock"
 
+            -- testing functions!!!
+            ("Request", "Pending") -> do
+                aMaybeTransaction <- aMessage .:? "transaction"
+                return $ case aMaybeTransaction of
+                    Just aTransaction -> IsInPendingRequest aTransaction
+                    Nothing           -> GetPendingRequest
 
+            ("Request", "PendingAdd") ->
+                AddTransactionRequest <$> aMessage .: "transaction"
+            ("Action", "AddToListOfConnects") ->
+                ActionAddToListOfConnects <$> aMessage .: "port"
             _ -> mzero
+
 
     parseJSON _ = mzero -- error $ show a
 
@@ -244,12 +258,8 @@ instance ToJSON NNToPPMessage where
             "tag"       .= ("Msg"   :: String),
             "type"      .= ("MsgTo" :: String),
             "sender"    .= ppIdToString aPPId,
-            "msg"       .= aObj
+            "msg"       .= aMessage
           ]
-      where
-        aObj = case S.decode aMessage of
-            Right (aObjValue :: Value)   -> aObjValue
-            Left aObjValue               -> String (T.pack aObjValue)
 
     toJSON (ResponseConnects aConnects) = object [
         "tag"       .= ("Response"  :: String),
@@ -275,20 +285,30 @@ instance ToJSON NNToPPMessage where
     toJSON (MsgBroadcastMsg aMessage (IdFrom aPPId)) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("Broadcast"  :: String),
-        "msg"       .= aObj,
+        "msg"       .= aMessage,
         "idFrom"    .= ppIdToString aPPId
       ]
-      where
-        aObj = case S.decode aMessage of
-          Right (aObjValue :: Value)   -> aObjValue
-          Left aObjValue               -> String (T.pack aObjValue)
-
 
     toJSON (ResponsePoWList aPPIds) = object [
         "tag"       .= ("Response"  :: String),
         "type"      .= ("PoWList"   :: String),
         "poWList"   .=  map ppIdToString aPPIds
       ]
+    toJSON (ResponsePendingTransactions aTransactions) = object [
+        "tag"       .= ("Response"  :: String),
+        "type"      .= ("Pending"   :: String),
+        "transactions" .= aTransactions
+      ]
+    toJSON (ResponseIsInPending aBool) = object [
+        "tag"       .= ("Response"  :: String),
+        "type"      .= ("Pending"   :: String),
+        "msg"       .= show aBool
+      ]
+    toJSON (ResponseTransactionValid aBool) = object [
+        "tag"       .= ("Response"  :: String),
+        "type"      .= ("PendingAdd"   :: String),
+        "msg"       .= show aBool
+       ]
 
 instance ToJSON Connect where
     toJSON (Connect aHostAddress aPortNumber) = object [

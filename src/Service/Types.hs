@@ -1,28 +1,37 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, DeriveGeneric, LambdaCase, StandaloneDeriving #-}
-{-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
+{-# LANGUAGE DeriveGeneric             #-}
+{-# LANGUAGE DisambiguateRecordFields  #-}
+{-# LANGUAGE DuplicateRecordFields     #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances         #-}
+{-# LANGUAGE GADTs                     #-}
+{-# LANGUAGE LambdaCase                #-}
+{-# LANGUAGE OverloadedStrings         #-}
+{-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE StandaloneDeriving        #-}
+
 module Service.Types where
 
-import              Data.Serialize
-import              Data.Graph.Inductive
-import              Service.Types.PublicPrivateKeyPair
-import              GHC.Generics
-import              Data.ByteString
-import              Data.List.Split (splitOn)
-
+import           Data.ByteString
+import qualified Data.ByteString.Char8              as C
+import           Data.Graph.Inductive
+import           Data.List.Split                    (splitOn)
+import           Data.Serialize
+import           GHC.Generics
+import           Service.Types.PublicPrivateKeyPair
 
 type QuantityTx = Int
 data Trans = Trans {
-        txAmount :: Amount
+        txAmount        :: Amount
       , recipientPubKey :: PublicKey
-      , senderPubKey :: PublicKey
-      , currency :: Currency
+      , senderPubKey    :: PublicKey
+      , currency        :: Currency
       } deriving (Eq, Show, Generic)
 
 type Id = Integer
 data MsgTo = MsgTo {
         messageTo      :: Id
       , messageContent :: String
-      } deriving (Eq, Show, Generic)
+      } deriving (Eq, Show, Generic, Ord)
 
 instance Read Trans where
     readsPrec _ value =
@@ -41,46 +50,43 @@ instance Read MsgTo where
 data Currency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
 instance Serialize Currency
 
+
+data PartWalletReq = PartWalletReq {
+    _key    :: PublicKey
+  , _offset :: Integer
+  , _count  :: Integer
+  } deriving (Eq, Show, Ord)
+
+instance Read PartWalletReq where
+    readsPrec _ value =
+        case splitOn ":" value of
+             [f1, f2, f3] ->
+                 [(PartWalletReq (read f1) (read f2) (read f3), [])]
+             x -> error $ "Invalid number of fields in input: " ++ show x
+
+
+
 type Time      = Int -- UnixTimestamp
 type DAG = Gr Transaction Transaction
 
-newtype Hash = Hash ByteString deriving (Ord, Eq, Show, Generic, Read)
+newtype Hash = Hash ByteString deriving (Ord, Eq, Show, Generic)
 instance Serialize Hash
 
--- instance Read Hash where
---        readsPrec _ value = return (Hash $ C.pack value,"")
+instance Read Hash where
+       readsPrec _ value = return (Hash $ C.pack value,"")
 
 data MicroblockV1 = MicroblockV1{
-                  hashCurrentMicroblock :: ByteString, -- hashCurrentMicroblock
+                  hashCurrentMicroblock  :: ByteString, -- hashCurrentMicroblock
                   hashPreviousMicroblock :: ByteString, -- hashPreviousMicroblock
-                  trans :: [Transaction]}
+                  trans                  :: [Transaction]}
                 deriving (Eq, Generic, Ord, Show)
 
-data MicroblockAPI = MicroblockAPI {
-    _keyBlockAPI :: ByteString, -- hash of key-block
-    _signAPI :: Signature,  -- signature for {K_hash, [Tx],}
-    _teamKeysAPI :: [PublicKey], -- for reward
-    _transactionsAPI :: [Transaction],
-    _numOfBlockAPI   :: Integer
-  }
-  deriving (Eq, Generic, Ord, Read, Show)
-instance Serialize MicroblockAPI
 
-data Macroblock = Macroblock {
-    _prevBlock :: ByteString
-  ,  _difficulty :: Integer
-  ,  _height :: Integer
-  ,  _solver :: ByteString
-  ,  _reward :: Integer
-  ,  _txs_cnt :: Integer
-  ,  _mblocks :: [ByteString]
-} deriving (Eq, Generic, Ord, Read, Show)
-instance Serialize Macroblock
-
+-- MicroblockPoA
 data Microblock = Microblock{
-    _keyBlock :: ByteString, -- hash of key-block
-    _sign :: Signature,  -- signature for {K_hash, [Tx],}
-    _teamKeys :: [PublicKey], -- for reward
+    _keyBlock     :: ByteString, -- hash of key-block
+    _sign         :: Signature,  -- signature for {K_hash, [Tx],}
+    _teamKeys     :: [PublicKey], -- for reward
     _transactions :: [Transaction],
     _numOfBlock   :: Integer
   }
@@ -88,13 +94,79 @@ data Microblock = Microblock{
 
 instance Serialize Microblock
 
+data MicroblockBD = MicroblockBD{
+    _keyBlock       :: ByteString, -- hash of key-block
+    _signBD         :: Signature,  -- signature for {K_hash, [Tx],}
+    _teamKeys       :: [PublicKey], -- for reward
+    _transactionsBD :: [ByteString], -- hashes of [Transaction],
+    _numOfBlock     :: Integer
+  }
+  deriving (Eq, Generic, Ord, Read, Show)
+
+instance Serialize MicroblockBD
+
+data MicroblockAPI = MicroblockAPI {
+     _prevMicroblock  :: ByteString  -- hash of the previous microblock if exists
+    ,_nextMicroblock  :: ByteString  -- hash of the next microblock if exists
+    ,_keyBlock        :: ByteString  -- hash of key-block
+    ,_signAPI         :: Signature   -- signature for {K_hash, [Tx],}
+    ,_teamKeys        :: [PublicKey] -- for reward
+    ,_publisher       :: PublicKey
+    ,_transactionsAPI :: [TransactionAPI]
+  }
+  deriving (Eq, Generic, Ord, Read, Show)
+instance Serialize MicroblockAPI
+
+
+data Macroblock = Macroblock {
+     _prevKBlock :: ByteString
+  ,  _difficulty :: Integer --
+  ,  _height     :: Integer -- block number in the chain
+  ,  _solver     :: PublicKey
+  ,  _reward     :: Integer
+  ,  _time       :: Integer
+  ,  _number     :: Integer
+  ,  _nonce      :: Integer
+  ,  _mblocks    :: [ByteString]
+  } deriving (Eq, Generic, Ord, Read, Show)
+instance Serialize Macroblock
+
+data MacroblockAPI = MacroblockAPI {
+     _prevKBlock :: ByteString
+  ,  _nextKBlock :: ByteString
+  ,  _difficulty :: Integer
+  ,  _height     :: Integer
+  ,  _solver     :: PublicKey
+  ,  _reward     :: Integer
+  ,  _txsCnt     :: Integer
+  ,  _mblocks    :: [ByteString]
+
+} deriving (Eq, Generic, Ord, Read, Show)
+instance Serialize MacroblockAPI
+
+data KeyBlockInfo = KeyBlockInfo {
+    _time     :: Integer
+  , prev_hash :: String
+  , _number   :: Integer
+  , _nonce    :: Integer
+  , _solver   :: PublicKey
+  } deriving (Eq, Generic, Ord, Read, Show)
+instance Serialize KeyBlockInfo
+
+
+data TransactionAPI = TransactionAPI {
+    _tx     :: Transaction
+  , _txHash :: ByteString
+  } deriving (Generic, Show, Eq, Ord, Read)
+instance Serialize TransactionAPI
+
 data Transaction = Transaction {
   _owner     :: PublicKey,
   _receiver  :: PublicKey,
   _amount    :: Amount,
   _currency  :: Currency,
-  _time      :: Time, -- UnixTime format
-  _signature :: Signature,
+  _timeMaybe :: Maybe Time, -- UnixTime format
+  _signature :: Maybe Signature,
   _uuid      :: Int
 } deriving ( Generic, Show, Eq, Ord, Read)
 

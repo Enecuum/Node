@@ -5,10 +5,8 @@ module Main where
 import              Control.Monad
 import qualified    Control.Concurrent as C
 import              System.Environment (getEnv)
-import              Node.Data.Key
 
 import              Control.Concurrent.Chan.Unagi.Bounded
-
 
 import              Data.Maybe (fromJust)
 import              Node.Node.Mining
@@ -34,6 +32,8 @@ import              Service.Transaction.Storage (connectOrRecoveryConnect)
 configName :: String
 configName = "configs/config.json"
 
+-- startNode descrDB buildConf infoCh manager startDo = do
+
 main :: IO ()
 main =  do
         putStrLn  "Dev 25/06/2018 17:00"
@@ -42,29 +42,18 @@ main =  do
           Nothing   -> error "Please, specify config file correctly"
           Just conf -> do
 
-            aExitCh   <- C.newChan
-            aAnswerCh <- C.newChan
-            (aInfoChanIn, aInfoChanOut) <- newChan (2^5)
+            (aInfoChanIn, aInfoChanOut) <- newChan 64
             rocksDB   <- connectOrRecoveryConnect
 
-            void $ startNode rocksDB conf
-                aExitCh aAnswerCh aInfoChanIn managerMining $ \(ch, _) aChan aMicroblockChan aMyNodeId aFileChan -> do
-                    -- periodically check current state compare to the whole network state
-                    metronomeS 400000 (writeChan ch connectivityQuery)
-                    metronomeS 1000000 (writeChan ch queryPositions)
-                    metronomeLinear 100000 100000000 (writeChan ch infoRequest)
-                    metronomeS 1000000 (writeChan ch deleteOldestMsg)
-                    metronomeS 1000000 (writeChan ch deleteOldestPoW)
-                    metronomeS 1000000 (writeChan ch findBestConnects)
+            void $ startNode rocksDB conf aInfoChanIn networkNodeStart $
+                \(ch, _) aChan aMicroblockChan aMyNodeId aFileChan -> do
+                    metronomeS 400000 (writeChan ch CleanAction)
 
-                    (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id, i_am_first) <- getConfigParameters aMyNodeId conf ch
-
-                    when i_am_first $ writeChan ch InitShardingLvl
+                    (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id) <- getConfigParameters aMyNodeId conf ch
 
                     void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id
 
-
-                    void $ C.forkIO $ servePoA poa_p aMyNodeId ch aChan aInfoChanIn aFileChan aMicroblockChan
+                    void $ C.forkIO $ servePoA poa_p ch aChan aInfoChanIn aFileChan aMicroblockChan
 
                     cli_m   <- try (getEnv "cliMode") >>= \case
                             Right item              -> return item
@@ -91,22 +80,9 @@ main =  do
                                        Nothing    -> updateConfigWithToken conf snbc rpcbc
 
                             serveRpc rocksDB rpc_p ip_en ch aInfoChanIn
-
-
                       "cli" -> serveCLI rocksDB ch aInfoChanIn
-
                       _     -> return ()
-
-
-
-                    --when (takeEnd 3 log_id == "175") $
-                    metronomeS 10000000 (writeChan ch testBroadcastBlockIndex)
-
-
-                    writeChan aInfoChanIn $ Metric $ increment "cl.node.count"
-
-            void $ C.readChan aExitCh
-
+            forever $ C.threadDelay 10000000000
 
 
 updateConfigWithToken :: BuildConfig -> SimpleNodeBuildConfig -> RPCBuildConfig -> IO Token
@@ -138,13 +114,11 @@ enableIPsList ips = sequence $ map (\ip_s -> try (readIO ip_s :: IO IPRange) >>=
                                ips
 
 getConfigParameters
-  :: (Show a1, ManagerMsg a2) =>
-     a1
-     -> BuildConfig
-     -> InChan a2
-     -> IO
-          (SimpleNodeBuildConfig, PortNumber, String, PortNumber, String,
-           PortNumber, String, Bool)
+    :: Show a1
+    => a1
+    ->  BuildConfig
+    ->  InChan MsgToCentralActor
+    ->  IO (SimpleNodeBuildConfig, PortNumber, String, PortNumber, String, PortNumber, String)
 getConfigParameters aMyNodeId conf ch = do
   snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case
           Right item              -> return item
@@ -174,13 +148,4 @@ getConfigParameters aMyNodeId conf ch = do
           Right item              -> return item
           Left (_::SomeException) -> return $ show aMyNodeId
 
-  test_send <- try (getEnv "test_send_id") >>= \case
-      Right idTo              -> (metronomeS 10000000 (writeChan ch (testSendMessage ((read idTo) :: NodeId))))
-      Left (e::SomeException) -> print e
-  print test_send
-
-  i_am_first <- try (getEnv "isFirst") >>= \case
-      Right "Yes" -> return True
-      Right _   -> return False
-      Left (_::SomeException) -> return False
-  return (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id, i_am_first)
+  return (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id)
