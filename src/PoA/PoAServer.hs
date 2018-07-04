@@ -194,7 +194,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
 
                 AddTransactionRequest aTransaction -> do
                     writeInChan ch $ NewTransaction aTransaction
-                    WS.sendTextData aConnect $ A.encode $ ResponseTransactionValid aOk
+                    WS.sendTextData aConnect $ A.encode $ ResponseTransactionValid True
 
                 ActionAddToListOfConnects _ -> undefined
 
