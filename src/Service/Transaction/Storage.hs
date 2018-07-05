@@ -26,7 +26,8 @@ import qualified Data.ByteString.Internal            as BSI
 import           Data.Default                        (def)
 import           Data.Maybe
 import           Data.Pool
-import qualified Data.Serialize                      as S (Serialize, decode, encode)
+import qualified Data.Serialize                      as S (Serialize, decode,
+                                                           encode)
 import qualified "rocksdb-haskell" Database.RocksDB  as Rocks
 import           Service.System.Directory            (getLedgerFilePath,
                                                       getMacroblockFilePath,
@@ -93,16 +94,6 @@ handler =
 --------------------------------------
 -- begin of the Database structure  section
 
--- data Macroblock = Macroblock {
---   keyBlock :: BC.ByteString,
---   -- microblockNumber :: Int,
---   -- requiredNumberOfMicroblocks :: Int,
---   hashOfMicroblock :: [BC.ByteString]
---   -- timeOfMicroblockArrived :: UTCTime
---                                  } deriving (Generic, Eq, Ord, Show, S.Serialize)
-
-
-
 -- for rocksdb Transaction and Microblock
 rHash :: S.Serialize a => a -> BSI.ByteString
 rHash key = Base64.encode . SHA.hash . rValue $ key
@@ -126,9 +117,14 @@ htK key = S.encode key
 --------------------------------------
 
 
-getTxsMicroblock :: DBPoolDescriptor -> MicroblockBD -> IO [Transaction]
-getTxsMicroblock db (MicroblockBD _ _ _ txHashes _) = do
-  let fun kTransactionHash = (\local_db -> Rocks.get local_db Rocks.defaultReadOptions kTransactionHash)
+
+-- getTxsMicroblock :: DBPoolDescriptor -> MicroblockBD -> IO [Transaction]
+-- getTxsMicroblock db (MicroblockBD _ _ _ txHashes _) = do
+--   let fun kTransactionHash = (\local_db -> Rocks.get local_db Rocks.defaultReadOptions kTransactionHash)
+
+getTxs :: DBPoolDescriptor -> MicroblockBD -> IO [TransactionInfo]
+getTxs db (MicroblockBD _ _ _ txHashes _) = do
+  let fun kTransactionHash = (\db -> Rocks.get db Rocks.defaultReadOptions kTransactionHash)
   maybeTxUntiped  <- mapM (\k -> withResource (poolTransaction db) (fun k)) txHashes
   let txDoesNotExist = filter (\t -> t /= Nothing) maybeTxUntiped
   if null txDoesNotExist
@@ -140,7 +136,14 @@ getTxsMicroblock db (MicroblockBD _ _ _ txHashes _) = do
                             Right r -> r
              txDecoded = map extract txUntiped
              tx = map (\t -> _tx  (t :: TransactionInfo)) txDecoded
-         return tx
+         return txDecoded
+
+
+getTxsMicroblock :: DBPoolDescriptor -> MicroblockBD -> IO [Transaction]
+getTxsMicroblock db mb@(MicroblockBD _ _ _ txHashes _) = do
+  txDecoded <- getTxs db mb
+  let tx = map (\t -> _tx  (t :: TransactionInfo)) txDecoded
+  return tx
 
 
 getNTransactions ::  IO [BSI.ByteString]
@@ -149,7 +152,7 @@ getNTransactions = runResourceT $ do
   (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
   getNFirstValues db 100
 
-test01 :: IO ()
+
 test01 = do
   let path = "/tmp/haskell-rocksDB6"
   db <- Rocks.open path def{Rocks.createIfMissing=True}
@@ -186,24 +189,42 @@ getNLastValuesT :: StateT Rocks.Iterator IO BSI.ByteString
 getNLastValuesT = do
   it <- get
   Just v <- lift $ Rocks.iterValue it
-  -- v <- lift $ Rocks.iterValue it
-  -- case v of Left _ -> return Nothing
-  --           Right r -> do
-  --             lift $ Rocks.iterPrev it
-  --             put it
-  --             return v
   lift $ Rocks.iterPrev it
   put it
   return v
-getNLastValues :: (Control.Monad.Trans.Class.MonadTrans t, MonadResource (t IO)) =>
-                          Rocks.DB -> Int -> t IO [BSI.ByteString]
+
+
 getNLastValues db n = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterLast it
   vs <- lift $ evalStateT (replicateM n getNLastValuesT) it
   return vs
 
-test02 :: IO ()
+
+
+
+
+getFirst db offset count = drop offset <$> getNFirstValues db (offset + count )
+getLast db  offset count = drop offset <$> getNLastValues db (offset + count )
+
+
+
+getLastTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> IO [TransactionAPI]
+getLastTransactions descr pubKey offset count = do
+  -- let fun = \db -> getLast db offset count
+  -- rawTxInfo <- withResource (poolTransaction descr) fun
+  let rawTxInfo = undefined
+  let txAPI = decodeTransactionsAndFilterByKey rawTxInfo pubKey
+  return txAPI
+
+
+--------------------------------------
+-- begin of the Test section
+
+-- goF = goFirst 4 1
+-- goL = goLast 4 1
+
+
 test02 = do
   let path = "/tmp/haskell-rocksDB5"
   db <- Rocks.open path def{Rocks.createIfMissing=True}
@@ -230,23 +251,11 @@ test03 fun n  = runResourceT $ do
   (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
   fun db n
 
-goFirst :: Int -> Int -> IO [BSI.ByteString]
-goFirst count offset = drop offset <$> test03 getNFirstValues (offset + count )
-goLast :: Int -> Int -> IO [BSI.ByteString]
-goLast count offset = drop offset <$> test03 getNLastValues  (offset + count )
 
-goGetAll :: IO ()
 goGetAll = do
   result <- getAll "/tmp/haskell-rocksDB5"
   print result
 
-
--- goF = goFirst 4 1
--- goL = goLast 4 1
-
-
---------------------------------------
--- begin of the Test section
 -- end of the Test section
 --------------------------------------
 
@@ -259,6 +268,16 @@ getMicroBlockByHashDB db mHash = do
                             Right rm -> Just rm
 
   return mb
+
+
+getTransactionsByMicroblockHash :: DBPoolDescriptor -> Hash -> IO (Maybe [TransactionInfo])
+getTransactionsByMicroblockHash db aHash = do
+  mb <- getMicroBlockByHashDB db aHash
+  case mb of
+    Nothing -> return Nothing
+    Just m@(MicroblockBD {..}) -> do
+      txInfo <- getTxs db m
+      return $ Just txInfo
 
 
 getBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe MicroblockAPI)
@@ -312,6 +331,8 @@ getTransactionByHashDB db tHash = do
   return t
 
 
+
+
 deleteMicroblocksByHash :: DBPoolDescriptor -> [BC.ByteString] -> IO ()
 deleteMicroblocksByHash db hashes = deleteByHash (poolMicroblock db) hashes
 
@@ -358,20 +379,26 @@ getAllItems db = do
   Rocks.iterFirst it
   Rocks.iterItems it
 
-getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [TransactionAPI]
-getAllTransactionsDB descr pubKey = do
-  txByte <- withResource (poolTransaction descr) getAllValues
-  -- putStrLn $ show txByte
-  let fun = \t -> case (S.decode t :: Either String TransactionInfo) of
+
+decodeTransactionsAndFilterByKey :: [BSI.ByteString] -> PublicKey -> [TransactionAPI]
+decodeTransactionsAndFilterByKey rawTx pubKey = txAPI
+  where fun = \t -> case (S.decode t :: Either String TransactionInfo) of
                        Left _   -> error "Can not decode TransactionInfo"
                        Right rt -> Just rt
 
-      txInfo = map fun txByte
-      txWithouMaybe = map fromJust (filter (isJust) txInfo)
-      tx = map (\t -> _tx (t  :: TransactionInfo) ) txWithouMaybe
-      txWithKey = filter (\t -> (_owner t == pubKey || _receiver t == pubKey)) tx
-      txAPI = map (\t -> TransactionAPI { _tx = t, _txHash = rHash t}) txWithKey
+        txInfo = map fun rawTx
+        txWithouMaybe = map fromJust (filter (isJust) txInfo)
+        tx = map (\t -> _tx (t  :: TransactionInfo) ) txWithouMaybe
+        txWithKey = filter (\t -> (_owner t == pubKey || _receiver t == pubKey)) tx
+        txAPI = map (\t -> TransactionAPI { _tx = t, _txHash = rHash t}) txWithKey
+
+
+getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [TransactionAPI]
+getAllTransactionsDB descr pubKey = do
+  txByte <- withResource (poolTransaction descr) getAllValues
+  let txAPI = decodeTransactionsAndFilterByKey txByte pubKey
   return txAPI
+
 
 getAllTransactions :: IO ()
 getAllTransactions = do
