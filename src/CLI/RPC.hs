@@ -102,7 +102,7 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum $ \_ aPending -> do
 
               getPartWallet = toMethod "enq_getTransactionsByWallet" f (Required "address" :+: Required "offset" :+: Required "count" :+: ())
                 where
-                  f :: PublicKey -> Integer -> Integer -> RpcResult IO [TransactionAPI]
+                  f :: PublicKey -> Int -> Int -> RpcResult IO [TransactionAPI]
                   f key offset cnt = handle $ getPartTransactions descrDB key offset cnt ch
 
               getSystemInfo = toMethod "enq_getChainInfo" f ()

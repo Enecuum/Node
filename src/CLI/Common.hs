@@ -38,12 +38,14 @@ import           System.Random                         (randomRIO)
 import           Node.Node.Types
 import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
-import           Service.Transaction.Storage            (DBPoolDescriptor, getAllTransactionsDB)
 import           Service.Transaction.Common            as B (getBalanceForKey,
-
                                                              getBlockByHashDB,
                                                              getKeyBlockByHashDB,
-                                                             getTransactionByHashDB)
+                                                             getLastTransactions,
+                                                             getTransactionByHashDB,
+                                                             getTransactionsByMicroblockHash)
+import           Service.Transaction.Storage           (DBPoolDescriptor,
+                                                        getAllTransactionsDB)
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
@@ -104,7 +106,7 @@ getTransactionByHash :: DBPoolDescriptor -> Hash -> InChan MsgToCentralActor -> 
 getTransactionByHash db hash _ = try $ do
   tx <- B.getTransactionByHashDB db hash
   case tx of
-    Nothing -> throw  NoSuchTransactionDB
+    Nothing -> throw  NoSuchMicroBlockDB
     Just t  -> return t
 
 
@@ -115,9 +117,13 @@ getAllTransactions pool key _ = try $ do
     [] -> throw NoTransactionsForPublicKey
     t  -> return t
 
-getPartTransactions :: DBPoolDescriptor -> PublicKey -> Integer -> Integer -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
-getPartTransactions pool key offset count _ = return $ Left NotImplementedException
 
+getPartTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
+getPartTransactions pool key offset count _ = try $ do --return $ Left NotImplementedException
+  tx <- B.getLastTransactions pool key offset count
+  case tx of
+    [] -> throw NoTransactionsForPublicKey
+    t  -> return t
 
 
 sendTrans :: Transaction -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
