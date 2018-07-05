@@ -10,7 +10,6 @@ module Service.Transaction.Common (
   addMacroblockToDB,
   runLedger,
   rHash,
-  getKeyBlockByHashDB,
 --  DBdescriptor(..),
   DBPoolDescriptor(..)
   ) where

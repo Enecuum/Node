@@ -16,17 +16,9 @@ module Node.FileDB.FileServer (
     ,   FileActorRequest(..)
   ) where
 
-
-import              Data.List.Extra
-
-import              Lens.Micro
-import              Lens.Micro.TH
 import              Control.Concurrent.MVar
 import              Control.Concurrent.Chan.Unagi.Bounded
-import qualified    Data.Map as M
 import qualified    Data.Set as S
-
-import              Node.Data.Key
 import              Service.Network.Base
 
 

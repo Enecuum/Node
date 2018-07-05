@@ -119,7 +119,7 @@ getConfigParameters
     ->  BuildConfig
     ->  InChan MsgToCentralActor
     ->  IO (SimpleNodeBuildConfig, PortNumber, String, PortNumber, String, PortNumber, String)
-getConfigParameters aMyNodeId conf ch = do
+getConfigParameters aMyNodeId conf _ = do
   snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case
           Right item              -> return item
           Left (_::SomeException) -> error "Please, specify simpleNodeBuildConfig"

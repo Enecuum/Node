@@ -51,17 +51,17 @@ startNode descrDB buildConf infoCh manager startDo = do
     --tmp
     createDirectoryIfMissing False "data"
 
-    managerChan@(inChanManager, _) <- newChan (2^7)
-    (aMicroblockChan, outMicroblockChan) <- newChan (2^7)
-    (aValueChan, aOutValueChan) <- newChan (2^7)
-    (aTransactionChan, outTransactionChan) <- newChan (2^7)
+    managerChan <- newChan (128)
+    (aMicroblockChan, outMicroblockChan) <- newChan (128)
+    (aValueChan, aOutValueChan) <- newChan (128)
+    (aTransactionChan, outTransactionChan) <- newChan (128)
     config  <- readNodeConfig
     bnList@[Connect aBootIp aBootPort]  <- readBootNodeList $ bootNodeList buildConf
     runClient (showHostAddress aBootIp) (fromEnum aBootPort) "/" $ \aConnect -> do
         WS.sendTextData aConnect ("{\"tag\":\"Action\",\"type\":\"AddToListOfConnects\",\"port\": 1554}" :: T.Text)
-    (aInFileRequestChan, aOutFileRequestChan) <- newChan (2^4)
+    (aInFileRequestChan, aOutFileRequestChan) <- newChan (16)
     void $ C.forkIO $ startFileServer aOutFileRequestChan
-    let portNumber = extConnectPort buildConf
+    --let portNumber = extConnectPort buildConf
     md      <- newIORef $ makeNetworkData bnList config infoCh aInFileRequestChan aMicroblockChan aTransactionChan aValueChan
     void $ C.forkIO $ microblockProc descrDB outMicroblockChan aOutValueChan infoCh
     void $ C.forkIO $ manager managerChan md

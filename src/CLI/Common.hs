@@ -116,21 +116,19 @@ getAllTransactions pool key _ = try $ do
     t  -> return t
 
 getPartTransactions :: DBPoolDescriptor -> PublicKey -> Integer -> Integer -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
-getPartTransactions pool key offset count _ = return $ Left NotImplementedException
+getPartTransactions _ _ _ _ _ = return $ Left NotImplementedException
 
 
 
 sendTrans :: Transaction -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
 sendTrans tx ch aInfoCh = try $ do
-  exp <- (timeout (5 :: Second) $ do
+  expression <- (timeout (5 :: Second) $ do
            sendMetrics tx aInfoCh
            cTime <- getTime
            writeChan ch $ NewTransaction (tx { _timeMaybe = Just cTime } ))
-  case exp of
+  case expression of
     Just _  -> return ()
     Nothing -> throw TransactionChanBusyException
-
-
 
 
 sendNewTrans :: Trans -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result Transaction)
@@ -138,7 +136,7 @@ sendNewTrans aTrans ch aInfoCh = try $ do
   let moneyAmount = Service.Types.txAmount aTrans :: Amount
   let receiverPubKey = recipientPubKey aTrans
   let ownerPubKey = senderPubKey aTrans
-  timePoint <- getTime
+  -- timePoint <- getTime
   keyPairs <- getSavedKeyPairs
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
   case Data.Map.lookup ownerPubKey mapPubPriv of

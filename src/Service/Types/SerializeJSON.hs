@@ -82,7 +82,7 @@ instance FromJSON TransactionInfo
 
 
 instance FromJSON MicroblockV1 where
-  parseJSON (Object v) = undefined
+  parseJSON (Object _) = undefined
       {-MicroblockV1
                            <$> ((v .: "curr") >>= decodeFromText)
                            <*> ((v .: "prev") >>= decodeFromText)

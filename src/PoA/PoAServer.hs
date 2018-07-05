@@ -32,7 +32,6 @@ import              PoA.Pending
 import              Control.Concurrent.Async
 import              Node.Data.Key
 import              Data.Maybe()
-import              Data.Either
 
 
 data ConnectTesterActor = AddConnectToList Connect | TestExistedConnect Connect
