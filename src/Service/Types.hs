@@ -156,7 +156,7 @@ instance Serialize KeyBlockInfo
 
 data TransactionAPI = TransactionAPI {
     _tx     :: Transaction
-  , _txHash :: ByteString
+  , _txHash :: ByteString  -- hash of Transaction
   } deriving (Generic, Show, Eq, Ord, Read)
 instance Serialize TransactionAPI
 
@@ -220,6 +220,7 @@ deriving instance Generic MessageForSign
 data ChainInfo = ChainInfo {
       _emission        :: Integer
     , _curr_difficulty :: Integer
+    , _last_block      :: ByteString
     , _blocks_num      :: Integer
     , _txs_num         :: Integer
     , _nodes_num       :: Integer

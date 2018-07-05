@@ -13,6 +13,7 @@ module Service.Transaction.Common (
   getLastTransactions,
   getTransactionByHashDB,
   getKeyBlockByHashDB,
+  getLastKeyBlock,
 --  DBdescriptor(..),
   DBPoolDescriptor(..)
   ) where
@@ -24,6 +25,7 @@ import           Service.Transaction.Storage (DBPoolDescriptor (..),
                                               getAllTransactionsDB,
                                               getBlockByHashDB,
                                               getKeyBlockByHashDB,
+                                              getLastKeyBlock,
                                               getLastTransactions,
                                               getTransactionByHashDB,
                                               getTransactionsByMicroblockHash,

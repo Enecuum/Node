@@ -170,6 +170,18 @@ getFirst db offset count = drop offset <$> getNFirstValues db (offset + count )
 getLast db  offset count = drop offset <$> getNLastValues db (offset + count )
 
 
+getLastKeyBlock :: DBPoolDescriptor -> IO (Maybe ChainInfo)
+getLastKeyBlock desc = do
+  -- kbByte <- withResource (poolMacroblock desc) (\db -> getLast db 0 1)
+  let kbByte = undefined
+  case kbByte of Nothing -> return Nothing
+                 Just k -> case (S.decode k :: Either String Macroblock) of
+                   Left _  -> error "Can not decode Microblock"
+                   Right r -> do
+                     mb <- tMacroblock2ChainInfo r
+                     return $ Just mb
+
+
 
 getLastTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> IO [TransactionAPI]
 getLastTransactions descr pubKey offset count = do
@@ -206,41 +218,27 @@ getBlockByHashDB db hash = do
   mb <- getMicroBlockByHashDB db hash
   case mb of
     Nothing -> return Nothing
-    Just m@(MicroblockBD {..}) -> do
-      tx <- getTxsMicroblock db m
-      let txAPI = map (\t -> TransactionAPI {_tx = t, _txHash = rHash t}) tx
-      let mbAPI = MicroblockAPI {
-            _prevMicroblock = "",
-            _nextMicroblock = "",
-            _keyBlock,
-            _signAPI = _signBD,
-            _teamKeys,
-            _publisher = read "1" :: PublicKey,
-            _transactionsAPI = txAPI
-            }
-      return (Just mbAPI)
+    Just m  -> do
+      mAPI <- tMicroblockBD2MicroblockAPI db m
+      return $ Just mAPI
 
 
 getKeyBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe MacroblockAPI)
 getKeyBlockByHashDB db kHash = do
   kb <- getByHash (poolMacroblock db) kHash
-  let t = case kb of Nothing -> Nothing
-                     Just j -> case (S.decode j :: Either String Macroblock) of
-                       Left _  -> error "Can not decode Macroblock"
-                       Right r -> Just (tMacroblock2MacroblockAPI r)
-
-
-  return t
+  case kb of Nothing -> return Nothing
+             Just j -> case (S.decode j :: Either String Macroblock) of
+               Left _  -> error "Can not decode Macroblock"
+               Right r -> return $ Just (tMacroblock2MacroblockAPI r)
 
 
 getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo) --Transaction
 getTransactionByHashDB db tHash = do
   tx <- getByHash (poolTransaction db) tHash
-  let t = case tx of Nothing -> Nothing
-                     Just j -> case (S.decode j :: Either String  TransactionInfo) of
-                       Left _   -> error "Can not decode TransactionInfo"
-                       Right rt -> Just rt
-  return t
+  case tx of Nothing -> return Nothing
+             Just j -> case (S.decode j :: Either String  TransactionInfo) of
+               Left _   -> error "Can not decode TransactionInfo"
+               Right rt -> return $ Just rt
 
 
 getByHash :: Pool Rocks.DB -> Hash -> IO (Maybe BSI.ByteString)
@@ -280,20 +278,6 @@ getAllItems db = do
   Rocks.iterItems it
 
 
-dummyMacroblock :: Macroblock
-dummyMacroblock = Macroblock {
-  _prevKBlock = "",
-  _difficulty = 0,
-  _height = 0,
-  _solver = aSolver,
-  _reward = 0,
-  _mblocks = [],
-  _time = 0,
-  _number = 0,
-  _nonce = 0}
-  where aSolver = read "1" :: PublicKey
-
-
 tMicroblockBD2Microblock :: DBPoolDescriptor -> MicroblockBD -> IO Microblock
 tMicroblockBD2Microblock db m@(MicroblockBD {..}) = do
   tx <- getTxsMicroblock db m
@@ -314,6 +298,21 @@ tMicroblock2MicroblockBD (Microblock {..}) = MicroblockBD {
   _numOfBlock }
 
 
+tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> MicroblockBD -> IO MicroblockAPI
+tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) = do
+  tx <- getTxsMicroblock db m
+  let txAPI = map (\t -> TransactionAPI {_tx = t, _txHash = rHash t}) tx
+  return MicroblockAPI {
+            _prevMicroblock = "",
+            _nextMicroblock = "",
+            _keyBlock,
+            _signAPI = _signBD,
+            _teamKeys,
+            _publisher = read "1" :: PublicKey,
+            _transactionsAPI = txAPI
+            }
+
+
 tMacroblock2MacroblockAPI :: Macroblock -> MacroblockAPI
 tMacroblock2MacroblockAPI (Macroblock {..}) = MacroblockAPI {
                                  _prevKBlock,
@@ -327,11 +326,39 @@ tMacroblock2MacroblockAPI (Macroblock {..}) = MacroblockAPI {
                                  }
 
 
+dummyMacroblock :: Macroblock
+dummyMacroblock = Macroblock {
+  _prevKBlock = "",
+  _difficulty = 0,
+  _height = 0,
+  _solver = aSolver,
+  _reward = 0,
+  _mblocks = [],
+  _time = 0,
+  _number = 0,
+  _nonce = 0}
+  where aSolver = read "1" :: PublicKey
+
+
 tKeyBlockInfo2Macroblock :: KeyBlockInfo -> Macroblock
 tKeyBlockInfo2Macroblock (KeyBlockInfo {..}) = Macroblock {
             _prevKBlock = prev_hash,
+            _difficulty = 20,
             _solver,
             _time,
             _number,
             _nonce
           }
+
+
+tMacroblock2ChainInfo :: Macroblock -> IO ChainInfo
+tMacroblock2ChainInfo m@(Macroblock {..}) = do
+  let currentBlock = rHash m
+  return ChainInfo {
+    _emission        = _reward,
+    _curr_difficulty = _difficulty,
+    _last_block      = currentBlock,
+    _blocks_num      = _number,
+    _txs_num         = 0,  -- quantity of all approved transactions
+    _nodes_num       = 0   -- quantity of all active nodes
+    }
