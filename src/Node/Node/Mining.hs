@@ -60,7 +60,7 @@ networkNodeStart (_, aOutChan) aMd = do
                                 (NodeInfo aChan aNodeType)
 
                     BroadcastRequest aBroadcastMsg aIdFrom aNodeType -> do
-                        writeChan (aData^.valueChan) aBroadcastMsg
+                        void $ tryWriteChan (aData^.valueChan) aBroadcastMsg
                         forM_ (aData^.connects) $ \aNode -> when
                             (aNodeType == aNode^.nodeType || aNodeType == All) $
                             void $ tryWriteChan (aNode^.nodeChan) $ MsgBroadcastMsg aBroadcastMsg aIdFrom
