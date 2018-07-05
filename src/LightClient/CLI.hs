@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TemplateHaskell           #-}
+{-# OPTIONS_GHC -fno-warn-unused-binds #-}
 
 
 module LightClient.CLI (
@@ -198,7 +199,7 @@ loadMessages ch = do
   case result of
     (Left err)    -> putStrLn $ "sendMessageBroadcast error: " ++ show err
     (Right msgs ) -> putStrLn $ "New messages: " ++ (unlines $ map showMsg msgs)
-                  where showMsg (MsgTo id m) = "Message from " ++ show id ++ ": " ++ m
+                  where showMsg (MsgTo aId m) = "Message from " ++ show aId ++ ": " ++ m
 
 
 getAllTransactions :: PublicKey -> WS.Connection -> IO ()

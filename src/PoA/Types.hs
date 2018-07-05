@@ -20,8 +20,6 @@ import qualified    Data.Text as T
 import              Data.Hex
 import              Data.Maybe
 import              Control.Monad.Extra
-import              Control.Exception
--- import              Data.Either
 import qualified    Data.Serialize as S
 import              Service.Types (Microblock(..), Transaction)
 import              Service.Network.Base
@@ -151,9 +149,6 @@ data NNToPPMessage
     | ResponseIsInPending Bool
     | ResponseTransactionValid Bool
 
-
-
---myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
 
 myUnhex :: IsString a => T.Text -> Either a String
 myUnhex aString = case unhex $ T.unpack aString of

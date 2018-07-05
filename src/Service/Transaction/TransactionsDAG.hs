@@ -37,7 +37,7 @@ getSignTransactions quantityOfTx keys'ns (x,y) = do
 getTransactions :: [KeyPair] -> QuantityOfTransactions-> IO [Transaction] --IO DAG
 getTransactions keys quantityTx = do
   let quantityRegistereKeyTx       = length keys
-  let pubs    = map (\(KeyPair pub _) -> pub) keys
+  --let pubs    = map (\(KeyPair pub _) -> pub) keys
   let keys'ns = zip [1..quantityRegistereKeyTx] keys
   let quantityBasicTx = quantityTx-quantityRegistereKeyTx
   basicTx <- loopTransaction keys'ns quantityBasicTx
