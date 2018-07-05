@@ -306,7 +306,7 @@ instance ToJSON NNToPPMessage where
     toJSON (ResponseClientId aNodeId) = object [
         "tag"       .= ("Response"  :: String),
         "type"      .= ("NodeId"   :: String),
-        "msg"       .= nodeIdToUnxed aNodeId
+        "node_id"   .= nodeIdToUnxed aNodeId
       ]
 
 
