@@ -44,7 +44,8 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
 
     (aInChan, aOutChan) <- newChan 64
     void $ C.forkIO $ forever $ readChan aOutChan >>= \case
-        AddConnectToList aConn@(Connect aHostAdress aPort) -> void $ C.forkIO $
+        AddConnectToList aConn@(Connect aHostAdress aPort) -> void $ C.forkIO $ do
+            C.threadDelay 3000000
             runClient (showHostAddress aHostAdress) (fromEnum aPort) "/" $
                 \_ -> void $ tryWriteChan aFileServerChan $ AddToFile [aConn]
 
