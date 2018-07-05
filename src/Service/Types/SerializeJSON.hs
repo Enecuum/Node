@@ -126,7 +126,7 @@ instance ToJSON Transaction where
            -- "sign"      .= _signature tx,
            "uuid"      .= _uuid tx
            ]
-       ++ case _timeMaybe (tx :: Transaction) of
+       ++ case _timestamp (tx :: Transaction) of
             Nothing -> []
             Just t  -> [ "timestamp" .= t ]
 

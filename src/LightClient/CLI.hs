@@ -155,7 +155,7 @@ sendTrans transactionsFile walletsFile ch = do
         result <- runExceptT $ newTx ch signTx
         case result of
           (Left err) -> putStrLn $ "Send transaction error: " ++ show err
-          (Right _ ) -> putStrLn ("Transaction done: " ++ show signTx)
+          (Right h ) -> putStrLn ("Transaction done: " ++ show signTx ++ "\n" ++ show h)
 
 printVersion :: IO ()
 printVersion = putStrLn ("--" ++ "2.0.0" ++ "--")

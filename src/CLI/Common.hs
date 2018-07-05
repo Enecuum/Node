@@ -45,7 +45,8 @@ import           Service.Transaction.Common            as B (getBalanceForKey,
                                                              getTransactionByHashDB,
                                                              getTransactionsByMicroblockHash)
 import           Service.Transaction.Storage           (DBPoolDescriptor,
-                                                        getAllTransactionsDB)
+                                                        getAllTransactionsDB,
+                                                        rHash)
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
@@ -126,21 +127,21 @@ getPartTransactions pool key offset count _ = try $ do --return $ Left NotImplem
     t  -> return t
 
 
-sendTrans :: Transaction -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
+sendTrans :: Transaction -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result Hash)
 sendTrans tx ch aInfoCh = try $ do
   exp <- (timeout (5 :: Second) $ do
            sendMetrics tx aInfoCh
            cTime <- getTime
-           writeChan ch $ NewTransaction (tx { _timeMaybe = Just cTime } ))
+           writeChan ch $ NewTransaction (tx { _timestamp = Just cTime } )
+           return $ rHash tx)
   case exp of
-    Just _  -> return ()
+    Just h  -> return $ Hash h
     Nothing -> throw TransactionChanBusyException
 
 
 
-
-sendNewTrans :: Trans -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result Transaction)
-sendNewTrans aTrans ch aInfoCh = try $ do
+sendNewTrans :: Trans -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result Hash)
+sendNewTrans aTrans ch aInfoCh = do
   let moneyAmount = Service.Types.txAmount aTrans :: Amount
   let receiverPubKey = recipientPubKey aTrans
   let ownerPubKey = senderPubKey aTrans
@@ -154,8 +155,7 @@ sendNewTrans aTrans ch aInfoCh = try $ do
       let tx  = Transaction ownerPubKey receiverPubKey moneyAmount ENQ Nothing Nothing uuid
       sign <- getSignature ownerPrivKey tx
       let signTx  = tx { _signature = Just sign }
-      _ <- sendTrans signTx ch aInfoCh
-      return signTx
+      sendTrans signTx ch aInfoCh
 
 
 
