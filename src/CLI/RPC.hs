@@ -108,7 +108,7 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum $ \_ aPending -> do
               getSystemInfo = toMethod "enq_getChainInfo" f ()
                 where
                   f :: RpcResult IO ChainInfo
-                  f = handle $ getChainInfo ch
+                  f = handle $ getChainInfo descrDB ch
 
 ------------- test functions
               createNTx = toMethod "gen_n_tx" f (Required "x" :+: ())

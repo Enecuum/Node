@@ -253,6 +253,7 @@ instance ToJSON ChainInfo where
     toJSON info = object  [
           "emission"   .= _emission info
         , "difficulty" .= _curr_difficulty info
+        , "last_block" .= _last_block info
         , "blocks_num" .= _blocks_num info
         , "txs_num"    .= _txs_num info
         , "nodes_num"  .= _nodes_num info
@@ -262,6 +263,7 @@ instance FromJSON ChainInfo where
     parseJSON (Object o) = ChainInfo
                <$> o .: "emission"
                <*> o .: "difficulty"
+               <*> o .: "last_block"
                <*> o .: "blocks_num"
                <*> o .: "txs_num"
                <*> o .: "nodes_num"

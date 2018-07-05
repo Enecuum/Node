@@ -41,6 +41,7 @@ import           Service.System.Directory              (getKeyFilePath, getTime)
 import           Service.Transaction.Common            as B (getBalanceForKey,
                                                              getBlockByHashDB,
                                                              getKeyBlockByHashDB,
+                                                             getLastKeyBlock,
                                                              getLastTransactions,
                                                              getTransactionByHashDB)
 import           Service.Transaction.Storage           (DBPoolDescriptor,
@@ -63,6 +64,7 @@ data CLIException = WrongKeyOwnerException
                   | NoSuchMicroBlockDB
                   | NoSuchMacroBlockDB
                   | NoSuchTransactionDB
+                  | NoClosedKeyBlockInDB
                   | TransactionChanBusyException
                   | OtherException
   deriving Show
@@ -98,8 +100,12 @@ getKeyBlockByHash db hash _ = try $ do
     Just m  -> return m
 
 
-getChainInfo :: InChan MsgToCentralActor -> IO (Result ChainInfo)
-getChainInfo _ = return $ Left NotImplementedException
+getChainInfo :: DBPoolDescriptor -> InChan MsgToCentralActor -> IO (Result ChainInfo)
+getChainInfo db _ = try $ do
+  k <- getLastKeyBlock db
+  case k of
+    Nothing -> throw NoClosedKeyBlockInDB
+    Just j  -> return j
 
 
 getTransactionByHash :: DBPoolDescriptor -> Hash -> InChan MsgToCentralActor -> IO (Result TransactionInfo)
@@ -216,7 +222,6 @@ generateNTransactions qTx ch m = try $ do
   putStrLn "Transactions are created"
 
 generateTransactionsForever :: InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
--- generateTransactionsForever :: ManagerMiningMsg a => Chan a -> Chan InfoMsg -> IO (Result ())
 generateTransactionsForever ch m = try $ forever $ do
                                 quantityOfTranscations <- randomRIO (20,30)
                                 tx <- genNTx quantityOfTranscations

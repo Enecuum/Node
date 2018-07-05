@@ -12,7 +12,8 @@ module Service.Transaction.Common (
   rHash,
   getLastTransactions,
   getTransactionByHashDB,
---  DBdescriptor(..),
+  getKeyBlockByHashDB,
+  getLastKeyBlock,
   DBPoolDescriptor(..)
   ) where
 import           Service.Transaction.Balance (addMacroblockToDB,
@@ -23,6 +24,7 @@ import           Service.Transaction.Storage (DBPoolDescriptor (..),
                                               getAllTransactionsDB,
                                               getBlockByHashDB,
                                               getKeyBlockByHashDB,
+                                              getLastKeyBlock,
                                               getLastTransactions,
                                               getTransactionByHashDB,
                                               getTransactionsByMicroblockHash,
