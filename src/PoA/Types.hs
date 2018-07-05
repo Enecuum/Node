@@ -20,6 +20,7 @@ import qualified    Data.Text as T
 import              Data.Hex
 import              Data.Maybe
 import              Control.Monad.Extra
+import              Control.Exception
 -- import              Data.Either
 import qualified    Data.Serialize as S
 import              Service.Types (Microblock(..), Transaction)
@@ -32,6 +33,7 @@ import qualified    Data.HashMap.Strict as H
 import qualified    Data.Vector as V
 import              Data.Scientific
 import              Data.Either
+import              Text.Read
 
 -- TODO: aception of msg from a PoA/PoW.
 -- ----: parsing - ok!
@@ -100,11 +102,8 @@ data PPToNNMessage
     | MsgMicroblock {
         microblock :: Microblock
     }
-    -- Macroblock was finallized.
-    -- | MsgMacroblock {
-    --     macroblock :: Macroblock
-    -- }
 
+    | ActionNodeStillAliveTest PortNumber HostAddress
     | IsInPendingRequest Transaction
     | GetPendingRequest
     | AddTransactionRequest Transaction
@@ -228,6 +227,14 @@ instance FromJSON PPToNNMessage where
                 AddTransactionRequest <$> aMessage .: "transaction"
             ("Action", "AddToListOfConnects") ->
                 ActionAddToListOfConnects <$> aMessage .: "port"
+
+            ("Action", "NodeStillAliveTest") -> do
+                aPort        <- aMessage .: "port"
+                aIp          <- aMessage .: "ip"
+                case readMaybe aIp of
+                    Just aJustIp -> return $ ActionNodeStillAliveTest
+                        (toEnum aPort) (toHostAddress aJustIp)
+                    _ -> mzero
             _ -> mzero
 
 

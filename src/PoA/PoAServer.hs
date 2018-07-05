@@ -30,6 +30,7 @@ import              PoA.Pending
 import              Control.Concurrent.Async
 import              Node.Data.Key
 import              Data.Maybe()
+import              Data.Either
 
 
 serverPoABootNode :: PortNumber -> InChan InfoMsg -> InChan FileActorRequest -> IO ()
@@ -56,6 +57,8 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
 
                 ActionAddToListOfConnects aPort ->
                     writeChan aFileServerChan $ AddToFile [Connect aHostAdress (toEnum aPort)]
+
+                ActionNodeStillAliveTest aPort aIp -> return ()
 
                 _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
                     "Broken message from PP " ++ show aMsg
@@ -196,8 +199,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                     writeInChan ch $ NewTransaction aTransaction
                     WS.sendTextData aConnect $ A.encode $ ResponseTransactionValid True
 
-                ActionAddToListOfConnects _ -> undefined
-
+                _ -> return ()
             Left a -> do
                 -- TODO: Include ID if exist.
                 writeLog aInfoChan [ServePoATag] Warning $
