@@ -118,7 +118,7 @@ getTxs desc (MicroblockBD _ _ _ txHashes _) = do
     else do
          let txUntiped = map fromJust (filter (isJust) maybeTxUntiped)
              extract t = case S.decode t :: Either String TransactionInfo of
-                            Left _  -> error "Can not decode TransactionInfo"
+                            Left e  -> error ("Can not decode TransactionInfo " ++ e)
                             Right r -> r
              txDecoded = map extract txUntiped
              -- tx = map (\t -> _tx  (t :: TransactionInfo)) txDecoded
@@ -227,17 +227,8 @@ getKeyBlockByHashDB db kHash = do
   let t = case kb of Nothing -> Nothing
                      Just j -> case (S.decode j :: Either String Macroblock) of
                        Left _  -> error "Can not decode Macroblock"
-                       Right (Macroblock {..}) -> Just a
-                         where a = MacroblockAPI {
-                                 _prevKBlock,
-                                 _nextKBlock = "",
-                                 _difficulty,
-                                 _height,
-                                 _solver,
-                                 _reward,
-                                 _txsCnt = 0,
-                                 _mblocks
-                                 }
+                       Right r -> Just (tMacroblock2MacroblockAPI r)
+
 
   return t
 
@@ -253,9 +244,7 @@ getTransactionByHashDB db tHash = do
 
 
 getByHash :: Pool Rocks.DB -> Hash -> IO (Maybe BSI.ByteString)
-getByHash pool hash = do
-  let (Hash key) = hash
-  funR pool key
+getByHash pool aHash = (\(Hash key) -> funR pool key) aHash
 
 
 decodeTransactionsAndFilterByKey :: [BSI.ByteString] -> PublicKey -> [TransactionAPI]
@@ -274,8 +263,7 @@ decodeTransactionsAndFilterByKey rawTx pubKey = txAPI
 getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [TransactionAPI]
 getAllTransactionsDB descr pubKey = do
   txByte <- withResource (poolTransaction descr) getAllValues
-  let txAPI = decodeTransactionsAndFilterByKey txByte pubKey
-  return txAPI
+  return $ decodeTransactionsAndFilterByKey txByte pubKey
 
 
 getAllValues :: MonadUnliftIO m => Rocks.DB -> m [BSI.ByteString]
@@ -290,3 +278,60 @@ getAllItems db = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterFirst it
   Rocks.iterItems it
+
+
+dummyMacroblock :: Macroblock
+dummyMacroblock = Macroblock {
+  _prevKBlock = "",
+  _difficulty = 0,
+  _height = 0,
+  _solver = aSolver,
+  _reward = 0,
+  _mblocks = [],
+  _time = 0,
+  _number = 0,
+  _nonce = 0}
+  where aSolver = read "1" :: PublicKey
+
+
+tMicroblockBD2Microblock :: DBPoolDescriptor -> MicroblockBD -> IO Microblock
+tMicroblockBD2Microblock db m@(MicroblockBD {..}) = do
+  tx <- getTxsMicroblock db m
+  return Microblock {
+  _keyBlock,
+  _sign          = _signBD,
+  _teamKeys,
+  _transactions  = tx,
+  _numOfBlock
+  }
+
+tMicroblock2MicroblockBD :: Microblock -> MicroblockBD
+tMicroblock2MicroblockBD (Microblock {..}) = MicroblockBD {
+  _keyBlock,
+  _signBD = _sign,
+  _teamKeys,
+  _transactionsBD = map rHash _transactions,
+  _numOfBlock }
+
+
+tMacroblock2MacroblockAPI :: Macroblock -> MacroblockAPI
+tMacroblock2MacroblockAPI (Macroblock {..}) = MacroblockAPI {
+                                 _prevKBlock,
+                                 _nextKBlock = "",
+                                 _difficulty,
+                                 _height,
+                                 _solver,
+                                 _reward,
+                                 _txsCnt = 0,
+                                 _mblocks
+                                 }
+
+
+tKeyBlockInfo2Macroblock :: KeyBlockInfo -> Macroblock
+tKeyBlockInfo2Macroblock (KeyBlockInfo {..}) = Macroblock {
+            _prevKBlock = prev_hash,
+            _solver,
+            _time,
+            _number,
+            _nonce
+          }

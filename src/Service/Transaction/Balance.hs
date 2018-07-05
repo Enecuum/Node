@@ -175,8 +175,8 @@ addMicroblockToDB db m aInfoChan =  do
 
 
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> Macroblock -> IO ()
-writeMacroblockToDB desc aInfoChan keyBlock aMacroblock = do
-  let key = keyBlock
+writeMacroblockToDB desc aInfoChan hashOfKeyBlock aMacroblock = do
+  let key = hashOfKeyBlock
       val = S.encode aMacroblock
   funW (poolMacroblock desc) [(key,val)]
   writeLog aInfoChan [BDTag] Info ("Write Macroblock " ++ show key ++ "to DB")
@@ -216,7 +216,7 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
 
   if keyBlock /= "kblock" then return ()
   else do
-    let keyBlockInfoObject@(KeyBlockInfo {..}) = case parseMaybe (.: "body") aValue of
+    let keyBlockInfoObject = case parseMaybe (.: "body") aValue of
             Nothing     -> error "Can not parse KeyBlockInfo" --Data.Map.empty
             Just kBlock -> kBlock :: KeyBlockInfo --Map T.Text Value
 
@@ -230,46 +230,4 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
             Left _  -> error "Can not decode Macroblock"
             Right r -> return r
 
-    -- fill data for key block
-    let fMacroblock = aMacroblock {
-            _prevKBlock = prev_hash,
-            _difficulty = 20,
-            _solver,
-            _time,
-            _number,
-            _nonce
-          }
-    writeMacroblockToDB db aInfoChan keyBlockHash fMacroblock
-
-
-dummyMacroblock :: Macroblock
-dummyMacroblock = Macroblock {
-  _prevKBlock = "",
-  _difficulty = 0,
-  _height = 0,
-  _solver = aSolver,
-  _reward = 0,
-  _mblocks = [],
-  _time = 0,
-  _number = 0,
-  _nonce = 0}
-  where aSolver = read "1" :: PublicKey
-
-tMicroblockBD2Microblock :: DBPoolDescriptor -> MicroblockBD -> IO Microblock
-tMicroblockBD2Microblock db m@(MicroblockBD {..}) = do
-  tx <- getTxsMicroblock db m
-  return Microblock {
-  _keyBlock,
-  _sign          = _signBD,
-  _teamKeys,
-  _transactions  = tx,
-  _numOfBlock
-  }
-
-tMicroblock2MicroblockBD :: Microblock -> MicroblockBD
-tMicroblock2MicroblockBD (Microblock {..}) = MicroblockBD {
-  _keyBlock,
-  _signBD = _sign,
-  _teamKeys,
-  _transactionsBD = map rHash _transactions,
-  _numOfBlock }
+    writeMacroblockToDB db aInfoChan keyBlockHash $ tKeyBlockInfo2Macroblock keyBlockInfoObject
