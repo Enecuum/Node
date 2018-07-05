@@ -44,10 +44,18 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
 
     (aInChan, aOutChan) <- newChan 64
     void $ C.forkIO $ forever $ readChan aOutChan >>= \case
-        AddConnectToList aConn@(Connect aHostAdress aPort) -> void $ C.forkIO $ do
+        AddConnectToList aConn@(Connect aHostAdress aPort) -> void $ C.forkIO $
             runClient (showHostAddress aHostAdress) (fromEnum aPort) "/" $
-                \_ -> writeChan aFileServerChan $ AddToFile [aConn]
-        _ -> return ()
+                \_ -> void $ tryWriteChan aFileServerChan $ AddToFile [aConn]
+
+        TestExistedConnect aConn@(Connect aHostAdress aPort) -> void $ C.forkIO $ do
+            aConnects <- getRecords aFileServerChan
+            when (aConn`elem`aConnects) $ do
+                aOk <- try $ runClient (showHostAddress aHostAdress) (fromEnum aPort) "/" $ \_ -> return ()
+                case aOk of
+                    Left (_ :: SomeException) ->
+                        void $ tryWriteChan aFileServerChan $ DeleteFromFile aConn
+                    _ -> return ()
 
     runServer aRecivePort $ \aHostAdress aPending -> do
         aConnect <- WS.acceptRequest aPending
@@ -70,7 +78,8 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                 ActionAddToListOfConnects aPort ->
                     void $ tryWriteChan aInChan $ AddConnectToList (Connect aHostAdress (toEnum aPort))
 
-                ActionNodeStillAliveTest aPort aIp -> return ()
+                ActionNodeStillAliveTest aPort aIp ->
+                    void $ tryWriteChan aInChan $ TestExistedConnect (Connect aIp aPort)
 
                 _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
                     "Broken message from PP " ++ show aMsg
