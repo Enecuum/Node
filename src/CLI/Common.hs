@@ -42,8 +42,7 @@ import           Service.Transaction.Common            as B (getBalanceForKey,
                                                              getBlockByHashDB,
                                                              getKeyBlockByHashDB,
                                                              getLastTransactions,
-                                                             getTransactionByHashDB,
-                                                             getTransactionsByMicroblockHash)
+                                                             getTransactionByHashDB)
 import           Service.Transaction.Storage           (DBPoolDescriptor,
                                                         getAllTransactionsDB,
                                                         rHash)
@@ -120,8 +119,8 @@ getAllTransactions pool key _ = try $ do
 
 
 getPartTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
-getPartTransactions pool key offset count _ = try $ do --return $ Left NotImplementedException
-  tx <- B.getLastTransactions pool key offset count
+getPartTransactions pool key offset aCount _ = try $ do --return $ Left NotImplementedException
+  tx <- B.getLastTransactions pool key offset aCount
   case tx of
     [] -> throw NoTransactionsForPublicKey
     t  -> return t
@@ -129,12 +128,12 @@ getPartTransactions pool key offset count _ = try $ do --return $ Left NotImplem
 
 sendTrans :: Transaction -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result Hash)
 sendTrans tx ch aInfoCh = try $ do
-  exp <- (timeout (5 :: Second) $ do
+  aExp <- (timeout (5 :: Second) $ do
            sendMetrics tx aInfoCh
            cTime <- getTime
            writeChan ch $ NewTransaction (tx { _timestamp = Just cTime } )
            return $ rHash tx)
-  case exp of
+  case aExp of
     Just h  -> return $ Hash h
     Nothing -> throw TransactionChanBusyException
 
@@ -145,7 +144,7 @@ sendNewTrans aTrans ch aInfoCh = do
   let moneyAmount = Service.Types.txAmount aTrans :: Amount
   let receiverPubKey = recipientPubKey aTrans
   let ownerPubKey = senderPubKey aTrans
-  timePoint <- getTime
+  --timePoint <- getTime
   keyPairs <- getSavedKeyPairs
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
   case Data.Map.lookup ownerPubKey mapPubPriv of

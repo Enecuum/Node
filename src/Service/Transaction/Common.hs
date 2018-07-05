@@ -12,7 +12,6 @@ module Service.Transaction.Common (
   rHash,
   getLastTransactions,
   getTransactionByHashDB,
-  getKeyBlockByHashDB,
 --  DBdescriptor(..),
   DBPoolDescriptor(..)
   ) where

@@ -12,24 +12,12 @@ module Service.Transaction.Test where
 
 import           Service.Transaction.Storage
 
-import           Control.Exception
-import           Control.Monad                       (replicateM)
-import qualified Control.Monad.Catch                 as E
-import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Resource
-import           Control.Monad.Trans.State           (StateT, evalStateT, get,
-                                                      put)
-import           Control.Retry
-import qualified Crypto.Hash.SHA256                  as SHA
 import           Data.Aeson
-import qualified Data.ByteString.Base64              as Base64
 import qualified Data.ByteString.Char8               as BC
 import qualified Data.ByteString.Internal            as BSI
 import           Data.Default                        (def)
-import           Data.Maybe
-import           Data.Pool
-import qualified Data.Serialize                      as S (Serialize, decode,
-                                                           encode)
+import qualified Data.Serialize                      as S (decode, encode)
 import qualified "rocksdb-haskell" Database.RocksDB  as Rocks
 import           Service.System.Directory            (getLedgerFilePath,
                                                       getMacroblockFilePath,
@@ -207,7 +195,7 @@ test03 fun n  = runResourceT $ do
   (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
   fun db n
 
-
+goGetAll :: IO ()
 goGetAll = do
   result <- getAll "/tmp/haskell-rocksDB5"
   print result
@@ -220,7 +208,7 @@ goGetAll = do
 -- goF = goFirst 4 1
 -- goL = goLast 4 1
 
-
+test02 :: IO ()
 test02 = do
   let path = "/tmp/haskell-rocksDB5"
   db <- Rocks.open path def{Rocks.createIfMissing=True}
@@ -239,7 +227,7 @@ test02 = do
   putStrLn $ show result
 
 
-
+test01 :: IO ()
 test01 = do
   let path = "/tmp/haskell-rocksDB6"
   db <- Rocks.open path def{Rocks.createIfMissing=True}

@@ -21,7 +21,6 @@ import           Control.Monad
 import           Data.Aeson
 import           Data.Aeson.Types                      (parseMaybe)
 import qualified Data.ByteString.Char8                 as BC
-import qualified Data.ByteString.Internal              as BSI
 import           Data.Default                          (def)
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
@@ -29,8 +28,7 @@ import           Data.List                             (sortBy)
 import           Data.Maybe
 import           Data.Ord                              (comparing)
 import           Data.Pool
-import qualified Data.Serialize                        as S (Serialize, decode,
-                                                             encode)
+import qualified Data.Serialize                        as S (decode, encode)
 import           Data.Typeable
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging

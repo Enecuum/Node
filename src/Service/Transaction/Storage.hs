@@ -97,12 +97,12 @@ rHash key = Base64.encode . SHA.hash . S.encode $ key
 
 
 funW db aMapKeyValue = do
-  let fun = (\db -> Rocks.write db def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) aMapKeyValue))
+  let fun = (\aDb -> Rocks.write aDb def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) aMapKeyValue))
   withResource db fun
 
 
 funR db key = do
-  let fun = (\db -> Rocks.get db Rocks.defaultReadOptions key)
+  let fun = (\aDb -> Rocks.get aDb Rocks.defaultReadOptions key)
   withResource db fun
 -- end of the Database structure  section
 --------------------------------------
@@ -126,7 +126,7 @@ getTxs desc (MicroblockBD _ _ _ txHashes _) = do
 
 
 getTxsMicroblock :: DBPoolDescriptor -> MicroblockBD -> IO [Transaction]
-getTxsMicroblock db mb@(MicroblockBD _ _ _ txHashes _) = do
+getTxsMicroblock db mb@(MicroblockBD _ _ _ _ _) = do
   txDecoded <- getTxs db mb
   let tx = map (\t -> _tx  (t :: TransactionInfo)) txDecoded
   return tx
@@ -158,21 +158,23 @@ getNLastValuesT = do
   put it
   return v
 
-
+getNLastValues :: (MonadTrans t, MonadResource (t IO)) =>
+                          Rocks.DB -> Int -> t IO [BSI.ByteString]
 getNLastValues db n = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterLast it
   vs <- lift $ evalStateT (replicateM n getNLastValuesT) it
   return vs
 
-
+getFirst :: (MonadResource (t IO), MonadTrans t) =>
+                    Rocks.DB -> Int -> Int -> t IO [BSI.ByteString]
 getFirst db offset count = drop offset <$> getNFirstValues db (offset + count )
 getLast db  offset count = drop offset <$> getNLastValues db (offset + count )
 
 
 
 getLastTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> IO [TransactionAPI]
-getLastTransactions descr pubKey offset count = do
+getLastTransactions _ pubKey _ _ = do
   -- let fun = \db -> getLast db offset count
   -- rawTxInfo <- withResource (poolTransaction descr) fun
   let rawTxInfo = undefined

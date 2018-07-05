@@ -27,9 +27,6 @@ import              Data.IP
 import              Node.Data.Key
 import              Service.Types.SerializeJSON()
 import              Service.Types.SerializeInstances
-import qualified    Data.HashMap.Strict as H
-import qualified    Data.Vector as V
-import              Data.Scientific
 import              Data.Either
 import              Text.Read
 import              Crypto.PubKey.ECC.ECDSA
@@ -200,7 +197,7 @@ instance FromJSON PPToNNMessage where
                     _ -> mzero
             ("Action", "Connect") -> do
                 aNodeType :: T.Text  <- aMessage .: "node_type"
-                let aType = readNodeType aNodeType
+                --let aType = readNodeType aNodeType
                 case readNodeType aNodeType of
                     NN -> do
                         aPort       <- aMessage .: "port"
