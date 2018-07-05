@@ -194,7 +194,7 @@ writeMicroblockDB db aInfoChan m = do
 writeTransactionDB :: Pool Rocks.DB -> InChan InfoMsg -> [Transaction] -> BC.ByteString -> IO ()
 writeTransactionDB dbTransaction aInfoChan txs hashOfMicroblock = do
   let txInfo = \tx1 num -> TransactionInfo tx1 hashOfMicroblock num
-      txKeyValue = map (\(t,n) -> (rHash t, S.encode (txInfo t n)) ) (zip txs [1..])
+      txKeyValue = map (\(t,n) -> (rHash $ t { _timestamp = Nothing } , S.encode (txInfo t n)) ) (zip txs [1..])
   funW dbTransaction txKeyValue
   writeLog aInfoChan [BDTag] Info ("Write Transactions to Transaction table")
 

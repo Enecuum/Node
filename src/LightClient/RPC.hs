@@ -35,7 +35,7 @@ type Result a = RpcResult IO a
 
 
 -- Client-side function's signature
-newTxSig :: Signature (Transaction ::: ()) ()
+newTxSig :: Signature (Transaction ::: ()) Hash
 newTxSig = Signature "enq_sendTransaction" ("tx" ::: ())
 
 reqLedgerSig :: Signature (PublicKey ::: ()) Amount
@@ -70,7 +70,7 @@ loadNewMsgSig :: Signature () [MsgTo]
 loadNewMsgSig = Signature "load_messages" ()
 
 -- Bind function signature with RPC connection
-newTx :: WS.Connection -> Transaction -> Result ()
+newTx :: WS.Connection -> Transaction -> Result Hash
 newTx h = toFunction (connectionWithTimeOut h) newTxSig
 
 reqLedger :: WS.Connection -> PublicKey -> Result Amount

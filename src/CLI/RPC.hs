@@ -72,7 +72,7 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum $ \_ aPending -> do
 
               createTx = toMethod "enq_sendTransaction" f (Required "tx" :+: ())
                 where
-                  f :: Transaction -> RpcResult IO ()
+                  f :: Transaction -> RpcResult IO Hash
                   f tx = handle $ sendTrans tx ch aInfoCh
 
               balanceReq = toMethod "enq_getBalance" f (Required "address" :+: ())
