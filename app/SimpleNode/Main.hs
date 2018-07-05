@@ -47,7 +47,7 @@ main =  do
 
             void $ startNode rocksDB conf aInfoChanIn networkNodeStart $
                 \(ch, _) aChan aMicroblockChan aMyNodeId aFileChan -> do
-                    metronomeS 400000 (writeChan ch CleanAction)
+                    metronomeS 400000 (void $ tryWriteChan ch CleanAction)
 
                     (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id) <- getConfigParameters aMyNodeId conf ch
 

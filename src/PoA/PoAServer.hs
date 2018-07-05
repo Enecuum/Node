@@ -88,12 +88,6 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                 writeLog aInfoChan [ServerBootNodeTag] Warning $
                     "Broken message from PP " ++ show aMsg ++ " " ++ a
 
-{-
-writeChan (aData^.fileServerChan) $
-        FileActorRequestNetLvl $ UpdateFile (aData^.myNodeId)
-        (NodeInfoListNetLvl [(aNodeId, Connect (aNode^.nodeHost) (aNode^.nodePort))])
-
--}
 
 getRecords :: InChan FileActorRequest -> IO [Connect]
 getRecords aChan = do
@@ -118,26 +112,41 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
 
-        WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
-        aId <- newEmptyMVar
-        (aInpChan, aOutChan) <- newChan 64
-        -- writeChan ch $ connecting to PoA, the PoA have id.
-        void $ race
-            (aSender aId aConnect aOutChan)
-            (aReceiver aId aConnect aInpChan inChanPending)
-  where
-    aSender aId aConnect aNewChan = forever (do
-        aMsg <- readChan aNewChan
-        WS.sendTextData aConnect $ A.encode aMsg) `finally` (do
-            aIsEmpty <- isEmptyMVar aId
-            unless aIsEmpty $ do
-                aDeadId <- readMVar aId
-                writeChan ch $ NodeIsDisconnected aDeadId)
+        aMsg <- WS.receiveData aConnect
+        case A.eitherDecodeStrict aMsg of
+            Right (NNConnection aPortNumber aPublicPoint aNodeId) -> return ()
+            Right (CNConnection aNodeType (Just aNodeId)) -> do
+                (aInpChan, aOutChan) <- newChan 64
+                sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan
 
-    aReceiver aId aConnect aNewChan aPendingChan = forever $ do
+                void $ race
+                    (aSender aNodeId aConnect aOutChan)
+                    (aReceiver aNodeId aConnect inChanPending)
+            Right (CNConnection aNodeType Nothing) -> do
+                aNodeId <- generateClientId []
+                WS.sendTextData aConnect $ A.encode $ ResponseClientId aNodeId
+                (aInpChan, aOutChan) <- newChan 64
+                sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan
+
+                void $ race
+                    (aSender aNodeId aConnect aOutChan)
+                    (aReceiver aNodeId aConnect inChanPending)
+
+            Right _ -> do
+                writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg
+                WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"ErrorOfConnect\", \"Msg\":" ++ show aMsg ++ ", \"comment\" : \"not a connect msg\"}")
+
+            Left a -> do
+                writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ a
+                WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"ErrorOfConnect\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
+
+  where
+    aSender aId aConnect aNewChan = forever (WS.sendTextData aConnect . A.encode =<< readChan aNewChan)
+        `finally` writeChan ch (NodeIsDisconnected aId)
+
+    aReceiver aId aConnect aPendingChan = forever $ do
         aMsg <- WS.receiveData aConnect
         writeLog aInfoChan [ServePoATag] Info $ "Raw msg: " ++ show aMsg
-        aOk <- isEmptyMVar aId
         case A.eitherDecodeStrict aMsg of
             Right a -> case a of
                 -- REVIEW: Check fair distribution of transactions between nodes
@@ -149,24 +158,14 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                         forM_ (take aNum $ cycle aTransactions) $ \aTransaction  -> do
                             writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
                             WS.sendTextData aConnect $ A.encode $ ResponseTransaction aTransaction
-                MsgMicroblock aMicroblock
-                    | not aOk -> do
-                        aSenderId <- readMVar aId
+                MsgMicroblock aMicroblock -> do
                         writeLog aInfoChan [ServePoATag] Info $ "Recived MBlock: " ++ show aMicroblock
-                        sendMsgToCentralActor ch $ AcceptedMicroblock aMicroblock aSenderId
-                    | otherwise -> do
-                        writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without PPId " ++ show aMsg
-                        WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
+                        sendMsgToCentralActor ch $ AcceptedMicroblock aMicroblock aId
 
-                RequestBroadcast aRecipientType aBroadcastMsg
-                    | not aOk -> do
-                        aSenderId <- readMVar aId
+                RequestBroadcast aRecipientType aBroadcastMsg -> do
                         writeLog aInfoChan [ServePoATag] Info $ "Broadcast request " ++ show aMsg
                         sendMsgToCentralActor ch $
-                            BroadcastRequest aBroadcastMsg (IdFrom aSenderId) aRecipientType
-                    | otherwise -> do
-                        writeLog aInfoChan [ServePoATag] Warning $ "Broadcast request  without PPId " ++ show aMsg
-                        WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
+                            BroadcastRequest aBroadcastMsg (IdFrom aId) aRecipientType
                 RequestConnects _ -> do
                     aShuffledRecords <- shuffleM =<< getRecords aFileServerChan
                     let aConnects = take 5 aShuffledRecords
@@ -174,36 +173,16 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                     WS.sendTextData aConnect $ A.encode $ ResponseConnects
                         ((\(Connect this_ip _) -> Connect this_ip 1554) <$> aConnects)
 
-                RequestPoWList
-                    | not aOk -> do
-                        aSenderId <- readMVar aId
+                RequestPoWList -> do
                         writeLog aInfoChan [ServePoATag] Info $
-                            "PoWListRequest the msg from " ++ show aSenderId
-                        sendMsgToCentralActor ch $ PoWListRequest (IdFrom aSenderId)
+                            "PoWListRequest the msg from " ++ show aId
+                        sendMsgToCentralActor ch $ PoWListRequest (IdFrom aId)
 
-                    | otherwise -> do
-                        writeLog aInfoChan [ServePoATag] Warning "Can't send request without PPId "
-                        WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
-
-
-                ResponseNodeIdToNN aPPId aNodeType ->
-                    when aOk $ do
-                        putMVar aId aPPId
+                MsgMsgToNN aDestination aMsgToNN -> do
                         writeLog aInfoChan [ServePoATag] Info $
-                            "Accept PPId " ++ show aPPId ++ " with type " ++ show aNodeType
+                            "Resending the msg from " ++ show aId ++ " the msg is " ++ show aMsgToNN
+                        sendMsgToCentralActor ch $ MsgResending (IdFrom aId) (IdTo aDestination) aMsgToNN
 
-                        sendMsgToCentralActor ch $ NewConnect aPPId aNodeType aNewChan
-
-                MsgMsgToNN aDestination aMsgToNN
-                    | not aOk       -> do
-                        aSenderId <- readMVar aId
-                        writeLog aInfoChan [ServePoATag] Info $
-                            "Resending the msg from " ++ show aSenderId ++ " the msg is " ++ show aMsgToNN
-                        sendMsgToCentralActor ch $ MsgResending (IdFrom aSenderId) (IdTo aDestination) aMsgToNN
-                    | otherwise     -> do
-                        writeLog aInfoChan [ServePoATag] Warning $ "Can't send request without PPId " ++ show aMsgToNN
-                        WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
-                --
                 IsInPendingRequest aTransaction -> do
                     aTmpChan <- C.newChan
                     writeInChan aPendingChan $ IsInPending aTransaction aTmpChan
@@ -222,11 +201,9 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
 
                 _ -> return ()
             Left a -> do
-                -- TODO: Include ID if exist.
-                writeLog aInfoChan [ServePoATag] Warning $
-                    "Broken message from PP " ++ show aMsg ++ " " ++ a
+                writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ a
                 WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"Error\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
-                when aOk $ WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
+
 
 writeInChan :: InChan t -> t -> IO ()
 writeInChan aChan aMsg = do

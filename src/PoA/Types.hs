@@ -113,6 +113,7 @@ data NNToPPMessage
     | ResponsePendingTransactions [Transaction]
     | ResponseIsInPending Bool
     | ResponseTransactionValid Bool
+    | ResponseClientId NodeId
 
 
 myUnhex :: IsString a => T.Text -> Either a String
@@ -127,8 +128,8 @@ unhexNodeId aString = case unhex . fromString . T.unpack $ aString of
     Nothing             -> mzero
 
 
-ppIdToString :: NodeId -> String
-ppIdToString (NodeId aPoint) = CB.unpack . hex . B.pack $ unroll aPoint
+nodeIdToUnxed :: NodeId -> String
+nodeIdToUnxed (NodeId aPoint) = CB.unpack . hex . B.pack $ unroll aPoint
 
 
 myTextUnhex :: T.Text -> Maybe B.ByteString
@@ -247,7 +248,7 @@ instance ToJSON NNToPPMessage where
     toJSON (MsgMsgToPP aPPId aMessage) = object [
             "tag"       .= ("Msg"   :: String),
             "type"      .= ("MsgTo" :: String),
-            "sender"    .= ppIdToString aPPId,
+            "sender"    .= nodeIdToUnxed aPPId,
             "msg"       .= aMessage
           ]
 
@@ -262,7 +263,7 @@ instance ToJSON NNToPPMessage where
     toJSON (MsgNewNodeInNet aPPId aNodeType) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("NewNodeInNet"  :: String),
-        "id"        .= ppIdToString aPPId,
+        "id"        .= nodeIdToUnxed aPPId,
         "nodeType"  .= show aNodeType
       ]
 
@@ -276,13 +277,13 @@ instance ToJSON NNToPPMessage where
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("Broadcast"  :: String),
         "msg"       .= aMessage,
-        "idFrom"    .= ppIdToString aPPId
+        "idFrom"    .= nodeIdToUnxed aPPId
       ]
 
     toJSON (ResponsePoWList aPPIds) = object [
         "tag"       .= ("Response"  :: String),
         "type"      .= ("PoWList"   :: String),
-        "poWList"   .=  map ppIdToString aPPIds
+        "poWList"   .=  map nodeIdToUnxed aPPIds
       ]
     toJSON (ResponsePendingTransactions aTransactions) = object [
         "tag"       .= ("Response"  :: String),
@@ -299,6 +300,12 @@ instance ToJSON NNToPPMessage where
         "type"      .= ("PendingAdd"   :: String),
         "msg"       .= show aBool
        ]
+    toJSON (ResponseClientId aNodeId) = object [
+        "tag"       .= ("Response"  :: String),
+        "type"      .= ("NodeId"   :: String),
+        "node_id"   .= nodeIdToUnxed aNodeId
+      ]
+
 
 instance ToJSON Connect where
     toJSON (Connect aHostAddress aPortNumber) = object [

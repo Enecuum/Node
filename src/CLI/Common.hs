@@ -29,7 +29,7 @@ import           Control.Concurrent                    (threadDelay)
 -- import           Control.Concurrent.Chan
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import           Control.Monad                         (forever)
+import           Control.Monad                         (forever, void)
 import           Data.List.Split                       (splitOn)
 import           Data.Map                              (Map, fromList, lookup)
 import           Data.Time.Units
@@ -135,7 +135,7 @@ sendTrans tx ch aInfoCh = try $ do
   aExp <- (timeout (5 :: Second) $ do
            sendMetrics tx aInfoCh
            cTime <- getTime
-           writeChan ch $ NewTransaction (tx { _timestamp = Just cTime } )
+           void $ tryWriteChan ch $ NewTransaction (tx { _timestamp = Just cTime } )
            return $ rHash tx)
   case aExp of
     Just h  -> return $ Hash h
@@ -175,7 +175,7 @@ getBalance descrDB pKey aInfoCh = try $ do
     stTime  <- getCPUTimeWithUnit :: IO Millisecond
     aBalance <- B.getBalanceForKey descrDB pKey
     endTime <- getCPUTimeWithUnit :: IO Millisecond
-    writeChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
+    void $ tryWriteChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
     case aBalance of
       Nothing -> throw NoSuchPublicKeyInDB
       Just b  -> return b
@@ -203,10 +203,10 @@ getPublicKeys = try $ map fst <$> getSavedKeyPairs
 
 sendMetrics :: Transaction -> InChan InfoMsg -> IO ()
 sendMetrics (Transaction o r a _ _ _ _) m = do
-    writeChan m $ Metric $ increment "cl.tx.count"
-    writeChan m $ Metric $ set "cl.tx.wallet" o
-    writeChan m $ Metric $ set "cl.tx.wallet" r
-    writeChan m $ Metric $ gauge "cl.tx.amount" a
+    void $ tryWriteChan m $ Metric $ increment "cl.tx.count"
+    void $ tryWriteChan m $ Metric $ set "cl.tx.wallet" o
+    void $ tryWriteChan m $ Metric $ set "cl.tx.wallet" r
+    void $ tryWriteChan m $ Metric $ gauge "cl.tx.amount" a
 
 
 -- generateNTransactions :: ManagerMiningMsg a => QuantityTx -> Chan a -> Chan InfoMsg -> IO (Result ())
@@ -214,7 +214,7 @@ generateNTransactions :: QuantityTx -> InChan MsgToCentralActor -> InChan InfoMs
 generateNTransactions qTx ch m = try $ do
   tx <- genNTx qTx
   mapM_ (\x -> do
-          writeChan ch $ NewTransaction x
+          void $ tryWriteChan ch $ NewTransaction x
           sendMetrics x m
         ) tx
   putStrLn "Transactions are created"
@@ -224,7 +224,7 @@ generateTransactionsForever ch m = try $ forever $ do
                                 quantityOfTranscations <- randomRIO (20,30)
                                 tx <- genNTx quantityOfTranscations
                                 mapM_ (\x -> do
-                                            writeChan ch $ NewTransaction x
+                                            void $ tryWriteChan ch $ NewTransaction x
                                             sendMetrics x m
                                        ) tx
                                 threadDelay (10^(6 :: Int))

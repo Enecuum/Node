@@ -86,10 +86,10 @@ generateKeyPair :: MonadRandom m =>  m (ECDSA.PublicKey, ECDSA.PrivateKey)
 generateKeyPair = generate curve_256
 
 
-generateClientId :: [Word64] ->  IO Word64
+generateClientId :: [Word64] ->  IO NodeId
 generateClientId list = do
       aRand <- randomIO :: IO Word64
-      return $ mask .|. ( shiftL aRand ((length list)*2))
+      return $ NodeId $ fromIntegral $ mask .|. ( shiftL aRand ((length list)*2))
 
       where
         bitsmask []     _ =  0
