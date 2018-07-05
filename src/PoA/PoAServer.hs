@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module PoA.PoAServer (
         servePoA
@@ -11,6 +12,7 @@ import              Control.Monad (forM_, void, forever, unless, when)
 import qualified    Network.WebSockets                  as WS
 import              Service.Network.Base
 import              Service.Network.WebSockets.Server
+import              Service.Network.WebSockets.Client
 import qualified    Control.Concurrent.Chan as C
 import              Control.Concurrent.Chan.Unagi.Bounded
 import              Node.Node.Types
@@ -32,10 +34,20 @@ import              Node.Data.Key
 import              Data.Maybe()
 
 
+data ConnectTesterActor = AddConnectToList Connect | TestExistedConnect Connect
+
 serverPoABootNode :: PortNumber -> InChan InfoMsg -> InChan FileActorRequest -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
         "Init. ServerPoABootNode: a port is " ++ show aRecivePort
+
+    (aInChan, aOutChan) <- newChan 64
+    void $ C.forkIO $ forever $ readChan aOutChan >>= \case
+        AddConnectToList aConn@(Connect aHostAdress aPort) -> void $ C.forkIO $ do
+            runClient (showHostAddress aHostAdress) (fromEnum aPort) "/" $
+                \_ -> writeChan aFileServerChan $ AddToFile [aConn]
+        _ -> return ()
+
     runServer aRecivePort $ \aHostAdress aPending -> do
         aConnect <- WS.acceptRequest aPending
         writeLog aInfoChan [ServerBootNodeTag] Info "ServerPoABootNode.Connect accepted."
@@ -55,7 +67,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                         WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
 
                 ActionAddToListOfConnects aPort ->
-                    writeChan aFileServerChan $ AddToFile [Connect aHostAdress (toEnum aPort)]
+                    void $ tryWriteChan aInChan $ AddConnectToList (Connect aHostAdress (toEnum aPort))
 
                 _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
                     "Broken message from PP " ++ show aMsg
