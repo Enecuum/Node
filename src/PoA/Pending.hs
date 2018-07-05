@@ -61,7 +61,7 @@ pendingActor (aInChan, aOutChan) _ aTransactionChan aInfoChan = do
     -- transactions re-pack
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for transactions"
     void . C.forkIO $ forever $ forever $ readChan aTransactionChan >>=
-        writeChan aInChan . AddTransaction
+        void $ tryWriteChan aInChan . AddTransaction
 
     -- actor's main body
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for commands"
