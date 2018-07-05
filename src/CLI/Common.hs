@@ -29,7 +29,7 @@ import           Control.Concurrent                    (threadDelay)
 -- import           Control.Concurrent.Chan
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import           Control.Monad                         (forever)
+import           Control.Monad                         (forever, void)
 import           Data.List.Split                       (splitOn)
 import           Data.Map                              (Map, fromList, lookup)
 import           Data.Time.Units
