@@ -235,8 +235,8 @@ getBlockByHash hash ch = do
 
 
 getMicroblockByHash :: Hash -> WS.Connection -> IO ()
-getMicroblockByHash hash ch = do
-  result <- runExceptT $ getMicroblock ch hash
+getMicroblockByHash aHash ch = do
+  result <- runExceptT $ getMicroblock ch aHash
   case result of
     (Left err)    -> putStrLn $ "getMicroblockByHash error: " ++ show err
     (Right block) -> print block
