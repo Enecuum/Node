@@ -44,10 +44,10 @@ instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
 
 
+
 getBalanceForKey :: DBPoolDescriptor -> PublicKey -> IO (Maybe Amount)
 getBalanceForKey db key = do
-    let fun = (\local_db -> Rocks.get local_db Rocks.defaultReadOptions (S.encode key))
-    val  <- withResource (poolLedger db) fun
+    val  <- funR (poolLedger db) (S.encode key)
     result <- case val of Nothing -> return Nothing --putStrLn "There is no such key"
                           Just v  -> case (S.decode v :: Either String Amount ) of
                               Left _  -> error ("Can not decode balance" ++ show v)
@@ -111,9 +111,7 @@ getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, Bool, Macroblock)
 checkMacroblock db aInfoChan keyBlockHash blockHash = do
     let quantityMicroblocksInMacroblock = 2
-        fun = (\local_db -> Rocks.get local_db Rocks.defaultReadOptions keyBlockHash)
-    v  <- withResource (poolMacroblock db) fun
-
+    v  <- funR (poolMacroblock db) keyBlockHash
     case v of
       Nothing -> do -- If Macroblock is not already in the table, than insert it into the table
                     let aMacroBlock = dummyMacroblock {_mblocks = [blockHash]} :: Macroblock
@@ -175,12 +173,12 @@ addMicroblockToDB db m aInfoChan =  do
                     writeMacroblockToDB db aInfoChan (_keyBlock (m :: Microblock)) macroblock
 
 
+
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> Macroblock -> IO ()
 writeMacroblockToDB desc aInfoChan keyBlock aMacroblock = do
   let key = keyBlock
       val = S.encode aMacroblock
-      fun = (\db -> Rocks.write db def{Rocks.sync = True} [ Rocks.Put key val ])
-  withResource (poolMacroblock desc) fun
+  funW (poolMacroblock desc) [(key,val)]
   writeLog aInfoChan [BDTag] Info ("Write Macroblock " ++ show key ++ "to DB")
 
 
@@ -188,8 +186,7 @@ writeMicroblockDB :: Pool Rocks.DB -> InChan InfoMsg -> MicroblockBD -> IO ()
 writeMicroblockDB db aInfoChan m = do
   let key = rHash m
       val  = S.encode m
-      fun = (\local_db -> Rocks.write local_db def{Rocks.sync = True} [ Rocks.Put key val ])
-  withResource db fun
+  funW db [(key,val)]
   writeLog aInfoChan [BDTag] Info ("typeOf Microblock "  ++ (show (typeOf m)))
   writeLog aInfoChan [BDTag] Info ("Write Microblock "  ++ show key ++ "to Microblock table")
 
@@ -198,8 +195,7 @@ writeTransactionDB :: Pool Rocks.DB -> InChan InfoMsg -> [Transaction] -> BC.Byt
 writeTransactionDB dbTransaction aInfoChan txs hashOfMicroblock = do
   let txInfo = \tx1 num -> TransactionInfo tx1 hashOfMicroblock num
       txKeyValue = map (\(t,n) -> (rHash t, S.encode (txInfo t n)) ) (zip txs [1..])
-      fun = (\db -> Rocks.write db def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) txKeyValue))
-  withResource dbTransaction fun
+  funW dbTransaction txKeyValue
   writeLog aInfoChan [BDTag] Info ("Write Transactions to Transaction table")
 
 
@@ -207,8 +203,7 @@ writeLedgerDB ::  Pool Rocks.DB -> InChan InfoMsg -> BalanceTable -> IO ()
 writeLedgerDB dbLedger aInfoChan bt = do
   ledgerKV <- H.toList bt
   let ledgerKeyValue = map (\(k,v)-> (S.encode k, S.encode v)) ledgerKV
-      fun = (\db -> Rocks.write db def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) ledgerKeyValue))
-  withResource dbLedger fun
+  funW dbLedger ledgerKeyValue
   writeLog aInfoChan [BDTag] Info ("Write Ledger "  ++ show bt)
 
 
@@ -226,11 +221,9 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
             Just kBlock -> kBlock :: KeyBlockInfo --Map T.Text Value
 
         keyBlockHash = rHash keyBlockInfoObject
-        fun local_db = Rocks.get local_db Rocks.defaultReadOptions keyBlockHash
-
     writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
 
-    val  <- withResource (poolMacroblock db) fun
+    val  <- funR (poolMacroblock db) keyBlockHash
     aMacroblock <- case val of
         Nothing -> return dummyMacroblock
         Just va  -> case S.decode va :: Either String Macroblock of
@@ -238,16 +231,14 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
             Right r -> return r
 
     -- fill data for key block
-    let prevHash = read prev_hash :: BC.ByteString
-        fMacroblock = aMacroblock {
-            _prevKBlock = prevHash,
+    let fMacroblock = aMacroblock {
+            _prevKBlock = prev_hash,
             _difficulty = 20,
             _solver,
             _time,
             _number,
             _nonce
           }
-
     writeMacroblockToDB db aInfoChan keyBlockHash fMacroblock
 
 

@@ -95,6 +95,15 @@ handler =
 rHash :: S.Serialize a => a -> BSI.ByteString
 rHash key = Base64.encode . SHA.hash . S.encode $ key
 
+
+funW db aMapKeyValue = do
+  let fun = (\db -> Rocks.write db def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) aMapKeyValue))
+  withResource db fun
+
+
+funR db key = do
+  let fun = (\db -> Rocks.get db Rocks.defaultReadOptions key)
+  withResource db fun
 -- end of the Database structure  section
 --------------------------------------
 
@@ -102,8 +111,7 @@ rHash key = Base64.encode . SHA.hash . S.encode $ key
 
 getTxs :: DBPoolDescriptor -> MicroblockBD -> IO [TransactionInfo]
 getTxs desc (MicroblockBD _ _ _ txHashes _) = do
-  let fun kTransactionHash = (\db -> Rocks.get db Rocks.defaultReadOptions kTransactionHash)
-  maybeTxUntiped  <- mapM (\k -> withResource (poolTransaction desc) (fun k)) txHashes
+  maybeTxUntiped  <- mapM (funR (poolTransaction desc)) txHashes
   let txDoesNotExist = filter (\t -> t /= Nothing) maybeTxUntiped
   if null txDoesNotExist
     then error "Some of transactions can not be found"
@@ -122,8 +130,6 @@ getTxsMicroblock db mb@(MicroblockBD _ _ _ txHashes _) = do
   txDecoded <- getTxs db mb
   let tx = map (\t -> _tx  (t :: TransactionInfo)) txDecoded
   return tx
-
-
 
 
 getNFirstValuesT :: StateT Rocks.Iterator IO BSI.ByteString
@@ -249,8 +255,7 @@ getTransactionByHashDB db tHash = do
 getByHash :: Pool Rocks.DB -> Hash -> IO (Maybe BSI.ByteString)
 getByHash pool hash = do
   let (Hash key) = hash
-  let fun = \db -> Rocks.get db Rocks.defaultReadOptions key
-  withResource pool fun
+  funR pool key
 
 
 decodeTransactionsAndFilterByKey :: [BSI.ByteString] -> PublicKey -> [TransactionAPI]

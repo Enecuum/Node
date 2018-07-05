@@ -146,7 +146,7 @@ instance Serialize MacroblockAPI
 
 data KeyBlockInfo = KeyBlockInfo {
     _time     :: Integer
-  , prev_hash :: String
+  , prev_hash :: ByteString --String
   , _number   :: Integer
   , _nonce    :: Integer
   , _solver   :: PublicKey
