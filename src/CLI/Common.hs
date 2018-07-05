@@ -40,8 +40,8 @@ import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
 import           Service.Transaction.Common            as B (getBalanceForKey,
                                                              getBlockByHashDB,
+                                                             getChainInfoDB,
                                                              getKeyBlockByHashDB,
-                                                             getLastKeyBlock,
                                                              getLastTransactions,
                                                              getTransactionByHashDB)
 import           Service.Transaction.Storage           (DBPoolDescriptor,
@@ -101,18 +101,16 @@ getKeyBlockByHash db hash _ = try $ do
 
 
 getChainInfo :: DBPoolDescriptor -> InChan MsgToCentralActor -> IO (Result ChainInfo)
-getChainInfo db _ = try $ do
-  k <- getLastKeyBlock db
-  case k of
-    Nothing -> throw NoClosedKeyBlockInDB
-    Just j  -> return j
+getChainInfo db _ = do
+  k <- B.getChainInfoDB db
+  return $ Right $ ChainInfo 0 0 "" 0 0 0
 
 
 getTransactionByHash :: DBPoolDescriptor -> Hash -> InChan MsgToCentralActor -> IO (Result TransactionInfo)
 getTransactionByHash db hash _ = try $ do
   tx <- B.getTransactionByHashDB db hash
   case tx of
-    Nothing -> throw  NoSuchMicroBlockDB
+    Nothing -> throw NoSuchTransactionDB
     Just t  -> return t
 
 

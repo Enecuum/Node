@@ -171,7 +171,6 @@ addMicroblockToDB db m aInfoChan =  do
                     writeMacroblockToDB db aInfoChan (_keyBlock (m :: Microblock)) macroblock
 
 
-
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> Macroblock -> IO ()
 writeMacroblockToDB desc aInfoChan hashOfKeyBlock aMacroblock = do
   let key = hashOfKeyBlock
@@ -185,7 +184,6 @@ writeMicroblockDB db aInfoChan m = do
   let key = rHash m
       val  = S.encode m
   funW db [(key,val)]
-  writeLog aInfoChan [BDTag] Info ("typeOf Microblock "  ++ (show (typeOf m)))
   writeLog aInfoChan [BDTag] Info ("Write Microblock "  ++ show key ++ "to Microblock table")
 
 
@@ -195,6 +193,7 @@ writeTransactionDB dbTransaction aInfoChan txs hashOfMicroblock = do
       txKeyValue = map (\(t,n) -> (rHash $ t { _timestamp = Nothing } , S.encode (txInfo t n)) ) (zip txs [1..])
   funW dbTransaction txKeyValue
   writeLog aInfoChan [BDTag] Info ("Write Transactions to Transaction table")
+  writeLog aInfoChan [BDTag] Info ("Transactions: " ++ show (map rHash txs))
 
 
 writeLedgerDB ::  Pool Rocks.DB -> InChan InfoMsg -> BalanceTable -> IO ()
@@ -203,7 +202,6 @@ writeLedgerDB dbLedger aInfoChan bt = do
   let ledgerKeyValue = map (\(k,v)-> (S.encode k, S.encode v)) ledgerKV
   funW dbLedger ledgerKeyValue
   writeLog aInfoChan [BDTag] Info ("Write Ledger "  ++ show bt)
-
 
 
 addMacroblockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> IO ()

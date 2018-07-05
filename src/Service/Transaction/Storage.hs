@@ -111,16 +111,20 @@ funR db key = do
 
 getTxs :: DBPoolDescriptor -> MicroblockBD -> IO [TransactionInfo]
 getTxs desc (MicroblockBD _ _ _ txHashes _) = do
-  maybeTxUntiped  <- mapM (funR (poolTransaction desc)) txHashes
-  let txDoesNotExist = filter (\t -> t /= Nothing) maybeTxUntiped
+  print txHashes
+  maybeTxUntyped  <- mapM (funR (poolTransaction desc)) txHashes
+  print maybeTxUntyped
+  let txDoesNotExist = filter (\t -> t /= Nothing) maybeTxUntyped
   if null txDoesNotExist
     then error "Some of transactions can not be found"
     else do
-         let txUntiped = map fromJust (filter (isJust) maybeTxUntiped)
-             extract t = case S.decode t :: Either String TransactionInfo of
+         let txUntyped = map fromJust (filter (isJust) maybeTxUntyped)
+         print txUntyped
+         let extract t = case S.decode t :: Either String TransactionInfo of
                             Left e  -> error ("Can not decode TransactionInfo " ++ e)
                             Right r -> r
-             txDecoded = map extract txUntiped
+         let txDecoded = map extract txUntyped
+         print txDecoded
              -- tx = map (\t -> _tx  (t :: TransactionInfo)) txDecoded
          return txDecoded
 
@@ -172,17 +176,14 @@ getFirst db offset count = drop offset <$> getNFirstValues db (offset + count )
 getLast db  offset count = drop offset <$> getNLastValues db (offset + count )
 
 
-getLastKeyBlock :: DBPoolDescriptor -> IO (Maybe ChainInfo)
-getLastKeyBlock desc = do
+getChainInfoDB :: DBPoolDescriptor -> IO ChainInfo
+getChainInfoDB desc = do
   -- kbByte <- withResource (poolMacroblock desc) (\db -> getLast db 0 1)
   let kbByte = undefined
-  case kbByte of Nothing -> return Nothing
+  case kbByte of Nothing -> tMacroblock2ChainInfo Nothing
                  Just k -> case (S.decode k :: Either String Macroblock) of
-                   Left _  -> error "Can not decode Microblock"
-                   Right r -> do
-                     mb <- tMacroblock2ChainInfo r
-                     return $ Just mb
-
+                              Left _  -> error "Can not decode Microblock"
+                              Right r -> tMacroblock2ChainInfo (Just r)
 
 
 getLastTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> IO [TransactionAPI]
@@ -197,12 +198,10 @@ getLastTransactions _ pubKey _ _ = do
 getMicroBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe MicroblockBD)
 getMicroBlockByHashDB db mHash = do
   mbByte <- getByHash (poolMicroblock db) mHash
-  let mb = case mbByte of Nothing -> Nothing
-                          Just m -> case (S.decode m :: Either String MicroblockBD) of
-                            Left _   -> error "Can not decode Microblock"
-                            Right rm -> Just rm
-
-  return mb
+  case mbByte of Nothing -> return Nothing
+                 Just m -> case (S.decode m :: Either String MicroblockBD) of
+                   Left _   -> error "Can not decode Microblock"
+                   Right rm -> return $ Just rm
 
 
 getTransactionsByMicroblockHash :: DBPoolDescriptor -> Hash -> IO (Maybe [TransactionInfo])
@@ -353,14 +352,21 @@ tKeyBlockInfo2Macroblock (KeyBlockInfo {..}) = Macroblock {
           }
 
 
-tMacroblock2ChainInfo :: Macroblock -> IO ChainInfo
-tMacroblock2ChainInfo m@(Macroblock {..}) = do
-  let currentBlock = rHash m
-  return ChainInfo {
+tMacroblock2ChainInfo :: Maybe Macroblock -> IO ChainInfo
+tMacroblock2ChainInfo m@(Just (Macroblock {..})) = do
+  case m of Nothing ->  return ChainInfo {
+    _emission        = 0,
+    _curr_difficulty = 0,
+    _last_block      = "",
+    _blocks_num      = 0,
+    _txs_num         = 0,  -- quantity of all approved transactions
+    _nodes_num       = 0   -- quantity of all active nodes
+    }
+            Just m  -> return ChainInfo {
     _emission        = _reward,
     _curr_difficulty = _difficulty,
-    _last_block      = currentBlock,
-    _blocks_num      = _number,
+    _last_block      = rHash m,
+    _blocks_num      = 0,
     _txs_num         = 0,  -- quantity of all approved transactions
     _nodes_num       = 0   -- quantity of all active nodes
     }
