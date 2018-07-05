@@ -231,16 +231,14 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
             Right r -> return r
 
     -- fill data for key block
-    let prevHash = read prev_hash :: BC.ByteString
-        fMacroblock = aMacroblock {
-            _prevKBlock = prevHash,
+    let fMacroblock = aMacroblock {
+            _prevKBlock = prev_hash,
             _difficulty = 20,
             _solver,
             _time,
             _number,
             _nonce
           }
-
     writeMacroblockToDB db aInfoChan keyBlockHash fMacroblock
 
 

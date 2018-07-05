@@ -32,41 +32,7 @@ import qualified    Data.Vector as V
 import              Data.Scientific
 import              Data.Either
 import              Text.Read
-
--- TODO: aception of msg from a PoA/PoW.
--- ----: parsing - ok!
--- TODO: processing of the msg
--- TODO:    Resending (to point);
--- TODO:    Broadcasting (in net);
--- TODO:    Response.
-
--- TODO: i have msg (it not response) for PoA/PoW node.
--- ----     toJson
--- TODO sending to PoA/PoW node.
-
-
--- TODO finding of optimal broadcast node for PoA/PoW node. ???
-
-instance S.Serialize Scientific where
-    get = read <$> S.get
-    put = S.put . show
-
-
-instance S.Serialize T.Text where
-    get = T.pack <$> S.get
-    put = S.put . T.unpack
-
-instance S.Serialize Object where
-    get = fmap H.fromList S.get
-    put = S.put . H.toList
-
-
-instance S.Serialize a => S.Serialize (V.Vector a) where
-    get = fmap V.fromList S.get
-    put = S.put . V.toList
-
-instance S.Serialize Value
-
+import              Crypto.PubKey.ECC.ECDSA
 
 data PPToNNMessage
     -- Requests:
@@ -106,6 +72,8 @@ data PPToNNMessage
     | GetPendingRequest
     | AddTransactionRequest Transaction
     | ActionAddToListOfConnects Int
+    | NNConnection PortNumber PublicPoint NodeId
+    | CNConnection NodeType (Maybe NodeId)
 
     deriving (Show)
 
@@ -230,7 +198,30 @@ instance FromJSON PPToNNMessage where
                     Just aJustIp -> return $ ActionNodeStillAliveTest
                         (toEnum aPort) (toHostAddress aJustIp)
                     _ -> mzero
+            ("Action", "Connect") -> do
+                aNodeType :: T.Text  <- aMessage .: "node_type"
+                let aType = readNodeType aNodeType
+                case readNodeType aNodeType of
+                    NN -> do
+                        aPort       <- aMessage .: "port"
+                        publicPoint <- aMessage .: "public_point"
+                        aNodeId     <- unhexNodeId =<< aMessage .: "my_id"
+                        return $ NNConnection (toEnum aPort) publicPoint aNodeId
+                    aCN  -> do
+                        aNodeId <- aMessage .:? "my_id"
+                        aId <- return $ unhexNodeId =<< aNodeId
+                        return $ CNConnection aCN aId
             _ -> mzero
+
+
+{-
+
+
+Для СН от КН -- {"tag":"Action", "type":"Connect", "node_type": "PoW" | "PoA", "my_id": 123}
+Для СН от КН -- {"tag":"Action", "type":"Connect", "node_type": "PoW" | "PoA"}
+--     | NNConnection PortNumber PublicPoint NodeId
+--    | CNConnection NodeType (Maybe NodeId)
+-}
 
 
     parseJSON _ = mzero -- error $ show a
@@ -239,8 +230,8 @@ readNodeType :: (IsString a, Eq a) => a -> NodeType
 readNodeType aNodeType
     | aNodeType == "PoW" = PoW
     | aNodeType == "All" = All
+    | aNodeType == "NN"  = NN
     | otherwise          = PoA
-
 
 decodeList :: [T.Text] -> [String]
 decodeList aList
