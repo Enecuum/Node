@@ -50,7 +50,7 @@ networkNodeStart (_, aOutChan) aMd = do
                         writeMetric (aData^.logChan) $ increment "net.bl.count"
                         writeLog (aData^.logChan) [NetLvlTag] Info $
                             "PP node " ++ show aSenderId ++ ", create a a microblock: " ++ show aMicroblock
-                        writeChan (aData^.microblockChan) aMicroblock
+                        void $ tryWriteChan (aData^.microblockChan) aMicroblock
 
                     NewConnect aNodeId aNodeType aChan  -> do
                         writeLog (aData^.logChan) [NetLvlTag] Info $
@@ -74,12 +74,12 @@ networkNodeStart (_, aOutChan) aMd = do
                     PoWListRequest (IdFrom aNodeId) ->
                         whenJust (aData^.connects.at aNodeId) $ \aNode -> do
                             let aPPIds = M.filter (\a -> a^.nodeType == PoW) (aData^.connects)
-                            writeChan (aNode^.nodeChan) $ ResponsePoWList $ M.keys aPPIds
+                            void $ tryWriteChan (aNode^.nodeChan) $ ResponsePoWList $ M.keys aPPIds
             MsgFromSharding         _   -> return ()
             CleanAction                 -> return ()
 
             NewTransaction          aTransaction  -> do
                 writeLog (aData^.logChan) [NetLvlTag] Info "I create a transaction."
-                writeChan (aData^.transactionsChan) aTransaction
+                void $ tryWriteChan (aData^.transactionsChan) aTransaction
 
 --------------------------------------------------------------------------------
