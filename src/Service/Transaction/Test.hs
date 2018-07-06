@@ -241,14 +241,14 @@ test01 = do
 
 
 -- test04 :: IO ()
-test04 = runResourceT $ do
-  let pathT = "/tmp/haskell-rocksDB5"
-  (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
-  getLast db 0 10
+-- test04 = runResourceT $ do
+--   let pathT = "/tmp/haskell-rocksDB5"
+--   (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
+--   getLast db 0 10
 
 
 getNTransactions ::  IO [BSI.ByteString]
 getNTransactions = runResourceT $ do
-  let pathT = "./try.here" --"/tmp/haskell-rocksDB6"
+  let pathT = "/tmp/haskell-rocksDB5"
   (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
-  getNFirstValues db 100
+  getNFirstValues db 3

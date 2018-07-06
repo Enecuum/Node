@@ -147,8 +147,8 @@ getNFirstValuesT = do
   return v
 
 
-getNFirstValues :: (Control.Monad.Trans.Class.MonadTrans t, MonadResource (t IO)) =>
-                           Rocks.DB -> Int -> t IO [BSI.ByteString]
+-- getNFirstValues :: (Control.Monad.Trans.Class.MonadTrans t, MonadResource (t IO)) =>
+--                            Rocks.DB -> Int -> t IO [BSI.ByteString]
 getNFirstValues db n = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterFirst it
@@ -159,33 +159,36 @@ getNFirstValues db n = do
 getNLastValuesT :: StateT Rocks.Iterator IO BSI.ByteString
 getNLastValuesT = do
   it <- get
-  Just v <- lift $ Rocks.iterValue it
-  lift $ Rocks.iterPrev it
+  -- Just v <- lift $ Rocks.iterValue it
+  -- lift $ Rocks.iterPrev it
+  Just v <- Rocks.iterValue it
+  Rocks.iterPrev it
   put it
   return v
 
-getNLastValues :: (MonadTrans t, MonadResource (t IO)) =>
-                          Rocks.DB -> Int -> t IO [BSI.ByteString]
-getNLastValues db n = do
+-- getNLastValues :: (MonadTrans t, MonadResource (t IO)) =>
+--                           Rocks.DB -> Int -> t IO [BSI.ByteString]
+getNLastValues :: Rocks.DB -> Int -> IO [BSI.ByteString]
+getNLastValues db n = runResourceT $ do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterLast it
-  vs <- lift $ evalStateT (replicateM n getNLastValuesT) it
-  return vs
+  -- vs <- lift $ evalStateT (replicateM n getNLastValuesT) it
+  -- return vs
+  lift $ evalStateT (replicateM n getNLastValuesT) it
 
 -- getFirst :: (MonadResource (t IO), MonadTrans t) =>
 --                     Rocks.DB -> Int -> Int -> t IO [BSI.ByteString]
 getFirst db offset count = drop offset <$> getNFirstValues db (offset + count )
 
--- getLast :: (MonadResource (t IO), MonadTrans t) =>
---                  Rocks.DB -> Int -> Int -> t IO [BSI.ByteString]
+getLast :: Rocks.DB -> Int -> Int -> IO [BSI.ByteString]
 getLast db  offset count = drop offset <$> getNLastValues db (offset + count )
 
 
--- getChainInfoDB :: DBPoolDescriptor -> IO ChainInfo
+getChainInfoDB :: DBPoolDescriptor -> IO ChainInfo
 getChainInfoDB desc = do
   kbByte <- withResource (poolMacroblock desc) (\db -> getLast db 0 1)
   let k = kbByte !! 0
-  lift $ helper (Just k)
+  helper (Just k)
 
 
 helper :: Maybe BSI.ByteString -> IO ChainInfo
@@ -197,10 +200,10 @@ helper kbByte = do
 
 
 getLastTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> IO [TransactionAPI]
-getLastTransactions _ pubKey _ _ = do
-  -- let fun = \db -> getLast db offset count
-  -- rawTxInfo <- withResource (poolTransaction descr) fun
-  let rawTxInfo = undefined
+getLastTransactions descr pubKey offset aCount = do
+  let fun = \db -> getLast db offset aCount
+  rawTxInfo <- withResource (poolTransaction descr) fun
+  -- let rawTxInfo = undefined
   let txAPI = decodeTransactionsAndFilterByKey rawTxInfo pubKey
   return txAPI
 

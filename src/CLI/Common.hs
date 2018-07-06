@@ -30,12 +30,13 @@ import           Control.Concurrent                    (threadDelay)
 -- import           Control.Concurrent.Chan
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import           Control.Monad                         (forever, void, unless)
+import           Control.Monad                         (forever, unless, void)
 import           Data.List.Split                       (splitOn)
 import           Data.Map                              (Map, fromList, lookup)
 import           Data.Time.Units
 import           System.Random                         (randomRIO)
 
+import           Control.Concurrent.MVar
 import           Node.Node.Types
 import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
@@ -50,7 +51,6 @@ import           Service.Transaction.Storage           (DBPoolDescriptor,
                                                         rHash)
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
-import              Control.Concurrent.MVar
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
 
@@ -104,9 +104,9 @@ getKeyBlockByHash db hash _ = try $ do
 
 getChainInfo :: DBPoolDescriptor -> InChan MsgToCentralActor -> IO (Result ChainInfo)
 getChainInfo db _ = do
-  -- k <- lift $ B.getChainInfoDB db
-  -- return $ Right k
-  return $ Right $ ChainInfo 0 0 "" 0 0 0
+  k <- B.getChainInfoDB db
+  return $ Right k
+  -- return $ Right $ ChainInfo 0 0 "" 0 0 0
 
 getTransactionByHash :: DBPoolDescriptor -> Hash -> InChan MsgToCentralActor -> IO (Result TransactionInfo)
 getTransactionByHash db hash _ = try $ do
@@ -139,7 +139,7 @@ sendTrans tx ch aInfoCh = try $ do
            aMVar <- newEmptyMVar
            cTime <- getTime
            writeInChan ch $ NewTransaction (tx { _timestamp = Just cTime } ) aMVar
-           r <- readMVar aMVar 
+           r <- readMVar aMVar
            print r
            case r of
              True -> return $ rHash tx
