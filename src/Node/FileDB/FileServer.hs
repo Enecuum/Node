@@ -13,6 +13,7 @@
 
 module Node.FileDB.FileServer (
         startFileServer
+    ,   getRecords
     ,   FileActorRequest(..)
   ) where
 
@@ -26,6 +27,14 @@ data FileActorRequest where
     ReadRecordsFromFile :: MVar [Connect]   -> FileActorRequest
     DeleteFromFile      :: Connect          -> FileActorRequest
     AddToFile           :: [Connect]        -> FileActorRequest
+
+
+getRecords :: InChan FileActorRequest -> IO [Connect]
+getRecords aChan = do
+    aTmpRef <- newEmptyMVar
+    writeChan aChan $ ReadRecordsFromFile aTmpRef
+    takeMVar aTmpRef
+
 
 startFileServer :: OutChan FileActorRequest -> IO ()
 startFileServer aChan = aLoop S.empty

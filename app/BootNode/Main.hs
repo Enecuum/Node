@@ -12,7 +12,7 @@ import              Service.InfoMsg
 import              Service.Network.Base (ConnectInfo(..))
 import              System.Environment
 import              Node.Node.Types
-import              PoA.PoAServer
+import              PoA.PoAServerBootNode
 import              Node.FileDB.FileServer
 
 import              Network.Socket()

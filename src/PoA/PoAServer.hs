@@ -1,18 +1,14 @@
 {-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module PoA.PoAServer (
         servePoA
-    ,   serverPoABootNode
   )  where
 
-
-
-import              Control.Monad (forM_, void, forever, unless, when)
+import              Control.Monad (forM_, void, forever, unless)
 import qualified    Network.WebSockets                  as WS
 import              Service.Network.Base
 import              Service.Network.WebSockets.Server
-import              Service.Network.WebSockets.Client
 import qualified    Control.Concurrent.Chan as C
 import              Control.Concurrent.Chan.Unagi.Bounded
 import              Node.Node.Types
@@ -24,7 +20,6 @@ import              Data.Aeson as A
 import              Control.Exception
 import              Node.Data.GlobalLoging
 import              PoA.Types
-import              Control.Concurrent.MVar
 import qualified    Control.Concurrent as C
 import              Node.FileDB.FileServer
 import              PoA.Pending
@@ -33,67 +28,6 @@ import              Control.Concurrent.Async
 import              Node.Data.Key
 import              Data.Maybe()
 
-
-data ConnectTesterActor = AddConnectToList Connect | TestExistedConnect Connect
-
-serverPoABootNode :: PortNumber -> InChan InfoMsg -> InChan FileActorRequest -> IO ()
-serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
-    writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
-        "Init. ServerPoABootNode: a port is " ++ show aRecivePort
-
-    (aInChan, aOutChan) <- newChan 64
-    void $ C.forkIO $ forever $ readChan aOutChan >>= \case
-        AddConnectToList aConn@(Connect aHostAdress aPort) -> void $ C.forkIO $ do
-            C.threadDelay 3000000
-            runClient (showHostAddress aHostAdress) (fromEnum aPort) "/" $
-                \_ -> void $ tryWriteChan aFileServerChan $ AddToFile [aConn]
-
-        TestExistedConnect aConn@(Connect aHostAdress aPort) -> void $ C.forkIO $ do
-            aConnects <- getRecords aFileServerChan
-            when (aConn`elem`aConnects) $ do
-                aOk <- try $ runClient (showHostAddress aHostAdress) (fromEnum aPort) "/" $ \_ -> return ()
-                case aOk of
-                    Left (_ :: SomeException) ->
-                        void $ tryWriteChan aFileServerChan $ DeleteFromFile aConn
-                    _ -> return ()
-
-    runServer aRecivePort $ \aHostAdress aPending -> do
-        aConnect <- WS.acceptRequest aPending
-        writeLog aInfoChan [ServerBootNodeTag] Info "ServerPoABootNode.Connect accepted."
-        aMsg <- WS.receiveData aConnect
-        case A.eitherDecodeStrict aMsg of
-            Right a -> case a of
-                RequestConnects aFull
-                    | aFull -> do
-                        writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request full list of connections."
-                        aConnects <- getRecords aFileServerChan
-                        WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
-
-                    | otherwise -> do
-                        writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request of connections."
-                        aShuffledRecords <- shuffleM =<< getRecords aFileServerChan
-                        let aConnects = take 5 aShuffledRecords
-                        WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
-
-                ActionAddToListOfConnects aPort ->
-                    void $ tryWriteChan aInChan $ AddConnectToList (Connect aHostAdress (toEnum aPort))
-
-                ActionNodeStillAliveTest aPort aIp ->
-                    void $ tryWriteChan aInChan $ TestExistedConnect (Connect aIp aPort)
-
-                _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
-                    "Broken message from PP " ++ show aMsg
-            Left a -> do
-                WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"Error\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
-                writeLog aInfoChan [ServerBootNodeTag] Warning $
-                    "Broken message from PP " ++ show aMsg ++ " " ++ a
-
-
-getRecords :: InChan FileActorRequest -> IO [Connect]
-getRecords aChan = do
-    aTmpRef <- newEmptyMVar
-    writeChan aChan $ ReadRecordsFromFile aTmpRef
-    takeMVar aTmpRef
 
 servePoA ::
        PortNumber
