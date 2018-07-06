@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+module Service.Transaction.Test2 where
 
 import           Control.Monad
 import           Control.Monad.Trans.Class
