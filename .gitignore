@@ -4,3 +4,4 @@ Node.cabal
 *.swp
 configs/*
 log.txt
+*.csv

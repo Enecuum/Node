@@ -17,6 +17,7 @@ module Node.Node.Mining (
 
 import              System.Random()
 
+import              Service.Chan
 import qualified    Data.Map                        as M
 import              Data.Maybe (isNothing)
 import              Data.IORef
@@ -31,6 +32,7 @@ import              Node.Data.GlobalLoging
 import              PoA.Types
 import              Sharding.Sharding()
 import              Node.BaseFunctions
+import qualified    Control.Concurrent as C
 
 
 networkNodeStart :: (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()
@@ -78,8 +80,8 @@ networkNodeStart (_, aOutChan) aMd = do
             MsgFromSharding         _   -> return ()
             CleanAction                 -> return ()
 
-            NewTransaction          aTransaction  -> do
+            NewTransaction          aTransaction aVar  -> do
                 writeLog (aData^.logChan) [NetLvlTag] Info "I create a transaction."
-                void $ tryWriteChan (aData^.transactionsChan) aTransaction
+                void $ C.forkIO $ writeInChan (aData^.transactionsChan) (aTransaction, aVar)
 
 --------------------------------------------------------------------------------

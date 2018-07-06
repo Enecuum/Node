@@ -30,7 +30,7 @@ import           Control.Concurrent                    (threadDelay)
 -- import           Control.Concurrent.Chan
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import           Control.Monad                         (forever, void)
+import           Control.Monad                         (forever, void, unless)
 import           Data.List.Split                       (splitOn)
 import           Data.Map                              (Map, fromList, lookup)
 import           Data.Time.Units
@@ -50,6 +50,7 @@ import           Service.Transaction.Storage           (DBPoolDescriptor,
                                                         rHash)
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
+import              Control.Concurrent.MVar
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
 
@@ -135,9 +136,15 @@ sendTrans :: Transaction -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Re
 sendTrans tx ch aInfoCh = try $ do
   aExp <- (timeout (5 :: Second) $ do
            sendMetrics tx aInfoCh
+           aMVar <- newEmptyMVar
            cTime <- getTime
-           void $ tryWriteChan ch $ NewTransaction (tx { _timestamp = Just cTime } )
-           return $ rHash tx)
+           writeInChan ch $ NewTransaction (tx { _timestamp = Just cTime } ) aMVar
+           r <- readMVar aMVar 
+           print r
+           case r of
+             True -> return $ rHash tx
+             _    -> throw TransactionChanBusyException
+          )
   case aExp of
     Just h  -> return $ Hash h
     Nothing -> throw TransactionChanBusyException
@@ -176,7 +183,7 @@ getBalance descrDB pKey aInfoCh = try $ do
     stTime  <- getCPUTimeWithUnit :: IO Millisecond
     aBalance <- B.getBalanceForKey descrDB pKey
     endTime <- getCPUTimeWithUnit :: IO Millisecond
-    void $ tryWriteChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
+    writeInChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
     case aBalance of
       Nothing -> throw NoSuchPublicKeyInDB
       Just b  -> return b
@@ -204,10 +211,10 @@ getPublicKeys = try $ map fst <$> getSavedKeyPairs
 
 sendMetrics :: Transaction -> InChan InfoMsg -> IO ()
 sendMetrics (Transaction o r a _ _ _ _) m = do
-    void $ tryWriteChan m $ Metric $ increment "cl.tx.count"
-    void $ tryWriteChan m $ Metric $ set "cl.tx.wallet" o
-    void $ tryWriteChan m $ Metric $ set "cl.tx.wallet" r
-    void $ tryWriteChan m $ Metric $ gauge "cl.tx.amount" a
+    writeInChan m $ Metric $ increment "cl.tx.count"
+    writeInChan m $ Metric $ set "cl.tx.wallet" o
+    writeInChan m $ Metric $ set "cl.tx.wallet" r
+    writeInChan m $ Metric $ gauge "cl.tx.amount" a
 
 
 -- generateNTransactions :: ManagerMiningMsg a => QuantityTx -> Chan a -> Chan InfoMsg -> IO (Result ())
@@ -215,7 +222,8 @@ generateNTransactions :: QuantityTx -> InChan MsgToCentralActor -> InChan InfoMs
 generateNTransactions qTx ch m = try $ do
   tx <- genNTx qTx
   mapM_ (\x -> do
-          void $ tryWriteChan ch $ NewTransaction x
+          aMVar <- newEmptyMVar
+          writeInChan ch $ NewTransaction x aMVar
           sendMetrics x m
         ) tx
   putStrLn "Transactions are created"
@@ -225,8 +233,17 @@ generateTransactionsForever ch m = try $ forever $ do
                                 quantityOfTranscations <- randomRIO (20,30)
                                 tx <- genNTx quantityOfTranscations
                                 mapM_ (\x -> do
-                                            void $ tryWriteChan ch $ NewTransaction x
+                                            aMVar <- newEmptyMVar
+                                            writeInChan ch $ NewTransaction x aMVar
                                             sendMetrics x m
                                        ) tx
                                 threadDelay (10^(6 :: Int))
                                 putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
+
+
+-- safe way to write in chan
+writeInChan :: InChan t -> t -> IO ()
+writeInChan aChan aMsg = do
+    aOk <- tryWriteChan aChan aMsg
+    threadDelay 10000
+    unless aOk $ writeInChan aChan aMsg

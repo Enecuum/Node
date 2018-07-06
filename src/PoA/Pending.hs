@@ -9,6 +9,8 @@ import Control.Monad
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import qualified Control.Concurrent as C
+import              Control.Concurrent.MVar
+import              Service.Chan
 
 import Service.Types
 import System.Clock
@@ -38,7 +40,7 @@ import Node.Data.GlobalLoging
 
 data PendingAction where
     RemoveTransactions  :: [Transaction]              -> PendingAction
-    AddTransaction      :: Transaction                -> PendingAction
+    AddTransaction      :: Transaction -> MVar Bool   -> PendingAction
     GetTransaction      :: Int -> C.Chan [Transaction]-> PendingAction
     GetPending          :: C.Chan [Transaction]       -> PendingAction
     IsInPending         :: Transaction -> C.Chan Bool -> PendingAction
@@ -47,7 +49,7 @@ data PendingAction where
 data Pending = Pending (Seq (Transaction, TimeSpec)) (Seq (Transaction, TimeSpec))
 
 
-pendingActor :: (InChan PendingAction, OutChan PendingAction) -> InChan Microblock -> OutChan Transaction -> InChan InfoMsg -> IO ()
+pendingActor :: (InChan PendingAction, OutChan PendingAction) -> InChan Microblock -> OutChan (Transaction, MVar Bool) -> InChan InfoMsg -> IO ()
 pendingActor (aInChan, aOutChan) aMicroblockChan aTransactionChan aInfoChan = do
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for microblocs"
 
@@ -56,12 +58,12 @@ pendingActor (aInChan, aOutChan) aMicroblockChan aTransactionChan aInfoChan = do
         -- blocks re-pack
         forever $ readChan aBlockChan >>= \case
             Microblock _ _ _ aTransactions _ ->
-                writeChan aInChan $ RemoveTransactions aTransactions
+                writeInChan aInChan $ RemoveTransactions aTransactions
 
     -- transactions re-pack
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for transactions"
-    void . C.forkIO $ forever $ forever $ readChan aTransactionChan >>=
-        void . tryWriteChan aInChan . AddTransaction
+    void . C.forkIO $ forever $ forever $ readChan aTransactionChan >>= \case
+        (aTr, aMVar) -> writeInChan aInChan $ AddTransaction aTr aMVar
 
     -- actor's main body
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for commands"
@@ -69,7 +71,7 @@ pendingActor (aInChan, aOutChan) aMicroblockChan aTransactionChan aInfoChan = do
     void $ loop $ Pending Empty Empty
   where
     loop (Pending aNewTransaactions aOldTransactions) = readChan aOutChan >>= \case
-        AddTransaction aTransaction -> do
+        AddTransaction aTransaction aMVar -> do
             writeLog aInfoChan [PendingTag] Info $
                 "Add transaction to pending" ++ show aTransaction
             aNaw <- getTime Realtime
@@ -83,9 +85,14 @@ pendingActor (aInChan, aOutChan) aMicroblockChan aTransactionChan aInfoChan = do
 
             if  | aSize < 500                  -> do
                     writeLog aInfoChan [PendingTag] Info "Pending size < 500"
+                    putMVar aMVar True
                     loop $ Pending
                         (aNewTransaactions :|> (aTransaction, aNaw))
                         aOldTransactions
+                | otherwise -> do
+                    putMVar aMVar False
+                    loop $ Pending aNewTransaactions aOldTransactions
+{-
                 | aSizeOfOldTransactions > 400 -> do
                     writeLog aInfoChan [PendingTag] Info "A sizi of old transaction < 400"
                     loop $ Pending
@@ -96,7 +103,7 @@ pendingActor (aInChan, aOutChan) aMicroblockChan aTransactionChan aInfoChan = do
                     loop $ Pending
                         (aFilter aNewTransaactions :|> (aTransaction, aNaw))
                         (aFilter aOldTransactions)
-
+-}
         -- transactions cleaning by the reason of including to block
 
         RemoveTransactions  aTransactions           -> do
