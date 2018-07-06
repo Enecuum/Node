@@ -218,11 +218,11 @@ deriving instance Generic MessageForSign
 
 
 data ChainInfo = ChainInfo {
-      _emission        :: Integer
-    , _curr_difficulty :: Integer
-    , _last_block      :: ByteString
-    , _blocks_num      :: Integer
-    , _txs_num         :: Integer
-    , _nodes_num       :: Integer
+      _emission        :: Integer     -- emission of last closed key block
+    , _curr_difficulty :: Integer     -- difficulty of last closed key block
+    , _last_block      :: ByteString  -- hash of last closed key block
+    , _blocks_num      :: Integer     -- quantity of all mined blocks
+    , _txs_num         :: Integer     -- quantity of all mined transactions
+    , _nodes_num       :: Integer     -- quantity of all active nodes now
   } deriving  (Generic, Show, Eq, Read)
 instance Serialize ChainInfo

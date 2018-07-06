@@ -141,43 +141,34 @@ getTxsMicroblock db mb@(MicroblockBD _ _ _ _ _) = do
 getNFirstValuesT :: StateT Rocks.Iterator IO BSI.ByteString
 getNFirstValuesT = do
   it <- get
-  Just v <- lift $ Rocks.iterValue it
-  lift $ Rocks.iterNext it
+  Just v <- Rocks.iterValue it
+  Rocks.iterNext it
   put it
   return v
 
 
--- getNFirstValues :: (Control.Monad.Trans.Class.MonadTrans t, MonadResource (t IO)) =>
---                            Rocks.DB -> Int -> t IO [BSI.ByteString]
 getNFirstValues db n = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterFirst it
-  vs <- lift $ evalStateT (replicateM n getNFirstValuesT) it
-  return vs
+  lift $ evalStateT (replicateM n getNFirstValuesT) it
 
 
 getNLastValuesT :: StateT Rocks.Iterator IO BSI.ByteString
 getNLastValuesT = do
   it <- get
-  -- Just v <- lift $ Rocks.iterValue it
-  -- lift $ Rocks.iterPrev it
   Just v <- Rocks.iterValue it
   Rocks.iterPrev it
   put it
   return v
 
--- getNLastValues :: (MonadTrans t, MonadResource (t IO)) =>
---                           Rocks.DB -> Int -> t IO [BSI.ByteString]
+
 getNLastValues :: Rocks.DB -> Int -> IO [BSI.ByteString]
 getNLastValues db n = runResourceT $ do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterLast it
-  -- vs <- lift $ evalStateT (replicateM n getNLastValuesT) it
-  -- return vs
   lift $ evalStateT (replicateM n getNLastValuesT) it
 
--- getFirst :: (MonadResource (t IO), MonadTrans t) =>
---                     Rocks.DB -> Int -> Int -> t IO [BSI.ByteString]
+
 getFirst db offset count = drop offset <$> getNFirstValues db (offset + count )
 
 getLast :: Rocks.DB -> Int -> Int -> IO [BSI.ByteString]
