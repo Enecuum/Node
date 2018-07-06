@@ -19,6 +19,7 @@ import              Data.Serialize
 import qualified    Data.Map                        as M
 import              GHC.Generics (Generic)
 import qualified    Control.Concurrent.Chan         as C
+import              Control.Concurrent.MVar
 import              Control.Concurrent.Chan.Unagi.Bounded
 
 import              Service.Network.Base
@@ -51,7 +52,7 @@ data MsgToCentralActor where
     MsgFromNode             :: MsgFromNode              -> MsgToCentralActor
     MsgFromSharding         :: N.ShardingNodeRequestMsg -> MsgToCentralActor
     CleanAction             :: MsgToCentralActor
-    NewTransaction          :: Transaction              -> MsgToCentralActor
+    NewTransaction          :: Transaction -> MVar Bool -> MsgToCentralActor
 
 
 data MsgFromNode

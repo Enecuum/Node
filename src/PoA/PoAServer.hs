@@ -9,6 +9,7 @@ import              Control.Monad (forM_, void, forever, unless)
 import qualified    Network.WebSockets                  as WS
 import              Service.Network.Base
 import              Service.Network.WebSockets.Server
+import              Control.Concurrent.MVar
 import qualified    Control.Concurrent.Chan as C
 import              Control.Concurrent.Chan.Unagi.Bounded
 import              Node.Node.Types
@@ -130,7 +131,8 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                     WS.sendTextData aConnect $ A.encode $ ResponsePendingTransactions aTransactions
 
                 AddTransactionRequest aTransaction -> do
-                    writeInChan ch $ NewTransaction aTransaction
+                    aMVar <- newEmptyMVar
+                    writeInChan ch $ NewTransaction aTransaction aMVar
                     WS.sendTextData aConnect $ A.encode $ ResponseTransactionValid True
 
                 _ -> return ()

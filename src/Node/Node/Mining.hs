@@ -78,7 +78,7 @@ networkNodeStart (_, aOutChan) aMd = do
             MsgFromSharding         _   -> return ()
             CleanAction                 -> return ()
 
-            NewTransaction          aTransaction  -> do
+            NewTransaction          aTransaction _  -> do
                 writeLog (aData^.logChan) [NetLvlTag] Info "I create a transaction."
                 void $ tryWriteChan (aData^.transactionsChan) aTransaction
 
