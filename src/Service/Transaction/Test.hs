@@ -12,6 +12,7 @@ module Service.Transaction.Test where
 
 import           Service.Transaction.Storage
 
+import           Control.Monad
 import           Control.Monad.Trans.Resource
 import           Data.Aeson
 import qualified Data.ByteString.Char8               as BC
@@ -27,7 +28,6 @@ import           Service.Transaction.TransactionsDAG (genNNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON         ()
-
 
 getOneMicroblock :: IO ()
 getOneMicroblock = do
@@ -247,8 +247,33 @@ test01 = do
 --   getLast db 0 10
 
 
-getNTransactions ::  IO [BSI.ByteString]
-getNTransactions = runResourceT $ do
+getO ::  IO [BSI.ByteString]
+getO = runResourceT $ do
   let pathT = "/tmp/haskell-rocksDB5"
   (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
-  getNFirstValues db 3
+  getNValuesOriginal db 100
+
+getS ::  IO [(BSI.ByteString, BSI.ByteString)]
+getS = runResourceT $ do
+  let pathT = "/tmp/haskell-rocksDB5"
+  (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
+  getNValues db 3
+  -- getLast2 db 100
+
+getNValues :: MonadResource m => Rocks.DB -> Int -> m [(BSI.ByteString, BSI.ByteString)]
+getNValues db n = do
+  it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+  Rocks.iterLast it
+  replicateM (n - 1) $ Rocks.iterPrev it
+  Rocks.iterItems it
+
+
+
+getNValuesOriginal :: MonadResource m => Rocks.DB -> p -> m [BSI.ByteString]
+getNValuesOriginal db n = do
+  it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+  Rocks.iterLast it
+  Just v1 <- Rocks.iterValue it
+  Rocks.iterPrev it
+  Just v2 <- Rocks.iterValue it
+  return [v1,v2]
