@@ -13,6 +13,7 @@ module Service.Transaction.Storage where
 import           Control.Exception
 import           Control.Monad                      (replicateM)
 import qualified Control.Monad.Catch                as E
+import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.State          (StateT, evalStateT, get,
@@ -20,6 +21,7 @@ import           Control.Monad.Trans.State          (StateT, evalStateT, get,
 import           Control.Retry
 import qualified Crypto.Hash.SHA256                 as SHA
 import qualified Data.ByteString.Base64             as Base64
+import           Data.Typeable
 -- import qualified Data.ByteString.Char8              as BC
 import qualified Data.ByteString.Internal           as BSI
 import           Data.Default                       (def)
@@ -170,23 +172,28 @@ getNLastValues db n = do
   vs <- lift $ evalStateT (replicateM n getNLastValuesT) it
   return vs
 
-getFirst :: (MonadResource (t IO), MonadTrans t) =>
-                    Rocks.DB -> Int -> Int -> t IO [BSI.ByteString]
+-- getFirst :: (MonadResource (t IO), MonadTrans t) =>
+--                     Rocks.DB -> Int -> Int -> t IO [BSI.ByteString]
 getFirst db offset count = drop offset <$> getNFirstValues db (offset + count )
 
-getLast :: (MonadResource (t IO), MonadTrans t) =>
-                 Rocks.DB -> Int -> Int -> t IO [BSI.ByteString]
+-- getLast :: (MonadResource (t IO), MonadTrans t) =>
+--                  Rocks.DB -> Int -> Int -> t IO [BSI.ByteString]
 getLast db  offset count = drop offset <$> getNLastValues db (offset + count )
 
 
-getChainInfoDB :: DBPoolDescriptor -> IO ChainInfo
-getChainInfoDB _ = do
-  -- kbByte <- withResource (poolMacroblock desc) (\db -> getLast db 0 1)
-  let kbByte = undefined
+-- getChainInfoDB :: DBPoolDescriptor -> IO ChainInfo
+getChainInfoDB desc = do
+  kbByte <- withResource (poolMacroblock desc) (\db -> getLast db 0 1)
+  let k = kbByte !! 0
+  lift $ helper (Just k)
+
+
+helper :: Maybe BSI.ByteString -> IO ChainInfo
+helper kbByte = do
   case kbByte of Nothing -> tMacroblock2ChainInfo Nothing
                  Just k -> case (S.decode k :: Either String Macroblock) of
-                              Left _  -> error "Can not decode Microblock"
-                              Right r -> tMacroblock2ChainInfo (Just r)
+                             Left _  -> error "Can not decode Microblock"
+                             Right r -> tMacroblock2ChainInfo (Just r)
 
 
 getLastTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> IO [TransactionAPI]

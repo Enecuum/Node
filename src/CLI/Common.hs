@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -40,6 +41,7 @@ import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
 import           Service.Transaction.Common            as B (getBalanceForKey,
                                                              getBlockByHashDB,
+                                                             getChainInfoDB,
                                                              getKeyBlockByHashDB,
                                                              getLastTransactions,
                                                              getTransactionByHashDB)
@@ -100,10 +102,10 @@ getKeyBlockByHash db hash _ = try $ do
 
 
 getChainInfo :: DBPoolDescriptor -> InChan MsgToCentralActor -> IO (Result ChainInfo)
-getChainInfo _ _ = do
-  --k <- B.getChainInfoDB db
+getChainInfo db _ = do
+  -- k <- lift $ B.getChainInfoDB db
+  -- return $ Right k
   return $ Right $ ChainInfo 0 0 "" 0 0 0
-
 
 getTransactionByHash :: DBPoolDescriptor -> Hash -> InChan MsgToCentralActor -> IO (Result TransactionInfo)
 getTransactionByHash db hash _ = try $ do
