@@ -83,9 +83,8 @@ handler =
         return True
     ]
 
-
-
-
+quantityMicroblocksInMacroblock :: Int
+quantityMicroblocksInMacroblock = 2
 -- End of the Connection section
 --------------------------------------
 
@@ -171,30 +170,40 @@ getNLastValues db n = runResourceT $ do
 
 getFirst db offset count = drop offset <$> getNFirstValues db (offset + count )
 
-getLast :: Rocks.DB -> Int -> Int -> IO [BSI.ByteString]
-getLast db  offset count = drop offset <$> getNLastValues db (offset + count )
+getLast :: Rocks.DB -> Int -> Int -> IO [(BSI.ByteString, BSI.ByteString)]
+-- getLast db  offset count = drop offset <$> getNLastValues db (offset + count )
+getLast db  offset count = drop offset <$> getNLastValues2 db (offset + count )
+
+
+getNLastValues2 :: Rocks.DB -> Int -> IO [(BSI.ByteString, BSI.ByteString)]
+getNLastValues2 db n = runResourceT $ do
+  it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+  Rocks.iterLast it
+  replicateM (n - 1) $ Rocks.iterPrev it
+  Rocks.iterItems it
+
 
 
 getChainInfoDB :: DBPoolDescriptor -> IO ChainInfo
 getChainInfoDB desc = do
-  kbByte <- withResource (poolMacroblock desc) (\db -> getLast db 0 1)
-  let k = kbByte !! 0
-  helper (Just k)
+  kvByte <- withResource (poolMacroblock desc) (\db -> getLast db 0 1)
+  let (k,v) = kvByte !! 0
+  helper k (Just v)
 
 
-helper :: Maybe BSI.ByteString -> IO ChainInfo
-helper kbByte = do
-  case kbByte of Nothing -> tMacroblock2ChainInfo Nothing
+helper :: BSI.ByteString -> Maybe BSI.ByteString -> IO ChainInfo
+helper k kbByte = do
+  case kbByte of Nothing -> tMacroblock2ChainInfo k Nothing
                  Just k -> case (S.decode k :: Either String Macroblock) of
                              Left _  -> error "Can not decode Microblock"
-                             Right r -> tMacroblock2ChainInfo (Just r)
+                             Right r -> tMacroblock2ChainInfo k (Just r)
 
 
 getLastTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> IO [TransactionAPI]
 getLastTransactions descr pubKey offset aCount = do
   let fun = \db -> getLast db offset aCount
-  rawTxInfo <- withResource (poolTransaction descr) fun
-  -- let rawTxInfo = undefined
+  txs <- withResource (poolTransaction descr) fun
+  let rawTxInfo = map (\(k,v) -> v) txs
   let txAPI = decodeTransactionsAndFilterByKey rawTxInfo pubKey
   return txAPI
 
@@ -356,8 +365,8 @@ tKeyBlockInfo2Macroblock (KeyBlockInfo {..}) = Macroblock {
           }
 
 
-tMacroblock2ChainInfo :: Maybe Macroblock -> IO ChainInfo
-tMacroblock2ChainInfo m@(Just (Macroblock {..})) = do
+tMacroblock2ChainInfo :: BSI.ByteString -> Maybe Macroblock -> IO ChainInfo
+tMacroblock2ChainInfo keyBlockHash m@(Just (Macroblock {..})) = do
   case m of Nothing ->  return ChainInfo {
     _emission        = 0,
     _curr_difficulty = 0,
@@ -369,7 +378,7 @@ tMacroblock2ChainInfo m@(Just (Macroblock {..})) = do
             Just am  -> return ChainInfo {
     _emission        = _reward,
     _curr_difficulty = _difficulty,
-    _last_block      = rHash am,
+    _last_block      = keyBlockHash,
     _blocks_num      = 0,
     _txs_num         = 0,  -- quantity of all approved transactions
     _nodes_num       = 0   -- quantity of all active nodes
