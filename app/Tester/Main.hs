@@ -14,13 +14,18 @@ import Service.Types
 import qualified    Network.WebSockets                  as WS
 import Service.Transaction.TransactionsDAG
 
-data SendTransaction = SendTransaction Transaction
+data SendTransaction = SendTransaction Transaction | SendHello
 
 instance ToJSON SendTransaction where
     toJSON (SendTransaction aTransaction) = object [
         "tag"           .= ("Request"  :: String),
         "type"          .= ("PendingAdd"  :: String),
         "transaction"   .= aTransaction
+      ]
+    toJSON SendHello = object [
+        "tag"           .= ("Action"  :: String),
+        "type"          .= ("Connect"  :: String),
+        "node_type"     .= ("PoA" :: String)
       ]
 
 
@@ -40,7 +45,7 @@ main = do
         _ -> return ()
 
 socketActor aSender aConnect = do
-    WS.sendTextData aConnect ("{\"tag\":\"Action\", \"type\":\"Connect\", \"node_type\": \"PoA\"}" :: T.Text)
+    WS.sendTextData aConnect $ encode SendHello
     void $ race (aSender aConnect) (receiver 0)
   where
     receiver :: Int -> IO ()
