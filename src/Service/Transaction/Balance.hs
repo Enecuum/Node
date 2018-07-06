@@ -29,7 +29,6 @@ import           Data.Maybe
 import           Data.Ord                              (comparing)
 import           Data.Pool
 import qualified Data.Serialize                        as S (decode, encode)
-import           Data.Typeable
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
 import           Service.InfoMsg                       (InfoMsg (..),
@@ -220,7 +219,7 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
     writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
 
     val  <- funR (poolMacroblock db) keyBlockHash
-    aMacroblock <- case val of
+    _ <- case val of
         Nothing -> return dummyMacroblock
         Just va  -> case S.decode va :: Either String Macroblock of
             Left _  -> error "Can not decode Macroblock"

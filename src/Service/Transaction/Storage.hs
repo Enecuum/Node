@@ -173,11 +173,14 @@ getNLastValues db n = do
 getFirst :: (MonadResource (t IO), MonadTrans t) =>
                     Rocks.DB -> Int -> Int -> t IO [BSI.ByteString]
 getFirst db offset count = drop offset <$> getNFirstValues db (offset + count )
+
+getLast :: (MonadResource (t IO), MonadTrans t) =>
+                 Rocks.DB -> Int -> Int -> t IO [BSI.ByteString]
 getLast db  offset count = drop offset <$> getNLastValues db (offset + count )
 
 
 getChainInfoDB :: DBPoolDescriptor -> IO ChainInfo
-getChainInfoDB desc = do
+getChainInfoDB _ = do
   -- kbByte <- withResource (poolMacroblock desc) (\db -> getLast db 0 1)
   let kbByte = undefined
   case kbByte of Nothing -> tMacroblock2ChainInfo Nothing
@@ -362,10 +365,10 @@ tMacroblock2ChainInfo m@(Just (Macroblock {..})) = do
     _txs_num         = 0,  -- quantity of all approved transactions
     _nodes_num       = 0   -- quantity of all active nodes
     }
-            Just m  -> return ChainInfo {
+            Just am  -> return ChainInfo {
     _emission        = _reward,
     _curr_difficulty = _difficulty,
-    _last_block      = rHash m,
+    _last_block      = rHash am,
     _blocks_num      = 0,
     _txs_num         = 0,  -- quantity of all approved transactions
     _nodes_num       = 0   -- quantity of all active nodes

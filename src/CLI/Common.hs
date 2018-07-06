@@ -40,7 +40,6 @@ import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
 import           Service.Transaction.Common            as B (getBalanceForKey,
                                                              getBlockByHashDB,
-                                                             getChainInfoDB,
                                                              getKeyBlockByHashDB,
                                                              getLastTransactions,
                                                              getTransactionByHashDB)
@@ -101,8 +100,8 @@ getKeyBlockByHash db hash _ = try $ do
 
 
 getChainInfo :: DBPoolDescriptor -> InChan MsgToCentralActor -> IO (Result ChainInfo)
-getChainInfo db _ = do
-  k <- B.getChainInfoDB db
+getChainInfo _ _ = do
+  --k <- B.getChainInfoDB db
   return $ Right $ ChainInfo 0 0 "" 0 0 0
 
 

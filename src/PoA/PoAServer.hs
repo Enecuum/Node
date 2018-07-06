@@ -114,7 +114,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
 
         aMsg <- WS.receiveData aConnect
         case A.eitherDecodeStrict aMsg of
-            Right (NNConnection aPortNumber aPublicPoint aNodeId) -> return ()
+            Right (NNConnection _aPortNumber _aPublicPoint _aNodeId) -> return ()
             Right (CNConnection aNodeType (Just aNodeId)) -> do
                 (aInpChan, aOutChan) <- newChan 64
                 sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan
