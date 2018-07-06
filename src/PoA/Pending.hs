@@ -47,17 +47,17 @@ data PendingAction where
 data Pending = Pending (Seq (Transaction, TimeSpec)) (Seq (Transaction, TimeSpec))
 
 
-pendingActor :: (InChan PendingAction, OutChan PendingAction) -> OutChan Microblock -> OutChan Transaction -> InChan InfoMsg -> IO ()
-pendingActor (aInChan, aOutChan) _ aTransactionChan aInfoChan = do
+pendingActor :: (InChan PendingAction, OutChan PendingAction) -> InChan Microblock -> OutChan Transaction -> InChan InfoMsg -> IO ()
+pendingActor (aInChan, aOutChan) aMicroblockChan aTransactionChan aInfoChan = do
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for microblocs"
-{-
+
     void . C.forkIO $ do
-        aBlockChan <- C.dupChan aMicroblockChan
+        aBlockChan <- dupChan aMicroblockChan
         -- blocks re-pack
-        forever $ C.readChan aBlockChan >>= \case
+        forever $ readChan aBlockChan >>= \case
             Microblock _ _ _ aTransactions _ ->
-                C.writeChan aChan $ RemoveTransactions aTransactions
--}
+                writeChan aInChan $ RemoveTransactions aTransactions
+
     -- transactions re-pack
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for transactions"
     void . C.forkIO $ forever $ forever $ readChan aTransactionChan >>=
@@ -98,12 +98,12 @@ pendingActor (aInChan, aOutChan) _ aTransactionChan aInfoChan = do
                         (aFilter aOldTransactions)
 
         -- transactions cleaning by the reason of including to block
-{-
+
         RemoveTransactions  aTransactions           -> do
             writeLog aInfoChan [PendingTag] Info "Remove transactions from pending. From pendig."
             let aFilter = S.filter (\(t, _) -> t `notElem` aTransactions)
             loop $ Pending (aFilter aNewTransaactions) (aFilter aOldTransactions)
--}
+
         -- transactions request
 
         GetTransaction      aCount aResponseChan    -> do

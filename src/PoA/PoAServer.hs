@@ -101,7 +101,7 @@ servePoA ::
     -> OutChan Transaction
     -> InChan InfoMsg
     -> InChan FileActorRequest
-    -> OutChan Microblock
+    -> InChan Microblock
     -> IO ()
 servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
