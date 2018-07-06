@@ -107,7 +107,6 @@ getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, Bool, Macroblock)
 checkMacroblock db aInfoChan keyBlockHash blockHash = do
-    let quantityMicroblocksInMacroblock = 2
     v  <- funR (poolMacroblock db) keyBlockHash
     case v of
       Nothing -> do -- If Macroblock is not already in the table, than insert it into the table

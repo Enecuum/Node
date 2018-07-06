@@ -83,9 +83,8 @@ handler =
         return True
     ]
 
-
-
-
+quantityMicroblocksInMacroblock :: Int
+quantityMicroblocksInMacroblock = 2
 -- End of the Connection section
 --------------------------------------
 
