@@ -48,6 +48,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
 
+        WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
         aMsg <- WS.receiveData aConnect
         case A.eitherDecodeStrict aMsg of
             Right (NNConnection _aPortNumber _aPublicPoint _aNodeId) -> return ()
@@ -61,6 +62,13 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
             Right (CNConnection aNodeType Nothing) -> do
                 aNodeId <- generateClientId []
                 WS.sendTextData aConnect $ A.encode $ ResponseClientId aNodeId
+                (aInpChan, aOutChan) <- newChan 64
+                sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan
+
+                void $ race
+                    (aSender aNodeId aConnect aOutChan)
+                    (aReceiver aNodeId aConnect inChanPending)
+            Right (ResponseNodeIdToNN aNodeId aNodeType) -> do
                 (aInpChan, aOutChan) <- newChan 64
                 sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan
 
