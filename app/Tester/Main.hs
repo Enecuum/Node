@@ -47,5 +47,5 @@ socketActor aSender aConnect = do
     receiver i = do
         aMsg <- WS.receiveDataMessage aConnect
         print i
-        when (i`mod`1000 == 0) $ print aMsg
+        print aMsg
         receiver $ i + 1
