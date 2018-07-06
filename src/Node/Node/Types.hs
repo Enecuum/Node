@@ -94,7 +94,7 @@ data NetworkNodeData = NetworkNodeData {
     ,   _logChan            :: InChan InfoMsg
     ,   _fileServerChan     :: InChan FileActorRequest
     ,   _microblockChan     :: InChan Microblock
-    ,   _transactionsChan   :: InChan Transaction
+    ,   _transactionsChan   :: InChan (Transaction, MVar Bool)
     ,   _valueChan          :: InChan Value
   }
 
@@ -106,7 +106,7 @@ makeNetworkData
     ->  InChan InfoMsg
     ->  InChan FileActorRequest
     ->  InChan Microblock
-    ->  InChan Transaction
+    ->  InChan (Transaction, MVar Bool)
     ->  InChan Value
     ->  NetworkNodeData
 makeNetworkData aBootNodeList aNodeConfig = NetworkNodeData M.empty aNodeConfig aBootNodeList Nothing

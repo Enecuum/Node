@@ -8,6 +8,7 @@ module Node.Lib where
 
 import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
+import              Control.Concurrent.MVar
 import           Control.Exception
 import           Control.Monad
 import qualified    Network.WebSockets                  as WS
@@ -44,7 +45,7 @@ startNode
     -> BuildConfig
     -> InChan InfoMsg
     -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ())
-    -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> OutChan Transaction -> InChan Microblock -> MyNodeId -> InChan FileActorRequest -> IO ())
+    -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> OutChan (Transaction, MVar Bool) -> InChan Microblock -> MyNodeId -> InChan FileActorRequest -> IO ())
     -> IO (InChan MsgToCentralActor, OutChan MsgToCentralActor)
 startNode descrDB buildConf infoCh manager startDo = do
 
