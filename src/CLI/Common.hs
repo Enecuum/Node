@@ -137,7 +137,12 @@ sendTrans tx ch aInfoCh = try $ do
            aMVar <- newEmptyMVar
            cTime <- getTime
            writeInChan ch $ NewTransaction (tx { _timestamp = Just cTime } ) aMVar
-           return $ rHash tx)
+           r <- readMVar aMVar 
+           print r
+           case r of
+             True -> return $ rHash tx
+             _    -> throw TransactionChanBusyException
+          )
   case aExp of
     Just h  -> return $ Hash h
     Nothing -> throw TransactionChanBusyException
