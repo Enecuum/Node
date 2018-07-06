@@ -7,6 +7,7 @@ module PoA.PoAServer (
 
 import              Control.Monad (forM_, void, forever, unless)
 import qualified    Network.WebSockets                  as WS
+import              Control.Concurrent.MVar
 import              Service.Network.Base
 import              Service.Network.WebSockets.Server
 import              Control.Concurrent.MVar
@@ -33,7 +34,7 @@ import              Data.Maybe()
 servePoA ::
        PortNumber
     -> InChan MsgToCentralActor
-    -> OutChan Transaction
+    -> OutChan (Transaction, MVar Bool)
     -> InChan InfoMsg
     -> InChan FileActorRequest
     -> InChan Microblock
@@ -133,7 +134,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 AddTransactionRequest aTransaction -> do
                     aMVar <- newEmptyMVar
                     writeInChan ch $ NewTransaction aTransaction aMVar
-                    WS.sendTextData aConnect $ A.encode $ ResponseTransactionValid True
+                    WS.sendTextData aConnect . A.encode . ResponseTransactionValid =<< takeMVar aMVar
 
                 _ -> return ()
             Left a -> do
