@@ -93,7 +93,8 @@ quantityMicroblocksInMacroblock = 2
 -- begin of the Database structure  section
 
 -- for rocksdb Transaction and Microblock
-rHash :: S.Serialize a => a -> BSI.ByteString
+-- rHash :: S.Serialize a => a -> BSI.ByteString
+rHashT t@(Transaction {}) = Base64.encode . SHA.hash . S.encode $ t { _timestamp = Nothing }
 rHash key = Base64.encode . SHA.hash . S.encode $ key
 
 
@@ -309,14 +310,14 @@ tMicroblock2MicroblockBD (Microblock {..}) = MicroblockBD {
   _keyBlock,
   _signBD = _sign,
   _teamKeys,
-  _transactionsHashes = map rHash _transactions,
+  _transactionsHashes = map rHashT _transactions,
   _numOfBlock }
 
 
 tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> MicroblockBD -> IO MicroblockAPI
 tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) = do
   tx <- getTxsMicroblock db m
-  let txAPI = map (\t -> TransactionAPI {_tx = t, _txHash = rHash t}) tx
+  let txAPI = map (\t -> TransactionAPI {_tx = t, _txHash = rHashT t }) tx
   return MicroblockAPI {
             _prevMicroblock = "",
             _nextMicroblock = "",
