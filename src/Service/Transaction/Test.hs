@@ -30,12 +30,13 @@ import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON         ()
 
 getOneMicroblock :: IO ()
-getOneMicroblock = do
-  c <- connectDB
-  let h = Hash ("2c4kS21m0cA91siB0OfuoCwLRWKyLl/2yuk3z+6BvFY=" :: BSI.ByteString)
-  -- let h = Hash ("\248\198\199\178e\ETXt\186T\148y\223\224t-\168p\162\138\&1" :: BSI.ByteString)
-  mb <- getBlockByHashDB c h
-  print mb
+getOneMicroblock = undefined
+-- getOneMicroblock = do
+--   c <- connectDB
+--   let h = Hash ("2c4kS21m0cA91siB0OfuoCwLRWKyLl/2yuk3z+6BvFY=" :: BSI.ByteString)
+--   -- let h = Hash ("\248\198\199\178e\ETXt\186T\148y\223\224t-\168p\162\138\&1" :: BSI.ByteString)
+--   mb <- getBlockByHashDB c h
+--   print mb
 
 
 getOneTransaction :: IO ()
@@ -57,10 +58,11 @@ getTransactionsByKey = do
 
 
 getOneKeyBlock :: IO (Maybe MacroblockAPI)
-getOneKeyBlock = do
-  c <- connectDB
-  let h = Hash ("XXX" :: BSI.ByteString)
-  getKeyBlockByHashDB c h
+getOneKeyBlock = undefined
+-- getOneKeyBlock = do
+--   c <- connectDB
+--   let h = Hash ("XXX" :: BSI.ByteString)
+--   getKeyBlockByHashDB c h
 
 tryParseTXInfoJson :: IO ()
 tryParseTXInfoJson = do
@@ -144,10 +146,10 @@ getAllMicroblocks = do
 -- data TypeInfo = Amount | Transaction | MicroblockBD | MacroblockBD --
 
 -- getAllKV1 :: TypeInfo -> IO ()
--- getAllKV1 Ledger      = getLedgerFilePath
--- getAllKV1 Transaction = getTransactionFilePath
--- getAllKV1 Microblock  = getMicroblockFilePath
--- getAllKV1 Macroblock  = getMacroblockFilePath
+-- getAllKV1 Amount       = getLedgerFilePath
+-- getAllKV1 Transaction{}  = getTransactionFilePath
+-- getAllKV1 MicroblockBD{} = getMicroblockFilePath
+-- getAllKV1 MacroblockBD{} = getMacroblockFilePath
 
 -- getAllKV2 typeInfo = do
 --   result <- getAllKV =<< getAllKV1 typeInfo

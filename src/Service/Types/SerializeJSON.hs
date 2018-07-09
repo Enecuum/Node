@@ -221,6 +221,7 @@ instance FromJSON MacroblockBD where
                <*> o .: "numberK"
                <*> o .: "nonce"
                <*> o .: "microblocks"
+               <*> o .: "team_keys"
     parseJSON inv         = typeMismatch "MacroblockBD" inv
 
 
@@ -235,6 +236,7 @@ instance ToJSON MacroblockAPI where
          ,  "txs_cnt"           .= _txsCnt (bl :: MacroblockAPI)
 --         ,  "microblocks_cnt"   .= length (_mblocksAPI bl)
          ,  "microblocks"       .= _mblocks (bl :: MacroblockAPI)
+         ,  "team_keys"         .= _mblocks (bl :: MacroblockAPI)
        ]
 
 instance FromJSON MacroblockAPI where

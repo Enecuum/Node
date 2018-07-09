@@ -105,12 +105,15 @@ getPubKeys :: Transaction -> [PublicKey]
 getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
-checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, Bool, MacroblockBD)
-checkMacroblock db aInfoChan keyBlockHash blockHash = do
+checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> Microblock -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, Bool, MacroblockBD)
+checkMacroblock db aInfoChan microblock keyBlockHash blockHash = do
     v  <- funR (poolMacroblock db) keyBlockHash
     case v of
       Nothing -> do -- If MacroblockBD is not already in the table, than insert it into the table
-                    let aMacroBlock = dummyMacroblock {_mblocks = [blockHash]} :: MacroblockBD
+                    let aMacroBlock = dummyMacroblock {
+                          _mblocks = [blockHash],
+                          _teamKeys = _teamKeys (microblock :: Microblock)
+                          } :: MacroblockBD
                     return (True, False, True, True, aMacroBlock)
       Just a -> -- If MacroblockBD already in the table
         case S.decode a :: Either String MacroblockBD of
@@ -144,7 +147,7 @@ addMicroblockToDB db m aInfoChan =  do
     let microblockHash = rHash m
     writeLog aInfoChan [BDTag] Info ("New Microblock came" ++ show(microblockHash))
 -- FIX: Write to db atomically
-    (goOn, macroblockClosed, microblockNew, macroblockNew, macroblock ) <- checkMacroblock db aInfoChan (_keyBlock (m :: Microblock)) microblockHash
+    (goOn, macroblockClosed, microblockNew, macroblockNew, macroblock ) <- checkMacroblock db aInfoChan m (_keyBlock (m :: Microblock)) microblockHash
     writeLog aInfoChan [BDTag] Info ("MacroblockBD - already closed " ++ show (not goOn))
     when goOn $ do
                 writeLog aInfoChan [BDTag] Info ("MacroblockBD - New is " ++ show macroblockNew)
@@ -153,7 +156,6 @@ addMicroblockToDB db m aInfoChan =  do
                 when (macroblockNew && microblockNew) $ do
                   writeMicroblockDB (poolMicroblock db) aInfoChan (tMicroblock2MicroblockBD m)
                   writeTransactionDB (poolTransaction db) aInfoChan txs microblockHash
-                  -- let aMacroblock = fromJust macroblock
 
                   if macroblockClosed then do
                     -- get all microblocks (without the last added) for macroblock
