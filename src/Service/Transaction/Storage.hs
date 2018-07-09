@@ -337,7 +337,6 @@ tMacroblock2MacroblockAPI (MacroblockBD {..}) = MacroblockAPI {
                                  _height,
                                  _solver,
                                  _reward,
-                                 _txsCnt = 0,
                                  _mblocks
                                  }
 
