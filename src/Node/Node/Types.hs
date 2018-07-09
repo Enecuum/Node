@@ -63,9 +63,6 @@ data MsgFromNode
     | ActualConnectListRequest (MVar [ActualConnectInfo])
   deriving (Show)
 
-data MsgToServer where
-    KillMsg       :: MsgToServer
-
 
 -- | TODO: shoud be refactord: reduce keys count.
 data NodeConfig = NodeConfig {
