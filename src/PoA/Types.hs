@@ -71,6 +71,7 @@ data PPToNNMessage
     | ActionAddToListOfConnects Int
     | NNConnection PortNumber PublicPoint NodeId
     | CNConnection NodeType (Maybe NodeId)
+    | RequestActualConnectList
 
     deriving (Show)
 
@@ -114,6 +115,40 @@ data NNToPPMessage
     | ResponseIsInPending Bool
     | ResponseTransactionValid Bool
     | ResponseClientId NodeId
+    | ActualConnectList [ActualConnectInfo]
+
+data ActualConnectInfo = ActualConnectInfo NodeId NodeType (Maybe Connect)
+
+
+instance ToJSON ActualConnectInfo where
+    toJSON (ActualConnectInfo aNodeId aNodeType (Just (Connect aIp aPortNumber))) = object [
+            "node_type" .= show aNodeType
+        ,   "node_id"   .= nodeIdToUnxed aNodeId
+        ,   "ip"        .= show (fromHostAddress aIp)
+        ,   "port"      .= fromEnum aPortNumber
+      ]
+    toJSON (ActualConnectInfo aNodeId aNodeType Nothing) = object [
+            "node_type" .= show aNodeType
+        ,   "node_id"   .= nodeIdToUnxed aNodeId
+      ]
+
+
+
+instance FromJSON ActualConnectInfo where
+    parseJSON (Object aMsg) = do
+        aNodeType :: T.Text  <- aMsg .: "node_type"
+        aUnxedId  :: T.Text  <- aMsg .: "node_id"
+        aNodeId   <- unhexNodeId aUnxedId
+
+        aIp       <- aMsg .:? "ip"
+        aPort     <- aMsg .:? "port"
+
+        let aConnect = do
+                aIpAdress <- readMaybe =<< aIp
+                aJustPort <- aPort
+                return $ Connect (toHostAddress aIpAdress) (toEnum aJustPort)
+        return $ ActualConnectInfo aNodeId (readNodeType aNodeType) aConnect
+
 
 
 myUnhex :: IsString a => T.Text -> Either a String
@@ -209,6 +244,7 @@ instance FromJSON PPToNNMessage where
                         aNodeId <- aMessage .:? "my_id"
                         aId <- return $ unhexNodeId =<< aNodeId
                         return $ CNConnection aCN aId
+            ("Request","ActualConnectList") -> return $ RequestActualConnectList
             _ -> mzero
 
 
@@ -227,9 +263,9 @@ instance FromJSON PPToNNMessage where
 readNodeType :: (IsString a, Eq a) => a -> NodeType
 readNodeType aNodeType
     | aNodeType == "PoW" = PoW
-    | aNodeType == "All" = All
+    | aNodeType == "PoA" = PoA
     | aNodeType == "NN"  = NN
-    | otherwise          = PoA
+    | otherwise          = All
 
 decodeList :: [T.Text] -> [String]
 decodeList aList
@@ -304,6 +340,11 @@ instance ToJSON NNToPPMessage where
         "tag"       .= ("Response"  :: String),
         "type"      .= ("NodeId"   :: String),
         "node_id"   .= nodeIdToUnxed aNodeId
+      ]
+    toJSON (ActualConnectList aConnects) = object [
+        "tag"               .= ("Response"  :: String),
+        "type"              .= ("ConnectList"   :: String),
+        "actual_connects"   .= aConnects
       ]
 
 
