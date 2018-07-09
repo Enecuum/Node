@@ -343,7 +343,7 @@ instance ToJSON NNToPPMessage where
       ]
     toJSON (ActualConnectList aConnects) = object [
         "tag"               .= ("Response"  :: String),
-        "type"              .= ("ConnectList"   :: String),
+        "type"              .= ("ActualConnectList"   :: String),
         "actual_connects"   .= aConnects
       ]
 
