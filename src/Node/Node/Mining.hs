@@ -54,12 +54,12 @@ networkNodeStart (_, aOutChan) aMd = do
                             "PP node " ++ show aSenderId ++ ", create a a microblock: " ++ show aMicroblock
                         void $ tryWriteChan (aData^.microblockChan) aMicroblock
 
-                    NewConnect aNodeId aNodeType aChan  -> do
+                    NewConnect aNodeId aNodeType aChan aConnect -> do
                         writeLog (aData^.logChan) [NetLvlTag] Info $
                             "A new connect with PP node " ++ show aNodeId ++ ", the type of node is " ++ show aNodeType
                         when (isNothing $ aData^.connects.at aNodeId) $
                             modifyIORef aMd $ connects %~ M.insert aNodeId
-                                (NodeInfo aChan aNodeType)
+                                (NodeInfo aChan aNodeType aConnect)
 
                     BroadcastRequest aBroadcastMsg aIdFrom aNodeType -> do
                         void $ tryWriteChan (aData^.valueChan) aBroadcastMsg
@@ -77,6 +77,12 @@ networkNodeStart (_, aOutChan) aMd = do
                         whenJust (aData^.connects.at aNodeId) $ \aNode -> do
                             let aPPIds = M.filter (\a -> a^.nodeType == PoW) (aData^.connects)
                             void $ tryWriteChan (aNode^.nodeChan) $ ResponsePoWList $ M.keys aPPIds
+
+                    ActualConnectListRequest aVar -> void $ C.forkIO $ do
+                        let aConnects = toActualConnectInfo <$> (M.toList $ aData^.connects)
+                        C.putMVar aVar aConnects
+
+
             MsgFromSharding         _   -> return ()
             CleanAction                 -> return ()
 
@@ -84,4 +90,8 @@ networkNodeStart (_, aOutChan) aMd = do
                 writeLog (aData^.logChan) [NetLvlTag] Info "I create a transaction."
                 void $ C.forkIO $ writeInChan (aData^.transactionsChan) (aTransaction, aVar)
 
+
+toActualConnectInfo :: (NodeId, NodeInfo) -> ActualConnectInfo
+toActualConnectInfo (aNodeId, NodeInfo _ aNodeType aConnect) =
+    ActualConnectInfo aNodeId aNodeType aConnect
 --------------------------------------------------------------------------------

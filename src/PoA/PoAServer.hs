@@ -10,7 +10,6 @@ import qualified    Network.WebSockets                  as WS
 import              Control.Concurrent.MVar
 import              Service.Network.Base
 import              Service.Network.WebSockets.Server
-import              Control.Concurrent.MVar
 import qualified    Control.Concurrent.Chan as C
 import              Control.Concurrent.Chan.Unagi.Bounded
 import              Node.Node.Types
@@ -54,27 +53,27 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
             Right (NNConnection _aPortNumber _aPublicPoint _aNodeId) -> return ()
             Right (CNConnection aNodeType (Just aNodeId)) -> do
                 (aInpChan, aOutChan) <- newChan 64
-                sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan
+                sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
 
                 void $ race
                     (aSender aNodeId aConnect aOutChan)
-                    (aReceiver aNodeId aConnect inChanPending)
+                    (aReceiver (IdFrom aNodeId) aConnect inChanPending)
             Right (CNConnection aNodeType Nothing) -> do
                 aNodeId <- generateClientId []
                 WS.sendTextData aConnect $ A.encode $ ResponseClientId aNodeId
                 (aInpChan, aOutChan) <- newChan 64
-                sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan
+                sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
 
                 void $ race
                     (aSender aNodeId aConnect aOutChan)
-                    (aReceiver aNodeId aConnect inChanPending)
+                    (aReceiver (IdFrom aNodeId) aConnect inChanPending)
             Right (ResponseNodeIdToNN aNodeId aNodeType) -> do
                 (aInpChan, aOutChan) <- newChan 64
-                sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan
+                sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
 
                 void $ race
                     (aSender aNodeId aConnect aOutChan)
-                    (aReceiver aNodeId aConnect inChanPending)
+                    (aReceiver (IdFrom aNodeId) aConnect inChanPending)
 
             Right _ -> do
                 writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg
@@ -109,7 +108,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 RequestBroadcast aRecipientType aBroadcastMsg -> do
                         writeLog aInfoChan [ServePoATag] Info $ "Broadcast request " ++ show aMsg
                         sendMsgToCentralActor ch $
-                            BroadcastRequest aBroadcastMsg (IdFrom aId) aRecipientType
+                            BroadcastRequest aBroadcastMsg aId aRecipientType
                 RequestConnects _ -> do
                     aShuffledRecords <- shuffleM =<< getRecords aFileServerChan
                     let aConnects = take 5 aShuffledRecords
@@ -120,12 +119,12 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 RequestPoWList -> do
                         writeLog aInfoChan [ServePoATag] Info $
                             "PoWListRequest the msg from " ++ show aId
-                        sendMsgToCentralActor ch $ PoWListRequest (IdFrom aId)
+                        sendMsgToCentralActor ch $ PoWListRequest aId
 
                 MsgMsgToNN aDestination aMsgToNN -> do
                         writeLog aInfoChan [ServePoATag] Info $
                             "Resending the msg from " ++ show aId ++ " the msg is " ++ show aMsgToNN
-                        sendMsgToCentralActor ch $ MsgResending (IdFrom aId) (IdTo aDestination) aMsgToNN
+                        sendMsgToCentralActor ch $ MsgResending aId (IdTo aDestination) aMsgToNN
 
                 IsInPendingRequest aTransaction -> do
                     aTmpChan <- C.newChan
@@ -144,10 +143,16 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                     writeInChan ch $ NewTransaction aTransaction aMVar
                     WS.sendTextData aConnect . A.encode . ResponseTransactionValid =<< takeMVar aMVar
 
+                RequestActualConnectList -> do
+                    aMVar <- newEmptyMVar
+                    sendMsgToCentralActor ch $ ActualConnectListRequest aMVar
+                    WS.sendTextData aConnect . A.encode . ActualConnectList =<< takeMVar aMVar
+
                 _ -> return ()
             Left a -> do
                 writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ a
                 WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"Error\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
+
 
 
 writeInChan :: InChan t -> t -> IO ()

@@ -39,9 +39,8 @@ import              PoA.Types
 import              Node.FileDB.FileServer
 
 
-instance Show (InChan a) where
-    show _ = "InChan"
-
+instance Show (InChan a) where show _ = "InChan"
+instance Show (MVar a) where show _ = "MVar"
 
 type Transactions = [Transaction]
 
@@ -56,11 +55,12 @@ data MsgToCentralActor where
 
 
 data MsgFromNode
-    = AcceptedMicroblock Microblock NodeId
+    = AcceptedMicroblock Microblock IdFrom
     | BroadcastRequest Value IdFrom NodeType
-    | NewConnect NodeId NodeType (InChan NNToPPMessage)
+    | NewConnect NodeId NodeType (InChan NNToPPMessage) (Maybe Connect)
     | MsgResending IdFrom IdTo Value
     | PoWListRequest IdFrom
+    | ActualConnectListRequest (MVar [ActualConnectInfo])
   deriving (Show)
 
 data MsgToServer where
@@ -79,8 +79,9 @@ makeLenses ''NodeConfig
 
 
 data NodeInfo = NodeInfo {
-        _nodeChan :: InChan NNToPPMessage
-    ,   _nodeType :: NodeType
+        _nodeChan     :: InChan NNToPPMessage
+    ,   _nodeType     :: NodeType
+    ,   _connectInfo  :: Maybe Connect
   }
   deriving (Eq)
 makeLenses ''NodeInfo
