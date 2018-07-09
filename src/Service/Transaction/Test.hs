@@ -176,9 +176,9 @@ getAllMicroblockKV = do
 getAllMacroblockKV :: IO ()
 getAllMacroblockKV = do
   result <- getAllKV =<< getMacroblockFilePath
-  let func res = case (S.decode res :: Either String Macroblock) of
+  let func res = case (S.decode res :: Either String MacroblockBD) of
         Right r -> r
-        Left _  -> error "Can not decode Macroblock"
+        Left _  -> error "Can not decode MacroblockBD"
   let result2 = map (\(k,v) -> (k, func v)) result
   putStrLn $ show result2
 

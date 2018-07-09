@@ -147,8 +147,8 @@ instance FromJSON Transaction where
 
 instance ToJSON MicroblockAPI where
     toJSON bl = object  [
-            "prev_block"   .= _prevMicroblock bl
-         ,  "next_block"   .= _nextMicroblock bl
+            "prev_block"   .= _prevMicroblock (bl :: MicroblockAPI)
+         ,  "next_block"   .= _nextMicroblock (bl :: MicroblockAPI)
          ,  "k_block"      .= _keyBlock (bl :: MicroblockAPI)
          ,  "team"         .= _teamKeys (bl :: MicroblockAPI)
          ,  "publisher"    .= _publisher (bl :: MicroblockAPI)
@@ -172,10 +172,10 @@ instance FromJSON MicroblockAPI where
 instance ToJSON Microblock where
  toJSON aBlock = object [
        "msg" .= object [
-           "K_hash"  .= encodeToText (_keyBlock (aBlock :: Microblock)),
-           "wallets" .= _teamKeys (aBlock :: Microblock),
-           "Tx"      .= _transactions aBlock
---           "uuid"    .= _numOfBlock aBlock
+           "K_hash"    .= encodeToText (_keyBlock (aBlock :: Microblock)),
+           "wallets"   .= _teamKeys (aBlock :: Microblock),
+           "Tx"        .= _transactions aBlock
+           -- "publisher" .= _publisher (aBlock :: Microblock)
          ],
        "sign" .= _sign (aBlock :: Microblock)
    ]
@@ -189,29 +189,29 @@ instance FromJSON Microblock where
        Object aBlock -> do
            aWallets <- aBlock .: "wallets"
            aTx      <- aBlock .: "Tx"
-           -- aUuid    <- aBlock .: "uuid"
+           -- aPublisher    <- aBlock .: "publisher"
            aKhash   <- decodeFromText =<< aBlock .: "K_hash"
            return $ Microblock aKhash aSign aWallets aTx 0
        _ -> mzero
  parseJSON _ = mzero
 
 
-instance ToJSON Macroblock where
+instance ToJSON MacroblockBD where
     toJSON bl = object  [
-            "prev_hash"         .= _prevKBlock (bl :: Macroblock)
-         ,  "difficulty"        .= _difficulty (bl :: Macroblock)
-         ,  "height"            .= _height (bl :: Macroblock)
-         ,  "solver"            .= _solver (bl :: Macroblock)
-         ,  "reward"            .= _reward (bl :: Macroblock)
-         ,  "timeK"             .= _time (bl :: Macroblock)
-         ,  "numberK"           .= _number (bl :: Macroblock)
-         ,  "nonce"             .= _nonce (bl :: Macroblock)
+            "prev_hash"         .= _prevKBlock (bl :: MacroblockBD)
+         ,  "difficulty"        .= _difficulty (bl :: MacroblockBD)
+         ,  "height"            .= _height (bl :: MacroblockBD)
+         ,  "solver"            .= _solver (bl :: MacroblockBD)
+         ,  "reward"            .= _reward (bl :: MacroblockBD)
+         ,  "timeK"             .= _time (bl :: MacroblockBD)
+         ,  "numberK"           .= _number (bl :: MacroblockBD)
+         ,  "nonce"             .= _nonce (bl :: MacroblockBD)
          -- ,  "microblocks_cnt"   .= length (_mblocks bl)
-         ,  "microblocks"       .= _mblocks (bl :: Macroblock)
+         ,  "microblocks"       .= _mblocks (bl :: MacroblockBD)
        ]
 
-instance FromJSON Macroblock where
-    parseJSON (Object o) = Macroblock
+instance FromJSON MacroblockBD where
+    parseJSON (Object o) = MacroblockBD
                <$> o .: "prev_hash"
                <*> o .: "difficulty"
                <*> o .: "height"
@@ -221,7 +221,7 @@ instance FromJSON Macroblock where
                <*> o .: "numberK"
                <*> o .: "nonce"
                <*> o .: "microblocks"
-    parseJSON inv         = typeMismatch "Macroblock" inv
+    parseJSON inv         = typeMismatch "MacroblockBD" inv
 
 
 instance ToJSON MacroblockAPI where

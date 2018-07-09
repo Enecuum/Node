@@ -1,23 +1,23 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs      #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiWayIf#-}
+{-# LANGUAGE MultiWayIf #-}
 module PoA.Pending where
 
-import Data.Sequence as S
+import           Data.Sequence                         as S
 
-import Control.Monad
+import           Control.Monad
 
+import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
-import qualified Control.Concurrent as C
-import              Control.Concurrent.MVar
-import              Service.Chan
+import           Control.Concurrent.MVar
+import           Service.Chan
 
-import Service.Types
-import System.Clock
-import Data.Foldable
+import           Data.Foldable
+import           Service.Types
+import           System.Clock
 
-import Service.InfoMsg
-import Node.Data.GlobalLoging
+import           Node.Data.GlobalLoging
+import           Service.InfoMsg
 -- actor
 -- actor's data
 -- commands for actor

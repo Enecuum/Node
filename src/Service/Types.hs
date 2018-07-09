@@ -87,6 +87,7 @@ data Microblock = Microblock{
     _keyBlock     :: ByteString, -- hash of key-block
     _sign         :: Signature,  -- signature for {K_hash, [Tx],}
     _teamKeys     :: [PublicKey], -- for reward
+    -- _publisher    :: PublicKey,
     _transactions :: [Transaction],
     _numOfBlock   :: Integer
   }
@@ -95,11 +96,12 @@ data Microblock = Microblock{
 instance Serialize Microblock
 
 data MicroblockBD = MicroblockBD{
-    _keyBlock       :: ByteString, -- hash of key-block
-    _signBD         :: Signature,  -- signature for {K_hash, [Tx],}
-    _teamKeys       :: [PublicKey], -- for reward
-    _transactionsBD :: [ByteString], -- hashes of [Transaction],
-    _numOfBlock     :: Integer
+    _keyBlock           :: ByteString, -- hash of key-block
+    _signBD             :: Signature,  -- signature for {K_hash, [Tx],}
+    _teamKeys           :: [PublicKey], -- for reward
+    -- _publisher          :: PublicKey,
+    _transactionsHashes :: [ByteString], -- hashes of [Transaction],
+    _numOfBlock         :: Integer
   }
   deriving (Eq, Generic, Ord, Read, Show)
 
@@ -118,7 +120,7 @@ data MicroblockAPI = MicroblockAPI {
 instance Serialize MicroblockAPI
 
 
-data Macroblock = Macroblock {
+data MacroblockBD = MacroblockBD {
      _prevKBlock :: ByteString
   ,  _difficulty :: Integer --
   ,  _height     :: Integer -- block number in the chain
@@ -129,7 +131,7 @@ data Macroblock = Macroblock {
   ,  _nonce      :: Integer
   ,  _mblocks    :: [ByteString]
   } deriving (Eq, Generic, Ord, Read, Show)
-instance Serialize Macroblock
+instance Serialize MacroblockBD
 
 data MacroblockAPI = MacroblockAPI {
      _prevKBlock :: ByteString
@@ -144,12 +146,13 @@ data MacroblockAPI = MacroblockAPI {
 } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize MacroblockAPI
 
+-- from PoW
 data KeyBlockInfo = KeyBlockInfo {
-    _time     :: Integer
-  , prev_hash :: ByteString --String
-  , _number   :: Integer
-  , _nonce    :: Integer
-  , _solver   :: PublicKey
+    _time      :: Integer
+  , _prev_hash :: ByteString
+  , _number    :: Integer
+  , _nonce     :: Integer
+  , _solver    :: PublicKey
   } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize KeyBlockInfo
 
