@@ -53,12 +53,25 @@ getTransactionsByKey = do
   tx <- getAllTransactionsDB c (read "QYy3AT4a3Z88MpEoGDixRgxtWW8v3RfSbJLFQEyFZwMe" :: PublicKey)
   print tx
 
+
+-- mb <- B.getKeyBlockByHashDB db hash aInfoChan
+
 -- end test cli
 --------------------------------------
 
 
-getOneKeyBlock :: IO (Maybe MacroblockAPI)
-getOneKeyBlock = undefined
+getOneKeyBlock :: IO (Maybe MacroblockBD)
+getOneKeyBlock = do
+  c <- connectDB
+  -- let h = Hash ("32" :: BSI.ByteString)
+  mb <- funR (poolMacroblock c) "32"
+  case mb of Nothing -> do
+               -- writeLog aInfoChan [BDTag] Error ("No Team Keys For Key block " ++ show aHash)
+               return Nothing
+             Just j -> case (S.decode j :: Either String MacroblockBD) of
+               Left _  -> error "Can not decode Macroblock"
+               Right r -> return $ Just r
+
 -- getOneKeyBlock = do
 --   c <- connectDB
 --   let h = Hash ("XXX" :: BSI.ByteString)

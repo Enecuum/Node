@@ -208,10 +208,10 @@ instance FromJSON Microblock where
      aSign <- v .: "sign"
      case aMsg of
        Object aBlock -> do
-           aWallets <- aBlock .: "wallets"
-           aTx      <- aBlock .: "Tx"
-           aPublisher    <- aBlock .: "publisher"
-           aKhash   <- decodeFromText =<< aBlock .: "K_hash"
+           aWallets   <- aBlock .: "wallets"
+           aTx        <- aBlock .: "Tx"
+           aPublisher <- aBlock .: "publisher"
+           aKhash     <- aBlock .: "K_hash"
            return $ Microblock aKhash aSign aWallets aPublisher aTx 0
        _ -> mzero
  parseJSON _ = mzero
