@@ -82,6 +82,21 @@ instance S.Serialize NodeType
 -- PP means PoW and PoA
 -- MsgToMainActorFromPP
 
+data BNResponseConnects = BNResponseConnects [Connect]
+data BNRequestConnects  = BNRequestConnects
+
+
+instance FromJSON BNResponseConnects where
+    parseJSON (Object aMsg) = BNResponseConnects <$> (aMsg .: "connects")
+
+
+instance ToJSON BNRequestConnects where
+    toJSON BNRequestConnects = object [
+        "tag"       .= ("Request"  :: String),
+        "type"      .= ("Connects"  :: String)
+      ]
+
+
 data NNToPPMessage
     = RequestNodeIdToPP
 
@@ -95,11 +110,6 @@ data NNToPPMessage
         poWList :: [NodeId]
     }
 
-    | MsgConnect {
-        ip    :: HostAddress,
-        port  :: PortNumber
-    }
-
     | MsgMsgToPP {
         sender :: NodeId,
         message :: Value
@@ -110,12 +120,23 @@ data NNToPPMessage
         idFrom  :: IdFrom
     }
 
-    | MsgNewNodeInNet NodeId NodeType
+    | MsgNewNodeInNet NodeId NodeType (Maybe Connect)
     | ResponsePendingTransactions [Transaction]
     | ResponseIsInPending Bool
     | ResponseTransactionValid Bool
     | ResponseClientId NodeId
     | ActualConnectList [ActualConnectInfo]
+
+
+{-
+data MsgToSenderActor where
+    KillSenderActor :: MsgToSenderActor
+    ...
+    ...
+    ...
+    MsgToClientNode :: MsgToClientNode -> MsgToSenderActor
+
+-}
 
 data ActualConnectInfo = ActualConnectInfo NodeId NodeType (Maybe Connect)
 
@@ -294,13 +315,19 @@ instance ToJSON NNToPPMessage where
         "connects"  .= aConnects
       ]
 
-    toJSON (MsgConnect aIp aPort) = toJSON $ Connect aIp aPort
-
-    toJSON (MsgNewNodeInNet aPPId aNodeType) = object [
+    toJSON (MsgNewNodeInNet aPPId aNodeType Nothing) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("NewNodeInNet"  :: String),
         "id"        .= nodeIdToUnxed aPPId,
         "nodeType"  .= show aNodeType
+      ]
+
+    toJSON (MsgNewNodeInNet aPPId aNodeType (Just aConnect)) = object [
+        "tag"       .= ("Msg"           :: String),
+        "type"      .= ("NewNodeInNet"  :: String),
+        "id"        .= nodeIdToUnxed aPPId,
+        "nodeType"  .= show aNodeType,
+        "connect"   .= aConnect
       ]
 
     toJSON (ResponseTransaction aTransaction) = object [
@@ -354,5 +381,13 @@ instance ToJSON Connect where
         "port" .= fromEnum aPortNumber
       ]
 
+instance FromJSON Connect where
+    parseJSON (Object aConnect) = do
+        aIp     <- aConnect .: "ip"
+        aPort   <- aConnect .: "port"
+        case readMaybe aIp of
+            Nothing      -> mzero
+            Just aJustIp -> return $
+                Connect (toHostAddress aJustIp) (toEnum aPort)
 
 --------------------------------------------------------------------------------
