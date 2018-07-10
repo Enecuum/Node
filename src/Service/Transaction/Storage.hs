@@ -102,6 +102,7 @@ quantityMicroblocksInMacroblock = 2
 -- rHash :: S.Serialize a => a -> BSI.ByteString
 rHashT t@(Transaction {}) = Base64.encode . SHA.hash . S.encode $ t { _timestamp = Nothing }
 rHash key = Base64.encode . SHA.hash . S.encode $ key
+lastKeyBlock = "2dJ6lb9JgyQRac0DAkoqmYmS6ats3tND0gKMLW6x2x8=" :: DBKey --read "1"
 
 
 funW db aMapKeyValue = do
@@ -193,32 +194,45 @@ getNLastValues2 db n = runResourceT $ do
 -- getChainInfoDB = undefined
 getChainInfoDB :: DBPoolDescriptor -> InChan InfoMsg -> IO ChainInfo
 getChainInfoDB desc aInfoChan = do
-  let bd = (poolMacroblock desc)
-  let fun = (\db -> runResourceT $ do
-                it    <- Rocks.iterOpen db Rocks.defaultReadOptions
-                Rocks.iterLast it
-                return it)
-  iter <- withResource bd fun
-  (key, mb) <- getLastKeyBlock bd iter aInfoChan
-  -- tMacroblock2ChainInfo key mb
+  print lastKeyBlock
+  key <- funR (poolMacroblock desc) lastKeyBlock
+  mByte <- case key of Nothing -> return Nothing
+                       Just k  -> funR (poolMacroblock desc) k
+  mb <- case mByte of Nothing -> do
+                        writeLog aInfoChan [BDTag] Error "No Key block "
+                        return Nothing
+                      Just k -> case (S.decode k :: Either String MacroblockBD) of
+                                   Left _  -> error "Can not decode Macroblock"
+                                   Right r -> return $ Just r
+  tMacroblock2ChainInfo key mb
 
-  return ( undefined :: ChainInfo)
---   (key, mb ) <- getLastKeyBlock desc aInfoChan 0 1
---   -- let true = length (_mblocks (mb :: MacroblockBD)) == length (_teamKeys (mb :: MacroblockBD))
+-- getChainInfoDB desc aInfoChan = do
+--   let bd = (poolMacroblock desc)
+--   let fun = (\db -> runResourceT $ do
+--                 it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+--                 Rocks.iterLast it
+--                 return it)
+--   iter <- withResource bd fun
+--   (key, mb) <- getLastKeyBlock bd iter aInfoChan
+--   -- tMacroblock2ChainInfo key mb
 
--- getLastKeyBlock = undefined
-getLastKeyBlock :: Pool Rocks.DB -> Rocks.Iterator -> InChan InfoMsg -> IO (Maybe DBKey, Maybe MacroblockBD)
-getLastKeyBlock bd it aInfoChan = do
-  value <- Rocks.iterValue it
-  key <- Rocks.iterKey it
-  let res = case value of Nothing -> do
-                             -- writeLog aInfoChan [BDTag] Error "No Key block "
-                             Nothing
-                          Just k -> case (S.decode k :: Either String MacroblockBD) of
-                                       Left _  -> error "Can not decode Microblock"
-                                       Right r -> Just r
-  return (key,res)
-  -- return undefined
+--   return ( undefined :: ChainInfo)
+-- --   (key, mb ) <- getLastKeyBlock desc aInfoChan 0 1
+-- --   -- let true = length (_mblocks (mb :: MacroblockBD)) == length (_teamKeys (mb :: MacroblockBD))
+
+-- -- getLastKeyBlock = undefined
+-- getLastKeyBlock :: Pool Rocks.DB -> Rocks.Iterator -> InChan InfoMsg -> IO (Maybe DBKey, Maybe MacroblockBD)
+-- getLastKeyBlock bd it aInfoChan = do
+--   value <- Rocks.iterValue it
+--   key <- Rocks.iterKey it
+--   let res = case value of Nothing -> do
+--                              -- writeLog aInfoChan [BDTag] Error "No Key block "
+--                              Nothing
+--                           Just k -> case (S.decode k :: Either String MacroblockBD) of
+--                                        Left _  -> error "Can not decode Microblock"
+--                                        Right r -> Just r
+--   return (key,res)
+--   -- return undefined
 
 getLastTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> IO [TransactionAPI]
 getLastTransactions descr pubKey offset aCount = do
@@ -403,7 +417,7 @@ tKeyBlockInfo2Macroblock (KeyBlockInfo {..}) = MacroblockBD {
           }
 
 
-tMacroblock2ChainInfo :: DBKey -> Maybe MacroblockBD -> IO ChainInfo
+tMacroblock2ChainInfo :: Maybe DBKey -> Maybe MacroblockBD -> IO ChainInfo
 tMacroblock2ChainInfo keyBlockHash m@(Just (MacroblockBD {..})) = do
   case m of Nothing ->  return ChainInfo {
     _emission        = 0,
@@ -416,7 +430,7 @@ tMacroblock2ChainInfo keyBlockHash m@(Just (MacroblockBD {..})) = do
             Just am  -> return ChainInfo {
     _emission        = _reward,
     _curr_difficulty = _difficulty,
-    _last_block      = keyBlockHash,
+    _last_block      = fromJust keyBlockHash,
     _blocks_num      = 0,
     _txs_num         = 0,  -- quantity of all approved transactions
     _nodes_num       = 0   -- quantity of all active nodes

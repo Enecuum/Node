@@ -176,8 +176,9 @@ writeMacroblockToDB desc aInfoChan hashOfKeyBlock aMacroblock = do
   let key = hashOfKeyBlock
       val = S.encode aMacroblock
   funW (poolMacroblock desc) [(key,val)]
-  writeLog aInfoChan [BDTag] Info ("Write MacroblockBD " ++ show key ++ "to DB")
-
+  writeLog aInfoChan [BDTag] Info ("Write Macroblock " ++ show key ++ "to DB")
+  funW (poolMacroblock desc) [(lastKeyBlock,key)]
+  writeLog aInfoChan [BDTag] Info ("Write Last Macroblock " ++ show lastKeyBlock ++ "to DB")
 
 writeMicroblockDB :: Pool Rocks.DB -> InChan InfoMsg -> MicroblockBD -> IO ()
 writeMicroblockDB db aInfoChan m = do
