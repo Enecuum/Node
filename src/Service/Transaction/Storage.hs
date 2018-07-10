@@ -253,7 +253,7 @@ getBlockByHashDB db hash aInfoChan = do
   case mb of
     Nothing -> return Nothing
     Just m  -> do
-      mAPI <- tMicroblockBD2MicroblockAPI db m aInfoChan
+      mAPI <- tMicroblockBD2MicroblockAPI db m --aInfoChan
       return $ Just mAPI
 
 
@@ -332,22 +332,24 @@ tMicroblock2MicroblockBD (Microblock {..}) = MicroblockBD {
   _transactionsHashes = map rHashT _transactions,
   _numOfBlock }
 
-getTeamKeysForMicroblock :: DBPoolDescriptor -> DBKey -> InChan InfoMsg -> IO [PublicKey]
-getTeamKeysForMicroblock db aHash aInfoChan = do
+-- getTeamKeysForMicroblock :: DBPoolDescriptor -> DBKey -> InChan InfoMsg -> IO [PublicKey]
+getTeamKeysForMicroblock :: DBPoolDescriptor -> DBKey -> IO [PublicKey]
+getTeamKeysForMicroblock db aHash = do
   mb <- getByHash (poolMacroblock db) (Hash aHash)
   case mb of Nothing -> do
-               writeLog aInfoChan [BDTag] Error ("No Team Keys For Key block " ++ show aHash)
+               -- writeLog aInfoChan [BDTag] Error ("No Team Keys For Key block " ++ show aHash)
                return []
              Just j -> case (S.decode j :: Either String MacroblockBD) of
                Left _  -> error "Can not decode Macroblock"
                Right r -> return $ _teamKeys (r :: MacroblockBD)
 
 
-tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> MicroblockBD -> InChan InfoMsg -> IO MicroblockAPI
-tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) aInfoChan = do
+-- tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> MicroblockBD -> InChan InfoMsg -> IO MicroblockAPI
+tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> MicroblockBD -> IO MicroblockAPI
+tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) = do
   tx <- getTxsMicroblock db m
   let txAPI = map (\t -> TransactionAPI {_tx = t, _txHash = rHashT t }) tx
-  teamKeys <- getTeamKeysForMicroblock db _keyBlock aInfoChan
+  teamKeys <- getTeamKeysForMicroblock db _keyBlock --aInfoChan
   return MicroblockAPI {
             _prevMicroblock = "",
             _nextMicroblock = "",
@@ -362,8 +364,9 @@ tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) aInfoChan = do
 tMacroblock2MacroblockAPI :: DBPoolDescriptor -> MacroblockBD -> IO MacroblockAPI
 tMacroblock2MacroblockAPI descr macroB = do
            microBlocksInfo <- mapM (\ hash -> do
-               (MicroblockBD key sign team _ num) <- fromJust <$> getMicroBlockByHashDB descr (Hash hash)
-               return $ MicroblockInfoAPI "" "" key sign team (team !! fromEnum num) hash
+               m@(MicroblockBD key sign publisher _ num) <- fromJust <$> getMicroBlockByHashDB descr (Hash hash)
+               mbAPI <- tMicroblockBD2MicroblockAPI descr m
+               return $ MicroblockInfoAPI "" "" key sign (_teamKeys (mbAPI :: MicroblockAPI))  publisher  hash
              ) (_mblocks (macroB :: MacroblockBD))
            return $ MacroblockAPI (_prevKBlock (macroB :: MacroblockBD))
                                   ""
@@ -372,7 +375,7 @@ tMacroblock2MacroblockAPI descr macroB = do
                                   (_solver     (macroB :: MacroblockBD))
                                   (_reward     (macroB :: MacroblockBD))
                                   microBlocksInfo
-                                 
+
 
 
 dummyMacroblock :: MacroblockBD
