@@ -21,6 +21,7 @@ import              Control.Concurrent.MVar
 import              Control.Concurrent.Chan.Unagi.Bounded
 import qualified    Data.Set as S
 import              Service.Network.Base
+import              Service.Chan
 
 
 data FileActorRequest where
@@ -33,7 +34,7 @@ data FileActorRequest where
 getRecords :: InChan FileActorRequest -> IO [Connect]
 getRecords aChan = do
     aTmpRef <- newEmptyMVar
-    writeChan aChan $ ReadRecordsFromFile aTmpRef
+    writeInChan aChan $ ReadRecordsFromFile aTmpRef
     takeMVar aTmpRef
 
 
