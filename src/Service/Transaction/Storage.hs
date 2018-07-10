@@ -245,7 +245,7 @@ getKeyBlockByHashDB db kHash = do
   case kb of Nothing -> return Nothing
              Just j -> case (S.decode j :: Either String MacroblockBD) of
                Left _  -> error "Can not decode MacroblockBD"
-               Right r -> return $ Just (tMacroblock2MacroblockAPI r)
+               Right r -> Just <$> (tMacroblock2MacroblockAPI db r)
 
 
 getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo) --Transaction
@@ -329,16 +329,20 @@ tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) = do
             }
 
 
-tMacroblock2MacroblockAPI :: MacroblockBD -> MacroblockAPI
-tMacroblock2MacroblockAPI (MacroblockBD {..}) = MacroblockAPI {
-                                 _prevKBlock,
-                                 _nextKBlock = "",
-                                 _difficulty,
-                                 _height,
-                                 _solver,
-                                 _reward,
-                                 _mblocks
-                                 }
+tMacroblock2MacroblockAPI :: DBPoolDescriptor -> MacroblockBD -> IO MacroblockAPI
+tMacroblock2MacroblockAPI descr macroB = do
+           microBlocksInfo <- mapM (\ hash -> do
+               (MicroblockBD key sign team _ num) <- fromJust <$> getMicroBlockByHashDB descr (Hash hash)
+               return $ MicroblockInfoAPI "" "" key sign team (team !! fromEnum num) hash
+             ) (_mblocks (macroB :: MacroblockBD))
+           return $ MacroblockAPI (_prevKBlock (macroB :: MacroblockBD))
+                                  ""
+                                  (_difficulty (macroB :: MacroblockBD))
+                                  (_height     (macroB :: MacroblockBD))
+                                  (_solver     (macroB :: MacroblockBD))
+                                  (_reward     (macroB :: MacroblockBD))
+                                  microBlocksInfo
+                                 
 
 
 dummyMacroblock :: MacroblockBD

@@ -190,7 +190,7 @@ data MacroblockAPI = MacroblockAPI {
   ,  _height     :: Integer
   ,  _solver     :: PublicKey
   ,  _reward     :: Integer
-  ,  _mblocks    :: [ByteString]
+  ,  _mblocks    :: [MicroblockInfoAPI]
 
 } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize MacroblockAPI
