@@ -223,7 +223,7 @@ goGetAll = do
 
 test02 :: IO ()
 test02 = do
-  let path = "/tmp/haskell-rocksDB5"
+  let path = "/tmp/haskell-rocksDB7"
   db <- Rocks.open path def{Rocks.createIfMissing=True}
   Rocks.write db def{Rocks.sync = True} [ Rocks.Put "-" "zero"]
   Rocks.write db def{Rocks.sync = True} [ Rocks.Put "a" "one"
@@ -236,8 +236,41 @@ test02 = do
   Rocks.write db def{Rocks.sync = True} [ Rocks.Put "h" "eight"]
   Rocks.write db def{Rocks.sync = True} [ Rocks.Put "j" "nine"]
   result <- Rocks.get db  Rocks.defaultReadOptions "a"
+  print result
+
+  -- let something1 = \db -> runResourceT $ do
+  --       it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+  --       Rocks.iterLast it
+  --       return it
+  -- iter <- something1 db
+  -- let something2 = \it -> runResourceT $ do
+  --       Rocks.iterPrev it
+  --       Rocks.iterItems it
+  -- value <- something2 iter
+
+  let something3 = \db -> runResourceT $ do
+        it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+        Rocks.iterLast it
+        -- Rocks.iterPrev it
+        Rocks.iterItems it
+  value <- something3 db
+  print value
+
+  result2 <- Rocks.get db  Rocks.defaultReadOptions "a"
+  print result2
+
+  let something4 = \db -> runResourceT $ do
+        it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+        Rocks.iterLast it
+        -- Rocks.iterPrev it
+        Rocks.iterItems it
+  value4 <- something4 db
+
+  result2 <- Rocks.get db  Rocks.defaultReadOptions "a"
+  print result2
+
+  print value4
   Rocks.close db
-  putStrLn $ show result
 
 
 test01 :: IO ()
