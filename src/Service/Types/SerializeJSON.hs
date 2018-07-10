@@ -153,7 +153,6 @@ instance ToJSON MicroblockAPI where
          ,  "team"         .= _teamKeys (bl :: MicroblockAPI)
          ,  "publisher"    .= _publisher (bl :: MicroblockAPI)
          ,  "sign"         .= _signAPI (bl :: MicroblockAPI)
---         ,  "txs_cnt"      .= length (_transactionsAPI bl)
          ,  "transactions" .= _transactionsAPI bl
        ]
 
@@ -166,7 +165,29 @@ instance FromJSON MicroblockAPI where
                <*> o .: "team"
                <*> o .: "publisher"
                <*> o .: "transactions"
-    parseJSON inv         = typeMismatch "Microblock" inv
+    parseJSON inv         = typeMismatch "MicroblockAPI" inv
+
+instance ToJSON MicroblockInfoAPI where
+    toJSON bl = object  [
+            "prev_block"   .= _prevMicroblock (bl :: MicroblockInfoAPI)
+         ,  "next_block"   .= _nextMicroblock (bl :: MicroblockInfoAPI)
+         ,  "k_block"      .= _keyBlock (bl :: MicroblockInfoAPI)
+         ,  "team"         .= _teamKeys (bl :: MicroblockInfoAPI)
+         ,  "publisher"    .= _publisher (bl :: MicroblockInfoAPI)
+         ,  "sign"         .= _signAPI (bl :: MicroblockInfoAPI)
+         ,  "hash"         .= _hash (bl :: MicroblockInfoAPI)
+       ]
+
+instance FromJSON MicroblockInfoAPI where
+    parseJSON (Object o) = MicroblockInfoAPI
+               <$> o .: "prev_block"
+               <*> o .: "next_block"
+               <*> o .: "k_block"
+               <*> o .: "sign"
+               <*> o .: "team"
+               <*> o .: "publisher"
+               <*> o .: "hash"
+    parseJSON inv         = typeMismatch "MicroblockInfo" inv
 
 
 instance ToJSON Microblock where
@@ -233,7 +254,6 @@ instance ToJSON MacroblockAPI where
          ,  "height"            .= _height (bl :: MacroblockAPI)
          ,  "solver"            .= _solver (bl :: MacroblockAPI)
          ,  "reward"            .= _reward (bl :: MacroblockAPI)
-         ,  "txs_cnt"           .= _txsCnt (bl :: MacroblockAPI)
 --         ,  "microblocks_cnt"   .= length (_mblocksAPI bl)
          ,  "microblocks"       .= _mblocks (bl :: MacroblockAPI)
          ,  "team_keys"         .= _mblocks (bl :: MacroblockAPI)
@@ -247,7 +267,6 @@ instance FromJSON MacroblockAPI where
                <*> o .: "height"
                <*> o .: "solver"
                <*> o .: "reward"
-               <*> o .: "txs_cnt"
                <*> o .: "microblocks"
     parseJSON inv         = typeMismatch "MacroblockAPI" inv
 
