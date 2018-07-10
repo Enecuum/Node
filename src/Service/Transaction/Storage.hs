@@ -328,6 +328,7 @@ tMicroblock2MicroblockBD (Microblock {..}) = MicroblockBD {
   _keyBlock,
   _signBD = _sign,
   -- _teamKeys,
+  _publisher,
   _transactionsHashes = map rHashT _transactions,
   _numOfBlock }
 
@@ -353,7 +354,7 @@ tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) aInfoChan = do
             _keyBlock,
             _signAPI = _signBD,
             _teamKeys = teamKeys,
-            _publisher = read "1" :: PublicKey,
+            _publisher, -- =  _publisher,-- = read "1" :: PublicKey,
             _transactionsAPI = txAPI
             }
 

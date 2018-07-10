@@ -87,7 +87,7 @@ data Microblock = Microblock{
     _keyBlock     :: ByteString, -- hash of key-block
     _sign         :: Signature,  -- signature for {K_hash, [Tx],}
     _teamKeys     :: [PublicKey], -- for reward
-    -- _publisher    :: PublicKey,
+    _publisher    :: PublicKey,
     _transactions :: [Transaction],
     _numOfBlock   :: Integer
   }
@@ -99,7 +99,7 @@ data MicroblockBD = MicroblockBD{
     _keyBlock           :: ByteString, -- hash of key-block
     _signBD             :: Signature,  -- signature for {K_hash, [Tx],}
     -- _teamKeys           :: [PublicKey], -- for reward
-    -- _publisher          :: PublicKey,
+    _publisher          :: PublicKey,
     _transactionsHashes :: [ByteString], -- hashes of [Transaction],
     _numOfBlock         :: Integer
   }
