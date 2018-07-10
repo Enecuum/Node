@@ -193,7 +193,7 @@ instance FromJSON MicroblockInfoAPI where
 instance ToJSON Microblock where
  toJSON aBlock = object [
        "msg" .= object [
-           "K_hash"    .= encodeToText (_keyBlock (aBlock :: Microblock)),
+           "K_hash"    .= _keyBlock (aBlock :: Microblock),
            "wallets"   .= _teamKeys (aBlock :: Microblock),
            "Tx"        .= _transactions aBlock,
            "publisher" .= _publisher (aBlock :: Microblock)

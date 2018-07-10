@@ -329,10 +329,13 @@ getAllItems db = do
 tMicroblockBD2Microblock :: DBPoolDescriptor -> MicroblockBD -> IO Microblock
 tMicroblockBD2Microblock db m@(MicroblockBD {..}) = do
   tx <- getTxsMicroblock db m
+  teamKeys <- getTeamKeysForMicroblock db _keyBlock
   return Microblock {
   _keyBlock,
   _sign          = _signBD,
   -- _teamKeys,
+  _teamKeys = teamKeys,
+  _publisher,
   _transactions  = tx,
   _numOfBlock
   }
@@ -379,8 +382,8 @@ tMacroblock2MacroblockAPI :: DBPoolDescriptor -> MacroblockBD -> IO MacroblockAP
 tMacroblock2MacroblockAPI descr macroB = do
            microBlocksInfo <- mapM (\ hash -> do
                m@(MicroblockBD key sign publisher _ num) <- fromJust <$> getMicroBlockByHashDB descr (Hash hash)
-               mbAPI <- tMicroblockBD2MicroblockAPI descr m
-               return $ MicroblockInfoAPI "" "" key sign (_teamKeys (mbAPI :: MicroblockAPI))  publisher  hash
+               teamKeys <- getTeamKeysForMicroblock descr key
+               return $ MicroblockInfoAPI "" "" key sign teamKeys publisher  hash
              ) (_mblocks (macroB :: MacroblockBD))
            return $ MacroblockAPI (_prevKBlock (macroB :: MacroblockBD))
                                   ""
@@ -399,10 +402,12 @@ dummyMacroblock = MacroblockBD {
   _height = 0,
   _solver = aSolver,
   _reward = 0,
-  _mblocks = [],
   _time = 0,
   _number = 0,
-  _nonce = 0}
+  _nonce = 0,
+  _mblocks = [],
+  _teamKeys = []
+}
   where aSolver = read "1" :: PublicKey
 
 
@@ -410,10 +415,14 @@ tKeyBlockInfo2Macroblock :: KeyBlockInfo -> MacroblockBD
 tKeyBlockInfo2Macroblock (KeyBlockInfo {..}) = MacroblockBD {
             _prevKBlock = _prev_hash,
             _difficulty = 20,
+            _height = 0,
             _solver,
+            _reward = 0,
             _time,
             _number,
-            _nonce
+            _nonce,
+            _mblocks = [],
+            _teamKeys = []
           }
 
 
