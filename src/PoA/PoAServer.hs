@@ -113,8 +113,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                     aShuffledRecords <- shuffleM =<< getRecords aFileServerChan
                     let aConnects = take 5 aShuffledRecords
                     writeLog aInfoChan [ServePoATag] Info $ "Send connections " ++ show aConnects
-                    WS.sendTextData aConnect $ A.encode $ ResponseConnects
-                        ((\(Connect this_ip _) -> Connect this_ip 1554) <$> aConnects)
+                    WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
 
                 RequestPoWList -> do
                         writeLog aInfoChan [ServePoATag] Info $
