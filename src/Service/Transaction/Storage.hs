@@ -381,21 +381,29 @@ tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) = do
 
 
 tMacroblock2MacroblockAPI :: DBPoolDescriptor -> MacroblockBD -> IO MacroblockAPI
-tMacroblock2MacroblockAPI descr macroB = do
+tMacroblock2MacroblockAPI descr macroB@(MacroblockBD {..}) = do
            print macroB
-           microBlocksInfo <- mapM (\ hash -> do
-               m@(MicroblockBD key sign publisher _ num) <- fromJust <$> getMicroBlockByHashDB descr (Hash hash)
-               teamKeys <- getTeamKeysForMicroblock descr key
-               return $ MicroblockInfoAPI "" "" key sign teamKeys publisher  hash
-             ) (_mblocks (macroB :: MacroblockBD))
-           return $ MacroblockAPI (_prevKBlock (macroB :: MacroblockBD))
-                                  ""
-                                  (_difficulty (macroB :: MacroblockBD))
-                                  (_height     (macroB :: MacroblockBD))
-                                  (_solver     (macroB :: MacroblockBD))
-                                  (_reward     (macroB :: MacroblockBD))
-                                  microBlocksInfo
-
+           return $ MacroblockAPI {
+             _prevKBlock,
+             _nextKBlock = "",
+             _difficulty,
+             _height,
+             _solver,
+             _reward,
+             _mblocks = [] } --Fix
+           -- fromJust <$> getBlockByHashDB descr (Hash hash) inChan
+           -- microBlocksInfo <- mapM (\ hash -> do
+           --     m@(MicroblockAPI key sign publisher _ num) <- fromJust <$> getBlockByHashDB descr (Hash hash) inChan
+           --     teamKeys <- getTeamKeysForMicroblock descr key
+           --     return $ MicroblockInfoAPI "" "" key sign teamKeys publisher  hash
+           --   ) (_mblocks (macroB :: MacroblockBD))
+           -- return $ MacroblockAPI (_prevKBlock (macroB :: MacroblockBD))
+           --                        ""
+           --                        (_difficulty (macroB :: MacroblockBD))
+           --                        (_height     (macroB :: MacroblockBD))
+           --                        (_solver     (macroB :: MacroblockBD))
+           --                        (_reward     (macroB :: MacroblockBD))
+           --                        microBlocksInfo
 
 
 dummyMacroblock :: MacroblockBD
