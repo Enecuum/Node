@@ -63,13 +63,11 @@ startNode descrDB buildConf infoCh manager startDo = do
     bnList  <- readBootNodeList $ bootNodeList buildConf
     (aInFileRequestChan, aOutFileRequestChan) <- newChan 128
     void $ C.forkIO $ startFileServer aOutFileRequestChan
-    void $ C.forkIO $ connectManager (extConnectPort buildConf) bnList aInFileRequestChan
-
-
     md      <- newIORef $ makeNetworkData config infoCh aInFileRequestChan aMicroblockChan aTransactionChan aValueChan
     void . C.forkIO $ microblockProc descrDB outMicroblockChan aOutValueChan infoCh
     void . C.forkIO $ manager managerChan md
     void $ startDo managerChan outTransactionChan aMicroblockChan (config^.myNodeId) aInFileRequestChan
+    void $ C.forkIO $ connectManager (extConnectPort buildConf) bnList aInFileRequestChan
     return managerChan
 
 
