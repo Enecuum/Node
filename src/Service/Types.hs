@@ -87,7 +87,7 @@ data Microblock = Microblock{
     _keyBlock     :: ByteString, -- hash of key-block
     _sign         :: Signature,  -- signature for {K_hash, [Tx],}
     _teamKeys     :: [PublicKey], -- for reward
-    -- _publisher    :: PublicKey,
+    _publisher    :: PublicKey,
     _transactions :: [Transaction],
     _numOfBlock   :: Integer
   }
@@ -98,8 +98,8 @@ instance Serialize Microblock
 data MicroblockBD = MicroblockBD{
     _keyBlock           :: ByteString, -- hash of key-block
     _signBD             :: Signature,  -- signature for {K_hash, [Tx],}
-    _teamKeys           :: [PublicKey], -- for reward
-    -- _publisher          :: PublicKey,
+    -- _teamKeys           :: [PublicKey], -- for reward
+    _publisher          :: PublicKey,
     _transactionsHashes :: [ByteString], -- hashes of [Transaction],
     _numOfBlock         :: Integer
   }
@@ -130,6 +130,7 @@ data MacroblockBD = MacroblockBD {
   ,  _number     :: Integer
   ,  _nonce      :: Integer
   ,  _mblocks    :: [ByteString]
+  ,  _teamKeys   :: [PublicKey]
   } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize MacroblockBD
 

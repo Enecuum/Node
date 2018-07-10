@@ -174,8 +174,8 @@ instance ToJSON Microblock where
        "msg" .= object [
            "K_hash"    .= encodeToText (_keyBlock (aBlock :: Microblock)),
            "wallets"   .= _teamKeys (aBlock :: Microblock),
-           "Tx"        .= _transactions aBlock
-           -- "publisher" .= _publisher (aBlock :: Microblock)
+           "Tx"        .= _transactions aBlock,
+           "publisher" .= _publisher (aBlock :: Microblock)
          ],
        "sign" .= _sign (aBlock :: Microblock)
    ]
@@ -189,9 +189,9 @@ instance FromJSON Microblock where
        Object aBlock -> do
            aWallets <- aBlock .: "wallets"
            aTx      <- aBlock .: "Tx"
-           -- aPublisher    <- aBlock .: "publisher"
+           aPublisher    <- aBlock .: "publisher"
            aKhash   <- decodeFromText =<< aBlock .: "K_hash"
-           return $ Microblock aKhash aSign aWallets aTx 0
+           return $ Microblock aKhash aSign aWallets aPublisher aTx 0
        _ -> mzero
  parseJSON _ = mzero
 
@@ -221,6 +221,7 @@ instance FromJSON MacroblockBD where
                <*> o .: "numberK"
                <*> o .: "nonce"
                <*> o .: "microblocks"
+               <*> o .: "team_keys"
     parseJSON inv         = typeMismatch "MacroblockBD" inv
 
 
@@ -235,6 +236,7 @@ instance ToJSON MacroblockAPI where
          ,  "txs_cnt"           .= _txsCnt (bl :: MacroblockAPI)
 --         ,  "microblocks_cnt"   .= length (_mblocksAPI bl)
          ,  "microblocks"       .= _mblocks (bl :: MacroblockAPI)
+         ,  "team_keys"         .= _mblocks (bl :: MacroblockAPI)
        ]
 
 instance FromJSON MacroblockAPI where

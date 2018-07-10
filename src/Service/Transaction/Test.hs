@@ -30,12 +30,13 @@ import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON         ()
 
 getOneMicroblock :: IO ()
-getOneMicroblock = do
-  c <- connectDB
-  let h = Hash ("2c4kS21m0cA91siB0OfuoCwLRWKyLl/2yuk3z+6BvFY=" :: BSI.ByteString)
-  -- let h = Hash ("\248\198\199\178e\ETXt\186T\148y\223\224t-\168p\162\138\&1" :: BSI.ByteString)
-  mb <- getBlockByHashDB c h
-  print mb
+getOneMicroblock = undefined
+-- getOneMicroblock = do
+--   c <- connectDB
+--   let h = Hash ("2c4kS21m0cA91siB0OfuoCwLRWKyLl/2yuk3z+6BvFY=" :: BSI.ByteString)
+--   -- let h = Hash ("\248\198\199\178e\ETXt\186T\148y\223\224t-\168p\162\138\&1" :: BSI.ByteString)
+--   mb <- getBlockByHashDB c h
+--   print mb
 
 
 getOneTransaction :: IO ()
@@ -57,10 +58,11 @@ getTransactionsByKey = do
 
 
 getOneKeyBlock :: IO (Maybe MacroblockAPI)
-getOneKeyBlock = do
-  c <- connectDB
-  let h = Hash ("XXX" :: BSI.ByteString)
-  getKeyBlockByHashDB c h
+getOneKeyBlock = undefined
+-- getOneKeyBlock = do
+--   c <- connectDB
+--   let h = Hash ("XXX" :: BSI.ByteString)
+--   getKeyBlockByHashDB c h
 
 tryParseTXInfoJson :: IO ()
 tryParseTXInfoJson = do
@@ -144,10 +146,10 @@ getAllMicroblocks = do
 -- data TypeInfo = Amount | Transaction | MicroblockBD | MacroblockBD --
 
 -- getAllKV1 :: TypeInfo -> IO ()
--- getAllKV1 Ledger      = getLedgerFilePath
--- getAllKV1 Transaction = getTransactionFilePath
--- getAllKV1 Microblock  = getMicroblockFilePath
--- getAllKV1 Macroblock  = getMacroblockFilePath
+-- getAllKV1 Amount       = getLedgerFilePath
+-- getAllKV1 Transaction{}  = getTransactionFilePath
+-- getAllKV1 MicroblockBD{} = getMicroblockFilePath
+-- getAllKV1 MacroblockBD{} = getMacroblockFilePath
 
 -- getAllKV2 typeInfo = do
 --   result <- getAllKV =<< getAllKV1 typeInfo
@@ -221,7 +223,7 @@ goGetAll = do
 
 test02 :: IO ()
 test02 = do
-  let path = "/tmp/haskell-rocksDB5"
+  let path = "/tmp/haskell-rocksDB7"
   db <- Rocks.open path def{Rocks.createIfMissing=True}
   Rocks.write db def{Rocks.sync = True} [ Rocks.Put "-" "zero"]
   Rocks.write db def{Rocks.sync = True} [ Rocks.Put "a" "one"
@@ -234,8 +236,41 @@ test02 = do
   Rocks.write db def{Rocks.sync = True} [ Rocks.Put "h" "eight"]
   Rocks.write db def{Rocks.sync = True} [ Rocks.Put "j" "nine"]
   result <- Rocks.get db  Rocks.defaultReadOptions "a"
+  print result
+
+  -- let something1 = \db -> runResourceT $ do
+  --       it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+  --       Rocks.iterLast it
+  --       return it
+  -- iter <- something1 db
+  -- let something2 = \it -> runResourceT $ do
+  --       Rocks.iterPrev it
+  --       Rocks.iterItems it
+  -- value <- something2 iter
+
+  let something3 = \db -> runResourceT $ do
+        it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+        Rocks.iterLast it
+        -- Rocks.iterPrev it
+        Rocks.iterItems it
+  value <- something3 db
+  print value
+
+  result2 <- Rocks.get db  Rocks.defaultReadOptions "a"
+  print result2
+
+  let something4 = \db -> runResourceT $ do
+        it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+        Rocks.iterLast it
+        -- Rocks.iterPrev it
+        Rocks.iterItems it
+  value4 <- something4 db
+
+  result2 <- Rocks.get db  Rocks.defaultReadOptions "a"
+  print result2
+
+  print value4
   Rocks.close db
-  putStrLn $ show result
 
 
 test01 :: IO ()

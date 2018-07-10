@@ -86,29 +86,29 @@ loadMessages :: InChan MsgToCentralActor -> IO (Result [MsgTo])
 loadMessages _ = return $ Left NotImplementedException
 
 
-getBlockByHash :: DBPoolDescriptor -> Hash -> InChan MsgToCentralActor -> IO (Result MicroblockAPI)
-getBlockByHash db hash _ = try $ do
-  mb <- B.getBlockByHashDB db hash
+getBlockByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Result MicroblockAPI)
+getBlockByHash db hash aInfoChan = try $ do
+  mb <- B.getBlockByHashDB db hash aInfoChan
   case mb of
     Nothing -> throw NoSuchMicroBlockDB
     Just m  -> return m
 
 
-getKeyBlockByHash :: DBPoolDescriptor -> Hash -> InChan MsgToCentralActor -> IO (Result MacroblockAPI)
-getKeyBlockByHash db hash _ = try $ do
-  mb <- B.getKeyBlockByHashDB db hash
+getKeyBlockByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Result MacroblockAPI)
+getKeyBlockByHash db hash aInfoChan = try $ do
+  mb <- B.getKeyBlockByHashDB db hash aInfoChan
   case mb of
     Nothing -> throw NoSuchMacroBlockDB
     Just m  -> return m
 
 
-getChainInfo :: DBPoolDescriptor -> InChan MsgToCentralActor -> IO (Result ChainInfo)
-getChainInfo db _ = do
-  k <- B.getChainInfoDB db
+getChainInfo :: DBPoolDescriptor -> InChan InfoMsg -> IO (Result ChainInfo)
+getChainInfo db aInfoChan = do
+  k <- B.getChainInfoDB db aInfoChan
   return $ Right k
   -- return $ Right $ ChainInfo 0 0 "" 0 0 0
 
-getTransactionByHash :: DBPoolDescriptor -> Hash -> InChan MsgToCentralActor -> IO (Result TransactionInfo)
+getTransactionByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Result TransactionInfo)
 getTransactionByHash db hash _ = try $ do
   tx <- B.getTransactionByHashDB db hash
   case tx of
