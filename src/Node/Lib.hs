@@ -13,9 +13,11 @@ import           Control.Exception
 import           Control.Monad
 import qualified    Network.WebSockets                  as WS
 import           Data.Aeson
+import          Service.Chan
 import qualified Data.Text                              as T
 import qualified Data.ByteString.Lazy                  as L
 import              Service.Network.WebSockets.Client
+import           Data.Maybe
 import           Data.IORef
 import           Lens.Micro
 import           Network.Socket                        (tupleToHostAddress)
@@ -31,6 +33,7 @@ import           Service.Transaction.Common            (DBPoolDescriptor (..),
 import           Service.Types                         (Microblock, Transaction)
 import           System.Directory                      (createDirectoryIfMissing)
 import           System.Environment
+import           PoA.Types
 
 -- code examples:
 -- http://book.realworldhaskell.org/read/sockets-and-syslog.html
@@ -52,23 +55,56 @@ startNode descrDB buildConf infoCh manager startDo = do
     --tmp
     createDirectoryIfMissing False "data"
 
-    managerChan <- newChan (128)
-    (aMicroblockChan, outMicroblockChan) <- newChan (128)
-    (aValueChan, aOutValueChan) <- newChan (128)
-    (aTransactionChan, outTransactionChan) <- newChan (128)
+    managerChan <- newChan 128
+    (aMicroblockChan, outMicroblockChan) <- newChan 128
+    (aValueChan, aOutValueChan) <- newChan 128
+    (aTransactionChan, outTransactionChan) <- newChan 128
     config  <- readNodeConfig
-    bnList@[Connect aBootIp aBootPort]  <- readBootNodeList $ bootNodeList buildConf
-    runClient (showHostAddress aBootIp) (fromEnum aBootPort) "/" $ \aConnect -> do
-        WS.sendTextData aConnect ("{\"tag\":\"Action\",\"type\":\"AddToListOfConnects\",\"port\": 1554}" :: T.Text)
-    (aInFileRequestChan, aOutFileRequestChan) <- newChan (16)
+    bnList  <- readBootNodeList $ bootNodeList buildConf
+    (aInFileRequestChan, aOutFileRequestChan) <- newChan 128
     void $ C.forkIO $ startFileServer aOutFileRequestChan
-    --let portNumber = extConnectPort buildConf
-    md      <- newIORef $ makeNetworkData bnList config infoCh aInFileRequestChan aMicroblockChan aTransactionChan aValueChan
-    void $ C.forkIO $ microblockProc descrDB outMicroblockChan aOutValueChan infoCh
-    void $ C.forkIO $ manager managerChan md
+    void $ C.forkIO $ connectManager (extConnectPort buildConf) bnList aInFileRequestChan
+
+
+    md      <- newIORef $ makeNetworkData config infoCh aInFileRequestChan aMicroblockChan aTransactionChan aValueChan
+    void . C.forkIO $ microblockProc descrDB outMicroblockChan aOutValueChan infoCh
+    void . C.forkIO $ manager managerChan md
     void $ startDo managerChan outTransactionChan aMicroblockChan (config^.myNodeId) aInFileRequestChan
     return managerChan
 
+
+
+connectManager :: PortNumber -> [Connect] -> InChan FileActorRequest -> IO ()
+connectManager aPortNumber aBNList aConnectsChan = do
+    forM_ aBNList $ \(Connect aBNIp aBNPort) -> do
+        void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
+            WS.sendTextData aConnect . encode $ AddToListOfConnectsRequest aPortNumber
+    aLoop aBNList
+  where
+    aLoop = \case
+        (Connect aBNIp aBNPort):aTailOfList -> do
+            aVar <- newEmptyMVar
+            writeInChan aConnectsChan $ NumberConnects aVar
+            aPotencialConnectNumber <- takeMVar aVar
+            when (aPotencialConnectNumber == 0) $ do
+                void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
+                    WS.sendTextData aConnect $ encode BNRequestConnects
+                    aMsg <- WS.receiveData aConnect
+                    let BNResponseConnects aConnects = fromJust $ decode aMsg
+                    writeInChan aConnectsChan $ AddToFile aConnects
+                C.threadDelay 1000000
+                aLoop (aTailOfList ++ [Connect aBNIp aBNPort])
+        _       -> return ()
+
+
+data AddToListOfConnectsRequest = AddToListOfConnectsRequest PortNumber
+
+instance ToJSON AddToListOfConnectsRequest where
+    toJSON (AddToListOfConnectsRequest aPort) = object [
+            "tag"  .= ("Action" :: T.Text)
+        ,   "type" .= ("AddToListOfConnects" :: T.Text)
+        ,   "port" .= fromEnum aPort
+      ]
 
 microblockProc :: DBPoolDescriptor -> OutChan Microblock -> OutChan Value -> InChan InfoMsg -> IO ()
 microblockProc descriptor aMicroblockCh aValueChan aInfoCh = do

@@ -87,7 +87,6 @@ makeLenses ''NodeInfo
 data NetworkNodeData = NetworkNodeData {
         _connects           :: M.Map NodeId NodeInfo
     ,   _nodeConfig         :: NodeConfig
-    ,   _bootConnects       :: [Connect]
     ,   _shardingChan       :: Maybe (C.Chan N.ShardingNodeAction)
     ,   _logChan            :: InChan InfoMsg
     ,   _fileServerChan     :: InChan FileActorRequest
@@ -99,15 +98,14 @@ data NetworkNodeData = NetworkNodeData {
 makeLenses ''NetworkNodeData
 
 makeNetworkData
-    ::  [Connect]
-    ->  NodeConfig
+    ::  NodeConfig
     ->  InChan InfoMsg
     ->  InChan FileActorRequest
     ->  InChan Microblock
     ->  InChan (Transaction, MVar Bool)
     ->  InChan Value
     ->  NetworkNodeData
-makeNetworkData aBootNodeList aNodeConfig = NetworkNodeData M.empty aNodeConfig aBootNodeList Nothing
+makeNetworkData aNodeConfig = NetworkNodeData M.empty aNodeConfig Nothing
 
 
 type Token = Integer

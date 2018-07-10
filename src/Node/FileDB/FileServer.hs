@@ -27,6 +27,7 @@ data FileActorRequest where
     ReadRecordsFromFile :: MVar [Connect]   -> FileActorRequest
     DeleteFromFile      :: Connect          -> FileActorRequest
     AddToFile           :: [Connect]        -> FileActorRequest
+    NumberConnects      :: MVar Int         -> FileActorRequest
 
 
 getRecords :: InChan FileActorRequest -> IO [Connect]
@@ -47,5 +48,8 @@ startFileServer aChan = aLoop S.empty
             S.delete aConnect aConnects
         AddToFile aNewConnects -> aLoop $
             S.union aConnects (S.fromList aNewConnects)
+        NumberConnects aMVar -> do
+            putMVar aMVar $ S.size aConnects
+            aLoop aConnects
 
 --------------------------------------------------------------------------------
