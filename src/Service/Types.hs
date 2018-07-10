@@ -107,19 +107,6 @@ data MicroblockBD = MicroblockBD{
 
 instance Serialize MicroblockBD
 
-data MicroblockAPI = MicroblockAPI {
-     _prevMicroblock  :: ByteString  -- hash of the previous microblock if exists
-    ,_nextMicroblock  :: ByteString  -- hash of the next microblock if exists
-    ,_keyBlock        :: ByteString  -- hash of key-block
-    ,_signAPI         :: Signature   -- signature for {K_hash, [Tx],}
-    ,_teamKeys        :: [PublicKey] -- for reward
-    ,_publisher       :: PublicKey
-    ,_transactionsAPI :: [TransactionAPI]
-  }
-  deriving (Eq, Generic, Ord, Read, Show)
-instance Serialize MicroblockAPI
-
-
 data MacroblockBD = MacroblockBD {
      _prevKBlock :: ByteString
   ,  _difficulty :: Integer --
@@ -133,19 +120,6 @@ data MacroblockBD = MacroblockBD {
   } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize MacroblockBD
 
-data MacroblockAPI = MacroblockAPI {
-     _prevKBlock :: ByteString
-  ,  _nextKBlock :: ByteString
-  ,  _difficulty :: Integer
-  ,  _height     :: Integer
-  ,  _solver     :: PublicKey
-  ,  _reward     :: Integer
-  ,  _txsCnt     :: Integer
-  ,  _mblocks    :: [ByteString]
-
-} deriving (Eq, Generic, Ord, Read, Show)
-instance Serialize MacroblockAPI
-
 -- from PoW
 data KeyBlockInfo = KeyBlockInfo {
     _time      :: Integer
@@ -156,12 +130,6 @@ data KeyBlockInfo = KeyBlockInfo {
   } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize KeyBlockInfo
 
-
-data TransactionAPI = TransactionAPI {
-    _tx     :: Transaction
-  , _txHash :: ByteString  -- hash of Transaction
-  } deriving (Generic, Show, Eq, Ord, Read)
-instance Serialize TransactionAPI
 
 data Transaction = Transaction {
   _owner     :: PublicKey,
@@ -176,13 +144,6 @@ data Transaction = Transaction {
 
 instance Serialize Transaction
 
-
-data TransactionInfo = TransactionInfo {
-     _tx    :: Transaction
-  ,  _block :: ByteString
-  ,  _index :: Int
-  } deriving (Generic, Show, Eq, Read)
-instance Serialize TransactionInfo
 
 data Ledger = Ledger { currentTime :: Time, ltable :: [LedgerEntry] }
   deriving (Show, Generic)
@@ -218,6 +179,60 @@ type ToPublicKey  = PublicKey
 data MessageForSign = MessageForSign ToPublicKey Amount Time
 instance Serialize MessageForSign
 deriving instance Generic MessageForSign
+
+
+----- API TYPES
+
+data MacroblockAPI = MacroblockAPI {
+     _prevKBlock :: ByteString
+  ,  _nextKBlock :: ByteString
+  ,  _difficulty :: Integer
+  ,  _height     :: Integer
+  ,  _solver     :: PublicKey
+  ,  _reward     :: Integer
+  ,  _mblocks    :: [MicroblockInfoAPI]
+
+} deriving (Eq, Generic, Ord, Read, Show)
+instance Serialize MacroblockAPI
+
+
+data MicroblockInfoAPI = MicroblockInfoAPI {
+     _prevMicroblock  :: ByteString  -- hash of the previous microblock if exists
+    ,_nextMicroblock  :: ByteString  -- hash of the next microblock if exists
+    ,_keyBlock        :: ByteString  -- hash of key-block
+    ,_signAPI         :: Signature   -- signature for {K_hash, [Tx],}
+    ,_teamKeys        :: [PublicKey] -- for reward
+    ,_publisher       :: PublicKey
+    ,_hash            :: ByteString
+  }
+  deriving (Eq, Generic, Ord, Read, Show)
+instance Serialize MicroblockInfoAPI
+
+data MicroblockAPI = MicroblockAPI {
+     _prevMicroblock  :: ByteString  -- hash of the previous microblock if exists
+    ,_nextMicroblock  :: ByteString  -- hash of the next microblock if exists
+    ,_keyBlock        :: ByteString  -- hash of key-block
+    ,_signAPI         :: Signature   -- signature for {K_hash, [Tx],}
+    ,_teamKeys        :: [PublicKey] -- for reward
+    ,_publisher       :: PublicKey
+    ,_transactionsAPI :: [TransactionAPI]
+  }
+  deriving (Eq, Generic, Ord, Read, Show)
+instance Serialize MicroblockAPI
+
+data TransactionAPI = TransactionAPI {
+    _tx     :: Transaction
+  , _txHash :: ByteString  -- hash of Transaction
+  } deriving (Generic, Show, Eq, Ord, Read)
+instance Serialize TransactionAPI
+
+
+data TransactionInfo = TransactionInfo {
+     _tx    :: Transaction
+  ,  _block :: ByteString
+  ,  _index :: Int
+  } deriving (Generic, Show, Eq, Read)
+instance Serialize TransactionInfo
 
 
 data ChainInfo = ChainInfo {
