@@ -93,7 +93,7 @@ instance FromJSON BNResponseConnects where
 instance ToJSON BNRequestConnects where
     toJSON BNRequestConnects = object [
         "tag"       .= ("Request"  :: String),
-        "type"      .= ("Connecs"  :: String)
+        "type"      .= ("Connects"  :: String)
       ]
 
 
