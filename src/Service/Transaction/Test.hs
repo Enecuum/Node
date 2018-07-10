@@ -12,22 +12,23 @@ module Service.Transaction.Test where
 
 import           Service.Transaction.Storage
 
+import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Monad
 import           Control.Monad.Trans.Resource
 import           Data.Aeson
-import qualified Data.ByteString.Char8               as BC
-import qualified Data.ByteString.Internal            as BSI
-import           Data.Default                        (def)
-import qualified Data.Serialize                      as S (decode, encode)
-import qualified "rocksdb-haskell" Database.RocksDB  as Rocks
-import           Service.System.Directory            (getLedgerFilePath,
-                                                      getMacroblockFilePath,
-                                                      getMicroblockFilePath,
-                                                      getTransactionFilePath)
-import           Service.Transaction.TransactionsDAG (genNNTx)
+import qualified Data.ByteString.Char8                 as BC
+import qualified Data.ByteString.Internal              as BSI
+import           Data.Default                          (def)
+import qualified Data.Serialize                        as S (decode, encode)
+import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
+import           Service.System.Directory              (getLedgerFilePath,
+                                                        getMacroblockFilePath,
+                                                        getMicroblockFilePath,
+                                                        getTransactionFilePath)
+import           Service.Transaction.TransactionsDAG   (genNNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeJSON         ()
+import           Service.Types.SerializeJSON           ()
 
 getOneMicroblock :: IO ()
 getOneMicroblock = undefined
@@ -59,6 +60,13 @@ getTransactionsByKey = do
 -- end test cli
 --------------------------------------
 
+getOneKeyBlock2 = do
+  c <- connectDB
+  let h = Hash ("MzI=" :: BSI.ByteString)
+  -- let h = Hash ("32" :: BSI.ByteString)
+  (inChan, outChan) <- newChan 64
+  getKeyBlockByHashDB c h inChan
+-- "MzI="
 
 getOneKeyBlock :: IO (Maybe MacroblockBD)
 getOneKeyBlock = do
