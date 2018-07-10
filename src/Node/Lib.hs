@@ -67,7 +67,7 @@ startNode descrDB buildConf infoCh manager startDo = do
     void . C.forkIO $ microblockProc descrDB outMicroblockChan aOutValueChan infoCh
     void . C.forkIO $ manager managerChan md
     void $ startDo managerChan outTransactionChan aMicroblockChan (config^.myNodeId) aInFileRequestChan
-    void $ C.forkIO $ connectManager (extConnectPort buildConf) bnList aInFileRequestChan
+    void $ C.forkIO $ connectManager (poaPort buildConf) bnList aInFileRequestChan
     return managerChan
 
 
