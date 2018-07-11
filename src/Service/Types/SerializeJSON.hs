@@ -14,6 +14,8 @@ import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA as ECDSA
 import           Data.Aeson
 import           Data.Aeson.Types                     (typeMismatch)
 import           Data.ByteString                      (ByteString)
+import qualified Data.ByteString.Char8             as BS
+
 import qualified Data.ByteString.Base64               as B
 import           Data.ByteString.Conversion
 import           Data.Text                            (Text, pack, unpack)
@@ -67,10 +69,10 @@ instance ToJSON Hash
 instance FromJSON Hash
 
 instance ToJSON ByteString where
-  toJSON h = String $ encodeToText h
+  toJSON h = String $ pack $ BS.unpack h
 
 instance FromJSON ByteString where
-  parseJSON (String s) = decodeFromText s
+  parseJSON (String s) = return $ BS.pack $ unpack s
   parseJSON _          = error "Wrong object format"
 
 instance ToJSON TransactionInfo
