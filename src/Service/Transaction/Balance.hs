@@ -18,7 +18,7 @@ module Service.Transaction.Balance
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Monad
-import           Data.Aeson
+import           Data.Aeson                            hiding (Error)
 import           Data.Aeson.Types                      (parseMaybe)
 import qualified Data.ByteString.Char8                 as BC
 import           Data.Default                          (def)
@@ -37,6 +37,8 @@ import           Service.InfoMsg                       (InfoMsg (..),
 import           Service.Transaction.Storage
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
+
+
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
 
@@ -228,3 +230,4 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
             Right r -> return r
 
     writeMacroblockToDB db aInfoChan keyBlockHash $ tKeyBlockInfo2Macroblock keyBlockInfoObject
+addMacroblockToDB _ x aInfoChan = writeLog aInfoChan [ServePoATag] Error ("Can not decode KeyBlockInfo" ++ show x)
