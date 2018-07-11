@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TemplateHaskell           #-}
+{-# OPTIONS_GHC -fno-warn-unused-binds #-}
 
 
 module LightClient.CLI (
@@ -154,7 +155,7 @@ sendTrans transactionsFile walletsFile ch = do
         result <- runExceptT $ newTx ch signTx
         case result of
           (Left err) -> putStrLn $ "Send transaction error: " ++ show err
-          (Right _ ) -> putStrLn ("Transaction done: " ++ show signTx)
+          (Right h ) -> putStrLn ("Transaction done: " ++ show signTx ++ "\n" ++ show h)
 
 printVersion :: IO ()
 printVersion = putStrLn ("--" ++ "2.0.0" ++ "--")
@@ -198,7 +199,7 @@ loadMessages ch = do
   case result of
     (Left err)    -> putStrLn $ "sendMessageBroadcast error: " ++ show err
     (Right msgs ) -> putStrLn $ "New messages: " ++ (unlines $ map showMsg msgs)
-                  where showMsg (MsgTo id m) = "Message from " ++ show id ++ ": " ++ m
+                  where showMsg (MsgTo aId m) = "Message from " ++ show aId ++ ": " ++ m
 
 
 getAllTransactions :: PublicKey -> WS.Connection -> IO ()
@@ -234,8 +235,8 @@ getBlockByHash hash ch = do
 
 
 getMicroblockByHash :: Hash -> WS.Connection -> IO ()
-getMicroblockByHash hash ch = do
-  result <- runExceptT $ getMicroblock ch hash
+getMicroblockByHash aHash ch = do
+  result <- runExceptT $ getMicroblock ch aHash
   case result of
     (Left err)    -> putStrLn $ "getMicroblockByHash error: " ++ show err
     (Right block) -> print block

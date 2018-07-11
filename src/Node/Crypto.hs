@@ -1,11 +1,8 @@
 {-# LANGUAGE ScopedTypeVariables, PackageImports, LambdaCase #-}
 module Node.Crypto where
 
-import              Service.Network.Base (PortNumber)
 import              Node.Data.Key hiding (PublicKey(..))
 
-
-import              System.Clock
 import              Crypto.Error
 import              Crypto.Cipher.Types
 import              Crypto.Random.Types
@@ -15,7 +12,6 @@ import              Crypto.PubKey.ECC.ECDSA
 
 import              Crypto.Cipher.AES   (AES256)
 import              Data.ByteArray (unpack)
-
 
 import              Data.ByteString (ByteString, pack)
 import              Data.Serialize

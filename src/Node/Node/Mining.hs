@@ -17,6 +17,7 @@ module Node.Node.Mining (
 
 import              System.Random()
 
+import              Service.Chan
 import qualified    Data.Map                        as M
 import              Data.Maybe (isNothing)
 import              Data.IORef
@@ -31,6 +32,7 @@ import              Node.Data.GlobalLoging
 import              PoA.Types
 import              Sharding.Sharding()
 import              Node.BaseFunctions
+import qualified    Control.Concurrent as C
 
 
 networkNodeStart :: (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()
@@ -50,17 +52,17 @@ networkNodeStart (_, aOutChan) aMd = do
                         writeMetric (aData^.logChan) $ increment "net.bl.count"
                         writeLog (aData^.logChan) [NetLvlTag] Info $
                             "PP node " ++ show aSenderId ++ ", create a a microblock: " ++ show aMicroblock
-                        writeChan (aData^.microblockChan) aMicroblock
+                        void $ tryWriteChan (aData^.microblockChan) aMicroblock
 
-                    NewConnect aNodeId aNodeType aChan  -> do
+                    NewConnect aNodeId aNodeType aChan aConnect -> do
                         writeLog (aData^.logChan) [NetLvlTag] Info $
                             "A new connect with PP node " ++ show aNodeId ++ ", the type of node is " ++ show aNodeType
                         when (isNothing $ aData^.connects.at aNodeId) $
                             modifyIORef aMd $ connects %~ M.insert aNodeId
-                                (NodeInfo aChan aNodeType)
+                                (NodeInfo aChan aNodeType aConnect)
 
                     BroadcastRequest aBroadcastMsg aIdFrom aNodeType -> do
-                        writeChan (aData^.valueChan) aBroadcastMsg
+                        void $ tryWriteChan (aData^.valueChan) aBroadcastMsg
                         forM_ (aData^.connects) $ \aNode -> when
                             (aNodeType == aNode^.nodeType || aNodeType == All) $
                             void $ tryWriteChan (aNode^.nodeChan) $ MsgBroadcastMsg aBroadcastMsg aIdFrom
@@ -74,12 +76,22 @@ networkNodeStart (_, aOutChan) aMd = do
                     PoWListRequest (IdFrom aNodeId) ->
                         whenJust (aData^.connects.at aNodeId) $ \aNode -> do
                             let aPPIds = M.filter (\a -> a^.nodeType == PoW) (aData^.connects)
-                            writeChan (aNode^.nodeChan) $ ResponsePoWList $ M.keys aPPIds
+                            void $ tryWriteChan (aNode^.nodeChan) $ ResponsePoWList $ M.keys aPPIds
+
+                    ActualConnectListRequest aVar -> void $ C.forkIO $ do
+                        let aConnects = toActualConnectInfo <$> (M.toList $ aData^.connects)
+                        C.putMVar aVar aConnects
+
+
             MsgFromSharding         _   -> return ()
             CleanAction                 -> return ()
 
-            NewTransaction          aTransaction  -> do
+            NewTransaction          aTransaction aVar  -> do
                 writeLog (aData^.logChan) [NetLvlTag] Info "I create a transaction."
-                writeChan (aData^.transactionsChan) aTransaction
+                void $ C.forkIO $ writeInChan (aData^.transactionsChan) (aTransaction, aVar)
 
+
+toActualConnectInfo :: (NodeId, NodeInfo) -> ActualConnectInfo
+toActualConnectInfo (aNodeId, NodeInfo _ aNodeType aConnect) =
+    ActualConnectInfo aNodeId aNodeType aConnect
 --------------------------------------------------------------------------------

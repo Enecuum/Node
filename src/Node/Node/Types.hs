@@ -19,6 +19,7 @@ import              Data.Serialize
 import qualified    Data.Map                        as M
 import              GHC.Generics (Generic)
 import qualified    Control.Concurrent.Chan         as C
+import              Control.Concurrent.MVar
 import              Control.Concurrent.Chan.Unagi.Bounded
 
 import              Service.Network.Base
@@ -38,9 +39,8 @@ import              PoA.Types
 import              Node.FileDB.FileServer
 
 
-instance Show (InChan a) where
-    show _ = "InChan"
-
+instance Show (InChan a) where show _ = "InChan"
+instance Show (MVar a) where show _ = "MVar"
 
 type Transactions = [Transaction]
 
@@ -51,19 +51,17 @@ data MsgToCentralActor where
     MsgFromNode             :: MsgFromNode              -> MsgToCentralActor
     MsgFromSharding         :: N.ShardingNodeRequestMsg -> MsgToCentralActor
     CleanAction             :: MsgToCentralActor
-    NewTransaction          :: Transaction              -> MsgToCentralActor
+    NewTransaction          :: Transaction -> MVar Bool -> MsgToCentralActor
 
 
 data MsgFromNode
-    = AcceptedMicroblock Microblock NodeId
+    = AcceptedMicroblock Microblock IdFrom
     | BroadcastRequest Value IdFrom NodeType
-    | NewConnect NodeId NodeType (InChan NNToPPMessage)
+    | NewConnect NodeId NodeType (InChan NNToPPMessage) (Maybe Connect)
     | MsgResending IdFrom IdTo Value
     | PoWListRequest IdFrom
+    | ActualConnectListRequest (MVar [ActualConnectInfo])
   deriving (Show)
-
-data MsgToServer where
-    KillMsg       :: MsgToServer
 
 
 -- | TODO: shoud be refactord: reduce keys count.
@@ -78,8 +76,9 @@ makeLenses ''NodeConfig
 
 
 data NodeInfo = NodeInfo {
-        _nodeChan :: InChan NNToPPMessage
-    ,   _nodeType :: NodeType
+        _nodeChan     :: InChan NNToPPMessage
+    ,   _nodeType     :: NodeType
+    ,   _connectInfo  :: Maybe Connect
   }
   deriving (Eq)
 makeLenses ''NodeInfo
@@ -88,27 +87,25 @@ makeLenses ''NodeInfo
 data NetworkNodeData = NetworkNodeData {
         _connects           :: M.Map NodeId NodeInfo
     ,   _nodeConfig         :: NodeConfig
-    ,   _bootConnects       :: [Connect]
     ,   _shardingChan       :: Maybe (C.Chan N.ShardingNodeAction)
     ,   _logChan            :: InChan InfoMsg
     ,   _fileServerChan     :: InChan FileActorRequest
     ,   _microblockChan     :: InChan Microblock
-    ,   _transactionsChan   :: InChan Transaction
+    ,   _transactionsChan   :: InChan (Transaction, MVar Bool)
     ,   _valueChan          :: InChan Value
   }
 
 makeLenses ''NetworkNodeData
 
 makeNetworkData
-    ::  [Connect]
-    ->  NodeConfig
+    ::  NodeConfig
     ->  InChan InfoMsg
     ->  InChan FileActorRequest
     ->  InChan Microblock
-    ->  InChan Transaction
+    ->  InChan (Transaction, MVar Bool)
     ->  InChan Value
     ->  NetworkNodeData
-makeNetworkData aBootNodeList aNodeConfig = NetworkNodeData M.empty aNodeConfig aBootNodeList Nothing
+makeNetworkData aNodeConfig = NetworkNodeData M.empty aNodeConfig Nothing
 
 
 type Token = Integer

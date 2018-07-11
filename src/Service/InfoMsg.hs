@@ -79,7 +79,7 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
             sendToServer lHandler $ "+node|" ++  aId ++ "|" ++
                       intercalate "," (show <$> [ConnectingTag .. InitTag]) ++ "\r\n"
 
-    undead (print "dead of log :))) ") $ forever $ do
+    undead (putStrLn "dead of log :))) ") $ forever $ do
         m <- readChan chan
         case m of
             Metric s -> case eithMHandler of

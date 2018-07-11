@@ -47,7 +47,7 @@ main =  do
 
             void $ startNode rocksDB conf aInfoChanIn networkNodeStart $
                 \(ch, _) aChan aMicroblockChan aMyNodeId aFileChan -> do
-                    metronomeS 400000 (writeChan ch CleanAction)
+                    metronomeS 400000 (void $ tryWriteChan ch CleanAction)
 
                     (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id) <- getConfigParameters aMyNodeId conf ch
 
@@ -119,7 +119,7 @@ getConfigParameters
     ->  BuildConfig
     ->  InChan MsgToCentralActor
     ->  IO (SimpleNodeBuildConfig, PortNumber, String, PortNumber, String, PortNumber, String)
-getConfigParameters aMyNodeId conf ch = do
+getConfigParameters aMyNodeId conf _ = do
   snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case
           Right item              -> return item
           Left (_::SomeException) -> error "Please, specify simpleNodeBuildConfig"

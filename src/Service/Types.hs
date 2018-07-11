@@ -87,6 +87,7 @@ data Microblock = Microblock{
     _keyBlock     :: ByteString, -- hash of key-block
     _sign         :: Signature,  -- signature for {K_hash, [Tx],}
     _teamKeys     :: [PublicKey], -- for reward
+    _publisher    :: PublicKey,
     _transactions :: [Transaction],
     _numOfBlock   :: Integer
   }
@@ -95,30 +96,18 @@ data Microblock = Microblock{
 instance Serialize Microblock
 
 data MicroblockBD = MicroblockBD{
-    _keyBlock       :: ByteString, -- hash of key-block
-    _signBD         :: Signature,  -- signature for {K_hash, [Tx],}
-    _teamKeys       :: [PublicKey], -- for reward
-    _transactionsBD :: [ByteString], -- hashes of [Transaction],
-    _numOfBlock     :: Integer
+    _keyBlock           :: ByteString, -- hash of key-block
+    _signBD             :: Signature,  -- signature for {K_hash, [Tx],}
+    -- _teamKeys           :: [PublicKey], -- for reward
+    _publisher          :: PublicKey,
+    _transactionsHashes :: [ByteString], -- hashes of [Transaction],
+    _numOfBlock         :: Integer
   }
   deriving (Eq, Generic, Ord, Read, Show)
 
 instance Serialize MicroblockBD
 
-data MicroblockAPI = MicroblockAPI {
-     _prevMicroblock  :: ByteString  -- hash of the previous microblock if exists
-    ,_nextMicroblock  :: ByteString  -- hash of the next microblock if exists
-    ,_keyBlock        :: ByteString  -- hash of key-block
-    ,_signAPI         :: Signature   -- signature for {K_hash, [Tx],}
-    ,_teamKeys        :: [PublicKey] -- for reward
-    ,_publisher       :: PublicKey
-    ,_transactionsAPI :: [TransactionAPI]
-  }
-  deriving (Eq, Generic, Ord, Read, Show)
-instance Serialize MicroblockAPI
-
-
-data Macroblock = Macroblock {
+data MacroblockBD = MacroblockBD {
      _prevKBlock :: ByteString
   ,  _difficulty :: Integer --
   ,  _height     :: Integer -- block number in the chain
@@ -128,44 +117,27 @@ data Macroblock = Macroblock {
   ,  _number     :: Integer
   ,  _nonce      :: Integer
   ,  _mblocks    :: [ByteString]
+  ,  _teamKeys   :: [PublicKey]
   } deriving (Eq, Generic, Ord, Read, Show)
-instance Serialize Macroblock
+instance Serialize MacroblockBD
 
-data MacroblockAPI = MacroblockAPI {
-     _prevKBlock :: ByteString
-  ,  _nextKBlock :: ByteString
-  ,  _difficulty :: Integer
-  ,  _height     :: Integer
-  ,  _solver     :: PublicKey
-  ,  _reward     :: Integer
-  ,  _txsCnt     :: Integer
-  ,  _mblocks    :: [ByteString]
-
-} deriving (Eq, Generic, Ord, Read, Show)
-instance Serialize MacroblockAPI
-
+-- from PoW
 data KeyBlockInfo = KeyBlockInfo {
-    _time     :: Integer
-  , prev_hash :: String
-  , _number   :: Integer
-  , _nonce    :: Integer
-  , _solver   :: PublicKey
+    _time      :: Integer
+  , _prev_hash :: ByteString
+  , _number    :: Integer
+  , _nonce     :: Integer
+  , _solver    :: PublicKey
   } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize KeyBlockInfo
 
-
-data TransactionAPI = TransactionAPI {
-    _tx     :: Transaction
-  , _txHash :: ByteString
-  } deriving (Generic, Show, Eq, Ord, Read)
-instance Serialize TransactionAPI
 
 data Transaction = Transaction {
   _owner     :: PublicKey,
   _receiver  :: PublicKey,
   _amount    :: Amount,
   _currency  :: Currency,
-  _timeMaybe :: Maybe Time, -- UnixTime format
+  _timestamp :: Maybe Time, -- UnixTime format
   _signature :: Maybe Signature,
   _uuid      :: Int
 } deriving ( Generic, Show, Eq, Ord, Read)
@@ -173,13 +145,6 @@ data Transaction = Transaction {
 
 instance Serialize Transaction
 
-
-data TransactionInfo = TransactionInfo {
-     _tx    :: Transaction
-  ,  _block :: ByteString
-  ,  _index :: Int
-  } deriving (Generic, Show, Eq, Read)
-instance Serialize TransactionInfo
 
 data Ledger = Ledger { currentTime :: Time, ltable :: [LedgerEntry] }
   deriving (Show, Generic)
@@ -217,11 +182,66 @@ instance Serialize MessageForSign
 deriving instance Generic MessageForSign
 
 
+----- API TYPES
+
+data MacroblockAPI = MacroblockAPI {
+     _prevKBlock :: ByteString
+  ,  _nextKBlock :: ByteString
+  ,  _difficulty :: Integer
+  ,  _height     :: Integer
+  ,  _solver     :: PublicKey
+  ,  _reward     :: Integer
+  ,  _mblocks    :: [MicroblockInfoAPI]
+  ,  _teamKeys   :: [PublicKey] -- for reward
+
+} deriving (Eq, Generic, Ord, Read, Show)
+instance Serialize MacroblockAPI
+
+
+data MicroblockInfoAPI = MicroblockInfoAPI {
+     _prevMicroblock :: ByteString  -- hash of the previous microblock if exists
+    ,_nextMicroblock :: ByteString  -- hash of the next microblock if exists
+    ,_keyBlock       :: ByteString  -- hash of key-block
+    ,_signAPI        :: Signature   -- signature for {K_hash, [Tx],}
+    ,_publisher      :: PublicKey
+    ,_hash           :: ByteString  -- hash of current Microblock
+  }
+  deriving (Eq, Generic, Ord, Read, Show)
+instance Serialize MicroblockInfoAPI
+
+data MicroblockAPI = MicroblockAPI {
+     _prevMicroblock  :: ByteString  -- hash of the previous microblock if exists
+    ,_nextMicroblock  :: ByteString  -- hash of the next microblock if exists
+    ,_keyBlock        :: ByteString  -- hash of key-block
+    ,_signAPI         :: Signature   -- signature for {K_hash, [Tx],}
+    -- ,_teamKeys        :: [PublicKey] -- for reward
+    ,_publisher       :: PublicKey
+    ,_transactionsAPI :: [TransactionAPI]
+  }
+  deriving (Eq, Generic, Ord, Read, Show)
+instance Serialize MicroblockAPI
+
+data TransactionAPI = TransactionAPI {
+    _tx     :: Transaction
+  , _txHash :: ByteString  -- hash of Transaction
+  } deriving (Generic, Show, Eq, Ord, Read)
+instance Serialize TransactionAPI
+
+
+data TransactionInfo = TransactionInfo {
+     _tx    :: Transaction
+  ,  _block :: ByteString
+  ,  _index :: Int
+  } deriving (Generic, Show, Eq, Read)
+instance Serialize TransactionInfo
+
+
 data ChainInfo = ChainInfo {
-      _emission        :: Integer
-    , _curr_difficulty :: Integer
-    , _blocks_num      :: Integer
-    , _txs_num         :: Integer
-    , _nodes_num       :: Integer
+      _emission        :: Integer     -- emission of last closed key block
+    , _curr_difficulty :: Integer     -- difficulty of last closed key block
+    , _last_block      :: ByteString  -- hash of last closed key block
+    , _blocks_num      :: Integer     -- quantity of all mined blocks
+    , _txs_num         :: Integer     -- quantity of all mined transactions
+    , _nodes_num       :: Integer     -- quantity of all active nodes now
   } deriving  (Generic, Show, Eq, Read)
 instance Serialize ChainInfo

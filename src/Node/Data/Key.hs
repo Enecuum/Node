@@ -19,9 +19,12 @@ module Node.Data.Key (
     ,   keyToId
     ,   idToKey
     ,   generateKeyPair
+    ,   generateClientId
   ) where
-
+import            Data.Bits
+import            Data.Word
 import            GHC.Generics
+import            System.Random
 import            Crypto.Random.Types (MonadRandom (..))
 import            Crypto.PubKey.ECC.Generate
 import            Crypto.PubKey.ECC.DH
@@ -81,4 +84,16 @@ idToKey (NodeId aId) = getPublicKey . uncompressPublicKey $ PublicKey256k1 $ fro
 
 generateKeyPair :: MonadRandom m =>  m (ECDSA.PublicKey, ECDSA.PrivateKey)
 generateKeyPair = generate curve_256
+
+
+generateClientId :: [Word64] ->  IO NodeId
+generateClientId list = do
+      aRand <- randomIO :: IO Word64
+      return $ NodeId $ fromIntegral $ mask .|. ( shiftL aRand ((length list)*2))
+
+      where
+        bitsmask []     _ =  0
+        bitsmask (x:xs) n =  (bitsmask xs (n+1)) .|. (shiftL x (2*n))
+
+        mask = bitsmask (reverse list) 0
 --------------------------------------------------------------------------------

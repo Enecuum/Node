@@ -72,7 +72,7 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum $ \_ aPending -> do
 
               createTx = toMethod "enq_sendTransaction" f (Required "tx" :+: ())
                 where
-                  f :: Transaction -> RpcResult IO ()
+                  f :: Transaction -> RpcResult IO Hash
                   f tx = handle $ sendTrans tx ch aInfoCh
 
               balanceReq = toMethod "enq_getBalance" f (Required "address" :+: ())
@@ -83,17 +83,17 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum $ \_ aPending -> do
               getBlock = toMethod "enq_getBlockByHash" f (Required "hash" :+: ())
                 where
                   f :: Hash ->  RpcResult IO MacroblockAPI
-                  f hash = handle $ getKeyBlockByHash descrDB hash ch
+                  f hash = handle $ getKeyBlockByHash descrDB hash aInfoCh
 
               getMicroblock = toMethod "enq_getMicroblockByHash" f (Required "hash" :+: ())
                 where
                   f :: Hash ->  RpcResult IO MicroblockAPI
-                  f hash = handle $ getBlockByHash descrDB hash ch
+                  f hash = handle $ getBlockByHash descrDB hash aInfoCh
 
               getTransaction = toMethod "enq_getTransactionByHash" f (Required "hash" :+:())
                 where
                   f :: Hash -> RpcResult IO TransactionInfo
-                  f hash = handle $ getTransactionByHash descrDB hash ch
+                  f hash = handle $ getTransactionByHash descrDB hash aInfoCh
 
               getFullWallet = toMethod "enq_getAllTransactions" f (Required "address" :+: ())
                 where
@@ -102,13 +102,13 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum $ \_ aPending -> do
 
               getPartWallet = toMethod "enq_getTransactionsByWallet" f (Required "address" :+: Required "offset" :+: Required "count" :+: ())
                 where
-                  f :: PublicKey -> Integer -> Integer -> RpcResult IO [TransactionAPI]
+                  f :: PublicKey -> Int -> Int -> RpcResult IO [TransactionAPI]
                   f key offset cnt = handle $ getPartTransactions descrDB key offset cnt ch
 
               getSystemInfo = toMethod "enq_getChainInfo" f ()
                 where
                   f :: RpcResult IO ChainInfo
-                  f = handle $ getChainInfo ch
+                  f = handle $ getChainInfo descrDB aInfoCh
 
 ------------- test functions
               createNTx = toMethod "gen_n_tx" f (Required "x" :+: ())

@@ -20,7 +20,6 @@ import qualified    Data.Text as T
 import              Data.Hex
 import              Data.Maybe
 import              Control.Monad.Extra
--- import              Data.Either
 import qualified    Data.Serialize as S
 import              Service.Types (Microblock(..), Transaction)
 import              Service.Network.Base
@@ -28,45 +27,9 @@ import              Data.IP
 import              Node.Data.Key
 import              Service.Types.SerializeJSON()
 import              Service.Types.SerializeInstances
-import qualified    Data.HashMap.Strict as H
-import qualified    Data.Vector as V
-import              Data.Scientific
 import              Data.Either
-
--- TODO: aception of msg from a PoA/PoW.
--- ----: parsing - ok!
--- TODO: processing of the msg
--- TODO:    Resending (to point);
--- TODO:    Broadcasting (in net);
--- TODO:    Response.
-
--- TODO: i have msg (it not response) for PoA/PoW node.
--- ----     toJson
--- TODO sending to PoA/PoW node.
-
-
--- TODO finding of optimal broadcast node for PoA/PoW node. ???
-
-instance S.Serialize Scientific where
-    get = read <$> S.get
-    put = S.put . show
-
-
-instance S.Serialize T.Text where
-    get = T.pack <$> S.get
-    put = S.put . T.unpack
-
-instance S.Serialize Object where
-    get = fmap H.fromList S.get
-    put = S.put . H.toList
-
-
-instance S.Serialize a => S.Serialize (V.Vector a) where
-    get = fmap V.fromList S.get
-    put = S.put . V.toList
-
-instance S.Serialize Value
-
+import              Text.Read
+import              Crypto.PubKey.ECC.ECDSA
 
 data PPToNNMessage
     -- Requests:
@@ -100,15 +63,15 @@ data PPToNNMessage
     | MsgMicroblock {
         microblock :: Microblock
     }
-    -- Macroblock was finallized.
-    -- | MsgMacroblock {
-    --     macroblock :: Macroblock
-    -- }
 
+    | ActionNodeStillAliveTest PortNumber HostAddress
     | IsInPendingRequest Transaction
     | GetPendingRequest
     | AddTransactionRequest Transaction
     | ActionAddToListOfConnects Int
+    | NNConnection PortNumber PublicPoint NodeId
+    | CNConnection NodeType (Maybe NodeId)
+    | RequestActualConnectList
 
     deriving (Show)
 
@@ -118,6 +81,21 @@ instance S.Serialize NodeType
 
 -- PP means PoW and PoA
 -- MsgToMainActorFromPP
+
+data BNResponseConnects = BNResponseConnects [Connect]
+data BNRequestConnects  = BNRequestConnects
+
+
+instance FromJSON BNResponseConnects where
+    parseJSON (Object aMsg) = BNResponseConnects <$> (aMsg .: "connects")
+
+
+instance ToJSON BNRequestConnects where
+    toJSON BNRequestConnects = object [
+        "tag"       .= ("Request"  :: String),
+        "type"      .= ("Connects"  :: String)
+      ]
+
 
 data NNToPPMessage
     = RequestNodeIdToPP
@@ -132,11 +110,6 @@ data NNToPPMessage
         poWList :: [NodeId]
     }
 
-    | MsgConnect {
-        ip    :: HostAddress,
-        port  :: PortNumber
-    }
-
     | MsgMsgToPP {
         sender :: NodeId,
         message :: Value
@@ -147,14 +120,57 @@ data NNToPPMessage
         idFrom  :: IdFrom
     }
 
-    | MsgNewNodeInNet NodeId NodeType
+    | MsgNewNodeInNet NodeId NodeType (Maybe Connect)
     | ResponsePendingTransactions [Transaction]
     | ResponseIsInPending Bool
     | ResponseTransactionValid Bool
+    | ResponseClientId NodeId
+    | ActualConnectList [ActualConnectInfo]
+
+
+{-
+data MsgToSenderActor where
+    KillSenderActor :: MsgToSenderActor
+    ...
+    ...
+    ...
+    MsgToClientNode :: MsgToClientNode -> MsgToSenderActor
+
+-}
+
+data ActualConnectInfo = ActualConnectInfo NodeId NodeType (Maybe Connect)
+
+
+instance ToJSON ActualConnectInfo where
+    toJSON (ActualConnectInfo aNodeId aNodeType (Just (Connect aIp aPortNumber))) = object [
+            "node_type" .= show aNodeType
+        ,   "node_id"   .= nodeIdToUnxed aNodeId
+        ,   "ip"        .= show (fromHostAddress aIp)
+        ,   "port"      .= fromEnum aPortNumber
+      ]
+    toJSON (ActualConnectInfo aNodeId aNodeType Nothing) = object [
+            "node_type" .= show aNodeType
+        ,   "node_id"   .= nodeIdToUnxed aNodeId
+      ]
 
 
 
---myUnhex :: (MonadPlus m, S.Serialize a) => T.Text -> m a
+instance FromJSON ActualConnectInfo where
+    parseJSON (Object aMsg) = do
+        aNodeType :: T.Text  <- aMsg .: "node_type"
+        aUnxedId  :: T.Text  <- aMsg .: "node_id"
+        aNodeId   <- unhexNodeId aUnxedId
+
+        aIp       <- aMsg .:? "ip"
+        aPort     <- aMsg .:? "port"
+
+        let aConnect = do
+                aIpAdress <- readMaybe =<< aIp
+                aJustPort <- aPort
+                return $ Connect (toHostAddress aIpAdress) (toEnum aJustPort)
+        return $ ActualConnectInfo aNodeId (readNodeType aNodeType) aConnect
+
+
 
 myUnhex :: IsString a => T.Text -> Either a String
 myUnhex aString = case unhex $ T.unpack aString of
@@ -168,8 +184,8 @@ unhexNodeId aString = case unhex . fromString . T.unpack $ aString of
     Nothing             -> mzero
 
 
-ppIdToString :: NodeId -> String
-ppIdToString (NodeId aPoint) = CB.unpack . hex . B.pack $ unroll aPoint
+nodeIdToUnxed :: NodeId -> String
+nodeIdToUnxed (NodeId aPoint) = CB.unpack . hex . B.pack $ unroll aPoint
 
 
 myTextUnhex :: T.Text -> Maybe B.ByteString
@@ -228,7 +244,39 @@ instance FromJSON PPToNNMessage where
                 AddTransactionRequest <$> aMessage .: "transaction"
             ("Action", "AddToListOfConnects") ->
                 ActionAddToListOfConnects <$> aMessage .: "port"
+
+            ("Action", "NodeStillAliveTest") -> do
+                aPort        <- aMessage .: "port"
+                aIp          <- aMessage .: "ip"
+                case readMaybe aIp of
+                    Just aJustIp -> return $ ActionNodeStillAliveTest
+                        (toEnum aPort) (toHostAddress aJustIp)
+                    _ -> mzero
+            ("Action", "Connect") -> do
+                aNodeType :: T.Text  <- aMessage .: "node_type"
+                --let aType = readNodeType aNodeType
+                case readNodeType aNodeType of
+                    NN -> do
+                        aPort       <- aMessage .: "port"
+                        publicPoint <- aMessage .: "public_point"
+                        aNodeId     <- unhexNodeId =<< aMessage .: "my_id"
+                        return $ NNConnection (toEnum aPort) publicPoint aNodeId
+                    aCN  -> do
+                        aNodeId <- aMessage .:? "my_id"
+                        aId <- return $ unhexNodeId =<< aNodeId
+                        return $ CNConnection aCN aId
+            ("Request","ActualConnectList") -> return $ RequestActualConnectList
             _ -> mzero
+
+
+{-
+
+
+Для СН от КН -- {"tag":"Action", "type":"Connect", "node_type": "PoW" | "PoA", "my_id": 123}
+Для СН от КН -- {"tag":"Action", "type":"Connect", "node_type": "PoW" | "PoA"}
+--     | NNConnection PortNumber PublicPoint NodeId
+--    | CNConnection NodeType (Maybe NodeId)
+-}
 
 
     parseJSON _ = mzero -- error $ show a
@@ -236,9 +284,9 @@ instance FromJSON PPToNNMessage where
 readNodeType :: (IsString a, Eq a) => a -> NodeType
 readNodeType aNodeType
     | aNodeType == "PoW" = PoW
-    | aNodeType == "All" = All
-    | otherwise          = PoA
-
+    | aNodeType == "PoA" = PoA
+    | aNodeType == "NN"  = NN
+    | otherwise          = All
 
 decodeList :: [T.Text] -> [String]
 decodeList aList
@@ -257,7 +305,7 @@ instance ToJSON NNToPPMessage where
     toJSON (MsgMsgToPP aPPId aMessage) = object [
             "tag"       .= ("Msg"   :: String),
             "type"      .= ("MsgTo" :: String),
-            "sender"    .= ppIdToString aPPId,
+            "sender"    .= nodeIdToUnxed aPPId,
             "msg"       .= aMessage
           ]
 
@@ -267,13 +315,19 @@ instance ToJSON NNToPPMessage where
         "connects"  .= aConnects
       ]
 
-    toJSON (MsgConnect aIp aPort) = toJSON $ Connect aIp aPort
-
-    toJSON (MsgNewNodeInNet aPPId aNodeType) = object [
+    toJSON (MsgNewNodeInNet aPPId aNodeType Nothing) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("NewNodeInNet"  :: String),
-        "id"        .= ppIdToString aPPId,
+        "id"        .= nodeIdToUnxed aPPId,
         "nodeType"  .= show aNodeType
+      ]
+
+    toJSON (MsgNewNodeInNet aPPId aNodeType (Just aConnect)) = object [
+        "tag"       .= ("Msg"           :: String),
+        "type"      .= ("NewNodeInNet"  :: String),
+        "id"        .= nodeIdToUnxed aPPId,
+        "nodeType"  .= show aNodeType,
+        "connect"   .= aConnect
       ]
 
     toJSON (ResponseTransaction aTransaction) = object [
@@ -286,13 +340,13 @@ instance ToJSON NNToPPMessage where
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("Broadcast"  :: String),
         "msg"       .= aMessage,
-        "idFrom"    .= ppIdToString aPPId
+        "idFrom"    .= nodeIdToUnxed aPPId
       ]
 
     toJSON (ResponsePoWList aPPIds) = object [
         "tag"       .= ("Response"  :: String),
         "type"      .= ("PoWList"   :: String),
-        "poWList"   .=  map ppIdToString aPPIds
+        "poWList"   .=  map nodeIdToUnxed aPPIds
       ]
     toJSON (ResponsePendingTransactions aTransactions) = object [
         "tag"       .= ("Response"  :: String),
@@ -309,6 +363,17 @@ instance ToJSON NNToPPMessage where
         "type"      .= ("PendingAdd"   :: String),
         "msg"       .= show aBool
        ]
+    toJSON (ResponseClientId aNodeId) = object [
+        "tag"       .= ("Response"  :: String),
+        "type"      .= ("NodeId"   :: String),
+        "node_id"   .= nodeIdToUnxed aNodeId
+      ]
+    toJSON (ActualConnectList aConnects) = object [
+        "tag"               .= ("Response"  :: String),
+        "type"              .= ("ActualConnectList"   :: String),
+        "actual_connects"   .= aConnects
+      ]
+
 
 instance ToJSON Connect where
     toJSON (Connect aHostAddress aPortNumber) = object [
@@ -316,5 +381,13 @@ instance ToJSON Connect where
         "port" .= fromEnum aPortNumber
       ]
 
+instance FromJSON Connect where
+    parseJSON (Object aConnect) = do
+        aIp     <- aConnect .: "ip"
+        aPort   <- aConnect .: "port"
+        case readMaybe aIp of
+            Nothing      -> mzero
+            Just aJustIp -> return $
+                Connect (toHostAddress aJustIp) (toEnum aPort)
 
 --------------------------------------------------------------------------------
