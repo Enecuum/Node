@@ -25,14 +25,15 @@ import           Network.Socket                     (HostName, PortNumber)
 import qualified Network.WebSockets                 as WS
 import           System.Console.GetOpt
 import           System.Environment                 (getArgs)
-
+import           Data.Aeson.Encode.Pretty
 import           Data.DeriveTH
 import           LightClient.RPC
 import           Service.Network.WebSockets.Client
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           System.Random
-
+import qualified Data.ByteString.Lazy              as L (putStrLn)
+import           Data.Aeson                        (ToJSON)
 
 data Flag = Port PortNumber | Host HostName | Version | Help
           | WalletsFile String | TransactionsFile String | KeyGen Int
@@ -155,7 +156,7 @@ sendTrans transactionsFile walletsFile ch = do
         result <- runExceptT $ newTx ch signTx
         case result of
           (Left err) -> putStrLn $ "Send transaction error: " ++ show err
-          (Right h ) -> putStrLn ("Transaction done: " ++ show signTx ++ "\n" ++ show h)
+          (Right (Hash h) ) -> putStrLn ("Transaction done: ") >> prettyPrint (TransactionAPI signTx h)
 
 printVersion :: IO ()
 printVersion = putStrLn ("--" ++ "2.0.0" ++ "--")
@@ -207,7 +208,7 @@ getAllTransactions key ch = do
   result <- runExceptT $ getAllTxs ch key
   case result of
     (Left err)   -> putStrLn $ "getAllTransactions error: " ++ show err
-    (Right txs ) -> mapM_ print txs
+    (Right txs ) -> mapM_ prettyPrint txs
 
 
 getPartTransactions :: PartWalletReq -> WS.Connection -> IO ()
@@ -215,7 +216,7 @@ getPartTransactions req ch = do
   result <- runExceptT $ getPartTxs ch (_key req) (_offset req) (_count req)
   case result of
     (Left err)   -> putStrLn $ "getTransactionsByWallet error: " ++ show err
-    (Right txs ) -> mapM_ print txs
+    (Right txs ) -> mapM_ prettyPrint txs
 
 
 getTransaction :: Hash -> WS.Connection -> IO ()
@@ -223,7 +224,7 @@ getTransaction hash ch = do
   result <- runExceptT $ getTx ch hash
   case result of
     (Left err)    -> putStrLn $ "getTransaction error: " ++ show err
-    (Right info ) -> print info
+    (Right info ) -> prettyPrint info
 
 
 getBlockByHash :: Hash -> WS.Connection -> IO ()
@@ -231,7 +232,7 @@ getBlockByHash hash ch = do
   result <- runExceptT $ getBlock ch hash
   case result of
     (Left err)    -> putStrLn $ "getBlockByHash error: " ++ show err
-    (Right block) -> print block
+    (Right block) -> prettyPrint block
 
 
 getMicroblockByHash :: Hash -> WS.Connection -> IO ()
@@ -239,7 +240,7 @@ getMicroblockByHash aHash ch = do
   result <- runExceptT $ getMicroblock ch aHash
   case result of
     (Left err)    -> putStrLn $ "getMicroblockByHash error: " ++ show err
-    (Right block) -> print block
+    (Right block) -> prettyPrint block
 
 
 getInfo :: WS.Connection -> IO ()
@@ -247,4 +248,8 @@ getInfo ch = do
   result <- runExceptT $ getChainInfo ch
   case result of
     (Left err)   -> putStrLn $ "getChainInfo error: " ++ show err
-    (Right info) -> print info
+    (Right info) -> prettyPrint info
+
+
+prettyPrint :: (ToJSON a) => a -> IO ()
+prettyPrint r = L.putStrLn $ encodePretty r
