@@ -13,7 +13,7 @@ module Service.Transaction.Storage where
 import           Control.Exception
 import           Control.Monad                         (replicateM)
 import qualified Control.Monad.Catch                   as E
-import           Control.Monad.IO.Class
+-- import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.State             (StateT, evalStateT, get,
@@ -21,7 +21,7 @@ import           Control.Monad.Trans.State             (StateT, evalStateT, get,
 import           Control.Retry
 import qualified Crypto.Hash.SHA256                    as SHA
 import qualified Data.ByteString.Base64                as Base64
-import           Data.Typeable
+-- import           Data.Typeable
 -- import qualified Data.ByteString.Char8              as BC
 import           Control.Concurrent.Chan.Unagi.Bounded
 import qualified Data.ByteString.Internal              as BSI
@@ -30,10 +30,10 @@ import           Data.Maybe
 import           Data.Pool
 import qualified Data.Serialize                        as S (Serialize, decode,
                                                              encode)
-import           Data.Traversable
+-- import           Data.Traversable
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
-import           Node.Node.Types                       (MsgToCentralActor (..))
+-- import           Node.Node.Types                       (MsgToCentralActor (..))
 import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
@@ -100,17 +100,23 @@ quantityMicroblocksInMacroblock = 2
 -- begin of the Database structure  section
 
 -- for rocksdb Transaction and Microblock
--- rHash :: S.Serialize a => a -> BSI.ByteString
+rHashT :: Transaction -> BSI.ByteString
 rHashT t@(Transaction {}) = Base64.encode . SHA.hash . S.encode $ t { _timestamp = Nothing }
+
+rHash :: S.Serialize a => a -> BSI.ByteString
 rHash key = Base64.encode . SHA.hash . S.encode $ key
+
+lastKeyBlock :: DBKey
 lastKeyBlock = "2dJ6lb9JgyQRac0DAkoqmYmS6ats3tND0gKMLW6x2x8=" :: DBKey --read "1"
 
 
+funW ::  Pool Rocks.DB -> [(DBKey, DBValue)] -> IO ()
 funW db aMapKeyValue = do
   let fun = (\aDb -> Rocks.write aDb def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) aMapKeyValue))
   withResource db fun
 
 
+funR ::  Pool Rocks.DB -> DBKey -> IO (Maybe BSI.ByteString)
 funR db key = do
   let fun = (\aDb -> Rocks.get aDb Rocks.defaultReadOptions key)
   withResource db fun
@@ -156,6 +162,7 @@ getNFirstValuesT = do
   return v
 
 
+getNFirstValues :: (MonadTrans t, MonadResource (t IO)) => Rocks.DB -> Int -> t IO [DBValue]
 getNFirstValues db n = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterFirst it
@@ -178,6 +185,7 @@ getNLastValues db n = runResourceT $ do
   lift $ evalStateT (replicateM n getNLastValuesT) it
 
 
+getFirst :: (MonadResource (t IO), MonadTrans t) => Rocks.DB -> Int -> Int -> t IO [DBValue]
 getFirst db offset count = drop offset <$> getNFirstValues db (offset + count )
 
 getLast :: Rocks.DB -> Int -> Int -> IO [(DBKey, DBValue)]
@@ -239,7 +247,7 @@ getLastTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> IO [Transa
 getLastTransactions descr pubKey offset aCount = do
   let fun = \db -> getLast db offset aCount
   txs <- withResource (poolTransaction descr) fun
-  let rawTxInfo = map (\(k,v) -> v) txs
+  let rawTxInfo = map (\(_,v) -> v) txs
   let txAPI = decodeTransactionsAndFilterByKey rawTxInfo pubKey
   return txAPI
 
@@ -263,7 +271,7 @@ getTransactionsByMicroblockHash db aHash = do
       return $ Just txInfo
 
 getBlockByHashDB :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe MicroblockAPI)
-getBlockByHashDB db hash aInfoChan = do
+getBlockByHashDB db hash _ = do
   mb <- getMicroBlockByHashDB db hash
   case mb of
     Nothing -> return Nothing
@@ -273,7 +281,7 @@ getBlockByHashDB db hash aInfoChan = do
 
 
 getKeyBlockByHashDB :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe MacroblockAPI)
-getKeyBlockByHashDB db kHash aInfoChan = do
+getKeyBlockByHashDB db kHash _ = do
   kb <- getByHash (poolMacroblock db) kHash
   case kb of Nothing -> return Nothing
              Just j -> case (S.decode j :: Either String MacroblockBD) of
@@ -372,7 +380,7 @@ tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> MicroblockBD -> IO Microblock
 tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) = do
   tx <- getTxsMicroblock db m
   let txAPI = map (\t -> TransactionAPI {_tx = t, _txHash = rHashT t }) tx
-  teamKeys <- getTeamKeysForMicroblock db _keyBlock --aInfoChan
+  -- teamKeys <- getTeamKeysForMicroblock db _keyBlock --aInfoChan
   return MicroblockAPI {
             _prevMicroblock = "",
             _nextMicroblock = "",
@@ -385,11 +393,8 @@ tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) = do
 
 
 tMacroblock2MacroblockAPI :: DBPoolDescriptor -> MacroblockBD -> IO MacroblockAPI
-tMacroblock2MacroblockAPI descr macroB@(MacroblockBD {..}) = do
-           print "Macro"
-           print macroB
+tMacroblock2MacroblockAPI descr (MacroblockBD {..}) = do
            microblocks <- zip _mblocks <$> mapM (\h -> fromJust <$> getMicroBlockByHashDB descr (Hash h)) _mblocks
-           print microblocks
            let microblocksInfoAPI = map (\(h, MicroblockBD {..}) -> MicroblockInfoAPI {
                                                         _prevMicroblock = "",
                                                         _nextMicroblock = "",
@@ -440,7 +445,7 @@ tKeyBlockInfo2Macroblock (KeyBlockInfo {..}) = MacroblockBD {
 
 
 tMacroblock2ChainInfo :: Maybe DBKey -> Maybe MacroblockBD -> IO ChainInfo
-tMacroblock2ChainInfo keyBlockHash m@(Just (MacroblockBD {..})) = do
+tMacroblock2ChainInfo keyBlockHash m = do
   case m of Nothing ->  return ChainInfo {
     _emission        = 0,
     _curr_difficulty = 0,
@@ -449,7 +454,7 @@ tMacroblock2ChainInfo keyBlockHash m@(Just (MacroblockBD {..})) = do
     _txs_num         = 0,  -- quantity of all approved transactions
     _nodes_num       = 0   -- quantity of all active nodes
     }
-            Just am  -> return ChainInfo {
+            Just (MacroblockBD {..})  -> return ChainInfo {
     _emission        = _reward,
     _curr_difficulty = _difficulty,
     _last_block      = fromJust keyBlockHash,

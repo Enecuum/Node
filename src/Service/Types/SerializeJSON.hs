@@ -77,20 +77,6 @@ instance ToJSON TransactionInfo
 instance FromJSON TransactionInfo
 
 
-
-
-
-
-instance FromJSON MicroblockV1 where
-  parseJSON (Object _) = undefined
-      {-MicroblockV1
-                           <$> ((v .: "curr") >>= decodeFromText)
-                           <*> ((v .: "prev") >>= decodeFromText)
-                           <*> v .: "txs"
--}
-
-
-
 instance ToJSON ECDSA.Signature where
   toJSON t = object [
     "sign_r" .= intToBase64Text  (ECDSA.sign_r t),
@@ -143,7 +129,7 @@ instance FromJSON Transaction where
               <*> o .:? "timestamp"
               <*> o .:? "sign"
               <*> o .:  "uuid"
-
+   parseJSON inv = typeMismatch "Transaction" inv
 
 instance ToJSON MicroblockAPI where
     toJSON bl = object  [

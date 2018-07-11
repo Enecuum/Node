@@ -30,7 +30,7 @@ import           Control.Concurrent                    (threadDelay)
 -- import           Control.Concurrent.Chan
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import           Control.Monad                         (forever, unless, void)
+import           Control.Monad                         (forever, unless)
 import           Data.List.Split                       (splitOn)
 import           Data.Map                              (Map, fromList, lookup)
 import           Data.Time.Units
@@ -55,8 +55,6 @@ import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
 
 import           Control.Timeout
-import qualified Data.ByteString.Base64                as Base64
-import           Data.Either
 import           Data.Time.Units                       (Second)
 
 type Result a = Either CLIException a
