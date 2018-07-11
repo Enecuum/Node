@@ -30,6 +30,7 @@ import           Data.Maybe
 import           Data.Pool
 import qualified Data.Serialize                        as S (Serialize, decode,
                                                              encode)
+import           Data.Traversable
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
 import           Node.Node.Types                       (MsgToCentralActor (..))
@@ -277,7 +278,12 @@ getKeyBlockByHashDB db kHash aInfoChan = do
   case kb of Nothing -> return Nothing
              Just j -> case (S.decode j :: Either String MacroblockBD) of
                Left _  -> error "Can not decode MacroblockBD"
-               Right r -> Just <$> (tMacroblock2MacroblockAPI db r)
+               Right r -> do
+                 -- print r
+                 -- mAPI <- tMacroblock2MacroblockAPI db r
+                 -- print mAPI
+                 -- print "Hello"
+                 Just <$> (tMacroblock2MacroblockAPI db r)
 
 
 getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo) --Transaction
@@ -372,27 +378,34 @@ tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) = do
             _nextMicroblock = "",
             _keyBlock,
             _signAPI = _signBD,
-            _teamKeys = teamKeys,
+            -- _teamKeys = teamKeys,
             _publisher, -- =  _publisher,-- = read "1" :: PublicKey,
             _transactionsAPI = txAPI
             }
 
 
 tMacroblock2MacroblockAPI :: DBPoolDescriptor -> MacroblockBD -> IO MacroblockAPI
-tMacroblock2MacroblockAPI descr macroB = do
-           microBlocksInfo <- mapM (\ hash -> do
-               m@(MicroblockBD key sign publisher _ num) <- fromJust <$> getMicroBlockByHashDB descr (Hash hash)
-               teamKeys <- getTeamKeysForMicroblock descr key
-               return $ MicroblockInfoAPI "" "" key sign teamKeys publisher  hash
-             ) (_mblocks (macroB :: MacroblockBD))
-           return $ MacroblockAPI (_prevKBlock (macroB :: MacroblockBD))
-                                  ""
-                                  (_difficulty (macroB :: MacroblockBD))
-                                  (_height     (macroB :: MacroblockBD))
-                                  (_solver     (macroB :: MacroblockBD))
-                                  (_reward     (macroB :: MacroblockBD))
-                                  microBlocksInfo
-
+tMacroblock2MacroblockAPI descr macroB@(MacroblockBD {..}) = do
+           print "Macro"
+           print macroB
+           microblocks <- zip _mblocks <$> mapM (\h -> fromJust <$> getMicroBlockByHashDB descr (Hash h)) _mblocks
+           print microblocks
+           let microblocksInfoAPI = map (\(h, MicroblockBD {..}) -> MicroblockInfoAPI {
+                                                        _prevMicroblock = "",
+                                                        _nextMicroblock = "",
+                                                        _keyBlock,
+                                                        _signAPI = _signBD,
+                                                        _publisher,
+                                                        _hash = h}) microblocks
+           return $ MacroblockAPI {
+             _prevKBlock,
+             _nextKBlock = "",
+             _difficulty,
+             _height,
+             _solver,
+             _reward,
+             _mblocks = microblocksInfoAPI,
+             _teamKeys }
 
 
 dummyMacroblock :: MacroblockBD

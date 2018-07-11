@@ -55,6 +55,8 @@ import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
 
 import           Control.Timeout
+import qualified Data.ByteString.Base64                as Base64
+import           Data.Either
 import           Data.Time.Units                       (Second)
 
 type Result a = Either CLIException a
@@ -95,12 +97,11 @@ getBlockByHash db hash aInfoChan = try $ do
 
 
 getKeyBlockByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Result MacroblockAPI)
-getKeyBlockByHash db hash aInfoChan = try $ do
-  mb <- B.getKeyBlockByHashDB db hash aInfoChan
+getKeyBlockByHash db (Hash h) aInfoChan = try $ do
+  mb <- B.getKeyBlockByHashDB db (Hash h) aInfoChan
   case mb of
     Nothing -> throw NoSuchMacroBlockDB
     Just m  -> return m
-
 
 getChainInfo :: DBPoolDescriptor -> InChan InfoMsg -> IO (Result ChainInfo)
 getChainInfo db aInfoChan = do
