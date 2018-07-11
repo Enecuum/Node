@@ -144,7 +144,7 @@ addMicroblockToDB :: DBPoolDescriptor -> Microblock -> InChan InfoMsg -> IO ()
 addMicroblockToDB db m aInfoChan =  do
 -- FIX: verify signature
     let txs = _transactions m
-    let microblockHash = rHash m
+    let microblockHash = rHash $ tMicroblock2MicroblockBD  m
     writeLog aInfoChan [BDTag] Info ("New Microblock came" ++ show(microblockHash))
 -- FIX: Write to db atomically
     (goOn, macroblockClosed, microblockNew, macroblockNew, macroblock ) <- checkMacroblock db aInfoChan m (_keyBlock (m :: Microblock)) microblockHash
@@ -176,7 +176,7 @@ writeMacroblockToDB desc aInfoChan hashOfKeyBlock aMacroblock = do
   let key = hashOfKeyBlock
       val = S.encode aMacroblock
   funW (poolMacroblock desc) [(key,val)]
-  writeLog aInfoChan [BDTag] Info ("Write Macroblock " ++ show key ++ "to DB")
+  writeLog aInfoChan [BDTag] Info ("Write Macroblock " ++ show key ++ " " ++ show aMacroblock ++ "to DB")
   -- funW (poolMacroblock desc) [(lastKeyBlock,key)]
   -- writeLog aInfoChan [BDTag] Info ("Write Last Macroblock " ++ show lastKeyBlock ++ "to DB")
 

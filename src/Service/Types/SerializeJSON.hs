@@ -150,7 +150,7 @@ instance ToJSON MicroblockAPI where
             "prev_block"   .= _prevMicroblock (bl :: MicroblockAPI)
          ,  "next_block"   .= _nextMicroblock (bl :: MicroblockAPI)
          ,  "k_block"      .= _keyBlock (bl :: MicroblockAPI)
-         ,  "team"         .= _teamKeys (bl :: MicroblockAPI)
+         -- ,  "team"         .= _teamKeys (bl :: MicroblockAPI)
          ,  "publisher"    .= _publisher (bl :: MicroblockAPI)
          ,  "sign"         .= _signAPI (bl :: MicroblockAPI)
          ,  "transactions" .= _transactionsAPI bl
@@ -162,7 +162,7 @@ instance FromJSON MicroblockAPI where
                <*> o .: "next_block"
                <*> o .: "k_block"
                <*> o .: "sign"
-               <*> o .: "team"
+               -- <*> o .: "team"
                <*> o .: "publisher"
                <*> o .: "transactions"
     parseJSON inv         = typeMismatch "MicroblockAPI" inv
@@ -172,7 +172,7 @@ instance ToJSON MicroblockInfoAPI where
             "prev_block"   .= _prevMicroblock (bl :: MicroblockInfoAPI)
          ,  "next_block"   .= _nextMicroblock (bl :: MicroblockInfoAPI)
          ,  "k_block"      .= _keyBlock (bl :: MicroblockInfoAPI)
-         ,  "team"         .= _teamKeys (bl :: MicroblockInfoAPI)
+         -- ,  "team"         .= _teamKeys (bl :: MicroblockInfoAPI)
          ,  "publisher"    .= _publisher (bl :: MicroblockInfoAPI)
          ,  "sign"         .= _signAPI (bl :: MicroblockInfoAPI)
          ,  "hash"         .= _hash (bl :: MicroblockInfoAPI)
@@ -184,7 +184,7 @@ instance FromJSON MicroblockInfoAPI where
                <*> o .: "next_block"
                <*> o .: "k_block"
                <*> o .: "sign"
-               <*> o .: "team"
+               -- <*> o .: "team"
                <*> o .: "publisher"
                <*> o .: "hash"
     parseJSON inv         = typeMismatch "MicroblockInfo" inv
@@ -268,6 +268,7 @@ instance FromJSON MacroblockAPI where
                <*> o .: "solver"
                <*> o .: "reward"
                <*> o .: "microblocks"
+               <*> o .: "team_keys"
     parseJSON inv         = typeMismatch "MacroblockAPI" inv
 
 instance ToJSON ChainInfo where

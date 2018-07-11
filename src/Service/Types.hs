@@ -192,19 +192,19 @@ data MacroblockAPI = MacroblockAPI {
   ,  _solver     :: PublicKey
   ,  _reward     :: Integer
   ,  _mblocks    :: [MicroblockInfoAPI]
+  ,  _teamKeys   :: [PublicKey] -- for reward
 
 } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize MacroblockAPI
 
 
 data MicroblockInfoAPI = MicroblockInfoAPI {
-     _prevMicroblock  :: ByteString  -- hash of the previous microblock if exists
-    ,_nextMicroblock  :: ByteString  -- hash of the next microblock if exists
-    ,_keyBlock        :: ByteString  -- hash of key-block
-    ,_signAPI         :: Signature   -- signature for {K_hash, [Tx],}
-    ,_teamKeys        :: [PublicKey] -- for reward
-    ,_publisher       :: PublicKey
-    ,_hash            :: ByteString
+     _prevMicroblock :: ByteString  -- hash of the previous microblock if exists
+    ,_nextMicroblock :: ByteString  -- hash of the next microblock if exists
+    ,_keyBlock       :: ByteString  -- hash of key-block
+    ,_signAPI        :: Signature   -- signature for {K_hash, [Tx],}
+    ,_publisher      :: PublicKey
+    ,_hash           :: ByteString  -- hash of current Microblock
   }
   deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize MicroblockInfoAPI
@@ -214,7 +214,7 @@ data MicroblockAPI = MicroblockAPI {
     ,_nextMicroblock  :: ByteString  -- hash of the next microblock if exists
     ,_keyBlock        :: ByteString  -- hash of key-block
     ,_signAPI         :: Signature   -- signature for {K_hash, [Tx],}
-    ,_teamKeys        :: [PublicKey] -- for reward
+    -- ,_teamKeys        :: [PublicKey] -- for reward
     ,_publisher       :: PublicKey
     ,_transactionsAPI :: [TransactionAPI]
   }
