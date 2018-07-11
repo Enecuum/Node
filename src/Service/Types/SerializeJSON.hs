@@ -229,6 +229,7 @@ instance ToJSON MacroblockBD where
          ,  "nonce"             .= _nonce (bl :: MacroblockBD)
          -- ,  "microblocks_cnt"   .= length (_mblocks bl)
          ,  "microblocks"       .= _mblocks (bl :: MacroblockBD)
+         ,  "team_keys"         .= _teamKeys (bl :: MacroblockBD)
        ]
 
 instance FromJSON MacroblockBD where
@@ -256,7 +257,7 @@ instance ToJSON MacroblockAPI where
          ,  "reward"            .= _reward (bl :: MacroblockAPI)
 --         ,  "microblocks_cnt"   .= length (_mblocksAPI bl)
          ,  "microblocks"       .= _mblocks (bl :: MacroblockAPI)
-         ,  "team_keys"         .= _mblocks (bl :: MacroblockAPI)
+         ,  "team_keys"         .= _teamKeys (bl :: MacroblockAPI)
        ]
 
 instance FromJSON MacroblockAPI where

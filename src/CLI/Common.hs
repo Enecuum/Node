@@ -98,16 +98,10 @@ getBlockByHash db hash aInfoChan = try $ do
 
 getKeyBlockByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Result MacroblockAPI)
 getKeyBlockByHash db (Hash h) aInfoChan = try $ do
-  print "That is hash from cli"
-  print h
-  case Base64.decode h of
-    Left _ -> error "Can not decode hash"
-    Right r -> do
-                 mb <- B.getKeyBlockByHashDB db (Hash r) aInfoChan
-                 case mb of
-                   Nothing -> throw NoSuchMacroBlockDB
-                   Just m  -> return m
-
+  mb <- B.getKeyBlockByHashDB db (Hash h) aInfoChan
+  case mb of
+    Nothing -> throw NoSuchMacroBlockDB
+    Just m  -> return m
 
 getChainInfo :: DBPoolDescriptor -> InChan InfoMsg -> IO (Result ChainInfo)
 getChainInfo db aInfoChan = do
