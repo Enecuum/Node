@@ -242,7 +242,7 @@ instance ToJSON NetMessage where
 
     toJSON (ResponsePotentialConnects aConnects) = object [
         "tag"       .= ("Response"  :: String),
-        "type"      .= ("Connects"  :: String),
+        "type"      .= ("PotentialConnects"  :: String),
         "connects"  .= aConnects
       ]
 
