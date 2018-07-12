@@ -76,7 +76,7 @@ connectManager :: PortNumber -> [Connect] -> InChan FileActorRequest -> IO ()
 connectManager aPortNumber aBNList aConnectsChan = do
     forM_ aBNList $ \(Connect aBNIp aBNPort) -> do
         void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
-            WS.sendTextData aConnect . encode $ AddToListOfConnectsRequest aPortNumber
+            WS.sendTextData aConnect . encode $ ActionAddToConnectList aPortNumber
     aLoop aBNList
   where
     aLoop = \case
@@ -94,15 +94,6 @@ connectManager aPortNumber aBNList aConnectsChan = do
                 aLoop (aTailOfList ++ [Connect aBNIp aBNPort])
         _       -> return ()
 
-
-data AddToListOfConnectsRequest = AddToListOfConnectsRequest PortNumber
-
-instance ToJSON AddToListOfConnectsRequest where
-    toJSON (AddToListOfConnectsRequest aPort) = object [
-            "tag"  .= ("Action" :: T.Text)
-        ,   "type" .= ("AddToListOfConnects" :: T.Text)
-        ,   "port" .= fromEnum aPort
-      ]
 
 microblockProc :: DBPoolDescriptor -> OutChan Microblock -> OutChan Value -> InChan InfoMsg -> IO ()
 microblockProc descriptor aMicroblockCh aValueChan aInfoCh = do
