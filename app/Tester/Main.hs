@@ -22,6 +22,10 @@ import Crypto.PubKey.ECC.ECDSA as ECDSA
 import qualified    Network.WebSockets                  as WS
 import Service.Transaction.TransactionsDAG
 
+main = undefined
+
+{-
+
 data SendMsg where
     SendTransaction     :: Transaction -> SendMsg
     SendMsg             :: NodeId -> SendMsg
@@ -55,12 +59,7 @@ instance FromJSON RecivedMsg where
         aId     <- unhexNodeId =<< aMsg .: "sender"
         aMsg    <- aMsg .: "msg"
         return $ RecivedMsg aId aMsg
-{-
-instance FromJSON RecivedPendingMsg where
-    parseJSON (Object aMsg) = do
-        aTransactions <-  aMsg .: "transactions"
-        return $
--}
+
 
 testMsg = object [
     "msg" .= ("testMsg" :: String)
@@ -250,3 +249,4 @@ socketActor aSender aConnect = do
 --
 genMicroBlock :: Transaction -> Microblock
 genMicroBlock tx = Microblock "123" (ECDSA.Signature 1 2) [] (PublicKey256k1 1) [tx] 1
+-}

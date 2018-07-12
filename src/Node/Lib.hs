@@ -86,9 +86,9 @@ connectManager aPortNumber aBNList aConnectsChan = do
             aPotencialConnectNumber <- takeMVar aVar
             when (aPotencialConnectNumber == 0) $ do
                 void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
-                    WS.sendTextData aConnect $ encode BNRequestConnects
+                    WS.sendTextData aConnect $ encode $ RequestPotentialConnects False
                     aMsg <- WS.receiveData aConnect
-                    let BNResponseConnects aConnects = fromJust $ decode aMsg
+                    let ResponsePotentialConnects aConnects = fromJust $ decode aMsg
                     writeInChan aConnectsChan $ AddToFile aConnects
                 C.threadDelay 1000000
                 aLoop (aTailOfList ++ [Connect aBNIp aBNPort])
