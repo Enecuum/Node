@@ -382,8 +382,8 @@ tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) = do
   let txAPI = map (\t -> TransactionAPI {_tx = t, _txHash = rHashT t }) tx
   -- teamKeys <- getTeamKeysForMicroblock db _keyBlock --aInfoChan
   return MicroblockAPI {
-            _prevMicroblock = "",
-            _nextMicroblock = "",
+            _prevMicroblock = Nothing,
+            _nextMicroblock = Nothing,
             _keyBlock,
             _signAPI = _signBD,
             -- _teamKeys = teamKeys,
@@ -396,15 +396,15 @@ tMacroblock2MacroblockAPI :: DBPoolDescriptor -> MacroblockBD -> IO MacroblockAP
 tMacroblock2MacroblockAPI descr (MacroblockBD {..}) = do
            microblocks <- zip _mblocks <$> mapM (\h -> fromJust <$> getMicroBlockByHashDB descr (Hash h)) _mblocks
            let microblocksInfoAPI = map (\(h, MicroblockBD {..}) -> MicroblockInfoAPI {
-                                                        _prevMicroblock = "",
-                                                        _nextMicroblock = "",
+                                                        _prevMicroblock = Nothing,
+                                                        _nextMicroblock = Nothing,
                                                         _keyBlock,
                                                         _signAPI = _signBD,
                                                         _publisher,
                                                         _hash = h}) microblocks
            return $ MacroblockAPI {
              _prevKBlock,
-             _nextKBlock = "",
+             _nextKBlock = Nothing,
              _difficulty,
              _height,
              _solver,
@@ -415,7 +415,8 @@ tMacroblock2MacroblockAPI descr (MacroblockBD {..}) = do
 
 dummyMacroblock :: MacroblockBD
 dummyMacroblock = MacroblockBD {
-  _prevKBlock = "",
+  _prevKBlock = Nothing,
+  _nextKBlock = Nothing,
   _difficulty = 0,
   _height = 0,
   _solver = aSolver,
@@ -431,7 +432,8 @@ dummyMacroblock = MacroblockBD {
 
 tKeyBlockInfo2Macroblock :: KeyBlockInfo -> MacroblockBD
 tKeyBlockInfo2Macroblock (KeyBlockInfo {..}) = MacroblockBD {
-            _prevKBlock = _prev_hash,
+            _prevKBlock = Just _prev_hash,
+            _nextKBlock = Nothing,
             _difficulty = 20,
             _height = 0,
             _solver,

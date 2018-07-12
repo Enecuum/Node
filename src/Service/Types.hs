@@ -108,7 +108,8 @@ data MicroblockBD = MicroblockBD{
 instance Serialize MicroblockBD
 
 data MacroblockBD = MacroblockBD {
-     _prevKBlock :: ByteString
+     _prevKBlock :: Maybe ByteString
+  ,  _nextKBlock :: Maybe ByteString
   ,  _difficulty :: Integer --
   ,  _height     :: Integer -- block number in the chain
   ,  _solver     :: PublicKey
@@ -185,8 +186,8 @@ deriving instance Generic MessageForSign
 ----- API TYPES
 
 data MacroblockAPI = MacroblockAPI {
-     _prevKBlock :: ByteString
-  ,  _nextKBlock :: ByteString
+     _prevKBlock :: Maybe ByteString
+  ,  _nextKBlock :: Maybe ByteString
   ,  _difficulty :: Integer
   ,  _height     :: Integer
   ,  _solver     :: PublicKey
@@ -199,8 +200,8 @@ instance Serialize MacroblockAPI
 
 
 data MicroblockInfoAPI = MicroblockInfoAPI {
-     _prevMicroblock :: ByteString  -- hash of the previous microblock if exists
-    ,_nextMicroblock :: ByteString  -- hash of the next microblock if exists
+     _prevMicroblock :: Maybe ByteString  -- hash of the previous microblock if exists
+    ,_nextMicroblock :: Maybe ByteString  -- hash of the next microblock if exists
     ,_keyBlock       :: ByteString  -- hash of key-block
     ,_signAPI        :: Signature   -- signature for {K_hash, [Tx],}
     ,_publisher      :: PublicKey
@@ -210,8 +211,8 @@ data MicroblockInfoAPI = MicroblockInfoAPI {
 instance Serialize MicroblockInfoAPI
 
 data MicroblockAPI = MicroblockAPI {
-     _prevMicroblock  :: ByteString  -- hash of the previous microblock if exists
-    ,_nextMicroblock  :: ByteString  -- hash of the next microblock if exists
+     _prevMicroblock  :: Maybe ByteString  -- hash of the previous microblock if exists
+    ,_nextMicroblock  :: Maybe ByteString  -- hash of the next microblock if exists
     ,_keyBlock        :: ByteString  -- hash of key-block
     ,_signAPI         :: Signature   -- signature for {K_hash, [Tx],}
     -- ,_teamKeys        :: [PublicKey] -- for reward

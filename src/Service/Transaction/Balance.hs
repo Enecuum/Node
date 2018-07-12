@@ -173,14 +173,39 @@ addMicroblockToDB db m aInfoChan =  do
                     writeMacroblockToDB db aInfoChan (_keyBlock (m :: Microblock)) macroblock
 
 
+checkMacroblockIsClosed :: MacroblockBD -> Bool
+checkMacroblockIsClosed MacroblockBD {..} = length _teamKeys == length _mblocks
+
+
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> MacroblockBD -> IO ()
-writeMacroblockToDB desc aInfoChan hashOfKeyBlock aMacroblock = do
-  let key = hashOfKeyBlock
-      val = S.encode aMacroblock
-  funW (poolMacroblock desc) [(key,val)]
-  writeLog aInfoChan [BDTag] Info ("Write Macroblock " ++ show key ++ " " ++ show aMacroblock ++ "to DB")
-  funW (poolMacroblock desc) [(lastKeyBlock,key)]
-  writeLog aInfoChan [BDTag] Info ("Write Last Macroblock " ++ show lastKeyBlock ++ "to DB")
+writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
+  hashPreviousLastKeyBlock <- funR (poolMacroblock desc) lastKeyBlock
+  bdKV <- case hashPreviousLastKeyBlock of
+    Nothing -> return []
+    Just j  -> do
+      previousLastKeyBlock <- funR (poolMacroblock desc) j
+      case previousLastKeyBlock of
+        Nothing -> return []
+        Just k -> case S.decode k :: Either String MacroblockBD of
+                    Left e -> do
+                      writeLog a [BDTag] Error ("Can not decode Macroblock" ++ show e)
+                      return []
+                    Right r -> do
+                      let pKey = j
+                          pVal = S.encode $ (r { _nextKBlock = Just hashOfKeyBlock } :: MacroblockBD)
+                      return [(pKey, pVal)]
+
+  let nMacroblock = (aMacroblock { _prevKBlock = hashPreviousLastKeyBlock }) :: MacroblockBD
+      cKey = hashOfKeyBlock
+      cVal = S.encode nMacroblock
+      keyValue = (cKey,cVal) : bdKV
+  funW (poolMacroblock desc) keyValue
+  writeLog a [BDTag] Info ("Write Macroblock " ++ show cKey ++ " " ++ show nMacroblock ++ "to DB")
+  if checkMacroblockIsClosed aMacroblock == True
+    then do
+    funW (poolMacroblock desc) [(lastKeyBlock, cKey)]
+    writeLog a [BDTag] Info ("Write Last Macroblock " ++ show lastKeyBlock ++ "to DB")
+  else return ()
 
 writeMicroblockDB :: Pool Rocks.DB -> InChan InfoMsg -> MicroblockBD -> IO ()
 writeMicroblockDB db aInfoChan m = do

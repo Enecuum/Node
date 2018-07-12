@@ -60,11 +60,12 @@ getTransactionsByKey = do
 -- end test cli
 --------------------------------------
 
+getOneKeyBlock2 :: IO (Maybe MacroblockAPI)
 getOneKeyBlock2 = do
   c <- connectDB
   let h = Hash ("MzI=" :: BSI.ByteString)
   -- let h = Hash ("32" :: BSI.ByteString)
-  (inChan, outChan) <- newChan 64
+  (inChan, _) <- newChan 64
   getKeyBlockByHashDB c h inChan
 -- "MzI="
 
@@ -269,19 +270,19 @@ test02 = do
   --       Rocks.iterItems it
   -- value <- something2 iter
 
-  let something3 = \db -> runResourceT $ do
-        it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+  let something3 = \bd -> runResourceT $ do
+        it    <- Rocks.iterOpen bd Rocks.defaultReadOptions
         Rocks.iterLast it
         -- Rocks.iterPrev it
         Rocks.iterItems it
   value <- something3 db
   print value
 
-  result2 <- Rocks.get db  Rocks.defaultReadOptions "a"
-  print result2
+  result1 <- Rocks.get db  Rocks.defaultReadOptions "a"
+  print result1
 
-  let something4 = \db -> runResourceT $ do
-        it    <- Rocks.iterOpen db Rocks.defaultReadOptions
+  let something4 = \bd -> runResourceT $ do
+        it    <- Rocks.iterOpen bd Rocks.defaultReadOptions
         Rocks.iterLast it
         -- Rocks.iterPrev it
         Rocks.iterItems it
@@ -318,7 +319,7 @@ getO ::  IO [BSI.ByteString]
 getO = runResourceT $ do
   let pathT = "/tmp/haskell-rocksDB5"
   (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
-  getNValuesOriginal db 100
+  getNValuesOriginal db
 
 getS ::  IO [(BSI.ByteString, BSI.ByteString)]
 getS = runResourceT $ do
@@ -331,13 +332,13 @@ getNValues :: MonadResource m => Rocks.DB -> Int -> m [(BSI.ByteString, BSI.Byte
 getNValues db n = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterLast it
-  replicateM (n - 1) $ Rocks.iterPrev it
+  _ <- replicateM (n - 1) $ Rocks.iterPrev it
   Rocks.iterItems it
 
 
 
-getNValuesOriginal :: MonadResource m => Rocks.DB -> p -> m [BSI.ByteString]
-getNValuesOriginal db n = do
+getNValuesOriginal :: MonadResource m => Rocks.DB -> m [BSI.ByteString]
+getNValuesOriginal db  = do
   it    <- Rocks.iterOpen db Rocks.defaultReadOptions
   Rocks.iterLast it
   Just v1 <- Rocks.iterValue it
