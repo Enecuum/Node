@@ -167,7 +167,7 @@ instance FromJSON NetMessage where
                 return $ MsgNewNode aNodeId (readNodeType aNodeType) aConnect
 
             ("Response", "NodeId") -> do
-                aPPId :: T.Text <- aMessage .: "nodeId"
+                aPPId :: T.Text <- aMessage .: "node_id"
 
                 aNodeId  <- unhexNodeId aPPId
                 return $ ResponseNodeId aNodeId
