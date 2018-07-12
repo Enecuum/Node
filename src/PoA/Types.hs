@@ -49,7 +49,7 @@ data NetMessage where
 
 
     MsgBroadcast                :: IdFrom -> NodeType -> Value ->  NetMessage
-    MsgMsgTo                       :: IdFrom -> IdTo     -> Value ->  NetMessage
+    MsgMsgTo                    :: IdFrom -> IdTo     -> Value ->  NetMessage
 
     MsgMicroblock               :: Microblock   -> NetMessage
     MsgTransaction              :: Transaction  -> NetMessage

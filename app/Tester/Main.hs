@@ -22,10 +22,11 @@ import Crypto.PubKey.ECC.ECDSA as ECDSA
 import qualified    Network.WebSockets                  as WS
 import Service.Transaction.TransactionsDAG
 
-main = undefined
 
+testMsg = object [
+    "msg" .= ("testMsg" :: String)
+  ]
 {-
-
 data SendMsg where
     SendTransaction     :: Transaction -> SendMsg
     SendMsg             :: NodeId -> SendMsg
@@ -61,9 +62,7 @@ instance FromJSON RecivedMsg where
         return $ RecivedMsg aId aMsg
 
 
-testMsg = object [
-    "msg" .= ("testMsg" :: String)
-  ]
+
 
 instance ToJSON SendMsg where
     toJSON (SendTransaction aTransaction) = object [
@@ -95,7 +94,7 @@ instance ToJSON SendMsg where
         "tag"           .= ("Request"  :: String),
         "type"          .= ("Pending" :: String)
       ]
-
+-}
 
 -- @ БН уже поднята
 -- @ СН тоже поднята
@@ -115,14 +114,13 @@ instance ToJSON SendMsg where
 -- Проверить, что мы можем просмотреть содержимое пендинга.
 
 connectWithNN aStr aConnect = do
-    _ :: B.ByteString <- WS.receiveData aConnect
     putStrLn $ aStr ++ "Sending of hello request"
-    WS.sendTextData aConnect $ encode SendHello
+    WS.sendTextData aConnect $ encode $ ActionConnect PoA Nothing
     putStrLn $ aStr ++ "Recivin of ID."
     aMsg <- WS.receiveData aConnect
-    RecivedID aMyNodeId <- return $ case decode aMsg of
-        Just a -> a
-        Nothing -> error $
+    aMyNodeId <- return $ case decode aMsg of
+        Just (ResponseNodeId aId) -> aId
+        _ -> error $
             aStr ++ "FAIL. The recived msg not a response for connect request! " ++ show aMsg
     putStrLn $ aStr ++ "Recived ID = " ++ show aMyNodeId
     return aMyNodeId
@@ -140,12 +138,12 @@ main = do
             putStrLn "   Connecting to BN..."
             void . forkIO $ runClient ip 1554 "/" $ \aConnect -> do
                 putStrLn "   Sending to BN reques for connects..."
-                WS.sendTextData aConnect $ encode BNRequestConnects
+                WS.sendTextData aConnect $ encode $ RequestPotentialConnects False
                 putStrLn "   Reciving from BN list of connects..."
                 aMsg <- WS.receiveData aConnect
-                let BNResponseConnects aConnects = case decode aMsg of
-                        Just a -> a
-                        Nothing -> error $
+                let aConnects = case decode aMsg of
+                        Just (ResponsePotentialConnects aConnects) -> aConnects
+                        _ -> error $
                             "   FAIL. The recived msg not a list of connects! " ++ show aMsg
                 putMVar aConnectListVar aConnects
             aConnects <- takeMVar aConnectListVar
@@ -166,11 +164,11 @@ main = do
 
                 aSecondNodeIsStarted <- takeMVar aSecondNodeIsStartedVar
                 putStrLn "1| Sending of test broadcast msg..."
-                WS.sendTextData aConnect $ encode SendBroadcas
+                WS.sendTextData aConnect $ encode $ MsgBroadcast (IdFrom aMyNodeId) All testMsg
                 aMsg <- WS.receiveData aConnect
-                RecivedBroadcast aNodeId aValue <- return $ case decode aMsg of
-                    Just a -> a
-                    Nothing -> error $
+                MsgBroadcast (IdFrom aNodeId) _ aValue<- return $ case decode aMsg of
+                    Just aMsgBroadcast@(MsgBroadcast _ _ _) -> aMsgBroadcast
+                    _ -> error $
                         "1| FAIL. The recived msg not a response for broadcast! " ++ show aMsg
                 putStrLn "1| Broadcast echo recived."
                 unless (aNodeId == aMyNodeId) $ error "1| The node ID en broadcast msg is broaken."
@@ -178,8 +176,8 @@ main = do
 
                 aMsg <- WS.receiveData aConnect
                 putStrLn "1| Recived msg from second node."
-                RecivedMsg aNodeId aValue <- return $ case decode aMsg of
-                    Just a -> a
+                MsgMsgTo aNodeId _ aValue <- return $ case decode aMsg of
+                    Just aMsgTo@(MsgMsgTo _ _ _) -> aMsgTo
                     Nothing -> error $
                         "1| FAIL. The recived msg not a correct! " ++ show aMsg
                 unless (aValue == testMsg) $ error "1| The broadcast msg is broaken."
@@ -190,19 +188,19 @@ main = do
             aIdOfFirsClient <- takeMVar aIdOfFirsClientVar
             putStrLn "2| Connecting of CN to NN..."
             void . forkIO $ runClient (showHostAddress aHostAddress) (fromEnum port) "/" $ \aConnect -> do
-                void $ connectWithNN "2| " aConnect
+                aMyId <- connectWithNN "2| " aConnect
                 putStrLn "2| CN is connected to NN."
                 putMVar aSecondNodeIsStartedVar True
 
                 aMsg <- WS.receiveData aConnect
                 putStrLn "2| Broadcast msg recived."
-                RecivedBroadcast aNodeId aValue <- return $ case decode aMsg of
-                    Just a -> a
-                    Nothing -> error $
-                        "2| FAIL. The recived msg not a broadcast msg! " ++ show aMsg
+                MsgBroadcast (IdFrom aNodeId) _ aValue<- return $ case decode aMsg of
+                    Just aMsgBroadcast@(MsgBroadcast _ _ _) -> aMsgBroadcast
+                    _ -> error $
+                        "2| FAIL. The recived msg not a response for broadcast! " ++ show aMsg
                 unless (aValue == testMsg)    $ error "2| The broadcast msg is broaken."
                 putStrLn $ "2| Sending msg to firs node..."
-                WS.sendTextData aConnect . encode $ SendMsg aNodeId
+                WS.sendTextData aConnect . encode $ MsgMsgTo (IdFrom aMyId)  (IdTo aNodeId) testMsg
                 aMsg :: B.ByteString <- WS.receiveData aConnect
                 return ()
 
@@ -231,11 +229,11 @@ main = do
             runClient ip 1554 "/" $ socketActor $ \aConnect ->
                 forM_ (cycle aTransactions) $ \aTrans -> do
                     threadDelay 1000
-                    WS.sendBinaryData aConnect $ encode $ SendTransaction aTrans
+                    WS.sendBinaryData aConnect $ encode $ MsgTransaction aTrans
         _ -> return ()
 
 socketActor aSender aConnect = do
-    WS.sendTextData aConnect $ encode SendHello
+    WS.sendTextData aConnect $ encode (ActionConnect PoA Nothing)
     void $ race (aSender aConnect) (receiver 0)
   where
     receiver :: Int -> IO ()
@@ -249,4 +247,3 @@ socketActor aSender aConnect = do
 --
 genMicroBlock :: Transaction -> Microblock
 genMicroBlock tx = Microblock "123" (ECDSA.Signature 1 2) [] (PublicKey256k1 1) [tx] 1
--}
