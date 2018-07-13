@@ -68,9 +68,13 @@ main = do
     aArgs <- getArgs
     case aArgs of
         "c":ip:_ -> do
+            putStrLn ""
+            putStrLn "--------------------------"
             putStrLn "   --------------------"
             putStrLn "   Start of test script"
             putStrLn "   --------------------"
+            putStrLn "--------------------------"
+            putStrLn ""
             aConnectListVar <- newEmptyMVar
             aSecondNodeIsStartedVar <-newEmptyMVar
             testsOk <- newEmptyMVar
@@ -94,9 +98,13 @@ main = do
             putStrLn "   Testing firs NN of the list..."
             when (null aConnects) $ error "   FAIL. The received list is empty."
             let (Connect aHostAddress port):_ = aConnects
+            putStrLn ""
+            putStrLn "---------------------------------------"
             putStrLn "   ---------------------------------"
             putStrLn "   Resending and broadcasting of msg"
             putStrLn "   ---------------------------------"
+            putStrLn "---------------------------------------"
+            putStrLn ""
             aIdOfFirsClientVar <- newEmptyMVar
             putStrLn "1| Connecting CN to NN..."
             void . forkIO $ runClient (showHostAddress aHostAddress) (fromEnum port) "/" $ \aConnect -> do
@@ -155,10 +163,13 @@ main = do
                 return ()
 
             _ <- takeMVar testsOk
+            putStrLn ""
+            putStrLn "-------------"
             putStrLn "   -------"
             putStrLn "   Pending"
             putStrLn "   -------"
-
+            putStrLn "-------------"
+            putStrLn ""
             void . forkIO $ runClient (showHostAddress aHostAddress) (fromEnum port) "/" $ \aConnect -> do
                 aTransaction:_ <- genNTx 10
                 void $ connectWithNN "   " aConnect
@@ -170,7 +181,7 @@ main = do
                 aTransactions <- checkOfPending aConnect
                 unless (null aTransactions) $  error "  FAIL. Then pending not empty!"
 
-                putStrLn "Sending transaction in the pending."
+                putStrLn "   Sending transaction in the pending."
                 printBS aMsgTransaction
                 WS.sendTextData aConnect aMsgTransaction
 
@@ -178,7 +189,7 @@ main = do
                 aTransactions <- checkOfPending aConnect
                 when (null aTransactions) $  error "   FAIL. Then pending is empty!"
 
-                putStrLn "Checking of pending clearing."
+                putStrLn "   Checking of pending clearing."
                 WS.sendTextData aConnect aMsgMicroblock
                 printBS aMsgMicroblock
 
@@ -187,10 +198,13 @@ main = do
                 putMVar testsOk True
 
             _ <- takeMVar testsOk
+            putStrLn ""
+            putStrLn "-----------------"
             putStrLn "   -----------"
             putStrLn "   Testing Ok!"
             putStrLn "   -----------"
-
+            putStrLn "-----------------"
+            putStrLn ""
 
         "b":ip:_ -> runClient ip 1554 "/" $ socketActor (\aConnect -> forever $ do
                 threadDelay 1000
