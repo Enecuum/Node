@@ -12,6 +12,7 @@ import Data.Aeson
 import Control.Concurrent.Async
 import Control.Concurrent
 import qualified Data.ByteString    as B
+import qualified Data.ByteString.Lazy.Char8    as B8
 import qualified Data.Text          as T
 import Service.Types
 import Node.Data.Key
@@ -26,75 +27,11 @@ import Service.Transaction.TransactionsDAG
 testMsg = object [
     "msg" .= ("testMsg" :: String)
   ]
-{-
-data SendMsg where
-    SendTransaction     :: Transaction -> SendMsg
-    SendMsg             :: NodeId -> SendMsg
-    SendHello           :: SendMsg
-    SendBroadcas        :: SendMsg
-    SendPendingRequest  :: SendMsg
-    SendMicroblock      :: Transaction -> SendMsg
 
-data RecivedID          = RecivedID NodeId
-data RecivedBroadcast   = RecivedBroadcast NodeId Value
-data RecivedMsg         = RecivedMsg       NodeId Value
-data RecivedPendingMsg  = RecivedPendingMsg [Transaction]
-
-
-instance FromJSON RecivedID where
-    parseJSON (Object aMsg) = do
-        aId <- unhexNodeId =<< aMsg .: "node_id"
-        return . RecivedID $ aId
-
--- TODO idFrom -> sender
-
-instance FromJSON RecivedBroadcast where
-    parseJSON (Object aMsg) = do
-        aId     <- unhexNodeId =<< aMsg .: "idFrom"
-        aMsg    <- aMsg .: "msg"
-        return $ RecivedBroadcast aId aMsg
-
-
-instance FromJSON RecivedMsg where
-    parseJSON (Object aMsg) = do
-        aId     <- unhexNodeId =<< aMsg .: "sender"
-        aMsg    <- aMsg .: "msg"
-        return $ RecivedMsg aId aMsg
-
-
-
-
-instance ToJSON SendMsg where
-    toJSON (SendTransaction aTransaction) = object [
-        "tag"           .= ("Request"  :: String),
-        "type"          .= ("PendingAdd"  :: String),
-        "transaction"   .= aTransaction
-      ]
-
-    toJSON SendHello = object [
-        "tag"           .= ("Action"  :: String),
-        "type"          .= ("Connect"  :: String),
-        "node_type"     .= ("PoA" :: String)
-      ]
-
-    toJSON SendBroadcas = object [
-        "tag"           .= ("Request"  :: String),
-        "type"          .= ("Broadcast" :: String),
-        "recipientType" .= show All,
-        "msg"           .= testMsg
-      ]
-
-    toJSON (SendMsg aNodeId) = object [
-        "tag"           .= ("Msg"  :: String),
-        "type"          .= ("MsgTo" :: String),
-        "destination"   .= nodeIdToUnxed aNodeId,
-        "msg"           .= testMsg
-      ]
-    toJSON SendPendingRequest = object [
-        "tag"           .= ("Request"  :: String),
-        "type"          .= ("Pending" :: String)
-      ]
--}
+printBS bs = do
+    putStrLn ""
+    putStrLn . ("   " ++) . B8.unpack $ bs
+    putStrLn ""
 
 -- @ БН уже поднята
 -- @ СН тоже поднята
@@ -115,14 +52,18 @@ instance ToJSON SendMsg where
 
 connectWithNN aStr aConnect = do
     putStrLn $ aStr ++ "Sending of hello request"
-    WS.sendTextData aConnect $ encode $ ActionConnect PoA Nothing
-    putStrLn $ aStr ++ "Recivin of ID."
+    let aConnectMsg = encode $ ActionConnect PoA Nothing
+    printBS aConnectMsg
+    WS.sendTextData aConnect aConnectMsg
+
+    putStrLn $ aStr ++ "Receiving of ID."
     aMsg <- WS.receiveData aConnect
+    printBS aMsg
     aMyNodeId <- return $ case decode aMsg of
         Just (ResponseNodeId aId) -> aId
         _ -> error $
-            aStr ++ "FAIL. The recived msg not a response for connect request! " ++ show aMsg
-    putStrLn $ aStr ++ "Recived ID = " ++ show aMyNodeId
+            aStr ++ "FAIL. The received msg not a response for connect request! " ++ show aMsg
+    putStrLn $ aStr ++ "received ID = " ++ show aMyNodeId
     return aMyNodeId
 
 main = do
@@ -138,19 +79,22 @@ main = do
             putStrLn "   Connecting to BN..."
             void . forkIO $ runClient ip 1554 "/" $ \aConnect -> do
                 putStrLn "   Sending to BN reques for connects..."
-                WS.sendTextData aConnect $ encode $ RequestPotentialConnects False
+                let aRequestPotentialConnects = encode $ RequestPotentialConnects False
+                WS.sendTextData aConnect aRequestPotentialConnects
+                printBS aRequestPotentialConnects
                 putStrLn "   Reciving from BN list of connects..."
                 aMsg <- WS.receiveData aConnect
+                printBS aMsg
                 let aConnects = case decode aMsg of
                         Just (ResponsePotentialConnects aConnects) -> aConnects
                         _ -> error $
-                            "   FAIL. The recived msg not a list of connects! " ++ show aMsg
+                            "   FAIL. The received msg not a list of connects! " ++ show aMsg
                 putMVar aConnectListVar aConnects
             aConnects <- takeMVar aConnectListVar
-            putStrLn "   Recived list of NN from BN."
+            putStrLn "   Received list of NN from BN."
 
             putStrLn "   Testing firs NN of the list..."
-            when (null aConnects) $ error "   FAIL. The recived list is empty."
+            when (null aConnects) $ error "   FAIL. The received list is empty."
             let (Connect aHostAddress port):_ = aConnects
             putStrLn "   ---------------------------------"
             putStrLn "   Resending and broadcasting of msg"
@@ -164,22 +108,27 @@ main = do
 
                 aSecondNodeIsStarted <- takeMVar aSecondNodeIsStartedVar
                 putStrLn "1| Sending of test broadcast msg..."
-                WS.sendTextData aConnect $ encode $ MsgBroadcast (IdFrom aMyNodeId) All testMsg
+                let aBroadcastMsg = encode $ MsgBroadcast (IdFrom aMyNodeId) All testMsg
+                printBS aBroadcastMsg
+                WS.sendTextData aConnect aBroadcastMsg
+                putStrLn "1| Receiving of broadcast echo..."
                 aMsg <- WS.receiveData aConnect
+                printBS aMsg
                 MsgBroadcast (IdFrom aNodeId) _ aValue<- return $ case decode aMsg of
                     Just aMsgBroadcast@(MsgBroadcast _ _ _) -> aMsgBroadcast
                     _ -> error $
-                        "1| FAIL. The recived msg not a response for broadcast! " ++ show aMsg
-                putStrLn "1| Broadcast echo recived."
+                        "1| FAIL. The received msg not a response for broadcast! " ++ show aMsg
+                putStrLn "1| Broadcast echo received."
                 unless (aNodeId == aMyNodeId) $ error "1| The node ID en broadcast msg is broaken."
                 unless (aValue == testMsg)    $ error "1| The broadcast msg is broaken."
 
                 aMsg <- WS.receiveData aConnect
-                putStrLn "1| Recived msg from second node."
+                printBS aMsg
+                putStrLn "1| Received msg from second node."
                 MsgMsgTo aNodeId _ aValue <- return $ case decode aMsg of
                     Just aMsgTo@(MsgMsgTo _ _ _) -> aMsgTo
                     Nothing -> error $
-                        "1| FAIL. The recived msg not a correct! " ++ show aMsg
+                        "1| FAIL. The received msg not a correct! " ++ show aMsg
                 unless (aValue == testMsg) $ error "1| The broadcast msg is broaken."
 
                 putMVar testsOk True
@@ -193,14 +142,17 @@ main = do
                 putMVar aSecondNodeIsStartedVar True
 
                 aMsg <- WS.receiveData aConnect
-                putStrLn "2| Broadcast msg recived."
+                printBS aMsg
+                putStrLn "2| Broadcast msg received."
                 MsgBroadcast (IdFrom aNodeId) _ aValue<- return $ case decode aMsg of
                     Just aMsgBroadcast@(MsgBroadcast _ _ _) -> aMsgBroadcast
                     _ -> error $
-                        "2| FAIL. The recived msg not a response for broadcast! " ++ show aMsg
+                        "2| FAIL. The received msg not a response for broadcast! " ++ show aMsg
                 unless (aValue == testMsg)    $ error "2| The broadcast msg is broaken."
                 putStrLn $ "2| Sending msg to firs node..."
-                WS.sendTextData aConnect . encode $ MsgMsgTo (IdFrom aMyId)  (IdTo aNodeId) testMsg
+                let aMsgTo = encode $ MsgMsgTo (IdFrom aMyId)  (IdTo aNodeId) testMsg
+                printBS aMsgTo
+                WS.sendTextData aConnect aMsgTo
                 aMsg :: B.ByteString <- WS.receiveData aConnect
                 return ()
 

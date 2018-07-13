@@ -211,7 +211,6 @@ readNodeType aNodeType
 
 
 instance ToJSON NetMessage where
-
     toJSON (ResponsePoWList aConnects) = object [
         "tag"       .= ("Response"   :: String),
         "type"      .= ("PoWList" :: String),
@@ -308,6 +307,7 @@ instance ToJSON NetMessage where
         "tag"       .= ("Request"      :: String),
         "type"      .= ("PoWList"  :: String)
       ]
+
     toJSON (RequestPending (Just aTransaction)) = object [
         "tag"           .= ("Request"      :: String),
         "type"          .= ("Pending"  :: String),
@@ -317,6 +317,7 @@ instance ToJSON NetMessage where
         "tag"           .= ("Request"      :: String),
         "type"          .= ("Pending"  :: String)
       ]
+
     toJSON (RequestPotentialConnects True) = object [
         "tag"           .= ("Request"      :: String),
         "type"          .= ("PotentialConnects"  :: String),
@@ -329,17 +330,6 @@ instance ToJSON NetMessage where
     toJSON RequestActualConnects = object [
         "tag"           .= ("Request"      :: String),
         "type"          .= ("ActualConnectList"  :: String)
-      ]
-
-    toJSON (RequestPending (Just aTransaction)) = object [
-        "tag"           .= ("Request"      :: String),
-        "type"          .= ("Pending"  :: String),
-        "transaction"   .= aTransaction
-      ]
-
-    toJSON (RequestPending _) = object [
-        "tag"           .= ("Request"      :: String),
-        "type"          .= ("Pending"  :: String)
       ]
 
     toJSON (ActionAddToConnectList aPortNumber) = object [
