@@ -33,22 +33,6 @@ printBS bs = do
     putStrLn . ("   " ++) . B8.unpack $ bs
     putStrLn ""
 
--- @ БН уже поднята
--- @ СН тоже поднята
--- @ мы эмулируем работу двух КН
-
--- Приконнектиться к БН, взять у неё ip и порт.                     [+]
--- Приконенктиться к СН по ip и порту взятому у БН.                 [+]
--- Создать второй коннект к СН.                                     [+]
-
--- Просмотреть актуальный список коннектов СН.
--- Между двумя коннектами прокинуть сообщение.                      [+]
-    -- Бродкастом.                                                  [+]
-    -- Адресное.                                                    [+]
-
--- Проверить загрузку транзакции в пендинг.
--- Проверить приём микроблока.
--- Проверить, что мы можем просмотреть содержимое пендинга.
 
 connectWithNN aStr aConnect = do
     putStrLn $ aStr ++ "Sending of hello request"
@@ -62,9 +46,23 @@ connectWithNN aStr aConnect = do
     aMyNodeId <- return $ case decode aMsg of
         Just (ResponseNodeId aId) -> aId
         _ -> error $
-            aStr ++ "FAIL. The received msg not a response for connect request! " ++ show aMsg
+            aStr ++ "FAIL. The received msg not a response for connect request! "
     putStrLn $ aStr ++ "received ID = " ++ show aMyNodeId
     return aMyNodeId
+
+
+checkOfPending aConnect = do
+    let aRequetPending  = encode $ RequestPending Nothing
+    printBS aRequetPending
+    WS.sendTextData aConnect aRequetPending
+    putStrLn $ "   Checking. Pending is empty?"
+    aPendingResonce <- WS.receiveData aConnect
+    printBS aPendingResonce
+    ResponseTransactions aTransactions <- return $ case decode aPendingResonce of
+        Just aTransactions@(ResponseTransactions _) -> aTransactions
+        Just _ -> error "  FAIL. The received msg not a response for pending request!"
+        _ -> error "  FAIL. Error in the parsing!"
+    return aTransactions
 
 main = do
     aArgs <- getArgs
@@ -88,7 +86,7 @@ main = do
                 let aConnects = case decode aMsg of
                         Just (ResponsePotentialConnects aConnects) -> aConnects
                         _ -> error $
-                            "   FAIL. The received msg not a list of connects! " ++ show aMsg
+                            "   FAIL. The received msg not a list of connects! "
                 putMVar aConnectListVar aConnects
             aConnects <- takeMVar aConnectListVar
             putStrLn "   Received list of NN from BN."
@@ -117,7 +115,7 @@ main = do
                 MsgBroadcast (IdFrom aNodeId) _ aValue<- return $ case decode aMsg of
                     Just aMsgBroadcast@(MsgBroadcast _ _ _) -> aMsgBroadcast
                     _ -> error $
-                        "1| FAIL. The received msg not a response for broadcast! " ++ show aMsg
+                        "1| FAIL. The received msg not a response for broadcast! "
                 putStrLn "1| Broadcast echo received."
                 unless (aNodeId == aMyNodeId) $ error "1| The node ID en broadcast msg is broaken."
                 unless (aValue == testMsg)    $ error "1| The broadcast msg is broaken."
@@ -128,7 +126,7 @@ main = do
                 MsgMsgTo aNodeId _ aValue <- return $ case decode aMsg of
                     Just aMsgTo@(MsgMsgTo _ _ _) -> aMsgTo
                     Nothing -> error $
-                        "1| FAIL. The received msg not a correct! " ++ show aMsg
+                        "1| FAIL. The received msg not a correct! "
                 unless (aValue == testMsg) $ error "1| The broadcast msg is broaken."
 
                 putMVar testsOk True
@@ -147,7 +145,7 @@ main = do
                 MsgBroadcast (IdFrom aNodeId) _ aValue<- return $ case decode aMsg of
                     Just aMsgBroadcast@(MsgBroadcast _ _ _) -> aMsgBroadcast
                     _ -> error $
-                        "2| FAIL. The received msg not a response for broadcast! " ++ show aMsg
+                        "2| FAIL. The received msg not a response for broadcast! "
                 unless (aValue == testMsg)    $ error "2| The broadcast msg is broaken."
                 putStrLn $ "2| Sending msg to firs node..."
                 let aMsgTo = encode $ MsgMsgTo (IdFrom aMyId)  (IdTo aNodeId) testMsg
@@ -164,9 +162,31 @@ main = do
             void . forkIO $ runClient (showHostAddress aHostAddress) (fromEnum port) "/" $ \aConnect -> do
                 aTransaction:_ <- genNTx 10
                 void $ connectWithNN "   " aConnect
+                let aMsgTransaction = encode $ MsgTransaction aTransaction
+                    aMsgMicroblock  = encode $ MsgMicroblock $ genMicroBlock aTransaction
+                    aRequetPending  = encode $ RequestPending Nothing
 
 
+                aTransactions <- checkOfPending aConnect
+                unless (null aTransactions) $  error "  FAIL. Then pending not empty!"
 
+                putStrLn "Sending transaction in the pending."
+                printBS aMsgTransaction
+                WS.sendTextData aConnect aMsgTransaction
+
+
+                aTransactions <- checkOfPending aConnect
+                when (null aTransactions) $  error "   FAIL. Then pending is empty!"
+
+                putStrLn "Checking of pending clearing."
+                WS.sendTextData aConnect aMsgMicroblock
+                printBS aMsgMicroblock
+
+                aTransactions <- checkOfPending aConnect
+                unless (null aTransactions) $  error "   FAIL. Then pending not empty!"
+                putMVar testsOk True
+
+            _ <- takeMVar testsOk
             putStrLn "   -----------"
             putStrLn "   Testing Ok!"
             putStrLn "   -----------"

@@ -253,7 +253,7 @@ instance ToJSON NetMessage where
 
     toJSON (ResponseTransactions aTransactions) = object [
         "tag"       .= ("Response"     :: String),
-        "type"      .= ("Transaction"  :: String),
+        "type"      .= ("Transactions"  :: String),
         "transactions" .= aTransactions
       ]
 
