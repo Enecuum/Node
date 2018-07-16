@@ -50,7 +50,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
         case A.eitherDecodeStrict aMsg of
             Right (ActionConnect aNodeType (Just aNodeId)) -> do
                 (aInpChan, aOutChan) <- newChan 64
-                sendActionToCentralActor ch aNodeType $ NewConnect aNodeId aInpChan Nothing
+                sendActionToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
 
                 void $ race
                     (aSender aNodeId aConnect aOutChan)
@@ -60,7 +60,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 aNodeId <- generateClientId []
                 WS.sendTextData aConnect $ A.encode $ ResponseNodeId aNodeId
                 (aInpChan, aOutChan) <- newChan 64
-                sendActionToCentralActor ch aNodeType $ NewConnect aNodeId aInpChan Nothing
+                sendActionToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
 
                 void $ race
                     (aSender aNodeId aConnect aOutChan)
@@ -100,7 +100,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 RequestPoWList -> do
                         writeLog aInfoChan [ServePoATag] Info $
                             "PoWListRequest the msg from " ++ show aId
-                        sendActionToCentralActor ch aNodeType $ RequestListOfPoW aId
+                        sendActionToCentralActor ch $ RequestListOfPoW aId
 
                 RequestPending (Just aTransaction) -> do
                     aTmpChan <- C.newChan
@@ -117,7 +117,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
 
                 RequestActualConnects -> do
                     aMVar <- newEmptyMVar
-                    sendActionToCentralActor ch aNodeType $ RequestActualConnectList aMVar
+                    sendActionToCentralActor ch $ RequestActualConnectList aMVar
                     WS.sendTextData aConnect . A.encode . ResponseActualConnects =<< takeMVar aMVar
                 --
                 aMsg -> do
@@ -141,5 +141,5 @@ sendMsgToCentralActor :: InChan MsgToCentralActor -> NodeType -> NetMessage -> I
 sendMsgToCentralActor aChan aNodeType aMsg = writeInChan aChan (MsgFromNode aNodeType aMsg)
 
 
-sendActionToCentralActor :: InChan MsgToCentralActor -> NodeType -> MsgFromNode -> IO ()
-sendActionToCentralActor aChan aNodeType aMsg = writeInChan aChan (ActionFromNode aNodeType aMsg)
+sendActionToCentralActor :: InChan MsgToCentralActor -> MsgFromNode -> IO ()
+sendActionToCentralActor aChan aMsg = writeInChan aChan (ActionFromNode aMsg)
