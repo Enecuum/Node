@@ -107,7 +107,7 @@ getPubKeys :: Transaction -> [PublicKey]
 getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
-checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> Microblock -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, Bool, MacroblockBD)
+checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> Microblock -> BC.ByteString -> BC.ByteString -> IO (Bool, Bool, Bool, MacroblockBD)
 checkMacroblock db aInfoChan microblock keyBlockHash blockHash = do
     v  <- funR (poolMacroblock db) keyBlockHash
     case v of
@@ -116,30 +116,25 @@ checkMacroblock db aInfoChan microblock keyBlockHash blockHash = do
                           _mblocks = [blockHash],
                           _teamKeys = _teamKeys (microblock :: Microblock)
                           } :: MacroblockBD
-                    return (True, False, True, True, aMacroBlock)
+                    return (True, True, True, aMacroBlock)
       Just a -> -- If MacroblockBD already in the table
         case S.decode a :: Either String MacroblockBD of
           Left _  -> error "Can not decode MacroblockBD"
           Right bdMacroblock -> do
                    let hashes = _mblocks ( bdMacroblock :: MacroblockBD)
                    writeLog aInfoChan [BDTag] Info ("length hashes" ++ show(length hashes) ++ " " ++ show hashes)
-                   if length hashes >= quantityMicroblocksInMacroblock
-                   then if (length hashes == quantityMicroblocksInMacroblock)
-                        then return (True, True, True, False, bdMacroblock)
-                        else return (False, True, True, False, bdMacroblock)
-                   else do
+                   if (not $ checkMacroblockIsClosed bdMacroblock)
+                   then do
                      -- Check is Microblock already in MacroblockBD
-                     let microblockIsAlreadyInMacroblock = blockHash `elem` hashes
-                     writeLog aInfoChan [BDTag] Info ("Microblock is already in macroblock: " ++ show microblockIsAlreadyInMacroblock)
-                     if microblockIsAlreadyInMacroblock
-                       then return (True, False, False, True, bdMacroblock)  -- Microblock already in MacroblockBD - Nothing
-                       else do -- add this Microblock to the value of MacroblockBD
+                        let microblockIsAlreadyInMacroblock = blockHash `elem` hashes
+                        writeLog aInfoChan [BDTag] Info ("Microblock is already in macroblock: " ++ show microblockIsAlreadyInMacroblock)
+                        if microblockIsAlreadyInMacroblock
+                        then return (True, False, True, bdMacroblock)  -- Microblock already in MacroblockBD - Nothing
+                        else do -- add this Microblock to the value of MacroblockBD
                                let aMacroBlock = bdMacroblock {  _mblocks = hashes ++ [blockHash] } :: MacroblockBD
                                writeMacroblockToDB db aInfoChan keyBlockHash aMacroBlock
-                             -- Check quantity of microblocks, can we close MacroblockBD?
-                               if (length hashes >= (quantityMicroblocksInMacroblock - 1))
-                                       then return (True, True, True, True, bdMacroblock)
-                                       else return (True, False, True, True, bdMacroblock)
+                               return (True, True, True, bdMacroblock)
+                    else return (True, True, True, bdMacroblock)
 
 
 addMicroblockToDB :: DBPoolDescriptor -> Microblock -> InChan InfoMsg -> IO ()
@@ -149,7 +144,8 @@ addMicroblockToDB db m aInfoChan =  do
     let microblockHash = rHash $ tMicroblock2MicroblockBD  m
     writeLog aInfoChan [BDTag] Info ("New Microblock came" ++ show(microblockHash))
 -- FIX: Write to db atomically
-    (goOn, macroblockClosed, microblockNew, macroblockNew, macroblock ) <- checkMacroblock db aInfoChan m (_keyBlock (m :: Microblock)) microblockHash
+    (goOn, microblockNew, macroblockNew, macroblock ) <- checkMacroblock db aInfoChan m (_keyBlock (m :: Microblock)) microblockHash
+    let macroblockClosed = checkMacroblockIsClosed macroblock
     writeLog aInfoChan [BDTag] Info ("MacroblockBD - already closed " ++ show (not goOn))
     when goOn $ do
                 writeLog aInfoChan [BDTag] Info ("MacroblockBD - New is " ++ show macroblockNew)
@@ -171,10 +167,6 @@ addMicroblockToDB db m aInfoChan =  do
                     writeMacroblockToDB db aInfoChan (_keyBlock (m :: Microblock)) (macroblock {_reward = 10})
                   else do
                     writeMacroblockToDB db aInfoChan (_keyBlock (m :: Microblock)) macroblock
-
-
-checkMacroblockIsClosed :: MacroblockBD -> Bool
-checkMacroblockIsClosed MacroblockBD {..} = length _teamKeys == length _mblocks
 
 
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> MacroblockBD -> IO ()
