@@ -33,7 +33,6 @@ import qualified Data.Serialize                        as S (Serialize, decode,
 -- import           Data.Traversable
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
--- import           Node.Node.Types                       (MsgToCentralActor (..))
 import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
