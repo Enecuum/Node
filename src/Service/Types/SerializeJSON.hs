@@ -81,7 +81,7 @@ instance ToJSON TransactionInfo where
     , "block" .= _block t
     , "index" .= _index t
     ]
-	
+
 instance FromJSON TransactionInfo where
   parseJSON (Object o) = TransactionInfo
     <$> o .: "tx"
