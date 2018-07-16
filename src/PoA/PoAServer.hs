@@ -50,17 +50,18 @@ servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan aMicroblo
         WS.forkPingThread aConnect 30
         aMsg <- WS.receiveData aConnect
         case A.eitherDecodeStrict aMsg of
-            Right (ActionConnect aNodeType (Just aNodeId)) -> do
-                (aInpChan, aOutChan) <- newChan 64
+            Right (ActionConnect aNodeType (Just aNodeId))
+                | NodeId aMyNodeId == aNodeId -> do
+                    (aInpChan, aOutChan) <- newChan 64
 
-                when (aNodeType == NN) .
-                    WS.sendTextData aConnect . A.encode $ ActionConnect NN (Just (NodeId aMyNodeId))
+                    when (aNodeType == NN) .
+                        WS.sendTextData aConnect . A.encode $ ActionConnect NN (Just (NodeId aMyNodeId))
 
-                sendActionToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
+                    sendActionToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
 
-                void $ race
-                    (msgSender ch aNodeId aConnect aOutChan)
-                    (msgReceiver ch aInfoChan aFileServerChan aNodeType (IdFrom aNodeId) aConnect inChanPending)
+                    void $ race
+                        (msgSender ch aNodeId aConnect aOutChan)
+                        (msgReceiver ch aInfoChan aFileServerChan aNodeType (IdFrom aNodeId) aConnect inChanPending)
 
             Right (ActionConnect aNodeType Nothing) -> do
                 aNodeId <- generateClientId []

@@ -145,7 +145,8 @@ main = do
                     "1| Received msg from second node."
                 MsgMsgTo aNodeId _ aValue <- return $ case decode aMsg of
                     Just aMsgTo@(MsgMsgTo _ _ _) -> aMsgTo
-                    _ -> error $ "1| FAIL. The received msg not a correct! "
+
+                    a -> error $ "1| FAIL. The received msg not a correct!"
                 unless (aValue == testMsg) $ error "1| The broadcast msg is broaken."
 
                 putMVar testsOk True
