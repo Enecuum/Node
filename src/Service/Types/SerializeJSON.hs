@@ -14,7 +14,7 @@ import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA as ECDSA
 import           Data.Aeson
 import           Data.Aeson.Types                     (typeMismatch)
 import           Data.ByteString                      (ByteString)
-import qualified Data.ByteString.Char8             as BS
+import qualified Data.ByteString.Char8                as BS
 
 import qualified Data.ByteString.Base64               as B
 import           Data.ByteString.Conversion
@@ -200,7 +200,7 @@ instance FromJSON Microblock where
            aTx        <- aBlock .: "Tx"
            aPublisher <- aBlock .: "publisher"
            aKhash     <- aBlock .: "K_hash"
-           return $ Microblock aKhash aSign aWallets aPublisher aTx 0
+           return $ Microblock aKhash aSign aWallets aPublisher aTx
        _ -> mzero
  parseJSON _ = mzero
 
@@ -208,6 +208,7 @@ instance FromJSON Microblock where
 instance ToJSON MacroblockBD where
     toJSON bl = object  [
             "prev_hash"         .= _prevKBlock (bl :: MacroblockBD)
+         ,  "next_hash"         .= _nextKBlock (bl :: MacroblockBD)
          ,  "difficulty"        .= _difficulty (bl :: MacroblockBD)
          ,  "height"            .= _height (bl :: MacroblockBD)
          ,  "solver"            .= _solver (bl :: MacroblockBD)
@@ -215,14 +216,14 @@ instance ToJSON MacroblockBD where
          ,  "timeK"             .= _time (bl :: MacroblockBD)
          ,  "numberK"           .= _number (bl :: MacroblockBD)
          ,  "nonce"             .= _nonce (bl :: MacroblockBD)
-         -- ,  "microblocks_cnt"   .= length (_mblocks bl)
          ,  "microblocks"       .= _mblocks (bl :: MacroblockBD)
          ,  "team_keys"         .= _teamKeys (bl :: MacroblockBD)
        ]
 
 instance FromJSON MacroblockBD where
     parseJSON (Object o) = MacroblockBD
-               <$> o .: "prev_hash"
+               <$> o .:? "prev_hash"
+               <*> o .:? "next_hash"
                <*> o .: "difficulty"
                <*> o .: "height"
                <*> o .: "solver"
