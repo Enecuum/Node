@@ -48,10 +48,10 @@ networkNodeStart (_, aOutChan) aMd = do
                     modifyIORef aMd $ connects %~ M.delete aNodeId
 
             MsgFromNode  aMsgFromNode -> case aMsgFromNode of
-                    AcceptedMicroblock aMicroblock aSenderId -> do
+                    AcceptedMicroblock aMicroblock -> do
                         writeMetric (aData^.logChan) $ increment "net.bl.count"
                         writeLog (aData^.logChan) [NetLvlTag] Info $
-                            "PP node " ++ show aSenderId ++ ", create a a microblock: " ++ show aMicroblock
+                             "create a a microblock: " ++ show aMicroblock
                         void $ tryWriteChan (aData^.microblockChan) aMicroblock
 
                     NewConnect aNodeId aNodeType aChan aConnect -> do
@@ -61,24 +61,24 @@ networkNodeStart (_, aOutChan) aMd = do
                             modifyIORef aMd $ connects %~ M.insert aNodeId
                                 (NodeInfo aChan aNodeType aConnect)
 
-                    BroadcastRequest aBroadcastMsg aIdFrom aNodeType -> do
+                    ResendingBroadcast aBroadcastMsg aIdFrom aNodeType -> do
                         void $ tryWriteChan (aData^.valueChan) aBroadcastMsg
                         forM_ (aData^.connects) $ \aNode -> when
                             (aNodeType == aNode^.nodeType || aNodeType == All) $
-                            void $ tryWriteChan (aNode^.nodeChan) $ MsgBroadcastMsg aBroadcastMsg aIdFrom
+                            void $ tryWriteChan (aNode^.nodeChan) $ MsgBroadcast aIdFrom aNodeType aBroadcastMsg 
 
-                    MsgResending (IdFrom aPPIdFrom) (IdTo aId) aByteString ->
+                    ResendingMsgTo aIdFrom aTo@(IdTo aId) aByteString ->
                         whenJust (aData^.connects.at aId) $ \aNode ->
                             void $ tryWriteChan (aNode^.nodeChan) $
-                                MsgMsgToPP aPPIdFrom aByteString
+                                MsgMsgTo aIdFrom aTo aByteString
 
 
-                    PoWListRequest (IdFrom aNodeId) ->
+                    RequestListOfPoW (IdFrom aNodeId) ->
                         whenJust (aData^.connects.at aNodeId) $ \aNode -> do
-                            let aPPIds = M.filter (\a -> a^.nodeType == PoW) (aData^.connects)
-                            void $ tryWriteChan (aNode^.nodeChan) $ ResponsePoWList $ M.keys aPPIds
+                            let aPPIds = M.toList $ M.filter (\a -> a^.nodeType == PoW) (aData^.connects)
+                            void $ tryWriteChan (aNode^.nodeChan) $ ResponsePoWList $ toActualConnectInfo <$> aPPIds
 
-                    ActualConnectListRequest aVar -> void $ C.forkIO $ do
+                    RequestActualConnectList aVar -> void $ C.forkIO $ do
                         let aConnects = toActualConnectInfo <$> (M.toList $ aData^.connects)
                         C.putMVar aVar aConnects
 

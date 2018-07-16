@@ -55,12 +55,14 @@ data MsgToCentralActor where
 
 
 data MsgFromNode
-    = AcceptedMicroblock Microblock IdFrom
-    | BroadcastRequest Value IdFrom NodeType
-    | NewConnect NodeId NodeType (InChan NNToPPMessage) (Maybe Connect)
-    | MsgResending IdFrom IdTo Value
-    | PoWListRequest IdFrom
-    | ActualConnectListRequest (MVar [ActualConnectInfo])
+    = AcceptedMicroblock Microblock
+    | AcceptedTransaction Transaction
+    | AcceptedKeyBlock Value
+    | ResendingBroadcast Value IdFrom NodeType
+    | ResendingMsgTo IdFrom IdTo Value
+    | RequestListOfPoW IdFrom
+    | RequestActualConnectList (MVar [ActualConnectInfo])
+    | NewConnect NodeId NodeType (InChan NetMessage) (Maybe Connect)
   deriving (Show)
 
 
@@ -76,7 +78,7 @@ makeLenses ''NodeConfig
 
 
 data NodeInfo = NodeInfo {
-        _nodeChan     :: InChan NNToPPMessage
+        _nodeChan     :: InChan NetMessage
     ,   _nodeType     :: NodeType
     ,   _connectInfo  :: Maybe Connect
   }

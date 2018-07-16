@@ -46,28 +46,19 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
     runServer aRecivePort $ \_ aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
-
-        WS.sendTextData aConnect $ A.encode RequestNodeIdToPP
         aMsg <- WS.receiveData aConnect
         case A.eitherDecodeStrict aMsg of
-            Right (NNConnection _aPortNumber _aPublicPoint _aNodeId) -> return ()
-            Right (CNConnection aNodeType (Just aNodeId)) -> do
+            Right (ActionConnect aNodeType (Just aNodeId)) -> do
                 (aInpChan, aOutChan) <- newChan 64
                 sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
 
                 void $ race
                     (aSender aNodeId aConnect aOutChan)
                     (aReceiver (IdFrom aNodeId) aConnect inChanPending)
-            Right (CNConnection aNodeType Nothing) -> do
+
+            Right (ActionConnect aNodeType Nothing) -> do
                 aNodeId <- generateClientId []
-                WS.sendTextData aConnect $ A.encode $ ResponseClientId aNodeId
-                (aInpChan, aOutChan) <- newChan 64
-                sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
-
-                void $ race
-                    (aSender aNodeId aConnect aOutChan)
-                    (aReceiver (IdFrom aNodeId) aConnect inChanPending)
-            Right (ResponseNodeIdToNN aNodeId aNodeType) -> do
+                WS.sendTextData aConnect $ A.encode $ ResponseNodeId aNodeId
                 (aInpChan, aOutChan) <- newChan 64
                 sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
 
@@ -97,55 +88,53 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                     aTmpChan <- C.newChan
                     writeInChan aPendingChan $ GetTransaction aNum aTmpChan
                     aTransactions <- C.readChan aTmpChan
-                    unless (null aTransactions) $
-                        forM_ (take aNum $ cycle aTransactions) $ \aTransaction  -> do
-                            writeLog aInfoChan [ServePoATag] Info $  "sendTransaction to poa " ++ show aTransaction
-                            WS.sendTextData aConnect $ A.encode $ ResponseTransaction aTransaction
+                    writeLog aInfoChan [ServePoATag] Info "sendTransactions to poa"
+                    WS.sendTextData aConnect $ A.encode $ ResponseTransactions aTransactions
+
                 MsgMicroblock aMicroblock -> do
                         writeLog aInfoChan [ServePoATag] Info $ "Recived MBlock: " ++ show aMicroblock
-                        sendMsgToCentralActor ch $ AcceptedMicroblock aMicroblock aId
+                        sendMsgToCentralActor ch $ AcceptedMicroblock aMicroblock
 
-                RequestBroadcast aRecipientType aBroadcastMsg -> do
+                MsgBroadcast aIdFrom aRecipientType aBroadcastMsg -> do
                         writeLog aInfoChan [ServePoATag] Info $ "Broadcast request " ++ show aMsg
                         sendMsgToCentralActor ch $
-                            BroadcastRequest aBroadcastMsg aId aRecipientType
-                RequestConnects _ -> do
+                            ResendingBroadcast aBroadcastMsg aIdFrom aRecipientType
+                RequestPotentialConnects _ -> do
                     aShuffledRecords <- shuffleM =<< getRecords aFileServerChan
                     let aConnects = take 5 aShuffledRecords
                     writeLog aInfoChan [ServePoATag] Info $ "Send connections " ++ show aConnects
-                    WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
+                    WS.sendTextData aConnect $ A.encode $ ResponsePotentialConnects aConnects
 
                 RequestPoWList -> do
                         writeLog aInfoChan [ServePoATag] Info $
                             "PoWListRequest the msg from " ++ show aId
-                        sendMsgToCentralActor ch $ PoWListRequest aId
+                        sendMsgToCentralActor ch $ RequestListOfPoW aId
 
-                MsgMsgToNN aDestination aMsgToNN -> do
+                MsgMsgTo aIdFrom aIdTo aMsgToNN -> do
                         writeLog aInfoChan [ServePoATag] Info $
                             "Resending the msg from " ++ show aId ++ " the msg is " ++ show aMsgToNN
-                        sendMsgToCentralActor ch $ MsgResending aId (IdTo aDestination) aMsgToNN
+                        sendMsgToCentralActor ch $ ResendingMsgTo aIdFrom aIdTo aMsgToNN
 
-                IsInPendingRequest aTransaction -> do
+                RequestPending (Just aTransaction) -> do
                     aTmpChan <- C.newChan
                     writeInChan aPendingChan $ IsInPending aTransaction aTmpChan
                     aTransactions <- C.readChan aTmpChan
-                    WS.sendTextData aConnect $ A.encode $ ResponseIsInPending aTransactions
+                    WS.sendTextData aConnect $ A.encode $ ResponseTransactionIsInPending aTransactions
 
-                GetPendingRequest -> do
+                RequestPending Nothing -> do
                     aTmpChan <- C.newChan
                     writeInChan aPendingChan $ GetPending aTmpChan
                     aTransactions <- C.readChan aTmpChan
-                    WS.sendTextData aConnect $ A.encode $ ResponsePendingTransactions aTransactions
+                    WS.sendTextData aConnect $ A.encode $ ResponseTransactions aTransactions
 
-                AddTransactionRequest aTransaction -> do
+                MsgTransaction aTransaction -> do
                     aMVar <- newEmptyMVar
                     writeInChan ch $ NewTransaction aTransaction aMVar
-                    WS.sendTextData aConnect . A.encode . ResponseTransactionValid =<< takeMVar aMVar
 
-                RequestActualConnectList -> do
+                RequestActualConnects -> do
                     aMVar <- newEmptyMVar
-                    sendMsgToCentralActor ch $ ActualConnectListRequest aMVar
-                    WS.sendTextData aConnect . A.encode . ActualConnectList =<< takeMVar aMVar
+                    sendMsgToCentralActor ch $ RequestActualConnectList aMVar
+                    WS.sendTextData aConnect . A.encode . ResponseActualConnects =<< takeMVar aMVar
 
                 _ -> return ()
             Left a -> do
