@@ -1,42 +1,42 @@
-{-# LANGUAGE
-        OverloadedStrings
-    ,   ScopedTypeVariables
-    ,   DuplicateRecordFields
-    ,   FlexibleInstances
-    ,   DeriveGeneric
-    ,   GeneralizedNewtypeDeriving
-    ,   StandaloneDeriving
-  #-}
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DuplicateRecordFields      #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE StandaloneDeriving         #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module PoA.Types where
 
-import              Data.Word()
-import qualified    Data.ByteString as B
-import qualified    Data.ByteString.Char8 as CB
-import              Data.Aeson
-import              Data.String
-import              GHC.Generics
-import qualified    Data.Text as T
-import              Data.Hex
-import              Data.Maybe
-import              Control.Monad.Extra
-import qualified    Data.Serialize as S
-import              Service.Types (Microblock(..), Transaction)
-import              Service.Network.Base
-import              Data.IP
-import              Node.Data.Key
-import              Service.Types.SerializeJSON()
-import              Service.Types.SerializeInstances
-import              Data.Either
-import              Text.Read
-import              Crypto.PubKey.ECC.ECDSA
+import           Control.Monad.Extra
+import           Crypto.PubKey.ECC.ECDSA
+import           Data.Aeson
+import qualified Data.ByteString                  as B
+import qualified Data.ByteString.Char8            as CB
+import           Data.Either
+import           Data.Hex
+import           Data.IP
+import           Data.Maybe
+import qualified Data.Serialize                   as S
+import           Data.String
+import qualified Data.Text                        as T
+import           Data.Word                        ()
+import           GHC.Generics
+import           Node.Data.Key
+import           Service.Network.Base
+import           Service.Types                    (Microblock (..), Transaction)
+import           Service.Types.SerializeInstances
+import           Service.Types.SerializeJSON      ()
+import           Text.Read
+
 
 data NetMessage where
     RequestTransaction          :: Int                      ->  NetMessage
     RequestPoWList              ::                              NetMessage
     RequestPotentialConnects    :: Bool                     ->  NetMessage
     RequestPending              :: Maybe Transaction        ->  NetMessage
+
 
     RequestActualConnects       ::                              NetMessage
 
@@ -61,6 +61,7 @@ data NetMessage where
     ActionAddToConnectList      :: PortNumber -> NetMessage
     ActionConnectIsDead         :: Connect    -> NetMessage
   deriving (Show)
+
 
 data NodeType = PoW | PoA | All | NN deriving (Eq, Show, Ord, Generic)
 
@@ -101,8 +102,8 @@ instance FromJSON ActualConnectInfo where
 
 unhexNodeId :: MonadPlus m => T.Text -> m NodeId
 unhexNodeId aString = case unhex . fromString . T.unpack $ aString of
-    Just aDecodeString  -> return . NodeId . roll $ B.unpack aDecodeString
-    Nothing             -> mzero
+    Just aDecodeString -> return . NodeId . roll $ B.unpack aDecodeString
+    Nothing            -> mzero
 
 nodeIdToUnxed :: NodeId -> String
 nodeIdToUnxed (NodeId aPoint) = CB.unpack . hex . B.pack $ unroll aPoint

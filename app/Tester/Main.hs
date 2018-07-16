@@ -1,27 +1,28 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE GADTs #-}
 module Main where
 
-import PoA.PoAServer
-import PoA.Types
-import Service.Network.WebSockets.Client
-import System.Environment (getArgs)
-import Control.Monad
-import Data.Aeson
-import Control.Concurrent.Async
-import Control.Concurrent
-import qualified Data.ByteString    as B
-import qualified Data.ByteString.Lazy.Char8    as B8
-import qualified Data.Text          as T
-import Service.Types
-import Node.Data.Key
-import Service.Network.Base
-import Service.Types.PublicPrivateKeyPair
-import Crypto.PubKey.ECC.ECDSA as ECDSA
+import           Control.Concurrent
+import           Control.Concurrent.Async
+import           Control.Monad
+import           Crypto.PubKey.ECC.ECDSA             as ECDSA
+import           Data.Aeson
+import qualified Data.ByteString                     as B
+import qualified Data.ByteString.Lazy.Char8          as B8
+import qualified Data.Text                           as T
+import           Node.Data.Key
+import           PoA.PoAServer
+import           PoA.Types
+import           Service.Network.Base
+import           Service.Network.WebSockets.Client
+import           Service.Types
+import           Service.Types.PublicPrivateKeyPair
+import           System.Environment                  (getArgs)
 
-import qualified    Network.WebSockets                  as WS
-import Service.Transaction.TransactionsDAG
+import qualified Network.WebSockets                  as WS
+import           Service.Transaction.TransactionsDAG
+
 
 
 testMsg = object [
@@ -227,4 +228,4 @@ socketActor aSender aConnect = do
 
 --
 genMicroBlock :: Transaction -> Microblock
-genMicroBlock tx = Microblock "123" (ECDSA.Signature 1 2) [] (PublicKey256k1 1) [tx] 1
+genMicroBlock tx = Microblock "123" (ECDSA.Signature 1 2) [] (PublicKey256k1 1) [tx]
