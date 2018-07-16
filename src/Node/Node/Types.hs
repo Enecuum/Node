@@ -48,19 +48,16 @@ data ExitMsg where ExitMsg :: ExitMsg
 
 data MsgToCentralActor where
     NodeIsDisconnected      :: NodeId                   -> MsgToCentralActor
-    MsgFromNode             :: MsgFromNode              -> MsgToCentralActor
+    ActionFromNode          ::              MsgFromNode -> MsgToCentralActor
+    MsgFromNode             :: NodeType -> NetMessage   -> MsgToCentralActor
     MsgFromSharding         :: N.ShardingNodeRequestMsg -> MsgToCentralActor
     CleanAction             :: MsgToCentralActor
     NewTransaction          :: Transaction -> MVar Bool -> MsgToCentralActor
+    ActualConnectsToNNRequest:: MVar [ActualConnectInfo] -> MsgToCentralActor
 
 
 data MsgFromNode
-    = AcceptedMicroblock Microblock
-    | AcceptedTransaction Transaction
-    | AcceptedKeyBlock Value
-    | ResendingBroadcast Value IdFrom NodeType
-    | ResendingMsgTo IdFrom IdTo Value
-    | RequestListOfPoW IdFrom
+    = RequestListOfPoW IdFrom
     | RequestActualConnectList (MVar [ActualConnectInfo])
     | NewConnect NodeId NodeType (InChan NetMessage) (Maybe Connect)
   deriving (Show)

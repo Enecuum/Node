@@ -24,6 +24,7 @@ import              Data.IORef
 import              Lens.Micro
 import              Lens.Micro.Mtl()
 import              Control.Concurrent.Chan.Unagi.Bounded
+import              Control.Concurrent.MVar
 import              Control.Monad.Extra
 import              Node.Data.Key
 import              Node.Node.Types
@@ -47,32 +48,42 @@ networkNodeStart (_, aOutChan) aMd = do
                     writeLog (aData^.logChan) [NetLvlTag] Info $  "The node " ++ show aNodeId ++ " is disconnected."
                     modifyIORef aMd $ connects %~ M.delete aNodeId
 
-            MsgFromNode  aMsgFromNode -> case aMsgFromNode of
-                    AcceptedMicroblock aMicroblock -> do
-                        writeMetric (aData^.logChan) $ increment "net.bl.count"
+            MsgFromNode aNodeType aMsgFromNode -> do
+                void $ C.forkIO $ when (aNodeType /= NN) $ forM_ (aData^.connects) $
+                    \aNode -> when (aNode^.nodeType == NN) $
+                        void $ tryWriteChan (aNode^.nodeChan) aMsgFromNode
+
+                case aMsgFromNode of
+                    aMsg@(MsgBroadcast _ aNodeType _) ->
+                        forM_ (aData^.connects) $ \aNode -> when
+                            (aNode^.nodeType /= NN && (aNodeType == aNode^.nodeType || aNodeType == All)) $
+                            void $ tryWriteChan (aNode^.nodeChan) aMsg
+
+                    aMsg@(MsgMsgTo _ (IdTo aId) _) -> do
+                        whenJust (aData^.connects.at aId) $ \aNode ->
+                            void $ tryWriteChan (aNode^.nodeChan) aMsg
+
+                    MsgMicroblock aMicroblock -> do
                         writeLog (aData^.logChan) [NetLvlTag] Info $
-                             "create a a microblock: " ++ show aMicroblock
+                             "Create a a microblock: " ++ show aMicroblock
                         void $ tryWriteChan (aData^.microblockChan) aMicroblock
 
+                    MsgTransaction aTransaction -> do
+                        aVar <- newEmptyMVar
+                        void $ tryWriteChan (aData^.transactionsChan) (aTransaction, aVar)
+
+                    MsgKeyBlock aKeyBlock -> do
+                        void $ tryWriteChan (aData^.valueChan) aKeyBlock
+                    a -> writeLog (aData^.logChan) [NetLvlTag] Info $  show a ++ " not a msg."
+
+            ActionFromNode aMsgFromNode -> do
+                case aMsgFromNode of
                     NewConnect aNodeId aNodeType aChan aConnect -> do
                         writeLog (aData^.logChan) [NetLvlTag] Info $
                             "A new connect with PP node " ++ show aNodeId ++ ", the type of node is " ++ show aNodeType
                         when (isNothing $ aData^.connects.at aNodeId) $
                             modifyIORef aMd $ connects %~ M.insert aNodeId
                                 (NodeInfo aChan aNodeType aConnect)
-
-                    ResendingBroadcast aBroadcastMsg aIdFrom aNodeType -> do
-                        void $ tryWriteChan (aData^.valueChan) aBroadcastMsg
-                        forM_ (aData^.connects) $ \aNode -> when
-                            (aNodeType == aNode^.nodeType || aNodeType == All) $
-                            void $ tryWriteChan (aNode^.nodeChan) $ MsgBroadcast aIdFrom aNodeType aBroadcastMsg 
-
-                    ResendingMsgTo aIdFrom aTo@(IdTo aId) aByteString ->
-                        whenJust (aData^.connects.at aId) $ \aNode ->
-                            void $ tryWriteChan (aNode^.nodeChan) $
-                                MsgMsgTo aIdFrom aTo aByteString
-
-
                     RequestListOfPoW (IdFrom aNodeId) ->
                         whenJust (aData^.connects.at aNodeId) $ \aNode -> do
                             let aPPIds = M.toList $ M.filter (\a -> a^.nodeType == PoW) (aData^.connects)
@@ -82,6 +93,9 @@ networkNodeStart (_, aOutChan) aMd = do
                         let aConnects = toActualConnectInfo <$> (M.toList $ aData^.connects)
                         C.putMVar aVar aConnects
 
+            ActualConnectsToNNRequest aVar -> void $ C.forkIO $ do
+                let aConnects = toActualConnectInfo <$> (M.toList $ aData^.connects)
+                C.putMVar aVar (filter (\(ActualConnectInfo _ aNodeType  _) -> aNodeType == NN) aConnects)
 
             MsgFromSharding         _   -> return ()
             CleanAction                 -> return ()
@@ -90,6 +104,7 @@ networkNodeStart (_, aOutChan) aMd = do
                 writeLog (aData^.logChan) [NetLvlTag] Info "I create a transaction."
                 void $ C.forkIO $ writeInChan (aData^.transactionsChan) (aTransaction, aVar)
 
+--  data ActualConnectInfo = ActualConnectInfo NodeId NodeType (Maybe Connect) deriving Show
 
 toActualConnectInfo :: (NodeId, NodeInfo) -> ActualConnectInfo
 toActualConnectInfo (aNodeId, NodeInfo _ aNodeType aConnect) =
