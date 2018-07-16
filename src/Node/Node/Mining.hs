@@ -47,14 +47,21 @@ networkNodeStart (_, aOutChan) aMd = do
                     writeLog (aData^.logChan) [NetLvlTag] Info $  "The node " ++ show aNodeId ++ " is disconnected."
                     modifyIORef aMd $ connects %~ M.delete aNodeId
 
-            MsgFromNode  aMsgFromNode -> case aMsgFromNode of
+            MsgFromNode aNodeType aMsgFromNode -> do
+{-
+                when (aNodeType /= NN) $
+                    forM_ (aData^.connects) $
+                        \aNode -> when (aNode^.nodeType == NN) $
+                            void $ tryWriteChan (aNode^.nodeChan) aMsgFromNode
+-}
+                case aMsgFromNode of
                     AcceptedMicroblock aMicroblock -> do
                         writeMetric (aData^.logChan) $ increment "net.bl.count"
                         writeLog (aData^.logChan) [NetLvlTag] Info $
                              "create a a microblock: " ++ show aMicroblock
                         void $ tryWriteChan (aData^.microblockChan) aMicroblock
 
-                    NewConnect aNodeId aNodeType aChan aConnect -> do
+                    NewConnect aNodeId aChan aConnect -> do
                         writeLog (aData^.logChan) [NetLvlTag] Info $
                             "A new connect with PP node " ++ show aNodeId ++ ", the type of node is " ++ show aNodeType
                         when (isNothing $ aData^.connects.at aNodeId) $
@@ -64,14 +71,13 @@ networkNodeStart (_, aOutChan) aMd = do
                     ResendingBroadcast aBroadcastMsg aIdFrom aNodeType -> do
                         void $ tryWriteChan (aData^.valueChan) aBroadcastMsg
                         forM_ (aData^.connects) $ \aNode -> when
-                            (aNodeType == aNode^.nodeType || aNodeType == All) $
-                            void $ tryWriteChan (aNode^.nodeChan) $ MsgBroadcast aIdFrom aNodeType aBroadcastMsg 
+                            (aNode^.nodeType /= NN && (aNodeType == aNode^.nodeType || aNodeType == All)) $
+                            void $ tryWriteChan (aNode^.nodeChan) $ MsgBroadcast aIdFrom aNodeType aBroadcastMsg
 
                     ResendingMsgTo aIdFrom aTo@(IdTo aId) aByteString ->
                         whenJust (aData^.connects.at aId) $ \aNode ->
                             void $ tryWriteChan (aNode^.nodeChan) $
                                 MsgMsgTo aIdFrom aTo aByteString
-
 
                     RequestListOfPoW (IdFrom aNodeId) ->
                         whenJust (aData^.connects.at aNodeId) $ \aNode -> do

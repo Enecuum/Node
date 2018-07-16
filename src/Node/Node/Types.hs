@@ -48,7 +48,8 @@ data ExitMsg where ExitMsg :: ExitMsg
 
 data MsgToCentralActor where
     NodeIsDisconnected      :: NodeId                   -> MsgToCentralActor
-    MsgFromNode             :: MsgFromNode              -> MsgToCentralActor
+    ActionFromNode          :: NodeType -> MsgFromNode -> MsgToCentralActor
+    MsgFromNode             :: NodeType -> NetMessage  -> MsgToCentralActor
     MsgFromSharding         :: N.ShardingNodeRequestMsg -> MsgToCentralActor
     CleanAction             :: MsgToCentralActor
     NewTransaction          :: Transaction -> MVar Bool -> MsgToCentralActor
@@ -62,7 +63,7 @@ data MsgFromNode
     | ResendingMsgTo IdFrom IdTo Value
     | RequestListOfPoW IdFrom
     | RequestActualConnectList (MVar [ActualConnectInfo])
-    | NewConnect NodeId NodeType (InChan NetMessage) (Maybe Connect)
+    | NewConnect NodeId (InChan NetMessage) (Maybe Connect)
   deriving (Show)
 
 

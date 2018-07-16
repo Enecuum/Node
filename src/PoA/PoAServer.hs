@@ -50,21 +50,21 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
         case A.eitherDecodeStrict aMsg of
             Right (ActionConnect aNodeType (Just aNodeId)) -> do
                 (aInpChan, aOutChan) <- newChan 64
-                sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
+                sendActionToCentralActor ch aNodeType $ NewConnect aNodeId aInpChan Nothing
 
                 void $ race
                     (aSender aNodeId aConnect aOutChan)
-                    (aReceiver (IdFrom aNodeId) aConnect inChanPending)
+                    (aReceiver aNodeType (IdFrom aNodeId) aConnect inChanPending)
 
             Right (ActionConnect aNodeType Nothing) -> do
                 aNodeId <- generateClientId []
                 WS.sendTextData aConnect $ A.encode $ ResponseNodeId aNodeId
                 (aInpChan, aOutChan) <- newChan 64
-                sendMsgToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
+                sendActionToCentralActor ch aNodeType $ NewConnect aNodeId aInpChan Nothing
 
                 void $ race
                     (aSender aNodeId aConnect aOutChan)
-                    (aReceiver (IdFrom aNodeId) aConnect inChanPending)
+                    (aReceiver aNodeType (IdFrom aNodeId) aConnect inChanPending)
 
             Right _ -> do
                 writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg
@@ -78,7 +78,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
     aSender aId aConnect aNewChan = forever (WS.sendTextData aConnect . A.encode =<< readChan aNewChan)
         `finally` writeChan ch (NodeIsDisconnected aId)
 
-    aReceiver aId aConnect aPendingChan = forever $ do
+    aReceiver aNodeType aId aConnect aPendingChan = forever $ do
         aMsg <- WS.receiveData aConnect
         writeLog aInfoChan [ServePoATag] Info $ "Raw msg: " ++ show aMsg
         case A.eitherDecodeStrict aMsg of
@@ -91,14 +91,6 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                     writeLog aInfoChan [ServePoATag] Info "sendTransactions to poa"
                     WS.sendTextData aConnect $ A.encode $ ResponseTransactions aTransactions
 
-                MsgMicroblock aMicroblock -> do
-                        writeLog aInfoChan [ServePoATag] Info $ "Recived MBlock: " ++ show aMicroblock
-                        sendMsgToCentralActor ch $ AcceptedMicroblock aMicroblock
-
-                MsgBroadcast aIdFrom aRecipientType aBroadcastMsg -> do
-                        writeLog aInfoChan [ServePoATag] Info $ "Broadcast request " ++ show aMsg
-                        sendMsgToCentralActor ch $
-                            ResendingBroadcast aBroadcastMsg aIdFrom aRecipientType
                 RequestPotentialConnects _ -> do
                     aShuffledRecords <- shuffleM =<< getRecords aFileServerChan
                     let aConnects = take 5 aShuffledRecords
@@ -108,12 +100,7 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                 RequestPoWList -> do
                         writeLog aInfoChan [ServePoATag] Info $
                             "PoWListRequest the msg from " ++ show aId
-                        sendMsgToCentralActor ch $ RequestListOfPoW aId
-
-                MsgMsgTo aIdFrom aIdTo aMsgToNN -> do
-                        writeLog aInfoChan [ServePoATag] Info $
-                            "Resending the msg from " ++ show aId ++ " the msg is " ++ show aMsgToNN
-                        sendMsgToCentralActor ch $ ResendingMsgTo aIdFrom aIdTo aMsgToNN
+                        sendActionToCentralActor ch aNodeType $ RequestListOfPoW aId
 
                 RequestPending (Just aTransaction) -> do
                     aTmpChan <- C.newChan
@@ -127,20 +114,20 @@ servePoA aRecivePort ch aRecvChan aInfoChan aFileServerChan aMicroblockChan = do
                     aTransactions <- C.readChan aTmpChan
                     WS.sendTextData aConnect $ A.encode $ ResponseTransactions aTransactions
 
-                MsgTransaction aTransaction -> do
-                    aMVar <- newEmptyMVar
-                    writeInChan ch $ NewTransaction aTransaction aMVar
 
                 RequestActualConnects -> do
                     aMVar <- newEmptyMVar
-                    sendMsgToCentralActor ch $ RequestActualConnectList aMVar
+                    sendActionToCentralActor ch aNodeType $ RequestActualConnectList aMVar
                     WS.sendTextData aConnect . A.encode . ResponseActualConnects =<< takeMVar aMVar
+                --
+                aMsg -> do
+                    writeLog aInfoChan [ServePoATag] Info $ "Received msg " ++ show aMsg
+                    sendMsgToCentralActor ch aNodeType aMsg
 
                 _ -> return ()
             Left a -> do
                 writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ a
                 WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"Error\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
-
 
 
 writeInChan :: InChan t -> t -> IO ()
@@ -149,5 +136,10 @@ writeInChan aChan aMsg = do
     C.threadDelay 10000
     unless aOk $ writeInChan aChan aMsg
 
-sendMsgToCentralActor :: InChan MsgToCentralActor -> MsgFromNode -> IO ()
-sendMsgToCentralActor aChan aMsg = writeInChan aChan (MsgFromNode aMsg)
+
+sendMsgToCentralActor :: InChan MsgToCentralActor -> NodeType -> NetMessage -> IO ()
+sendMsgToCentralActor aChan aNodeType aMsg = writeInChan aChan (MsgFromNode aNodeType aMsg)
+
+
+sendActionToCentralActor :: InChan MsgToCentralActor -> NodeType -> MsgFromNode -> IO ()
+sendActionToCentralActor aChan aNodeType aMsg = writeInChan aChan (ActionFromNode aNodeType aMsg)
