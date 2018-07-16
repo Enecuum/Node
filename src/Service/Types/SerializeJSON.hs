@@ -75,9 +75,19 @@ instance FromJSON ByteString where
   parseJSON (String s) = return $ BS.pack $ unpack s
   parseJSON _          = error "Wrong object format"
 
-instance ToJSON TransactionInfo
-instance FromJSON TransactionInfo
-
+instance ToJSON TransactionInfo where
+  toJSON t = object [
+      "tx"    .= _tx (t :: TransactionInfo)
+    , "block" .= _block t
+    , "index" .= _index t
+    ]
+	
+instance FromJSON TransactionInfo where
+  parseJSON (Object o) = TransactionInfo
+    <$> o .: "tx"
+    <*> o .: "block"
+    <*> o .: "index"
+  parseJSON inv        = typeMismatch "TransactionInfo" inv 
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [
@@ -110,8 +120,6 @@ instance ToJSON Transaction where
            "receiver"  .= _receiver tx,
            "amount"    .= _amount tx,
            "currency"  .= _currency tx,
-           -- "timestamp" .= _time (tx :: Transaction),
-           -- "sign"      .= _signature tx,
            "uuid"      .= _uuid tx
            ]
        ++ case _timestamp (tx :: Transaction) of
