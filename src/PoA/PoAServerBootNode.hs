@@ -53,23 +53,23 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
         aMsg <- WS.receiveData aConnect
         case A.eitherDecodeStrict aMsg of
             Right a -> case a of
-                RequestConnects aFull
+                RequestPotentialConnects aFull
                     | aFull -> do
                         writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request full list of connections."
                         aConnects <- getRecords aFileServerChan
-                        WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
+                        WS.sendTextData aConnect $ A.encode $ ResponsePotentialConnects aConnects
 
                     | otherwise -> do
                         writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request of connections."
                         aShuffledRecords <- shuffleM =<< getRecords aFileServerChan
                         let aConnects = take 5 aShuffledRecords
-                        WS.sendTextData aConnect $ A.encode $ ResponseConnects aConnects
+                        WS.sendTextData aConnect $ A.encode $ ResponsePotentialConnects aConnects
 
-                ActionAddToListOfConnects aPort ->
-                    void $ tryWriteChan aInChan $ AddConnectToList (Connect aHostAdress (toEnum aPort))
+                ActionAddToConnectList aPort ->
+                    void $ tryWriteChan aInChan $ AddConnectToList (Connect aHostAdress aPort)
 
-                ActionNodeStillAliveTest aPort aIp ->
-                    void $ tryWriteChan aInChan $ TestExistedConnect (Connect aIp aPort)
+                ActionConnectIsDead aConnect ->
+                    void $ tryWriteChan aInChan $ TestExistedConnect aConnect
 
                 _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
                     "Broken message from PP " ++ show aMsg
