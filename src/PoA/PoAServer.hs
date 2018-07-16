@@ -51,7 +51,7 @@ servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan aMicroblo
         aMsg <- WS.receiveData aConnect
         case A.eitherDecodeStrict aMsg of
             Right (ActionConnect aNodeType (Just aNodeId))
-                | NodeId aMyNodeId == aNodeId -> do
+                | NodeId aMyNodeId /= aNodeId -> do
                     (aInpChan, aOutChan) <- newChan 64
 
                     when (aNodeType == NN) .
