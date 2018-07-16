@@ -53,8 +53,6 @@ main =  do
 
                     void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id
 
-                    void $ C.forkIO $ servePoA poa_p ch aChan aInfoChanIn aFileChan aMicroblockChan
-
                     cli_m   <- try (getEnv "cliMode") >>= \case
                             Right item              -> return item
                             Left (_::SomeException) -> return $ cliMode snbc
@@ -112,40 +110,3 @@ enableIPsList ips = sequence $ map (\ip_s -> try (readIO ip_s :: IO IPRange) >>=
                             Left (_ :: SomeException) -> error $ "Wrong IP format"
                             )
                                ips
-
-getConfigParameters
-    :: Show a1
-    => a1
-    ->  BuildConfig
-    ->  InChan MsgToCentralActor
-    ->  IO (SimpleNodeBuildConfig, PortNumber, String, PortNumber, String, PortNumber, String)
-getConfigParameters aMyNodeId conf _ = do
-  snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case
-          Right item              -> return item
-          Left (_::SomeException) -> error "Please, specify simpleNodeBuildConfig"
-
-  poa_p   <- try (getEnv "poaPort") >>= \case
-          Right item              -> return $ read item
-          Left (_::SomeException) -> return $ poaPort conf
-
-  stat_h  <- try (getEnv "statsdHost") >>= \case
-          Right item              -> return item
-          Left (_::SomeException) -> return $ host $ statsdBuildConfig conf
-
-  stat_p  <- try (getEnv "statsdPort") >>= \case
-          Right item              -> return $ read item
-          Left (_::SomeException) -> return $ port $ statsdBuildConfig conf
-
-  logs_h  <- try (getEnv "logHost") >>= \case
-          Right item              -> return item
-          Left (_::SomeException) -> return $ host $ logsBuildConfig conf
-
-  logs_p  <- try (getEnv "logPort") >>= \case
-          Right item              -> return $ read item
-          Left (_::SomeException) -> return $ port $ logsBuildConfig conf
-
-  log_id  <- try (getEnv "log_id") >>= \case
-          Right item              -> return item
-          Left (_::SomeException) -> return $ show aMyNodeId
-
-  return (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id)

@@ -120,7 +120,6 @@ main = do
             aConnects <- takeMVar aConnectListVar
             putStrLn "   Testing firs NN of the list..."
             when (null aConnects) $ error "   FAIL. The received list is empty."
-            let (Connect aHostAddress port):_ = aConnects
             putStrLn ""
             putStrLn "---------------------------------------"
             putStrLn "   ---------------------------------"
@@ -130,6 +129,8 @@ main = do
             putStrLn ""
             aIdOfFirsClientVar <- newEmptyMVar
             putStrLn "1| Connecting CN to NN..."
+            let (Connect aHostAddress port):(Connect aHostAddress2 port2):_ = aConnects
+            putStrLn $ "1| Node adress: " ++ showHostAddress aHostAddress
             void . forkIO $ runClient (showHostAddress aHostAddress) (fromEnum port) "/" $ \aConnect -> do
                 aMyNodeId <- connectWithNN "1| " aConnect
                 putStrLn "1| CN is connected to NN."
@@ -146,7 +147,8 @@ main = do
                     "1| Received msg from second node."
                 MsgMsgTo aNodeId _ aValue <- return $ case decode aMsg of
                     Just aMsgTo@(MsgMsgTo _ _ _) -> aMsgTo
-                    _ -> error $ "1| FAIL. The received msg not a correct! "
+
+                    a -> error $ "1| FAIL. The received msg not a correct!"
                 unless (aValue == testMsg) $ error "1| The broadcast msg is broaken."
 
                 putMVar testsOk True
@@ -154,7 +156,8 @@ main = do
 
             aIdOfFirsClient <- takeMVar aIdOfFirsClientVar
             putStrLn "2| Connecting of CN to NN..."
-            void . forkIO $ runClient (showHostAddress aHostAddress) (fromEnum port) "/" $ \aConnect -> do
+            putStrLn $ "2| Node adress: " ++ showHostAddress aHostAddress2
+            void . forkIO $ runClient (showHostAddress aHostAddress2) (fromEnum port2) "/" $ \aConnect -> do
                 aMyId <- connectWithNN "2| " aConnect
                 putStrLn "2| CN is connected to NN."
                 putMVar aSecondNodeIsStartedVar True
