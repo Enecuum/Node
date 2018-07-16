@@ -53,6 +53,7 @@ data MsgToCentralActor where
     MsgFromSharding         :: N.ShardingNodeRequestMsg -> MsgToCentralActor
     CleanAction             :: MsgToCentralActor
     NewTransaction          :: Transaction -> MVar Bool -> MsgToCentralActor
+    ActualConnectsToNNRequest:: MVar [ActualConnectInfo] -> MsgToCentralActor
 
 
 data MsgFromNode

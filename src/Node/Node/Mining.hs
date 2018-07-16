@@ -93,6 +93,9 @@ networkNodeStart (_, aOutChan) aMd = do
                         let aConnects = toActualConnectInfo <$> (M.toList $ aData^.connects)
                         C.putMVar aVar aConnects
 
+            ActualConnectsToNNRequest aVar -> void $ C.forkIO $ do
+                let aConnects = toActualConnectInfo <$> (M.toList $ aData^.connects)
+                C.putMVar aVar (filter (\(ActualConnectInfo _ aNodeType  _) -> aNodeType == NN) aConnects)
 
             MsgFromSharding         _   -> return ()
             CleanAction                 -> return ()
@@ -101,6 +104,7 @@ networkNodeStart (_, aOutChan) aMd = do
                 writeLog (aData^.logChan) [NetLvlTag] Info "I create a transaction."
                 void $ C.forkIO $ writeInChan (aData^.transactionsChan) (aTransaction, aVar)
 
+--  data ActualConnectInfo = ActualConnectInfo NodeId NodeType (Maybe Connect) deriving Show
 
 toActualConnectInfo :: (NodeId, NodeInfo) -> ActualConnectInfo
 toActualConnectInfo (aNodeId, NodeInfo _ aNodeType aConnect) =
