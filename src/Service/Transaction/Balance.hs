@@ -18,6 +18,7 @@ module Service.Transaction.Balance
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Monad
+import           Control.Exception                     (throw)
 import           Data.Aeson                            hiding (Error)
 import           Data.Aeson.Types                      (parseMaybe)
 import qualified Data.ByteString.Char8                 as BC
@@ -49,7 +50,7 @@ getBalanceForKey db key = do
     val  <- funR (poolLedger db) (S.encode key)
     result <- case val of Nothing -> return Nothing --putStrLn "There is no such key"
                           Just v  -> case (S.decode v :: Either String Amount ) of
-                              Left _  -> error ("Can not decode balance" ++ show v)
+                              Left _  -> throw DecodeException
                               Right b -> return $ Just b
 
     return result
@@ -119,7 +120,7 @@ checkMacroblock db aInfoChan microblock keyBlockHash blockHash = do
                     return (True, True, True, aMacroBlock)
       Just a -> -- If MacroblockBD already in the table
         case S.decode a :: Either String MacroblockBD of
-          Left _  -> error "Can not decode MacroblockBD"
+          Left _  -> throw DecodeException
           Right bdMacroblock -> do
                    let hashes = _mblocks ( bdMacroblock :: MacroblockBD)
                    writeLog aInfoChan [BDTag] Info ("length hashes" ++ show(length hashes) ++ " " ++ show hashes)
@@ -233,7 +234,7 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
   if keyBlock /= "kblock" then return ()
   else do
     let keyBlockInfoObject = case parseMaybe (.: "body") aValue of
-            Nothing     -> error "Can not parse KeyBlockInfo" --Data.Map.empty
+            Nothing     -> throw DecodeException
             Just kBlock -> kBlock :: KeyBlockInfo --Map T.Text Value
 
         keyBlockHash = rHash keyBlockInfoObject
@@ -243,7 +244,7 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
     _ <- case val of
         Nothing -> return dummyMacroblock
         Just va  -> case S.decode va :: Either String MacroblockBD of
-            Left _  -> error "Can not decode MacroblockBD"
+            Left _  -> throw DecodeException
             Right r -> return r
 
     writeMacroblockToDB db aInfoChan keyBlockHash $ tKeyBlockInfo2Macroblock keyBlockInfoObject

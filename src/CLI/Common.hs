@@ -59,21 +59,6 @@ import           Data.Time.Units                       (Second)
 
 type Result a = Either CLIException a
 
-data CLIException = WrongKeyOwnerException
-                  | NotImplementedException -- test
-                  | NoTransactionsForPublicKey
-                  | NoSuchPublicKeyInDB
-                  | NoSuchMicroBlockDB
-                  | NoSuchMacroBlockDB
-                  | NoSuchTransactionDB
-                  | NoClosedKeyBlockInDB
-                  | TransactionChanBusyException
-                  | OtherException
-  deriving Show
-
-instance Exception CLIException
-
-
 sendMessageTo :: MsgTo -> InChan MsgToCentralActor -> IO (Result ())
 sendMessageTo _ _ = return $ return undefined
 

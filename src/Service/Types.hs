@@ -18,6 +18,23 @@ import           Data.List.Split                    (splitOn)
 import           Data.Serialize
 import           GHC.Generics
 import           Service.Types.PublicPrivateKeyPair
+import           Control.Exception
+
+data CLIException = WrongKeyOwnerException
+                  | NotImplementedException -- test
+                  | NoTransactionsForPublicKey
+                  | NoSuchPublicKeyInDB
+                  | NoSuchMicroBlockDB
+                  | NoSuchMacroBlockDB
+                  | NoSuchTransactionDB
+                  | NoClosedKeyBlockInDB
+                  | TransactionChanBusyException
+                  | DecodeException
+                  | OtherException
+  deriving Show
+
+instance Exception CLIException
+
 
 type QuantityTx = Int
 data Trans = Trans {

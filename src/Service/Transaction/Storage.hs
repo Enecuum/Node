@@ -138,11 +138,11 @@ getTxs desc mb = do
   print maybeTxUntyped
   let txDoesNotExist = filter (/= Nothing) maybeTxUntyped
   if null txDoesNotExist
-    then error "Some of transactions can not be found"
+    then throw DecodeException
     else do
          let txUntyped = map fromJust (filter (isJust) maybeTxUntyped)
          let extract t = case S.decode t :: Either String TransactionInfo of
-                            Left e  -> error ("Can not decode TransactionInfo " ++ e)
+                            Left  _ -> throw DecodeException
                             Right r -> r
          return $ map extract txUntyped
 
@@ -219,7 +219,8 @@ getLastKeyBlock desc aInfoChan = do
                                 writeLog aInfoChan [BDTag] Error "No Key block "
                                 return (Just k, Nothing)
                               Just j -> case (S.decode j :: Either String MacroblockBD) of
-                                           Left _  -> error "Can not decode Macroblock"
+                                           Left _  -> throw DecodeException
+
                                            Right r -> return $ (Just k,Just r)
 
 
@@ -237,7 +238,7 @@ getMicroBlockByHashDB db mHash = do
   mbByte <- getByHash (poolMicroblock db) mHash
   case mbByte of Nothing -> return Nothing
                  Just m -> case (S.decode m :: Either String MicroblockBD) of
-                   Left _   -> error "Can not decode Microblock"
+                   Left _   -> throw DecodeException
                    Right rm -> return $ Just rm
 
 
@@ -265,7 +266,7 @@ getKeyBlockByHashDB db kHash _ = do
   kb <- getByHash (poolMacroblock db) kHash
   case kb of Nothing -> return Nothing
              Just j -> case (S.decode j :: Either String MacroblockBD) of
-               Left _  -> error "Can not decode MacroblockBD"
+               Left _  -> throw DecodeException
                Right r -> do
                  -- print r
                  -- mAPI <- tMacroblock2MacroblockAPI db r
@@ -279,7 +280,7 @@ getTransactionByHashDB db tHash = do
   tx <- getByHash (poolTransaction db) tHash
   case tx of Nothing -> return Nothing
              Just j -> case (S.decode j :: Either String  TransactionInfo) of
-               Left _   -> error "Can not decode TransactionInfo"
+               Left _   -> throw DecodeException
                Right rt -> return $ Just rt
 
 
@@ -290,7 +291,7 @@ getByHash pool aHash = (\(Hash key) -> funR pool key) aHash
 decodeTransactionsAndFilterByKey :: [DBValue] -> PublicKey -> [TransactionAPI]
 decodeTransactionsAndFilterByKey rawTx pubKey = txAPI
   where fun = \t -> case (S.decode t :: Either String TransactionInfo) of
-                       Left _   -> error "Can not decode TransactionInfo"
+                       Left _   -> throw DecodeException
                        Right rt -> Just rt
 
         txInfo = map fun rawTx
@@ -352,7 +353,7 @@ getTeamKeysForMicroblock db aHash = do
                -- writeLog aInfoChan [BDTag] Error ("No Team Keys For Key block " ++ show aHash)
                return []
              Just j -> case (S.decode j :: Either String MacroblockBD) of
-               Left _  -> error "Can not decode Macroblock"
+               Left _  -> throw DecodeException
                Right r -> return $ _teamKeys (r :: MacroblockBD)
 
 
