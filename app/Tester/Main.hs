@@ -249,4 +249,4 @@ socketActor aSender aConnect = do
 
 --
 genMicroBlock :: Transaction -> Microblock
-genMicroBlock tx = Microblock "123" (ECDSA.Signature 1 2) [] (PublicKey256k1 1) [tx] 1
+genMicroBlock tx = Microblock "123" (ECDSA.Signature 1 2) [] (PublicKey256k1 1) [tx]

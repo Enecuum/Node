@@ -350,8 +350,8 @@ tMicroblockBD2Microblock db m@(MicroblockBD {..}) = do
   -- _teamKeys,
   _teamKeys = teamKeys,
   _publisher,
-  _transactions  = tx,
-  _numOfBlock
+  _transactions  = tx
+  -- _numOfBlock
   }
 
 tMicroblock2MicroblockBD :: Microblock -> MicroblockBD
@@ -360,8 +360,9 @@ tMicroblock2MicroblockBD (Microblock {..}) = MicroblockBD {
   _signBD = _sign,
   -- _teamKeys,
   _publisher,
-  _transactionsHashes = map rHashT _transactions,
-  _numOfBlock }
+  _transactionsHashes = map rHashT _transactions
+  -- _numOfBlock = 0
+  }
 
 -- getTeamKeysForMicroblock :: DBPoolDescriptor -> DBKey -> InChan InfoMsg -> IO [PublicKey]
 getTeamKeysForMicroblock :: DBPoolDescriptor -> DBKey -> IO [PublicKey]

@@ -200,7 +200,7 @@ instance FromJSON Microblock where
            aTx        <- aBlock .: "Tx"
            aPublisher <- aBlock .: "publisher"
            aKhash     <- aBlock .: "K_hash"
-           return $ Microblock aKhash aSign aWallets aPublisher aTx 0
+           return $ Microblock aKhash aSign aWallets aPublisher aTx
        _ -> mzero
  parseJSON _ = mzero
 
@@ -222,8 +222,8 @@ instance ToJSON MacroblockBD where
 
 instance FromJSON MacroblockBD where
     parseJSON (Object o) = MacroblockBD
-               <$> o .: "prev_hash"
-               <*> o .: "next_hash"
+               <$> o .:? "prev_hash"
+               <*> o .:? "next_hash"
                <*> o .: "difficulty"
                <*> o .: "height"
                <*> o .: "solver"

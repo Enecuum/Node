@@ -88,8 +88,8 @@ data Microblock = Microblock{
     _sign         :: Signature,  -- signature for {K_hash, [Tx],}
     _teamKeys     :: [PublicKey], -- for reward
     _publisher    :: PublicKey,
-    _transactions :: [Transaction],
-    _numOfBlock   :: Integer
+    _transactions :: [Transaction]
+    -- _numOfBlock   :: Integer
   }
   deriving (Eq, Generic, Ord, Read, Show)
 
@@ -100,8 +100,8 @@ data MicroblockBD = MicroblockBD{
     _signBD             :: Signature,  -- signature for {K_hash, [Tx],}
     -- _teamKeys           :: [PublicKey], -- for reward
     _publisher          :: PublicKey,
-    _transactionsHashes :: [ByteString], -- hashes of [Transaction],
-    _numOfBlock         :: Integer
+    _transactionsHashes :: [ByteString]  -- hashes of [Transaction],
+    -- _numOfBlock         :: Integer
   }
   deriving (Eq, Generic, Ord, Read, Show)
 
