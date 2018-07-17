@@ -125,7 +125,7 @@ instance FromJSON NetMessage where
         aType :: T.Text <- aMessage .: "type"
         --error $ show aTag ++ " " ++ show aType
         case (T.unpack aTag, T.unpack aType) of
-            ("Request", "Transaction") -> RequestTransaction <$> aMessage .: "number"
+            ("Request", "Transactions") -> RequestTransaction <$> aMessage .: "number"
 
             ("Request","PotentialConnects")    -> do
                 aFull :: Maybe T.Text <- aMessage .:? "full"
@@ -300,7 +300,7 @@ instance ToJSON NetMessage where
 
     toJSON (RequestTransaction aNum) = object [
         "tag"       .= ("Request"      :: String),
-        "type"      .= ("Transaction"  :: String),
+        "type"      .= ("Transactions"  :: String),
         "number" .= aNum
       ]
 
