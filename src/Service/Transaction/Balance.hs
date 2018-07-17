@@ -119,7 +119,7 @@ checkMacroblock db aInfoChan microblock blockHash = do
                           _teamKeys = _teamKeys (microblock :: Microblock)
                           } :: MacroblockBD
                     return (True, True, aMacroBlock)
-      Just a -> -- If MacroblockBD already in the table
+      Just a -> -- If MacroblockBD is already in the table
         case S.decode a :: Either String MacroblockBD of
           Left _  -> throw DecodeException
           Right bdMacroblock -> do
@@ -159,11 +159,11 @@ addMicroblockToDB db m i =  do
           writeTransactionDB (poolTransaction db) i (_transactions m) microblockHash
           writeMacroblockToDB db i (_keyBlock (m :: Microblock)) macroblock
 
-          when macroblockClosed $ do calculateLedger macroblock
+          when macroblockClosed $ do calculateLedger db i (_keyBlock (m :: Microblock)) macroblock
 
 
-calculateLedger :: DBPoolDescriptor -> InChan InfoMsg -> MacroblockBD
-calculateLedger db i macroblock = do
+calculateLedger :: DBPoolDescriptor -> InChan InfoMsg -> DBKey -> MacroblockBD -> IO ()
+calculateLedger db i hashKeyBlock macroblock = do
   -- get all microblocks for macroblock
   let microblockHashes = _mblocks (macroblock :: MacroblockBD)
   mbBD <- mapM (\h -> getMicroBlockByHashDB db (Hash h))  microblockHashes
@@ -172,7 +172,8 @@ calculateLedger db i macroblock = do
   let sortedMb = sortBy (comparing _sign) (mbWithTx :: [Microblock])
   writeLog i [BDTag] Info ("Start calculate Ledger "  ++ show (length (sortedMb :: [Microblock])))
   mapM_ (runLedger db i) (sortedMb :: [Microblock])
-  writeMacroblockToDB db i (_keyBlock (m :: Microblock)) (macroblock {_reward = 10})
+
+  writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = 10})
 
 
 
