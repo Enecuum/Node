@@ -60,6 +60,9 @@ networkNodeStart (_, aOutChan) aMd = do
                             void $ tryWriteChan (aNode^.nodeChan) aMsg
 
                     aMsg@(MsgMsgTo _ (IdTo aId) _) -> do
+                      -- fork sync or not sync
+                      -- if it's sync -> go to syncServer/syncClient
+                      -- else resending to alien
                         whenJust (aData^.connects.at aId) $ \aNode ->
                             void $ tryWriteChan (aNode^.nodeChan) aMsg
 
