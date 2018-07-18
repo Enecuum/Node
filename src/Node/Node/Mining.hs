@@ -34,10 +34,11 @@ import              PoA.Types
 import              Sharding.Sharding()
 import              Node.BaseFunctions
 import qualified    Control.Concurrent as C
+import              Service.Sync.SyncJson
 
 
-networkNodeStart :: (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()
-networkNodeStart (_, aOutChan) aMd = do
+networkNodeStart :: InChan SyncMessage -> (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()
+networkNodeStart aSyncChan (_, aOutChan) aMd = do
     aDataMain <- readIORef aMd
     undead (writeLog (aDataMain^.logChan) [NetLvlTag] Warning "networkNodeStart. This node could be die!" )
       $ forever $ do
@@ -62,7 +63,7 @@ networkNodeStart (_, aOutChan) aMd = do
                     aMsg@(MsgMsgTo _ (IdTo aId) _) -> do
                       -- fork sync or not sync
                       -- if it's sync -> go to syncServer/syncClient
-                      -- else resending to alien
+                      -- else resending to alien nodes
                         whenJust (aData^.connects.at aId) $ \aNode ->
                             void $ tryWriteChan (aNode^.nodeChan) aMsg
 

@@ -48,6 +48,7 @@ import           PoA.Types
 -- https://www.stackage.org/haddock/lts-10.3/network-2.6.3.2/Network-Socket-ByteString.html
 
 -- | Standart function to launch a node.
+{-
 startNode
     :: DBPoolDescriptor
     -> BuildConfig
@@ -55,6 +56,7 @@ startNode
     -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ())
     -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> OutChan (Transaction, MVar Bool) -> InChan Microblock -> MyNodeId -> InChan FileActorRequest -> IO ())
     -> IO (InChan MsgToCentralActor, OutChan MsgToCentralActor)
+-}
 startNode descrDB buildConf infoCh manager startDo = do
 
     --tmp
@@ -67,29 +69,29 @@ startNode descrDB buildConf infoCh manager startDo = do
     (aTransactionChan, outTransactionChan)      <- newChan 128
     (aInFileRequestChan, aOutFileRequestChan)   <- newChan 128
     aPendingChan@(inChanPending, _)             <- newChan 128
+    aSyncChan@(aInputSync, _)                   <- newChan 128
+    aDBActorChan                                <- newChan 128
 
     config  <- readNodeConfig
     bnList  <- readBootNodeList $ bootNodeList buildConf
     (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id) <- getConfigParameters (config^.myNodeId) buildConf aIn
 
-    md      <- newIORef $ makeNetworkData config infoCh aInFileRequestChan aMicroblockChan aTransactionChan aValueChan
+    md  <- newIORef $ makeNetworkData config infoCh aInFileRequestChan aMicroblockChan aTransactionChan aValueChan
     void . C.forkIO $ pendingActor aPendingChan aMicroblockChan outTransactionChan infoCh
-
     void . C.forkIO $ servePoA (config^.myNodeId) poa_p aIn infoCh aInFileRequestChan aMicroblockChan inChanPending
-
     void . C.forkIO $ startFileServer aOutFileRequestChan
-    void . C.forkIO $ microblockProc descrDB outMicroblockChan aOutValueChan infoCh
-    void . C.forkIO $ manager managerChan md
+    void . C.forkIO $ startDBActor descrDB outMicroblockChan aOutValueChan infoCh aDBActorChan
+    void . C.forkIO $ manager aInputSync managerChan md
     void $ startDo managerChan outTransactionChan aMicroblockChan (config^.myNodeId) aInFileRequestChan
 
     let MyNodeId aId = config^.myNodeId
 
-    void $ C.forkIO $ connectManager aIn (poaPort buildConf) bnList aInFileRequestChan (NodeId aId) inChanPending infoCh
+    void $ C.forkIO $ connectManager aSyncChan aDBActorChan aIn (poaPort buildConf) bnList aInFileRequestChan (NodeId aId) inChanPending infoCh
     return managerChan
 
 
 --connectManager :: InChan MsgToCentralActor -> PortNumber -> [Connect] -> InChan FileActorRequest -> IO ()
-connectManager aManagerChan aPortNumber aBNList aConnectsChan aMyNodeId inChanPending aInfoChan = do
+connectManager _ _ aManagerChan aPortNumber aBNList aConnectsChan aMyNodeId inChanPending aInfoChan = do
     forM_ aBNList $ \(Connect aBNIp aBNPort) -> do
         void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
             WS.sendTextData aConnect . encode $ ActionAddToConnectList aPortNumber
@@ -161,11 +163,6 @@ connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aConn@(Connect 
             void $ tryWriteChan aFileServerChan $ DeleteFromFile aConn
         _ -> return ()
 
-
-microblockProc :: DBPoolDescriptor -> OutChan Microblock -> OutChan Value -> InChan InfoMsg -> IO ()
-microblockProc descriptor aMicroblockCh aValueChan aInfoCh = do
-    aChans <- newChan 128
-    startDBActor descriptor aMicroblockCh aValueChan aInfoCh aChans
 
 
 readNodeConfig :: IO NodeConfig
