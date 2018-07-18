@@ -5,13 +5,15 @@ module Service.System.Directory (
     getTransactionFilePath,
     getLedgerFilePath,
     getMicroblockFilePath,
-    getMacroblockFilePath
+    getMacroblockFilePath,
+    getSproutFilePath
   )where
 
-import System.FilePath.Posix (takeDirectory)
-import System.Directory      (getHomeDirectory, createDirectoryIfMissing)
-import System.FilePath       (pathSeparator)
-import Data.UnixTime
+import           Data.UnixTime
+import           System.Directory      (createDirectoryIfMissing,
+                                        getHomeDirectory)
+import           System.FilePath       (pathSeparator)
+import           System.FilePath.Posix (takeDirectory)
 
 
 getTime :: IO Int
@@ -51,6 +53,10 @@ getMacroblockFilePath = do
     enecuumDir <- getEnecuumDir
     return (enecuumDir ++ [pathSeparator] ++ "macroblock.db")
 
+getSproutFilePath :: IO String
+getSproutFilePath = do
+    enecuumDir <- getEnecuumDir
+    return (enecuumDir ++ [pathSeparator] ++ "sprout.db")
 
 createFilesDirectory :: FilePath -> IO ()
 createFilesDirectory path = createDirectoryIfMissing True $ takeDirectory path

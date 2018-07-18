@@ -11,6 +11,7 @@
 
 module Service.Types where
 
+import           Control.Exception
 import           Data.ByteString
 import qualified Data.ByteString.Char8              as C
 import           Data.Graph.Inductive
@@ -18,7 +19,6 @@ import           Data.List.Split                    (splitOn)
 import           Data.Serialize
 import           GHC.Generics
 import           Service.Types.PublicPrivateKeyPair
-import           Control.Exception
 
 data CLIException = WrongKeyOwnerException
                   | NotImplementedException -- test
@@ -29,7 +29,7 @@ data CLIException = WrongKeyOwnerException
                   | NoSuchTransactionDB
                   | NoClosedKeyBlockInDB
                   | TransactionChanBusyException
-                  | DecodeException
+                  | DecodeException String
                   | OtherException
   deriving Show
 
@@ -115,10 +115,8 @@ instance Serialize Microblock
 data MicroblockBD = MicroblockBD{
     _keyBlock           :: ByteString, -- hash of key-block
     _signBD             :: Signature,  -- signature for {K_hash, [Tx],}
-    -- _teamKeys           :: [PublicKey], -- for reward
     _publisher          :: PublicKey,
     _transactionsHashes :: [ByteString]  -- hashes of [Transaction],
-    -- _numOfBlock         :: Integer
   }
   deriving (Eq, Generic, Ord, Read, Show)
 

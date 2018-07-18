@@ -36,10 +36,7 @@ import           Node.Data.GlobalLoging
 import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
-import           Service.System.Directory              (getLedgerFilePath,
-                                                        getMacroblockFilePath,
-                                                        getMicroblockFilePath,
-                                                        getTransactionFilePath)
+import           Service.System.Directory
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
@@ -51,6 +48,7 @@ data DBPoolDescriptor = DBPoolDescriptor {
   , poolMicroblock  :: Pool Rocks.DB
   , poolLedger      :: Pool Rocks.DB
   , poolMacroblock  :: Pool Rocks.DB
+  , poolSprout      :: Pool Rocks.DB
   }
 
 -- FIX change def (5 times)
@@ -60,18 +58,16 @@ connectOrRecoveryConnect = recovering def handler . const $ connectDB
 
 connectDB :: IO DBPoolDescriptor
 connectDB = do
-  aTx <- getTransactionFilePath
-  aMb <- getMicroblockFilePath
-  aLd <- getLedgerFilePath
-  aMacroblock <- getMacroblockFilePath
-  poolTransaction <- createPool (Rocks.open aTx def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
-  poolMicroblock  <- createPool (Rocks.open aMb def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
-  poolLedger      <- createPool (Rocks.open aLd def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
-  poolMacroblock  <- createPool (Rocks.open aMacroblock def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
+  let fun dbFilePath = createPool (Rocks.open dbFilePath def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
+  poolTransaction <- fun =<< getTransactionFilePath
+  poolMicroblock  <- fun =<< getMicroblockFilePath
+  poolLedger      <- fun =<< getLedgerFilePath
+  poolMacroblock  <- fun =<< getMacroblockFilePath
+  poolSprout      <- fun =<< getSproutFilePath
   -- putStrLn "DBTransactionException"
   -- sleepMs 5000
   -- throw DBTransactionException
-  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger poolMacroblock)
+  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger poolMacroblock poolSprout)
 
 
 data SuperException = DBTransactionException
@@ -103,8 +99,8 @@ rHashT t@(Transaction {}) = Base64.encode . SHA.hash . S.encode $ t { _timestamp
 rHash :: S.Serialize a => a -> BSI.ByteString
 rHash key = Base64.encode . SHA.hash . S.encode $ key
 
-lastKeyBlock :: DBKey
-lastKeyBlock = "2dJ6lb9JgyQRac0DAkoqmYmS6ats3tND0gKMLW6x2x8=" :: DBKey
+lastClosedKeyBlock :: DBKey
+lastClosedKeyBlock = "2dJ6lb9JgyQRac0DAkoqmYmS6ats3tND0gKMLW6x2x8=" :: DBKey
 
 
 funW ::  Pool Rocks.DB -> [(DBKey, DBValue)] -> IO ()
@@ -137,11 +133,11 @@ getTxs desc mb = do
   print maybeTxUntyped
   let txDoesNotExist = filter (/= Nothing) maybeTxUntyped
   if null txDoesNotExist
-    then throw DecodeException
+    then throw (DecodeException "txDoesNotExist")
     else do
          let txUntyped = map fromJust (filter (isJust) maybeTxUntyped)
          let extract t = case S.decode t :: Either String TransactionInfo of
-                            Left  _ -> throw DecodeException
+                            Left  e -> throw (DecodeException (show e))
                             Right r -> r
          return $ map extract txUntyped
 
@@ -210,7 +206,7 @@ getChainInfoDB desc aInfoChan = do
 getLastKeyBlock  :: DBPoolDescriptor -> InChan InfoMsg -> IO (Maybe DBKey, Maybe MacroblockBD)
 getLastKeyBlock desc aInfoChan = do
   -- print lastKeyBlock
-  key <- funR (poolMacroblock desc) lastKeyBlock
+  key <- funR (poolMacroblock desc) lastClosedKeyBlock
   case key of Nothing -> return (Nothing, Nothing)
               Just k  -> do
                 mByte <- funR (poolMacroblock desc) k
@@ -218,7 +214,7 @@ getLastKeyBlock desc aInfoChan = do
                                 writeLog aInfoChan [BDTag] Error "No Key block "
                                 return (Just k, Nothing)
                               Just j -> case (S.decode j :: Either String MacroblockBD) of
-                                           Left _  -> throw DecodeException
+                                           Left e  -> throw (DecodeException (show e))
 
                                            Right r -> return $ (Just k,Just r)
 
@@ -237,7 +233,7 @@ getMicroBlockByHashDB db mHash = do
   mbByte <- getByHash (poolMicroblock db) mHash
   case mbByte of Nothing -> return Nothing
                  Just m -> case (S.decode m :: Either String MicroblockBD) of
-                   Left _   -> throw DecodeException
+                   Left e   -> throw (DecodeException (show e))
                    Right rm -> return $ Just rm
 
 
@@ -265,7 +261,7 @@ getKeyBlockByHashDB db kHash _ = do
   kb <- getByHash (poolMacroblock db) kHash
   case kb of Nothing -> return Nothing
              Just j -> case (S.decode j :: Either String MacroblockBD) of
-               Left _  -> throw DecodeException
+               Left e  -> throw (DecodeException (show e))
                Right r -> do
                  -- print r
                  -- mAPI <- tMacroblock2MacroblockAPI db r
@@ -279,7 +275,7 @@ getTransactionByHashDB db tHash = do
   tx <- getByHash (poolTransaction db) tHash
   case tx of Nothing -> return Nothing
              Just j -> case (S.decode j :: Either String  TransactionInfo) of
-               Left _   -> throw DecodeException
+               Left e   -> throw (DecodeException (show e))
                Right rt -> return $ Just rt
 
 
@@ -290,7 +286,7 @@ getByHash pool aHash = (\(Hash key) -> funR pool key) aHash
 decodeTransactionsAndFilterByKey :: [DBValue] -> PublicKey -> [TransactionAPI]
 decodeTransactionsAndFilterByKey rawTx pubKey = txAPI
   where fun = \t -> case (S.decode t :: Either String TransactionInfo) of
-                       Left _   -> throw DecodeException
+                       Left e   -> throw (DecodeException (show e))
                        Right rt -> Just rt
 
         txInfo = map fun rawTx
@@ -352,7 +348,7 @@ getTeamKeysForMicroblock db aHash = do
                -- writeLog aInfoChan [BDTag] Error ("No Team Keys For Key block " ++ show aHash)
                return []
              Just j -> case (S.decode j :: Either String MacroblockBD) of
-               Left _  -> throw DecodeException
+               Left e  -> throw (DecodeException (show e))
                Right r -> return $ _teamKeys (r :: MacroblockBD)
 
 
