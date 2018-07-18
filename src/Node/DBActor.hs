@@ -22,7 +22,7 @@ data MacroblockBD
 data HashOfMicroblock
 data To
 data From
-data Number
+type Number = Integer
 data HashOfKeyBlock
 
 
