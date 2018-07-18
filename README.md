@@ -18,6 +18,126 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 <br/>
 <br/>
 
+
+## Build and Install
+
+### Install Haskell Stack
+
+1. Install Haskell stack
+
+`curl -sSL https://get.haskellstack.org/ | sh`
+
+2. If needed, add the path to your profile
+
+`sudo nano ~/.profile` and append `export PATH=$PATH:$HOME/.local/bin` at the end.
+
+### Install RockDB for the Legder
+
+`sudo apt install librocksdb-dev`
+
+### Clone and Build Node
+
+1. Choose the appropriate local folder, clone the repo and change to the cloned repository folder
+
+`git clone https://github.com/Enecuum/Node.git && cd Node`
+
+2. Build
+
+`stack build`
+
+### Initialize a Boot Node
+
+`stack exec BootNode-exe`
+
+
+### Initialize a Simple Node
+
+`stack exec SimpleNode-exe`
+
+
+### Initialize Light Client
+
+`stack exec LightClient-exe`
+
+<br>
+
+Hint: to run an instance of LightClient, you need to first start a local Simple Node in the background.\
+Alternatively, you can run LightClient with additional parameters `addr` and `port` to connect to a remote Simple Node, e.g.: `stack exec LightClient-exe-- --addr=245.217.53.5 --port=1555`
+<br>
+
+#### Available commands for Light Client
+
+| Command shortcut | Full command | Description of the command and parameters |
+|---------|--------|---------|
+| -P port | --port=port | port number |
+| -A hostAddr | --addr=hostAddr |  host address |
+| -F walletsFile | --wallets=walletsFile | csv file containing wallets |
+| -S transactionsFile | --transactions=transactionsFile | csv file containing transactions to be sent |
+|  -K keysCount       |  --gen-keys=keysCount           |   generate N key pairs |
+|  -B publicKey       |  --get-balance=publicKey        |  get balance for public key |
+|  -M wallets         |  --show-my-keys=wallets         | show my public keys |
+|  -U hash            |  --load-block=hash              |   get keyblock by hash |
+|  -O hash            |  --load-microblock=hash         |   get microblock by hash |
+|  -X hash            |  --get-tx=hash                  |   get transaction by hash |
+|  -W publicKey       |  --load-wallet=publicKey        |   get all transactions for a wallet |
+|  -I                 |  --chain-info                   |   get total chain info |
+|  -R message         |  --send-message-for-all=message |   send broadcast message |
+|  -T nodeId message  |  --send-message-to=nodeId message |  send message to the node |
+|  -L                 |  --load-new-messages            |   load new recieved messages |
+|  -V                 |  --version                      |   show LightClient version |
+|  -H, -?             |  --help                         |   help |
+
+
+<br/>
+<br/>
+
+### (Optional) Set your own environment variables:
+
+You can define curstom values for variables in the /configs/config.json:
+
+* `simpleNodeBuildConfig` is the config section for Simple Node.
+
+| Variable | Description |
+|---------|---------|
+| enableIP | IP addresses that are allowed to connect to the node |
+| rpcPort | Port for remote procedure calls to the node |
+
+Hint: setting `enableIP` to `0.0.0.0` or leaving it blank allows any IP addresses. This field allows IPV6 subnet masks as well as IP addresses separated by commas.
+ 
+<br/>
+
+* `statsdBuildConfig` is the config section for the server to collect metrics. 
+
+| Variable | Description |
+|---------|---------|
+| host | IP of the stat server; you can write yours if you have one up and running |
+| port | Port of the server to send the data to |
+
+<br/>
+
+* `bootNodeList` is the variable for the Boot Node to address when you enter the network the first time or after a while. `1` stands for the ID of the Boot Node, `172,17,0,2` - for the IP address Boot Node resides at (Docker's default IP address in this case). `1667` - port Boot Node receives requests to.
+
+<br/>
+
+* `poaPort` is the variable for communication with PoA Nodes (receiving requests for transactions, sending transactions, receiving microblocks. 
+
+<br/>
+
+* `logsBuildConfig` is the config section for the log server.
+
+| Variable | Description |
+|---------|---------|
+| host | IP of the log server; you can write yours if you have one up and running |
+| port | Port of the server to send the data to |
+
+<br/>
+
+* `extConnectPort` is the variable that defines the port for commnunicating with the outer world (e.g. broadcasting). 
+
+<br/>
+<br/>
+
+
 ## JSON-RPC API for Simple Node
 
 **Sends transaction to a node: `enq_sendTransaction`**
@@ -277,137 +397,6 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 ##### Response example:
 
  `{"result":[{"amount":10,"uuid":15,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":111453389016965411942432161422836677977682117261774497318558333020708965069823,"sign_r":34802528517330025474056637040554169615944272750680678430210531325764022406021},"timestamp":1529681025},{"amount":19,"uuid":12,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":36702896446615718903997830217307609909443281366110703304854624965337681147887,"sign_r":7367170092931138165337844383547165997062478109283580450989454932653837213781},"timestamp":1529681025},{"amount":14,"uuid":19,"owner":"K6Cw7fqXz1VD2ZmZvYvZd395NR8wNngE6Q1EgUHvw5Us","receiver":"CmCy17EfeRdVLp8FdgT5BJjbHH2HHPcZ83BiCsMMqbNL","currency":"ENQ","sign":{"sign_s":98414524750868806711785718518430616768375010094240450345905375658581001458859,"sign_r":95027401014124111353895671545669534279352130813036148099458965611942353578063},"timestamp":1529681025}],"jsonrpc":"2.0","id":1}`
-
-<br/>
-<br/>
-
-## Build and Install
-
-### Install Haskell Stack
-
-1. Install Haskell stack
-
-`curl -sSL https://get.haskellstack.org/ | sh`
-
-2. If needed, add the path to your profile
-
-`sudo nano ~/.profile` and append `export PATH=$PATH:$HOME/.local/bin` at the end.
-
-
-### Install Docker and Pull the Image
-
-1. [Install Docker](https://docs.docker.com/install/linux/docker-ce/ubuntu/)
-
-2. Add current user to the docker group
-
-`sudo usermod -a -G docker $USER`
-
-2.1 Log out or reboot
-
-3. Pull Docker image (warning, ~2.6 Gb)
-
-`stack docker pull`
-
-
-### Clone and Build Node
-
-1. Choose the appropriate local folder, clone the repo and change to the cloned repository folder
-
-`git clone git@github.com:Enecuum/Node.git && cd Node`
-
-2. Build without docker
-
-`stack build`
-
-
-### Initialize a Boot Node
-
-`stack exec BootNode-exe`
-
-
-### Initialize a Simple Node
-
-`stack exec SimpleNode-exe`
-
-
-### Initialize Light Client
-
-`stack exec LightClient-exe`
-
-<br>
-
-Hint: to run an instance of LightClient, you need to first start a local Simple Node in the background.\
-Alternatively, you can run LightClient with additional parameters `addr` and `port` to connect to a remote Simple Node, e.g.: `stack exec LightClient-exe-- --addr=245.217.53.5 --port=1555`
-<br>
-
-#### Available commands for Light Client
-
-| Command shortcut | Full command | Description of the command and parameters |
-|---------|--------|---------|
-| -P port | --port=port | port number |
-| -A hostAddr | --addr=hostAddr |  host address |
-| -F walletsFile | --wallets=walletsFile | csv file containing wallets |
-| -S transactionsFile | --transactions=transactionsFile | csv file containing transactions to be sent |
-|  -K keysCount       |  --gen-keys=keysCount           |   generate N key pairs |
-|  -B publicKey       |  --get-balance=publicKey        |  get balance for public key |
-|  -M wallets         |  --show-my-keys=wallets         | show my public keys |
-|  -U hash            |  --load-block=hash              |   get keyblock by hash |
-|  -O hash            |  --load-microblock=hash         |   get microblock by hash |
-|  -X hash            |  --get-tx=hash                  |   get transaction by hash |
-|  -W publicKey       |  --load-wallet=publicKey        |   get all transactions for a wallet |
-|  -I                 |  --chain-info                   |   get total chain info |
-|  -R message         |  --send-message-for-all=message |   send broadcast message |
-|  -T nodeId message  |  --send-message-to=nodeId message |  send message to the node |
-|  -L                 |  --load-new-messages            |   load new recieved messages |
-|  -V                 |  --version                      |   show LightClient version |
-|  -H, -?             |  --help                         |   help |
-
-
-<br/>
-<br/>
-
-### (Optional) Set your own environment variables:
-
-You can define curstom values for variables in the /configs/config.json:
-
-* `simpleNodeBuildConfig` is the config section for Simple Node.
-
-| Variable | Description |
-|---------|---------|
-| enableIP | IP addresses that are allowed to connect to the node |
-| rpcPort | Port for remote procedure calls to the node |
-
-Hint: setting `enableIP` to `0.0.0.0` or leaving it blank allows any IP addresses. This field allows IPV6 subnet masks as well as IP addresses separated by commas.
- 
-<br/>
-
-* `statsdBuildConfig` is the config section for the server to collect metrics. 
-
-| Variable | Description |
-|---------|---------|
-| host | IP of the stat server; you can write yours if you have one up and running |
-| port | Port of the server to send the data to |
-
-<br/>
-
-* `bootNodeList` is the variable for the Boot Node to address when you enter the network the first time or after a while. `1` stands for the ID of the Boot Node, `172,17,0,2` - for the IP address Boot Node resides at (Docker's default IP address in this case). `1667` - port Boot Node receives requests to.
-
-<br/>
-
-* `poaPort` is the variable for communication with PoA Nodes (receiving requests for transactions, sending transactions, receiving microblocks. 
-
-<br/>
-
-* `logsBuildConfig` is the config section for the log server.
-
-| Variable | Description |
-|---------|---------|
-| host | IP of the log server; you can write yours if you have one up and running |
-| port | Port of the server to send the data to |
-
-<br/>
-
-* `extConnectPort` is the variable that defines the port for commnunicating with the outer world (e.g. broadcasting). 
 
 <br/>
 <br/>
