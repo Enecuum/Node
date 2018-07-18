@@ -1,25 +1,49 @@
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE GADTs #-}
+
 module Node.DBActor where
+
+import Service.InfoMsg
+import Control.Concurrent.Chan.Unagi.Bounded
+import qualified Control.Concurrent as C
+import Control.Concurrent.MVar
+import Data.Aeson
+import Control.Monad
+import Service.Types (Microblock)
+import Service.Chan
+import Service.Transaction.Common (
+        DBPoolDescriptor (..)
+    ,   addMacroblockToDB
+    ,   addMicroblockToDB
+  )
+
+data MicroBlockContent
+data MacroblockBD
+data HashOfMicroblock
+data To
+data From
+data Number
+data HashOfKeyBlock
 
 
 data MsgToDB where
     KeyBlockMsgToDB :: Value -> MsgToDB
     MicroblockMsgToDB :: Microblock -> MsgToDB
 
-    MyTail :: MVar (HashOfKeyBlock, Number) -> MsgToDB
+    MyTail :: MVar Number -> MsgToDB
     GetHashOfLastClosedKeyBlock :: MVar (HashOfKeyBlock, Number) -> MsgToDB
     PeekNPreviousClosedKeyBlocks :: Int -> HashOfKeyBlock -> MVar [(HashOfKeyBlock, Number)] -> MsgToDB
 
     GetKeyBlockSproutData :: From -> To -> MVar [MacroblockBD]-> MsgToDB
     SetKeyBlockSproutData :: [MacroblockBD] -> MVar Bool -> MsgToDB
 
-    GetRestSproutData :: [MickroBlockHash] -> MVar MicroBlockContent -> MsgToDB
-    SetRestSproutData :: [MicroBlockContent] -> MVar Bool -> MsgToDB
+    GetRestSproutData :: [HashOfMicroblock] -> MVar MicroBlockContent -> MsgToDB
+    SetRestSproutData :: MicroBlockContent -> MVar Bool -> MsgToDB
 
-resender = void . C.forkIO . forever . writeInChan
 
-microblockProc descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) = do
-    resender aInChan . MicroblockMsgToDB =<< readChan aMicroblockCh
-    resender aInChan . KeyBlockMsgToDB =<< readChan aValueChan
+startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) = do
+    void . C.forkIO . forever . writeInChan aInChan . MicroblockMsgToDB =<< readChan aMicroblockCh
+    void . C.forkIO . forever . writeInChan aInChan . KeyBlockMsgToDB =<< readChan aValueChan
     forever $ readChan aOutChan >>= \case
         MicroblockMsgToDB aMicroblock ->
             addMicroblockToDB descriptor aMicroblock aInfoCh
@@ -41,15 +65,15 @@ microblockProc descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) =
 
         SetKeyBlockSproutData aMacroblockBD aMVar -> do
             aIsValid <- isValidKeyBlockSprout descriptor aInfoCh aMacroblockBD
-            when aIsValid setKeyBlockSproutData descriptor aInfoCh aMacroblockBD
+            when aIsValid $ setKeyBlockSproutData descriptor aInfoCh aMacroblockBD
             putMVar aMVar aIsValid
 
         GetRestSproutData aMickroBlockHash aMVar -> do
-            putMVar aMVar =<< getKeyBlockSproutData descriptor aInfoCh aMickroBlockHash
+            putMVar aMVar =<< getRestSproutData descriptor aInfoCh aMickroBlockHash
 
         SetRestSproutData aMicroBlockContent aMVar -> do
             aIsValid <- isValidRestOfSprout descriptor aInfoCh aMicroBlockContent
-            when aIsValid setRestSproutData descriptor aInfoCh aMicroBlockContent
+            when aIsValid $ setRestSproutData descriptor aInfoCh aMicroBlockContent
             putMVar aMVar aIsValid
 
 
@@ -71,7 +95,7 @@ getKeyBlockSproutData = undefined
 getRestSproutData :: DBPoolDescriptor -> InChan InfoMsg -> [HashOfMicroblock] -> IO MicroBlockContent
 getRestSproutData = undefined
 
-setRestSproutData :: DBPoolDescriptor -> InChan InfoMsg -> [MicroBlockContent]  -> IO ()
+setRestSproutData :: DBPoolDescriptor -> InChan InfoMsg -> MicroBlockContent  -> IO ()
 setRestSproutData = undefined
 
 isValidKeyBlockSprout :: DBPoolDescriptor -> InChan InfoMsg -> [MacroblockBD] -> IO Bool
