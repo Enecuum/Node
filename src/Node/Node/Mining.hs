@@ -20,6 +20,7 @@ import              System.Random()
 import              Service.Chan
 import qualified    Data.Map                        as M
 import              Data.Maybe (isNothing)
+import              Data.Aeson as A
 import              Data.IORef
 import              Lens.Micro
 import              Lens.Micro.Mtl()
@@ -49,6 +50,11 @@ networkNodeStart aSyncChan (_, aOutChan) aMd = do
                     writeLog (aData^.logChan) [NetLvlTag] Info $  "The node " ++ show aNodeId ++ " is disconnected."
                     modifyIORef aMd $ connects %~ M.delete aNodeId
 
+            SendMsgToNode aMsgFromNode aIdTo@(IdTo aId) -> do
+                whenJust (aData^.connects.at aId) $ \aNode -> do
+                    let MyNodeId aMyId = aData^.nodeConfig.myNodeId
+                    void $ tryWriteChan (aNode^.nodeChan) $ MsgMsgTo (IdFrom $ NodeId aMyId) aIdTo aMsgFromNode
+
             MsgFromNode aNodeType aMsgFromNode -> do
                 void $ C.forkIO $ when (aNodeType /= NN) $ forM_ (aData^.connects) $
                     \aNode -> when (aNode^.nodeType == NN) $
@@ -60,12 +66,13 @@ networkNodeStart aSyncChan (_, aOutChan) aMd = do
                             (aNode^.nodeType /= NN && (aNodeType == aNode^.nodeType || aNodeType == All)) $
                             void $ tryWriteChan (aNode^.nodeChan) aMsg
 
-                    aMsg@(MsgMsgTo _ (IdTo aId) _) -> do
-                      -- fork sync or not sync
-                      -- if it's sync -> go to syncServer/syncClient
-                      -- else resending to alien nodes
-                        whenJust (aData^.connects.at aId) $ \aNode ->
-                            void $ tryWriteChan (aNode^.nodeChan) aMsg
+                    aMsg@(MsgMsgTo _ (IdTo aId) aContent) -> do
+                      if aId == toNodeId (aData^.nodeConfig.myNodeId)
+                      then case fromJSON aContent of
+                          Success aSyncMsg -> writeInChan aSyncChan aSyncMsg
+                          A.Error _ -> return ()
+                      else whenJust (aData^.connects.at aId) $ \aNode ->
+                              void $ tryWriteChan (aNode^.nodeChan) aMsg
 
                     MsgMicroblock aMicroblock -> do
                         writeLog (aData^.logChan) [NetLvlTag] Info $
