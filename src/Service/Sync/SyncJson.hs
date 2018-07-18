@@ -23,16 +23,19 @@ data MickroBlokContent = MickroBlokContent [MicroblockBD] [TransactionInfo] deri
 type LastNumber = Int
 type Count      = Int
 type Number     = Integer
+type SyncStatusMessage  = String
+type ErrorStringCode    = String
 
 data SyncMessage where
-    RequestTail           ::                                       SyncMessage
-    ResponseTail          :: LastNumber     -> HashOfKeyBlock   -> SyncMessage
-    PeekKeyBlokRequest    :: From           -> To               -> SyncMessage
-    PeekKeyBlokResponse   :: [MacroblockBD]                     -> SyncMessage
-    MicroblockRequest     :: [HashOfMicroblock]                 -> SyncMessage
-    MicroblockResponse    :: [MickroBlokContent]                -> SyncMessage
-    PeekHashKblokRequest  :: Count          -> HashOfKeyBlock   -> SyncMessage
-    PeekHashKblokResponse :: [(HashOfKeyBlock, Number)]         -> SyncMessage
+    RequestTail           ::                                         SyncMessage
+    ResponseTail          :: LastNumber     -> HashOfKeyBlock     -> SyncMessage
+    PeekKeyBlokRequest    :: From           -> To                 -> SyncMessage
+    PeekKeyBlokResponse   :: [MacroblockBD]                       -> SyncMessage
+    MicroblockRequest     :: [HashOfMicroblock]                   -> SyncMessage
+    MicroblockResponse    :: [MickroBlokContent]                  -> SyncMessage
+    PeekHashKblokRequest  :: Count          -> HashOfKeyBlock     -> SyncMessage
+    PeekHashKblokResponse :: [(HashOfKeyBlock, Number)]           -> SyncMessage
+    StatusSyncMessage     :: SyncStatusMessage -> ErrorStringCode -> SyncMessage
   deriving (Show)
 
 
@@ -78,6 +81,11 @@ instance ToJSON SyncMessage where
         "sync"     .= ("peek_hash_key_blok_response"   :: String),
         "hashes"   .= aHashOfKeyBlock
       ]
+    toJSON (StatusSyncMessage msg errorCode) = object [
+        "sync"      .= ("error"   :: String),
+        "msg"       .= msg,
+        "errorCode" .= errorCode
+      ]
 
 instance FromJSON SyncMessage where
     parseJSON (Object aMessage) = do
@@ -111,6 +119,12 @@ instance FromJSON SyncMessage where
 
             "peek_hash_key_blok_response" ->
                 PeekHashKblokResponse <$> aMessage .: "hashes"
+
+            "error"-> do
+                msg <- aMessage .: "msg"
+                errorCode   <- aMessage .: "error"
+                return $ StatusSyncMessage msg errorCode
+
 
             _ -> mzero
 
