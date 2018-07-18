@@ -12,6 +12,7 @@ import              Control.Concurrent.MVar
 import           Control.Exception
 import           Control.Monad
 import          PoA.Pending
+import          Node.DBActor
 
 import qualified    Network.WebSockets                  as WS
 import           Data.Aeson                            as A
@@ -163,12 +164,8 @@ connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aConn@(Connect 
 
 microblockProc :: DBPoolDescriptor -> OutChan Microblock -> OutChan Value -> InChan InfoMsg -> IO ()
 microblockProc descriptor aMicroblockCh aValueChan aInfoCh = do
-    void $ C.forkIO $ forever $ do
-        aMicroblock <- readChan aMicroblockCh
-        addMicroblockToDB descriptor aMicroblock aInfoCh
-    forever $ do
-        aValue <- readChan aValueChan
-        addMacroblockToDB descriptor aValue aInfoCh
+    aChans <- newChan 128
+    startDBActor descriptor aMicroblockCh aValueChan aInfoCh aChans
 
 
 readNodeConfig :: IO NodeConfig
