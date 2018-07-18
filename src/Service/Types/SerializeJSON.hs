@@ -82,12 +82,30 @@ instance ToJSON TransactionInfo where
     , "index" .= _index t
     ]
 
+instance ToJSON MicroblockBD where
+  toJSON mb = object [
+      "keyBlock"            .= _keyBlock (mb :: MicroblockBD)
+    , "signBD"              .= _signBD (mb :: MicroblockBD)
+    , "publisher"           .= _publisher (mb :: MicroblockBD)
+    , "transactionsHashes"  .= _transactionsHashes (mb :: MicroblockBD)
+    ]
+
+instance FromJSON MicroblockBD where
+    parseJSON (Object aMsg) = do
+        aKeyBlock           <- aMsg .: "keyBlock"
+        aSignBd             <- aMsg .: "signBD"
+        aPublisher          <- aMsg .: "publisher"
+        aTransactionHashes  <- aMsg .: "transactionsHashes"
+        return $ MicroblockBD aKeyBlock aSignBd aPublisher aTransactionHashes
+
+    parseJSON _ = mzero
+
 instance FromJSON TransactionInfo where
   parseJSON (Object o) = TransactionInfo
     <$> o .: "tx"
     <*> o .: "block"
     <*> o .: "index"
-  parseJSON inv        = typeMismatch "TransactionInfo" inv 
+  parseJSON inv        = typeMismatch "TransactionInfo" inv
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [
