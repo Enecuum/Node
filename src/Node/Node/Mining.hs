@@ -78,7 +78,7 @@ networkNodeStart (_, aOutChan) aMd = do
                     aMsg@(MsgKeyBlock aKeyBlock) -> do
                         void $ tryWriteChan (aData^.valueChan) aKeyBlock
                         void $ C.forkIO $ forM_ (aData^.connects) $ \aNode -> when
-                            (aNode^.nodeType == All) $
+                            (aNode^.nodeType /= NN) $
                             writeInChan (aNode^.nodeChan) aMsg
 
                     a -> writeLog (aData^.logChan) [NetLvlTag] Info $  show a ++ " not a msg."
