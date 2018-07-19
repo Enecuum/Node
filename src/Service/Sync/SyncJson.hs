@@ -1,28 +1,28 @@
+{-# LANGUAGE DeriveGeneric            #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE DuplicateRecordFields    #-}
+{-# LANGUAGE GADTs                    #-}
 {-# LANGUAGE OverloadedStrings        #-}
 {-# LANGUAGE PackageImports           #-}
 {-# LANGUAGE ScopedTypeVariables      #-}
-{-# LANGUAGE GADTs                    #-}
-{-# LANGUAGE DeriveGeneric            #-}
 
 module Service.Sync.SyncJson where
 
-import           Data.Aeson
-import           Service.Types
-import           Service.Transaction.LedgerSync
-import qualified Data.ByteString.Internal              as BSI
-import qualified Data.ByteString.Char8                 as BS
-import qualified Data.Text                             as T
-import           GHC.Generics (Generic)
 import           Control.Monad
+import           Data.Aeson
+import qualified Data.ByteString.Char8          as BS
+import qualified Data.ByteString.Internal       as BSI
+import qualified Data.Text                      as T
+import           GHC.Generics                   (Generic)
+import           Service.Transaction.LedgerSync
+import           Service.Types
 --type HashOfKeyBlock = ByteString
-type HashOfMicroblock = BSI.ByteString
+-- type HashOfMicroblock = BSI.ByteString
 data MickroBlokContent = MickroBlokContent [MicroblockBD] [TransactionInfo] deriving (Show, Read, Generic)
 
 type LastNumber = Int
 type Count      = Int
-type Number     = Integer
+-- type Number     = Integer
 type SyncStatusMessage  = String
 type ErrorStringCode    = String
 

@@ -199,24 +199,24 @@ getNLastValues2 db n = runResourceT $ do
 
 getChainInfoDB :: DBPoolDescriptor -> InChan InfoMsg -> IO ChainInfo
 getChainInfoDB desc aInfoChan = do
-  (key,mb) <- getLastKeyBlock desc aInfoChan
-  tMacroblock2ChainInfo key mb
+  kv <- getLastKeyBlock desc aInfoChan
+  tMacroblock2ChainInfo kv
 
 
-getLastKeyBlock  :: DBPoolDescriptor -> InChan InfoMsg -> IO (Maybe DBKey, Maybe MacroblockBD)
+getLastKeyBlock  :: DBPoolDescriptor -> InChan InfoMsg -> IO (Maybe (DBKey,MacroblockBD))
 getLastKeyBlock desc aInfoChan = do
   -- print lastKeyBlock
   key <- funR (poolMacroblock desc) lastClosedKeyBlock
-  case key of Nothing -> return (Nothing, Nothing)
+  case key of Nothing -> return Nothing
               Just k  -> do
                 mByte <- funR (poolMacroblock desc) k
                 case mByte of Nothing -> do
                                 writeLog aInfoChan [BDTag] Error "No Key block "
-                                return (Just k, Nothing)
+                                return Nothing
                               Just j -> case (S.decode j :: Either String MacroblockBD) of
                                            Left e  -> throw (DecodeException (show e))
 
-                                           Right r -> return $ (Just k,Just r)
+                                           Right r -> return $ Just (k,r)
 
 
 getLastTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> IO [TransactionAPI]
@@ -422,9 +422,21 @@ tKeyBlockInfo2Macroblock (KeyBlockInfo {..}) = MacroblockBD {
             _teamKeys = []
           }
 
-tMacroblock2ChainInfo :: Maybe DBKey -> Maybe MacroblockBD -> IO ChainInfo
-tMacroblock2ChainInfo keyBlockHash m = do
-  case m of Nothing ->  return ChainInfo {
+tMacroblock2KeyBlockInfo :: MacroblockBD -> KeyBlockInfo
+tMacroblock2KeyBlockInfo (MacroblockBD {..}) = KeyBlockInfo {
+  _time     ,
+  _prev_hash = prev_hash,
+  _number   ,
+  _nonce    ,
+  _solver   }
+  where prev_hash = case _prevKBlock of Nothing -> ""
+                                        Just j  -> j
+
+
+tMacroblock2ChainInfo :: Maybe (DBKey, MacroblockBD) -> IO ChainInfo
+tMacroblock2ChainInfo kv = do
+  case kv of
+    Nothing ->  return ChainInfo {
     _emission        = 0,
     _curr_difficulty = 0,
     _last_block      = "",
@@ -432,10 +444,10 @@ tMacroblock2ChainInfo keyBlockHash m = do
     _txs_num         = 0,  -- quantity of all approved transactions
     _nodes_num       = 0   -- quantity of all active nodes
     }
-            Just (MacroblockBD {..})  -> return ChainInfo {
+    Just (keyBlockHash, (MacroblockBD {..}))  -> return ChainInfo {
     _emission        = _reward,
     _curr_difficulty = _difficulty,
-    _last_block      = fromJust keyBlockHash,
+    _last_block      = keyBlockHash,
     _blocks_num      = 0,
     _txs_num         = 0,  -- quantity of all approved transactions
     _nodes_num       = 0   -- quantity of all active nodes
