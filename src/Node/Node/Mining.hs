@@ -38,7 +38,7 @@ import qualified    Control.Concurrent as C
 import              Service.Sync.SyncJson
 
 
-networkNodeStart :: InChan SyncMessage -> (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()
+networkNodeStart :: InChan SyncEvent -> (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()
 networkNodeStart aSyncChan (_, aOutChan) aMd = do
     aDataMain <- readIORef aMd
     undead (writeLog (aDataMain^.logChan) [NetLvlTag] Warning "networkNodeStart. This node could be die!" )
@@ -69,7 +69,7 @@ networkNodeStart aSyncChan (_, aOutChan) aMd = do
                     aMsg@(MsgMsgTo _ (IdTo aId) aContent) -> do
                       if aId == toNodeId (aData^.nodeConfig.myNodeId)
                       then case fromJSON aContent of
-                          Success aSyncMsg -> writeInChan aSyncChan aSyncMsg
+                          Success aSyncMsg -> writeInChan aSyncChan $ SyncMsg aSyncMsg
                           A.Error _ -> return ()
                       else whenJust (aData^.connects.at aId) $ \aNode ->
                               void $ tryWriteChan (aNode^.nodeChan) aMsg

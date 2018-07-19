@@ -19,34 +19,67 @@ import Service.Transaction.Common (
     ,   addMicroblockToDB
   )
 
-data MicroBlockContent
+
 data MacroblockBD
+data TransactionInfo
+data MicroblockBD
+
 data HashOfMicroblock
-type To     = Number
-type From   = Number
-type Number = Integer
 data HashOfKeyBlock
+data MicroBlockContent = MicroBlockContent MicroblockBD [TransactionInfo]
+type Number = Integer
+type From = Number
+type To = Number
+data CommonData = CommonData {
+  db       :: DBPoolDescriptor,
+  infoChan :: InChan InfoMsg
+}
+
+myTail ::  CommonData -> IO (Number, HashOfKeyBlock)
+myTail = undefined
+
+peekNKeyBlocks :: CommonData -> From -> To -> IO [(Number, HashOfKeyBlock)]
+peekNKeyBlocks = undefined
+
+getKeyBlockSproutData :: CommonData -> From -> To -> IO [(Number, HashOfKeyBlock, MacroblockBD)]
+getKeyBlockSproutData = undefined
+
+isValidKeyBlockSprout :: CommonData -> (HashOfKeyBlock,MacroblockBD) -> IO Bool
+isValidKeyBlockSprout = undefined
+
+setKeyBlockSproutData :: CommonData -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
+setKeyBlockSproutData = undefined
+
+getRestSproutData :: CommonData -> HashOfMicroblock -> IO MicroBlockContent
+getRestSproutData = undefined
+
+isValidRestOfSprout :: CommonData -> MicroBlockContent -> IO Bool
+isValidRestOfSprout = undefined
+
+setRestSproutData :: CommonData -> MicroBlockContent -> IO ()
+setRestSproutData = undefined
+
+deleteSproutData      :: CommonData -> (Number, HashOfKeyBlock) -> IO ()
+deleteSproutData = undefined
 
 
 data MsgToDB where
-    KeyBlockMsgToDB :: Value -> MsgToDB
-    MicroblockMsgToDB :: Microblock -> MsgToDB
+    KeyBlockMsgToDB       :: Value -> MsgToDB
+    MicroblockMsgToDB     :: Microblock -> MsgToDB
 
-    MyTail :: MVar Number -> MsgToDB
-    GetHashOfLastClosedKeyBlock :: MVar (Maybe (HashOfKeyBlock, Number)) -> MsgToDB
-    PeekNPreviousClosedKeyBlocks :: Int -> Number -> MVar (Maybe [(HashOfKeyBlock, Number)]) -> MsgToDB
+    MyTail                :: MVar (Maybe (Number, HashOfKeyBlock)) -> MsgToDB
+    PeekNKeyBlocks        :: From -> To -> MVar (Maybe [(Number, HashOfKeyBlock)]) -> MsgToDB
+    GetKeyBlockSproutData :: From -> To -> MVar (Maybe [(Number, HashOfKeyBlock, MacroblockBD)])-> MsgToDB
+    SetKeyBlockSproutData :: [(HashOfKeyBlock, MacroblockBD)] -> MVar Bool -> MsgToDB
+    GetRestSproutData     :: HashOfMicroblock -> MVar (Maybe MicroBlockContent) -> MsgToDB
+    SetRestSproutData     :: MicroBlockContent -> MVar Bool -> MsgToDB
+    DeleteSproutData      :: (Number, HashOfKeyBlock) -> MsgToDB
 
-    GetKeyBlockSproutData :: From -> To -> MVar (Maybe [MacroblockBD])-> MsgToDB
-    SetKeyBlockSproutData :: [MacroblockBD] -> MVar Bool -> MsgToDB
-
-    GetRestSproutData :: [HashOfMicroblock] -> MVar (Maybe MicroBlockContent) -> MsgToDB
-    SetRestSproutData :: MicroBlockContent -> MVar Bool -> MsgToDB
-
-    SproutFullyTransfered :: MsgToDB
 
 startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) = do
     void . C.forkIO . forever . writeInChan aInChan . MicroblockMsgToDB =<< readChan aMicroblockCh
     void . C.forkIO . forever . writeInChan aInChan . KeyBlockMsgToDB =<< readChan aValueChan
+    let aData = CommonData descriptor aInfoCh
     forever $ readChan aOutChan >>= \case
         MicroblockMsgToDB aMicroblock ->
             addMicroblockToDB descriptor aMicroblock aInfoCh
@@ -55,71 +88,37 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) = d
             addMacroblockToDB descriptor aValue aInfoCh
 
         MyTail aMVar -> do
-            putMVar aMVar =<< myTail descriptor aInfoCh
-
-        GetHashOfLastClosedKeyBlock aMVar -> do
-            aRes <- try $ getHashOfLastClosedKeyBlock descriptor aInfoCh
+            aRes <- try $ myTail aData
             case aRes of
                 Right aJustRes              -> putMVar aMVar (Just aJustRes)
                 Left (_ :: SomeException)   -> putMVar aMVar Nothing
 
-        PeekNPreviousClosedKeyBlocks aInt aHashOfKeyBlock aMVar -> do
-            aRes <- try $ peekNPreviousClosedKeyBlocks descriptor aInfoCh aInt aHashOfKeyBlock
+        PeekNKeyBlocks aInt aHashOfKeyBlock aMVar -> do
+            aRes <- try $ peekNKeyBlocks aData aInt aHashOfKeyBlock
             case aRes of
                 Right aJustRes              -> putMVar aMVar (Just aJustRes)
                 Left (_ :: SomeException)   -> putMVar aMVar Nothing
 
         GetKeyBlockSproutData aFrom aTo aMVar -> do
-            aRes <- try $ getKeyBlockSproutData descriptor aInfoCh aFrom aTo
+            aRes <- try $ getKeyBlockSproutData aData aFrom aTo
             case aRes of
                 Right aJustRes              -> putMVar aMVar (Just aJustRes)
                 Left (_ :: SomeException)   -> putMVar aMVar Nothing
 
         SetKeyBlockSproutData aMacroblockBD aMVar -> do
-            aIsValid <- isValidKeyBlockSprout descriptor aInfoCh aMacroblockBD
-            when aIsValid $ setKeyBlockSproutData descriptor aInfoCh aMacroblockBD
-            putMVar aMVar aIsValid
+            aIsValid <- forM aMacroblockBD (isValidKeyBlockSprout aData)
+            when (and aIsValid) $ setKeyBlockSproutData aData aMacroblockBD
+            putMVar aMVar (and aIsValid)
 
         GetRestSproutData aMickroBlockHash aMVar -> do
-            aRes <- try $ getRestSproutData descriptor aInfoCh aMickroBlockHash
+            aRes <- try $ getRestSproutData aData aMickroBlockHash
             case aRes of
                 Right aJustRes              -> putMVar aMVar (Just aJustRes)
                 Left (_ :: SomeException)   -> putMVar aMVar Nothing
 
         SetRestSproutData aMicroBlockContent aMVar -> do
-            aIsValid <- isValidRestOfSprout descriptor aInfoCh aMicroBlockContent
-            when aIsValid $ setRestSproutData descriptor aInfoCh aMicroBlockContent
+            aIsValid <- isValidRestOfSprout aData aMicroBlockContent
+            when aIsValid $ setRestSproutData aData aMicroBlockContent
             putMVar aMVar aIsValid
 
-        SproutFullyTransfered -> sproutFullyTransfered descriptor aInfoCh
-
-
-myTail :: DBPoolDescriptor -> InChan InfoMsg -> IO Number
-myTail = undefined
-
-getHashOfLastClosedKeyBlock ::  DBPoolDescriptor -> InChan InfoMsg -> IO (HashOfKeyBlock, Number)
-getHashOfLastClosedKeyBlock = undefined
-
-peekNPreviousClosedKeyBlocks :: DBPoolDescriptor -> InChan InfoMsg -> Int -> Number -> IO [(HashOfKeyBlock, Number)]
-peekNPreviousClosedKeyBlocks = undefined
-
-setKeyBlockSproutData :: DBPoolDescriptor -> InChan InfoMsg -> [MacroblockBD] -> IO ()
-setKeyBlockSproutData = undefined
-
-getKeyBlockSproutData :: DBPoolDescriptor -> InChan InfoMsg -> From -> To -> IO [MacroblockBD]
-getKeyBlockSproutData = undefined
-
-getRestSproutData :: DBPoolDescriptor -> InChan InfoMsg -> [HashOfMicroblock] -> IO MicroBlockContent
-getRestSproutData = undefined
-
-setRestSproutData :: DBPoolDescriptor -> InChan InfoMsg -> MicroBlockContent  -> IO ()
-setRestSproutData = undefined
-
-isValidKeyBlockSprout :: DBPoolDescriptor -> InChan InfoMsg -> [MacroblockBD] -> IO Bool
-isValidKeyBlockSprout = undefined
-
-isValidRestOfSprout :: DBPoolDescriptor -> InChan InfoMsg -> MicroBlockContent -> IO Bool
-isValidRestOfSprout = undefined
-
-sproutFullyTransfered :: DBPoolDescriptor -> InChan InfoMsg -> IO ()
-sproutFullyTransfered = undefined
+        DeleteSproutData arg -> deleteSproutData aData arg
