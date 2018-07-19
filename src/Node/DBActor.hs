@@ -22,8 +22,8 @@ import Service.Transaction.Common (
 data MicroBlockContent
 data MacroblockBD
 data HashOfMicroblock
-data To
-data From
+type To     = Number
+type From   = Number
 type Number = Integer
 data HashOfKeyBlock
 
@@ -34,7 +34,7 @@ data MsgToDB where
 
     MyTail :: MVar Number -> MsgToDB
     GetHashOfLastClosedKeyBlock :: MVar (Maybe (HashOfKeyBlock, Number)) -> MsgToDB
-    PeekNPreviousClosedKeyBlocks :: Int -> HashOfKeyBlock -> MVar (Maybe [(HashOfKeyBlock, Number)]) -> MsgToDB
+    PeekNPreviousClosedKeyBlocks :: Int -> Number -> MVar (Maybe [(HashOfKeyBlock, Number)]) -> MsgToDB
 
     GetKeyBlockSproutData :: From -> To -> MVar (Maybe [MacroblockBD])-> MsgToDB
     SetKeyBlockSproutData :: [MacroblockBD] -> MVar Bool -> MsgToDB
@@ -100,7 +100,7 @@ myTail = undefined
 getHashOfLastClosedKeyBlock ::  DBPoolDescriptor -> InChan InfoMsg -> IO (HashOfKeyBlock, Number)
 getHashOfLastClosedKeyBlock = undefined
 
-peekNPreviousClosedKeyBlocks :: DBPoolDescriptor -> InChan InfoMsg -> Int -> HashOfKeyBlock -> IO [(HashOfKeyBlock, Number)]
+peekNPreviousClosedKeyBlocks :: DBPoolDescriptor -> InChan InfoMsg -> Int -> Number -> IO [(HashOfKeyBlock, Number)]
 peekNPreviousClosedKeyBlocks = undefined
 
 setKeyBlockSproutData :: DBPoolDescriptor -> InChan InfoMsg -> [MacroblockBD] -> IO ()

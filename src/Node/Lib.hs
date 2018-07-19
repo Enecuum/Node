@@ -121,6 +121,95 @@ connectManager _ _ aManagerChan aPortNumber aBNList aConnectsChan aMyNodeId inCh
             C.threadDelay 10000000
             aConnectLoop aBNList
 
+{-
+let MyNodeId aId = config^.myNodeId
+
+void $ C.forkIO $ connectManager aSyncChan aDBActorChan aIn (poaPort buildConf) bnList aInFileRequestChan (NodeId aId) inChanPending infoCh
+return managerChan
+
+
+--connectManager :: InChan MsgToCentralActor -> PortNumber -> [Connect] -> InChan FileActorRequest -> IO ()
+connectManager aSyncChan aDBActorChan aManagerChan aPortNumber aBNList aConnectsChan aMyNodeId inChanPending aInfoChan = do
+forM_ aBNList $ \(Connect aBNIp aBNPort) -> do
+    void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
+        WS.sendTextData aConnect . encode $ ActionAddToConnectList aPortNumber
+aConnectLoop aBNList True
+where
+aRequestOfPotencialConnects = \case -- IDEA: add random to BN list
+    (Connect aBNIp aBNPort):aTailOfList -> do
+        aPotencialConnectNumber <- takeRecords aConnectsChan NumberConnects
+        when (aPotencialConnectNumber == 0) $ do
+            void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
+                WS.sendTextData aConnect $ encode $ RequestPotentialConnects False
+                aMsg <- WS.receiveData aConnect
+                let ResponsePotentialConnects aConnects = fromJust $ decode aMsg
+                writeInChan aConnectsChan $ AddToFile aConnects
+            C.threadDelay s
+            aRequestOfPotencialConnects (aTailOfList ++ [Connect aBNIp aBNPort])
+    _       -> return ()
+
+aConnectLoop aBNList isFirstStart = do
+    aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
+    if null aActualConnects then do
+        aNumberOfConnects <- takeRecords aConnectsChan NumberConnects
+        when (aNumberOfConnects == 0) $ aRequestOfPotencialConnects aBNList
+        aConnects <- takeRecords aConnectsChan ReadRecordsFromFile
+        forM_ aConnects (connectToNN aConnectsChan aMyNodeId inChanPending aInfoChan aManagerChan)
+        -- start sprout client/server
+        C.threadDelay $ 2*s
+        {-
+        when isFirstStart $ void $ C.forkIO $
+            syncServer aSyncChan aDBActorChan aManagerChan
+-}
+        C.threadDelay $ 10*s
+        aConnectLoop aBNList False
+    else do
+        C.threadDelay $ 10*s
+        aConnectLoop aBNList False
+
+
+{-
+data SyncEvent where
+RestartSync ::                SyncEvent
+SyncMsg     :: SyncMessage -> SyncEvent
+-}
+syncServer syncChan aDBActorChan aManagerChan = undefined
+{-
+forever $
+readChan syncChan >>= \case
+RestartSync -> do
+  -- client algorythm
+  aConnects <- takeRecords aConnectsChan ReadRecordsFromFile
+  whriteInChan syncChan RequestTail
+
+
+SyncMsg aMsg -> case aMsg of
+    RequestTail                                 -> undefined
+    PeekKeyBlokRequest aFrom aTo                -> undefined
+    MicroblockRequest aHashOfMicroblock         -> undefined
+    PeekHashKblokRequest aCount aHashOfKeyBlock -> undefined
+    _ -> undefined
+-}
+{-
+--RequestTail           ::                                         undefined
+--ResponseTail          :: LastNumber     -> HashOfKeyBlock     -> undefined
+PeekKeyBlokRequest    :: From           -> To                 -> undefined
+PeekKeyBlokResponse   :: [MacroblockBD]                       -> undefined
+MicroblockRequest     :: [HashOfMicroblock]                   -> undefined
+MicroblockResponse    :: [MickroBlokContent]                  -> undefined
+PeekHashKblokRequest  :: Count          -> HashOfKeyBlock     -> undefined
+PeekHashKblokResponse   list                              -> undefined
+StatusSyncMessage     aSyncStatusMessage aErrorStringCode -> undefined
+
+-}
+
+s = 1000000
+
+
+
+-}
+
+
 -- мой ид
 -- чан для пендинга
 -- чан для логов

@@ -30,7 +30,8 @@ data SproutInfo = SproutInfo [MacroblockBD] [MicroblockBD] [TransactionInfo]
 createSprout :: DBPoolDescriptor -> InChan InfoMsg -> SproutInfo -> IO ()
 createSprout = undefined
 
-type From = Int
-type To = Int
+type From = Number
+type To = Number
+type Number = Integer
 getSprout :: DBPoolDescriptor -> InChan InfoMsg -> From -> To -> IO SproutInfo
 getSprout = undefined

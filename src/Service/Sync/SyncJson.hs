@@ -22,9 +22,9 @@ data MickroBlokContent = MickroBlokContent [MicroblockBD] [TransactionInfo] deri
 
 type LastNumber = Int
 type Count      = Int
-type Number     = Integer
 type SyncStatusMessage  = String
 type ErrorStringCode    = String
+
 
 data SyncMessage where
     RequestTail           ::                                         SyncMessage
@@ -37,6 +37,7 @@ data SyncMessage where
     PeekHashKblokResponse :: [(HashOfKeyBlock, Number)]           -> SyncMessage
     StatusSyncMessage     :: SyncStatusMessage -> ErrorStringCode -> SyncMessage
   deriving (Show)
+
 
 
 instance ToJSON SyncMessage where
