@@ -3,34 +3,87 @@
 module Service.Transaction.LedgerSync where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Exception
 import qualified Data.ByteString.Internal              as BSI
-import           Data.Maybe
+import qualified Data.HashTable.IO                     as H
 import           Service.InfoMsg                       (InfoMsg (..))
+import           Service.Transaction.Balance
 import           Service.Transaction.Storage
 import           Service.Types
 
-
-myTail :: DBPoolDescriptor -> InChan InfoMsg -> IO Integer
-myTail desc aInfoChan = do
-  (_,mb) <- getLastKeyBlock desc aInfoChan
-  let mbN = fromJust mb
-  let n = _number (mbN :: MacroblockBD)
-  return n
-
+type HashOfMicroblock = BSI.ByteString
 type HashOfKeyBlock = BSI.ByteString
-peekNPreviousClosedKeyBlocks :: DBPoolDescriptor -> InChan InfoMsg -> Int -> HashOfKeyBlock -> IO [HashOfKeyBlock]
-peekNPreviousClosedKeyBlocks = undefined
+data MicroBlockContent = MicroBlockContent [MicroblockBD] [TransactionInfo]
+type Number = Integer
+type From = Number
+type To = Number
 
-getFromDBMacroblocks :: DBPoolDescriptor -> InChan InfoMsg -> [HashOfKeyBlock] -> IO [MacroblockBD]
-getFromDBMacroblocks = undefined
 
--- canAppendChainToKeyBlock ::
-data SproutInfo = SproutInfo [MacroblockBD] [MicroblockBD] [TransactionInfo]
+type SproutTable = H.BasicHashTable Number [Maybe HashOfKeyBlock]
+data CommonData = CommonData {
+  db       :: DBPoolDescriptor,
+  infoChan :: InChan InfoMsg,
+  sprout   :: SproutTable}
 
-createSprout :: DBPoolDescriptor -> InChan InfoMsg -> SproutInfo -> IO ()
-createSprout = undefined
 
-type From = Int
-type To = Int
-getSprout :: DBPoolDescriptor -> InChan InfoMsg -> From -> To -> IO SproutInfo
-getSprout = undefined
+sproutTable :: IO SproutTable
+sproutTable = sproutT
+  where v1 = [Just (read "1" :: HashOfKeyBlock)]
+        v2 = [Just (read "2" :: HashOfKeyBlock)]
+        v3 = [Just (read "3" :: HashOfKeyBlock)]
+        kv = [(1, v1), (2, v2), (3, v3)]
+        sproutT = H.fromList kv
+
+-- H.lookup ht $ key
+-- H.insert ht key value
+
+myTail ::  DBPoolDescriptor -> InChan InfoMsg -> IO (HashOfKeyBlock, Number)
+myTail descr i = do
+  kv <- getLastKeyBlock descr i
+  case kv of
+    Nothing -> throw NoClosedKeyBlockInDB
+    Just (hashOfKeyBlock, mb)  -> do
+      let n =  _number (mb :: MacroblockBD)
+      return (hashOfKeyBlock, n)
+
+
+-- peekNPreviousClosedKeyBlocks :: CommonData -> Int -> HashOfKeyBlock -> IO [(HashOfKeyBlock, Number)]
+peekNPreviousKeyBlocks :: CommonData -> From -> To -> IO [(HashOfKeyBlock, Number)]
+peekNPreviousKeyBlocks c from to = do --undefined
+  let numbers = [from .. to]
+  st <- sproutTable
+  let kv = map (\n -> (H.lookup st n, n)) numbers
+        -- where hashOfKeyBlock n = fromJust (H.lookup st n)
+  return undefined
+
+getKeyBlockSproutData :: CommonData -> From -> To -> IO [(HashOfKeyBlock,MacroblockBD)]
+getKeyBlockSproutData = undefined
+
+
+isValidKeyBlockSprout :: CommonData -> [(HashOfKeyBlock,MacroblockBD)] -> IO Bool
+isValidKeyBlockSprout = undefined
+
+
+setKeyBlockSproutData :: CommonData -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
+setKeyBlockSproutData = undefined
+
+
+getRestSproutData :: CommonData -> HashOfMicroblock -> IO [MicroBlockContent]
+getRestSproutData = undefined
+
+
+isValidRestOfSprout :: CommonData -> [MicroBlockContent] -> IO Bool
+isValidRestOfSprout = undefined
+
+
+setRestSproutData :: CommonData -> [MicroBlockContent] -> IO ()
+setRestSproutData = undefined
+
+
+sproutFullyTransfered :: CommonData -> IO ()
+sproutFullyTransfered = undefined
+
+
+
+-------------------------
+-- tMacroblock2KeyBlockInfo
