@@ -77,9 +77,10 @@ instance FromJSON ByteString where
 
 instance ToJSON TransactionInfo where
   toJSON t = object [
-      "tx"    .= _tx (t :: TransactionInfo)
-    , "block" .= _block t
-    , "index" .= _index t
+      "tx"       .= _tx (t :: TransactionInfo)
+    , "block"    .= _block t
+    , "index"    .= _index t
+    , "accepted" .= _accepted t
     ]
 
 instance ToJSON MicroblockBD where
@@ -105,6 +106,7 @@ instance FromJSON TransactionInfo where
     <$> o .: "tx"
     <*> o .: "block"
     <*> o .: "index"
+    <*> o .: "accepted"
   parseJSON inv        = typeMismatch "TransactionInfo" inv
 
 instance ToJSON ECDSA.Signature where

@@ -245,9 +245,10 @@ instance Serialize TransactionAPI
 
 
 data TransactionInfo = TransactionInfo {
-     _tx    :: Transaction
-  ,  _block :: ByteString
-  ,  _index :: Int
+     _tx       :: Transaction
+  ,  _block    :: ByteString
+  ,  _index    :: Int
+  ,  _accepted :: Bool
   } deriving (Generic, Show, Eq, Read)
 instance Serialize TransactionInfo
 

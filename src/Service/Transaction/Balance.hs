@@ -63,10 +63,12 @@ getBalanceForKey db key = do
                     Right b -> return $ Just b
 
 
-updateBalanceTable :: BalanceTable -> IsStorno -> Transaction -> IO ()
-updateBalanceTable ht isStorno (Transaction fromKey toKey am _ _ _ _) = do
+updateBalanceTable :: DBPoolDescriptor -> BalanceTable -> IsStorno -> Transaction -> IO ()
+updateBalanceTable db ht isStorno t@(Transaction fromKey toKey am _ _ _ _) = do
   v1 <- H.lookup ht $ fromKey
   v2 <- H.lookup ht $ toKey
+  let tKey = rHashT t
+  txI <- getTransactionByHashDB db (Hash tKey)
   case (v1,v2) of
     (Nothing, _)       -> do return ()
     (_, Nothing)       -> do return ()
@@ -75,9 +77,15 @@ updateBalanceTable ht isStorno (Transaction fromKey toKey am _ _ _ _) = do
       then when ((balanceFrom - am) > 0) $ do
         H.insert ht fromKey (balanceFrom - am)
         H.insert ht toKey (balanceTo + am)
+        updateTxStatus tKey txI True
       else do --it is storno transaction
         H.insert ht fromKey (balanceFrom + am)
         H.insert ht toKey (balanceTo - am)
+        updateTxStatus tKey txI False
+  where
+     updateTxStatus tKey txI stat = case txI of
+         Nothing   -> throw DBTransactionException
+         Just info -> funW (poolTransaction db) [(tKey,  S.encode (info { _accepted = stat}))] 
 
 
 getBalanceOfKeys :: Pool Rocks.DB -> IsStorno -> [Transaction] -> IO BalanceTable
@@ -112,7 +120,7 @@ runLedger :: DBPoolDescriptor -> InChan InfoMsg -> IsStorno -> Microblock -> IO 
 runLedger db aInfoChan isStorno m = do
     let txs = _transactions m
     ht      <- getBalanceOfKeys (poolLedger db) isStorno txs
-    mapM_ (updateBalanceTable ht isStorno) txs
+    mapM_ (updateBalanceTable db ht isStorno) txs
     writeLedgerDB (poolLedger db) aInfoChan ht
 
 
@@ -239,7 +247,7 @@ writeMicroblockDB descr aInfoChan m = do
 writeTransactionDB :: DBPoolDescriptor -> InChan InfoMsg -> [Transaction] -> BC.ByteString -> IO ()
 writeTransactionDB descr aInfoChan txs hashOfMicroblock = do
   let db = poolTransaction descr
-      txInfo = \tx1 num -> TransactionInfo tx1 hashOfMicroblock num
+      txInfo = \tx1 num -> TransactionInfo tx1 hashOfMicroblock num False
       txKeyValue = map (\(t,n) -> (rHashT t , S.encode (txInfo t n)) ) (zip txs [1..])
   funW db txKeyValue
   writeLog aInfoChan [BDTag] Info ("Write Transactions to Transaction table")
