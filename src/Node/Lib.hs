@@ -13,6 +13,7 @@ import           Control.Exception
 import           Control.Monad
 import           PoA.Pending
 import           Node.DBActor
+import           Data.List.Extra
 
 import qualified Network.WebSockets                    as WS
 import           Data.Aeson                            as A
@@ -41,23 +42,7 @@ import           System.Environment
 import           PoA.Types
 import           Service.Sync.SyncJson
 
--- code examples:
--- http://book.realworldhaskell.org/read/sockets-and-syslog.html
--- docs:
--- https://github.com/ethereum/devp2p/blob/master/rlpx.md
--- https://github.com/ethereum/wiki/wiki/%C3%90%CE%9EVp2p-Wire-Protocol
--- https://www.stackage.org/haddock/lts-10.3/network-2.6.3.2/Network-Socket-ByteString.html
 
--- | Standart function to launch a node.
-{-
-startNode
-    :: DBPoolDescriptor
-    -> BuildConfig
-    -> InChan InfoMsg
-    -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ())
-    -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> OutChan (Transaction, MVar Bool) -> InChan Microblock -> MyNodeId -> InChan FileActorRequest -> IO ())
-    -> IO (InChan MsgToCentralActor, OutChan MsgToCentralActor)
--}
 startNode descrDB buildConf infoCh manager startDo = do
 
     --tmp
@@ -131,13 +116,116 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
             C.threadDelay $ 10 * sec
             aConnectLoop aBNList False
 
+takeMyTail :: InChan MsgToDB -> IO Number
+takeMyTail aDBActorChan =
+    takeRecords aDBActorChan MyTail >>= \case
+        Just (aNum, _)  -> return aNum
+        Nothing         -> return 0
+
+
+takeTailNum (Response _ (aNum, _)) = aNum
+
+
+findBeforeFork :: Number -> NodeId -> OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> IO Number
+findBeforeFork 0 _ _ _ _ = return 0
+findBeforeFork n aId outSyncChan aDBActorChan aManagerChan = do
+    sendMsgToNode aManagerChan (PeekHashKblokRequest n n) aId
+    let aTakePeek aId aChan = do
+            Response remoteNodeId aRes <- takePeekHashKblokResponse aChan
+            if aId == remoteNodeId then return aRes else aTakePeek aId aChan
+    [(_, aHash)]        <- aTakePeek aId outSyncChan
+    Just [(_, aMyHash)] <- takeRecords aDBActorChan (PeekNKeyBlocks n n)
+
+    if aHash == aMyHash
+    then return n
+    else findBeforeFork (n-1) aId outSyncChan aDBActorChan aManagerChan
+{-
+/home/al/eneecuum/Node/src/Node/Lib.hs:136:35: error:
+    • Couldn't match expected type ‘OutChan SyncEvent’
+                  with actual type ‘InChan MsgToDB’
+    • In the second argument of ‘aTakePeek’, namely ‘aDBActorChan’
+      In a stmt of a 'do' block:
+        [(_, aHash)] <- aTakePeek aId aDBActorChan
+      In the expression:
+        do sendMsgToNode aManagerChan (PeekHashKblokRequest n n) aId
+           let aTakePeek aId aChan = ...
+           [(_, aHash)] <- aTakePeek aId aDBActorChan
+           Just [(_, aMyHash)] <- takeRecords
+                                    aDBActorChan (PeekNKeyBlocks n n)
+           ....
+    |
+136 |     [(_, aHash)] <- aTakePeek aId aDBActorChan
+
+
+-}
+
+requestOfAllTails :: OutChan SyncEvent -> InChan MsgToCentralActor -> IO [Response (Number, Maybe HashOfKeyBlock)]
+requestOfAllTails outSyncChan aManagerChan = do
+    aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
+    forM_ aActualConnects $ \(ActualConnectInfo aNodeId aNodeType _) ->
+        when (aNodeType == NN) $ sendMsgToNode aManagerChan RequestTail aNodeId
+
+    -- FIXME: If somebody doesn't answer!!!
+    forM aActualConnects $ \_ -> takeResponseTail outSyncChan
+
+
+syncProcess :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> IO ()
+syncProcess outSyncChan aDBActorChan aManagerChan = do
+    allTails <- requestOfAllTails outSyncChan aManagerChan
+    aMyTail  <- takeMyTail        aDBActorChan
+    let maxTails = reverse $ sortOn takeTailNum allTails
+
+    let aId = undefined
+    lastCommonNumber <- findBeforeFork aMyTail aId outSyncChan aDBActorChan aManagerChan
+    undefined
+    -- закачивать хеши пачками, пока не найдём развилку.
+
+
+
+    {-
+    filter ((<) aMyTail . takeTailNum)
+
+    -}
+
+          -- взять список актуальных коннектов
+            -- 1. разослать запрос теил.
+                -- 2. выбрать 3 с наибольшим.
+                -- 3. в цикле синхронизироваться с каждым.
+            -- повторить 1.
+
+            --     GetHashOfLastClosedKeyBlock :: MVar (Maybe (HashOfKeyBlock, Number)) -> MsgToDB
+            {-
+            RequestTail           ::                                             SyncMessage
+            ResponseTail          :: (Number, HashOfKeyBlock)                 -> SyncMessage
+
+            PeekHashKblokRequest  :: From             -> To                   -> SyncMessage
+            PeekHashKblokResponse :: [(Number, HashOfKeyBlock)]               -> SyncMessage
+
+            PeekKeyBlokRequest    :: From             -> To                   -> SyncMessage
+            PeekKeyBlokResponse   :: [(Number, HashOfKeyBlock, MacroblockBD)] -> SyncMessage
+
+            MicroblockRequest     :: HashOfMicroblock                         -> SyncMessage
+            MicroblockResponse    :: MicroBlockContent                         -> SyncMessage
+            StatusSyncMessage     :: SyncStatusMessage -> ErrorStringCode     -> SyncMessage
+
+            -}
+
+            {-
+            PeekNKeyBlocks        :: From -> To -> MVar (Maybe [(Number, HashOfKeyBlock)]) -> MsgToDB
+            GetKeyBlockSproutData :: From -> To -> MVar (Maybe [(Number, HashOfKeyBlock, MacroblockBD)])-> MsgToDB
+            SetKeyBlockSproutData :: [(HashOfKeyBlock, MacroblockBD)] -> MVar Bool -> MsgToDB
+            GetRestSproutData     :: HashOfMicroblock -> MVar (Maybe MicroBlockContent) -> MsgToDB
+            SetRestSproutData     :: MicroBlockContent -> MVar Bool -> MsgToDB
+            DeleteSproutData      :: (Number, HashOfKeyBlock) -> MsgToDB
+
+            -}
+            -- мой ид
+            -- чан для пендинга
+            -- чан для логов
+
 syncServer syncChan@(inSyncChan, outSyncChan) aDBActorChan aManagerChan = forever $
   readChan outSyncChan >>= \case
-    RestartSync -> undefined {-do
-      -- client algorythm
-      aConnects <- takeRecords aConnectsChan ReadRecordsFromFile
-      whriteInChan syncChan RequestTail
-      -}
+    RestartSync -> syncProcess outSyncChan aDBActorChan aManagerChan
 
     SyncMsg aNodeId aMsg -> do
         let aSend amsg = sendMsgToNode aManagerChan amsg aNodeId
@@ -163,7 +251,6 @@ syncServer syncChan@(inSyncChan, outSyncChan) aDBActorChan aManagerChan = foreve
                     Nothing   -> aSend $ StatusSyncMessage ("No kblocks between " ++ show aFrom ++ " and " ++ show aTo)  "#004"
 
             _ -> aSend $ StatusSyncMessage ("Send command are not allowed for server")  "#005"
-
 
 
 sendMsgToNode aChan aMsg aId = writeInChan aChan $ SendMsgToNode (toJSON aMsg) (IdTo aId)
@@ -205,55 +292,12 @@ takePeekHashKblokResponse aChan = readChan aChan >>= \case
     _                 -> takePeekHashKblokResponse aChan
 
 
---     GetHashOfLastClosedKeyBlock :: MVar (Maybe (HashOfKeyBlock, Number)) -> MsgToDB
-{-
-RequestTail           ::                                             SyncMessage
-ResponseTail          :: (Number, HashOfKeyBlock)                 -> SyncMessage
-
-PeekHashKblokRequest  :: From             -> To                   -> SyncMessage
-PeekHashKblokResponse :: [(Number, HashOfKeyBlock)]               -> SyncMessage
-
-PeekKeyBlokRequest    :: From             -> To                   -> SyncMessage
-PeekKeyBlokResponse   :: [(Number, HashOfKeyBlock, MacroblockBD)] -> SyncMessage
-
-MicroblockRequest     :: HashOfMicroblock                         -> SyncMessage
-MicroblockResponse    :: MicroBlockContent                         -> SyncMessage
-StatusSyncMessage     :: SyncStatusMessage -> ErrorStringCode     -> SyncMessage
-
--}
-
-{-
-PeekNKeyBlocks        :: From -> To -> MVar (Maybe [(Number, HashOfKeyBlock)]) -> MsgToDB
-GetKeyBlockSproutData :: From -> To -> MVar (Maybe [(Number, HashOfKeyBlock, MacroblockBD)])-> MsgToDB
-SetKeyBlockSproutData :: [(HashOfKeyBlock, MacroblockBD)] -> MVar Bool -> MsgToDB
-GetRestSproutData     :: HashOfMicroblock -> MVar (Maybe MicroBlockContent) -> MsgToDB
-SetRestSproutData     :: MicroBlockContent -> MVar Bool -> MsgToDB
-DeleteSproutData      :: (Number, HashOfKeyBlock) -> MsgToDB
-
--}
--- мой ид
--- чан для пендинга
--- чан для логов
 
 takeRecords aChan aTaker  = do
     aVar <- newEmptyMVar
     writeInChan aChan $ aTaker aVar
     takeMVar aVar
 
-{-
-
-СН - сетевая нода.
-БН - бут нода
-АК - актуальный коннект
-ПК - потенциальный коннект
-
-1. Убедиться в отсутствии АК к СН, если уже есть, то закончить.
-2. Убедиться в отсутствии ПК к СН.
-3. Запросить список ПК к СН у БН.
-4. Протестировать список ПК к СН (попытка установить соединение).
-5. => 1.
-
--}
 
 connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aConn@(Connect aIp aPort)= do
     aOk <- try $ runClient (showHostAddress aIp) (fromEnum aPort) "/" $ \aConnect -> do
@@ -296,9 +340,6 @@ readBootNodeList conf = do
      where
        toNormForm aList = return $ (\(b,c) -> Connect (tupleToHostAddress b) c)
           <$> aList
-
----
-
 
 
 mergeMBlocks :: [Microblock] -> [Microblock] -> [Microblock] -- new old result
