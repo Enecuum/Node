@@ -45,8 +45,14 @@ data MsgToDB where
     SproutFullyTransfered :: MsgToDB
 
 startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) = do
-    void . C.forkIO . forever . writeInChan aInChan . MicroblockMsgToDB =<< readChan aMicroblockCh
-    void . C.forkIO . forever . writeInChan aInChan . KeyBlockMsgToDB =<< readChan aValueChan
+    void . C.forkIO . forever $ do
+        aVal <- readChan aMicroblockCh
+        writeInChan aInChan $ MicroblockMsgToDB aVal
+
+    void . C.forkIO . forever $ do
+        aVal <- readChan aValueChan
+        writeInChan aInChan $ KeyBlockMsgToDB aVal
+
     forever $ readChan aOutChan >>= \case
         MicroblockMsgToDB aMicroblock ->
             addMicroblockToDB descriptor aMicroblock aInfoCh
