@@ -35,7 +35,7 @@ import           Control.Concurrent.Async
 import           Service.Transaction.Common            (DBPoolDescriptor (..),
                                                         addMacroblockToDB,
                                                         addMicroblockToDB)
-import           Service.Types                         (Microblock, Transaction)
+import           Service.Types                         (Microblock, Transaction, MacroblockBD)
 import           System.Directory                      (createDirectoryIfMissing)
 import           System.Environment
 import           PoA.Types
@@ -173,29 +173,36 @@ data Response a = Response NodeId a
 takeResponseTail :: OutChan SyncEvent -> IO (Response (Number, Maybe HashOfKeyBlock))
 takeResponseTail aChan = readChan aChan >>= \case
     SyncMsg aId aMsg  -> case aMsg of
-        ResponseTail (aNum, aHash)  -> return (aId, (aNum,Just aHash))
-        StatusSyncMessage _ "#001"  -> return (aId, (0, Nothing))
+        ResponseTail (aNum, aHash)  -> return $ Response aId (aNum,Just aHash)
+        StatusSyncMessage _ "#001"  -> return $ Response aId (0, Nothing)
         _                           -> takeResponseTail aChan
     _                 -> takeResponseTail aChan
 
 takePeekKeyBlokResponse     :: OutChan SyncEvent -> IO (Response [(Number, HashOfKeyBlock, MacroblockBD)])
 takePeekKeyBlokResponse aChan = readChan aChan >>= \case
     SyncMsg aId aMsg  -> case aMsg of
-        _ -> takePeekKeyBlokResponse aChan
-    _ -> takePeekKeyBlokResponse aChan
+        PeekKeyBlokResponse aList  -> return $ Response aId aList
+        StatusSyncMessage _ "#002" -> return $ Response aId []
+        _                          -> takePeekKeyBlokResponse aChan
+    _                 -> takePeekKeyBlokResponse aChan
 
 takeMicroblockResponse      :: OutChan SyncEvent -> IO (Response (Maybe MicroBlockContent))
 takeMicroblockResponse aChan = readChan aChan >>= \case
     SyncMsg aId aMsg  -> case aMsg of
-        _ -> takeMicroblockResponse aChan
-    _ -> takeMicroblockResponse aChan
+
+      MicroblockResponse aContent -> return $ Response aId (Just aContent)
+      StatusSyncMessage _ "#003"  -> return $ Response aId Nothing
+      _                           -> takeMicroblockResponse aChan
+    _                 -> takeMicroblockResponse aChan
 
 
 takePeekHashKblokResponse   :: OutChan SyncEvent -> IO (Response [(Number, HashOfKeyBlock)])
 takePeekHashKblokResponse aChan = readChan aChan >>= \case
     SyncMsg aId aMsg  -> case aMsg of
-        _ -> takePeekHashKblokResponse aChan
-    _ -> takePeekHashKblokResponse aChan
+        PeekHashKblokResponse aList -> return $ Response aId aList
+        StatusSyncMessage _ "#004"  -> return $ Response aId []
+        _                           -> takePeekHashKblokResponse aChan
+    _                 -> takePeekHashKblokResponse aChan
 
 
 --     GetHashOfLastClosedKeyBlock :: MVar (Maybe (HashOfKeyBlock, Number)) -> MsgToDB
