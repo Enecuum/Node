@@ -44,7 +44,7 @@ getKeyBlockSproutData = undefined
 isValidKeyBlockSprout :: CommonData -> (HashOfKeyBlock, MacroblockBD) -> IO Bool
 isValidKeyBlockSprout = undefined
 
-setKeyBlockSproutData :: CommonData -> [(HashOfKeyBlock, MacroblockBD)] -> IO ()
+setKeyBlockSproutData :: CommonData -> [(Number, HashOfKeyBlock, MacroblockBD)] -> IO ()
 setKeyBlockSproutData = undefined
 
 getRestSproutData :: CommonData -> HashOfMicroblock -> IO MicroBlockContent
@@ -68,9 +68,9 @@ data MsgToDB where
     MicroblockMsgToDB     :: Microblock -> MsgToDB
 
     MyTail                :: MVar (Maybe (Number, HashOfKeyBlock)) -> MsgToDB
-    PeekNKeyBlocks        :: From -> To -> MVar (Maybe [(Number, HashOfKeyBlock)]) -> MsgToDB
-    GetKeyBlockSproutData :: From -> To -> MVar (Maybe [(Number, HashOfKeyBlock, MacroblockBD)])-> MsgToDB
-    SetKeyBlockSproutData :: [(HashOfKeyBlock, MacroblockBD)] -> MVar Bool -> MsgToDB
+    PeekNKeyBlocks        :: From -> To -> MVar [(Number, HashOfKeyBlock)] -> MsgToDB
+    GetKeyBlockSproutData :: From -> To -> MVar [(Number, HashOfKeyBlock, MacroblockBD)]-> MsgToDB
+    SetKeyBlockSproutData :: [(Number, HashOfKeyBlock, MacroblockBD)] -> MVar Bool -> MsgToDB
     GetRestSproutData     :: HashOfMicroblock -> MVar (Maybe MicroBlockContent) -> MsgToDB
     SetRestSproutData     :: MicroBlockContent -> MVar Bool -> MsgToDB
     DeleteSproutData      :: (Number, HashOfKeyBlock) -> MsgToDB
@@ -102,19 +102,14 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) = d
                 Left (_ :: SomeException)   -> putMVar aMVar Nothing
 
         PeekNKeyBlocks aInt aHashOfKeyBlock aMVar -> do
-            aRes <- try $ peekNPreviousKeyBlocks aData aInt aHashOfKeyBlock
-            case aRes of
-                Right aJustRes              -> putMVar aMVar (Just aJustRes)
-                Left (_ :: SomeException)   -> putMVar aMVar Nothing
+            peekNPreviousKeyBlocks aData aInt aHashOfKeyBlock >>= putMVar aMVar
 
         GetKeyBlockSproutData aFrom aTo aMVar -> do
-            aRes <- try $ getKeyBlockSproutData aData aFrom aTo
-            case aRes of
-                Right aJustRes              -> putMVar aMVar (Just aJustRes)
-                Left (_ :: SomeException)   -> putMVar aMVar Nothing
+            getKeyBlockSproutData aData aFrom aTo >>= putMVar aMVar
+
 
         SetKeyBlockSproutData aMacroblockBD aMVar -> do
-            aIsValid <- forM aMacroblockBD (isValidKeyBlockSprout aData)
+            aIsValid <- forM aMacroblockBD (isValidKeyBlockSprout aData.toPair2)
             when (and aIsValid) $ setKeyBlockSproutData aData aMacroblockBD
             putMVar aMVar (and aIsValid)
 
@@ -131,3 +126,11 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) = d
 
         DeleteSproutData arg -> deleteSproutData aData arg
         SetSproutAsMain arg -> setSproutAsMain aData arg
+
+
+--
+toPair1 :: (a, b, c) -> (a, b)
+toPair1 (a, b, _) = (a, b)
+
+toPair2 :: (a, b, c) -> (b, c)
+toPair2 (_, b, c) = (b, c)

@@ -116,6 +116,7 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
             C.threadDelay $ 10 * sec
             aConnectLoop aBNList False
 
+-- найти длинну своей цепочки
 takeMyTail :: InChan MsgToDB -> IO Number
 takeMyTail aDBActorChan =
     takeRecords aDBActorChan MyTail >>= \case
@@ -127,6 +128,7 @@ takeTailNum :: Response (Number, a) -> Number
 takeTailNum (Response _ (aNum, _)) = aNum
 
 
+-- нойти номер последнего общего блока
 findBeforeFork :: Number -> NodeId -> OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> IO Number
 findBeforeFork 0 _ _ _ _ = return 0
 findBeforeFork n aId outSyncChan aDBActorChan aManagerChan = do
@@ -134,14 +136,17 @@ findBeforeFork n aId outSyncChan aDBActorChan aManagerChan = do
     let aTakePeek aId aChan = do
             Response remoteNodeId aRes <- takePeekHashKblokResponse aChan
             if aId == remoteNodeId then return aRes else aTakePeek aId aChan
-    [(_, aHash)]        <- aTakePeek aId outSyncChan
-    Just [(_, aMyHash)] <- takeRecords aDBActorChan (PeekNKeyBlocks n n)
+    [(_, aHash)]   <- aTakePeek aId outSyncChan
+    [(_, aMyHash)] <- takeRecords aDBActorChan (PeekNKeyBlocks n n)
 
     if aHash == aMyHash
     then return n
     else findBeforeFork (n-1) aId outSyncChan aDBActorChan aManagerChan
 
 
+
+
+-- загрузить длинны всех цепочек у соседей
 requestOfAllTails :: OutChan SyncEvent -> InChan MsgToCentralActor -> IO [Response (Number, Maybe HashOfKeyBlock)]
 requestOfAllTails outSyncChan aManagerChan = do
     aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
@@ -151,34 +156,37 @@ requestOfAllTails outSyncChan aManagerChan = do
     -- FIXME: If somebody doesn't answer!!!
     forM aActualConnects $ \_ -> takeResponseTail outSyncChan
 
+-- загрузить микроблоки
+loadMicrBlocks
+    ::  OutChan SyncEvent
+    ->  InChan MsgToDB
+    ->  InChan MsgToCentralActor
+    ->  (Number, HashOfKeyBlock, MacroblockBD)
+    ->  [(Number, HashOfKeyBlock, MacroblockBD)]
+    ->  NodeId
+    ->  IO Bool
+loadMicrBlocks = undefined
 
-loadBlocks :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> From -> To -> NodeId -> IO ()
-loadBlocks outSyncChan aDBActorChan aManagerChan aFrom aTo aId = do
+
+-- загрузить блоки
+loadBlocks :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> [(Number, HashOfKeyBlock, MacroblockBD)] -> From -> To -> NodeId -> IO Bool
+loadBlocks outSyncChan aDBActorChan aManagerChan [aHash] aFrom aTo aId = do
     sendMsgToNode aManagerChan (PeekKeyBlokRequest aFrom aTo) aId
     let aTake = do
             Response aNodeId aList <- takePeekKeyBlokResponse outSyncChan
             if aNodeId /= aId then return aList else aTake
     aListOfBlocks <- aTake
-    aOk <- takeRecords aDBActorChan (SetKeyBlockSproutData (toPair2 <$> aListOfBlocks))
-    if not aOk then writeInChan aDBActorChan $ DeleteSproutData undefined
-      --deleteSproutData      :: CommonData -> (Number, HashOfKeyBlock) -> IO ()   -- Number - развилка
+    aOk <- takeRecords aDBActorChan (SetKeyBlockSproutData aListOfBlocks)
+    if not aOk then do
+        writeInChan aDBActorChan $ DeleteSproutData (toPair1 aHash)
+        return False
     else do
-        undefined
-
-{-
-DeleteSproutData      :: (Number, HashOfKeyBlock) -> MsgToDB
-SetSproutAsMain       :: (Number, HashOfKeyBlock) -> MsgToDB
--}
-
-toPair1 :: (a, b, c) -> (a, b)
-toPair1 (a, b, c) = (a, b)
-
-toPair2 :: (a, b, c) -> (b, c)
-toPair2 (a, b, c) = (b, c)
+        loadMicrBlocks outSyncChan aDBActorChan aManagerChan aHash aListOfBlocks aId
 
 
 --  SetKeyBlockSproutData :: [(HashOfKeyBlock, MacroblockBD)] -> MVar Bool -> MsgToDB
 -- [(Number, HashOfKeyBlock, MacroblockBD)]
+
 
 syncProcess :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> IO ()
 syncProcess outSyncChan aDBActorChan aManagerChan = do
@@ -189,10 +197,12 @@ syncProcess outSyncChan aDBActorChan aManagerChan = do
     let aId = undefined
     let maxTialNumber = undefined
     lastCommonNumber <- findBeforeFork aMyTail aId outSyncChan aDBActorChan aManagerChan
-    loadBlocks outSyncChan aDBActorChan aManagerChan lastCommonNumber maxTialNumber aId
+    aDiffBlock <- takeRecords aDBActorChan (GetKeyBlockSproutData (lastCommonNumber+1) (lastCommonNumber+1))
+    loadBlocks outSyncChan aDBActorChan aManagerChan aDiffBlock lastCommonNumber maxTialNumber aId
+    return ()
 
-
-
+-- достройка
+-- переписывание
     {-
     filter ((<) aMyTail . takeTailNum)
 
@@ -247,9 +257,8 @@ syncServer syncChan@(inSyncChan, outSyncChan) aDBActorChan aManagerChan = foreve
                     Nothing     -> aSend $ StatusSyncMessage "Empty tail" "#001"
 
             PeekKeyBlokRequest aFrom aTo                -> do
-                takeRecords aDBActorChan (GetKeyBlockSproutData aFrom aTo) >>= \case
-                    Just aKeyBlocks -> aSend $ PeekKeyBlokResponse aKeyBlocks
-                    Nothing         -> aSend $ StatusSyncMessage ("No kblocks between " ++ show aFrom ++ " and " ++ show aTo)  "#002"
+                takeRecords aDBActorChan (GetKeyBlockSproutData aFrom aTo) >>=
+                    aSend . PeekKeyBlokResponse
 
             MicroblockRequest aHash         -> do
                 takeRecords aDBActorChan (GetRestSproutData aHash) >>= \case
@@ -257,9 +266,9 @@ syncServer syncChan@(inSyncChan, outSyncChan) aDBActorChan aManagerChan = foreve
                   Nothing     -> aSend $ StatusSyncMessage ("No block with this hash " ++ show aHash ++ " in DB")  "#003"
 
             PeekHashKblokRequest aFrom aTo -> do
-                takeRecords aDBActorChan (PeekNKeyBlocks aFrom aTo) >>= \case
-                    Just  aList -> aSend $ PeekHashKblokResponse aList
-                    Nothing   -> aSend $ StatusSyncMessage ("No kblocks between " ++ show aFrom ++ " and " ++ show aTo)  "#004"
+                takeRecords aDBActorChan (PeekNKeyBlocks aFrom aTo) >>=
+                    aSend . PeekHashKblokResponse
+
 
             _ -> aSend $ StatusSyncMessage ("Send command are not allowed for server")  "#005"
 

@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE StandaloneDeriving        #-}
+{-# LANGUAGE TemplateHaskell           #-}
 
 module Service.Types where
 
@@ -19,6 +20,7 @@ import           Data.List.Split                    (splitOn)
 import           Data.Serialize
 import           GHC.Generics
 import           Service.Types.PublicPrivateKeyPair
+import              Lens.Micro.TH
 
 data CLIException = WrongKeyOwnerException
                   | NotImplementedException -- test
@@ -137,6 +139,8 @@ data MacroblockBD = MacroblockBD {
   } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize MacroblockBD
 
+
+
 -- from PoW
 data KeyBlockInfo = KeyBlockInfo {
     _time      :: Integer
@@ -158,6 +162,7 @@ data Transaction = Transaction {
   _uuid      :: Int
 } deriving ( Generic, Show, Eq, Ord, Read)
 
+makeLenses ''MacroblockBD
 
 instance Serialize Transaction
 
