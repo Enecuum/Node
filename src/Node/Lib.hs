@@ -123,6 +123,7 @@ takeMyTail aDBActorChan =
         Nothing         -> return 0
 
 
+takeTailNum :: Response (Number, a) -> Number
 takeTailNum (Response _ (aNum, _)) = aNum
 
 
@@ -139,25 +140,7 @@ findBeforeFork n aId outSyncChan aDBActorChan aManagerChan = do
     if aHash == aMyHash
     then return n
     else findBeforeFork (n-1) aId outSyncChan aDBActorChan aManagerChan
-{-
-/home/al/eneecuum/Node/src/Node/Lib.hs:136:35: error:
-    • Couldn't match expected type ‘OutChan SyncEvent’
-                  with actual type ‘InChan MsgToDB’
-    • In the second argument of ‘aTakePeek’, namely ‘aDBActorChan’
-      In a stmt of a 'do' block:
-        [(_, aHash)] <- aTakePeek aId aDBActorChan
-      In the expression:
-        do sendMsgToNode aManagerChan (PeekHashKblokRequest n n) aId
-           let aTakePeek aId aChan = ...
-           [(_, aHash)] <- aTakePeek aId aDBActorChan
-           Just [(_, aMyHash)] <- takeRecords
-                                    aDBActorChan (PeekNKeyBlocks n n)
-           ....
-    |
-136 |     [(_, aHash)] <- aTakePeek aId aDBActorChan
 
-
--}
 
 requestOfAllTails :: OutChan SyncEvent -> InChan MsgToCentralActor -> IO [Response (Number, Maybe HashOfKeyBlock)]
 requestOfAllTails outSyncChan aManagerChan = do
@@ -169,6 +152,34 @@ requestOfAllTails outSyncChan aManagerChan = do
     forM aActualConnects $ \_ -> takeResponseTail outSyncChan
 
 
+loadBlocks :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> From -> To -> NodeId -> IO ()
+loadBlocks outSyncChan aDBActorChan aManagerChan aFrom aTo aId = do
+    sendMsgToNode aManagerChan (PeekKeyBlokRequest aFrom aTo) aId
+    let aTake = do
+            Response aNodeId aList <- takePeekKeyBlokResponse outSyncChan
+            if aNodeId /= aId then return aList else aTake
+    aListOfBlocks <- aTake
+    aOk <- takeRecords aDBActorChan (SetKeyBlockSproutData (toPair2 <$> aListOfBlocks))
+    if not aOk then writeInChan aDBActorChan $ DeleteSproutData undefined
+      --deleteSproutData      :: CommonData -> (Number, HashOfKeyBlock) -> IO ()   -- Number - развилка
+    else do
+        undefined
+
+{-
+DeleteSproutData      :: (Number, HashOfKeyBlock) -> MsgToDB
+SetSproutAsMain       :: (Number, HashOfKeyBlock) -> MsgToDB
+-}
+
+toPair1 :: (a, b, c) -> (a, b)
+toPair1 (a, b, c) = (a, b)
+
+toPair2 :: (a, b, c) -> (b, c)
+toPair2 (a, b, c) = (b, c)
+
+
+--  SetKeyBlockSproutData :: [(HashOfKeyBlock, MacroblockBD)] -> MVar Bool -> MsgToDB
+-- [(Number, HashOfKeyBlock, MacroblockBD)]
+
 syncProcess :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> IO ()
 syncProcess outSyncChan aDBActorChan aManagerChan = do
     allTails <- requestOfAllTails outSyncChan aManagerChan
@@ -176,9 +187,9 @@ syncProcess outSyncChan aDBActorChan aManagerChan = do
     let maxTails = reverse $ sortOn takeTailNum allTails
 
     let aId = undefined
+    let maxTialNumber = undefined
     lastCommonNumber <- findBeforeFork aMyTail aId outSyncChan aDBActorChan aManagerChan
-    undefined
-    -- закачивать хеши пачками, пока не найдём развилку.
+    loadBlocks outSyncChan aDBActorChan aManagerChan lastCommonNumber maxTialNumber aId
 
 
 
@@ -293,6 +304,7 @@ takePeekHashKblokResponse aChan = readChan aChan >>= \case
 
 
 
+takeRecords :: InChan a -> (MVar p -> a) -> IO p
 takeRecords aChan aTaker  = do
     aVar <- newEmptyMVar
     writeInChan aChan $ aTaker aVar
