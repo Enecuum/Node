@@ -10,44 +10,41 @@ import Control.Concurrent.Chan.Unagi.Bounded
 import qualified Control.Concurrent as C
 import Control.Concurrent.MVar
 import Data.Aeson
+
+import qualified Data.ByteString as B
 import Control.Monad
-import Service.Types (Microblock)
+import Service.Types (Microblock, MacroblockBD)
 import Service.Chan
+import Service.Sync.SyncJson
+import Service.Transaction.LedgerSync hiding (myTail, HashOfKeyBlock)
 import Service.Transaction.Common (
         DBPoolDescriptor (..)
     ,   addMacroblockToDB
     ,   addMicroblockToDB
   )
 
+data CommonData = CommonData {
+    db       :: DBPoolDescriptor,
+    infoChan :: InChan InfoMsg
+  }
 
-data MacroblockBD
+
 data TransactionInfo
 data MicroblockBD
-
-data HashOfMicroblock
-data HashOfKeyBlock
-data MicroBlockContent = MicroBlockContent MicroblockBD [TransactionInfo]
-type Number = Integer
-type From = Number
-type To = Number
-data CommonData = CommonData {
-  db       :: DBPoolDescriptor,
-  infoChan :: InChan InfoMsg
-}
 
 myTail ::  CommonData -> IO (Number, HashOfKeyBlock)
 myTail = undefined
 
-peekNKeyBlocks :: CommonData -> From -> To -> IO [(Number, HashOfKeyBlock)]
-peekNKeyBlocks = undefined
+peekNPreviousKeyBlocks :: CommonData -> From -> To -> IO [(Number, HashOfKeyBlock)]
+peekNPreviousKeyBlocks = undefined
 
 getKeyBlockSproutData :: CommonData -> From -> To -> IO [(Number, HashOfKeyBlock, MacroblockBD)]
 getKeyBlockSproutData = undefined
 
-isValidKeyBlockSprout :: CommonData -> (HashOfKeyBlock,MacroblockBD) -> IO Bool
+isValidKeyBlockSprout :: CommonData -> (HashOfKeyBlock, MacroblockBD) -> IO Bool
 isValidKeyBlockSprout = undefined
 
-setKeyBlockSproutData :: CommonData -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
+setKeyBlockSproutData :: CommonData -> [(HashOfKeyBlock, MacroblockBD)] -> IO ()
 setKeyBlockSproutData = undefined
 
 getRestSproutData :: CommonData -> HashOfMicroblock -> IO MicroBlockContent
@@ -62,6 +59,9 @@ setRestSproutData = undefined
 deleteSproutData      :: CommonData -> (Number, HashOfKeyBlock) -> IO ()
 deleteSproutData = undefined
 
+setSproutAsMain       :: CommonData -> (Number, HashOfKeyBlock) -> IO ()
+setSproutAsMain = undefined
+
 
 data MsgToDB where
     KeyBlockMsgToDB       :: Value -> MsgToDB
@@ -74,8 +74,16 @@ data MsgToDB where
     GetRestSproutData     :: HashOfMicroblock -> MVar (Maybe MicroBlockContent) -> MsgToDB
     SetRestSproutData     :: MicroBlockContent -> MVar Bool -> MsgToDB
     DeleteSproutData      :: (Number, HashOfKeyBlock) -> MsgToDB
+    SetSproutAsMain       :: (Number, HashOfKeyBlock) -> MsgToDB
 
 
+startDBActor
+    ::  DBPoolDescriptor
+    ->  OutChan Microblock
+    ->  OutChan Value
+    ->  InChan InfoMsg
+    ->  (InChan MsgToDB, OutChan MsgToDB)
+    ->  IO b
 startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) = do
     void . C.forkIO . forever . writeInChan aInChan . MicroblockMsgToDB =<< readChan aMicroblockCh
     void . C.forkIO . forever . writeInChan aInChan . KeyBlockMsgToDB =<< readChan aValueChan
@@ -94,7 +102,7 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) = d
                 Left (_ :: SomeException)   -> putMVar aMVar Nothing
 
         PeekNKeyBlocks aInt aHashOfKeyBlock aMVar -> do
-            aRes <- try $ peekNKeyBlocks aData aInt aHashOfKeyBlock
+            aRes <- try $ peekNPreviousKeyBlocks aData aInt aHashOfKeyBlock
             case aRes of
                 Right aJustRes              -> putMVar aMVar (Just aJustRes)
                 Left (_ :: SomeException)   -> putMVar aMVar Nothing
@@ -122,3 +130,4 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) = d
             putMVar aMVar aIsValid
 
         DeleteSproutData arg -> deleteSproutData aData arg
+        SetSproutAsMain arg -> setSproutAsMain aData arg

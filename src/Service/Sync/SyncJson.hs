@@ -16,9 +16,15 @@ import qualified Data.ByteString.Char8                 as BS
 import qualified Data.Text                             as T
 import           GHC.Generics (Generic)
 import           Control.Monad
---type HashOfKeyBlock = ByteString
-type HashOfMicroblock = BSI.ByteString
-data MicroBlokContent = MicroBlokContent [MicroblockBD] [TransactionInfo] deriving (Show, Read, Generic)
+import           Node.Data.Key
+
+type HashOfKeyBlock    = BSI.ByteString
+type HashOfMicroblock  = BSI.ByteString
+data MicroBlockContent = MicroBlockContent [MicroblockBD] [TransactionInfo] deriving (Show, Read, Generic)
+
+type From   = Number
+type To     = Number
+type Number = Integer
 
 type LastNumber = Int
 type Count      = Int
@@ -26,8 +32,8 @@ type SyncStatusMessage  = String
 type ErrorStringCode    = String
 
 data SyncEvent where
-    RestartSync ::                SyncEvent
-    SyncMsg     :: SyncMessage -> SyncEvent
+    RestartSync ::                          SyncEvent
+    SyncMsg     :: NodeId -> SyncMessage -> SyncEvent
 
 data SyncMessage where
     RequestTail           ::                                             SyncMessage
@@ -37,7 +43,7 @@ data SyncMessage where
     PeekKeyBlokRequest    :: From             -> To                   -> SyncMessage
     PeekKeyBlokResponse   :: [(Number, HashOfKeyBlock, MacroblockBD)] -> SyncMessage
     MicroblockRequest     :: HashOfMicroblock                         -> SyncMessage
-    MicroblockResponse    :: MicroBlokContent                         -> SyncMessage
+    MicroblockResponse    :: MicroBlockContent                        -> SyncMessage
     StatusSyncMessage     :: SyncStatusMessage -> ErrorStringCode     -> SyncMessage
   deriving (Show)
 
@@ -134,17 +140,17 @@ instance FromJSON SyncMessage where
 
     parseJSON _ = mzero -- error $ show a
 
-instance ToJSON MicroBlokContent where
-  toJSON (MicroBlokContent aMicroblocksBD aTransactionsInfo) = object [
+instance ToJSON MicroBlockContent where
+  toJSON (MicroBlockContent aMicroblocksBD aTransactionsInfo) = object [
       "micro_block"   .= aMicroblocksBD,
       "transaction_info" .= aTransactionsInfo
     ]
 
-instance FromJSON MicroBlokContent where
+instance FromJSON MicroBlockContent where
     parseJSON (Object mbc) = do
         aMicroblocksBD    <- mbc .: "micro_block"
         aTransactionsInfo <-  mbc .: "transaction_info"
-        return $ MicroBlokContent aMicroblocksBD aTransactionsInfo
+        return $ MicroBlockContent aMicroblocksBD aTransactionsInfo
     parseJSON _ = mzero
 
 --------------------------------------------------------------------------------

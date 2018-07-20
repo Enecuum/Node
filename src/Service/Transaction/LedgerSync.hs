@@ -9,7 +9,7 @@ import           Service.InfoMsg                       (InfoMsg (..))
 import           Service.Transaction.Storage
 import           Service.Types
 
-
+{-
 myTail :: DBPoolDescriptor -> InChan InfoMsg -> IO Integer
 myTail desc aInfoChan = do
   (_,mb) <- getLastKeyBlock desc aInfoChan
@@ -33,5 +33,7 @@ createSprout = undefined
 type From = Number
 type To = Number
 type Number = Integer
+
 getSprout :: DBPoolDescriptor -> InChan InfoMsg -> From -> To -> IO SproutInfo
 getSprout = undefined
+-}

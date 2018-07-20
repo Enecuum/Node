@@ -8,18 +8,18 @@ module Node.Lib where
 
 import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
-import              Control.Concurrent.MVar
+import           Control.Concurrent.MVar
 import           Control.Exception
 import           Control.Monad
-import          PoA.Pending
-import          Node.DBActor
+import           PoA.Pending
+import           Node.DBActor
 
-import qualified    Network.WebSockets                  as WS
+import qualified Network.WebSockets                    as WS
 import           Data.Aeson                            as A
-import          Service.Chan
-import qualified Data.Text                              as T
+import           Service.Chan
+import qualified Data.Text                             as T
 import qualified Data.ByteString.Lazy                  as L
-import              Service.Network.WebSockets.Client
+import           Service.Network.WebSockets.Client
 import           Data.Maybe
 import           Data.IORef
 import           Lens.Micro
@@ -31,7 +31,7 @@ import           Node.Node.Types
 import           Service.InfoMsg                       (InfoMsg)
 import           Service.Network.Base
 import           PoA.PoAServer
-import          Control.Concurrent.Async
+import           Control.Concurrent.Async
 import           Service.Transaction.Common            (DBPoolDescriptor (..),
                                                         addMacroblockToDB,
                                                         addMicroblockToDB)
@@ -94,7 +94,7 @@ startNode descrDB buildConf infoCh manager startDo = do
 sec = 1000000
 
 --connectManager :: InChan MsgToCentralActor -> PortNumber -> [Connect] -> InChan FileActorRequest -> IO ()
-connectManager aSyncChan aDBActorChan aManagerChan aPortNumber aBNList aConnectsChan aMyNodeId inChanPending aInfoChan = do
+connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aConnectsChan aMyNodeId inChanPending aInfoChan = do
     forM_ aBNList $ \(Connect aBNIp aBNPort) -> do
         void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
             WS.sendTextData aConnect . encode $ ActionAddToConnectList aPortNumber
@@ -123,7 +123,7 @@ connectManager aSyncChan aDBActorChan aManagerChan aPortNumber aBNList aConnects
             C.threadDelay $ 2 * sec
 
             when isFirst $ void $ C.forkIO $
-                    syncServer aSyncChan aDBActorChan aManagerChan
+                    syncServer aSyncChan inDBActorChan aManagerChan
 
             C.threadDelay $ 2*sec
             aConnectLoop aBNList False
@@ -139,30 +139,64 @@ syncServer syncChan@(inSyncChan, outSyncChan) aDBActorChan aManagerChan = foreve
       whriteInChan syncChan RequestTail
       -}
 
-    SyncMsg aMsg -> case aMsg of
-        RequestTail                                 -> undefined
-    --        aLastHashAndNumber <- takeRecords aDBActorChan MyTail
+    SyncMsg aNodeId aMsg -> do
+        let aSend amsg = sendMsgToNode aManagerChan amsg aNodeId
+        case aMsg of
+            RequestTail                                 -> do
+                takeRecords aDBActorChan MyTail >>= \case
+                    Just aTail  -> aSend $ ResponseTail aTail
+                    Nothing     -> aSend $ StatusSyncMessage "Empty tail" "#001"
+
+            PeekKeyBlokRequest aFrom aTo                -> do
+                takeRecords aDBActorChan (GetKeyBlockSproutData aFrom aTo) >>= \case
+                    Just aKeyBlocks -> aSend $ PeekKeyBlokResponse aKeyBlocks
+                    Nothing         -> aSend $ StatusSyncMessage ("No kblocks between " ++ show aFrom ++ " and " ++ show aTo)  "#002"
+
+            MicroblockRequest aHash         -> do
+                takeRecords aDBActorChan (GetRestSproutData aHash) >>= \case
+                  Just mblock -> aSend $ MicroblockResponse mblock
+                  Nothing     -> aSend $ StatusSyncMessage ("No block with this hash " ++ show aHash ++ " in DB")  "#003"
+
+            PeekHashKblokRequest aFrom aTo -> do
+                takeRecords aDBActorChan (PeekNKeyBlocks aFrom aTo) >>= \case
+                    Just  aList -> aSend $ PeekHashKblokResponse aList
+                    Nothing   -> aSend $ StatusSyncMessage ("No kblocks between " ++ show aFrom ++ " and " ++ show aTo)  "#004"
+
+            _ -> aSend $ StatusSyncMessage ("Send command are not allowed for server")  "#005"
 
 
-        PeekKeyBlokRequest aFrom aTo                -> undefined
-        MicroblockRequest aHashOfMicroblock         -> undefined
-        PeekHashKblokRequest aCount aHashOfKeyBlock -> undefined
-        _ -> undefined
+
+sendMsgToNode aChan aMsg aId = writeInChan aChan $ SendMsgToNode (toJSON aMsg) (IdTo aId)
+
+takeResponseTail :: OutChan SyncEvent -> IO (NodeId, (Number, HashOfKeyBlock))
+takeResponseTail aChan = readChan aChan >>= \case
+    SyncMsg aId (ResponseTail aRes) -> return (aId, aRes)
+    _                               -> takeResponseTail aChan
+
+
 --     GetHashOfLastClosedKeyBlock :: MVar (Maybe (HashOfKeyBlock, Number)) -> MsgToDB
 {-
---RequestTail           ::                                         undefined
---ResponseTail          :: LastNumber     -> HashOfKeyBlock     -> undefined
-PeekKeyBlokRequest    :: From           -> To                 -> undefined
-PeekKeyBlokResponse   :: [MacroblockBD]                       -> undefined
-MicroblockRequest     :: [HashOfMicroblock]                   -> undefined
-MicroblockResponse    :: [MickroBlokContent]                  -> undefined
-PeekHashKblokRequest  :: Count          -> HashOfKeyBlock     -> undefined
-PeekHashKblokResponse   list                              -> undefined
-StatusSyncMessage     aSyncStatusMessage aErrorStringCode -> undefined
+RequestTail           ::                                             SyncMessage
+ResponseTail          :: (Number, HashOfKeyBlock)                 -> SyncMessage
+PeekHashKblokRequest  :: From             -> To                   -> SyncMessage
+PeekHashKblokResponse :: [(Number, HashOfKeyBlock)]               -> SyncMessage
+PeekKeyBlokRequest    :: From             -> To                   -> SyncMessage
+PeekKeyBlokResponse   :: [(Number, HashOfKeyBlock, MacroblockBD)] -> SyncMessage
+MicroblockRequest     :: HashOfMicroblock                         -> SyncMessage
+MicroblockResponse    :: MicroBlockContent                         -> SyncMessage
+StatusSyncMessage     :: SyncStatusMessage -> ErrorStringCode     -> SyncMessage
 
 -}
 
+{-
+PeekNKeyBlocks        :: From -> To -> MVar (Maybe [(Number, HashOfKeyBlock)]) -> MsgToDB
+GetKeyBlockSproutData :: From -> To -> MVar (Maybe [(Number, HashOfKeyBlock, MacroblockBD)])-> MsgToDB
+SetKeyBlockSproutData :: [(HashOfKeyBlock, MacroblockBD)] -> MVar Bool -> MsgToDB
+GetRestSproutData     :: HashOfMicroblock -> MVar (Maybe MicroBlockContent) -> MsgToDB
+SetRestSproutData     :: MicroBlockContent -> MVar Bool -> MsgToDB
+DeleteSproutData      :: (Number, HashOfKeyBlock) -> MsgToDB
 
+-}
 -- мой ид
 -- чан для пендинга
 -- чан для логов

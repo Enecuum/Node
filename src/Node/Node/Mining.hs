@@ -66,10 +66,10 @@ networkNodeStart aSyncChan (_, aOutChan) aMd = do
                             (aNode^.nodeType /= NN && (aNodeType == aNode^.nodeType || aNodeType == All)) $
                             void $ tryWriteChan (aNode^.nodeChan) aMsg
 
-                    aMsg@(MsgMsgTo _ (IdTo aId) aContent) -> do
+                    aMsg@(MsgMsgTo (IdFrom aSender) (IdTo aId) aContent) -> do
                       if aId == toNodeId (aData^.nodeConfig.myNodeId)
                       then case fromJSON aContent of
-                          Success aSyncMsg -> writeInChan aSyncChan $ SyncMsg aSyncMsg
+                          Success aSyncMsg -> writeInChan aSyncChan $ SyncMsg aSender aSyncMsg
                           A.Error _ -> return ()
                       else whenJust (aData^.connects.at aId) $ \aNode ->
                               void $ tryWriteChan (aNode^.nodeChan) aMsg
