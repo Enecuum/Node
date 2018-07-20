@@ -168,20 +168,47 @@ syncServer syncChan@(inSyncChan, outSyncChan) aDBActorChan aManagerChan = foreve
 
 sendMsgToNode aChan aMsg aId = writeInChan aChan $ SendMsgToNode (toJSON aMsg) (IdTo aId)
 
-takeResponseTail :: OutChan SyncEvent -> IO (NodeId, (Number, HashOfKeyBlock))
+data Response a = Response NodeId a
+
+takeResponseTail :: OutChan SyncEvent -> IO (Response (Number, Maybe HashOfKeyBlock))
 takeResponseTail aChan = readChan aChan >>= \case
-    SyncMsg aId (ResponseTail aRes) -> return (aId, aRes)
-    _                               -> takeResponseTail aChan
+    SyncMsg aId aMsg  -> case aMsg of
+        ResponseTail (aNum, aHash)  -> return (aId, (aNum,Just aHash))
+        StatusSyncMessage _ "#001"  -> return (aId, (0, Nothing))
+        _                           -> takeResponseTail aChan
+    _                 -> takeResponseTail aChan
+
+takePeekKeyBlokResponse     :: OutChan SyncEvent -> IO (Response [(Number, HashOfKeyBlock, MacroblockBD)])
+takePeekKeyBlokResponse aChan = readChan aChan >>= \case
+    SyncMsg aId aMsg  -> case aMsg of
+        _ -> takePeekKeyBlokResponse aChan
+    _ -> takePeekKeyBlokResponse aChan
+
+takeMicroblockResponse      :: OutChan SyncEvent -> IO (Response (Maybe MicroBlockContent))
+takeMicroblockResponse aChan = readChan aChan >>= \case
+    SyncMsg aId aMsg  -> case aMsg of
+        _ -> takeMicroblockResponse aChan
+    _ -> takeMicroblockResponse aChan
+
+
+takePeekHashKblokResponse   :: OutChan SyncEvent -> IO (Response [(Number, HashOfKeyBlock)])
+takePeekHashKblokResponse aChan = readChan aChan >>= \case
+    SyncMsg aId aMsg  -> case aMsg of
+        _ -> takePeekHashKblokResponse aChan
+    _ -> takePeekHashKblokResponse aChan
 
 
 --     GetHashOfLastClosedKeyBlock :: MVar (Maybe (HashOfKeyBlock, Number)) -> MsgToDB
 {-
 RequestTail           ::                                             SyncMessage
 ResponseTail          :: (Number, HashOfKeyBlock)                 -> SyncMessage
+
 PeekHashKblokRequest  :: From             -> To                   -> SyncMessage
 PeekHashKblokResponse :: [(Number, HashOfKeyBlock)]               -> SyncMessage
+
 PeekKeyBlokRequest    :: From             -> To                   -> SyncMessage
 PeekKeyBlokResponse   :: [(Number, HashOfKeyBlock, MacroblockBD)] -> SyncMessage
+
 MicroblockRequest     :: HashOfMicroblock                         -> SyncMessage
 MicroblockResponse    :: MicroBlockContent                         -> SyncMessage
 StatusSyncMessage     :: SyncStatusMessage -> ErrorStringCode     -> SyncMessage
