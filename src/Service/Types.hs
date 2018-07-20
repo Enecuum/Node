@@ -14,6 +14,7 @@ module Service.Types where
 import           Control.Exception
 import           Data.ByteString
 import qualified Data.ByteString.Char8              as C
+import qualified Data.ByteString.Internal           as BSI
 import           Data.Graph.Inductive
 import           Data.List.Split                    (splitOn)
 import           Data.Serialize
@@ -261,3 +262,10 @@ data ChainInfo = ChainInfo {
     , _nodes_num       :: Integer     -- quantity of all active nodes now
   } deriving  (Generic, Show, Eq, Read)
 instance Serialize ChainInfo
+
+
+type HashOfKeyBlock = BSI.ByteString
+type HashOfMicroblock = BSI.ByteString
+
+type DBKey = BSI.ByteString
+type DBValue = BSI.ByteString

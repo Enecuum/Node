@@ -114,8 +114,12 @@ funR db key = do
   let fun = (\aDb -> Rocks.get aDb Rocks.defaultReadOptions key)
   withResource db fun
 
-type DBKey = BSI.ByteString
-type DBValue = BSI.ByteString
+
+funD ::  Pool Rocks.DB -> DBKey -> IO ()
+funD db key = do
+  let fun = (\aDb -> Rocks.delete aDb def{Rocks.sync = True} key)
+  withResource db fun
+
 
 checkMacroblockIsClosed :: MacroblockBD -> Bool
 checkMacroblockIsClosed MacroblockBD {..} = length _teamKeys == length _mblocks
@@ -255,19 +259,20 @@ getBlockByHashDB db hash _ = do
       mAPI <- tMicroblockBD2MicroblockAPI db m --aInfoChan
       return $ Just mAPI
 
-
-getKeyBlockByHashDB :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe MacroblockAPI)
-getKeyBlockByHashDB db kHash _ = do
-  kb <- getByHash (poolMacroblock db) kHash
-  case kb of Nothing -> return Nothing
+getKeyBlockByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe MacroblockBD)
+getKeyBlockByHash db kHash _ = do
+  mb <- getByHash (poolMacroblock db) kHash
+  case mb of Nothing -> return Nothing
              Just j -> case (S.decode j :: Either String MacroblockBD) of
                Left e  -> throw (DecodeException (show e))
-               Right r -> do
-                 -- print r
-                 -- mAPI <- tMacroblock2MacroblockAPI db r
-                 -- print mAPI
-                 -- print "Hello"
-                 Just <$> (tMacroblock2MacroblockAPI db r)
+               Right r -> return $ Just r
+
+
+getKeyBlockByHashDB :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe MacroblockAPI)
+getKeyBlockByHashDB db kHash i = do
+  hashOfKey <- getKeyBlockByHash db kHash i
+  case hashOfKey of Nothing -> return Nothing
+                    Just j  -> Just <$> (tMacroblock2MacroblockAPI db j)
 
 
 getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo) --Transaction

@@ -13,7 +13,10 @@ module Service.Transaction.Balance
     addMicroblockToDB,
     addMacroblockToDB,
     runLedger,
-    writeMacroblockToDB
+    writeMacroblockToDB,
+    writeTransactionDB,
+    writeMicroblockDB,
+    addMicroblockHashesToMacroBlock
     ) where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
@@ -25,11 +28,12 @@ import qualified Data.ByteString.Char8                 as BC
 import           Data.Default                          (def)
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
-import           Data.List                             (sortBy)
+import           Data.List                             (sort, sortBy)
 import           Data.Maybe
 import           Data.Ord                              (comparing)
 import           Data.Pool
 import qualified Data.Serialize                        as S (decode, encode)
+import qualified Data.Set                              as Set
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
 import           Service.InfoMsg                       (InfoMsg (..),
@@ -38,7 +42,6 @@ import           Service.InfoMsg                       (InfoMsg (..),
 import           Service.Transaction.Storage
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
-
 
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
@@ -268,13 +271,32 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
 
         keyBlockHash = rHash keyBlockInfoObject
     writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
+    updateMacroblockByKeyBlock db aInfoChan keyBlockHash keyBlockInfoObject
+addMacroblockToDB _ x aInfoChan = writeLog aInfoChan [ServePoATag] Error ("Can not decode KeyBlockInfo" ++ show x)
 
-    val  <- funR (poolMacroblock db) keyBlockHash
+
+updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> IO ()
+updateMacroblockByKeyBlock db aInfoChan hashOfKeyBlock keyBlockInfo = do
+    val  <- funR (poolMacroblock db) hashOfKeyBlock
     _ <- case val of
         Nothing -> return dummyMacroblock
         Just va  -> case S.decode va :: Either String MacroblockBD of
             Left e  -> throw (DecodeException (show e))
             Right r -> return r
 
-    writeMacroblockToDB db aInfoChan keyBlockHash $ tKeyBlockInfo2Macroblock keyBlockInfoObject
-addMacroblockToDB _ x aInfoChan = writeLog aInfoChan [ServePoATag] Error ("Can not decode KeyBlockInfo" ++ show x)
+    writeMacroblockToDB db aInfoChan hashOfKeyBlock $ tKeyBlockInfo2Macroblock keyBlockInfo
+
+
+addMicroblockHashesToMacroBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> [HashOfMicroblock] -> IO ()
+addMicroblockHashesToMacroBlock db i hashOfKeyBlock hashesOfMicroblock = do
+  val  <- funR (poolMacroblock db) hashOfKeyBlock
+  case val of
+    Nothing -> writeLog i [BDTag] Error ("There is no KeyBlock with hash " ++ show hashOfKeyBlock)
+    Just k -> case S.decode k :: Either String MacroblockBD of
+      Left e  -> throw (DecodeException (show e))
+      Right (r )  -> do
+        let currentHashes = Set.fromList $ _mblocks (r :: MacroblockBD)
+            newHashes = Set.fromList $ hashesOfMicroblock
+            allHashes = sort $ Set.elems $ Set.union currentHashes newHashes
+        let macroblock = S.encode $ (r {_mblocks = allHashes} :: MacroblockBD)
+        funW (poolMacroblock db) [(hashOfKeyBlock, macroblock)]

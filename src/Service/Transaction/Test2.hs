@@ -13,7 +13,6 @@ import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON         ()
 import           System.Random
 
-type HashOfMicroblock = BC.ByteString
 
 data MicroblockV1 = MicroblockV1{
                   hashCurrentMicroblock  :: BC.ByteString, -- hashCurrentMicroblock

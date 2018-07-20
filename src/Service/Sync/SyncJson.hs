@@ -10,11 +10,11 @@ module Service.Sync.SyncJson where
 
 import           Control.Monad
 import           Data.Aeson
-import qualified Data.ByteString.Char8          as BS
-import qualified Data.ByteString.Internal       as BSI
-import qualified Data.Text                      as T
-import           GHC.Generics                   (Generic)
-import           Service.Transaction.LedgerSync
+import qualified Data.ByteString.Char8            as BS
+import qualified Data.ByteString.Internal         as BSI
+import qualified Data.Text                        as T
+import           GHC.Generics                     (Generic)
+import           Service.Transaction.SproutCommon
 import           Service.Types
 --type HashOfKeyBlock = ByteString
 -- type HashOfMicroblock = BSI.ByteString
