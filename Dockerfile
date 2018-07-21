@@ -1,25 +1,12 @@
-# мы берем базовый образ terrorjack/meikyu (этот чувак собрал образ на
-# альпине и поставил туда свежий stack и ghc + регулярно контрибьютит,
-# когда как у fpco больше года никакой активности),
-FROM terrorjack/meikyu:ghc-8.2.2
-
-# копируем папку с конфигами
-COPY ./configs ./configs
-
+FROM terrorjack/meikyu:ghc-8.2.2 as builder
 ADD . /usr/src/app
 WORKDIR /usr/src/app
+RUN apk --no-cache add build-base linux-headers rocksdb-dev
+RUN stack build && mkdir bin && stack install --local-bin-path /usr/src/app/bin
 
-# apk - это менеджер пакетов на alpine.
+FROM terrorjack/meikyu:ghc-8.2.2
+ENV bootnode false
+COPY --from=builder /usr/src/app/bin /usr/src/app
+COPY --from=builder /usr/src/app/configs /usr/src/app/configs
 RUN apk --no-cache add rocksdb-dev
-
-# stack build компилирует внутри контейнера и выдает бинарник...
-RUN stack build --no-docker
-
-# ...который мы и запускаем.  Однако пока я отключил его автоматический
-# запуск, чтобы иметь возможность заходить в контейнер консолью и
-# смотреть содержимое
-# ENTRYPOINT if [ "$bootnode" = true ] ; then \
-#              stack exec BootNode-exe; \
-#            else \
-#              stack exec SimpleNode-exe; \
-#            fi
+ENTRYPOINT if [ "$bootnode" = true ]; then echo "Bootnode activated" && ./BootNode-exe; else echo "Node activated" && ./SimpleNode-exe; fi
