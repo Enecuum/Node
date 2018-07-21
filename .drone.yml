@@ -1,32 +1,49 @@
 pipeline:
   build:
-    image: terrorjack/meikyu:ghc-8.2.2
-    commands:
-      - "stack --stack-yaml=CI.stack.yaml build"
+    image: plugins/docker
+    secrets: [docker_username, docker_password]
+    registry: dev.enecuum.com:2087
+    repo: dev.enecuum.com:2087/testnet/node
+    tags: latest
     when:
       branch:
-        - master
+        - Dev
+      event:
+        - push
+        - tag
   notify-build:
     image: dev.enecuum.com:2087/library/drone-telegram:v1.0.0
     secrets: [telegram_token, telegram_id]
     when:
-      status: [ success, failure ]
-  publish:
-    image: plugins/docker
-    secrets: [docker_username, docker_password, docker_repo]
-    registry: $DOCKER_REPO
-    insecure: true
-    repo: $DOCKER_REPO/testnet/node
-    auto_tag: true
+      branch:
+        - Dev
+      status:
+        - success
+        - failure
+      event:
+        - push
+        - tag
+  deploy-bootnode-dev:
+    image: peloton/drone-rancher
+    url: https://testnet.enecuum.com:2096
+    secrets:
+      - source: rancher_access_key
+        target: PLUGIN_ACCESS_KEY
+      - source: rancher_secret_key
+        target: PLUGIN_SECRET_KEY
+    docker_image: dev.enecuum.com:2087/testnet/node:latest
+    service: bootnode/bootnode-dev
+    confirm: true
+    timeout: 240
     when:
       branch:
-        - master
+        - Dev
       status:
         - success
       event:
         - push
         - tag
-  deploy-bootnode:
+  deploy-node-dev:
     image: peloton/drone-rancher
     url: https://testnet.enecuum.com:2096
     secrets:
@@ -35,32 +52,26 @@ pipeline:
       - source: rancher_secret_key
         target: PLUGIN_SECRET_KEY
     docker_image: dev.enecuum.com:2087/testnet/node:latest
-    service: bootnode/bootnode
-    batch_size: 8
+    service: node/node-dev
     confirm: true
     timeout: 240
-  notify-deploy-bootnode:
+    when:
+      branch:
+        - Dev
+      status:
+        - success
+      event:
+        - push
+        - tag
+  notify-deploy-dev:
     image: dev.enecuum.com:2087/library/drone-telegram:v1.0.0
     secrets: [telegram_token, telegram_id]
-    message: \u2705 bootnode deployment successful
+    message: \u2705 ${DRONE_REPO}:`${DRONE_COMMIT_BRANCH}` ${DRONE_BUILD_NUMBER} deployment successful
     when:
-      status: [ success ]
-  deploy-node:
-    image: peloton/drone-rancher
-    url: https://testnet.enecuum.com:2096
-    secrets:
-      - source: rancher_access_key
-        target: PLUGIN_ACCESS_KEY
-      - source: rancher_secret_key
-        target: PLUGIN_SECRET_KEY
-    docker_image: dev.enecuum.com:2087/testnet/node:latest
-    service: node/node
-    batch_size: 20
-    confirm: true
-    timeout: 240
-  notify-deploy-node:
-    image: dev.enecuum.com:2087/library/drone-telegram:v1.0.0
-    secrets: [telegram_token, telegram_id]
-    message: \u2705 node deployment successful
-    when:
-      status: [ success ]
+      branch:
+        - Dev
+      status:
+        - success
+      event:
+        - push
+        - tag
