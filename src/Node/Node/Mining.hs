@@ -63,18 +63,26 @@ networkNodeStart (_, aOutChan) aMd = do
                         whenJust (aData^.connects.at aId) $ \aNode ->
                             void $ tryWriteChan (aNode^.nodeChan) aMsg
 
-                    MsgMicroblock aMicroblock -> do
+                    aMsg@(MsgMicroblock aMicroblock) -> do
                         writeLog (aData^.logChan) [NetLvlTag] Info $
                              "Create a a microblock: " ++ show aMicroblock
                         void $ tryWriteChan (aData^.microblockChan) aMicroblock
+                        void $ C.forkIO $ forM_ (aData^.connects) $ \aNode -> when
+                            (aNode^.nodeType == All) $
+                            writeInChan (aNode^.nodeChan) aMsg
 
                     MsgTransaction aTransaction -> do
                         aVar <- newEmptyMVar
                         void $ tryWriteChan (aData^.transactionsChan) (aTransaction, aVar)
 
-                    MsgKeyBlock aKeyBlock -> do
+                    aMsg@(MsgKeyBlock aKeyBlock) -> do
                         void $ tryWriteChan (aData^.valueChan) aKeyBlock
+                        void $ C.forkIO $ forM_ (aData^.connects) $ \aNode -> when
+                            (aNode^.nodeType /= NN) $
+                            writeInChan (aNode^.nodeChan) aMsg
+
                     a -> writeLog (aData^.logChan) [NetLvlTag] Info $  show a ++ " not a msg."
+
 
             ActionFromNode aMsgFromNode -> do
                 case aMsgFromNode of
