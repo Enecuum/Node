@@ -1,28 +1,33 @@
-{-# LANGUAGE PackageImports #-}
-{-# Language
-    LambdaCase,
-    TypeSynonymInstances,
-    GeneralizedNewtypeDeriving,
-    StandaloneDeriving,
-    DeriveGeneric,
-    TemplateHaskell
-  #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE PackageImports             #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Service.Types.SerializeInstances where
 
-import Data.Serialize
-import GHC.Generics
-import Data.Word
-import Data.Bits
-import Data.Int
-import Data.List    (unfoldr)
-import qualified Data.Aeson as A
-import Control.Monad
-import "cryptonite" Crypto.PubKey.ECC.ECDSA
-import "cryptonite" Crypto.PubKey.ECC.Types
-import Data.Hashable
-import Data.Aeson.TH
+import           Control.Monad
+import           "cryptonite" Crypto.PubKey.ECC.ECDSA
+import           "cryptonite" Crypto.PubKey.ECC.Types
+import qualified Data.Aeson                           as A
+import           Data.Aeson.TH
+import           Data.Bits
+import qualified Data.ByteString.Lazy.Char8           as B
+import           Data.Char
+import           Data.Hashable
+import           Data.Int
+import           Data.List                            (unfoldr)
+import           Data.Serialize
+import           Data.Word
+import           GHC.Generics
+
+lEBsToInt :: B.ByteString -> Int -- littleEndianByteStringToInt
+lEBsToInt bs = let bsI = B.take 4 bs in -- 1.
+    fst $ B.foldl (\(s,i) b -> let shiftBy = i * 8 in -- 2.
+        (s + (ord b `shiftL` shiftBy), i + 1)) (0,0) bsI --3.
 
 newtype CompactInteger = CompactInteger Integer
     deriving (Eq, Show, Enum, Num, Integral, Real, Ord, Bits, A.ToJSON, A.FromJSON, Hashable)
