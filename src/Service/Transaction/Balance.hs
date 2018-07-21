@@ -17,7 +17,8 @@ module Service.Transaction.Balance
     writeTransactionDB,
     writeMicroblockDB,
     addMicroblockHashesToMacroBlock,
-    calculateLedger
+    calculateLedger,
+    updateMacroblockByKeyBlock
     ) where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
@@ -40,6 +41,8 @@ import           Node.Data.GlobalLoging
 import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
+import           Service.Transaction.Independent
+import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
@@ -272,12 +275,12 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
 
         keyBlockHash = rHash keyBlockInfoObject
     writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
-    updateMacroblockByKeyBlock db aInfoChan keyBlockHash keyBlockInfoObject
+    updateMacroblockByKeyBlock db aInfoChan keyBlockHash keyBlockInfoObject Main
 addMacroblockToDB _ x aInfoChan = writeLog aInfoChan [ServePoATag] Error ("Can not decode KeyBlockInfo" ++ show x)
 
 
-updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> IO ()
-updateMacroblockByKeyBlock db aInfoChan hashOfKeyBlock keyBlockInfo = do
+updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()
+updateMacroblockByKeyBlock db aInfoChan hashOfKeyBlock keyBlockInfo branch = do
     val  <- funR (poolMacroblock db) hashOfKeyBlock
     _ <- case val of
         Nothing -> return dummyMacroblock
@@ -286,7 +289,7 @@ updateMacroblockByKeyBlock db aInfoChan hashOfKeyBlock keyBlockInfo = do
             Right r -> return r
 
     writeMacroblockToDB db aInfoChan hashOfKeyBlock $ tKeyBlockInfo2Macroblock keyBlockInfo
-
+    setChain (Common db aInfoChan undefined) (_number (keyBlockInfo :: KeyBlockInfo)) hashOfKeyBlock branch
 
 addMicroblockHashesToMacroBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> [HashOfMicroblock] -> IO ()
 addMicroblockHashesToMacroBlock db i hashOfKeyBlock hashesOfMicroblock = do

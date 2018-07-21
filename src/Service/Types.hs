@@ -271,3 +271,5 @@ type HashOfMicroblock = BSI.ByteString
 
 type DBKey = BSI.ByteString
 type DBValue = BSI.ByteString
+
+data BranchOfChain = Main | Sprout deriving (Eq, Generic, Ord, Read, Show)
