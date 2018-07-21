@@ -317,9 +317,12 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
             print "keyBlockInfoObject"
             putStrLn ("type of action1 is: " ++ (show (typeOf keyBlockInfoObject)))
             print keyBlockInfoObject
+            print "keyBlockHash"
+            print $ keyBlockHash keyBlockInfoObject
             let keyBlockHash = rHash keyBlockInfoObject
             writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
             updateMacroblockByKeyBlock db aInfoChan keyBlockHash (tKBIPoW2KBI keyBlockInfoObject) Main
+
 
 tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
 tKBIPoW2KBI (KeyBlockInfoPoW {..}) = undefined --KeyBlockInfo {
@@ -330,10 +333,7 @@ tKBIPoW2KBI (KeyBlockInfoPoW {..}) = undefined --KeyBlockInfo {
   -- _solver,
   -- _type}
 
-try = do
-  input <- B.readFile "/home/ksenia/input.json"
-  let mm = decode input :: Maybe KeyBlockInfo
-  print mm
+
 -- json1 ={\"time\":1532168703,\"nonce\":62592,\"number\":2,\"type\":0,\"prev_hash\":\"AAABrMjWwW95ZXx5EgIn8gG2c0/xaXi1M4uaGWMH28o=\",\"solver\":\"OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=\"}
 
 --test01 = Base64.decode "W3sidGltZSI6MTUzMjE2ODcwMywibm9uY2UiOjYyNTkyLCJudW1iZXIiOjIsInR5cGUiOjAsInByZXZfaGFzaCI6IkFBQUJyTWpXd1c5NVpYeDVFZ0luOGdHMmMwL3hhWGkxTTR1YUdXTUgyOG89Iiwic29sdmVyIjoiT3ZTOExtbWNNYTRtdEVXYmlmTzVaRmtxVDZBWVJpenpRNm1Fb2JNTWh6ND0ifV0=\"

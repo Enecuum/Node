@@ -31,6 +31,10 @@ import           Data.Pool
 import qualified Data.Serialize                        as S (Serialize, decode,
                                                              encode)
 -- import           Data.Traversable
+import qualified Data.Aeson                            as A
+import qualified Data.ByteString                       as B (concat)
+import qualified Data.ByteString.Lazy                  as BL
+import           Data.Serialize.Put
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
 import           Service.InfoMsg                       (InfoMsg (..),
@@ -459,3 +463,16 @@ tMacroblock2ChainInfo kv = do
     _txs_num         = 0,  -- quantity of all approved transactions
     _nodes_num       = 0   -- quantity of all active nodes
     }
+
+
+keyBlockHash :: KeyBlockInfoPoW -> BSI.ByteString
+keyBlockHash  KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
+  where bstr = B.concat $ map runPut [
+                  putWord8    (toEnum _type)
+               ,  putWord32le (fromInteger _number)
+               ,  putWord32le (fromInteger _time)
+               ,  putWord32le (fromInteger _nonce)
+               ]  ++  [
+                  _prev_hash
+               ,  S.encode    _solver
+               ]
