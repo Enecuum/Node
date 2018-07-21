@@ -4,7 +4,6 @@ module Service.Transaction.LedgerSync where
 
 
 import           Control.Exception
-import           Control.Monad.Loops
 import           Data.Maybe
 import qualified Data.Serialize                   as S (encode)
 import           Node.Data.GlobalLoging
@@ -14,6 +13,7 @@ import           Service.Transaction.Sprout
 import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
+
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
 myTail (Common descr i _) = do
@@ -92,28 +92,14 @@ setRestSproutData c@(Common descr i _) (number, hashOfKeyBlock, (MicroBlockConte
 
 
 deleteSproutData      :: Common -> (Number, HashOfKeyBlock) -> IO () -- right after foundation
-deleteSproutData c@(Common descr i _) (number, hashOfKeyBlock) = do
-  deleteSprout c (number, hashOfKeyBlock) Sprout
+deleteSproutData c (number, _) = do
+  let branch = Sprout
+  chain <- findWholeChainSince c number branch
+  mapM_ (\r -> deleteSprout c r branch) chain
 
-
--- deleteWholeChainSince ::  Common -> (Number, HashOfKeyBlock) -> IO ()
-findWholeChainSince ::  Common -> (Number, HashOfKeyBlock) -> BranchOfChain -> IO [(Number, HashOfKeyBlock)]
-findWholeChainSince c (number, hashofkeyblock) branch = do --undefined
-  let fun = findChain c (number, hashofkeyblock) branch
-      second = \a -> isNothing $ snd a
-  -- concat <$>
-  whileM (second <$> fun) $ findWholeChainSince c (number, hashofkeyblock) branch
-  return undefined
-
-
--- func :: <function type>
--- func <arguments> =
---     if condition
---         then <recursive call>
---         else computedValue
 
 deleteSprout :: Common -> (Number, HashOfKeyBlock) -> BranchOfChain -> IO () -- right after foundation
-deleteSprout (Common descr i _) (number, hashOfKeyBlock) branch = do
+deleteSprout c@(Common descr i _) (number, hashOfKeyBlock) branch = do
   macroblock <- getKeyBlockByHash descr (Hash hashOfKeyBlock) i
   case macroblock of
     Nothing -> writeLog i [BDTag] Error ("There is no KeyBlock "  ++ show hashOfKeyBlock)
@@ -129,12 +115,22 @@ deleteSprout (Common descr i _) (number, hashOfKeyBlock) branch = do
       mapM_ (funD (poolMicroblock descr)) hashesOfMicroBlocks
       -- delete KeyBlock
       funD (poolMacroblock descr) hashOfKeyBlock
-      -- delete chain
-      -- chain <- getChain number
-      -- newChain = case branch of Main -> (Noting, snd chain)
-      --                           Sprout -> ()
-      -- funW (poolSprout descr) [(S.encode number), (S.encode newChain)
+      -- erase chain from Sprout table
+      (aMain,aSprout) <- getChain c number
+      let newChain = case branch of
+            Main   -> (Nothing, aSprout)
+            Sprout ->  (aMain, Nothing)
+          sKey   = S.encode number
+          sValue = S.encode newChain
+      funW (poolSprout descr) [(sKey, sValue)]
 
 
-setSproutAsMain       :: Common -> (Number, HashOfKeyBlock) -> IO () -- right after foundation
-setSproutAsMain = undefined
+setSproutAsMain :: Common -> (Number, HashOfKeyBlock) -> IO () -- right after foundation
+setSproutAsMain c (number, hashOfKeyBlock) = do
+  let branch = Main
+  -- find key blocks belong to Main chain (right after foundation of main and sprout chain)
+  chain <- findWholeChainSince c number branch
+  -- recalculate ledger
+
+  -- delete Main chain (right after foundation of main and sprout chain)
+  mapM_ (\r -> deleteSprout c r branch) chain

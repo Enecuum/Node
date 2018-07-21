@@ -99,7 +99,7 @@ dependencies:
 - cryptohash-sha256
 - derive
 - bytestring-conversion
-- monad-loops
+
 
 library:
   source-dirs: src

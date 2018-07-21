@@ -177,7 +177,7 @@ addMicroblockToDB db m i =  do
           when isMacroblockClosed $ calculateLedger db i False (_keyBlock (m :: Microblock)) macroblock
 
 
-calculateLedger :: DBPoolDescriptor -> InChan InfoMsg -> IsStorno -> DBKey -> MacroblockBD -> IO ()
+calculateLedger :: DBPoolDescriptor -> InChan InfoMsg -> IsStorno -> HashOfKeyBlock -> MacroblockBD -> IO ()
 calculateLedger db i isStorno hashKeyBlock macroblock = do
   -- get all microblocks for macroblock
   let microblockHashes = _mblocks (macroblock :: MacroblockBD)
