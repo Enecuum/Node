@@ -2,7 +2,6 @@ pipeline:
   build:
     image: plugins/docker
     secrets: [docker_username, docker_password, docker_registry]
-    registry: ${DOCKER_REGISTRY}
     repo: ${DOCKER_REGISTRY}/testnet/node
     tags: latest
     when:
