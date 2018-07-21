@@ -1,8 +1,9 @@
 pipeline:
   build:
     image: plugins/docker
-    secrets: [docker_username, docker_password, docker_registry]
-    repo: ${DOCKER_REGISTRY}/testnet/node
+    secrets: [docker_username, docker_password]
+    registry: dev.enecuum.com:2087
+    repo: dev.enecuum.com:2087/testnet/node
     tags: latest
     when:
       branch:
