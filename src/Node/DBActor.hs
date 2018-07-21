@@ -6,6 +6,7 @@ module Node.DBActor where
 
 import Control.Exception
 import Service.InfoMsg
+import Node.Data.GlobalLoging
 import Control.Concurrent.Chan.Unagi.Bounded
 import qualified Control.Concurrent as C
 import Control.Concurrent.MVar
@@ -85,47 +86,71 @@ startDBActor
     ->  (InChan MsgToDB, OutChan MsgToDB)
     ->  IO b
 startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) = do
-    void . C.forkIO . forever . writeInChan aInChan . MicroblockMsgToDB =<< readChan aMicroblockCh
-    void . C.forkIO . forever . writeInChan aInChan . KeyBlockMsgToDB =<< readChan aValueChan
+    writeLog aInfoCh [BDTag, InitTag] Info "Init. Starting of DBActor."
+    void . C.forkIO do
+        writeLog aInfoCh [BDTag, InitTag] Info "Init. Resender of microblocs."
+        forever $ do
+            val <- readChan aMicroblockCh
+            writeInChan aInChan $ MicroblockMsgToDB val
+
+    void . C.forkIO $
+        writeLog aInfoCh [BDTag, InitTag] Info "Init. Resender of KeyBlocks."
+        forever $ do
+            val <- readChan aValueChan
+            writeInChan aInChan $ KeyBlockMsgToDB val
+
     let aData = CommonData descriptor aInfoCh
+    writeLog aInfoCh [BDTag, InitTag] Info "Init. DBActor started."
     forever $ readChan aOutChan >>= \case
-        MicroblockMsgToDB aMicroblock ->
+        MicroblockMsgToDB aMicroblock -> do
+            writeLog aInfoCh [BDTag] Info "Recived mickrobloc."
             addMicroblockToDB descriptor aMicroblock aInfoCh
 
-        KeyBlockMsgToDB aValue ->
+        KeyBlockMsgToDB aValue -> do
+            writeLog aInfoCh [BDTag] Info "Recived keyBlocks."
             addMacroblockToDB descriptor aValue aInfoCh
 
         MyTail aMVar -> do
+            writeLog aInfoCh [BDTag] Info "My tail request."
             aRes <- try $ myTail aData
             case aRes of
                 Right aJustRes              -> putMVar aMVar (Just aJustRes)
                 Left (_ :: SomeException)   -> putMVar aMVar Nothing
 
         PeekNKeyBlocks aInt aHashOfKeyBlock aMVar -> do
+            writeLog aInfoCh [BDTag] Info "Peek NKey blocks request."
             peekNPreviousKeyBlocks aData aInt aHashOfKeyBlock >>= putMVar aMVar
 
         GetKeyBlockSproutData aFrom aTo aMVar -> do
+            writeLog aInfoCh [BDTag] Info "Get key block sprout data request."
             getKeyBlockSproutData aData aFrom aTo >>= putMVar aMVar
 
 
         SetKeyBlockSproutData aMacroblockBD aMVar -> do
+            writeLog aInfoCh [BDTag] Info "Set key block sprout data request."
             aIsValid <- forM aMacroblockBD (isValidKeyBlockSprout aData.toPair2)
             when (and aIsValid) $ setKeyBlockSproutData aData aMacroblockBD
             putMVar aMVar (and aIsValid)
 
         GetRestSproutData aMickroBlockHash aMVar -> do
+            writeLog aInfoCh [BDTag] Info "Get rest sprout data request."
             aRes <- try $ getRestSproutData aData aMickroBlockHash
             case aRes of
                 Right aJustRes              -> putMVar aMVar (Just aJustRes)
                 Left (_ :: SomeException)   -> putMVar aMVar Nothing
 
         SetRestSproutData aMicroBlockContent aMVar -> do
+            writeLog aInfoCh [BDTag] Info "Set rest sprout data request."
             aIsValid <- isValidRestOfSprout aData aMicroBlockContent
             when aIsValid $ setRestSproutData aData aMicroBlockContent
             putMVar aMVar aIsValid
 
-        DeleteSproutData arg -> deleteSproutData aData arg
-        SetSproutAsMain arg -> setSproutAsMain aData arg
+        DeleteSproutData arg -> do
+            writeLog aInfoCh [BDTag] Info "Delete sprout data request."
+            deleteSproutData aData arg
+        SetSproutAsMain arg -> do
+            writeLog aInfoCh [BDTag] Info  "Set sprout as main request."
+            setSproutAsMain aData arg
 
 
 --
