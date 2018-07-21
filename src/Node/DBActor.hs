@@ -87,13 +87,13 @@ startDBActor
     ->  IO b
 startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) = do
     writeLog aInfoCh [BDTag, InitTag] Info "Init. Starting of DBActor."
-    void . C.forkIO do
+    void . C.forkIO $ do
         writeLog aInfoCh [BDTag, InitTag] Info "Init. Resender of microblocs."
         forever $ do
             val <- readChan aMicroblockCh
             writeInChan aInChan $ MicroblockMsgToDB val
 
-    void . C.forkIO $
+    void . C.forkIO $ do
         writeLog aInfoCh [BDTag, InitTag] Info "Init. Resender of KeyBlocks."
         forever $ do
             val <- readChan aValueChan
