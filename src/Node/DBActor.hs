@@ -56,10 +56,10 @@ isValidRestOfSprout = undefined
 setRestSproutData :: CommonData -> MicroBlockContent -> IO ()
 setRestSproutData = undefined
 
-deleteSproutData      :: CommonData -> (Number, HashOfKeyBlock) -> IO ()
+deleteSproutData      :: CommonData -> Number -> IO ()
 deleteSproutData = undefined
 
-setSproutAsMain       :: CommonData -> (Number, HashOfKeyBlock) -> IO ()
+setSproutAsMain       :: CommonData -> Number -> IO ()
 setSproutAsMain = undefined
 
 
@@ -73,8 +73,8 @@ data MsgToDB where
     SetKeyBlockSproutData :: [(Number, HashOfKeyBlock, MacroblockBD)] -> MVar Bool -> MsgToDB
     GetRestSproutData     :: HashOfMicroblock -> MVar (Maybe MicroBlockContent) -> MsgToDB
     SetRestSproutData     :: MicroBlockContent -> MVar Bool -> MsgToDB
-    DeleteSproutData      :: (Number, HashOfKeyBlock) -> MsgToDB
-    SetSproutAsMain       :: (Number, HashOfKeyBlock) -> MsgToDB
+    DeleteSproutData      :: Number -> MsgToDB
+    SetSproutAsMain       :: Number -> MsgToDB
 
 
 startDBActor

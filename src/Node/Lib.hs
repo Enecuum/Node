@@ -41,6 +41,8 @@ import           System.Directory                      (createDirectoryIfMissing
 import           System.Environment
 import           PoA.Types
 import           Service.Sync.SyncJson
+import           Service.Types
+
 
 
 startNode descrDB buildConf infoCh manager startDo = do
@@ -156,16 +158,44 @@ requestOfAllTails outSyncChan aManagerChan = do
     -- FIXME: If somebody doesn't answer!!!
     forM aActualConnects $ \_ -> takeResponseTail outSyncChan
 
+
 -- загрузить микроблоки
-loadMicrBlocks
+loadMacroBlocks
     ::  OutChan SyncEvent
     ->  InChan MsgToDB
     ->  InChan MsgToCentralActor
-    ->  (Number, HashOfKeyBlock, MacroblockBD)
+    ->  Number -- блок для удаления (старая цепочка)
     ->  [(Number, HashOfKeyBlock, MacroblockBD)]
     ->  NodeId
     ->  IO Bool
-loadMicrBlocks = undefined
+loadMacroBlocks a1 a2 a3 aNumber (x:xs) aId = do
+    aOk <- loadOneMacroBlock a1 a2 a3 ((third x)^.mblocks) aId
+    if aOk then loadMacroBlocks a1 a2 a3 aNumber xs aId
+    else do
+        writeInChan a2 $ DeleteSproutData aNumber
+        return False
+
+loadMacroBlocks a1 a2 a3 aNumber _ aId = do
+    writeInChan a2 $ SetSproutAsMain aNumber
+    return True
+
+
+loadOneMacroBlock
+    ::  OutChan SyncEvent
+    ->  InChan MsgToDB
+    ->  InChan MsgToCentralActor
+    ->  [HashOfMicroblock] -- Блок для загрузки
+    ->  NodeId
+    ->  IO Bool
+loadOneMacroBlock outSyncChan aDBActorChan aManagerChan (x:xs) aNodeId = do
+    sendMsgToNode aManagerChan (MicroblockRequest x) aNodeId
+    Response aId aMicroBlockContent <- takeMicroblockResponse outSyncChan
+    case aMicroBlockContent of
+        Just aJustMicroBlockContent -> do
+            takeRecords aDBActorChan (SetRestSproutData aJustMicroBlockContent)
+        Nothing -> return False
+
+loadOneMacroBlock _ _ _ _ _ = return True
 
 
 -- загрузить блоки
@@ -178,71 +208,40 @@ loadBlocks outSyncChan aDBActorChan aManagerChan [aHash] aFrom aTo aId = do
     aListOfBlocks <- aTake
     aOk <- takeRecords aDBActorChan (SetKeyBlockSproutData aListOfBlocks)
     if not aOk then do
-        writeInChan aDBActorChan $ DeleteSproutData (toPair1 aHash)
+        writeInChan aDBActorChan $ DeleteSproutData (first aHash)
         return False
     else do
-        loadMicrBlocks outSyncChan aDBActorChan aManagerChan aHash aListOfBlocks aId
+        loadMacroBlocks outSyncChan aDBActorChan aManagerChan (first aHash) aListOfBlocks aId
+
+first :: (a, b, c) -> a
+first (a,_,_) = a
+
+third :: (a, b, c) -> c
+third (_, _, c) = c
 
 
---  SetKeyBlockSproutData :: [(HashOfKeyBlock, MacroblockBD)] -> MVar Bool -> MsgToDB
--- [(Number, HashOfKeyBlock, MacroblockBD)]
-
-
+-- синхронизация
 syncProcess :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> IO ()
 syncProcess outSyncChan aDBActorChan aManagerChan = do
     allTails <- requestOfAllTails outSyncChan aManagerChan
-    aMyTail  <- takeMyTail        aDBActorChan
     let maxTails = reverse $ sortOn takeTailNum allTails
-
-    let aId = undefined
-    let maxTialNumber = undefined
-    lastCommonNumber <- findBeforeFork aMyTail aId outSyncChan aDBActorChan aManagerChan
-    aDiffBlock <- takeRecords aDBActorChan (GetKeyBlockSproutData (lastCommonNumber+1) (lastCommonNumber+1))
-    loadBlocks outSyncChan aDBActorChan aManagerChan aDiffBlock lastCommonNumber maxTialNumber aId
+    syncNeighbors outSyncChan aDBActorChan aManagerChan maxTails
     return ()
 
--- достройка
--- переписывание
-    {-
-    filter ((<) aMyTail . takeTailNum)
 
-    -}
+-- пройти по списку соседей
+syncNeighbors :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> [Response (Number, Maybe HashOfKeyBlock)] -> IO ()
+syncNeighbors outSyncChan aDBActorChan aManagerChan (x:xs) = do
+    aMyTail  <- takeMyTail aDBActorChan
+    let Response aNodeId (aNumber, _) = x
+    if aMyTail < aNumber then do
+        lastCommonNumber <- findBeforeFork aMyTail aNodeId outSyncChan aDBActorChan aManagerChan
+        aDiffBlock <- takeRecords aDBActorChan (GetKeyBlockSproutData (lastCommonNumber+1) (lastCommonNumber+1))
+        aOk <- loadBlocks outSyncChan aDBActorChan aManagerChan aDiffBlock lastCommonNumber aNumber aNodeId
+        unless aOk $ syncNeighbors outSyncChan aDBActorChan aManagerChan xs
+    else return ()
+syncNeighbors _ _ _ _ = return ()
 
-          -- взять список актуальных коннектов
-            -- 1. разослать запрос теил.
-                -- 2. выбрать 3 с наибольшим.
-                -- 3. в цикле синхронизироваться с каждым.
-            -- повторить 1.
-
-            --     GetHashOfLastClosedKeyBlock :: MVar (Maybe (HashOfKeyBlock, Number)) -> MsgToDB
-            {-
-            RequestTail           ::                                             SyncMessage
-            ResponseTail          :: (Number, HashOfKeyBlock)                 -> SyncMessage
-
-            PeekHashKblokRequest  :: From             -> To                   -> SyncMessage
-            PeekHashKblokResponse :: [(Number, HashOfKeyBlock)]               -> SyncMessage
-
-            PeekKeyBlokRequest    :: From             -> To                   -> SyncMessage
-            PeekKeyBlokResponse   :: [(Number, HashOfKeyBlock, MacroblockBD)] -> SyncMessage
-
-            MicroblockRequest     :: HashOfMicroblock                         -> SyncMessage
-            MicroblockResponse    :: MicroBlockContent                         -> SyncMessage
-            StatusSyncMessage     :: SyncStatusMessage -> ErrorStringCode     -> SyncMessage
-
-            -}
-
-            {-
-            PeekNKeyBlocks        :: From -> To -> MVar (Maybe [(Number, HashOfKeyBlock)]) -> MsgToDB
-            GetKeyBlockSproutData :: From -> To -> MVar (Maybe [(Number, HashOfKeyBlock, MacroblockBD)])-> MsgToDB
-            SetKeyBlockSproutData :: [(HashOfKeyBlock, MacroblockBD)] -> MVar Bool -> MsgToDB
-            GetRestSproutData     :: HashOfMicroblock -> MVar (Maybe MicroBlockContent) -> MsgToDB
-            SetRestSproutData     :: MicroBlockContent -> MVar Bool -> MsgToDB
-            DeleteSproutData      :: (Number, HashOfKeyBlock) -> MsgToDB
-
-            -}
-            -- мой ид
-            -- чан для пендинга
-            -- чан для логов
 
 syncServer syncChan@(inSyncChan, outSyncChan) aDBActorChan aManagerChan = forever $
   readChan outSyncChan >>= \case
