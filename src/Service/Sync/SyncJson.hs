@@ -5,38 +5,49 @@
 {-# LANGUAGE OverloadedStrings        #-}
 {-# LANGUAGE PackageImports           #-}
 {-# LANGUAGE ScopedTypeVariables      #-}
+{-# LANGUAGE StandaloneDeriving       #-}
 
 module Service.Sync.SyncJson where
 
 import           Control.Monad
 import           Data.Aeson
-import qualified Data.ByteString.Char8          as BS
-import qualified Data.ByteString.Internal       as BSI
-import qualified Data.Text                      as T
-import           GHC.Generics                   (Generic)
-import           Service.Transaction.LedgerSync
+import qualified Data.ByteString.Char8            as BS
+import qualified Data.ByteString.Internal         as BSI
+import qualified Data.Text                        as T
+import           GHC.Generics                     (Generic)
+import           Service.Transaction.SproutCommon
 import           Service.Types
---type HashOfKeyBlock = ByteString
--- type HashOfMicroblock = BSI.ByteString
-data MickroBlokContent = MickroBlokContent [MicroblockBD] [TransactionInfo] deriving (Show, Read, Generic)
+import           Service.Transaction.LedgerSync
+import qualified Data.ByteString.Internal              as BSI
+import qualified Data.ByteString.Char8                 as BS
+import qualified Data.Text                             as T
+import           GHC.Generics (Generic)
+import           Control.Monad
+import           Node.Data.Key
+
+deriving instance Show MicroBlockContent
 
 type LastNumber = Int
 type Count      = Int
--- type Number     = Integer
 type SyncStatusMessage  = String
 type ErrorStringCode    = String
 
+data SyncEvent where
+    RestartSync ::                          SyncEvent
+    SyncMsg     :: NodeId -> SyncMessage -> SyncEvent
+
 data SyncMessage where
-    RequestTail           ::                                         SyncMessage
-    ResponseTail          :: LastNumber     -> HashOfKeyBlock     -> SyncMessage
-    PeekKeyBlokRequest    :: From           -> To                 -> SyncMessage
-    PeekKeyBlokResponse   :: [MacroblockBD]                       -> SyncMessage
-    MicroblockRequest     :: [HashOfMicroblock]                   -> SyncMessage
-    MicroblockResponse    :: [MickroBlokContent]                  -> SyncMessage
-    PeekHashKblokRequest  :: Count          -> HashOfKeyBlock     -> SyncMessage
-    PeekHashKblokResponse :: [(HashOfKeyBlock, Number)]           -> SyncMessage
-    StatusSyncMessage     :: SyncStatusMessage -> ErrorStringCode -> SyncMessage
+    RequestTail           ::                                             SyncMessage
+    ResponseTail          :: (Number, HashOfKeyBlock)                 -> SyncMessage
+    PeekHashKblokRequest  :: From             -> To                   -> SyncMessage
+    PeekHashKblokResponse :: [(Number, HashOfKeyBlock)]               -> SyncMessage
+    PeekKeyBlokRequest    :: From             -> To                   -> SyncMessage
+    PeekKeyBlokResponse   :: [(Number, HashOfKeyBlock, MacroblockBD)] -> SyncMessage
+    MicroblockRequest     :: HashOfMicroblock                         -> SyncMessage
+    MicroblockResponse    :: MicroBlockContent                        -> SyncMessage
+    StatusSyncMessage     :: SyncStatusMessage -> ErrorStringCode     -> SyncMessage
   deriving (Show)
+
 
 
 instance ToJSON SyncMessage where
@@ -44,7 +55,7 @@ instance ToJSON SyncMessage where
         "sync"      .= ("tail_request"   :: String)
       ]
 
-    toJSON (ResponseTail aLastNumber aHashOfKeyBlock) = object [
+    toJSON (ResponseTail (aLastNumber, aHashOfKeyBlock)) = object [
         "sync"        .= ("tail_response"   :: String),
         "last_number" .= aLastNumber,
         "last_hash"   .= BS.unpack aHashOfKeyBlock
@@ -96,7 +107,7 @@ instance FromJSON SyncMessage where
             "tail_response"-> do
                 lastNumber <- aMessage .: "last_number"
                 lastHash   <- aMessage .: "last_hash"
-                return $ ResponseTail lastNumber lastHash
+                return $ ResponseTail (lastNumber, lastHash)
 
             "peek_key_blok_request"-> do
                 from <- aMessage .: "from"
@@ -130,17 +141,17 @@ instance FromJSON SyncMessage where
 
     parseJSON _ = mzero -- error $ show a
 
-instance ToJSON MickroBlokContent where
-  toJSON (MickroBlokContent aMicroblocksBD aTransactionsInfo) = object [
+instance ToJSON MicroBlockContent where
+  toJSON (MicroBlockContent aMicroblocksBD aTransactionsInfo) = object [
       "micro_block"   .= aMicroblocksBD,
       "transaction_info" .= aTransactionsInfo
     ]
 
-instance FromJSON MickroBlokContent where
+instance FromJSON MicroBlockContent where
     parseJSON (Object mbc) = do
         aMicroblocksBD    <- mbc .: "micro_block"
         aTransactionsInfo <-  mbc .: "transaction_info"
-        return $ MickroBlokContent aMicroblocksBD aTransactionsInfo
+        return $ MicroBlockContent aMicroblocksBD aTransactionsInfo
     parseJSON _ = mzero
 
 --------------------------------------------------------------------------------

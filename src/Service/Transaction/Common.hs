@@ -1,5 +1,6 @@
 {-# LANGUAGE PackageImports #-}
-module Service.Transaction.Common (
+module Service.Transaction.Common
+  (
   connectOrRecoveryConnect,
   getBlockByHashDB,
   getTransactionsByMicroblockHash,
@@ -14,7 +15,8 @@ module Service.Transaction.Common (
   getTransactionByHashDB,
   getChainInfoDB,
   DBPoolDescriptor(..)
-  ) where
+  )
+  where
 import           Service.Transaction.Balance (addMacroblockToDB,
                                               addMicroblockToDB,
                                               getBalanceForKey, runLedger)

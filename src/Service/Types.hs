@@ -8,17 +8,20 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE StandaloneDeriving        #-}
+{-# LANGUAGE TemplateHaskell           #-}
 
 module Service.Types where
 
 import           Control.Exception
 import           Data.ByteString
 import qualified Data.ByteString.Char8              as C
+import qualified Data.ByteString.Internal           as BSI
 import           Data.Graph.Inductive
 import           Data.List.Split                    (splitOn)
 import           Data.Serialize
 import           GHC.Generics
 import           Service.Types.PublicPrivateKeyPair
+import              Lens.Micro.TH
 
 data CLIException = WrongKeyOwnerException
                   | NotImplementedException -- test
@@ -123,19 +126,22 @@ data MicroblockBD = MicroblockBD{
 instance Serialize MicroblockBD
 
 data MacroblockBD = MacroblockBD {
-     _prevKBlock :: Maybe ByteString
-  ,  _nextKBlock :: Maybe ByteString
-  ,  _difficulty :: Integer --
-  ,  _height     :: Integer -- block number in the chain
-  ,  _solver     :: PublicKey
-  ,  _reward     :: Integer
-  ,  _time       :: Integer
-  ,  _number     :: Integer
-  ,  _nonce      :: Integer
-  ,  _mblocks    :: [ByteString]
-  ,  _teamKeys   :: [PublicKey]
+     _prevKBlock  :: Maybe ByteString -- previous closed KBlock
+  ,  _nextKBlock  :: Maybe ByteString -- next closed KBlock
+  ,  _prevHKBlock :: Maybe ByteString -- real previous
+  ,  _difficulty  :: Integer --
+  ,  _height      :: Integer -- block number in the chain
+  ,  _solver      :: PublicKey
+  ,  _reward      :: Integer
+  ,  _time        :: Integer
+  ,  _number      :: Integer
+  ,  _nonce       :: Integer
+  ,  _mblocks     :: [ByteString]
+  ,  _teamKeys    :: [PublicKey]
   } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize MacroblockBD
+
+
 
 -- from PoW
 data KeyBlockInfo = KeyBlockInfo {
@@ -158,6 +164,7 @@ data Transaction = Transaction {
   _uuid      :: Int
 } deriving ( Generic, Show, Eq, Ord, Read)
 
+makeLenses ''MacroblockBD
 
 instance Serialize Transaction
 
@@ -203,6 +210,7 @@ deriving instance Generic MessageForSign
 data MacroblockAPI = MacroblockAPI {
      _prevKBlock :: Maybe ByteString
   ,  _nextKBlock :: Maybe ByteString
+  -- ,  _prevHKBlock :: Maybe ByteString
   ,  _difficulty :: Integer
   ,  _height     :: Integer
   ,  _solver     :: PublicKey
@@ -262,3 +270,10 @@ data ChainInfo = ChainInfo {
     , _nodes_num       :: Integer     -- quantity of all active nodes now
   } deriving  (Generic, Show, Eq, Read)
 instance Serialize ChainInfo
+
+
+type HashOfKeyBlock = BSI.ByteString
+type HashOfMicroblock = BSI.ByteString
+
+type DBKey = BSI.ByteString
+type DBValue = BSI.ByteString

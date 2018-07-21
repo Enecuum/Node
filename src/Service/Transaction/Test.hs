@@ -303,9 +303,13 @@ test01 = do
                                         , Rocks.Put (BC.pack "b") (BC.pack "two")
                                         , Rocks.Put (BC.pack "c") (BC.pack "three") ]
   Rocks.write db def{Rocks.sync = True} [ Rocks.Put (BC.pack "a") (BC.pack "4")]
-  result <- Rocks.get db Rocks.defaultReadOptions (BC.pack "a")
+  result1 <- Rocks.get db Rocks.defaultReadOptions (BC.pack "a")
+  putStrLn $ show result1
+  Rocks.delete db def{Rocks.sync = True} (BC.pack "a")
+  result2 <- Rocks.get db Rocks.defaultReadOptions (BC.pack "a")
+  putStrLn $ show result2
   Rocks.close db
-  putStrLn $ show result
+
 
 
 -- test04 :: IO ()
