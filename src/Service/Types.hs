@@ -20,8 +20,8 @@ import           Data.Graph.Inductive
 import           Data.List.Split                    (splitOn)
 import           Data.Serialize
 import           GHC.Generics
+import           Lens.Micro.TH
 import           Service.Types.PublicPrivateKeyPair
-import              Lens.Micro.TH
 
 data CLIException = WrongKeyOwnerException
                   | NotImplementedException -- test
@@ -150,6 +150,7 @@ data KeyBlockInfo = KeyBlockInfo {
   , _number    :: Integer
   , _nonce     :: Integer
   , _solver    :: PublicKey
+  , _type      :: Int
   } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize KeyBlockInfo
 

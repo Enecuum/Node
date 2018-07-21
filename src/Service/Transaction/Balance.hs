@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings        #-}
 {-# LANGUAGE PackageImports           #-}
 {-# LANGUAGE RecordWildCards          #-}
+{-# LANGUAGE ScopedTypeVariables      #-}
 {-# OPTIONS_GHC -fno-warn-orphans     #-}
 
 module Service.Transaction.Balance
@@ -18,7 +19,8 @@ module Service.Transaction.Balance
     writeMicroblockDB,
     addMicroblockHashesToMacroBlock,
     calculateLedger,
-    updateMacroblockByKeyBlock
+    updateMacroblockByKeyBlock,
+    --testOfBase
     ) where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
@@ -26,7 +28,11 @@ import           Control.Exception                     (throw)
 import           Control.Monad
 import           Data.Aeson                            hiding (Error)
 import           Data.Aeson.Types                      (parseMaybe)
+import qualified Data.ByteString.Base64                as Base64
 import qualified Data.ByteString.Char8                 as BC
+import qualified Data.ByteString.Internal              as BSI
+import qualified Data.ByteString.Lazy                  as B
+import           Data.ByteString.Lazy.Internal
 import           Data.Default                          (def)
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
@@ -46,6 +52,7 @@ import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
+
 
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
@@ -269,22 +276,56 @@ writeLedgerDB dbLedger aInfoChan bt = do
   writeLog aInfoChan [BDTag] Info ("Write Ledger "  ++ show bt)
 
 
+-- instance ToJSON BSI.ByteString where
+--   toJSON h = String $ pack $ B.unpack h
+
+-- instance FromJSON BSI.ByteString where
+--   parseJSON (String s) = return $ B.pack $ unpack s
+--   parseJSON _          = error "Wrong object format"
+
+
+
 addMacroblockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> IO ()
 addMacroblockToDB db (Object aValue) aInfoChan = do
   let keyBlock = case parseMaybe (.: "verb") aValue of
-        Nothing     -> ""
-        Just kBlock -> kBlock :: String --Map T.Text Value
+        Nothing     -> throw (DecodeException "There is no verb in PoW Key Block")
+        Just kBlock -> kBlock :: BC.ByteString --Map T.Text Value
+  if keyBlock /= "kblock"
+    then return ()
+    else do
+    let body = case parseMaybe (.: "body") aValue of
+          Nothing     -> throw (DecodeException "Can not parse body of PoW Key Block ")
+          Just kBlock -> kBlock :: BC.ByteString --BSI.ByteString --KeyBlockInfo --Map T.Text Value
 
-  if keyBlock /= "kblock" then return ()
-  else do
-    let keyBlockInfoObject = case parseMaybe (.: "body") aValue of
-            Nothing     -> throw (DecodeException "Can not parse body of PoW Key Block ")
-            Just kBlock -> kBlock :: KeyBlockInfo --Map T.Text Value
+    let decodedKey = Base64.decode body -- :: Either String
+    print "hi"
+    print decodedKey
+    case decodedKey of
+      Left e -> throw (DecodeException (show e))
+      Right r -> do
+        -- case Data.Aeson.decode r of
+        --   Left a -> throw (DecodeException $ "There is no PoW Key Block. The error: " ++ a)
+        --   Right (keyBlockInfoObject :: [KeyBlockInfo]) -> do
+        --     print "keyBlockInfoObject"
+        --     print keyBlockInfoObject
+        let what = BC.init $ BC.tail r
+        print what
+        case Data.Aeson.eitherDecodeStrict $ what of
+          Left a -> throw (DecodeException $ "There is no PoW Key Block. The error: " ++ a)
+          Right (keyBlockInfoObject ) -> do
+            print "keyBlockInfoObject"
+            print keyBlockInfoObject
+            let keyBlockHash = rHash keyBlockInfoObject
+            writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
+            updateMacroblockByKeyBlock db aInfoChan keyBlockHash keyBlockInfoObject Main
 
-        keyBlockHash = rHash keyBlockInfoObject
-    writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
-    updateMacroblockByKeyBlock db aInfoChan keyBlockHash keyBlockInfoObject Main
-addMacroblockToDB _ x aInfoChan = writeLog aInfoChan [ServePoATag] Error ("Can not decode KeyBlockInfo" ++ show x)
+try = do
+  input <- B.readFile "/home/ksenia/input.json"
+  let mm = decode input :: Maybe KeyBlockInfo
+  print mm
+-- json1 ={\"time\":1532168703,\"nonce\":62592,\"number\":2,\"type\":0,\"prev_hash\":\"AAABrMjWwW95ZXx5EgIn8gG2c0/xaXi1M4uaGWMH28o=\",\"solver\":\"OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=\"}
+
+--test01 = Base64.decode "W3sidGltZSI6MTUzMjE2ODcwMywibm9uY2UiOjYyNTkyLCJudW1iZXIiOjIsInR5cGUiOjAsInByZXZfaGFzaCI6IkFBQUJyTWpXd1c5NVpYeDVFZ0luOGdHMmMwL3hhWGkxTTR1YUdXTUgyOG89Iiwic29sdmVyIjoiT3ZTOExtbWNNYTRtdEVXYmlmTzVaRmtxVDZBWVJpenpRNm1Fb2JNTWh6ND0ifV0=\"
 
 
 updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()
@@ -312,3 +353,7 @@ addMicroblockHashesToMacroBlock db i hashOfKeyBlock hashesOfMicroblock = do
             allHashes = sort $ Set.elems $ Set.union currentHashes newHashes
         let macroblock = S.encode $ (r {_mblocks = allHashes} :: MacroblockBD)
         funW (poolMacroblock db) [(hashOfKeyBlock, macroblock)]
+
+
+hashForKeyBlock :: KeyBlockInfo -> HashOfKeyBlock
+hashForKeyBlock = undefined

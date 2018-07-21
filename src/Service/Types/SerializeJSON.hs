@@ -319,4 +319,5 @@ instance FromJSON KeyBlockInfo where
                          <*> (v .: "number")
                          <*> (v .: "nonce")
                          <*> (v .: "solver")
+                         <*> (v .: "type")
   parseJSON inv        = typeMismatch "KeyBlockInfo" inv

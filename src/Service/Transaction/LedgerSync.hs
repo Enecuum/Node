@@ -46,8 +46,9 @@ getKeyBlockSproutData c@(Common descr i) from to = do
 
 
 isValidKeyBlockSprout :: Common -> (HashOfKeyBlock, MacroblockBD) -> IO Bool
-isValidKeyBlockSprout = return True -- Fix verify hash of KeyBlock
--- -- tMacroblock2KeyBlockInfo
+isValidKeyBlockSprout c (h,m) = return True  --return $ h == _prevHKBlock m
+
+
 
 
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
