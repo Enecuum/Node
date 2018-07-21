@@ -235,6 +235,7 @@ instance ToJSON MacroblockBD where
     toJSON bl = object  [
             "prev_hash"         .= _prevKBlock (bl :: MacroblockBD)
          ,  "next_hash"         .= _nextKBlock (bl :: MacroblockBD)
+         ,  "prev_Khash"        .= _prevHKBlock (bl :: MacroblockBD)
          ,  "difficulty"        .= _difficulty (bl :: MacroblockBD)
          ,  "height"            .= _height (bl :: MacroblockBD)
          ,  "solver"            .= _solver (bl :: MacroblockBD)
@@ -250,6 +251,7 @@ instance FromJSON MacroblockBD where
     parseJSON (Object o) = MacroblockBD
                <$> o .:? "prev_hash"
                <*> o .:? "next_hash"
+               <*> o .:? "prev_Khash"
                <*> o .: "difficulty"
                <*> o .: "height"
                <*> o .: "solver"

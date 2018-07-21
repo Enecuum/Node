@@ -399,6 +399,7 @@ dummyMacroblock :: MacroblockBD
 dummyMacroblock = MacroblockBD {
   _prevKBlock = Nothing,
   _nextKBlock = Nothing,
+  _prevHKBlock = Nothing,
   _difficulty = 0,
   _height = 0,
   _solver = aSolver,
@@ -414,8 +415,9 @@ dummyMacroblock = MacroblockBD {
 
 tKeyBlockInfo2Macroblock :: KeyBlockInfo -> MacroblockBD
 tKeyBlockInfo2Macroblock (KeyBlockInfo {..}) = MacroblockBD {
-            _prevKBlock = Just _prev_hash,
+            _prevKBlock = Nothing,
             _nextKBlock = Nothing,
+            _prevHKBlock = Just _prev_hash,
             _difficulty = 20,
             _height = 0,
             _solver,

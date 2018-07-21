@@ -3,6 +3,7 @@
 module Service.Transaction.Sprout where
 
 import           Control.Exception
+import           Control.Monad
 import qualified Data.HashTable.IO                as H
 import           Data.Maybe
 import qualified Data.Serialize                   as S (decode, encode)
@@ -52,17 +53,24 @@ getM c number = do
 
 
 
-setS :: Common -> Number -> HashOfKeyBlock -> IO ()
-setS c@(Common descr _ _) number hashOfKeyBlock = do
+setS :: Common -> Number -> HashOfKeyBlock -> BranchOfChain -> IO ()
+setS c@(Common descr _ _) number hashOfKeyBlock branch = when (branch == Sprout) $ do
   chain <- getChain c number
-  case chain of
-    (_, Just j) -> do
-      let err k = "There is sprout already in the table, hashOfKeyBlock " ++ show k
-      throw (SproutExists (err j))
-    (m, Nothing) -> do
-      let key = S.encode number
-          val = S.encode (m, Just hashOfKeyBlock)
-      funW (poolSprout descr) [(key, val)]
+  let valueOfChain = funBranch branch $ chain
+  let newChain = if (valueOfChain == Nothing)
+        then case branch of
+        Main   -> (Just hashOfKeyBlock, snd chain)
+        Sprout -> (fst chain, Just hashOfKeyBlock)
+        else throw (ValueOfChainIsNotNothing ("KeyBlockHash is" ++ (show valueOfChain)))
+
+  let key = S.encode number
+      val = S.encode newChain
+  funW (poolSprout descr) [(key, val)]
+
+
+funBranch :: BranchOfChain -> (a, a) -> a
+funBranch Main   = fst
+funBranch Sprout = snd
 
 
 findWholeChainSince ::  Common -> Number -> BranchOfChain -> IO [(Number, HashOfKeyBlock)]
@@ -75,6 +83,21 @@ findWholeChainSince c number branch = do
     let chain = (fst chainJ, fromJust (snd chainJ))
     return (chain:rest)
     else return []
+
+
+findConsequentChainSinceUntil :: Common -> HashOfKeyBlock -> HashOfKeyBlock -> Limit -> IO [(HashOfKeyBlock, Number)]
+findConsequentChainSinceUntil c@(Common descr i _) h searchedHash limit = do
+  macroblockMaybe <- getKeyBlockByHash descr (Hash h) i
+  case macroblockMaybe of
+    Nothing -> return []
+    Just macroblock -> case _prevHKBlock macroblock of
+      Nothing -> return []
+      Just hashPrevKBlock -> if (limit > 0 && hashPrevKBlock /= searchedHash)
+        then do
+        let number = _number (macroblock :: MacroblockBD)
+        rest <- findConsequentChainSinceUntil c hashPrevKBlock searchedHash (limit - 1)
+        return ((hashPrevKBlock,number):rest)
+      else return []
 
 
 bbb :: IO [(Int, Maybe Int)]
@@ -96,8 +119,3 @@ findSinceAndUntil i = do
     rest <- findSinceAndUntil (i+1)
     return (p:rest)
     else return []
-
-
-funBranch :: BranchOfChain -> (a, a) -> a
-funBranch Main   = fst
-funBranch Sprout = snd

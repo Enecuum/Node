@@ -124,17 +124,18 @@ data MicroblockBD = MicroblockBD{
 instance Serialize MicroblockBD
 
 data MacroblockBD = MacroblockBD {
-     _prevKBlock :: Maybe ByteString
-  ,  _nextKBlock :: Maybe ByteString
-  ,  _difficulty :: Integer --
-  ,  _height     :: Integer -- block number in the chain
-  ,  _solver     :: PublicKey
-  ,  _reward     :: Integer
-  ,  _time       :: Integer
-  ,  _number     :: Integer
-  ,  _nonce      :: Integer
-  ,  _mblocks    :: [ByteString]
-  ,  _teamKeys   :: [PublicKey]
+     _prevKBlock  :: Maybe ByteString -- previous closed KBlock
+  ,  _nextKBlock  :: Maybe ByteString -- next closed KBlock
+  ,  _prevHKBlock :: Maybe ByteString -- real previous
+  ,  _difficulty  :: Integer --
+  ,  _height      :: Integer -- block number in the chain
+  ,  _solver      :: PublicKey
+  ,  _reward      :: Integer
+  ,  _time        :: Integer
+  ,  _number      :: Integer
+  ,  _nonce       :: Integer
+  ,  _mblocks     :: [ByteString]
+  ,  _teamKeys    :: [PublicKey]
   } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize MacroblockBD
 
@@ -204,6 +205,7 @@ deriving instance Generic MessageForSign
 data MacroblockAPI = MacroblockAPI {
      _prevKBlock :: Maybe ByteString
   ,  _nextKBlock :: Maybe ByteString
+  -- ,  _prevHKBlock :: Maybe ByteString
   ,  _difficulty :: Integer
   ,  _height     :: Integer
   ,  _solver     :: PublicKey

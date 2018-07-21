@@ -60,7 +60,7 @@ setKeyBlockSproutData c@(Common descr _ _) kv = do
 
   -- read from and write to Sprout Table
   let kvN = map (\(h,m) -> (h, _number (m :: MacroblockBD))) kv
-  mapM_ (\(hashOfKeyBlock, number) -> setS c number hashOfKeyBlock) kvN
+  mapM_ (\(hashOfKeyBlock, number) -> setS c number hashOfKeyBlock Sprout) kvN
 
 
 getRestSproutData :: Common -> HashOfMicroblock -> IO MicroBlockContent
@@ -88,7 +88,7 @@ setRestSproutData c@(Common descr i _) (number, hashOfKeyBlock, (MicroBlockConte
   -- add hashes of microblocks to Macroblock table
   addMicroblockHashesToMacroBlock descr i hashOfKeyBlock [rHash mb]
   -- write number and hashOfKeyBlock to Sprout table
-  setS c number hashOfKeyBlock
+  setS c number hashOfKeyBlock Sprout
 
 
 deleteSproutData      :: Common -> (Number, HashOfKeyBlock) -> IO () -- right after foundation
@@ -126,11 +126,28 @@ deleteSprout c@(Common descr i _) (number, hashOfKeyBlock) branch = do
 
 
 setSproutAsMain :: Common -> (Number, HashOfKeyBlock) -> IO () -- right after foundation
-setSproutAsMain c (number, hashOfKeyBlock) = do
-  let branch = Main
-  -- find key blocks belong to Main chain (right after foundation of main and sprout chain)
-  chain <- findWholeChainSince c number branch
+setSproutAsMain c@(Common descr i _) (number, _) = do
+  -- find key blocks which belong to Main chain (right after foundation of main and sprout chain)
+  mainChain <- findWholeChainSince c number Main
+  mainChainClosedKeyBlocks <- getClosedMacroblockByHash c $ map snd mainChain
+  sproutChain <- findWholeChainSince c number Sprout
+  sproutChainClosedKeyBlocks <- getClosedMacroblockByHash c $ map snd sproutChain
   -- recalculate ledger
-
+  -- storno
+  mapM_ (\(h,m) -> calculateLedger descr i True h m) mainChainClosedKeyBlocks
+  -- add closed sprout macroblocks to ledger
+  mapM_ (\(h,m) -> calculateLedger descr i False h m) sproutChainClosedKeyBlocks
   -- delete Main chain (right after foundation of main and sprout chain)
-  mapM_ (\r -> deleteSprout c r branch) chain
+  mapM_ (\r -> deleteSprout c r Sprout) mainChain
+  -- set SproutChain as MainChain
+  mapM_ (\(n,h) -> setS c n h Main) sproutChain
+
+
+getClosedMacroblockByHash :: Common -> [HashOfKeyBlock] -> IO [(HashOfKeyBlock, MacroblockBD)]
+getClosedMacroblockByHash (Common descr i _) hashOfKeyBlock = do
+  let fun = \h -> (getKeyBlockByHash descr (Hash h) i)
+  macroblocksMaybe <- mapM fun hashOfKeyBlock
+  let macroblocksJust = filter (\a -> isJust $ snd a) $ zip hashOfKeyBlock macroblocksMaybe
+      macroblocks = map (\(h,m) -> (h,fromJust m)) macroblocksJust
+      closedMacroblocks = filter (\a -> checkMacroblockIsClosed $ snd a) macroblocks
+  return closedMacroblocks

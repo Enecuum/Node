@@ -16,7 +16,8 @@ module Service.Transaction.Balance
     writeMacroblockToDB,
     writeTransactionDB,
     writeMicroblockDB,
-    addMicroblockHashesToMacroBlock
+    addMicroblockHashesToMacroBlock,
+    calculateLedger
     ) where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
@@ -123,7 +124,7 @@ getPubKeys :: Transaction -> [PublicKey]
 getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
-checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> Microblock -> BC.ByteString -> IO (IsMicroblockNew, IsMacroblockNew, MacroblockBD)
+checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> Microblock -> HashOfMicroblock -> IO (IsMicroblockNew, IsMacroblockNew, MacroblockBD)
 checkMacroblock db aInfoChan microblock blockHash = do
     let keyBlockHash = (_keyBlock (microblock :: Microblock))
     v  <- funR (poolMacroblock db) keyBlockHash
