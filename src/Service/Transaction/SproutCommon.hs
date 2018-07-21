@@ -1,12 +1,11 @@
-{-# LANGUAGE DeriveGeneric #-}
 module Service.Transaction.SproutCommon where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
 import qualified Data.HashTable.IO                     as H
-import           GHC.Generics
 import           Service.InfoMsg                       (InfoMsg (..))
-import           Service.Transaction.Common
+-- import           Service.Transaction.Common
+import           Service.Transaction.Storage
 import           Service.Types
 
 data MicroBlockContent = MicroBlockContent MicroblockBD [TransactionInfo]
@@ -19,8 +18,6 @@ data Common = Common {
   db       :: DBPoolDescriptor,
   infoChan :: InChan InfoMsg
  }
-
-data BranchOfChain = Main | Sprout deriving (Eq, Generic, Ord, Read, Show)
 
 type MainChain = HashOfKeyBlock
 type SproutChain = HashOfKeyBlock

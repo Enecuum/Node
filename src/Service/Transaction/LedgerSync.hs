@@ -9,11 +9,11 @@ import qualified Data.Serialize                   as S (encode)
 import           Node.Data.GlobalLoging
 import           Service.InfoMsg                  (LogingTag (..), MsgType (..))
 import           Service.Transaction.Balance
+import           Service.Transaction.Independent
 import           Service.Transaction.Sprout
 import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
-
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
 myTail (Common descr i) = do
@@ -51,16 +51,12 @@ isValidKeyBlockSprout = undefined -- Fix verify hash of KeyBlock
 
 
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
-setKeyBlockSproutData c@(Common descr _) kv = do
-  -- write MacroblockBD without Microblocks hashes
-  let clearMicroblocks = map (\(k,v ) -> (k,fun v) ) kv
-        where fun v = (v {_mblocks = []}) :: MacroblockBD
-  let kvDB = map (\(k,v) -> (k, S.encode v)) clearMicroblocks
-  funW (poolMacroblock descr) kvDB
+setKeyBlockSproutData c@(Common descr i) kv = do
+  mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
 
   -- read from and write to Sprout Table
   let kvN = map (\(h,m) -> (h, _number (m :: MacroblockBD))) kv
-  mapM_ (\(hashOfKeyBlock, number) -> setS c number hashOfKeyBlock Sprout) kvN
+  mapM_ (\(hashOfKeyBlock, number) -> setChain c number hashOfKeyBlock Sprout) kvN
 
 
 getRestSproutData :: Common -> HashOfMicroblock -> IO MicroBlockContent
@@ -88,7 +84,7 @@ setRestSproutData c@(Common descr i) (number, hashOfKeyBlock, (MicroBlockContent
   -- add hashes of microblocks to Macroblock table
   addMicroblockHashesToMacroBlock descr i hashOfKeyBlock [rHash mb]
   -- write number and hashOfKeyBlock to Sprout table
-  setS c number hashOfKeyBlock Sprout
+  setChain c number hashOfKeyBlock Sprout
 
 
 deleteSproutData      :: Common -> Number -> IO () -- right after foundation
@@ -140,7 +136,7 @@ setSproutAsMain c@(Common descr i) number = do
   -- delete Main chain (right after foundation of main and sprout chain)
   mapM_ (\r -> deleteSprout c r Sprout) mainChain
   -- set SproutChain as MainChain
-  mapM_ (\(n,h) -> setS c n h Main) sproutChain
+  mapM_ (\(n,h) -> setChain c n h Main) sproutChain
 
 
 getClosedMacroblockByHash :: Common -> [HashOfKeyBlock] -> IO [(HashOfKeyBlock, MacroblockBD)]
