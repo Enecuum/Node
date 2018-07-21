@@ -1,9 +1,9 @@
 pipeline:
-  build:
+  build-dev:
     image: plugins/docker
     secrets: [docker_username, docker_password]
     registry: dev.enecuum.com:2087
-    repo: dev.enecuum.com:2087/testnet/node
+    repo: dev.enecuum.com:2087/testnet/node-dev
     tags: latest
     when:
       branch:
@@ -31,7 +31,7 @@ pipeline:
         target: PLUGIN_ACCESS_KEY
       - source: rancher_secret_key
         target: PLUGIN_SECRET_KEY
-    docker_image: dev.enecuum.com:2087/testnet/node:latest
+    docker_image: dev.enecuum.com:2087/testnet/node-dev:latest
     service: bootnode/bootnode-dev
     confirm: true
     timeout: 240
@@ -51,7 +51,7 @@ pipeline:
         target: PLUGIN_ACCESS_KEY
       - source: rancher_secret_key
         target: PLUGIN_SECRET_KEY
-    docker_image: dev.enecuum.com:2087/testnet/node:latest
+    docker_image: dev.enecuum.com:2087/testnet/node-dev:latest
     service: node/node-dev
     confirm: true
     timeout: 240
