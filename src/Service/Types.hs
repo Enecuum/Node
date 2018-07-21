@@ -144,6 +144,16 @@ instance Serialize MacroblockBD
 
 
 -- from PoW
+data KeyBlockInfoPoW = KeyBlockInfoPoW {
+    _time      :: Integer
+  , _prev_hash :: ByteString
+  , _number    :: Integer
+  , _nonce     :: Integer
+  , _solver    :: String
+  , _type      :: Int
+  } deriving (Eq, Generic, Ord, Read, Show)
+instance Serialize KeyBlockInfoPoW
+
 data KeyBlockInfo = KeyBlockInfo {
     _time      :: Integer
   , _prev_hash :: ByteString

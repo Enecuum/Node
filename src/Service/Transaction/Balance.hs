@@ -42,6 +42,7 @@ import           Data.Ord                              (comparing)
 import           Data.Pool
 import qualified Data.Serialize                        as S (decode, encode)
 import qualified Data.Set                              as Set
+import           Data.Typeable
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
 import           Service.InfoMsg                       (InfoMsg (..),
@@ -53,12 +54,12 @@ import           Service.Transaction.Storage
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 
-
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
 type IsStorno = Bool
 type IsMicroblockNew = Bool
 type IsMacroblockNew = Bool
+
 
 
 cReward :: Integer
@@ -314,10 +315,20 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
           Left a -> throw (DecodeException $ "There is no PoW Key Block. The error: " ++ a)
           Right (keyBlockInfoObject ) -> do
             print "keyBlockInfoObject"
+            putStrLn ("type of action1 is: " ++ (show (typeOf keyBlockInfoObject)))
             print keyBlockInfoObject
             let keyBlockHash = rHash keyBlockInfoObject
             writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
-            updateMacroblockByKeyBlock db aInfoChan keyBlockHash keyBlockInfoObject Main
+            updateMacroblockByKeyBlock db aInfoChan keyBlockHash (tKBIPoW2KBI keyBlockInfoObject) Main
+
+tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
+tKBIPoW2KBI (KeyBlockInfoPoW {..}) = undefined --KeyBlockInfo {
+  -- _time,
+  -- _prev_hash,
+  -- _number,
+  -- _nonce,
+  -- _solver,
+  -- _type}
 
 try = do
   input <- B.readFile "/home/ksenia/input.json"
