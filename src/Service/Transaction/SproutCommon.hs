@@ -17,8 +17,8 @@ type Limit = Integer
 
 data Common = Common {
   db       :: DBPoolDescriptor,
-  infoChan :: InChan InfoMsg,
-  sprout   :: SproutTable}
+  infoChan :: InChan InfoMsg
+ }
 
 data BranchOfChain = Main | Sprout deriving (Eq, Generic, Ord, Read, Show)
 

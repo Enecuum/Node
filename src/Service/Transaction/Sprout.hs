@@ -27,7 +27,7 @@ sproutTable = sproutT
 -- -- H.insert ht key value
 
 getChain :: Common -> Number -> IO Chain
-getChain (Common descr _ _) number = do
+getChain (Common descr _) number = do
   -- maybeV <- H.lookup st $ number
   maybeV <- funR (poolSprout descr) (S.encode number)
   case maybeV of
@@ -54,7 +54,7 @@ getM c number = do
 
 
 setS :: Common -> Number -> HashOfKeyBlock -> BranchOfChain -> IO ()
-setS c@(Common descr _ _) number hashOfKeyBlock branch = when (branch == Sprout) $ do
+setS c@(Common descr _) number hashOfKeyBlock branch = when (branch == Sprout) $ do
   chain <- getChain c number
   let valueOfChain = funBranch branch $ chain
   let newChain = if (valueOfChain == Nothing)
@@ -86,7 +86,7 @@ findWholeChainSince c number branch = do
 
 
 findConsequentChainSinceUntil :: Common -> HashOfKeyBlock -> HashOfKeyBlock -> Limit -> IO [(HashOfKeyBlock, Number)]
-findConsequentChainSinceUntil c@(Common descr i _) h searchedHash limit = do
+findConsequentChainSinceUntil c@(Common descr i) h searchedHash limit = do
   macroblockMaybe <- getKeyBlockByHash descr (Hash h) i
   case macroblockMaybe of
     Nothing -> return []

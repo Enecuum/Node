@@ -16,7 +16,7 @@ import           Service.Types
 
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
-myTail (Common descr i _) = do
+myTail (Common descr i) = do
   kv <- getLastKeyBlock descr i
   case kv of
     Nothing -> throw NoClosedKeyBlockInDB
@@ -36,7 +36,7 @@ peekNPreviousKeyBlocks c from to = do
 
 
 getKeyBlockSproutData :: Common -> From -> To -> IO [(Number, HashOfKeyBlock, MacroblockBD)]
-getKeyBlockSproutData c@(Common descr i _) from to = do
+getKeyBlockSproutData c@(Common descr i) from to = do
   kv <- peekNPreviousKeyBlocks c from to
   mb <- mapM (\(_,aHash) -> getKeyBlockByHash descr (Hash aHash) i) kv
   let allMaybe = zipWith (\(number, aHash) aMacroblock -> (number, aHash, aMacroblock)) kv mb
@@ -51,7 +51,7 @@ isValidKeyBlockSprout = undefined -- Fix verify hash of KeyBlock
 
 
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
-setKeyBlockSproutData c@(Common descr _ _) kv = do
+setKeyBlockSproutData c@(Common descr _) kv = do
   -- write MacroblockBD without Microblocks hashes
   let clearMicroblocks = map (\(k,v ) -> (k,fun v) ) kv
         where fun v = (v {_mblocks = []}) :: MacroblockBD
@@ -64,7 +64,7 @@ setKeyBlockSproutData c@(Common descr _ _) kv = do
 
 
 getRestSproutData :: Common -> HashOfMicroblock -> IO MicroBlockContent
-getRestSproutData (Common descr _ _) hashOfMicroblock = do
+getRestSproutData (Common descr _) hashOfMicroblock = do
   microblock <- getMicroBlockByHashDB descr (Hash hashOfMicroblock)
   case microblock of Nothing -> throw NoSuchMicroBlockDB
                      Just m -> do
@@ -79,7 +79,7 @@ isValidRestOfSprout _ _ = do -- Fix verify transaction signature
 
 
 setRestSproutData :: Common -> (Number, HashOfKeyBlock, MicroBlockContent) -> IO ()
-setRestSproutData c@(Common descr i _) (number, hashOfKeyBlock, (MicroBlockContent mb txInfo )) = do
+setRestSproutData c@(Common descr i) (number, hashOfKeyBlock, (MicroBlockContent mb txInfo )) = do
   -- write MicroBlockContent MicroblockBD [TransactionInfo]
   let tx = map (\t -> _tx (t :: TransactionInfo)) txInfo
   writeTransactionDB descr i tx (rHash mb)
@@ -91,15 +91,15 @@ setRestSproutData c@(Common descr i _) (number, hashOfKeyBlock, (MicroBlockConte
   setS c number hashOfKeyBlock Sprout
 
 
-deleteSproutData      :: Common -> (Number, HashOfKeyBlock) -> IO () -- right after foundation
-deleteSproutData c (number, _) = do
+deleteSproutData      :: Common -> Number -> IO () -- right after foundation
+deleteSproutData c number = do
   let branch = Sprout
   chain <- findWholeChainSince c number branch
   mapM_ (\r -> deleteSprout c r branch) chain
 
 
 deleteSprout :: Common -> (Number, HashOfKeyBlock) -> BranchOfChain -> IO () -- right after foundation
-deleteSprout c@(Common descr i _) (number, hashOfKeyBlock) branch = do
+deleteSprout c@(Common descr i) (number, hashOfKeyBlock) branch = do
   macroblock <- getKeyBlockByHash descr (Hash hashOfKeyBlock) i
   case macroblock of
     Nothing -> writeLog i [BDTag] Error ("There is no KeyBlock "  ++ show hashOfKeyBlock)
@@ -125,8 +125,8 @@ deleteSprout c@(Common descr i _) (number, hashOfKeyBlock) branch = do
       funW (poolSprout descr) [(sKey, sValue)]
 
 
-setSproutAsMain :: Common -> (Number, HashOfKeyBlock) -> IO () -- right after foundation
-setSproutAsMain c@(Common descr i _) (number, _) = do
+setSproutAsMain :: Common -> Number -> IO () -- right after foundation
+setSproutAsMain c@(Common descr i) number = do
   -- find key blocks which belong to Main chain (right after foundation of main and sprout chain)
   mainChain <- findWholeChainSince c number Main
   mainChainClosedKeyBlocks <- getClosedMacroblockByHash c $ map snd mainChain
@@ -144,7 +144,7 @@ setSproutAsMain c@(Common descr i _) (number, _) = do
 
 
 getClosedMacroblockByHash :: Common -> [HashOfKeyBlock] -> IO [(HashOfKeyBlock, MacroblockBD)]
-getClosedMacroblockByHash (Common descr i _) hashOfKeyBlock = do
+getClosedMacroblockByHash (Common descr i) hashOfKeyBlock = do
   let fun = \h -> (getKeyBlockByHash descr (Hash h) i)
   macroblocksMaybe <- mapM fun hashOfKeyBlock
   let macroblocksJust = filter (\a -> isJust $ snd a) $ zip hashOfKeyBlock macroblocksMaybe

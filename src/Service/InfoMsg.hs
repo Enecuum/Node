@@ -46,6 +46,7 @@ data LogingTag
     | PendingTag
     | RegularTag
     | InitTag
+    | SyncTag
     | BDTag
   deriving (Show, Enum)
 
@@ -77,7 +78,7 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
       Right lHandler              -> do
             putStrLn "Logs server connected"
             sendToServer lHandler $ "+node|" ++  aId ++ "|" ++
-                      intercalate "," (show <$> [ConnectingTag .. InitTag]) ++ "\r\n"
+                      intercalate "," (show <$> [ConnectingTag .. BDTag]) ++ "\r\n"
 
     undead (putStrLn "dead of log :))) ") $ forever $ do
         m <- readChan chan

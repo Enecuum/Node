@@ -20,6 +20,7 @@ import              System.Random()
 import              Service.Chan
 import qualified    Data.Map                        as M
 import              Data.Maybe (isNothing)
+import              Data.Aeson as A
 import              Data.IORef
 import              Lens.Micro
 import              Lens.Micro.Mtl()
@@ -34,19 +35,29 @@ import              PoA.Types
 import              Sharding.Sharding()
 import              Node.BaseFunctions
 import qualified    Control.Concurrent as C
+import              Service.Sync.SyncJson
 
 
-networkNodeStart :: (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()
-networkNodeStart (_, aOutChan) aMd = do
+networkNodeStart :: InChan SyncEvent -> (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()
+networkNodeStart aSyncChan (_, aOutChan) aMd = do
     aDataMain <- readIORef aMd
-    undead (writeLog (aDataMain^.logChan) [NetLvlTag] Warning "networkNodeStart. This node could be die!" )
+    let aWriteLog = writeLog (aDataMain^.logChan)
+        aNetLog   = aWriteLog [NetLvlTag] Info
+    aWriteLog [NetLvlTag, InitTag] Info "Init. Start of network level."
+    undead (aWriteLog [NetLvlTag] Warning "networkNodeStart. This node could be die!" )
       $ forever $ do
           aData <- readIORef aMd
           readChan aOutChan >>= \case
             NodeIsDisconnected      aNodeId                   ->
                 whenJust (aData^.connects.at aNodeId) $ \_ -> do
-                    writeLog (aData^.logChan) [NetLvlTag] Info $  "The node " ++ show aNodeId ++ " is disconnected."
+                    aNetLog $ "The node " ++ show aNodeId ++ " is disconnected."
                     modifyIORef aMd $ connects %~ M.delete aNodeId
+
+            SendMsgToNode aMsgFromNode aIdTo@(IdTo aId) -> do
+                whenJust (aData^.connects.at aId) $ \aNode -> do
+                    aNetLog $ "Sending of msg to " ++ show aId
+                    let MyNodeId aMyId = aData^.nodeConfig.myNodeId
+                    void $ tryWriteChan (aNode^.nodeChan) $ MsgMsgTo (IdFrom $ NodeId aMyId) aIdTo aMsgFromNode
 
             MsgFromNode aNodeType aMsgFromNode -> do
                 void $ C.forkIO $ when (aNodeType /= NN) $ forM_ (aData^.connects) $
@@ -54,18 +65,24 @@ networkNodeStart (_, aOutChan) aMd = do
                         void $ tryWriteChan (aNode^.nodeChan) aMsgFromNode
 
                 case aMsgFromNode of
-                    aMsg@(MsgBroadcast _ aNodeType _) ->
+                    aMsg@(MsgBroadcast _ aNodeType _) -> do
+                        aNetLog $ "Resending. Broadcast."
                         forM_ (aData^.connects) $ \aNode -> when
                             (aNode^.nodeType /= NN && (aNodeType == aNode^.nodeType || aNodeType == All)) $
                             void $ tryWriteChan (aNode^.nodeChan) aMsg
 
-                    aMsg@(MsgMsgTo _ (IdTo aId) _) -> do
-                        whenJust (aData^.connects.at aId) $ \aNode ->
-                            void $ tryWriteChan (aNode^.nodeChan) aMsg
+                    aMsg@(MsgMsgTo (IdFrom aSender) (IdTo aId) aContent) -> do
+                      if aId == toNodeId (aData^.nodeConfig.myNodeId)
+                      then case fromJSON aContent of
+                          Success aSyncMsg -> do
+                              aNetLog $ "Received sync msg. " ++ show aContent
+                              writeInChan aSyncChan $ SyncMsg aSender aSyncMsg
+                          A.Error _ -> return ()
+                      else whenJust (aData^.connects.at aId) $ \aNode ->
+                              void $ tryWriteChan (aNode^.nodeChan) aMsg
 
                     aMsg@(MsgMicroblock aMicroblock) -> do
-                        writeLog (aData^.logChan) [NetLvlTag] Info $
-                             "Create a a microblock: " ++ show aMicroblock
+                        aNetLog $ "Create a a microblock: " ++ show aMicroblock
                         void $ tryWriteChan (aData^.microblockChan) aMicroblock
                         void $ C.forkIO $ forM_ (aData^.connects) $ \aNode -> when
                             (aNode^.nodeType == All) $
@@ -76,19 +93,19 @@ networkNodeStart (_, aOutChan) aMd = do
                         void $ tryWriteChan (aData^.transactionsChan) (aTransaction, aVar)
 
                     aMsg@(MsgKeyBlock aKeyBlock) -> do
+                        aNetLog "Received key block"
                         void $ tryWriteChan (aData^.valueChan) aKeyBlock
                         void $ C.forkIO $ forM_ (aData^.connects) $ \aNode -> when
                             (aNode^.nodeType /= NN) $
                             writeInChan (aNode^.nodeChan) aMsg
 
-                    a -> writeLog (aData^.logChan) [NetLvlTag] Info $  show a ++ " not a msg."
+                    a -> aNetLog $  show a ++ " not a msg."
 
 
             ActionFromNode aMsgFromNode -> do
                 case aMsgFromNode of
                     NewConnect aNodeId aNodeType aChan aConnect -> do
-                        writeLog (aData^.logChan) [NetLvlTag] Info $
-                            "A new connect with PP node " ++ show aNodeId ++ ", the type of node is " ++ show aNodeType
+                        aNetLog $ "A new connect with PP node " ++ show aNodeId ++ ", the type of node is " ++ show aNodeType
                         when (isNothing $ aData^.connects.at aNodeId) $
                             modifyIORef aMd $ connects %~ M.insert aNodeId
                                 (NodeInfo aChan aNodeType aConnect)
@@ -109,7 +126,7 @@ networkNodeStart (_, aOutChan) aMd = do
             CleanAction                 -> return ()
 
             NewTransaction          aTransaction aVar  -> do
-                writeLog (aData^.logChan) [NetLvlTag] Info "I create a transaction."
+                aNetLog "I create a transaction."
                 void $ C.forkIO $ writeInChan (aData^.transactionsChan) (aTransaction, aVar)
 
 --  data ActualConnectInfo = ActualConnectInfo NodeId NodeType (Maybe Connect) deriving Show
