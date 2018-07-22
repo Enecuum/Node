@@ -34,6 +34,7 @@ import qualified Data.Serialize                        as S (Serialize, decode,
 import qualified Data.Aeson                            as A
 import qualified Data.ByteString                       as B (concat)
 import qualified Data.ByteString.Lazy                  as BL
+import           Data.Either
 import           Data.Serialize.Put
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
@@ -44,6 +45,7 @@ import           Service.System.Directory
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
+
 
 --------------------------------------
 -- begin of the Connection section
@@ -473,8 +475,8 @@ keyBlockHash  KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
                ,  putWord32le (fromInteger _time)
                ,  putWord32le (fromInteger _nonce)
                ]  ++  [
-                  _prev_hash
-               ,  _solver
+                  fromRight "" $ Base64.decode _prev_hash
+               ,  fromRight "" $ Base64.decode _solver
                ]
 
 
@@ -505,3 +507,5 @@ k3 = KeyBlockInfoPoW{
 
 go = do
   mapM_ (print . keyBlockHash) [k1,k2,k3]
+
+go1 = ["B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw=", "AAABrMjWwW95ZXx5EgIn8gG2c0/xaXi1M4uaGWMH28o="]
