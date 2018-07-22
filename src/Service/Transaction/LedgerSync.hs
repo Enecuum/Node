@@ -15,6 +15,7 @@ import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
 
+
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
 myTail (Common descr i) = do
   kv <- getLastKeyBlock descr i
@@ -138,6 +139,8 @@ setSproutAsMain c@(Common descr i) number = do
   mapM_ (\r -> deleteSprout c r Sprout) mainChain
   -- set SproutChain as MainChain
   mapM_ (\(n,h) -> setChain c n h Main) sproutChain
+  let lastNumber = fst $ last sproutChain
+  writeKeyBlockNumber c lastNumber
 
 
 getClosedMacroblockByHash :: Common -> [HashOfKeyBlock] -> IO [(HashOfKeyBlock, MacroblockBD)]

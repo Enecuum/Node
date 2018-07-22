@@ -19,8 +19,7 @@ module Service.Transaction.Balance
     writeMicroblockDB,
     addMicroblockHashesToMacroBlock,
     calculateLedger,
-    updateMacroblockByKeyBlock,
-    --testOfBase
+    updateMacroblockByKeyBlock
     ) where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
@@ -31,9 +30,6 @@ import           Data.Aeson.Types                      (parseMaybe)
 import qualified Data.ByteString                       as B
 import qualified Data.ByteString.Base64                as Base64
 import qualified Data.ByteString.Char8                 as BC
-import qualified Data.ByteString.Internal              as BSI
-import qualified Data.ByteString.Lazy                  as BL
-import           Data.ByteString.Lazy.Internal
 import           Data.Default                          (def)
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
@@ -46,15 +42,17 @@ import qualified Data.Set                              as Set
 import           Data.Typeable
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
+import           Service.Chan
 import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
+import           Service.Sync.SyncJson
 import           Service.Transaction.Independent
 import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeInstances      (roll, unroll)
+import           Service.Types.SerializeInstances      (roll)
 
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
@@ -176,7 +174,7 @@ checkMacroblock db aInfoChan microblock blockHash = do
                     else return (True, True, bdMacroblock)
 
 
-addMicroblockToDB :: DBPoolDescriptor -> Microblock -> InChan InfoMsg -> IO ()
+--addMicroblockToDB :: DBPoolDescriptor -> Microblock -> InChan InfoMsg -> IO ()
 addMicroblockToDB db m i =  do
 -- FIX: verify signature
     let microblockHash = rHash $ tMicroblock2MicroblockBD  m
@@ -279,17 +277,11 @@ writeLedgerDB dbLedger aInfoChan bt = do
   writeLog aInfoChan [BDTag] Info ("Write Ledger "  ++ show bt)
 
 
--- instance ToJSON BSI.ByteString where
---   toJSON h = String $ pack $ B.unpack h
-
--- instance FromJSON BSI.ByteString where
---   parseJSON (String s) = return $ B.pack $ unpack s
---   parseJSON _          = error "Wrong object format"
 
 
 
-addMacroblockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> IO ()
-addMacroblockToDB db (Object aValue) aInfoChan = do
+--addMacroblockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> IO ()
+addMacroblockToDB db (Object aValue) aInfoChan  aSyncChan = do
   let keyBlock = case parseMaybe (.: "verb") aValue of
         Nothing     -> throw (DecodeException "There is no verb in PoW Key Block")
         Just kBlock -> kBlock :: BC.ByteString --Map T.Text Value
@@ -301,7 +293,6 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
           Just kBlock -> kBlock :: BC.ByteString --BSI.ByteString --KeyBlockInfo --Map T.Text Value
 
     let decodedKey = Base64.decode body -- :: Either String
-    print "hi"
     print decodedKey
     case decodedKey of
       Left e -> throw (DecodeException (show e))
@@ -312,22 +303,28 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
             putStrLn ("type of keyBlockInfoObject is: " ++ (show (typeOf keyBlockInfoObject)))
             print keyBlockInfoObject
             print "keyBlockHash"
-            let keyBlock = tKBIPoW2KBI keyBlockInfoObject
-            print $ keyBlockHash keyBlockInfoObject
-            let aKeyBlockHash = keyBlockHash keyBlockInfoObject
+            -- let aKeyBlock = tKBIPoW2KBI keyBlockInfoObject
+            let aKeyBlockHash = getKeyBlockHash keyBlockInfoObject
+            print $ aKeyBlockHash
             writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
-            updateMacroblockByKeyBlock db aInfoChan aKeyBlockHash keyBlock Main
+
+            let receivedKeyNumber = _number (keyBlockInfoObject :: KeyBlockInfoPoW)
+                startSync = writeInChan (fst aSyncChan) RestartSync
+            currentNumberInDB <- getKeyBlockNumber (Common db aInfoChan)
+            case currentNumberInDB of
+              Nothing -> startSync
+              Just j  -> when (j < receivedKeyNumber) $ do startSync
 
 
-tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
-tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {
-  _time,
-  _prev_hash,
-  _number,
-  _nonce,
-  _solver = pubKey,
-  _type}
-  where pubKey = publicKey256k1 ((roll $ B.unpack _solver) :: Integer)
+-- tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
+-- tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {
+--   _time,
+--   _prev_hash,
+--   _number,
+--   _nonce,
+--   _solver = pubKey,
+--   _type}
+--   where pubKey = publicKey256k1 ((roll $ B.unpack _solver) :: Integer)
 
 
 updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()
@@ -355,7 +352,3 @@ addMicroblockHashesToMacroBlock db i hashOfKeyBlock hashesOfMicroblock = do
             allHashes = sort $ Set.elems $ Set.union currentHashes newHashes
         let macroblock = S.encode $ (r {_mblocks = allHashes} :: MacroblockBD)
         funW (poolMacroblock db) [(hashOfKeyBlock, macroblock)]
-
-
-hashForKeyBlock :: KeyBlockInfo -> HashOfKeyBlock
-hashForKeyBlock = undefined

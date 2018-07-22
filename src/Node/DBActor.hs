@@ -39,7 +39,7 @@ data MsgToDB where
     DeleteSproutData      :: Number -> MsgToDB
     SetSproutAsMain       :: Number -> MsgToDB
 
-
+{-
 startDBActor
     ::  DBPoolDescriptor
     ->  OutChan Microblock
@@ -47,7 +47,8 @@ startDBActor
     ->  InChan InfoMsg
     ->  (InChan MsgToDB, OutChan MsgToDB)
     ->  IO b
-startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) = do
+-}
+startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSyncChan = do
     writeLog aInfoCh [BDTag, InitTag] Info "Init. Starting of DBActor."
     void . C.forkIO $ do
         writeLog aInfoCh [BDTag, InitTag] Info "Init. Resender of microblocs."
@@ -66,11 +67,11 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) = d
     forever $ readChan aOutChan >>= \case
         MicroblockMsgToDB aMicroblock -> do
             writeLog aInfoCh [BDTag] Info "Recived mickrobloc."
-            addMicroblockToDB descriptor aMicroblock aInfoCh
+            addMicroblockToDB descriptor aMicroblock aInfoCh 
 
         KeyBlockMsgToDB aValue -> do
             writeLog aInfoCh [BDTag] Info "Recived keyBlocks."
-            addMacroblockToDB descriptor aValue aInfoCh
+            addMacroblockToDB descriptor aValue aInfoCh aSyncChan
 
         MyTail aMVar -> do
             writeLog aInfoCh [BDTag] Info "My tail request."

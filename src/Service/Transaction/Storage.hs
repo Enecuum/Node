@@ -31,9 +31,9 @@ import           Data.Pool
 import qualified Data.Serialize                        as S (Serialize, decode,
                                                              encode)
 -- import           Data.Traversable
-import qualified Data.Aeson                            as A
+-- import qualified Data.Aeson                            as A
 import qualified Data.ByteString                       as B (concat)
-import qualified Data.ByteString.Lazy                  as BL
+-- import qualified Data.ByteString.Lazy                  as BL
 import           Data.Either
 import           Data.Serialize.Put
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
@@ -330,12 +330,12 @@ getAllItems db = do
 tMicroblockBD2Microblock :: DBPoolDescriptor -> MicroblockBD -> IO Microblock
 tMicroblockBD2Microblock db m@(MicroblockBD {..}) = do
   tx <- getTxsMicroblock db m
-  teamKeys <- getTeamKeysForMicroblock db _keyBlock
+  aTeamkeys <- getTeamKeysForMicroblock db _keyBlock
   return Microblock {
   _keyBlock,
   _sign          = _signBD,
   -- _teamKeys,
-  _teamKeys = teamKeys,
+  _teamKeys = aTeamkeys,
   _publisher,
   _transactions  = tx
   -- _numOfBlock
@@ -441,7 +441,8 @@ tMacroblock2KeyBlockInfo (MacroblockBD {..}) = KeyBlockInfo {
   _prev_hash = prev_hash,
   _number   ,
   _nonce    ,
-  _solver   }
+  _solver   ,
+  _type = 0}
   where prev_hash = case _prevKBlock of Nothing -> ""
                                         Just j  -> j
 
@@ -457,18 +458,18 @@ tMacroblock2ChainInfo kv = do
     _txs_num         = 0,  -- quantity of all approved transactions
     _nodes_num       = 0   -- quantity of all active nodes
     }
-    Just (keyBlockHash, (MacroblockBD {..}))  -> return ChainInfo {
+    Just (aKeyBlockHash, (MacroblockBD {..}))  -> return ChainInfo {
     _emission        = _reward,
     _curr_difficulty = _difficulty,
-    _last_block      = keyBlockHash,
+    _last_block      = aKeyBlockHash,
     _blocks_num      = 0,
     _txs_num         = 0,  -- quantity of all approved transactions
     _nodes_num       = 0   -- quantity of all active nodes
     }
 
 
-keyBlockHash :: KeyBlockInfoPoW -> BSI.ByteString
-keyBlockHash  KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
+getKeyBlockHash :: KeyBlockInfoPoW -> BSI.ByteString
+getKeyBlockHash  KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
   where bstr = B.concat $ map runPut [
                   putWord8    (toEnum _type)
                ,  putWord32le (fromInteger _number)
@@ -480,32 +481,32 @@ keyBlockHash  KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
                ]
 
 
-k1 = KeyBlockInfoPoW{
-  _time = 0,
-  _prev_hash = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-  _number = 0,
-  _nonce = 0,
-  _solver = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-  _type = 0}
+-- k1 = KeyBlockInfoPoW{
+--   _time = 0,
+--   _prev_hash = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+--   _number = 0,
+--   _nonce = 0,
+--   _solver = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+--   _type = 0}
 
-k2 = KeyBlockInfoPoW{
-  _time = 1532005108,
-  _prev_hash = "B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw=",
-  _number = 1,
-  _nonce = 366080,
-  _solver = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=",
-  _type = 0}
+-- k2 = KeyBlockInfoPoW{
+--   _time = 1532005108,
+--   _prev_hash = "B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw=",
+--   _number = 1,
+--   _nonce = 366080,
+--   _solver = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=",
+--   _type = 0}
 
-k3 = KeyBlockInfoPoW{
-  _time = 1532168703,
-  _prev_hash = "AAABrMjWwW95ZXx5EgIn8gG2c0/xaXi1M4uaGWMH28o=",
-  _number = 2,
-  _nonce = 62592,
-  _solver = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=",
-  _type = 0}
+-- k3 = KeyBlockInfoPoW{
+--   _time = 1532168703,
+--   _prev_hash = "AAABrMjWwW95ZXx5EgIn8gG2c0/xaXi1M4uaGWMH28o=",
+--   _number = 2,
+--   _nonce = 62592,
+--   _solver = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=",
+--   _type = 0}
 
 
-go = do
-  mapM_ (print . keyBlockHash) [k1,k2,k3]
+-- go = do
+--   mapM_ (print . keyBlockHash) [k1,k2,k3]
 
-go1 = ["B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw=", "AAABrMjWwW95ZXx5EgIn8gG2c0/xaXi1M4uaGWMH28o="]
+-- go1 = ["B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw=", "AAABrMjWwW95ZXx5EgIn8gG2c0/xaXi1M4uaGWMH28o="]

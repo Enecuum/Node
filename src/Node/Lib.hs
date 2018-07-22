@@ -71,7 +71,7 @@ startNode descrDB buildConf infoCh manager startDo = do
     void . C.forkIO $ pendingActor aPendingChan aMicroblockChan outTransactionChan infoCh
     void . C.forkIO $ servePoA (config^.myNodeId) poa_p aIn infoCh aInFileRequestChan aMicroblockChan inChanPending
     void . C.forkIO $ startFileServer aOutFileRequestChan
-    void . C.forkIO $ startDBActor descrDB outMicroblockChan aOutValueChan infoCh aDBActorChan
+    void . C.forkIO $ startDBActor descrDB outMicroblockChan aOutValueChan infoCh aDBActorChan aSyncChan
     void . C.forkIO $ manager aInputSync managerChan md
     void $ startDo managerChan outTransactionChan aMicroblockChan (config^.myNodeId) aInFileRequestChan
 

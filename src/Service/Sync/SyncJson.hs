@@ -17,12 +17,12 @@ import qualified Data.Text                        as T
 import           GHC.Generics                     (Generic)
 import           Service.Transaction.SproutCommon
 import           Service.Types
-import           Service.Transaction.LedgerSync
-import qualified Data.ByteString.Internal              as BSI
-import qualified Data.ByteString.Char8                 as BS
-import qualified Data.Text                             as T
-import           GHC.Generics (Generic)
+-- import           Service.Transaction.LedgerSync
 import           Control.Monad
+import qualified Data.ByteString.Char8            as BS
+import qualified Data.ByteString.Internal         as BSI
+import qualified Data.Text                        as T
+import           GHC.Generics                     (Generic)
 import           Node.Data.Key
 
 deriving instance Show MicroBlockContent
@@ -32,9 +32,12 @@ type Count      = Int
 type SyncStatusMessage  = String
 type ErrorStringCode    = String
 
+
+
 data SyncEvent where
     RestartSync ::                          SyncEvent
     SyncMsg     :: NodeId -> SyncMessage -> SyncEvent
+
 
 data SyncMessage where
     RequestTail           ::                                             SyncMessage
@@ -47,6 +50,8 @@ data SyncMessage where
     MicroblockResponse    :: MicroBlockContent                        -> SyncMessage
     StatusSyncMessage     :: SyncStatusMessage -> ErrorStringCode     -> SyncMessage
   deriving (Show)
+
+
 
 
 
