@@ -299,32 +299,32 @@ addMacroblockToDB db (Object aValue) aInfoChan  aSyncChan = do
       Right r -> do
         case Data.Aeson.eitherDecodeStrict $ BC.init $ BC.tail r of
           Left a -> throw (DecodeException $ "There is no PoW Key Block. The error: " ++ a)
-          Right (keyBlockInfoObject ) -> do
-            putStrLn ("type of keyBlockInfoObject is: " ++ (show (typeOf keyBlockInfoObject)))
-            print keyBlockInfoObject
+          Right (keyBlockInfo ) -> do
+            putStrLn ("type of keyBlockInfoObject is: " ++ (show (typeOf keyBlockInfo)))
+            print keyBlockInfo
             print "keyBlockHash"
             -- let aKeyBlock = tKBIPoW2KBI keyBlockInfoObject
-            let aKeyBlockHash = getKeyBlockHash keyBlockInfoObject
+            let aKeyBlockHash = getKeyBlockHash keyBlockInfo
             print $ aKeyBlockHash
-            writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
+            writeLog aInfoChan [BDTag] Info (show keyBlockInfo)
 
-            let receivedKeyNumber = _number (keyBlockInfoObject :: KeyBlockInfoPoW)
+            let receivedKeyNumber = _number (keyBlockInfo :: KeyBlockInfoPoW)
                 startSync = writeInChan (fst aSyncChan) RestartSync
             currentNumberInDB <- getKeyBlockNumber (Common db aInfoChan)
             case currentNumberInDB of
-              Nothing -> startSync
+              Nothing -> updateMacroblockByKeyBlock db aInfoChan aKeyBlockHash (tKBIPoW2KBI keyBlockInfo) Main
               Just j  -> when (j < receivedKeyNumber) $ do startSync
 
 
--- tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
--- tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {
---   _time,
---   _prev_hash,
---   _number,
---   _nonce,
---   _solver = pubKey,
---   _type}
---   where pubKey = publicKey256k1 ((roll $ B.unpack _solver) :: Integer)
+tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
+tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {
+  _time,
+  _prev_hash,
+  _number,
+  _nonce,
+  _solver = pubKey,
+  _type}
+  where pubKey = publicKey256k1 ((roll $ B.unpack _solver) :: Integer)
 
 
 updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()

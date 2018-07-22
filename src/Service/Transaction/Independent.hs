@@ -11,9 +11,8 @@ import           Service.Types
 
 
 getChain :: Common -> Number -> IO Chain
-getChain (Common descr _ ) number = do
-  -- maybeV <- H.lookup st $ number
-  maybeV <- funR (poolSprout descr) (S.encode number)
+getChain (Common descr _ ) aNumber = do
+  maybeV <- funR (poolSprout descr) (S.encode aNumber)
   case maybeV of
     Nothing    -> return (Nothing, Nothing)
     Just m -> case S.decode m :: Either String Chain of
