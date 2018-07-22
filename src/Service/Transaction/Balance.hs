@@ -24,7 +24,7 @@ module Service.Transaction.Balance
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception                     (throw)
-import           Control.Monad
+import           Control.Monad                         (liftM, when)
 import           Data.Aeson                            hiding (Error)
 import           Data.Aeson.Types                      (parseMaybe)
 import qualified Data.ByteString                       as B

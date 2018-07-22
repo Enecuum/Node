@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveGeneric            #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE DuplicateRecordFields    #-}
 {-# LANGUAGE GADTs                    #-}
@@ -12,18 +12,11 @@ module Service.Sync.SyncJson where
 import           Control.Monad
 import           Data.Aeson
 import qualified Data.ByteString.Char8            as BS
-import qualified Data.ByteString.Internal         as BSI
 import qualified Data.Text                        as T
-import           GHC.Generics                     (Generic)
-import           Service.Transaction.SproutCommon
-import           Service.Types
--- import           Service.Transaction.LedgerSync
-import           Control.Monad
-import qualified Data.ByteString.Char8            as BS
-import qualified Data.ByteString.Internal         as BSI
-import qualified Data.Text                        as T
-import           GHC.Generics                     (Generic)
 import           Node.Data.Key
+import           Service.Transaction.SproutCommon (From, MicroBlockContent (..),
+                                                   Number, To)
+import           Service.Types
 
 deriving instance Show MicroBlockContent
 
