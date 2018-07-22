@@ -474,7 +474,7 @@ keyBlockHash  KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
                ,  putWord32le (fromInteger _nonce)
                ]  ++  [
                   _prev_hash
-               ,  S.encode    _solver
+               ,  _solver
                ]
 
 
