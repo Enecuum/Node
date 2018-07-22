@@ -76,6 +76,6 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
             Left a -> do
                 WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"Error\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
                 writeLog aInfoChan [ServerBootNodeTag] Warning $
-                    "Broken message from PP " ++ show aMsg ++ " " ++ a
+                    "Broken message from PP " ++ show aMsg ++ " " ++ a ++ showHostAddress aHostAdress
 
 --------------------------------------------------------------------------------
