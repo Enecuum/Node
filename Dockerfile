@@ -13,4 +13,5 @@ RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositori
     echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories; \
     echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
 RUN apk --no-cache add rocksdb-dev gmp-dev numactl
+EXPOSE 1554 1555
 ENTRYPOINT if [ "$bootnode" = true ]; then echo "Bootnode activated" && ./BootNode-exe; else echo "Node activated" && ./SimpleNode-exe; fi
