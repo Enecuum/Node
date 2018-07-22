@@ -24,7 +24,7 @@ module Service.Transaction.Balance
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception                     (throw)
-import           Control.Monad
+import           Control.Monad                         (liftM, when)
 import           Data.Aeson                            hiding (Error)
 import           Data.Aeson.Types                      (parseMaybe)
 import qualified Data.ByteString                       as B
@@ -48,6 +48,7 @@ import           Service.InfoMsg                       (InfoMsg (..),
                                                         MsgType (..))
 import           Service.Sync.SyncJson
 import           Service.Transaction.Independent
+import           Service.Transaction.Sprout
 import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
@@ -277,10 +278,7 @@ writeLedgerDB dbLedger aInfoChan bt = do
   writeLog aInfoChan [BDTag] Info ("Write Ledger "  ++ show bt)
 
 
-
-
-
---addMacroblockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> IO ()
+addMacroblockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> (InChan SyncEvent, b) -> IO ()
 addMacroblockToDB db (Object aValue) aInfoChan  aSyncChan = do
   let keyBlock = case parseMaybe (.: "verb") aValue of
         Nothing     -> throw (DecodeException "There is no verb in PoW Key Block")
@@ -299,32 +297,39 @@ addMacroblockToDB db (Object aValue) aInfoChan  aSyncChan = do
       Right r -> do
         case Data.Aeson.eitherDecodeStrict $ BC.init $ BC.tail r of
           Left a -> throw (DecodeException $ "There is no PoW Key Block. The error: " ++ a)
-          Right (keyBlockInfoObject ) -> do
-            putStrLn ("type of keyBlockInfoObject is: " ++ (show (typeOf keyBlockInfoObject)))
-            print keyBlockInfoObject
+          Right (keyBlockInfo ) -> do
+            putStrLn ("type of keyBlockInfoObject is: " ++ (show (typeOf keyBlockInfo)))
+            print keyBlockInfo
             print "keyBlockHash"
-            -- let aKeyBlock = tKBIPoW2KBI keyBlockInfoObject
-            let aKeyBlockHash = getKeyBlockHash keyBlockInfoObject
+            let aKeyBlock = tKBIPoW2KBI keyBlockInfo
+            let aKeyBlockHash = getKeyBlockHash keyBlockInfo
             print $ aKeyBlockHash
-            writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
+            writeLog aInfoChan [BDTag] Info (show keyBlockInfo)
 
-            let receivedKeyNumber = _number (keyBlockInfoObject :: KeyBlockInfoPoW)
+            let receivedKeyNumber = _number (keyBlockInfo :: KeyBlockInfoPoW)
                 startSync = writeInChan (fst aSyncChan) RestartSync
             currentNumberInDB <- getKeyBlockNumber (Common db aInfoChan)
+            let updateKeyBlockDB = updateMacroblockByKeyBlock db aInfoChan aKeyBlockHash aKeyBlock Main
             case currentNumberInDB of
-              Nothing -> startSync
-              Just j  -> when (j < receivedKeyNumber) $ do startSync
+              Nothing -> updateKeyBlockDB
+              Just j  -> do
+                hashOfDBKeyBlock <- getM (Common db aInfoChan) j
+                case hashOfDBKeyBlock of
+                  Nothing ->  writeLog aInfoChan [BDTag] Error ("There is no key block with number " ++ (show j))
+                  Just h -> if (h == _prev_hash (aKeyBlock :: KeyBlockInfo))
+                    then updateKeyBlockDB
+                    else when (j < receivedKeyNumber) $ do startSync
 
 
--- tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
--- tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {
---   _time,
---   _prev_hash,
---   _number,
---   _nonce,
---   _solver = pubKey,
---   _type}
---   where pubKey = publicKey256k1 ((roll $ B.unpack _solver) :: Integer)
+tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
+tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {
+  _time,
+  _prev_hash,
+  _number,
+  _nonce,
+  _solver = pubKey,
+  _type}
+  where pubKey = publicKey256k1 ((roll $ B.unpack _solver) :: Integer)
 
 
 updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()
