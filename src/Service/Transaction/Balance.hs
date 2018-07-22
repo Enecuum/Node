@@ -177,7 +177,7 @@ checkMacroblock db aInfoChan microblock blockHash = do
                     else return (True, True, bdMacroblock)
 
 
---addMicroblockToDB :: DBPoolDescriptor -> Microblock -> InChan InfoMsg -> IO ()
+addMicroblockToDB :: DBPoolDescriptor -> Microblock -> InChan InfoMsg -> IO ()
 addMicroblockToDB db m i =  do
 -- FIX: verify signature
     let microblockHash = rHash $ tMicroblock2MicroblockBD  m
@@ -213,8 +213,8 @@ calculateLedger db i isStorno hashKeyBlock macroblock = do
   mapM_ (runLedger db i isStorno) (sortedM :: [Microblock])
   case isStorno of False -> writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = cReward})
                    True -> do
-                     let reward = (_reward (macroblock :: MacroblockBD)) - cReward
-                     writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = reward})
+                     let aReward = (_reward (macroblock :: MacroblockBD)) - cReward
+                     writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = aReward})
 
 
 
@@ -302,10 +302,9 @@ addMacroblockToDB db (Object aValue) aInfoChan  aSyncChan = do
           Right (keyBlockInfo ) -> do
             putStrLn ("type of keyBlockInfoObject is: " ++ (show (typeOf keyBlockInfo)))
             print keyBlockInfo
-            print "keyBlockHash"
             let aKeyBlock = tKBIPoW2KBI keyBlockInfo
             let aKeyBlockHash = getKeyBlockHash keyBlockInfo
-            print $ aKeyBlockHash
+            putStrLn $ "keyBlockHash" ++ show aKeyBlockHash
             writeLog aInfoChan [BDTag] Info (show keyBlockInfo)
 
             let receivedKeyNumber = _number (keyBlockInfo :: KeyBlockInfoPoW)
@@ -321,7 +320,7 @@ addMacroblockToDB db (Object aValue) aInfoChan  aSyncChan = do
                   Just h -> if (h == _prev_hash (aKeyBlock :: KeyBlockInfo))
                     then updateKeyBlockDB
                     else when (j < receivedKeyNumber) $ do startSync
-
+addMacroblockToDB _ _ _ _ = error "Can not PoW Key Block"
 
 tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
 tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {

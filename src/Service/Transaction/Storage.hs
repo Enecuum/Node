@@ -24,7 +24,7 @@ import qualified Data.ByteString.Base64                as Base64
 -- import           Data.Typeable
 -- import qualified Data.ByteString.Char8              as BC
 import           Control.Concurrent.Chan.Unagi.Bounded
-import qualified Data.ByteString                       as B (concat)
+-- import qualified Data.ByteString                       as B (concat)
 import qualified Data.ByteString                       as B
 import qualified Data.ByteString.Internal              as BSI
 import           Data.Default                          (def)
@@ -42,7 +42,7 @@ import           Service.InfoMsg                       (InfoMsg (..),
 import           Service.System.Directory
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeInstances      (roll, unroll)
+-- import           Service.Types.SerializeInstances      (roll, unroll)
 import           Service.Types.SerializeJSON           ()
 
 

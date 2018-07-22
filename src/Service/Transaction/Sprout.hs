@@ -2,11 +2,7 @@
 
 module Service.Transaction.Sprout where
 
-import           Control.Exception
-import           Control.Monad
-import qualified Data.HashTable.IO                as H
 import           Data.Maybe
-import qualified Data.Serialize                   as S (decode, encode)
 import           Service.Transaction.Independent
 import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
@@ -14,27 +10,27 @@ import           Service.Types
 
 
 findChain :: Common -> Number -> BranchOfChain -> IO (Number, Maybe HashOfKeyBlock)
-findChain c number branch = do
+findChain c aNumber branch = do
   let fun = case branch of
         Main   -> fst
         Sprout -> snd
-  chain <- fun <$> getChain c number
-  return (number, chain)
+  chain <- fun <$> getChain c aNumber
+  return (aNumber, chain)
 
 
 getM :: Common -> Number -> IO (Maybe HashOfKeyBlock)
-getM c number = do
-  chain <- getChain c number
+getM c aNumber = do
+  chain <- getChain c aNumber
   return $ fst chain
 
 
 findWholeChainSince ::  Common -> Number -> BranchOfChain -> IO [(Number, HashOfKeyBlock)]
-findWholeChainSince c number branch = do
-  chainJ <- findChain c number branch
+findWholeChainSince c aNumber branch = do
+  chainJ <- findChain c aNumber branch
   let second = \a -> isJust $ snd a
   if (second chainJ)
     then do
-    rest <- findWholeChainSince c (number + 1) branch
+    rest <- findWholeChainSince c (aNumber + 1) branch
     let chain = (fst chainJ, fromJust (snd chainJ))
     return (chain:rest)
     else return []
@@ -49,9 +45,9 @@ findConsequentChainSinceUntil c@(Common descr i) h searchedHash limit = do
       Nothing -> return []
       Just hashPrevKBlock -> if (limit > 0 && hashPrevKBlock /= searchedHash)
         then do
-        let number = _number (macroblock :: MacroblockBD)
+        let aNumber = _number (macroblock :: MacroblockBD)
         rest <- findConsequentChainSinceUntil c hashPrevKBlock searchedHash (limit - 1)
-        return ((hashPrevKBlock,number):rest)
+        return ((hashPrevKBlock,aNumber):rest)
       else return []
 
 

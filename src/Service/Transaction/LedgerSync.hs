@@ -40,14 +40,14 @@ getKeyBlockSproutData :: Common -> From -> To -> IO [(Number, HashOfKeyBlock, Ma
 getKeyBlockSproutData c@(Common descr i) from to = do
   kv <- peekNPreviousKeyBlocks c from to
   mb <- mapM (\(_,aHash) -> getKeyBlockByHash descr (Hash aHash) i) kv
-  let allMaybe = zipWith (\(number, aHash) aMacroblock -> (number, aHash, aMacroblock)) kv mb
+  let allMaybe = zipWith (\(aNumber, aHash) aMacroblock -> (aNumber, aHash, aMacroblock)) kv mb
       allJust = filter (\(_,_,v) -> v /= Nothing) allMaybe
       allKeyData = map (\(n,h,m) -> (n, h, fromJust m)) allJust
   return allKeyData
 
 
 isValidKeyBlockSprout :: Common -> [(HashOfKeyBlock, MacroblockBD)] -> IO Bool
-isValidKeyBlockSprout c kv = do --return True  --return $ h == _prevHKBlock m
+isValidKeyBlockSprout _ kv = do --return True  --return $ h == _prevHKBlock m
   -- hash of Key Block is real hash
   let fun h m = (h ==) $ getKeyBlockHash $ tKeyBlockToPoWType $ tMacroblock2KeyBlockInfo m
       isRealHash = map (\(h,m) -> fun h m) kv
@@ -60,7 +60,7 @@ setKeyBlockSproutData c@(Common descr i) kv = do
 
   -- read from and write to Sprout Table
   let kvN = map (\(h,m) -> (h, _number (m :: MacroblockBD))) kv
-  mapM_ (\(hashOfKeyBlock, number) -> setChain c number hashOfKeyBlock Sprout) kvN
+  mapM_ (\(hashOfKeyBlock, aNumber) -> setChain c aNumber hashOfKeyBlock Sprout) kvN
 
 
 getRestSproutData :: Common -> HashOfMicroblock -> IO MicroBlockContent
@@ -79,7 +79,7 @@ isValidRestOfSprout _ _ = do -- Fix verify transaction signature
 
 
 setRestSproutData :: Common -> (Number, HashOfKeyBlock, MicroBlockContent) -> IO ()
-setRestSproutData c@(Common descr i) (number, hashOfKeyBlock, (MicroBlockContent mb txInfo )) = do
+setRestSproutData c@(Common descr i) (aNumber, hashOfKeyBlock, (MicroBlockContent mb txInfo )) = do
   -- write MicroBlockContent MicroblockBD [TransactionInfo]
   let tx = map (\t -> _tx (t :: TransactionInfo)) txInfo
   writeTransactionDB descr i tx (rHash mb)
@@ -88,18 +88,18 @@ setRestSproutData c@(Common descr i) (number, hashOfKeyBlock, (MicroBlockContent
   -- add hashes of microblocks to Macroblock table
   addMicroblockHashesToMacroBlock descr i hashOfKeyBlock [rHash mb]
   -- write number and hashOfKeyBlock to Sprout table
-  setChain c number hashOfKeyBlock Sprout
+  setChain c aNumber hashOfKeyBlock Sprout
 
 
 deleteSproutData      :: Common -> Number -> IO () -- right after foundation
-deleteSproutData c number = do
+deleteSproutData c aNumber = do
   let branch = Sprout
-  chain <- findWholeChainSince c number branch
+  chain <- findWholeChainSince c aNumber branch
   mapM_ (\r -> deleteSprout c r branch) chain
 
 
 deleteSprout :: Common -> (Number, HashOfKeyBlock) -> BranchOfChain -> IO () -- right after foundation
-deleteSprout c@(Common descr i) (number, hashOfKeyBlock) branch = do
+deleteSprout c@(Common descr i) (aNumber, hashOfKeyBlock) branch = do
   macroblock <- getKeyBlockByHash descr (Hash hashOfKeyBlock) i
   case macroblock of
     Nothing -> writeLog i [BDTag] Error ("There is no KeyBlock "  ++ show hashOfKeyBlock)
@@ -116,21 +116,21 @@ deleteSprout c@(Common descr i) (number, hashOfKeyBlock) branch = do
       -- delete KeyBlock
       funD (poolMacroblock descr) hashOfKeyBlock
       -- erase chain from Sprout table
-      (aMain,aSprout) <- getChain c number
+      (aMain,aSprout) <- getChain c aNumber
       let newChain = case branch of
             Main   -> (Nothing, aSprout)
             Sprout ->  (aMain, Nothing)
-          sKey   = S.encode number
+          sKey   = S.encode aNumber
           sValue = S.encode newChain
       funW (poolSprout descr) [(sKey, sValue)]
 
 
 setSproutAsMain :: Common -> Number -> IO () -- right after foundation
-setSproutAsMain c@(Common descr i) number = do
+setSproutAsMain c@(Common descr i) aNumber = do
   -- find key blocks which belong to Main chain (right after foundation of main and sprout chain)
-  mainChain <- findWholeChainSince c number Main
+  mainChain <- findWholeChainSince c aNumber Main
   mainChainClosedKeyBlocks <- getClosedMacroblockByHash c $ map snd mainChain
-  sproutChain <- findWholeChainSince c number Sprout
+  sproutChain <- findWholeChainSince c aNumber Sprout
   sproutChainClosedKeyBlocks <- getClosedMacroblockByHash c $ map snd sproutChain
   -- recalculate ledger
   -- storno

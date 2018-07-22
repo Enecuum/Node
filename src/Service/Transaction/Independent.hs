@@ -20,8 +20,8 @@ getChain (Common descr _ ) aNumber = do
       Right r -> return r
 
 setChain :: Common -> Number -> HashOfKeyBlock -> BranchOfChain -> IO ()
-setChain c@(Common descr _ ) number hashOfKeyBlock branch = when (branch == Sprout) $ do
-  chain <- getChain c number
+setChain c@(Common descr _ ) aNumber hashOfKeyBlock branch = when (branch == Sprout) $ do
+  chain <- getChain c aNumber
   let valueOfChain = funBranch branch $ chain
   let newChain = if (valueOfChain == Nothing)
         then case branch of
@@ -29,7 +29,7 @@ setChain c@(Common descr _ ) number hashOfKeyBlock branch = when (branch == Spro
         Sprout -> (fst chain, Just hashOfKeyBlock)
         else throw (ValueOfChainIsNotNothing ("KeyBlockHash is" ++ (show valueOfChain)))
 
-  let key = S.encode number
+  let key = S.encode aNumber
       val = S.encode newChain
   funW (poolSprout descr) [(key, val)]
 

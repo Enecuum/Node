@@ -10,7 +10,7 @@ import           GHC.Generics
 import           Service.Transaction.TransactionsDAG
 import           Service.Types                       hiding (MicroblockV1)
 --import           Service.Types.PublicPrivateKeyPair
-import           Data.Maybe
+-- import           Data.Maybe
 import           Service.Types.SerializeJSON         ()
 import           System.Random
 
