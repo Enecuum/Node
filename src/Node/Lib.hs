@@ -270,7 +270,7 @@ syncNeighbors outSyncChan aDBActorChan aManagerChan (x:xs) aInfoChan = do
         writeLog aInfoChan [SyncTag] Info $  "My tail is small."
         lastCommonNumber <- findBeforeFork aMyTail aNodeId outSyncChan aDBActorChan aManagerChan aInfoChan
         aDiffBlock <- takeRecords aDBActorChan (GetKeyBlockSproutData (lastCommonNumber+1) (lastCommonNumber+1))
-        aOk <- loadBlocks outSyncChan aDBActorChan aManagerChan aDiffBlock lastCommonNumber aNumber aNodeId aInfoChan
+        aOk <- loadBlocks outSyncChan aDBActorChan aManagerChan aDiffBlock (lastCommonNumber+1) aNumber aNodeId aInfoChan
         unless aOk $ syncNeighbors outSyncChan aDBActorChan aManagerChan xs aInfoChan
     else return ()
 syncNeighbors _ _ _ _ _ = return ()
