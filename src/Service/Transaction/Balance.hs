@@ -48,6 +48,7 @@ import           Service.InfoMsg                       (InfoMsg (..),
                                                         MsgType (..))
 import           Service.Sync.SyncJson
 import           Service.Transaction.Independent
+import           Service.Transaction.Sprout
 import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
@@ -277,10 +278,7 @@ writeLedgerDB dbLedger aInfoChan bt = do
   writeLog aInfoChan [BDTag] Info ("Write Ledger "  ++ show bt)
 
 
-
-
-
---addMacroblockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> IO ()
+addMacroblockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> (InChan SyncEvent, b) -> IO ()
 addMacroblockToDB db (Object aValue) aInfoChan  aSyncChan = do
   let keyBlock = case parseMaybe (.: "verb") aValue of
         Nothing     -> throw (DecodeException "There is no verb in PoW Key Block")
@@ -303,7 +301,7 @@ addMacroblockToDB db (Object aValue) aInfoChan  aSyncChan = do
             putStrLn ("type of keyBlockInfoObject is: " ++ (show (typeOf keyBlockInfo)))
             print keyBlockInfo
             print "keyBlockHash"
-            -- let aKeyBlock = tKBIPoW2KBI keyBlockInfoObject
+            let aKeyBlock = tKBIPoW2KBI keyBlockInfo
             let aKeyBlockHash = getKeyBlockHash keyBlockInfo
             print $ aKeyBlockHash
             writeLog aInfoChan [BDTag] Info (show keyBlockInfo)
@@ -311,9 +309,16 @@ addMacroblockToDB db (Object aValue) aInfoChan  aSyncChan = do
             let receivedKeyNumber = _number (keyBlockInfo :: KeyBlockInfoPoW)
                 startSync = writeInChan (fst aSyncChan) RestartSync
             currentNumberInDB <- getKeyBlockNumber (Common db aInfoChan)
+            let updateKeyBlockDB = updateMacroblockByKeyBlock db aInfoChan aKeyBlockHash aKeyBlock Main
             case currentNumberInDB of
-              Nothing -> updateMacroblockByKeyBlock db aInfoChan aKeyBlockHash (tKBIPoW2KBI keyBlockInfo) Main
-              Just j  -> when (j < receivedKeyNumber) $ do startSync
+              Nothing -> updateKeyBlockDB
+              Just j  -> do
+                hashOfDBKeyBlock <- getM (Common db aInfoChan) j
+                case hashOfDBKeyBlock of
+                  Nothing ->  writeLog aInfoChan [BDTag] Error ("There is no key block with number " ++ (show j))
+                  Just h -> if (h == _prev_hash (aKeyBlock :: KeyBlockInfo))
+                    then updateKeyBlockDB
+                    else when (j < receivedKeyNumber) $ do startSync
 
 
 tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
