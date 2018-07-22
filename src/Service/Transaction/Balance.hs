@@ -28,10 +28,11 @@ import           Control.Exception                     (throw)
 import           Control.Monad
 import           Data.Aeson                            hiding (Error)
 import           Data.Aeson.Types                      (parseMaybe)
+import qualified Data.ByteString                       as B
 import qualified Data.ByteString.Base64                as Base64
 import qualified Data.ByteString.Char8                 as BC
 import qualified Data.ByteString.Internal              as BSI
-import qualified Data.ByteString.Lazy                  as B
+import qualified Data.ByteString.Lazy                  as BL
 import           Data.ByteString.Lazy.Internal
 import           Data.Default                          (def)
 import           Data.Hashable
@@ -53,6 +54,7 @@ import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
+import           Service.Types.SerializeInstances      (roll, unroll)
 
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
@@ -304,39 +306,28 @@ addMacroblockToDB db (Object aValue) aInfoChan = do
     case decodedKey of
       Left e -> throw (DecodeException (show e))
       Right r -> do
-        -- case Data.Aeson.decode r of
-        --   Left a -> throw (DecodeException $ "There is no PoW Key Block. The error: " ++ a)
-        --   Right (keyBlockInfoObject :: [KeyBlockInfo]) -> do
-        --     print "keyBlockInfoObject"
-        --     print keyBlockInfoObject
-        let what = BC.init $ BC.tail r
-        print what
-        case Data.Aeson.eitherDecodeStrict $ what of
+        case Data.Aeson.eitherDecodeStrict $ BC.init $ BC.tail r of
           Left a -> throw (DecodeException $ "There is no PoW Key Block. The error: " ++ a)
           Right (keyBlockInfoObject ) -> do
-            print "keyBlockInfoObject"
-            putStrLn ("type of action1 is: " ++ (show (typeOf keyBlockInfoObject)))
+            putStrLn ("type of keyBlockInfoObject is: " ++ (show (typeOf keyBlockInfoObject)))
             print keyBlockInfoObject
             print "keyBlockHash"
+            let keyBlock = tKBIPoW2KBI keyBlockInfoObject
             print $ keyBlockHash keyBlockInfoObject
-            let keyBlockHash = rHash keyBlockInfoObject
+            let aKeyBlockHash = keyBlockHash keyBlockInfoObject
             writeLog aInfoChan [BDTag] Info (show keyBlockInfoObject)
-            updateMacroblockByKeyBlock db aInfoChan keyBlockHash (tKBIPoW2KBI keyBlockInfoObject) Main
+            updateMacroblockByKeyBlock db aInfoChan aKeyBlockHash keyBlock Main
 
 
 tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
-tKBIPoW2KBI (KeyBlockInfoPoW {..}) = undefined --KeyBlockInfo {
-  -- _time,
-  -- _prev_hash,
-  -- _number,
-  -- _nonce,
-  -- _solver,
-  -- _type}
-
-
--- json1 ={\"time\":1532168703,\"nonce\":62592,\"number\":2,\"type\":0,\"prev_hash\":\"AAABrMjWwW95ZXx5EgIn8gG2c0/xaXi1M4uaGWMH28o=\",\"solver\":\"OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=\"}
-
---test01 = Base64.decode "W3sidGltZSI6MTUzMjE2ODcwMywibm9uY2UiOjYyNTkyLCJudW1iZXIiOjIsInR5cGUiOjAsInByZXZfaGFzaCI6IkFBQUJyTWpXd1c5NVpYeDVFZ0luOGdHMmMwL3hhWGkxTTR1YUdXTUgyOG89Iiwic29sdmVyIjoiT3ZTOExtbWNNYTRtdEVXYmlmTzVaRmtxVDZBWVJpenpRNm1Fb2JNTWh6ND0ifV0=\"
+tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {
+  _time,
+  _prev_hash,
+  _number,
+  _nonce,
+  _solver = pubKey,
+  _type}
+  where pubKey = publicKey256k1 ((roll $ B.unpack _solver) :: Integer)
 
 
 updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()

@@ -14,6 +14,7 @@ module Service.Types where
 
 import           Control.Exception
 import           Data.ByteString
+import qualified Data.ByteString                    as B
 import qualified Data.ByteString.Char8              as C
 import qualified Data.ByteString.Internal           as BSI
 import           Data.Graph.Inductive
@@ -149,7 +150,7 @@ data KeyBlockInfoPoW = KeyBlockInfoPoW {
   , _prev_hash :: ByteString
   , _number    :: Integer
   , _nonce     :: Integer
-  , _solver    :: String
+  , _solver    :: B.ByteString --String
   , _type      :: Int
   } deriving (Eq, Generic, Ord, Read, Show)
 instance Serialize KeyBlockInfoPoW

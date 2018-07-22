@@ -1,10 +1,8 @@
-{-# LANGUAGE
-        PackageImports
-    ,   DeriveGeneric
-    ,   GeneralizedNewtypeDeriving
-    ,   StandaloneDeriving
-    ,   TypeSynonymInstances
-  #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PackageImports             #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -15,6 +13,7 @@ module Service.Types.PublicPrivateKeyPair(
     ,   uncompressPublicKey
     ,   getPublicKey
     ,   fromPublicKey256k1
+    ,   publicKey256k1
     ,   PublicKey(..)
     ,   PrivateKey(..)
     ,   KeyPair(..)
@@ -22,23 +21,23 @@ module Service.Types.PublicPrivateKeyPair(
     ,   generateNewRandomAnonymousKeyPair
   ) where
 
-import Data.Maybe
-import GHC.Generics
-import Service.Types.SerializeInstances
+import           Data.Maybe
+import           GHC.Generics
+import           Service.Types.SerializeInstances
 
-import            Data.Serialize
-import "cryptonite" Crypto.Random
-import "cryptonite" Crypto.PubKey.ECC.Types
-import "cryptonite" Crypto.Hash.Algorithms
-import "cryptonite" Crypto.PubKey.ECC.Generate
-import qualified "cryptonite"  Crypto.PubKey.ECC.ECDSA as ECDSA
+import           "cryptonite" Crypto.Hash.Algorithms
+import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA    as ECDSA
+import           "cryptonite" Crypto.PubKey.ECC.Generate
+import           "cryptonite" Crypto.PubKey.ECC.Types
+import           "cryptonite" Crypto.Random
+import           Data.Serialize
 
-import qualified    Data.ByteString.Char8 as BC
-import              Data.ByteString.Base58
+import           Data.ByteString.Base58
+import qualified Data.ByteString.Char8                   as BC
 
 
-import              Math.NumberTheory.Moduli
-import Data.Int (Int64)
+import           Data.Int                                (Int64)
+import           Math.NumberTheory.Moduli
 
 type Amount = Int64
 
