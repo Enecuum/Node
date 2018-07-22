@@ -19,7 +19,9 @@ module Service.Transaction.Balance
     writeMicroblockDB,
     addMicroblockHashesToMacroBlock,
     calculateLedger,
-    updateMacroblockByKeyBlock
+    updateMacroblockByKeyBlock,
+    tKBIPoW2KBI,
+    tKeyBlockToPoWType
     ) where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
@@ -53,7 +55,7 @@ import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeInstances      (roll)
+import           Service.Types.SerializeInstances      (roll, unroll)
 
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
@@ -330,6 +332,17 @@ tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {
   _solver = pubKey,
   _type}
   where pubKey = publicKey256k1 ((roll $ B.unpack _solver) :: Integer)
+
+
+tKeyBlockToPoWType :: KeyBlockInfo -> KeyBlockInfoPoW
+tKeyBlockToPoWType (KeyBlockInfo {..}) = KeyBlockInfoPoW{
+  _time,
+  _prev_hash,
+  _number,
+  _nonce,
+  _solver = pubKey,
+  _type}
+  where pubKey = B.pack $ unroll $ fromPublicKey256k1 _solver
 
 
 updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()

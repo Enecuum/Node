@@ -24,17 +24,15 @@ import qualified Data.ByteString.Base64                as Base64
 -- import           Data.Typeable
 -- import qualified Data.ByteString.Char8              as BC
 import           Control.Concurrent.Chan.Unagi.Bounded
+import qualified Data.ByteString                       as B (concat)
+import qualified Data.ByteString                       as B
 import qualified Data.ByteString.Internal              as BSI
 import           Data.Default                          (def)
+import           Data.Either
 import           Data.Maybe
 import           Data.Pool
 import qualified Data.Serialize                        as S (Serialize, decode,
                                                              encode)
--- import           Data.Traversable
--- import qualified Data.Aeson                            as A
-import qualified Data.ByteString                       as B (concat)
--- import qualified Data.ByteString.Lazy                  as BL
-import           Data.Either
 import           Data.Serialize.Put
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
@@ -44,6 +42,7 @@ import           Service.InfoMsg                       (InfoMsg (..),
 import           Service.System.Directory
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
+import           Service.Types.SerializeInstances      (roll, unroll)
 import           Service.Types.SerializeJSON           ()
 
 
@@ -479,34 +478,3 @@ getKeyBlockHash  KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
                   fromRight "" $ Base64.decode _prev_hash
                ,  fromRight "" $ Base64.decode _solver
                ]
-
-
--- k1 = KeyBlockInfoPoW{
---   _time = 0,
---   _prev_hash = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
---   _number = 0,
---   _nonce = 0,
---   _solver = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
---   _type = 0}
-
--- k2 = KeyBlockInfoPoW{
---   _time = 1532005108,
---   _prev_hash = "B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw=",
---   _number = 1,
---   _nonce = 366080,
---   _solver = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=",
---   _type = 0}
-
--- k3 = KeyBlockInfoPoW{
---   _time = 1532168703,
---   _prev_hash = "AAABrMjWwW95ZXx5EgIn8gG2c0/xaXi1M4uaGWMH28o=",
---   _number = 2,
---   _nonce = 62592,
---   _solver = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=",
---   _type = 0}
-
-
--- go = do
---   mapM_ (print . keyBlockHash) [k1,k2,k3]
-
--- go1 = ["B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw=", "AAABrMjWwW95ZXx5EgIn8gG2c0/xaXi1M4uaGWMH28o="]
