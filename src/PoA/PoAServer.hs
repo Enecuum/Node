@@ -45,7 +45,7 @@ servePoA
 servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan aMicroblockChan inChanPending = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. servePoA: a port is " ++ show aRecivePort
-    runServer aRecivePort $ \_ aPending -> do
+    runServer aRecivePort $ \aIp aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
         aMsg <- WS.receiveData aConnect
@@ -78,7 +78,7 @@ servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan aMicroblo
                 WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"ErrorOfConnect\", \"Msg\":" ++ show aMsg ++ ", \"comment\" : \"not a connect msg\"}")
 
             Left a -> do
-                writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ a
+                writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ a ++ " ip: " ++ showHostAddress aIp
                 WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"ErrorOfConnect\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
 
 msgSender ch aId aConnect aNewChan = forever (WS.sendTextData aConnect . A.encode =<< readChan aNewChan)
