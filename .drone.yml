@@ -33,6 +33,8 @@ pipeline:
         target: PLUGIN_SECRET_KEY
     docker_image: dev.enecuum.com:2087/testnet/node-dev:latest
     service: bootnode/bootnode-dev
+    start_first: false
+    batch_size: 1
     confirm: true
     timeout: 240
     when:
@@ -53,6 +55,7 @@ pipeline:
         target: PLUGIN_SECRET_KEY
     docker_image: dev.enecuum.com:2087/testnet/node-dev:latest
     service: node/node-dev
+    batch_size: 9
     confirm: true
     timeout: 240
     when:
