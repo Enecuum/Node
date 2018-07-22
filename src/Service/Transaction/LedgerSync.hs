@@ -46,8 +46,8 @@ getKeyBlockSproutData c@(Common descr i) from to = do
   return allKeyData
 
 
-isValidKeyBlockSprout :: Common -> (HashOfKeyBlock, MacroblockBD) -> IO Bool
-isValidKeyBlockSprout c (h,m) = return True  --return $ h == _prevHKBlock m
+isValidKeyBlockSprout :: Common -> [(HashOfKeyBlock, MacroblockBD)] -> IO Bool
+isValidKeyBlockSprout c kv = return True  --return $ h == _prevHKBlock m
 
 
 
@@ -143,6 +143,7 @@ setSproutAsMain c@(Common descr i) number = do
   writeKeyBlockNumber c lastNumber
 
 
+-- get all closed macroblocks for calculating ledger
 getClosedMacroblockByHash :: Common -> [HashOfKeyBlock] -> IO [(HashOfKeyBlock, MacroblockBD)]
 getClosedMacroblockByHash (Common descr i) hashOfKeyBlock = do
   let fun = \h -> (getKeyBlockByHash descr (Hash h) i)
