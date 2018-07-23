@@ -10,26 +10,21 @@
 
 module Service.Transaction.Storage where
 
+import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import           Control.Monad                         (replicateM)
+import           Control.Monad                         (forM, replicateM)
 import qualified Control.Monad.Catch                   as E
--- import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.State             (StateT, evalStateT, get,
                                                         put)
 import           Control.Retry
 import qualified Crypto.Hash.SHA256                    as SHA
-import qualified Data.ByteString.Base64                as Base64
--- import           Data.Typeable
--- import qualified Data.ByteString.Char8              as BC
-import           Control.Concurrent.Chan.Unagi.Bounded
--- import qualified Data.ByteString                       as B (concat)
 import qualified Data.ByteString                       as B
+import qualified Data.ByteString.Base64                as Base64
 import qualified Data.ByteString.Internal              as BSI
 import           Data.Default                          (def)
 import           Data.Either
-import           Data.Maybe
 import           Data.Pool
 import qualified Data.Serialize                        as S (Serialize, decode,
                                                              encode)
@@ -133,27 +128,23 @@ checkMacroblockIsClosed MacroblockBD {..} = length _teamKeys == length _mblocks
 --------------------------------------
 
 
-
-getTxs :: DBPoolDescriptor -> MicroblockBD -> IO [TransactionInfo]
-getTxs desc mb = do
+getTxs :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO [TransactionInfo]
+getTxs descr i mb = do
   let txHashes = _transactionsHashes mb
-  print txHashes
-  maybeTxUntyped  <- mapM (funR (poolTransaction desc)) txHashes
-  print maybeTxUntyped
-  let txDoesNotExist = filter (/= Nothing) maybeTxUntyped
-  if null txDoesNotExist
-    then throw (DecodeException "txDoesNotExist")
-    else do
-         let txUntyped = map fromJust (filter (isJust) maybeTxUntyped)
-         let extract t = case S.decode t :: Either String TransactionInfo of
-                            Left  e -> throw (DecodeException (show e))
-                            Right r -> r
-         return $ map extract txUntyped
+  forM txHashes $ getTx1 descr i
+  where getTx1 :: DBPoolDescriptor -> InChan InfoMsg -> HashOfTransaction -> IO TransactionInfo
+        getTx1 d _ h = do
+          maybeTxUntyped  <- funR (poolTransaction d) h
+          case maybeTxUntyped of
+            Nothing -> throw $ NoSuchTransactionForHash ("hash: " ++ show h)
+            Just t -> case S.decode t :: Either String TransactionInfo of
+              Left  e -> throw (DecodeException (show e))
+              Right r -> return r
 
 
-getTxsMicroblock :: DBPoolDescriptor -> MicroblockBD -> IO [Transaction]
-getTxsMicroblock db mb = do
-  txDecoded <- getTxs db mb
+getTxsMicroblock :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO [Transaction]
+getTxsMicroblock db i mb = do
+  txDecoded <- getTxs db i mb
   let tx = map (\t -> _tx  (t :: TransactionInfo)) txDecoded
   return tx
 
@@ -237,32 +228,32 @@ getLastTransactions descr pubKey offset aCount = do
   return txAPI
 
 
-getMicroBlockByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe MicroblockBD)
+getMicroBlockByHashDB :: DBPoolDescriptor -> Hash -> IO MicroblockBD
 getMicroBlockByHashDB db mHash = do
   mbByte <- getByHash (poolMicroblock db) mHash
-  case mbByte of Nothing -> return Nothing
+  case mbByte of Nothing -> throw (NoSuchMicroBlockForHash $ show mHash)
                  Just m -> case (S.decode m :: Either String MicroblockBD) of
-                   Left e   -> throw (DecodeException (show e))
-                   Right rm -> return $ Just rm
+                   Left e  -> throw (DecodeException (show e))
+                   Right r -> return r
 
 
-getTransactionsByMicroblockHash :: DBPoolDescriptor -> Hash -> IO (Maybe [TransactionInfo])
-getTransactionsByMicroblockHash db aHash = do
-  mb <- getMicroBlockByHashDB db aHash
-  case mb of
-    Nothing -> return Nothing
-    Just m@(MicroblockBD {..}) -> do
-      txInfo <- getTxs db m
-      return $ Just txInfo
+getTransactionsByMicroblockHash :: DBPoolDescriptor -> InChan InfoMsg -> Hash -> IO (Maybe [TransactionInfo])
+getTransactionsByMicroblockHash db i aHash = do
+  m@(MicroblockBD {..}) <- getMicroBlockByHashDB db aHash
+  -- case mb of
+  --   Nothing -> return Nothing
+  --   Just m@(MicroblockBD {..}) -> do
+  txInfo <- getTxs db i m
+  return $ Just txInfo
 
 getBlockByHashDB :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe MicroblockAPI)
-getBlockByHashDB db hash _ = do
-  mb <- getMicroBlockByHashDB db hash
-  case mb of
-    Nothing -> return Nothing
-    Just m  -> do
-      mAPI <- tMicroblockBD2MicroblockAPI db m --aInfoChan
-      return $ Just mAPI
+getBlockByHashDB db hash i = do
+  m <- getMicroBlockByHashDB db hash
+  -- case mb of
+  --   Nothing -> return Nothing
+  --   Just m  -> do
+  mAPI <- tMicroblockBD2MicroblockAPI db i m --aInfoChan
+  return $ Just mAPI
 
 getKeyBlockByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe MacroblockBD)
 getKeyBlockByHash db kHash _ = do
@@ -296,12 +287,10 @@ getByHash pool aHash = (\(Hash key) -> funR pool key) aHash
 decodeTransactionsAndFilterByKey :: [DBValue] -> PublicKey -> [TransactionAPI]
 decodeTransactionsAndFilterByKey rawTx pubKey = txAPI
   where fun = \t -> case (S.decode t :: Either String TransactionInfo) of
-                       Left e   -> throw (DecodeException (show e))
-                       Right rt -> Just rt
+                       Left e  -> throw (DecodeException (show e))
+                       Right r -> _tx (r  :: TransactionInfo)
 
-        txInfo = map fun rawTx
-        txWithouMaybe = map fromJust (filter (isJust) txInfo)
-        tx = map (\t -> _tx (t  :: TransactionInfo) ) txWithouMaybe
+        tx = map fun rawTx
         txWithKey = filter (\t -> (_owner t == pubKey || _receiver t == pubKey)) tx
         txAPI = map (\t -> TransactionAPI { _tx = t, _txHash = rHashT t}) txWithKey
 
@@ -326,9 +315,9 @@ getAllItems db = do
   Rocks.iterItems it
 
 
-tMicroblockBD2Microblock :: DBPoolDescriptor -> MicroblockBD -> IO Microblock
-tMicroblockBD2Microblock db m@(MicroblockBD {..}) = do
-  tx <- getTxsMicroblock db m
+tMicroblockBD2Microblock :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO Microblock
+tMicroblockBD2Microblock db i m@(MicroblockBD {..}) = do
+  tx <- getTxsMicroblock db i m
   aTeamkeys <- getTeamKeysForMicroblock db _keyBlock
   return Microblock {
   _keyBlock,
@@ -362,10 +351,9 @@ getTeamKeysForMicroblock db aHash = do
                Right r -> return $ _teamKeys (r :: MacroblockBD)
 
 
--- tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> MicroblockBD -> InChan InfoMsg -> IO MicroblockAPI
-tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> MicroblockBD -> IO MicroblockAPI
-tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) = do
-  tx <- getTxsMicroblock db m
+tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO MicroblockAPI
+tMicroblockBD2MicroblockAPI db i m@(MicroblockBD {..}) = do
+  tx <- getTxsMicroblock db i m
   let txAPI = map (\t -> TransactionAPI {_tx = t, _txHash = rHashT t }) tx
   -- teamKeys <- getTeamKeysForMicroblock db _keyBlock --aInfoChan
   return MicroblockAPI {
@@ -381,7 +369,7 @@ tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) = do
 
 tMacroblock2MacroblockAPI :: DBPoolDescriptor -> MacroblockBD -> IO MacroblockAPI
 tMacroblock2MacroblockAPI descr (MacroblockBD {..}) = do
-           microblocks <- zip _mblocks <$> mapM (\h -> fromJust <$> getMicroBlockByHashDB descr (Hash h)) _mblocks
+           microblocks <- zip _mblocks <$> mapM (\h -> getMicroBlockByHashDB descr (Hash h)) _mblocks
            let microblocksInfoAPI = map (\(h, MicroblockBD {..}) -> MicroblockInfoAPI {
                                                         _prevMicroblock = Nothing,
                                                         _nextMicroblock = Nothing,

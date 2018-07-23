@@ -19,22 +19,23 @@ module LightClient.CLI (
 
 import           Control.Monad                      (forM_, replicateM_)
 import           Control.Monad.Except               (runExceptT)
+import           Data.Aeson                         (ToJSON)
+import           Data.Aeson.Encode.Pretty
+import qualified Data.ByteString.Lazy.Char8         as BC (putStrLn)
+import           Data.DeriveTH
 import           Data.List                          (find)
 import           Data.List.Split                    (splitOn)
 import           Data.Map                           (Map, fromList, lookup)
+import           LightClient.RPC
 import           Network.Socket                     (HostName, PortNumber)
 import qualified Network.WebSockets                 as WS
-import           System.Console.GetOpt
-import           System.Environment                 (getArgs)
-import           Data.Aeson.Encode.Pretty
-import           Data.DeriveTH
-import           LightClient.RPC
 import           Service.Network.WebSockets.Client
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
+import           System.Console.GetOpt
+import           System.Environment                 (getArgs)
 import           System.Random
-import qualified Data.ByteString.Lazy.Char8 as C
-import           Data.Aeson                        (ToJSON)
+
 
 data Flag = Port PortNumber | Host HostName | Version | Help
           | WalletsFile String | TransactionsFile String | KeyGen Int
@@ -253,4 +254,4 @@ getInfo ch = do
 
 
 prettyPrint :: (ToJSON a) => a -> IO ()
-prettyPrint r = C.putStrLn $ encodePretty r
+prettyPrint r = BC.putStrLn $ encodePretty r

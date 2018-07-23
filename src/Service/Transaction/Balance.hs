@@ -36,7 +36,6 @@ import           Data.Default                          (def)
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
 import           Data.List                             (sort, sortBy)
-import           Data.Maybe
 import           Data.Ord                              (comparing)
 import           Data.Pool
 import qualified Data.Serialize                        as S (decode, encode)
@@ -205,8 +204,7 @@ calculateLedger db i isStorno hashKeyBlock macroblock = do
   -- get all microblocks for macroblock
   let microblockHashes = _mblocks (macroblock :: MacroblockBD)
   mbBD <- mapM (\h -> getMicroBlockByHashDB db (Hash h))  microblockHashes
-  let realMb =  map fromJust (filter (isJust) mbBD)
-  mbWithTx <- mapM (tMicroblockBD2Microblock db) realMb
+  mbWithTx <- mapM (tMicroblockBD2Microblock db i) mbBD
   let sortedMb = sortBy (comparing _sign) (mbWithTx :: [Microblock])
       sortedM = if (isStorno == False) then sortedMb else reverse sortedMb
   writeLog i [BDTag] Info ("Start calculate Ledger, isStorno "  ++ show isStorno)
