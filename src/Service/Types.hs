@@ -43,6 +43,19 @@ data CLIException = WrongKeyOwnerException
 instance Exception CLIException
 
 
+type HashOfKeyBlock = BSI.ByteString
+type HashOfMicroblock = BSI.ByteString
+type HashOfTransaction = BSI.ByteString
+
+type DBKey = BSI.ByteString
+type DBValue = BSI.ByteString
+
+type MainChain = HashOfKeyBlock
+type SproutChain = HashOfKeyBlock
+type Chain = (Maybe MainChain, Maybe SproutChain)
+type FullChain = (Integer, Maybe MainChain, Maybe SproutChain)
+
+
 type QuantityTx = Int
 data Trans = Trans {
         txAmount        :: Amount
@@ -105,7 +118,7 @@ data MicroblockV1 = MicroblockV1{
                   trans                  :: [Transaction]}
                 deriving (Eq, Generic, Ord, Show)
 
-type HashOfKeyBlock = BSI.ByteString
+
 -- MicroblockPoA
 data Microblock = Microblock{
     _keyBlock     :: HashOfKeyBlock, -- hash of key-block
@@ -288,10 +301,10 @@ instance Serialize ChainInfo
 
 
 
-type HashOfMicroblock = BSI.ByteString
-type HashOfTransaction = BSI.ByteString
+-- type HashOfMicroblock = BSI.ByteString
+-- type HashOfTransaction = BSI.ByteString
 
-type DBKey = BSI.ByteString
-type DBValue = BSI.ByteString
+-- type DBKey = BSI.ByteString
+-- type DBValue = BSI.ByteString
 
 data BranchOfChain = Main | Sprout deriving (Eq, Generic, Ord, Read, Show)

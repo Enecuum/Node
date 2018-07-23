@@ -38,4 +38,4 @@ runClientWith host port path0 opts customHeaders app = do
     finally
         (S.connect sock (S.addrAddress addr) >>
          runClientWithSocket sock fullHost path opts customHeaders app)
-        (S.close sock)
+        (S.close sock >> (putStrLn $ "WebSocket exception: Can't connect to " ++ host ++ ":" ++ show port))

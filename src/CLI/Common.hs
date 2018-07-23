@@ -15,11 +15,17 @@ module CLI.Common (
   getBlockByHash,
   getKeyBlockByHash,
   getTransactionByHash,
-  getAllTransactions,
+  getAllTransactionsByWallet,
   getPartTransactions,
   getBalance,
   getChainInfo,
   getPublicKeys,
+
+  getAllChain,
+  getAllLedger,
+  getAllMicroblocks,
+  getAllKblocks,
+  getAllTransactions,
 
   CLIException(..),
   Result
@@ -57,7 +63,27 @@ import           Service.Types.SerializeJSON           ()
 import           Control.Timeout
 import           Data.Time.Units                       (Second)
 
+import           Service.Transaction.Test              ( getAllLedgerKV
+                                                       , getAllMicroblockKV
+                                                       , getAllMacroblockKV
+                                                       , getAllTransactionsKV)
+
 type Result a = Either CLIException a
+
+getAllChain :: IO (Result [FullChain])
+getAllChain = undefined
+
+getAllLedger :: IO (Result [(DBKey, Amount)])
+getAllLedger = try $ getAllLedgerKV
+
+getAllMicroblocks :: IO (Result [(DBKey, MicroblockBD)])
+getAllMicroblocks =  try $ getAllMicroblockKV
+
+getAllKblocks :: IO (Result [(DBKey, MacroblockBD)])
+getAllKblocks =  try $ getAllMacroblockKV
+
+getAllTransactions :: IO (Result [(DBKey, TransactionInfo)])
+getAllTransactions =  try $ getAllTransactionsKV
 
 sendMessageTo :: MsgTo -> InChan MsgToCentralActor -> IO (Result ())
 sendMessageTo _ _ = return $ return undefined
@@ -100,8 +126,8 @@ getTransactionByHash db hash _ = try $ do
     Just t  -> return t
 
 
-getAllTransactions :: DBPoolDescriptor -> PublicKey -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
-getAllTransactions pool key _ = try $ do
+getAllTransactionsByWallet :: DBPoolDescriptor -> PublicKey -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
+getAllTransactionsByWallet pool key _ = try $ do
   tx <- getAllTransactionsDB pool key
   case tx of
     [] -> throw NoTransactionsForPublicKey
