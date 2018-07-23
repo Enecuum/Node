@@ -10,26 +10,21 @@
 
 module Service.Transaction.Storage where
 
+import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
 import           Control.Monad                         (forM, replicateM)
 import qualified Control.Monad.Catch                   as E
--- import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Resource
 import           Control.Monad.Trans.State             (StateT, evalStateT, get,
                                                         put)
 import           Control.Retry
 import qualified Crypto.Hash.SHA256                    as SHA
-import qualified Data.ByteString.Base64                as Base64
--- import           Data.Typeable
--- import qualified Data.ByteString.Char8              as BC
-import           Control.Concurrent.Chan.Unagi.Bounded
--- import qualified Data.ByteString                       as B (concat)
 import qualified Data.ByteString                       as B
+import qualified Data.ByteString.Base64                as Base64
 import qualified Data.ByteString.Internal              as BSI
 import           Data.Default                          (def)
 import           Data.Either
-import           Data.Maybe
 import           Data.Pool
 import qualified Data.Serialize                        as S (Serialize, decode,
                                                              encode)

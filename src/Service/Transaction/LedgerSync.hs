@@ -2,8 +2,8 @@
 
 module Service.Transaction.LedgerSync where
 
-
 import           Control.Exception
+import           Control.Monad                    (forM)
 import           Data.Maybe
 import qualified Data.Serialize                   as S (encode)
 import           Node.Data.GlobalLoging
@@ -20,7 +20,7 @@ myTail ::  Common -> IO (Number, HashOfKeyBlock)
 myTail (Common descr i) = do
   kv <- getLastKeyBlock descr i
   case kv of
-    Nothing -> throw NoClosedKeyBlockInDB
+    Nothing -> throw NoLastKeyBlock
     Just (hashOfKeyBlock, mb)  -> do
       let n =  _number (mb :: MacroblockBD)
       return (n, hashOfKeyBlock)
@@ -145,10 +145,15 @@ setSproutAsMain c@(Common descr i) aNumber = do
 
 -- get all closed macroblocks for calculating ledger
 getClosedMacroblockByHash :: Common -> [HashOfKeyBlock] -> IO [(HashOfKeyBlock, MacroblockBD)]
-getClosedMacroblockByHash (Common descr i) hashOfKeyBlock = do
-  let fun = \h -> (getKeyBlockByHash descr (Hash h) i)
-  macroblocksMaybe <- mapM fun hashOfKeyBlock
-  let macroblocksJust = filter (\a -> isJust $ snd a) $ zip hashOfKeyBlock macroblocksMaybe
-      macroblocks = map (\(h,m) -> (h,fromJust m)) macroblocksJust
-      closedMacroblocks = filter (\a -> checkMacroblockIsClosed $ snd a) macroblocks
-  return closedMacroblocks
+getClosedMacroblockByHash co hashesOfKeyBlock = do
+  macroblocks <- forM hashesOfKeyBlock $ findClosedMacroblocks co
+  return $ map fromJust $ filter (/= Nothing ) macroblocks
+  where
+        findClosedMacroblocks :: Common -> HashOfKeyBlock -> IO (Maybe (HashOfKeyBlock, MacroblockBD))
+        findClosedMacroblocks (Common descr i) h = do
+          macroblockMaybe <- getKeyBlockByHash descr (Hash h) i
+          case macroblockMaybe of
+            Nothing -> throw (NoClosedKeyBlockInDB (show h))
+            Just j  -> if (checkMacroblockIsClosed j)
+              then return $ Just (h, j)
+              else return Nothing

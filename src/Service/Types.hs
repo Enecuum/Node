@@ -33,7 +33,8 @@ data CLIException = WrongKeyOwnerException
                   | NoSuchTransactionDB
                   | NoSuchTransactionForHash String
                   | NoSuchMicroBlockForHash String
-                  | NoClosedKeyBlockInDB
+                  | NoLastKeyBlock
+                  | NoClosedKeyBlockInDB String
                   | TransactionChanBusyException
                   | DecodeException String
                   | OtherException
