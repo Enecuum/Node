@@ -61,9 +61,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
 
                     | otherwise -> do
                         writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request of connections."
-                        aShuffledRecords <- shuffleM =<< getRecords aFileServerChan
-                        let aConnects = take 5 aShuffledRecords
-                        WS.sendTextData aConnect $ A.encode $ ResponsePotentialConnects aConnects
+                        WS.sendTextData aConnect . A.encode . ResponsePotentialConnects =< getRecords aFileServerChan
 
                 ActionAddToConnectList aPort ->
                     void $ tryWriteChan aInChan $ AddConnectToList (Connect aHostAdress aPort)
