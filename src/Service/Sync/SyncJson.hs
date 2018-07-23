@@ -118,7 +118,7 @@ instance FromJSON SyncMessage where
             "block_mickro_blok_request"->
                 MicroblockRequest <$> aMessage .: "block_hash"
 
-            "peek_hash_key_blok_response"->
+            "block_mickro_blok_response"->
                 MicroblockResponse <$> aMessage .: "hashes"
 
             "peek_hash_key_blok_request"-> do
