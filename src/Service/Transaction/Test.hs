@@ -162,7 +162,7 @@ getAllMicroblocks = do
         Right r -> r
         Left _  -> error "Can not decode Microblock"
   let result2 = map func result
-  putStrLn $ show result2
+  print result2
 
 
 -- data TypeInfo = Amount | Transaction | MicroblockBD | MacroblockBD --
@@ -177,45 +177,43 @@ getAllMicroblocks = do
 --   result <- getAllKV =<< getAllKV1 typeInfo
 
 
-getAllLedgerKV :: IO ()
+getAllLedgerKV :: IO [(DBKey,Amount)]
 getAllLedgerKV = do
   result <- getAllKV =<< getLedgerFilePath
   let func res = case (S.decode res :: Either String Amount) of
         Right r -> r
         Left _  -> error "Can not decode Ledger"
   let result2 = map (\(k,v) -> (k, func v)) result
-  print result2
+  return result2
 
-
-getAllTransactionsKV :: IO ()
+getAllTransactionsKV :: IO [(DBKey,TransactionInfo)]
 getAllTransactionsKV = do
   result <- getAllKV =<< getTransactionFilePath
-  let func res = case (S.decode res :: Either String Transaction) of
+  let func res = case (S.decode res :: Either String TransactionInfo) of
         Right r -> r
         Left _  -> error "Can not decode Transaction"
   let result2 = map (\(k,v) -> (k, func v)) result
-  print result2
+  return result2
 
 
-getAllMicroblockKV :: IO ()
+getAllMicroblockKV :: IO [(DBKey,MicroblockBD)]
 getAllMicroblockKV = do
   result <- getAllKV =<< getMicroblockFilePath
   let func res = case (S.decode res :: Either String MicroblockBD) of
         Right r -> r
         Left _  -> error "Can not decode Microblock"
   let result2 = map (\(k,v) -> (k, func v)) result
-  print result2
-  -- return result2
+  return result2
 
 
-getAllMacroblockKV :: IO ()
+getAllMacroblockKV :: IO [(DBKey,MacroblockBD)]
 getAllMacroblockKV = do
   result <- getAllKV =<< getMacroblockFilePath
   let func res = case (S.decode res :: Either String MacroblockBD) of
         Right r -> r
         Left _  -> error "Can not decode MacroblockBD"
   let result2 = map (\(k,v) -> (k, func v)) result
-  print result2
+  return result2
 
 
 
