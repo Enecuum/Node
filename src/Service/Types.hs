@@ -43,6 +43,19 @@ data CLIException = WrongKeyOwnerException
 instance Exception CLIException
 
 
+type HashOfKeyBlock = BSI.ByteString
+type HashOfMicroblock = BSI.ByteString
+type HashOfTransaction = BSI.ByteString
+
+type DBKey = BSI.ByteString
+type DBValue = BSI.ByteString
+
+type MainChain = HashOfKeyBlock
+type SproutChain = HashOfKeyBlock
+type Chain = (Maybe MainChain, Maybe SproutChain)
+type FullChain = (Integer, Maybe MainChain, Maybe SproutChain)
+
+
 type QuantityTx = Int
 data Trans = Trans {
         txAmount        :: Amount
@@ -285,13 +298,5 @@ data ChainInfo = ChainInfo {
     , _nodes_num       :: Integer     -- quantity of all active nodes now
   } deriving  (Generic, Show, Eq, Read)
 instance Serialize ChainInfo
-
-
-type HashOfKeyBlock = BSI.ByteString
-type HashOfMicroblock = BSI.ByteString
-type HashOfTransaction = BSI.ByteString
-
-type DBKey = BSI.ByteString
-type DBValue = BSI.ByteString
 
 data BranchOfChain = Main | Sprout deriving (Eq, Generic, Ord, Read, Show)

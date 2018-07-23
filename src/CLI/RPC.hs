@@ -65,8 +65,9 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum $ \_ aPending -> do
 
               methods = [createTx , balanceReq, getBlock, getMicroblock
                        , getTransaction, getFullWallet, getPartWallet, getSystemInfo
+                       , getAllChainF, getAllLedgerF, getAllMicroblocksF, getAllKblocksF, getAllTransactionsF
 -- test
-                       , createNTx, createUnlimTx, sendMsgBroadcast, sendMsgTo, loadMsg
+--                       , createNTx, createUnlimTx, sendMsgBroadcast, sendMsgTo, loadMsg
                         ]
 
 
@@ -95,10 +96,10 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum $ \_ aPending -> do
                   f :: Hash -> RpcResult IO TransactionInfo
                   f hash = handle $ getTransactionByHash descrDB hash aInfoCh
 
-              getFullWallet = toMethod "enq_getAllTransactions" f (Required "address" :+: ())
+              getFullWallet = toMethod "enq_getAllTransactionsByWallet" f (Required "address" :+: ())
                 where
                   f :: PublicKey -> RpcResult IO [TransactionAPI]
-                  f key = handle $ getAllTransactions descrDB key ch
+                  f key = handle $ getAllTransactionsByWallet descrDB key ch
 
               getPartWallet = toMethod "enq_getTransactionsByWallet" f (Required "address" :+: Required "offset" :+: Required "count" :+: ())
                 where
@@ -109,6 +110,31 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum $ \_ aPending -> do
                 where
                   f :: RpcResult IO ChainInfo
                   f = handle $ getChainInfo descrDB aInfoCh
+
+              getAllChainF = toMethod "enq_getAllChain" f ()
+                where
+                  f :: RpcResult IO [FullChain]
+                  f = handle getAllChain
+
+              getAllLedgerF = toMethod "enq_getAllLedger" f ()
+                where
+                  f :: RpcResult IO [(DBKey, Amount)]
+                  f = handle getAllLedger
+
+              getAllMicroblocksF = toMethod "enq_getAllMicroblocks" f ()
+                where
+                  f :: RpcResult IO [(DBKey, MicroblockBD)]
+                  f = handle getAllMicroblocks
+
+              getAllKblocksF = toMethod "enq_getAllKblocks" f ()
+                where
+                  f :: RpcResult IO [(DBKey, MacroblockBD)]
+                  f = handle getAllKblocks
+
+              getAllTransactionsF = toMethod "enq_getAllTransactions" f ()
+                where
+                  f :: RpcResult IO [(DBKey, TransactionInfo)]
+                  f = handle getAllTransactions
 
 ------------- test functions
               createNTx = toMethod "gen_n_tx" f (Required "x" :+: ())

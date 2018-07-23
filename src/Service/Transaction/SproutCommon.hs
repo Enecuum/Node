@@ -21,11 +21,6 @@ data Common = Common {
   infoChan :: InChan InfoMsg
  }
 
-type MainChain = HashOfKeyBlock
-type SproutChain = HashOfKeyBlock
-type Chain = (Maybe MainChain, Maybe SproutChain)
-type SproutTable = H.BasicHashTable Number Chain
-
 
 data SproutException = ValueOfChainIsNotNothing String
                   | NotImplementedException -- test

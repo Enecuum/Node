@@ -42,6 +42,8 @@ data Flag = Port PortNumber | Host HostName | Version | Help
           | ShowKey String | Balance PublicKey | Info
           | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey | PartWallet PartWalletReq
           | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
+          | Microblocks | Txs | AllLedger | Kblocks | Chain
+          
      deriving (Eq, Ord, Show)
 derive makeIs ''Flag
 
@@ -64,12 +66,19 @@ args = [
   , Option ['Q'] ["load-txs-from-wallet"] (ReqArg (PartWallet . read) "publicKey:offset:count") "get n transactions from k'th tx for given wallet"
   , Option ['I'] ["chain-info"] (NoArg Info) "Get total chain info"
 -- test
-  , Option ['R'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
-  , Option ['T'] ["send-message-to"] (ReqArg (SendMessageTo . read) "nodeId message") "Send message to the node"
-  , Option ['L'] ["load-new-messages"] (NoArg LoadMessages) "Load new recieved messages"
+--  , Option ['R'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
+--  , Option ['T'] ["send-message-to"] (ReqArg (SendMessageTo . read) "nodeId message") "Send message to the node"
+--  , Option ['L'] ["load-new-messages"] (NoArg LoadMessages) "Load new recieved messages"
 
   , Option ['V'] ["version"] (NoArg Version) "show version number"
   , Option ['H', '?'] ["help"] (NoArg Help) "help"
+
+
+  , Option ['C'] ["get-all-chain"] (NoArg Chain) "load all chain"
+  , Option ['D'] ["get-all-ledger"] (NoArg AllLedger) "load all ledger"
+  , Option ['E'] ["get-all-microblocks"] (NoArg Microblocks) "load all microblocks"
+  , Option ['G'] ["get-all-kblocks"] (NoArg Kblocks) "load all kblocks"
+  , Option ['J'] ["get-all-transactios"] (NoArg Txs) "load all transactions"
   ]
 
 
@@ -107,7 +116,7 @@ dispatch flags h p =
         (KeyGen c : _)                   -> genKeys c
         (Balance aPublicKey : _)         -> withClient $ getBalance aPublicKey
         (ShowKey f: _)                   -> showPublicKey f
-        (Wallet key : _)                 -> withClient $ getAllTransactions key
+        (Wallet key : _)                 -> withClient $ getAllTransactionsByWallet key
         (PartWallet req : _)             -> withClient $ getPartTransactions req
 
         (Block hash : _)                 -> withClient $ getBlockByHash hash
@@ -116,9 +125,16 @@ dispatch flags h p =
         (Info : _)                       -> withClient   getInfo
 
 -- test
-        (SendMessageBroadcast m : _)     -> withClient $ sendMessageBroadcast m
-        (SendMessageTo mTo : _)          -> withClient $ sendMessageTo mTo
-        (LoadMessages : _)               -> withClient   loadMessages
+--        (SendMessageBroadcast m : _)     -> withClient $ sendMessageBroadcast m
+--        (SendMessageTo mTo : _)          -> withClient $ sendMessageTo mTo
+--        (LoadMessages : _)               -> withClient   loadMessages
+
+        (Chain : _)                      -> withClient   getAllChain
+        (AllLedger : _)                  -> withClient   getAllLedger
+        (Microblocks : _)                -> withClient   getAllMicroblocks
+        (Kblocks : _)                    -> withClient   getAllKblocks
+        (Txs : _)                        -> withClient   getAllTransactions
+
         (Help : _)                       -> putStrLn $ usageInfo "Usage: " args
         (Version: _)                     -> printVersion
         _                                -> putStrLn $ usageInfo "Wrong input.\nUsage: " args
@@ -205,8 +221,8 @@ loadMessages ch = do
                   where showMsg (MsgTo aId m) = "Message from " ++ show aId ++ ": " ++ m
 
 
-getAllTransactions :: PublicKey -> WS.Connection -> IO ()
-getAllTransactions key ch = do
+getAllTransactionsByWallet :: PublicKey -> WS.Connection -> IO ()
+getAllTransactionsByWallet key ch = do
   result <- runExceptT $ getAllTxs ch key
   case result of
     (Left err)   -> putStrLn $ "getAllTransactions error: " ++ show err
@@ -251,6 +267,42 @@ getInfo ch = do
   case result of
     (Left err)   -> putStrLn $ "getChainInfo error: " ++ show err
     (Right info) -> prettyPrint info
+
+
+getAllChain :: WS.Connection -> IO ()
+getAllChain ch =  do
+  result <- runExceptT $ getAllChainRPC ch
+  case result of
+    (Left err)   -> putStrLn $ "getAllChain error: " ++ show err 
+    (Right chain) -> prettyPrint chain
+
+getAllLedger :: WS.Connection -> IO ()
+getAllLedger ch =  do
+  result <- runExceptT $ getAllLedgerRPC ch
+  case result of
+    (Left err)   -> putStrLn $ "getAllLedger error: " ++ show err 
+    (Right ledger) -> prettyPrint ledger
+
+getAllMicroblocks :: WS.Connection -> IO ()
+getAllMicroblocks ch =  do
+  result <- runExceptT $ getAllMicroblocksRPC ch
+  case result of
+    (Left err)   -> putStrLn $ "getAllMicroblocks error: " ++ show err 
+    (Right mbs) -> prettyPrint mbs
+
+getAllKblocks :: WS.Connection -> IO ()
+getAllKblocks ch =  do
+  result <- runExceptT $ getAllKblocksRPC ch
+  case result of
+    (Left err)   -> putStrLn $ "getAllKblocks error: " ++ show err 
+    (Right kbs) -> prettyPrint kbs
+
+getAllTransactions :: WS.Connection -> IO ()
+getAllTransactions ch =  do
+  result <- runExceptT $ getAllTransactionsRPC ch
+  case result of
+    (Left err)   -> putStrLn $ "getAllTransactions error: " ++ show err 
+    (Right txs) -> prettyPrint txs
 
 
 prettyPrint :: (ToJSON a) => a -> IO ()
