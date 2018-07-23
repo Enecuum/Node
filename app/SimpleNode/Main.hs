@@ -17,7 +17,6 @@ import              Service.Timer
 import              Node.Lib
 import              Service.InfoMsg
 import              Service.Network.Base
-import              PoA.PoAServer
 import              CLI.CLI
 import              CLI.RPC
 import              Control.Exception (try, SomeException())
@@ -46,10 +45,10 @@ main =  do
             rocksDB   <- connectOrRecoveryConnect
 
             void $ startNode rocksDB conf aInfoChanIn networkNodeStart $
-                \(ch, _) aChan aMicroblockChan aMyNodeId aFileChan -> do
+                \(ch, _) _ _ aMyNodeId _ -> do
                     metronomeS 400000 (void $ tryWriteChan ch CleanAction)
 
-                    (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id) <- getConfigParameters aMyNodeId conf ch
+                    (snbc, _, stat_h, stat_p, logs_h, logs_p, log_id) <- getConfigParameters aMyNodeId conf ch
 
                     void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id
 

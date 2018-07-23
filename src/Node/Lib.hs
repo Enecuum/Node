@@ -93,7 +93,7 @@ startNode descrDB buildConf infoCh manager startDo = do
     void $ C.forkIO $ connectManager aSyncChan aDBActorChan aIn (poaPort buildConf) bnList aInFileRequestChan (NodeId aId) inChanPending infoCh
     return managerChan
 
-
+sec :: Int
 sec = 1000000
 
 connectManager
@@ -128,24 +128,24 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
                 aRequestOfPotencialConnects (aTailOfList ++ [Connect aBNIp aBNPort])
         _       -> return ()
 
-    aConnectLoop aBNList isFirst = do
+    aConnectLoop aBootNodeList isFirst = do
         aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
         if null aActualConnects then do
             aNumberOfConnects <- takeRecords aConnectsChan NumberConnects
-            when (aNumberOfConnects == 0) $ aRequestOfPotencialConnects aBNList
+            when (aNumberOfConnects == 0) $ aRequestOfPotencialConnects aBootNodeList
             aConnects <- takeRecords aConnectsChan ReadRecordsFromFile
             forM_ aConnects (connectToNN aConnectsChan aMyNodeId inChanPending aInfoChan aManagerChan)
             C.threadDelay $ 2 * sec
 
             when isFirst $ void $ C.forkIO $ do
-                syncServer aSyncChan inDBActorChan aManagerChan aInfoChan
+                _ <- syncServer aSyncChan inDBActorChan aManagerChan aInfoChan
                 writeInChan (fst aSyncChan) RestartSync
 
             C.threadDelay $ 2*sec
-            aConnectLoop aBNList False
+            aConnectLoop aBootNodeList False
         else do
             C.threadDelay $ 10 * sec
-            aConnectLoop aBNList False
+            aConnectLoop aBootNodeList False
 
 
 -- найти длинну своей цепочки
@@ -166,9 +166,9 @@ findBeforeFork 0 _ _ _ _ _ = return 0
 findBeforeFork n aId outSyncChan aDBActorChan aManagerChan aInfoChan = do
     writeLog aInfoChan [SyncTag] Info $ "Find before fork: " ++ show n
     sendMsgToNode aManagerChan (PeekHashKblokRequest n n) aId
-    let aTakePeek aId aChan = do
+    let aTakePeek aIdThis aChan = do
             Response remoteNodeId aRes <- takePeekHashKblokResponse aChan
-            if aId == remoteNodeId then return aRes else aTakePeek aId aChan
+            if aIdThis == remoteNodeId then return aRes else aTakePeek aIdThis aChan
     [(_, aHash)]   <- aTakePeek aId outSyncChan
     [(_, aMyHash)] <- takeRecords aDBActorChan (PeekNKeyBlocks n n)
 
@@ -207,7 +207,7 @@ loadMacroBlocks a1 a2 a3 aNumber (x:xs) aId aInfoChan = do
         writeInChan a2 $ DeleteSproutData aNumber
         return False
 
-loadMacroBlocks a1 a2 a3 aNumber _ aId aInfoChan = do
+loadMacroBlocks _ a2 _ aNumber _ _ aInfoChan = do
     writeLog aInfoChan [SyncTag] Info $ "Set sprout as main " ++ show aNumber
     writeInChan a2 $ SetSproutAsMain aNumber
     return True
@@ -234,12 +234,12 @@ loadOneMacroBlock
 loadOneMacroBlock outSyncChan aDBActorChan aManagerChan (x:xs) aNodeId aInfoChan hashOfKeyBlock aNumber = do
     writeLog aInfoChan [SyncTag] Info $ "Loading of microblocks. From " ++ show aNodeId
     sendMsgToNode aManagerChan (MicroblockRequest x) aNodeId
-    Response aId aMicroBlockContent <- takeMicroblockResponse outSyncChan
+    Response _ aMicroBlockContent <- takeMicroblockResponse outSyncChan
     case aMicroBlockContent of
         Just aJustMicroBlockContent -> do
-            takeRecords aDBActorChan (SetRestSproutData (aNumber, hashOfKeyBlock,  aJustMicroBlockContent))
+            _ <- takeRecords aDBActorChan (SetRestSproutData (aNumber, hashOfKeyBlock,  aJustMicroBlockContent))
+            loadOneMacroBlock outSyncChan aDBActorChan aManagerChan xs aNodeId aInfoChan hashOfKeyBlock aNumber
         Nothing -> return False
-
 loadOneMacroBlock _ _ _ _ _ _ _ _ = return True
 
 
