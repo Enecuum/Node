@@ -216,7 +216,7 @@ calculateLedger db i isStorno hashKeyBlock macroblock = do
 
 
 
-writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> BC.ByteString -> MacroblockBD -> IO ()
+writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
 writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
   hashPreviousLastKeyBlock <- funR (poolMacroblock desc) lastClosedKeyBlock
   let cMacroblock = if (checkMacroblockIsClosed aMacroblock == True)
@@ -278,8 +278,17 @@ writeLedgerDB dbLedger aInfoChan bt = do
   writeLog aInfoChan [BDTag] Info ("Write Ledger "  ++ show bt)
 
 
+genesisKeyBlock :: KeyBlockInfoPoW
+genesisKeyBlock = KeyBlockInfoPoW{
+  _time = 0,
+  _prev_hash = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  _number = 0,
+  _nonce = 0,
+  _solver = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  _type = 0}
+
 addMacroblockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> (InChan SyncEvent, b) -> IO ()
-addMacroblockToDB db (Object aValue) aInfoChan  aSyncChan = do
+addMacroblockToDB db (Object aValue) i  aSyncChan = do
   let keyBlock = case parseMaybe (.: "verb") aValue of
         Nothing     -> throw (DecodeException "There is no verb in PoW Key Block")
         Just kBlock -> kBlock :: BC.ByteString --Map T.Text Value
@@ -290,9 +299,8 @@ addMacroblockToDB db (Object aValue) aInfoChan  aSyncChan = do
           Nothing     -> throw (DecodeException "Can not parse body of PoW Key Block ")
           Just kBlock -> kBlock :: BC.ByteString --BSI.ByteString --KeyBlockInfo --Map T.Text Value
 
-    let decodedKey = Base64.decode body -- :: Either String
-    print decodedKey
-    case decodedKey of
+
+    case Base64.decode body of
       Left e -> throw (DecodeException (show e))
       Right r -> do
         case Data.Aeson.eitherDecodeStrict $ BC.init $ BC.tail r of
@@ -303,22 +311,35 @@ addMacroblockToDB db (Object aValue) aInfoChan  aSyncChan = do
             let aKeyBlock = tKBIPoW2KBI keyBlockInfo
             let aKeyBlockHash = getKeyBlockHash keyBlockInfo
             putStrLn $ "keyBlockHash" ++ show aKeyBlockHash
-            writeLog aInfoChan [BDTag] Info (show keyBlockInfo)
+            writeLog i [BDTag] Info (show keyBlockInfo)
 
             let receivedKeyNumber = _number (keyBlockInfo :: KeyBlockInfoPoW)
                 startSync = writeInChan (fst aSyncChan) RestartSync
-            currentNumberInDB <- getKeyBlockNumber (Common db aInfoChan)
-            let updateKeyBlockDB = updateMacroblockByKeyBlock db aInfoChan aKeyBlockHash aKeyBlock Main
+            currentNumberInDB <- getKeyBlockNumber (Common db i)
+            writeLog i [BDTag] Info $ "Current KeyBlock Number In DB is " ++ show currentNumberInDB
             case currentNumberInDB of
-              Nothing -> updateKeyBlockDB
+              Nothing -> do
+                let k = tKBIPoW2KBI genesisKeyBlock
+                    h = getKeyBlockHash genesisKeyBlock
+
+                    mes = "The first time in history, genesis kblock " ++ show h ++ show k
+                writeLog i [BDTag] Info mes
+                updateMacroblockByKeyBlock db i h k Main
+
               Just j  -> do
-                hashOfDBKeyBlock <- getM (Common db aInfoChan) j
-                case hashOfDBKeyBlock of
-                  Nothing ->  writeLog aInfoChan [BDTag] Error ("There is no key block with number " ++ (show j))
-                  Just h -> if (h == _prev_hash (aKeyBlock :: KeyBlockInfo))
-                    then updateKeyBlockDB
-                    else when (j < receivedKeyNumber) $ do startSync
-addMacroblockToDB _ _ _ _ = error "Can not PoW Key Block"
+                when (j < receivedKeyNumber) $ do
+                  hashOfDBKeyBlock <- getM (Common db i) j
+                  writeLog i [BDTag] Info $ "Current hash of KeyBlock in DB is " ++ show hashOfDBKeyBlock
+                  let prev_hash = _prev_hash (aKeyBlock :: KeyBlockInfo)
+                  case hashOfDBKeyBlock of
+                    Nothing ->  writeLog i [BDTag] Error ("There is no key block with number " ++ (show j))
+                    Just h -> if (h == prev_hash)
+                      then updateMacroblockByKeyBlock db i aKeyBlockHash aKeyBlock Main
+                      else do
+                      let mes = "Hashes doesn't much: current hash: " ++ show h ++ "previous hash: " ++ show prev_hash
+                      writeLog i [BDTag] Info mes
+                      when (j < receivedKeyNumber) $ do startSync
+addMacroblockToDB _ v _ _ = error ("Can not PoW Key Block" ++ show v)
 
 tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
 tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {
@@ -343,7 +364,7 @@ tKeyBlockToPoWType (KeyBlockInfo {..}) = KeyBlockInfoPoW{
 
 
 updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()
-updateMacroblockByKeyBlock db aInfoChan hashOfKeyBlock keyBlockInfo branch = do
+updateMacroblockByKeyBlock db i hashOfKeyBlock keyBlockInfo branch = do
     val  <- funR (poolMacroblock db) hashOfKeyBlock
     _ <- case val of
         Nothing -> return dummyMacroblock
@@ -351,8 +372,13 @@ updateMacroblockByKeyBlock db aInfoChan hashOfKeyBlock keyBlockInfo branch = do
             Left e  -> throw (DecodeException (show e))
             Right r -> return r
 
-    writeMacroblockToDB db aInfoChan hashOfKeyBlock $ tKeyBlockInfo2Macroblock keyBlockInfo
-    setChain (Common db aInfoChan ) (_number (keyBlockInfo :: KeyBlockInfo)) hashOfKeyBlock branch
+    writeMacroblockToDB db i hashOfKeyBlock $ tKeyBlockInfo2Macroblock keyBlockInfo
+    let aNumber = _number (keyBlockInfo :: KeyBlockInfo)
+        mes = "going to write number " ++ show aNumber ++ show hashOfKeyBlock ++ show branch
+    writeLog i [BDTag] Info mes
+    setChain (Common db i ) aNumber hashOfKeyBlock branch
+    writeKeyBlockNumber (Common db i) $ _number (keyBlockInfo :: KeyBlockInfo)
+
 
 addMicroblockHashesToMacroBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> [HashOfMicroblock] -> IO ()
 addMicroblockHashesToMacroBlock db i hashOfKeyBlock hashesOfMicroblock = do

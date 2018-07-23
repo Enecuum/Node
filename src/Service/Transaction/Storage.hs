@@ -48,6 +48,7 @@ data DBPoolDescriptor = DBPoolDescriptor {
   , poolMicroblock  :: Pool Rocks.DB
   , poolLedger      :: Pool Rocks.DB
   , poolMacroblock  :: Pool Rocks.DB
+  -- , poolKeyBlock    :: Pool Rocks.DB
   , poolSprout      :: Pool Rocks.DB
   }
 
@@ -122,7 +123,7 @@ funD db key = do
 
 
 checkMacroblockIsClosed :: MacroblockBD -> Bool
-checkMacroblockIsClosed MacroblockBD {..} = length _teamKeys == length _mblocks
+checkMacroblockIsClosed MacroblockBD {..} = length _mblocks /= 0 && length _teamKeys == length _mblocks
 
 -- end of the Database structure  section
 --------------------------------------

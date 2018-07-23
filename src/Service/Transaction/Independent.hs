@@ -2,13 +2,13 @@
 
 module Service.Transaction.Independent where
 import           Control.Exception
-import           Control.Monad
+-- import           Control.Monad
 import qualified Data.Serialize                   as S (decode, encode)
+import           Node.Data.GlobalLoging
+import           Service.InfoMsg                  (LogingTag (..), MsgType (..))
 import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
-
-
 
 getChain :: Common -> Number -> IO Chain
 getChain (Common descr _ ) aNumber = do
@@ -20,7 +20,7 @@ getChain (Common descr _ ) aNumber = do
       Right r -> return r
 
 setChain :: Common -> Number -> HashOfKeyBlock -> BranchOfChain -> IO ()
-setChain c@(Common descr _ ) aNumber hashOfKeyBlock branch = when (branch == Sprout) $ do
+setChain c@(Common descr i ) aNumber hashOfKeyBlock branch = do
   chain <- getChain c aNumber
   let valueOfChain = funBranch branch $ chain
   let newChain = if (valueOfChain == Nothing)
@@ -32,7 +32,7 @@ setChain c@(Common descr _ ) aNumber hashOfKeyBlock branch = when (branch == Spr
   let key = S.encode aNumber
       val = S.encode newChain
   funW (poolSprout descr) [(key, val)]
-
+  writeLog i [BDTag] Info $ "Write number  " ++ show aNumber ++ show newChain ++ show branch
 
 funBranch :: BranchOfChain -> (a, a) -> a
 funBranch Main   = fst
