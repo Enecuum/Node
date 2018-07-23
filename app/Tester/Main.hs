@@ -35,10 +35,10 @@ printBS bs = do
     putStrLn ""
 
 
-connectWithNN :: [Char] -> WS.Connection -> IO NodeId
-connectWithNN aStr aConnect = do
+connectWithNN :: [Char] -> NodeType -> WS.Connection -> IO NodeId
+connectWithNN aStr aType aConnect = do
     putStrLn $ aStr ++ "Sending of hello request"
-    sendMsg aConnect $ ActionConnect PoA Nothing
+    sendMsg aConnect $ ActionConnect aType Nothing
 
     aMsg <- receiveMsg aConnect
         (aStr ++ "Receiving of ID...")
@@ -141,7 +141,7 @@ main = do
             let (Connect aHostAddress aPort):(Connect aHostAddress2 aPort2):_ = aConnects
             putStrLn $ "1| Node adress: " ++ showHostAddress aHostAddress
             void . forkIO $ runClient (showHostAddress aHostAddress) (fromEnum aPort) "/" $ \aConnect -> do
-                aMyNodeId <- connectWithNN "1| " aConnect
+                aMyNodeId <- connectWithNN "1| " PoA aConnect
                 putStrLn "1| CN is connected to NN."
                 putMVar aIdOfFirsClientVar aMyNodeId
 
@@ -167,7 +167,7 @@ main = do
             putStrLn "2| Connecting of CN to NN..."
             putStrLn $ "2| Node adress: " ++ showHostAddress aHostAddress2
             void . forkIO $ runClient (showHostAddress aHostAddress2) (fromEnum aPort2) "/" $ \aConnect -> do
-                aMyId <- connectWithNN "2| " aConnect
+                aMyId <- connectWithNN "2| " PoA aConnect
                 putStrLn "2| CN is connected to NN."
                 putMVar aSecondNodeIsStartedVar True
 
@@ -186,7 +186,7 @@ main = do
             putStrLn ""
             void . forkIO $ runClient (showHostAddress aHostAddress) (fromEnum aPort) "/" $ \aConnect -> do
                 aTransaction:_ <- genNTx 10
-                void $ connectWithNN "   " aConnect
+                void $ connectWithNN "   " PoA aConnect
                 void $ do
                     aTransactions <- checkOfPending aConnect
                     unless (null aTransactions) $  error "  FAIL. Then pending not empty!"
@@ -199,10 +199,47 @@ main = do
 
                 putStrLn "   Checking of pending clearing."
                 void $ do
+
                     sendMsg aConnect $ MsgMicroblock $ genMicroBlock aTransaction
                     aTransactions <- checkOfPending aConnect
                     unless (null aTransactions) $  error "   FAIL. Then pending not empty!"
                     putMVar testsOk True
+            _ <- takeMVar testsOk
+            putStrLn ""
+            putStrLn "---------------------------------------"
+            putStrLn "   ---------------------------------"
+            putStrLn "   Resending (MicroBlocs, KeyBlocks)"
+            putStrLn "   ---------------------------------"
+            putStrLn "---------------------------------------"
+            putStrLn ""
+            putStrLn $ "1| Node adress: " ++ showHostAddress aHostAddress
+            aNode1Start  <- newEmptyMVar
+            void . forkIO $ runClient (showHostAddress aHostAddress) (fromEnum aPort) "/" $ \aConnect -> do
+                void $ connectWithNN "1| " All aConnect
+                putMVar aNode1Start True
+                aMsg1 <- receiveMsg aConnect
+                    ("1| " ++ "Receiving of msg Mickroblock...")
+                    ("1| " ++ "Recived msg Mickroblock.")
+                void $ return $ case decode aMsg1 of
+                    Just (MsgMicroblock _) -> 0 :: Int
+                    _ -> error $ "1| FAIL. The received msg not a correct!"
+                aMsg2 <- receiveMsg aConnect
+                    ("1| " ++ "Receiving of msg KeyBlock...")
+                    ("1| " ++ "Recived msg KeyBlock.")
+                void $ return $ case decode aMsg2 of
+                    Just (MsgKeyBlock _) -> 0 :: Int
+                    _ -> error $ "1| FAIL. The received msg not a correct!"
+                putMVar testsOk True
+
+            _ <- takeMVar aNode1Start
+            putStrLn $ "2| Node adress: " ++ showHostAddress aHostAddress2
+            void . forkIO $ runClient (showHostAddress aHostAddress2) (fromEnum aPort2) "/" $ \aConnect -> do
+                void $ connectWithNN "2| " PoA aConnect
+                aTransaction:_ <- genNTx 10
+                putStrLn "1| Sending of Microblock"
+                sendMsg aConnect $ MsgMicroblock $ genMicroBlock aTransaction
+                putStrLn "1| Sending of KeyBlock"
+                sendMsg aConnect $ MsgKeyBlock testMsg
 
             _ <- takeMVar testsOk
             putStrLn ""

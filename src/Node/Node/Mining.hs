@@ -62,7 +62,7 @@ networkNodeStart aSyncChan (_, aOutChan) aMd = do
             MsgFromNode aNodeType aMsgFromNode -> do
                 void $ C.forkIO $ when (aNodeType /= NN) $ forM_ (aData^.connects) $
                     \aNode -> when (aNode^.nodeType == NN) $
-                        void $ tryWriteChan (aNode^.nodeChan) aMsgFromNode
+                        writeInChan (aNode^.nodeChan) aMsgFromNode
 
                 case aMsgFromNode of
                     aMsg@(MsgBroadcast _ aNodeType _) -> do
