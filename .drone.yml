@@ -1,5 +1,5 @@
 pipeline:
-  build:
+  build-dev:
     image: plugins/docker
     secrets: [docker_username, docker_password]
     registry: dev.enecuum.com:2087
@@ -33,11 +33,33 @@ pipeline:
         target: PLUGIN_SECRET_KEY
     docker_image: dev.enecuum.com:2087/testnet/node:latest
     service: bootnode/bootnode-dev
+    batch_size: 1
     confirm: true
     timeout: 240
     when:
       branch:
         - Dev
+      status:
+        - success
+      event:
+        - push
+        - tag
+  deploy-bootnode-master:
+    image: peloton/drone-rancher
+    url: https://testnet.enecuum.com:2096
+    secrets:
+      - source: rancher_access_key
+        target: PLUGIN_ACCESS_KEY
+      - source: rancher_secret_key
+        target: PLUGIN_SECRET_KEY
+    docker_image: dev.enecuum.com:2087/testnet/node:latest
+    service: bootnode/bootnode-master
+    batch_size: 1
+    confirm: true
+    timeout: 240
+    when:
+      branch:
+        - master
       status:
         - success
       event:
@@ -53,11 +75,33 @@ pipeline:
         target: PLUGIN_SECRET_KEY
     docker_image: dev.enecuum.com:2087/testnet/node:latest
     service: node/node-dev
+    batch_size: 9
     confirm: true
     timeout: 240
     when:
       branch:
         - Dev
+      status:
+        - success
+      event:
+        - push
+        - tag
+  deploy-node-master:
+    image: peloton/drone-rancher
+    url: https://testnet.enecuum.com:2096
+    secrets:
+      - source: rancher_access_key
+        target: PLUGIN_ACCESS_KEY
+      - source: rancher_secret_key
+        target: PLUGIN_SECRET_KEY
+    docker_image: dev.enecuum.com:2087/testnet/node:latest
+    service: node/node-dev
+    batch_size: 14
+    confirm: true
+    timeout: 240
+    when:
+      branch:
+        - master
       status:
         - success
       event:
@@ -70,6 +114,18 @@ pipeline:
     when:
       branch:
         - Dev
+      status:
+        - success
+      event:
+        - push
+        - tag
+  notify-deploy-master:
+    image: dev.enecuum.com:2087/library/drone-telegram:v1.0.0
+    secrets: [telegram_token, telegram_id]
+    message: \u2705 ${DRONE_REPO}:`${DRONE_COMMIT_BRANCH}` ${DRONE_BUILD_NUMBER} deployment successful
+    when:
+      branch:
+        - master
       status:
         - success
       event:
