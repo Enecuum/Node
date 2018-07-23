@@ -33,8 +33,7 @@ genMicroBlockV1 = do
   put aHashCurrentMicroblock
   return (MicroblockV1 aHashCurrentMicroblock aHashPreviousMicroblock tx)
 
-
-
+{-
 genPoWKeyBlocks :: StateT (Integer,HashOfKeyBlock) IO KeyBlockInfoPoW
 genPoWKeyBlocks = do
    (aNumber, prev_hash) <- get
@@ -53,10 +52,9 @@ genPoWKeyBlocks = do
    put (aNumber+1, currentHash)
    return key
 
-
 generatePoWKeyBlock :: Int -> IO [KeyBlockInfoPoW]
 generatePoWKeyBlock n = evalStateT (replicateM n genPoWKeyBlocks) (0, hashOfgenesis)
-
+-}
 
 hashOfgenesis :: HashOfKeyBlock
 hashOfgenesis = "B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw="
@@ -77,6 +75,25 @@ genPoAMicroblock h = do
   _publisher = aPublisher,
   _transactions = tx}
 
+{-
+generateMicroblocksAndKeyBlocks :: Int -> IO [(KeyBlockInfoPoW, [Microblock])]
+generateMicroblocksAndKeyBlocks n = undefined
+-}
 
-generateMicroblocksAndKeyBlocks :: Int -> IO (KeyBlockInfoPoW, [Microblock])
-generateMicroblocksAndKeyBlocks = undefined
+generateMicroblocksAndKeyBlocks :: Int -> StateT (Integer,HashOfKeyBlock) IO (KeyBlockInfoPoW, [Microblock])
+generateMicroblocksAndKeyBlocks n = do
+   (aNumber, prev_hash) <- get
+   let aTime = 0
+       aNonce = 0
+       aType = 0
+       aSolver = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+       key = KeyBlockInfoPoW{
+         _time = aTime,
+         _prev_hash = prev_hash,
+         _number = aNumber,
+         _nonce = aNonce,
+         _solver = aSolver,
+         _type = aType}
+       currentHash = getKeyBlockHash key
+   put (aNumber+1, currentHash)
+   lift $ ((,) key) <$> replicateM n (genPoAMicroblock currentHash) 
