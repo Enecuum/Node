@@ -43,7 +43,7 @@ servePoA
     -> InChan Microblock
     -> InChan PendingAction
     -> IO ()
-servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan aMicroblockChan inChanPending = do
+servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan _ inChanPending = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. servePoA: a port is " ++ show aRecivePort
     runServer aRecivePort $ \aIp aPending -> do
@@ -139,11 +139,10 @@ msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan = f
                 sendActionToCentralActor ch $ RequestActualConnectList aMVar
                 WS.sendTextData aConnect . A.encode . ResponseActualConnects =<< takeMVar aMVar
             --
-            aMsg -> do
-                writeLog aInfoChan [ServePoATag] Info $ "Received msg " ++ show aMsg
-                sendMsgToCentralActor ch aNodeType aMsg
+            aMessage -> do
+                writeLog aInfoChan [ServePoATag] Info $ "Received msg " ++ show aMessage
+                sendMsgToCentralActor ch aNodeType aMessage
 
-            _ -> return ()
         Left a -> do
             writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ a
             WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"Error\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
