@@ -11,43 +11,59 @@ import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
 import           Control.Exception
 import           Control.Monad
-import           PoA.Pending
-import           Node.DBActor
 import           Data.List.Extra
+import           Node.DBActor
+import           PoA.Pending
 
-import qualified Network.WebSockets                    as WS
+import           Control.Concurrent.Async
 import           Data.Aeson                            as A
-import           Service.Chan
-import qualified Data.Text                             as T
 import qualified Data.ByteString.Lazy                  as L
-import           Service.Network.WebSockets.Client
-import           Data.Maybe
 import           Data.IORef
+import           Data.Maybe
+-- import qualified Data.Text                             as T
 import           Lens.Micro
 import           Network.Socket                        (tupleToHostAddress)
+import qualified Network.WebSockets                    as WS
+import           Node.Data.GlobalLoging
 import           Node.Data.Key
 import           Node.FileDB.FileServer
 import           Node.Node.Config.Make
 import           Node.Node.Types
-import           Service.InfoMsg                       (InfoMsg)
-import           Service.Network.Base
 import           PoA.PoAServer
-import           Control.Concurrent.Async
+import           PoA.Types
+import           Service.Chan
+import           Service.InfoMsg                       (InfoMsg)
+import           Service.InfoMsg
+import           Service.Network.Base
+import           Service.Network.WebSockets.Client
+import           Service.Sync.SyncJson
 import           Service.Transaction.Common            (DBPoolDescriptor (..),
                                                         addMacroblockToDB,
                                                         addMicroblockToDB)
-import           Service.Types                         (Microblock, Transaction, MacroblockBD)
+import           Service.Transaction.LedgerSync
+import           Service.Transaction.SproutCommon
+import           Service.Types                         (MacroblockBD,
+                                                        Microblock, Transaction)
+import           Service.Types
 import           System.Directory                      (createDirectoryIfMissing)
 import           System.Environment
-import           PoA.Types
-import           Service.Sync.SyncJson
-import           Service.Types
-import           Node.Data.GlobalLoging
-import           Service.InfoMsg
-import Service.Transaction.LedgerSync
-import Service.Transaction.SproutCommon
 
 
+startNode
+  :: DBPoolDescriptor
+     -> BuildConfig
+     -> InChan InfoMsg
+     -> (InChan SyncEvent
+         -> (InChan MsgToCentralActor, OutChan MsgToCentralActor)
+         -> IORef NetworkNodeData
+         -> IO ())
+     -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor)
+         -> OutChan (Transaction, MVar Bool)
+         -> InChan Microblock
+         -> MyNodeId
+         -> InChan FileActorRequest
+         -> IO a)
+     -> IO (InChan MsgToCentralActor, OutChan MsgToCentralActor)
 startNode descrDB buildConf infoCh manager startDo = do
 
     --tmp
@@ -316,9 +332,9 @@ data Response a = Response NodeId a deriving Show
 takeResponseTail :: OutChan SyncEvent -> IO (Response (Number, Maybe HashOfKeyBlock))
 takeResponseTail aChan = readChan aChan >>= \case
     SyncMsg aId aMsg  -> case aMsg of
-        ResponseTail (aNum, aHash)  -> return $ Response aId (aNum,Just aHash)
-        StatusSyncMessage _ "#001"  -> return $ Response aId (0, Nothing)
-        _                           -> takeResponseTail aChan
+        ResponseTail (aNum, aHash) -> return $ Response aId (aNum,Just aHash)
+        StatusSyncMessage _ "#001" -> return $ Response aId (0, Nothing)
+        _                          -> takeResponseTail aChan
     _                 -> takeResponseTail aChan
 
 takePeekKeyBlokResponse     :: OutChan SyncEvent -> IO (Response [(Number, HashOfKeyBlock, MacroblockBD)])

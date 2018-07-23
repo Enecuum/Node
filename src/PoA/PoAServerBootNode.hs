@@ -1,26 +1,26 @@
-{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module PoA.PoAServerBootNode (
         serverPoABootNode
 ) where
 
-import              Control.Monad (void, forever, when)
-import qualified    Network.WebSockets                  as WS
-import              Service.Network.Base
-import              Service.Network.WebSockets.Server
-import              Service.Network.WebSockets.Client
-import              Control.Concurrent.Chan.Unagi.Bounded
-import              Service.InfoMsg as I
-import qualified    Data.Text as T
-import              System.Random.Shuffle
-import              Data.Aeson as A
-import              Control.Exception
-import              Node.Data.GlobalLoging
-import              PoA.Types
-import qualified    Control.Concurrent as C
-import              Node.FileDB.FileServer
-import              Data.Maybe()
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Monad                         (forever, void, when)
+import qualified Data.Text                             as T
+import qualified Network.WebSockets                    as WS
+import           Service.InfoMsg                       as I
+import           Service.Network.Base
+import           Service.Network.WebSockets.Client
+import           Service.Network.WebSockets.Server
+-- import              System.Random.Shuffle
+import qualified Control.Concurrent                    as C
+import           Control.Exception
+import           Data.Aeson                            as A
+import           Data.Maybe                            ()
+import           Node.Data.GlobalLoging
+import           Node.FileDB.FileServer
+import           PoA.Types
 
 
 data ConnectTesterActor = AddConnectToList Connect | TestExistedConnect Connect

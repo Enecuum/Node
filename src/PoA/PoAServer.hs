@@ -1,5 +1,5 @@
-{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module PoA.PoAServer (
     servePoA,
@@ -8,29 +8,30 @@ module PoA.PoAServer (
     sendActionToCentralActor
   )  where
 
-import              Control.Monad (forM_, void, when, forever, unless)
-import qualified    Network.WebSockets                  as WS
-import              Control.Concurrent.MVar
-import              Service.Network.Base
-import              Service.Network.WebSockets.Server
-import qualified    Control.Concurrent.Chan as C
-import              Control.Concurrent.Chan.Unagi.Bounded
-import              Node.Node.Types
-import              Service.InfoMsg as I
-import qualified    Data.Text as T
-import              Service.Types
-import              System.Random.Shuffle
-import              Data.Aeson as A
-import              Control.Exception
-import              Node.Data.GlobalLoging
-import              PoA.Types
-import qualified    Control.Concurrent as C
-import              Node.FileDB.FileServer
-import              PoA.Pending
+import qualified Control.Concurrent                    as C
+-- import qualified Control.Concurrent.Chan               as C
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Concurrent.MVar
+import           Control.Exception
+import           Control.Monad                         (forever, unless, void,
+                                                        when)
+import           Data.Aeson                            as A
+import qualified Data.Text                             as T
+import qualified Network.WebSockets                    as WS
+import           Node.Data.GlobalLoging
+import           Node.FileDB.FileServer
+import           Node.Node.Types
+import           PoA.Pending
+import           PoA.Types
+import           Service.InfoMsg                       as I
+import           Service.Network.Base
+import           Service.Network.WebSockets.Server
+import           Service.Types
+import           System.Random.Shuffle
 
-import              Control.Concurrent.Async
-import              Node.Data.Key
-import              Data.Maybe()
+import           Control.Concurrent.Async
+import           Data.Maybe                            ()
+import           Node.Data.Key
 
 
 servePoA
@@ -81,9 +82,21 @@ servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan aMicroblo
                 writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ a ++ " ip: " ++ showHostAddress aIp
                 WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"ErrorOfConnect\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
 
+
+msgSender :: ToJSON a1 =>
+                   InChan MsgToCentralActor
+                   -> NodeId -> WS.Connection -> OutChan a1 -> IO a2
 msgSender ch aId aConnect aNewChan = forever (WS.sendTextData aConnect . A.encode =<< readChan aNewChan)
     `finally` writeChan ch (NodeIsDisconnected aId)
 
+msgReceiver :: InChan MsgToCentralActor
+                     -> InChan InfoMsg
+                     -> InChan FileActorRequest
+                     -> NodeType
+                     -> IdFrom
+                     -> WS.Connection
+                     -> InChan PendingAction
+                     -> IO b
 msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan = forever $ do
     aMsg <- WS.receiveData aConnect
     writeLog aInfoChan [ServePoATag] Info $ "Raw msg: " ++ show aMsg

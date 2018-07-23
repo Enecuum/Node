@@ -10,15 +10,15 @@
 module PoA.Types where
 
 import           Control.Monad.Extra
-import           Crypto.PubKey.ECC.ECDSA
+-- import           Crypto.PubKey.ECC.ECDSA
 import           Data.Aeson
 import qualified Data.ByteString                  as B
 import qualified Data.ByteString.Char8            as CB
-import           Data.Either
+-- import           Data.Either
 import           Data.Hex
 import           Data.IP
 import           Data.Maybe
-import qualified Data.Serialize                   as S
+-- import qualified Data.Serialize                   as S
 import           Data.String
 import qualified Data.Text                        as T
 import           Data.Word                        ()
@@ -98,7 +98,7 @@ instance FromJSON ActualConnectInfo where
                 aJustPort <- aPort
                 return $ Connect (toHostAddress aIpAdress) (toEnum aJustPort)
         return $ ActualConnectInfo aNodeId (readNodeType aNodeType) aConnect
-
+    parseJSON s = error ("ActualConnectInfo is not an object: " ++ show s)
 
 unhexNodeId :: MonadPlus m => T.Text -> m NodeId
 unhexNodeId aString = case unhex . fromString . T.unpack $ aString of
@@ -372,5 +372,5 @@ instance FromJSON Connect where
             Nothing      -> mzero
             Just aJustIp -> return $
                 Connect (toHostAddress aJustIp) (toEnum aPort)
-
+    parseJSON s = error ("FromJSON Connect is not an object: " ++ show s)
 --------------------------------------------------------------------------------

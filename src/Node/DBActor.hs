@@ -13,7 +13,7 @@ import           Node.Data.GlobalLoging
 import           Service.InfoMsg
 
 import           Control.Monad
-import qualified Data.ByteString                       as B
+-- import qualified Data.ByteString                       as B
 import           Service.Chan
 import           Service.Sync.SyncJson
 import           Service.Transaction.Common            (DBPoolDescriptor (..),
@@ -37,15 +37,15 @@ data MsgToDB where
     DeleteSproutData      :: Number -> MsgToDB
     SetSproutAsMain       :: Number -> MsgToDB
 
-{-
-startDBActor
-    ::  DBPoolDescriptor
-    ->  OutChan Microblock
-    ->  OutChan Value
-    ->  InChan InfoMsg
-    ->  (InChan MsgToDB, OutChan MsgToDB)
-    ->  IO b
--}
+
+
+startDBActor :: DBPoolDescriptor
+                      -> OutChan Microblock
+                      -> OutChan Value
+                      -> InChan InfoMsg
+                      -> (InChan MsgToDB, OutChan MsgToDB)
+                      -> (InChan Service.Sync.SyncJson.SyncEvent, b1)
+                      -> IO b2
 startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSyncChan = do
     writeLog aInfoCh [BDTag, InitTag] Info "Init. Starting of DBActor."
     void . C.forkIO $ do
@@ -89,7 +89,7 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
 
         SetKeyBlockSproutData aMacroblockBD aMVar -> do
             writeLog aInfoCh [BDTag] Info "Set key block sprout data request."
-            aIsValid <- isValidKeyBlockSprout aData (toPair2 <$> aMacroblockBD) 
+            aIsValid <- isValidKeyBlockSprout aData (toPair2 <$> aMacroblockBD)
             -- aIsValid <- undefined
             when (aIsValid) $ setKeyBlockSproutData aData $ toPair2 <$> aMacroblockBD
             putMVar aMVar (aIsValid)
