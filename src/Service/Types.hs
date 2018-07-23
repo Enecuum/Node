@@ -105,10 +105,10 @@ data MicroblockV1 = MicroblockV1{
                   trans                  :: [Transaction]}
                 deriving (Eq, Generic, Ord, Show)
 
-
+type HashOfKeyBlock = BSI.ByteString
 -- MicroblockPoA
 data Microblock = Microblock{
-    _keyBlock     :: ByteString, -- hash of key-block
+    _keyBlock     :: HashOfKeyBlock, -- hash of key-block
     _sign         :: Signature,  -- signature for {K_hash, [Tx],}
     _teamKeys     :: [PublicKey], -- for reward
     _publisher    :: PublicKey,
@@ -287,7 +287,7 @@ data ChainInfo = ChainInfo {
 instance Serialize ChainInfo
 
 
-type HashOfKeyBlock = BSI.ByteString
+
 type HashOfMicroblock = BSI.ByteString
 type HashOfTransaction = BSI.ByteString
 

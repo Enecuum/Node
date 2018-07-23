@@ -24,6 +24,8 @@ data Common = Common {
 type MainChain = HashOfKeyBlock
 type SproutChain = HashOfKeyBlock
 type Chain = (Maybe MainChain, Maybe SproutChain)
+type FullChain = (Integer, Maybe MainChain, Maybe SproutChain)
+
 type SproutTable = H.BasicHashTable Number Chain
 
 
