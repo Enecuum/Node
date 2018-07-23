@@ -69,7 +69,7 @@ checkOfPending aConnect = do
 receivingOfBroadcast :: [Char] -> WS.Connection -> IO NodeId
 receivingOfBroadcast aStr aConnect = do
     aMsg <- receiveMsg aConnect
-        (aStr ++ "Receiving of broadcast echo...")
+        (aStr ++ "Receiving of broadcast...")
         (aStr ++ "Broadcast msg received.")
 
     MsgBroadcast (IdFrom aNodeId) _ aValue<- return $ case decode aMsg of
