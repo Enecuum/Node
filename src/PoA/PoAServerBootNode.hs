@@ -61,8 +61,8 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
 
                     | otherwise -> do
                         writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request of connections."
-                        aConnect <- getRecords aFileServerChan
-                        WS.sendTextData aConnect . A.encode $ ResponsePotentialConnects aConnect
+                        aConnects <- getRecords aFileServerChan
+                        WS.sendTextData aConnect . A.encode $ ResponsePotentialConnects aConnects
 
                 ActionAddToConnectList aPort ->
                     void $ tryWriteChan aInChan $ AddConnectToList (Connect aHostAdress aPort)
