@@ -69,7 +69,7 @@ checkOfPending aConnect = do
 receivingOfBroadcast :: [Char] -> WS.Connection -> IO NodeId
 receivingOfBroadcast aStr aConnect = do
     aMsg <- receiveMsg aConnect
-        (aStr ++ "Receiving of broadcast echo...")
+        (aStr ++ "Receiving of broadcast...")
         (aStr ++ "Broadcast msg received.")
 
     MsgBroadcast (IdFrom aNodeId) _ aValue<- return $ case decode aMsg of
@@ -236,9 +236,9 @@ main = do
             void . forkIO $ runClient (showHostAddress aHostAddress2) (fromEnum aPort2) "/" $ \aConnect -> do
                 void $ connectWithNN "2| " PoA aConnect
                 aTransaction:_ <- genNTx 10
-                putStrLn "1| Sending of Microblock"
+                putStrLn "2| Sending of Microblock"
                 sendMsg aConnect $ MsgMicroblock $ genMicroBlock aTransaction
-                putStrLn "1| Sending of KeyBlock"
+                putStrLn "2| Sending of KeyBlock"
                 sendMsg aConnect $ MsgKeyBlock testMsg
 
             _ <- takeMVar testsOk

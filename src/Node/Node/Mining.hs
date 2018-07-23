@@ -62,13 +62,13 @@ networkNodeStart aSyncChan (_, aOutChan) aMd = do
             MsgFromNode aNodeType aMsgFromNode -> do
                 void $ C.forkIO $ when (aNodeType /= NN) $ forM_ (aData^.connects) $
                     \aNode -> when (aNode^.nodeType == NN) $
-                        writeInChan (aNode^.nodeChan) aMsgFromNode
+                        void $ C.forkIO $ writeInChan (aNode^.nodeChan) aMsgFromNode
 
                 case aMsgFromNode of
-                    aMsg@(MsgBroadcast _ _ _) -> do
+                    aMsg@(MsgBroadcast _ aRecieverType _) -> do
                         aNetLog $ "Resending. Broadcast."
                         forM_ (aData^.connects) $ \aNode -> when
-                            (aNode^.nodeType /= NN && (aNodeType == aNode^.nodeType || aNodeType == All)) $
+                            (aNode^.nodeType /= NN && (aRecieverType == aNode^.nodeType || aRecieverType == All)) $
                             void $ tryWriteChan (aNode^.nodeChan) aMsg
 
                     aMsg@(MsgMsgTo (IdFrom aSender) (IdTo aId) aContent) -> do
