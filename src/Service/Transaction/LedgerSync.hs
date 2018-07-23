@@ -64,11 +64,11 @@ setKeyBlockSproutData c@(Common descr i) kv = do
 
 
 getRestSproutData :: Common -> HashOfMicroblock -> IO MicroBlockContent
-getRestSproutData (Common descr _) hashOfMicroblock = do
+getRestSproutData (Common descr i) hashOfMicroblock = do
   microblock <- getMicroBlockByHashDB descr (Hash hashOfMicroblock)
   case microblock of Nothing -> throw NoSuchMicroBlockDB
                      Just m -> do
-                       tx <- getTransactionsByMicroblockHash descr (Hash hashOfMicroblock)
+                       tx <- getTransactionsByMicroblockHash descr i (Hash hashOfMicroblock)
                        case tx of Nothing -> throw NoSuchTransactionDB
                                   Just t  -> return $ MicroBlockContent m t
 

@@ -206,7 +206,7 @@ calculateLedger db i isStorno hashKeyBlock macroblock = do
   let microblockHashes = _mblocks (macroblock :: MacroblockBD)
   mbBD <- mapM (\h -> getMicroBlockByHashDB db (Hash h))  microblockHashes
   let realMb =  map fromJust (filter (isJust) mbBD)
-  mbWithTx <- mapM (tMicroblockBD2Microblock db) realMb
+  mbWithTx <- mapM (tMicroblockBD2Microblock db i) realMb
   let sortedMb = sortBy (comparing _sign) (mbWithTx :: [Microblock])
       sortedM = if (isStorno == False) then sortedMb else reverse sortedMb
   writeLog i [BDTag] Info ("Start calculate Ledger, isStorno "  ++ show isStorno)

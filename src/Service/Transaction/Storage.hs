@@ -134,8 +134,8 @@ checkMacroblockIsClosed MacroblockBD {..} = length _teamKeys == length _mblocks
 
 
 
-getTxs :: DBPoolDescriptor -> MicroblockBD -> IO [TransactionInfo]
-getTxs desc mb = do
+getTxs :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO [TransactionInfo]
+getTxs desc i mb = do
   let txHashes = _transactionsHashes mb
   print txHashes
   maybeTxUntyped  <- mapM (funR (poolTransaction desc)) txHashes
@@ -151,9 +151,9 @@ getTxs desc mb = do
          return $ map extract txUntyped
 
 
-getTxsMicroblock :: DBPoolDescriptor -> MicroblockBD -> IO [Transaction]
-getTxsMicroblock db mb = do
-  txDecoded <- getTxs db mb
+getTxsMicroblock :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO [Transaction]
+getTxsMicroblock db i mb = do
+  txDecoded <- getTxs db i mb
   let tx = map (\t -> _tx  (t :: TransactionInfo)) txDecoded
   return tx
 
@@ -246,22 +246,22 @@ getMicroBlockByHashDB db mHash = do
                    Right rm -> return $ Just rm
 
 
-getTransactionsByMicroblockHash :: DBPoolDescriptor -> Hash -> IO (Maybe [TransactionInfo])
-getTransactionsByMicroblockHash db aHash = do
+getTransactionsByMicroblockHash :: DBPoolDescriptor -> InChan InfoMsg -> Hash -> IO (Maybe [TransactionInfo])
+getTransactionsByMicroblockHash db i aHash = do
   mb <- getMicroBlockByHashDB db aHash
   case mb of
     Nothing -> return Nothing
     Just m@(MicroblockBD {..}) -> do
-      txInfo <- getTxs db m
+      txInfo <- getTxs db i m
       return $ Just txInfo
 
 getBlockByHashDB :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe MicroblockAPI)
-getBlockByHashDB db hash _ = do
+getBlockByHashDB db hash i = do
   mb <- getMicroBlockByHashDB db hash
   case mb of
     Nothing -> return Nothing
     Just m  -> do
-      mAPI <- tMicroblockBD2MicroblockAPI db m --aInfoChan
+      mAPI <- tMicroblockBD2MicroblockAPI db i m --aInfoChan
       return $ Just mAPI
 
 getKeyBlockByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe MacroblockBD)
@@ -326,9 +326,9 @@ getAllItems db = do
   Rocks.iterItems it
 
 
-tMicroblockBD2Microblock :: DBPoolDescriptor -> MicroblockBD -> IO Microblock
-tMicroblockBD2Microblock db m@(MicroblockBD {..}) = do
-  tx <- getTxsMicroblock db m
+tMicroblockBD2Microblock :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO Microblock
+tMicroblockBD2Microblock db i m@(MicroblockBD {..}) = do
+  tx <- getTxsMicroblock db i m
   aTeamkeys <- getTeamKeysForMicroblock db _keyBlock
   return Microblock {
   _keyBlock,
@@ -362,10 +362,9 @@ getTeamKeysForMicroblock db aHash = do
                Right r -> return $ _teamKeys (r :: MacroblockBD)
 
 
--- tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> MicroblockBD -> InChan InfoMsg -> IO MicroblockAPI
-tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> MicroblockBD -> IO MicroblockAPI
-tMicroblockBD2MicroblockAPI db m@(MicroblockBD {..}) = do
-  tx <- getTxsMicroblock db m
+tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO MicroblockAPI
+tMicroblockBD2MicroblockAPI db i m@(MicroblockBD {..}) = do
+  tx <- getTxsMicroblock db i m
   let txAPI = map (\t -> TransactionAPI {_tx = t, _txHash = rHashT t }) tx
   -- teamKeys <- getTeamKeysForMicroblock db _keyBlock --aInfoChan
   return MicroblockAPI {
