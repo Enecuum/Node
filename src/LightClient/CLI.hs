@@ -9,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TemplateHaskell           #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 
 module LightClient.CLI (
@@ -34,6 +35,7 @@ import           Service.Types.PublicPrivateKeyPair
 import           System.Console.GetOpt
 import           System.Environment                 (getArgs)
 import           System.Random
+
 
 data Flag = Port PortNumber | Host HostName | Version | Help
           | WalletsFile String | TransactionsFile String | KeyGen Int

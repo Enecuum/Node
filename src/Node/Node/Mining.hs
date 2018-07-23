@@ -65,7 +65,7 @@ networkNodeStart aSyncChan (_, aOutChan) aMd = do
                         void $ tryWriteChan (aNode^.nodeChan) aMsgFromNode
 
                 case aMsgFromNode of
-                    aMsg@(MsgBroadcast _ aNodeType _) -> do
+                    aMsg@(MsgBroadcast _ _ _) -> do
                         aNetLog $ "Resending. Broadcast."
                         forM_ (aData^.connects) $ \aNode -> when
                             (aNode^.nodeType /= NN && (aNodeType == aNode^.nodeType || aNodeType == All)) $
