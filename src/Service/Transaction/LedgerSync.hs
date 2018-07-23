@@ -66,11 +66,11 @@ setKeyBlockSproutData c@(Common descr i) kv = do
 getRestSproutData :: Common -> HashOfMicroblock -> IO MicroBlockContent
 getRestSproutData (Common descr i) hashOfMicroblock = do
   microblock <- getMicroBlockByHashDB descr (Hash hashOfMicroblock)
-  case microblock of Nothing -> throw NoSuchMicroBlockDB
-                     Just m -> do
-                       tx <- getTransactionsByMicroblockHash descr i (Hash hashOfMicroblock)
-                       case tx of Nothing -> throw NoSuchTransactionDB
-                                  Just t  -> return $ MicroBlockContent m t
+  -- case microblock of Nothing -> throw NoSuchMicroBlockDB
+  --                    Just m -> do
+  tx <- getTransactionsByMicroblockHash descr i (Hash hashOfMicroblock)
+  case tx of Nothing -> throw NoSuchTransactionDB
+             Just t  -> return $ MicroBlockContent microblock t
 
 
 isValidRestOfSprout :: Common -> MicroBlockContent -> IO Bool
@@ -105,10 +105,8 @@ deleteSprout c@(Common descr i) (aNumber, hashOfKeyBlock) branch = do
     Nothing -> writeLog i [BDTag] Error ("There is no KeyBlock "  ++ show hashOfKeyBlock)
     Just m -> do
       let hashesOfMicroBlocks = _mblocks (m :: MacroblockBD)
-      microblocksMaybe <- mapM (\h -> getMicroBlockByHashDB descr (Hash h)) hashesOfMicroBlocks
-      let microblocks = map fromJust microblocksJust
-            where microblocksJust = filter (/= Nothing) microblocksMaybe
-          hashesOfTransactions = concat $ map _transactionsHashes microblocks
+      microblocks <- mapM (\h -> getMicroBlockByHashDB descr (Hash h)) hashesOfMicroBlocks
+      let hashesOfTransactions = concat $ map _transactionsHashes microblocks
       -- delete Transactions
       mapM_ (funD (poolTransaction descr)) hashesOfTransactions
       -- delete MicroBlocks

@@ -31,6 +31,8 @@ data CLIException = WrongKeyOwnerException
                   | NoSuchMicroBlockDB
                   | NoSuchMacroBlockDB
                   | NoSuchTransactionDB
+                  | NoSuchTransactionForHash String
+                  | NoSuchMicroBlockForHash String
                   | NoClosedKeyBlockInDB
                   | TransactionChanBusyException
                   | DecodeException String
@@ -286,6 +288,7 @@ instance Serialize ChainInfo
 
 type HashOfKeyBlock = BSI.ByteString
 type HashOfMicroblock = BSI.ByteString
+type HashOfTransaction = BSI.ByteString
 
 type DBKey = BSI.ByteString
 type DBValue = BSI.ByteString
