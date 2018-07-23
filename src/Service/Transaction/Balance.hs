@@ -36,6 +36,7 @@ import           Data.Default                          (def)
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
 import           Data.List                             (sort, sortBy)
+import           Data.Maybe
 import           Data.Ord                              (comparing)
 import           Data.Pool
 import qualified Data.Serialize                        as S (decode, encode)
@@ -317,15 +318,19 @@ addMacroblockToDB db (Object aValue) i  aSyncChan = do
                 startSync = writeInChan (fst aSyncChan) RestartSync
             currentNumberInDB <- getKeyBlockNumber (Common db i)
             writeLog i [BDTag] Info $ "Current KeyBlock Number In DB is " ++ show currentNumberInDB
-            case currentNumberInDB of
-              Nothing -> do
-                let k = tKBIPoW2KBI genesisKeyBlock
-                    h = getKeyBlockHash genesisKeyBlock
+            -- if Nothing write genesis KeyBlock
+            when (isNothing currentNumberInDB) $ do
+              let k = tKBIPoW2KBI genesisKeyBlock
+                  h = getKeyBlockHash genesisKeyBlock
 
-                    mes = "The first time in history, genesis kblock " ++ show h ++ show k
-                writeLog i [BDTag] Info mes
-                updateMacroblockByKeyBlock db i h k Main
+                  mes = "The first time in history, genesis kblock " ++ show h ++ show k
+              writeLog i [BDTag] Info mes
+              updateMacroblockByKeyBlock db i h k Main
 
+            --
+            newCurrentNumberInDB <- getKeyBlockNumber (Common db i)
+            case newCurrentNumberInDB of
+              Nothing -> writeLog i [BDTag] Error "There are no genesis key block number!"
               Just j  -> do
                 when (j < receivedKeyNumber) $ do
                   hashOfDBKeyBlock <- getM (Common db i) j
