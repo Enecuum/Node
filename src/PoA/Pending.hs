@@ -78,10 +78,10 @@ pendingActor (aInChan, aOutChan) aMicroblockChan aTransactionChan aInfoChan = do
             let aSizeOfOldTransactions = S.length aOldTransactions
                 aSizeOfNewTransactions = S.length aNewTransaactions
                 aSize = aSizeOfNewTransactions + aSizeOfOldTransactions
-                aAverage = (average aNewTransaactions aNaw + average aOldTransactions aNaw) `div` toInteger aSize
+                --aAverage = (average aNewTransaactions aNaw + average aOldTransactions aNaw) `div` toInteger aSize
 
-                aFilter :: Seq (Transaction, TimeSpec) -> Seq (Transaction, TimeSpec)
-                aFilter = S.filter (\s -> average' aNaw s < aAverage)
+                --aFilter :: Seq (Transaction, TimeSpec) -> Seq (Transaction, TimeSpec)
+                --aFilter = S.filter (\s -> average' aNaw s < aAverage)
 
             if  | aSize < 500                  -> do
                     writeLog aInfoChan [PendingTag] Info "Pending size < 500"

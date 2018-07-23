@@ -37,10 +37,7 @@ import           Service.InfoMsg
 import           Service.Network.Base
 import           Service.Network.WebSockets.Client
 import           Service.Sync.SyncJson
-import           Service.Transaction.Common            (DBPoolDescriptor (..),
-                                                        addMacroblockToDB,
-                                                        addMicroblockToDB)
-import           Service.Transaction.LedgerSync
+import           Service.Transaction.Common            (DBPoolDescriptor (..))
 import           Service.Transaction.SproutCommon
 import           Service.Types                         (MacroblockBD,
                                                         Microblock, Transaction)
@@ -76,12 +73,12 @@ startNode descrDB buildConf infoCh manager startDo = do
     (aTransactionChan, outTransactionChan)      <- newChan 128
     (aInFileRequestChan, aOutFileRequestChan)   <- newChan 128
     aPendingChan@(inChanPending, _)             <- newChan 128
-    aSyncChan@(aInputSync, outChanSync)         <- newChan 128
+    aSyncChan@(aInputSync, _)         <- newChan 128
     aDBActorChan                                <- newChan 128
 
     config  <- readNodeConfig
     bnList  <- readBootNodeList $ bootNodeList buildConf
-    (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id) <- getConfigParameters (config^.myNodeId) buildConf aIn
+    (_, poa_p, _, _, _, _, _) <- getConfigParameters (config^.myNodeId) buildConf aIn
 
     md  <- newIORef $ makeNetworkData config infoCh aInFileRequestChan aMicroblockChan aTransactionChan aValueChan
     void . C.forkIO $ pendingActor aPendingChan aMicroblockChan outTransactionChan infoCh

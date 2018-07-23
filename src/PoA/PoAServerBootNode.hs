@@ -67,8 +67,8 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                 ActionAddToConnectList aPort ->
                     void $ tryWriteChan aInChan $ AddConnectToList (Connect aHostAdress aPort)
 
-                ActionConnectIsDead aConnect ->
-                    void $ tryWriteChan aInChan $ TestExistedConnect aConnect
+                ActionConnectIsDead aDeadConnect ->
+                    void $ tryWriteChan aInChan $ TestExistedConnect aDeadConnect
 
                 _  -> writeLog aInfoChan [ServerBootNodeTag] Warning $
                     "Broken message from PP " ++ show aMsg

@@ -9,6 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TemplateHaskell           #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
+{-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 
 module LightClient.CLI (
@@ -32,7 +33,7 @@ import           Service.Network.WebSockets.Client
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           System.Random
-import qualified Data.ByteString.Lazy              as L (putStrLn)
+import qualified Data.ByteString.Lazy.Char8 as C
 import           Data.Aeson                        (ToJSON)
 
 data Flag = Port PortNumber | Host HostName | Version | Help
@@ -252,4 +253,4 @@ getInfo ch = do
 
 
 prettyPrint :: (ToJSON a) => a -> IO ()
-prettyPrint r = L.putStrLn $ encodePretty r
+prettyPrint r = C.putStrLn $ encodePretty r
