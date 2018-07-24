@@ -11,7 +11,6 @@ import           Service.Types
 
 
 data MicroBlockContent = MicroBlockContent MicroblockBD [TransactionInfo]
-type Number = Integer
 type From = Number
 type To = Number
 type Limit = Integer

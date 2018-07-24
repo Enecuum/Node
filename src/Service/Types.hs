@@ -54,7 +54,7 @@ type MainChain = HashOfKeyBlock
 type SproutChain = HashOfKeyBlock
 type Chain = (Maybe MainChain, Maybe SproutChain)
 type FullChain = (Integer, Maybe MainChain, Maybe SproutChain)
-
+type Number = Integer
 
 type QuantityTx = Int
 data Trans = Trans {
