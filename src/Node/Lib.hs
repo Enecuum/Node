@@ -274,6 +274,7 @@ syncProcess :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -
 syncProcess outSyncChan aDBActorChan aManagerChan aInfoChan = do
     writeLog aInfoChan [SyncTag, InitTag] Info "Init. Process of syncronization."
     allTails <- requestOfAllTails outSyncChan aManagerChan
+    writeLog aInfoChan [SyncTag] Info "Recived all tails"
     let maxTails = reverse $ sortOn takeTailNum allTails
     syncNeighbors outSyncChan aDBActorChan aManagerChan maxTails aInfoChan
 
@@ -343,7 +344,9 @@ takeResponseTail :: OutChan SyncEvent -> IO (Response (Number, Maybe HashOfKeyBl
 takeResponseTail aChan = readChan aChan >>= \case
     SyncMsg aId aMsg  -> case aMsg of
         ResponseTail (aNum, aHash) -> return $ Response aId (aNum,Just aHash)
-        StatusSyncMessage _ "#001" -> return $ Response aId (0, Nothing)
+        StatusSyncMessage _ "#001" -> do
+            putStrLn "!!!! Recived empty tail !!!!"
+            return $ Response aId (0, Nothing)
         _                          -> takeResponseTail aChan
     _                 -> takeResponseTail aChan
 
