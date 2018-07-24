@@ -36,7 +36,7 @@ import           Data.Default                          (def)
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
 import           Data.List                             (sort, sortBy)
-import           Data.Maybe
+-- import           Data.Maybe
 import           Data.Ord                              (comparing)
 import           Data.Pool
 import qualified Data.Serialize                        as S (decode, encode)
@@ -49,13 +49,13 @@ import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
 import           Service.Sync.SyncJson
-import           Service.Transaction.Independent
+-- import           Service.Transaction.Independent
 import           Service.Transaction.Sprout
-import           Service.Transaction.SproutCommon
+-- import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeInstances      (roll, unroll)
+import           Service.Types.SerializeInstances      (unroll)
 
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
@@ -270,7 +270,7 @@ addMacroblockToDB db (Object aValue) i  aSyncChan = do
             putStrLn ("type of keyBlockInfoObject is: " ++ (show (typeOf keyBlockInfo)))
             print keyBlockInfo
             let aKeyBlock = tKBIPoW2KBI keyBlockInfo
-            let aKeyBlockHash = getKeyBlockHash keyBlockInfo
+                aKeyBlockHash = getKeyBlockHash keyBlockInfo
             putStrLn $ "keyBlockHash" ++ show aKeyBlockHash
             writeLog i [BDTag] Info (show keyBlockInfo)
 

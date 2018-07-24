@@ -3,7 +3,7 @@
 module Service.Transaction.Sprout where
 
 import           Data.Maybe
-import           Service.Transaction.Independent
+-- import           Service.Transaction.Independent
 import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types

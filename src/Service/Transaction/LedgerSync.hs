@@ -9,7 +9,7 @@ import qualified Data.Serialize                   as S (encode)
 import           Node.Data.GlobalLoging
 import           Service.InfoMsg                  (LogingTag (..), MsgType (..))
 import           Service.Transaction.Balance
-import           Service.Transaction.Independent
+-- import           Service.Transaction.Independent
 import           Service.Transaction.Sprout
 import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
@@ -39,6 +39,7 @@ myTail c@(Common _ i) = do
   --     return (n, hashOfKeyBlock)
 
 
+
 peekNPreviousKeyBlocks :: Common -> From -> To -> IO [(Number, HashOfKeyBlock)]
 peekNPreviousKeyBlocks c from to = do
   let numbers = [from .. to]
@@ -62,13 +63,21 @@ getKeyBlockSproutData c@(Common descr i) from to = do
 pair3 :: (a, b, c) -> c
 pair3 (_, _, c)  = c
 
-isValidKeyBlockSprout :: Common -> [(HashOfKeyBlock, MacroblockBD)] -> IO Bool
-isValidKeyBlockSprout (Common _ i) kv = do --return True  --return $ h == _prevHKBlock m
+pair2 :: (a, b, c) -> (b, c)
+pair2 (_, b, c) = (b, c)
+
+isValidKeyBlockSprout :: Common -> [(Number, HashOfKeyBlock, MacroblockBD)] -> IO Bool
+isValidKeyBlockSprout c@(Common _ i) okv = do
+  let (numberOfFoundation, macroblockOfFoundation) =  head $ map (\(a,_,m) -> (a,m)) okv
+  hashMainMaybe <- getM c numberOfFoundation
+  let isFoundationOk = hashMainMaybe == _prevHKBlock (macroblockOfFoundation :: MacroblockBD)
+
   -- hash of Key Block is real hash
-  let fun h m = (h ==) $ getKeyBlockHash $ tKeyBlockToPoWType $ tMacroblock2KeyBlockInfo m
+  let kv = map pair2 okv
+      fun h m = (h ==) $ getKeyBlockHash $ tKeyBlockToPoWType $ tMacroblock2KeyBlockInfo m
       hmm = map (\(h,m) -> (h, m, (fun h m) :: Bool)) kv
       isRealHash = map pair3 hmm
-      allTrue = and isRealHash
+      allTrue = and $ isFoundationOk : isRealHash
   writeLog i [BDTag] Info $ "allTrue: " ++ show allTrue
   when (not allTrue) $ do  writeLog i [BDTag] Info $ concat $ map show isRealHash
   -- return allTrue

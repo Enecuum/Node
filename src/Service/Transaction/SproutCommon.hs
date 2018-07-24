@@ -4,8 +4,8 @@ module Service.Transaction.SproutCommon where
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
 -- import qualified Data.HashTable.IO                     as H
-import qualified Data.Serialize                        as S (decode, encode)
-import           Service.InfoMsg                       (InfoMsg (..))
+-- import qualified Data.Serialize                        as S (decode, encode)
+-- import           Service.InfoMsg                       (InfoMsg (..))
 import           Service.Transaction.Storage
 import           Service.Types
 

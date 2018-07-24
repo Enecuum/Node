@@ -31,9 +31,8 @@ import qualified Data.Serialize                        as S (Serialize, decode,
 import           Data.Serialize.Put
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
-import           Service.InfoMsg                       (InfoMsg (..),
-                                                        LogingTag (..),
-                                                        MsgType (..))
+-- import           Service.InfoMsg                       (LogingTag (..),
+--                                                         MsgType (..))
 import           Service.System.Directory
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
