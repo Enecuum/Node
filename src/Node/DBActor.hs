@@ -89,9 +89,12 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
         SetKeyBlockSproutData aMacroblockBD aMVar -> do
             writeLog aInfoCh [BDTag] Info "Set key block sprout data request."
             aIsValid <- isValidKeyBlockSprout aData (toPair2 <$> aMacroblockBD)
-            -- aIsValid <- undefined
-            when (aIsValid) $ setKeyBlockSproutData aData $ toPair2 <$> aMacroblockBD
-            putMVar aMVar (aIsValid)
+            when aIsValid $ do
+                aExeption <- try $ setKeyBlockSproutData aData $ toPair2 <$> aMacroblockBD
+                case aExeption of
+                    Right _ -> writeLog aInfoCh [BDTag] Info "Success of setting"
+                    Left (e :: SomeException) -> writeLog aInfoCh [BDTag] Info $ "Setting false !!! =" ++ show e 
+            putMVar aMVar aIsValid
 
         GetRestSproutData aMickroBlockHash aMVar -> do
             writeLog aInfoCh [BDTag] Info "Get rest sprout data request."
