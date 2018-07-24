@@ -17,9 +17,10 @@ import           Service.Types
 
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
-myTail (Common descr i) = do
+myTail c@(Common descr i) = do
+  curNumber <- getKeyBlockNumber c
+  writeLog i [BDTag] Info $ "Currnet number of key block: " ++ show curNumber
   kv <- getLastKeyBlock descr i
-  -- kv <- getKeyBlockNumber (Common descr i)
   case kv of
     Nothing -> throw NoLastKeyBlock
     Just (hashOfKeyBlock, mb)  -> do
