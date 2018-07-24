@@ -35,8 +35,7 @@ data SproutException = ValueOfChainIsNotNothing String
 instance Exception SproutException
 
 
-lastKeyBlock :: DBKey
-lastKeyBlock = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=" :: DBKey
+
 
 
 writeKeyBlockNumber :: Common -> Number -> IO ()

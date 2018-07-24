@@ -19,6 +19,7 @@ import           Service.Types
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
 myTail (Common descr i) = do
   kv <- getLastKeyBlock descr i
+  -- kv <- getKeyBlockNumber (Common descr i)
   case kv of
     Nothing -> throw NoLastKeyBlock
     Just (hashOfKeyBlock, mb)  -> do
