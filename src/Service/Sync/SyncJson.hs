@@ -131,7 +131,7 @@ instance FromJSON SyncMessage where
 
             "error"-> do
                 msg <- aMessage .: "msg"
-                errorCode   <- aMessage .: "error"
+                errorCode   <- aMessage .: "errorCode"
                 return $ StatusSyncMessage msg errorCode
 
 
