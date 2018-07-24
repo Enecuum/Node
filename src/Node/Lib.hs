@@ -110,7 +110,7 @@ connectManager
 
 connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aConnectsChan aMyNodeId inChanPending aInfoChan = do
     writeLog aInfoChan [ConnectingTag, InitTag] Info "Manager of connecting started."
-    void $ syncServer aSyncChan inDBActorChan aManagerChan aInfoChan
+    void $ C.forkIO $ syncServer aSyncChan inDBActorChan aManagerChan aInfoChan
     forM_ aBNList $ \(Connect aBNIp aBNPort) -> do
         void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
             WS.sendTextData aConnect . encode $ ActionAddToConnectList aPortNumber
