@@ -183,15 +183,20 @@ findBeforeFork n aId outSyncChan aDBActorChan aManagerChan aInfoChan = do
 
 
 -- загрузить длинны всех цепочек у соседей
-requestOfAllTails :: OutChan SyncEvent -> InChan MsgToCentralActor -> IO [Response (Number, Maybe HashOfKeyBlock)]
-requestOfAllTails outSyncChan aManagerChan = do
+requestOfAllTails :: OutChan SyncEvent -> InChan MsgToCentralActor -> InChan InfoMsg -> IO [Response (Number, Maybe HashOfKeyBlock)]
+requestOfAllTails outSyncChan aManagerChan aLogChan = do
+    writeLog aLogChan [SyncTag, InitTag] Info "Init. request of all tails"
     aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
+    writeLog aLogChan [SyncTag] Info $ "Actual connects: " ++ show aActualConnects
     forM_ aActualConnects $ \(ActualConnectInfo aNodeId aNodeType _) ->
         when (aNodeType == NN) $ sendMsgToNode aManagerChan RequestTail aNodeId
 
     -- FIXME: If somebody doesn't answer!!!
-    forM aActualConnects $ \_ -> takeResponseTail outSyncChan
-
+    writeLog aLogChan [SyncTag] Info $ "Reciving a tails"
+    forM aActualConnects $ \_ -> do
+        aTail <- takeResponseTail outSyncChan
+        writeLog aLogChan [SyncTag] Info $ "Recived a tail:" ++ show aTail
+        return aTail
 
 -- загрузить микроблоки
 loadMacroBlocks
@@ -273,7 +278,7 @@ loadBlocks _ _ _ _ _ _ _ _= return False
 syncProcess :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> InChan InfoMsg -> IO ()
 syncProcess outSyncChan aDBActorChan aManagerChan aInfoChan = do
     writeLog aInfoChan [SyncTag, InitTag] Info "Init. Process of syncronization."
-    allTails <- requestOfAllTails outSyncChan aManagerChan
+    allTails <- requestOfAllTails outSyncChan aManagerChan aInfoChan
     writeLog aInfoChan [SyncTag] Info $ "Recived all tails: " ++ show allTails
     let maxTails = reverse $ sortOn takeTailNum allTails
     syncNeighbors outSyncChan aDBActorChan aManagerChan maxTails aInfoChan
