@@ -10,6 +10,7 @@ import           Node.Data.GlobalLoging
 import           Service.InfoMsg                  (LogingTag (..), MsgType (..))
 import           Service.Transaction.Balance
 -- import           Service.Transaction.Independent
+import           Data.List
 import           Service.Transaction.Sprout
 import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
@@ -68,6 +69,7 @@ pair2 (_, b, c) = (b, c)
 
 isValidKeyBlockSprout :: Common -> [(Number, HashOfKeyBlock, MacroblockBD)] -> IO Bool
 isValidKeyBlockSprout c@(Common _ i) okv = do
+  writeLog i [BDTag] Info $ show $ intersperse "" $ map show okv
   let (numberOfFoundation, macroblockOfFoundation) =  head $ map (\(a,_,m) -> (a,m)) okv
   hashMainMaybe <- getM c numberOfFoundation
   let isFoundationOk = hashMainMaybe == _prevHKBlock (macroblockOfFoundation :: MacroblockBD)
@@ -88,7 +90,7 @@ isValidKeyBlockSprout c@(Common _ i) okv = do
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
 setKeyBlockSproutData c@(Common descr i) kv = do
   mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
-  writeLog i [BDTag] Info $ "update hashes: " ++ show (map fst kv)
+  writeLog i [BDTag] Info $ "Write KBlocks : " ++ show (map fst kv)
   -- read from and write to Sprout Table
   let kvN = map (\(h,m) -> (h, _number (m :: MacroblockBD))) kv
   mapM_ (\(hashOfKeyBlock, aNumber) -> setChain c aNumber hashOfKeyBlock Sprout) kvN
