@@ -114,7 +114,7 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
     forM_ aBNList $ \(Connect aBNIp aBNPort) -> do
         void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
             WS.sendTextData aConnect . encode $ ActionAddToConnectList aPortNumber
-    aConnectLoop aBNList True
+    aConnectLoop aBNList
   where
     aRequestOfPotencialConnects = \case -- IDEA: add random to BN list
         (Connect aBNIp aBNPort):aTailOfList -> do
@@ -129,7 +129,7 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
                 aRequestOfPotencialConnects (aTailOfList ++ [Connect aBNIp aBNPort])
         _       -> return ()
 
-    aConnectLoop aBootNodeList isFirst = do
+    aConnectLoop aBootNodeList  = do
         aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
         if null aActualConnects then do
             aNumberOfConnects <- takeRecords aConnectsChan NumberConnects
@@ -138,14 +138,13 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
             forM_ aConnects (connectToNN aConnectsChan aMyNodeId inChanPending aInfoChan aManagerChan)
             C.threadDelay $ 2 * sec
 
-            when isFirst $ void $ C.forkIO $ do
-                writeInChan (fst aSyncChan) RestartSync
+            writeInChan (fst aSyncChan) RestartSync
 
             C.threadDelay $ 2*sec
-            aConnectLoop aBootNodeList False
+            aConnectLoop aBootNodeList
         else do
             C.threadDelay $ 10 * sec
-            aConnectLoop aBootNodeList False
+            aConnectLoop aBootNodeList
 
 
 -- найти длинну своей цепочки
