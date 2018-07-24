@@ -60,17 +60,19 @@ getKeyBlockSproutData c@(Common descr i) from to = do
 
 
 isValidKeyBlockSprout :: Common -> [(HashOfKeyBlock, MacroblockBD)] -> IO Bool
-isValidKeyBlockSprout _ kv = do --return True  --return $ h == _prevHKBlock m
+isValidKeyBlockSprout (Common _ i) kv = do --return True  --return $ h == _prevHKBlock m
   -- hash of Key Block is real hash
   let fun h m = (h ==) $ getKeyBlockHash $ tKeyBlockToPoWType $ tMacroblock2KeyBlockInfo m
       isRealHash = map (\(h,m) -> fun h m) kv
-  return (and isRealHash)
+      allTrue = and isRealHash
+  writeLog i [BDTag] Info $ "allTrue: " ++ show allTrue
+  return allTrue
 
 
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
 setKeyBlockSproutData c@(Common descr i) kv = do
   mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
-
+  writeLog i [BDTag] Info $ "update hashes: " ++ show (map fst kv)
   -- read from and write to Sprout Table
   let kvN = map (\(h,m) -> (h, _number (m :: MacroblockBD))) kv
   mapM_ (\(hashOfKeyBlock, aNumber) -> setChain c aNumber hashOfKeyBlock Sprout) kvN
