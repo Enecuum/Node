@@ -70,9 +70,12 @@ pair2 (_, b, c) = (b, c)
 isValidKeyBlockSprout :: Common -> [(Number, HashOfKeyBlock, MacroblockBD)] -> IO Bool
 isValidKeyBlockSprout c@(Common _ i) okv = do
   writeLog i [BDTag] Info $ show $ intersperse "" $ map show okv
-  let (numberOfFoundation, macroblockOfFoundation) =  head $ map (\(a,_,m) -> (a,m)) okv
-  hashMainMaybe <- getM c numberOfFoundation
-  let isFoundationOk = hashMainMaybe == _prevHKBlock (macroblockOfFoundation :: MacroblockBD)
+  let (numberAfterFoundation, macroblockAfterFoundation) =  head $ map (\(a,_,m) -> (a,m)) okv
+  let mes = "After Foundation on main chain: number: " ++ show numberAfterFoundation ++ "m: " ++ show macroblockAfterFoundation
+  writeLog i [BDTag] Info $ mes
+  hashMainMaybe <- getM c (numberAfterFoundation - 1)
+  writeLog i [BDTag] Info $ "Hash of foundation: " ++ show hashMainMaybe
+  let isFoundationOk = hashMainMaybe == _prevHKBlock (macroblockAfterFoundation :: MacroblockBD)
 
   -- hash of Key Block is real hash
   let kv = map pair2 okv
