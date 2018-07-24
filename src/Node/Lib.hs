@@ -289,6 +289,7 @@ syncNeighbors :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor
 syncNeighbors outSyncChan aDBActorChan aManagerChan (x:xs) aInfoChan = do
     writeLog aInfoChan [SyncTag] Info $  "Process of syncronization with the " ++ show x
     aMyTail  <- takeMyTail aDBActorChan
+    writeLog aInfoChan [SyncTag] Info $  "My tail is: " ++ show aMyTail
     let Response aNodeId (aNumber, _) = x
     if aMyTail < aNumber then do
         writeLog aInfoChan [SyncTag] Info $  "My tail is small."
@@ -296,7 +297,9 @@ syncNeighbors outSyncChan aDBActorChan aManagerChan (x:xs) aInfoChan = do
         aDiffBlock <- takeRecords aDBActorChan (GetKeyBlockSproutData (lastCommonNumber+1) (lastCommonNumber+1))
         aOk <- loadBlocks outSyncChan aDBActorChan aManagerChan aDiffBlock (lastCommonNumber+1) aNumber aNodeId aInfoChan
         unless aOk $ syncNeighbors outSyncChan aDBActorChan aManagerChan xs aInfoChan
-    else return ()
+    else do
+        writeLog aInfoChan [SyncTag] Info $  "My tail is big."
+
 syncNeighbors _ _ _ _ _ = return ()
 
 
