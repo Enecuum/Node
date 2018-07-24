@@ -298,20 +298,28 @@ syncServer (_, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
             let aSend amsg = sendMsgToNode aManagerChan amsg aNodeId
             case aMsg of
                 RequestTail                                 -> do
+                    writeLog aInfoChan [SyncTag] Info "Processing of RequestTail."
                     takeRecords aDBActorChan MyTail >>= \case
-                        Just aTail  -> aSend $ ResponseTail aTail
-                        Nothing     -> aSend $ StatusSyncMessage "Empty tail" "#001"
+                        Just aTail  -> do
+                            writeLog aInfoChan [SyncTag] Info $ "aTail " ++ show aTail
+                            aSend $ ResponseTail aTail
+                        Nothing     -> do
+                            writeLog aInfoChan [SyncTag] Info "Empty tail #001"
+                            aSend $ StatusSyncMessage "Empty tail" "#001"
 
                 PeekKeyBlokRequest aFrom aTo                -> do
+                    writeLog aInfoChan [SyncTag] Info "Processing of PeekKeyBlokRequest."
                     takeRecords aDBActorChan (GetKeyBlockSproutData aFrom aTo) >>=
                         aSend . PeekKeyBlokResponse
 
                 MicroblockRequest aHash         -> do
+                    writeLog aInfoChan [SyncTag] Info "Processing of MicroblockRequest."
                     takeRecords aDBActorChan (GetRestSproutData aHash) >>= \case
                       Just mblock -> aSend $ MicroblockResponse mblock
                       Nothing     -> aSend $ StatusSyncMessage ("No block with this hash " ++ show aHash ++ " in DB")  "#003"
 
                 PeekHashKblokRequest aFrom aTo -> do
+                    writeLog aInfoChan [SyncTag] Info "Processing of PeekHashKblokRequest."
                     takeRecords aDBActorChan (PeekNKeyBlocks aFrom aTo) >>=
                         aSend . PeekHashKblokResponse
 
