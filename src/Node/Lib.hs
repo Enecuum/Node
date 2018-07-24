@@ -263,14 +263,18 @@ loadBlocks outSyncChan aDBActorChan aManagerChan aHash aFrom aTo aId aInfoChan =
     writeLog aInfoChan [SyncTag] Info $ "Loading of blocks: process start. From " ++ show aId ++ ". (" ++ show aFrom ++ ", " ++ show aTo ++ ")"
     sendMsgToNode aManagerChan (PeekKeyBlokRequest aFrom aTo) aId
     let aTake = do
-            Response aNodeId aList <- takePeekKeyBlokResponse outSyncChan
+            Response aNodeId aList <- takePeekKeyBlokResponse outSyncChan aInfoChan
             if aNodeId /= aId then return aList else aTake
     aListOfBlocks <- aTake
+    writeLog aInfoChan [SyncTag] Info " Kblocks recieved."
     aOk <- takeRecords aDBActorChan (SetKeyBlockSproutData aListOfBlocks)
+    writeLog aInfoChan [SyncTag] Info " Seting of kblocks"
     if not aOk then do
+        writeLog aInfoChan [SyncTag] Info "DeleteSproutData"
         writeInChan aDBActorChan $ DeleteSproutData (aMyTails + 1)
         return False
     else do
+        writeLog aInfoChan [SyncTag] Info "Loading of macrblock"
         loadMacroBlocks outSyncChan aDBActorChan aManagerChan aMyTails aListOfBlocks aId aInfoChan
 
 
@@ -370,13 +374,23 @@ takeResponseTail aChan aLog = do
             writeLog aLog [SyncTag] Info "!!! takeResponseTail 4"
             takeResponseTail aChan aLog
 
-takePeekKeyBlokResponse     :: OutChan SyncEvent -> IO (Response [(Number, HashOfKeyBlock, MacroblockBD)])
-takePeekKeyBlokResponse aChan = readChan aChan >>= \case
-    SyncMsg aId aMsg  -> case aMsg of
-        PeekKeyBlokResponse aList  -> return $ Response aId aList
-        StatusSyncMessage _ "#002" -> return $ Response aId []
-        _                          -> takePeekKeyBlokResponse aChan
-    _                 -> takePeekKeyBlokResponse aChan
+takePeekKeyBlokResponse     :: OutChan SyncEvent -> InChan InfoMsg -> IO (Response [(Number, HashOfKeyBlock, MacroblockBD)])
+takePeekKeyBlokResponse aChan aLog = do
+    writeLog aLog [SyncTag] Info "!!! Init !!! takePeekKeyBlokResponse"
+    readChan aChan >>= \case
+        SyncMsg aId aMsg  -> case aMsg of
+            PeekKeyBlokResponse aList  -> do
+                writeLog aLog [SyncTag] Info "takePeekKeyBlokResponse 1"
+                return $ Response aId aList
+            StatusSyncMessage _ "#002" ->  do
+                writeLog aLog [SyncTag] Info "takePeekKeyBlokResponse 2"
+                return $ Response aId []
+            _                          -> do
+                writeLog aLog [SyncTag] Info "takePeekKeyBlokResponse 3"
+                takePeekKeyBlokResponse aChan aLog
+        _                 -> do
+            writeLog aLog [SyncTag] Info "takePeekKeyBlokResponse 4"
+            takePeekKeyBlokResponse aChan aLog
 
 takeMicroblockResponse      :: OutChan SyncEvent -> IO (Response (Maybe MicroBlockContent))
 takeMicroblockResponse aChan = readChan aChan >>= \case
