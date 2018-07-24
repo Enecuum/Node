@@ -13,15 +13,13 @@ module Service.Transaction.Common
   rHash,
   getLastTransactions,
   getTransactionByHashDB,
-  getChainInfoDB,
-  DBPoolDescriptor(..)
+  getChainInfoDB
   )
   where
 import           Service.Transaction.Balance (addMacroblockToDB,
                                               addMicroblockToDB,
                                               getBalanceForKey, runLedger)
-import           Service.Transaction.Storage (DBPoolDescriptor (..),
-                                              connectOrRecoveryConnect,
+import           Service.Transaction.Storage (connectOrRecoveryConnect,
                                               getAllTransactionsDB,
                                               getBlockByHashDB, getChainInfoDB,
                                               getKeyBlockByHashDB,

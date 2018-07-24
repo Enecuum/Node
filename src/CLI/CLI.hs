@@ -19,7 +19,7 @@ import           Control.Monad                         (forever, mapM_)
 import           Data.List.Split                       (splitOn)
 import           Node.Node.Types
 import           Service.InfoMsg
-import           Service.Transaction.Storage           (DBPoolDescriptor (..))
+-- import           Service.Transaction.Storage           (DBPoolDescriptor (..))
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair    (PublicKey)
 import           System.Console.GetOpt

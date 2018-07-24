@@ -16,8 +16,7 @@ import           Control.Monad
 -- import qualified Data.ByteString                       as B
 import           Service.Chan
 import           Service.Sync.SyncJson
-import           Service.Transaction.Common            (DBPoolDescriptor (..),
-                                                        addMacroblockToDB,
+import           Service.Transaction.Common            (addMacroblockToDB,
                                                         addMicroblockToDB)
 import           Service.Transaction.LedgerSync
 import           Service.Transaction.SproutCommon

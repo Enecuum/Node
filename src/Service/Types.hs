@@ -6,25 +6,31 @@
 {-# LANGUAGE GADTs                     #-}
 {-# LANGUAGE LambdaCase                #-}
 {-# LANGUAGE OverloadedStrings         #-}
+{-# LANGUAGE PackageImports            #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE StandaloneDeriving        #-}
 {-# LANGUAGE TemplateHaskell           #-}
 
 module Service.Types where
 
+import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
 import           Data.ByteString
-import qualified Data.ByteString                    as B
-import qualified Data.ByteString.Char8              as C
-import qualified Data.ByteString.Internal           as BSI
+import qualified Data.ByteString                       as B
+import qualified Data.ByteString.Char8                 as C
+import qualified Data.ByteString.Internal              as BSI
 import           Data.Graph.Inductive
-import           Data.List.Split                    (splitOn)
+import           Data.List.Split                       (splitOn)
+import           Data.Pool
 import           Data.Serialize
+import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           GHC.Generics
 import           Lens.Micro.TH
+import           Service.InfoMsg                       (InfoMsg (..))
 import           Service.Types.PublicPrivateKeyPair
 
-data CLIException = WrongKeyOwnerException
+data CLIException = ValueOfChainIsNotNothing String
+                  | WrongKeyOwnerException
                   | NotImplementedException -- test
                   | NoTransactionsForPublicKey
                   | NoSuchPublicKeyInDB
@@ -301,10 +307,19 @@ instance Serialize ChainInfo
 
 
 
--- type HashOfMicroblock = BSI.ByteString
--- type HashOfTransaction = BSI.ByteString
 
--- type DBKey = BSI.ByteString
--- type DBValue = BSI.ByteString
 
+-- begin of the Connection section
+data DBPoolDescriptor = DBPoolDescriptor {
+    poolTransaction :: Pool Rocks.DB
+  , poolMicroblock  :: Pool Rocks.DB
+  , poolLedger      :: Pool Rocks.DB
+  , poolMacroblock  :: Pool Rocks.DB
+  -- , poolKeyBlock    :: Pool Rocks.DB
+  , poolSprout      :: Pool Rocks.DB
+  }
 data BranchOfChain = Main | Sprout deriving (Eq, Generic, Ord, Read, Show)
+data Common = Common {
+  db       :: DBPoolDescriptor,
+  infoChan :: InChan InfoMsg
+ }

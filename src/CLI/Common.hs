@@ -52,8 +52,7 @@ import           Service.Transaction.Common            as B (getBalanceForKey,
                                                              getKeyBlockByHashDB,
                                                              getLastTransactions,
                                                              getTransactionByHashDB)
-import           Service.Transaction.Storage           (DBPoolDescriptor,
-                                                        getAllTransactionsDB,
+import           Service.Transaction.Storage           (getAllTransactionsDB,
                                                         rHash)
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types

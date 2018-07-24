@@ -15,10 +15,6 @@ type From = Number
 type To = Number
 type Limit = Integer
 
-data Common = Common {
-  db       :: DBPoolDescriptor,
-  infoChan :: InChan InfoMsg
- }
 
 -- type MainChain = HashOfKeyBlock
 -- type SproutChain = HashOfKeyBlock
@@ -28,27 +24,7 @@ data Common = Common {
 -- type SproutTable = H.BasicHashTable Number Chain
 
 
-data SproutException = ValueOfChainIsNotNothing String
-                  | NotImplementedException -- test
+data SproutException = NotImplementedException -- test
                   | OtherException
   deriving Show
 instance Exception SproutException
-
-
-
-
-
-writeKeyBlockNumber :: Common -> Number -> IO ()
-writeKeyBlockNumber (Common descr _) aNumber= do
-  let value = S.encode aNumber
-  funW (poolSprout descr) [(lastKeyBlock, value)]
-
-
-getKeyBlockNumber :: Common -> IO (Maybe Number)
-getKeyBlockNumber (Common descr _) = do
-  value <- funR (poolSprout descr) lastKeyBlock
-  case value of
-    Nothing -> return Nothing
-    Just v  -> case S.decode v :: Either String Number of
-      Left e  -> throw (DecodeException (show e))
-      Right r -> return $ Just r

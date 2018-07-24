@@ -217,39 +217,6 @@ calculateLedger db i isStorno hashKeyBlock macroblock = do
 
 
 
-writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
-writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
-  hashPreviousLastKeyBlock <- funR (poolMacroblock desc) lastClosedKeyBlock
-  let cMacroblock = if (checkMacroblockIsClosed aMacroblock == True)
-        then (aMacroblock { _prevKBlock = hashPreviousLastKeyBlock }) :: MacroblockBD
-        else aMacroblock
-  let cKey = hashOfKeyBlock
-      cVal = (S.encode cMacroblock)
-  funW (poolMacroblock desc) [(cKey,cVal)]
-  writeLog a [BDTag] Info ("Write Macroblock " ++ show cKey ++ " " ++ show cMacroblock ++ "to DB")
-
-  -- For closed Macroblock
-  when (checkMacroblockIsClosed aMacroblock) $ do
-    -- fill _nextKBlock for previous closed Macroblock
-    bdKV <- case hashPreviousLastKeyBlock of
-      Nothing -> return []
-      Just j  -> do
-        previousLastKeyBlock <- funR (poolMacroblock desc) j
-        case previousLastKeyBlock of
-          Nothing -> return []
-          Just k -> case S.decode k :: Either String MacroblockBD of
-                      Left e -> do
-                        writeLog a [BDTag] Error ("Can not decode Macroblock" ++ show e)
-                        return []
-                      Right r -> do
-                        let pKey = j
-                            pVal = S.encode $ (r { _nextKBlock = Just hashOfKeyBlock } :: MacroblockBD)
-                        return [(pKey, pVal)]
-
-    -- fill new last closed Macroblock
-    let keyValue = (lastClosedKeyBlock, cKey) : bdKV
-    funW (poolMacroblock desc) keyValue
-    writeLog a [BDTag] Info ("Write Last Closed Macroblock " ++ show lastClosedKeyBlock ++ "to DB")
 
 
 writeMicroblockDB :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO ()
@@ -279,14 +246,7 @@ writeLedgerDB dbLedger aInfoChan bt = do
   writeLog aInfoChan [BDTag] Info ("Write Ledger "  ++ show bt)
 
 
-genesisKeyBlock :: KeyBlockInfoPoW
-genesisKeyBlock = KeyBlockInfoPoW{
-  _time = 0,
-  _prev_hash = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-  _number = 0,
-  _nonce = 0,
-  _solver = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-  _type = 0}
+
 
 addMacroblockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> (InChan SyncEvent, b) -> IO ()
 addMacroblockToDB db (Object aValue) i  aSyncChan = do
@@ -318,18 +278,7 @@ addMacroblockToDB db (Object aValue) i  aSyncChan = do
                 startSync = writeInChan (fst aSyncChan) RestartSync
             currentNumberInDB <- getKeyBlockNumber (Common db i)
             writeLog i [BDTag] Info $ "Current KeyBlock Number In DB is " ++ show currentNumberInDB
-            -- if Nothing write genesis KeyBlock
-            when (isNothing currentNumberInDB) $ do
-              let k = tKBIPoW2KBI genesisKeyBlock
-                  h = getKeyBlockHash genesisKeyBlock
-
-                  mes = "The first time in history, genesis kblock " ++ show h ++ show k
-              writeLog i [BDTag] Info mes
-              updateMacroblockByKeyBlock db i h k Main
-
-            --
-            newCurrentNumberInDB <- getKeyBlockNumber (Common db i)
-            case newCurrentNumberInDB of
+            case currentNumberInDB of
               Nothing -> writeLog i [BDTag] Error "There are no genesis key block number!"
               Just j  -> do
                 when (j < receivedKeyNumber) $ do
@@ -346,15 +295,7 @@ addMacroblockToDB db (Object aValue) i  aSyncChan = do
                       when (j < receivedKeyNumber) $ do startSync
 addMacroblockToDB _ v _ _ = error ("Can not PoW Key Block" ++ show v)
 
-tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
-tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {
-  _time,
-  _prev_hash,
-  _number,
-  _nonce,
-  _solver = pubKey,
-  _type}
-  where pubKey = publicKey256k1 ((roll $ B.unpack _solver) :: Integer)
+
 
 
 tKeyBlockToPoWType :: KeyBlockInfo -> KeyBlockInfoPoW
@@ -368,21 +309,7 @@ tKeyBlockToPoWType (KeyBlockInfo {..}) = KeyBlockInfoPoW{
   where pubKey = B.pack $ unroll $ fromPublicKey256k1 _solver
 
 
-updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()
-updateMacroblockByKeyBlock db i hashOfKeyBlock keyBlockInfo branch = do
-    val  <- funR (poolMacroblock db) hashOfKeyBlock
-    _ <- case val of
-        Nothing -> return dummyMacroblock
-        Just va  -> case S.decode va :: Either String MacroblockBD of
-            Left e  -> throw (DecodeException (show e))
-            Right r -> return r
 
-    writeMacroblockToDB db i hashOfKeyBlock $ tKeyBlockInfo2Macroblock keyBlockInfo
-    let aNumber = _number (keyBlockInfo :: KeyBlockInfo)
-        mes = "going to write number " ++ show aNumber ++ show hashOfKeyBlock ++ show branch
-    writeLog i [BDTag] Info mes
-    setChain (Common db i ) aNumber hashOfKeyBlock branch
-    writeKeyBlockNumber (Common db i) $ _number (keyBlockInfo :: KeyBlockInfo)
 
 
 addMicroblockHashesToMacroBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> [HashOfMicroblock] -> IO ()

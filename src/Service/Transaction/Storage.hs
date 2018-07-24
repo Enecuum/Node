@@ -12,7 +12,7 @@ module Service.Transaction.Storage where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import           Control.Monad                         (forM, replicateM)
+import           Control.Monad                         (forM, replicateM, when)
 import qualified Control.Monad.Catch                   as E
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Resource
@@ -38,19 +38,14 @@ import           Service.System.Directory
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 -- import           Service.Types.SerializeInstances      (roll, unroll)
+import           Service.InfoMsg                       (InfoMsg (..),
+                                                        LogingTag (..),
+                                                        MsgType (..))
+import           Service.Types.SerializeInstances      (roll, unroll)
 import           Service.Types.SerializeJSON           ()
 
-
 --------------------------------------
--- begin of the Connection section
-data DBPoolDescriptor = DBPoolDescriptor {
-    poolTransaction :: Pool Rocks.DB
-  , poolMicroblock  :: Pool Rocks.DB
-  , poolLedger      :: Pool Rocks.DB
-  , poolMacroblock  :: Pool Rocks.DB
-  -- , poolKeyBlock    :: Pool Rocks.DB
-  , poolSprout      :: Pool Rocks.DB
-  }
+
 
 -- FIX change def (5 times)
 connectOrRecoveryConnect :: IO DBPoolDescriptor
@@ -469,3 +464,133 @@ getKeyBlockHash  KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
                   fromRight "" $ Base64.decode _prev_hash
                ,  fromRight "" $ Base64.decode _solver
                ]
+
+
+
+updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()
+updateMacroblockByKeyBlock db i hashOfKeyBlock keyBlockInfo branch = do
+    val  <- funR (poolMacroblock db) hashOfKeyBlock
+    _ <- case val of
+        Nothing -> return dummyMacroblock
+        Just va  -> case S.decode va :: Either String MacroblockBD of
+            Left e  -> throw (DecodeException (show e))
+            Right r -> return r
+
+    writeMacroblockToDB db i hashOfKeyBlock $ tKeyBlockInfo2Macroblock keyBlockInfo
+    let aNumber = _number (keyBlockInfo :: KeyBlockInfo)
+        mes = "going to write number " ++ show aNumber ++ show hashOfKeyBlock ++ show branch
+    writeLog i [BDTag] Info mes
+    setChain (Common db i ) aNumber hashOfKeyBlock branch
+    writeKeyBlockNumber (Common db i) $ _number (keyBlockInfo :: KeyBlockInfo)
+
+
+writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
+writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
+  hashPreviousLastKeyBlock <- funR (poolMacroblock desc) lastClosedKeyBlock
+  let cMacroblock = if (checkMacroblockIsClosed aMacroblock == True)
+        then (aMacroblock { _prevKBlock = hashPreviousLastKeyBlock }) :: MacroblockBD
+        else aMacroblock
+  let cKey = hashOfKeyBlock
+      cVal = (S.encode cMacroblock)
+  funW (poolMacroblock desc) [(cKey,cVal)]
+  writeLog a [BDTag] Info ("Write Macroblock " ++ show cKey ++ " " ++ show cMacroblock ++ "to DB")
+
+  -- For closed Macroblock
+  when (checkMacroblockIsClosed aMacroblock) $ do
+    -- fill _nextKBlock for previous closed Macroblock
+    bdKV <- case hashPreviousLastKeyBlock of
+      Nothing -> return []
+      Just j  -> do
+        previousLastKeyBlock <- funR (poolMacroblock desc) j
+        case previousLastKeyBlock of
+          Nothing -> return []
+          Just k -> case S.decode k :: Either String MacroblockBD of
+                      Left e -> do
+                        writeLog a [BDTag] Error ("Can not decode Macroblock" ++ show e)
+                        return []
+                      Right r -> do
+                        let pKey = j
+                            pVal = S.encode $ (r { _nextKBlock = Just hashOfKeyBlock } :: MacroblockBD)
+                        return [(pKey, pVal)]
+
+    -- fill new last closed Macroblock
+    let keyValue = (lastClosedKeyBlock, cKey) : bdKV
+    funW (poolMacroblock desc) keyValue
+    writeLog a [BDTag] Info ("Write Last Closed Macroblock " ++ show lastClosedKeyBlock ++ "to DB")
+
+
+
+writeKeyBlockNumber :: Common -> Number -> IO ()
+writeKeyBlockNumber (Common descr _) aNumber= do
+  let value = S.encode aNumber
+  funW (poolSprout descr) [(lastKeyBlock, value)]
+
+
+getKeyBlockNumber :: Common -> IO (Maybe Number)
+getKeyBlockNumber c@(Common descr i) = do
+  value <- funR (poolSprout descr) lastKeyBlock
+  -- if Nothing write genesis KeyBlock
+  case value of
+    Nothing -> do
+      let k = tKBIPoW2KBI genesisKeyBlock
+          h = getKeyBlockHash genesisKeyBlock
+          mes = "The first time in history, genesis kblock " ++ show h ++ show k
+      writeLog i [BDTag] Info mes
+      updateMacroblockByKeyBlock descr i h k Main
+      writeLog i [BDTag] Info "Genesis block was written"
+      getKeyBlockNumber c
+    Just v  -> case S.decode v :: Either String Number of
+      Left e  -> throw (DecodeException (show e))
+      Right r -> return $ Just r
+
+
+setChain :: Common -> Number -> HashOfKeyBlock -> BranchOfChain -> IO ()
+setChain c@(Common descr i ) aNumber hashOfKeyBlock branch = do
+  chain <- getChain c aNumber
+  let valueOfChain = funBranch branch $ chain
+  let newChain = if (valueOfChain == Nothing)
+        then case branch of
+        Main   -> (Just hashOfKeyBlock, snd chain)
+        Sprout -> (fst chain, Just hashOfKeyBlock)
+        else throw (ValueOfChainIsNotNothing ("KeyBlockHash is" ++ (show valueOfChain)))
+
+  let key = S.encode aNumber
+      val = S.encode newChain
+  funW (poolSprout descr) [(key, val)]
+  writeLog i [BDTag] Info $ "Write number  " ++ show aNumber ++ show newChain ++ show branch
+
+
+funBranch :: BranchOfChain -> (a, a) -> a
+funBranch Main   = fst
+funBranch Sprout = snd
+
+
+getChain :: Common -> Number -> IO Chain
+getChain (Common descr _ ) aNumber = do
+  maybeV <- funR (poolSprout descr) (S.encode aNumber)
+  case maybeV of
+    Nothing    -> return (Nothing, Nothing)
+    Just m -> case S.decode m :: Either String Chain of
+      Left e  -> throw (DecodeException (show e))
+      Right r -> return r
+
+
+genesisKeyBlock :: KeyBlockInfoPoW
+genesisKeyBlock = KeyBlockInfoPoW{
+  _time = 0,
+  _prev_hash = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  _number = 0,
+  _nonce = 0,
+  _solver = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  _type = 0}
+
+
+tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
+tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {
+  _time,
+  _prev_hash,
+  _number,
+  _nonce,
+  _solver = pubKey,
+  _type}
+  where pubKey = publicKey256k1 ((roll $ B.unpack _solver) :: Integer)

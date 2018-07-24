@@ -37,7 +37,7 @@ import           Service.InfoMsg
 import           Service.Network.Base
 import           Service.Network.WebSockets.Client
 import           Service.Sync.SyncJson
-import           Service.Transaction.Common            (DBPoolDescriptor (..))
+import           Service.Transaction.Common
 import           Service.Transaction.SproutCommon
 import           Service.Types                         (MacroblockBD,
                                                         Microblock, Transaction)
