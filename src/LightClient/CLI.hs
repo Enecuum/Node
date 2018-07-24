@@ -23,7 +23,7 @@ import           Data.Aeson                         (ToJSON)
 import           Data.Aeson.Encode.Pretty
 import qualified Data.ByteString.Lazy.Char8         as BC (putStrLn)
 import           Data.DeriveTH
-import           Data.List                          (find)
+import           Data.List                          (find, sortBy)
 import           Data.List.Split                    (splitOn)
 import           Data.Map                           (Map, fromList, lookup)
 import           LightClient.RPC
@@ -295,7 +295,7 @@ getAllKblocks ch =  do
   result <- runExceptT $ getAllKblocksRPC ch
   case result of
     (Left err)   -> putStrLn $ "getAllKblocks error: " ++ show err 
-    (Right kbs) -> prettyPrint kbs
+    (Right kbs) -> prettyPrint $ sortBy (\(_, b1) (_, b2) -> compare (_number (b1 :: MacroblockBD)) (_number (b2 :: MacroblockBD))) kbs
 
 getAllTransactions :: WS.Connection -> IO ()
 getAllTransactions ch =  do

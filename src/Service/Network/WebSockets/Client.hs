@@ -1,4 +1,4 @@
-{-#Language Strict#-}
+{-# Language Strict, LambdaCase, ScopedTypeVariables #-}
 module Service.Network.WebSockets.Client (runClient) where
 
 import              Network.WebSockets hiding (runClientWith, runClient)
@@ -35,7 +35,6 @@ runClientWith host port path0 opts customHeaders app = do
     S.setSocketOption sock S.NoDelay 1
 
     -- Connect WebSocket and run client
-    finally
-        (S.connect sock (S.addrAddress addr) >>
+    onException (S.connect sock (S.addrAddress addr) >>
          runClientWithSocket sock fullHost path opts customHeaders app)
-        (S.close sock >> (putStrLn $ "WebSocket exception: Can't connect to " ++ host ++ ":" ++ show port))
+                (S.close sock >> (putStrLn $ "WebSocket exception on " ++ host ++ ":" ++ show port))
