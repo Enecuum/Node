@@ -347,20 +347,22 @@ sendMsgToNode aChan aMsg aId = writeInChan aChan $ SendMsgToNode (toJSON aMsg) (
 data Response a = Response NodeId a deriving Show
 
 takeResponseTail :: OutChan SyncEvent -> InChan InfoMsg -> IO (Response (Number, Maybe HashOfKeyBlock))
-takeResponseTail aChan aLog = readChan aChan >>= \case
-    SyncMsg aId aMsg  -> case aMsg of
-        ResponseTail (aNum, aHash) -> do
-            writeLog aLog [SyncTag] Info "!!! takeResponseTail 1"
-            return $ Response aId (aNum,Just aHash)
-        StatusSyncMessage _ "#001" -> do
-            writeLog aLog [SyncTag] Info "!!! takeResponseTail 2"
-            return $ Response aId (0, Nothing)
-        _                          -> do
-            writeLog aLog [SyncTag] Info "!!! takeResponseTail 3"
+takeResponseTail aChan aLog = do
+    writeLog aLog [SyncTag] Info "!!! Init !!! takeResponseTail"
+    readChan aChan >>= \case
+        SyncMsg aId aMsg  -> case aMsg of
+            ResponseTail (aNum, aHash) -> do
+                writeLog aLog [SyncTag] Info "!!! takeResponseTail 1"
+                return $ Response aId (aNum,Just aHash)
+            StatusSyncMessage _ "#001" -> do
+                writeLog aLog [SyncTag] Info "!!! takeResponseTail 2"
+                return $ Response aId (0, Nothing)
+            _                          -> do
+                writeLog aLog [SyncTag] Info "!!! takeResponseTail 3"
+                takeResponseTail aChan aLog
+        _                 -> do
+            writeLog aLog [SyncTag] Info "!!! takeResponseTail 4"
             takeResponseTail aChan aLog
-    _                 -> do
-        writeLog aLog [SyncTag] Info "!!! takeResponseTail 4"
-        takeResponseTail aChan aLog
 
 takePeekKeyBlokResponse     :: OutChan SyncEvent -> IO (Response [(Number, HashOfKeyBlock, MacroblockBD)])
 takePeekKeyBlokResponse aChan = readChan aChan >>= \case
