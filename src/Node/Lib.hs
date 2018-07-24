@@ -274,7 +274,7 @@ syncProcess :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -
 syncProcess outSyncChan aDBActorChan aManagerChan aInfoChan = do
     writeLog aInfoChan [SyncTag, InitTag] Info "Init. Process of syncronization."
     allTails <- requestOfAllTails outSyncChan aManagerChan
-    writeLog aInfoChan [SyncTag] Info "Recived all tails"
+    writeLog aInfoChan [SyncTag] Info $ "Recived all tails: " ++ show allTails
     let maxTails = reverse $ sortOn takeTailNum allTails
     syncNeighbors outSyncChan aDBActorChan aManagerChan maxTails aInfoChan
 
@@ -293,6 +293,7 @@ syncNeighbors outSyncChan aDBActorChan aManagerChan (x:xs) aInfoChan = do
         unless aOk $ syncNeighbors outSyncChan aDBActorChan aManagerChan xs aInfoChan
     else return ()
 syncNeighbors _ _ _ _ _ = return ()
+
 
 syncServer :: (InChan SyncEvent, OutChan SyncEvent) -> InChan MsgToDB -> InChan MsgToCentralActor -> InChan InfoMsg -> IO b
 syncServer (_, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
