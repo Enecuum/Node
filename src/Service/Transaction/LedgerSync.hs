@@ -3,7 +3,7 @@
 module Service.Transaction.LedgerSync where
 
 import           Control.Exception
-import           Control.Monad                    (forM)
+import           Control.Monad                    (forM, when)
 import           Data.Maybe
 import qualified Data.Serialize                   as S (encode)
 import           Node.Data.GlobalLoging
@@ -17,13 +17,26 @@ import           Service.Types
 
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
-myTail (Common descr i) = do
-  kv <- getLastKeyBlock descr i
-  case kv of
+myTail c@(Common _ i) = do
+  -- kv <- getLastKeyBlock descr i
+  curNumber <- getKeyBlockNumber c
+  writeLog i [BDTag] Info $ "Currnet number of key block: " ++ show curNumber
+  (nNumber, hashMaybe) <- findChain c (fromJust curNumber) Main
+  writeLog i [BDTag] Info $ "Get number of key block: " ++ show nNumber ++ "Hash: " ++ show hashMaybe
+  case hashMaybe of
     Nothing -> throw NoLastKeyBlock
-    Just (hashOfKeyBlock, mb)  -> do
-      let n =  _number (mb :: MacroblockBD)
-      return (n, hashOfKeyBlock)
+    Just h  -> return (nNumber,h)
+  --     kBlock <- getKeyBlockByHash descr (Hash h) i
+  --     case kBlock Of
+  --       Nothing -> throw NoLastKeyBlock
+  --       Just mb -> return (n, hashOfKeyBlock)
+
+
+  -- case kv of
+  --   Nothing -> throw NoLastKeyBlock
+  --   Just (hashOfKeyBlock, mb)  -> do
+  --     let n =  _number (mb :: MacroblockBD)
+  --     return (n, hashOfKeyBlock)
 
 
 peekNPreviousKeyBlocks :: Common -> From -> To -> IO [(Number, HashOfKeyBlock)]
@@ -46,18 +59,27 @@ getKeyBlockSproutData c@(Common descr i) from to = do
   return allKeyData
 
 
+pair3 :: (a, b, c) -> c
+pair3 (_, _, c)  = c
+
 isValidKeyBlockSprout :: Common -> [(HashOfKeyBlock, MacroblockBD)] -> IO Bool
-isValidKeyBlockSprout _ kv = do --return True  --return $ h == _prevHKBlock m
+isValidKeyBlockSprout (Common _ i) kv = do --return True  --return $ h == _prevHKBlock m
   -- hash of Key Block is real hash
   let fun h m = (h ==) $ getKeyBlockHash $ tKeyBlockToPoWType $ tMacroblock2KeyBlockInfo m
-      isRealHash = map (\(h,m) -> fun h m) kv
-  return (and isRealHash)
+      hmm = map (\(h,m) -> (h, m, (fun h m) :: Bool)) kv
+      isRealHash = map pair3 hmm
+      allTrue = and isRealHash
+  writeLog i [BDTag] Info $ "allTrue: " ++ show allTrue
+  when (not allTrue) $ do  writeLog i [BDTag] Info $ concat $ map show isRealHash
+  -- return allTrue
+  writeLog i [BDTag] Info $ "We will return True in any case! "
+  return True
 
 
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
 setKeyBlockSproutData c@(Common descr i) kv = do
   mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
-
+  writeLog i [BDTag] Info $ "update hashes: " ++ show (map fst kv)
   -- read from and write to Sprout Table
   let kvN = map (\(h,m) -> (h, _number (m :: MacroblockBD))) kv
   mapM_ (\(hashOfKeyBlock, aNumber) -> setChain c aNumber hashOfKeyBlock Sprout) kvN

@@ -3,7 +3,7 @@ module Service.Transaction.SproutCommon where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import qualified Data.HashTable.IO                     as H
+-- import qualified Data.HashTable.IO                     as H
 import qualified Data.Serialize                        as S (decode, encode)
 import           Service.InfoMsg                       (InfoMsg (..))
 import           Service.Transaction.Storage
@@ -35,8 +35,7 @@ data SproutException = ValueOfChainIsNotNothing String
 instance Exception SproutException
 
 
-lastKeyBlock :: DBKey
-lastKeyBlock = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=" :: DBKey
+
 
 
 writeKeyBlockNumber :: Common -> Number -> IO ()
