@@ -93,6 +93,7 @@ isValidKeyBlockSprout c@(Common _ i) okv = do
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
 setKeyBlockSproutData c@(Common descr i) kv = do
   mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
+  mapM_ (print . tMacroblock2KeyBlockInfo) $ map snd kv
   writeLog i [BDTag] Info $ "Write KBlocks : " ++ show (map fst kv)
   -- read from and write to Sprout Table
   let kvN = map (\(h,m) -> (h, _number (m :: MacroblockBD))) kv
