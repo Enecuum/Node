@@ -74,11 +74,14 @@ networkNodeStart aSyncChan (_, aOutChan) aMd = do
                     aMsg@(MsgMsgTo (IdFrom aSender) (IdTo aId) aContent) -> do
                       aNetLog $ "Received MsgMsgTo" ++ show aMsg
                       if aId == toNodeId (aData^.nodeConfig.myNodeId)
-                      then case fromJSON aContent of
-                          Success aSyncMsg -> do
-                              aNetLog $ "Received sync msg. " ++ show aContent
-                              writeInChan aSyncChan $ SyncMsg aSender aSyncMsg
-                          A.Error _ -> return ()
+                      then do
+                          aNetLog $ "Received Msg for me" ++ show aMsg
+                          case fromJSON aContent of
+                              Success aSyncMsg -> do
+                                  aNetLog $ "Received sync msg. " ++ show aContent
+                                  writeInChan aSyncChan $ SyncMsg aSender aSyncMsg
+                              A.Error a -> do
+                                  aNetLog $ "Error of parsing:" ++ a
                       else whenJust (aData^.connects.at aId) $ \aNode ->
                               void $ tryWriteChan (aNode^.nodeChan) aMsg
 
