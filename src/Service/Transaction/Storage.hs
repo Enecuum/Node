@@ -207,7 +207,7 @@ getChainInfoDB desc aInfoChan = do
 getLastKeyBlock  :: DBPoolDescriptor -> InChan InfoMsg -> IO (Maybe (DBKey,MacroblockBD))
 getLastKeyBlock desc aInfoChan = do
   -- print lastKeyBlock
-  key <- funR (poolMacroblock desc) lastClosedKeyBlock
+  key <- funR (poolMacroblock desc) lastKeyBlock
   case key of Nothing -> return Nothing
               Just k  -> do
                 mByte <- funR (poolMacroblock desc) k
