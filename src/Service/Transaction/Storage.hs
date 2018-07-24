@@ -385,6 +385,7 @@ tMacroblock2MacroblockAPI descr (MacroblockBD {..}) = do
              _teamKeys }
 
 
+
 dummyMacroblock :: MacroblockBD
 dummyMacroblock = MacroblockBD {
   _prevKBlock = Nothing,
@@ -469,13 +470,14 @@ getKeyBlockHash  KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
 updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()
 updateMacroblockByKeyBlock db i hashOfKeyBlock keyBlockInfo branch = do
     val  <- funR (poolMacroblock db) hashOfKeyBlock
-    _ <- case val of
-        Nothing -> return dummyMacroblock
+    writeLog i [BDTag] Info $ "keyBlockInfo: " ++ show keyBlockInfo
+    mb <- case val of
+        Nothing -> return $ tKeyBlockInfo2Macroblock keyBlockInfo
         Just va  -> case S.decode va :: Either String MacroblockBD of
             Left e  -> throw (DecodeException (show e))
             Right r -> return r
 
-    writeMacroblockToDB db i hashOfKeyBlock $ tKeyBlockInfo2Macroblock keyBlockInfo
+    writeMacroblockToDB db i hashOfKeyBlock mb
     let aNumber = _number (keyBlockInfo :: KeyBlockInfo)
         mes = "going to write number " ++ show aNumber ++ show hashOfKeyBlock ++ show branch
     writeLog i [BDTag] Info mes
