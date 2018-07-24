@@ -15,7 +15,7 @@ import qualified Data.ByteString.Char8            as BS
 import qualified Data.Text                        as T
 import           Node.Data.Key
 import           Service.Transaction.SproutCommon (From, MicroBlockContent (..),
-                                                   Number, To)
+                                                   To)
 import           Service.Types
 
 deriving instance Show MicroBlockContent

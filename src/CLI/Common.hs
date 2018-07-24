@@ -63,15 +63,16 @@ import           Service.Types.SerializeJSON           ()
 import           Control.Timeout
 import           Data.Time.Units                       (Second)
 
-import           Service.Transaction.Test              ( getAllLedgerKV
-                                                       , getAllMicroblockKV
-                                                       , getAllMacroblockKV
-                                                       , getAllTransactionsKV)
+import           Service.Transaction.Test              (getAllLedgerKV,
+                                                        getAllMacroblockKV,
+                                                        getAllMicroblockKV,
+                                                        getAllSproutKV,
+                                                        getAllTransactionsKV)
 
 type Result a = Either CLIException a
 
 getAllChain :: IO (Result [FullChain])
-getAllChain = undefined
+getAllChain = try $ getAllSproutKV
 
 getAllLedger :: IO (Result [(DBKey, Amount)])
 getAllLedger = try $ getAllLedgerKV

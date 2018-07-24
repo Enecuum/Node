@@ -24,6 +24,7 @@ import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Service.System.Directory              (getLedgerFilePath,
                                                         getMacroblockFilePath,
                                                         getMicroblockFilePath,
+                                                        getSproutFilePath,
                                                         getTransactionFilePath)
 import           Service.Transaction.TransactionsDAG   (genNNTx)
 import           Service.Types
@@ -130,13 +131,13 @@ getAllTransactions = do
   -- return result2
 
 
-getAll ::  String -> IO [BSI.ByteString]
+getAll ::  String -> IO [DBValue]
 getAll path = runResourceT $ do
   (_, db) <- Rocks.openBracket path def{Rocks.createIfMissing=False}
   getAllValues db
 
 
-getAllKV ::  String -> IO [(BSI.ByteString,BSI.ByteString)]
+getAllKV ::  String -> IO [(DBKey,DBValue)]
 getAllKV path = runResourceT $ do
   (_, db) <- Rocks.openBracket path def{Rocks.createIfMissing=False}
   getAllItems db
@@ -176,6 +177,17 @@ getAllMicroblocks = do
 -- getAllKV2 typeInfo = do
 --   result <- getAllKV =<< getAllKV1 typeInfo
 
+getAllSproutKV :: IO [FullChain]
+getAllSproutKV = do
+  result <- getAllKV =<< getSproutFilePath
+  let funcV res = case (S.decode res :: Either String Chain) of
+        Right r -> r
+        Left e  -> error ("Can not decode Chain" ++ show e)
+  let funcK res = case (S.decode res :: Either String Number) of
+        Right r -> r
+        Left e  -> error ("Can not decode Chain" ++ show e)
+  let result2 = map (\(k,v) -> (funcK k, fst (funcV v), snd (funcV v))) result
+  return result2
 
 getAllLedgerKV :: IO [(DBKey,Amount)]
 getAllLedgerKV = do
@@ -186,7 +198,7 @@ getAllLedgerKV = do
   let result2 = map (\(k,v) -> (k, func v)) result
   return result2
 
-getAllTransactionsKV :: IO [(DBKey,TransactionInfo)]
+getAllTransactionsKV :: IO [(HashOfTransaction,TransactionInfo)]
 getAllTransactionsKV = do
   result <- getAllKV =<< getTransactionFilePath
   let func res = case (S.decode res :: Either String TransactionInfo) of
@@ -196,7 +208,7 @@ getAllTransactionsKV = do
   return result2
 
 
-getAllMicroblockKV :: IO [(DBKey,MicroblockBD)]
+getAllMicroblockKV :: IO [(HashOfMicroblock,MicroblockBD)]
 getAllMicroblockKV = do
   result <- getAllKV =<< getMicroblockFilePath
   let func res = case (S.decode res :: Either String MicroblockBD) of
@@ -206,7 +218,7 @@ getAllMicroblockKV = do
   return result2
 
 
-getAllMacroblockKV :: IO [(DBKey,MacroblockBD)]
+getAllMacroblockKV :: IO [(HashOfKeyBlock,MacroblockBD)]
 getAllMacroblockKV = do
   result <- getAllKV =<< getMacroblockFilePath
   let func res = case (S.decode res :: Either String MacroblockBD) of
