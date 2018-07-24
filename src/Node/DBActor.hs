@@ -94,7 +94,7 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
                 aExeption <- try $ setKeyBlockSproutData aData $ toPair2 <$> aMacroblockBD
                 case aExeption of
                     Right _ -> writeLog aInfoCh [BDTag] Info "Success of setting"
-                    Left (_ :: SomeException) -> writeLog aInfoCh [BDTag] Info "Setting false"
+                    Left (e :: SomeException) -> writeLog aInfoCh [BDTag] Info $ "Setting false !!! =" ++ show e 
             putMVar aMVar aIsValid
 
         GetRestSproutData aMickroBlockHash aMVar -> do
