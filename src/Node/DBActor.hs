@@ -88,6 +88,7 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
 
         SetKeyBlockSproutData aMacroblockBD aMVar -> do
             writeLog aInfoCh [BDTag] Info "Set key block sprout data request."
+            writeLog aInfoCh [BDTag] Info $ "Setting a blocks: " ++ show aMacroblockBD
             aIsValid <- isValidKeyBlockSprout aData aMacroblockBD
             when aIsValid $ do
                 aExeption <- try $ setKeyBlockSproutData aData $ toPair2 <$> aMacroblockBD
