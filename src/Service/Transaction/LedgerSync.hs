@@ -74,15 +74,20 @@ isValidKeyBlockSprout c@(Common _ i) okv = do
   let mes = "After Foundation on main chain: number: " ++ show numberAfterFoundation ++ "m: " ++ show macroblockAfterFoundation
   writeLog i [BDTag] Info $ mes
   hashMainMaybe <- getM c (numberAfterFoundation - 1)
+  let prevHash = _prevHKBlock (macroblockAfterFoundation :: MacroblockBD)
   writeLog i [BDTag] Info $ "Hash of foundation: " ++ show hashMainMaybe
-  let isFoundationOk = hashMainMaybe == _prevHKBlock (macroblockAfterFoundation :: MacroblockBD)
-
+  writeLog i [BDTag] Info $ "Prev Hash: " ++ show prevHash
+  let isFoundationOk = hashMainMaybe == prevHash
+  writeLog i [BDTag] Info $ "isFoundationOk: " ++ show isFoundationOk
   -- hash of Key Block is real hash
   let kv = map pair2 okv
-      fun h m = (h ==) $ getKeyBlockHash $ tKeyBlockToPoWType $ tMacroblock2KeyBlockInfo m
-      hmm = map (\(h,m) -> (h, m, (fun h m) :: Bool)) kv
-      isRealHash = map pair3 hmm
-      allTrue = and $ isFoundationOk : isRealHash
+  writeLog i [BDTag] Info $ "kv: " ++ show kv
+  let fun h m = (h ==) $ getKeyBlockHash $ tKeyBlockToPoWType $ tMacroblock2KeyBlockInfo m
+  let hmm = map (\(h,m) -> (h, m, (fun h m) :: Bool)) kv
+  writeLog i [BDTag] Info $ "kv: " ++ show hmm
+  let isRealHash = map pair3 hmm
+  writeLog i [BDTag] Info $ "isRealHash: " ++ show isRealHash
+  let allTrue = and $ isFoundationOk : isRealHash
   writeLog i [BDTag] Info $ "allTrue: " ++ show allTrue
   when (not allTrue) $ do  writeLog i [BDTag] Info $ concat $ map show isRealHash
   -- return allTrue
