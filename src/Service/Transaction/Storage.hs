@@ -428,8 +428,9 @@ tMacroblock2KeyBlockInfo (MacroblockBD {..}) = KeyBlockInfo {
   _nonce    ,
   _solver   ,
   _type = 0}
-  where prev_hash = case _prevKBlock of Nothing -> ""
-                                        Just j  -> j
+  where prev_hash = case _prevHKBlock of
+          Nothing -> ""
+          Just j  -> j
 
 
 tMacroblock2ChainInfo :: Maybe (DBKey, MacroblockBD) -> IO ChainInfo
