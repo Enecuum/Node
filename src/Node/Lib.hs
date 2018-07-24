@@ -264,7 +264,7 @@ loadBlocks outSyncChan aDBActorChan aManagerChan aHash aFrom aTo aId aInfoChan =
     sendMsgToNode aManagerChan (PeekKeyBlokRequest aFrom aTo) aId
     let aTake = do
             Response aNodeId aList <- takePeekKeyBlokResponse outSyncChan aInfoChan
-            if aNodeId /= aId then return aList else aTake
+            if aNodeId == aId then return aList else aTake
     aListOfBlocks <- aTake
     writeLog aInfoChan [SyncTag] Info " Kblocks recieved."
     aOk <- takeRecords aDBActorChan (SetKeyBlockSproutData aListOfBlocks)
