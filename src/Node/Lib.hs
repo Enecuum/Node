@@ -110,10 +110,11 @@ connectManager
 
 connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aConnectsChan aMyNodeId inChanPending aInfoChan = do
     writeLog aInfoChan [ConnectingTag, InitTag] Info "Manager of connecting started."
+    void $ C.forkIO $ syncServer aSyncChan inDBActorChan aManagerChan aInfoChan
     forM_ aBNList $ \(Connect aBNIp aBNPort) -> do
         void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
             WS.sendTextData aConnect . encode $ ActionAddToConnectList aPortNumber
-    aConnectLoop aBNList True
+    aConnectLoop aBNList
   where
     aRequestOfPotencialConnects = \case -- IDEA: add random to BN list
         (Connect aBNIp aBNPort):aTailOfList -> do
@@ -128,7 +129,7 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
                 aRequestOfPotencialConnects (aTailOfList ++ [Connect aBNIp aBNPort])
         _       -> return ()
 
-    aConnectLoop aBootNodeList isFirst = do
+    aConnectLoop aBootNodeList  = do
         aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
         if null aActualConnects then do
             aNumberOfConnects <- takeRecords aConnectsChan NumberConnects
@@ -137,15 +138,13 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
             forM_ aConnects (connectToNN aConnectsChan aMyNodeId inChanPending aInfoChan aManagerChan)
             C.threadDelay $ 2 * sec
 
-            when isFirst $ void $ C.forkIO $ do
-                _ <- syncServer aSyncChan inDBActorChan aManagerChan aInfoChan
-                writeInChan (fst aSyncChan) RestartSync
+            writeInChan (fst aSyncChan) RestartSync
 
             C.threadDelay $ 2*sec
-            aConnectLoop aBootNodeList False
+            aConnectLoop aBootNodeList
         else do
             C.threadDelay $ 10 * sec
-            aConnectLoop aBootNodeList False
+            aConnectLoop aBootNodeList
 
 
 -- найти длинну своей цепочки
@@ -299,20 +298,28 @@ syncServer (_, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
             let aSend amsg = sendMsgToNode aManagerChan amsg aNodeId
             case aMsg of
                 RequestTail                                 -> do
+                    writeLog aInfoChan [SyncTag] Info "Processing of RequestTail."
                     takeRecords aDBActorChan MyTail >>= \case
-                        Just aTail  -> aSend $ ResponseTail aTail
-                        Nothing     -> aSend $ StatusSyncMessage "Empty tail" "#001"
+                        Just aTail  -> do
+                            writeLog aInfoChan [SyncTag] Info $ "aTail " ++ show aTail
+                            aSend $ ResponseTail aTail
+                        Nothing     -> do
+                            writeLog aInfoChan [SyncTag] Info "Empty tail #001"
+                            aSend $ StatusSyncMessage "Empty tail" "#001"
 
                 PeekKeyBlokRequest aFrom aTo                -> do
+                    writeLog aInfoChan [SyncTag] Info "Processing of PeekKeyBlokRequest."
                     takeRecords aDBActorChan (GetKeyBlockSproutData aFrom aTo) >>=
                         aSend . PeekKeyBlokResponse
 
                 MicroblockRequest aHash         -> do
+                    writeLog aInfoChan [SyncTag] Info "Processing of MicroblockRequest."
                     takeRecords aDBActorChan (GetRestSproutData aHash) >>= \case
                       Just mblock -> aSend $ MicroblockResponse mblock
                       Nothing     -> aSend $ StatusSyncMessage ("No block with this hash " ++ show aHash ++ " in DB")  "#003"
 
                 PeekHashKblokRequest aFrom aTo -> do
+                    writeLog aInfoChan [SyncTag] Info "Processing of PeekHashKblokRequest."
                     takeRecords aDBActorChan (PeekNKeyBlocks aFrom aTo) >>=
                         aSend . PeekHashKblokResponse
 
