@@ -132,15 +132,21 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
     aConnectLoop aBootNodeList  = do
         aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
         if null aActualConnects then do
+            writeLog aInfoChan [ConnectingTag] Info "!!! 1 !!!"
             aNumberOfConnects <- takeRecords aConnectsChan NumberConnects
+            writeLog aInfoChan [ConnectingTag] Info "!!! 2 !!!"
             when (aNumberOfConnects == 0) $ aRequestOfPotencialConnects aBootNodeList
+            writeLog aInfoChan [ConnectingTag] Info "!!! 3 !!!"
             aConnects <- takeRecords aConnectsChan ReadRecordsFromFile
+            writeLog aInfoChan [ConnectingTag] Info "!!! 4 !!!"
             forM_ aConnects (connectToNN aConnectsChan aMyNodeId inChanPending aInfoChan aManagerChan)
+            writeLog aInfoChan [ConnectingTag] Info "!!! 5 !!!"
             C.threadDelay $ 2 * sec
-
+            writeLog aInfoChan [ConnectingTag] Info "!!! 6 !!!"
             writeInChan (fst aSyncChan) RestartSync
-
+            writeLog aInfoChan [ConnectingTag] Info "!!! 7 !!!"
             C.threadDelay $ 2*sec
+            writeLog aInfoChan [ConnectingTag] Info "!!! 8 !!!"
             aConnectLoop aBootNodeList
         else do
             C.threadDelay $ 10 * sec
@@ -384,7 +390,9 @@ connectToNN
     ->  Connect
     ->  IO ()
 connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aConn@(Connect aIp aPort)= do
+    writeLog aInfoChan [NetLvlTag] Info $ "Try connecting to: "  ++ showHostAddress aIp
     aOk <- try $ runClient (showHostAddress aIp) (fromEnum aPort) "/" $ \aConnect -> do
+        writeLog aInfoChan [NetLvlTag] Info $ "Connecting to: "  ++ showHostAddress aIp
         WS.sendTextData aConnect . A.encode $ ActionConnect NN (Just aMyNodeId)
         aMsg <- WS.receiveData aConnect
         case A.eitherDecodeStrict aMsg of
