@@ -47,7 +47,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                         void $ tryWriteChan aFileServerChan $ DeleteFromFile aConn
                     _ -> return ()
 
-    runServer aRecivePort $ \aHostAdress aPending -> do
+    runServer aRecivePort "serverPoABootNode" $ \aHostAdress aPending -> do
         aConnect <- WS.acceptRequest aPending
         writeLog aInfoChan [ServerBootNodeTag] Info "ServerPoABootNode.Connect accepted."
         aMsg <- WS.receiveData aConnect

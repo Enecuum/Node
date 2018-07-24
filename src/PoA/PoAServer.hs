@@ -46,7 +46,7 @@ servePoA
 servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan _ inChanPending = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. servePoA: a port is " ++ show aRecivePort
-    runServer aRecivePort $ \aIp aPending -> do
+    runServer aRecivePort ("server of SN: " ++ show aMyNodeId) $ \aIp aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30
         aMsg <- WS.receiveData aConnect

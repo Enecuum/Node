@@ -26,7 +26,7 @@ import           Service.Types.SerializeJSON           ()
 
 
 serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan MsgToCentralActor -> InChan InfoMsg -> IO ()
-serveRpc descrDB portNum _ ch aInfoCh = runServer portNum $ \_ aPending -> do
+serveRpc descrDB portNum _ ch aInfoCh = runServer portNum "serveRpc" $ \_ aPending -> do
     aConnect <- WS.acceptRequest aPending
     WS.forkPingThread aConnect 30
     forever $ do
