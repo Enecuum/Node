@@ -72,6 +72,7 @@ networkNodeStart aSyncChan (_, aOutChan) aMd = do
                             void $ tryWriteChan (aNode^.nodeChan) aMsg
 
                     aMsg@(MsgMsgTo (IdFrom aSender) (IdTo aId) aContent) -> do
+                      aNetLog $ "Received MsgMsgTo" ++ show aMsg
                       if aId == toNodeId (aData^.nodeConfig.myNodeId)
                       then case fromJSON aContent of
                           Success aSyncMsg -> do
