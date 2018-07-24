@@ -17,15 +17,26 @@ import           Service.Types
 
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
-myTail c@(Common descr i) = do
+myTail c@(Common _ i) = do
+  -- kv <- getLastKeyBlock descr i
   curNumber <- getKeyBlockNumber c
   writeLog i [BDTag] Info $ "Currnet number of key block: " ++ show curNumber
-  kv <- getLastKeyBlock descr i
-  case kv of
+  (nNumber, hashMaybe) <- findChain c (fromJust curNumber) Main
+  writeLog i [BDTag] Info $ "Get number of key block: " ++ show nNumber ++ "Hash: " ++ show hashMaybe
+  case hashMaybe of
     Nothing -> throw NoLastKeyBlock
-    Just (hashOfKeyBlock, mb)  -> do
-      let n =  _number (mb :: MacroblockBD)
-      return (n, hashOfKeyBlock)
+    Just h  -> return (nNumber,h)
+  --     kBlock <- getKeyBlockByHash descr (Hash h) i
+  --     case kBlock Of
+  --       Nothing -> throw NoLastKeyBlock
+  --       Just mb -> return (n, hashOfKeyBlock)
+
+
+  -- case kv of
+  --   Nothing -> throw NoLastKeyBlock
+  --   Just (hashOfKeyBlock, mb)  -> do
+  --     let n =  _number (mb :: MacroblockBD)
+  --     return (n, hashOfKeyBlock)
 
 
 peekNPreviousKeyBlocks :: Common -> From -> To -> IO [(Number, HashOfKeyBlock)]
