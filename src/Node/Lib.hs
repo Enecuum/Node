@@ -194,7 +194,7 @@ requestOfAllTails outSyncChan aManagerChan aLogChan = do
     -- FIXME: If somebody doesn't answer!!!
     writeLog aLogChan [SyncTag] Info $ "Reciving a tails"
     forM aActualConnects $ \_ -> do
-        aTail <- takeResponseTail outSyncChan
+        aTail <- takeResponseTail outSyncChan aLogChan
         writeLog aLogChan [SyncTag] Info $ "Recived a tail:" ++ show aTail
         return aTail
 
@@ -346,15 +346,21 @@ sendMsgToNode aChan aMsg aId = writeInChan aChan $ SendMsgToNode (toJSON aMsg) (
 
 data Response a = Response NodeId a deriving Show
 
-takeResponseTail :: OutChan SyncEvent -> IO (Response (Number, Maybe HashOfKeyBlock))
-takeResponseTail aChan = readChan aChan >>= \case
+takeResponseTail :: OutChan SyncEvent -> InChan InfoMsg -> IO (Response (Number, Maybe HashOfKeyBlock))
+takeResponseTail aChan aLog = readChan aChan >>= \case
     SyncMsg aId aMsg  -> case aMsg of
-        ResponseTail (aNum, aHash) -> return $ Response aId (aNum,Just aHash)
+        ResponseTail (aNum, aHash) -> do
+            writeLog aLog [SyncTag] Info "!!! takeResponseTail 1"
+            return $ Response aId (aNum,Just aHash)
         StatusSyncMessage _ "#001" -> do
-            putStrLn "!!!! Recived empty tail !!!!"
+            writeLog aLog [SyncTag] Info "!!! takeResponseTail 2"
             return $ Response aId (0, Nothing)
-        _                          -> takeResponseTail aChan
-    _                 -> takeResponseTail aChan
+        _                          -> do
+            writeLog aLog [SyncTag] Info "!!! takeResponseTail 3"
+            takeResponseTail aChan aLog
+    _                 -> do
+        writeLog aLog [SyncTag] Info "!!! takeResponseTail 4"
+        takeResponseTail aChan aLog
 
 takePeekKeyBlokResponse     :: OutChan SyncEvent -> IO (Response [(Number, HashOfKeyBlock, MacroblockBD)])
 takePeekKeyBlokResponse aChan = readChan aChan >>= \case
