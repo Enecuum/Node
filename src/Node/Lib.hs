@@ -217,12 +217,12 @@ loadMacroBlocks a1 a2 a3 aNumber (x:xs) aId aInfoChan = do
     if aOk then loadMacroBlocks a1 a2 a3 aNumber xs aId aInfoChan
     else do
         writeLog aInfoChan [SyncTag] Info $ "Delete sprout " ++ show aNumber
-        writeInChan a2 $ DeleteSproutData (aNumber + 1)
+        writeInChan a2 $ DeleteSproutData aNumber
         return False
 
 loadMacroBlocks _ a2 _ aNumber _ _ aInfoChan = do
     writeLog aInfoChan [SyncTag] Info $ "Set sprout as main " ++ show aNumber
-    writeInChan a2 $ SetSproutAsMain (aNumber + 1)
+    writeInChan a2 $ SetSproutAsMain aNumber
     return True
 
 first :: (a, b, c) -> a
@@ -257,9 +257,8 @@ loadOneMacroBlock _ _ _ _ _ _ _ _ = return True
 
 
 -- загрузить блоки
-loadBlocks :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> [(Number, HashOfKeyBlock, MacroblockBD)] -> From -> To -> NodeId -> InChan InfoMsg -> IO Bool
-loadBlocks outSyncChan aDBActorChan aManagerChan aHash aFrom aTo aId aInfoChan = do
-    let aMyTails = if length aHash == 1 then first (head aHash) else 0
+loadBlocks :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> From -> To -> NodeId -> InChan InfoMsg -> IO Bool
+loadBlocks outSyncChan aDBActorChan aManagerChan aFrom aTo aId aInfoChan = do
     writeLog aInfoChan [SyncTag] Info $ "Loading of blocks: process start. From " ++ show aId ++ ". (" ++ show aFrom ++ ", " ++ show aTo ++ ")"
     sendMsgToNode aManagerChan (PeekKeyBlokRequest aFrom aTo) aId
     let aTake = do
@@ -271,11 +270,11 @@ loadBlocks outSyncChan aDBActorChan aManagerChan aHash aFrom aTo aId aInfoChan =
     writeLog aInfoChan [SyncTag] Info " Seting of kblocks"
     if not aOk then do
         writeLog aInfoChan [SyncTag] Info "DeleteSproutData"
-        writeInChan aDBActorChan $ DeleteSproutData (aMyTails + 1)
+        writeInChan aDBActorChan $ DeleteSproutData aFrom
         return False
     else do
         writeLog aInfoChan [SyncTag] Info "Loading of macrblock"
-        loadMacroBlocks outSyncChan aDBActorChan aManagerChan aMyTails aListOfBlocks aId aInfoChan
+        loadMacroBlocks outSyncChan aDBActorChan aManagerChan aFrom aListOfBlocks aId aInfoChan
 
 
 
@@ -300,9 +299,7 @@ syncNeighbors outSyncChan aDBActorChan aManagerChan (x:xs) aInfoChan = do
     if aMyTail < aNumber then do
         writeLog aInfoChan [SyncTag] Info $  "My tail is small."
         lastCommonNumber <- findBeforeFork aMyTail aNodeId outSyncChan aDBActorChan aManagerChan aInfoChan
-        aDiffBlock <- takeRecords aDBActorChan (GetKeyBlockSproutData (lastCommonNumber+1) (lastCommonNumber+1))
-        writeLog aInfoChan [SyncTag] Info $  "A diff block is" ++ show aDiffBlock
-        aOk <- loadBlocks outSyncChan aDBActorChan aManagerChan aDiffBlock (lastCommonNumber+1) aNumber aNodeId aInfoChan
+        aOk <- loadBlocks outSyncChan aDBActorChan aManagerChan (lastCommonNumber+1) aNumber aNodeId aInfoChan
         unless aOk $ syncNeighbors outSyncChan aDBActorChan aManagerChan xs aInfoChan
     else do
         writeLog aInfoChan [SyncTag] Info $  "My tail is big."
