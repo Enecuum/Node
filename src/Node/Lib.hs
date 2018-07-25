@@ -430,12 +430,13 @@ connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aConn@(Connect 
         WS.sendTextData aConnect . A.encode $ ActionConnect NN (Just aMyNodeId)
         aMsg <- WS.receiveData aConnect
         case A.eitherDecodeStrict aMsg of
-            Right (ActionConnect aNodeType (Just aNodeId)) -> do
-                (aInpChan, aOutChan) <- newChan 64
-                sendActionToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
-                void $ race
-                    (msgSender ch aMyNodeId aConnect aOutChan)
-                    (msgReceiver ch aInfoChan aFileServerChan NN (IdFrom aNodeId) aConnect inChanPending)
+            Right (ActionConnect aNodeType (Just aNodeId))
+                | aMyNodeId /= aNodeId -> do
+                    (aInpChan, aOutChan) <- newChan 64
+                    sendActionToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
+                    void $ race
+                        (msgSender ch aMyNodeId aConnect aOutChan)
+                        (msgReceiver ch aInfoChan aFileServerChan NN (IdFrom aNodeId) aConnect inChanPending)
             _ -> return ()
 
     case aOk of
