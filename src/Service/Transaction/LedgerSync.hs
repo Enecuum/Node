@@ -175,17 +175,23 @@ setSproutAsMain :: Common -> Number -> IO () -- right after foundation
 setSproutAsMain c@(Common descr i) aNumber = do
   -- find key blocks which belong to Main chain (right after foundation of main and sprout chain)
   mainChain <- findWholeChainSince c aNumber Main
+  writeLog i [BDTag] Info $ "setSproutAsMain: main chain is " ++ show mainChain
   mainChainClosedKeyBlocks <- getClosedMacroblockByHash c $ map snd mainChain
+  writeLog i [BDTag] Info $ "setSproutAsMain: mainChainClosedKeyBlocks is " ++ show mainChainClosedKeyBlocks
   sproutChain <- findWholeChainSince c aNumber Sprout
+  writeLog i [BDTag] Info $ "setSproutAsMain: main chain is " ++ show sproutChain
   sproutChainClosedKeyBlocks <- getClosedMacroblockByHash c $ map snd sproutChain
+  writeLog i [BDTag] Info $ "setSproutAsMain: sproutChainClosedKeyBlocks is " ++ show sproutChainClosedKeyBlocks
   -- recalculate ledger
   -- storno
   mapM_ (\(h,m) -> calculateLedger descr i True h m) mainChainClosedKeyBlocks
   -- add closed sprout macroblocks to ledger
   mapM_ (\(h,m) -> calculateLedger descr i False h m) sproutChainClosedKeyBlocks
   -- delete Main chain (right after foundation of main and sprout chain)
+  writeLog i [BDTag] Info $ "delete Main chain " ++ show mainChain
   mapM_ (\r -> deleteSprout c r Sprout) mainChain
   -- set SproutChain as MainChain
+  writeLog i [BDTag] Info $ "set SproutChain as MainChain " ++ show sproutChain
   mapM_ (\(n,h) -> setChain c n h Main) sproutChain
   let lastNumber = fst $ last sproutChain
   writeKeyBlockNumber c lastNumber
