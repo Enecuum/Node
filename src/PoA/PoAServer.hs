@@ -18,6 +18,7 @@ import           Control.Monad                         (forever, unless, void,
 import           Data.Aeson                            as A
 import qualified Data.Text                             as T
 import qualified Network.WebSockets                    as WS
+import qualified Data.ByteString.Char8            as B8
 import           Node.Data.GlobalLoging
 import           Node.FileDB.FileServer
 import           Node.Node.Types
@@ -100,6 +101,7 @@ msgReceiver :: InChan MsgToCentralActor
 msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan = forever $ do
     aMsg <- WS.receiveData aConnect
     writeLog aInfoChan [ServePoATag] Info $ "Raw msg: " ++ show aMsg
+    appendFile "netLog.txt" $ B8.unpack $ aMsg
     case A.eitherDecodeStrict aMsg of
         Right a -> case a of
             -- REVIEW: Check fair distribution of transactions between nodes
