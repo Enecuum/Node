@@ -153,7 +153,6 @@ checkMacroblock db aInfoChan microblock blockHash = do
     case v of
       Nothing -> do -- If MacroblockBD is not already in the table, than insert it into the table
                     let aMacroBlock = dummyMacroblock {
-                          _mblocks = [blockHash],
                           _teamKeys = _teamKeys (microblock :: Microblock)
                           } :: MacroblockBD
                     return (True, True, aMacroBlock)
@@ -162,19 +161,15 @@ checkMacroblock db aInfoChan microblock blockHash = do
           Left e  -> throw (DecodeException (show e))
           Right bdMacroblock -> do
                    let hashes = _mblocks ( bdMacroblock :: MacroblockBD)
-                   writeLog aInfoChan [BDTag] Info ("length hashes" ++ show(length hashes) ++ " " ++ show hashes)
-                   if (not $ checkMacroblockIsClosed bdMacroblock)
-                   then do
-                     -- Check is Microblock already in MacroblockBD
-                        let microblockIsAlreadyInMacroblock = blockHash `elem` hashes
-                        writeLog aInfoChan [BDTag] Info ("Microblock is already in macroblock: " ++ show microblockIsAlreadyInMacroblock)
-                        if microblockIsAlreadyInMacroblock
-                        then return (False, True, bdMacroblock)  -- Microblock already in MacroblockBD - Nothing
-                        else do -- add this Microblock to the value of MacroblockBD
-                               let aMacroBlock = bdMacroblock {  _mblocks = hashes ++ [blockHash] } :: MacroblockBD
-                               writeMacroblockToDB db aInfoChan keyBlockHash aMacroBlock
-                               return (True, True, bdMacroblock)
-                    else return (True, True, bdMacroblock)
+                       mes = ("length hashes" ++ show(length hashes) ++ " " ++ show hashes)
+                   writeLog aInfoChan [BDTag] Info mes
+                   --Check is Microblock already in MacroblockBD
+                   let microblockIsAlreadyInMacroblock = blockHash `elem` hashes
+                       mes2 = ("Microblock is already in macroblock: " ++ show microblockIsAlreadyInMacroblock)
+                   writeLog aInfoChan [BDTag] Info mes2
+                   if microblockIsAlreadyInMacroblock
+                     then return (False, True, bdMacroblock)  -- Microblock already in MacroblockBD - Nothing
+                     else return (True, True, bdMacroblock)
 
 
 addMicroblockToDB :: DBPoolDescriptor -> Microblock -> InChan InfoMsg -> IO ()
@@ -216,17 +211,15 @@ calculateLedger db i isStorno hashKeyBlock macroblock = do
                      writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = aReward})
 
 
-
-
-
 writeMicroblockDB :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO ()
-writeMicroblockDB descr aInfoChan m = do
+writeMicroblockDB descr i m = do
   let db = poolMicroblock descr
       key = rHash m
       val  = S.encode m
   funW db [(key,val)]
-  writeLog aInfoChan [BDTag] Info ("Write Microblock "  ++ show key ++ "to Microblock table")
-
+  writeLog i [BDTag] Info ("Write Microblock "  ++ show key ++ "to Microblock table")
+  let hashKeyBlock = _keyBlock (m :: MicroblockBD)
+  addMicroblockHashesToMacroBlock descr i hashKeyBlock [key]
 
 writeTransactionDB :: DBPoolDescriptor -> InChan InfoMsg -> [Transaction] -> BC.ByteString -> IO ()
 writeTransactionDB descr aInfoChan txs hashOfMicroblock = do
