@@ -184,7 +184,7 @@ addMicroblockToDB db m i =  do
     let isMacroblockClosed = checkMacroblockIsClosed macroblock
         goOn = macroblockIsOk macroblock
           where macroblockIsOk (MacroblockBD {..}) = length _mblocks <= length _teamKeys
-    writeLog i [BDTag] Info ("MacroblockBD - already closed is " ++ show (not goOn))
+    writeLog i [BDTag] Info ("MacroblockBD :- length _mblocks <= length _teamKeyss " ++ show (not goOn))
     when goOn $ do
         writeLog i [BDTag] Info ("MacroblockBD - New is " ++ show isMacroblockNew)
         writeLog i [BDTag] Info ("Microblock - New is " ++ show isMicroblockNew)
