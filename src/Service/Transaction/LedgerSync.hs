@@ -179,7 +179,7 @@ setSproutAsMain c@(Common descr i) aNumber = do
   mainChainClosedKeyBlocks <- getClosedMacroblockByHash c $ map snd mainChain
   writeLog i [BDTag] Info $ "setSproutAsMain: mainChainClosedKeyBlocks is " ++ show mainChainClosedKeyBlocks
   sproutChain <- findWholeChainSince c aNumber Sprout
-  writeLog i [BDTag] Info $ "setSproutAsMain: main chain is " ++ show sproutChain
+  writeLog i [BDTag] Info $ "setSproutAsMain: sproutChain is " ++ show sproutChain
   sproutChainClosedKeyBlocks <- getClosedMacroblockByHash c $ map snd sproutChain
   writeLog i [BDTag] Info $ "setSproutAsMain: sproutChainClosedKeyBlocks is " ++ show sproutChainClosedKeyBlocks
   -- recalculate ledger
@@ -192,7 +192,7 @@ setSproutAsMain c@(Common descr i) aNumber = do
   mapM_ (\r -> deleteSprout c r Sprout) mainChain
   -- set SproutChain as MainChain
   writeLog i [BDTag] Info $ "set SproutChain as MainChain " ++ show sproutChain
-  mapM_ (\(n,h) -> setChain c n h Main) sproutChain
+  mapM_ (\(n,h) -> setChainAndDeleteOther c n h Main) sproutChain
   let lastNumber = fst $ last sproutChain
   writeKeyBlockNumber c lastNumber
 

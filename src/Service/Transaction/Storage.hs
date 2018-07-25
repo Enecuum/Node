@@ -562,6 +562,21 @@ setChain c@(Common descr i ) aNumber hashOfKeyBlock branch = do
   writeLog i [BDTag] Info $ "Write number  " ++ show aNumber ++ show newChain ++ show branch
 
 
+setChainAndDeleteOther :: Common -> Number -> HashOfKeyBlock -> BranchOfChain -> IO ()
+setChainAndDeleteOther c@(Common descr i ) aNumber hashOfKeyBlock branch = do
+  chain <- getChain c aNumber
+  let valueOfChain = funBranch branch $ chain
+  let newChain = case branch of
+        Main   -> (Just hashOfKeyBlock, Nothing)
+        Sprout -> (Nothing, Just hashOfKeyBlock)
+
+
+  let key = S.encode aNumber
+      val = S.encode (newChain :: Chain)
+  funW (poolSprout descr) [(key, val)]
+  writeLog i [BDTag] Info $ "Write number  " ++ show aNumber ++ show newChain ++ show branch
+
+
 funBranch :: BranchOfChain -> (a, a) -> a
 funBranch Main   = fst
 funBranch Sprout = snd
