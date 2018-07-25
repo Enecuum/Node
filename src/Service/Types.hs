@@ -37,6 +37,7 @@ data CLIException = ValueOfChainIsNotNothing String
                   | NoSuchMicroBlockDB
                   | NoSuchMacroBlockDB
                   | NoSuchTransactionDB
+                  | NoSproutAtAll
                   | NoSuchTransactionForHash String
                   | NoSuchMicroBlockForHash String
                   | NoHashForNumberMainChain String

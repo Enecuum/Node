@@ -180,13 +180,18 @@ getAllMicroblocks = do
 getAllSproutKV :: IO [FullChain]
 getAllSproutKV = do
   result <- getAllKV =<< getSproutFilePath
+  -- case result of
+  --   Nothing -> throw NoSproutAtAll
+  --   Just j  ->
   let funcV res = case (S.decode res :: Either String Chain) of
         Right r -> r
-        Left e  -> error ("Can not decode Chain" ++ show e)
+        Left e  -> (Nothing,Nothing) --error ("Can not decode Chain" ++ show e)
   let funcK res = case (S.decode res :: Either String Number) of
         Right r -> r
-        Left e  -> error ("Can not decode Chain" ++ show e)
+        Left e  -> (-1) --error ("Can not decode Number" ++ show e)
   let result2 = map (\(k,v) -> (funcK k, fst (funcV v), snd (funcV v))) result
+  -- let result2 = map (\(k,v) -> (funcK k, Nothing, Nothing)) result
+
   return result2
 
 getAllLedgerKV :: IO [(DBKey,Amount)]

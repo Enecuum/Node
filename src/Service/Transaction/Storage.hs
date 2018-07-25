@@ -557,7 +557,7 @@ setChain c@(Common descr i ) aNumber hashOfKeyBlock branch = do
         else throw (ValueOfChainIsNotNothing ("KeyBlockHash is" ++ (show valueOfChain)))
 
   let key = S.encode aNumber
-      val = S.encode newChain
+      val = S.encode (newChain :: Chain)
   funW (poolSprout descr) [(key, val)]
   writeLog i [BDTag] Info $ "Write number  " ++ show aNumber ++ show newChain ++ show branch
 
