@@ -217,10 +217,10 @@ writeMicroblockDB descr i m = do
       hashOfMicroblock = rHash m
       val  = S.encode m
   funW db [(hashOfMicroblock,val)]
-  let mes = foldr1 (++) ["Write Microblock ", hashOfMicroblock, "to Microblock table"]
+  let mes = foldr1 (++) ["Write Microblock ", show hashOfMicroblock, "to Microblock table"]
   writeLog i [BDTag] Info mes
   let hashKeyBlock = _keyBlock (m :: MicroblockBD)
-  writeLog i [BDTag] Info "Going to add microblock hashOfMicroblock " ++ show hashOfMicroblock ++ "to key block " ++ hashKeyBlock
+  writeLog i [BDTag] Info $ "Going to add microblock hashOfMicroblock " ++ show hashOfMicroblock ++ "to key block " ++ show hashKeyBlock
   addMicroblockHashesToMacroBlock descr i hashKeyBlock [hashOfMicroblock]
 
 writeTransactionDB :: DBPoolDescriptor -> InChan InfoMsg -> [Transaction] -> BC.ByteString -> IO ()
