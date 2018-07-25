@@ -147,7 +147,7 @@ getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
 checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> Microblock -> HashOfMicroblock -> IO (IsMicroblockNew, IsMacroblockNew, MacroblockBD)
-checkMacroblock db aInfoChan microblock blockHash = do
+checkMacroblock db i microblock blockHash = do
     let keyBlockHash = (_keyBlock (microblock :: Microblock))
     v  <- funR (poolMacroblock db) keyBlockHash
     case v of
@@ -155,6 +155,7 @@ checkMacroblock db aInfoChan microblock blockHash = do
                     let aMacroBlock = dummyMacroblock {
                           _teamKeys = _teamKeys (microblock :: Microblock)
                           } :: MacroblockBD
+                    writeMacroblockToDB db i (_keyBlock (microblock :: Microblock)) aMacroBlock
                     return (True, True, aMacroBlock)
       Just a -> -- If MacroblockBD is already in the table
         case S.decode a :: Either String MacroblockBD of
@@ -162,11 +163,11 @@ checkMacroblock db aInfoChan microblock blockHash = do
           Right bdMacroblock -> do
                    let hashes = _mblocks ( bdMacroblock :: MacroblockBD)
                        mes = ("length hashes" ++ show(length hashes) ++ " " ++ show hashes)
-                   writeLog aInfoChan [BDTag] Info mes
+                   writeLog i [BDTag] Info mes
                    --Check is Microblock already in MacroblockBD
                    let microblockIsAlreadyInMacroblock = blockHash `elem` hashes
                        mes2 = ("Microblock is already in macroblock: " ++ show microblockIsAlreadyInMacroblock)
-                   writeLog aInfoChan [BDTag] Info mes2
+                   writeLog i [BDTag] Info mes2
                    if microblockIsAlreadyInMacroblock
                      then return (False, True, bdMacroblock)  -- Microblock already in MacroblockBD - Nothing
                      else return (True, True, bdMacroblock)
@@ -190,7 +191,7 @@ addMicroblockToDB db m i =  do
         when (isMacroblockNew && isMicroblockNew) $ do
           writeMicroblockDB db i (tMicroblock2MicroblockBD m)
           writeTransactionDB db i (_transactions m) microblockHash
-          writeMacroblockToDB db i (_keyBlock (m :: Microblock)) macroblock
+          -- writeMacroblockToDB db i (_keyBlock (m :: Microblock)) macroblock
 
           when isMacroblockClosed $ calculateLedger db i False (_keyBlock (m :: Microblock)) macroblock
 
