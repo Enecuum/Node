@@ -260,6 +260,12 @@ main = do
                 forM_ (cycle aTransactions) $ \aTrans -> do
                     threadDelay 1000
                     WS.sendBinaryData aConnect $ encode $ MsgTransaction aTrans
+        "l":ip:aFile:_ -> do
+            aTrafic <- readFile aFile
+            runClient ip 1554 "/" $ socketActor $ \aConnect ->
+                forM_ (lines aTrafic) $ \aMsg -> do
+                    threadDelay 1000
+                    WS.sendTextData aConnect $ B8.pack aMsg
         _ -> return ()
 
 socketActor :: (WS.Connection -> IO a) -> WS.Connection -> IO ()
