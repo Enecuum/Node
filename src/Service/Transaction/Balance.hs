@@ -304,13 +304,15 @@ tKeyBlockToPoWType (KeyBlockInfo {..}) = KeyBlockInfoPoW{
 addMicroblockHashesToMacroBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> [HashOfMicroblock] -> IO ()
 addMicroblockHashesToMacroBlock db i hashOfKeyBlock hashesOfMicroblock = do
   val <- getKeyBlockByHash db i (Hash hashOfKeyBlock)
-  case val of
-    Nothing -> writeLog i [BDTag] Error ("There is no KeyBlock with hash " ++ show hashOfKeyBlock)
-    Just r -> do
-        let currentHashes = Set.fromList $ _mblocks (r :: MacroblockBD)
-            newHashes = Set.fromList $ hashesOfMicroblock
-            allHashes = sort $ Set.elems $ Set.union currentHashes newHashes
-        let macroblock = S.encode $ (r {_mblocks = allHashes} :: MacroblockBD)
-        funW (poolMacroblock db) [(hashOfKeyBlock, macroblock)]
-        let mes = foldr1 (++) ["Write hashes microblocks ", show hashesOfMicroblock, " to key block ", show hashOfKeyBlock]
-        writeLog i [BDTag] Info mes
+  macroblock <- S.encode <$> case val of
+    Nothing -> do
+      writeLog i [BDTag] Info ("There is no KeyBlock with hash " ++ show hashOfKeyBlock)
+      return $ (dummyMacroblock {_mblocks = hashesOfMicroblock} :: MacroblockBD)
+    Just j -> do
+      let currentHashes = Set.fromList $ _mblocks (j :: MacroblockBD)
+          newHashes = Set.fromList $ hashesOfMicroblock
+          allHashes = sort $ Set.elems $ Set.union currentHashes newHashes
+      return (j {_mblocks = allHashes} :: MacroblockBD)
+  funW (poolMacroblock db) [(hashOfKeyBlock, macroblock)]
+  let mes = foldr1 (++) ["Write hashes microblocks ", show hashesOfMicroblock, " to key block ", show hashOfKeyBlock]
+  writeLog i [BDTag] Info mes

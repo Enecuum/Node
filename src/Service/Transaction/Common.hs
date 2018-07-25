@@ -19,11 +19,11 @@ module Service.Transaction.Common
 import           Service.Transaction.Balance (addMacroblockToDB,
                                               addMicroblockToDB,
                                               getBalanceForKey, runLedger)
+import           Service.Transaction.Decode
 import           Service.Transaction.Storage (connectOrRecoveryConnect,
                                               getAllTransactionsDB,
                                               getBlockByHashDB, getChainInfoDB,
                                               getKeyBlockByHashDB,
                                               getLastTransactions,
-                                              getTransactionByHashDB,
                                               getTransactionsByMicroblockHash,
                                               rHash)
