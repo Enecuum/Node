@@ -100,8 +100,8 @@ msgReceiver :: InChan MsgToCentralActor
                      -> IO b
 msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan = forever $ do
     aMsg <- WS.receiveData aConnect
-    writeLog aInfoChan [ServePoATag] Info $ "Raw msg: " ++ show aMsg
-    appendFile "netLog.txt" $ B8.unpack $ aMsg
+    writeLog aInfoChan [ServePoATag] Info $ "Raw msg: " ++ show aMsg ++ "\n"
+    appendFile "netLog.txt" $ B8.unpack aMsg ++ "\n"
     case A.eitherDecodeStrict aMsg of
         Right a -> case a of
             -- REVIEW: Check fair distribution of transactions between nodes
