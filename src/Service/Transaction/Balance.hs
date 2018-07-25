@@ -161,6 +161,7 @@ checkMacroblock db i microblock blockHash = do
         case S.decode a :: Either String MacroblockBD of
           Left e  -> throw (DecodeException (show e))
           Right bdMacroblock -> do
+                   writeMacroblockToDB db i (_keyBlock (microblock :: Microblock)) $ bdMacroblock {_teamKeys = _teamKeys (microblock :: Microblock)}
                    let hashes = _mblocks ( bdMacroblock :: MacroblockBD)
                        mes = ("length hashes" ++ show(length hashes) ++ " " ++ show hashes)
                    writeLog i [BDTag] Info mes
