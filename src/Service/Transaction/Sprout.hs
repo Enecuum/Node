@@ -3,11 +3,10 @@
 module Service.Transaction.Sprout where
 
 import           Data.Maybe
--- import           Service.Transaction.Independent
+import           Service.Transaction.Decode
 import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
-
 
 findChain :: Common -> Number -> BranchOfChain -> IO (Number, Maybe HashOfKeyBlock)
 findChain c aNumber branch = do
@@ -38,7 +37,7 @@ findWholeChainSince c aNumber branch = do
 
 findConsequentChainSinceUntil :: Common -> HashOfKeyBlock -> HashOfKeyBlock -> Limit -> IO [(HashOfKeyBlock, Number)]
 findConsequentChainSinceUntil c@(Common descr i) h searchedHash limit = do
-  macroblockMaybe <- getKeyBlockByHash descr (Hash h) i
+  macroblockMaybe <- getKeyBlockByHash descr i (Hash h)
   case macroblockMaybe of
     Nothing -> return []
     Just macroblock -> case _prevHKBlock macroblock of

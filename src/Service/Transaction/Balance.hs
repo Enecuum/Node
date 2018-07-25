@@ -49,9 +49,8 @@ import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
 import           Service.Sync.SyncJson
--- import           Service.Transaction.Independent
+import           Service.Transaction.Decode
 import           Service.Transaction.Sprout
--- import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
@@ -149,31 +148,24 @@ getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> Microblock -> HashOfMicroblock -> IO (IsMicroblockNew, IsMacroblockNew, MacroblockBD)
 checkMacroblock db i microblock blockHash = do
     let keyBlockHash = (_keyBlock (microblock :: Microblock))
-    v  <- funR (poolMacroblock db) keyBlockHash
-    case v of
-      Nothing -> do -- If MacroblockBD is not already in the table, than insert it into the table
-                    let aMacroBlock = dummyMacroblock {
-                          _teamKeys = _teamKeys (microblock :: Microblock)
-                          } :: MacroblockBD
-                    writeMacroblockToDB db i (_keyBlock (microblock :: Microblock)) aMacroBlock
-                    return (True, True, aMacroBlock)
-      Just a -> -- If MacroblockBD is already in the table
-        case S.decode a :: Either String MacroblockBD of
-          Left e  -> throw (DecodeException (show e))
-          Right bdMacroblock -> do
-                   writeMacroblockToDB db i (_keyBlock (microblock :: Microblock)) $ bdMacroblock {_teamKeys = _teamKeys (microblock :: Microblock)}
-                   let hashes = _mblocks ( bdMacroblock :: MacroblockBD)
-                       mes = ("length hashes" ++ show(length hashes) ++ " " ++ show hashes)
-                   writeLog i [BDTag] Info mes
-                   --Check is Microblock already in MacroblockBD
-                   let microblockIsAlreadyInMacroblock = blockHash `elem` hashes
-                       mes2 = ("Microblock is already in macroblock: " ++ show microblockIsAlreadyInMacroblock)
-                   writeLog i [BDTag] Info mes2
-                   if microblockIsAlreadyInMacroblock
-                     then return (False, True, bdMacroblock)  -- Microblock already in MacroblockBD - Nothing
-                     else return (True, True, bdMacroblock)
+    mb <- getKeyBlockByHash db i (Hash keyBlockHash)
+    let mbUpdated = case mb of
+          Nothing -> dummyMacroblock { _teamKeys = _teamKeys (microblock :: Microblock)} :: MacroblockBD
+          Just j -> j {_teamKeys = _teamKeys (microblock :: Microblock)} :: MacroblockBD
+
+    let hashes = _mblocks ( mbUpdated :: MacroblockBD)
+        mes = ("length hashes" ++ show(length hashes) ++ " " ++ show hashes)
+    writeLog i [BDTag] Info mes
+    --Check is Microblock already in MacroblockBD
+    let microblockIsAlreadyInMacroblock = blockHash `elem` hashes
+        mes2 = ("Microblock is already in macroblock: " ++ show microblockIsAlreadyInMacroblock)
+    writeLog i [BDTag] Info mes2
+    if microblockIsAlreadyInMacroblock
+      then return (False, True, mbUpdated)  -- Microblock already in MacroblockBD - Nothing
+      else return (True, True, mbUpdated)
 
 
+-- main function for Microblock
 addMicroblockToDB :: DBPoolDescriptor -> Microblock -> InChan InfoMsg -> IO ()
 addMicroblockToDB db m i =  do
 -- FIX: verify signature
@@ -311,12 +303,10 @@ tKeyBlockToPoWType (KeyBlockInfo {..}) = KeyBlockInfoPoW{
 
 addMicroblockHashesToMacroBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> [HashOfMicroblock] -> IO ()
 addMicroblockHashesToMacroBlock db i hashOfKeyBlock hashesOfMicroblock = do
-  val  <- funR (poolMacroblock db) hashOfKeyBlock
+  val <- getKeyBlockByHash db i (Hash hashOfKeyBlock)
   case val of
     Nothing -> writeLog i [BDTag] Error ("There is no KeyBlock with hash " ++ show hashOfKeyBlock)
-    Just k -> case S.decode k :: Either String MacroblockBD of
-      Left e  -> throw (DecodeException (show e))
-      Right (r )  -> do
+    Just r -> do
         let currentHashes = Set.fromList $ _mblocks (r :: MacroblockBD)
             newHashes = Set.fromList $ hashesOfMicroblock
             allHashes = sort $ Set.elems $ Set.union currentHashes newHashes
