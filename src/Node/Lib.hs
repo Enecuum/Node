@@ -217,12 +217,12 @@ loadMacroBlocks a1 a2 a3 aNumber (x:xs) aId aInfoChan = do
     if aOk then loadMacroBlocks a1 a2 a3 aNumber xs aId aInfoChan
     else do
         writeLog aInfoChan [SyncTag] Info $ "Delete sprout " ++ show aNumber
-        writeInChan a2 $ DeleteSproutData aNumber
+        writeInChan a2 $ DeleteSproutData (aNumber + 1)
         return False
 
 loadMacroBlocks _ a2 _ aNumber _ _ aInfoChan = do
     writeLog aInfoChan [SyncTag] Info $ "Set sprout as main " ++ show aNumber
-    writeInChan a2 $ SetSproutAsMain aNumber
+    writeInChan a2 $ SetSproutAsMain (aNumber + 1)
     return True
 
 first :: (a, b, c) -> a
@@ -271,7 +271,7 @@ loadBlocks outSyncChan aDBActorChan aManagerChan aHash aFrom aTo aId aInfoChan =
     writeLog aInfoChan [SyncTag] Info " Seting of kblocks"
     if not aOk then do
         writeLog aInfoChan [SyncTag] Info "DeleteSproutData"
-        writeInChan aDBActorChan $ DeleteSproutData aMyTails
+        writeInChan aDBActorChan $ DeleteSproutData (aMyTails + 1)
         return False
     else do
         writeLog aInfoChan [SyncTag] Info "Loading of macrblock"
