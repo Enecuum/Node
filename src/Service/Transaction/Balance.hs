@@ -214,12 +214,14 @@ calculateLedger db i isStorno hashKeyBlock macroblock = do
 writeMicroblockDB :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO ()
 writeMicroblockDB descr i m = do
   let db = poolMicroblock descr
-      key = rHash m
+      hashOfMicroblock = rHash m
       val  = S.encode m
-  funW db [(key,val)]
-  writeLog i [BDTag] Info ("Write Microblock "  ++ show key ++ "to Microblock table")
+  funW db [(hashOfMicroblock,val)]
+  let mes = foldr1 (++) ["Write Microblock ", hashOfMicroblock, "to Microblock table"]
+  writeLog i [BDTag] Info mes
   let hashKeyBlock = _keyBlock (m :: MicroblockBD)
-  addMicroblockHashesToMacroBlock descr i hashKeyBlock [key]
+  writeLog i [BDTag] Info "Going to add microblock hashOfMicroblock " ++ show hashOfMicroblock ++ "to key block " ++ hashKeyBlock
+  addMicroblockHashesToMacroBlock descr i hashKeyBlock [hashOfMicroblock]
 
 writeTransactionDB :: DBPoolDescriptor -> InChan InfoMsg -> [Transaction] -> BC.ByteString -> IO ()
 writeTransactionDB descr aInfoChan txs hashOfMicroblock = do
@@ -318,3 +320,5 @@ addMicroblockHashesToMacroBlock db i hashOfKeyBlock hashesOfMicroblock = do
             allHashes = sort $ Set.elems $ Set.union currentHashes newHashes
         let macroblock = S.encode $ (r {_mblocks = allHashes} :: MacroblockBD)
         funW (poolMacroblock db) [(hashOfKeyBlock, macroblock)]
+        let mes = foldr1 (++) ["Write hashes microblocks ", show hashesOfMicroblock, " to key block ", show hashOfKeyBlock]
+        writeLog i [BDTag] Info mes
