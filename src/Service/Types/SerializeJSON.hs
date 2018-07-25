@@ -239,7 +239,6 @@ instance ToJSON MacroblockBD where
          ,  "next_hash"         .= _nextKBlock (bl :: MacroblockBD)
          ,  "prev_Khash"        .= _prevHKBlock (bl :: MacroblockBD)
          ,  "difficulty"        .= _difficulty (bl :: MacroblockBD)
-         ,  "height"            .= _height (bl :: MacroblockBD)
          ,  "solver"            .= _solver (bl :: MacroblockBD)
          ,  "reward"            .= _reward (bl :: MacroblockBD)
          ,  "timeK"             .= _time (bl :: MacroblockBD)
@@ -255,7 +254,6 @@ instance FromJSON MacroblockBD where
                <*> o .:? "next_hash"
                <*> o .:? "prev_Khash"
                <*> o .: "difficulty"
-               <*> o .: "height"
                <*> o .: "solver"
                <*> o .: "reward"
                <*> o .: "timeK"
