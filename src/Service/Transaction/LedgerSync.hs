@@ -151,18 +151,23 @@ deleteSprout c@(Common descr i) (aNumber, hashOfKeyBlock) branch = do
       microblocks <- mapM (\h -> getMicroBlockByHashDB descr (Hash h)) hashesOfMicroBlocks
       let hashesOfTransactions = concat $ map _transactionsHashes microblocks
       -- delete Transactions
+      writeLog i [BDTag] Info $ "delete Transactions: " ++ show hashesOfTransactions
       mapM_ (funD (poolTransaction descr)) hashesOfTransactions
       -- delete MicroBlocks
+      writeLog i [BDTag] Info $ "delete MicroBlocks: " ++ show hashesOfMicroBlocks
       mapM_ (funD (poolMicroblock descr)) hashesOfMicroBlocks
       -- delete KeyBlock
+      writeLog i [BDTag] Info $ "delete KeyBlock: " ++ show hashOfKeyBlock
       funD (poolMacroblock descr) hashOfKeyBlock
       -- erase chain from Sprout table
+      writeLog i [BDTag] Info $ "erase chain from Sprout table"
       (aMain,aSprout) <- getChain c aNumber
       let newChain = case branch of
             Main   -> (Nothing, aSprout)
             Sprout ->  (aMain, Nothing)
           sKey   = S.encode aNumber
           sValue = S.encode newChain
+      writeLog i [BDTag] Info $ "new chain value: " ++ show aNumber ++ " " ++ show newChain
       funW (poolSprout descr) [(sKey, sValue)]
 
 
