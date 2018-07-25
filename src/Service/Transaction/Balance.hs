@@ -262,12 +262,12 @@ addMacroblockToDB db (Object aValue) i  aSyncChan = do
         case Data.Aeson.eitherDecodeStrict $ BC.init $ BC.tail r of
           Left a -> throw (DecodeException $ "There is no PoW Key Block. The error: " ++ a)
           Right (keyBlockInfo ) -> do
-            putStrLn ("type of keyBlockInfoObject is: " ++ (show (typeOf keyBlockInfo)))
-            print keyBlockInfo
             let aKeyBlock = tKBIPoW2KBI keyBlockInfo
                 aKeyBlockHash = getKeyBlockHash keyBlockInfo
-            putStrLn $ "keyBlockHash" ++ show aKeyBlockHash
-            writeLog i [BDTag] Info (show keyBlockInfo)
+
+            writeLog i [BDTag] Info $ "type of keyBlockInfoObject is: " ++ show (typeOf keyBlockInfo)
+            writeLog i [BDTag] Info $ "keyBlockHash: " ++ show aKeyBlockHash
+            writeLog i [BDTag] Info $ "keyBlockInfo: " ++ show keyBlockInfo
 
             let receivedKeyNumber = _number (keyBlockInfo :: KeyBlockInfoPoW)
                 startSync = writeInChan (fst aSyncChan) RestartSync

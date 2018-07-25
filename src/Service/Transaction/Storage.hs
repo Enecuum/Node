@@ -468,6 +468,14 @@ getKeyBlockHash  KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
 
 
 
+
+
+
+
+
+
+
+
 updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()
 updateMacroblockByKeyBlock db i hashOfKeyBlock keyBlockInfo branch = do
     val  <- funR (poolMacroblock db) hashOfKeyBlock
@@ -476,7 +484,7 @@ updateMacroblockByKeyBlock db i hashOfKeyBlock keyBlockInfo branch = do
         Nothing -> return $ tKeyBlockInfo2Macroblock keyBlockInfo
         Just va  -> case S.decode va :: Either String MacroblockBD of
             Left e  -> throw (DecodeException (show e))
-            Right r -> return r
+            Right r -> return $ fillMacroblockByKeyBlock r keyBlockInfo
 
     writeMacroblockToDB db i hashOfKeyBlock mb
     let aNumber = _number (keyBlockInfo :: KeyBlockInfo)
@@ -611,3 +619,14 @@ tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {
   _solver = pubKey,
   _type}
   where pubKey = publicKey256k1 ((roll $ B.unpack _solver) :: Integer)
+
+
+
+
+fillMacroblockByKeyBlock :: MacroblockBD -> KeyBlockInfo -> MacroblockBD
+fillMacroblockByKeyBlock m (KeyBlockInfo {..}) = m {
+        _prevHKBlock = Just $ _prev_hash,
+        _solver = _solver,
+        _time = _time,
+        _number = _number,
+        _nonce  = _nonce}
