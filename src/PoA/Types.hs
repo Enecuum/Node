@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module PoA.Types where
 
@@ -65,8 +66,11 @@ data NetMessage where
 
 data NodeType = PoW | PoA | All | NN deriving (Eq, Show, Ord, Generic)
 
-
-
+isBlock :: NetMessage -> Bool
+isBlock = \case
+    MsgMicroblock _ -> True
+    MsgKeyBlock   _ -> True
+    _               -> False
 
 data ActualConnectInfo = ActualConnectInfo NodeId NodeType (Maybe Connect) deriving Show
 
