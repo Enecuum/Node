@@ -183,12 +183,12 @@ getChainInfoDB desc aInfoChan = do
   tMacroblock2ChainInfo kv
 
 
-lastKeyBlock :: DBKey
-lastKeyBlock = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=" :: DBKey
+
 
 getLastKeyBlock  :: DBPoolDescriptor -> InChan InfoMsg -> IO (Maybe (DBKey,MacroblockBD))
 getLastKeyBlock desc aInfoChan = do
-  key <- funR (poolMacroblock desc) lastKeyBlock
+  key <- funR (poolLast desc) lastClosedKeyBlock
+  -- key <- getLastKeyBlockNumber (Common desc aInfoChan)
   case key of Nothing -> return Nothing
               Just k  -> do
                 mb <- getKeyBlockByHash desc aInfoChan (Hash k)
@@ -430,7 +430,7 @@ updateMacroblockByKeyBlock db i hashOfKeyBlock keyBlockInfo branch = do
 
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
 writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
-  hashPreviousLastKeyBlock <- funR (poolMacroblock desc) lastClosedKeyBlock
+  hashPreviousLastKeyBlock <- funR (poolLast desc) lastClosedKeyBlock
   let cMacroblock = if (checkMacroblockIsClosed aMacroblock == True)
         then (aMacroblock { _prevKBlock = hashPreviousLastKeyBlock }) :: MacroblockBD
         else aMacroblock
@@ -458,8 +458,9 @@ writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
                         return [(pKey, pVal)]
 
     -- fill new last closed Macroblock
-    let keyValue = (lastClosedKeyBlock, cKey) : bdKV
-    funW (poolMacroblock desc) keyValue
+    let keyValue = [(lastClosedKeyBlock, cKey)]
+    funW (poolLast desc) keyValue
+    funW (poolMacroblock desc) bdKV
     writeLog a [BDTag] Info ("Write Last Closed Macroblock " ++ show lastClosedKeyBlock ++ "to DB")
 
 
@@ -467,12 +468,12 @@ writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
 writeKeyBlockNumber :: Common -> Number -> IO ()
 writeKeyBlockNumber (Common descr _) aNumber= do
   let value = S.encode aNumber
-  funW (poolSprout descr) [(lastKeyBlock, value)]
+  funW (poolLast descr) [(lastKeyBlock, value)]
 
 
 getKeyBlockNumber :: Common -> IO (Maybe Number)
 getKeyBlockNumber c@(Common descr i) = do
-  value <- funR (poolSprout descr) lastKeyBlock
+  value <- getLastKeyBlockNumber c
   -- if Nothing write genesis KeyBlock
   case value of
     Nothing -> do
@@ -483,9 +484,7 @@ getKeyBlockNumber c@(Common descr i) = do
       updateMacroblockByKeyBlock descr i h k Main
       writeLog i [BDTag] Info "Genesis block was written"
       getKeyBlockNumber c
-    Just v  -> case S.decode v :: Either String Number of
-      Left e  -> throw (DecodeException (show e))
-      Right r -> return $ Just r
+    Just v  -> return $ Just v
 
 
 setChain :: Common -> Number -> HashOfKeyBlock -> BranchOfChain -> IO ()

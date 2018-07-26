@@ -23,6 +23,11 @@ import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 
+
+lastKeyBlock :: DBKey
+lastKeyBlock = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=" :: DBKey
+
+
 funW ::  Pool Rocks.DB -> [(DBKey, DBValue)] -> IO ()
 funW db aMapKeyValue = do
   let fun = (\aDb -> Rocks.write aDb def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) aMapKeyValue))
@@ -93,3 +98,13 @@ getBalanceForKey db key = do
                 Just v  -> case (S.decode v :: Either String Amount ) of
                     Left e  -> throw (DecodeException (show e))
                     Right b -> return $ Just b
+
+--Last Number
+getLastKeyBlockNumber :: Common -> IO (Maybe Number)
+getLastKeyBlockNumber c@(Common descr i) = do
+  value <- funR (poolSprout descr) lastKeyBlock
+  case value of
+    Nothing -> return Nothing
+    Just j -> case S.decode j :: Either String Number of
+      Left e  -> throw (DecodeException (show e))
+      Right r -> return $ Just r
