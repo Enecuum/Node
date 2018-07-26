@@ -73,7 +73,7 @@ type Result a = Either CLIException a
 getAllChain :: IO (Result [FullChain])
 getAllChain = try $ getAllSproutKV
 
-getAllLedger :: IO (Result [(DBKey, Amount)])
+getAllLedger :: IO (Result [(PublicKey, Amount)])
 getAllLedger = try $ getAllLedgerKV
 
 getAllMicroblocks :: IO (Result [(DBKey, MicroblockBD)])

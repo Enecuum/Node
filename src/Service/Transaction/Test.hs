@@ -195,13 +195,16 @@ getAllSproutKV = do
 
   return result2
 
-getAllLedgerKV :: IO [(DBKey,Amount)]
+getAllLedgerKV :: IO [(PublicKey,Amount)]
 getAllLedgerKV = do
   result <- getAllKV =<< getLedgerFilePath
-  let func res = case (S.decode res :: Either String Amount) of
+  let funcK res = case (S.decode res :: Either String PublicKey) of
         Right r -> r
-        Left _  -> error "Can not decode Ledger"
-  let result2 = map (\(k,v) -> (k, func v)) result
+        Left _  -> error "Can not decode Public Key in Ledger"
+  let funcV res = case (S.decode res :: Either String Amount) of
+        Right r -> r
+        Left _  -> error "Can not decode Amount in Ledger"
+  let result2 = map (\(k,v) -> (funcK k, funcV v)) result
   return result2
 
 getAllTransactionsKV :: IO [(HashOfTransaction,TransactionInfo)]

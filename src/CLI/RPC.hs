@@ -118,22 +118,22 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum "serveRpc" $ \_ aPendi
 
               getAllLedgerF = toMethod "enq_getAllLedger" f ()
                 where
-                  f :: RpcResult IO [(DBKey, Amount)]
+                  f :: RpcResult IO [(PublicKey, Amount)]
                   f = handle getAllLedger
 
               getAllMicroblocksF = toMethod "enq_getAllMicroblocks" f ()
                 where
-                  f :: RpcResult IO [(DBKey, MicroblockBD)]
+                  f :: RpcResult IO [(HashOfMicroblock, MicroblockBD)]
                   f = handle getAllMicroblocks
 
               getAllKblocksF = toMethod "enq_getAllKblocks" f ()
                 where
-                  f :: RpcResult IO [(DBKey, MacroblockBD)]
+                  f :: RpcResult IO [(HashOfKeyBlock, MacroblockBD)]
                   f = handle getAllKblocks
 
               getAllTransactionsF = toMethod "enq_getAllTransactions" f ()
                 where
-                  f :: RpcResult IO [(DBKey, TransactionInfo)]
+                  f :: RpcResult IO [(HashOfTransaction, TransactionInfo)]
                   f = handle getAllTransactions
 
 ------------- test functions
