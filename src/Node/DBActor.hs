@@ -113,7 +113,11 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
         SetRestSproutData aMicroBlockContent@(_,_,a) aMVar -> do
             writeLog aInfoCh [BDTag] Info "Set rest sprout data request."
             aIsValid <- isValidRestOfSprout aData a
-            when aIsValid $ setRestSproutData aData aMicroBlockContent
+            when aIsValid $ do
+                aExeption <- try $ setRestSproutData aData aMicroBlockContent
+                case aExeption of
+                    Right _ -> writeLog aInfoCh [BDTag] Info "Success of setting"
+                    Left (e :: SomeException) -> writeLog aInfoCh [BDTag] Info $ "Setting false !!! =" ++ show e
             putMVar aMVar aIsValid
 
 
