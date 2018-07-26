@@ -10,6 +10,8 @@ import           Service.Transaction.TransactionsDAG
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON         ()
+import           PoA.Types
+import           Data.Aeson
 
 
 quantityOfTransactionInMicroblock :: Int

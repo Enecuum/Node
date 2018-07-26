@@ -101,7 +101,6 @@ msgReceiver :: InChan MsgToCentralActor
 msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan = forever $ do
     aMsg <- WS.receiveData aConnect
     writeLog aInfoChan [ServePoATag] Info $ "Raw msg: " ++ show aMsg ++ "\n"
-    appendFile "netLog.txt" $ B8.unpack aMsg ++ "\n"
     case A.eitherDecodeStrict aMsg of
         Right a -> case a of
             -- REVIEW: Check fair distribution of transactions between nodes
@@ -144,6 +143,7 @@ msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan = f
             aMessage -> do
                 writeLog aInfoChan [ServePoATag] Info $ "Received msg " ++ show aMessage
                 sendMsgToCentralActor ch aNodeType aMessage
+                when (isBlock aMessage) $ appendFile "netLog.txt" $ B8.unpack aMsg ++ "\n"
 
         Left a -> do
             writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ a
