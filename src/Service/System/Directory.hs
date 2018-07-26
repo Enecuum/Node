@@ -6,7 +6,8 @@ module Service.System.Directory (
     getLedgerFilePath,
     getMicroblockFilePath,
     getMacroblockFilePath,
-    getSproutFilePath
+    getSproutFilePath,
+    getLastFilePath
   )where
 
 import           Data.UnixTime
@@ -57,6 +58,11 @@ getSproutFilePath :: IO String
 getSproutFilePath = do
     enecuumDir <- getEnecuumDir
     return (enecuumDir ++ [pathSeparator] ++ "sprout.db")
+
+getLastFilePath :: IO String
+getLastFilePath = do
+    enecuumDir <- getEnecuumDir
+    return (enecuumDir ++ [pathSeparator] ++ "last.db")
 
 createFilesDirectory :: FilePath -> IO ()
 createFilesDirectory path = createDirectoryIfMissing True $ takeDirectory path

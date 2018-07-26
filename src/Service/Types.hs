@@ -318,6 +318,7 @@ data DBPoolDescriptor = DBPoolDescriptor {
   , poolMacroblock  :: Pool Rocks.DB
   -- , poolKeyBlock    :: Pool Rocks.DB
   , poolSprout      :: Pool Rocks.DB
+  , poolLast        :: Pool Rocks.DB
   }
 data BranchOfChain = Main | Sprout deriving (Eq, Generic, Ord, Read, Show)
 data Common = Common {

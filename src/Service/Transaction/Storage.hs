@@ -61,10 +61,11 @@ connectDB = do
   poolLedger      <- fun =<< getLedgerFilePath
   poolMacroblock  <- fun =<< getMacroblockFilePath
   poolSprout      <- fun =<< getSproutFilePath
+  poolLast        <- fun =<< getLastFilePath
   -- putStrLn "DBTransactionException"
   -- sleepMs 5000
   -- throw DBTransactionException
-  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger poolMacroblock poolSprout)
+  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger poolMacroblock poolSprout poolLast)
 
 
 data SuperException = DBTransactionException
@@ -491,11 +492,11 @@ setChain :: Common -> Number -> HashOfKeyBlock -> BranchOfChain -> IO ()
 setChain c@(Common descr i ) aNumber hashOfKeyBlock branch = do
   chain <- getChain c aNumber
   let valueOfChain = funBranch branch $ chain
-  let newChain = if (valueOfChain == Nothing)
-        then case branch of
+  let newChain = case branch of
+        -- if (valueOfChain == Nothing) then
         Main   -> (Just hashOfKeyBlock, snd chain)
         Sprout -> (fst chain, Just hashOfKeyBlock)
-        else throw (ValueOfChainIsNotNothing ("KeyBlockHash is" ++ (show valueOfChain)))
+        -- else throw (ValueOfChainIsNotNothing ("KeyBlockHash is" ++ (show valueOfChain)))
 
   let key = S.encode aNumber
       val = S.encode (newChain :: Chain)
