@@ -212,8 +212,9 @@ loadMacroBlocks
     ->  InChan InfoMsg
     ->  IO Bool
 loadMacroBlocks a1 a2 a3 aNumber (x:xs) aId aInfoChan = do
-    writeLog aInfoChan [SyncTag] Info $ "Loading of macrblock. From " ++ show aId ++ "Block: " ++ show x
+    writeLog aInfoChan [SyncTag] Info $ "Loading of macrblock. From " ++ show aId ++ "Block: " ++ show  x
     aOk <- loadOneMacroBlock a1 a2 a3 ((third x)^.mblocks) aId aInfoChan (second x) (first x)
+    writeLog aInfoChan [SyncTag] Info "Macrblock loaded?"
     if aOk then loadMacroBlocks a1 a2 a3 aNumber xs aId aInfoChan
     else do
         writeLog aInfoChan [SyncTag] Info $ "Delete sprout " ++ show aNumber
@@ -248,9 +249,12 @@ loadOneMacroBlock outSyncChan aDBActorChan aManagerChan (x:xs) aNodeId aInfoChan
     writeLog aInfoChan [SyncTag] Info $ "Loading of microblocks. From " ++ show aNodeId
     sendMsgToNode aManagerChan (MicroblockRequest x) aNodeId
     Response _ aMicroBlockContent <- takeMicroblockResponse outSyncChan
+    writeLog aInfoChan [SyncTag] Info $ "Microblock loaded. From " ++ show aNodeId
     case aMicroBlockContent of
         Just aJustMicroBlockContent -> do
+            writeLog aInfoChan [SyncTag] Info $ "Seting of microblocs:" ++ show aJustMicroBlockContent
             _ <- takeRecords aDBActorChan (SetRestSproutData (aNumber, hashOfKeyBlock,  aJustMicroBlockContent))
+            writeLog aInfoChan [SyncTag] Info $ "Microbloc seted:" ++ show aJustMicroBlockContent
             loadOneMacroBlock outSyncChan aDBActorChan aManagerChan xs aNodeId aInfoChan hashOfKeyBlock aNumber
         Nothing -> return False
 loadOneMacroBlock _ _ _ _ _ _ _ _ = return True
