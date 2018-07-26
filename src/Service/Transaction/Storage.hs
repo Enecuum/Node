@@ -324,6 +324,7 @@ tMacroblock2MacroblockAPI descr (MacroblockBD {..}) = do
              _prevKBlock,
              _nextKBlock = Nothing,
              _difficulty,
+             _height = _number,
              _solver,
              _reward,
              _mblocks = microblocksInfoAPI,
