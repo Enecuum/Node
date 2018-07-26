@@ -19,7 +19,7 @@ import           System.Environment                  (getArgs)
 
 import qualified Network.WebSockets                  as WS
 import           Service.Transaction.TransactionsDAG
-
+import           Service.Sync.SyncJson
 
 
 testMsg :: Value
@@ -230,8 +230,27 @@ main = do
             putStrLn ""
             void . forkIO $ runClient (showHostAddress aHostAddress) (fromEnum aPort) "/" $ \aConnect -> do
                 aNodeId <- connectHowNN "  " (NodeId 1) aConnect
-                --sendMsg :: ToJSON a => WS.Connection -> a -> IO ()
+                let aSendSync aMsg = sendMsg aConnect $ MsgMsgTo (IdFrom (NodeId 1)) (IdTo aNodeId) (toJSON aMsg)
+                    aReciveSync = receiveMsg aConnect
+                        "   Receiving of sync msg..."
+                        "   Received sync msg."
+                    aDecodeSync aMsg = return $ case decode aMsg of
+                        Just aMsgTo@(MsgMsgTo _ _ aValue) -> aValue
+                        _ -> error "it is not the sync msg"
+                void $ do
+                    aSendSync RequestTail
+                    void $ aDecodeSync =<< aReciveSync
+
+                void $ do
+                    aSendSync $ PeekHashKblokRequest 1 2
+                    void $ aDecodeSync =<< aReciveSync
+
+                void $ do
+                    aSendSync $ PeekKeyBlokRequest 1 2
+                    void $ aDecodeSync =<< aReciveSync
                 putMVar testsOk True
+
+
             _ <- takeMVar testsOk
             putStrLn ""
             putStrLn "---------------------------------------"
