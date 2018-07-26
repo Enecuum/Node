@@ -155,7 +155,6 @@ data MacroblockBD = MacroblockBD {
   ,  _nextKBlock  :: Maybe ByteString -- next closed KBlock
   ,  _prevHKBlock :: Maybe ByteString -- real previous
   ,  _difficulty  :: Integer --
-  ,  _height      :: Integer -- block number in the chain
   ,  _solver      :: PublicKey
   ,  _reward      :: Integer
   ,  _time        :: Integer

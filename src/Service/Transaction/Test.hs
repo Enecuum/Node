@@ -26,6 +26,7 @@ import           Service.System.Directory              (getLedgerFilePath,
                                                         getMicroblockFilePath,
                                                         getSproutFilePath,
                                                         getTransactionFilePath)
+import           Service.Transaction.Decode
 import           Service.Transaction.TransactionsDAG   (genNNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair

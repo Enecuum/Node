@@ -11,6 +11,7 @@ import           Service.InfoMsg                  (LogingTag (..), MsgType (..))
 import           Service.Transaction.Balance
 -- import           Service.Transaction.Independent
 import           Data.List
+import           Service.Transaction.Decode
 import           Service.Transaction.Sprout
 import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
@@ -27,18 +28,6 @@ myTail c@(Common _ i) = do
   case hashMaybe of
     Nothing -> throw NoLastKeyBlock
     Just h  -> return (nNumber,h)
-  --     kBlock <- getKeyBlockByHash descr (Hash h) i
-  --     case kBlock Of
-  --       Nothing -> throw NoLastKeyBlock
-  --       Just mb -> return (n, hashOfKeyBlock)
-
-
-  -- case kv of
-  --   Nothing -> throw NoLastKeyBlock
-  --   Just (hashOfKeyBlock, mb)  -> do
-  --     let n =  _number (mb :: MacroblockBD)
-  --     return (n, hashOfKeyBlock)
-
 
 
 peekNPreviousKeyBlocks :: Common -> From -> To -> IO [(Number, HashOfKeyBlock)]
@@ -54,7 +43,7 @@ peekNPreviousKeyBlocks c from to = do
 getKeyBlockSproutData :: Common -> From -> To -> IO [(Number, HashOfKeyBlock, MacroblockBD)]
 getKeyBlockSproutData c@(Common descr i) from to = do
   kv <- peekNPreviousKeyBlocks c from to
-  mb <- mapM (\(_,aHash) -> getKeyBlockByHash descr (Hash aHash) i) kv
+  mb <- mapM (\(_,aHash) -> getKeyBlockByHash descr i (Hash aHash)) kv
   let allMaybe = zipWith (\(aNumber, aHash) aMacroblock -> (aNumber, aHash, aMacroblock)) kv mb
       allJust = filter (\(_,_,v) -> v /= Nothing) allMaybe
       allKeyData = map (\(n,h,m) -> (n, h, fromJust m)) allJust
@@ -96,14 +85,10 @@ isValidKeyBlockSprout c@(Common _ i) okv = do
 
 
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
-setKeyBlockSproutData c@(Common descr i) kv = do
+setKeyBlockSproutData (Common descr i) kv = do
   writeLog i [BDTag] Info $ show $ kv
   mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
   writeLog i [BDTag] Info $ show $ map (tMacroblock2KeyBlockInfo . snd) kv
-  -- writeLog i [BDTag] Info $ "KBlocks was written : " ++ show kv
-  -- read from and write to Sprout Table
-  -- let kvN = map (\(h,m) -> (h, _number (m :: MacroblockBD))) kv
-  -- mapM_ (\(hashOfKeyBlock, aNumber) -> setChain c aNumber hashOfKeyBlock Sprout) kvN
 
 
 getRestSproutData :: Common -> HashOfMicroblock -> IO MicroBlockContent
@@ -143,7 +128,7 @@ deleteSproutData c aNumber = do
 
 deleteSprout :: Common -> (Number, HashOfKeyBlock) -> BranchOfChain -> IO () -- right after foundation
 deleteSprout c@(Common descr i) (aNumber, hashOfKeyBlock) branch = do
-  macroblock <- getKeyBlockByHash descr (Hash hashOfKeyBlock) i
+  macroblock <- getKeyBlockByHash descr i (Hash hashOfKeyBlock)
   case macroblock of
     Nothing -> writeLog i [BDTag] Error ("There is no KeyBlock "  ++ show hashOfKeyBlock)
     Just m -> do
@@ -205,7 +190,7 @@ getClosedMacroblockByHash co hashesOfKeyBlock = do
   where
         findClosedMacroblocks :: Common -> HashOfKeyBlock -> IO (Maybe (HashOfKeyBlock, MacroblockBD))
         findClosedMacroblocks (Common descr i) h = do
-          macroblockMaybe <- getKeyBlockByHash descr (Hash h) i
+          macroblockMaybe <- getKeyBlockByHash descr i (Hash h)
           case macroblockMaybe of
             Nothing -> throw (NoClosedKeyBlockInDB (show h))
             Just j  -> if (checkMacroblockIsClosed j)
