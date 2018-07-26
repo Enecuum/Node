@@ -169,8 +169,10 @@ setSproutAsMain c@(Common descr i) aNumber = do
   writeLog i [BDTag] Info $ "setSproutAsMain: sproutChainClosedKeyBlocks is " ++ show sproutChainClosedKeyBlocks
   -- recalculate ledger
   -- storno
+  writeLog i [BDTag] Info $ "Storno calculate Ledger for " ++ mainChainClosedKeyBlocks
   mapM_ (\(h,m) -> calculateLedger descr i True h m) mainChainClosedKeyBlocks
   -- add closed sprout macroblocks to ledger
+  writeLog i [BDTag] Info $ "Calculate Ledger for sprout: " ++ sproutChainClosedKeyBlocks
   mapM_ (\(h,m) -> calculateLedger descr i False h m) sproutChainClosedKeyBlocks
   -- delete Main chain (right after foundation of main and sprout chain)
   writeLog i [BDTag] Info $ "delete Main chain " ++ show mainChain
