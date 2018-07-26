@@ -428,6 +428,21 @@ updateMacroblockByKeyBlock db i hashOfKeyBlock keyBlockInfo branch = do
     writeKeyBlockNumber (Common db i) $ _number (keyBlockInfo :: KeyBlockInfo)
 
 
+updateMacroblockByMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> BranchOfChain -> IO ()
+updateMacroblockByMacroblock db i hashOfKeyBlock mb  branch = do
+    writeLog i [BDTag] Info $ "Macroblock: " ++ show mb
+    val <- getKeyBlockByHash db i (Hash hashOfKeyBlock)
+    case val of
+      Just j  -> writeLog i [BDTag] Warning $ "Macroblock with hash " ++ show hashOfKeyBlock ++ "is already in the table"
+      Nothing -> do
+        writeMacroblockToDB db i hashOfKeyBlock mb
+        let aNumber = _number (mb  :: MacroblockBD)
+            mes = "going to write number " ++ show aNumber ++ show hashOfKeyBlock ++ show branch
+        writeLog i [BDTag] Info mes
+        setChain (Common db i ) aNumber hashOfKeyBlock branch
+        writeKeyBlockNumber (Common db i) $ _number (mb  :: MacroblockBD)
+
+
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
 writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
   hashPreviousLastKeyBlock <- funR (poolLast desc) lastClosedKeyBlock
