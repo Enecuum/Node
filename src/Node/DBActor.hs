@@ -64,11 +64,17 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
     forever $ readChan aOutChan >>= \case
         MicroblockMsgToDB aMicroblock -> do
             writeLog aInfoCh [BDTag] Info "Recived mickrobloc."
-            addMicroblockToDB descriptor aMicroblock aInfoCh
+            aExeption <- try $ addMicroblockToDB descriptor aMicroblock aInfoCh
+            case aExeption of
+                Right _ -> writeLog aInfoCh [BDTag] Info "Success of setting microblock"
+                Left (e :: SomeException) -> writeLog aInfoCh [BDTag] Info $ "Setting false !!! =" ++ show e
 
         KeyBlockMsgToDB aValue -> do
             writeLog aInfoCh [BDTag] Info "Recived keyBlocks."
-            addKeyBlockToDB descriptor aValue aInfoCh aSyncChan
+            aExeption <- try $ addKeyBlockToDB descriptor aValue aInfoCh aSyncChan
+            case aExeption of
+                Right _ -> writeLog aInfoCh [BDTag] Info "Success of setting keyBlock"
+                Left (e :: SomeException) -> writeLog aInfoCh [BDTag] Info $ "Setting false !!! =" ++ show e
 
         MyTail aMVar -> do
             writeLog aInfoCh [BDTag] Info "My tail request."
