@@ -35,7 +35,7 @@ printBS bs = do
     putStrLn ""
 
 
-connectWithNN :: [Char] -> NodeType -> WS.Connection -> IO NodeId
+connectWithNN :: String -> NodeType -> WS.Connection -> IO NodeId
 connectWithNN aStr aType aConnect = do
     putStrLn $ aStr ++ "Sending of hello request"
     sendMsg aConnect $ ActionConnect aType Nothing
@@ -50,6 +50,21 @@ connectWithNN aStr aType aConnect = do
         _ -> error "FAIL. Error in the parsing!"
     putStrLn $ aStr ++ "received ID = " ++ show aMyNodeId
     return aMyNodeId
+
+
+connectHowNN :: String -> NodeId -> WS.Connection -> IO NodeId
+connectHowNN  aStr aMyNodeId aConnect = do
+    putStrLn $ aStr ++ "Sending of hello request"
+    sendMsg aConnect $ ActionConnect NN (Just aMyNodeId)
+    aMsg <- receiveMsg aConnect
+        (aStr ++ "Receiving of ID...")
+        (aStr ++ "ID received.")
+    aNodeId <- return $ case decode aMsg of
+        Just (ActionConnect NN (Just aNodeId)) -> aNodeId
+        Just _ -> error $ aStr ++ "FAIL. The received msg not a response for connect request! "
+        _ -> error "FAIL. Error in the parsing!"
+    putStrLn $ aStr ++ "received ID = " ++ show aNodeId
+    return aNodeId
 
 
 checkOfPending :: WS.Connection -> IO [Transaction]
@@ -205,6 +220,19 @@ main = do
                     unless (null aTransactions) $  error "   FAIL. Then pending not empty!"
                     putMVar testsOk True
             _ <- takeMVar testsOk
+
+            putStrLn ""
+            putStrLn "-------------"
+            putStrLn "   --------"
+            putStrLn "   Sync Msg"
+            putStrLn "   --------"
+            putStrLn "--------------"
+            putStrLn ""
+            void . forkIO $ runClient (showHostAddress aHostAddress) (fromEnum aPort) "/" $ \aConnect -> do
+                aNodeId <- connectHowNN "  " (NodeId 1) aConnect
+                --sendMsg :: ToJSON a => WS.Connection -> a -> IO ()
+                putMVar testsOk True
+            _ <- takeMVar testsOk
             putStrLn ""
             putStrLn "---------------------------------------"
             putStrLn "   ---------------------------------"
@@ -264,13 +292,13 @@ main = do
             aTrafic <- readFile aFile
             runClient ip 1554 "/" $ socketActor $ \aConnect ->
                 forM_ (lines aTrafic) $ \aMsg -> do
-                    threadDelay 1000
+                    threadDelay 50000
                     WS.sendTextData aConnect $ B8.pack aMsg
         _ -> return ()
 
 socketActor :: (WS.Connection -> IO a) -> WS.Connection -> IO ()
 socketActor aSender aConnect = do
-    WS.sendTextData aConnect $ encode (ActionConnect PoA Nothing)
+    WS.sendTextData aConnect $ encode (ActionConnect All Nothing)
     void $ race (aSender aConnect) (receiver 0)
   where
     receiver :: Int -> IO ()
