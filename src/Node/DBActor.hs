@@ -124,11 +124,17 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
 
         DeleteSproutData arg -> do
             writeLog aInfoCh [BDTag] Info "Delete sprout data request."
-            deleteSproutData aData arg
+            aExeption <- try $ deleteSproutData aData arg
+            case aExeption of
+                Right _ -> writeLog aInfoCh [BDTag] Info "Success of deleting"
+                Left (e :: SomeException) -> writeLog aInfoCh [BDTag] Info $ "Deleting false !!! =" ++ show e
 
         SetSproutAsMain arg -> do
             writeLog aInfoCh [BDTag] Info  "Set sprout as main request."
-            setSproutAsMain aData arg
+            aExeption <- try $ setSproutAsMain aData arg
+            case aExeption of
+                Right _ -> writeLog aInfoCh [BDTag] Info "Success of Set sprout as main"
+                Left (e :: SomeException) -> writeLog aInfoCh [BDTag] Info $ "Set sprout as main false !!! =" ++ show e
 
 
 --
