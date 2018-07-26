@@ -8,7 +8,7 @@ module Service.Transaction.Common
   getAllTransactionsDB,
   getBalanceForKey,
   addMicroblockToDB,
-  addMacroblockToDB,
+  addKeyBlockToDB,
   runLedger,
   rHash,
   getLastTransactions,
@@ -16,7 +16,7 @@ module Service.Transaction.Common
   getChainInfoDB
   )
   where
-import           Service.Transaction.Balance (addMacroblockToDB,
+import           Service.Transaction.Balance (addKeyBlockToDB,
                                               addMicroblockToDB,
                                               getBalanceForKey, runLedger)
 import           Service.Transaction.Decode

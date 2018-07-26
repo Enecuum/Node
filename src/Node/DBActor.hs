@@ -16,7 +16,7 @@ import           Control.Monad
 -- import qualified Data.ByteString                       as B
 import           Service.Chan
 import           Service.Sync.SyncJson
-import           Service.Transaction.Common            (addMacroblockToDB,
+import           Service.Transaction.Common            (addKeyBlockToDB,
                                                         addMicroblockToDB)
 import           Service.Transaction.LedgerSync
 import           Service.Transaction.SproutCommon
@@ -68,7 +68,7 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
 
         KeyBlockMsgToDB aValue -> do
             writeLog aInfoCh [BDTag] Info "Recived keyBlocks."
-            addMacroblockToDB descriptor aValue aInfoCh aSyncChan
+            addKeyBlockToDB descriptor aValue aInfoCh aSyncChan
 
         MyTail aMVar -> do
             writeLog aInfoCh [BDTag] Info "My tail request."

@@ -21,7 +21,7 @@ import           Data.Default                          (def)
 import           Data.Pool
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Service.Types
-
+import           Service.Types.PublicPrivateKeyPair
 
 funW ::  Pool Rocks.DB -> [(DBKey, DBValue)] -> IO ()
 funW db aMapKeyValue = do
@@ -46,7 +46,7 @@ getByHash pool aHash = (\(Hash key) -> funR pool key) aHash
 
 
 
--- Decode
+---- Decode
 -- MacroblockBD
 getKeyBlockByHash :: DBPoolDescriptor -> InChan InfoMsg -> Hash  -> IO (Maybe MacroblockBD)
 getKeyBlockByHash db _ kHash = do
@@ -84,3 +84,12 @@ getChain (Common descr _ ) aNumber = do
     Just m -> case S.decode m :: Either String Chain of
       Left e  -> throw (DecodeException (show e))
       Right r -> return r
+
+--Ledger
+getBalanceForKey :: DBPoolDescriptor -> PublicKey -> IO (Maybe Amount)
+getBalanceForKey db key = do
+    val  <- funR (poolLedger db) (S.encode key)
+    case val of Nothing -> return Nothing --putStrLn "There is no such key"
+                Just v  -> case (S.decode v :: Either String Amount ) of
+                    Left e  -> throw (DecodeException (show e))
+                    Right b -> return $ Just b

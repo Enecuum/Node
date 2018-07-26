@@ -43,7 +43,7 @@ data Flag = Port PortNumber | Host HostName | Version | Help
           | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey | PartWallet PartWalletReq
           | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
           | Microblocks | Txs | AllLedger | Kblocks | Chain
-          
+
      deriving (Eq, Ord, Show)
 derive makeIs ''Flag
 
@@ -54,14 +54,14 @@ args = [
 
   , Option ['F'] ["wallets"] (ReqArg WalletsFile "walletsFile") "csv file contains wallets"
   , Option ['S'] ["transactions"] (ReqArg TransactionsFile "transactionsFile") "csv file contains transactions should be sent"
-  , Option ['K'] ["gen-keys"] (ReqArg (KeyGen . read) "keysCount") "generate N key pairs"
+  , Option ['G'] ["gen-keys"] (ReqArg (KeyGen . read) "keysCount") "generate N key pairs"
 
   , Option ['B'] ["get-balance"] (ReqArg (Balance . read) "publicKey") "get balance for public key"
-  , Option ['M'] ["show-my-keys"] (ReqArg ShowKey "wallets") "show my public keys"
+  , Option ['Z'] ["show-my-keys"] (ReqArg ShowKey "wallets") "show my public keys"
 
-  , Option ['U'] ["load-block"] (ReqArg (Block . read) "hash") "get keyblock by hash"
-  , Option ['O'] ["load-microblock"] (ReqArg (MBlock . read) "hash") "get microblock by hash"
-  , Option ['X'] ["get-tx"] (ReqArg (Tx . read) "hash") "get transaction by hash"
+  , Option ['K'] ["load-block"] (ReqArg (Block . read) "hash") "get keyblock by hash"
+  , Option ['M'] ["load-microblock"] (ReqArg (MBlock . read) "hash") "get microblock by hash"
+  , Option ['T'] ["get-tx"] (ReqArg (Tx . read) "hash") "get transaction by hash"
   , Option ['W'] ["load-wallet"] (ReqArg (Wallet . read) "publicKey") "get all transactions for wallet"
   , Option ['Q'] ["load-txs-from-wallet"] (ReqArg (PartWallet . read) "publicKey:offset:count") "get n transactions from k'th tx for given wallet"
   , Option ['I'] ["chain-info"] (NoArg Info) "Get total chain info"
@@ -74,11 +74,11 @@ args = [
   , Option ['H', '?'] ["help"] (NoArg Help) "help"
 
 
-  , Option ['C'] ["get-all-chain"] (NoArg Chain) "load all chain"
-  , Option ['D'] ["get-all-ledger"] (NoArg AllLedger) "load all ledger"
-  , Option ['E'] ["get-all-microblocks"] (NoArg Microblocks) "load all microblocks"
-  , Option ['G'] ["get-all-kblocks"] (NoArg Kblocks) "load all kblocks"
-  , Option ['J'] ["get-all-transactios"] (NoArg Txs) "load all transactions"
+  , Option ['c'] ["get-all-chain"] (NoArg Chain) "load all chain"
+  , Option ['l'] ["get-all-ledger"] (NoArg AllLedger) "load all ledger"
+  , Option ['m'] ["get-all-microblocks"] (NoArg Microblocks) "load all microblocks"
+  , Option ['k'] ["get-all-kblocks"] (NoArg Kblocks) "load all kblocks"
+  , Option ['t'] ["get-all-transactios"] (NoArg Txs) "load all transactions"
   ]
 
 
@@ -273,35 +273,35 @@ getAllChain :: WS.Connection -> IO ()
 getAllChain ch =  do
   result <- runExceptT $ getAllChainRPC ch
   case result of
-    (Left err)   -> putStrLn $ "getAllChain error: " ++ show err 
+    (Left err)    -> putStrLn $ "getAllChain error: " ++ show err
     (Right chain) -> prettyPrint chain
 
 getAllLedger :: WS.Connection -> IO ()
 getAllLedger ch =  do
   result <- runExceptT $ getAllLedgerRPC ch
   case result of
-    (Left err)   -> putStrLn $ "getAllLedger error: " ++ show err 
+    (Left err)     -> putStrLn $ "getAllLedger error: " ++ show err
     (Right ledger) -> prettyPrint ledger
 
 getAllMicroblocks :: WS.Connection -> IO ()
 getAllMicroblocks ch =  do
   result <- runExceptT $ getAllMicroblocksRPC ch
   case result of
-    (Left err)   -> putStrLn $ "getAllMicroblocks error: " ++ show err 
+    (Left err)  -> putStrLn $ "getAllMicroblocks error: " ++ show err
     (Right mbs) -> prettyPrint mbs
 
 getAllKblocks :: WS.Connection -> IO ()
 getAllKblocks ch =  do
   result <- runExceptT $ getAllKblocksRPC ch
   case result of
-    (Left err)   -> putStrLn $ "getAllKblocks error: " ++ show err 
+    (Left err)   -> putStrLn $ "getAllKblocks error: " ++ show err
     (Right kbs) -> prettyPrint $ sortBy (\(_, b1) (_, b2) -> compare (_number (b1 :: MacroblockBD)) (_number (b2 :: MacroblockBD))) kbs
 
 getAllTransactions :: WS.Connection -> IO ()
 getAllTransactions ch =  do
   result <- runExceptT $ getAllTransactionsRPC ch
   case result of
-    (Left err)   -> putStrLn $ "getAllTransactions error: " ++ show err 
+    (Left err)  -> putStrLn $ "getAllTransactions error: " ++ show err
     (Right txs) -> prettyPrint txs
 
 
