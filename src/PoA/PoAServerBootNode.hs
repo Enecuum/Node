@@ -57,12 +57,12 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                     | aFull -> do
                         writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request full list of connections."
                         aConnects <- getRecords aFileServerChan
-                        WS.sendTextData aConnect $ A.encode $ ResponsePotentialConnects aConnects
+                        WS.sendTextData aConnect $ A.encode $ ResponsePotentialConnects $ filter (\(Connect aAdress _) -> aHostAdress /= aAdress ) aConnects
 
                     | otherwise -> do
                         writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request of connections."
                         aConnects <- getRecords aFileServerChan
-                        WS.sendTextData aConnect . A.encode $ ResponsePotentialConnects aConnects
+                        WS.sendTextData aConnect . A.encode $ ResponsePotentialConnects $ filter (\(Connect aAdress _) -> aHostAdress /= aAdress ) aConnects
 
                 ActionAddToConnectList aPort ->
                     void $ tryWriteChan aInChan $ AddConnectToList (Connect aHostAdress aPort)
