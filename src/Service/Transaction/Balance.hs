@@ -12,7 +12,7 @@
 module Service.Transaction.Balance
   ( getBalanceForKey,
     addMicroblockToDB,
-    addMacroblockToDB,
+    addKeyBlockToDB,
     runLedger,
     writeMacroblockToDB,
     writeTransactionDB,
@@ -71,13 +71,7 @@ cReward = 10
 initialAmount :: Amount
 initialAmount = 100
 
-getBalanceForKey :: DBPoolDescriptor -> PublicKey -> IO (Maybe Amount)
-getBalanceForKey db key = do
-    val  <- funR (poolLedger db) (S.encode key)
-    case val of Nothing -> return Nothing --putStrLn "There is no such key"
-                Just v  -> case (S.decode v :: Either String Amount ) of
-                    Left e  -> throw (DecodeException (show e))
-                    Right b -> return $ Just b
+
 
 
 updateBalanceTable :: DBPoolDescriptor -> BalanceTable -> IsStorno -> Transaction -> IO ()
@@ -146,7 +140,7 @@ getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
 checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> Microblock -> HashOfMicroblock -> IO (IsMicroblockNew, IsMacroblockNew, MacroblockBD)
-checkMacroblock db i microblock blockHash = do
+checkMacroblock db i microblock microblockHash = do
     let keyBlockHash = (_keyBlock (microblock :: Microblock))
     mb <- getKeyBlockByHash db i (Hash keyBlockHash)
     let mbUpdated = case mb of
@@ -157,11 +151,10 @@ checkMacroblock db i microblock blockHash = do
         mes = ("length hashes" ++ show(length hashes) ++ " " ++ show hashes)
     writeLog i [BDTag] Info mes
     --Check is Microblock already in MacroblockBD
-    let microblockIsAlreadyInMacroblock = blockHash `elem` hashes
-        mes2 = ("Microblock is already in macroblock: " ++ show microblockIsAlreadyInMacroblock)
-    writeLog i [BDTag] Info mes2
-    if microblockIsAlreadyInMacroblock
-      then return (False, True, mbUpdated)  -- Microblock already in MacroblockBD - Nothing
+    if (microblockHash `elem` hashes) -- microblockIsAlreadyInMacroblock
+      then do
+      writeLog i [BDTag] Info $ "Microblock is already in macroblock: " ++ show True
+      return (False, True, mbUpdated)  -- Microblock already in MacroblockBD - do Nothing
       else return (True, True, mbUpdated)
 
 
@@ -177,11 +170,13 @@ addMicroblockToDB db m i =  do
         goOn = macroblockIsOk macroblock
           where macroblockIsOk (MacroblockBD {..}) = length _mblocks <= length _teamKeys
     writeLog i [BDTag] Info ("MacroblockBD :- length _mblocks <= length _teamKeyss " ++ show (not goOn))
+    writeLog i [BDTag] Info $ "Are we going to process microblock? - " ++ show goOn
     when goOn $ do
         writeLog i [BDTag] Info ("MacroblockBD - New is " ++ show isMacroblockNew)
         writeLog i [BDTag] Info ("Microblock - New is " ++ show isMicroblockNew)
         writeLog i [BDTag] Info ("MacroblockBD closed is " ++ show isMacroblockClosed)
         when (isMacroblockNew && isMicroblockNew) $ do
+          writeMacroblockToDB db i (_keyBlock (m :: Microblock)) macroblock
           writeMicroblockDB db i (tMicroblock2MicroblockBD m)
           writeTransactionDB db i (_transactions m) microblockHash
           -- writeMacroblockToDB db i (_keyBlock (m :: Microblock)) macroblock
@@ -217,7 +212,7 @@ writeMicroblockDB descr i m = do
   writeLog i [BDTag] Info $ "Going to add microblock hashOfMicroblock " ++ show hashOfMicroblock ++ "to key block " ++ show hashKeyBlock
   addMicroblockHashesToMacroBlock descr i hashKeyBlock [hashOfMicroblock]
 
-writeTransactionDB :: DBPoolDescriptor -> InChan InfoMsg -> [Transaction] -> BC.ByteString -> IO ()
+writeTransactionDB :: DBPoolDescriptor -> InChan InfoMsg -> [Transaction] -> HashOfMicroblock -> IO ()
 writeTransactionDB descr aInfoChan txs hashOfMicroblock = do
   let db = poolTransaction descr
       txInfo = \tx1 num -> TransactionInfo tx1 hashOfMicroblock num False
@@ -237,8 +232,8 @@ writeLedgerDB dbLedger aInfoChan bt = do
 
 
 
-addMacroblockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> (InChan SyncEvent, b) -> IO ()
-addMacroblockToDB db (Object aValue) i  aSyncChan = do
+addKeyBlockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> (InChan SyncEvent, b) -> IO ()
+addKeyBlockToDB db (Object aValue) i  aSyncChan = do
   let keyBlock = case parseMaybe (.: "verb") aValue of
         Nothing     -> throw (DecodeException "There is no verb in PoW Key Block")
         Just kBlock -> kBlock :: BC.ByteString --Map T.Text Value
@@ -282,7 +277,7 @@ addMacroblockToDB db (Object aValue) i  aSyncChan = do
                       let mes = "Hashes doesn't much: current hash: " ++ show h ++ "previous hash: " ++ show prev_hash
                       writeLog i [BDTag] Info mes
                       when (j < receivedKeyNumber) $ do startSync
-addMacroblockToDB _ v _ _ = error ("Can not PoW Key Block" ++ show v)
+addKeyBlockToDB _ v _ _ = error ("Can not PoW Key Block" ++ show v)
 
 
 
