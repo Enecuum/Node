@@ -102,7 +102,7 @@ getBalanceForKey db key = do
 --Last Number
 getLastKeyBlockNumber :: Common -> IO (Maybe Number)
 getLastKeyBlockNumber c@(Common descr i) = do
-  value <- funR (poolSprout descr) lastKeyBlock
+  value <- funR (poolLast descr) lastKeyBlock
   case value of
     Nothing -> return Nothing
     Just j -> case S.decode j :: Either String Number of
