@@ -72,29 +72,34 @@ initialAmount = 100
 
 
 
-updateBalanceTable :: DBPoolDescriptor -> BalanceTable -> IsStorno -> Transaction -> IO ()
-updateBalanceTable db ht isStorno t@(Transaction fromKey toKey am _ _ _ _) = do
+updateBalanceTable :: DBPoolDescriptor -> InChan InfoMsg -> BalanceTable -> IsStorno -> Transaction -> IO ()
+updateBalanceTable db i ht isStorno t@(Transaction fromKey toKey am _ _ _ _) = do
   v1 <- H.lookup ht $ fromKey
   v2 <- H.lookup ht $ toKey
   let tKey = rHashT t
   txI <- getTransactionByHashDB db (Hash tKey)
+  writeLog i [BDTag] Info $ "Transaction " ++ show txI ++ " isStorno " ++ show isStorno
   case (v1,v2) of
     (Nothing, _)       -> do return ()
     (_, Nothing)       -> do return ()
     (Just balanceFrom, Just balanceTo) ->
       if (isStorno == False)
       then when ((balanceFrom - am) > 0) $ do
+        -- writeLog i [BDTag] Info $ "Forward tx: fromKey " ++ show fromKey ++ " toKey " ++ show toKey ++ " - amount " ++ show am
         H.insert ht fromKey (balanceFrom - am)
         H.insert ht toKey (balanceTo + am)
         updateTxStatus tKey txI True
       else do --it is storno transaction
+        -- writeLog i [BDTag] Info $ "Storno tx: fromKey " ++ show fromKey ++ " toKey " ++ show toKey ++ " + amount " ++ show am
         H.insert ht fromKey (balanceFrom + am)
         H.insert ht toKey (balanceTo - am)
         updateTxStatus tKey txI False
   where
      updateTxStatus tKey txI stat = case txI of
          Nothing   -> throw DBTransactionException
-         Just info -> funW (poolTransaction db) [(tKey,  S.encode (info { _accepted = stat}))]
+         Just info -> do
+           -- writeLog i [BDTag] Info $ "Update tx accepted tatus to " ++ show stat
+           funW (poolTransaction db) [(tKey,  S.encode (info { _accepted = stat}))]
 
 
 getBalanceOfKeys :: Pool Rocks.DB -> IsStorno -> [Transaction] -> IO BalanceTable
@@ -126,11 +131,12 @@ getBalanceOfKeys db isStorno tx = do
 
 
 runLedger :: DBPoolDescriptor -> InChan InfoMsg -> IsStorno -> Microblock -> IO ()
-runLedger db aInfoChan isStorno m = do
+runLedger db i isStorno m = do
     let txs = _transactions m
+    writeLog i [BDTag] Info $ "runLedger, isStorno: " ++ show isStorno ++ " for transactions: " ++ show txs
     ht      <- getBalanceOfKeys (poolLedger db) isStorno txs
-    mapM_ (updateBalanceTable db ht isStorno) txs
-    writeLedgerDB (poolLedger db) aInfoChan ht
+    mapM_ (updateBalanceTable db i ht isStorno) txs
+    writeLedgerDB (poolLedger db) i ht
 
 
 getPubKeys :: Transaction -> [PublicKey]
@@ -192,10 +198,10 @@ calculateLedger db i isStorno hashKeyBlock macroblock = do
       sortedM = if (isStorno == False) then sortedMb else reverse sortedMb
   writeLog i [BDTag] Info ("Start calculate Ledger, isStorno "  ++ show isStorno)
   mapM_ (runLedger db i isStorno) (sortedM :: [Microblock])
-  case isStorno of False -> writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = cReward})
-                   True -> do
-                     let aReward = (_reward (macroblock :: MacroblockBD)) - cReward
-                     writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = aReward})
+  -- case isStorno of False -> writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = cReward})
+  --                  True -> do
+  --                    let aReward = (_reward (macroblock :: MacroblockBD)) - cReward
+  --                    writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = aReward})
 
 
 writeMicroblockDB :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO ()

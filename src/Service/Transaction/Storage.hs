@@ -105,8 +105,8 @@ lastClosedKeyBlock = "2dJ6lb9JgyQRac0DAkoqmYmS6ats3tND0gKMLW6x2x8=" :: DBKey
 
 checkMacroblockIsClosed :: MacroblockBD -> InChan InfoMsg -> IO Bool
 checkMacroblockIsClosed MacroblockBD {..} i = do
-  writeLog i [BDTag] Info $ "checkMacroblockIsClosed: length _mblocks " ++ show (length _mblocks)
-  writeLog i [BDTag] Info $ "checkMacroblockIsClosed: length _teamKeys" ++ show (length _teamKeys)
+  -- writeLog i [BDTag] Info $ "checkMacroblockIsClosed: length _mblocks " ++ show (length _mblocks)
+  -- writeLog i [BDTag] Info $ "checkMacroblockIsClosed: length _teamKeys" ++ show (length _teamKeys)
   return $ length _mblocks /= 0 && length _teamKeys == length _mblocks
 
 -- end of the Database structure  section
