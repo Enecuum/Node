@@ -497,7 +497,7 @@ writeKeyBlockNumber :: Common -> Number -> IO ()
 writeKeyBlockNumber (Common descr _) aNumber = do
     funW (poolLast descr) [(lastKeyBlock, S.encode aNumber)]
 
-
+-- ok
 getKeyBlockNumber :: Common -> IO (Maybe Number)
 getKeyBlockNumber c@(Common descr i) = do
   value <- getLastKeyBlockNumber c
@@ -506,8 +506,7 @@ getKeyBlockNumber c@(Common descr i) = do
     Nothing -> do
       let k = tKBIPoW2KBI genesisKeyBlock
           h = getKeyBlockHash genesisKeyBlock
-          mes = "The first time in history, genesis kblock " ++ show h ++ show k
-      writeLog i [BDTag] Info mes
+      writeLog i [BDTag] Info $ "The first time in history, genesis kblock " ++ show h ++ show k
       updateMacroblockByKeyBlock descr i h k Main
       writeLog i [BDTag] Info "Genesis block was written"
       getKeyBlockNumber c

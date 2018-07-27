@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 
 module Service.Transaction.LedgerSync where
 
@@ -21,9 +21,10 @@ import           Service.Types
 
 bdLog i msg = writeLog i [BDTag] Info msg
 
+-- ok
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
 myTail c@(Common _ i) = do
-    exist <- checkThatMicroblocksAndTeamKeysExist c
+    exist     <- checkThatMicroblocksAndTeamKeysExist c
     writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
     curNumber <- getKeyBlockNumber c
     (nNumber, hashMaybe) <- findChain c (fromJust curNumber) Main
@@ -31,7 +32,7 @@ myTail c@(Common _ i) = do
     bdLog i $ "Get number of key block: " ++ show nNumber ++ "Hash: " ++ show hashMaybe
     case hashMaybe of
         Nothing -> throw NoLastKeyBlock
-        Just h  -> return (nNumber,h)
+        Just h  -> return (nNumber, h)
 
 peekNPreviousKeyBlocks :: Common -> From -> To -> IO [(Number, HashOfKeyBlock)]
 peekNPreviousKeyBlocks c from to = do
@@ -159,9 +160,9 @@ setSproutAsMain c@(Common descr i) aNumber = do
     exist <- checkThatMicroblocksAndTeamKeysExist c
     writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
     -- find key blocks which belong to Main chain (right after foundation of main and sprout chain)
-    mainChain <- findWholeChainSince c aNumber Main
-    mainChainKeyBlocks <- getAllMacroblockByHash c $ map snd mainChain
-    sproutChain <- findWholeChainSince c aNumber Sprout
+    mainChain            <- findWholeChainSince c aNumber Main
+    mainChainKeyBlocks   <- getAllMacroblockByHash c $ map snd mainChain
+    sproutChain          <- findWholeChainSince c aNumber Sprout
     sproutChainKeyBlocks <- getAllMacroblockByHash c $ map snd sproutChain
     -- recalculate ledger
     -- storno

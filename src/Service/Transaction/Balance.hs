@@ -196,7 +196,8 @@ calculateLedger db i isStorno _ macroblock = do
   mbWithTx <- mapM (tMicroblockBD2Microblock db i) mbBD
   let sortedMb = sortBy (comparing _sign) (mbWithTx :: [Microblock])
       sortedM = if (isStorno == False) then sortedMb else reverse sortedMb
-  writeLog i [BDTag] Info ("Start calculate Ledger, isStorno "  ++ show isStorno)
+  writeLog i [BDTag] Info $ "calculateLedger: microblockHashes " ++ show sortedM
+  writeLog i [BDTag] Info ("calculateLedger: Start calculate Ledger, isStorno "  ++ show isStorno)
   mapM_ (runLedger db i isStorno) (sortedM :: [Microblock])
   -- case isStorno of False -> writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = cReward})
   --                  True -> do
