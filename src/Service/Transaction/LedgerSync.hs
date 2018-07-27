@@ -180,7 +180,7 @@ setSproutAsMain c@(Common descr i) aNumber = do
   mapM_ (\r -> deleteSprout c r Sprout) mainChain
 
   -- write Last Macroblock
-  let lastClosedKeyBlockSprout = fst $ head sproutChainClosedKeyBlocks
+  let lastClosedKeyBlockSprout = fst $ last sproutChainClosedKeyBlocks
   funW (poolLast descr) [(lastClosedKeyBlock,lastClosedKeyBlockSprout)]
   writeLog i [BDTag] Info ("Write Last Closed Macroblock " ++ show lastClosedKeyBlockSprout ++ "to DB")
 
