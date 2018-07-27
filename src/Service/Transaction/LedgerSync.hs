@@ -161,26 +161,28 @@ setSproutAsMain :: Common -> Number -> IO () -- right after foundation
 setSproutAsMain c@(Common descr i) aNumber = do
   -- find key blocks which belong to Main chain (right after foundation of main and sprout chain)
   mainChain <- findWholeChainSince c aNumber Main
+  writeLog i [BDTag] Info $ "findWholeChainSince: Main since " ++ aNumber
   writeLog i [BDTag] Info $ "setSproutAsMain: main chain is " ++ show mainChain
-  mainChainClosedKeyBlocks <- getClosedMacroblockByHash c $ map snd mainChain
-  writeLog i [BDTag] Info $ "setSproutAsMain: mainChainClosedKeyBlocks is " ++ show mainChainClosedKeyBlocks
+  mainChainKeyBlocks <- getAllMacroblockByHash c $ map snd mainChain
+  writeLog i [BDTag] Info $ "setSproutAsMain: mainChainClosedKeyBlocks is " ++ show mainChainKeyBlocks
   sproutChain <- findWholeChainSince c aNumber Sprout
+  writeLog i [BDTag] Info $ "findWholeChainSince: Main Sprout " ++ aNumber
   writeLog i [BDTag] Info $ "setSproutAsMain: sproutChain is " ++ show sproutChain
-  sproutChainClosedKeyBlocks <- getClosedMacroblockByHash c $ map snd sproutChain
-  writeLog i [BDTag] Info $ "setSproutAsMain: sproutChainClosedKeyBlocks is " ++ show sproutChainClosedKeyBlocks
+  sproutChainKeyBlocks <- getAllMacroblockByHash c $ map snd sproutChain
+  writeLog i [BDTag] Info $ "setSproutAsMain: sproutChainClosedKeyBlocks is " ++ show sproutChainKeyBlocks
   -- recalculate ledger
   -- storno
-  writeLog i [BDTag] Info $ "Storno calculate Ledger for " ++ show mainChainClosedKeyBlocks
-  mapM_ (\(h,m) -> calculateLedger descr i True h m) mainChainClosedKeyBlocks
+  writeLog i [BDTag] Info $ "Storno calculate Ledger for " ++ show mainChainKeyBlocks
+  mapM_ (\(h,m) -> calculateLedger descr i True h m) mainChainKeyBlocks
   -- add closed sprout macroblocks to ledger
-  writeLog i [BDTag] Info $ "Calculate Ledger for sprout: " ++ show sproutChainClosedKeyBlocks
-  mapM_ (\(h,m) -> calculateLedger descr i False h m) sproutChainClosedKeyBlocks
+  writeLog i [BDTag] Info $ "Calculate Ledger for sprout: " ++ show sproutChainKeyBlocks
+  mapM_ (\(h,m) -> calculateLedger descr i False h m) sproutChainKeyBlocks
   -- delete Main chain (right after foundation of main and sprout chain)
   writeLog i [BDTag] Info $ "delete Main chain " ++ show mainChain
   mapM_ (\r -> deleteSprout c r Sprout) mainChain
 
   -- write Last Macroblock
-  let lastClosedKeyBlockSprout = fst $ last sproutChainClosedKeyBlocks
+  let lastClosedKeyBlockSprout = fst $ last sproutChainKeyBlocks
   funW (poolLast descr) [(lastClosedKeyBlock,lastClosedKeyBlockSprout)]
   writeLog i [BDTag] Info ("Write Last Closed Macroblock " ++ show lastClosedKeyBlockSprout ++ "to DB")
 
@@ -192,18 +194,18 @@ setSproutAsMain c@(Common descr i) aNumber = do
 
 
 -- get all closed macroblocks for calculating ledger
-getClosedMacroblockByHash :: Common -> [HashOfKeyBlock] -> IO [(HashOfKeyBlock, MacroblockBD)]
-getClosedMacroblockByHash co hashesOfKeyBlock = do
-  macroblocks <- forM hashesOfKeyBlock $ findClosedMacroblocks co
-  return $ map fromJust $ filter (/= Nothing ) macroblocks
+getAllMacroblockByHash :: Common -> [HashOfKeyBlock] -> IO [(HashOfKeyBlock, MacroblockBD)]
+getAllMacroblockByHash co hashesOfKeyBlock = do
+  forM hashesOfKeyBlock $ findAllMacroblocks co
+  -- return $ map fromJust $ filter (/= Nothing ) macroblocks
   where
-        findClosedMacroblocks :: Common -> HashOfKeyBlock -> IO (Maybe (HashOfKeyBlock, MacroblockBD))
-        findClosedMacroblocks (Common descr i) h = do
+        findAllMacroblocks :: Common -> HashOfKeyBlock -> IO (HashOfKeyBlock, MacroblockBD)
+        findAllMacroblocks (Common descr i) h = do
           macroblockMaybe <- getKeyBlockByHash descr i (Hash h)
           case macroblockMaybe of
             Nothing -> throw (NoKeyBlock (show h))
             Just j  -> do
-              return $ Just (h, j)
+              return $ (h, j)
               -- isMacroblockClosed <- checkMacroblockIsClosed j i
               -- writeLog i [BDTag] Info $ "Macroblock with hash " ++ show h ++ "is closed " ++ show isMacroblockClosed
               -- if isMacroblockClosed
