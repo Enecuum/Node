@@ -132,21 +132,11 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
     aConnectLoop aBootNodeList  = do
         aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
         if null aActualConnects then do
-            writeLog aInfoChan [ConnectingTag] Info "!!! 1 !!!"
             aNumberOfConnects <- takeRecords aConnectsChan NumberConnects
-            writeLog aInfoChan [ConnectingTag] Info "!!! 2 !!!"
             when (aNumberOfConnects == 0) $ aRequestOfPotencialConnects aBootNodeList
-            writeLog aInfoChan [ConnectingTag] Info "!!! 3 !!!"
             aConnects <- takeRecords aConnectsChan ReadRecordsFromFile
-            writeLog aInfoChan [ConnectingTag] Info "!!! 4 !!!"
-            forM_ aConnects (connectToNN aConnectsChan aMyNodeId inChanPending aInfoChan aManagerChan)
-            writeLog aInfoChan [ConnectingTag] Info "!!! 5 !!!"
+            forM_ aConnects (connectToNN aConnectsChan aMyNodeId inChanPending aInfoChan aManagerChan (fst aSyncChan))
             C.threadDelay $ 2 * sec
-            writeLog aInfoChan [ConnectingTag] Info "!!! 6 !!!"
-            writeInChan (fst aSyncChan) RestartSync
-            writeLog aInfoChan [ConnectingTag] Info "!!! 7 !!!"
-            C.threadDelay $ 2*sec
-            writeLog aInfoChan [ConnectingTag] Info "!!! 8 !!!"
             aConnectLoop aBootNodeList
         else do
             C.threadDelay $ 10 * sec
@@ -184,22 +174,6 @@ findBeforeFork n aId outSyncChan aDBActorChan aManagerChan aInfoChan = do
     then return n
     else findBeforeFork (n-1) aId outSyncChan aDBActorChan aManagerChan aInfoChan
 
-
--- загрузить длинны всех цепочек у соседей
-requestOfAllTails :: OutChan SyncEvent -> InChan MsgToCentralActor -> InChan InfoMsg -> IO [Response (Number, Maybe HashOfKeyBlock)]
-requestOfAllTails outSyncChan aManagerChan aLogChan = do
-    writeLog aLogChan [SyncTag, InitTag] Info "Init. request of all tails"
-    aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
-    writeLog aLogChan [SyncTag] Info $ "Actual connects: " ++ show aActualConnects
-    forM_ aActualConnects $ \(ActualConnectInfo aNodeId aNodeType _) ->
-        when (aNodeType == NN) $ sendMsgToNode aManagerChan RequestTail aNodeId
-
-    -- FIXME: If somebody doesn't answer!!!
-    writeLog aLogChan [SyncTag] Info $ "Reciving a tails"
-    forM aActualConnects $ \_ -> do
-        aTail <- takeResponseTail outSyncChan aLogChan
-        writeLog aLogChan [SyncTag] Info $ "Recived a tail:" ++ show aTail
-        return aTail
 
 -- загрузить микроблоки
 loadMacroBlocks
@@ -281,36 +255,6 @@ loadBlocks outSyncChan aDBActorChan aManagerChan aFrom aTo aId aInfoChan = do
         loadMacroBlocks outSyncChan aDBActorChan aManagerChan aFrom aListOfBlocks aId aInfoChan
 
 
-
-
--- синхронизация
-syncProcess :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> InChan InfoMsg -> IO ()
-syncProcess outSyncChan aDBActorChan aManagerChan aInfoChan = do
-    writeLog aInfoChan [SyncTag, InitTag] Info "Init. Process of syncronization."
-    allTails <- requestOfAllTails outSyncChan aManagerChan aInfoChan
-    writeLog aInfoChan [SyncTag] Info $ "Received all tails: " ++ show allTails
-    let maxTails = reverse $ sortOn takeTailNum allTails
-    syncNeighbors outSyncChan aDBActorChan aManagerChan maxTails aInfoChan
-
-
--- пройти по списку соседей
-syncNeighbors :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> [Response (Number, Maybe HashOfKeyBlock)] -> InChan InfoMsg -> IO ()
-syncNeighbors outSyncChan aDBActorChan aManagerChan (x:xs) aInfoChan = do
-    writeLog aInfoChan [SyncTag] Info $  "Process of syncronization with the " ++ show x
-    aMyTail  <- takeMyTail aDBActorChan
-    writeLog aInfoChan [SyncTag] Info $  "My tail is: " ++ show aMyTail
-    let Response aNodeId (aNumber, _) = x
-    if aMyTail < aNumber then do
-        writeLog aInfoChan [SyncTag] Info $  "My tail is small."
-        lastCommonNumber <- findBeforeFork aMyTail aNodeId outSyncChan aDBActorChan aManagerChan aInfoChan
-        aOk <- loadBlocks outSyncChan aDBActorChan aManagerChan (lastCommonNumber+1) aNumber aNodeId aInfoChan
-        unless aOk $ syncNeighbors outSyncChan aDBActorChan aManagerChan xs aInfoChan
-    else do
-        writeLog aInfoChan [SyncTag] Info $  "My tail is big."
-
-syncNeighbors _ _ _ _ _ = return ()
-
-
 syncServer :: (InChan SyncEvent, OutChan SyncEvent) -> InChan MsgToDB -> InChan MsgToCentralActor -> InChan InfoMsg -> IO b
 syncServer (_, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
     let aLog aMsg = writeLog aInfoChan [SyncTag] Info aMsg
@@ -319,8 +263,10 @@ syncServer (_, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
       aLog $ "Start of syncServer stap."
       readChan outSyncChan >>= \case
         RestartSync -> do
-            aLog "Sync start."
-            syncProcess outSyncChan aDBActorChan aManagerChan aInfoChan
+            aLog "Request of all tails"
+            aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
+            forM_ aActualConnects $ \(ActualConnectInfo aNodeId aNodeType _) -> do
+                    when (aNodeType == NN) $ sendMsgToNode aManagerChan RequestTail aNodeId
 
         SyncMsg aNodeId aMsg -> do
             aLog $ "Recived SyncMsg to syncServer: " ++ show aMsg
@@ -335,6 +281,15 @@ syncServer (_, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
                         Nothing     -> do
                             aLog "Empty tail #001"
                             aSend $ StatusSyncMessage "Empty tail" "#001"
+
+                ResponseTail (aNum, aHash) -> do
+                    aLog $ "Recived response tail " ++ show aNum
+                    aMyTail  <- takeMyTail aDBActorChan
+                    aLog $ "My tail is: " ++ show aMyTail
+                    when (aMyTail < aNum) $ do
+                        aLog $ "Start of sync."
+                        lastCommonNumber <- findBeforeFork aMyTail aNodeId outSyncChan aDBActorChan aManagerChan aInfoChan
+                        void $ loadBlocks outSyncChan aDBActorChan aManagerChan (lastCommonNumber+1) aNum aNodeId aInfoChan
 
                 PeekKeyBlokRequest aFrom aTo                -> do
                     aLog "Processing of PeekKeyBlokRequest."
@@ -362,41 +317,15 @@ sendMsgToNode aChan aMsg aId = writeInChan aChan $ SendMsgToNode (toJSON aMsg) (
 
 data Response a = Response NodeId a deriving Show
 
-takeResponseTail :: OutChan SyncEvent -> InChan InfoMsg -> IO (Response (Number, Maybe HashOfKeyBlock))
-takeResponseTail aChan aLog = do
-    writeLog aLog [SyncTag] Info "!!! Init !!! takeResponseTail"
-    readChan aChan >>= \case
-        SyncMsg aId aMsg  -> case aMsg of
-            ResponseTail (aNum, aHash) -> do
-                writeLog aLog [SyncTag] Info "!!! takeResponseTail 1"
-                return $ Response aId (aNum,Just aHash)
-            StatusSyncMessage _ "#001" -> do
-                writeLog aLog [SyncTag] Info "!!! takeResponseTail 2"
-                return $ Response aId (0, Nothing)
-            _                          -> do
-                writeLog aLog [SyncTag] Info "!!! takeResponseTail 3"
-                takeResponseTail aChan aLog
-        _                 -> do
-            writeLog aLog [SyncTag] Info "!!! takeResponseTail 4"
-            takeResponseTail aChan aLog
 
 takePeekKeyBlokResponse     :: OutChan SyncEvent -> InChan InfoMsg -> IO (Response [(Number, HashOfKeyBlock, MacroblockBD)])
 takePeekKeyBlokResponse aChan aLog = do
-    writeLog aLog [SyncTag] Info "!!! Init !!! takePeekKeyBlokResponse"
     readChan aChan >>= \case
         SyncMsg aId aMsg  -> case aMsg of
-            PeekKeyBlokResponse aList  -> do
-                writeLog aLog [SyncTag] Info "takePeekKeyBlokResponse 1"
-                return $ Response aId aList
-            StatusSyncMessage _ "#002" ->  do
-                writeLog aLog [SyncTag] Info "takePeekKeyBlokResponse 2"
-                return $ Response aId []
-            _                          -> do
-                writeLog aLog [SyncTag] Info "takePeekKeyBlokResponse 3"
-                takePeekKeyBlokResponse aChan aLog
-        _                 -> do
-            writeLog aLog [SyncTag] Info "takePeekKeyBlokResponse 4"
-            takePeekKeyBlokResponse aChan aLog
+            PeekKeyBlokResponse aList  -> return $ Response aId aList
+            StatusSyncMessage _ "#002" -> return $ Response aId []
+            _                          -> takePeekKeyBlokResponse aChan aLog
+        _                 -> takePeekKeyBlokResponse aChan aLog
 
 takeMicroblockResponse      :: OutChan SyncEvent -> IO (Response (Maybe MicroBlockContent))
 takeMicroblockResponse aChan = readChan aChan >>= \case
@@ -430,9 +359,10 @@ connectToNN
     ->  InChan PendingAction
     ->  InChan InfoMsg
     ->  InChan MsgToCentralActor
+    ->  InChan SyncEvent
     ->  Connect
     ->  IO ()
-connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aConn@(Connect aIp aPort)= do
+connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aSync aConn@(Connect aIp aPort)  = do
     writeLog aInfoChan [NetLvlTag] Info $ "Try connecting to: "  ++ showHostAddress aIp
     aOk <- try $ runClient (showHostAddress aIp) (fromEnum aPort) "/" $ \aConnect -> do
         writeLog aInfoChan [NetLvlTag] Info $ "Connecting to: "  ++ showHostAddress aIp
@@ -443,6 +373,9 @@ connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aConn@(Connect 
                 | aMyNodeId /= aNodeId -> do
                     (aInpChan, aOutChan) <- newChan 64
                     sendActionToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
+                    void $ C.forkIO $ do
+                        C.threadDelay sec
+                        writeInChan aSync RestartSync
                     void $ race
                         (msgSender ch aMyNodeId aConnect aOutChan)
                         (msgReceiver ch aInfoChan aFileServerChan NN (IdFrom aNodeId) aConnect inChanPending)
