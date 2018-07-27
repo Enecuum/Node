@@ -142,6 +142,7 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
             aConnectLoop aBootNodeList
         else do
             C.threadDelay $ 10 * sec
+            writeInChan (fst aSyncChan) RestartSync
             aConnectLoop aBootNodeList
 
 
