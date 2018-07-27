@@ -135,14 +135,11 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
             aNumberOfConnects <- takeRecords aConnectsChan NumberConnects
             when (aNumberOfConnects == 0) $ aRequestOfPotencialConnects aBootNodeList
             aConnects <- takeRecords aConnectsChan ReadRecordsFromFile
-            forM_ aConnects (connectToNN aConnectsChan aMyNodeId inChanPending aInfoChan aManagerChan)
+            forM_ aConnects (connectToNN aConnectsChan aMyNodeId inChanPending aInfoChan aManagerChan (fst aSyncChan))
             C.threadDelay $ 2 * sec
-            writeInChan (fst aSyncChan) RestartSync
-            C.threadDelay $ 2*sec
             aConnectLoop aBootNodeList
         else do
             C.threadDelay $ 10 * sec
-            writeInChan (fst aSyncChan) RestartSync
             aConnectLoop aBootNodeList
 
 
@@ -362,9 +359,10 @@ connectToNN
     ->  InChan PendingAction
     ->  InChan InfoMsg
     ->  InChan MsgToCentralActor
+    ->  InChan SyncEvent
     ->  Connect
     ->  IO ()
-connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aConn@(Connect aIp aPort)= do
+connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aSync aConn@(Connect aIp aPort)  = do
     writeLog aInfoChan [NetLvlTag] Info $ "Try connecting to: "  ++ showHostAddress aIp
     aOk <- try $ runClient (showHostAddress aIp) (fromEnum aPort) "/" $ \aConnect -> do
         writeLog aInfoChan [NetLvlTag] Info $ "Connecting to: "  ++ showHostAddress aIp
@@ -375,6 +373,9 @@ connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aConn@(Connect 
                 | aMyNodeId /= aNodeId -> do
                     (aInpChan, aOutChan) <- newChan 64
                     sendActionToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
+                    void $ C.forkIO $ do
+                        C.threadDelay sec
+                        writeInChan aSync RestartSync
                     void $ race
                         (msgSender ch aMyNodeId aConnect aOutChan)
                         (msgReceiver ch aInfoChan aFileServerChan NN (IdFrom aNodeId) aConnect inChanPending)
