@@ -435,7 +435,8 @@ updateMacroblockByMacroblock db i hashOfKeyBlock mb  branch = do
     case val of
       Just j  -> writeLog i [BDTag] Warning $ "Macroblock with hash " ++ show hashOfKeyBlock ++ "is already in the table"
       Nothing -> do
-        writeMacroblockToDB db i hashOfKeyBlock mb
+        -- writeMacroblockToDB db i hashOfKeyBlock mb
+        writeMacroblockSprout db i hashOfKeyBlock mb
         let aNumber = _number (mb  :: MacroblockBD)
             mes = "going to write number " ++ show aNumber ++ show hashOfKeyBlock ++ show branch
         writeLog i [BDTag] Info mes
@@ -443,16 +444,25 @@ updateMacroblockByMacroblock db i hashOfKeyBlock mb  branch = do
         writeKeyBlockNumber (Common db i) $ _number (mb  :: MacroblockBD)
 
 
+writeMacroblockSprout :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
+writeMacroblockSprout desc a hashOfKeyBlock aMacroblock = do
+  let cKey = hashOfKeyBlock
+      cVal = (S.encode aMacroblock)
+  funW (poolMacroblock desc) [(cKey,cVal)]
+  writeLog a [BDTag] Info ("Write Macroblock " ++ show cKey ++ " " ++ show aMacroblock ++ "to DB")
+
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
 writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
   hashPreviousLastKeyBlock <- funR (poolLast desc) lastClosedKeyBlock
   let cMacroblock = if (checkMacroblockIsClosed aMacroblock == True)
         then (aMacroblock { _prevKBlock = hashPreviousLastKeyBlock }) :: MacroblockBD
         else aMacroblock
+
   let cKey = hashOfKeyBlock
       cVal = (S.encode cMacroblock)
   funW (poolMacroblock desc) [(cKey,cVal)]
   writeLog a [BDTag] Info ("Write Macroblock " ++ show cKey ++ " " ++ show cMacroblock ++ "to DB")
+
 
   -- For closed Macroblock
   when (checkMacroblockIsClosed aMacroblock) $ do

@@ -178,6 +178,12 @@ setSproutAsMain c@(Common descr i) aNumber = do
   -- delete Main chain (right after foundation of main and sprout chain)
   writeLog i [BDTag] Info $ "delete Main chain " ++ show mainChain
   mapM_ (\r -> deleteSprout c r Sprout) mainChain
+
+  -- write Last Macroblock
+  let lastClosedKeyBlockSprout = fst $ head sproutChainClosedKeyBlocks
+  funW (poolLast descr) [(lastClosedKeyBlock,lastClosedKeyBlockSprout)]
+  writeLog i [BDTag] Info ("Write Last Closed Macroblock " ++ show lastClosedKeyBlockSprout ++ "to DB")
+
   -- set SproutChain as MainChain
   writeLog i [BDTag] Info $ "set SproutChain as MainChain " ++ show sproutChain
   mapM_ (\(n,h) -> setChainAndDeleteOther c n h Main) sproutChain
