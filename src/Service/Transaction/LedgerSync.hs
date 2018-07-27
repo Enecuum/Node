@@ -48,8 +48,8 @@ getKeyBlockSproutData c@(Common descr i) from to = do
   let allMaybe = zipWith (\(aNumber, aHash) aMacroblock -> (aNumber, aHash, aMacroblock)) kv mb
       allJust = filter (\(_,_,v) -> v /= Nothing) allMaybe
       allKeyData = map (\(n,h,m) -> (n, h, fromJust m)) allJust
-  exist <- checkThatMicroblocksAndTeamKeysExist c
-  writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
+  -- exist <- checkThatMicroblocksAndTeamKeysExist c
+  -- writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
   return allKeyData
 
 
