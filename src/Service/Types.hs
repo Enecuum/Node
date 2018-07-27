@@ -45,6 +45,7 @@ data CLIException = ValueOfChainIsNotNothing String
                   | NoClosedKeyBlockInDB String
                   | NoKeyBlock String
                   | TransactionChanBusyException
+                  | TransactionInvalidSignatureException
                   | DecodeException String
                   | OtherException
   deriving Show
