@@ -63,7 +63,7 @@ type IsMacroblockNew = Bool
 
 
 cReward :: Integer
-cReward = 10
+cReward = 0
 
 
 initialAmount :: Amount
