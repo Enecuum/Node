@@ -59,32 +59,21 @@ pair2 (_, b, c) = (b, c)
 
 isValidKeyBlockSprout :: Common -> [(Number, HashOfKeyBlock, MacroblockBD)] -> IO Bool
 isValidKeyBlockSprout c@(Common _ i) okv = do
-  exist <- checkThatMicroblocksAndTeamKeysExist c
-  writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
-  bdLog i $ show $ intersperse "" $ map show okv
-  let (numberAfterFoundation, macroblockAfterFoundation) =  head $ map (\(a,_,m) -> (a,m)) okv
-  let mes = "After Foundation on main chain: number: " ++ show numberAfterFoundation ++ "m: " ++ show macroblockAfterFoundation
-  bdLog i $ mes
-  hashMainMaybe <- getM c (numberAfterFoundation - 1)
-  let prevHash = _prevHKBlock (macroblockAfterFoundation :: MacroblockBD)
-  bdLog i $ "Hash of foundation: " ++ show hashMainMaybe
-  bdLog i $ "Prev Hash: " ++ show prevHash
-  let isFoundationOk = hashMainMaybe == prevHash
-  bdLog i $ "isFoundationOk: " ++ show isFoundationOk
-  -- hash of Key Block is real hash
-  let kv = map pair2 okv
-  bdLog i $ "kv: " ++ show kv
-  let fun h m = (h ==) $ getKeyBlockHash $ tKeyBlockToPoWType $ tMacroblock2KeyBlockInfo m
-  let hmm = map (\(h,m) -> (h, m, (fun h m) :: Bool)) kv
-  bdLog i $ "kv: " ++ show hmm
-  let isRealHash = map pair3 hmm
-  bdLog i $ "isRealHash: " ++ show isRealHash
-  let allTrue = and $ isFoundationOk : isRealHash
-  bdLog i $ "allTrue: " ++ show allTrue
-  when (not allTrue) $ do  bdLog i $ concat $ map show isRealHash
-  -- return allTrue
-  bdLog i $ "We will return True in any case! "
-  return True
+    exist <- checkThatMicroblocksAndTeamKeysExist c
+    writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
+    bdLog i $ show $ intersperse "" $ map show okv
+    let (numberAfterFoundation, _, macroblockAfterFoundation):_ = okv
+    hashMainMaybe <- getM c (numberAfterFoundation - 1)
+    let prevHash = _prevHKBlock (macroblockAfterFoundation :: MacroblockBD)
+        isFoundationOk = hashMainMaybe == prevHash
+        -- hash of Key Block is real hash
+        kv = map pair2 okv
+        fun h m = (h ==) $ getKeyBlockHash $ tKeyBlockToPoWType $ tMacroblock2KeyBlockInfo m
+        hmm = map (\(h,m) -> (h, m, (fun h m) :: Bool)) kv
+        isRealHash = map pair3 hmm
+        allTrue = and $ isFoundationOk : isRealHash
+    when (not allTrue) $ do  bdLog i $ concat $ map show isRealHash
+    return allTrue
 
 
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
@@ -131,9 +120,8 @@ setRestSproutData c@(Common descr i) (aNumber, hashOfKeyBlock, (MicroBlockConten
 
 deleteSproutData      :: Common -> Number -> IO () -- right after foundation
 deleteSproutData c aNumber = do
-    let branch = Sprout
-    chain <- findWholeChainSince c aNumber branch
-    mapM_ (\r -> deleteSprout c r branch) chain
+    chain <- findWholeChainSince c aNumber Sprout
+    mapM_ (\r -> deleteSprout c r Sprout) chain
 
 
 deleteSprout :: Common -> (Number, HashOfKeyBlock) -> BranchOfChain -> IO () -- right after foundation
@@ -245,7 +233,10 @@ hashesOfMainChain = [
 
 checkThatMicroblocksAndTeamKeysExist :: Common -> IO (Bool, Bool)
 checkThatMicroblocksAndTeamKeysExist (Common d i) = do
-    mMaybe :: [Maybe MacroblockBD] <- mapM (getKeyBlockByHash d i) $ Hash <$> hashesOfMainChain
+    let hashes = [kBlock1]
+    mMaybe :: [Maybe MacroblockBD] <- mapM (getKeyBlockByHash d i) $ Hash <$> hashes --hashesOfMainChain
     let isMicroblocksThere = (\m -> not . null $ (_mblocks (m :: MacroblockBD)))  <$> catMaybes mMaybe
         isTeamKeysThere    = (\m -> not . null $ (_teamKeys (m :: MacroblockBD))) <$> catMaybes mMaybe
     return (or isMicroblocksThere, or isTeamKeysThere)
+
+kBlock1 = "AAABxBQmBTqnwHo9fh2Q7yXmkjbTdLHbIVuetMGhzQk="
