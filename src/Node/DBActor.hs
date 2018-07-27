@@ -60,81 +60,88 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
             writeInChan aInChan $ KeyBlockMsgToDB val
 
     let aData = Common descriptor aInfoCh
+        aLog aMsg = writeLog aInfoCh [BDTag] Info aMsg
     writeLog aInfoCh [BDTag, InitTag] Info "Init. DBActor started."
     forever $ readChan aOutChan >>= \case
         MicroblockMsgToDB aMicroblock -> do
-            writeLog aInfoCh [BDTag] Info "Recived mickrobloc."
+            aLog "Recived mickrobloc."
             aExeption <- try $ addMicroblockToDB descriptor aMicroblock aInfoCh
             case aExeption of
-                Right _ -> writeLog aInfoCh [BDTag] Info "Success of setting microblock"
-                Left (e :: SomeException) -> writeLog aInfoCh [BDTag] Info $ "Setting false !!! =" ++ show e
+                Right _ -> aLog "Success of setting microblock"
+                Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e
 
         KeyBlockMsgToDB aValue -> do
             writeLog aInfoCh [BDTag] Info "Recived keyBlocks."
             aExeption <- try $ addKeyBlockToDB descriptor aValue aInfoCh aSyncChan
             case aExeption of
-                Right _ -> writeLog aInfoCh [BDTag] Info "Success of setting keyBlock"
-                Left (e :: SomeException) -> writeLog aInfoCh [BDTag] Info $ "Setting false !!! =" ++ show e
+                Right _ -> aLog "Success of setting keyBlock"
+                Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e
 
         MyTail aMVar -> do
-            writeLog aInfoCh [BDTag] Info "My tail request."
+            aLog "My tail request."
             aRes <- try $ myTail aData
             case aRes of
                 Right aJustRes            -> putMVar aMVar (Just aJustRes)
                 Left (_ :: SomeException) -> putMVar aMVar Nothing
 
         PeekNKeyBlocks aInt aHashOfKeyBlock aMVar -> do
-            writeLog aInfoCh [BDTag] Info "Peek NKey blocks request."
+            aLog "Peek NKey blocks request."
             peekNPreviousKeyBlocks aData aInt aHashOfKeyBlock >>= putMVar aMVar
 
         GetKeyBlockSproutData aFrom aTo aMVar -> do
-            writeLog aInfoCh [BDTag] Info "Get key block sprout data request."
+            aLog "Get key block sprout data request."
             getKeyBlockSproutData aData aFrom aTo >>= putMVar aMVar
 
 
         SetKeyBlockSproutData aMacroblockBD aMVar -> do
-            writeLog aInfoCh [BDTag] Info "Set key block sprout data request."
-            writeLog aInfoCh [BDTag] Info $ "Setting a blocks: " ++ show aMacroblockBD
-            aIsValid <- isValidKeyBlockSprout aData aMacroblockBD
+            aLog "Set key block sprout data request."
+            aLog $ "Setting a blocks: " ++ show aMacroblockBD
+            _aIsValid <- try $ isValidKeyBlockSprout aData aMacroblockBD
+            aIsValid<- case _aIsValid of
+                Right aBool -> return aBool
+                Left (e :: SomeException) -> do
+                    aLog $ "Validation false: " ++ show e
+                    return False
+
             when aIsValid $ do
                 aExeption <- try $ setKeyBlockSproutData aData $ toPair2 <$> aMacroblockBD
                 case aExeption of
-                    Right _ -> writeLog aInfoCh [BDTag] Info "Success of setting"
-                    Left (e :: SomeException) -> writeLog aInfoCh [BDTag] Info $ "Setting false !!! =" ++ show e
+                    Right _ -> aLog "Success of setting"
+                    Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e
             putMVar aMVar aIsValid
 
         GetRestSproutData aMickroBlockHash aMVar -> do
-            writeLog aInfoCh [BDTag] Info "Get rest sprout data request."
+            aLog "Get rest sprout data request."
             aRes <- try $ getRestSproutData aData aMickroBlockHash
             case aRes of
                 Right aJustRes            -> putMVar aMVar (Just aJustRes)
                 Left (_ :: SomeException) -> putMVar aMVar Nothing
 
         SetRestSproutData aMicroBlockContent@(_,_,a) aMVar -> do
-            writeLog aInfoCh [BDTag] Info "Set rest sprout data request."
+            aLog "Set rest sprout data request."
             aIsValid <- isValidRestOfSprout aData a
             when aIsValid $ do
                 aExeption <- try $ setRestSproutData aData aMicroBlockContent
                 case aExeption of
-                    Right _ -> writeLog aInfoCh [BDTag] Info "Success of setting"
-                    Left (e :: SomeException) -> writeLog aInfoCh [BDTag] Info $ "Setting false !!! =" ++ show e
+                    Right _ -> aLog "Success of setting"
+                    Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e
             putMVar aMVar aIsValid
 
 
 
         DeleteSproutData arg -> do
-            writeLog aInfoCh [BDTag] Info "Delete sprout data request."
+            aLog "Delete sprout data request."
             aExeption <- try $ deleteSproutData aData arg
             case aExeption of
-                Right _ -> writeLog aInfoCh [BDTag] Info "Success of deleting"
+                Right _ -> aLog "Success of deleting"
                 Left (e :: SomeException) -> writeLog aInfoCh [BDTag] Info $ "Deleting false !!! =" ++ show e
 
         SetSproutAsMain arg -> do
-            writeLog aInfoCh [BDTag] Info  "Set sprout as main request."
+            aLog "Set sprout as main request."
             aExeption <- try $ setSproutAsMain aData arg
             case aExeption of
-                Right _ -> writeLog aInfoCh [BDTag] Info "Success of Set sprout as main"
-                Left (e :: SomeException) -> writeLog aInfoCh [BDTag] Info $ "Set sprout as main false !!! =" ++ show e
+                Right _ -> aLog "Success of Set sprout as main"
+                Left (e :: SomeException) -> aLog $ "Set sprout as main false !!! =" ++ show e
 
 
 --

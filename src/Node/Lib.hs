@@ -313,37 +313,42 @@ syncNeighbors _ _ _ _ _ = return ()
 
 syncServer :: (InChan SyncEvent, OutChan SyncEvent) -> InChan MsgToDB -> InChan MsgToCentralActor -> InChan InfoMsg -> IO b
 syncServer (_, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
+    let aLog aMsg = writeLog aInfoChan [SyncTag] Info aMsg
     writeLog aInfoChan [SyncTag, InitTag] Info "Init syncServer"
-    forever $
+    forever $ do
+      aLog $ "Start of syncServer stap."
       readChan outSyncChan >>= \case
-        RestartSync -> syncProcess outSyncChan aDBActorChan aManagerChan aInfoChan
+        RestartSync -> do
+            aLog "Sync start."
+            syncProcess outSyncChan aDBActorChan aManagerChan aInfoChan
 
         SyncMsg aNodeId aMsg -> do
+            aLog $ "Recived SyncMsg to syncServer: " ++ show aMsg
             let aSend amsg = sendMsgToNode aManagerChan amsg aNodeId
             case aMsg of
                 RequestTail                                 -> do
-                    writeLog aInfoChan [SyncTag] Info "Processing of RequestTail."
+                    aLog "Processing of RequestTail."
                     takeRecords aDBActorChan MyTail >>= \case
                         Just aTail  -> do
-                            writeLog aInfoChan [SyncTag] Info $ "aTail " ++ show aTail
+                            aLog $ "aTail " ++ show aTail
                             aSend $ ResponseTail aTail
                         Nothing     -> do
-                            writeLog aInfoChan [SyncTag] Info "Empty tail #001"
+                            aLog "Empty tail #001"
                             aSend $ StatusSyncMessage "Empty tail" "#001"
 
                 PeekKeyBlokRequest aFrom aTo                -> do
-                    writeLog aInfoChan [SyncTag] Info "Processing of PeekKeyBlokRequest."
+                    aLog "Processing of PeekKeyBlokRequest."
                     takeRecords aDBActorChan (GetKeyBlockSproutData aFrom aTo) >>=
                         aSend . PeekKeyBlokResponse
 
                 MicroblockRequest aHash         -> do
-                    writeLog aInfoChan [SyncTag] Info "Processing of MicroblockRequest."
+                    aLog "Processing of MicroblockRequest."
                     takeRecords aDBActorChan (GetRestSproutData aHash) >>= \case
                       Just mblock -> aSend $ MicroblockResponse mblock
                       Nothing     -> aSend $ StatusSyncMessage ("No block with this hash " ++ show aHash ++ " in DB")  "#003"
 
                 PeekHashKblokRequest aFrom aTo -> do
-                    writeLog aInfoChan [SyncTag] Info "Processing of PeekHashKblokRequest."
+                    aLog "Processing of PeekHashKblokRequest."
                     takeRecords aDBActorChan (PeekNKeyBlocks aFrom aTo) >>=
                         aSend . PeekHashKblokResponse
 
