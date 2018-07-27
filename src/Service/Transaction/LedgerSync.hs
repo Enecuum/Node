@@ -89,7 +89,6 @@ setKeyBlockSproutData (Common descr i) kv = do
   writeLog i [BDTag] Info $ show $ kv
   -- mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
   mapM_ (\(h,m) -> updateMacroblockByMacroblock descr i h  m Sprout) kv
-  writeLog i [BDTag] Info $ show $ map (tMacroblock2KeyBlockInfo . snd) kv
 
 
 getRestSproutData :: Common -> HashOfMicroblock -> IO MicroBlockContent
@@ -207,6 +206,7 @@ getAllMacroblockByHash co hashesOfKeyBlock = do
               writeLog i [BDTag] Error $ "NoKeyBlock " ++ show h
               throw $ NoKeyBlock $ show h
             Just j  -> do
+              when (null $ _mblocks (j :: MacroblockBD)) $ writeLog i [BDTag] Warning $ "mblocks is empty for hash: " ++ show h
               return $ (h, j)
               -- isMacroblockClosed <- checkMacroblockIsClosed j i
               -- writeLog i [BDTag] Info $ "Macroblock with hash " ++ show h ++ "is closed " ++ show isMacroblockClosed

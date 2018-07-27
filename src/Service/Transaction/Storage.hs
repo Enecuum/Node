@@ -444,7 +444,7 @@ updateMacroblockByMacroblock db i hashOfKeyBlock mb  branch = do
             mes = "going to write number " ++ show aNumber ++ show hashOfKeyBlock ++ show branch
         writeLog i [BDTag] Info mes
         setChain (Common db i ) aNumber hashOfKeyBlock branch
-        writeKeyBlockNumber (Common db i) $ _number (mb  :: MacroblockBD)
+        -- writeKeyBlockNumber (Common db i) $ _number (mb  :: MacroblockBD)
 
 
 writeMacroblockSprout :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
