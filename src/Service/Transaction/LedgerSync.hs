@@ -87,7 +87,8 @@ isValidKeyBlockSprout c@(Common _ i) okv = do
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
 setKeyBlockSproutData (Common descr i) kv = do
   writeLog i [BDTag] Info $ show $ kv
-  mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
+  -- mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
+  mapM_ (\(h,m) -> updateMacroblockByMacroblock descr i h  m Sprout) kv
   writeLog i [BDTag] Info $ show $ map (tMacroblock2KeyBlockInfo . snd) kv
 
 
@@ -169,8 +170,10 @@ setSproutAsMain c@(Common descr i) aNumber = do
   writeLog i [BDTag] Info $ "setSproutAsMain: sproutChainClosedKeyBlocks is " ++ show sproutChainClosedKeyBlocks
   -- recalculate ledger
   -- storno
+  writeLog i [BDTag] Info $ "Storno calculate Ledger for " ++ show mainChainClosedKeyBlocks
   mapM_ (\(h,m) -> calculateLedger descr i True h m) mainChainClosedKeyBlocks
   -- add closed sprout macroblocks to ledger
+  writeLog i [BDTag] Info $ "Calculate Ledger for sprout: " ++ show sproutChainClosedKeyBlocks
   mapM_ (\(h,m) -> calculateLedger descr i False h m) sproutChainClosedKeyBlocks
   -- delete Main chain (right after foundation of main and sprout chain)
   writeLog i [BDTag] Info $ "delete Main chain " ++ show mainChain

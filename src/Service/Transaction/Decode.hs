@@ -12,16 +12,27 @@
 module Service.Transaction.Decode where
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import qualified Data.Serialize                        as S (Serialize, decode,
-                                                             encode)
-import           Service.InfoMsg                       (InfoMsg (..))
+import qualified Data.Serialize                        as S (decode, encode)
+import           Service.InfoMsg                       (InfoMsg (..),
+                                                        LogingTag (..),
+                                                        MsgType (..))
 -- import           Service.Transaction.Storage
+import           Data.Aeson                            hiding (Error)
+import           Data.Aeson.Types                      (parseMaybe)
+import qualified Data.ByteString.Base64                as Base64
+import qualified Data.ByteString.Char8                 as BC
 import qualified Data.ByteString.Internal              as BSI
 import           Data.Default                          (def)
 import           Data.Pool
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
+import           Node.Data.GlobalLoging
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
+import           Service.Types.SerializeJSON
+
+lastKeyBlock :: DBKey
+lastKeyBlock = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=" :: DBKey
+
 
 funW ::  Pool Rocks.DB -> [(DBKey, DBValue)] -> IO ()
 funW db aMapKeyValue = do
@@ -93,3 +104,41 @@ getBalanceForKey db key = do
                 Just v  -> case (S.decode v :: Either String Amount ) of
                     Left e  -> throw (DecodeException (show e))
                     Right b -> return $ Just b
+
+--Last Number
+getLastKeyBlockNumber :: Common -> IO (Maybe Number)
+getLastKeyBlockNumber (Common descr _) = do
+  value <- funR (poolLast descr) lastKeyBlock
+  case value of
+    Nothing -> return Nothing
+    Just j -> case S.decode j :: Either String Number of
+      Left e  -> throw (DecodeException (show e))
+      Right r -> return $ Just r
+
+
+--KeyBlock
+decodeKeyBlock :: InChan InfoMsg -> Value -> IO KeyBlockInfoPoW
+decodeKeyBlock i (Object aValue) = do
+  let keyBlock = case parseMaybe (.: "verb") aValue of
+        Nothing     -> throw (DecodeException "There is no verb in PoW Key Block")
+        Just kBlock -> kBlock :: BC.ByteString --Map T.Text Value
+  if keyBlock /= "kblock"
+    then throw $ DecodeException $ "Expected kblock, but get: " ++ show keyBlock
+    else do
+    let body = case parseMaybe (.: "body") aValue of
+          Nothing     -> throw (DecodeException "Can not parse body of PoW Key Block ")
+          Just kBlock -> kBlock :: BC.ByteString --BSI.ByteString --KeyBlockInfo --Map T.Text Value
+
+    case Base64.decode body of
+      Left e -> throw (DecodeException (show e))
+      Right r -> do
+        case Data.Aeson.eitherDecodeStrict $ BC.init $ BC.tail r of
+          Left a -> throw (DecodeException $ "There is no PoW Key Block. The error: " ++ a)
+          Right (keyBlockInfo ) -> do
+            -- let aKeyBlock = tKBIPoW2KBI keyBlockInfo
+            --     aKeyBlockHash = getKeyBlockHash keyBlockInfo
+
+            -- writeLog i [KeyBlockTag] Info $ "keyBlockHash: " ++ show aKeyBlockHash
+            writeLog i [KeyBlockTag] Info $ "keyBlockInfo: " ++ show keyBlockInfo
+            return keyBlockInfo
+decodeKeyBlock _ v  = throw $ DecodeException $ "Can not decode PoW Key Block" ++ show v

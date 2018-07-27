@@ -1,4 +1,6 @@
-{-# LANGUAGE OverloadedStrings, LambdaCase, ScopedTypeVariables #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Service.InfoMsg (
   withRate,
@@ -15,19 +17,19 @@ module Service.InfoMsg (
   LogingTag(..)
 )  where
 
-import qualified Data.ByteString.Char8 as BS
-import Network.Socket.ByteString (sendTo)
-import Data.List
-import Node.BaseFunctions
+import qualified Data.ByteString.Char8                 as BS
+import           Data.List
+import           Network.Socket.ByteString             (sendTo)
+import           Node.BaseFunctions
 
-import System.Clock()
-import Service.Network.Base
-import Service.Network.TCP.Client
-import Service.Metrics.Statsd
+import           Service.Metrics.Statsd
+import           Service.Network.Base
+import           Service.Network.TCP.Client
+import           System.Clock                          ()
 
-import Control.Monad (void, forever)
-import              Control.Concurrent.Chan.Unagi.Bounded
-import Control.Exception (try, SomeException)
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Exception                     (SomeException, try)
+import           Control.Monad                         (forever, void)
 
 
 data MsgType = Info | Warning | Error
@@ -40,6 +42,7 @@ data LogingTag
     | ShardingLvlTag
     | NetLvlTag
     | MiningLvlTag
+    | KeyBlockTag
     | ServePoATag
     | ServerBootNodeTag
     | GCTag
@@ -52,9 +55,9 @@ data LogingTag
 
 
 instance Show MsgType where
-    show Info   = "info"
+    show Info    = "info"
     show Warning = "warning"
-    show Error  = "error"
+    show Error   = "error"
 
 
 data InfoMsg = Metric String | Log [LogingTag] MsgType String
