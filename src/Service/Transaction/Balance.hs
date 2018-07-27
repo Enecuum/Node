@@ -193,10 +193,10 @@ calculateLedger db i isStorno hashKeyBlock macroblock = do
       sortedM = if (isStorno == False) then sortedMb else reverse sortedMb
   writeLog i [BDTag] Info ("Start calculate Ledger, isStorno "  ++ show isStorno)
   mapM_ (runLedger db i isStorno) (sortedM :: [Microblock])
-  case isStorno of False -> writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = cReward})
-                   True -> do
-                     let aReward = (_reward (macroblock :: MacroblockBD)) - cReward
-                     writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = aReward})
+  -- case isStorno of False -> writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = cReward})
+  --                  True -> do
+  --                    let aReward = (_reward (macroblock :: MacroblockBD)) - cReward
+  --                    writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = aReward})
 
 
 writeMicroblockDB :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO ()
