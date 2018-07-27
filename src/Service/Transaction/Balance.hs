@@ -189,7 +189,7 @@ addMicroblockToDB db m i =  do
 
 
 calculateLedger :: DBPoolDescriptor -> InChan InfoMsg -> IsStorno -> HashOfKeyBlock -> MacroblockBD -> IO ()
-calculateLedger db i isStorno hashKeyBlock macroblock = do
+calculateLedger db i isStorno _ macroblock = do
   -- get all microblocks for macroblock
   let microblockHashes = _mblocks (macroblock :: MacroblockBD)
   mbBD <- mapM (\h -> getMicroBlockByHashDB db (Hash h))  microblockHashes

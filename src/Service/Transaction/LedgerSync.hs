@@ -85,11 +85,12 @@ isValidKeyBlockSprout c@(Common _ i) okv = do
 
 
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
-setKeyBlockSproutData (Common descr i) kv = do
+setKeyBlockSproutData c@(Common descr i) kv = do
   writeLog i [BDTag] Info $ show $ kv
   -- mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
   mapM_ (\(h,m) -> updateMacroblockByMacroblock descr i h  m Sprout) kv
-
+  mb <- getAllMacroblockByHash c $ map fst kv
+  writeLog i [BDTag,KeyBlockTag] Info $ "After setting to db Macroblocks: " ++ (concat $ map show $ mb)
 
 getRestSproutData :: Common -> HashOfMicroblock -> IO MicroBlockContent
 getRestSproutData (Common descr i) hashOfMicroblock = do
