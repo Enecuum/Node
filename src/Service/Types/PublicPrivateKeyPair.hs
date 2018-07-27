@@ -114,4 +114,4 @@ generateNewRandomAnonymousKeyPair = do
 
 -- | Previous version of function was replaced by more generic function
 getSignature :: (Serialize msg, MonadRandom m) => PrivateKey -> msg -> m ECDSA.Signature
-getSignature priv msg = ECDSA.sign (getPrivateKey priv) MD2 (encode msg)
+getSignature priv msg = ECDSA.sign (getPrivateKey priv) SHA3_256 (encode msg)

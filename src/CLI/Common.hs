@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
+{-# LANGUAGE PackageImports      #-}
 module CLI.Common (
   sendMessageTo,
   sendMessageBroadcast,
@@ -44,6 +44,7 @@ import           System.Random                         (randomRIO)
 
 import           Control.Concurrent.MVar
 import           Node.Node.Types
+import           Node.Crypto                           (verifyEncodeble)
 import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
 import           Service.Transaction.Common            as B (getBalanceForKey,
@@ -145,20 +146,27 @@ getPartTransactions pool key offset aCount _ = try $ do --return $ Left NotImple
 sendTrans :: Transaction -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result Hash)
 sendTrans tx ch aInfoCh = try $ do
   aExp <- (timeout (5 :: Second) $ do
-           sendMetrics tx aInfoCh
-           aMVar <- newEmptyMVar
-           cTime <- getTime
-           writeInChan ch $ NewTransaction (tx { _timestamp = Just cTime } ) aMVar
-           r <- readMVar aMVar
-           print r
-           case r of
-             True -> return $ rHash tx
-             _    -> throw TransactionChanBusyException
+           case _signature tx of
+            Just sign -> 
+                 if verifyEncodeble pk sign (tx {_signature = Nothing})
+                 then do
+                   sendMetrics tx aInfoCh
+                   aMVar <- newEmptyMVar
+                   cTime <- getTime
+                   writeInChan ch $ NewTransaction (tx { _timestamp = Just cTime } ) aMVar
+                   r <- readMVar aMVar
+                   print r
+                   case r of
+                     True -> return $ rHash tx
+                     _    -> throw TransactionChanBusyException
+                 else
+                   throw TransactionInvalidSignatureException
+            _         -> throw TransactionInvalidSignatureException
           )
   case aExp of
     Just h  -> return $ Hash h
     Nothing -> throw TransactionChanBusyException
-
+ where pk = getPublicKey $ uncompressPublicKey $ _owner tx
 
 
 sendNewTrans :: Trans -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result Hash)
