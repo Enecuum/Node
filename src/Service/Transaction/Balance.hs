@@ -85,12 +85,12 @@ updateBalanceTable db i ht isStorno t@(Transaction fromKey toKey am _ _ _ _) = d
     (Just balanceFrom, Just balanceTo) ->
       if (isStorno == False)
       then when ((balanceFrom - am) > 0) $ do
-        writeLog i [BDTag] Info $ "Forward tx: fromKey " ++ show fromKey ++ " toKey " ++ show toKey ++ " - amount " ++ show am
+        -- writeLog i [BDTag] Info $ "Forward tx: fromKey " ++ show fromKey ++ " toKey " ++ show toKey ++ " - amount " ++ show am
         H.insert ht fromKey (balanceFrom - am)
         H.insert ht toKey (balanceTo + am)
         updateTxStatus tKey txI True
       else do --it is storno transaction
-        writeLog i [BDTag] Info $ "Storno tx: fromKey " ++ show fromKey ++ " toKey " ++ show toKey ++ " + amount " ++ show am
+        -- writeLog i [BDTag] Info $ "Storno tx: fromKey " ++ show fromKey ++ " toKey " ++ show toKey ++ " + amount " ++ show am
         H.insert ht fromKey (balanceFrom + am)
         H.insert ht toKey (balanceTo - am)
         updateTxStatus tKey txI False
@@ -98,7 +98,7 @@ updateBalanceTable db i ht isStorno t@(Transaction fromKey toKey am _ _ _ _) = d
      updateTxStatus tKey txI stat = case txI of
          Nothing   -> throw DBTransactionException
          Just info -> do
-           writeLog i [BDTag] Info $ "Update tx accepted tatus to " ++ show stat
+           -- writeLog i [BDTag] Info $ "Update tx accepted tatus to " ++ show stat
            funW (poolTransaction db) [(tKey,  S.encode (info { _accepted = stat}))]
 
 

@@ -161,12 +161,12 @@ setSproutAsMain :: Common -> Number -> IO () -- right after foundation
 setSproutAsMain c@(Common descr i) aNumber = do
   -- find key blocks which belong to Main chain (right after foundation of main and sprout chain)
   mainChain <- findWholeChainSince c aNumber Main
-  writeLog i [BDTag] Info $ "findWholeChainSince: Main since " ++ aNumber
+  writeLog i [BDTag] Info $ "findWholeChainSince: Main since " ++ show aNumber
   writeLog i [BDTag] Info $ "setSproutAsMain: main chain is " ++ show mainChain
   mainChainKeyBlocks <- getAllMacroblockByHash c $ map snd mainChain
   writeLog i [BDTag] Info $ "setSproutAsMain: mainChainClosedKeyBlocks is " ++ show mainChainKeyBlocks
   sproutChain <- findWholeChainSince c aNumber Sprout
-  writeLog i [BDTag] Info $ "findWholeChainSince: Main Sprout " ++ aNumber
+  writeLog i [BDTag] Info $ "findWholeChainSince: Main Sprout " ++ show aNumber
   writeLog i [BDTag] Info $ "setSproutAsMain: sproutChain is " ++ show sproutChain
   sproutChainKeyBlocks <- getAllMacroblockByHash c $ map snd sproutChain
   writeLog i [BDTag] Info $ "setSproutAsMain: sproutChainClosedKeyBlocks is " ++ show sproutChainKeyBlocks
@@ -203,7 +203,9 @@ getAllMacroblockByHash co hashesOfKeyBlock = do
         findAllMacroblocks (Common descr i) h = do
           macroblockMaybe <- getKeyBlockByHash descr i (Hash h)
           case macroblockMaybe of
-            Nothing -> throw (NoKeyBlock (show h))
+            Nothing -> do
+              writeLog i [BDTag] Error $ "NoKeyBlock " ++ show h
+              throw $ NoKeyBlock $ show h
             Just j  -> do
               return $ (h, j)
               -- isMacroblockClosed <- checkMacroblockIsClosed j i
