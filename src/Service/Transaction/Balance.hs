@@ -63,7 +63,7 @@ type IsMacroblockNew = Bool
 
 
 cReward :: Integer
-cReward = 10
+cReward = 0
 
 
 initialAmount :: Amount
@@ -126,11 +126,12 @@ getBalanceOfKeys db isStorno tx = do
 
 
 runLedger :: DBPoolDescriptor -> InChan InfoMsg -> IsStorno -> Microblock -> IO ()
-runLedger db aInfoChan isStorno m = do
+runLedger db i isStorno m = do
     let txs = _transactions m
+    writeLog i [BDTag] Info $ "runLedger, isStorno: " ++ show isStorno ++ " for transactions: " ++ show txs
     ht      <- getBalanceOfKeys (poolLedger db) isStorno txs
     mapM_ (updateBalanceTable db ht isStorno) txs
-    writeLedgerDB (poolLedger db) aInfoChan ht
+    writeLedgerDB (poolLedger db) i ht
 
 
 getPubKeys :: Transaction -> [PublicKey]

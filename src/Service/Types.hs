@@ -43,6 +43,7 @@ data CLIException = ValueOfChainIsNotNothing String
                   | NoHashForNumberMainChain String
                   | NoLastKeyBlock
                   | NoClosedKeyBlockInDB String
+                  | NoKeyBlock String
                   | TransactionChanBusyException
                   | DecodeException String
                   | OtherException
