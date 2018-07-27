@@ -7,6 +7,7 @@
 {-# LANGUAGE PackageImports        #-}
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE LambdaCase            #-}
 
 module Service.Transaction.Storage where
 
@@ -434,25 +435,22 @@ updateMacroblockByKeyBlock db i hashOfKeyBlock keyBlockInfo branch = do
 updateMacroblockByMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> BranchOfChain -> IO ()
 updateMacroblockByMacroblock db i hashOfKeyBlock mb  branch = do
     writeLog i [BDTag] Info $ "Macroblock: " ++ show mb
-    val <- getKeyBlockByHash db i (Hash hashOfKeyBlock)
-    case val of
-      Just j  -> writeLog i [BDTag] Warning $ "Macroblock with hash " ++ show hashOfKeyBlock ++ "is already in the table"
-      Nothing -> do
-        -- writeMacroblockToDB db i hashOfKeyBlock mb
-        writeMacroblockSprout db i hashOfKeyBlock mb
-        let aNumber = _number (mb  :: MacroblockBD)
-            mes = "going to write number " ++ show aNumber ++ show hashOfKeyBlock ++ show branch
-        writeLog i [BDTag] Info mes
-        setChain (Common db i ) aNumber hashOfKeyBlock branch
-        -- writeKeyBlockNumber (Common db i) $ _number (mb  :: MacroblockBD)
+    getKeyBlockByHash db i (Hash hashOfKeyBlock) >>= \case
+        Just _  -> writeLog i [BDTag] Warning $ "Macroblock with hash " ++ show hashOfKeyBlock ++ "is already in the table"
+        Nothing -> do
+            -- writeMacroblockToDB db i hashOfKeyBlock mb
+            writeLog i [BDTag] Info $ "going to write number " ++ show (_number (mb :: MacroblockBD)) ++ show hashOfKeyBlock ++ show branch
+            writeMacroblockSprout db i hashOfKeyBlock mb
+            setChain (Common db i) (_number (mb :: MacroblockBD)) hashOfKeyBlock branch
+            -- writeKeyBlockNumber (Common db i) $ _number (mb  :: MacroblockBD)
 
 
 writeMacroblockSprout :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
 writeMacroblockSprout desc a hashOfKeyBlock aMacroblock = do
-  let cKey = hashOfKeyBlock
-      cVal = (S.encode aMacroblock)
-  funW (poolMacroblock desc) [(cKey,cVal)]
-  writeLog a [BDTag] Info ("Write Macroblock " ++ show cKey ++ " " ++ show aMacroblock ++ "to DB")
+    let cKey = hashOfKeyBlock
+        cVal = (S.encode aMacroblock)
+    funW (poolMacroblock desc) [(cKey,cVal)]
+    writeLog a [BDTag] Info ("Write Macroblock " ++ show cKey ++ " " ++ show aMacroblock ++ "to DB")
 
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
 writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
@@ -496,9 +494,8 @@ writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
 
 
 writeKeyBlockNumber :: Common -> Number -> IO ()
-writeKeyBlockNumber (Common descr _) aNumber= do
-  let value = S.encode aNumber
-  funW (poolLast descr) [(lastKeyBlock, value)]
+writeKeyBlockNumber (Common descr _) aNumber = do
+    funW (poolLast descr) [(lastKeyBlock, S.encode aNumber)]
 
 
 getKeyBlockNumber :: Common -> IO (Maybe Number)

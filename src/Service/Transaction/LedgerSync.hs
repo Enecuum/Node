@@ -23,32 +23,28 @@ bdLog i msg = writeLog i [BDTag] Info msg
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
 myTail c@(Common _ i) = do
-  -- kv <- getLastKeyBlock descr i
-  curNumber <- getKeyBlockNumber c
-  bdLog i $ "Currnet number of key block: " ++ show curNumber
-  (nNumber, hashMaybe) <- findChain c (fromJust curNumber) Main
-  bdLog i $ "Get number of key block: " ++ show nNumber ++ "Hash: " ++ show hashMaybe
-  case hashMaybe of
-    Nothing -> throw NoLastKeyBlock
-    Just h  -> return (nNumber,h)
-
+    exist <- checkThatMicroblocksAndTeamKeysExist c
+    writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
+    curNumber <- getKeyBlockNumber c
+    (nNumber, hashMaybe) <- findChain c (fromJust curNumber) Main
+    bdLog i $ "Currnet number of key block: " ++ show curNumber
+    bdLog i $ "Get number of key block: " ++ show nNumber ++ "Hash: " ++ show hashMaybe
+    case hashMaybe of
+        Nothing -> throw NoLastKeyBlock
+        Just h  -> return (nNumber,h)
 
 peekNPreviousKeyBlocks :: Common -> From -> To -> IO [(Number, HashOfKeyBlock)]
 peekNPreviousKeyBlocks c from to = do
-  let numbers = [from .. to]
-  vM <- mapM (\n -> getM c n) numbers
-  let kvM = zip numbers vM
-      kvJust = filter (\(_,v) -> v /= Nothing) kvM
-      kv = map (\(k,v) -> (k, fromJust v)) kvJust
-  return kv
+    vM <- forM [from..to] $ getM c
+    return [(k, v) | (k, Just v) <- zip [from..to] vM]
 
 
 getKeyBlockSproutData :: Common -> From -> To -> IO [(Number, HashOfKeyBlock, MacroblockBD)]
 getKeyBlockSproutData c@(Common descr i) from to = do
   kv <- peekNPreviousKeyBlocks c from to
   mb <- mapM (\(_,aHash) -> getKeyBlockByHash descr i (Hash aHash)) kv
-  let allMaybe = zipWith (\(aNumber, aHash) aMacroblock -> (aNumber, aHash, aMacroblock)) kv mb
-      allJust = filter (\(_,_,v) -> v /= Nothing) allMaybe
+  let allMaybe   = zipWith (\(aNumber, aHash) aMacroblock -> (aNumber, aHash, aMacroblock)) kv mb
+      allJust    = filter (\(_,_,v) -> v /= Nothing) allMaybe
       allKeyData = map (\(n,h,m) -> (n, h, fromJust m)) allJust
   -- exist <- checkThatMicroblocksAndTeamKeysExist c
   -- writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
@@ -97,7 +93,7 @@ setKeyBlockSproutData c@(Common descr i) kv = do
   writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
   bdLog i $ show $ kv
   -- mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
-  mapM_ (\(h,m) -> updateMacroblockByMacroblock descr i h  m Sprout) kv
+  mapM_ (\(h, m) -> updateMacroblockByMacroblock descr i h  m Sprout) kv
   mb <- getAllMacroblockByHash c $ map fst kv
   writeLog i [BDTag,KeyBlockTag] Info $ "After setting to db Macroblocks: " ++ (concat $ map show $ mb)
 
@@ -176,30 +172,20 @@ setSproutAsMain c@(Common descr i) aNumber = do
     writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
     -- find key blocks which belong to Main chain (right after foundation of main and sprout chain)
     mainChain <- findWholeChainSince c aNumber Main
-    bdLog i $ "findWholeChainSince: Main since " ++ show aNumber
-    bdLog i $ "setSproutAsMain: main chain is " ++ show mainChain
     mainChainKeyBlocks <- getAllMacroblockByHash c $ map snd mainChain
-    bdLog i $ "setSproutAsMain: mainChainClosedKeyBlocks is " ++ show mainChainKeyBlocks
     sproutChain <- findWholeChainSince c aNumber Sprout
-    bdLog i $ "findWholeChainSince: Main Sprout " ++ show aNumber
-    bdLog i $ "setSproutAsMain: sproutChain is " ++ show sproutChain
     sproutChainKeyBlocks <- getAllMacroblockByHash c $ map snd sproutChain
-    bdLog i $ "setSproutAsMain: sproutChainClosedKeyBlocks is " ++ show sproutChainKeyBlocks
     -- recalculate ledger
     -- storno
-    bdLog i $ "Storno calculate Ledger for " ++ show mainChainKeyBlocks
     mapM_ (\(h,m) -> calculateLedger descr i True h m) mainChainKeyBlocks
     -- add closed sprout macroblocks to ledger
-    bdLog i $ "Calculate Ledger for sprout: " ++ show sproutChainKeyBlocks
     mapM_ (\(h,m) -> calculateLedger descr i False h m) sproutChainKeyBlocks
     -- delete Main chain (right after foundation of main and sprout chain)
-    bdLog i $ "delete Main chain " ++ show mainChain
     mapM_ (\r -> deleteSprout c r Sprout) mainChain
 
     -- write Last Macroblock
     let lastClosedKeyBlockSprout = fst $ last sproutChainKeyBlocks
     funW (poolLast descr) [(lastClosedKeyBlock,lastClosedKeyBlockSprout)]
-    bdLog i ("Write Last Closed Macroblock " ++ show lastClosedKeyBlockSprout ++ "to DB")
 
     -- set SproutChain as MainChain
     bdLog i $ "set SproutChain as MainChain " ++ show sproutChain
@@ -258,10 +244,8 @@ hashesOfMainChain = [
 
 
 checkThatMicroblocksAndTeamKeysExist :: Common -> IO (Bool, Bool)
-checkThatMicroblocksAndTeamKeysExist c@(Common d i) = do
-    mMaybe <- mapM (getKeyBlockByHash d i) $ map (\h-> Hash h) hashesOfMainChain
-    let isMicroblocksThere            = map (\j -> not $ null $ _mblocks (j :: MacroblockBD)) (catMaybes mMaybe)
-        isTeamKeysThere               = map (\j -> not $ null $ _teamKeys (j :: MacroblockBD)) (catMaybes mMaybe)
-        isAtLeast1MicroblocksThere    = or isMicroblocksThere
-        isAtLeast1TeamKeysThere       = or isTeamKeysThere
-    return (isAtLeast1MicroblocksThere, isAtLeast1TeamKeysThere)
+checkThatMicroblocksAndTeamKeysExist (Common d i) = do
+    mMaybe :: [Maybe MacroblockBD] <- mapM (getKeyBlockByHash d i) $ Hash <$> hashesOfMainChain
+    let isMicroblocksThere = (\m -> not . null $ (_mblocks (m :: MacroblockBD)))  <$> catMaybes mMaybe
+        isTeamKeysThere    = (\m -> not . null $ (_teamKeys (m :: MacroblockBD))) <$> catMaybes mMaybe
+    return (or isMicroblocksThere, or isTeamKeysThere)
