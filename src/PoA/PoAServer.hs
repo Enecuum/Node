@@ -143,7 +143,7 @@ msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan = f
             aMessage -> do
                 writeLog aInfoChan [ServePoATag] Info $ "Received msg " ++ show aMessage
                 sendMsgToCentralActor ch aNodeType aMessage
-                when (isBlock aMessage) $ appendFile "netLog.txt" $ B8.unpack aMsg ++ "\n"
+                --when (isBlock aMessage) $ appendFile "netLog.txt" $ B8.unpack aMsg ++ "\n"
 
         Left a -> do
             writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ a
