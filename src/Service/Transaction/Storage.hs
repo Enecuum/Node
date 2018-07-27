@@ -103,8 +103,11 @@ lastClosedKeyBlock = "2dJ6lb9JgyQRac0DAkoqmYmS6ats3tND0gKMLW6x2x8=" :: DBKey
 
 
 
-checkMacroblockIsClosed :: MacroblockBD -> Bool
-checkMacroblockIsClosed MacroblockBD {..} = length _mblocks /= 0 && length _teamKeys == length _mblocks
+checkMacroblockIsClosed :: MacroblockBD -> InChan InfoMsg -> IO Bool
+checkMacroblockIsClosed MacroblockBD {..} i = do
+  writeLog i [BDTag] Info $ "checkMacroblockIsClosed: length _mblocks " ++ show (length _mblocks)
+  writeLog i [BDTag] Info $ "checkMacroblockIsClosed: length _teamKeys" ++ show (length _teamKeys)
+  return $ length _mblocks /= 0 && length _teamKeys == length _mblocks
 
 -- end of the Database structure  section
 --------------------------------------
@@ -454,7 +457,8 @@ writeMacroblockSprout desc a hashOfKeyBlock aMacroblock = do
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
 writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
   hashPreviousLastKeyBlock <- funR (poolLast desc) lastClosedKeyBlock
-  let cMacroblock = if (checkMacroblockIsClosed aMacroblock == True)
+  isMacroblockClosed <- checkMacroblockIsClosed aMacroblock a
+  let cMacroblock = if ( isMacroblockClosed == True)
         then (aMacroblock { _prevKBlock = hashPreviousLastKeyBlock }) :: MacroblockBD
         else aMacroblock
 
@@ -465,7 +469,8 @@ writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
 
 
   -- For closed Macroblock
-  when (checkMacroblockIsClosed aMacroblock) $ do
+  isMacroblockClosed <- checkMacroblockIsClosed aMacroblock a
+  when (isMacroblockClosed) $ do
     -- fill _nextKBlock for previous closed Macroblock
     bdKV <- case hashPreviousLastKeyBlock of
       Nothing -> return []

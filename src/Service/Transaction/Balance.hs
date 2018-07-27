@@ -164,8 +164,8 @@ addMicroblockToDB db m i =  do
     writeLog i [BDTag] Info ("New Microblock came" ++ show(microblockHash))
 -- FIX: Write to db atomically
     (isMicroblockNew, isMacroblockNew, macroblock ) <- checkMacroblock db i m microblockHash
-    let isMacroblockClosed = checkMacroblockIsClosed macroblock
-        goOn = macroblockIsOk macroblock
+    isMacroblockClosed <- checkMacroblockIsClosed macroblock i
+    let goOn = macroblockIsOk macroblock
           where macroblockIsOk (MacroblockBD {..}) = length _mblocks <= length _teamKeys
     writeLog i [BDTag] Info ("MacroblockBD :- length _mblocks <= length _teamKeyss " ++ show (not goOn))
     writeLog i [BDTag] Info $ "Are we going to process microblock? - " ++ show goOn

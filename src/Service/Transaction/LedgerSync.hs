@@ -202,6 +202,9 @@ getClosedMacroblockByHash co hashesOfKeyBlock = do
           macroblockMaybe <- getKeyBlockByHash descr i (Hash h)
           case macroblockMaybe of
             Nothing -> throw (NoClosedKeyBlockInDB (show h))
-            Just j  -> if (checkMacroblockIsClosed j)
+            Just j  -> do
+              isMacroblockClosed <- checkMacroblockIsClosed j i
+              writeLog i [BDTag] Info $ "Macroblock with hash " ++ show h ++ "is closed " ++ show isMacroblockClosed
+              if isMacroblockClosed
               then return $ Just (h, j)
               else return Nothing
