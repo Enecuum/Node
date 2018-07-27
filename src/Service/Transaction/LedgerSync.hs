@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedStrings     #-}
 
 module Service.Transaction.LedgerSync where
 
@@ -47,6 +48,8 @@ getKeyBlockSproutData c@(Common descr i) from to = do
   let allMaybe = zipWith (\(aNumber, aHash) aMacroblock -> (aNumber, aHash, aMacroblock)) kv mb
       allJust = filter (\(_,_,v) -> v /= Nothing) allMaybe
       allKeyData = map (\(n,h,m) -> (n, h, fromJust m)) allJust
+  exist <- checkThatMicroblocksAndTeamKeysExist c
+  writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
   return allKeyData
 
 
@@ -58,6 +61,8 @@ pair2 (_, b, c) = (b, c)
 
 isValidKeyBlockSprout :: Common -> [(Number, HashOfKeyBlock, MacroblockBD)] -> IO Bool
 isValidKeyBlockSprout c@(Common _ i) okv = do
+  exist <- checkThatMicroblocksAndTeamKeysExist c
+  writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
   writeLog i [BDTag] Info $ show $ intersperse "" $ map show okv
   let (numberAfterFoundation, macroblockAfterFoundation) =  head $ map (\(a,_,m) -> (a,m)) okv
   let mes = "After Foundation on main chain: number: " ++ show numberAfterFoundation ++ "m: " ++ show macroblockAfterFoundation
@@ -86,6 +91,8 @@ isValidKeyBlockSprout c@(Common _ i) okv = do
 
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
 setKeyBlockSproutData c@(Common descr i) kv = do
+  exist <- checkThatMicroblocksAndTeamKeysExist c
+  writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
   writeLog i [BDTag] Info $ show $ kv
   -- mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
   mapM_ (\(h,m) -> updateMacroblockByMacroblock descr i h  m Sprout) kv
@@ -93,7 +100,9 @@ setKeyBlockSproutData c@(Common descr i) kv = do
   writeLog i [BDTag,KeyBlockTag] Info $ "After setting to db Macroblocks: " ++ (concat $ map show $ mb)
 
 getRestSproutData :: Common -> HashOfMicroblock -> IO MicroBlockContent
-getRestSproutData (Common descr i) hashOfMicroblock = do
+getRestSproutData c@(Common descr i) hashOfMicroblock = do
+  exist <- checkThatMicroblocksAndTeamKeysExist c
+  writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
   microblock <- getMicroBlockByHashDB descr (Hash hashOfMicroblock)
   -- case microblock of Nothing -> throw NoSuchMicroBlockDB
   --                    Just m -> do
@@ -109,6 +118,8 @@ isValidRestOfSprout _ _ = do -- Fix verify transaction signature
 
 setRestSproutData :: Common -> (Number, HashOfKeyBlock, MicroBlockContent) -> IO ()
 setRestSproutData c@(Common descr i) (aNumber, hashOfKeyBlock, (MicroBlockContent mb txInfo )) = do
+  exist <- checkThatMicroblocksAndTeamKeysExist c
+  writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
   -- write MicroBlockContent MicroblockBD [TransactionInfo]
   let tx = map (\t -> _tx (t :: TransactionInfo)) txInfo
   writeTransactionDB descr i tx (rHash mb)
@@ -159,6 +170,8 @@ deleteSprout c@(Common descr i) (aNumber, hashOfKeyBlock) branch = do
 
 setSproutAsMain :: Common -> Number -> IO () -- right after foundation
 setSproutAsMain c@(Common descr i) aNumber = do
+  exist <- checkThatMicroblocksAndTeamKeysExist c
+  writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
   -- find key blocks which belong to Main chain (right after foundation of main and sprout chain)
   mainChain <- findWholeChainSince c aNumber Main
   writeLog i [BDTag] Info $ "findWholeChainSince: Main since " ++ show aNumber
@@ -214,3 +227,38 @@ getAllMacroblockByHash co hashesOfKeyBlock = do
               -- if isMacroblockClosed
               -- then return $ Just (h, j)
               -- else return Nothing
+
+
+hashesOfMainChain :: [HashOfKeyBlock]
+hashesOfMainChain = [
+        "AAAAJt9Ljl9ji7zn8IrdFAdQchCdc8eehUSgu9hIpuw=",
+        "AAABmmtHox4wewnRRXS2RQmLRQNDs8wFaoT5KZKzQW4=",
+        "AAAB7cwLX7POO/iJaqWu4nu+9UXShUx9omSMyg+PLgg=",
+        "AAAA5MrYI4QxCuypJIbVMZeZcafSvp0PjliEV9TgPhg=",
+        "AAABoOLGZEDbGRr5qjbHmQwDM/88pXSe6QE58eOlZGw=",
+        "AAAAWYXuX5TrLwfsE/S0Okn8JCPQxTloc3ITBdWAvRk=",
+        "AAAAYaogybnCMgfqQoplOuVcsRFT67xXQu9aRlCbhIk=",
+        "AAAAM+trVwD0KsiZFqIhPP0MGZ4IQDQn1yb2a+SSado=",
+        "AAAAcXZqxJIRkSE5DM4ahPM+CGtIoNPzZM9qSK4aIRs=",
+        "AAABilkOSyFzaLrXZ9Ejanqea4n2QhBMfuIzq8ZJK7U=",
+        "AAABuriErBpUmHDspdXhIrJFnKZR8/FHdHG7xaL+rUI=",
+        "AAAAohMvatstSzkZnPRPahRe9zH7ljUmcUtoGkwMn9s=",
+        "AAAAsvqGTaTnqwnd/nDbDWJIy8mnw5mKCURRD23ik4k=",
+        "AAAAZa+BtZZGPcaN+Qt11mavtVz4xwQzZAvFaOmO+vg=",
+        "AAAAbkF2CckT1vRRZUCD3B63p0F+gRTCe6ZFUUtC+Pc=",
+        "AAABg5iWZEROysgggHhDW8D3iMbB3VxKH9TzYL+HAkw=",
+        "AAAATyMMCewySferoB3srbbTlh3CWXq9x4AcCTCztCk=",
+        "AAAARby3UVMHB9KTv/7PSUm72dCx4Z8+/I4QeQnbB4M=",
+        "AAAAIZw0eeTP2KJtOMu/AeHjKMXn+44VPFwDX0ELTOw=",
+        "AAAA/Fqzpub6sS8Gt5sxF2U7Atxw/YTEMVAuF9SQ7K4=",
+        "B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw="]
+
+
+checkThatMicroblocksAndTeamKeysExist :: Common -> IO (Bool, Bool)
+checkThatMicroblocksAndTeamKeysExist c = do
+  m <- map snd <$> getAllMacroblockByHash c hashesOfMainChain
+  let isMicroblocksThere = map (\j -> not $ null $ _mblocks (j :: MacroblockBD)) m
+      isAtLeast1MicroblocksThere = or isMicroblocksThere
+      isTeamKeysThere = map (\j -> not $ null $ _teamKeys (j :: MacroblockBD)) m
+      isAtLeast1TeamKeysThere = or isTeamKeysThere
+  return (isAtLeast1MicroblocksThere, isAtLeast1TeamKeysThere)
