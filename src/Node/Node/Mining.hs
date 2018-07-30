@@ -100,8 +100,9 @@ networkNodeStart aSyncChan (_, aOutChan) aMd = do
                         aNetLog "Received key block"
                         void $ tryWriteChan (aData^.valueChan) aKeyBlock
                         void $ C.forkIO $ forM_ (aData^.connects) $ \aNode -> when
-                            (aNode^.nodeType /= NN) $
-                            writeInChan (aNode^.nodeChan) aMsg
+                            (aNode^.nodeType /= NN) $ do
+                                aNetLog "Key block is resended."
+                                writeInChan (aNode^.nodeChan) aMsg
 
                     a -> aNetLog $  show a ++ " not a msg."
 
