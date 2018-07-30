@@ -5,13 +5,16 @@
 module Service.Transaction.LedgerSync where
 
 import           Control.Exception
-import           Control.Monad                    (forM, when)
+import           Control.Monad                         (forM, when)
 import           Data.Maybe
-import qualified Data.Serialize                   as S (encode)
+import qualified Data.Serialize                        as S (encode)
 import           Node.Data.GlobalLoging
-import           Service.InfoMsg                  (LogingTag (..), MsgType (..))
+import           Service.InfoMsg                       (InfoMsg (..),
+                                                        LogingTag (..),
+                                                        MsgType (..))
 import           Service.Transaction.Balance
 -- import           Service.Transaction.Independent
+import           Control.Concurrent.Chan.Unagi.Bounded
 import           Data.List
 import           Service.Transaction.Decode
 import           Service.Transaction.Sprout
@@ -19,16 +22,16 @@ import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Types
 
+
+bdLog :: InChan InfoMsg -> String -> IO ()
 bdLog i msg = writeLog i [BDTag] Info msg
 
--- ok
+
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
 myTail c@(Common _ i) = do
-    exist     <- checkThatMicroblocksAndTeamKeysExist c
-    writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
     curNumber <- getKeyBlockNumber c
     (nNumber, hashMaybe) <- findChain c (fromJust curNumber) Main
-    bdLog i $ "Currnet number of key block: " ++ show curNumber
+    bdLog i $ "Current number of key block: " ++ show curNumber
     bdLog i $ "Get number of key block: " ++ show nNumber ++ "Hash: " ++ show hashMaybe
     mm <- findMicroblocksForMainChain c
     bdLog i $ "findMicroblocksForMainChain: " ++ show mm
@@ -44,15 +47,12 @@ peekNPreviousKeyBlocks c from to = do
 
 getKeyBlockSproutData :: Common -> From -> To -> IO [(Number, HashOfKeyBlock, MacroblockBD)]
 getKeyBlockSproutData c@(Common descr i) from to = do
-  mm <- findMicroblocksForMainChain c
-  bdLog i $ "findMicroblocksForMainChain: " ++ show mm
+  _ <- bdLog i <$> ("findMicroblocksForMainChain: " ++) <$> show <$> findMicroblocksForMainChain c
   kv <- peekNPreviousKeyBlocks c from to
   mb <- mapM (\(_,aHash) -> getKeyBlockByHash descr i (Hash aHash)) kv
   let allMaybe   = zipWith (\(aNumber, aHash) aMacroblock -> (aNumber, aHash, aMacroblock)) kv mb
       allJust    = filter (\(_,_,v) -> v /= Nothing) allMaybe
       allKeyData = map (\(n,h,m) -> (n, h, fromJust m)) allJust
-  -- exist <- checkThatMicroblocksAndTeamKeysExist c
-  -- writeLog i [KeyBlockTag] Info $ "Main chain, mE, tE: " ++ show exist
   return allKeyData
 
 
@@ -64,9 +64,8 @@ pair2 (_, b, c) = (b, c)
 
 isValidKeyBlockSprout :: Common -> [(Number, HashOfKeyBlock, MacroblockBD)] -> IO Bool
 isValidKeyBlockSprout c@(Common _ i) okv = do
-    mm <- findMicroblocksForMainChain c
-    bdLog i $ "findMicroblocksForMainChain: " ++ show mm
-    bdLog i $ show $ intersperse "" $ map show okv
+    _ <- bdLog i <$> ("findMicroblocksForMainChain: " ++) <$> show <$> findMicroblocksForMainChain c
+    _ <- bdLog i $ show $ intersperse "" $ map show okv
     let (numberAfterFoundation, _, macroblockAfterFoundation):_ = okv
     hashMainMaybe <- getM c (numberAfterFoundation - 1)
     let prevHash = _prevHKBlock (macroblockAfterFoundation :: MacroblockBD)
@@ -83,8 +82,7 @@ isValidKeyBlockSprout c@(Common _ i) okv = do
 
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
 setKeyBlockSproutData c@(Common descr i) kv = do
-  mm <- findMicroblocksForMainChain c
-  bdLog i $ "findMicroblocksForMainChain: " ++ show mm
+  _ <- bdLog i <$> ("findMicroblocksForMainChain: " ++) <$> show <$> findMicroblocksForMainChain c
   bdLog i $ show $ kv
   -- mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
   mapM_ (\(h, m) -> updateMacroblockByMacroblock descr i h  m Sprout) kv
@@ -93,8 +91,7 @@ setKeyBlockSproutData c@(Common descr i) kv = do
 
 getRestSproutData :: Common -> HashOfMicroblock -> IO MicroBlockContent
 getRestSproutData c@(Common descr i) hashOfMicroblock = do
-  mm <- findMicroblocksForMainChain c
-  bdLog i $ "findMicroblocksForMainChain: " ++ show mm
+  _ <- bdLog i <$> ("findMicroblocksForMainChain: " ++) <$> show <$> findMicroblocksForMainChain c
 
   microblock <- getMicroBlockByHashDB descr (Hash hashOfMicroblock)
   -- case microblock of Nothing -> throw NoSuchMicroBlockDB
@@ -111,8 +108,7 @@ isValidRestOfSprout _ _ = do -- Fix verify transaction signature
 
 setRestSproutData :: Common -> (Number, HashOfKeyBlock, MicroBlockContent) -> IO ()
 setRestSproutData c@(Common descr i) (aNumber, hashOfKeyBlock, (MicroBlockContent mb txInfo )) = do
-    mm <- findMicroblocksForMainChain c
-    bdLog i $ "findMicroblocksForMainChain: " ++ show mm
+    _ <- bdLog i <$> ("findMicroblocksForMainChain: " ++) <$> show <$> findMicroblocksForMainChain c
     -- write MicroBlockContent MicroblockBD [TransactionInfo]
     let tx = map (\t -> _tx (t :: TransactionInfo)) txInfo
     writeTransactionDB descr i tx (rHash mb)
@@ -214,39 +210,7 @@ getAllMacroblockByHash co hashesOfKeyBlock = do
               -- else return Nothing
 
 
-hashesOfMainChain :: [HashOfKeyBlock]
-hashesOfMainChain = [
-        "AAAAJt9Ljl9ji7zn8IrdFAdQchCdc8eehUSgu9hIpuw=",
-        "AAABmmtHox4wewnRRXS2RQmLRQNDs8wFaoT5KZKzQW4=",
-        "AAAB7cwLX7POO/iJaqWu4nu+9UXShUx9omSMyg+PLgg=",
-        "AAAA5MrYI4QxCuypJIbVMZeZcafSvp0PjliEV9TgPhg=",
-        "AAABoOLGZEDbGRr5qjbHmQwDM/88pXSe6QE58eOlZGw=",
-        "AAAAWYXuX5TrLwfsE/S0Okn8JCPQxTloc3ITBdWAvRk=",
-        "AAAAYaogybnCMgfqQoplOuVcsRFT67xXQu9aRlCbhIk=",
-        "AAAAM+trVwD0KsiZFqIhPP0MGZ4IQDQn1yb2a+SSado=",
-        "AAAAcXZqxJIRkSE5DM4ahPM+CGtIoNPzZM9qSK4aIRs=",
-        "AAABilkOSyFzaLrXZ9Ejanqea4n2QhBMfuIzq8ZJK7U=",
-        "AAABuriErBpUmHDspdXhIrJFnKZR8/FHdHG7xaL+rUI=",
-        "AAAAohMvatstSzkZnPRPahRe9zH7ljUmcUtoGkwMn9s=",
-        "AAAAsvqGTaTnqwnd/nDbDWJIy8mnw5mKCURRD23ik4k=",
-        "AAAAZa+BtZZGPcaN+Qt11mavtVz4xwQzZAvFaOmO+vg=",
-        "AAAAbkF2CckT1vRRZUCD3B63p0F+gRTCe6ZFUUtC+Pc=",
-        "AAABg5iWZEROysgggHhDW8D3iMbB3VxKH9TzYL+HAkw=",
-        "AAAATyMMCewySferoB3srbbTlh3CWXq9x4AcCTCztCk=",
-        "AAAARby3UVMHB9KTv/7PSUm72dCx4Z8+/I4QeQnbB4M=",
-        "AAAAIZw0eeTP2KJtOMu/AeHjKMXn+44VPFwDX0ELTOw=",
-        "AAAA/Fqzpub6sS8Gt5sxF2U7Atxw/YTEMVAuF9SQ7K4=",
-        "B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw="]
-
-
-checkThatMicroblocksAndTeamKeysExist :: Common -> IO (Bool, Bool)
-checkThatMicroblocksAndTeamKeysExist (Common d i) = do
-    let hashes = [kBlock1]
-    mMaybe :: [Maybe MacroblockBD] <- mapM (getKeyBlockByHash d i) $ Hash <$> hashes --hashesOfMainChain
-    let isMicroblocksThere = (\m -> not . null $ (_mblocks (m :: MacroblockBD)))  <$> catMaybes mMaybe
-        isTeamKeysThere    = (\m -> not . null $ (_teamKeys (m :: MacroblockBD))) <$> catMaybes mMaybe
-    return (or isMicroblocksThere, or isTeamKeysThere)
-
+kBlock1 :: HashOfKeyBlock
 kBlock1 = "AAABxBQmBTqnwHo9fh2Q7yXmkjbTdLHbIVuetMGhzQk="
 
 
