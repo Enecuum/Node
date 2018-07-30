@@ -18,9 +18,7 @@ findChain c aNumber branch = do
 
 
 getM :: Common -> Number -> IO (Maybe HashOfKeyBlock)
-getM c aNumber = do
-  chain <- getChain c aNumber
-  return $ fst chain
+getM c aNumber = fst <$> getChain c aNumber
 
 
 findWholeChainSince ::  Common -> Number -> BranchOfChain -> IO [(Number, HashOfKeyBlock)]
