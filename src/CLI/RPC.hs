@@ -19,7 +19,6 @@ import           Network.Socket                        (PortNumber)
 import qualified Network.WebSockets                    as WS
 import           Node.Node.Types
 import           Service.InfoMsg
--- import           Service.Transaction.Storage           (DBPoolDescriptor (..))
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()

@@ -1,4 +1,5 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Service.Metrics.Statsd (
   Stat,
@@ -13,18 +14,18 @@ module Service.Metrics.Statsd (
   set
 ) where
 
-import Data.Time.Units
-import Text.Printf
-import Service.Types.PublicPrivateKeyPair (PublicKey, Amount)
+import           Data.Time.Units
+import           Service.Types.PublicPrivateKeyPair (Amount, PublicKey)
+import           Text.Printf
 
 
 type Stat = String
 data Type = Count | Gauge | Timing | Set
 instance Show Type where
-  show Count = "c"
-  show Gauge = "g"
+  show Count  = "c"
+  show Gauge  = "g"
   show Timing = "ms"
-  show Set = "s"
+  show Set    = "s"
 
 
 class (Show a) => Datagram a where
@@ -37,6 +38,7 @@ instance Datagram Amount
 instance Datagram PublicKey
 instance Datagram String where
    fmtDatagram stat value statType = printf "%s:%s|%s" stat value (show statType)
+
 
 withRate :: (Show a) => a -> String -> String
 withRate rate msg = msg ++ "|@" ++ show rate

@@ -3,23 +3,20 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE LambdaCase                 #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module PoA.Types where
 
 import           Control.Monad.Extra
--- import           Crypto.PubKey.ECC.ECDSA
 import           Data.Aeson
 import qualified Data.ByteString                  as B
 import qualified Data.ByteString.Char8            as CB
--- import           Data.Either
 import           Data.Hex
 import           Data.IP
 import           Data.Maybe
--- import qualified Data.Serialize                   as S
 import           Data.String
 import qualified Data.Text                        as T
 import           Data.Word                        ()
@@ -65,6 +62,7 @@ data NetMessage where
 
 
 data NodeType = PoW | PoA | All | NN deriving (Eq, Show, Ord, Generic)
+
 
 isBlock :: NetMessage -> Bool
 isBlock = \case

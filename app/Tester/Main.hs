@@ -18,8 +18,8 @@ import           Service.Types
 import           System.Environment                  (getArgs)
 
 import qualified Network.WebSockets                  as WS
-import           Service.Transaction.TransactionsDAG
 import           Service.Sync.SyncJson
+import           Service.Transaction.TransactionsDAG
 
 
 testMsg :: Value
@@ -314,6 +314,7 @@ main = do
                     threadDelay 50000
                     WS.sendTextData aConnect $ B8.pack aMsg
         _ -> return ()
+
 
 socketActor :: (WS.Connection -> IO a) -> WS.Connection -> IO ()
 socketActor aSender aConnect = do

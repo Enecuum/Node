@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell, TupleSections #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections   #-}
 module Node.Template.Constructor (
         managerMsgFuncList
     ,   managerMiningMsgList
@@ -21,11 +22,11 @@ module Node.Template.Constructor (
     ,   lensInst
   ) where
 
-import Language.Haskell.TH
-import Control.Monad
-import Lens.Micro
-import Data.Char
-import Data.DoList (item, toList, DoListM)
+import           Control.Monad
+import           Data.Char
+import           Data.DoList         (DoListM, item, toList)
+import           Language.Haskell.TH
+import           Lens.Micro
 
 
 managerMsgFuncList, managerMiningMsgList, managerBootNodeMsgList ::
@@ -77,6 +78,7 @@ managerMiningMsgListData = toList $ do
     "sendRawData"                   +: [["B.ByteString"]]
     "sendTransactionToPublicator"   +: [["Transaction"]]
     "resendTransactionToPublicator" +: []
+
 
 managerBootNodeMsgListData :: [(Bool, String, [[String]])]
 managerBootNodeMsgListData = toList $ do
@@ -230,7 +232,7 @@ foldTypeList t = foldl1 appT (conT.mkName <$> t)
 
 
 appArrowT :: [TypeQ] -> TypeQ
-appArrowT [t] = t
+appArrowT [t]    = t
 appArrowT (t:xs) = appT (appT arrowT t) (appArrowT xs)
 appArrowT []     = error "Template.Constructor: appArrowT"
 

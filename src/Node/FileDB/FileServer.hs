@@ -1,15 +1,12 @@
-{-# LANGUAGE
-        LambdaCase
-    ,   ViewPatterns
-    ,   MultiWayIf
-    ,   ScopedTypeVariables
-    ,   MultiParamTypeClasses
-    ,   FlexibleContexts
-    ,   PatternSynonyms
-    ,   FlexibleInstances
-    ,   TemplateHaskell
-    ,   GADTs
-  #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiWayIf            #-}
+{-# LANGUAGE PatternSynonyms       #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TemplateHaskell       #-}
 
 module Node.FileDB.FileServer (
         startFileServer
@@ -17,11 +14,11 @@ module Node.FileDB.FileServer (
     ,   FileActorRequest(..)
   ) where
 
-import              Control.Concurrent.MVar
-import              Control.Concurrent.Chan.Unagi.Bounded
-import qualified    Data.Set as S
-import              Service.Network.Base
-import              Service.Chan
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Concurrent.MVar
+import qualified Data.Set                              as S
+import           Service.Chan
+import           Service.Network.Base
 
 
 data FileActorRequest where

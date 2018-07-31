@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE PackageImports      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module CLI.Common (
   sendMessageTo,
   sendMessageBroadcast,
@@ -43,8 +43,8 @@ import           Data.Time.Units
 import           System.Random                         (randomRIO)
 
 import           Control.Concurrent.MVar
-import           Node.Node.Types
 import           Node.Crypto                           (verifyEncodeble)
+import           Node.Node.Types
 import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
 import           Service.Transaction.Common            as B (getBalanceForKey,
@@ -147,7 +147,7 @@ sendTrans :: Transaction -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Re
 sendTrans tx ch aInfoCh = try $ do
   aExp <- (timeout (5 :: Second) $ do
            case _signature tx of
-            Just sign -> 
+            Just sign ->
                  if verifyEncodeble pk sign (tx {_signature = Nothing})
                  then do
                    sendMetrics tx aInfoCh

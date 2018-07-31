@@ -310,8 +310,6 @@ instance Serialize ChainInfo
 
 
 
-
-
 -- begin of the Connection section
 data DBPoolDescriptor = DBPoolDescriptor {
     poolTransaction :: Pool Rocks.DB

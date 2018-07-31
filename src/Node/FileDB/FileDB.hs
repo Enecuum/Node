@@ -1,4 +1,4 @@
-{-#LANGUAGE ScopedTypeVariables#-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Node.FileDB.FileDB (
         addDataToFile
@@ -7,13 +7,13 @@ module Node.FileDB.FileDB (
     ,   writeDataToFile
 ) where
 
-import Control.Exception
-import Control.Monad
+import           Control.Exception
+import           Control.Monad
 
-import qualified Data.ByteString as B
-import Service.Types
-import Data.Serialize as S
-import System.Directory
+import qualified Data.ByteString   as B
+import           Data.Serialize    as S
+import           Service.Types
+import           System.Directory
 
 
 
@@ -58,7 +58,7 @@ addDataToFile aFilePath aDataList = do
     aOk1 <- try $ forM_ aDataList $ \aData ->
         appendFile aFilePath $ show aData ++ "\n"
     case aOk1 of
-        Right _ -> pure ()
+        Right _                   -> pure ()
         Left (_ :: SomeException) -> writeDataToFile aFilePath aDataList
 
 {-

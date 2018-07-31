@@ -27,23 +27,22 @@ import           PoA.Types
 import           Service.InfoMsg                       as I
 import           Service.Network.Base
 import           Service.Network.WebSockets.Server
-import           Service.Types
+-- import           Service.Types
 import           System.Random.Shuffle
 
 import           Control.Concurrent.Async
 import           Data.Maybe                            ()
 import           Node.Data.Key
 
-{-
-servePoA
-    :: MyNodeId
-    -> PortNumber
-    -> InChan MsgToCentralActor
-    -> InChan InfoMsg
-    -> InChan FileActorRequest
-    -> InChan PendingAction
-    -> IO ()
--}
+
+servePoA :: MyNodeId
+            -> PortNumber
+            -> InChan MsgToCentralActor
+            -> InChan InfoMsg
+            -> InChan FileActorRequest
+            -> InChan PendingAction
+            -> InChan B8.ByteString
+            -> IO ()
 servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan inChanPending aInChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. servePoA: a port is " ++ show aRecivePort
@@ -89,16 +88,17 @@ msgSender :: ToJSON a1 =>
                    -> NodeId -> WS.Connection -> OutChan a1 -> IO a2
 msgSender ch aId aConnect aNewChan = forever (WS.sendTextData aConnect . A.encode =<< readChan aNewChan)
     `finally` writeChan ch (NodeIsDisconnected aId)
-{-
+
+
 msgReceiver :: InChan MsgToCentralActor
-                     -> InChan InfoMsg
-                     -> InChan FileActorRequest
-                     -> NodeType
-                     -> IdFrom
-                     -> WS.Connection
-                     -> InChan PendingAction
-                     -> IO b
-                     -}
+               -> InChan InfoMsg
+               -> InChan FileActorRequest
+               -> NodeType
+               -> IdFrom
+               -> WS.Connection
+               -> InChan PendingAction
+               -> InChan B8.ByteString
+               -> IO b
 msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan aInChan = forever $ do
     aMsg <- WS.receiveData aConnect
     writeLog aInfoChan [ServePoATag] Info $ "Raw msg: " ++ show aMsg ++ "\n"

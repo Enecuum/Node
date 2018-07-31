@@ -1,8 +1,8 @@
 module Service.Timer where
 
-import Control.Monad
-import Control.Concurrent
-import Control.Concurrent.Async
+import           Control.Concurrent
+import           Control.Concurrent.Async
+import           Control.Monad
 
 data MetronomeComand = StopMetronome
 
@@ -20,7 +20,6 @@ metronomeLinear aMinT aMaxT aFunc = void $ forkIO $ aLoop 0
         threadDelay aTime
         aFunc
         aLoop (x+1)
-
 
 
 metronome :: Int -> IO () -> IO ()

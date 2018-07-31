@@ -1,20 +1,22 @@
-{-# LANGUAGE ScopedTypeVariables, PackageImports, LambdaCase #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE PackageImports      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Node.Crypto where
 
-import              Node.Data.Key hiding (PublicKey(..))
+import           Node.Data.Key            hiding (PublicKey (..))
 
-import              Crypto.Error
-import              Crypto.Cipher.Types
-import              Crypto.Random.Types
-import "cryptonite" Crypto.Hash
-import              Crypto.PubKey.ECC.DH
-import              Crypto.PubKey.ECC.ECDSA
+import           Crypto.Cipher.Types
+import           Crypto.Error
+import           "cryptonite" Crypto.Hash
+import           Crypto.PubKey.ECC.DH
+import           Crypto.PubKey.ECC.ECDSA
+import           Crypto.Random.Types
 
-import              Crypto.Cipher.AES   (AES256)
-import              Data.ByteArray (unpack)
+import           Crypto.Cipher.AES        (AES256)
+import           Data.ByteArray           (unpack)
 
-import              Data.ByteString (ByteString, pack)
-import              Data.Serialize
+import           Data.ByteString          (ByteString, pack)
+import           Data.Serialize
 {-
 makeConnectingRequest
     ::  MyNodeId

@@ -1,23 +1,26 @@
-{-# LANGUAGE OverloadedStrings, LambdaCase, ScopedTypeVariables #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- Boot node's binaries
 module Main where
 
-import              Control.Monad
-import              Control.Exception(SomeException, try)
-import qualified    Control.Concurrent as C
-import              Control.Concurrent.Chan.Unagi.Bounded
+import qualified Control.Concurrent                    as C
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Exception                     (SomeException, try)
+import           Control.Monad
 
-import              Service.InfoMsg
-import              Service.Network.Base (ConnectInfo(..))
-import              System.Environment
-import              Node.Node.Types
-import              PoA.PoAServerBootNode
-import              Node.FileDB.FileServer
+import           Node.FileDB.FileServer
+import           Node.Node.Types
+import           PoA.PoAServerBootNode
+import           Service.InfoMsg
+import           Service.Network.Base                  (ConnectInfo (..))
+import           System.Environment
 
-import              Network.Socket()
-import qualified    Data.ByteString.Lazy as L
-import              Data.Aeson
+import           Data.Aeson
+import qualified Data.ByteString.Lazy                  as L
+import           Network.Socket                        ()
+
 
 main :: IO ()
 main =  do
