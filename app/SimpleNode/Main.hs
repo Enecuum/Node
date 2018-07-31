@@ -9,7 +9,7 @@ import              System.Environment (getEnv)
 import              Control.Concurrent.Chan.Unagi.Bounded
 
 import              Data.Maybe (fromJust)
-import              Node.Node.Mining
+import              Node.NetLvl.Router 
 import              Node.Node.Types
 import              Node.Data.Key (generateKeyPair)
 import              Service.Types.PublicPrivateKeyPair (fromPublicKey256k1, compressPublicKey)
@@ -44,7 +44,7 @@ main =  do
             (aInfoChanIn, aInfoChanOut) <- newChan 64
             rocksDB   <- connectOrRecoveryConnect
 
-            void $ startNode rocksDB conf aInfoChanIn networkNodeStart $
+            void $ startNode rocksDB conf aInfoChanIn routerActorStart $
                 \(ch, _) _ _ aMyNodeId _ -> do
                     metronomeS 400000 (void $ tryWriteChan ch CleanAction)
 

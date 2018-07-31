@@ -13,7 +13,7 @@ import           Control.Exception
 import           Control.Monad
 import           Data.List.Extra
 import           Node.DBActor
-import           PoA.Pending
+import           Pending
 
 import           Control.Concurrent.Async
 import           Data.Aeson                            as A
@@ -27,11 +27,11 @@ import           Network.Socket                        (tupleToHostAddress)
 import qualified Network.WebSockets                    as WS
 import           Node.Data.GlobalLoging
 import           Node.Data.Key
-import           Node.FileDB.FileServer
+import           Node.Node.DataActor
 import           Node.Node.Config.Make
 import           Node.Node.Types
-import           PoA.PoAServer
-import           PoA.Types
+import           Node.NetLvl.Server
+import           Node.NetLvl.Massages
 import           Service.Chan
 import           Service.InfoMsg                       (InfoMsg)
 import           Service.InfoMsg
@@ -58,7 +58,7 @@ startNode
          -> OutChan (Transaction, MVar Bool)
          -> InChan Microblock
          -> MyNodeId
-         -> InChan FileActorRequest
+         -> InChan (DataActorRequest Connect)
          -> IO a)
      -> IO (InChan MsgToCentralActor, OutChan MsgToCentralActor)
 startNode descrDB buildConf infoCh aManager startDo = do
@@ -83,8 +83,8 @@ startNode descrDB buildConf infoCh aManager startDo = do
 
     md  <- newIORef $ makeNetworkData config infoCh aInFileRequestChan aMicroblockChan aTransactionChan aValueChan
     void . C.forkIO $ pendingActor aPendingChan aMicroblockChan outTransactionChan infoCh
-    void . C.forkIO $ servePoA (config^.myNodeId) poa_p aIn infoCh aInFileRequestChan inChanPending aInLogerChan
-    void . C.forkIO $ startFileServer aOutFileRequestChan
+    void . C.forkIO $ netLvlServer (config^.myNodeId) poa_p aIn infoCh aInFileRequestChan inChanPending aInLogerChan
+    void . C.forkIO $ startDataActor aOutFileRequestChan
     void . C.forkIO $ startDBActor descrDB outMicroblockChan aOutValueChan infoCh aDBActorChan aSyncChan
     void . C.forkIO $ aManager aInputSync managerChan md
     void . C.forkIO $ traficLoger aOutLogerChan
@@ -125,13 +125,13 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
   where
     aRequestOfPotencialConnects = \case -- IDEA: add random to BN list
         (Connect aBNIp aBNPort):aTailOfList -> do
-            aPotencialConnectNumber <- takeRecords aConnectsChan NumberConnects
+            aPotencialConnectNumber <- takeRecords aConnectsChan NumberOfRecords
             when (aPotencialConnectNumber == 0) $ do
                 void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
                     WS.sendTextData aConnect $ encode $ RequestPotentialConnects False
                     aMsg <- WS.receiveData aConnect
                     let ResponsePotentialConnects aConnects = fromJust $ decode aMsg
-                    writeInChan aConnectsChan $ AddToFile aConnects
+                    writeInChan aConnectsChan $ AddRecords aConnects
                 C.threadDelay sec
                 aRequestOfPotencialConnects (aTailOfList ++ [Connect aBNIp aBNPort])
         _       -> return ()
@@ -139,9 +139,9 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
     aConnectLoop aBootNodeList  = do
         aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
         if null aActualConnects then do
-            aNumberOfConnects <- takeRecords aConnectsChan NumberConnects
+            aNumberOfConnects <- takeRecords aConnectsChan NumberOfRecords
             when (aNumberOfConnects == 0) $ aRequestOfPotencialConnects aBootNodeList
-            aConnects <- takeRecords aConnectsChan ReadRecordsFromFile
+            aConnects <- takeRecords aConnectsChan ReadRecords
             forM_ aConnects (connectToNN aConnectsChan aMyNodeId inChanPending aInfoChan aManagerChan (fst aSyncChan) aInLogerChan)
             C.threadDelay $ 2 * sec
             aConnectLoop aBootNodeList
@@ -392,7 +392,7 @@ connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aSync aInLogerC
 
     case aOk of
         Left (_ :: SomeException) ->
-            void $ tryWriteChan aFileServerChan $ DeleteFromFile aConn
+            void $ tryWriteChan aFileServerChan $ DeleteRecords aConn
         _ -> return ()
 
 

@@ -12,8 +12,8 @@ import              Service.InfoMsg
 import              Service.Network.Base (ConnectInfo(..))
 import              System.Environment
 import              Node.Node.Types
-import              PoA.PoAServerBootNode
-import              Node.FileDB.FileServer
+import              BootNodeServer
+import              Node.Node.DataActor
 
 import              Network.Socket()
 import qualified    Data.ByteString.Lazy as L
@@ -54,8 +54,8 @@ main =  do
                 Right item              -> return item
                 Left (_::SomeException) -> return "0"
             (aFileChan, aOutFileRequestChan) <- newChan 16
-            void $ C.forkIO $ startFileServer aOutFileRequestChan
-            void $ C.forkIO $ serverPoABootNode poa_p aInfoChanIn aFileChan
+            void $ C.forkIO $ startDataActor aOutFileRequestChan
+            void $ C.forkIO $ bootNodeServer poa_p aInfoChanIn aFileChan
             void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id
 
             forever $ C.threadDelay 10000000000

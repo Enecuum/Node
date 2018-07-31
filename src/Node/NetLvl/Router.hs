@@ -10,9 +10,7 @@
 {-# LANGUAGE ViewPatterns          #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Node.Node.Mining (
-    networkNodeStart
-  ) where
+module Node.NetLvl.Router (routerActorStart) where
 
 
 import              System.Random()
@@ -31,19 +29,19 @@ import              Node.Data.Key
 import              Node.Node.Types
 import              Service.InfoMsg
 import              Node.Data.GlobalLoging
-import              PoA.Types
+import              Node.NetLvl.Massages
 import              Sharding.Sharding()
 import              Node.BaseFunctions
 import qualified    Control.Concurrent as C
 import              Service.Sync.SyncJson
 
 
-networkNodeStart :: InChan SyncEvent -> (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()
-networkNodeStart aSyncChan (_, aOutChan) aMd = do
+routerActorStart :: InChan SyncEvent -> (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()
+routerActorStart aSyncChan (_, aOutChan) aMd = do
     aDataMain <- readIORef aMd
     let aWriteLog = writeLog (aDataMain^.logChan)
         aNetLog   = aWriteLog [NetLvlTag] Info
-    aWriteLog [NetLvlTag, InitTag] Info "Init. Start of network level."
+    aWriteLog [NetLvlTag, InitTag] Info "Init. Start of router actor level."
     undead (aWriteLog [NetLvlTag] Warning "networkNodeStart. This node could be die!" )
       $ forever $ do
           aData <- readIORef aMd
