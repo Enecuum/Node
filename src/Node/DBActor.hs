@@ -80,7 +80,7 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
         MyTail aMVar -> do
             aLog "My tail request."
             --aRes <- try $ myTail aData
-            case aRes of
+            case () of
                 _ -> putMVar aMVar Nothing
 
                 --Right aJustRes            -> putMVar aMVar (Just aJustRes)
