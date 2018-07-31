@@ -16,6 +16,7 @@ import           Data.Aeson.Types                     (typeMismatch)
 import           Data.ByteString                      (ByteString)
 import qualified Data.ByteString.Char8                as BS
 
+import           Control.Exception                    (throw)
 import qualified Data.ByteString.Base64               as B
 import           Data.ByteString.Conversion
 import           Data.Text                            (Text, pack, unpack)
@@ -36,7 +37,7 @@ instance ToJSON Currency
 
 instance FromJSON PublicKey where
   parseJSON (String s) = return $ read $ unpack s
-  parseJSON _          = error "PublicKey JSON parse error"
+  parseJSON _          = throw $ DecodeException "PublicKey JSON parse error"
 
 instance ToJSON PublicKey where
   toJSON key = String $ pack $ show key
@@ -73,7 +74,7 @@ instance ToJSON ByteString where
 
 instance FromJSON ByteString where
   parseJSON (String s) = return $ BS.pack $ unpack s
-  parseJSON _          = error "Wrong object format"
+  parseJSON e          = throw $ DecodeException $ "ByteString: Wrong object format" ++ show e
 
 instance ToJSON TransactionInfo where
   toJSON t = object [

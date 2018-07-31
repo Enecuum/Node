@@ -45,7 +45,6 @@ getFirst :: (MonadResource (t IO), MonadTrans t) => Rocks.DB -> Int -> Int -> t 
 getFirst db offset count = drop offset <$> getNFirstValues db (offset + count )
 
 getLast :: Rocks.DB -> Int -> Int -> IO [(DBKey, DBValue)]
--- getLast db  offset count = drop offset <$> getNLastValues db (offset + count )
 getLast db  offset count = drop offset <$> getNLastValues2 db (offset + count )
 
 

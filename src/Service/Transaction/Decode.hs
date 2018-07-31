@@ -24,11 +24,13 @@ import qualified Data.ByteString.Char8                 as BC
 import qualified Data.ByteString.Internal              as BSI
 import           Data.Default                          (def)
 import           Data.Pool
+import qualified Data.Serialize                        as S (Serialize (..))
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON
+
 
 lastKeyBlock :: DBKey
 lastKeyBlock = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=" :: DBKey
@@ -58,6 +60,13 @@ getByHash pool aHash = (\(Hash key) -> funR pool key) aHash
 
 
 ---- Decode
+decodeThis :: S.Serialize p => BSI.ByteString -> p
+decodeThis res = case (S.decode res) of
+  Right r -> r
+  Left e  -> error $ "Can not decode " ++ show e
+
+
+
 -- MacroblockBD
 getKeyBlockByHash :: DBPoolDescriptor -> InChan InfoMsg -> Hash  -> IO (Maybe MacroblockBD)
 getKeyBlockByHash db _ kHash = do

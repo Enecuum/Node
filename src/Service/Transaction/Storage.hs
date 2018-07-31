@@ -13,12 +13,12 @@ module Service.Transaction.Storage where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import           Control.Monad                         (forM, replicateM, when)
+import           Control.Monad                         (forM, when)
 import qualified Control.Monad.Catch                   as E
-import           Control.Monad.Trans.Class
+-- import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Resource
-import           Control.Monad.Trans.State             (StateT, evalStateT, get,
-                                                        put)
+-- import           Control.Monad.Trans.State             (StateT, evalStateT, get,
+--                                                         put)
 import           Control.Retry
 import qualified Crypto.Hash.SHA256                    as SHA
 import qualified Data.ByteString                       as B
@@ -41,7 +41,6 @@ import           Service.Types.PublicPrivateKeyPair
 import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
-import           Service.Transaction.Decode
 import           Service.Transaction.Decode
 import           Service.Transaction.Iterator
 import           Service.Types.SerializeInstances      (roll)
@@ -107,6 +106,7 @@ lastClosedKeyBlock = "2dJ6lb9JgyQRac0DAkoqmYmS6ats3tND0gKMLW6x2x8=" :: DBKey
 bdLog :: InChan InfoMsg -> String -> IO ()
 bdLog i msg = writeLog i [BDTag] Info msg
 
+bsLog :: Show a => InChan InfoMsg -> a -> IO ()
 bsLog i msg = writeLog i [BDTag] Info $ show msg
 
 
@@ -480,7 +480,7 @@ getKeyBlockNumber c@(Common descr i) = do
 setChain :: Common -> Number -> HashOfKeyBlock -> BranchOfChain -> IO ()
 setChain c@(Common descr i ) aNumber hashOfKeyBlock branch = do
   chain <- getChain c aNumber
-  let valueOfChain = funBranch branch $ chain
+  -- let valueOfChain = funBranch branch $ chain
   let newChain = case branch of
         -- if (valueOfChain == Nothing) then
         Main   -> (Just hashOfKeyBlock, snd chain)
@@ -494,8 +494,8 @@ setChain c@(Common descr i ) aNumber hashOfKeyBlock branch = do
 
 
 setChainAndDeleteOther :: Common -> Number -> HashOfKeyBlock -> BranchOfChain -> IO ()
-setChainAndDeleteOther c@(Common descr i ) aNumber hashOfKeyBlock branch = do
-  chain <- getChain c aNumber
+setChainAndDeleteOther (Common descr i ) aNumber hashOfKeyBlock branch = do
+  -- chain <- getChain c aNumber
   -- let valueOfChain = funBranch branch $ chain
   let newChain = case branch of
         Main   -> (Just hashOfKeyBlock, Nothing)

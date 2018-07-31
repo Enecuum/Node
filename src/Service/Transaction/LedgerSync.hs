@@ -30,8 +30,6 @@ myTail c@(Common _ i) = do
     (nNumber, hashMaybe) <- findChain c (fromJust curNumber) Main
     bdLog i $ "Current number of key block: " ++ show curNumber
     bdLog i $ "Get number of key block: " ++ show nNumber ++ "Hash: " ++ show hashMaybe
-    mm <- findMicroblocksForMainChain c
-    bdLog i $ "findMicroblocksForMainChain: " ++ show mm
     case hashMaybe of
         Nothing -> throw NoLastKeyBlock
         Just h  -> return (nNumber, h)

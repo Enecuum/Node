@@ -47,6 +47,7 @@ data CLIException = ValueOfChainIsNotNothing String
                   | TransactionChanBusyException
                   | TransactionInvalidSignatureException
                   | DecodeException String
+                  | EncodeException String
                   | OtherException
   deriving Show
 
@@ -63,7 +64,7 @@ type DBValue = BSI.ByteString
 type MainChain = HashOfKeyBlock
 type SproutChain = HashOfKeyBlock
 type Chain = (Maybe MainChain, Maybe SproutChain)
-type FullChain = (Integer, Maybe MainChain, Maybe SproutChain)
+type FullChain = (Integer, (Maybe MainChain, Maybe SproutChain))
 type Number = Integer
 
 type QuantityTx = Int
