@@ -21,6 +21,7 @@ import qualified Data.ByteString.Lazy                  as L
 import           Data.IORef
 import           Data.Maybe
 -- import qualified Data.Text                             as T
+import qualified Data.ByteString.Char8                 as B8
 import           Lens.Micro
 import           Network.Socket                        (tupleToHostAddress)
 import qualified Network.WebSockets                    as WS
@@ -44,7 +45,6 @@ import           Service.Types                         (MacroblockBD,
 import           Service.Types
 import           System.Directory                      (createDirectoryIfMissing)
 import           System.Environment
-import qualified Data.ByteString.Char8                 as B8
 
 startNode
   :: DBPoolDescriptor
@@ -150,7 +150,7 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
             aConnectLoop aBootNodeList
 
 
--- найти длинну своей цепочки
+-- find length of my chain
 takeMyTail :: InChan MsgToDB -> IO Number
 takeMyTail aDBActorChan =
     takeRecords aDBActorChan MyTail >>= \case
@@ -162,7 +162,7 @@ takeTailNum :: Response (Number, a) -> Number
 takeTailNum (Response _ (aNum, _)) = aNum
 
 
--- нойти номер последнего общего блока
+-- find number of last common kblock
 findBeforeFork :: Number -> NodeId -> OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> InChan InfoMsg -> IO Number
 findBeforeFork 0 _ _ _ _ aInfoChan = do
     writeLog aInfoChan [SyncTag] Info $ "Find before fork: " ++ show 0
@@ -182,12 +182,12 @@ findBeforeFork n aId outSyncChan aDBActorChan aManagerChan aInfoChan = do
     else findBeforeFork (n-1) aId outSyncChan aDBActorChan aManagerChan aInfoChan
 
 
--- загрузить микроблоки
+-- load microblocks
 loadMacroBlocks
     ::  OutChan SyncEvent
     ->  InChan MsgToDB
     ->  InChan MsgToCentralActor
-    ->  Number -- блок для удаления (старая цепочка)
+    ->  Number -- number of block for delete (old chain)
     ->  [(Number, HashOfKeyBlock, MacroblockBD)]
     ->  NodeId
     ->  InChan InfoMsg
@@ -220,7 +220,7 @@ loadOneMacroBlock
     ::  OutChan SyncEvent
     ->  InChan MsgToDB
     ->  InChan MsgToCentralActor
-    ->  [HashOfMicroblock] -- Блок для загрузки
+    ->  [HashOfMicroblock] -- Microblock for loading
     ->  NodeId
     ->  InChan InfoMsg
     ->  HashOfKeyBlock
@@ -241,7 +241,7 @@ loadOneMacroBlock outSyncChan aDBActorChan aManagerChan (x:xs) aNodeId aInfoChan
 loadOneMacroBlock _ _ _ _ _ _ _ _ = return True
 
 
--- загрузить блоки
+-- load kblocks
 loadBlocks :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> From -> To -> NodeId -> InChan InfoMsg -> IO Bool
 loadBlocks outSyncChan aDBActorChan aManagerChan aFrom aTo aId aInfoChan = do
     writeLog aInfoChan [SyncTag] Info $ "Loading of blocks: process start. From " ++ show aId ++ ". (" ++ show aFrom ++ ", " ++ show aTo ++ ")"
