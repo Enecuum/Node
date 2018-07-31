@@ -1,8 +1,8 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module PoA.PoAServer (
-    servePoA,
+module Node.NetLvl.Server (
+    netLvlServer,
     msgReceiver,
     msgSender,
     sendActionToCentralActor
@@ -22,8 +22,8 @@ import qualified Network.WebSockets                    as WS
 import           Node.Data.GlobalLoging
 import           Node.Node.DataActor
 import           Node.Node.Types
-import           PoA.Pending
-import           PoA.Types
+import           Pending
+import           Node.NetLvl.Massages
 import           Service.InfoMsg                       as I
 import           Service.Network.Base
 import           Service.Network.WebSockets.Server
@@ -35,7 +35,7 @@ import           Data.Maybe                            ()
 import           Node.Data.Key
 
 {-
-servePoA
+netLvlServer
     :: MyNodeId
     -> PortNumber
     -> InChan MsgToCentralActor
@@ -44,9 +44,9 @@ servePoA
     -> InChan PendingAction
     -> IO ()
 -}
-servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan inChanPending aInChan = do
+netLvlServer (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan inChanPending aInChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
-        "Init. servePoA: a port is " ++ show aRecivePort
+        "Init. NetLvlServer: a port is " ++ show aRecivePort
     runServer aRecivePort ("server of SN: " ++ show aMyNodeId) $ \aIp aPending -> do
         aConnect <- WS.acceptRequest aPending
         WS.forkPingThread aConnect 30

@@ -1,7 +1,7 @@
 {-# LANGUAGE GADTs      #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiWayIf #-}
-module PoA.Pending where
+module Pending where
 
 import           Data.Sequence                         as S
 

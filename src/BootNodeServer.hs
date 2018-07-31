@@ -1,8 +1,8 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module PoA.PoAServerBootNode (
-        serverPoABootNode
+module BootNodeServer (
+    bootNodeServer
 ) where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
@@ -20,14 +20,14 @@ import           Data.Aeson                            as A
 import           Data.Maybe                            ()
 import           Node.Data.GlobalLoging
 import           Node.Node.DataActor
-import           PoA.Types
+import           Node.NetLvl.Massages
 
 
 data ConnectTesterActor = AddConnectToList Connect | TestExistedConnect Connect
 
 
-serverPoABootNode :: PortNumber -> InChan InfoMsg -> InChan (DataActorRequest Connect) -> IO ()
-serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
+bootNodeServer :: PortNumber -> InChan InfoMsg -> InChan (DataActorRequest Connect) -> IO ()
+bootNodeServer aRecivePort aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
         "Init. ServerPoABootNode: a port is " ++ show aRecivePort
 
@@ -47,7 +47,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                         void $ tryWriteChan aFileServerChan $ DeleteRecords aConn
                     _ -> return ()
 
-    runServer aRecivePort "serverPoABootNode" $ \aHostAdress aPending -> do
+    runServer aRecivePort "bootNodeServer" $ \aHostAdress aPending -> do
         aConnect <- WS.acceptRequest aPending
         writeLog aInfoChan [ServerBootNodeTag] Info "ServerPoABootNode.Connect accepted."
         aMsg <- WS.receiveData aConnect

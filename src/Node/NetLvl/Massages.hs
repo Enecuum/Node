@@ -8,7 +8,7 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module PoA.Types where
+module Node.NetLvl.Massages where
 
 import           Control.Monad.Extra
 -- import           Crypto.PubKey.ECC.ECDSA

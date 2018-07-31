@@ -13,7 +13,7 @@ import           Control.Exception
 import           Control.Monad
 import           Data.List.Extra
 import           Node.DBActor
-import           PoA.Pending
+import           Pending
 
 import           Control.Concurrent.Async
 import           Data.Aeson                            as A
@@ -29,8 +29,8 @@ import           Node.Data.Key
 import           Node.Node.DataActor
 import           Node.Node.Config.Make
 import           Node.Node.Types
-import           PoA.PoAServer
-import           PoA.Types
+import           Node.NetLvl.Server
+import           Node.NetLvl.Massages
 import           Service.Chan
 import           Service.InfoMsg                       (InfoMsg)
 import           Service.InfoMsg
@@ -83,7 +83,7 @@ startNode descrDB buildConf infoCh aManager startDo = do
 
     md  <- newIORef $ makeNetworkData config infoCh aInFileRequestChan aMicroblockChan aTransactionChan aValueChan
     void . C.forkIO $ pendingActor aPendingChan aMicroblockChan outTransactionChan infoCh
-    void . C.forkIO $ servePoA (config^.myNodeId) poa_p aIn infoCh aInFileRequestChan inChanPending aInLogerChan
+    void . C.forkIO $ netLvlServer (config^.myNodeId) poa_p aIn infoCh aInFileRequestChan inChanPending aInLogerChan
     void . C.forkIO $ startDataActor aOutFileRequestChan
     void . C.forkIO $ startDBActor descrDB outMicroblockChan aOutValueChan infoCh aDBActorChan aSyncChan
     void . C.forkIO $ aManager aInputSync managerChan md

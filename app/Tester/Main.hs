@@ -11,7 +11,7 @@ import           Data.Aeson
 import qualified Data.ByteString.Lazy.Char8          as B8
 import qualified Data.Text                           as T
 import           Node.Data.Key
-import           PoA.Types
+import           Node.NetLvl.Massages
 import           Service.Network.Base
 import           Service.Network.WebSockets.Client
 import           Service.Types

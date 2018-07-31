@@ -35,7 +35,7 @@ import              Data.Scientific (toRealFloat, Scientific)
 import              Data.Aeson
 import              Data.Aeson.TH
 import              Service.InfoMsg
-import              PoA.Types
+import              Node.NetLvl.Massages
 import              Node.Node.DataActor
 
 
