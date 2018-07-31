@@ -81,7 +81,9 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
             aLog "My tail request."
             aRes <- try $ myTail aData
             case aRes of
-                Right aJustRes            -> putMVar aMVar (Just aJustRes)
+                Right (_) -> putMVar aMVar Nothing
+
+                --Right aJustRes            -> putMVar aMVar (Just aJustRes)
                 Left (_ :: SomeException) -> putMVar aMVar Nothing
 
         PeekNKeyBlocks aInt aHashOfKeyBlock aMVar -> do
