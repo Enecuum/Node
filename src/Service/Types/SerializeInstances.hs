@@ -15,8 +15,6 @@ import           "cryptonite" Crypto.PubKey.ECC.Types
 import qualified Data.Aeson                           as A
 import           Data.Aeson.TH
 import           Data.Bits
-import qualified Data.ByteString.Lazy.Char8           as B
-import           Data.Char
 import           Data.Hashable
 import           Data.Int
 import           Data.List                            (unfoldr)

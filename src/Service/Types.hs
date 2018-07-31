@@ -324,6 +324,6 @@ data DBPoolDescriptor = DBPoolDescriptor {
   }
 data BranchOfChain = Main | Sprout deriving (Eq, Generic, Ord, Read, Show)
 data Common = Common {
-  db       :: DBPoolDescriptor,
+  pool     :: DBPoolDescriptor,
   infoChan :: InChan InfoMsg
  }

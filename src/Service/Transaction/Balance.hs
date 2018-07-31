@@ -217,6 +217,7 @@ writeMicroblockDB descr i m = do
   writeLog i [BDTag] Info $ "Going to add microblock hashOfMicroblock " ++ show hashOfMicroblock ++ "to key block " ++ show hashKeyBlock
   addMicroblockHashesToMacroBlock descr i hashKeyBlock [hashOfMicroblock]
 
+
 writeTransactionDB :: DBPoolDescriptor -> InChan InfoMsg -> [Transaction] -> HashOfMicroblock -> IO ()
 writeTransactionDB descr aInfoChan txs hashOfMicroblock = do
   let db = poolTransaction descr
@@ -233,8 +234,6 @@ writeLedgerDB dbLedger aInfoChan bt = do
   let ledgerKeyValue = map (\(k,v)-> (S.encode k, S.encode v)) ledgerKV
   funW dbLedger ledgerKeyValue
   writeLog aInfoChan [BDTag] Info ("Write Ledger "  ++ show bt)
-
-
 
 
 addKeyBlockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> (InChan SyncEvent, b) -> IO ()
@@ -267,9 +266,6 @@ addKeyBlockToDB db o i  aSyncChan = do
             when (j < receivedKeyNumber) $ do startSync
 
 
-
-
-
 tKeyBlockToPoWType :: KeyBlockInfo -> KeyBlockInfoPoW
 tKeyBlockToPoWType (KeyBlockInfo {..}) = KeyBlockInfoPoW{
   _time,
@@ -279,9 +275,6 @@ tKeyBlockToPoWType (KeyBlockInfo {..}) = KeyBlockInfoPoW{
   _solver = pubKey,
   _type}
   where pubKey = B.pack $ unroll $ fromPublicKey256k1 _solver
-
-
-
 
 
 addMicroblockHashesToMacroBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> [HashOfMicroblock] -> IO ()
