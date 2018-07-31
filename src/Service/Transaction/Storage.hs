@@ -510,10 +510,12 @@ getKeyBlockNumber c@(Common descr i) = do
   -- if Nothing write genesis KeyBlock
   case value of
     Nothing -> do
+      -- Write genesis block
       let k = tKBIPoW2KBI genesisKeyBlock
           h = getKeyBlockHash genesisKeyBlock
       writeLog i [BDTag] Info $ "The first time in history, genesis kblock " ++ show h ++ show k
       updateMacroblockByKeyBlock descr i h k Main
+      writeKeyBlockNumber c 0
       writeLog i [BDTag] Info "Genesis block was written"
       getKeyBlockNumber c
     Just v  -> return $ Just v

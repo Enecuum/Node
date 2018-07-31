@@ -112,7 +112,7 @@ getLastKeyBlockNumber (Common descr _) = do
   case value of
     Nothing -> return Nothing
     Just j -> case S.decode j :: Either String Number of
-      Left e  -> throw (DecodeException (show e))
+      Left e  -> throw $ DecodeException (show e)
       Right r -> return $ Just r
 
 
