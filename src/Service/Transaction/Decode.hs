@@ -62,67 +62,52 @@ getByHash pool aHash = (\(Hash key) -> funR pool key) aHash
 ---- Decode
 decodeThis :: S.Serialize p => BSI.ByteString -> p
 decodeThis res = case (S.decode res) of
+  Left e  -> throw $ DecodeException $ show e
   Right r -> r
-  Left e  -> error $ "Can not decode " ++ show e
 
+
+decodeRaw :: S.Serialize a => Maybe DBValue -> Maybe a
+decodeRaw this = case this of
+  Nothing -> Nothing
+  Just j  -> Just $ decodeThis j
 
 
 -- MacroblockBD
 getKeyBlockByHash :: DBPoolDescriptor -> InChan InfoMsg -> Hash  -> IO (Maybe MacroblockBD)
-getKeyBlockByHash db _ kHash = do
-  mb <- getByHash (poolMacroblock db) kHash
-  case mb of Nothing -> return Nothing
-             Just j -> case (S.decode j :: Either String MacroblockBD) of
-               Left e  -> throw (DecodeException (show e))
-               Right r -> return $ Just r
+getKeyBlockByHash db _ kHash = decodeRaw <$> getByHash (poolMacroblock db) kHash
 
 
 --Microblock
 getMicroBlockByHashDB :: DBPoolDescriptor -> Hash -> IO MicroblockBD
 getMicroBlockByHashDB db mHash = do
-  mbByte <- getByHash (poolMicroblock db) mHash
-  case mbByte of Nothing -> throw (NoSuchMicroBlockForHash $ show mHash)
-                 Just m -> case (S.decode m :: Either String MicroblockBD) of
-                   Left e  -> throw (DecodeException (show e))
-                   Right r -> return r
+  res <- decodeRaw <$> getByHash (poolMicroblock db) mHash
+  case res of
+    Nothing -> throw (NoSuchMicroBlockForHash $ show mHash)
+    Just j  -> return j
+
 
 --Transaction
-getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo) --Transaction
-getTransactionByHashDB db tHash = do
-  tx <- getByHash (poolTransaction db) tHash
-  case tx of Nothing -> return Nothing
-             Just j -> case (S.decode j :: Either String  TransactionInfo) of
-               Left e   -> throw (DecodeException (show e))
-               Right rt -> return $ Just rt
+getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo)
+getTransactionByHashDB db tHash = decodeRaw <$> getByHash (poolTransaction db) tHash
+
 
 -- Chain
 getChain :: Common -> Number -> IO Chain
 getChain (Common descr _ ) aNumber = do
   maybeV <- funR (poolSprout descr) (S.encode aNumber)
   case maybeV of
-    Nothing    -> return (Nothing, Nothing)
-    Just m -> case S.decode m :: Either String Chain of
-      Left e  -> throw (DecodeException (show e))
-      Right r -> return r
+    Nothing -> return (Nothing, Nothing)
+    Just m  -> return $ decodeThis m
+
 
 --Ledger
 getBalanceForKey :: DBPoolDescriptor -> PublicKey -> IO (Maybe Amount)
-getBalanceForKey db key = do
-    val  <- funR (poolLedger db) (S.encode key)
-    case val of Nothing -> return Nothing --putStrLn "There is no such key"
-                Just v  -> case (S.decode v :: Either String Amount ) of
-                    Left e  -> throw (DecodeException (show e))
-                    Right b -> return $ Just b
+getBalanceForKey db key = decodeRaw <$> funR (poolLedger db) (S.encode key)
+
 
 --Last Number
 getLastKeyBlockNumber :: Common -> IO (Maybe Number)
-getLastKeyBlockNumber (Common descr _) = do
-  value <- funR (poolLast descr) lastKeyBlock
-  case value of
-    Nothing -> return Nothing
-    Just j -> case S.decode j :: Either String Number of
-      Left e  -> throw $ DecodeException (show e)
-      Right r -> return $ Just r
+getLastKeyBlockNumber (Common descr _) = decodeRaw <$> funR (poolLast descr) lastKeyBlock
 
 
 --KeyBlock
