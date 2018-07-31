@@ -44,7 +44,7 @@ import           Service.Types                         (MacroblockBD,
 import           Service.Types
 import           System.Directory                      (createDirectoryIfMissing)
 import           System.Environment
-
+import qualified Data.ByteString.Char8                 as B8
 
 startNode
   :: DBPoolDescriptor
@@ -61,7 +61,7 @@ startNode
          -> InChan FileActorRequest
          -> IO a)
      -> IO (InChan MsgToCentralActor, OutChan MsgToCentralActor)
-startNode descrDB buildConf infoCh manager startDo = do
+startNode descrDB buildConf infoCh aManager startDo = do
 
     --tmp
     createDirectoryIfMissing False "data"
@@ -73,7 +73,8 @@ startNode descrDB buildConf infoCh manager startDo = do
     (aTransactionChan, outTransactionChan)      <- newChan 128
     (aInFileRequestChan, aOutFileRequestChan)   <- newChan 128
     aPendingChan@(inChanPending, _)             <- newChan 128
-    aSyncChan@(aInputSync, _)         <- newChan 128
+    (aInLogerChan, aOutLogerChan)               <- newChan 128
+    aSyncChan@(aInputSync, _)                   <- newChan 128
     aDBActorChan                                <- newChan 128
 
     config  <- readNodeConfig
@@ -82,20 +83,26 @@ startNode descrDB buildConf infoCh manager startDo = do
 
     md  <- newIORef $ makeNetworkData config infoCh aInFileRequestChan aMicroblockChan aTransactionChan aValueChan
     void . C.forkIO $ pendingActor aPendingChan aMicroblockChan outTransactionChan infoCh
-    void . C.forkIO $ servePoA (config^.myNodeId) poa_p aIn infoCh aInFileRequestChan inChanPending
+    void . C.forkIO $ servePoA (config^.myNodeId) poa_p aIn infoCh aInFileRequestChan inChanPending aInLogerChan
     void . C.forkIO $ startFileServer aOutFileRequestChan
     void . C.forkIO $ startDBActor descrDB outMicroblockChan aOutValueChan infoCh aDBActorChan aSyncChan
-    void . C.forkIO $ manager aInputSync managerChan md
+    void . C.forkIO $ aManager aInputSync managerChan md
+    void . C.forkIO $ traficLoger aOutLogerChan
     void $ startDo managerChan outTransactionChan aMicroblockChan (config^.myNodeId) aInFileRequestChan
 
     let MyNodeId aId = config^.myNodeId
 
-    void $ C.forkIO $ connectManager aSyncChan aDBActorChan aIn (poaPort buildConf) bnList aInFileRequestChan (NodeId aId) inChanPending infoCh
+    void $ C.forkIO $ connectManager aSyncChan aDBActorChan aIn (poaPort buildConf) bnList aInFileRequestChan (NodeId aId) inChanPending infoCh aInLogerChan
     return managerChan
+
+traficLoger aOutChan = forever $ do
+    aMsg <- readChan aOutChan
+    appendFile "netLog.txt" $ B8.unpack aMsg ++ "\n"
 
 sec :: Int
 sec = 1000000
 
+{-
 connectManager
     ::  (InChan SyncEvent, OutChan SyncEvent)
     ->  (InChan MsgToDB, b1)
@@ -107,8 +114,8 @@ connectManager
     ->  InChan PendingAction
     ->  InChan InfoMsg
     ->  IO b2
-
-connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aConnectsChan aMyNodeId inChanPending aInfoChan = do
+-}
+connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aConnectsChan aMyNodeId inChanPending aInfoChan aInLogerChan = do
     writeLog aInfoChan [ConnectingTag, InitTag] Info "Manager of connecting started."
     void $ C.forkIO $ syncServer aSyncChan inDBActorChan aManagerChan aInfoChan
     forM_ aBNList $ \(Connect aBNIp aBNPort) -> do
@@ -135,7 +142,7 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
             aNumberOfConnects <- takeRecords aConnectsChan NumberConnects
             when (aNumberOfConnects == 0) $ aRequestOfPotencialConnects aBootNodeList
             aConnects <- takeRecords aConnectsChan ReadRecordsFromFile
-            forM_ aConnects (connectToNN aConnectsChan aMyNodeId inChanPending aInfoChan aManagerChan (fst aSyncChan))
+            forM_ aConnects (connectToNN aConnectsChan aMyNodeId inChanPending aInfoChan aManagerChan (fst aSyncChan) aInLogerChan)
             C.threadDelay $ 2 * sec
             aConnectLoop aBootNodeList
         else do
@@ -353,6 +360,7 @@ takeRecords aChan aTaker  = do
     writeInChan aChan $ aTaker aVar
     takeMVar aVar
 
+{-
 connectToNN
     ::  InChan FileActorRequest
     ->  NodeId
@@ -362,7 +370,8 @@ connectToNN
     ->  InChan SyncEvent
     ->  Connect
     ->  IO ()
-connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aSync aConn@(Connect aIp aPort)  = do
+-}
+connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aSync aInLogerChan aConn@(Connect aIp aPort)  = do
     writeLog aInfoChan [NetLvlTag] Info $ "Try connecting to: "  ++ showHostAddress aIp
     aOk <- try $ runClient (showHostAddress aIp) (fromEnum aPort) "/" $ \aConnect -> do
         writeLog aInfoChan [NetLvlTag] Info $ "Connecting to: "  ++ showHostAddress aIp
@@ -378,7 +387,7 @@ connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aSync aConn@(Co
                         writeInChan aSync RestartSync
                     void $ race
                         (msgSender ch aMyNodeId aConnect aOutChan)
-                        (msgReceiver ch aInfoChan aFileServerChan NN (IdFrom aNodeId) aConnect inChanPending)
+                        (msgReceiver ch aInfoChan aFileServerChan NN (IdFrom aNodeId) aConnect inChanPending aInLogerChan)
             _ -> return ()
 
     case aOk of
