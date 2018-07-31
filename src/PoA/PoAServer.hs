@@ -34,7 +34,7 @@ import           Control.Concurrent.Async
 import           Data.Maybe                            ()
 import           Node.Data.Key
 
-
+{-
 servePoA
     :: MyNodeId
     -> PortNumber
@@ -43,7 +43,8 @@ servePoA
     -> InChan FileActorRequest
     -> InChan PendingAction
     -> IO ()
-servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan inChanPending = do
+-}
+servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan inChanPending aInChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. servePoA: a port is " ++ show aRecivePort
     runServer aRecivePort ("server of SN: " ++ show aMyNodeId) $ \aIp aPending -> do
@@ -62,7 +63,7 @@ servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan inChanPen
 
                     void $ race
                         (msgSender ch aNodeId aConnect aOutChan)
-                        (msgReceiver ch aInfoChan aFileServerChan aNodeType (IdFrom aNodeId) aConnect inChanPending)
+                        (msgReceiver ch aInfoChan aFileServerChan aNodeType (IdFrom aNodeId) aConnect inChanPending aInChan)
 
             Right (ActionConnect aNodeType Nothing) -> do
                 aNodeId <- generateClientId []
@@ -72,7 +73,7 @@ servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan inChanPen
 
                 void $ race
                     (msgSender ch aNodeId aConnect aOutChan)
-                    (msgReceiver ch aInfoChan aFileServerChan aNodeType (IdFrom aNodeId) aConnect inChanPending)
+                    (msgReceiver ch aInfoChan aFileServerChan aNodeType (IdFrom aNodeId) aConnect inChanPending aInChan)
 
             Right _ -> do
                 writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg
@@ -88,7 +89,7 @@ msgSender :: ToJSON a1 =>
                    -> NodeId -> WS.Connection -> OutChan a1 -> IO a2
 msgSender ch aId aConnect aNewChan = forever (WS.sendTextData aConnect . A.encode =<< readChan aNewChan)
     `finally` writeChan ch (NodeIsDisconnected aId)
-
+{-
 msgReceiver :: InChan MsgToCentralActor
                      -> InChan InfoMsg
                      -> InChan FileActorRequest
@@ -97,7 +98,8 @@ msgReceiver :: InChan MsgToCentralActor
                      -> WS.Connection
                      -> InChan PendingAction
                      -> IO b
-msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan = forever $ do
+                     -}
+msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan aInChan = forever $ do
     aMsg <- WS.receiveData aConnect
     writeLog aInfoChan [ServePoATag] Info $ "Raw msg: " ++ show aMsg ++ "\n"
     case A.eitherDecodeStrict aMsg of
@@ -142,7 +144,7 @@ msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan = f
             aMessage -> do
                 writeLog aInfoChan [ServePoATag] Info $ "Received msg " ++ show aMessage
                 sendMsgToCentralActor ch aNodeType aMessage
-                --when (isBlock aMessage) $ appendFile "netLog.txt" $ B8.unpack aMsg ++ "\n"
+                when (isBlock aMessage) $ writeInChan aInChan aMsg
 
         Left a -> do
             writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ a
