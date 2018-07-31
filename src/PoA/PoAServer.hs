@@ -20,7 +20,7 @@ import qualified Data.ByteString.Char8                 as B8
 import qualified Data.Text                             as T
 import qualified Network.WebSockets                    as WS
 import           Node.Data.GlobalLoging
-import           Node.FileDB.FileServer
+import           Node.Node.DataActor
 import           Node.Node.Types
 import           PoA.Pending
 import           PoA.Types

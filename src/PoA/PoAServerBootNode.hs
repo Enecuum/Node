@@ -19,14 +19,14 @@ import           Control.Exception
 import           Data.Aeson                            as A
 import           Data.Maybe                            ()
 import           Node.Data.GlobalLoging
-import           Node.FileDB.FileServer
+import           Node.Node.DataActor
 import           PoA.Types
 
 
 data ConnectTesterActor = AddConnectToList Connect | TestExistedConnect Connect
 
 
-serverPoABootNode :: PortNumber -> InChan InfoMsg -> InChan FileActorRequest -> IO ()
+serverPoABootNode :: PortNumber -> InChan InfoMsg -> InChan (DataActorRequest Connect) -> IO ()
 serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
         "Init. ServerPoABootNode: a port is " ++ show aRecivePort
@@ -36,7 +36,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
         AddConnectToList aConn@(Connect aHostAdress aPort) -> void $ C.forkIO $ do
             C.threadDelay 3000000
             runClient (showHostAddress aHostAdress) (fromEnum aPort) "/" $
-                \_ -> void $ tryWriteChan aFileServerChan $ AddToFile [aConn]
+                \_ -> void $ tryWriteChan aFileServerChan $ AddRecords [aConn]
 
         TestExistedConnect aConn@(Connect aHostAdress aPort) -> void $ C.forkIO $ do
             aConnects <- getRecords aFileServerChan
@@ -44,7 +44,7 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                 aOk <- try $ runClient (showHostAddress aHostAdress) (fromEnum aPort) "/" $ \_ -> return ()
                 case aOk of
                     Left (_ :: SomeException) ->
-                        void $ tryWriteChan aFileServerChan $ DeleteFromFile aConn
+                        void $ tryWriteChan aFileServerChan $ DeleteRecords aConn
                     _ -> return ()
 
     runServer aRecivePort "serverPoABootNode" $ \aHostAdress aPending -> do

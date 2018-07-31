@@ -36,7 +36,7 @@ import              Data.Aeson
 import              Data.Aeson.TH
 import              Service.InfoMsg
 import              PoA.Types
-import              Node.FileDB.FileServer
+import              Node.Node.DataActor
 
 
 instance Show (InChan a) where show _ = "InChan"
@@ -89,7 +89,7 @@ data NetworkNodeData = NetworkNodeData {
     ,   _nodeConfig         :: NodeConfig
     ,   _shardingChan       :: Maybe (C.Chan N.ShardingNodeAction)
     ,   _logChan            :: InChan InfoMsg
-    ,   _fileServerChan     :: InChan FileActorRequest
+    ,   _fileServerChan     :: InChan (DataActorRequest Connect)
     ,   _microblockChan     :: InChan Microblock
     ,   _transactionsChan   :: InChan (Transaction, MVar Bool)
     ,   _valueChan          :: InChan Value
@@ -100,7 +100,7 @@ makeLenses ''NetworkNodeData
 makeNetworkData
     ::  NodeConfig
     ->  InChan InfoMsg
-    ->  InChan FileActorRequest
+    ->  InChan (DataActorRequest Connect)
     ->  InChan Microblock
     ->  InChan (Transaction, MVar Bool)
     ->  InChan Value
