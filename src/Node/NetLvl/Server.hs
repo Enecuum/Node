@@ -49,6 +49,7 @@ netLvlServer (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan inCha
         "Init. NetLvlServer: a port is " ++ show aRecivePort
     runServer aRecivePort ("server of SN: " ++ show aMyNodeId) $ \aIp aPending -> do
         aConnect <- WS.acceptRequest aPending
+        writeLog aInfoChan [ServePoATag] Info $ "New connect: " ++ showHostAddress aIp
         WS.forkPingThread aConnect 30
         aMsg <- WS.receiveData aConnect
         case A.eitherDecodeStrict aMsg of
