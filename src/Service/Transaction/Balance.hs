@@ -170,22 +170,20 @@ addMicroblockToDB db m i =  do
     writeLog i [BDTag] Info ("New Microblock came" ++ show(microblockHash))
 -- FIX: Write to db atomically
     (isMicroblockNew, isMacroblockNew, macroblock ) <- checkMacroblock db i m microblockHash
-    isMacroblockClosed <- checkMacroblockIsClosed macroblock i
-    let goOn = macroblockIsOk macroblock
-          where macroblockIsOk (MacroblockBD {..}) = length _mblocks <= length _teamKeys
+    aIsMacroblockClosed <- isMacroblockClosed macroblock i
+    let goOn = not aIsMacroblockClosed
     writeLog i [BDTag] Info ("MacroblockBD :- length _mblocks <= length _teamKeyss " ++ show (not goOn))
     writeLog i [BDTag] Info $ "Are we going to process microblock? - " ++ show goOn
     when goOn $ do
         writeLog i [BDTag] Info ("MacroblockBD - New is " ++ show isMacroblockNew)
         writeLog i [BDTag] Info ("Microblock - New is " ++ show isMicroblockNew)
-        writeLog i [BDTag] Info ("MacroblockBD closed is " ++ show isMacroblockClosed)
+        writeLog i [BDTag] Info ("MacroblockBD closed is " ++ show aIsMacroblockClosed)
         when (isMacroblockNew && isMicroblockNew) $ do
           writeMacroblockToDB db i (_keyBlock (m :: Microblock)) macroblock
           writeMicroblockDB db i (tMicroblock2MicroblockBD m)
           writeTransactionDB db i (_transactions m) microblockHash
           -- writeMacroblockToDB db i (_keyBlock (m :: Microblock)) macroblock
-
-          when isMacroblockClosed $ calculateLedger db i False (_keyBlock (m :: Microblock)) macroblock
+          when aIsMacroblockClosed $ calculateLedger db i False (_keyBlock (m :: Microblock)) macroblock
 
 
 calculateLedger :: DBPoolDescriptor -> InChan InfoMsg -> IsStorno -> HashOfKeyBlock -> MacroblockBD -> IO ()
