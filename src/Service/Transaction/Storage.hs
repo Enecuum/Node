@@ -103,9 +103,14 @@ lastClosedKeyBlock = "2dJ6lb9JgyQRac0DAkoqmYmS6ats3tND0gKMLW6x2x8=" :: DBKey
 
 
 
+bdLog :: InChan InfoMsg -> String -> IO ()
+bdLog i msg = writeLog i [BDTag] Info msg
 
-checkMacroblockIsClosed :: MacroblockBD -> InChan InfoMsg -> IO Bool
-checkMacroblockIsClosed MacroblockBD {..} _ = do
+bsLog i msg = writeLog i [BDTag] Info $ show msg
+
+
+isMacroblockClosed :: MacroblockBD -> InChan InfoMsg -> IO Bool
+isMacroblockClosed MacroblockBD {..} _ = do
   -- writeLog i [BDTag] Info $ "checkMacroblockIsClosed: length _mblocks " ++ show (length _mblocks)
   -- writeLog i [BDTag] Info $ "checkMacroblockIsClosed: length _teamKeys" ++ show (length _teamKeys)
   return $ length _mblocks /= 0 && length _teamKeys == length _mblocks
@@ -455,20 +460,21 @@ writeMacroblockSprout desc a hashOfKeyBlock aMacroblock = do
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
 writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
   hashPreviousLastKeyBlock <- funR (poolLast desc) lastClosedKeyBlock
-  isMacroblockClosed <- checkMacroblockIsClosed aMacroblock a
-  let cMacroblock = if ( isMacroblockClosed == True)
+  aIsMacroblockClosed <- isMacroblockClosed aMacroblock a
+  let cMacroblock = if ( aIsMacroblockClosed == True)
         then (aMacroblock { _prevKBlock = hashPreviousLastKeyBlock }) :: MacroblockBD
         else aMacroblock
-
+  print $ "cMacroblock" ++ show cMacroblock
   let cKey = hashOfKeyBlock
       cVal = (S.encode cMacroblock)
+  print $ "cKey " ++ show cKey
+  print $ "cVal " ++ show cVal
   funW (poolMacroblock desc) [(cKey,cVal)]
   writeLog a [BDTag] Info ("Write Macroblock " ++ show cKey ++ " " ++ show cMacroblock ++ "to DB")
 
-
   -- For closed Macroblock
-  isMacroblockClosed <- checkMacroblockIsClosed aMacroblock a
-  when (isMacroblockClosed) $ do
+  bIsMacroblockClosed <- isMacroblockClosed aMacroblock a
+  when (bIsMacroblockClosed) $ do
     -- fill _nextKBlock for previous closed Macroblock
     bdKV <- case hashPreviousLastKeyBlock of
       Nothing -> return []

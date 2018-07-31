@@ -16,9 +16,9 @@ import           Control.Exception
 import           Control.Monad                         (forever, unless, void,
                                                         when)
 import           Data.Aeson                            as A
+import qualified Data.ByteString.Char8                 as B8
 import qualified Data.Text                             as T
 import qualified Network.WebSockets                    as WS
-import qualified Data.ByteString.Char8            as B8
 import           Node.Data.GlobalLoging
 import           Node.FileDB.FileServer
 import           Node.Node.Types
@@ -41,10 +41,9 @@ servePoA
     -> InChan MsgToCentralActor
     -> InChan InfoMsg
     -> InChan FileActorRequest
-    -> InChan Microblock
     -> InChan PendingAction
     -> IO ()
-servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan _ inChanPending = do
+servePoA (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan inChanPending = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. servePoA: a port is " ++ show aRecivePort
     runServer aRecivePort ("server of SN: " ++ show aMyNodeId) $ \aIp aPending -> do

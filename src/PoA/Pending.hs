@@ -51,7 +51,7 @@ data Pending = Pending (Seq (Transaction, TimeSpec)) (Seq (Transaction, TimeSpec
 
 pendingActor :: (InChan PendingAction, OutChan PendingAction) -> InChan Microblock -> OutChan (Transaction, MVar Bool) -> InChan InfoMsg -> IO ()
 pendingActor (aInChan, aOutChan) aMicroblockChan aTransactionChan aInfoChan = do
-    writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for microblocs"
+    writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for microblocks"
 
     void . C.forkIO $ do
         aBlockChan <- dupChan aMicroblockChan

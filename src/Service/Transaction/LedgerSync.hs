@@ -5,16 +5,14 @@
 module Service.Transaction.LedgerSync where
 
 import           Control.Exception
-import           Control.Monad                         (forM, when)
+import           Control.Monad                    (forM, when)
 import           Data.Maybe
-import qualified Data.Serialize                        as S (encode)
+import qualified Data.Serialize                   as S (encode)
 import           Node.Data.GlobalLoging
-import           Service.InfoMsg                       (InfoMsg (..),
-                                                        LogingTag (..),
-                                                        MsgType (..))
+import           Service.InfoMsg                  (LogingTag (..), MsgType (..))
 import           Service.Transaction.Balance
 -- import           Service.Transaction.Independent
-import           Control.Concurrent.Chan.Unagi.Bounded
+-- import           Control.Concurrent.Chan.Unagi.Bounded
 import           Data.List
 import           Service.Transaction.Decode
 import           Service.Transaction.Sprout
@@ -23,8 +21,7 @@ import           Service.Transaction.Storage
 import           Service.Types
 
 
-bdLog :: InChan InfoMsg -> String -> IO ()
-bdLog i msg = writeLog i [BDTag] Info msg
+
 
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
@@ -47,7 +44,6 @@ peekNPreviousKeyBlocks c from to = do
 
 getKeyBlockSproutData :: Common -> From -> To -> IO [(Number, HashOfKeyBlock, MacroblockBD)]
 getKeyBlockSproutData c@(Common descr i) from to = do
-  _ <- bdLog i <$> ("findMicroblocksForMainChain: " ++) <$> show <$> findMicroblocksForMainChain c
   kv <- peekNPreviousKeyBlocks c from to
   mb <- mapM (\(_,aHash) -> getKeyBlockByHash descr i (Hash aHash)) kv
   let allMaybe   = zipWith (\(aNumber, aHash) aMacroblock -> (aNumber, aHash, aMacroblock)) kv mb
@@ -64,8 +60,8 @@ pair2 (_, b, c) = (b, c)
 
 isValidKeyBlockSprout :: Common -> [(Number, HashOfKeyBlock, MacroblockBD)] -> IO Bool
 isValidKeyBlockSprout c@(Common _ i) okv = do
-    _ <- bdLog i <$> ("findMicroblocksForMainChain: " ++) <$> show <$> findMicroblocksForMainChain c
-    _ <- bdLog i $ show $ intersperse "" $ map show okv
+    findMicroblocksForMainChain c
+    bdLog i $ show $ intersperse "" $ map show okv
     let (numberAfterFoundation, _, macroblockAfterFoundation):_ = okv
     hashMainMaybe <- getM c (numberAfterFoundation - 1)
     let prevHash = _prevHKBlock (macroblockAfterFoundation :: MacroblockBD)
@@ -82,7 +78,7 @@ isValidKeyBlockSprout c@(Common _ i) okv = do
 
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
 setKeyBlockSproutData c@(Common descr i) kv = do
-  _ <- bdLog i <$> ("findMicroblocksForMainChain: " ++) <$> show <$> findMicroblocksForMainChain c
+  findMicroblocksForMainChain c
   bdLog i $ show $ kv
   -- mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
   mapM_ (\(h, m) -> updateMacroblockByMacroblock descr i h  m Sprout) kv
@@ -91,7 +87,7 @@ setKeyBlockSproutData c@(Common descr i) kv = do
 
 getRestSproutData :: Common -> HashOfMicroblock -> IO MicroBlockContent
 getRestSproutData c@(Common descr i) hashOfMicroblock = do
-  _ <- bdLog i <$> ("findMicroblocksForMainChain: " ++) <$> show <$> findMicroblocksForMainChain c
+  findMicroblocksForMainChain c
 
   microblock <- getMicroBlockByHashDB descr (Hash hashOfMicroblock)
   -- case microblock of Nothing -> throw NoSuchMicroBlockDB
@@ -108,7 +104,7 @@ isValidRestOfSprout _ _ = do -- Fix verify transaction signature
 
 setRestSproutData :: Common -> (Number, HashOfKeyBlock, MicroBlockContent) -> IO ()
 setRestSproutData c@(Common descr i) (aNumber, hashOfKeyBlock, (MicroBlockContent mb txInfo )) = do
-    _ <- bdLog i <$> ("findMicroblocksForMainChain: " ++) <$> show <$> findMicroblocksForMainChain c
+    findMicroblocksForMainChain c
     -- write MicroBlockContent MicroblockBD [TransactionInfo]
     let tx = map (\t -> _tx (t :: TransactionInfo)) txInfo
     writeTransactionDB descr i tx (rHash mb)
@@ -128,8 +124,7 @@ deleteSproutData c aNumber = do
 
 deleteSprout :: Common -> (Number, HashOfKeyBlock) -> BranchOfChain -> IO () -- right after foundation
 deleteSprout c@(Common descr i) (aNumber, hashOfKeyBlock) branch = do
-  mm <- findMicroblocksForMainChain c
-  bdLog i $ "findMicroblocksForMainChain: " ++ show mm
+  findMicroblocksForMainChain c
   macroblock <- getKeyBlockByHash descr i (Hash hashOfKeyBlock)
   case macroblock of
     Nothing -> writeLog i [BDTag] Error ("There is no KeyBlock "  ++ show hashOfKeyBlock)
@@ -160,8 +155,7 @@ deleteSprout c@(Common descr i) (aNumber, hashOfKeyBlock) branch = do
 
 setSproutAsMain :: Common -> Number -> IO () -- right after foundation
 setSproutAsMain c@(Common descr i) aNumber = do
-    mm <- findMicroblocksForMainChain c
-    bdLog i $ "findMicroblocksForMainChain: " ++ show mm
+    findMicroblocksForMainChain c
     -- find key blocks which belong to Main chain (right after foundation of main and sprout chain)
     mainChain            <- findWholeChainSince c aNumber Main
     mainChainKeyBlocks   <- getAllMacroblockByHash c $ map snd mainChain
@@ -214,8 +208,12 @@ kBlock1 :: HashOfKeyBlock
 kBlock1 = "AAABxBQmBTqnwHo9fh2Q7yXmkjbTdLHbIVuetMGhzQk="
 
 
-findMicroblocksForMainChain  :: Common -> IO [HashOfMicroblock]
-findMicroblocksForMainChain  c = do
+findMicroblocksForMainChain :: Common -> IO ()
+findMicroblocksForMainChain c@(Common _ i) = (bdLog i . ("findMicroblocksForMainChain: " ++) . show) =<< (findMicroblocksForMainChain c)
+
+
+findMicroblocksForMainChainHelp  :: Common -> IO [HashOfMicroblock]
+findMicroblocksForMainChainHelp  c = do
   mainChainKHashes <- map snd <$> findWholeChainSince c 0 Main
   macroblock <- map snd <$> getAllMacroblockByHash c mainChainKHashes
   let hashesOfMicroblocks = concat $ map (\m -> _mblocks (m :: MacroblockBD)) macroblock
