@@ -47,7 +47,7 @@ compressPublicKey :: ECDSA.PublicKey -> PublicKey
 compressPublicKey pub
     | c == y = publicKey256k1 (x*2)
     | d == y = publicKey256k1 (x*2+1)
-    | otherwise = error "error"
+    | otherwise = error "Can not compress PublicKey"
   where
     (Point x y) = ECDSA.public_q pub
     (c, d) = curveK (ECDSA.public_curve pub) x
@@ -69,12 +69,12 @@ curveK aCurve x = (c, d)
     d = prime - c
 
 publicKey256k1 :: Integer -> PublicKey
-publicKey256k1 = PublicKey256k1 . CompactInteger
+publicKey256k1 = PublicKey256k1
 
 fromPublicKey256k1 :: PublicKey -> Integer
-fromPublicKey256k1 (PublicKey256k1 (CompactInteger i)) = i
+fromPublicKey256k1 (PublicKey256k1 i) = i
 
-newtype PublicKey  = PublicKey256k1 CompactInteger deriving (Generic, Serialize, Eq, Ord, Num, Enum)
+newtype PublicKey  = PublicKey256k1 Integer deriving (Generic, Serialize, Eq, Ord, Num, Enum)
 newtype PrivateKey = PrivateKey256k1 Integer deriving (Generic, Serialize, Eq, Ord)
 
 
