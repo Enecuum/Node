@@ -113,7 +113,7 @@ receiveMsg aConnect aStr1 aStr2 = do
     return aMsg
 
 checkVersion :: WS.Connection -> IO ()
-checkVersion = do
+checkVersion aConnect = do
     putStrLn "   Sending version request..."
     sendMsg aConnect $ RequestVersion
 
@@ -144,7 +144,7 @@ main = do
             testsOk <- newEmptyMVar
             let aWait = void $ takeMVar testsOk
             putStrLn "   Connecting to BN..."
-            void . forkIO $ runClient ip 1554 "/" $ aConnect -> do
+            void . forkIO $ runClient ip 1554 "/" $ \aConnect -> do
                 checkVersion aConnect
                 putMVar testsOk True
 
