@@ -62,7 +62,7 @@ bootNodeServer aRecivePort aInfoChan aFileServerChan = do
             Right a -> case a of
                 RequestVersion -> do
                     aLog  $ "Version request from client node."
-                    aSend $ ResponseVersion $(version)
+                    aSend $ ResponseVersion $ init $(version)
 
                 RequestPotentialConnects aFull
                     | aFull -> do

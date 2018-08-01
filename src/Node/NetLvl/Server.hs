@@ -117,7 +117,7 @@ msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan aIn
 
             RequestVersion -> do
                 aLog  $ "Version request from client node."
-                aSend $ ResponseVersion $(version)
+                aSend $ ResponseVersion $ init $(version)
 
             RequestPending (Just aTransaction) -> do
                 aTmpChan <- C.newChan

@@ -103,7 +103,6 @@ sendMsg aConnect aMsg = do
     printBS aEncodedMsg
     WS.sendTextData aConnect aEncodedMsg
 
-
 receiveMsg :: WS.Connection -> String -> String -> IO B8.ByteString
 receiveMsg aConnect aStr1 aStr2 = do
     putStrLn aStr1
@@ -125,7 +124,7 @@ checkVersion aConnect = do
         Just (ResponseVersion aVersion) -> aVersion
         Just _ -> error $ "   FAIL. The received msg not a version response! "
         _ -> error "FAIL. Error in the parsing!"
-    when (aVersion /= $(version)) $ error "FAIL. Version of node /= version of tester!"
+    when (aVersion /= init $(version)) $ error "FAIL. Version of node /= version of tester!"
 
 main :: IO ()
 main = do
