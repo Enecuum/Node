@@ -6,4 +6,4 @@ import System.Process
 version :: Q Exp
 version = do
     aVersion <- runIO $ readProcess "git" ["rev-parse", "HEAD"] []
-    litE (StringL aVersion)
+    litE (StringL $ take 7 aVersion)

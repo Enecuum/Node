@@ -124,7 +124,8 @@ checkVersion aConnect = do
         Just (ResponseVersion aVersion) -> aVersion
         Just _ -> error $ "   FAIL. The received msg not a version response! "
         _ -> error "FAIL. Error in the parsing!"
-    when (aVersion /= init $(version)) $ error "FAIL. Version of node /= version of tester!"
+    when (aVersion /= $(version)) $ error "FAIL. Version of node /= version of tester!"
+
 
 main :: IO ()
 main = do
