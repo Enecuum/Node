@@ -7,19 +7,17 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE TemplateHaskell            #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Node.NetLvl.Massages where
 
 import           Control.Monad.Extra
--- import           Crypto.PubKey.ECC.ECDSA
 import           Data.Aeson
 import qualified Data.ByteString                  as B
 import qualified Data.ByteString.Char8            as CB
--- import           Data.Either
 import           Data.Hex
 import           Data.IP
 import           Data.Maybe
--- import qualified Data.Serialize                   as S
 import           Data.String
 import qualified Data.Text                        as T
 import           Data.Word                        ()
@@ -37,7 +35,7 @@ data NetMessage where
     RequestPoWList              ::                              NetMessage
     RequestPotentialConnects    :: Bool                     ->  NetMessage
     RequestPending              :: Maybe Transaction        ->  NetMessage
-
+    RequestVersion              ::                              NetMessage
 
     RequestActualConnects       ::                              NetMessage
 
@@ -47,7 +45,7 @@ data NetMessage where
     ResponseTransactions        :: [Transaction]            ->  NetMessage
     ResponseTransactionIsInPending  :: Bool                 ->  NetMessage
     ResponsePoWList             :: [ActualConnectInfo]      ->  NetMessage
-
+    ResponseVersion             :: String                   ->  NetMessage
 
     MsgBroadcast                :: IdFrom -> NodeType -> Value ->  NetMessage
     MsgMsgTo                    :: IdFrom -> IdTo     -> Value ->  NetMessage
@@ -61,6 +59,7 @@ data NetMessage where
     ActionConnect               :: NodeType   -> Maybe NodeId -> NetMessage
     ActionAddToConnectList      :: PortNumber -> NetMessage
     ActionConnectIsDead         :: Connect    -> NetMessage
+
   deriving (Show)
 
 
@@ -135,8 +134,9 @@ instance FromJSON NetMessage where
                 aFull :: Maybe T.Text <- aMessage .:? "full"
                 return $ RequestPotentialConnects (isJust aFull)
 
-            ("Request","PoWList")     -> return RequestPoWList
+            ("Request","PoWList")           -> return RequestPoWList
             ("Request","ActualConnectList") -> return RequestActualConnects
+            ("Request", "Version")          -> return $ RequestVersion
 
             ("Request", "Pending") ->
                 RequestPending <$> aMessage .:? "transaction"
@@ -176,6 +176,10 @@ instance FromJSON NetMessage where
 
                 aNodeId  <- unhexNodeId aPPId
                 return $ ResponseNodeId aNodeId
+
+            ("Response", "Version")          -> do
+                aVersion <- aMessage .: "version"
+                return $ ResponseVersion $ T.unpack aVersion
 
             ("Response", "PotentialConnects") ->
                 ResponsePotentialConnects <$> aMessage .: "connects"
@@ -220,6 +224,19 @@ instance ToJSON NetMessage where
         "tag"       .= ("Response"   :: String),
         "type"      .= ("PoWList" :: String),
         "connects"  .= aConnects
+      ]
+
+      -- RequestVersion
+      -- ResponseVersion
+    toJSON RequestVersion = object [
+        "tag"       .= ("Request" :: String),
+        "type"      .= ("Version" :: String)
+      ]
+
+    toJSON (ResponseVersion aVersion) = object [
+        "tag"       .= ("Response" :: String),
+        "type"      .= ("Version" :: String),
+        "version"   .= T.pack aVersion
       ]
 
     toJSON (MsgMsgTo (IdFrom aIdFrom) (IdTo aIdTo) aMessage) = object [

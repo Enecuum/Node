@@ -1,6 +1,8 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
+
 module Node.NetLvl.Server (
     netLvlServer,
     msgReceiver,
@@ -29,21 +31,13 @@ import           Service.Network.Base
 import           Service.Network.WebSockets.Server
 import           Service.Types
 import           System.Random.Shuffle
+import           Service.System.Version
 
 import           Control.Concurrent.Async
 import           Data.Maybe                            ()
 import           Node.Data.Key
 
-{-
-netLvlServer
-    :: MyNodeId
-    -> PortNumber
-    -> InChan MsgToCentralActor
-    -> InChan InfoMsg
-    -> InChan FileActorRequest
-    -> InChan PendingAction
-    -> IO ()
--}
+
 netLvlServer (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan inChanPending aInChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. NetLvlServer: a port is " ++ show aRecivePort
@@ -85,24 +79,22 @@ netLvlServer (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan inCha
                 WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"ErrorOfConnect\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
 
 
-msgSender :: ToJSON a1 =>
-                   InChan MsgToCentralActor
-                   -> NodeId -> WS.Connection -> OutChan a1 -> IO a2
+msgSender
+    ::  ToJSON a1
+    =>  InChan MsgToCentralActor
+    ->  NodeId
+    ->  WS.Connection
+    ->  OutChan a1
+    ->  IO a2
 msgSender ch aId aConnect aNewChan = forever (WS.sendTextData aConnect . A.encode =<< readChan aNewChan)
     `finally` writeChan ch (NodeIsDisconnected aId)
-{-
-msgReceiver :: InChan MsgToCentralActor
-                     -> InChan InfoMsg
-                     -> InChan FileActorRequest
-                     -> NodeType
-                     -> IdFrom
-                     -> WS.Connection
-                     -> InChan PendingAction
-                     -> IO b
-                     -}
+
+
 msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan aInChan = forever $ do
     aMsg <- WS.receiveData aConnect
-    writeLog aInfoChan [ServePoATag] Info $ "Raw msg: " ++ show aMsg ++ "\n"
+    let aLog aMsg  = writeLog aInfoChan [ServePoATag] Info aMsg
+        aSend aMsg = WS.sendTextData aConnect $ A.encode aMsg
+    aLog $ "Raw msg: " ++ show aMsg ++ "\n"
     case A.eitherDecodeStrict aMsg of
         Right a -> case a of
             -- REVIEW: Check fair distribution of transactions between nodes
@@ -110,37 +102,42 @@ msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan aIn
                 aTmpChan <- C.newChan
                 writeInChan aPendingChan $ GetTransaction aNum aTmpChan
                 aTransactions <- C.readChan aTmpChan
-                writeLog aInfoChan [ServePoATag] Info "sendTransactions to poa"
-                WS.sendTextData aConnect $ A.encode $ ResponseTransactions aTransactions
+                aLog    "Sending of transactions to client node."
+                aSend $ ResponseTransactions aTransactions
 
             RequestPotentialConnects _ -> do
                 aShuffledRecords <- shuffleM =<< getRecords aFileServerChan
                 let aConnects = take 5 aShuffledRecords
-                writeLog aInfoChan [ServePoATag] Info $ "Send connections " ++ show aConnects
-                WS.sendTextData aConnect $ A.encode $ ResponsePotentialConnects aConnects
+                aLog  $ "Sending of connections: " ++ show aConnects
+                aSend $ ResponsePotentialConnects aConnects
 
             RequestPoWList -> do
-                    writeLog aInfoChan [ServePoATag] Info $
-                        "PoWListRequest the msg from " ++ show aId
-                    sendActionToCentralActor ch $ RequestListOfPoW aId
+                aLog $ "PoWListRequest the msg from " ++ show aId
+                sendActionToCentralActor ch $ RequestListOfPoW aId
+
+            RequestVersion -> do
+                aLog  $ "Version request from client node."
+                aSend $ ResponseVersion $(version)
 
             RequestPending (Just aTransaction) -> do
                 aTmpChan <- C.newChan
                 writeInChan aPendingChan $ IsInPending aTransaction aTmpChan
                 aTransactions <- C.readChan aTmpChan
-                WS.sendTextData aConnect $ A.encode $ ResponseTransactionIsInPending aTransactions
+                aLog  $ "Pending request from client node."
+                aSend $ ResponseTransactionIsInPending aTransactions
 
             RequestPending Nothing -> do
                 aTmpChan <- C.newChan
                 writeInChan aPendingChan $ GetPending aTmpChan
                 aTransactions <- C.readChan aTmpChan
-                WS.sendTextData aConnect $ A.encode $ ResponseTransactions aTransactions
+                aSend $ ResponseTransactions aTransactions
 
 
             RequestActualConnects -> do
                 aMVar <- newEmptyMVar
                 sendActionToCentralActor ch $ RequestActualConnectList aMVar
-                WS.sendTextData aConnect . A.encode . ResponseActualConnects =<< takeMVar aMVar
+                aVar <- takeMVar aMVar
+                aSend $ ResponseActualConnects aVar
             --
             aMessage -> do
                 writeLog aInfoChan [ServePoATag] Info $ "Received msg " ++ show aMessage
@@ -157,7 +154,6 @@ writeInChan aChan aMsg = do
     aOk <- tryWriteChan aChan aMsg
     C.threadDelay 10000
     unless aOk $ writeInChan aChan aMsg
-
 
 sendMsgToCentralActor :: InChan MsgToCentralActor -> NodeType -> NetMessage -> IO ()
 sendMsgToCentralActor aChan aNodeType aMsg = writeInChan aChan (MsgFromNode aNodeType aMsg)
