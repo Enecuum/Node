@@ -8,14 +8,13 @@ module BootNodeServer (
 ) where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Monad                         (forever, void, when)
+import           Control.Monad                         (forever, void, when, forM_)
 import qualified Data.Text                             as T
 import qualified Network.WebSockets                    as WS
 import           Service.InfoMsg                       as I
 import           Service.Network.Base
 import           Service.Network.WebSockets.Client
 import           Service.Network.WebSockets.Server
--- import              System.Random.Shuffle
 import qualified Control.Concurrent                    as C
 import           Control.Exception
 import           Data.Aeson                            as A
@@ -32,8 +31,12 @@ bootNodeServer :: PortNumber -> InChan InfoMsg -> InChan (DataActorRequest Conne
 bootNodeServer aRecivePort aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
         "Init. ServerPoABootNode: a port is " ++ show aRecivePort
-
     (aInChan, aOutChan) <- newChan 64
+    void $ C.forkIO $ forever $ do
+        C.threadDelay 60000000
+        aConnects <- getRecords aFileServerChan
+        forM_ aConnects (tryWriteChan aInChan . TestExistedConnect)
+
     void $ C.forkIO $ forever $ readChan aOutChan >>= \case
         AddConnectToList aConn@(Connect aHostAdress aPort) -> void $ C.forkIO $ do
             C.threadDelay 3000000
