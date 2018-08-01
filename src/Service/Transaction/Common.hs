@@ -25,5 +25,6 @@ import           Service.Transaction.Storage (connectOrRecoveryConnect,
                                               getBlockByHashDB, getChainInfoDB,
                                               getKeyBlockByHashDB,
                                               getLastTransactions,
-                                              getTransactionsByMicroblockHash,
-                                              rHash)
+                                              getTransactionsByMicroblockHash)
+
+import           Service.Transaction.Decode  (rHash)

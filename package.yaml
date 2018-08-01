@@ -99,7 +99,7 @@ dependencies:
 - cryptohash-sha256
 - derive
 - bytestring-conversion
-
+- hspec
 
 library:
   source-dirs: src

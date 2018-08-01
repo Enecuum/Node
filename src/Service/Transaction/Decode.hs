@@ -17,6 +17,7 @@ import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
 -- import           Service.Transaction.Storage
+import qualified Crypto.Hash.SHA256                    as SHA
 import           Data.Aeson                            hiding (Error)
 import           Data.Aeson.Types                      (parseMaybe)
 import qualified Data.ByteString.Base64                as Base64
@@ -30,6 +31,13 @@ import           Node.Data.GlobalLoging
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON
+
+-- for rocksdb Transaction and Microblock
+rHashT :: Transaction -> BSI.ByteString
+rHashT t@(Transaction {}) = Base64.encode . SHA.hash . S.encode $ t { _timestamp = Nothing }
+
+rHash :: S.Serialize a => a -> BSI.ByteString
+rHash key = Base64.encode . SHA.hash . S.encode $ key
 
 
 lastKeyBlock :: DBKey
@@ -90,6 +98,26 @@ getMicroBlockByHashDB db mHash = do
 getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo)
 getTransactionByHashDB db tHash = decodeRaw <$> getByHash (poolTransaction db) tHash
 
+
+decodeTransactionAndFilterByKey :: PublicKey -> DBValue ->  Maybe TransactionAPI
+decodeTransactionAndFilterByKey pubKey rawTx  = txAPI
+  where txInfo = (decodeThis rawTx) :: TransactionInfo
+        tx = _tx (txInfo :: TransactionInfo)
+        -- condition t = _owner t == pubKey || _receiver t == pubKey
+        txAPI = if (txFilterByKey pubKey tx)
+          then Just $ TransactionAPI { _tx = tx, _txHash = rHashT tx}
+          else Nothing
+
+
+decodeAndFilter :: PublicKey -> DBValue -> Bool
+decodeAndFilter pubKey rawTx  = isKeyThere
+  where txInfo = (decodeThis rawTx) :: TransactionInfo
+        tx = _tx (txInfo :: TransactionInfo)
+        isKeyThere = txFilterByKey pubKey tx
+
+
+txFilterByKey :: PublicKey -> Transaction -> Bool
+txFilterByKey pubKey t = _owner t == pubKey || _receiver t == pubKey
 
 -- Chain
 getChain :: Common -> Number -> IO Chain

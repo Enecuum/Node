@@ -38,6 +38,7 @@ import           Service.System.Directory
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 -- import           Service.Types.SerializeInstances      (roll, unroll)
+import           Data.Maybe
 import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
@@ -45,7 +46,6 @@ import           Service.Transaction.Decode
 import           Service.Transaction.Iterator
 import           Service.Types.SerializeInstances      (roll)
 import           Service.Types.SerializeJSON           ()
-
 --------------------------------------
 
 
@@ -91,12 +91,7 @@ handler =
 --------------------------------------
 -- begin of the Database structure  section
 
--- for rocksdb Transaction and Microblock
-rHashT :: Transaction -> BSI.ByteString
-rHashT t@(Transaction {}) = Base64.encode . SHA.hash . S.encode $ t { _timestamp = Nothing }
 
-rHash :: S.Serialize a => a -> BSI.ByteString
-rHash key = Base64.encode . SHA.hash . S.encode $ key
 
 lastClosedKeyBlock :: DBKey
 lastClosedKeyBlock = "2dJ6lb9JgyQRac0DAkoqmYmS6ats3tND0gKMLW6x2x8=" :: DBKey
@@ -165,13 +160,13 @@ getLastKeyBlock desc aInfoChan = do
 
 getLastTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> IO [TransactionAPI]
 getLastTransactions descr pubKey offset aCount = do
-  let fun = \db -> getLast db offset aCount
-  txs <- withResource (poolTransaction descr) fun
-  let rawTxInfo = map (\(_,v) -> v) txs
-  let txAPI = decodeTransactionsAndFilterByKey rawTxInfo pubKey
-  return txAPI
-
-
+  -- let fun = \db -> getLast db offset aCount
+  -- txs <- withResource (poolTransaction descr) fun
+  -- let rawTxInfo = map (\(_,v) -> v) txs
+  -- let txAPI = decodeTransactionsAndFilterByKey rawTxInfo pubKey
+  -- return txAPI
+  let fun = \db -> findTransactionsForWallet1 db pubKey offset aCount
+  withResource (poolTransaction descr) fun
 
 getTransactionsByMicroblockHash :: DBPoolDescriptor -> InChan InfoMsg -> Hash -> IO (Maybe [TransactionInfo])
 getTransactionsByMicroblockHash db i aHash = do
@@ -186,6 +181,11 @@ getBlockByHashDB db hash i = do
   return $ Just mAPI
 
 
+decodeTransactionsAndFilterByKey :: [DBValue] -> PublicKey -> [TransactionAPI]
+decodeTransactionsAndFilterByKey rawTx pubKey = catMaybes $ map (decodeTransactionAndFilterByKey pubKey) rawTx
+
+
+
 
 
 getKeyBlockByHashDB :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe MacroblockAPI)
@@ -193,17 +193,6 @@ getKeyBlockByHashDB db kHash i = do
   hashOfKey <- getKeyBlockByHash db i kHash
   case hashOfKey of Nothing -> return Nothing
                     Just j  -> Just <$> (tMacroblock2MacroblockAPI db j)
-
-
-decodeTransactionsAndFilterByKey :: [DBValue] -> PublicKey -> [TransactionAPI]
-decodeTransactionsAndFilterByKey rawTx pubKey = txAPI
-  where fun = \t -> case (S.decode t :: Either String TransactionInfo) of
-                       Left e  -> throw (DecodeException (show e))
-                       Right r -> _tx (r  :: TransactionInfo)
-
-        tx = map fun rawTx
-        txWithKey = filter (\t -> (_owner t == pubKey || _receiver t == pubKey)) tx
-        txAPI = map (\t -> TransactionAPI { _tx = t, _txHash = rHashT t}) txWithKey
 
 
 getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [TransactionAPI]

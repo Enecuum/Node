@@ -21,6 +21,7 @@ import qualified Data.ByteString.Char8               as BC
 import qualified Data.ByteString.Internal            as BSI
 import           Data.Default                        (def)
 import qualified Data.Serialize                      as S (decode, encode)
+import qualified Data.Serialize                      as S
 import qualified "rocksdb-haskell" Database.RocksDB  as Rocks
 import           Service.System.Directory            (getLedgerFilePath,
                                                       getMacroblockFilePath,
@@ -32,7 +33,6 @@ import           Service.Transaction.TransactionsDAG (genNNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON         ()
-
 
 
 
@@ -87,38 +87,40 @@ getAllLedger = do
   return $ map snd l
 
 
-getAllAndDecode :: IO String
-                   -> (DBKey -> a) -> (DBValue -> b) -> IO [(a, b)]
-getAllAndDecode filename funcK funcV = do
-  result <- getAllKV =<< filename
-  let result2 = map (\(k,v) -> (funcK k, funcV v)) result
-  return result2
-
-
 getAllMicroblocks :: IO [MicroblockBD]
 getAllMicroblocks = do
   m <- getAllMicroblockKV
   return $ map snd m
 
 
+getAllAndDecode :: IO String -> (DBKey -> a) -> (DBValue -> b) -> IO [(a, b)]
+getAllAndDecode filename funcK funcV = do
+  result <- getAllKV =<< filename
+  let result2 = map (\(k,v) -> (funcK k, funcV v)) result
+  return result2
+
+
+getAllAndDecode2 :: (S.Serialize b, S.Serialize a) => IO String -> IO [(a, b)]
+getAllAndDecode2 filename = getAllAndDecode filename decodeThis decodeThis
+
 getAllSproutKV :: IO [(Integer, (Maybe MainChain, Maybe SproutChain))]
-getAllSproutKV = getAllAndDecode getSproutFilePath decodeThis decodeThis
+getAllSproutKV = getAllAndDecode2 getSproutFilePath
 
 
 getAllLedgerKV :: IO [(PublicKey,Amount)]
-getAllLedgerKV = getAllAndDecode getLedgerFilePath decodeThis decodeThis
+getAllLedgerKV = getAllAndDecode2 getLedgerFilePath
 
 
 getAllTransactionsKV :: IO [(HashOfTransaction,TransactionInfo)]
-getAllTransactionsKV = getAllAndDecode getTransactionFilePath id decodeThis
+getAllTransactionsKV = getAllAndDecode2 getTransactionFilePath
 
 
 getAllMicroblockKV :: IO [(HashOfMicroblock,MicroblockBD)]
-getAllMicroblockKV = getAllAndDecode getMicroblockFilePath id decodeThis
+getAllMicroblockKV = getAllAndDecode2 getMicroblockFilePath
 
 
 getAllMacroblockKV :: IO [(HashOfKeyBlock,MacroblockBD)]
-getAllMacroblockKV = getAllAndDecode getMacroblockFilePath id decodeThis
+getAllMacroblockKV = getAllAndDecode2 getMacroblockFilePath
 
 
 -- test03 ::  IO [BSI.ByteString]

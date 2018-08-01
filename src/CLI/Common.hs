@@ -53,7 +53,7 @@ import           Service.Transaction.Common            as B (getBalanceForKey,
                                                              getKeyBlockByHashDB,
                                                              getLastTransactions,
                                                              getTransactionByHashDB)
-import           Service.Transaction.Storage           (getAllTransactionsDB,
+import           Service.Transaction.Common            (getAllTransactionsDB,
                                                         rHash)
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
