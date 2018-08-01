@@ -11,7 +11,7 @@
     ,   GADTs
   #-}
 
-module Node.Node.DataActor (
+module Node.DataActor (
         startDataActor
     ,   getRecords
     ,   DataActorRequest(..)

@@ -21,7 +21,7 @@ import           Control.Exception
 import           Data.Aeson                            as A
 import           Data.Maybe                            ()
 import           Node.Data.GlobalLoging
-import           Node.Node.DataActor
+import           Node.DataActor
 import           Node.NetLvl.Massages
 import           Service.System.Version
 

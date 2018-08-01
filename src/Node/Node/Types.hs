@@ -36,7 +36,7 @@ import              Data.Aeson
 import              Data.Aeson.TH
 import              Service.InfoMsg
 import              Node.NetLvl.Massages
-import              Node.Node.DataActor
+import              Node.DataActor
 
 
 instance Show (InChan a) where show _ = "InChan"
