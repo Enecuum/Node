@@ -13,7 +13,7 @@ import              Service.Network.Base (ConnectInfo(..))
 import              System.Environment
 import              Node.Node.Types
 import              BootNodeServer
-import              Node.Node.DataActor
+import              Node.DataActor
 
 import              Network.Socket()
 import qualified    Data.ByteString.Lazy as L
@@ -21,7 +21,6 @@ import              Data.Aeson
 
 main :: IO ()
 main =  do
-      putStrLn  "Dev 25/06/2018 17:00"
       enc <- L.readFile "configs/config.json"
       case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
