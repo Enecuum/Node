@@ -1,6 +1,8 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
+
 module BootNodeServer (
     bootNodeServer
 ) where
@@ -21,7 +23,7 @@ import           Data.Maybe                            ()
 import           Node.Data.GlobalLoging
 import           Node.Node.DataActor
 import           Node.NetLvl.Massages
-
+import           Service.System.Version
 
 data ConnectTesterActor = AddConnectToList Connect | TestExistedConnect Connect
 
@@ -49,20 +51,26 @@ bootNodeServer aRecivePort aInfoChan aFileServerChan = do
 
     runServer aRecivePort "bootNodeServer" $ \aHostAdress aPending -> do
         aConnect <- WS.acceptRequest aPending
-        writeLog aInfoChan [ServerBootNodeTag] Info "ServerPoABootNode.Connect accepted."
+        let aSend = WS.sendTextData aConnect . A.encode
+            aLog  = writeLog aInfoChan [ServerBootNodeTag] Info
+        aLog "ServerPoABootNode.Connect accepted."
         aMsg <- WS.receiveData aConnect
         case A.eitherDecodeStrict aMsg of
             Right a -> case a of
+                RequestVersion -> do
+                    aLog  $ "Version request from client node."
+                    aSend $ ResponseVersion $(version)
+
                 RequestPotentialConnects aFull
                     | aFull -> do
-                        writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request full list of connections."
+                        aLog "Accepted request full list of connections."
                         aConnects <- getRecords aFileServerChan
-                        WS.sendTextData aConnect $ A.encode $ ResponsePotentialConnects $ filter (\(Connect aAdress _) -> aHostAdress /= aAdress ) aConnects
+                        aSend $ ResponsePotentialConnects $ filter (\(Connect aAdress _) -> aHostAdress /= aAdress ) aConnects
 
                     | otherwise -> do
-                        writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request of connections."
+                        aLog "Accepted request of connections."
                         aConnects <- getRecords aFileServerChan
-                        WS.sendTextData aConnect . A.encode $ ResponsePotentialConnects $ filter (\(Connect aAdress _) -> aHostAdress /= aAdress ) aConnects
+                        aSend $ ResponsePotentialConnects $ filter (\(Connect aAdress _) -> aHostAdress /= aAdress ) aConnects
 
                 ActionAddToConnectList aPort ->
                     void $ tryWriteChan aInChan $ AddConnectToList (Connect aHostAdress aPort)

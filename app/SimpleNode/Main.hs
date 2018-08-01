@@ -1,15 +1,19 @@
-{-# LANGUAGE OverloadedStrings, LambdaCase, ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
 import              Control.Monad
 import qualified    Control.Concurrent as C
 import              System.Environment (getEnv)
+import              Service.System.Version
 
 import              Control.Concurrent.Chan.Unagi.Bounded
 
 import              Data.Maybe (fromJust)
-import              Node.NetLvl.Router 
+import              Node.NetLvl.Router
 import              Node.Node.Types
 import              Node.Data.Key (generateKeyPair)
 import              Service.Types.PublicPrivateKeyPair (fromPublicKey256k1, compressPublicKey)
@@ -35,7 +39,7 @@ configName = "configs/config.json"
 
 main :: IO ()
 main =  do
-        putStrLn  "Dev 25/06/2018 17:00"
+        putStrLn $ "Version: " ++ $(version)
         enc <- L.readFile configName
         case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
