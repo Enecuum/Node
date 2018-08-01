@@ -119,7 +119,7 @@ findUntil it count maximum' predicate = do
 findTransactionsForWallet :: Rocks.Iterator -> PublicKey -> Int -> Int -> IO [TransactionAPI]
 findTransactionsForWallet it pubKey count maximum' = do
   txInfo <- findUntil it count maximum' (decodeAndFilter pubKey)
-  let tx = map (\t -> _tx (decodeThis t :: TransactionInfo)) txInfo
+  let tx = map (\t -> _tx (decodeThis "TransactionInfo" t :: TransactionInfo)) txInfo
   return $ map (\t -> TransactionAPI { _tx = t, _txHash = rHashT t}) tx
 
 

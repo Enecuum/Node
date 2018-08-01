@@ -427,15 +427,19 @@ writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
         previousLastKeyBlock <- funR (poolMacroblock desc) j
         case previousLastKeyBlock of
           Nothing -> return []
-          Just k -> case S.decode k :: Either String MacroblockBD of
-                      Left e -> do
-                        writeLog a [BDTag] Error ("Can not decode Macroblock" ++ show e)
-                        return []
-                      Right r -> do
-                        let pKey = j
-                            pVal = S.encode $ (r { _nextKBlock = Just hashOfKeyBlock } :: MacroblockBD)
-                        return [(pKey, pVal)]
-
+          -- Just k -> case S.decode k :: Either String MacroblockBD of
+          --             Left e -> do
+          --               writeLog a [BDTag] Error ("Can not decode Macroblock" ++ show e)
+          --               return []
+          --             Right r -> do
+          --               let pKey = j
+          --                   pVal = S.encode $ (r { _nextKBlock = Just hashOfKeyBlock } :: MacroblockBD)
+          --               return [(pKey, pVal)]
+          Just k -> do
+            let r = decodeThis "MacroblockBD" k
+                pKey = j
+                pVal = S.encode $ (r { _nextKBlock = Just hashOfKeyBlock } :: MacroblockBD)
+            return [(pKey, pVal)]
     -- fill new last closed Macroblock
     let keyValue = [(lastClosedKeyBlock, cKey)]
     funW (poolLast desc) keyValue

@@ -47,26 +47,20 @@ tryParseTXInfoJson = do
   print $ res
 
 
-tryParseTXInfoBin :: IO ()
+tryParseTXInfoBin :: IO TransactionInfo
 tryParseTXInfoBin = do
   tx <- genNNTx 5
   let ti = TransactionInfo (tx !! 0) (BC.pack "123") 2 False
   let eti = S.encode ti
   print eti
-  let res = S.decode eti :: Either String TransactionInfo
-  -- return res
-  print $ res
-
-
+  let res = decodeThis "TransactionInfo" eti
+  return res
 
 
 getAllTransactions :: IO [TransactionInfo]
 getAllTransactions = do
   result <- getAll =<< getTransactionFilePath
-  let func res = case (S.decode res :: Either String TransactionInfo) of
-        Right r -> r
-        Left _  -> error "Can not decode Transaction"
-  return $ map func result
+  return $ map (decodeThis "TransactionInfo") result
 
 
 getAll ::  String -> IO [DBValue]
@@ -100,27 +94,28 @@ getAllAndDecode filename funcK funcV = do
   return result2
 
 
-getAllAndDecode2 :: (S.Serialize b, S.Serialize a) => IO String -> IO [(a, b)]
-getAllAndDecode2 filename = getAllAndDecode filename decodeThis decodeThis
+getAllAndDecode2 :: (S.Serialize b, S.Serialize a) => IO String -> DecodeType -> DecodeType -> IO [(a, b)]
+getAllAndDecode2 filename aType bType = getAllAndDecode filename (decodeThis aType) (decodeThis bType)
+
 
 getAllSproutKV :: IO [(Integer, (Maybe MainChain, Maybe SproutChain))]
-getAllSproutKV = getAllAndDecode2 getSproutFilePath
+getAllSproutKV = getAllAndDecode2 getSproutFilePath "Integer" "(Maybe MainChain, Maybe SproutChain)"
 
 
 getAllLedgerKV :: IO [(PublicKey,Amount)]
-getAllLedgerKV = getAllAndDecode2 getLedgerFilePath
+getAllLedgerKV = getAllAndDecode2 getLedgerFilePath "PublicKey" "Amount"
 
 
 getAllTransactionsKV :: IO [(HashOfTransaction,TransactionInfo)]
-getAllTransactionsKV = getAllAndDecode2 getTransactionFilePath
+getAllTransactionsKV = getAllAndDecode2 getTransactionFilePath "HashOfTransaction" "TransactionInfo"
 
 
 getAllMicroblockKV :: IO [(HashOfMicroblock,MicroblockBD)]
-getAllMicroblockKV = getAllAndDecode2 getMicroblockFilePath
+getAllMicroblockKV = getAllAndDecode2 getMicroblockFilePath "HashOfMicroblock" "MicroblockBD"
 
 
 getAllMacroblockKV :: IO [(HashOfKeyBlock,MacroblockBD)]
-getAllMacroblockKV = getAllAndDecode2 getMacroblockFilePath
+getAllMacroblockKV = getAllAndDecode2 getMacroblockFilePath "HashOfKeyBlock" "MacroblockBD"
 
 
 -- test03 ::  IO [BSI.ByteString]

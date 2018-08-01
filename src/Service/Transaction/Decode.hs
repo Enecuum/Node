@@ -26,6 +26,7 @@ import qualified Data.ByteString.Internal              as BSI
 import           Data.Default                          (def)
 import           Data.Pool
 import qualified Data.Serialize                        as S (Serialize (..))
+-- import           Data.Typeable
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
 import           Service.Types
@@ -66,29 +67,30 @@ getByHash :: Pool Rocks.DB -> Hash -> IO (Maybe DBValue)
 getByHash pool aHash = (\(Hash key) -> funR pool key) aHash
 
 
+type DecodeType = String
 
 ---- Decode
-decodeThis :: S.Serialize p => BSI.ByteString -> p
-decodeThis res = case (S.decode res) of
-  Left e  -> throw $ DecodeException $ show e
+decodeThis :: S.Serialize p => DecodeType -> BSI.ByteString ->  p
+decodeThis aType res = case (S.decode res) of
+  Left e  -> throw $ DecodeException $ aType ++ show e
   Right r -> r
 
 
-decodeRaw :: S.Serialize a => Maybe DBValue -> Maybe a
-decodeRaw this = case this of
+decodeRaw :: S.Serialize a => DecodeType -> Maybe DBValue ->  Maybe a
+decodeRaw aType this = case this of
   Nothing -> Nothing
-  Just j  -> Just $ decodeThis j
+  Just j  -> Just $ decodeThis aType j
 
 
 -- MacroblockBD
 getKeyBlockByHash :: DBPoolDescriptor -> InChan InfoMsg -> Hash  -> IO (Maybe MacroblockBD)
-getKeyBlockByHash db _ kHash = decodeRaw <$> getByHash (poolMacroblock db) kHash
+getKeyBlockByHash db _ kHash = (decodeRaw "MacroblockBD") <$> getByHash (poolMacroblock db) kHash
 
 
 --Microblock
 getMicroBlockByHashDB :: DBPoolDescriptor -> Hash -> IO MicroblockBD
 getMicroBlockByHashDB db mHash = do
-  res <- decodeRaw <$> getByHash (poolMicroblock db) mHash
+  res <- (decodeRaw "MicroblockBD") <$> getByHash (poolMicroblock db) mHash
   case res of
     Nothing -> throw (NoSuchMicroBlockForHash $ show mHash)
     Just j  -> return j
@@ -96,12 +98,12 @@ getMicroBlockByHashDB db mHash = do
 
 --Transaction
 getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo)
-getTransactionByHashDB db tHash = decodeRaw <$> getByHash (poolTransaction db) tHash
+getTransactionByHashDB db tHash = (decodeRaw "TransactionInfo") <$> getByHash (poolTransaction db) tHash
 
 
 decodeTransactionAndFilterByKey :: PublicKey -> DBValue ->  Maybe TransactionAPI
 decodeTransactionAndFilterByKey pubKey rawTx  = txAPI
-  where txInfo = (decodeThis rawTx) :: TransactionInfo
+  where txInfo = (decodeThis "TransactionInfo" rawTx) :: TransactionInfo
         tx = _tx (txInfo :: TransactionInfo)
         -- condition t = _owner t == pubKey || _receiver t == pubKey
         txAPI = if (txFilterByKey pubKey tx)
@@ -111,7 +113,7 @@ decodeTransactionAndFilterByKey pubKey rawTx  = txAPI
 
 decodeAndFilter :: PublicKey -> DBValue -> Bool
 decodeAndFilter pubKey rawTx  = isKeyThere
-  where txInfo = (decodeThis rawTx) :: TransactionInfo
+  where txInfo = (decodeThis "TransactionInfo" rawTx) :: TransactionInfo
         tx = _tx (txInfo :: TransactionInfo)
         isKeyThere = txFilterByKey pubKey tx
 
@@ -125,17 +127,17 @@ getChain (Common descr _ ) aNumber = do
   maybeV <- funR (poolSprout descr) (S.encode aNumber)
   case maybeV of
     Nothing -> return (Nothing, Nothing)
-    Just m  -> return $ decodeThis m
+    Just m  -> return $ decodeThis "Chain" m
 
 
 --Ledger
 getBalanceForKey :: DBPoolDescriptor -> PublicKey -> IO (Maybe Amount)
-getBalanceForKey db key = decodeRaw <$> funR (poolLedger db) (S.encode key)
+getBalanceForKey db key = (decodeRaw "Amount") <$> funR (poolLedger db) (S.encode key)
 
 
 --Last Number
 getLastKeyBlockNumber :: Common -> IO (Maybe Number)
-getLastKeyBlockNumber (Common descr _) = decodeRaw <$> funR (poolLast descr) lastKeyBlock
+getLastKeyBlockNumber (Common descr _) = (decodeRaw "Number") <$> funR (poolLast descr) lastKeyBlock
 
 
 --KeyBlock
