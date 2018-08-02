@@ -14,7 +14,7 @@
         "host": "195.201.41.200",
         "port": 8125
     },
-    "bootNodeList": "[((195,201,226,28), 1554)]",
+    "bootNodeList": "[((127,0,0,1), 1554)]",
     "poaPort": 1554,
     "logsBuildConfig": {
         "host": "195.201.41.200",
