@@ -35,7 +35,7 @@ import           Service.Types.SerializeJSON
 
 -- for rocksdb Transaction and Microblock
 rHashT :: Transaction -> BSI.ByteString
-rHashT t@(Transaction {}) = Base64.encode . SHA.hash . S.encode $ t { _timestamp = Nothing }
+rHashT t@Transaction {} = Base64.encode . SHA.hash . S.encode $ t { _timestamp = Nothing }
 
 rHash :: S.Serialize a => a -> BSI.ByteString
 rHash key = Base64.encode . SHA.hash . S.encode $ key
@@ -47,19 +47,19 @@ lastKeyBlock = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4=" :: DBKey
 
 funW ::  Pool Rocks.DB -> [(DBKey, DBValue)] -> IO ()
 funW db aMapKeyValue = do
-  let fun = (\aDb -> Rocks.write aDb def{Rocks.sync = True} (map (\(k,v) -> Rocks.Put k v) aMapKeyValue))
+  let fun aDb =  Rocks.write aDb def{Rocks.sync = True} $ map (uncurry Rocks.Put) aMapKeyValue
   withResource db fun
 
 
 funR ::  Pool Rocks.DB -> DBKey -> IO (Maybe BSI.ByteString)
 funR db key = do
-  let fun = (\aDb -> Rocks.get aDb Rocks.defaultReadOptions key)
+  let fun aDb = Rocks.get aDb Rocks.defaultReadOptions key
   withResource db fun
 
 
 funD ::  Pool Rocks.DB -> DBKey -> IO ()
 funD db key = do
-  let fun = (\aDb -> Rocks.delete aDb def{Rocks.sync = True} key)
+  let fun aDb = Rocks.delete aDb def{Rocks.sync = True} key
   withResource db fun
 
 
@@ -71,7 +71,7 @@ type DecodeType = String
 
 ---- Decode
 decodeThis :: S.Serialize p => DecodeType -> BSI.ByteString ->  p
-decodeThis aType res = case (S.decode res) of
+decodeThis aType res = case S.decode res of
   Left e  -> throw $ DecodeException $ aType ++ show e
   Right r -> r
 
@@ -84,13 +84,13 @@ decodeRaw aType this = case this of
 
 -- MacroblockBD
 getKeyBlockByHash :: DBPoolDescriptor -> InChan InfoMsg -> Hash  -> IO (Maybe MacroblockBD)
-getKeyBlockByHash db _ kHash = (decodeRaw "MacroblockBD") <$> getByHash (poolMacroblock db) kHash
+getKeyBlockByHash db _ kHash = decodeRaw "MacroblockBD" <$> getByHash (poolMacroblock db) kHash
 
 
 --Microblock
 getMicroBlockByHashDB :: DBPoolDescriptor -> Hash -> IO MicroblockBD
 getMicroBlockByHashDB db mHash = do
-  res <- (decodeRaw "MicroblockBD") <$> getByHash (poolMicroblock db) mHash
+  res <- decodeRaw "MicroblockBD" <$> getByHash (poolMicroblock db) mHash
   case res of
     Nothing -> throw (NoSuchMicroBlockForHash $ show mHash)
     Just j  -> return j
@@ -98,22 +98,22 @@ getMicroBlockByHashDB db mHash = do
 
 --Transaction
 getTransactionByHashDB :: DBPoolDescriptor -> Hash -> IO (Maybe TransactionInfo)
-getTransactionByHashDB db tHash = (decodeRaw "TransactionInfo") <$> getByHash (poolTransaction db) tHash
+getTransactionByHashDB db tHash = decodeRaw "TransactionInfo" <$> getByHash (poolTransaction db) tHash
 
 
 decodeTransactionAndFilterByKey :: PublicKey -> DBValue ->  Maybe TransactionAPI
 decodeTransactionAndFilterByKey pubKey rawTx  = txAPI
-  where txInfo = (decodeThis "TransactionInfo" rawTx) :: TransactionInfo
+  where txInfo = decodeThis "TransactionInfo" rawTx :: TransactionInfo
         tx = _tx (txInfo :: TransactionInfo)
         -- condition t = _owner t == pubKey || _receiver t == pubKey
-        txAPI = if (txFilterByKey pubKey tx)
-          then Just $ TransactionAPI { _tx = tx, _txHash = rHashT tx}
+        txAPI = if txFilterByKey pubKey tx
+          then Just TransactionAPI { _tx = tx, _txHash = rHashT tx}
           else Nothing
 
 
 decodeAndFilter :: PublicKey -> DBValue -> Bool
 decodeAndFilter pubKey rawTx  = isKeyThere
-  where txInfo = (decodeThis "TransactionInfo" rawTx) :: TransactionInfo
+  where txInfo = decodeThis "TransactionInfo" rawTx :: TransactionInfo
         tx = _tx (txInfo :: TransactionInfo)
         isKeyThere = txFilterByKey pubKey tx
 
@@ -132,12 +132,12 @@ getChain (Common descr _ ) aNumber = do
 
 --Ledger
 getBalanceForKey :: DBPoolDescriptor -> PublicKey -> IO (Maybe Amount)
-getBalanceForKey db key = (decodeRaw "Amount") <$> funR (poolLedger db) (S.encode key)
+getBalanceForKey db key = decodeRaw "Amount" <$> funR (poolLedger db) (S.encode key)
 
 
 --Last Number
 getLastKeyBlockNumber :: Common -> IO (Maybe Number)
-getLastKeyBlockNumber (Common descr _) = (decodeRaw "Number") <$> funR (poolLast descr) lastKeyBlock
+getLastKeyBlockNumber (Common descr _) = decodeRaw "Number" <$> funR (poolLast descr) lastKeyBlock
 
 
 --KeyBlock
@@ -155,10 +155,9 @@ decodeKeyBlock i (Object aValue) = do
 
     case Base64.decode body of
       Left e -> throw (DecodeException (show e))
-      Right r -> do
-        case Data.Aeson.eitherDecodeStrict $ BC.init $ BC.tail r of
+      Right r -> case Data.Aeson.eitherDecodeStrict $ BC.init $ BC.tail r of
           Left a -> throw (DecodeException $ "There is no PoW Key Block. The error: " ++ a)
-          Right (keyBlockInfo ) -> do
+          Right keyBlockInfo -> do
             -- let aKeyBlock = tKBIPoW2KBI keyBlockInfo
             --     aKeyBlockHash = getKeyBlockHash keyBlockInfo
 

@@ -74,16 +74,16 @@ initialAmount = 100
 
 updateBalanceTable :: DBPoolDescriptor -> InChan InfoMsg -> BalanceTable -> IsStorno -> Transaction -> IO ()
 updateBalanceTable db i ht isStorno t@(Transaction fromKey toKey am _ _ _ _) = do
-  v1 <- H.lookup ht $ fromKey
-  v2 <- H.lookup ht $ toKey
+  v1 <- H.lookup ht fromKey
+  v2 <- H.lookup ht toKey
   let tKey = rHashT t
   txI <- getTransactionByHashDB db (Hash tKey)
   writeLog i [BDTag] Info $ "Transaction " ++ show txI ++ " isStorno " ++ show isStorno
   case (v1,v2) of
-    (Nothing, _)       -> do return ()
-    (_, Nothing)       -> do return ()
+    (Nothing, _)       -> return ()
+    (_, Nothing)       -> return ()
     (Just balanceFrom, Just balanceTo) ->
-      if (isStorno == False)
+      if isStorno == False
       then when ((balanceFrom - am) > 0) $ do
         -- writeLog i [BDTag] Info $ "Forward tx: fromKey " ++ show fromKey ++ " toKey " ++ show toKey ++ " - amount " ++ show am
         H.insert ht fromKey (balanceFrom - am)

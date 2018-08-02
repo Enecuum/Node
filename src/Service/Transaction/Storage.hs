@@ -79,10 +79,7 @@ instance Exception SuperException
 
 --catch all exceptions and retry connections
 handler :: [p -> E.Handler IO Bool]
-handler =
-    [ \_ -> E.Handler $ \(_ :: SomeException) -> do
-        return True
-    ]
+handler = [ \_ -> E.Handler $ \(_ :: SomeException) -> return True ]
 
 -- End of the Connection section
 --------------------------------------
@@ -165,12 +162,12 @@ getLastTransactions descr pubKey offset aCount = do
   -- let rawTxInfo = map (\(_,v) -> v) txs
   -- let txAPI = decodeTransactionsAndFilterByKey rawTxInfo pubKey
   -- return txAPI
-  let fun = \db -> findTransactionsForWallet1 db pubKey offset aCount
+  let fun db = findTransactionsForWallet1 db pubKey offset aCount
   withResource (poolTransaction descr) fun
 
 getTransactionsByMicroblockHash :: DBPoolDescriptor -> InChan InfoMsg -> Hash -> IO (Maybe [TransactionInfo])
 getTransactionsByMicroblockHash db i aHash = do
-  m@(MicroblockBD {..}) <- getMicroBlockByHashDB db aHash
+  m@MicroblockBD {..} <- getMicroBlockByHashDB db aHash
   txInfo <- getTxs db i m
   return $ Just txInfo
 
@@ -182,7 +179,7 @@ getBlockByHashDB db hash i = do
 
 
 decodeTransactionsAndFilterByKey :: [DBValue] -> PublicKey -> [TransactionAPI]
-decodeTransactionsAndFilterByKey rawTx pubKey = catMaybes $ map (decodeTransactionAndFilterByKey pubKey) rawTx
+decodeTransactionsAndFilterByKey rawTx pubKey = mapMaybe (decodeTransactionAndFilterByKey pubKey) rawTx
 
 
 
@@ -192,7 +189,7 @@ getKeyBlockByHashDB :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe M
 getKeyBlockByHashDB db kHash i = do
   hashOfKey <- getKeyBlockByHash db i kHash
   case hashOfKey of Nothing -> return Nothing
-                    Just j  -> Just <$> (tMacroblock2MacroblockAPI db j)
+                    Just j  -> Just <$> tMacroblock2MacroblockAPI db j
 
 
 getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [TransactionAPI]
@@ -216,7 +213,7 @@ getAllItems db = do
 
 
 tMicroblockBD2Microblock :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO Microblock
-tMicroblockBD2Microblock db i m@(MicroblockBD {..}) = do
+tMicroblockBD2Microblock db i m@MicroblockBD {..} = do
   tx <- getTxsMicroblock db i m
   aTeamkeys <- getTeamKeysForMicroblock db i _keyBlock
   return Microblock {
@@ -230,7 +227,7 @@ tMicroblockBD2Microblock db i m@(MicroblockBD {..}) = do
   }
 
 tMicroblock2MicroblockBD :: Microblock -> MicroblockBD
-tMicroblock2MicroblockBD (Microblock {..}) = MicroblockBD {
+tMicroblock2MicroblockBD Microblock {..} = MicroblockBD {
   _keyBlock,
   _signBD = _sign,
   -- _teamKeys,
@@ -250,7 +247,7 @@ getTeamKeysForMicroblock db i aHash = do
 
 
 tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO MicroblockAPI
-tMicroblockBD2MicroblockAPI db i m@(MicroblockBD {..}) = do
+tMicroblockBD2MicroblockAPI db i m@MicroblockBD {..} = do
   tx <- getTxsMicroblock db i m
   let txAPI = map (\t -> TransactionAPI {_tx = t, _txHash = rHashT t }) tx
   -- teamKeys <- getTeamKeysForMicroblock db _keyBlock --aInfoChan
@@ -266,8 +263,8 @@ tMicroblockBD2MicroblockAPI db i m@(MicroblockBD {..}) = do
 
 
 tMacroblock2MacroblockAPI :: DBPoolDescriptor -> MacroblockBD -> IO MacroblockAPI
-tMacroblock2MacroblockAPI descr (MacroblockBD {..}) = do
-           microblocks <- zip _mblocks <$> mapM (\h -> getMicroBlockByHashDB descr (Hash h)) _mblocks
+tMacroblock2MacroblockAPI descr MacroblockBD {..} = do
+           microblocks <- zip _mblocks <$> mapM (getMicroBlockByHashDB descr . Hash) _mblocks
            let microblocksInfoAPI = map (\(h, MicroblockBD {..}) -> MicroblockInfoAPI {
                                                         _prevMicroblock = Nothing,
                                                         _nextMicroblock = Nothing,
@@ -275,7 +272,7 @@ tMacroblock2MacroblockAPI descr (MacroblockBD {..}) = do
                                                         _signAPI = _signBD,
                                                         _publisher,
                                                         _hash = h}) microblocks
-           return $ MacroblockAPI {
+           return MacroblockAPI {
              _prevKBlock,
              _nextKBlock = Nothing,
              _difficulty,
@@ -305,7 +302,7 @@ dummyMacroblock = MacroblockBD {
 
 
 tKeyBlockInfo2Macroblock :: KeyBlockInfo -> MacroblockBD
-tKeyBlockInfo2Macroblock (KeyBlockInfo {..}) = MacroblockBD {
+tKeyBlockInfo2Macroblock KeyBlockInfo {..} = MacroblockBD {
             _prevKBlock = Nothing,
             _nextKBlock = Nothing,
             _prevHKBlock = Just _prev_hash,
@@ -320,7 +317,7 @@ tKeyBlockInfo2Macroblock (KeyBlockInfo {..}) = MacroblockBD {
           }
 
 tMacroblock2KeyBlockInfo :: MacroblockBD -> KeyBlockInfo
-tMacroblock2KeyBlockInfo (MacroblockBD {..}) = KeyBlockInfo {
+tMacroblock2KeyBlockInfo MacroblockBD {..} = KeyBlockInfo {
   _time     ,
   _prev_hash = prev_hash,
   _number   ,
@@ -333,8 +330,7 @@ tMacroblock2KeyBlockInfo (MacroblockBD {..}) = KeyBlockInfo {
 
 
 tMacroblock2ChainInfo :: Maybe (DBKey, MacroblockBD) -> IO ChainInfo
-tMacroblock2ChainInfo kv = do
-  case kv of
+tMacroblock2ChainInfo kv = case kv of
     Nothing ->  return ChainInfo {
     _emission        = 0,
     _curr_difficulty = 0,
@@ -343,7 +339,7 @@ tMacroblock2ChainInfo kv = do
     _txs_num         = 0,  -- quantity of all approved transactions
     _nodes_num       = 0   -- quantity of all active nodes
     }
-    Just (aKeyBlockHash, (MacroblockBD {..}))  -> return ChainInfo {
+    Just (aKeyBlockHash, MacroblockBD {..})  -> return ChainInfo {
     _emission        = _reward,
     _curr_difficulty = _difficulty,
     _last_block      = aKeyBlockHash,
@@ -398,20 +394,21 @@ updateMacroblockByMacroblock db i hashOfKeyBlock mb  branch = do
 writeMacroblockSprout :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
 writeMacroblockSprout desc a hashOfKeyBlock aMacroblock = do
     let cKey = hashOfKeyBlock
-        cVal = (S.encode aMacroblock)
+        cVal = S.encode aMacroblock
     funW (poolMacroblock desc) [(cKey,cVal)]
     writeLog a [BDTag] Info ("Write Macroblock " ++ show cKey ++ " " ++ show aMacroblock ++ "to DB")
+
 
 writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
 writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
   hashPreviousLastKeyBlock <- funR (poolLast desc) lastClosedKeyBlock
   aIsMacroblockClosed <- isMacroblockClosed aMacroblock a
-  let cMacroblock = if ( aIsMacroblockClosed == True)
+  let cMacroblock = if aIsMacroblockClosed
         then (aMacroblock { _prevKBlock = hashPreviousLastKeyBlock }) :: MacroblockBD
         else aMacroblock
   print $ "cMacroblock" ++ show cMacroblock
   let cKey = hashOfKeyBlock
-      cVal = (S.encode cMacroblock)
+      cVal = S.encode cMacroblock
   print $ "cKey " ++ show cKey
   print $ "cVal " ++ show cVal
   funW (poolMacroblock desc) [(cKey,cVal)]
@@ -419,7 +416,7 @@ writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
 
   -- For closed Macroblock
   bIsMacroblockClosed <- isMacroblockClosed aMacroblock a
-  when (bIsMacroblockClosed) $ do
+  when bIsMacroblockClosed $ do
     -- fill _nextKBlock for previous closed Macroblock
     bdKV <- case hashPreviousLastKeyBlock of
       Nothing -> return []
@@ -438,7 +435,7 @@ writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
           Just k -> do
             let r = decodeThis "MacroblockBD" k
                 pKey = j
-                pVal = S.encode $ (r { _nextKBlock = Just hashOfKeyBlock } :: MacroblockBD)
+                pVal = S.encode (r { _nextKBlock = Just hashOfKeyBlock } :: MacroblockBD)
             return [(pKey, pVal)]
     -- fill new last closed Macroblock
     let keyValue = [(lastClosedKeyBlock, cKey)]
@@ -449,8 +446,7 @@ writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
 
 
 writeKeyBlockNumber :: Common -> Number -> IO ()
-writeKeyBlockNumber (Common descr _) aNumber = do
-    funW (poolLast descr) [(lastKeyBlock, S.encode aNumber)]
+writeKeyBlockNumber (Common descr _) aNumber = funW (poolLast descr) [(lastKeyBlock, S.encode aNumber)]
 
 -- ok
 getKeyBlockNumber :: Common -> IO (Maybe Number)
@@ -520,7 +516,7 @@ genesisKeyBlock = KeyBlockInfoPoW{
 
 
 tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
-tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {
+tKBIPoW2KBI KeyBlockInfoPoW {..} = KeyBlockInfo {
   _time,
   _prev_hash,
   _number,
@@ -533,8 +529,8 @@ tKBIPoW2KBI (KeyBlockInfoPoW {..}) = KeyBlockInfo {
 
 
 fillMacroblockByKeyBlock :: MacroblockBD -> KeyBlockInfo -> MacroblockBD
-fillMacroblockByKeyBlock m (KeyBlockInfo {..}) = m {
-        _prevHKBlock = Just $ _prev_hash,
+fillMacroblockByKeyBlock m KeyBlockInfo {..} = m {
+        _prevHKBlock = Just _prev_hash,
         _solver = _solver,
         _time = _time,
         _number = _number,
