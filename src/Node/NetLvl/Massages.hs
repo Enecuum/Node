@@ -29,6 +29,7 @@ import           Service.Types                    (Microblock (..), Transaction)
 import           Service.Types.SerializeInstances
 import           Service.Types.SerializeJSON      ()
 import           Text.Read
+import           Service.Sync.SyncJson
 
 
 data NetMessage where
@@ -60,6 +61,7 @@ data NetMessage where
     ActionConnect               :: NodeType   -> Maybe NodeId -> NetMessage
     ActionAddToConnectList      :: PortNumber -> NetMessage
     ActionConnectIsDead         :: Connect    -> NetMessage
+    Sync                        :: Value      -> NetMessage
 
   deriving (Show)
 
@@ -380,6 +382,7 @@ instance ToJSON NetMessage where
         "type" .= ("ConnectIsDead"  :: String),
         "connect" .= aConnect
       ]
+    toJSON (Sync aVal) = aVal
 
 instance ToJSON Connect where
     toJSON (Connect aHostAddress aPortNumber) = object [

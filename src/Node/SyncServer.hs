@@ -242,4 +242,4 @@ takeRecords aChan aTaker  = do
 
 --
 sendMsgToNode :: ToJSON a => InChan MsgToCentralActor -> a -> NodeId -> IO ()
-sendMsgToNode aChan aMsg aId = writeInChan aChan $ SendMsgToNode (toJSON aMsg) (IdTo aId)
+sendMsgToNode aChan aMsg aId = writeInChan aChan $ SendSyncMsg aId (toJSON aMsg) 

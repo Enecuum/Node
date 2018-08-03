@@ -24,6 +24,7 @@ import           Crypto.PubKey.ECC.ECDSA               as ECDSA
 import           Crypto.Random.Types
 import           Lens.Micro.TH
 import           Service.Network.Base
+import           Service.Sync.SyncJson
 
 import           Data.Aeson
 import           Data.Aeson.TH
@@ -52,6 +53,8 @@ data MsgToCentralActor where
     CleanAction             :: MsgToCentralActor
     NewTransaction          :: Transaction -> MVar Bool -> MsgToCentralActor
     SendMsgToNode           :: Value -> IdTo            -> MsgToCentralActor
+    SendSyncMsg             :: NodeId -> Value          -> MsgToCentralActor
+    SyncToNode              :: SyncMessage  -> NodeId       -> MsgToCentralActor
     ActualConnectsToNNRequest:: MVar [ActualConnectInfo] -> MsgToCentralActor
 
 
