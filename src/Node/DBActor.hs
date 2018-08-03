@@ -39,9 +39,6 @@ data MsgToDB where
     SetSproutAsMain       :: Number -> MsgToDB
     WriteChain            :: [Chunk] -> MsgToDB
 
-cleanDB :: Common -> IO ()
-cleanDB = undefined
-
 
 startDBActor :: DBPoolDescriptor
                       -> OutChan Microblock
@@ -70,14 +67,14 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
     forever $ readChan aOutChan >>= \case
         MicroblockMsgToDB aMicroblock -> do
             aLog "Recived mickrobloc."
-            aExeption <- try $ addMicroblockToDB descriptor aMicroblock aInfoCh
+            aExeption <- try $ addMicroblockToDB aData aMicroblock
             case aExeption of
                 Right _ -> aLog "Success of setting microblock"
                 Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e
 
         KeyBlockMsgToDB aValue -> do
             writeLog aInfoCh [BDTag] Info "Recived keyBlocks."
-            aExeption <- try $ addKeyBlockToDB descriptor aValue aInfoCh aSyncChan
+            aExeption <- try $ addKeyBlockToDB aData aValue aSyncChan
             case aExeption of
                 Right _ -> aLog "Success of setting keyBlock"
                 Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e
@@ -86,9 +83,9 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
             aLog "Recived chain."
             cleanDB aData
             forM_ aChain $ \(Chunk aKeyBlo aMicroblocks) -> do
-                addKeyBlockToDB2 descriptor aKeyBlo aInfoCh aSyncChan
+                addKeyBlockToDB2 aData aKeyBlo aSyncChan
                 forM_ aMicroblocks $ \aBlock -> do
-                    addMicroblockToDB descriptor aBlock aInfoCh
+                    addMicroblockToDB aData aBlock
 
         MyTail aMVar -> do
             aLog "My tail request."

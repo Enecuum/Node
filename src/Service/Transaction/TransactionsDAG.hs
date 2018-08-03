@@ -1,14 +1,18 @@
-{-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
+{-# LANGUAGE DisambiguateRecordFields  #-}
+{-# LANGUAGE DuplicateRecordFields     #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances         #-}
+{-# LANGUAGE GADTs                     #-}
 
 module Service.Transaction.TransactionsDAG where
 
-import Data.Graph.Inductive
-import Control.Monad (replicateM)
-import Service.Types.PublicPrivateKeyPair
-import Service.System.Directory (getTime)
-import Service.Types
-import Service.Transaction.Skelet (getSkeletDAG)
-import System.Random
+import           Control.Monad                      (replicateM)
+import           Data.Graph.Inductive
+import           Service.System.Directory           (getTime)
+import           Service.Transaction.Skelet         (getSkeletDAG)
+import           Service.Types
+import           Service.Types.PublicPrivateKeyPair
+import           System.Random
 type QuantityOfTransactions = Int
 
 getLabsNodes :: [LNode a] -> [a]
@@ -72,4 +76,5 @@ genNTx n = do
                         where qKeys = div n 3
    keys <- replicateM quantityOfKeys generateNewRandomAnonymousKeyPair
    tx <- getTransactions keys n
-   return tx
+   let nTx = take n $ cycle tx
+   return nTx

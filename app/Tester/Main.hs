@@ -1,28 +1,27 @@
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell#-}
+{-# LANGUAGE TemplateHaskell     #-}
 module Main where
 
 import           Control.Concurrent
 import           Control.Concurrent.Async
 import           Control.Monad
-import           Crypto.PubKey.ECC.ECDSA             as ECDSA
+import           Crypto.PubKey.ECC.ECDSA           as ECDSA
 import           Data.Aeson
-import qualified Data.ByteString.Lazy.Char8          as B8
-import qualified Data.Text                           as T
+import qualified Data.ByteString.Lazy.Char8        as B8
+import qualified Data.Text                         as T
 import           Node.Data.Key
 import           Node.NetLvl.Massages
 import           Service.Network.Base
 import           Service.Network.WebSockets.Client
 import           Service.Types
-import           System.Environment                  (getArgs)
+import           System.Environment                (getArgs)
 
-import qualified Network.WebSockets                  as WS
-import           Service.Transaction.TransactionsDAG
+import qualified Network.WebSockets                as WS
 import           Service.Sync.SyncJson
 import           Service.System.Version
-
+import           Service.Transaction.Common
 
 testMsg :: Value
 testMsg = object [
@@ -337,6 +336,7 @@ main = do
                     threadDelay 50000
                     WS.sendTextData aConnect $ B8.pack aMsg
         _ -> return ()
+
 
 socketActor :: (WS.Connection -> IO a) -> WS.Connection -> IO ()
 socketActor aSender aConnect = do

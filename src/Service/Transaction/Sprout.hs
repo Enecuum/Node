@@ -5,7 +5,7 @@ module Service.Transaction.Sprout where
 import           Data.Maybe
 import           Service.Transaction.Decode
 import           Service.Transaction.SproutCommon
-import           Service.Transaction.Storage
+-- import           Service.Transaction.Storage
 import           Service.Types
 
 findChain :: Common -> Number -> BranchOfChain -> IO (Number, Maybe HashOfKeyBlock)
@@ -24,8 +24,8 @@ getM c aNumber = fst <$> getChain c aNumber
 findWholeChainSince ::  Common -> Number -> BranchOfChain -> IO [(Number, HashOfKeyBlock)]
 findWholeChainSince c aNumber branch = do
   chainJ <- findChain c aNumber branch
-  let second = \a -> isJust $ snd a
-  if (second chainJ)
+  let second a = isJust $ snd a
+  if second chainJ
     then do
     rest <- findWholeChainSince c (aNumber + 1) branch
     let chain = (fst chainJ, fromJust (snd chainJ))
@@ -40,7 +40,7 @@ findConsequentChainSinceUntil c@(Common descr i) h searchedHash limit = do
     Nothing -> return []
     Just macroblock -> case _prevHKBlock macroblock of
       Nothing -> return []
-      Just hashPrevKBlock -> if (limit > 0 && hashPrevKBlock /= searchedHash)
+      Just hashPrevKBlock -> if limit > 0 && hashPrevKBlock /= searchedHash
         then do
         let aNumber = _number (macroblock :: MacroblockBD)
         rest <- findConsequentChainSinceUntil c hashPrevKBlock searchedHash (limit - 1)
@@ -61,8 +61,8 @@ pickByNumber i = do
 findSinceAndUntil :: Int -> IO [(Int, Maybe Int)]
 findSinceAndUntil i = do
   p <- pickByNumber i
-  let second = \a -> isJust $ snd a
-  if (second p)
+  let second a = isJust $ snd a
+  if second p
     then do
     rest <- findSinceAndUntil (i+1)
     return (p:rest)

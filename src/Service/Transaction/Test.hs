@@ -12,81 +12,29 @@ module Service.Transaction.Test where
 
 import           Service.Transaction.Storage
 
-import           Control.Concurrent.Chan.Unagi.Bounded
+-- import           Control.Concurrent.Chan.Unagi.Bounded
+-- import           Control.Exception                   (throw)
 import           Control.Monad
 import           Control.Monad.Trans.Resource
 import           Data.Aeson
-import qualified Data.ByteString.Char8                 as BC
-import qualified Data.ByteString.Internal              as BSI
-import           Data.Default                          (def)
-import qualified Data.Serialize                        as S (decode, encode)
-import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
-import           Service.System.Directory              (getLedgerFilePath,
-                                                        getMacroblockFilePath,
-                                                        getMicroblockFilePath,
-                                                        getSproutFilePath,
-                                                        getTransactionFilePath)
+import qualified Data.ByteString.Char8               as BC
+import qualified Data.ByteString.Internal            as BSI
+import           Data.Default                        (def)
+import qualified Data.Serialize                      as S (decode, encode)
+import qualified Data.Serialize                      as S
+import qualified "rocksdb-haskell" Database.RocksDB  as Rocks
+import           Service.System.Directory            (getLedgerFilePath,
+                                                      getMacroblockFilePath,
+                                                      getMicroblockFilePath,
+                                                      getSproutFilePath,
+                                                      getTransactionFilePath)
 import           Service.Transaction.Decode
-import           Service.Transaction.TransactionsDAG   (genNNTx)
+import           Service.Transaction.Iterator
+import           Service.Transaction.TransactionsDAG (genNNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeJSON           ()
+import           Service.Types.SerializeJSON         ()
 
-getOneMicroblock :: IO ()
-getOneMicroblock = undefined
--- getOneMicroblock = do
---   c <- connectDB
---   let h = Hash ("2c4kS21m0cA91siB0OfuoCwLRWKyLl/2yuk3z+6BvFY=" :: BSI.ByteString)
---   -- let h = Hash ("\248\198\199\178e\ETXt\186T\148y\223\224t-\168p\162\138\&1" :: BSI.ByteString)
---   mb <- getBlockByHashDB c h
---   print mb
-
-
-getOneTransaction :: IO ()
-getOneTransaction = do
-  c <- connectDB
-  let h = Hash ("NKgaAanEuIfiXBWWPzQVSCjkWu1Y/xVLS4o7IIAVt1E=" :: BSI.ByteString)
-  tx <- getTransactionByHashDB c h
-  print tx
-
-
-getTransactionsByKey :: IO ()
-getTransactionsByKey = do
-  c <- connectDB
-  tx <- getAllTransactionsDB c (read "QYy3AT4a3Z88MpEoGDixRgxtWW8v3RfSbJLFQEyFZwMe" :: PublicKey)
-  print tx
-
-
--- mb <- B.getKeyBlockByHashDB db hash aInfoChan
-
--- end test cli
---------------------------------------
-
-getOneKeyBlock2 :: IO (Maybe MacroblockAPI)
-getOneKeyBlock2 = do
-  c <- connectDB
-  let h = Hash ("MzI=" :: BSI.ByteString)
-  -- let h = Hash ("32" :: BSI.ByteString)
-  (inChan, _) <- newChan 64
-  getKeyBlockByHashDB c h inChan
--- "MzI="
-
-getOneKeyBlock :: IO (Maybe MacroblockBD)
-getOneKeyBlock = do
-  c <- connectDB
-  -- let h = Hash ("32" :: BSI.ByteString)
-  mb <- funR (poolMacroblock c) "32"
-  case mb of Nothing -> do
-               -- writeLog aInfoChan [BDTag] Error ("No Team Keys For Key block " ++ show aHash)
-               return Nothing
-             Just j -> case (S.decode j :: Either String MacroblockBD) of
-               Left _  -> error "Can not decode Macroblock"
-               Right r -> return $ Just r
-
--- getOneKeyBlock = do
---   c <- connectDB
---   let h = Hash ("XXX" :: BSI.ByteString)
---   getKeyBlockByHashDB c h
 
 tryParseTXInfoJson :: IO ()
 tryParseTXInfoJson = do
@@ -95,41 +43,24 @@ tryParseTXInfoJson = do
   let eti = Data.Aeson.encode ti
   print eti
   let res = Data.Aeson.decode eti :: Maybe TransactionInfo
-  -- return t
+  -- return res
   print $ res
 
 
-tryParseTXInfoBin :: IO ()
+tryParseTXInfoBin :: IO TransactionInfo
 tryParseTXInfoBin = do
   tx <- genNNTx 5
   let ti = TransactionInfo (tx !! 0) (BC.pack "123") 2 False
   let eti = S.encode ti
   print eti
-  let res = S.decode eti :: Either String TransactionInfo
-  -- return t
-  print $ res
+  let res = decodeThis "TransactionInfo" eti
+  return res
 
 
---------------------------------------
-
--- showAllMicroblockKV :: IO [(Text, MicroblockBD)]
--- showAllMicroblockKV = do
---           mbs <- getAllMicroblockKV
---           return $ map (\(bs, mb) -> (decodeUtf8 $ encodeBase58 bitcoinAlphabet bs, mb)) mbs
-
---------------------------------------
--- begin test cli
-
-
-getAllTransactions :: IO ()
+getAllTransactions :: IO [TransactionInfo]
 getAllTransactions = do
   result <- getAll =<< getTransactionFilePath
-  let func res = case (S.decode res :: Either String TransactionInfo) of
-        Right r -> r
-        Left _  -> error "Can not decode Transaction"
-  let result2 = map func result
-  putStrLn $ show result2
-  -- return result2
+  return $ map (decodeThis "TransactionInfo") result
 
 
 getAll ::  String -> IO [DBValue]
@@ -144,101 +75,47 @@ getAllKV path = runResourceT $ do
   getAllItems db
 
 
-getAllLedger :: IO ()
+getAllLedger :: IO [Amount]
 getAllLedger = do
-  result <- getAll =<< getLedgerFilePath
-  -- let result2 = map (\res -> S.decode res :: Either String PublicKey) result
-  let func res = case (S.decode res :: Either String Amount) of
-        Right r -> r
-        Left _  -> error "Can not decode Ledger"
-  let result2 = map func result
-  putStrLn $ show result2
+  l <- getAllLedgerKV
+  return $ map snd l
 
 
-
-
-getAllMicroblocks :: IO ()
+getAllMicroblocks :: IO [MicroblockBD]
 getAllMicroblocks = do
-  result <- getAll =<< getMicroblockFilePath
-  let func res = case (S.decode res :: Either String Microblock) of
-        Right r -> r
-        Left _  -> error "Can not decode Microblock"
-  let result2 = map func result
-  print result2
+  m <- getAllMicroblockKV
+  return $ map snd m
 
 
--- data TypeInfo = Amount | Transaction | MicroblockBD | MacroblockBD --
-
--- getAllKV1 :: TypeInfo -> IO ()
--- getAllKV1 Amount       = getLedgerFilePath
--- getAllKV1 Transaction{}  = getTransactionFilePath
--- getAllKV1 MicroblockBD{} = getMicroblockFilePath
--- getAllKV1 MacroblockBD{} = getMacroblockFilePath
-
--- getAllKV2 typeInfo = do
---   result <- getAllKV =<< getAllKV1 typeInfo
-
-getAllSproutKV :: IO [FullChain]
-getAllSproutKV = do
-  result <- getAllKV =<< getSproutFilePath
-  -- case result of
-  --   Nothing -> throw NoSproutAtAll
-  --   Just j  ->
-  let funcV res = case (S.decode res :: Either String Chain) of
-        Right r -> r
-        Left e  -> (Nothing,Nothing) --error ("Can not decode Chain" ++ show e)
-  let funcK res = case (S.decode res :: Either String Number) of
-        Right r -> r
-        Left e  -> (-1) --error ("Can not decode Number" ++ show e)
-  let result2 = map (\(k,v) -> (funcK k, fst (funcV v), snd (funcV v))) result
-  -- let result2 = map (\(k,v) -> (funcK k, Nothing, Nothing)) result
-
-  return result2
-
-getAllLedgerKV :: IO [(PublicKey,Amount)]
-getAllLedgerKV = do
-  result <- getAllKV =<< getLedgerFilePath
-  let funcK res = case (S.decode res :: Either String PublicKey) of
-        Right r -> r
-        Left _  -> error "Can not decode Public Key in Ledger"
-  let funcV res = case (S.decode res :: Either String Amount) of
-        Right r -> r
-        Left _  -> error "Can not decode Amount in Ledger"
+getAllAndDecode :: IO String -> (DBKey -> a) -> (DBValue -> b) -> IO [(a, b)]
+getAllAndDecode filename funcK funcV = do
+  result <- getAllKV =<< filename
   let result2 = map (\(k,v) -> (funcK k, funcV v)) result
   return result2
 
+
+getAllAndDecode2 :: (S.Serialize b, S.Serialize a) => IO String -> DecodeType -> DecodeType -> IO [(a, b)]
+getAllAndDecode2 filename aType bType = getAllAndDecode filename (decodeThis aType) (decodeThis bType)
+
+
+getAllSproutKV :: IO [(Integer, (Maybe MainChain, Maybe SproutChain))]
+getAllSproutKV = getAllAndDecode2 getSproutFilePath "Integer" "(Maybe MainChain, Maybe SproutChain)"
+
+
+getAllLedgerKV :: IO [(PublicKey,Amount)]
+getAllLedgerKV = getAllAndDecode2 getLedgerFilePath "PublicKey" "Amount"
+
+
 getAllTransactionsKV :: IO [(HashOfTransaction,TransactionInfo)]
-getAllTransactionsKV = do
-  result <- getAllKV =<< getTransactionFilePath
-  let func res = case (S.decode res :: Either String TransactionInfo) of
-        Right r -> r
-        Left _  -> error "Can not decode Transaction"
-  let result2 = map (\(k,v) -> (k, func v)) result
-  return result2
+getAllTransactionsKV = getAllAndDecode2 getTransactionFilePath "HashOfTransaction" "TransactionInfo"
 
 
 getAllMicroblockKV :: IO [(HashOfMicroblock,MicroblockBD)]
-getAllMicroblockKV = do
-  result <- getAllKV =<< getMicroblockFilePath
-  let func res = case (S.decode res :: Either String MicroblockBD) of
-        Right r -> r
-        Left _  -> error "Can not decode Microblock"
-  let result2 = map (\(k,v) -> (k, func v)) result
-  return result2
+getAllMicroblockKV = getAllAndDecode2 getMicroblockFilePath "HashOfMicroblock" "MicroblockBD"
 
 
 getAllMacroblockKV :: IO [(HashOfKeyBlock,MacroblockBD)]
-getAllMacroblockKV = do
-  result <- getAllKV =<< getMacroblockFilePath
-  let func res = case (S.decode res :: Either String MacroblockBD) of
-        Right r -> r
-        Left _  -> error "Can not decode MacroblockBD"
-  let result2 = map (\(k,v) -> (k, func v)) result
-  return result2
-
-
--- end of the Query Iterator section
-
+getAllMacroblockKV = getAllAndDecode2 getMacroblockFilePath "HashOfKeyBlock" "MacroblockBD"
 
 
 -- test03 ::  IO [BSI.ByteString]
@@ -247,6 +124,7 @@ test03 fun n  = runResourceT $ do
   let pathT = "/tmp/haskell-rocksDB5"
   (_, db) <- Rocks.openBracket pathT def{Rocks.createIfMissing=False}
   fun db n
+
 
 goGetAll :: IO ()
 goGetAll = do

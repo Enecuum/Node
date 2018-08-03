@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE PackageImports      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module CLI.Common (
   sendMessageTo,
   sendMessageBroadcast,
@@ -43,8 +43,8 @@ import           Data.Time.Units
 import           System.Random                         (randomRIO)
 
 import           Control.Concurrent.MVar
-import           Node.Node.Types
 import           Node.Crypto                           (verifyEncodeble)
+import           Node.Node.Types
 import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
 import           Service.Transaction.Common            as B (getBalanceForKey,
@@ -53,8 +53,9 @@ import           Service.Transaction.Common            as B (getBalanceForKey,
                                                              getKeyBlockByHashDB,
                                                              getLastTransactions,
                                                              getTransactionByHashDB)
-import           Service.Transaction.Storage           (getAllTransactionsDB,
+import           Service.Transaction.Common            (getAllTransactionsDB,
                                                         rHash)
+import           Service.Transaction.Iterator          (kvOffset)
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
@@ -98,46 +99,44 @@ loadMessages :: InChan MsgToCentralActor -> IO (Result [MsgTo])
 loadMessages _ = return $ Left NotImplementedException
 
 
-getBlockByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Result MicroblockAPI)
-getBlockByHash db hash aInfoChan = try $ do
-  mb <- B.getBlockByHashDB db hash aInfoChan
+getBlockByHash :: Common -> Hash  -> IO (Result MicroblockAPI)
+getBlockByHash c hash  = try $ do
+  mb <- B.getBlockByHashDB c hash
   case mb of
     Nothing -> throw NoSuchMicroBlockDB
     Just m  -> return m
 
 
-getKeyBlockByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Result MacroblockAPI)
-getKeyBlockByHash db (Hash h) aInfoChan = try $ do
-  mb <- B.getKeyBlockByHashDB db (Hash h) aInfoChan
+getKeyBlockByHash :: Common -> Hash -> IO (Result MacroblockAPI)
+getKeyBlockByHash common (Hash h)  = try $ do
+  mb <- B.getKeyBlockByHashDB common (Hash h)
   case mb of
     Nothing -> throw NoSuchMacroBlockDB
     Just m  -> return m
 
 getChainInfo :: DBPoolDescriptor -> InChan InfoMsg -> IO (Result ChainInfo)
-getChainInfo db aInfoChan = do
-  k <- B.getChainInfoDB db aInfoChan
-  return $ Right k
-  -- return $ Right $ ChainInfo 0 0 "" 0 0 0
+getChainInfo db aInfoChan = Right <$> B.getChainInfoDB (Common db aInfoChan)
 
-getTransactionByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Result TransactionInfo)
-getTransactionByHash db hash _ = try $ do
+
+getTransactionByHash :: Common -> Hash  -> IO (Result TransactionInfo)
+getTransactionByHash (Common db _) hash = try $ do
   tx <- B.getTransactionByHashDB db hash
   case tx of
     Nothing -> throw NoSuchTransactionDB
     Just t  -> return t
 
 
-getAllTransactionsByWallet :: DBPoolDescriptor -> PublicKey -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
-getAllTransactionsByWallet pool key _ = try $ do
-  tx <- getAllTransactionsDB pool key
+getAllTransactionsByWallet :: Common -> PublicKey -> IO (Result [TransactionAPI])
+getAllTransactionsByWallet c key = try $ do
+  tx <- getAllTransactionsDB c key
   case tx of
     [] -> throw NoTransactionsForPublicKey
     t  -> return t
 
 
-getPartTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
-getPartTransactions pool key offset aCount _ = try $ do --return $ Left NotImplementedException
-  tx <- B.getLastTransactions pool key offset aCount
+getPartTransactions :: Common -> OffsetMap -> PublicKey -> Int -> Int -> IO (Result [TransactionAPI])
+getPartTransactions (Common pool _) aOffsetMap key offset aCount = try $ do --return $ Left NotImplementedException
+  tx <- B.getLastTransactions pool aOffsetMap key offset aCount
   case tx of
     [] -> throw NoTransactionsForPublicKey
     t  -> return t
@@ -147,7 +146,7 @@ sendTrans :: Transaction -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Re
 sendTrans tx ch aInfoCh = try $ do
   aExp <- (timeout (5 :: Second) $ do
            case _signature tx of
-            Just sign -> 
+            Just sign ->
                  if verifyEncodeble pk sign (tx {_signature = Nothing})
                  then do
                    sendMetrics tx aInfoCh

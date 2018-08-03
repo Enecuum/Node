@@ -3,10 +3,10 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Node.NetLvl.Massages where
@@ -64,6 +64,7 @@ data NetMessage where
 
 
 data NodeType = PoW | PoA | All | NN deriving (Eq, Show, Ord, Generic)
+
 
 isBlock :: NetMessage -> Bool
 isBlock = \case

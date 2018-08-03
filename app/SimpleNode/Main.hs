@@ -1,42 +1,43 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 module Main where
 
-import              Control.Monad
-import qualified    Control.Concurrent as C
-import              System.Environment (getEnv)
-import              Service.System.Version
+import qualified Control.Concurrent                    as C
+import           Control.Monad
+import           Service.System.Version
+import           System.Environment                    (getEnv)
 
-import              Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Concurrent.Chan.Unagi.Bounded
 
-import              Data.Maybe (fromJust)
-import              Node.NetLvl.Router
-import              Node.Node.Types
-import              Node.Data.Key (generateKeyPair)
-import              Service.Types.PublicPrivateKeyPair (fromPublicKey256k1, compressPublicKey)
-import              Service.Timer
-import              Node.Lib
-import              Service.InfoMsg
-import              Service.Network.Base
-import              CLI.CLI
-import              CLI.RPC
-import              Control.Exception (try, SomeException())
-import              Data.IP
+import           CLI.CLI
+import           CLI.RPC
+import           Control.Exception                     (SomeException, try)
+import           Data.IP
+import           Data.Maybe                            (fromJust)
+import           Node.Data.Key                         (generateKeyPair)
+import           Node.Lib
+import           Node.NetLvl.Router
+import           Node.Node.Types
+import           Service.InfoMsg
+import           Service.Network.Base
+import           Service.Timer
+import           Service.Types.PublicPrivateKeyPair    (compressPublicKey,
+                                                        fromPublicKey256k1)
 
-import              Data.Aeson (decode)
-import              Data.Aeson.Encode.Pretty (encodePretty)
-import qualified    Data.ByteString.Lazy as L
-import              Service.Transaction.Storage (connectOrRecoveryConnect)
+import           Data.Aeson                            (decode)
+import           Data.Aeson.Encode.Pretty              (encodePretty)
+import qualified Data.ByteString.Lazy                  as L
+import           Service.Transaction.Storage           (connectOrRecoveryConnect)
 
 
 configName :: String
 configName = "configs/config.json"
 
--- startNode descrDB buildConf infoCh manager startDo = do
 
+-- startNode descrDB buildConf infoCh manager startDo = do
 main :: IO ()
 main =  do
         putStrLn $ "Version: " ++ $(version)
