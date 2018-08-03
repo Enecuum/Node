@@ -1,13 +1,11 @@
-{-# LANGUAGE
-        GADTs
-    ,   DeriveGeneric
-    ,   TemplateHaskell
-    ,   OverloadedStrings
-    ,   TypeSynonymInstances
-    ,   FlexibleInstances
-    ,   MultiWayIf
-    ,   MultiParamTypeClasses
-  #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiWayIf            #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -15,32 +13,32 @@
 -- Different nodes use mutually overlapping set of messages
 module Node.Node.Types where
 
-import              Data.Serialize
-import qualified    Data.Map                        as M
-import              GHC.Generics (Generic)
-import qualified    Control.Concurrent.Chan         as C
-import              Control.Concurrent.MVar
-import              Control.Concurrent.Chan.Unagi.Bounded
+import qualified Control.Concurrent.Chan               as C
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Concurrent.MVar
+import qualified Data.Map                              as M
+import           Data.Serialize
+import           GHC.Generics                          (Generic)
 
-import              Service.Network.Base
-import              Crypto.Random.Types
-import              Crypto.PubKey.ECC.ECDSA         as ECDSA
-import              Lens.Micro.TH
+import           Crypto.PubKey.ECC.ECDSA               as ECDSA
+import           Crypto.Random.Types
+import           Lens.Micro.TH
+import           Service.Network.Base
 
-import              Node.Data.Key
-import qualified    Sharding.Types.Node as N
-import              Service.Types (Transaction, Microblock)
-
-import              Data.Scientific (toRealFloat, Scientific)
-import              Data.Aeson
-import              Data.Aeson.TH
-import              Service.InfoMsg
-import              Node.NetLvl.Massages
-import              Node.DataActor
+import           Data.Aeson
+import           Data.Aeson.TH
+import           Data.Scientific                       (Scientific, toRealFloat)
+import           Node.Data.Key
+import           Node.DataActor
+import           Node.NetLvl.Massages
+import           Service.InfoMsg
+import           Service.Types                         (Microblock, Transaction)
+import qualified Sharding.Types.Node                   as N
 
 
 instance Show (InChan a) where show _ = "InChan"
 instance Show (MVar a) where show _ = "MVar"
+
 
 type Transactions = [Transaction]
 
@@ -66,8 +64,8 @@ data MsgFromNode
 
 -- | TODO: shoud be refactord: reduce keys count.
 data NodeConfig = NodeConfig {
-        _privateKey    :: PrivateKey
-    ,   _myNodeId      :: MyNodeId
+        _privateKey :: PrivateKey
+    ,   _myNodeId   :: MyNodeId
   }
   deriving (Generic)
 
@@ -76,23 +74,23 @@ makeLenses ''NodeConfig
 
 
 data NodeInfo = NodeInfo {
-        _nodeChan     :: InChan NetMessage
-    ,   _nodeType     :: NodeType
-    ,   _connectInfo  :: Maybe Connect
+        _nodeChan    :: InChan NetMessage
+    ,   _nodeType    :: NodeType
+    ,   _connectInfo :: Maybe Connect
   }
   deriving (Eq)
 makeLenses ''NodeInfo
 
 
 data NetworkNodeData = NetworkNodeData {
-        _connects           :: M.Map NodeId NodeInfo
-    ,   _nodeConfig         :: NodeConfig
-    ,   _shardingChan       :: Maybe (C.Chan N.ShardingNodeAction)
-    ,   _logChan            :: InChan InfoMsg
-    ,   _fileServerChan     :: InChan (DataActorRequest Connect)
-    ,   _microblockChan     :: InChan Microblock
-    ,   _transactionsChan   :: InChan (Transaction, MVar Bool)
-    ,   _valueChan          :: InChan Value
+        _connects         :: M.Map NodeId NodeInfo
+    ,   _nodeConfig       :: NodeConfig
+    ,   _shardingChan     :: Maybe (C.Chan N.ShardingNodeAction)
+    ,   _logChan          :: InChan InfoMsg
+    ,   _fileServerChan   :: InChan (DataActorRequest Connect)
+    ,   _microblockChan   :: InChan Microblock
+    ,   _transactionsChan :: InChan (Transaction, MVar Bool)
+    ,   _valueChan        :: InChan Value
   }
 
 makeLenses ''NetworkNodeData

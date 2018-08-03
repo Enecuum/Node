@@ -19,7 +19,6 @@ import           Network.Socket                        (PortNumber)
 import qualified Network.WebSockets                    as WS
 import           Node.Node.Types
 import           Service.InfoMsg
--- import           Service.Transaction.Storage           (DBPoolDescriptor (..))
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
@@ -84,27 +83,27 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum "serveRpc" $ \_ aPendi
               getBlock = toMethod "enq_getBlockByHash" f (Required "hash" :+: ())
                 where
                   f :: Hash ->  RpcResult IO MacroblockAPI
-                  f hash = handle $ getKeyBlockByHash descrDB hash aInfoCh
+                  f hash = handle $ getKeyBlockByHash (Common descrDB aInfoCh) hash
 
               getMicroblock = toMethod "enq_getMicroblockByHash" f (Required "hash" :+: ())
                 where
                   f :: Hash ->  RpcResult IO MicroblockAPI
-                  f hash = handle $ getBlockByHash descrDB hash aInfoCh
+                  f hash = handle $ getBlockByHash (Common descrDB aInfoCh) hash
 
               getTransaction = toMethod "enq_getTransactionByHash" f (Required "hash" :+:())
                 where
                   f :: Hash -> RpcResult IO TransactionInfo
-                  f hash = handle $ getTransactionByHash descrDB hash aInfoCh
+                  f hash = handle $ getTransactionByHash (Common descrDB aInfoCh) hash
 
               getFullWallet = toMethod "enq_getAllTransactionsByWallet" f (Required "address" :+: ())
                 where
                   f :: PublicKey -> RpcResult IO [TransactionAPI]
-                  f key = handle $ getAllTransactionsByWallet descrDB key ch
+                  f key = handle $ getAllTransactionsByWallet (Common descrDB aInfoCh) key
 
               getPartWallet = toMethod "enq_getTransactionsByWallet" f (Required "address" :+: Required "offset" :+: Required "count" :+: ())
                 where
                   f :: PublicKey -> Int -> Int -> RpcResult IO [TransactionAPI]
-                  f key offset cnt = handle $ getPartTransactions descrDB key offset cnt ch
+                  f key offset cnt = handle $ getPartTransactions (Common descrDB aInfoCh) undefined key offset cnt
 
               getSystemInfo = toMethod "enq_getChainInfo" f ()
                 where

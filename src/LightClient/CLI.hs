@@ -47,6 +47,7 @@ data Flag = Port PortNumber | Host HostName | Version | Help
      deriving (Eq, Ord, Show)
 derive makeIs ''Flag
 
+
 args :: [OptDescr Flag]
 args = [
     Option ['P'] ["port"]    (ReqArg (Port . read) "port") "port number"

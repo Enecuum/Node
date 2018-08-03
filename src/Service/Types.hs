@@ -21,6 +21,7 @@ import qualified Data.ByteString.Char8                 as C
 import qualified Data.ByteString.Internal              as BSI
 import           Data.Graph.Inductive
 import           Data.List.Split                       (splitOn)
+import qualified Data.Map                              as M
 import           Data.Pool
 import           Data.Serialize
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
@@ -44,9 +45,11 @@ data CLIException = ValueOfChainIsNotNothing String
                   | NoLastKeyBlock
                   | NoClosedKeyBlockInDB String
                   | NoKeyBlock String
+                  | NoValueInDBAnymore
                   | TransactionChanBusyException
                   | TransactionInvalidSignatureException
                   | DecodeException String
+                  | EncodeException String
                   | OtherException
   deriving Show
 
@@ -63,7 +66,7 @@ type DBValue = BSI.ByteString
 type MainChain = HashOfKeyBlock
 type SproutChain = HashOfKeyBlock
 type Chain = (Maybe MainChain, Maybe SproutChain)
-type FullChain = (Integer, Maybe MainChain, Maybe SproutChain)
+type FullChain = (Integer, (Maybe MainChain, Maybe SproutChain))
 type Number = Integer
 
 type QuantityTx = Int
@@ -309,9 +312,7 @@ data ChainInfo = ChainInfo {
 instance Serialize ChainInfo
 
 
-
-
-
+type OffsetMap = (M.Map (PublicKey, Int) Rocks.Iterator)
 -- begin of the Connection section
 data DBPoolDescriptor = DBPoolDescriptor {
     poolTransaction :: Pool Rocks.DB
@@ -324,6 +325,6 @@ data DBPoolDescriptor = DBPoolDescriptor {
   }
 data BranchOfChain = Main | Sprout deriving (Eq, Generic, Ord, Read, Show)
 data Common = Common {
-  db       :: DBPoolDescriptor,
+  pool     :: DBPoolDescriptor,
   infoChan :: InChan InfoMsg
  }

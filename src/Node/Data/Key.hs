@@ -1,9 +1,7 @@
-{-# LANGUAGE
-        GADTs
-    ,   DeriveGeneric
-    ,   GeneralizedNewtypeDeriving
-    ,   TemplateHaskell
-  #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE GADTs                      #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell            #-}
 
 module Node.Data.Key (
         StringKey(..)
@@ -21,29 +19,25 @@ module Node.Data.Key (
     ,   generateKeyPair
     ,   generateClientId
   ) where
-import            Data.Bits
-import            Data.Word
-import            GHC.Generics
-import            System.Random
-import            Crypto.Random.Types (MonadRandom (..))
-import            Crypto.PubKey.ECC.Generate
-import            Crypto.PubKey.ECC.DH
-import            Crypto.PubKey.ECC.Types (
-    getCurveByName,
-    CurveName(SEC_p256k1),
-    Curve(..)
-  )
-import qualified    Crypto.PubKey.ECC.ECDSA         as ECDSA
-import qualified    Data.ByteString                 as B
-import qualified    Data.ByteArray                  as BA
-import              Data.Aeson.TH
-import              Data.Serialize
-import              Service.Types.PublicPrivateKeyPair (
-        uncompressPublicKey
-    ,   getPublicKey
-    ,   compressPublicKey
-    ,   PublicKey(..)
-  )
+import           Crypto.PubKey.ECC.DH
+import qualified Crypto.PubKey.ECC.ECDSA            as ECDSA
+import           Crypto.PubKey.ECC.Generate
+import           Crypto.PubKey.ECC.Types            (Curve (..),
+                                                     CurveName (SEC_p256k1),
+                                                     getCurveByName)
+import           Crypto.Random.Types                (MonadRandom (..))
+import           Data.Aeson.TH
+import           Data.Bits
+import qualified Data.ByteArray                     as BA
+import qualified Data.ByteString                    as B
+import           Data.Serialize
+import           Data.Word
+import           GHC.Generics
+import           Service.Types.PublicPrivateKeyPair (PublicKey (..),
+                                                     compressPublicKey,
+                                                     getPublicKey,
+                                                     uncompressPublicKey)
+import           System.Random
 
 newtype NodeId     = NodeId     Integer deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)
 newtype MyNodeId   = MyNodeId   Integer deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)
@@ -52,8 +46,10 @@ newtype IdTo       = IdTo       NodeId  deriving (Show, Ord, Eq, Generic, Serial
 
 newtype StringKey  = StringKey B.ByteString deriving (Eq, Show)
 
+
 curve_256 :: Curve
 curve_256 = getCurveByName SEC_p256k1
+
 
 getStringKey :: PrivateNumber -> PublicPoint -> StringKey
 getStringKey priv pub = StringKey key

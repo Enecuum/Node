@@ -23,19 +23,20 @@ import qualified Data.Text                             as T
 import qualified Network.WebSockets                    as WS
 import           Node.Data.GlobalLoging
 import           Node.DataActor
+import           Node.NetLvl.Massages
 import           Node.Node.Types
 import           Pending
-import           Node.NetLvl.Massages
 import           Service.InfoMsg                       as I
 import           Service.Network.Base
 import           Service.Network.WebSockets.Server
-import           Service.Types
-import           System.Random.Shuffle
+-- import           Service.Types
 import           Service.System.Version
+import           System.Random.Shuffle
 
 import           Control.Concurrent.Async
 import           Data.Maybe                            ()
 import           Node.Data.Key
+
 
 
 netLvlServer (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan inChanPending aInChan = do

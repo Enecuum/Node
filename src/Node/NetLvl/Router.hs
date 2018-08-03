@@ -7,33 +7,32 @@
 {-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
-{-# LANGUAGE ViewPatterns          #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Node.NetLvl.Router (routerActorStart) where
 
 
-import              System.Random()
+import           System.Random                         ()
 
-import              Service.Chan
-import qualified    Data.Map                        as M
-import              Data.Maybe (isNothing)
-import              Data.Aeson as A
-import              Data.IORef
-import              Lens.Micro
-import              Lens.Micro.Mtl()
-import              Control.Concurrent.Chan.Unagi.Bounded
-import              Control.Concurrent.MVar
-import              Control.Monad.Extra
-import              Node.Data.Key
-import              Node.Node.Types
-import              Service.InfoMsg
-import              Node.Data.GlobalLoging
-import              Node.NetLvl.Massages
-import              Sharding.Sharding()
-import              Node.BaseFunctions
-import qualified    Control.Concurrent as C
-import              Service.Sync.SyncJson
+import qualified Control.Concurrent                    as C
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Concurrent.MVar
+import           Control.Monad.Extra
+import           Data.Aeson                            as A
+import           Data.IORef
+import qualified Data.Map                              as M
+import           Data.Maybe                            (isNothing)
+import           Lens.Micro
+import           Lens.Micro.Mtl                        ()
+import           Node.BaseFunctions
+import           Node.Data.GlobalLoging
+import           Node.Data.Key
+import           Node.NetLvl.Massages
+import           Node.Node.Types
+import           Service.Chan
+import           Service.InfoMsg
+import           Service.Sync.SyncJson
+import           Sharding.Sharding                     ()
 
 
 routerActorStart :: InChan SyncEvent -> (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()

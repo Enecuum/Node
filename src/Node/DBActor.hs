@@ -65,14 +65,14 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
     forever $ readChan aOutChan >>= \case
         MicroblockMsgToDB aMicroblock -> do
             aLog "Recived mickrobloc."
-            aExeption <- try $ addMicroblockToDB descriptor aMicroblock aInfoCh
+            aExeption <- try $ addMicroblockToDB (Common descriptor aInfoCh) aMicroblock
             case aExeption of
                 Right _ -> aLog "Success of setting microblock"
                 Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e
 
         KeyBlockMsgToDB aValue -> do
             writeLog aInfoCh [BDTag] Info "Recived keyBlocks."
-            aExeption <- try $ addKeyBlockToDB descriptor aValue aInfoCh aSyncChan
+            aExeption <- try $ addKeyBlockToDB (Common descriptor aInfoCh) aValue aSyncChan
             case aExeption of
                 Right _ -> aLog "Success of setting keyBlock"
                 Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e

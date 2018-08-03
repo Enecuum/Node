@@ -1,6 +1,7 @@
 module Main where
 
-import              LightClient.CLI (control)
+import           LightClient.CLI (control)
+
 
 main :: IO ()
-main = control 
+main = control

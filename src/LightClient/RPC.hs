@@ -116,7 +116,6 @@ getAllTransactionsRPC h = toFunction (connectionWithTimeOut h) (Signature "enq_g
 
 
 
-
 --test
 newMsgBroadcast :: WS.Connection -> String -> Result ()
 newMsgBroadcast h = toFunction (connectionWithTimeOut h) newMsgBroadcastSig
