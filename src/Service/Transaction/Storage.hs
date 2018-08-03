@@ -11,6 +11,7 @@
 
 module Service.Transaction.Storage where
 
+-- import           Control.Applicative
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
 import           Control.Exception
