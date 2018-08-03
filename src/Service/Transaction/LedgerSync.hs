@@ -1,5 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE PackageImports        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 
 module Service.Transaction.LedgerSync where
@@ -15,14 +16,13 @@ import           Service.Transaction.Balance
 -- import           Service.Transaction.Independent
 -- import           Control.Concurrent.Chan.Unagi.Bounded
 import           Data.List
+import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import           Service.Transaction.Decode
 import           Service.Transaction.Sprout
 import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Transaction.Transformation
 import           Service.Types
-
-
 
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
@@ -77,7 +77,7 @@ isValidKeyBlockSprout c@(Common _ i) okv = do
 
 
 setKeyBlockSproutData :: Common -> [(HashOfKeyBlock,MacroblockBD)] -> IO ()
-setKeyBlockSproutData c@(Common descr i) kv = do
+setKeyBlockSproutData c@(Common _ i) kv = do
   findMicroblocksForMainChain c
   bdLog i $ show kv
   -- mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
@@ -86,7 +86,7 @@ setKeyBlockSproutData c@(Common descr i) kv = do
   writeLog i [BDTag,KeyBlockTag] Info $ "After setting to db Macroblocks: " ++ concatMap show mb
 
 getRestSproutData :: Common -> HashOfMicroblock -> IO MicroBlockContent
-getRestSproutData c@(Common descr i) hashOfMicroblock = do
+getRestSproutData c@(Common descr _) hashOfMicroblock = do
   findMicroblocksForMainChain c
 
   microblock <- getMicroBlockByHashDB descr (Hash hashOfMicroblock)
@@ -102,7 +102,7 @@ isValidRestOfSprout _ _ = return True -- Fix verify transaction signature
 
 
 setRestSproutData :: Common -> (Number, HashOfKeyBlock, MicroBlockContent) -> IO ()
-setRestSproutData c@(Common descr i) (aNumber, hashOfKeyBlock, MicroBlockContent mb txInfo ) = do
+setRestSproutData c (aNumber, hashOfKeyBlock, MicroBlockContent mb txInfo ) = do
     findMicroblocksForMainChain c
     -- write MicroBlockContent MicroblockBD [TransactionInfo]
     let tx = map (\t -> _tx (t :: TransactionInfo)) txInfo
@@ -216,3 +216,10 @@ findMicroblocksForMainChainHelp  c = do
   macroblock <- map snd <$> getAllMacroblockByHash c mainChainKHashes
   let hashesOfMicroblocks = concatMap (\m -> _mblocks (m :: MacroblockBD)) macroblock
   return hashesOfMicroblocks
+
+
+cleanDB :: Common -> IO ()
+cleanDB (Common _ i) = do --undefined --do
+  filenames <- allDB
+  mapM_ (\f -> Rocks.destroy f Rocks.defaultOptions) filenames
+  bdLog i $ "Delete all tables"

@@ -46,6 +46,17 @@ connectOrRecoveryConnect :: IO DBPoolDescriptor
 connectOrRecoveryConnect = recovering def handler . const $ connectDB
 
 
+allDB :: IO [FilePath]
+allDB = do
+  transactionFilePath <- getTransactionFilePath
+  microblockFilePath <- getMicroblockFilePath
+  ledgerFilePath <- getLedgerFilePath
+  macroblockFilePath <- getMacroblockFilePath
+  sproutFilePath <- getSproutFilePath
+  lastFilePath <- getLastFilePath
+  return [transactionFilePath, microblockFilePath, ledgerFilePath, macroblockFilePath, sproutFilePath, lastFilePath]
+
+
 connectDB :: IO DBPoolDescriptor
 connectDB = do
   let fun dbFilePath = createPool (Rocks.open dbFilePath def{Rocks.createIfMissing=True}) Rocks.close 1 32 16
@@ -58,8 +69,7 @@ connectDB = do
   -- putStrLn "DBTransactionException"
   -- sleepMs 5000
   -- throw DBTransactionException
-  let offsetMap = kvOffset
-  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger poolMacroblock poolSprout poolLast offsetMap)
+  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger poolMacroblock poolSprout poolLast)
 
 
 data SuperException = DBTransactionException
