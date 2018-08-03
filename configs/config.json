@@ -14,11 +14,7 @@
         "host": "127.0.0.1",
         "port": 8125
     },
-<<<<<<< HEAD
-    "bootNodeList": "[((195,201,226,29), 1554)]",
-=======
     "bootNodeList": "[((127,0,0,1), 1554)]",
->>>>>>> Dev
     "poaPort": 1554,
     "logsBuildConfig": {
         "host": "127.0.0.1",
