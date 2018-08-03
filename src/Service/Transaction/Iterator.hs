@@ -4,26 +4,22 @@
 {-# OPTIONS_GHC -fno-warn-orphans     #-}
 
 module Service.Transaction.Iterator where
-import           Control.Exception                   (throw)
-import           Control.Monad                       (replicateM, when)
+import           Control.Monad                      (replicateM)
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Resource
-import           Control.Monad.Trans.State           (StateT, evalStateT, get,
-                                                      put, runStateT)
-import qualified Data.ByteString.Char8               as BC
-import           Data.Default                        (def)
-import qualified Data.Map                            as M
-import qualified Data.Serialize                      as S (encode)
-import qualified Data.Set                            as Set
-import qualified "rocksdb-haskell" Database.RocksDB  as Rocks
--- import           Service.Transaction.Decode
-import           Service.Transaction.TransactionsDAG
+import           Control.Monad.Trans.State          (StateT, evalStateT, get,
+                                                     put, runStateT)
+import           Data.Default                       (def)
+import qualified Data.Map                           as M
+import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           System.IO.Unsafe
 
 
+maxAttempt :: Int
 maxAttempt = 15
+
 
 getNLastValuesT :: StateT Rocks.Iterator IO (Maybe DBValue)
 getNLastValuesT = do
@@ -59,7 +55,7 @@ getLast :: Rocks.Iterator -> Int -> Int -> IO [Maybe DBValue]
 getLast it offset count = drop offset <$> getNLastValues it (offset + count )
 
 
-goo :: String -> Int -> (DBValue -> Bool) -> IO [DBValue]
+goo :: FilePath -> Int -> (DBValue -> Bool) -> IO [DBValue]
 goo path n predicate = runResourceT $ do
   (_, db) <- Rocks.openBracket path def{Rocks.createIfMissing=False}
   it <- Rocks.iterOpen db Rocks.defaultReadOptions

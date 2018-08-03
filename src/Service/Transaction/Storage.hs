@@ -38,7 +38,6 @@ import           Service.Transaction.Iterator
 import           Service.Transaction.Transformation
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeInstances      (roll)
 import           Service.Types.SerializeJSON           ()
 
 

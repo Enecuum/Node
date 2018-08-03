@@ -1,22 +1,19 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE DuplicateRecordFields    #-}
 {-# LANGUAGE FlexibleContexts         #-}
-{-# LANGUAGE LambdaCase               #-}
 {-# LANGUAGE NamedFieldPuns           #-}
 {-# LANGUAGE OverloadedStrings        #-}
 {-# LANGUAGE PackageImports           #-}
-{-# LANGUAGE RecordWildCards          #-}
 {-# LANGUAGE ScopedTypeVariables      #-}
 {-# OPTIONS_GHC -fno-warn-orphans     #-}
 
 module Service.Transaction.Decode where
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import qualified Data.Serialize                        as S (decode, encode)
+import qualified Data.Serialize                        as S (Serialize (..),decode, encode)
 import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
--- import           Service.Transaction.Storage
 import qualified Crypto.Hash.SHA256                    as SHA
 import           Data.Aeson                            hiding (Error)
 import           Data.Aeson.Types                      (parseMaybe)
@@ -25,13 +22,12 @@ import qualified Data.ByteString.Char8                 as BC
 import qualified Data.ByteString.Internal              as BSI
 import           Data.Default                          (def)
 import           Data.Pool
-import qualified Data.Serialize                        as S (Serialize (..))
--- import           Data.Typeable
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeJSON
+import           Service.Types.SerializeJSON           ()
+
 
 -- for rocksdb Transaction and Microblock
 rHashT :: Transaction -> BSI.ByteString
@@ -120,6 +116,7 @@ decodeAndFilter pubKey rawTx  = isKeyThere
 
 txFilterByKey :: PublicKey -> Transaction -> Bool
 txFilterByKey pubKey t = _owner t == pubKey || _receiver t == pubKey
+
 
 -- Chain
 getChain :: Common -> Number -> IO Chain

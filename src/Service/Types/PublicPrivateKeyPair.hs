@@ -23,7 +23,7 @@ module Service.Types.PublicPrivateKeyPair(
 
 import           Data.Maybe
 import           GHC.Generics
-import           Service.Types.SerializeInstances
+import           Service.Types.SerializeInstances        ()
 
 import           "cryptonite" Crypto.Hash.Algorithms
 import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA    as ECDSA

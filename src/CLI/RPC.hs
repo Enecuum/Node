@@ -83,17 +83,17 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum "serveRpc" $ \_ aPendi
               getBlock = toMethod "enq_getBlockByHash" f (Required "hash" :+: ())
                 where
                   f :: Hash ->  RpcResult IO MacroblockAPI
-                  f hash = handle $ getKeyBlockByHash descrDB hash aInfoCh
+                  f hash = handle $ getKeyBlockByHash (Common descrDB aInfoCh) hash
 
               getMicroblock = toMethod "enq_getMicroblockByHash" f (Required "hash" :+: ())
                 where
                   f :: Hash ->  RpcResult IO MicroblockAPI
-                  f hash = handle $ getBlockByHash descrDB hash aInfoCh
+                  f hash = handle $ getBlockByHash (Common descrDB aInfoCh) hash
 
               getTransaction = toMethod "enq_getTransactionByHash" f (Required "hash" :+:())
                 where
                   f :: Hash -> RpcResult IO TransactionInfo
-                  f hash = handle $ getTransactionByHash descrDB hash aInfoCh
+                  f hash = handle $ getTransactionByHash (Common descrDB aInfoCh) hash
 
               getFullWallet = toMethod "enq_getAllTransactionsByWallet" f (Required "address" :+: ())
                 where

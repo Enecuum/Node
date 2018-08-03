@@ -22,13 +22,14 @@ import           Service.Transaction.Balance         (addKeyBlockToDB,
                                                       getBalanceForKey,
                                                       runLedger)
 import           Service.Transaction.Decode
-import           Service.Transaction.Storage         (connectOrRecoveryConnect,
-                                                      getAllTransactionsDB,
-                                                      getBlockByHashDB,
-                                                      getChainInfoDB,
-                                                      getKeyBlockByHashDB,
-                                                      getLastTransactions,
-                                                      getTransactionsByMicroblockHash)
+import           Service.Transaction.Storage
+-- import           Service.Transaction.Storage         (connectOrRecoveryConnect,
+--                                                       getAllTransactionsDB,
+--                                                       getBlockByHashDB,
+--                                                       getChainInfoDB,
+--                                                       getKeyBlockByHashDB,
+--                                                       getLastTransactions,
+--                                                       getTransactionsByMicroblockHash)
 
 import           Service.Transaction.Decode          (rHash)
 import           Service.Transaction.TransactionsDAG

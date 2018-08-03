@@ -16,6 +16,7 @@ import qualified Data.Text                        as T
 import           Node.Data.Key
 import           Service.Transaction.SproutCommon (From, MicroBlockContent (..),
                                                    To)
+import           Service.Transaction.Storage      ()
 import           Service.Types
 
 deriving instance Show MicroBlockContent
