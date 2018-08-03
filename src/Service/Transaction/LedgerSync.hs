@@ -81,7 +81,7 @@ setKeyBlockSproutData c@(Common descr i) kv = do
   findMicroblocksForMainChain c
   bdLog i $ show kv
   -- mapM_ (\(h,m) -> updateMacroblockByKeyBlock descr i h (tMacroblock2KeyBlockInfo m) Sprout) kv
-  mapM_ (\(h, m) -> updateMacroblockByMacroblock descr i h  m Sprout) kv
+  mapM_ (\(h, m) -> updateMacroblockByMacroblock c h  m Sprout) kv
   mb <- getAllMacroblockByHash c $ map fst kv
   writeLog i [BDTag,KeyBlockTag] Info $ "After setting to db Macroblocks: " ++ concatMap show mb
 
@@ -92,7 +92,7 @@ getRestSproutData c@(Common descr i) hashOfMicroblock = do
   microblock <- getMicroBlockByHashDB descr (Hash hashOfMicroblock)
   -- case microblock of Nothing -> throw NoSuchMicroBlockDB
   --                    Just m -> do
-  tx <- getTransactionsByMicroblockHash descr i (Hash hashOfMicroblock)
+  tx <- getTransactionsByMicroblockHash c (Hash hashOfMicroblock)
   case tx of Nothing -> throw NoSuchTransactionDB
              Just t  -> return $ MicroBlockContent microblock t
 
@@ -106,11 +106,11 @@ setRestSproutData c@(Common descr i) (aNumber, hashOfKeyBlock, MicroBlockContent
     findMicroblocksForMainChain c
     -- write MicroBlockContent MicroblockBD [TransactionInfo]
     let tx = map (\t -> _tx (t :: TransactionInfo)) txInfo
-    writeTransactionDB descr i tx (rHash mb)
-    writeMicroblockDB descr i mb
+    writeTransactionDB c tx (rHash mb)
+    writeMicroblockDB c mb
 
     -- add hashes of microblocks to Macroblock table
-    addMicroblockHashesToMacroBlock descr i hashOfKeyBlock [rHash mb]
+    addMicroblockHashesToMacroBlock c hashOfKeyBlock [rHash mb]
     -- write number and hashOfKeyBlock to Sprout table
     setChain c aNumber hashOfKeyBlock Sprout
 
@@ -162,9 +162,9 @@ setSproutAsMain c@(Common descr i) aNumber = do
     sproutChainKeyBlocks <- getAllMacroblockByHash c $ map snd sproutChain
     -- recalculate ledger
     -- storno
-    mapM_ (uncurry (calculateLedger descr i True)) mainChainKeyBlocks
+    mapM_ (uncurry (calculateLedger c True)) mainChainKeyBlocks
     -- add closed sprout macroblocks to ledger
-    mapM_ (uncurry (calculateLedger descr i False)) sproutChainKeyBlocks
+    mapM_ (uncurry (calculateLedger c False)) sproutChainKeyBlocks
     -- delete Main chain (right after foundation of main and sprout chain)
     mapM_ (\r -> deleteSprout c r Sprout) mainChain
 

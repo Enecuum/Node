@@ -101,7 +101,7 @@ loadMessages _ = return $ Left NotImplementedException
 
 getBlockByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Result MicroblockAPI)
 getBlockByHash db hash aInfoChan = try $ do
-  mb <- B.getBlockByHashDB db hash aInfoChan
+  mb <- B.getBlockByHashDB (Common db aInfoChan) hash
   case mb of
     Nothing -> throw NoSuchMicroBlockDB
     Just m  -> return m
@@ -109,14 +109,14 @@ getBlockByHash db hash aInfoChan = try $ do
 
 getKeyBlockByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Result MacroblockAPI)
 getKeyBlockByHash db (Hash h) aInfoChan = try $ do
-  mb <- B.getKeyBlockByHashDB db (Hash h) aInfoChan
+  mb <- B.getKeyBlockByHashDB (Common db aInfoChan) (Hash h)
   case mb of
     Nothing -> throw NoSuchMacroBlockDB
     Just m  -> return m
 
 getChainInfo :: DBPoolDescriptor -> InChan InfoMsg -> IO (Result ChainInfo)
 getChainInfo db aInfoChan = do
-  k <- B.getChainInfoDB db aInfoChan
+  k <- B.getChainInfoDB (Common db aInfoChan)
   return $ Right k
   -- return $ Right $ ChainInfo 0 0 "" 0 0 0
 

@@ -99,14 +99,14 @@ isMacroblockClosed MacroblockBD {..} _ = do
   return $ length _mblocks /= 0 && length _teamKeys == length _mblocks
 
 
-getChainInfoDB :: DBPoolDescriptor -> InChan InfoMsg -> IO ChainInfo
-getChainInfoDB desc aInfoChan = do
-  kv <- getLastKeyBlock desc aInfoChan
+getChainInfoDB :: Common -> IO ChainInfo
+getChainInfoDB c = do
+  kv <- getLastKeyBlock c
   tMacroblock2ChainInfo kv
 
 
-getLastKeyBlock  :: DBPoolDescriptor -> InChan InfoMsg -> IO (Maybe (DBKey,MacroblockBD))
-getLastKeyBlock desc aInfoChan = do
+getLastKeyBlock  :: Common -> IO (Maybe (DBKey,MacroblockBD))
+getLastKeyBlock (Common desc aInfoChan) = do
   key <- funR (poolLast desc) lastClosedKeyBlock
   -- key <- getLastKeyBlockNumber (Common desc aInfoChan)
   case key of Nothing -> return Nothing
@@ -138,15 +138,15 @@ getPartTransactions db pubKey offset aCount = do
       decodeTx  =<< (fun it aCount)
 
 
-getTransactionsByMicroblockHash :: DBPoolDescriptor -> InChan InfoMsg -> Hash -> IO (Maybe [TransactionInfo])
-getTransactionsByMicroblockHash db i aHash = do
+getTransactionsByMicroblockHash :: Common -> Hash -> IO (Maybe [TransactionInfo])
+getTransactionsByMicroblockHash (Common db i) aHash = do
   m@MicroblockBD {..} <- getMicroBlockByHashDB db aHash
   txInfo <- getTxs db i m
   return $ Just txInfo
 
 
-getBlockByHashDB :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe MicroblockAPI)
-getBlockByHashDB db hash i = do
+getBlockByHashDB :: Common -> Hash  -> IO (Maybe MicroblockAPI)
+getBlockByHashDB (Common db i) hash = do
   m <- getMicroBlockByHashDB db hash
   mAPI <- tMicroblockBD2MicroblockAPI db i m --aInfoChan
   return $ Just mAPI
@@ -156,8 +156,8 @@ decodeTransactionsAndFilterByKey :: [DBValue] -> PublicKey -> [TransactionAPI]
 decodeTransactionsAndFilterByKey rawTx pubKey = mapMaybe (decodeTransactionAndFilterByKey pubKey) rawTx
 
 
-getKeyBlockByHashDB :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe MacroblockAPI)
-getKeyBlockByHashDB db kHash i = do
+getKeyBlockByHashDB :: Common -> Hash  -> IO (Maybe MacroblockAPI)
+getKeyBlockByHashDB (Common db i) kHash = do
   hashOfKey <- getKeyBlockByHash db i kHash
   case hashOfKey of Nothing -> return Nothing
                     Just j  -> Just <$> tMacroblock2MacroblockAPI db j
@@ -203,15 +203,15 @@ getKeyBlockHash  KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
                ]
 
 
-updateMacroblockByKeyBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()
-updateMacroblockByKeyBlock db i hashOfKeyBlock keyBlockInfo branch = do
+updateMacroblockByKeyBlock :: Common -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()
+updateMacroblockByKeyBlock (Common db i) hashOfKeyBlock keyBlockInfo branch = do
     writeLog i [BDTag] Info $ "keyBlockInfo: " ++ show keyBlockInfo
     val <- getKeyBlockByHash db i (Hash hashOfKeyBlock)
     mb <- case val of
         Nothing -> return $ tKeyBlockInfo2Macroblock keyBlockInfo
         Just j  -> return $ fillMacroblockByKeyBlock j keyBlockInfo
 
-    writeMacroblockToDB db i hashOfKeyBlock mb
+    writeMacroblockToDB (Common db i) hashOfKeyBlock mb
     let aNumber = _number (keyBlockInfo :: KeyBlockInfo)
         mes = "going to write number " ++ show aNumber ++ show hashOfKeyBlock ++ show branch
     writeLog i [BDTag] Info mes
@@ -219,8 +219,8 @@ updateMacroblockByKeyBlock db i hashOfKeyBlock keyBlockInfo branch = do
     writeKeyBlockNumber (Common db i) $ _number (keyBlockInfo :: KeyBlockInfo)
 
 
-updateMacroblockByMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> BranchOfChain -> IO ()
-updateMacroblockByMacroblock db i hashOfKeyBlock mb  branch = do
+updateMacroblockByMacroblock :: Common -> HashOfKeyBlock -> MacroblockBD -> BranchOfChain -> IO ()
+updateMacroblockByMacroblock (Common db i) hashOfKeyBlock mb  branch = do
     writeLog i [BDTag] Info $ "Macroblock: " ++ show mb
     getKeyBlockByHash db i (Hash hashOfKeyBlock) >>= \case
         Just _  -> writeLog i [BDTag] Warning $ "Macroblock with hash " ++ show hashOfKeyBlock ++ "is already in the table"
@@ -240,8 +240,8 @@ writeMacroblockSprout desc a hashOfKeyBlock aMacroblock = do
     writeLog a [BDTag] Info ("Write Macroblock " ++ show cKey ++ " " ++ show aMacroblock ++ "to DB")
 
 
-writeMacroblockToDB :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
-writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
+writeMacroblockToDB :: Common -> HashOfKeyBlock -> MacroblockBD -> IO ()
+writeMacroblockToDB (Common desc a) hashOfKeyBlock aMacroblock = do
   hashPreviousLastKeyBlock <- funR (poolLast desc) lastClosedKeyBlock
   aIsMacroblockClosed <- isMacroblockClosed aMacroblock a
   let cMacroblock = if aIsMacroblockClosed
@@ -283,7 +283,7 @@ writeKeyBlockNumber (Common descr _) aNumber = funW (poolLast descr) [(lastKeyBl
 
 -- ok
 getKeyBlockNumber :: Common -> IO (Maybe Number)
-getKeyBlockNumber c@(Common descr i) = do
+getKeyBlockNumber c@(Common _ i) = do
   value <- getLastKeyBlockNumber c
   -- if Nothing write genesis KeyBlock
   case value of
@@ -292,7 +292,7 @@ getKeyBlockNumber c@(Common descr i) = do
       let k = tKBIPoW2KBI genesisKeyBlock
           h = getKeyBlockHash genesisKeyBlock
       writeLog i [BDTag] Info $ "The first time in history, genesis kblock " ++ show h ++ show k
-      updateMacroblockByKeyBlock descr i h k Main
+      updateMacroblockByKeyBlock c h k Main
       writeKeyBlockNumber c 0
       writeLog i [BDTag] Info "Genesis block was written"
       getKeyBlockNumber c
