@@ -10,9 +10,9 @@ import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception                     (SomeException, try)
 import           Control.Monad
 
-import           Node.FileDB.FileServer
+import           BootNodeServer
+import           Node.DataActor
 import           Node.Node.Types
-import           PoA.PoAServerBootNode
 import           Service.InfoMsg
 import           Service.Network.Base                  (ConnectInfo (..))
 import           System.Environment
@@ -24,7 +24,6 @@ import           Network.Socket                        ()
 
 main :: IO ()
 main =  do
-      putStrLn  "Dev 25/06/2018 17:00"
       enc <- L.readFile "configs/config.json"
       case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
@@ -57,8 +56,8 @@ main =  do
                 Right item              -> return item
                 Left (_::SomeException) -> return "0"
             (aFileChan, aOutFileRequestChan) <- newChan 16
-            void $ C.forkIO $ startFileServer aOutFileRequestChan
-            void $ C.forkIO $ serverPoABootNode poa_p aInfoChanIn aFileChan
+            void $ C.forkIO $ startDataActor aOutFileRequestChan
+            void $ C.forkIO $ bootNodeServer poa_p aInfoChanIn aFileChan
             void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id
 
             forever $ C.threadDelay 10000000000

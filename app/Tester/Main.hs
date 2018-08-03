@@ -1,26 +1,27 @@
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 module Main where
 
 import           Control.Concurrent
 import           Control.Concurrent.Async
 import           Control.Monad
-import           Crypto.PubKey.ECC.ECDSA             as ECDSA
+import           Crypto.PubKey.ECC.ECDSA           as ECDSA
 import           Data.Aeson
-import qualified Data.ByteString.Lazy.Char8          as B8
-import qualified Data.Text                           as T
+import qualified Data.ByteString.Lazy.Char8        as B8
+import qualified Data.Text                         as T
 import           Node.Data.Key
-import           PoA.Types
+import           Node.NetLvl.Massages
 import           Service.Network.Base
 import           Service.Network.WebSockets.Client
 import           Service.Types
-import           System.Environment                  (getArgs)
+import           System.Environment                (getArgs)
 
-import qualified Network.WebSockets                  as WS
+import qualified Network.WebSockets                as WS
 import           Service.Sync.SyncJson
-import           Service.Transaction.TransactionsDAG
-
+import           Service.System.Version
+import           Service.Transaction.Common
 
 testMsg :: Value
 testMsg = object [
@@ -101,7 +102,6 @@ sendMsg aConnect aMsg = do
     printBS aEncodedMsg
     WS.sendTextData aConnect aEncodedMsg
 
-
 receiveMsg :: WS.Connection -> String -> String -> IO B8.ByteString
 receiveMsg aConnect aStr1 aStr2 = do
     putStrLn aStr1
@@ -109,6 +109,21 @@ receiveMsg aConnect aStr1 aStr2 = do
     printBS aMsg
     putStrLn aStr2
     return aMsg
+
+checkVersion :: WS.Connection -> IO ()
+checkVersion aConnect = do
+    putStrLn "   Sending version request..."
+    sendMsg aConnect $ RequestVersion
+
+    aMsg <- receiveMsg aConnect
+        "   Reciving version response..."
+        "   Received version response."
+
+    aVersion <- return $ case decode aMsg of
+        Just (ResponseVersion aVersion) -> aVersion
+        Just _ -> error $ "   FAIL. The received msg not a version response! "
+        _ -> error "FAIL. Error in the parsing!"
+    when (aVersion /= $(version)) $ error "FAIL. Version of node /= version of tester!"
 
 
 main :: IO ()
@@ -126,7 +141,13 @@ main = do
             aConnectListVar <- newEmptyMVar
             aSecondNodeIsStartedVar <-newEmptyMVar
             testsOk <- newEmptyMVar
+            let aWait = void $ takeMVar testsOk
             putStrLn "   Connecting to BN..."
+            void . forkIO $ runClient ip 1554 "/" $ \aConnect -> do
+                checkVersion aConnect
+                putMVar testsOk True
+
+            aWait
             void . forkIO $ runClient ip 1554 "/" $ \aConnect -> do
                 putStrLn "   Sending to BN reques for connects..."
                 sendMsg aConnect $ RequestPotentialConnects False
@@ -158,6 +179,7 @@ main = do
             void . forkIO $ runClient (showHostAddress aHostAddress) (fromEnum aPort) "/" $ \aConnect -> do
                 aMyNodeId <- connectWithNN "1| " PoA aConnect
                 putStrLn "1| CN is connected to NN."
+                checkVersion aConnect
                 putMVar aIdOfFirsClientVar aMyNodeId
 
                 void $ takeMVar aSecondNodeIsStartedVar
@@ -184,6 +206,7 @@ main = do
             void . forkIO $ runClient (showHostAddress aHostAddress2) (fromEnum aPort2) "/" $ \aConnect -> do
                 aMyId <- connectWithNN "2| " PoA aConnect
                 putStrLn "2| CN is connected to NN."
+                checkVersion aConnect
                 putMVar aSecondNodeIsStartedVar True
 
                 aNodeId <- receivingOfBroadcast "2| " aConnect
@@ -191,7 +214,7 @@ main = do
                 putStrLn $ "2| Sending msg to firs node..."
                 sendMsg aConnect $ MsgMsgTo (IdFrom aMyId)  (IdTo aNodeId) testMsg
 
-            _ <- takeMVar testsOk
+            aWait
             putStrLn ""
             putStrLn "-------------"
             putStrLn "   -------"
@@ -219,8 +242,8 @@ main = do
                     aTransactions <- checkOfPending aConnect
                     unless (null aTransactions) $  error "   FAIL. Then pending not empty!"
                     putMVar testsOk True
-            _ <- takeMVar testsOk
 
+            aWait
             putStrLn ""
             putStrLn "-------------"
             putStrLn "   --------"
@@ -250,8 +273,7 @@ main = do
                     void $ aDecodeSync =<< aReciveSync
                 putMVar testsOk True
 
-
-            _ <- takeMVar testsOk
+            aWait
             putStrLn ""
             putStrLn "---------------------------------------"
             putStrLn "   ---------------------------------"
@@ -288,7 +310,7 @@ main = do
                 putStrLn "2| Sending of KeyBlock"
                 sendMsg aConnect $ MsgKeyBlock testMsg
 
-            _ <- takeMVar testsOk
+            aWait
             putStrLn ""
             putStrLn "-----------------"
             putStrLn "   -----------"

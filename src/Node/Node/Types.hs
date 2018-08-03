@@ -25,16 +25,15 @@ import           Crypto.Random.Types
 import           Lens.Micro.TH
 import           Service.Network.Base
 
-import           Node.Data.Key
-import           Service.Types                         (Microblock, Transaction)
-import qualified Sharding.Types.Node                   as N
-
 import           Data.Aeson
 import           Data.Aeson.TH
 import           Data.Scientific                       (Scientific, toRealFloat)
-import           Node.FileDB.FileServer
-import           PoA.Types
+import           Node.Data.Key
+import           Node.DataActor
+import           Node.NetLvl.Massages
 import           Service.InfoMsg
+import           Service.Types                         (Microblock, Transaction)
+import qualified Sharding.Types.Node                   as N
 
 
 instance Show (InChan a) where show _ = "InChan"
@@ -88,7 +87,7 @@ data NetworkNodeData = NetworkNodeData {
     ,   _nodeConfig       :: NodeConfig
     ,   _shardingChan     :: Maybe (C.Chan N.ShardingNodeAction)
     ,   _logChan          :: InChan InfoMsg
-    ,   _fileServerChan   :: InChan FileActorRequest
+    ,   _fileServerChan   :: InChan (DataActorRequest Connect)
     ,   _microblockChan   :: InChan Microblock
     ,   _transactionsChan :: InChan (Transaction, MVar Bool)
     ,   _valueChan        :: InChan Value
@@ -99,7 +98,7 @@ makeLenses ''NetworkNodeData
 makeNetworkData
     ::  NodeConfig
     ->  InChan InfoMsg
-    ->  InChan FileActorRequest
+    ->  InChan (DataActorRequest Connect)
     ->  InChan Microblock
     ->  InChan (Transaction, MVar Bool)
     ->  InChan Value

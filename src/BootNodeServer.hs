@@ -1,42 +1,47 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module PoA.PoAServerBootNode (
-        serverPoABootNode
+{-# LANGUAGE TemplateHaskell     #-}
+
+module BootNodeServer (
+    bootNodeServer
 ) where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Monad                         (forever, void, when)
+import           Control.Monad                         (forever, void, when, forM_)
 import qualified Data.Text                             as T
 import qualified Network.WebSockets                    as WS
 import           Service.InfoMsg                       as I
 import           Service.Network.Base
 import           Service.Network.WebSockets.Client
 import           Service.Network.WebSockets.Server
--- import              System.Random.Shuffle
 import qualified Control.Concurrent                    as C
 import           Control.Exception
 import           Data.Aeson                            as A
 import           Data.Maybe                            ()
 import           Node.Data.GlobalLoging
-import           Node.FileDB.FileServer
-import           PoA.Types
-
+import           Node.DataActor
+import           Node.NetLvl.Massages
+import           Service.System.Version
 
 data ConnectTesterActor = AddConnectToList Connect | TestExistedConnect Connect
 
 
-serverPoABootNode :: PortNumber -> InChan InfoMsg -> InChan FileActorRequest -> IO ()
-serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
+bootNodeServer :: PortNumber -> InChan InfoMsg -> InChan (DataActorRequest Connect) -> IO ()
+bootNodeServer aRecivePort aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
         "Init. ServerPoABootNode: a port is " ++ show aRecivePort
-
     (aInChan, aOutChan) <- newChan 64
+    void $ C.forkIO $ forever $ do
+        C.threadDelay 60000000
+        aConnects <- getRecords aFileServerChan
+        forM_ aConnects (tryWriteChan aInChan . TestExistedConnect)
+
     void $ C.forkIO $ forever $ readChan aOutChan >>= \case
         AddConnectToList aConn@(Connect aHostAdress aPort) -> void $ C.forkIO $ do
             C.threadDelay 3000000
             runClient (showHostAddress aHostAdress) (fromEnum aPort) "/" $
-                \_ -> void $ tryWriteChan aFileServerChan $ AddToFile [aConn]
+                \_ -> void $ tryWriteChan aFileServerChan $ AddRecords [aConn]
 
         TestExistedConnect aConn@(Connect aHostAdress aPort) -> void $ C.forkIO $ do
             aConnects <- getRecords aFileServerChan
@@ -44,25 +49,31 @@ serverPoABootNode aRecivePort aInfoChan aFileServerChan = do
                 aOk <- try $ runClient (showHostAddress aHostAdress) (fromEnum aPort) "/" $ \_ -> return ()
                 case aOk of
                     Left (_ :: SomeException) ->
-                        void $ tryWriteChan aFileServerChan $ DeleteFromFile aConn
+                        void $ tryWriteChan aFileServerChan $ DeleteRecords aConn
                     _ -> return ()
 
-    runServer aRecivePort "serverPoABootNode" $ \aHostAdress aPending -> do
+    runServer aRecivePort "bootNodeServer" $ \aHostAdress aPending -> do
         aConnect <- WS.acceptRequest aPending
-        writeLog aInfoChan [ServerBootNodeTag] Info "ServerPoABootNode.Connect accepted."
+        let aSend = WS.sendTextData aConnect . A.encode
+            aLog  = writeLog aInfoChan [ServerBootNodeTag] Info
+        aLog "ServerPoABootNode.Connect accepted."
         aMsg <- WS.receiveData aConnect
         case A.eitherDecodeStrict aMsg of
             Right a -> case a of
+                RequestVersion -> do
+                    aLog  $ "Version request from client node."
+                    aSend $ ResponseVersion $(version)
+
                 RequestPotentialConnects aFull
                     | aFull -> do
-                        writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request full list of connections."
+                        aLog "Accepted request full list of connections."
                         aConnects <- getRecords aFileServerChan
-                        WS.sendTextData aConnect $ A.encode $ ResponsePotentialConnects $ filter (\(Connect aAdress _) -> aHostAdress /= aAdress ) aConnects
+                        aSend $ ResponsePotentialConnects $ filter (\(Connect aAdress _) -> aHostAdress /= aAdress ) aConnects
 
                     | otherwise -> do
-                        writeLog aInfoChan [ServerBootNodeTag] Info "Accepted request of connections."
+                        aLog "Accepted request of connections."
                         aConnects <- getRecords aFileServerChan
-                        WS.sendTextData aConnect . A.encode $ ResponsePotentialConnects $ filter (\(Connect aAdress _) -> aHostAdress /= aAdress ) aConnects
+                        aSend $ ResponsePotentialConnects $ filter (\(Connect aAdress _) -> aHostAdress /= aAdress ) aConnects
 
                 ActionAddToConnectList aPort ->
                     void $ tryWriteChan aInChan $ AddConnectToList (Connect aHostAdress aPort)

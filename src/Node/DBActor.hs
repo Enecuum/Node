@@ -86,11 +86,17 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
 
         PeekNKeyBlocks aInt aHashOfKeyBlock aMVar -> do
             aLog "Peek NKey blocks request."
-            peekNPreviousKeyBlocks aData aInt aHashOfKeyBlock >>= putMVar aMVar
+            aRes <- try $ peekNPreviousKeyBlocks aData aInt aHashOfKeyBlock
+            case aRes of
+                Right aJustRes              -> putMVar aMVar aJustRes
+                Left (_ :: SomeException)   -> putMVar aMVar []
 
         GetKeyBlockSproutData aFrom aTo aMVar -> do
             aLog "Get key block sprout data request."
-            getKeyBlockSproutData aData aFrom aTo >>= putMVar aMVar
+            aRes <- try $ getKeyBlockSproutData aData aFrom aTo
+            case aRes of
+                Right aJustRes              -> putMVar aMVar aJustRes
+                Left (_ :: SomeException)   -> putMVar aMVar []
 
 
         SetKeyBlockSproutData aMacroblockBD aMVar -> do

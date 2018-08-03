@@ -1,11 +1,13 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 module Main where
 
 import qualified Control.Concurrent                    as C
 import           Control.Monad
+import           Service.System.Version
 import           System.Environment                    (getEnv)
 
 import           Control.Concurrent.Chan.Unagi.Bounded
@@ -17,7 +19,7 @@ import           Data.IP
 import           Data.Maybe                            (fromJust)
 import           Node.Data.Key                         (generateKeyPair)
 import           Node.Lib
-import           Node.Node.Mining
+import           Node.NetLvl.Router
 import           Node.Node.Types
 import           Service.InfoMsg
 import           Service.Network.Base
@@ -38,7 +40,7 @@ configName = "configs/config.json"
 -- startNode descrDB buildConf infoCh manager startDo = do
 main :: IO ()
 main =  do
-        putStrLn  "Dev 25/06/2018 17:00"
+        putStrLn $ "Version: " ++ $(version)
         enc <- L.readFile configName
         case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
@@ -47,7 +49,7 @@ main =  do
             (aInfoChanIn, aInfoChanOut) <- newChan 64
             rocksDB   <- connectOrRecoveryConnect
 
-            void $ startNode rocksDB conf aInfoChanIn networkNodeStart $
+            void $ startNode rocksDB conf aInfoChanIn routerActorStart $
                 \(ch, _) _ _ aMyNodeId _ -> do
                     metronomeS 400000 (void $ tryWriteChan ch CleanAction)
 
