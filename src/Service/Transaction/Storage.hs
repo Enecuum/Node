@@ -117,16 +117,16 @@ getLastKeyBlock (Common desc aInfoChan) = do
                            Just r -> return $ Just (k,r)
 
 
-getLastTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> IO [TransactionAPI]
-getLastTransactions descr pubKey offset aCount = do
-  let fun db = getPartTransactions db pubKey offset aCount
+getLastTransactions :: DBPoolDescriptor -> OffsetMap -> PublicKey -> Int -> Int -> IO [TransactionAPI]
+getLastTransactions descr aOffsetMap pubKey offset aCount = do
+  let fun db = getPartTransactions db aOffsetMap pubKey offset aCount
   withResource (poolTransaction descr) fun
 
 
-getPartTransactions :: Rocks.DB -> PublicKey -> Int -> Int -> IO [TransactionAPI]
-getPartTransactions db pubKey offset aCount = do
-  let aOffsetMap = kvOffset
-      key = (pubKey, offset)
+getPartTransactions :: Rocks.DB -> OffsetMap -> PublicKey -> Int -> Int -> IO [TransactionAPI]
+getPartTransactions db aOffsetMap pubKey offset aCount = do
+  let key = (pubKey, offset)
+      -- aOffsetMap = kvOffset
       aIt = Map.lookup key aOffsetMap
       fun iter count = nLastValues iter count (decodeAndFilter pubKey)
   case aIt of
@@ -162,8 +162,8 @@ getKeyBlockByHashDB (Common db i) kHash = do
                     Just j  -> Just <$> tMacroblock2MacroblockAPI db j
 
 
-getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [TransactionAPI]
-getAllTransactionsDB descr pubKey = do
+getAllTransactionsDB :: Common -> PublicKey -> IO [TransactionAPI]
+getAllTransactionsDB (Common descr _) pubKey = do
   txByte <- withResource (poolTransaction descr) getAllValues
   return $ decodeTransactionsAndFilterByKey txByte pubKey
 

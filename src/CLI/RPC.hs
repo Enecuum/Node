@@ -98,12 +98,12 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum "serveRpc" $ \_ aPendi
               getFullWallet = toMethod "enq_getAllTransactionsByWallet" f (Required "address" :+: ())
                 where
                   f :: PublicKey -> RpcResult IO [TransactionAPI]
-                  f key = handle $ getAllTransactionsByWallet descrDB key ch
+                  f key = handle $ getAllTransactionsByWallet (Common descrDB aInfoCh) key
 
               getPartWallet = toMethod "enq_getTransactionsByWallet" f (Required "address" :+: Required "offset" :+: Required "count" :+: ())
                 where
                   f :: PublicKey -> Int -> Int -> RpcResult IO [TransactionAPI]
-                  f key offset cnt = handle $ getPartTransactions descrDB key offset cnt ch
+                  f key offset cnt = handle $ getPartTransactions (Common descrDB aInfoCh) undefined key offset cnt
 
               getSystemInfo = toMethod "enq_getChainInfo" f ()
                 where

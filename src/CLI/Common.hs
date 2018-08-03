@@ -126,17 +126,17 @@ getTransactionByHash (Common db _) hash = try $ do
     Just t  -> return t
 
 
-getAllTransactionsByWallet :: DBPoolDescriptor -> PublicKey -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
-getAllTransactionsByWallet pool key _ = try $ do
-  tx <- getAllTransactionsDB pool key
+getAllTransactionsByWallet :: Common -> PublicKey -> IO (Result [TransactionAPI])
+getAllTransactionsByWallet c key = try $ do
+  tx <- getAllTransactionsDB c key
   case tx of
     [] -> throw NoTransactionsForPublicKey
     t  -> return t
 
 
-getPartTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
-getPartTransactions pool key offset aCount _ = try $ do --return $ Left NotImplementedException
-  tx <- B.getLastTransactions pool key offset aCount
+getPartTransactions :: Common -> OffsetMap -> PublicKey -> Int -> Int -> IO (Result [TransactionAPI])
+getPartTransactions (Common pool _) aOffsetMap key offset aCount = try $ do --return $ Left NotImplementedException
+  tx <- B.getLastTransactions pool aOffsetMap key offset aCount
   case tx of
     [] -> throw NoTransactionsForPublicKey
     t  -> return t
