@@ -17,6 +17,7 @@ import qualified Data.ByteString                  as B
 import qualified Data.ByteString.Char8            as CB
 import           Data.Hex
 import           Data.IP
+import           Data.Char
 import           Data.Maybe
 import           Data.String
 import qualified Data.Text                        as T
@@ -105,7 +106,7 @@ instance FromJSON ActualConnectInfo where
     parseJSON s = error ("ActualConnectInfo is not an object: " ++ show s)
 
 unhexNodeId :: MonadPlus m => T.Text -> m NodeId
-unhexNodeId aString = case unhex . fromString . T.unpack $ aString of
+unhexNodeId aString = case unhex . fromString . (toUpper <$>) . filter isHexDigit . T.unpack $ aString of
     Just aDecodeString -> return . NodeId . roll $ B.unpack aDecodeString
     Nothing            -> mzero
 
