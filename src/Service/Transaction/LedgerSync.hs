@@ -5,11 +5,12 @@
 module Service.Transaction.LedgerSync where
 
 import           Control.Exception
-import           Control.Monad                    (forM, when, unless)
+import           Control.Monad                      (forM, unless, when)
 import           Data.Maybe
-import qualified Data.Serialize                   as S (encode)
+import qualified Data.Serialize                     as S (encode)
 import           Node.Data.GlobalLoging
-import           Service.InfoMsg                  (LogingTag (..), MsgType (..))
+import           Service.InfoMsg                    (LogingTag (..),
+                                                     MsgType (..))
 import           Service.Transaction.Balance
 -- import           Service.Transaction.Independent
 -- import           Control.Concurrent.Chan.Unagi.Bounded
@@ -18,8 +19,8 @@ import           Service.Transaction.Decode
 import           Service.Transaction.Sprout
 import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
+import           Service.Transaction.Transformation
 import           Service.Types
-
 
 
 
@@ -33,6 +34,7 @@ myTail c@(Common _ i) = do
     case hashMaybe of
         Nothing -> throw NoLastKeyBlock
         Just h  -> return (nNumber, h)
+
 
 peekNPreviousKeyBlocks :: Common -> From -> To -> IO [(Number, HashOfKeyBlock)]
 peekNPreviousKeyBlocks c from to = do

@@ -13,12 +13,8 @@ module Service.Transaction.Storage where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import           Control.Monad                         (forM, when)
+import           Control.Monad                         (when)
 import qualified Control.Monad.Catch                   as E
--- import           Control.Monad.Trans.Class
-import           Control.Monad.Trans.Resource
--- import           Control.Monad.Trans.State             (StateT, evalStateT, get,
---                                                         put)
 import           Control.Retry
 import qualified Crypto.Hash.SHA256                    as SHA
 import qualified Data.ByteString                       as B
@@ -26,27 +22,24 @@ import qualified Data.ByteString.Base64                as Base64
 import qualified Data.ByteString.Internal              as BSI
 import           Data.Default                          (def)
 import           Data.Either
+import qualified Data.Map                              as Map
+import           Data.Maybe
 import           Data.Pool
-import qualified Data.Serialize                        as S (Serialize, decode,
-                                                             encode)
+import qualified Data.Serialize                        as S (encode)
 import           Data.Serialize.Put
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
--- import           Service.InfoMsg                       (LogingTag (..),
---                                                         MsgType (..))
-import           Service.System.Directory
-import           Service.Types
-import           Service.Types.PublicPrivateKeyPair
--- import           Service.Types.SerializeInstances      (roll, unroll)
-import           Data.Maybe
 import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
+import           Service.System.Directory
 import           Service.Transaction.Decode
 import           Service.Transaction.Iterator
+import           Service.Transaction.Transformation
+import           Service.Types
+import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeInstances      (roll)
 import           Service.Types.SerializeJSON           ()
---------------------------------------
 
 
 -- FIX change def (5 times)
@@ -66,7 +59,8 @@ connectDB = do
   -- putStrLn "DBTransactionException"
   -- sleepMs 5000
   -- throw DBTransactionException
-  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger poolMacroblock poolSprout poolLast)
+  let offsetMap = kvOffset
+  return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger poolMacroblock poolSprout poolLast offsetMap)
 
 
 data SuperException = DBTransactionException
@@ -83,10 +77,6 @@ handler = [ \_ -> E.Handler $ \(_ :: SomeException) -> return True ]
 
 -- End of the Connection section
 --------------------------------------
-
-
---------------------------------------
--- begin of the Database structure  section
 
 
 
@@ -108,38 +98,11 @@ isMacroblockClosed MacroblockBD {..} _ = do
   -- writeLog i [BDTag] Info $ "checkMacroblockIsClosed: length _teamKeys" ++ show (length _teamKeys)
   return $ length _mblocks /= 0 && length _teamKeys == length _mblocks
 
--- end of the Database structure  section
---------------------------------------
-
-
-getTxs :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO [TransactionInfo]
-getTxs descr i mb = do
-  let txHashes = _transactionsHashes mb
-  forM txHashes $ getTx1 descr i
-  where getTx1 :: DBPoolDescriptor -> InChan InfoMsg -> HashOfTransaction -> IO TransactionInfo
-        getTx1 d _ h = do
-          maybeTx <- getTransactionByHashDB d (Hash h)
-          case maybeTx of
-            Nothing -> throw $ NoSuchTransactionForHash ("hash: " ++ show h)
-            Just j  -> return j
-
-
-getTxsMicroblock :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO [Transaction]
-getTxsMicroblock db i mb = do
-  txDecoded <- getTxs db i mb
-  let tx = map (\t -> _tx  (t :: TransactionInfo)) txDecoded
-  return tx
-
-
-
-
 
 getChainInfoDB :: DBPoolDescriptor -> InChan InfoMsg -> IO ChainInfo
 getChainInfoDB desc aInfoChan = do
   kv <- getLastKeyBlock desc aInfoChan
   tMacroblock2ChainInfo kv
-
-
 
 
 getLastKeyBlock  :: DBPoolDescriptor -> InChan InfoMsg -> IO (Maybe (DBKey,MacroblockBD))
@@ -157,19 +120,30 @@ getLastKeyBlock desc aInfoChan = do
 
 getLastTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> IO [TransactionAPI]
 getLastTransactions descr pubKey offset aCount = do
-  -- let fun = \db -> getLast db offset aCount
-  -- txs <- withResource (poolTransaction descr) fun
-  -- let rawTxInfo = map (\(_,v) -> v) txs
-  -- let txAPI = decodeTransactionsAndFilterByKey rawTxInfo pubKey
-  -- return txAPI
-  let fun db = findTransactionsForWallet1 db pubKey offset aCount
+  let fun db = getPartTransactions db pubKey offset aCount
   withResource (poolTransaction descr) fun
+
+
+getPartTransactions :: Rocks.DB -> PublicKey -> Int -> Int -> IO [TransactionAPI]
+getPartTransactions db pubKey offset aCount = do
+  let aOffsetMap = kvOffset
+      key = (pubKey, offset)
+      aIt = Map.lookup key aOffsetMap
+      fun iter count = nLastValues iter count (decodeAndFilter pubKey)
+  case aIt of
+    Nothing -> do
+      it <- getLastIterator db
+      decodeTx  =<< (drop offset <$> fun it (aCount + offset))
+    Just it  -> do
+      decodeTx  =<< (fun it aCount)
+
 
 getTransactionsByMicroblockHash :: DBPoolDescriptor -> InChan InfoMsg -> Hash -> IO (Maybe [TransactionInfo])
 getTransactionsByMicroblockHash db i aHash = do
   m@MicroblockBD {..} <- getMicroBlockByHashDB db aHash
   txInfo <- getTxs db i m
   return $ Just txInfo
+
 
 getBlockByHashDB :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe MicroblockAPI)
 getBlockByHashDB db hash i = do
@@ -180,9 +154,6 @@ getBlockByHashDB db hash i = do
 
 decodeTransactionsAndFilterByKey :: [DBValue] -> PublicKey -> [TransactionAPI]
 decodeTransactionsAndFilterByKey rawTx pubKey = mapMaybe (decodeTransactionAndFilterByKey pubKey) rawTx
-
-
-
 
 
 getKeyBlockByHashDB :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Maybe MacroblockAPI)
@@ -196,70 +167,6 @@ getAllTransactionsDB :: DBPoolDescriptor -> PublicKey -> IO [TransactionAPI]
 getAllTransactionsDB descr pubKey = do
   txByte <- withResource (poolTransaction descr) getAllValues
   return $ decodeTransactionsAndFilterByKey txByte pubKey
-
-
-getAllValues :: MonadUnliftIO m => Rocks.DB -> m [DBValue]
-getAllValues db = runResourceT $ do
-  it    <- Rocks.iterOpen db Rocks.defaultReadOptions
-  Rocks.iterFirst it
-  Rocks.iterValues it
-
-
-getAllItems :: MonadResource m => Rocks.DB -> m [(DBKey, DBValue)]
-getAllItems db = do
-  it    <- Rocks.iterOpen db Rocks.defaultReadOptions
-  Rocks.iterFirst it
-  Rocks.iterItems it
-
-
-tMicroblockBD2Microblock :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO Microblock
-tMicroblockBD2Microblock db i m@MicroblockBD {..} = do
-  tx <- getTxsMicroblock db i m
-  aTeamkeys <- getTeamKeysForMicroblock db i _keyBlock
-  return Microblock {
-  _keyBlock,
-  _sign          = _signBD,
-  -- _teamKeys,
-  _teamKeys = aTeamkeys,
-  _publisher,
-  _transactions  = tx
-  -- _numOfBlock
-  }
-
-tMicroblock2MicroblockBD :: Microblock -> MicroblockBD
-tMicroblock2MicroblockBD Microblock {..} = MicroblockBD {
-  _keyBlock,
-  _signBD = _sign,
-  -- _teamKeys,
-  _publisher,
-  _transactionsHashes = map rHashT _transactions
-  -- _numOfBlock = 0
-  }
-
-
-getTeamKeysForMicroblock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> IO [PublicKey]
-getTeamKeysForMicroblock db i aHash = do
-  mb <- getKeyBlockByHash db i (Hash aHash)
-  case mb of Nothing -> do
-               -- writeLog aInfoChan [BDTag] Error ("No Team Keys For Key block " ++ show aHash)
-               return []
-             Just r -> return $ _teamKeys (r :: MacroblockBD)
-
-
-tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO MicroblockAPI
-tMicroblockBD2MicroblockAPI db i m@MicroblockBD {..} = do
-  tx <- getTxsMicroblock db i m
-  let txAPI = map (\t -> TransactionAPI {_tx = t, _txHash = rHashT t }) tx
-  -- teamKeys <- getTeamKeysForMicroblock db _keyBlock --aInfoChan
-  return MicroblockAPI {
-            _prevMicroblock = Nothing,
-            _nextMicroblock = Nothing,
-            _keyBlock,
-            _signAPI = _signBD,
-            -- _teamKeys = teamKeys,
-            _publisher,
-            _transactionsAPI = txAPI
-            }
 
 
 tMacroblock2MacroblockAPI :: DBPoolDescriptor -> MacroblockBD -> IO MacroblockAPI
@@ -281,72 +188,6 @@ tMacroblock2MacroblockAPI descr MacroblockBD {..} = do
              _reward,
              _mblocks = microblocksInfoAPI,
              _teamKeys }
-
-
-
-dummyMacroblock :: MacroblockBD
-dummyMacroblock = MacroblockBD {
-  _prevKBlock = Nothing,
-  _nextKBlock = Nothing,
-  _prevHKBlock = Nothing,
-  _difficulty = 0,
-  _solver = aSolver,
-  _reward = 0,
-  _time = 0,
-  _number = 0,
-  _nonce = 0,
-  _mblocks = [],
-  _teamKeys = []
-}
-  where aSolver = read "1" :: PublicKey
-
-
-tKeyBlockInfo2Macroblock :: KeyBlockInfo -> MacroblockBD
-tKeyBlockInfo2Macroblock KeyBlockInfo {..} = MacroblockBD {
-            _prevKBlock = Nothing,
-            _nextKBlock = Nothing,
-            _prevHKBlock = Just _prev_hash,
-            _difficulty = 20,
-            _solver,
-            _reward = 0,
-            _time,
-            _number,
-            _nonce,
-            _mblocks = [],
-            _teamKeys = []
-          }
-
-tMacroblock2KeyBlockInfo :: MacroblockBD -> KeyBlockInfo
-tMacroblock2KeyBlockInfo MacroblockBD {..} = KeyBlockInfo {
-  _time     ,
-  _prev_hash = prev_hash,
-  _number   ,
-  _nonce    ,
-  _solver   ,
-  _type = 0}
-  where prev_hash = case _prevHKBlock of
-          Nothing -> ""
-          Just j  -> j
-
-
-tMacroblock2ChainInfo :: Maybe (DBKey, MacroblockBD) -> IO ChainInfo
-tMacroblock2ChainInfo kv = case kv of
-    Nothing ->  return ChainInfo {
-    _emission        = 0,
-    _curr_difficulty = 0,
-    _last_block      = "",
-    _blocks_num      = 0,
-    _txs_num         = 0,  -- quantity of all approved transactions
-    _nodes_num       = 0   -- quantity of all active nodes
-    }
-    Just (aKeyBlockHash, MacroblockBD {..})  -> return ChainInfo {
-    _emission        = _reward,
-    _curr_difficulty = _difficulty,
-    _last_block      = aKeyBlockHash,
-    _blocks_num      = 0,
-    _txs_num         = 0,  -- quantity of all approved transactions
-    _nodes_num       = 0   -- quantity of all active nodes
-    }
 
 
 getKeyBlockHash :: KeyBlockInfoPoW -> BSI.ByteString
@@ -424,14 +265,6 @@ writeMacroblockToDB desc a hashOfKeyBlock aMacroblock = do
         previousLastKeyBlock <- funR (poolMacroblock desc) j
         case previousLastKeyBlock of
           Nothing -> return []
-          -- Just k -> case S.decode k :: Either String MacroblockBD of
-          --             Left e -> do
-          --               writeLog a [BDTag] Error ("Can not decode Macroblock" ++ show e)
-          --               return []
-          --             Right r -> do
-          --               let pKey = j
-          --                   pVal = S.encode $ (r { _nextKBlock = Just hashOfKeyBlock } :: MacroblockBD)
-          --               return [(pKey, pVal)]
           Just k -> do
             let r = decodeThis "MacroblockBD" k
                 pKey = j
@@ -503,8 +336,6 @@ funBranch Sprout = snd
 
 
 
-
-
 genesisKeyBlock :: KeyBlockInfoPoW
 genesisKeyBlock = KeyBlockInfoPoW{
   _time = 0,
@@ -513,25 +344,3 @@ genesisKeyBlock = KeyBlockInfoPoW{
   _nonce = 0,
   _solver = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
   _type = 0}
-
-
-tKBIPoW2KBI :: KeyBlockInfoPoW -> KeyBlockInfo
-tKBIPoW2KBI KeyBlockInfoPoW {..} = KeyBlockInfo {
-  _time,
-  _prev_hash,
-  _number,
-  _nonce,
-  _solver = pubKey,
-  _type}
-  where pubKey = publicKey256k1 ((roll $ B.unpack _solver) :: Integer)
-
-
-
-
-fillMacroblockByKeyBlock :: MacroblockBD -> KeyBlockInfo -> MacroblockBD
-fillMacroblockByKeyBlock m KeyBlockInfo {..} = m {
-        _prevHKBlock = Just _prev_hash,
-        _solver = _solver,
-        _time = _time,
-        _number = _number,
-        _nonce  = _nonce}

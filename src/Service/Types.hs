@@ -21,6 +21,7 @@ import qualified Data.ByteString.Char8                 as C
 import qualified Data.ByteString.Internal              as BSI
 import           Data.Graph.Inductive
 import           Data.List.Split                       (splitOn)
+import qualified Data.Map                              as M
 import           Data.Pool
 import           Data.Serialize
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
@@ -311,7 +312,7 @@ data ChainInfo = ChainInfo {
 instance Serialize ChainInfo
 
 
-
+type OffsetMap = (M.Map (PublicKey, Int) Rocks.Iterator)
 -- begin of the Connection section
 data DBPoolDescriptor = DBPoolDescriptor {
     poolTransaction :: Pool Rocks.DB
@@ -321,6 +322,7 @@ data DBPoolDescriptor = DBPoolDescriptor {
   -- , poolKeyBlock    :: Pool Rocks.DB
   , poolSprout      :: Pool Rocks.DB
   , poolLast        :: Pool Rocks.DB
+  , offsetMap       :: OffsetMap
   }
 data BranchOfChain = Main | Sprout deriving (Eq, Generic, Ord, Read, Show)
 data Common = Common {

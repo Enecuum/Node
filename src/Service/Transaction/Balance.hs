@@ -28,14 +28,10 @@ import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception                     (throw)
 import           Control.Monad                         (liftM, when)
 import           Data.Aeson                            hiding (Error)
--- import           Data.Aeson.Types                      (parseMaybe)
-import qualified Data.ByteString                       as B
--- import qualified Data.ByteString.Base64                as Base64
 import           Data.Default                          (def)
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
 import           Data.List                             (sort, sortBy)
--- import           Data.Maybe
 import           Data.Ord                              (comparing)
 import           Data.Pool
 import qualified Data.Serialize                        as S (decode, encode)
@@ -50,9 +46,10 @@ import           Service.Sync.SyncJson
 import           Service.Transaction.Decode
 import           Service.Transaction.Sprout
 import           Service.Transaction.Storage
+import           Service.Transaction.Transformation
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeInstances      (unroll)
+
 
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
@@ -70,10 +67,8 @@ initialAmount :: Amount
 initialAmount = 100
 
 
-
-
-updateBalanceTable :: DBPoolDescriptor -> InChan InfoMsg -> BalanceTable -> IsStorno -> Transaction -> IO ()
-updateBalanceTable db i ht isStorno t@(Transaction fromKey toKey am _ _ _ _) = do
+updateBalanceTable :: Common  -> BalanceTable -> IsStorno -> Transaction -> IO ()
+updateBalanceTable (Common db i) ht isStorno t@(Transaction fromKey toKey am _ _ _ _) = do
   v1 <- H.lookup ht fromKey
   v2 <- H.lookup ht toKey
   let tKey = rHashT t
@@ -130,12 +125,12 @@ getBalanceOfKeys db isStorno tx = do
   return aBalanceTable
 
 
-runLedger :: DBPoolDescriptor -> InChan InfoMsg -> IsStorno -> Microblock -> IO ()
-runLedger db i isStorno m = do
+runLedger :: Common -> IsStorno -> Microblock -> IO ()
+runLedger c@(Common db i) isStorno m = do
     let txs = _transactions m
     writeLog i [BDTag] Info $ "runLedger, isStorno: " ++ show isStorno ++ " for transactions: " ++ show txs
     ht      <- getBalanceOfKeys (poolLedger db) isStorno txs
-    mapM_ (updateBalanceTable db i ht isStorno) txs
+    mapM_ (updateBalanceTable c ht isStorno) txs
     writeLedgerDB (poolLedger db) i ht
 
 
@@ -143,8 +138,8 @@ getPubKeys :: Transaction -> [PublicKey]
 getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
-checkMacroblock :: DBPoolDescriptor -> InChan InfoMsg -> Microblock -> HashOfMicroblock -> IO (IsMicroblockNew, IsMacroblockNew, MacroblockBD)
-checkMacroblock db i microblock microblockHash = do
+checkMacroblock :: Common -> Microblock -> HashOfMicroblock -> IO (IsMicroblockNew, IsMacroblockNew, MacroblockBD)
+checkMacroblock (Common db i) microblock microblockHash = do
     let keyBlockHash = (_keyBlock (microblock :: Microblock))
     mb <- getKeyBlockByHash db i (Hash keyBlockHash)
     let mbUpdated = case mb of
@@ -169,7 +164,7 @@ addMicroblockToDB db m i =  do
     let microblockHash = rHash $ tMicroblock2MicroblockBD  m
     writeLog i [BDTag] Info ("New Microblock came" ++ show(microblockHash))
 -- FIX: Write to db atomically
-    (isMicroblockNew, isMacroblockNew, macroblock ) <- checkMacroblock db i m microblockHash
+    (isMicroblockNew, isMacroblockNew, macroblock ) <- checkMacroblock (Common db i) m microblockHash
     aIsMacroblockClosed <- isMacroblockClosed macroblock i
     -- let goOn = not aIsMacroblockClosed
     let goOn = macroblockIsOk macroblock
@@ -198,7 +193,7 @@ calculateLedger db i isStorno _ macroblock = do
       sortedM = if (isStorno == False) then sortedMb else reverse sortedMb
   writeLog i [BDTag] Info $ "calculateLedger: microblockHashes " ++ show sortedM
   writeLog i [BDTag] Info ("calculateLedger: Start calculate Ledger, isStorno "  ++ show isStorno)
-  mapM_ (runLedger db i isStorno) (sortedM :: [Microblock])
+  mapM_ (runLedger (Common db i) isStorno) (sortedM :: [Microblock])
   -- case isStorno of False -> writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = cReward})
   --                  True -> do
   --                    let aReward = (_reward (macroblock :: MacroblockBD)) - cReward
@@ -264,17 +259,6 @@ addKeyBlockToDB db o i  aSyncChan = do
             let mes = "Hashes doesn't much: current hash: " ++ show h ++ "previous hash: " ++ show prev_hash
             writeLog i [BDTag] Info mes
             when (j < receivedKeyNumber) $ do startSync
-
-
-tKeyBlockToPoWType :: KeyBlockInfo -> KeyBlockInfoPoW
-tKeyBlockToPoWType (KeyBlockInfo {..}) = KeyBlockInfoPoW{
-  _time,
-  _prev_hash,
-  _number,
-  _nonce,
-  _solver = pubKey,
-  _type}
-  where pubKey = B.pack $ unroll $ fromPublicKey256k1 _solver
 
 
 addMicroblockHashesToMacroBlock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> [HashOfMicroblock] -> IO ()

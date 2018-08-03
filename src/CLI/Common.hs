@@ -55,6 +55,7 @@ import           Service.Transaction.Common            as B (getBalanceForKey,
                                                              getTransactionByHashDB)
 import           Service.Transaction.Common            (getAllTransactionsDB,
                                                         rHash)
+import           Service.Transaction.Iterator          (kvOffset)
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair

@@ -29,11 +29,11 @@ import           Service.System.Directory            (getLedgerFilePath,
                                                       getSproutFilePath,
                                                       getTransactionFilePath)
 import           Service.Transaction.Decode
+import           Service.Transaction.Iterator
 import           Service.Transaction.TransactionsDAG (genNNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON         ()
-
 
 
 tryParseTXInfoJson :: IO ()
