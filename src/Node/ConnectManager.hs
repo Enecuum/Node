@@ -4,14 +4,16 @@
 module Node.ConnectManager where
 
 --
-import qualified Control.Concurrent                    as C
+import qualified Control.Concurrent                     as C
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
 import           Control.Monad
 import           Control.Concurrent.Async
-import           Data.Aeson                            as A
+import           Data.Aeson                             as A
 import           Data.Maybe
-import qualified Network.WebSockets                    as WS
+import qualified Network.WebSockets                     as WS
+import qualified Data.ByteString                        as B
+import           Pending
 import           Node.Data.GlobalLoging
 import           Node.Data.Key
 import           Node.DataActor
@@ -24,9 +26,21 @@ import           Service.Network.Base
 import           Service.Network.WebSockets.Client
 import           Service.Sync.SyncJson
 import           Node.SyncServer
+import           Node.DBActor
 
 --
-
+connectManager
+    ::  (InChan SyncEvent, OutChan SyncEvent)
+    ->  (InChan MsgToDB, b1)
+    ->  InChan MsgToCentralActor
+    ->  PortNumber
+    ->  [Connect]
+    ->  InChan (DataActorRequest Connect)
+    ->  NodeId
+    ->  InChan PendingAction
+    ->  InChan InfoMsg
+    ->  InChan B.ByteString
+    ->  IO b2
 connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aConnectsChan aMyNodeId inChanPending aInfoChan aInLogerChan = do
     writeLog aInfoChan [ConnectingTag, InitTag] Info "Manager of connecting started."
     void $ C.forkIO $ syncServer aSyncChan inDBActorChan aManagerChan aInfoChan
@@ -61,7 +75,16 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
             C.threadDelay $ 10 * sec
             aConnectLoop aBootNodeList
 
-
+connectToNN
+    ::  InChan (DataActorRequest Connect)
+    ->  NodeId
+    ->  InChan PendingAction
+    ->  InChan InfoMsg
+    ->  InChan MsgToCentralActor
+    ->  InChan SyncEvent
+    ->  InChan B.ByteString
+    ->  Connect
+    ->  IO ()
 connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aSync aInLogerChan aConn@(Connect aIp aPort)  = do
     writeLog aInfoChan [NetLvlTag] Info $ "Try connecting to: "  ++ showHostAddress aIp
     aOk <- try $ runClient (showHostAddress aIp) (fromEnum aPort) "/" $ \aConnect -> do

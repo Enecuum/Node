@@ -18,7 +18,7 @@ import           Control.Exception
 import           Control.Monad                         (forever, unless, void,
                                                         when)
 import           Data.Aeson                            as A
-import qualified Data.ByteString.Char8                 as B8
+--import qualified Data.ByteString.Char8                 as B8
 import qualified Data.Text                             as T
 import qualified Network.WebSockets                    as WS
 import           Node.Data.GlobalLoging
