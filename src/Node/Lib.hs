@@ -83,6 +83,7 @@ startNode descrDB buildConf infoCh aManager startDo = do
     void $ C.forkIO $ connectManager aSyncChan aDBActorChan aIn (poaPort buildConf) bnList aInFileRequestChan (NodeId aId) inChanPending infoCh aInLogerChan
     return managerChan
 
+traficLoger :: OutChan B8.ByteString -> IO b
 traficLoger aOutChan = forever $ do
     aMsg <- readChan aOutChan
     appendFile "netLog.txt" $ B8.unpack aMsg ++ "\n"
