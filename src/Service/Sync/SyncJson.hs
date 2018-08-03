@@ -31,34 +31,73 @@ data SyncEvent where
     RestartSync ::                          SyncEvent
     SyncMsg     :: NodeId -> SyncMessage -> SyncEvent
 
+data Chunk = Chunk KeyBlockInfoPoW [Microblock] deriving (Show)
 
 data SyncMessage where
     RequestTail           ::                                             SyncMessage
-    ResponseTail          :: (Number, HashOfKeyBlock)                 -> SyncMessage
+    ResponseTail          :: Number                                   -> SyncMessage
+    RequestChain          ::                                             SyncMessage
+    ResponseChain         :: [Chunk]                                  -> SyncMessage
+{-
     PeekHashKblokRequest  :: From             -> To                   -> SyncMessage
     PeekHashKblokResponse :: [(Number, HashOfKeyBlock)]               -> SyncMessage
     PeekKeyBlokRequest    :: From             -> To                   -> SyncMessage
     PeekKeyBlokResponse   :: [(Number, HashOfKeyBlock, MacroblockBD)] -> SyncMessage
     MicroblockRequest     :: HashOfMicroblock                         -> SyncMessage
     MicroblockResponse    :: MicroBlockContent                        -> SyncMessage
+-}
     StatusSyncMessage     :: SyncStatusMessage -> ErrorStringCode     -> SyncMessage
   deriving (Show)
 
 
+{-
 
+{
+    "sync": "chunk",
+    "chunk": [
+        {
+            "block": {
+                "time": 1533291189,
+                "nonce": 218605,
+                "number": 1,
+                "type": 0,
+                "prev_hash": "B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw=",
+                "solver": ""
+            },
+            "microblocks": []
+        }
+    ]
+}
 
+-}
+{-
+instance FromJSON KeyBlockInfo where
+  parseJSON (Object v) = KeyBlockInfoPoW
+                         <$> (v .: "time")
+                         <*> (v .: "prev_hash")
+                         <*> (v .: "number")
+                         <*> (v .: "nonce")
+                         <*> (v .: "solver")
+                         <*> (v .: "type")
+  parseJSON inv        = typeMismatch "KeyBlockInfo" inv
 
+-}
 instance ToJSON SyncMessage where
     toJSON RequestTail = object [
-        "sync"      .= ("tail_request"   :: String)
+        "sync"      .= ("tail"   :: String),
+        "tail"      .= (0 :: Int)
       ]
 
-    toJSON (ResponseTail (aLastNumber, aHashOfKeyBlock)) = object [
-        "sync"        .= ("tail_response"   :: String),
-        "last_number" .= aLastNumber,
-        "last_hash"   .= BS.unpack aHashOfKeyBlock
+    toJSON (ResponseTail aNumber) = object [
+        "sync"        .= ("peak"   :: String),
+        "tail"        .= aNumber
       ]
 
+    toJSON RequestChain = object [
+        "sync"        .= ("sync"   :: String),
+        "tail"        .= (0 :: Int)
+      ]
+{-
     toJSON (PeekKeyBlokRequest aFrom aTo) = object [
         "sync"      .= ("peek_key_blok_request"   :: String),
         "from"      .= aFrom,
@@ -90,23 +129,29 @@ instance ToJSON SyncMessage where
         "sync"     .= ("peek_hash_key_blok_response"   :: String),
         "hashes"   .= aHashOfKeyBlock
       ]
+-}
     toJSON (StatusSyncMessage msg errorCode) = object [
         "sync"      .= ("error"   :: String),
         "msg"       .= msg,
         "errorCode" .= errorCode
       ]
 
+instance FromJSON Chunk where
+    parseJSON (Object aMessage) = do
+        aBlock       <- aMessage .: "block"
+        aMicroBlocks <- aMessage .: "microblocks"
+        return $ Chunk aBlock aMicroBlocks
+
 instance FromJSON SyncMessage where
     parseJSON (Object aMessage) = do
         sync  :: T.Text <- aMessage .:"sync"
         case (T.unpack sync) of
-            "tail_request" -> return RequestTail
+            "tail" -> return RequestTail
+            "peek" -> ResponseTail <$> aMessage .: "tail"
+            "sync" -> return RequestChain
+            "chunk"-> ResponseChain <$> aMessage .: "chunk"
 
-            "tail_response"-> do
-                lastNumber <- aMessage .: "last_number"
-                lastHash   <- aMessage .: "last_hash"
-                return $ ResponseTail (lastNumber, lastHash)
-
+{-
             "peek_key_blok_request"-> do
                 from <- aMessage .: "from"
                 to   <- aMessage .: "to"
@@ -128,7 +173,7 @@ instance FromJSON SyncMessage where
 
             "peek_hash_key_blok_response" ->
                 PeekHashKblokResponse <$> aMessage .: "hashes"
-
+-}
             "error"-> do
                 msg <- aMessage .: "msg"
                 errorCode   <- aMessage .: "errorCode"

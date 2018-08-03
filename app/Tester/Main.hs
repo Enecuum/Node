@@ -243,7 +243,7 @@ main = do
                     aTransactions <- checkOfPending aConnect
                     unless (null aTransactions) $  error "   FAIL. Then pending not empty!"
                     putMVar testsOk True
-
+{-
             aWait
             putStrLn ""
             putStrLn "-------------"
@@ -273,7 +273,7 @@ main = do
                     aSendSync $ PeekKeyBlokRequest 1 2
                     void $ aDecodeSync =<< aReciveSync
                 putMVar testsOk True
-
+-}
             aWait
             putStrLn ""
             putStrLn "---------------------------------------"

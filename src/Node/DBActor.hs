@@ -15,12 +15,14 @@ import           Service.InfoMsg
 import           Control.Monad
 -- import qualified Data.ByteString                       as B
 import           Service.Chan
+import           Service.Transaction.Balance (addKeyBlockToDB2)
 import           Service.Sync.SyncJson
 import           Service.Transaction.Common            (addKeyBlockToDB,
                                                         addMicroblockToDB)
 import           Service.Transaction.LedgerSync
 import           Service.Transaction.SproutCommon
 import           Service.Types
+
 
 
 data MsgToDB where
@@ -35,7 +37,10 @@ data MsgToDB where
     SetRestSproutData     :: (Number, HashOfKeyBlock, MicroBlockContent) -> MVar Bool -> MsgToDB
     DeleteSproutData      :: Number -> MsgToDB
     SetSproutAsMain       :: Number -> MsgToDB
+    WriteChain            :: [Chunk] -> MsgToDB
 
+cleanDB :: Common -> IO ()
+cleanDB = undefined
 
 
 startDBActor :: DBPoolDescriptor
@@ -76,6 +81,14 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
             case aExeption of
                 Right _ -> aLog "Success of setting keyBlock"
                 Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e
+
+        WriteChain aChain -> do
+            aLog "Recived chain."
+            cleanDB aData
+            forM_ aChain $ \(Chunk aKeyBlo aMicroblocks) -> do
+                addKeyBlockToDB2 descriptor aKeyBlo aInfoCh aSyncChan
+                forM_ aMicroblocks $ \aBlock -> do
+                    addMicroblockToDB descriptor aBlock aInfoCh
 
         MyTail aMVar -> do
             aLog "My tail request."

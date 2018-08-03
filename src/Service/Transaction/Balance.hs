@@ -21,7 +21,8 @@ module Service.Transaction.Balance
     calculateLedger,
     updateMacroblockByKeyBlock,
     tKBIPoW2KBI,
-    tKeyBlockToPoWType
+    tKeyBlockToPoWType,
+    addKeyBlockToDB2
     ) where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
@@ -235,7 +236,34 @@ writeLedgerDB dbLedger aInfoChan bt = do
   writeLog aInfoChan [BDTag] Info ("Write Ledger "  ++ show bt)
 
 
+--
+addKeyBlockToDB2 :: DBPoolDescriptor -> KeyBlockInfoPoW -> InChan InfoMsg -> (InChan SyncEvent, b) -> IO ()
+addKeyBlockToDB2 db keyBlockInfo i  aSyncChan = do
+    let aKeyBlock = tKBIPoW2KBI keyBlockInfo
+        aKeyBlockHash = getKeyBlockHash keyBlockInfo
 
+    writeLog i [BDTag] Info $ "keyBlockHash: " ++ show aKeyBlockHash
+    writeLog i [BDTag] Info $ "keyBlockInfo: " ++ show aKeyBlock
+
+    let receivedKeyNumber = _number (keyBlockInfo :: KeyBlockInfoPoW)
+        startSync = writeInChan (fst aSyncChan) RestartSync
+    currentNumberInDB <- getKeyBlockNumber (Common db i)
+    writeLog i [BDTag] Info $ "Current KeyBlock Number In DB is " ++ show currentNumberInDB
+    case currentNumberInDB of
+      Nothing -> writeLog i [BDTag] Error "There are no genesis key block number!"
+      Just j  -> do
+        when (j < receivedKeyNumber) $ do
+          hashOfDBKeyBlock <- getM (Common db i) j
+          writeLog i [BDTag] Info $ "Current hash of KeyBlock in DB is " ++ show hashOfDBKeyBlock
+          let prev_hash = _prev_hash (aKeyBlock :: KeyBlockInfo)
+          case hashOfDBKeyBlock of
+            Nothing ->  writeLog i [BDTag] Error ("There is no key block with number " ++ (show j))
+            Just h -> if (h == prev_hash)
+              then updateMacroblockByKeyBlock db i aKeyBlockHash aKeyBlock Main
+              else do
+              let mes = "Hashes doesn't much: current hash: " ++ show h ++ "previous hash: " ++ show prev_hash
+              writeLog i [BDTag] Info mes
+              when (j < receivedKeyNumber) $ do startSync
 
 addKeyBlockToDB :: DBPoolDescriptor -> Value -> InChan InfoMsg -> (InChan SyncEvent, b) -> IO ()
 addKeyBlockToDB db o i  aSyncChan = do
