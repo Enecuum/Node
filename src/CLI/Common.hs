@@ -55,7 +55,6 @@ import           Service.Transaction.Common            as B (getBalanceForKey,
                                                              getTransactionByHashDB)
 import           Service.Transaction.Common            (getAllTransactionsDB,
                                                         rHash)
-import           Service.Transaction.Iterator          (kvOffset)
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
@@ -134,9 +133,11 @@ getAllTransactionsByWallet c key = try $ do
     t  -> return t
 
 
-getPartTransactions :: Common -> OffsetMap -> PublicKey -> Int -> Int -> IO (Result [TransactionAPI])
-getPartTransactions (Common pool _) aOffsetMap key offset aCount = try $ do --return $ Left NotImplementedException
-  tx <- B.getLastTransactions pool aOffsetMap key offset aCount
+--
+
+getPartTransactions :: Common -> InContainerChan -> PublicKey -> Int -> Int -> IO (Result [TransactionAPI])
+getPartTransactions (Common pool _) inContainerChan key offset aCount = try $ do --return $ Left NotImplementedException
+  tx <- B.getLastTransactions pool inContainerChan key offset aCount
   case tx of
     [] -> throw NoTransactionsForPublicKey
     t  -> return t

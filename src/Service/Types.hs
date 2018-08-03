@@ -27,6 +27,7 @@ import           Data.Serialize
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           GHC.Generics
 import           Lens.Micro.TH
+import           Node.DataActor
 import           Service.InfoMsg                       (InfoMsg (..))
 import           Service.Types.PublicPrivateKeyPair
 
@@ -328,3 +329,6 @@ data Common = Common {
   pool     :: DBPoolDescriptor,
   infoChan :: InChan InfoMsg
  }
+
+type InContainerChan  = InChan (ContainerCommands (M.Map (PublicKey, Int)) Rocks.Iterator)
+type OutContainerChan = OutChan (ContainerCommands (M.Map (PublicKey, Int)) Rocks.Iterator)

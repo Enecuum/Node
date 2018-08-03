@@ -12,6 +12,7 @@
 module Service.Transaction.Storage where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Concurrent.MVar
 import           Control.Exception
 import           Control.Monad                         (when)
 import qualified Control.Monad.Catch                   as E
@@ -29,6 +30,8 @@ import qualified Data.Serialize                        as S (encode)
 import           Data.Serialize.Put
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
+import           Node.DataActor
+import           Service.Chan
 import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
@@ -39,7 +42,6 @@ import           Service.Transaction.Transformation
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
-
 
 -- FIX change def (5 times)
 connectOrRecoveryConnect :: IO DBPoolDescriptor
@@ -127,24 +129,42 @@ getLastKeyBlock (Common desc aInfoChan) = do
                            Just r -> return $ Just (k,r)
 
 
-getLastTransactions :: DBPoolDescriptor -> OffsetMap -> PublicKey -> Int -> Int -> IO [TransactionAPI]
+getLastTransactions :: DBPoolDescriptor -> InContainerChan -> PublicKey -> Int -> Int -> IO [TransactionAPI]
 getLastTransactions descr aOffsetMap pubKey offset aCount = do
   let fun db = getPartTransactions db aOffsetMap pubKey offset aCount
   withResource (poolTransaction descr) fun
 
+{-
+Predicate :: (m a -> Bool)    -> MVar Bool      -> ContainerCommands m a
+Lookup    :: (m a -> Maybe a) -> MVar (Maybe a) -> ContainerCommands m a
+-- insert, delete, adjust, updateWithKey
+Update    :: (m a -> m a)                       -> ContainerCommands m a
+-- size, length
+Size      :: (m a -> Int)     -> MVar Int       -> ContainerCommands m a
 
-getPartTransactions :: Rocks.DB -> OffsetMap -> PublicKey -> Int -> Int -> IO [TransactionAPI]
-getPartTransactions db aOffsetMap pubKey offset aCount = do
+-}
+
+getPartTransactions :: Rocks.DB -> InContainerChan -> PublicKey -> Int -> Int -> IO [TransactionAPI]
+getPartTransactions db inContainerChan pubKey offset aCount = do
   let key = (pubKey, offset)
-      -- aOffsetMap = kvOffset
-      aIt = Map.lookup key aOffsetMap
-      fun iter count = nLastValues iter count (decodeAndFilter pubKey)
-  case aIt of
+
+  aVar <- newEmptyMVar
+  writeInChan inContainerChan (Lookup (Map.lookup key) aVar)
+  aIt <- takeMVar aVar
+
+  let fun iter count = nLastValues iter count (decodeAndFilter pubKey)
+  (txAPI, newIter) <- case aIt of
     Nothing -> do
       it <- getLastIterator db
-      decodeTx  =<< (drop offset <$> fun it (aCount + offset))
+      (values, lastIter) <- fun it (aCount + offset)
+      tx <- decodeTx $ drop offset values
+      return (tx, lastIter)
     Just it  -> do
-      decodeTx  =<< (fun it aCount)
+      (values, lastIter) <- fun it aCount
+      tx <- decodeTx values
+      return (tx, lastIter)
+  when (not $ null txAPI) $ writeInChan inContainerChan (Update (Map.insert key newIter))
+  return txAPI
 
 
 getTransactionsByMicroblockHash :: Common -> Hash -> IO (Maybe [TransactionInfo])
