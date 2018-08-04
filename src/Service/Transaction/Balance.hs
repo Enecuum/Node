@@ -33,6 +33,7 @@ import           Data.Default                          (def)
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
 import           Data.List                             (sort, sortBy)
+import           Data.Maybe
 import           Data.Ord                              (comparing)
 import           Data.Pool
 import qualified Data.Serialize                        as S (decode, encode)
@@ -50,7 +51,6 @@ import           Service.Transaction.Storage
 import           Service.Transaction.Transformation
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
-import Data.Maybe
 
 
 instance Hashable PublicKey
@@ -231,7 +231,7 @@ writeLedgerDB dbLedger aInfoChan bt = do
   writeLog aInfoChan [BDTag] Info ("Write Ledger "  ++ show bt)
 
 
---
+
 addKeyBlockToDB2 :: Common  -> KeyBlockInfoPoW -> (InChan SyncEvent, b) -> IO ()
 addKeyBlockToDB2 c@(Common db i) keyBlockInfo aSyncChan = do
     let aKeyBlock = tKBIPoW2KBI keyBlockInfo
@@ -260,34 +260,11 @@ addKeyBlockToDB2 c@(Common db i) keyBlockInfo aSyncChan = do
               writeLog i [BDTag] Info mes
               when (j < receivedKeyNumber) startSync
 
+
 addKeyBlockToDB :: Common -> Value -> (InChan SyncEvent, b) -> IO ()
-addKeyBlockToDB c@(Common db i) o aSyncChan = do
+addKeyBlockToDB c@(Common _ i) o aSyncChan = do
   keyBlockInfo <- decodeKeyBlock i o
-  let aKeyBlock = tKBIPoW2KBI keyBlockInfo
-      aKeyBlockHash = getKeyBlockHash keyBlockInfo
-
-  writeLog i [BDTag] Info $ "keyBlockHash: " ++ show aKeyBlockHash
-  writeLog i [BDTag] Info $ "keyBlockInfo: " ++ show aKeyBlock
-
-  let receivedKeyNumber = _number (keyBlockInfo :: KeyBlockInfoPoW)
-      startSync = writeInChan (fst aSyncChan) RestartSync
-  currentNumberInDB <- getKeyBlockNumber (Common db i)
-  writeLog i [BDTag] Info $ "Current KeyBlock Number In DB is " ++ show currentNumberInDB
-  case currentNumberInDB of
-    Nothing -> writeLog i [BDTag] Error "There are no genesis key block number!"
-    Just j  -> do
-      when (j < receivedKeyNumber) $ do
-        hashOfDBKeyBlock <- getM (Common db i) j
-        writeLog i [BDTag] Info $ "Current hash of KeyBlock in DB is " ++ show hashOfDBKeyBlock
-        let prev_hash = _prev_hash (aKeyBlock :: KeyBlockInfo)
-        case hashOfDBKeyBlock of
-          Nothing ->  writeLog i [BDTag] Error $ "There is no key block with number " ++ show j
-          Just h -> if h == prev_hash
-            then updateMacroblockByKeyBlock c aKeyBlockHash aKeyBlock Main
-            else do
-            let mes = "Hashes doesn't much: current hash: " ++ show h ++ "previous hash: " ++ show prev_hash
-            writeLog i [BDTag] Info mes
-            when (j < receivedKeyNumber) startSync
+  addKeyBlockToDB2 c keyBlockInfo aSyncChan
 
 
 addMicroblockHashesToMacroBlock :: Common -> HashOfKeyBlock -> [HashOfMicroblock] -> IO ()
