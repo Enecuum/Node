@@ -83,9 +83,15 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
             aLog "Recived chain."
             cleanDB aData
             forM_ aChain $ \(Chunk aKeyBlo aMicroblocks) -> do
-                addKeyBlockToDB2 aData aKeyBlo aSyncChan
+                aExeption <- try $ addKeyBlockToDB2 aData aKeyBlo aSyncChan
+                case aExeption of
+                    Right _ -> aLog "KeyBlock loaded ok."
+                    Left (e :: SomeException) -> aLog $ "Error of KeyBlock loading: " ++ show e
                 forM_ aMicroblocks $ \aBlock -> do
-                    addMicroblockToDB aData aBlock
+                    aExeption <- try $ addMicroblockToDB aData aBlock
+                    case aExeption of
+                        Right _ -> aLog "Block loaded ok."
+                        Left (e :: SomeException) -> aLog $ "Error of KeyBlock loading: " ++ show e
 
         MyTail aMVar -> do
             aLog "My tail request."
