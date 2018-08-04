@@ -84,20 +84,26 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
 
         WriteChain aChain -> do
             aLog "Recived chain."
-            aExeption <- try $ cleanDB aData
-            case aExeption of
-                Right _ -> aLog "DB cleaned. Ok."
-                Left (e :: SomeException) -> aLog $ "Error of db cleaning: " ++ show e
-            forM_ (sortOn (\(Chunk a _) -> _number (a :: KeyBlockInfoPoW)) aChain) $ \(Chunk aKeyBlo aMicroblocks) -> do
-                aExeption <- try $ addKeyBlockToDB2 aData aKeyBlo aSyncChan
+            aRes <- try $ myTail aData
+            aJustTail <- return $ case aRes of
+                Right aJustRes            -> fst aJustRes
+                Left (_ :: SomeException) -> 0
+            if fromEnum aJustTail < length aChain then do
+                aExeption <- try $ cleanDB aData
                 case aExeption of
-                    Right _ -> aLog "KeyBlock loaded ok."
-                    Left (e :: SomeException) -> aLog $ "Error of KeyBlock loading: " ++ show e
-                forM_ aMicroblocks $ \aBlock -> do
-                    aExeption <- try $ addMicroblockToDB aData aBlock
+                    Right _ -> aLog "DB cleaned. Ok."
+                    Left (e :: SomeException) -> aLog $ "Error of db cleaning: " ++ show e
+                forM_ (sortOn (\(Chunk a _) -> _number (a :: KeyBlockInfoPoW)) aChain) $ \(Chunk aKeyBlo aMicroblocks) -> do
+                    aExeption <- try $ addKeyBlockToDB2 aData aKeyBlo aSyncChan
                     case aExeption of
-                        Right _ -> aLog "Block loaded ok."
+                        Right _ -> aLog "KeyBlock loaded ok."
                         Left (e :: SomeException) -> aLog $ "Error of KeyBlock loading: " ++ show e
+                    forM_ aMicroblocks $ \aBlock -> do
+                        aExeption <- try $ addMicroblockToDB aData aBlock
+                        case aExeption of
+                            Right _ -> aLog "Block loaded ok."
+                            Left (e :: SomeException) -> aLog $ "Error of KeyBlock loading: " ++ show e
+            else return ()
 
         MyTail aMVar -> do
             aLog "My tail request."
