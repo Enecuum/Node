@@ -17,12 +17,14 @@ import           Service.InfoMsg
 import           Service.Sync.SyncJson
 import           Service.Transaction.SproutCommon
 import           Service.Types
+import           Service.Timer
 
 
 syncServer :: (InChan SyncEvent, OutChan SyncEvent) -> InChan MsgToDB -> InChan MsgToCentralActor -> InChan InfoMsg -> IO b
-syncServer (_, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
+syncServer (aInputSync, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
     let aLog aMsg = writeLog aInfoChan [SyncTag] Info aMsg
     writeLog aInfoChan [SyncTag, InitTag] Info "Init syncServer"
+    metronome 60000000 $ writeInChan aInputSync RestartSync
     forever $ do
       aLog $ "Start of syncServer stap."
       readChan outSyncChan >>= \case
@@ -30,7 +32,7 @@ syncServer (_, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
             aLog "Request of all tails"
             aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
             forM_ aActualConnects $ \(ActualConnectInfo aNodeId aNodeType _) -> do
-                    when (aNodeType == NN) $ sendMsgToNode aManagerChan RequestTail aNodeId
+                when (aNodeType == NN) $ sendMsgToNode aManagerChan RequestTail aNodeId
 
         SyncMsg aNodeId aMsg -> do
             aLog $ "Recived SyncMsg to syncServer: " ++ show aMsg
@@ -41,20 +43,26 @@ syncServer (_, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
                     takeRecords aDBActorChan MyTail >>= \case
                         Just aTail  -> do
                             aLog $ "aTail " ++ show aTail
-                            aSend $ ResponseTail aTail
+                            aSend $ ResponseTail $ fst aTail
                         Nothing     -> do
                             aLog "Empty tail #001"
                             aSend $ StatusSyncMessage "Empty tail" "#001"
 
-                ResponseTail (aNum, aHash) -> do
+                ResponseTail aNum -> do
                     aLog $ "Recived response tail " ++ show aNum
                     aMyTail  <- takeMyTail aDBActorChan
                     aLog $ "My tail is: " ++ show aMyTail
                     when (aMyTail < aNum) $ do
-                        aLog $ "Start of sync."
+                        aLog $ "Sending of chain request."
+                        aSend RequestChain
+                ResponseChain aChunk -> do
+                    aLog $ "Response chain" ++ show aChunk
+                    writeInChan aDBActorChan (WriteChain aChunk)
+                        {-
                         lastCommonNumber <- findBeforeFork aMyTail aNodeId outSyncChan aDBActorChan aManagerChan aInfoChan
                         void $ loadBlocks outSyncChan aDBActorChan aManagerChan (lastCommonNumber+1) aNum aNodeId aInfoChan
-
+                        -}
+{-
                 PeekKeyBlokRequest aFrom aTo                -> do
                     aLog "Processing of PeekKeyBlokRequest."
                     takeRecords aDBActorChan (GetKeyBlockSproutData aFrom aTo) >>=
@@ -71,13 +79,13 @@ syncServer (_, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
                     takeRecords aDBActorChan (PeekNKeyBlocks aFrom aTo) >>=
                         aSend . PeekHashKblokResponse
 
-
+-}
                 _ -> aSend $ StatusSyncMessage ("Send command are not allowed for server")  "#005"
 
 
 data Response a = Response NodeId a deriving Show
 
-
+{-
 takePeekKeyBlokResponse     :: OutChan SyncEvent -> InChan InfoMsg -> IO (Response [(Number, HashOfKeyBlock, MacroblockBD)])
 takePeekKeyBlokResponse aChan aLog = do
     readChan aChan >>= \case
@@ -105,7 +113,9 @@ takePeekHashKblokResponse aChan = readChan aChan >>= \case
         _                           -> takePeekHashKblokResponse aChan
     _                 -> takePeekHashKblokResponse aChan
 
+-}
 --
+{-
 loadOneMacroBlock
     ::  OutChan SyncEvent
     ->  InChan MsgToDB
@@ -129,7 +139,8 @@ loadOneMacroBlock outSyncChan aDBActorChan aManagerChan (x:xs) aNodeId aInfoChan
             loadOneMacroBlock outSyncChan aDBActorChan aManagerChan xs aNodeId aInfoChan hashOfKeyBlock aNumber
         Nothing -> return False
 loadOneMacroBlock _ _ _ _ _ _ _ _ = return True
-
+-}
+{-
 
 -- load kblocks
 loadBlocks :: OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> From -> To -> NodeId -> InChan InfoMsg -> IO Bool
@@ -151,8 +162,8 @@ loadBlocks outSyncChan aDBActorChan aManagerChan aFrom aTo aId aInfoChan = do
         writeLog aInfoChan [SyncTag] Info "Loading of macrblock"
         loadMacroBlocks outSyncChan aDBActorChan aManagerChan aFrom aListOfBlocks aId aInfoChan
 
---
-
+-}
+{-
 -- load microblocks
 loadMacroBlocks
     ::  OutChan SyncEvent
@@ -177,6 +188,7 @@ loadMacroBlocks _ a2 _ aNumber _ _ aInfoChan = do
     writeLog aInfoChan [SyncTag] Info $ "Set sprout as main " ++ show aNumber
     writeInChan a2 $ SetSproutAsMain aNumber
     return True
+-}
 
 first :: (a, b, c) -> a
 first (a, _, _) = a
@@ -201,7 +213,7 @@ takeMyTail aDBActorChan =
 takeTailNum :: Response (Number, a) -> Number
 takeTailNum (Response _ (aNum, _)) = aNum
 
-
+{-
 -- find number of last common kblock
 findBeforeFork :: Number -> NodeId -> OutChan SyncEvent -> InChan MsgToDB -> InChan MsgToCentralActor -> InChan InfoMsg -> IO Number
 findBeforeFork 0 _ _ _ _ aInfoChan = do
@@ -220,7 +232,7 @@ findBeforeFork n aId outSyncChan aDBActorChan aManagerChan aInfoChan = do
     if aHash == aMyHash
     then return n
     else findBeforeFork (n-1) aId outSyncChan aDBActorChan aManagerChan aInfoChan
-
+-}
 --
 takeRecords :: InChan a -> (MVar p -> a) -> IO p
 takeRecords aChan aTaker  = do
@@ -230,4 +242,4 @@ takeRecords aChan aTaker  = do
 
 --
 sendMsgToNode :: ToJSON a => InChan MsgToCentralActor -> a -> NodeId -> IO ()
-sendMsgToNode aChan aMsg aId = writeInChan aChan $ SendMsgToNode (toJSON aMsg) (IdTo aId)
+sendMsgToNode aChan aMsg aId = writeInChan aChan $ SendSyncMsg aId (toJSON aMsg) 

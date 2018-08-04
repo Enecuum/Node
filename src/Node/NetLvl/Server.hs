@@ -36,7 +36,7 @@ import           System.Random.Shuffle
 import           Control.Concurrent.Async
 import           Data.Maybe                            ()
 import           Node.Data.Key
-
+import           Service.Sync.SyncJson
 
 
 netLvlServer (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan inChanPending aInChan = do
@@ -146,8 +146,13 @@ msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan aIn
                 when (isBlock aMessage) $ writeInChan aInChan aMsg
 
         Left a -> do
-            writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ a
-            WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"Error\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
+            case A.eitherDecodeStrict aMsg of
+                Right (a :: SyncMessage) -> do
+                    let IdFrom aNodeId = aId
+                    writeInChan ch (SyncToNode a aNodeId)
+                Left a -> do
+                    writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ a
+                    WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"Error\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
 
 
 writeInChan :: InChan t -> t -> IO ()

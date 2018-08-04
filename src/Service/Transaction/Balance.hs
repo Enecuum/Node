@@ -21,7 +21,8 @@ module Service.Transaction.Balance
     calculateLedger,
     updateMacroblockByKeyBlock,
     tKBIPoW2KBI,
-    tKeyBlockToPoWType
+    tKeyBlockToPoWType,
+    addKeyBlockToDB2
     ) where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
@@ -230,7 +231,36 @@ writeLedgerDB dbLedger aInfoChan bt = do
   writeLog aInfoChan [BDTag] Info ("Write Ledger "  ++ show bt)
 
 
-addKeyBlockToDB :: Common -> Value  -> (InChan SyncEvent, b) -> IO ()
+--
+addKeyBlockToDB2 :: Common  -> KeyBlockInfoPoW -> (InChan SyncEvent, b) -> IO ()
+addKeyBlockToDB2 c@(Common db i) keyBlockInfo aSyncChan = do
+    let aKeyBlock = tKBIPoW2KBI keyBlockInfo
+        aKeyBlockHash = getKeyBlockHash keyBlockInfo
+
+    writeLog i [BDTag] Info $ "keyBlockHash: " ++ show aKeyBlockHash
+    writeLog i [BDTag] Info $ "keyBlockInfo: " ++ show aKeyBlock
+
+    let receivedKeyNumber = _number (keyBlockInfo :: KeyBlockInfoPoW)
+        startSync = writeInChan (fst aSyncChan) RestartSync
+    currentNumberInDB <- getKeyBlockNumber (Common db i)
+    writeLog i [BDTag] Info $ "Current KeyBlock Number In DB is " ++ show currentNumberInDB
+    case currentNumberInDB of
+      Nothing -> writeLog i [BDTag] Error "There are no genesis key block number!"
+      Just j  -> do
+        when (j < receivedKeyNumber) $ do
+          hashOfDBKeyBlock <- getM (Common db i) j
+          writeLog i [BDTag] Info $ "Current hash of KeyBlock in DB is " ++ show hashOfDBKeyBlock
+          let prev_hash = _prev_hash (aKeyBlock :: KeyBlockInfo)
+          case hashOfDBKeyBlock of
+            Nothing ->  writeLog i [BDTag] Error $ "There is no key block with number " ++ show j
+            Just h -> if h == prev_hash
+              then updateMacroblockByKeyBlock c aKeyBlockHash aKeyBlock Main
+              else do
+              let mes = "Hashes doesn't much: current hash: " ++ show h ++ "previous hash: " ++ show prev_hash
+              writeLog i [BDTag] Info mes
+              when (j < receivedKeyNumber) startSync
+
+addKeyBlockToDB :: Common -> Value -> (InChan SyncEvent, b) -> IO ()
 addKeyBlockToDB c@(Common db i) o aSyncChan = do
   keyBlockInfo <- decodeKeyBlock i o
   let aKeyBlock = tKBIPoW2KBI keyBlockInfo

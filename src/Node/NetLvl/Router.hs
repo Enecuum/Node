@@ -56,6 +56,15 @@ routerActorStart aSyncChan (_, aOutChan) aMd = do
                     let MyNodeId aMyId = aData^.nodeConfig.myNodeId
                     void $ tryWriteChan (aNode^.nodeChan) $ MsgMsgTo (IdFrom $ NodeId aMyId) aIdTo aMsgFromNode
 
+            SendSyncMsg aId aMsgFromNode -> do
+                whenJust (aData^.connects.at aId) $ \aNode -> do
+                    aNetLog $ "Sending of msg to " ++ show aId
+                    void $ tryWriteChan (aNode^.nodeChan) (Sync aMsgFromNode)
+
+            SyncToNode aMsg aSender -> do
+                aNetLog $ "Received sync msg. " ++ show aMsg
+                writeInChan aSyncChan $ SyncMsg aSender aMsg
+
             MsgFromNode aNodeType aMsgFromNode -> do
                 void $ C.forkIO $ when (aNodeType /= NN) $ forM_ (aData^.connects) $
                     \aNode -> when (aNode^.nodeType == NN) $

@@ -15,12 +15,14 @@ import           Service.InfoMsg
 import           Control.Monad
 -- import qualified Data.ByteString                       as B
 import           Service.Chan
+import           Service.Transaction.Balance (addKeyBlockToDB2)
 import           Service.Sync.SyncJson
 import           Service.Transaction.Common            (addKeyBlockToDB,
                                                         addMicroblockToDB)
 import           Service.Transaction.LedgerSync
 import           Service.Transaction.SproutCommon
 import           Service.Types
+
 
 
 data MsgToDB where
@@ -35,7 +37,7 @@ data MsgToDB where
     SetRestSproutData     :: (Number, HashOfKeyBlock, MicroBlockContent) -> MVar Bool -> MsgToDB
     DeleteSproutData      :: Number -> MsgToDB
     SetSproutAsMain       :: Number -> MsgToDB
-
+    WriteChain            :: [Chunk] -> MsgToDB
 
 
 startDBActor :: DBPoolDescriptor
@@ -65,17 +67,25 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
     forever $ readChan aOutChan >>= \case
         MicroblockMsgToDB aMicroblock -> do
             aLog "Recived mickrobloc."
-            aExeption <- try $ addMicroblockToDB (Common descriptor aInfoCh) aMicroblock
+            aExeption <- try $ addMicroblockToDB aData aMicroblock
             case aExeption of
                 Right _ -> aLog "Success of setting microblock"
                 Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e
 
         KeyBlockMsgToDB aValue -> do
             writeLog aInfoCh [BDTag] Info "Recived keyBlocks."
-            aExeption <- try $ addKeyBlockToDB (Common descriptor aInfoCh) aValue aSyncChan
+            aExeption <- try $ addKeyBlockToDB aData aValue aSyncChan
             case aExeption of
                 Right _ -> aLog "Success of setting keyBlock"
                 Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e
+
+        WriteChain aChain -> do
+            aLog "Recived chain."
+            cleanDB aData
+            forM_ aChain $ \(Chunk aKeyBlo aMicroblocks) -> do
+                addKeyBlockToDB2 aData aKeyBlo aSyncChan
+                forM_ aMicroblocks $ \aBlock -> do
+                    addMicroblockToDB aData aBlock
 
         MyTail aMVar -> do
             aLog "My tail request."
