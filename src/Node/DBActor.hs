@@ -81,7 +81,10 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
 
         WriteChain aChain -> do
             aLog "Recived chain."
-            cleanDB aData
+            aExeption <- try $ cleanDB aData
+            case aExeption of
+                Right _ -> aLog "DB cleaned. Ok."
+                Left (e :: SomeException) -> aLog $ "Error of db cleaning: " ++ show e
             forM_ aChain $ \(Chunk aKeyBlo aMicroblocks) -> do
                 aExeption <- try $ addKeyBlockToDB2 aData aKeyBlo aSyncChan
                 case aExeption of
