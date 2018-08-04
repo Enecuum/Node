@@ -1,6 +1,8 @@
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DisambiguateRecordFields  #-}
+{-# LANGUAGE DuplicateRecordFields     #-}
 
 module Node.DBActor where
 
@@ -9,6 +11,7 @@ import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
 import           Control.Exception
 import           Data.Aeson
+import           Data.List.Extra
 import           Node.Data.GlobalLoging
 import           Service.InfoMsg
 
@@ -81,11 +84,20 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
 
         WriteChain aChain -> do
             aLog "Recived chain."
-            cleanDB aData
-            forM_ aChain $ \(Chunk aKeyBlo aMicroblocks) -> do
-                addKeyBlockToDB2 aData aKeyBlo aSyncChan
+            aExeption <- try $ cleanDB aData
+            case aExeption of
+                Right _ -> aLog "DB cleaned. Ok."
+                Left (e :: SomeException) -> aLog $ "Error of db cleaning: " ++ show e
+            forM_ (sortOn (\(Chunk a _) -> _number (a :: KeyBlockInfoPoW)) aChain) $ \(Chunk aKeyBlo aMicroblocks) -> do
+                aExeption <- try $ addKeyBlockToDB2 aData aKeyBlo aSyncChan
+                case aExeption of
+                    Right _ -> aLog "KeyBlock loaded ok."
+                    Left (e :: SomeException) -> aLog $ "Error of KeyBlock loading: " ++ show e
                 forM_ aMicroblocks $ \aBlock -> do
-                    addMicroblockToDB aData aBlock
+                    aExeption <- try $ addMicroblockToDB aData aBlock
+                    case aExeption of
+                        Right _ -> aLog "Block loaded ok."
+                        Left (e :: SomeException) -> aLog $ "Error of KeyBlock loading: " ++ show e
 
         MyTail aMVar -> do
             aLog "My tail request."
@@ -158,6 +170,7 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
             case aExeption of
                 Right _ -> aLog "Success of Set sprout as main"
                 Left (e :: SomeException) -> aLog $ "Set sprout as main false !!! =" ++ show e
+
 
 
 --
