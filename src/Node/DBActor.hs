@@ -1,6 +1,8 @@
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DisambiguateRecordFields  #-}
+{-# LANGUAGE DuplicateRecordFields     #-}
 
 module Node.DBActor where
 
@@ -9,6 +11,7 @@ import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
 import           Control.Exception
 import           Data.Aeson
+import           Data.List.Extra
 import           Node.Data.GlobalLoging
 import           Service.InfoMsg
 
@@ -85,7 +88,7 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
             case aExeption of
                 Right _ -> aLog "DB cleaned. Ok."
                 Left (e :: SomeException) -> aLog $ "Error of db cleaning: " ++ show e
-            forM_ aChain $ \(Chunk aKeyBlo aMicroblocks) -> do
+            forM_ (sortOn (\(Chunk a _) -> _number (a :: KeyBlockInfoPoW)) aChain) $ \(Chunk aKeyBlo aMicroblocks) -> do
                 aExeption <- try $ addKeyBlockToDB2 aData aKeyBlo aSyncChan
                 case aExeption of
                     Right _ -> aLog "KeyBlock loaded ok."
@@ -167,6 +170,7 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
             case aExeption of
                 Right _ -> aLog "Success of Set sprout as main"
                 Left (e :: SomeException) -> aLog $ "Set sprout as main false !!! =" ++ show e
+
 
 
 --
