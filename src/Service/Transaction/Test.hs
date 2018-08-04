@@ -107,15 +107,15 @@ getAllLedgerKV = getAllAndDecode2 getLedgerFilePath "PublicKey" "Amount"
 
 
 getAllTransactionsKV :: IO [(HashOfTransaction,TransactionInfo)]
-getAllTransactionsKV = getAllAndDecode2 getTransactionFilePath "HashOfTransaction" "TransactionInfo"
+getAllTransactionsKV = getAllAndDecode getTransactionFilePath id (decodeThis "TransactionInfo")
 
 
 getAllMicroblockKV :: IO [(HashOfMicroblock,MicroblockBD)]
-getAllMicroblockKV = getAllAndDecode2 getMicroblockFilePath "HashOfMicroblock" "MicroblockBD"
+getAllMicroblockKV = getAllAndDecode getMicroblockFilePath id (decodeThis "MicroblockBD")
 
 
 getAllMacroblockKV :: IO [(HashOfKeyBlock,MacroblockBD)]
-getAllMacroblockKV = getAllAndDecode2 getMacroblockFilePath "HashOfKeyBlock" "MacroblockBD"
+getAllMacroblockKV = getAllAndDecode getMacroblockFilePath id (decodeThis "MacroblockBD")
 
 
 -- test03 ::  IO [BSI.ByteString]
