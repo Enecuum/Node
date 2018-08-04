@@ -92,10 +92,20 @@ connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aSync aInLogerC
         WS.sendTextData aConnect . A.encode $ ActionConnect NN (Just aMyNodeId)
         aMsg <- WS.receiveData aConnect
         case A.eitherDecodeStrict aMsg of
-            Right (ActionConnect aNodeType (Just aNodeId))
+            Right (ResponseNodeId aNodeId) -> do
+                (aInpChan, aOutChan) <- newChan 64
+                sendActionToCentralActor ch $ NewConnect aNodeId NN aInpChan Nothing
+                void $ C.forkIO $ do
+                    C.threadDelay sec
+                    writeInChan aSync RestartSync
+                void $ race
+                    (msgSender ch aMyNodeId aConnect aOutChan)
+                    (msgReceiver ch aInfoChan aFileServerChan NN (IdFrom aNodeId) aConnect inChanPending aInLogerChan)
+
+            Right (ActionConnect _ (Just aNodeId))
                 | aMyNodeId /= aNodeId -> do
                     (aInpChan, aOutChan) <- newChan 64
-                    sendActionToCentralActor ch $ NewConnect aNodeId aNodeType aInpChan Nothing
+                    sendActionToCentralActor ch $ NewConnect aNodeId NN aInpChan Nothing
                     void $ C.forkIO $ do
                         C.threadDelay sec
                         writeInChan aSync RestartSync

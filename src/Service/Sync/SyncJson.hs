@@ -148,7 +148,7 @@ instance FromJSON SyncMessage where
         sync  :: T.Text <- aMessage .:"sync"
         case (T.unpack sync) of
             "tail" -> return RequestTail
-            "peek" -> ResponseTail <$> aMessage .: "tail"
+            "peak" -> ResponseTail <$> aMessage .: "tail"
             "sync" -> return RequestChain
             "chunk"-> ResponseChain <$> aMessage .: "chunk"
 
