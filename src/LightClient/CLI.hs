@@ -41,7 +41,7 @@ data Flag = Port PortNumber | Host HostName | Version | Help
           | WalletsFile String | TransactionsFile String | KeyGen Int
           | ShowKey String | Balance PublicKey | Info
           | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey | PartWallet PartWalletReq
-          | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
+--          | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
           | Microblocks | Txs | AllLedger | Kblocks | Chain | Tables
 
      deriving (Eq, Ord, Show)

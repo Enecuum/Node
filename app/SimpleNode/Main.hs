@@ -85,7 +85,7 @@ main =  do
                                        Nothing    -> updateConfigWithToken conf snbc rpcbc
 
                             serveRpc rocksDB rpc_p ip_en ch aInfoChanIn aInContainerChan
-                      "cli" -> serveCLI rocksDB ch aInfoChanIn
+                      "cli" -> serveCLI rocksDB ch aInfoChanIn aInContainerChan
                       _     -> return ()
             forever $ C.threadDelay 10000000000
 
