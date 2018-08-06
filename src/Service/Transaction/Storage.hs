@@ -39,6 +39,7 @@ import           Service.InfoMsg                       (InfoMsg (..),
 import           Service.System.Directory
 import           Service.Transaction.Decode
 import           Service.Transaction.Iterator
+import           Service.Transaction.Sprout
 import           Service.Transaction.Transformation
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
@@ -376,11 +377,29 @@ genesisKeyBlock = KeyBlockInfoPoW{
   _type = 0}
 
 
-type NumberOfKeyBlock = Int
+type NumberOfKeyBlock = Integer
+
 
 getMickroblocks :: Common -> NumberOfKeyBlock -> IO [Microblock]
-getMickroblocks c n = undefined
+getMickroblocks c@(Common db i) kNumber = do
+  m <- getKeyBlockMain c kNumber
+  mbBD <- mapM (getMicroBlockByHashDB db . Hash) $ _mblocks (m :: MacroblockBD)
+  mapM (tMicroblockBD2Microblock db i) mbBD
+
+
+getKeyBlockMain :: Common -> NumberOfKeyBlock-> IO MacroblockBD
+getKeyBlockMain c@(Common db i) kNumber = do
+  (_, hashMaybe) <- findChain c kNumber Main
+  case hashMaybe of
+    Nothing -> throw NoSuchKBlockDB
+    Just kHash -> do
+      mb <- getKeyBlockByHash db i (Hash kHash)
+      case mb of
+        Nothing -> throw NoSuchKBlockDB
+        Just m  -> return m
 
 
 getKeyBlock :: Common -> NumberOfKeyBlock-> IO KeyBlockInfoPoW
-getKeyBlock c n = undefined
+getKeyBlock c kNumber = do
+   m <- getKeyBlockMain c kNumber
+   return $ tKeyBlockToPoWType $ tMacroblock2KeyBlockInfo m

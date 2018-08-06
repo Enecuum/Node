@@ -12,8 +12,8 @@ import           Control.Concurrent.MVar
 import           Control.Exception
 import           Control.Monad
 import           Data.Aeson
-import           Data.Maybe
 import           Data.List.Extra
+import           Data.Maybe
 import           Node.Data.GlobalLoging
 import           Service.Chan
 import           Service.InfoMsg
@@ -114,8 +114,8 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
                     return 0
 
             aChain  <- forM [1..fromEnum aNumber] $ \aNum -> do
-                aMicroblocks <- try $ getMickroblocks aData aNum
-                aKeyBlock    <- try $ getKeyBlock aData aNum
+                aMicroblocks <- try $ getMickroblocks aData (toInteger aNum)
+                aKeyBlock    <- try $ getKeyBlock aData (toInteger aNum)
                 case (aKeyBlock, aMicroblocks) of
                   (Right aKeyBlock, Right aMicroblocks) -> return $ Just $ Chunk aKeyBlock aMicroblocks
                   (Left (a :: SomeException), Left (b :: SomeException))    -> return Nothing
