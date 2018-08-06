@@ -55,7 +55,8 @@ import           Service.Transaction.Common            as B (getBalanceForKey,
                                                              getTransactionByHashDB)
 import           Service.Transaction.Common            (getAllTransactionsDB,
                                                         rHash)
-import           Service.Transaction.Iterator          (kvOffset)
+-- import           Service.Transaction.Iterator          (kvOffset)
+import           Service.Transaction.LedgerSync        (cleanDB)
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
@@ -87,6 +88,11 @@ getAllKblocks =  try $ getAllMacroblockKV
 getAllTransactions :: IO (Result [(DBKey, TransactionInfo)])
 getAllTransactions =  try $ getAllTransactionsKV
 
+
+deleteAllDB :: Common -> IO (Result ())
+deleteAllDB c =  try $ cleanDB c
+
+
 sendMessageTo :: MsgTo -> InChan MsgToCentralActor -> IO (Result ())
 sendMessageTo _ _ = return $ return undefined
 
@@ -114,8 +120,8 @@ getKeyBlockByHash common (Hash h)  = try $ do
     Nothing -> throw NoSuchMacroBlockDB
     Just m  -> return m
 
-getChainInfo :: DBPoolDescriptor -> InChan InfoMsg -> IO (Result ChainInfo)
-getChainInfo db aInfoChan = Right <$> B.getChainInfoDB (Common db aInfoChan)
+getChainInfo :: Common -> IO (Result ChainInfo)
+getChainInfo c = Right <$> B.getChainInfoDB c
 
 
 getTransactionByHash :: Common -> Hash  -> IO (Result TransactionInfo)

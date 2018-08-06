@@ -18,6 +18,7 @@ module LightClient.RPC (
         getAllTransactionsRPC,
 
 --test
+        cleanDBRPC,
         newMsgBroadcast,
         newMsgTo,
         loadNewMsg,
@@ -114,6 +115,8 @@ getAllKblocksRPC h = toFunction (connectionWithTimeOut h) (Signature  "enq_getAl
 getAllTransactionsRPC :: WS.Connection -> Result [(DBKey, TransactionInfo)]
 getAllTransactionsRPC h = toFunction (connectionWithTimeOut h) (Signature "enq_getAllTransactions" ())
 
+cleanDBRPC :: WS.Connection -> Result ()
+cleanDBRPC h = toFunction (connectionWithTimeOut h) (Signature "enq_deleteAllDB" ())
 
 
 --test

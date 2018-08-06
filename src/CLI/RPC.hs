@@ -108,7 +108,7 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum "serveRpc" $ \_ aPendi
               getSystemInfo = toMethod "enq_getChainInfo" f ()
                 where
                   f :: RpcResult IO ChainInfo
-                  f = handle $ getChainInfo descrDB aInfoCh
+                  f = handle $ getChainInfo (Common descrDB aInfoCh)
 
               getAllChainF = toMethod "enq_getAllChain" f ()
                 where
@@ -136,6 +136,11 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum "serveRpc" $ \_ aPendi
                   f = handle getAllTransactions
 
 ------------- test functions
+              -- deleteAllDB = toMethod "enq_deleteAllDB" f ()
+              --   where
+              --     f :: RpcResult IO ()
+              --     f = handle $ deleteAllDB (Common descrDB aInfoCh)
+
               createNTx = toMethod "gen_n_tx" f (Required "x" :+: ())
                 where
                   f :: Int -> RpcResult IO ()
