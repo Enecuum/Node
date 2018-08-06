@@ -21,7 +21,9 @@ module Service.Transaction.Common
   getAllMacroblockKV,
   getAllMicroblockKV,
   getAllSproutKV,
-  getAllTransactionsKV
+  getAllTransactionsKV,
+  getMickroblocks,
+  getKeyBlock
   )
   where
 import           Service.Transaction.API             (getAllLedgerKV,

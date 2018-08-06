@@ -374,3 +374,13 @@ genesisKeyBlock = KeyBlockInfoPoW{
   _nonce = 0,
   _solver = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
   _type = 0}
+
+
+type NumberOfKeyBlock = Int
+
+getMickroblocks :: Common -> NumberOfKeyBlock -> IO [Microblock]
+getMickroblocks c n = undefined
+
+
+getKeyBlock :: Common -> NumberOfKeyBlock-> IO KeyBlockInfoPoW
+getKeyBlock c n = undefined
