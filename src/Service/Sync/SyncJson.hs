@@ -97,6 +97,10 @@ instance ToJSON SyncMessage where
         "sync"        .= ("sync"   :: String),
         "tail"        .= (0 :: Int)
       ]
+    toJSON (ResponseChain aChunk) = object [
+        "sync"   .= ("chunk"  :: String),
+        "chunk"  .= aChunk
+      ]
 {-
     toJSON (PeekKeyBlokRequest aFrom aTo) = object [
         "sync"      .= ("peek_key_blok_request"   :: String),
@@ -141,6 +145,14 @@ instance FromJSON Chunk where
         aBlock       <- aMessage .: "block"
         aMicroBlocks <- aMessage .: "microblocks"
         return $ Chunk aBlock aMicroBlocks
+-- {"block":{},"microblocks":[]}
+
+instance ToJSON Chunk where
+    toJSON (Chunk aKey aMBs) = object [
+        "block"       .= aKey,
+        "microblocks" .= aMBs
+      ]
+
 
 instance FromJSON SyncMessage where
     parseJSON (Object aMessage) = do

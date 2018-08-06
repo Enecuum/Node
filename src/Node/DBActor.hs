@@ -12,6 +12,7 @@ import           Control.Concurrent.MVar
 import           Control.Exception
 import           Control.Monad
 import           Data.Aeson
+import           Data.Maybe
 import           Data.List.Extra
 import           Node.Data.GlobalLoging
 import           Service.Chan
@@ -24,6 +25,11 @@ import           Service.Transaction.Common            (addKeyBlockToDB,
 import           Service.Transaction.LedgerSync
 import           Service.Types
 
+getMickroblocks :: Common -> Number -> IO [Microblock]
+getMickroblocks = undefined
+
+getKeyBlock :: Common -> Number-> IO KeyBlockInfoPoW
+getKeyBlock = undefined
 
 
 data MsgToDB where
@@ -38,7 +44,9 @@ data MsgToDB where
     SetRestSproutData     :: (Number, HashOfKeyBlock, MicroBlockContent) -> MVar Bool -> MsgToDB
     DeleteSproutData      :: Number -> MsgToDB
     SetSproutAsMain       :: Number -> MsgToDB
+
     WriteChain            :: [Chunk] -> MsgToDB
+    GetChain              :: MVar [Chunk] -> MsgToDB
 
 
 startDBActor :: DBPoolDescriptor
@@ -102,6 +110,26 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
                             Right _ -> aLog "Block loaded ok."
                             Left (e :: SomeException) -> aLog $ "Error of KeyBlock loading: " ++ show e
             else return ()
+
+        GetChain aVar -> do
+            aLog "Recived chain."
+            aTail   <- try $ myTail aData
+            -- getting number of key bloks.
+            aNumber <- case aTail of
+                Right (aNum, _) -> return aNum
+                Left (e :: SomeException) -> do
+                    aLog $ "Error of myTail: " ++ show e
+                    return 0
+
+            aChain  <- forM [1..aNumber] $ \aNum -> do
+                aMicroblocks <- try $ getMickroblocks aData aNum
+                aKeyBlock    <- try $ getKeyBlock aData aNum
+                case (aKeyBlock, aMicroblocks) of
+                  (Right aKeyBlock, Right aMicroblocks) -> return $ Just $ Chunk aKeyBlock aMicroblocks
+                  (Left (a :: SomeException), Left (b :: SomeException))    -> return Nothing
+                  (_, Left (e :: SomeException))                            -> return Nothing
+                  (Left (e :: SomeException), _)                            -> return Nothing
+            putMVar aVar $ catMaybes aChain
 
         MyTail aMVar -> do
             aLog "My tail request."

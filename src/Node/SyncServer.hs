@@ -58,6 +58,10 @@ syncServer (aInputSync, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
                 ResponseChain aChunk -> do
                     aLog $ "Response chain" ++ show aChunk
                     writeInChan aDBActorChan (WriteChain aChunk)
+
+                RequestChain ->
+                    aSend . ResponseChain =<< takeRecords aDBActorChan GetChain
+
                         {-
                         lastCommonNumber <- findBeforeFork aMyTail aNodeId outSyncChan aDBActorChan aManagerChan aInfoChan
                         void $ loadBlocks outSyncChan aDBActorChan aManagerChan (lastCommonNumber+1) aNum aNodeId aInfoChan

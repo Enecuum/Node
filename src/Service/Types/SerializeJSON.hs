@@ -330,3 +330,13 @@ instance FromJSON KeyBlockInfoPoW where
                          <*> (v .: "solver")
                          <*> (v .: "type")
   parseJSON inv        = typeMismatch "KeyBlockInfo" inv
+
+instance ToJSON KeyBlockInfoPoW where
+    toJSON (KeyBlockInfoPoW aTime aPrevHash aNumber aNonce aSolver aType) = object [
+        "time"         .= aTime,
+        "prev_hash"    .= aPrevHash,
+        "number"       .= aNumber,
+        "nonce"        .= aNonce,
+        "solver"       .= aSolver,
+        "type"         .= aType
+      ]
