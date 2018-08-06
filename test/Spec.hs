@@ -41,3 +41,24 @@ main = hspec $ do
     it "should retrieve n transactions for publickey" $  do
       undefined
       `shouldReturn` (Just "zzz")
+
+
+parseTXInfoJson :: IO ()
+parseTXInfoJson = do
+  tx <- genNNTx 5
+  let ti = TransactionInfo (tx !! 0) (BC.pack "123") 2 False
+  let eti = Data.Aeson.encode ti
+  print eti
+  let res = Data.Aeson.decode eti :: Maybe TransactionInfo
+  -- return res
+  print $ res
+
+
+parseTXInfoBin :: IO TransactionInfo
+parseTXInfoBin = do
+  tx <- genNNTx 5
+  let ti = TransactionInfo (tx !! 0) (BC.pack "123") 2 False
+  let eti = S.encode ti
+  print eti
+  let res = decodeThis "TransactionInfo" eti
+  return res

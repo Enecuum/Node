@@ -1,15 +1,20 @@
+{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings     #-}
 
-module Service.Transaction.Test4 where
+module Service.Transaction.Generate where
 
 import           Control.Monad                       (replicateM)
 import           Control.Monad.State
+import qualified Crypto.Hash.SHA256                  as SHA
+import qualified Data.ByteString.Char8               as BC
+import           GHC.Generics
 import           Service.Transaction.Storage
 import           Service.Transaction.TransactionsDAG
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON         ()
+import           System.Random
 
 
 quantityOfTransactionInMicroblock :: Int
@@ -68,3 +73,17 @@ generateMicroblocksAndKeyBlocks = do
 
 genMicroblocksAndKeyBlocks :: Int -> IO [(KeyBlockInfoPoW, [Microblock])]
 genMicroblocksAndKeyBlocks n = evalStateT (replicateM n generateMicroblocksAndKeyBlocks) (0, hashOfgenesis)
+
+
+genNMicroBlocksV1 :: Int -> IO [MicroblockV1]
+genNMicroBlocksV1 n = evalStateT (replicateM n genMicroBlockV1) BC.empty
+
+
+genMicroBlockV1 :: StateT HashOfMicroblock IO MicroblockV1
+genMicroBlockV1 = do
+  aHashPreviousMicroblock <- get
+  n <- lift $ randomRIO (3,4) --(40,128) -- from 40 to 128 transactions per block
+  tx <- lift $ genNNTx n
+  let aHashCurrentMicroblock = (SHA.hash . BC.pack . show) tx
+  put aHashCurrentMicroblock
+  return (MicroblockV1 aHashCurrentMicroblock aHashPreviousMicroblock tx)

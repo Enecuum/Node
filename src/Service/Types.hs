@@ -127,8 +127,8 @@ instance Read Hash where
        readsPrec _ value = return (Hash $ C.pack value,"")
 
 data MicroblockV1 = MicroblockV1{
-                  hashCurrentMicroblock  :: ByteString, -- hashCurrentMicroblock
-                  hashPreviousMicroblock :: ByteString, -- hashPreviousMicroblock
+                  hashCurrentMicroblock  :: HashOfMicroblock,
+                  hashPreviousMicroblock :: HashOfMicroblock,
                   trans                  :: [Transaction]}
                 deriving (Eq, Generic, Ord, Show)
 

@@ -9,27 +9,33 @@ module Service.Transaction.Common
   getBalanceForKey,
   addMicroblockToDB,
   addKeyBlockToDB,
+  addKeyBlockToDB2,
   runLedger,
   rHash,
   getLastTransactions,
   getTransactionByHashDB,
   getChainInfoDB,
-  genNTx
+  genNTx,
+  cleanDB,
+  getAllLedgerKV,
+  getAllMacroblockKV,
+  getAllMicroblockKV,
+  getAllSproutKV,
+  getAllTransactionsKV
   )
   where
+import           Service.Transaction.API             (getAllLedgerKV,
+                                                      getAllMacroblockKV,
+                                                      getAllMicroblockKV,
+                                                      getAllSproutKV,
+                                                      getAllTransactionsKV)
 import           Service.Transaction.Balance         (addKeyBlockToDB,
                                                       addMicroblockToDB,
                                                       getBalanceForKey,
                                                       runLedger)
+import           Service.Transaction.Balance         (addKeyBlockToDB2)
 import           Service.Transaction.Decode
-import           Service.Transaction.Storage
--- import           Service.Transaction.Storage         (connectOrRecoveryConnect,
---                                                       getAllTransactionsDB,
---                                                       getBlockByHashDB,
---                                                       getChainInfoDB,
---                                                       getKeyBlockByHashDB,
---                                                       getLastTransactions,
---                                                       getTransactionsByMicroblockHash)
-
 import           Service.Transaction.Decode          (rHash)
-import           Service.Transaction.TransactionsDAG
+import           Service.Transaction.LedgerSync      (cleanDB)
+import           Service.Transaction.Storage
+import           Service.Transaction.TransactionsDAG (genNTx)

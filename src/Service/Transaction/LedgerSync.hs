@@ -16,10 +16,10 @@ import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import           Node.Data.GlobalLoging
 import           Service.InfoMsg                    (LogingTag (..),
                                                      MsgType (..))
+import           Service.Sync.SyncTypes
 import           Service.Transaction.Balance
 import           Service.Transaction.Decode
 import           Service.Transaction.Sprout
-import           Service.Transaction.SproutCommon
 import           Service.Transaction.Storage
 import           Service.Transaction.Transformation
 import           Service.Types

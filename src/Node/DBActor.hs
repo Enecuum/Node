@@ -1,8 +1,8 @@
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DisambiguateRecordFields  #-}
-{-# LANGUAGE DuplicateRecordFields     #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE DuplicateRecordFields    #-}
+{-# LANGUAGE GADTs                    #-}
+{-# LANGUAGE LambdaCase               #-}
+{-# LANGUAGE ScopedTypeVariables      #-}
 
 module Node.DBActor where
 
@@ -10,20 +10,18 @@ import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
 import           Control.Exception
+import           Control.Monad
 import           Data.Aeson
 import           Data.List.Extra
 import           Node.Data.GlobalLoging
-import           Service.InfoMsg
-
-import           Control.Monad
--- import qualified Data.ByteString                       as B
 import           Service.Chan
-import           Service.Transaction.Balance (addKeyBlockToDB2)
+import           Service.InfoMsg
 import           Service.Sync.SyncJson
+import           Service.Sync.SyncTypes
 import           Service.Transaction.Common            (addKeyBlockToDB,
+                                                        addKeyBlockToDB2,
                                                         addMicroblockToDB)
 import           Service.Transaction.LedgerSync
-import           Service.Transaction.SproutCommon
 import           Service.Types
 
 
@@ -116,15 +114,15 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
             aLog "Peek NKey blocks request."
             aRes <- try $ peekNPreviousKeyBlocks aData aInt aHashOfKeyBlock
             case aRes of
-                Right aJustRes              -> putMVar aMVar aJustRes
-                Left (_ :: SomeException)   -> putMVar aMVar []
+                Right aJustRes            -> putMVar aMVar aJustRes
+                Left (_ :: SomeException) -> putMVar aMVar []
 
         GetKeyBlockSproutData aFrom aTo aMVar -> do
             aLog "Get key block sprout data request."
             aRes <- try $ getKeyBlockSproutData aData aFrom aTo
             case aRes of
-                Right aJustRes              -> putMVar aMVar aJustRes
-                Left (_ :: SomeException)   -> putMVar aMVar []
+                Right aJustRes            -> putMVar aMVar aJustRes
+                Left (_ :: SomeException) -> putMVar aMVar []
 
 
         SetKeyBlockSproutData aMacroblockBD aMVar -> do

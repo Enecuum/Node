@@ -117,27 +117,27 @@ serveRpc descrDB portNum _ ch aInfoCh aContChan = runServer portNum "serveRpc" $
               getAllChainF = toMethod "enq_getAllChain" f ()
                 where
                   f :: RpcResult IO [FullChain]
-                  f = handle getAllChain
+                  f = handle $ getAllChain (Common descrDB aInfoCh)
 
               getAllLedgerF = toMethod "enq_getAllLedger" f ()
                 where
                   f :: RpcResult IO [(PublicKey, Amount)]
-                  f = handle getAllLedger
+                  f = handle $ getAllLedger (Common descrDB aInfoCh)
 
               getAllMicroblocksF = toMethod "enq_getAllMicroblocks" f ()
                 where
                   f :: RpcResult IO [(HashOfMicroblock, MicroblockBD)]
-                  f = handle getAllMicroblocks
+                  f = handle $ getAllMicroblocks (Common descrDB aInfoCh)
 
               getAllKblocksF = toMethod "enq_getAllKblocks" f ()
                 where
                   f :: RpcResult IO [(HashOfKeyBlock, MacroblockBD)]
-                  f = handle getAllKblocks
+                  f = handle $ getAllKblocks (Common descrDB aInfoCh)
 
               getAllTransactionsF = toMethod "enq_getAllTransactions" f ()
                 where
                   f :: RpcResult IO [(HashOfTransaction, TransactionInfo)]
-                  f = handle getAllTransactions
+                  f = handle $ getAllTransactions (Common descrDB aInfoCh)
 
 ------------- test functions
               -- deleteAllDB = toMethod "enq_deleteAllDB" f ()

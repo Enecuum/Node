@@ -11,12 +11,11 @@ module Service.Sync.SyncJson where
 
 import           Control.Monad
 import           Data.Aeson
-import qualified Data.ByteString.Char8            as BS
-import qualified Data.Text                        as T
+import qualified Data.ByteString.Char8       as BS
+import qualified Data.Text                   as T
 import           Node.Data.Key
-import           Service.Transaction.SproutCommon (From, MicroBlockContent (..),
-                                                   To)
-import           Service.Transaction.Storage      ()
+import           Service.Sync.SyncTypes
+import           Service.Transaction.Storage ()
 import           Service.Types
 
 deriving instance Show MicroBlockContent

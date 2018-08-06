@@ -4,20 +4,20 @@ module Node.SyncServer where
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
 import           Control.Monad
-import           Node.DBActor
 import           Data.Aeson                            as A
 import           Lens.Micro
 import           Node.Data.GlobalLoging
 import           Node.Data.Key
-import           Node.Node.Types
+import           Node.DBActor
 import           Node.NetLvl.Massages
+import           Node.Node.Types
 import           Service.Chan
 import           Service.InfoMsg                       (InfoMsg)
 import           Service.InfoMsg
 import           Service.Sync.SyncJson
-import           Service.Transaction.SproutCommon
-import           Service.Types
+import           Service.Sync.SyncTypes
 import           Service.Timer
+import           Service.Types
 
 
 syncServer :: (InChan SyncEvent, OutChan SyncEvent) -> InChan MsgToDB -> InChan MsgToCentralActor -> InChan InfoMsg -> IO b

@@ -130,8 +130,8 @@ getLastKeyBlock (Common desc aInfoChan) = do
                            Just r -> return $ Just (k,r)
 
 
-getLastTransactions :: DBPoolDescriptor -> InContainerChan -> PublicKey -> Int -> Int -> IO [TransactionAPI]
-getLastTransactions descr aOffsetMap pubKey offset aCount = do
+getLastTransactions :: Common -> InContainerChan -> PublicKey -> Int -> Int -> IO [TransactionAPI]
+getLastTransactions (Common descr _) aOffsetMap pubKey offset aCount = do
   let fun db = getPartTransactions db aOffsetMap pubKey offset aCount
   withResource (poolTransaction descr) fun
 
@@ -154,16 +154,16 @@ getPartTransactions db inContainerChan pubKey offset aCount = do
   aIt <- takeMVar aVar
 
   let fun iter count = nLastValues iter count (decodeAndFilter pubKey)
-  (txAPI, newIter) <- case aIt of
+  (realCount, realOffset, startIt) <- case aIt of
     Nothing -> do
       it <- getLastIterator db
-      (values, lastIter) <- fun it (aCount + offset)
-      tx <- decodeTx $ drop offset values
-      return (tx, lastIter)
+      return (aCount + offset, offset, it)
     Just it  -> do
-      (values, lastIter) <- fun it aCount
-      tx <- decodeTx values
-      return (tx, lastIter)
+      return (aCount, 0, it)
+
+  (values, newIter) <- fun startIt realCount
+  txAPI <- decodeTx $ drop realOffset values
+
   when (not $ null txAPI) $ writeInChan inContainerChan (Update (Map.insert key newIter))
   return txAPI
 

@@ -47,16 +47,7 @@ import           Node.Crypto                           (verifyEncodeble)
 import           Node.Node.Types
 import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
-import           Service.Transaction.Common            as B (getAllTransactionsDB,
-                                                             getBalanceForKey,
-                                                             getBlockByHashDB,
-                                                             getChainInfoDB,
-                                                             getKeyBlockByHashDB,
-                                                             getLastTransactions,
-                                                             getTransactionByHashDB,
-                                                             rHash)
-import           Service.Transaction.LedgerSync        (cleanDB)
-import           Service.Transaction.TransactionsDAG   (genNTx)
+import qualified Service.Transaction.Common            as B
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
@@ -64,32 +55,26 @@ import           Service.Types.SerializeJSON           ()
 import           Control.Timeout
 import           Data.Time.Units                       (Second)
 
-import           Service.Transaction.Test              (getAllLedgerKV,
-                                                        getAllMacroblockKV,
-                                                        getAllMicroblockKV,
-                                                        getAllSproutKV,
-                                                        getAllTransactionsKV)
+
 
 type Result a = Either CLIException a
 
-getAllChain :: IO (Result [FullChain])
-getAllChain = try $ getAllSproutKV
+getAllChain :: Common -> IO (Result [FullChain])
+getAllChain c = try $ B.getAllSproutKV c
 
-getAllLedger :: IO (Result [(PublicKey, Amount)])
-getAllLedger = try $ getAllLedgerKV
+getAllLedger :: Common -> IO (Result [(PublicKey, Amount)])
+getAllLedger c = try $ B.getAllLedgerKV c
 
-getAllMicroblocks :: IO (Result [(DBKey, MicroblockBD)])
-getAllMicroblocks =  try $ getAllMicroblockKV
+getAllMicroblocks :: Common -> IO (Result [(DBKey, MicroblockBD)])
+getAllMicroblocks c =  try $ B.getAllMicroblockKV c
 
-getAllKblocks :: IO (Result [(DBKey, MacroblockBD)])
-getAllKblocks =  try $ getAllMacroblockKV
+getAllKblocks :: Common -> IO (Result [(DBKey, MacroblockBD)])
+getAllKblocks c =  try $ B.getAllMacroblockKV c
 
-getAllTransactions :: IO (Result [(DBKey, TransactionInfo)])
-getAllTransactions =  try $ getAllTransactionsKV
+getAllTransactions :: Common -> IO (Result [(DBKey, TransactionInfo)])
+getAllTransactions c =  try $ B.getAllTransactionsKV c
 
 
-deleteAllDB :: Common -> IO (Result ())
-deleteAllDB c =  try $ cleanDB c
 
 
 sendMessageTo :: MsgTo -> InChan MsgToCentralActor -> IO (Result ())
@@ -119,8 +104,11 @@ getKeyBlockByHash common (Hash h)  = try $ do
     Nothing -> throw NoSuchMacroBlockDB
     Just m  -> return m
 
+
 getChainInfo :: Common -> IO (Result ChainInfo)
-getChainInfo c = Right <$> B.getChainInfoDB c
+getChainInfo c = do
+  Right <$> B.getChainInfoDB c
+
 
 
 getTransactionByHash :: Common -> Hash  -> IO (Result TransactionInfo)
@@ -133,7 +121,7 @@ getTransactionByHash (Common db _) hash = try $ do
 
 getAllTransactionsByWallet :: Common -> PublicKey -> IO (Result [TransactionAPI])
 getAllTransactionsByWallet c key = try $ do
-  tx <- getAllTransactionsDB c key
+  tx <- B.getAllTransactionsDB c key
   case tx of
     [] -> throw NoTransactionsForPublicKey
     t  -> return t
@@ -142,8 +130,8 @@ getAllTransactionsByWallet c key = try $ do
 --
 
 getPartTransactions :: Common -> InContainerChan -> PublicKey -> Int -> Int -> IO (Result [TransactionAPI])
-getPartTransactions (Common pool _) inContainerChan key offset aCount = try $ do --return $ Left NotImplementedException
-  tx <- B.getLastTransactions pool inContainerChan key offset aCount
+getPartTransactions c inContainerChan key offset aCount = try $ do --return $ Left NotImplementedException
+  tx <- B.getLastTransactions c inContainerChan key offset aCount
   case tx of
     [] -> throw NoTransactionsForPublicKey
     t  -> return t
@@ -163,7 +151,7 @@ sendTrans tx ch aInfoCh = try $ do
                    r <- readMVar aMVar
                    print r
                    case r of
-                     True -> return $ rHash tx
+                     True -> return $ B.rHash tx
                      _    -> throw TransactionChanBusyException
                  else
                    throw TransactionInvalidSignatureException
@@ -244,7 +232,7 @@ sendMetrics (Transaction o r a _ _ _ _) m = do
 -- generateNTransactions :: ManagerMiningMsg a => QuantityTx -> Chan a -> Chan InfoMsg -> IO (Result ())
 generateNTransactions :: QuantityTx -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
 generateNTransactions qTx ch m = try $ do
-  tx <- genNTx qTx
+  tx <- B.genNTx qTx
   mapM_ (\x -> do
           aMVar <- newEmptyMVar
           writeInChan ch $ NewTransaction x aMVar
@@ -255,7 +243,7 @@ generateNTransactions qTx ch m = try $ do
 generateTransactionsForever :: InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
 generateTransactionsForever ch m = try $ forever $ do
                                 quantityOfTranscations <- randomRIO (20,30)
-                                tx <- genNTx quantityOfTranscations
+                                tx <- B.genNTx quantityOfTranscations
                                 mapM_ (\x -> do
                                             aMVar <- newEmptyMVar
                                             writeInChan ch $ NewTransaction x aMVar

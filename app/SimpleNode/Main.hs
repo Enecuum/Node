@@ -32,7 +32,7 @@ import           Data.Aeson                            (decode)
 import           Data.Aeson.Encode.Pretty              (encodePretty)
 import qualified Data.ByteString.Lazy                  as L
 import           Node.DataActor
-import           Service.Transaction.Storage           (connectOrRecoveryConnect)
+import           Service.Transaction.Common            (connectOrRecoveryConnect)
 
 configName :: String
 configName = "configs/config.json"

@@ -309,6 +309,3 @@ getAllTransactions ch =  do
 
 prettyPrint :: (ToJSON a) => a -> IO ()
 prettyPrint r = BC.putStrLn $ encodePretty r
-
-
-deleteAllDB c = runExceptT $ cleanDBRPC c

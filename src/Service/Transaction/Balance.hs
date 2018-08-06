@@ -29,7 +29,7 @@ import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception                     (throw)
 import           Control.Monad                         (liftM, when)
 import           Data.Aeson                            hiding (Error)
-import           Data.Default                          (def)
+-- import           Data.Default                          (def)
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
 import           Data.List                             (sort, sortBy)
@@ -100,21 +100,15 @@ updateBalanceTable (Common db i) ht isStorno t@(Transaction fromKey toKey am _ _
 getBalanceOfKeys :: Pool Rocks.DB -> IsStorno -> [Transaction] -> IO BalanceTable
 getBalanceOfKeys db isStorno tx = do
   let hashKeys = concatMap getPubKeys tx
-      fun k aDb = Rocks.get aDb Rocks.defaultReadOptions (S.encode k)
-      getBalanceByKey k = withResource db (fun k)
-      toTuple k b = (,) k b
-  balance  <- mapM (\k -> liftM (toTuple k ) (getBalanceByKey k)) hashKeys
-  --   balance (key Maybe(S.encode Amount))
-
-  let initialMoney = if isStorno then 0 else initialAmount
+      getBalanceByKey k = funR db (S.encode k)
+      initialMoney = if isStorno then 0 else initialAmount
+  balance  <- mapM (\k -> liftM ((,) k ) (getBalanceByKey k)) hashKeys
 
   -- initialize keys which does'not exist yet with initial balance
   when (not isStorno) $ do
     let keysWhichDoesNotExistYet = filter (\(_,v) -> isNothing v ) balance
         initialBalance = map (\(k,_) ->  (S.encode k, S.encode initialMoney)) keysWhichDoesNotExistYet
-        iBalance = map (uncurry Rocks.Put) initialBalance
-        fun2 bd = Rocks.write bd def{Rocks.sync = True} iBalance
-    withResource db fun2
+    funW db initialBalance
 
   let fun3 (k,v) = case v of Nothing -> (k, initialMoney )
                              Just aBalance -> case (S.decode aBalance :: Either String Amount) of
