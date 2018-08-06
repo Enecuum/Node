@@ -58,11 +58,11 @@ main =  do
 
                     (snbc, _, stat_h, stat_p, logs_h, logs_p, log_id) <- getConfigParameters aMyNodeId conf ch
 
-                    void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id
-
                     cli_m   <- try (getEnv "cliMode") >>= \case
                             Right item              -> return item
                             Left (_::SomeException) -> return $ cliMode snbc
+
+                    void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id (cli_m /= "cli")
 
                     void $ C.forkIO $ case cli_m of
                       "rpc" -> do

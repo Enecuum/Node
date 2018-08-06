@@ -66,8 +66,8 @@ data InfoMsg = Metric String | Log [LogingTag] MsgType String
 sendToServer :: ClientHandle -> String -> IO ()
 sendToServer h s = void $ sendTo (clientSocket h) (BS.pack s) (clientAddress h)
 
-serveInfoMsg :: ConnectInfo -> ConnectInfo -> OutChan InfoMsg -> String -> IO ()
-serveInfoMsg statsdInfo logsInfo chan aId = do
+serveInfoMsg :: ConnectInfo -> ConnectInfo -> OutChan InfoMsg -> String -> Bool -> IO ()
+serveInfoMsg statsdInfo logsInfo chan aId stdout_log = do
     eithMHandler <- try (openConnect (host statsdInfo) (port statsdInfo))
 
     case eithMHandler of
@@ -97,8 +97,10 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                                    ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
 
                          aFileString = "  !  " ++ aId ++ "|" ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
-                     putStrLn aFileString
                      appendFile "log.txt" aFileString
                      case eithLHandler of
                           Left  _        -> return ()
                           Right lHandler -> sendToServer lHandler aString
+                     if stdout_log 
+                     then putStrLn aFileString
+                     else return ()
