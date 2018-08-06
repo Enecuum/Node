@@ -11,12 +11,11 @@ module Service.Sync.SyncJson where
 
 import           Control.Monad
 import           Data.Aeson
-import qualified Data.ByteString.Char8            as BS
-import qualified Data.Text                        as T
+import qualified Data.ByteString.Char8       as BS
+import qualified Data.Text                   as T
 import           Node.Data.Key
-import           Service.Transaction.SproutCommon (From, MicroBlockContent (..),
-                                                   To)
-import           Service.Transaction.Storage      ()
+import           Service.Sync.SyncTypes
+import           Service.Transaction.Storage ()
 import           Service.Types
 
 deriving instance Show MicroBlockContent
@@ -98,6 +97,10 @@ instance ToJSON SyncMessage where
         "sync"        .= ("sync"   :: String),
         "tail"        .= (0 :: Int)
       ]
+    toJSON (ResponseChain aChunk) = object [
+        "sync"   .= ("chunk"  :: String),
+        "chunk"  .= aChunk
+      ]
 {-
     toJSON (PeekKeyBlokRequest aFrom aTo) = object [
         "sync"      .= ("peek_key_blok_request"   :: String),
@@ -142,6 +145,14 @@ instance FromJSON Chunk where
         aBlock       <- aMessage .: "block"
         aMicroBlocks <- aMessage .: "microblocks"
         return $ Chunk aBlock aMicroBlocks
+-- {"block":{},"microblocks":[]}
+
+instance ToJSON Chunk where
+    toJSON (Chunk aKey aMBs) = object [
+        "block"       .= aKey,
+        "microblocks" .= aMBs
+      ]
+
 
 instance FromJSON SyncMessage where
     parseJSON (Object aMessage) = do

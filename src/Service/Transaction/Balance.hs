@@ -29,10 +29,11 @@ import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception                     (throw)
 import           Control.Monad                         (liftM, when)
 import           Data.Aeson                            hiding (Error)
-import           Data.Default                          (def)
+-- import           Data.Default                          (def)
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
 import           Data.List                             (sort, sortBy)
+import           Data.Maybe
 import           Data.Ord                              (comparing)
 import           Data.Pool
 import qualified Data.Serialize                        as S (decode, encode)
@@ -50,7 +51,6 @@ import           Service.Transaction.Storage
 import           Service.Transaction.Transformation
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
-import Data.Maybe
 
 
 instance Hashable PublicKey
@@ -100,21 +100,15 @@ updateBalanceTable (Common db i) ht isStorno t@(Transaction fromKey toKey am _ _
 getBalanceOfKeys :: Pool Rocks.DB -> IsStorno -> [Transaction] -> IO BalanceTable
 getBalanceOfKeys db isStorno tx = do
   let hashKeys = concatMap getPubKeys tx
-      fun k db = Rocks.get db Rocks.defaultReadOptions (S.encode k)
-      getBalanceByKey k = withResource db (fun k)
-      toTuple k b = (,) k b
-  balance  <- mapM (\k -> liftM (toTuple k ) (getBalanceByKey k)) hashKeys
-  --   balance (key Maybe(S.encode Amount))
-
-  let initialMoney = if isStorno then 0 else initialAmount
+      getBalanceByKey k = funR db (S.encode k)
+      initialMoney = if isStorno then 0 else initialAmount
+  balance  <- mapM (\k -> liftM ((,) k ) (getBalanceByKey k)) hashKeys
 
   -- initialize keys which does'not exist yet with initial balance
   when (not isStorno) $ do
     let keysWhichDoesNotExistYet = filter (\(_,v) -> isNothing v ) balance
         initialBalance = map (\(k,_) ->  (S.encode k, S.encode initialMoney)) keysWhichDoesNotExistYet
-        iBalance = map (uncurry Rocks.Put) initialBalance
-        fun2 bd = Rocks.write bd def{Rocks.sync = True} iBalance
-    withResource db fun2
+    funW db initialBalance
 
   let fun3 (k,v) = case v of Nothing -> (k, initialMoney )
                              Just aBalance -> case (S.decode aBalance :: Either String Amount) of
@@ -231,7 +225,7 @@ writeLedgerDB dbLedger aInfoChan bt = do
   writeLog aInfoChan [BDTag] Info ("Write Ledger "  ++ show bt)
 
 
---
+
 addKeyBlockToDB2 :: Common  -> KeyBlockInfoPoW -> (InChan SyncEvent, b) -> IO ()
 addKeyBlockToDB2 c@(Common db i) keyBlockInfo aSyncChan = do
     let aKeyBlock = tKBIPoW2KBI keyBlockInfo
@@ -260,34 +254,11 @@ addKeyBlockToDB2 c@(Common db i) keyBlockInfo aSyncChan = do
               writeLog i [BDTag] Info mes
               when (j < receivedKeyNumber) startSync
 
+
 addKeyBlockToDB :: Common -> Value -> (InChan SyncEvent, b) -> IO ()
-addKeyBlockToDB c@(Common db i) o aSyncChan = do
+addKeyBlockToDB c@(Common _ i) o aSyncChan = do
   keyBlockInfo <- decodeKeyBlock i o
-  let aKeyBlock = tKBIPoW2KBI keyBlockInfo
-      aKeyBlockHash = getKeyBlockHash keyBlockInfo
-
-  writeLog i [BDTag] Info $ "keyBlockHash: " ++ show aKeyBlockHash
-  writeLog i [BDTag] Info $ "keyBlockInfo: " ++ show aKeyBlock
-
-  let receivedKeyNumber = _number (keyBlockInfo :: KeyBlockInfoPoW)
-      startSync = writeInChan (fst aSyncChan) RestartSync
-  currentNumberInDB <- getKeyBlockNumber (Common db i)
-  writeLog i [BDTag] Info $ "Current KeyBlock Number In DB is " ++ show currentNumberInDB
-  case currentNumberInDB of
-    Nothing -> writeLog i [BDTag] Error "There are no genesis key block number!"
-    Just j  -> do
-      when (j < receivedKeyNumber) $ do
-        hashOfDBKeyBlock <- getM (Common db i) j
-        writeLog i [BDTag] Info $ "Current hash of KeyBlock in DB is " ++ show hashOfDBKeyBlock
-        let prev_hash = _prev_hash (aKeyBlock :: KeyBlockInfo)
-        case hashOfDBKeyBlock of
-          Nothing ->  writeLog i [BDTag] Error $ "There is no key block with number " ++ show j
-          Just h -> if h == prev_hash
-            then updateMacroblockByKeyBlock c aKeyBlockHash aKeyBlock Main
-            else do
-            let mes = "Hashes doesn't much: current hash: " ++ show h ++ "previous hash: " ++ show prev_hash
-            writeLog i [BDTag] Info mes
-            when (j < receivedKeyNumber) startSync
+  addKeyBlockToDB2 c keyBlockInfo aSyncChan
 
 
 addMicroblockHashesToMacroBlock :: Common -> HashOfKeyBlock -> [HashOfMicroblock] -> IO ()

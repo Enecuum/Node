@@ -11,7 +11,9 @@
 
 module Service.Transaction.Storage where
 
+-- import           Control.Applicative
 import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Concurrent.MVar
 import           Control.Exception
 import           Control.Monad                         (when)
 import qualified Control.Monad.Catch                   as E
@@ -29,17 +31,19 @@ import qualified Data.Serialize                        as S (encode)
 import           Data.Serialize.Put
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
+import           Node.DataActor
+import           Service.Chan
 import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
 import           Service.System.Directory
 import           Service.Transaction.Decode
 import           Service.Transaction.Iterator
+import           Service.Transaction.Sprout
 import           Service.Transaction.Transformation
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
-
 
 -- FIX change def (5 times)
 connectOrRecoveryConnect :: IO DBPoolDescriptor
@@ -127,24 +131,42 @@ getLastKeyBlock (Common desc aInfoChan) = do
                            Just r -> return $ Just (k,r)
 
 
-getLastTransactions :: DBPoolDescriptor -> OffsetMap -> PublicKey -> Int -> Int -> IO [TransactionAPI]
-getLastTransactions descr aOffsetMap pubKey offset aCount = do
+getLastTransactions :: Common -> InContainerChan -> PublicKey -> Int -> Int -> IO [TransactionAPI]
+getLastTransactions (Common descr _) aOffsetMap pubKey offset aCount = do
   let fun db = getPartTransactions db aOffsetMap pubKey offset aCount
   withResource (poolTransaction descr) fun
 
+{-
+Predicate :: (m a -> Bool)    -> MVar Bool      -> ContainerCommands m a
+Lookup    :: (m a -> Maybe a) -> MVar (Maybe a) -> ContainerCommands m a
+-- insert, delete, adjust, updateWithKey
+Update    :: (m a -> m a)                       -> ContainerCommands m a
+-- size, length
+Size      :: (m a -> Int)     -> MVar Int       -> ContainerCommands m a
 
-getPartTransactions :: Rocks.DB -> OffsetMap -> PublicKey -> Int -> Int -> IO [TransactionAPI]
-getPartTransactions db aOffsetMap pubKey offset aCount = do
+-}
+
+getPartTransactions :: Rocks.DB -> InContainerChan -> PublicKey -> Int -> Int -> IO [TransactionAPI]
+getPartTransactions db inContainerChan pubKey offset aCount = do
   let key = (pubKey, offset)
-      -- aOffsetMap = kvOffset
-      aIt = Map.lookup key aOffsetMap
-      fun iter count = nLastValues iter count (decodeAndFilter pubKey)
-  case aIt of
+
+  aVar <- newEmptyMVar
+  writeInChan inContainerChan (Lookup (Map.lookup key) aVar)
+  aIt <- takeMVar aVar
+
+  let fun iter count = nLastValues iter count (decodeAndFilter pubKey)
+  (realCount, realOffset, startIt) <- case aIt of
     Nothing -> do
       it <- getLastIterator db
-      decodeTx  =<< (drop offset <$> fun it (aCount + offset))
+      return (aCount + offset, offset, it)
     Just it  -> do
-      decodeTx  =<< (fun it aCount)
+      return (aCount, 0, it)
+
+  (values, newIter) <- fun startIt realCount
+  txAPI <- decodeTx $ drop realOffset values
+
+  when (not $ null txAPI) $ writeInChan inContainerChan (Update (Map.insert key newIter))
+  return txAPI
 
 
 getTransactionsByMicroblockHash :: Common -> Hash -> IO (Maybe [TransactionInfo])
@@ -353,3 +375,31 @@ genesisKeyBlock = KeyBlockInfoPoW{
   _nonce = 0,
   _solver = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
   _type = 0}
+
+
+type NumberOfKeyBlock = Integer
+
+
+getMickroblocks :: Common -> NumberOfKeyBlock -> IO [Microblock]
+getMickroblocks c@(Common db i) kNumber = do
+  m <- getKeyBlockMain c kNumber
+  mbBD <- mapM (getMicroBlockByHashDB db . Hash) $ _mblocks (m :: MacroblockBD)
+  mapM (tMicroblockBD2Microblock db i) mbBD
+
+
+getKeyBlockMain :: Common -> NumberOfKeyBlock-> IO MacroblockBD
+getKeyBlockMain c@(Common db i) kNumber = do
+  (_, hashMaybe) <- findChain c kNumber Main
+  case hashMaybe of
+    Nothing -> throw NoSuchKBlockDB
+    Just kHash -> do
+      mb <- getKeyBlockByHash db i (Hash kHash)
+      case mb of
+        Nothing -> throw NoSuchKBlockDB
+        Just m  -> return m
+
+
+getKeyBlock :: Common -> NumberOfKeyBlock-> IO KeyBlockInfoPoW
+getKeyBlock c kNumber = do
+   m <- getKeyBlockMain c kNumber
+   return $ tKeyBlockToPoWType $ tMacroblock2KeyBlockInfo m

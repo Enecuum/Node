@@ -7,6 +7,7 @@ module Main where
 
 import qualified Control.Concurrent                    as C
 import           Control.Monad
+import qualified Data.Map                              as M
 import           Service.System.Version
 import           System.Environment                    (getEnv)
 
@@ -30,8 +31,8 @@ import           Service.Types.PublicPrivateKeyPair    (compressPublicKey,
 import           Data.Aeson                            (decode)
 import           Data.Aeson.Encode.Pretty              (encodePretty)
 import qualified Data.ByteString.Lazy                  as L
-import           Service.Transaction.Storage           (connectOrRecoveryConnect)
-
+import           Node.DataActor
+import           Service.Transaction.Common            (connectOrRecoveryConnect)
 
 configName :: String
 configName = "configs/config.json"
@@ -47,6 +48,8 @@ main =  do
           Just conf -> do
 
             (aInfoChanIn, aInfoChanOut) <- newChan 64
+            (aInContainerChan, aOut) <- newChan 64
+            void $ C.forkIO $ startContainerActor M.empty aOut
             rocksDB   <- connectOrRecoveryConnect
 
             void $ startNode rocksDB conf aInfoChanIn routerActorStart $
@@ -81,7 +84,7 @@ main =  do
                                        Just token -> return token
                                        Nothing    -> updateConfigWithToken conf snbc rpcbc
 
-                            serveRpc rocksDB rpc_p ip_en ch aInfoChanIn
+                            serveRpc rocksDB rpc_p ip_en ch aInfoChanIn aInContainerChan
                       "cli" -> serveCLI rocksDB ch aInfoChanIn
                       _     -> return ()
             forever $ C.threadDelay 10000000000

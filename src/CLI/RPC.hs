@@ -24,8 +24,12 @@ import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
 
 
-serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan MsgToCentralActor -> InChan InfoMsg -> IO ()
-serveRpc descrDB portNum _ ch aInfoCh = runServer portNum "serveRpc" $ \_ aPending -> do
+-- type OffsetMap = M.Map (PublicKey, Int) Rocks.Iterator
+
+
+
+serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan MsgToCentralActor -> InChan InfoMsg -> InContainerChan -> IO ()
+serveRpc descrDB portNum _ ch aInfoCh aContChan = runServer portNum "serveRpc" $ \_ aPending -> do
     aConnect <- WS.acceptRequest aPending
     WS.forkPingThread aConnect 30
     forever $ do
@@ -103,39 +107,44 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum "serveRpc" $ \_ aPendi
               getPartWallet = toMethod "enq_getTransactionsByWallet" f (Required "address" :+: Required "offset" :+: Required "count" :+: ())
                 where
                   f :: PublicKey -> Int -> Int -> RpcResult IO [TransactionAPI]
-                  f key offset cnt = handle $ getPartTransactions (Common descrDB aInfoCh) undefined key offset cnt
+                  f key offset cnt = handle $ getPartTransactions (Common descrDB aInfoCh) aContChan key offset cnt
 
               getSystemInfo = toMethod "enq_getChainInfo" f ()
                 where
                   f :: RpcResult IO ChainInfo
-                  f = handle $ getChainInfo descrDB aInfoCh
+                  f = handle $ getChainInfo (Common descrDB aInfoCh)
 
               getAllChainF = toMethod "enq_getAllChain" f ()
                 where
                   f :: RpcResult IO [FullChain]
-                  f = handle getAllChain
+                  f = handle $ getAllChain (Common descrDB aInfoCh)
 
               getAllLedgerF = toMethod "enq_getAllLedger" f ()
                 where
                   f :: RpcResult IO [(PublicKey, Amount)]
-                  f = handle getAllLedger
+                  f = handle $ getAllLedger (Common descrDB aInfoCh)
 
               getAllMicroblocksF = toMethod "enq_getAllMicroblocks" f ()
                 where
                   f :: RpcResult IO [(HashOfMicroblock, MicroblockBD)]
-                  f = handle getAllMicroblocks
+                  f = handle $ getAllMicroblocks (Common descrDB aInfoCh)
 
               getAllKblocksF = toMethod "enq_getAllKblocks" f ()
                 where
                   f :: RpcResult IO [(HashOfKeyBlock, MacroblockBD)]
-                  f = handle getAllKblocks
+                  f = handle $ getAllKblocks (Common descrDB aInfoCh)
 
               getAllTransactionsF = toMethod "enq_getAllTransactions" f ()
                 where
                   f :: RpcResult IO [(HashOfTransaction, TransactionInfo)]
-                  f = handle getAllTransactions
+                  f = handle $ getAllTransactions (Common descrDB aInfoCh)
 
 ------------- test functions
+              -- deleteAllDB = toMethod "enq_deleteAllDB" f ()
+              --   where
+              --     f :: RpcResult IO ()
+              --     f = handle $ deleteAllDB (Common descrDB aInfoCh)
+
               createNTx = toMethod "gen_n_tx" f (Required "x" :+: ())
                 where
                   f :: Int -> RpcResult IO ()

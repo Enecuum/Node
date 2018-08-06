@@ -10,10 +10,6 @@
 module Service.Transaction.Decode where
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import qualified Data.Serialize                        as S (Serialize (..),decode, encode)
-import           Service.InfoMsg                       (InfoMsg (..),
-                                                        LogingTag (..),
-                                                        MsgType (..))
 import qualified Crypto.Hash.SHA256                    as SHA
 import           Data.Aeson                            hiding (Error)
 import           Data.Aeson.Types                      (parseMaybe)
@@ -22,8 +18,13 @@ import qualified Data.ByteString.Char8                 as BC
 import qualified Data.ByteString.Internal              as BSI
 import           Data.Default                          (def)
 import           Data.Pool
+import qualified Data.Serialize                        as S (Serialize (..),
+                                                             decode, encode)
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
+import           Service.InfoMsg                       (InfoMsg (..),
+                                                        LogingTag (..),
+                                                        MsgType (..))
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()

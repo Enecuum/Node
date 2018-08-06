@@ -1,8 +1,8 @@
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE DisambiguateRecordFields  #-}
-{-# LANGUAGE DuplicateRecordFields     #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE DuplicateRecordFields    #-}
+{-# LANGUAGE GADTs                    #-}
+{-# LANGUAGE LambdaCase               #-}
+{-# LANGUAGE ScopedTypeVariables      #-}
 
 module Node.DBActor where
 
@@ -10,22 +10,18 @@ import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
 import           Control.Exception
+import           Control.Monad
 import           Data.Aeson
 import           Data.List.Extra
+import           Data.Maybe
 import           Node.Data.GlobalLoging
-import           Service.InfoMsg
-
-import           Control.Monad
--- import qualified Data.ByteString                       as B
 import           Service.Chan
-import           Service.Transaction.Balance (addKeyBlockToDB2)
+import           Service.InfoMsg
 import           Service.Sync.SyncJson
-import           Service.Transaction.Common            (addKeyBlockToDB,
-                                                        addMicroblockToDB)
+import           Service.Sync.SyncTypes
+import           Service.Transaction.Common
 import           Service.Transaction.LedgerSync
-import           Service.Transaction.SproutCommon
 import           Service.Types
-
 
 
 data MsgToDB where
@@ -40,7 +36,9 @@ data MsgToDB where
     SetRestSproutData     :: (Number, HashOfKeyBlock, MicroBlockContent) -> MVar Bool -> MsgToDB
     DeleteSproutData      :: Number -> MsgToDB
     SetSproutAsMain       :: Number -> MsgToDB
+
     WriteChain            :: [Chunk] -> MsgToDB
+    GetChain              :: MVar [Chunk] -> MsgToDB
 
 
 startDBActor :: DBPoolDescriptor
@@ -84,20 +82,46 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
 
         WriteChain aChain -> do
             aLog "Recived chain."
-            aExeption <- try $ cleanDB aData
-            case aExeption of
-                Right _ -> aLog "DB cleaned. Ok."
-                Left (e :: SomeException) -> aLog $ "Error of db cleaning: " ++ show e
-            forM_ (sortOn (\(Chunk a _) -> _number (a :: KeyBlockInfoPoW)) aChain) $ \(Chunk aKeyBlo aMicroblocks) -> do
-                aExeption <- try $ addKeyBlockToDB2 aData aKeyBlo aSyncChan
+            aRes <- try $ myTail aData
+            aJustTail <- return $ case aRes of
+                Right aJustRes            -> fst aJustRes
+                Left (_ :: SomeException) -> 0
+            if fromEnum aJustTail < length aChain then do
+                aExeption <- try $ cleanDB aData
                 case aExeption of
-                    Right _ -> aLog "KeyBlock loaded ok."
-                    Left (e :: SomeException) -> aLog $ "Error of KeyBlock loading: " ++ show e
-                forM_ aMicroblocks $ \aBlock -> do
-                    aExeption <- try $ addMicroblockToDB aData aBlock
+                    Right _ -> aLog "DB cleaned. Ok."
+                    Left (e :: SomeException) -> aLog $ "Error of db cleaning: " ++ show e
+                forM_ (sortOn (\(Chunk a _) -> _number (a :: KeyBlockInfoPoW)) aChain) $ \(Chunk aKeyBlo aMicroblocks) -> do
+                    aExeption <- try $ addKeyBlockToDB2 aData aKeyBlo aSyncChan
                     case aExeption of
-                        Right _ -> aLog "Block loaded ok."
+                        Right _ -> aLog "KeyBlock loaded ok."
                         Left (e :: SomeException) -> aLog $ "Error of KeyBlock loading: " ++ show e
+                    forM_ aMicroblocks $ \aBlock -> do
+                        aExeption <- try $ addMicroblockToDB aData aBlock
+                        case aExeption of
+                            Right _ -> aLog "Block loaded ok."
+                            Left (e :: SomeException) -> aLog $ "Error of KeyBlock loading: " ++ show e
+            else return ()
+
+        GetChain aVar -> do
+            aLog "Recived chain."
+            aTail   <- try $ myTail aData
+            -- getting number of key bloks.
+            aNumber <- case aTail of
+                Right (aNum, _) -> return aNum
+                Left (e :: SomeException) -> do
+                    aLog $ "Error of myTail: " ++ show e
+                    return 0
+
+            aChain  <- forM [1..fromEnum aNumber] $ \aNum -> do
+                aMicroblocks <- try $ getMickroblocks aData (toInteger aNum)
+                aKeyBlock    <- try $ getKeyBlock aData (toInteger aNum)
+                case (aKeyBlock, aMicroblocks) of
+                  (Right aKeyBlock, Right aMicroblocks) -> return $ Just $ Chunk aKeyBlock aMicroblocks
+                  (Left (a :: SomeException), Left (b :: SomeException))    -> return Nothing
+                  (_, Left (e :: SomeException))                            -> return Nothing
+                  (Left (e :: SomeException), _)                            -> return Nothing
+            putMVar aVar $ catMaybes aChain
 
         MyTail aMVar -> do
             aLog "My tail request."
@@ -110,15 +134,15 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
             aLog "Peek NKey blocks request."
             aRes <- try $ peekNPreviousKeyBlocks aData aInt aHashOfKeyBlock
             case aRes of
-                Right aJustRes              -> putMVar aMVar aJustRes
-                Left (_ :: SomeException)   -> putMVar aMVar []
+                Right aJustRes            -> putMVar aMVar aJustRes
+                Left (_ :: SomeException) -> putMVar aMVar []
 
         GetKeyBlockSproutData aFrom aTo aMVar -> do
             aLog "Get key block sprout data request."
             aRes <- try $ getKeyBlockSproutData aData aFrom aTo
             case aRes of
-                Right aJustRes              -> putMVar aMVar aJustRes
-                Left (_ :: SomeException)   -> putMVar aMVar []
+                Right aJustRes            -> putMVar aMVar aJustRes
+                Left (_ :: SomeException) -> putMVar aMVar []
 
 
         SetKeyBlockSproutData aMacroblockBD aMVar -> do

@@ -42,7 +42,7 @@ data Flag = Port PortNumber | Host HostName | Version | Help
           | ShowKey String | Balance PublicKey | Info
           | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey | PartWallet PartWalletReq
           | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
-          | Microblocks | Txs | AllLedger | Kblocks | Chain
+          | Microblocks | Txs | AllLedger | Kblocks | Chain | Tables
 
      deriving (Eq, Ord, Show)
 derive makeIs ''Flag
@@ -80,6 +80,7 @@ args = [
   , Option ['m'] ["get-all-microblocks"] (NoArg Microblocks) "load all microblocks"
   , Option ['k'] ["get-all-kblocks"] (NoArg Kblocks) "load all kblocks"
   , Option ['t'] ["get-all-transactios"] (NoArg Txs) "load all transactions"
+  , Option ['D'] ["delete-all-tables"] (NoArg Tables) "delete-all-tables"
   ]
 
 
@@ -135,7 +136,7 @@ dispatch flags h p =
         (Microblocks : _)                -> withClient   getAllMicroblocks
         (Kblocks : _)                    -> withClient   getAllKblocks
         (Txs : _)                        -> withClient   getAllTransactions
-
+        -- (Tables: _)                      -> withClient   deleteAllDB
         (Help : _)                       -> putStrLn $ usageInfo "Usage: " args
         (Version: _)                     -> printVersion
         _                                -> putStrLn $ usageInfo "Wrong input.\nUsage: " args
