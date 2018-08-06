@@ -47,15 +47,14 @@ import           Node.Crypto                           (verifyEncodeble)
 import           Node.Node.Types
 import           Service.InfoMsg
 import           Service.System.Directory              (getKeyFilePath, getTime)
-import           Service.Transaction.Common            as B (getBalanceForKey,
+import           Service.Transaction.Common            as B (getAllTransactionsDB,
+                                                             getBalanceForKey,
                                                              getBlockByHashDB,
                                                              getChainInfoDB,
                                                              getKeyBlockByHashDB,
                                                              getLastTransactions,
-                                                             getTransactionByHashDB)
-import           Service.Transaction.Common            (getAllTransactionsDB,
-                                                        rHash)
--- import           Service.Transaction.Iterator          (kvOffset)
+                                                             getTransactionByHashDB,
+                                                             rHash)
 import           Service.Transaction.LedgerSync        (cleanDB)
 import           Service.Transaction.TransactionsDAG   (genNTx)
 import           Service.Types
@@ -140,9 +139,11 @@ getAllTransactionsByWallet c key = try $ do
     t  -> return t
 
 
-getPartTransactions :: Common -> OffsetMap -> PublicKey -> Int -> Int -> IO (Result [TransactionAPI])
-getPartTransactions (Common pool _) aOffsetMap key offset aCount = try $ do --return $ Left NotImplementedException
-  tx <- B.getLastTransactions pool aOffsetMap key offset aCount
+--
+
+getPartTransactions :: Common -> InContainerChan -> PublicKey -> Int -> Int -> IO (Result [TransactionAPI])
+getPartTransactions (Common pool _) inContainerChan key offset aCount = try $ do --return $ Left NotImplementedException
+  tx <- B.getLastTransactions pool inContainerChan key offset aCount
   case tx of
     [] -> throw NoTransactionsForPublicKey
     t  -> return t

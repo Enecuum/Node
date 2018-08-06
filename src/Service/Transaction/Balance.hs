@@ -100,7 +100,7 @@ updateBalanceTable (Common db i) ht isStorno t@(Transaction fromKey toKey am _ _
 getBalanceOfKeys :: Pool Rocks.DB -> IsStorno -> [Transaction] -> IO BalanceTable
 getBalanceOfKeys db isStorno tx = do
   let hashKeys = concatMap getPubKeys tx
-      fun k db = Rocks.get db Rocks.defaultReadOptions (S.encode k)
+      fun k aDb = Rocks.get aDb Rocks.defaultReadOptions (S.encode k)
       getBalanceByKey k = withResource db (fun k)
       toTuple k b = (,) k b
   balance  <- mapM (\k -> liftM (toTuple k ) (getBalanceByKey k)) hashKeys

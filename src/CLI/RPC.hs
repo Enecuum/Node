@@ -24,8 +24,12 @@ import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
 
 
-serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan MsgToCentralActor -> InChan InfoMsg -> IO ()
-serveRpc descrDB portNum _ ch aInfoCh = runServer portNum "serveRpc" $ \_ aPending -> do
+-- type OffsetMap = M.Map (PublicKey, Int) Rocks.Iterator
+
+
+
+serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan MsgToCentralActor -> InChan InfoMsg -> InContainerChan -> IO ()
+serveRpc descrDB portNum _ ch aInfoCh aContChan = runServer portNum "serveRpc" $ \_ aPending -> do
     aConnect <- WS.acceptRequest aPending
     WS.forkPingThread aConnect 30
     forever $ do
@@ -103,7 +107,7 @@ serveRpc descrDB portNum _ ch aInfoCh = runServer portNum "serveRpc" $ \_ aPendi
               getPartWallet = toMethod "enq_getTransactionsByWallet" f (Required "address" :+: Required "offset" :+: Required "count" :+: ())
                 where
                   f :: PublicKey -> Int -> Int -> RpcResult IO [TransactionAPI]
-                  f key offset cnt = handle $ getPartTransactions (Common descrDB aInfoCh) undefined key offset cnt
+                  f key offset cnt = handle $ getPartTransactions (Common descrDB aInfoCh) aContChan key offset cnt
 
               getSystemInfo = toMethod "enq_getChainInfo" f ()
                 where
