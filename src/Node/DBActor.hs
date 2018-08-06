@@ -19,17 +19,9 @@ import           Service.Chan
 import           Service.InfoMsg
 import           Service.Sync.SyncJson
 import           Service.Sync.SyncTypes
-import           Service.Transaction.Common            (addKeyBlockToDB,
-                                                        addKeyBlockToDB2,
-                                                        addMicroblockToDB)
+import           Service.Transaction.Common
 import           Service.Transaction.LedgerSync
 import           Service.Types
-
-getMickroblocks :: Common -> Number -> IO [Microblock]
-getMickroblocks = undefined
-
-getKeyBlock :: Common -> Number-> IO KeyBlockInfoPoW
-getKeyBlock = undefined
 
 
 data MsgToDB where
@@ -121,7 +113,7 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
                     aLog $ "Error of myTail: " ++ show e
                     return 0
 
-            aChain  <- forM [1..aNumber] $ \aNum -> do
+            aChain  <- forM [1..fromEnum aNumber] $ \aNum -> do
                 aMicroblocks <- try $ getMickroblocks aData aNum
                 aKeyBlock    <- try $ getKeyBlock aData aNum
                 case (aKeyBlock, aMicroblocks) of
