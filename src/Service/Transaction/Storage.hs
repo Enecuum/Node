@@ -8,6 +8,7 @@
 {-# LANGUAGE PackageImports        #-}
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# OPTIONS_GHC -fno-warn-orphans     #-}
 
 module Service.Transaction.Storage where
 
@@ -132,8 +133,8 @@ getLastKeyBlock (Common desc aInfoChan) = do
 
 
 getLastTransactions :: Common -> InContainerChan -> PublicKey -> Int -> Int -> IO [TransactionAPI]
-getLastTransactions (Common descr _) aOffsetMap pubKey offset aCount = do
-  let fun db = getPartTransactions db aOffsetMap pubKey offset aCount
+getLastTransactions (Common descr i) aOffsetMap pubKey offset aCount = do
+  let fun db = getPartTransactions db i aOffsetMap pubKey offset aCount
   withResource (poolTransaction descr) fun
 
 {-
@@ -146,27 +147,63 @@ Size      :: (m a -> Int)     -> MVar Int       -> ContainerCommands m a
 
 -}
 
-getPartTransactions :: Rocks.DB -> InContainerChan -> PublicKey -> Int -> Int -> IO [TransactionAPI]
-getPartTransactions db inContainerChan pubKey offset aCount = do
+
+
+getPartTransactions :: Rocks.DB -> InChan InfoMsg -> InContainerChan -> PublicKey -> Int -> Int -> IO [TransactionAPI]
+getPartTransactions db i inContainerChan pubKey offset aCount = do
   let key = (pubKey, offset)
 
-  aVar <- newEmptyMVar
-  writeInChan inContainerChan (Lookup (Map.lookup key) aVar)
-  aIt <- takeMVar aVar
-
-  let fun iter count = nLastValues iter count (decodeAndFilter pubKey)
+  -- aVar <- newEmptyMVar
+  -- writeInChan inContainerChan (Lookup (Map.lookup key) aVar)
+  -- aIt <- takeMVar aVar
+  let aIt = Nothing
   (realCount, realOffset, startIt) <- case aIt of
     Nothing -> do
-      it <- getLastIterator db
-      return (aCount + offset, offset, it)
+      print "we are going to find last iterator"
+      it <- Rocks.createIter db  Rocks.defaultReadOptions
+      Rocks.iterLast it
+      return (aCount, offset, it)
     Just it  -> do
-      return (aCount, 0, it)
+      print $ "We have found non empty iterator for key : " ++ show key
+      isValid <- Rocks.iterValid it
+      if isValid
+        then do
+        print "Iterator is still valid, we will use it"
+        return (aCount - offset, 0, it)
+        else do
+        print "Iterator is already invalid, we will create a new one"
+        newIt <- Rocks.createIter db  Rocks.defaultReadOptions
+        Rocks.iterLast newIt
+        return (aCount + offset, offset, newIt)
 
-  (values, newIter) <- fun startIt realCount
-  txAPI <- decodeTx $ drop realOffset values
+  print $ "realCount " ++ show realCount
+  print $ "realOffset " ++ show realOffset
+  isValid <- Rocks.iterValid startIt
+  let issValid = ("isIterValid:" ++) <$> show <$> (Rocks.iterValid startIt)
+  print <$> issValid
+  print =<< Rocks.iterValid startIt
+  -- let isValid = True
+  if (isValid)
+    then do
+    (values, newIter) <- nLastValues startIt realCount (decodeAndFilter pubKey)
+    print $ "newIter == startIt :" ++ show ( newIter == startIt)
+    print values
+    txAPI <- decodeTx $ drop realOffset values
+    -- when (not $ null txAPI) $ do
+    --   let newKey = (pubKey, realOffset + realCount)
+    --   Rocks.iterNext newIter
+    --   writeInChan inContainerChan (Update (Map.insert newKey newIter))
+    --   print $ "save iterator" ++ show newKey ++ show newIter
+    Rocks.releaseIter newIter
+    return txAPI
+    else do
+    writeLog i [BDTag] Info "There are no valid iterator"
+    -- print "There are no valid iterator"
+    return []
 
-  when (not $ null txAPI) $ writeInChan inContainerChan (Update (Map.insert key newIter))
-  return txAPI
+
+instance Show Rocks.Iterator where
+  show _ = "Iter"
 
 
 getTransactionsByMicroblockHash :: Common -> Hash -> IO (Maybe [TransactionInfo])
@@ -376,6 +413,7 @@ genesisKeyBlock = KeyBlockInfoPoW{
   _solver = "EMde81cgGToGrGWSNCqm6Y498qBpjEzRczBbvC5MV2Q=",
   _type = 0}
 
+g2 :: HashOfKeyBlock
 g2 = getKeyBlockHash $ genesisKeyBlock
 -- g3 = read "4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY=" :: HashOfKeyBlock
 
