@@ -373,8 +373,11 @@ genesisKeyBlock = KeyBlockInfoPoW{
   _prev_hash = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
   _number = 0,
   _nonce = 0,
-  _solver = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+  _solver = "EMde81cgGToGrGWSNCqm6Y498qBpjEzRczBbvC5MV2Q=",
   _type = 0}
+
+g2 = getKeyBlockHash $ genesisKeyBlock
+-- g3 = read "4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY=" :: HashOfKeyBlock
 
 
 type NumberOfKeyBlock = Integer
