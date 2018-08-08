@@ -77,7 +77,7 @@ data Trans = Trans {
       , recipientPubKey :: PublicKey
       , senderPubKey    :: PublicKey
       , currency        :: Currency
-      } deriving (Eq, Show, Generic)
+      } deriving (Eq, Show, Generic, Ord)
 
 type Id = Integer
 data MsgTo = MsgTo {

@@ -58,11 +58,11 @@ main =  do
 
                     (snbc, _, stat_h, stat_p, logs_h, logs_p, log_id) <- getConfigParameters aMyNodeId conf ch
 
-                    void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id
-
                     cli_m   <- try (getEnv "cliMode") >>= \case
                             Right item              -> return item
                             Left (_::SomeException) -> return $ cliMode snbc
+
+                    void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id (cli_m /= "cli")
 
                     void $ C.forkIO $ case cli_m of
                       "rpc" -> do
@@ -85,7 +85,7 @@ main =  do
                                        Nothing    -> updateConfigWithToken conf snbc rpcbc
 
                             serveRpc rocksDB rpc_p ip_en ch aInfoChanIn aInContainerChan
-                      "cli" -> serveCLI rocksDB ch aInfoChanIn
+                      "cli" -> serveCLI rocksDB ch aInfoChanIn aInContainerChan
                       _     -> return ()
             forever $ C.threadDelay 10000000000
 

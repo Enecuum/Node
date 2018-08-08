@@ -58,6 +58,6 @@ main =  do
             (aFileChan, aOutFileRequestChan) <- newChan 16
             void $ C.forkIO $ startDataActor aOutFileRequestChan
             void $ C.forkIO $ bootNodeServer poa_p aInfoChanIn aFileChan
-            void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id
+            void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p) (ConnectInfo logs_h logs_p) aInfoChanOut log_id True
 
             forever $ C.threadDelay 10000000000
