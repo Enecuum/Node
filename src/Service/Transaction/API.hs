@@ -1,11 +1,7 @@
-{-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE PackageImports        #-}
-{-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 
 module Service.Transaction.API where

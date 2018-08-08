@@ -17,7 +17,7 @@ import           Service.Types
 
 
 maxAttempt :: Int
-maxAttempt = 15
+maxAttempt = 1000
 
 
 getNValues :: MonadResource m => Rocks.DB -> Int -> m [(BSI.ByteString, BSI.ByteString)]
@@ -37,11 +37,14 @@ getNLastValuesT = do
   return value
 
 
-findUntil :: Rocks.Iterator -> Int -> Int -> (DBValue -> Bool) -> IO [(DBValue,Rocks.Iterator)]
+type Count = Int
+
+findUntil :: Rocks.Iterator -> Count -> Int -> (DBValue -> Bool) -> IO [(DBValue,Rocks.Iterator)]
 findUntil it count maximum' predicate = if count > 0 && maximum' > 0
     then do
     print $ "count " ++ show count ++ " maximum' " ++ show maximum'
     (rawTx, newIter) <- runStateT getNLastValuesT it
+    print $ "newIter == it" ++ show (newIter == it)
     case rawTx of
       Nothing -> return []
       Just v  -> if predicate v
@@ -59,15 +62,29 @@ getNLastValues it n = runResourceT $ do
 
 
 nLastValues :: Rocks.Iterator -> Int -> (DBValue -> Bool) -> IO ([DBValue], Rocks.Iterator)
-nLastValues it n predicate = runResourceT $ do
+-- nLastValues it n predicate = runResourceT $ do
+nLastValues it n predicate = do
+  -- (_, it) <- Rocks.iterOpenBracket db Rocks.defaultReadOptions
   Rocks.iterLast it
-  vs <- lift $ findUntil it n maxAttempt predicate
+  vs <- findUntil it n maxAttempt predicate
   let values = map fst vs
       lastIter = snd $ last vs
+  print $ map ((== it) . snd) vs
+  print $ "it == lastIter " ++ show (it == lastIter)
   return (values, lastIter)
 
 getLastIterator :: Rocks.DB -> IO Rocks.Iterator
-getLastIterator db = runResourceT $ Rocks.iterOpen db Rocks.defaultReadOptions
+getLastIterator db = runResourceT $ do
+  -- Rocks.iterOpen db Rocks.defaultReadOptions
+  (_, it) <- Rocks.iterOpenBracket db Rocks.defaultReadOptions
+  return it
+
+
+-- getLastIterator :: (MonadResource m) => Rocks.DB -> m Rocks.Iterator
+-- getLastIterator db = do
+--   -- Rocks.iterOpen db Rocks.defaultReadOptions
+--   (_, it) <- Rocks.iterOpenBracket db Rocks.defaultReadOptions
+--   return it
 
 
 getAllValues :: Rocks.DB -> IO [DBValue]

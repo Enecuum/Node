@@ -1,7 +1,6 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE DuplicateRecordFields    #-}
 {-# LANGUAGE FlexibleContexts         #-}
-{-# LANGUAGE LambdaCase               #-}
 {-# LANGUAGE NamedFieldPuns           #-}
 {-# LANGUAGE OverloadedStrings        #-}
 {-# LANGUAGE PackageImports           #-}
@@ -115,8 +114,7 @@ getBalanceOfKeys db isStorno tx = do
                                Left _  -> (k, 0)
                                Right b -> (k, b)
   let newBalance = map fun3 balance
-  aBalanceTable <- H.fromList newBalance
-  return aBalanceTable
+  H.fromList newBalance
 
 
 runLedger :: Common -> IsStorno -> Microblock -> IO ()
@@ -134,7 +132,7 @@ getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 checkMacroblock :: Common -> Microblock -> HashOfMicroblock -> IO (IsMicroblockNew, IsMacroblockNew, MacroblockBD)
 checkMacroblock (Common db i) microblock microblockHash = do
-    let keyBlockHash = (_keyBlock (microblock :: Microblock))
+    let keyBlockHash = _keyBlock (microblock :: Microblock)
     mb <- getKeyBlockByHash db i (Hash keyBlockHash)
     let mbUpdated = case mb of
           Nothing -> dummyMacroblock { _teamKeys = _teamKeys (microblock :: Microblock)} :: MacroblockBD
@@ -240,8 +238,7 @@ addKeyBlockToDB2 c@(Common db i) keyBlockInfo aSyncChan = do
     writeLog i [BDTag] Info $ "Current KeyBlock Number In DB is " ++ show currentNumberInDB
     case currentNumberInDB of
       Nothing -> writeLog i [BDTag] Error "There are no genesis key block number!"
-      Just j  -> do
-        when (j < receivedKeyNumber) $ do
+      Just j  -> when (j < receivedKeyNumber) $ do
           hashOfDBKeyBlock <- getM (Common db i) j
           writeLog i [BDTag] Info $ "Current hash of KeyBlock in DB is " ++ show hashOfDBKeyBlock
           let prev_hash = _prev_hash (aKeyBlock :: KeyBlockInfo)
