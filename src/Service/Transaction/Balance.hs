@@ -131,9 +131,9 @@ getPubKeys (Transaction fromKey toKey _ _ _ _ _) = [fromKey, toKey]
 
 
 checkMacroblock :: Common -> Microblock -> HashOfMicroblock -> IO (IsMicroblockNew, IsMacroblockNew, MacroblockBD)
-checkMacroblock (Common db i) microblock microblockHash = do
+checkMacroblock c@(Common _ i) microblock microblockHash = do
     let keyBlockHash = _keyBlock (microblock :: Microblock)
-    mb <- getKeyBlockByHash db i (Hash keyBlockHash)
+    mb <- getKeyBlockByHash c (Hash keyBlockHash)
     let mbUpdated = case mb of
           Nothing -> dummyMacroblock { _teamKeys = _teamKeys (microblock :: Microblock)} :: MacroblockBD
           Just j -> j {_teamKeys = _teamKeys (microblock :: Microblock)} :: MacroblockBD
@@ -259,8 +259,8 @@ addKeyBlockToDB c@(Common _ i) o aSyncChan = do
 
 
 addMicroblockHashesToMacroBlock :: Common -> HashOfKeyBlock -> [HashOfMicroblock] -> IO ()
-addMicroblockHashesToMacroBlock (Common db i) hashOfKeyBlock hashesOfMicroblock = do
-  val <- getKeyBlockByHash db i (Hash hashOfKeyBlock)
+addMicroblockHashesToMacroBlock c@(Common db i) hashOfKeyBlock hashesOfMicroblock = do
+  val <- getKeyBlockByHash c (Hash hashOfKeyBlock)
   macroblock <- S.encode <$> case val of
     Nothing -> do
       writeLog i [BDTag] Info ("There is no KeyBlock with hash " ++ show hashOfKeyBlock)

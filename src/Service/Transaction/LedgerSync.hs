@@ -43,9 +43,9 @@ peekNPreviousKeyBlocks c from to = do
 
 
 getKeyBlockSproutData :: Common -> From -> To -> IO [(Number, HashOfKeyBlock, MacroblockBD)]
-getKeyBlockSproutData c@(Common descr i) from to = do
+getKeyBlockSproutData c from to = do
   kv <- peekNPreviousKeyBlocks c from to
-  mb <- mapM (\(_,aHash) -> getKeyBlockByHash descr i (Hash aHash)) kv
+  mb <- mapM (\(_,aHash) -> getKeyBlockByHash c (Hash aHash)) kv
   let allMaybe   = zipWith (\(aNumber, aHash) aMacroblock -> (aNumber, aHash, aMacroblock)) kv mb
       allJust    = filter (\(_,_,v) -> (isJust v)) allMaybe
       allKeyData = map (\(n,h,m) -> (n, h, fromJust m)) allJust
@@ -124,7 +124,7 @@ deleteSproutData c aNumber = do
 deleteSprout :: Common -> (Number, HashOfKeyBlock) -> BranchOfChain -> IO () -- right after foundation
 deleteSprout c@(Common descr i) (aNumber, hashOfKeyBlock) branch = do
   findMicroblocksForMainChain c
-  macroblock <- getKeyBlockByHash descr i (Hash hashOfKeyBlock)
+  macroblock <- getKeyBlockByHash c (Hash hashOfKeyBlock)
   case macroblock of
     Nothing -> writeLog i [BDTag] Error ("There is no KeyBlock "  ++ show hashOfKeyBlock)
     Just m -> do
@@ -185,8 +185,8 @@ getAllMacroblockByHash co hashesOfKeyBlock = forM hashesOfKeyBlock $ findAllMacr
   -- return $ map fromJust $ filter (/= Nothing ) macroblocks
   where
         findAllMacroblocks :: Common -> HashOfKeyBlock -> IO (HashOfKeyBlock, MacroblockBD)
-        findAllMacroblocks (Common descr i) h = do
-          macroblockMaybe <- getKeyBlockByHash descr i (Hash h)
+        findAllMacroblocks (Common _ i) h = do
+          macroblockMaybe <- getKeyBlockByHash co (Hash h)
           case macroblockMaybe of
             Nothing -> do
               writeLog i [BDTag] Error $ "NoKeyBlock " ++ show h

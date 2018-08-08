@@ -117,12 +117,12 @@ getChainInfoDB c = tMacroblock2ChainInfo =<< getLastKeyBlock c
 
 
 getLastKeyBlock  :: Common -> IO (Maybe (DBKey,MacroblockBD))
-getLastKeyBlock (Common desc aInfoChan) = do
+getLastKeyBlock c@(Common desc aInfoChan) = do
   key <- funR (poolLast desc) lastClosedKeyBlock
   -- key <- getLastKeyBlockNumber (Common desc aInfoChan)
   case key of Nothing -> return Nothing
               Just k  -> do
-                mb <- getKeyBlockByHash desc aInfoChan (Hash k)
+                mb <- getKeyBlockByHash c (Hash k)
                 case mb of Nothing -> do
                                 writeLog aInfoChan [BDTag] Error "No Key block "
                                 return Nothing
@@ -200,17 +200,11 @@ instance Show Rocks.Iterator where
 
 
 getTransactionsByMicroblockHash :: Common -> Hash -> IO (Maybe [TransactionInfo])
-getTransactionsByMicroblockHash (Common db i) aHash = do
-  m@MicroblockBD {..} <- getMicroBlockByHashDB db aHash
-  txInfo <- getTxs db i m
-  return $ Just txInfo
+getTransactionsByMicroblockHash (Common db i) aHash = Just <$> (getTxs db i =<< getMicroBlockByHashDB db aHash)
 
 
 getBlockByHashDB :: Common -> Hash  -> IO (Maybe MicroblockAPI)
-getBlockByHashDB (Common db i) hash = do
-  m <- getMicroBlockByHashDB db hash
-  mAPI <- tMicroblockBD2MicroblockAPI db i m --aInfoChan
-  return $ Just mAPI
+getBlockByHashDB (Common db i) hash = Just <$> (tMicroblockBD2MicroblockAPI db i =<< getMicroBlockByHashDB db hash)
 
 
 decodeTransactionsAndFilterByKey :: [DBValue] -> PublicKey -> [TransactionAPI]
@@ -218,8 +212,8 @@ decodeTransactionsAndFilterByKey rawTx pubKey = mapMaybe (decodeTransactionAndFi
 
 
 getKeyBlockByHashDB :: Common -> Hash  -> IO (Maybe MacroblockAPI)
-getKeyBlockByHashDB (Common db i) kHash = do
-  hashOfKey <- getKeyBlockByHash db i kHash
+getKeyBlockByHashDB c@(Common db _) kHash = do
+  hashOfKey <- getKeyBlockByHash c kHash
   case hashOfKey of Nothing -> return Nothing
                     Just j  -> Just <$> tMacroblock2MacroblockAPI db j
 
@@ -244,9 +238,9 @@ getKeyBlockHash  KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
 
 
 updateMacroblockByKeyBlock :: Common -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()
-updateMacroblockByKeyBlock (Common db i) hashOfKeyBlock keyBlockInfo branch = do
+updateMacroblockByKeyBlock c@(Common db i) hashOfKeyBlock keyBlockInfo branch = do
     writeLog i [BDTag] Info $ "keyBlockInfo: " ++ show keyBlockInfo
-    val <- getKeyBlockByHash db i (Hash hashOfKeyBlock)
+    val <- getKeyBlockByHash c (Hash hashOfKeyBlock)
     mb <- case val of
         Nothing -> return $ tKeyBlockInfo2Macroblock keyBlockInfo
         Just j  -> return $ fillMacroblockByKeyBlock j keyBlockInfo
@@ -260,9 +254,9 @@ updateMacroblockByKeyBlock (Common db i) hashOfKeyBlock keyBlockInfo branch = do
 
 
 updateMacroblockByMacroblock :: Common -> HashOfKeyBlock -> MacroblockBD -> BranchOfChain -> IO ()
-updateMacroblockByMacroblock (Common db i) hashOfKeyBlock mb  branch = do
+updateMacroblockByMacroblock c@(Common db i) hashOfKeyBlock mb  branch = do
     writeLog i [BDTag] Info $ "Macroblock: " ++ show mb
-    getKeyBlockByHash db i (Hash hashOfKeyBlock) >>= \case
+    getKeyBlockByHash c (Hash hashOfKeyBlock) >>= \case
         Just _  -> writeLog i [BDTag] Warning $ "Macroblock with hash " ++ show hashOfKeyBlock ++ "is already in the table"
         Nothing -> do
             -- writeMacroblockToDB db i hashOfKeyBlock mb
@@ -397,17 +391,18 @@ type NumberOfKeyBlock = Integer
 getMickroblocks :: Common -> NumberOfKeyBlock -> IO [Microblock]
 getMickroblocks c@(Common db i) kNumber = do
   m <- getKeyBlockMain c kNumber
-  mbBD <- mapM (getMicroBlockByHashDB db . Hash) $ _mblocks (m :: MacroblockBD)
-  mapM (tMicroblockBD2Microblock db i) mbBD
+  let microblocksHashes = map Hash $ _mblocks (m :: MacroblockBD)
+      fun h = tMicroblockBD2Microblock db i =<< getMicroBlockByHashDB db h
+  mapM fun microblocksHashes
 
 
 getKeyBlockMain :: Common -> NumberOfKeyBlock-> IO MacroblockBD
-getKeyBlockMain c@(Common db i) kNumber = do
+getKeyBlockMain c kNumber = do
   (_, hashMaybe) <- findChain c kNumber Main
   case hashMaybe of
     Nothing -> throw NoSuchKBlockDB
     Just kHash -> do
-      mb <- getKeyBlockByHash db i (Hash kHash)
+      mb <- getKeyBlockByHash c (Hash kHash)
       case mb of
         Nothing -> throw NoSuchKBlockDB
         Just m  -> return m
