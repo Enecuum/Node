@@ -19,7 +19,7 @@ import           Service.Types
 import           System.Environment                (getArgs)
 
 import qualified Network.WebSockets                as WS
-import           Service.Sync.SyncJson
+-- import           Service.Sync.SyncJson
 import           Service.System.Version
 import           Service.Transaction.Common
 

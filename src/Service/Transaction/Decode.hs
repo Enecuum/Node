@@ -85,8 +85,8 @@ getKeyBlockByHash (Common db _) kHash = decodeRaw "MacroblockBD" <$> getByHash (
 
 
 --Microblock
-getMicroBlockByHashDB :: DBPoolDescriptor -> Hash -> IO MicroblockBD
-getMicroBlockByHashDB db mHash = do
+getMicroBlockByHashDB :: Common -> Hash -> IO MicroblockBD
+getMicroBlockByHashDB (Common db _) mHash = do
   res <- decodeRaw "MicroblockBD" <$> getByHash (poolMicroblock db) mHash
   case res of
     Nothing -> throw (NoSuchMicroBlockForHash $ show mHash)

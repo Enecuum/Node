@@ -200,11 +200,11 @@ instance Show Rocks.Iterator where
 
 
 getTransactionsByMicroblockHash :: Common -> Hash -> IO (Maybe [TransactionInfo])
-getTransactionsByMicroblockHash (Common db i) aHash = Just <$> (getTxs db i =<< getMicroBlockByHashDB db aHash)
+getTransactionsByMicroblockHash c aHash = Just <$> (getTxs c =<< getMicroBlockByHashDB c aHash)
 
 
 getBlockByHashDB :: Common -> Hash  -> IO (Maybe MicroblockAPI)
-getBlockByHashDB (Common db i) hash = Just <$> (tMicroblockBD2MicroblockAPI db i =<< getMicroBlockByHashDB db hash)
+getBlockByHashDB c hash = Just <$> (tMicroblockBD2MicroblockAPI c =<< getMicroBlockByHashDB c hash)
 
 
 decodeTransactionsAndFilterByKey :: [DBValue] -> PublicKey -> [TransactionAPI]
@@ -212,10 +212,10 @@ decodeTransactionsAndFilterByKey rawTx pubKey = mapMaybe (decodeTransactionAndFi
 
 
 getKeyBlockByHashDB :: Common -> Hash  -> IO (Maybe MacroblockAPI)
-getKeyBlockByHashDB c@(Common db _) kHash = do
+getKeyBlockByHashDB c kHash = do
   hashOfKey <- getKeyBlockByHash c kHash
   case hashOfKey of Nothing -> return Nothing
-                    Just j  -> Just <$> tMacroblock2MacroblockAPI db j
+                    Just j  -> Just <$> tMacroblock2MacroblockAPI c j
 
 
 getAllTransactionsDB :: Common -> PublicKey -> IO [TransactionAPI]
@@ -389,10 +389,10 @@ type NumberOfKeyBlock = Integer
 
 
 getMicroblocks :: Common -> NumberOfKeyBlock -> IO [Microblock]
-getMicroblocks c@(Common db i) kNumber = do
+getMicroblocks c kNumber = do
   m <- getKeyBlockMain c kNumber
   let microblocksHashes = map Hash $ _mblocks (m :: MacroblockBD)
-      fun h = tMicroblockBD2Microblock db i =<< getMicroBlockByHashDB db h
+      fun h = tMicroblockBD2Microblock c =<< getMicroBlockByHashDB c h
   mapM fun microblocksHashes
 
 

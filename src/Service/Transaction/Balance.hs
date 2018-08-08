@@ -150,8 +150,8 @@ checkMacroblock c@(Common _ i) microblock microblockHash = do
 
 
 -- main function for Microblock
-addMicroblockToDB :: Common -> Microblock -> IO ()
-addMicroblockToDB c@(Common _ i) m =  do
+addMicroblockToDB :: Common -> Microblock -> BranchOfChain -> IO ()
+addMicroblockToDB c@(Common _ i) m branch =  do
 -- FIX: verify signature
     let microblockHash = rHash $ tMicroblock2MicroblockBD  m
     writeLog i [BDTag] Info $ "New Microblock came" ++ show microblockHash
@@ -172,15 +172,15 @@ addMicroblockToDB c@(Common _ i) m =  do
           writeMicroblockDB c (tMicroblock2MicroblockBD m)
           writeTransactionDB c (_transactions m) microblockHash
           -- writeMacroblockToDB db i (_keyBlock (m :: Microblock)) macroblock
-          when aIsMacroblockClosed $ calculateLedger c False (_keyBlock (m :: Microblock)) macroblock
+          when (aIsMacroblockClosed && branch == Main) $ calculateLedger c False (_keyBlock (m :: Microblock)) macroblock
 
 
 calculateLedger :: Common -> IsStorno -> HashOfKeyBlock -> MacroblockBD -> IO ()
-calculateLedger c@(Common db i) isStorno _ macroblock = do
+calculateLedger c@(Common _ i) isStorno _ macroblock = do
   -- get all microblocks for macroblock
   let microblockHashes = _mblocks (macroblock :: MacroblockBD)
-  mbBD <- mapM (getMicroBlockByHashDB db . Hash)  microblockHashes
-  mbWithTx <- mapM (tMicroblockBD2Microblock db i) mbBD
+  mbBD <- mapM (getMicroBlockByHashDB c . Hash)  microblockHashes
+  mbWithTx <- mapM (tMicroblockBD2Microblock c) mbBD
   let sortedMb = sortBy (comparing _sign) (mbWithTx :: [Microblock])
       sortedM = if not isStorno then sortedMb else reverse sortedMb
   writeLog i [BDTag] Info $ "calculateLedger: microblockHashes " ++ show sortedM
