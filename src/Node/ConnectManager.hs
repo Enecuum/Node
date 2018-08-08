@@ -1,32 +1,32 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Node.ConnectManager where
 
 --
-import qualified Control.Concurrent                     as C
+import qualified Control.Concurrent                    as C
+import           Control.Concurrent.Async
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
 import           Control.Monad
-import           Control.Concurrent.Async
-import           Data.Aeson                             as A
+import           Data.Aeson                            as A
+import qualified Data.ByteString                       as B
 import           Data.Maybe
-import qualified Network.WebSockets                     as WS
-import qualified Data.ByteString                        as B
-import           Pending
+import qualified Network.WebSockets                    as WS
 import           Node.Data.GlobalLoging
 import           Node.Data.Key
 import           Node.DataActor
-import           Node.Node.Types
+import           Node.DBActor
+import           Node.NetLvl.Messages
 import           Node.NetLvl.Server
-import           Node.NetLvl.Massages
+import           Node.Node.Types
+import           Node.SyncServer
+import           Pending
 import           Service.Chan
 import           Service.InfoMsg
 import           Service.Network.Base
 import           Service.Network.WebSockets.Client
 import           Service.Sync.SyncJson
-import           Node.SyncServer
-import           Node.DBActor
 
 --
 connectManager

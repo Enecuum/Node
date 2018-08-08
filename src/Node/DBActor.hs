@@ -67,21 +67,21 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
     writeLog aInfoCh [BDTag, InitTag] Info "Init. DBActor started."
     forever $ readChan aOutChan >>= \case
         MicroblockMsgToDB aMicroblock -> do
-            aLog "Recived mickrobloc."
+            aLog "Received microblock."
             aExeption <- try $ addMicroblockToDB aData aMicroblock
             case aExeption of
                 Right _ -> aLog "Success of setting microblock"
                 Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e
 
         KeyBlockMsgToDB aValue -> do
-            writeLog aInfoCh [BDTag] Info "Recived keyBlocks."
+            writeLog aInfoCh [BDTag] Info "Received keyBlocks."
             aExeption <- try $ addKeyBlockToDB aData aValue aSyncChan
             case aExeption of
                 Right _ -> aLog "Success of setting keyBlock"
                 Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e
 
         WriteChain aChain -> do
-            aLog "Recived chain."
+            aLog "Received chain."
             aRes <- try $ myTail aData
             aJustTail <- return $ case aRes of
                 Right aJustRes            -> fst aJustRes
@@ -104,7 +104,7 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
             else return ()
 
         GetChain aVar -> do
-            aLog "Recived chain."
+            aLog "Received chain."
             aTail   <- try $ myTail aData
             -- getting number of key bloks.
             aNumber <- case aTail of
@@ -114,7 +114,7 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
                     return 0
 
             aChain  <- forM [1..fromEnum aNumber] $ \aNum -> do
-                aMicroblocks <- try $ getMickroblocks aData (toInteger aNum)
+                aMicroblocks <- try $ getMicroblocks aData (toInteger aNum)
                 aKeyBlock    <- try $ getKeyBlock aData (toInteger aNum)
                 case (aKeyBlock, aMicroblocks) of
                   (Right aKeyBlock, Right aMicroblocks) -> return $ Just $ Chunk aKeyBlock aMicroblocks

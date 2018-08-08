@@ -27,7 +27,7 @@ import           Lens.Micro.Mtl                        ()
 import           Node.BaseFunctions
 import           Node.Data.GlobalLoging
 import           Node.Data.Key
-import           Node.NetLvl.Massages
+import           Node.NetLvl.Messages
 import           Node.Node.Types
 import           Service.Chan
 import           Service.InfoMsg

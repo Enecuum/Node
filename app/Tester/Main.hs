@@ -12,7 +12,7 @@ import           Data.Aeson
 import qualified Data.ByteString.Lazy.Char8        as B8
 import qualified Data.Text                         as T
 import           Node.Data.Key
-import           Node.NetLvl.Massages
+import           Node.NetLvl.Messages
 import           Service.Network.Base
 import           Service.Network.WebSockets.Client
 import           Service.Types
@@ -116,7 +116,7 @@ checkVersion aConnect = do
     sendMsg aConnect $ RequestVersion
 
     aMsg <- receiveMsg aConnect
-        "   Reciving version response..."
+        "   Receiving version response..."
         "   Received version response."
 
     aVersion <- return $ case decode aMsg of
@@ -153,7 +153,7 @@ main = do
                 sendMsg aConnect $ RequestPotentialConnects False
 
                 aMsg <- receiveMsg aConnect
-                    "   Reciving from BN list of connects..."
+                    "   Receiving from BN list of connects..."
                     "   Received list of NN from BN."
 
                 aConnects <- return $ case decode aMsg of
@@ -254,7 +254,7 @@ main = do
             void . forkIO $ runClient (showHostAddress aHostAddress) (fromEnum aPort) "/" $ \aConnect -> do
                 aNodeId <- connectHowNN "  " (NodeId 1) aConnect
                 let aSendSync aMsg = sendMsg aConnect $ MsgMsgTo (IdFrom (NodeId 1)) (IdTo aNodeId) (toJSON aMsg)
-                    aReciveSync = receiveMsg aConnect
+                    aReceiveSync = receiveMsg aConnect
                         "   Receiving of sync msg..."
                         "   Received sync msg."
                     aDecodeSync aMsg = return $ case decode aMsg of
@@ -262,15 +262,15 @@ main = do
                         _ -> error "it is not the sync msg"
                 void $ do
                     aSendSync RequestTail
-                    void $ aDecodeSync =<< aReciveSync
+                    void $ aDecodeSync =<< aReceiveSync
 
                 void $ do
                     aSendSync $ PeekHashKblokRequest 1 2
-                    void $ aDecodeSync =<< aReciveSync
+                    void $ aDecodeSync =<< aReceiveSync
 
                 void $ do
                     aSendSync $ PeekKeyBlokRequest 1 2
-                    void $ aDecodeSync =<< aReciveSync
+                    void $ aDecodeSync =<< aReceiveSync
                 putMVar testsOk True
 -}
             aWait
@@ -287,14 +287,14 @@ main = do
                 void $ connectWithNN "1| " All aConnect
                 putMVar aNode1Start True
                 aMsg1 <- receiveMsg aConnect
-                    ("1| " ++ "Receiving of msg Mickroblock...")
-                    ("1| " ++ "Recived msg Mickroblock.")
+                    ("1| " ++ "Receiving of msg Microblock...")
+                    ("1| " ++ "Received msg Microblock.")
                 void $ return $ case decode aMsg1 of
                     Just (MsgMicroblock _) -> 0 :: Int
                     _ -> error $ "1| FAIL. The received msg not a correct!"
                 aMsg2 <- receiveMsg aConnect
                     ("1| " ++ "Receiving of msg KeyBlock...")
-                    ("1| " ++ "Recived msg KeyBlock.")
+                    ("1| " ++ "Received msg KeyBlock.")
                 void $ return $ case decode aMsg2 of
                     Just (MsgKeyBlock _) -> 0 :: Int
                     _ -> error $ "1| FAIL. The received msg not a correct!"

@@ -23,7 +23,7 @@ import qualified Data.Text                             as T
 import qualified Network.WebSockets                    as WS
 import           Node.Data.GlobalLoging
 import           Node.DataActor
-import           Node.NetLvl.Massages
+import           Node.NetLvl.Messages
 import           Node.Node.Types
 import           Pending
 import           Service.InfoMsg                       as I
@@ -39,10 +39,10 @@ import           Node.Data.Key
 import           Service.Sync.SyncJson
 
 
-netLvlServer (MyNodeId aMyNodeId) aRecivePort ch aInfoChan aFileServerChan inChanPending aInChan = do
+netLvlServer (MyNodeId aMyNodeId) aReceivePort ch aInfoChan aFileServerChan inChanPending aInChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
-        "Init. NetLvlServer: a port is " ++ show aRecivePort
-    runServer aRecivePort ("server of SN: " ++ show aMyNodeId) $ \aIp aPending -> do
+        "Init. NetLvlServer: a port is " ++ show aReceivePort
+    runServer aReceivePort ("server of SN: " ++ show aMyNodeId) $ \aIp aPending -> do
         aConnect <- WS.acceptRequest aPending
         writeLog aInfoChan [ServePoATag] Info $ "New connect: " ++ showHostAddress aIp
         WS.forkPingThread aConnect 30

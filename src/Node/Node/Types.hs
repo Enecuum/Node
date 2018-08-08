@@ -31,7 +31,7 @@ import           Data.Aeson.TH
 import           Data.Scientific                       (Scientific, toRealFloat)
 import           Node.Data.Key
 import           Node.DataActor
-import           Node.NetLvl.Massages
+import           Node.NetLvl.Messages
 import           Service.InfoMsg
 import           Service.Types                         (Microblock, Transaction)
 import qualified Sharding.Types.Node                   as N

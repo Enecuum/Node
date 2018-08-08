@@ -22,7 +22,7 @@ module Service.Transaction.Common
   getAllMicroblockKV,
   getAllSproutKV,
   getAllTransactionsKV,
-  getMickroblocks,
+  getMicroblocks,
   getKeyBlock
   )
   where

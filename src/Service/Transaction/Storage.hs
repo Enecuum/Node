@@ -388,8 +388,8 @@ g2 = getKeyBlockHash genesisKeyBlock
 type NumberOfKeyBlock = Integer
 
 
-getMickroblocks :: Common -> NumberOfKeyBlock -> IO [Microblock]
-getMickroblocks c@(Common db i) kNumber = do
+getMicroblocks :: Common -> NumberOfKeyBlock -> IO [Microblock]
+getMicroblocks c@(Common db i) kNumber = do
   m <- getKeyBlockMain c kNumber
   let microblocksHashes = map Hash $ _mblocks (m :: MacroblockBD)
       fun h = tMicroblockBD2Microblock db i =<< getMicroBlockByHashDB db h

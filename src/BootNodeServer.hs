@@ -7,30 +7,31 @@ module BootNodeServer (
     bootNodeServer
 ) where
 
+import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Monad                         (forever, void, when, forM_)
+import           Control.Exception
+import           Control.Monad                         (forM_, forever, void,
+                                                        when)
+import           Data.Aeson                            as A
+import           Data.Maybe                            ()
 import qualified Data.Text                             as T
 import qualified Network.WebSockets                    as WS
+import           Node.Data.GlobalLoging
+import           Node.DataActor
+import           Node.NetLvl.Messages
 import           Service.InfoMsg                       as I
 import           Service.Network.Base
 import           Service.Network.WebSockets.Client
 import           Service.Network.WebSockets.Server
-import qualified Control.Concurrent                    as C
-import           Control.Exception
-import           Data.Aeson                            as A
-import           Data.Maybe                            ()
-import           Node.Data.GlobalLoging
-import           Node.DataActor
-import           Node.NetLvl.Massages
 import           Service.System.Version
 
 data ConnectTesterActor = AddConnectToList Connect | TestExistedConnect Connect
 
 
 bootNodeServer :: PortNumber -> InChan InfoMsg -> InChan (DataActorRequest Connect) -> IO ()
-bootNodeServer aRecivePort aInfoChan aFileServerChan = do
+bootNodeServer aReceivePort aInfoChan aFileServerChan = do
     writeLog aInfoChan [ServerBootNodeTag, InitTag] Info $
-        "Init. ServerPoABootNode: a port is " ++ show aRecivePort
+        "Init. ServerPoABootNode: a port is " ++ show aReceivePort
     (aInChan, aOutChan) <- newChan 64
     void $ C.forkIO $ forever $ do
         C.threadDelay 60000000
@@ -52,7 +53,7 @@ bootNodeServer aRecivePort aInfoChan aFileServerChan = do
                         void $ tryWriteChan aFileServerChan $ DeleteRecords aConn
                     _ -> return ()
 
-    runServer aRecivePort "bootNodeServer" $ \aHostAdress aPending -> do
+    runServer aReceivePort "bootNodeServer" $ \aHostAdress aPending -> do
         aConnect <- WS.acceptRequest aPending
         let aSend = WS.sendTextData aConnect . A.encode
             aLog  = writeLog aInfoChan [ServerBootNodeTag] Info
