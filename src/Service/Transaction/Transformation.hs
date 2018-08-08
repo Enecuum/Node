@@ -25,7 +25,7 @@ import           Service.Types.SerializeInstances      (roll, unroll)
 -- Helper functions
 getTeamKeysForMicroblock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> IO [PublicKey]
 getTeamKeysForMicroblock db i aHash = do
-  mb <- getKeyBlockByHash db i (Hash aHash)
+  mb <- getKeyBlockByHash (Common db i) (Hash aHash)
   case mb of Nothing -> do
                -- writeLog aInfoChan [BDTag] Error ("No Team Keys For Key block " ++ show aHash)
                return []

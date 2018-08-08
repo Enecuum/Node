@@ -34,8 +34,8 @@ findWholeChainSince c aNumber branch = do
 
 
 findConsequentChainSinceUntil :: Common -> HashOfKeyBlock -> HashOfKeyBlock -> Limit -> IO [(HashOfKeyBlock, Number)]
-findConsequentChainSinceUntil c@(Common descr i) h searchedHash limit = do
-  macroblockMaybe <- getKeyBlockByHash descr i (Hash h)
+findConsequentChainSinceUntil c h searchedHash limit = do
+  macroblockMaybe <- getKeyBlockByHash c (Hash h)
   case macroblockMaybe of
     Nothing -> return []
     Just macroblock -> case _prevHKBlock macroblock of

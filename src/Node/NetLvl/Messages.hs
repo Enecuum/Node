@@ -9,15 +9,15 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Node.NetLvl.Massages where
+module Node.NetLvl.Messages where
 
 import           Control.Monad.Extra
 import           Data.Aeson
 import qualified Data.ByteString                  as B
 import qualified Data.ByteString.Char8            as CB
+import           Data.Char
 import           Data.Hex
 import           Data.IP
-import           Data.Char
 import           Data.Maybe
 import           Data.String
 import qualified Data.Text                        as T
@@ -25,11 +25,11 @@ import           Data.Word                        ()
 import           GHC.Generics
 import           Node.Data.Key
 import           Service.Network.Base
+import           Service.Sync.SyncJson
 import           Service.Types                    (Microblock (..), Transaction)
 import           Service.Types.SerializeInstances
 import           Service.Types.SerializeJSON      ()
 import           Text.Read
-import           Service.Sync.SyncJson
 
 
 data NetMessage where

@@ -80,8 +80,8 @@ decodeRaw aType this = case this of
 
 
 -- MacroblockBD
-getKeyBlockByHash :: DBPoolDescriptor -> InChan InfoMsg -> Hash  -> IO (Maybe MacroblockBD)
-getKeyBlockByHash db _ kHash = decodeRaw "MacroblockBD" <$> getByHash (poolMacroblock db) kHash
+getKeyBlockByHash :: Common -> Hash  -> IO (Maybe MacroblockBD)
+getKeyBlockByHash (Common db _) kHash = decodeRaw "MacroblockBD" <$> getByHash (poolMacroblock db) kHash
 
 
 --Microblock

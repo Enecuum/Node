@@ -9,7 +9,7 @@ import           Lens.Micro
 import           Node.Data.GlobalLoging
 import           Node.Data.Key
 import           Node.DBActor
-import           Node.NetLvl.Massages
+import           Node.NetLvl.Messages
 import           Node.Node.Types
 import           Service.Chan
 import           Service.InfoMsg                       (InfoMsg)
@@ -35,7 +35,7 @@ syncServer (aInputSync, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
                 when (aNodeType == NN) $ sendMsgToNode aManagerChan RequestTail aNodeId
 
         SyncMsg aNodeId aMsg -> do
-            aLog $ "Recived SyncMsg to syncServer: " ++ show aMsg
+            aLog $ "Received SyncMsg to syncServer: " ++ show aMsg
             let aSend amsg = sendMsgToNode aManagerChan amsg aNodeId
             case aMsg of
                 RequestTail                                 -> do
@@ -49,7 +49,7 @@ syncServer (aInputSync, outSyncChan) aDBActorChan aManagerChan aInfoChan = do
                             aSend $ StatusSyncMessage "Empty tail" "#001"
 
                 ResponseTail aNum -> do
-                    aLog $ "Recived response tail " ++ show aNum
+                    aLog $ "Received response tail " ++ show aNum
                     aMyTail  <- takeMyTail aDBActorChan
                     aLog $ "My tail is: " ++ show aMyTail
                     when (aMyTail < aNum) $ do
