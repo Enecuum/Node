@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE LambdaCase            #-}
@@ -14,7 +12,7 @@ module Service.Transaction.Storage where
 
 -- import           Control.Applicative
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Concurrent.MVar
+--import           Control.Concurrent.MVar
 import           Control.Exception
 import           Control.Monad                         (when)
 import qualified Control.Monad.Catch                   as E
@@ -25,15 +23,15 @@ import qualified Data.ByteString.Base64                as Base64
 import qualified Data.ByteString.Internal              as BSI
 import           Data.Default                          (def)
 import           Data.Either
-import qualified Data.Map                              as Map
+--import qualified Data.Map                              as Map
 import           Data.Maybe
 import           Data.Pool
 import qualified Data.Serialize                        as S (encode)
 import           Data.Serialize.Put
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
-import           Node.DataActor
-import           Service.Chan
+--import           Node.DataActor
+--import           Service.Chan
 import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
@@ -107,16 +105,15 @@ bsLog i msg = writeLog i [BDTag] Info $ show msg
 
 
 isMacroblockClosed :: MacroblockBD -> InChan InfoMsg -> IO Bool
-isMacroblockClosed MacroblockBD {..} _ = do
+isMacroblockClosed MacroblockBD {..} _ = return $ not (null _mblocks) && length _teamKeys == length _mblocks
   -- writeLog i [BDTag] Info $ "checkMacroblockIsClosed: length _mblocks " ++ show (length _mblocks)
   -- writeLog i [BDTag] Info $ "checkMacroblockIsClosed: length _teamKeys" ++ show (length _teamKeys)
-  return $ length _mblocks /= 0 && length _teamKeys == length _mblocks
+
 
 
 getChainInfoDB :: Common -> IO ChainInfo
-getChainInfoDB c = do
-  kv <- getLastKeyBlock c
-  tMacroblock2ChainInfo kv
+getChainInfoDB c = tMacroblock2ChainInfo =<< getLastKeyBlock c
+
 
 
 getLastKeyBlock  :: Common -> IO (Maybe (DBKey,MacroblockBD))
@@ -150,7 +147,7 @@ Size      :: (m a -> Int)     -> MVar Int       -> ContainerCommands m a
 
 
 getPartTransactions :: Rocks.DB -> InChan InfoMsg -> InContainerChan -> PublicKey -> Int -> Int -> IO [TransactionAPI]
-getPartTransactions db i inContainerChan pubKey offset aCount = do
+getPartTransactions db i _ pubKey offset aCount = do
   let key = (pubKey, offset)
 
   -- aVar <- newEmptyMVar
@@ -159,31 +156,28 @@ getPartTransactions db i inContainerChan pubKey offset aCount = do
   let aIt = Nothing
   (realCount, realOffset, startIt) <- case aIt of
     Nothing -> do
-      print "we are going to find last iterator"
+      bdLog i "Going to find last iterator"
       it <- Rocks.createIter db  Rocks.defaultReadOptions
       Rocks.iterLast it
       return (aCount, offset, it)
     Just it  -> do
-      print $ "We have found non empty iterator for key : " ++ show key
+      bdLog i $ "We have found non empty iterator for key : " ++ show key
       isValid <- Rocks.iterValid it
       if isValid
         then do
-        print "Iterator is still valid, we will use it"
+        bdLog i $ "Iterator is still valid, we will use it"
         return (aCount - offset, 0, it)
         else do
-        print "Iterator is already invalid, we will create a new one"
+        bdLog i $ "Iterator is already invalid, we will create a new one"
         newIt <- Rocks.createIter db  Rocks.defaultReadOptions
         Rocks.iterLast newIt
         return (aCount + offset, offset, newIt)
 
-  print $ "realCount " ++ show realCount
-  print $ "realOffset " ++ show realOffset
+  bdLog i $ "realCount " ++ show realCount
+  bdLog i $ "realOffset " ++ show realOffset
   isValid <- Rocks.iterValid startIt
-  let issValid = ("isIterValid:" ++) <$> show <$> (Rocks.iterValid startIt)
-  print <$> issValid
-  print =<< Rocks.iterValid startIt
-  -- let isValid = True
-  if (isValid)
+  print =<< (("isIterValid:" ++) . show <$> Rocks.iterValid startIt)
+  if isValid
     then do
     (values, newIter) <- nLastValues startIt realCount (decodeAndFilter pubKey)
     print $ "newIter == startIt :" ++ show ( newIter == startIt)
@@ -198,7 +192,6 @@ getPartTransactions db i inContainerChan pubKey offset aCount = do
     return txAPI
     else do
     writeLog i [BDTag] Info "There are no valid iterator"
-    -- print "There are no valid iterator"
     return []
 
 
@@ -235,27 +228,6 @@ getAllTransactionsDB :: Common -> PublicKey -> IO [TransactionAPI]
 getAllTransactionsDB (Common descr _) pubKey = do
   txByte <- withResource (poolTransaction descr) getAllValues
   return $ decodeTransactionsAndFilterByKey txByte pubKey
-
-
-tMacroblock2MacroblockAPI :: DBPoolDescriptor -> MacroblockBD -> IO MacroblockAPI
-tMacroblock2MacroblockAPI descr MacroblockBD {..} = do
-           microblocks <- zip _mblocks <$> mapM (getMicroBlockByHashDB descr . Hash) _mblocks
-           let microblocksInfoAPI = map (\(h, MicroblockBD {..}) -> MicroblockInfoAPI {
-                                                        _prevMicroblock = Nothing,
-                                                        _nextMicroblock = Nothing,
-                                                        _keyBlock,
-                                                        _signAPI = _signBD,
-                                                        _publisher,
-                                                        _hash = h}) microblocks
-           return MacroblockAPI {
-             _prevKBlock,
-             _nextKBlock = Nothing,
-             _difficulty,
-             _height = _number,
-             _solver,
-             _reward,
-             _mblocks = microblocksInfoAPI,
-             _teamKeys }
 
 
 getKeyBlockHash :: KeyBlockInfoPoW -> BSI.ByteString
@@ -310,10 +282,10 @@ writeMacroblockSprout desc a hashOfKeyBlock aMacroblock = do
 
 writeMacroblockToDB :: Common -> HashOfKeyBlock -> MacroblockBD -> IO ()
 writeMacroblockToDB (Common desc a) hashOfKeyBlock aMacroblock = do
-  hashPreviousLastKeyBlock <- funR (poolLast desc) lastClosedKeyBlock
+  hashPreviousLastClosedKeyBlock <- funR (poolLast desc) lastClosedKeyBlock
   aIsMacroblockClosed <- isMacroblockClosed aMacroblock a
   let cMacroblock = if aIsMacroblockClosed
-        then (aMacroblock { _prevKBlock = hashPreviousLastKeyBlock }) :: MacroblockBD
+        then (aMacroblock { _prevKBlock = hashPreviousLastClosedKeyBlock }) :: MacroblockBD
         else aMacroblock
   print $ "cMacroblock" ++ show cMacroblock
   let cKey = hashOfKeyBlock
@@ -324,16 +296,17 @@ writeMacroblockToDB (Common desc a) hashOfKeyBlock aMacroblock = do
   writeLog a [BDTag] Info ("Write Macroblock " ++ show cKey ++ " " ++ show cMacroblock ++ "to DB")
 
   -- For closed Macroblock
-  bIsMacroblockClosed <- isMacroblockClosed aMacroblock a
-  when bIsMacroblockClosed $ do
+  when aIsMacroblockClosed $ do
+    writeLog a [BDTag] Info "going to fill _nextKBlock"
     -- fill _nextKBlock for previous closed Macroblock
-    bdKV <- case hashPreviousLastKeyBlock of
+    bdKV <- case hashPreviousLastClosedKeyBlock of
       Nothing -> return []
       Just j  -> do
-        previousLastKeyBlock <- funR (poolMacroblock desc) j
-        case previousLastKeyBlock of
+        previousLastClosedKeyBlock <- funR (poolMacroblock desc) j
+        case previousLastClosedKeyBlock of
           Nothing -> return []
           Just k -> do
+            writeLog a [BDTag] Info $ "fill _nextKBlock: key " ++ show j ++ " _nextKBlock = " ++ show hashOfKeyBlock
             let r = decodeThis "MacroblockBD" k
                 pKey = j
                 pVal = S.encode (r { _nextKBlock = Just hashOfKeyBlock } :: MacroblockBD)
@@ -414,7 +387,7 @@ genesisKeyBlock = KeyBlockInfoPoW{
   _type = 0}
 
 g2 :: HashOfKeyBlock
-g2 = getKeyBlockHash $ genesisKeyBlock
+g2 = getKeyBlockHash genesisKeyBlock
 -- g3 = read "4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY=" :: HashOfKeyBlock
 
 
@@ -441,6 +414,4 @@ getKeyBlockMain c@(Common db i) kNumber = do
 
 
 getKeyBlock :: Common -> NumberOfKeyBlock-> IO KeyBlockInfoPoW
-getKeyBlock c kNumber = do
-   m <- getKeyBlockMain c kNumber
-   return $ tKeyBlockToPoWType $ tMacroblock2KeyBlockInfo m
+getKeyBlock c kNumber = tKeyBlockToPoWType . tMacroblock2KeyBlockInfo <$> getKeyBlockMain c kNumber

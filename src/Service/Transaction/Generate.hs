@@ -8,7 +8,7 @@ import           Control.Monad                       (replicateM)
 import           Control.Monad.State
 import qualified Crypto.Hash.SHA256                  as SHA
 import qualified Data.ByteString.Char8               as BC
-import           GHC.Generics
+-- import           GHC.Generics
 import           Service.Transaction.Storage
 import           Service.Transaction.TransactionsDAG
 import           Service.Types
@@ -29,7 +29,7 @@ quantityOfPoAMiners :: Int
 quantityOfPoAMiners = 3
 
 hashOfgenesis :: HashOfKeyBlock
-hashOfgenesis = "B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw="
+hashOfgenesis = "4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY="
 
 
 genPoAMicroblock :: HashOfKeyBlock -> IO Microblock

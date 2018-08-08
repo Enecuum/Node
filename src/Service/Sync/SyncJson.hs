@@ -9,9 +9,9 @@
 
 module Service.Sync.SyncJson where
 
+import           Control.Exception
 import           Control.Monad
 import           Data.Aeson
-import qualified Data.ByteString.Char8       as BS
 import qualified Data.Text                   as T
 import           Node.Data.Key
 import           Service.Sync.SyncTypes
@@ -145,6 +145,7 @@ instance FromJSON Chunk where
         aBlock       <- aMessage .: "block"
         aMicroBlocks <- aMessage .: "microblocks"
         return $ Chunk aBlock aMicroBlocks
+    parseJSON v = throw $ DecodeException $ "Can not parse chunk " ++ show v
 -- {"block":{},"microblocks":[]}
 
 instance ToJSON Chunk where

@@ -190,6 +190,27 @@ dummyMacroblock = MacroblockBD {
   where aSolver = read "1" :: PublicKey
 
 
+tMacroblock2MacroblockAPI :: DBPoolDescriptor -> MacroblockBD -> IO MacroblockAPI
+tMacroblock2MacroblockAPI descr MacroblockBD {..} = do
+           microblocks <- zip _mblocks <$> mapM (getMicroBlockByHashDB descr . Hash) _mblocks
+           let microblocksInfoAPI = map (\(h, MicroblockBD {..}) -> MicroblockInfoAPI {
+                                                        _prevMicroblock = Nothing,
+                                                        _nextMicroblock = Nothing,
+                                                        _keyBlock,
+                                                        _signAPI = _signBD,
+                                                        _publisher,
+                                                        _hash = h}) microblocks
+           return MacroblockAPI {
+             _prevKBlock,
+             _nextKBlock = Nothing,
+             _difficulty,
+             _height = _number,
+             _solver,
+             _reward,
+             _mblocks = microblocksInfoAPI,
+             _teamKeys }
+
+
 decodeTx :: [DBValue] -> IO [TransactionAPI]
 decodeTx txInfo = do
   let fun1 t = _tx (decodeThis "TransactionInfo" t :: TransactionInfo)
