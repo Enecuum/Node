@@ -9,10 +9,11 @@ ENV bootnode false
 WORKDIR /usr/src/app
 COPY --from=builder /usr/src/app/bin /usr/src/app
 COPY --from=builder /usr/src/app/configs /usr/src/app/configs
+COPY --from=builder /usr/src/app/transfer /usr/bin/transfer
 RUN echo "http://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories; \
     echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories; \
     echo "http://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
 RUN apk --no-cache add rocksdb-dev gmp-dev numactl curl
-RUN mv transfer /usr/bin/transfer && chmod +x /usr/bin/transfer
+RUN chmod +x /usr/bin/transfer
 EXPOSE 1554 1555
 ENTRYPOINT if [ "$bootnode" = true ]; then echo "Bootnode activated" && ./BootNode-exe; else echo "Node activated" && ./SimpleNode-exe; fi
