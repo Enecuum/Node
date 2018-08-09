@@ -30,8 +30,8 @@ data MsgToDB where
 
     MyTail                :: MVar (Maybe (Number, HashOfKeyBlock)) -> MsgToDB
     PeekNKeyBlocks        :: From -> To -> MVar [(Number, HashOfKeyBlock)] -> MsgToDB
-    GetKeyBlockSproutData :: From -> To -> MVar [(Number, HashOfKeyBlock, MacroblockBD)]-> MsgToDB
-    SetKeyBlockSproutData :: [(Number, HashOfKeyBlock, MacroblockBD)] -> MVar Bool -> MsgToDB
+    GetKeyBlockSproutData :: From -> To -> MVar [(Number, HashOfKeyBlock, KeyBlockContent)]-> MsgToDB
+    SetKeyBlockSproutData :: [(Number, KeyBlockContent)] -> MVar Bool -> MsgToDB
     GetRestSproutData     :: HashOfMicroblock -> MVar (Maybe MicroBlockContent) -> MsgToDB
     SetRestSproutData     :: (Number, HashOfKeyBlock, MicroBlockContent) -> MVar Bool -> MsgToDB
     DeleteSproutData      :: Number -> MsgToDB
@@ -46,7 +46,7 @@ startDBActor :: DBPoolDescriptor
                       -> OutChan Value
                       -> InChan InfoMsg
                       -> (InChan MsgToDB, OutChan MsgToDB)
-                      -> (InChan Service.Sync.SyncJson.SyncEvent, b1)
+                      -> (InChan SyncEvent, OutChan SyncEvent)
                       -> IO b2
 startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSyncChan = do
     writeLog aInfoCh [BDTag, InitTag] Info "Init. Starting of DBActor."
@@ -68,7 +68,7 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
     forever $ readChan aOutChan >>= \case
         MicroblockMsgToDB aMicroblock -> do
             aLog "Received microblock."
-            aExeption <- try $ addMicroblockToDB aData aMicroblock
+            aExeption <- try $ addMicroblockToDB aData aMicroblock Main
             case aExeption of
                 Right _ -> aLog "Success of setting microblock"
                 Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e
@@ -91,14 +91,14 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
                 case aExeption of
                     Right _ -> aLog "DB cleaned. Ok."
                     Left (e :: SomeException) -> aLog $ "Error of db cleaning: " ++ show e
-                forM_ (sortOn (\(Chunk a _) -> _number (a :: KeyBlockInfoPoW)) aChain) $ \(Chunk aKeyBlo aMicroblocks) -> do
-                    aExeption <- try $ addKeyBlockToDB2 aData aKeyBlo aSyncChan
-                    case aExeption of
+                forM_ (sortOn (\(Chunk a _) -> _number (a :: KeyBlockInfoPoW)) aChain) $ \(Chunk aKeyBlock aMicroblocks) -> do
+                    bExeption <- try $ addKeyBlockToDB2 aData aKeyBlock aSyncChan
+                    case bExeption of
                         Right _ -> aLog "KeyBlock loaded ok."
                         Left (e :: SomeException) -> aLog $ "Error of KeyBlock loading: " ++ show e
                     forM_ aMicroblocks $ \aBlock -> do
-                        aExeption <- try $ addMicroblockToDB aData aBlock
-                        case aExeption of
+                        cExeption <- try $ addMicroblockToDB aData aBlock Main
+                        case cExeption of
                             Right _ -> aLog "Block loaded ok."
                             Left (e :: SomeException) -> aLog $ "Error of KeyBlock loading: " ++ show e
             else return ()
@@ -117,10 +117,10 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
                 aMicroblocks <- try $ getMicroblocks aData (toInteger aNum)
                 aKeyBlock    <- try $ getKeyBlock aData (toInteger aNum)
                 case (aKeyBlock, aMicroblocks) of
-                  (Right aKeyBlock, Right aMicroblocks) -> return $ Just $ Chunk aKeyBlock aMicroblocks
-                  (Left (a :: SomeException), Left (b :: SomeException))    -> return Nothing
-                  (_, Left (e :: SomeException))                            -> return Nothing
-                  (Left (e :: SomeException), _)                            -> return Nothing
+                  (Right rKeyBlock, Right rMicroblocks) -> return $ Just $ Chunk rKeyBlock rMicroblocks
+                  (Left (_ :: SomeException), Left (_ :: SomeException))    -> return Nothing
+                  (_, Left (_ :: SomeException))                            -> return Nothing
+                  (Left (_ :: SomeException), _)                            -> return Nothing
             putMVar aVar $ catMaybes aChain
 
         MyTail aMVar -> do
@@ -145,10 +145,10 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
                 Left (_ :: SomeException) -> putMVar aMVar []
 
 
-        SetKeyBlockSproutData aMacroblockBD aMVar -> do
+        SetKeyBlockSproutData aKeyBlockContent aMVar -> do
             aLog "Set key block sprout data request."
-            aLog $ "Setting a blocks: " ++ show aMacroblockBD
-            _aIsValid <- try $ isValidKeyBlockSprout aData aMacroblockBD
+            aLog $ "Setting a blocks: " ++ show aKeyBlockContent
+            _aIsValid <- try $ isValidKeyBlockSprout aData aKeyBlockContent
             aIsValid<- case _aIsValid of
                 Right aBool -> return aBool
                 Left (e :: SomeException) -> do
@@ -156,7 +156,8 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
                     return False
 
             when aIsValid $ do
-                aExeption <- try $ setKeyBlockSproutData aData $ toPair2 <$> aMacroblockBD
+                let kBlocks = map (\(_, (KeyBlockContent k _)) -> k) $ aKeyBlockContent
+                aExeption <- try $ setKeyBlockSproutData aData aSyncChan kBlocks
                 case aExeption of
                     Right _ -> aLog "Success of setting"
                     Left (e :: SomeException) -> aLog $ "Setting false !!! =" ++ show e

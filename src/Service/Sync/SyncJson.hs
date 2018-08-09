@@ -18,7 +18,6 @@ import           Service.Sync.SyncTypes
 import           Service.Transaction.Storage ()
 import           Service.Types
 
-deriving instance Show MicroBlockContent
 
 type LastNumber = Int
 type Count      = Int
@@ -198,16 +197,16 @@ instance FromJSON SyncMessage where
     parseJSON _ = mzero -- error $ show a
 
 instance ToJSON MicroBlockContent where
-  toJSON (MicroBlockContent aMicroblocksBD aTransactionsInfo) = object [
-      "micro_block"   .= aMicroblocksBD,
-      "transaction_info" .= aTransactionsInfo
+  toJSON (MicroBlockContent aMicroblocks) = object [
+      "micro_block"   .= aMicroblocks
+      -- "transaction_info" .= aTransactionsInfo
     ]
 
 instance FromJSON MicroBlockContent where
     parseJSON (Object mbc) = do
-        aMicroblocksBD    <- mbc .: "micro_block"
-        aTransactionsInfo <-  mbc .: "transaction_info"
-        return $ MicroBlockContent aMicroblocksBD aTransactionsInfo
+        aMicroblocks    <- mbc .: "micro_block"
+        -- aTransactionsInfo <-  mbc .: "transaction_info"
+        return $ MicroBlockContent aMicroblocks
     parseJSON _ = mzero
 
 --------------------------------------------------------------------------------

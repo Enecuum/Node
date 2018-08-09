@@ -34,11 +34,19 @@ import           Service.System.Version
 import           System.Random.Shuffle
 
 import           Control.Concurrent.Async
+import qualified Data.ByteString.Internal              as BSI
 import           Data.Maybe                            ()
 import           Node.Data.Key
 import           Service.Sync.SyncJson
 
-
+netLvlServer :: MyNodeId
+                -> PortNumber
+                -> InChan MsgToCentralActor
+                -> InChan InfoMsg
+                -> InChan (DataActorRequest Connect)
+                -> InChan PendingAction
+                -> InChan BSI.ByteString
+                -> IO ()
 netLvlServer (MyNodeId aMyNodeId) aReceivePort ch aInfoChan aFileServerChan inChanPending aInChan = do
     writeLog aInfoChan [ServePoATag, InitTag] Info $
         "Init. NetLvlServer: a port is " ++ show aReceivePort
@@ -91,10 +99,19 @@ msgSender ch aId aConnect aNewChan = forever (WS.sendTextData aConnect . A.encod
     `finally` writeChan ch (NodeIsDisconnected aId)
 
 
+msgReceiver :: InChan MsgToCentralActor
+               -> InChan InfoMsg
+               -> InChan (DataActorRequest Connect)
+               -> NodeType
+               -> IdFrom
+               -> WS.Connection
+               -> InChan PendingAction
+               -> InChan BSI.ByteString
+               -> IO b
 msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan aInChan = forever $ do
     aMsg <- WS.receiveData aConnect
-    let aLog aMsg  = writeLog aInfoChan [ServePoATag] Info aMsg
-        aSend aMsg = WS.sendTextData aConnect $ A.encode aMsg
+    let aLog bMsg  = writeLog aInfoChan [ServePoATag] Info bMsg
+        aSend bMsg = WS.sendTextData aConnect $ A.encode bMsg
     aLog $ "Raw msg: " ++ show aMsg ++ "\n"
     case A.eitherDecodeStrict aMsg of
         Right a -> case a of
@@ -145,13 +162,13 @@ msgReceiver ch aInfoChan aFileServerChan aNodeType aId aConnect aPendingChan aIn
                 sendMsgToCentralActor ch aNodeType aMessage
                 when (isBlock aMessage) $ writeInChan aInChan aMsg
 
-        Left a -> do
+        Left l -> do
             case A.eitherDecodeStrict aMsg of
                 Right (a :: SyncMessage) -> do
                     let IdFrom aNodeId = aId
                     writeInChan ch (SyncToNode a aNodeId)
                 Left a -> do
-                    writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ a
+                    writeLog aInfoChan [ServePoATag] Warning $ "Broken message from PP " ++ show aMsg ++ " " ++ l
                     WS.sendTextData aConnect $ T.pack ("{\"tag\":\"Response\",\"type\":\"Error\", \"reason\":\"" ++ a ++ "\", \"Msg\":" ++ show aMsg ++"}")
 
 

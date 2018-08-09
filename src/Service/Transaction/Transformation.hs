@@ -10,21 +10,18 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 
 module Service.Transaction.Transformation where
-import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import           Control.Monad                         (forM)
-import qualified Data.ByteString                       as B
--- import           Node.Data.GlobalLoging
-import           Service.InfoMsg                       (InfoMsg (..))
+import           Control.Monad                      (forM)
+import qualified Data.ByteString                    as B
 import           Service.Transaction.Decode
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeInstances      (roll, unroll)
+import           Service.Types.SerializeInstances   (roll, unroll)
 
 
 -- Helper functions
-getTeamKeysForMicroblock :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> IO [PublicKey]
-getTeamKeysForMicroblock db i aHash = do
+getTeamKeysForMicroblock :: Common -> HashOfKeyBlock -> IO [PublicKey]
+getTeamKeysForMicroblock (Common db i) aHash = do
   mb <- getKeyBlockByHash (Common db i) (Hash aHash)
   case mb of Nothing -> do
                -- writeLog aInfoChan [BDTag] Error ("No Team Keys For Key block " ++ show aHash)
@@ -32,18 +29,18 @@ getTeamKeysForMicroblock db i aHash = do
              Just r -> return $ _teamKeys (r :: MacroblockBD)
 
 
-getTxsMicroblock :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO [Transaction]
-getTxsMicroblock db i mb = do
-  txDecoded <- getTxs db i mb
+getTxsMicroblock :: Common -> MicroblockBD -> IO [Transaction]
+getTxsMicroblock c mb = do
+  txDecoded <- getTxs c mb
   return $ map (\t -> _tx  (t :: TransactionInfo)) txDecoded
 
 
-getTxs :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO [TransactionInfo]
-getTxs descr i mb = do
+getTxs :: Common -> MicroblockBD -> IO [TransactionInfo]
+getTxs c mb = do
   let txHashes = _transactionsHashes mb
-  forM txHashes $ getTx1 descr i
-  where getTx1 :: DBPoolDescriptor -> InChan InfoMsg -> HashOfTransaction -> IO TransactionInfo
-        getTx1 d _ h = do
+  forM txHashes $ getTx1 c
+  where getTx1 :: Common -> HashOfTransaction -> IO TransactionInfo
+        getTx1 (Common d _) h = do
           maybeTx <- getTransactionByHashDB d (Hash h)
           case maybeTx of
             Nothing -> throw $ NoSuchTransactionForHash ("hash: " ++ show h)
@@ -52,9 +49,9 @@ getTxs descr i mb = do
 
 
 
-tMicroblockBD2MicroblockAPI :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO MicroblockAPI
-tMicroblockBD2MicroblockAPI db i m@MicroblockBD {..} = do
-  tx <- getTxsMicroblock db i m
+tMicroblockBD2MicroblockAPI :: Common -> MicroblockBD -> IO MicroblockAPI
+tMicroblockBD2MicroblockAPI c m@MicroblockBD {..} = do
+  tx <- getTxsMicroblock c m
   let txAPI = map (\t -> TransactionAPI {_tx = t, _txHash = rHashT t }) tx
   return MicroblockAPI {
             _prevMicroblock = Nothing,
@@ -67,10 +64,10 @@ tMicroblockBD2MicroblockAPI db i m@MicroblockBD {..} = do
             }
 
 
-tMicroblockBD2Microblock :: DBPoolDescriptor -> InChan InfoMsg -> MicroblockBD -> IO Microblock
-tMicroblockBD2Microblock db i m@MicroblockBD {..} = do
-  tx <- getTxsMicroblock db i m
-  aTeamkeys <- getTeamKeysForMicroblock db i _keyBlock
+tMicroblockBD2Microblock :: Common -> MicroblockBD -> IO Microblock
+tMicroblockBD2Microblock c m@MicroblockBD {..} = do
+  tx <- getTxsMicroblock c m
+  aTeamkeys <- getTeamKeysForMicroblock c _keyBlock
   return Microblock {
   _keyBlock,
   _sign          = _signBD,
@@ -190,9 +187,9 @@ dummyMacroblock = MacroblockBD {
   where aSolver = read "1" :: PublicKey
 
 
-tMacroblock2MacroblockAPI :: DBPoolDescriptor -> MacroblockBD -> IO MacroblockAPI
-tMacroblock2MacroblockAPI descr MacroblockBD {..} = do
-           microblocks <- zip _mblocks <$> mapM (getMicroBlockByHashDB descr . Hash) _mblocks
+tMacroblock2MacroblockAPI :: Common -> MacroblockBD -> IO MacroblockAPI
+tMacroblock2MacroblockAPI c MacroblockBD {..} = do
+           microblocks <- zip _mblocks <$> mapM (getMicroBlockByHashDB c . Hash) _mblocks
            let microblocksInfoAPI = map (\(h, MicroblockBD {..}) -> MicroblockInfoAPI {
                                                         _prevMicroblock = Nothing,
                                                         _nextMicroblock = Nothing,

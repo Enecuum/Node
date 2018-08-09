@@ -5,7 +5,7 @@ import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
 import           Control.Monad
 import           Data.Aeson                            as A
-import           Lens.Micro
+-- import           Lens.Micro
 import           Node.Data.GlobalLoging
 import           Node.Data.Key
 import           Node.DBActor
@@ -15,7 +15,7 @@ import           Service.Chan
 import           Service.InfoMsg                       (InfoMsg)
 import           Service.InfoMsg
 import           Service.Sync.SyncJson
-import           Service.Sync.SyncTypes
+-- import           Service.Sync.SyncTypes
 import           Service.Timer
 import           Service.Types
 
