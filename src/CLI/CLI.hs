@@ -23,13 +23,13 @@ import           Data.DeriveTH
 import           Data.List.Split                       (splitOn)
 import           Node.Node.Types
 import           Service.InfoMsg
+import           Service.System.Version
 import           Service.Types
 import           Service.Types.PublicPrivateKeyPair    (PublicKey)
 import           System.Console.GetOpt
 
-
 data Flag = Version | Help | Key | Send Trans
-          | ShowKey | Balance PublicKey 
+          | ShowKey | Balance PublicKey
           | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey | PartWallet PartWalletReq
 --          | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
           | Microblocks | Txs | AllLedger | Kblocks | Chain | Tables
@@ -98,14 +98,13 @@ serveCLI descrDB ch aInfoCh aContChan = do
               (Block hash : _)                  -> getKeyBlockByHash (Common descrDB aInfoCh) hash >>= handle
               (MBlock hash : _)                 -> getBlockByHash (Common descrDB aInfoCh) hash >>= handle
               (Tx hash : _)                     -> getTransactionByHash (Common descrDB aInfoCh) hash >>= handle
-              (Help : _)                        -> getChainInfo (Common descrDB aInfoCh) >>= handle
 
               (Chain : _)                       -> getAllChain (Common descrDB aInfoCh) >>= handle
               (AllLedger : _)                   -> getAllLedger (Common descrDB aInfoCh) >>= handle
               (Microblocks : _)                 -> getAllMicroblocks (Common descrDB aInfoCh) >>= handle
               (Kblocks : _)                     -> getAllKblocks (Common descrDB aInfoCh) >>= handle
               (Txs : _)                         -> getAllTransactions (Common descrDB aInfoCh) >>= handle
- 
+
 --             (Tables: _)                       -> deleteAllDB
               (Help : _)                        -> putStrLn $ usageInfo "Usage: " options
 
@@ -119,5 +118,4 @@ serveCLI descrDB ch aInfoCh aContChan = do
           handleList (Right a)  = mapM_ print a
 
 printVersion :: IO ()
-printVersion = putStrLn ("--" ++ "2.0.0" ++ "--")
-
+printVersion = putStrLn $ "Version: " ++ $(version)
