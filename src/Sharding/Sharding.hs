@@ -3,7 +3,7 @@
     ,   MultiWayIf
     ,   FlexibleContexts
   #-}
-
+-- Not used: not valid for TestNet
 -- 1. Request of block
 -- -> NetLvl -> LogicLvl -> NetLvl ->
 --              | <---------------------------+

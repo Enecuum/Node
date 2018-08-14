@@ -31,7 +31,7 @@ import           System.Console.GetOpt
 data Flag = Version | Help | Key | Send Trans
           | ShowKey | Balance PublicKey 
           | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey | PartWallet PartWalletReq
---          | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
+          | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
           | Microblocks | Txs | AllLedger | Kblocks | Chain | Tables
 
      deriving (Eq, Ord, Show)
@@ -51,10 +51,10 @@ options = [
   , Option ['W'] ["load-wallet"] (ReqArg (Wallet . read) "publicKey") "get all transactions for wallet"
   , Option ['Q'] ["load-txs-from-wallet"] (ReqArg (PartWallet . read) "publicKey:offset:count") "get n transactions from k'th tx for given wallet"
   , Option ['I'] ["chain-info"] (NoArg Help) "Get total chain info"
--- test
---  , Option ['R'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
---  , Option ['T'] ["send-message-to"] (ReqArg (SendMessageTo . read) "nodeId message") "Send message to the node"
---  , Option ['L'] ["load-new-messages"] (NoArg LoadMessages) "Load new recieved messages"
+
+  , Option ['R'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
+  , Option ['T'] ["send-message-to"] (ReqArg (SendMessageTo . read) "nodeId message") "Send message to the node"
+  , Option ['L'] ["load-new-messages"] (NoArg LoadMessages) "Load new recieved messages"
 
   , Option ['V'] ["version"] (NoArg Version) "show version number"
   , Option ['H', '?'] ["help"] (NoArg Help) "help"
@@ -87,9 +87,9 @@ serveCLI descrDB ch aInfoCh aContChan = do
               (Send tx : _)                     -> sendNewTrans tx ch aInfoCh >>= handle
               (ShowKey : _)                     -> getPublicKeys >>= handleList
 
---              (SendMessageBroadcast m : _)     -> sendMessageBroadcast m ch >>= handle
---              (SendMessageTo mTo : _)          -> sendMessageTo mTo ch >>= handle
---              (LoadMessages : _)               -> loadMessages ch >>= handle
+              (SendMessageBroadcast m : _)     -> sendMessageBroadcast m ch >>= handle
+              (SendMessageTo mTo : _)          -> sendMessageTo mTo ch >>= handle
+              (LoadMessages : _)               -> loadMessages ch >>= handle
               (Balance aPublicKey : _)          -> getBalance descrDB aPublicKey aInfoCh >>= handle
 
               (Wallet key : _)                  -> getAllTransactionsByWallet (Common descrDB aInfoCh) key >>= handle
@@ -106,8 +106,7 @@ serveCLI descrDB ch aInfoCh aContChan = do
               (Kblocks : _)                     -> getAllKblocks (Common descrDB aInfoCh) >>= handle
               (Txs : _)                         -> getAllTransactions (Common descrDB aInfoCh) >>= handle
  
---             (Tables: _)                       -> deleteAllDB
-              (Help : _)                        -> putStrLn $ usageInfo "Usage: " options
+              _                                 -> putStrLn $ usageInfo "Usage: " options
 
 
           handle :: Show a => Result a -> IO ()

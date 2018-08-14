@@ -19,7 +19,6 @@ import           Service.Types
 import           System.Environment                (getArgs)
 
 import qualified Network.WebSockets                as WS
--- import           Service.Sync.SyncJson
 import           Service.System.Version
 import           Service.Transaction.Common
 
@@ -242,37 +241,6 @@ main = do
                     aTransactions <- checkOfPending aConnect
                     unless (null aTransactions) $  error "   FAIL. Then pending not empty!"
                     putMVar testsOk True
-{-
-            aWait
-            putStrLn ""
-            putStrLn "-------------"
-            putStrLn "   --------"
-            putStrLn "   Sync Msg"
-            putStrLn "   --------"
-            putStrLn "--------------"
-            putStrLn ""
-            void . forkIO $ runClient (showHostAddress aHostAddress) (fromEnum aPort) "/" $ \aConnect -> do
-                aNodeId <- connectHowNN "  " (NodeId 1) aConnect
-                let aSendSync aMsg = sendMsg aConnect $ MsgMsgTo (IdFrom (NodeId 1)) (IdTo aNodeId) (toJSON aMsg)
-                    aReceiveSync = receiveMsg aConnect
-                        "   Receiving of sync msg..."
-                        "   Received sync msg."
-                    aDecodeSync aMsg = return $ case decode aMsg of
-                        Just aMsgTo@(MsgMsgTo _ _ aValue) -> aValue
-                        _ -> error "it is not the sync msg"
-                void $ do
-                    aSendSync RequestTail
-                    void $ aDecodeSync =<< aReceiveSync
-
-                void $ do
-                    aSendSync $ PeekHashKblokRequest 1 2
-                    void $ aDecodeSync =<< aReceiveSync
-
-                void $ do
-                    aSendSync $ PeekKeyBlokRequest 1 2
-                    void $ aDecodeSync =<< aReceiveSync
-                putMVar testsOk True
--}
             aWait
             putStrLn ""
             putStrLn "---------------------------------------"

@@ -10,9 +10,7 @@
 
 module Service.Transaction.Storage where
 
--- import           Control.Applicative
 import           Control.Concurrent.Chan.Unagi.Bounded
---import           Control.Concurrent.MVar
 import           Control.Exception
 import           Control.Monad                         (when)
 import qualified Control.Monad.Catch                   as E
@@ -23,15 +21,12 @@ import qualified Data.ByteString.Base64                as Base64
 import qualified Data.ByteString.Internal              as BSI
 import           Data.Default                          (def)
 import           Data.Either
---import qualified Data.Map                              as Map
 import           Data.Maybe
 import           Data.Pool
 import qualified Data.Serialize                        as S (encode)
 import           Data.Serialize.Put
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
---import           Node.DataActor
---import           Service.Chan
 import           Service.InfoMsg                       (InfoMsg (..),
                                                         LogingTag (..),
                                                         MsgType (..))
@@ -69,9 +64,6 @@ connectDB = do
   poolMacroblock  <- fun =<< getMacroblockFilePath
   poolSprout      <- fun =<< getSproutFilePath
   poolLast        <- fun =<< getLastFilePath
-  -- putStrLn "DBTransactionException"
-  -- sleepMs 5000
-  -- throw DBTransactionException
   return (DBPoolDescriptor poolTransaction poolMicroblock poolLedger poolMacroblock poolSprout poolLast)
 
 
@@ -106,9 +98,6 @@ bsLog i msg = writeLog i [BDTag] Info $ show msg
 
 isMacroblockClosed :: MacroblockBD -> InChan InfoMsg -> IO Bool
 isMacroblockClosed MacroblockBD {..} _ = return $ not (null _mblocks) && length _teamKeys == length _mblocks
-  -- writeLog i [BDTag] Info $ "checkMacroblockIsClosed: length _mblocks " ++ show (length _mblocks)
-  -- writeLog i [BDTag] Info $ "checkMacroblockIsClosed: length _teamKeys" ++ show (length _teamKeys)
-
 
 
 getChainInfoDB :: Common -> IO ChainInfo
@@ -119,7 +108,6 @@ getChainInfoDB c = tMacroblock2ChainInfo =<< getLastKeyBlock c
 getLastKeyBlock  :: Common -> IO (Maybe (DBKey,MacroblockBD))
 getLastKeyBlock c@(Common desc aInfoChan) = do
   key <- funR (poolLast desc) lastClosedKeyBlock
-  -- key <- getLastKeyBlockNumber (Common desc aInfoChan)
   case key of Nothing -> return Nothing
               Just k  -> do
                 mb <- getKeyBlockByHash c (Hash k)
@@ -134,25 +122,11 @@ getLastTransactions (Common descr i) aOffsetMap pubKey offset aCount = do
   let fun db = getPartTransactions db i aOffsetMap pubKey offset aCount
   withResource (poolTransaction descr) fun
 
-{-
-Predicate :: (m a -> Bool)    -> MVar Bool      -> ContainerCommands m a
-Lookup    :: (m a -> Maybe a) -> MVar (Maybe a) -> ContainerCommands m a
--- insert, delete, adjust, updateWithKey
-Update    :: (m a -> m a)                       -> ContainerCommands m a
--- size, length
-Size      :: (m a -> Int)     -> MVar Int       -> ContainerCommands m a
-
--}
-
-
 
 getPartTransactions :: Rocks.DB -> InChan InfoMsg -> InContainerChan -> PublicKey -> Int -> Int -> IO [TransactionAPI]
 getPartTransactions db i _ pubKey offset aCount = do
   let key = (pubKey, offset)
 
-  -- aVar <- newEmptyMVar
-  -- writeInChan inContainerChan (Lookup (Map.lookup key) aVar)
-  -- aIt <- takeMVar aVar
   let aIt = Nothing
   (realCount, realOffset, startIt) <- case aIt of
     Nothing -> do
@@ -183,11 +157,6 @@ getPartTransactions db i _ pubKey offset aCount = do
     print $ "newIter == startIt :" ++ show ( newIter == startIt)
     print values
     txAPI <- decodeTx $ drop realOffset values
-    -- when (not $ null txAPI) $ do
-    --   let newKey = (pubKey, realOffset + realCount)
-    --   Rocks.iterNext newIter
-    --   writeInChan inContainerChan (Update (Map.insert newKey newIter))
-    --   print $ "save iterator" ++ show newKey ++ show newIter
     Rocks.releaseIter newIter
     return txAPI
     else do
@@ -259,11 +228,9 @@ updateMacroblockByMacroblock c@(Common db i) hashOfKeyBlock mb  branch = do
     getKeyBlockByHash c (Hash hashOfKeyBlock) >>= \case
         Just _  -> writeLog i [BDTag] Warning $ "Macroblock with hash " ++ show hashOfKeyBlock ++ "is already in the table"
         Nothing -> do
-            -- writeMacroblockToDB db i hashOfKeyBlock mb
             writeLog i [BDTag] Info $ "going to write number " ++ show (_number (mb :: MacroblockBD)) ++ show hashOfKeyBlock ++ show branch
             writeMacroblockSprout db i hashOfKeyBlock mb
             setChain (Common db i) (_number (mb :: MacroblockBD)) hashOfKeyBlock branch
-            -- writeKeyBlockNumber (Common db i) $ _number (mb  :: MacroblockBD)
 
 
 writeMacroblockSprout :: DBPoolDescriptor -> InChan InfoMsg -> HashOfKeyBlock -> MacroblockBD -> IO ()
@@ -292,7 +259,6 @@ writeMacroblockToDB (Common desc a) hashOfKeyBlock aMacroblock = do
   -- For closed Macroblock
   when aIsMacroblockClosed $ do
     writeLog a [BDTag] Info "going to fill _nextKBlock"
-    -- fill _nextKBlock for previous closed Macroblock
     bdKV <- case hashPreviousLastClosedKeyBlock of
       Nothing -> return []
       Just j  -> do
@@ -337,12 +303,9 @@ getKeyBlockNumber c@(Common _ i) = do
 setChain :: Common -> Number -> HashOfKeyBlock -> BranchOfChain -> IO ()
 setChain c@(Common descr i ) aNumber hashOfKeyBlock branch = do
   chain <- getChain c aNumber
-  -- let valueOfChain = funBranch branch $ chain
   let newChain = case branch of
-        -- if (valueOfChain == Nothing) then
         Main   -> (Just hashOfKeyBlock, snd chain)
         Sprout -> (fst chain, Just hashOfKeyBlock)
-        -- else throw (ValueOfChainIsNotNothing ("KeyBlockHash is" ++ (show valueOfChain)))
 
   let key = S.encode aNumber
       val = S.encode (newChain :: Chain)
@@ -352,8 +315,6 @@ setChain c@(Common descr i ) aNumber hashOfKeyBlock branch = do
 
 setChainAndDeleteOther :: Common -> Number -> HashOfKeyBlock -> BranchOfChain -> IO ()
 setChainAndDeleteOther (Common descr i ) aNumber hashOfKeyBlock branch = do
-  -- chain <- getChain c aNumber
-  -- let valueOfChain = funBranch branch $ chain
   let newChain = case branch of
         Main   -> (Just hashOfKeyBlock, Nothing)
         Sprout -> (Nothing, Just hashOfKeyBlock)
@@ -382,7 +343,6 @@ genesisKeyBlock = KeyBlockInfoPoW{
 
 g2 :: HashOfKeyBlock
 g2 = getKeyBlockHash genesisKeyBlock
--- g3 = read "4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY=" :: HashOfKeyBlock
 
 
 type NumberOfKeyBlock = Integer

@@ -8,10 +8,8 @@ module Service.Transaction.LedgerSync where
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
 import           Control.Monad                         (forM, unless, when)
--- import           Control.Monad.Trans.Resource
 import           Data.List
 import           Data.Maybe
--- import           Data.Pool
 import qualified Data.Serialize                        as S (encode)
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
@@ -188,7 +186,6 @@ setSproutAsMain c@(Common descr i) aNumber = do
 -- get all closed macroblocks for calculating ledger
 getAllMacroblockByHash :: Common -> [HashOfKeyBlock] -> IO [(HashOfKeyBlock, MacroblockBD)]
 getAllMacroblockByHash co hashesOfKeyBlock = forM hashesOfKeyBlock $ findAllMacroblocks co
-  -- return $ map fromJust $ filter (/= Nothing ) macroblocks
   where
         findAllMacroblocks :: Common -> HashOfKeyBlock -> IO (HashOfKeyBlock, MacroblockBD)
         findAllMacroblocks (Common _ i) h = do
@@ -216,10 +213,7 @@ findMicroblocksForMainChainHelp  c = do
 
 
 cleanDB :: Common -> IO ()
-cleanDB (Common _ i) = do --undefined --do
-  -- let fun aDb = Rocks.close aDb
-  -- let pools = [poolTransaction descr, poolMicroblock descr, poolLedger descr, poolMacroblock descr, poolSprout descr, poolLast descr]
-  -- mapM_ (\aPool -> withResource aPool fun) pools
+cleanDB (Common _ i) = do 
   filenames <- allDB
   mapM_ (\f -> Rocks.destroy f Rocks.defaultOptions) filenames
   bdLog i $ "Delete all tables"

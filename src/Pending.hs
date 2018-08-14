@@ -78,10 +78,6 @@ pendingActor (aInChan, aOutChan) aMicroblockChan aTransactionChan aInfoChan = do
             let aSizeOfOldTransactions = S.length aOldTransactions
                 aSizeOfNewTransactions = S.length aNewTransaactions
                 aSize = aSizeOfNewTransactions + aSizeOfOldTransactions
-                --aAverage = (average aNewTransaactions aNaw + average aOldTransactions aNaw) `div` toInteger aSize
-
-                --aFilter :: Seq (Transaction, TimeSpec) -> Seq (Transaction, TimeSpec)
-                --aFilter = S.filter (\s -> average' aNaw s < aAverage)
 
             if  | aSize < 500                  -> do
                     writeLog aInfoChan [PendingTag] Info "Pending size < 500"
@@ -92,19 +88,6 @@ pendingActor (aInChan, aOutChan) aMicroblockChan aTransactionChan aInfoChan = do
                 | otherwise -> do
                     putMVar aMVar False
                     loop $ Pending aNewTransaactions aOldTransactions
-{-
-                | aSizeOfOldTransactions > 400 -> do
-                    writeLog aInfoChan [PendingTag] Info "A sizi of old transaction < 400"
-                    loop $ Pending
-                        (aNewTransaactions :|> (aTransaction, aNaw))
-                        (aFilter aOldTransactions)
-                | otherwise                    -> do
-                    writeLog aInfoChan [PendingTag] Info "Clearing of pending"
-                    loop $ Pending
-                        (aFilter aNewTransaactions :|> (aTransaction, aNaw))
-                        (aFilter aOldTransactions)
--}
-        -- transactions cleaning by the reason of including to block
 
         RemoveTransactions  aTransactions           -> do
             writeLog aInfoChan [PendingTag] Info "Remove transactions from pending. From pendig."

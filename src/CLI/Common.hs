@@ -9,8 +9,6 @@ module CLI.Common (
 
   sendTrans,
   sendNewTrans,
-  generateNTransactions,
-  generateTransactionsForever,
   getNewKey,
   getBlockByHash,
   getKeyBlockByHash,
@@ -33,10 +31,9 @@ module CLI.Common (
   )where
 
 import           Control.Concurrent                    (threadDelay)
--- import           Control.Concurrent.Chan
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import           Control.Monad                         (forever, unless)
+import           Control.Monad                         (unless)
 import           Data.List.Split                       (splitOn)
 import           Data.Map                              (Map, fromList, lookup)
 import           Data.Time.Units
@@ -127,10 +124,8 @@ getAllTransactionsByWallet c key = try $ do
     t  -> return t
 
 
---
-
 getPartTransactions :: Common -> InContainerChan -> PublicKey -> Int -> Int -> IO (Result [TransactionAPI])
-getPartTransactions c inContainerChan key offset aCount = try $ do --return $ Left NotImplementedException
+getPartTransactions c inContainerChan key offset aCount = try $ do 
   tx <- B.getLastTransactions c inContainerChan key offset aCount
   case tx of
     [] -> throw NoTransactionsForPublicKey
@@ -168,7 +163,6 @@ sendNewTrans aTrans ch aInfoCh = do
   let moneyAmount = Service.Types.txAmount aTrans :: Amount
   let receiverPubKey = recipientPubKey aTrans
   let ownerPubKey = senderPubKey aTrans
-  --timePoint <- getTime
   keyPairs <- getSavedKeyPairs
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
   case Data.Map.lookup ownerPubKey mapPubPriv of
@@ -199,8 +193,6 @@ getBalance descrDB pKey aInfoCh = try $ do
     case aBalance of
       Nothing -> throw NoSuchPublicKeyInDB
       Just b  -> return b
-    --putStrLn "There is no such key in database"
-    -- return result
 
 
 getSavedKeyPairs :: IO [(PublicKey, PrivateKey)]
@@ -227,30 +219,6 @@ sendMetrics (Transaction o r a _ _ _ _) m = do
     writeInChan m $ Metric $ set "cl.tx.wallet" o
     writeInChan m $ Metric $ set "cl.tx.wallet" r
     writeInChan m $ Metric $ gauge "cl.tx.amount" a
-
-
--- generateNTransactions :: ManagerMiningMsg a => QuantityTx -> Chan a -> Chan InfoMsg -> IO (Result ())
-generateNTransactions :: QuantityTx -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
-generateNTransactions qTx ch m = try $ do
-  tx <- B.genNTx qTx
-  mapM_ (\x -> do
-          aMVar <- newEmptyMVar
-          writeInChan ch $ NewTransaction x aMVar
-          sendMetrics x m
-        ) tx
-  putStrLn "Transactions are created"
-
-generateTransactionsForever :: InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
-generateTransactionsForever ch m = try $ forever $ do
-                                quantityOfTranscations <- randomRIO (20,30)
-                                tx <- B.genNTx quantityOfTranscations
-                                mapM_ (\x -> do
-                                            aMVar <- newEmptyMVar
-                                            writeInChan ch $ NewTransaction x aMVar
-                                            sendMetrics x m
-                                       ) tx
-                                threadDelay (10^(6 :: Int))
-                                putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
 
 
 -- safe way to write in chan

@@ -46,5 +46,3 @@ saveShard aShard = B.writeFile (shardsPath aShard) $ encode aShard
 
 removeShard :: ShardHash -> IO ()
 removeShard aShardHash = removeFile (shardsPath aShardHash)
-
----

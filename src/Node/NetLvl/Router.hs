@@ -140,9 +140,7 @@ routerActorStart aSyncChan (_, aOutChan) aMd = do
                 aNetLog "I create a transaction."
                 void $ C.forkIO $ writeInChan (aData^.transactionsChan) (aTransaction, aVar)
 
---  data ActualConnectInfo = ActualConnectInfo NodeId NodeType (Maybe Connect) deriving Show
 
 toActualConnectInfo :: (NodeId, NodeInfo) -> ActualConnectInfo
 toActualConnectInfo (aNodeId, NodeInfo _ aNodeType aConnect) =
     ActualConnectInfo aNodeId aNodeType aConnect
---------------------------------------------------------------------------------

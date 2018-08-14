@@ -25,7 +25,6 @@ import           Data.Word                        ()
 import           GHC.Generics
 import           Node.Data.Key
 import           Service.Network.Base
--- import           Service.Sync.SyncJson
 import           Service.Types                    (Microblock (..), Transaction)
 import           Service.Types.SerializeInstances
 import           Service.Types.SerializeJSON      ()
@@ -130,7 +129,6 @@ instance FromJSON NetMessage where
     parseJSON (Object aMessage) = do
         aTag  :: T.Text <- aMessage .: "tag"
         aType :: T.Text <- aMessage .: "type"
-        --error $ show aTag ++ " " ++ show aType
         case (T.unpack aTag, T.unpack aType) of
             ("Request", "Transactions") -> RequestTransaction <$> aMessage .: "number"
 
@@ -213,7 +211,7 @@ instance FromJSON NetMessage where
             _ -> mzero
 
 
-    parseJSON _ = mzero -- error $ show a
+    parseJSON _ = mzero
 
 readNodeType :: (IsString a, Eq a) => a -> NodeType
 readNodeType aNodeType
@@ -230,8 +228,6 @@ instance ToJSON NetMessage where
         "connects"  .= aConnects
       ]
 
-      -- RequestVersion
-      -- ResponseVersion
     toJSON RequestVersion = object [
         "tag"       .= ("Request" :: String),
         "type"      .= ("Version" :: String)
@@ -399,4 +395,3 @@ instance FromJSON Connect where
             Just aJustIp -> return $
                 Connect (toHostAddress aJustIp) (toEnum aPort)
     parseJSON s = error ("FromJSON Connect is not an object: " ++ show s)
---------------------------------------------------------------------------------

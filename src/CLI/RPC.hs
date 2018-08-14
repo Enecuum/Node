@@ -23,11 +23,6 @@ import           Service.Types
 import           Service.Types.PublicPrivateKeyPair
 import           Service.Types.SerializeJSON           ()
 
-
--- type OffsetMap = M.Map (PublicKey, Int) Rocks.Iterator
-
-
-
 serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan MsgToCentralActor -> InChan InfoMsg -> InContainerChan -> IO ()
 serveRpc descrDB portNum _ ch aInfoCh aContChan = runServer portNum "serveRpc" $ \_ aPending -> do
     aConnect <- WS.acceptRequest aPending
@@ -42,35 +37,19 @@ serveRpc descrDB portNum _ ch aInfoCh aContChan = runServer portNum "serveRpc" $
          WS.sendTextData aConnect response
 
             where
-              -- ipAccepted :: SockAddr -> Bool
-              -- ipAccepted addr = unsafePerformIO $
-              --   case fromSockAddr addr of
-              --     Nothing      -> return False
-              --     Just (ip, _) -> do
-              --            putStrLn $ "Connection from: " ++ show ip
-              --            return $ foldl (\p ip_r -> p || isMatchedTo (convert ip) ip_r) False ipRangeList
-              --       where convert ip = case ip of
-              --                IPv4 i -> ipv4ToIPv6 i
-              --                IPv6 i -> i
 
-              handle f =
-                    case {-ipAccepted addr-} True of
-                          False -> do
-                                liftIO $ putStrLn "Denied"
-                                throwError $ rpcError 401 $ pack "Access denied: wrong IP"
-                          True  -> do
-                                liftIO $ putStrLn "Accepted"
-                                mTx <- liftIO $ f
-                                case mTx of
-                                     Left e  -> throwError $ rpcError 400 $ pack $ show e
-                                     Right r -> liftIO $ return r
+              handle f = do
+                         liftIO $ putStrLn "Accepted"
+                         mTx <- liftIO $ f
+                         case mTx of
+                              Left e  -> throwError $ rpcError 400 $ pack $ show e
+                              Right r -> liftIO $ return r
 
 
               methods = [createTx , balanceReq, getBlock, getMicroblock
                        , getTransaction, getFullWallet, getPartWallet, getSystemInfo
                        , getAllChainF, getAllLedgerF, getAllMicroblocksF, getAllKblocksF, getAllTransactionsF
--- test
---                       , createNTx, createUnlimTx, sendMsgBroadcast, sendMsgTo, loadMsg
+                       , sendMsgBroadcast, sendMsgTo, loadMsg
                         ]
 
 
@@ -138,23 +117,6 @@ serveRpc descrDB portNum _ ch aInfoCh aContChan = runServer portNum "serveRpc" $
                 where
                   f :: RpcResult IO [(HashOfTransaction, TransactionInfo)]
                   f = handle $ getAllTransactions (Common descrDB aInfoCh)
-
-------------- test functions
-              -- deleteAllDB = toMethod "enq_deleteAllDB" f ()
-              --   where
-              --     f :: RpcResult IO ()
-              --     f = handle $ deleteAllDB (Common descrDB aInfoCh)
-
-              createNTx = toMethod "gen_n_tx" f (Required "x" :+: ())
-                where
-                  f :: Int -> RpcResult IO ()
-                  f num = handle $ generateNTransactions num ch aInfoCh
-
-              createUnlimTx = toMethod "gen_unlim_tx" f ()
-                where
-                  f :: RpcResult IO ()
-                  f = handle $ generateTransactionsForever ch aInfoCh
-
               sendMsgBroadcast = toMethod "send_message_broadcast" f (Required "x" :+: ())
                 where
                   f :: String -> RpcResult IO ()

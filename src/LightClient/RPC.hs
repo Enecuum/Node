@@ -17,7 +17,6 @@ module LightClient.RPC (
         getAllKblocksRPC,
         getAllTransactionsRPC,
 
---test
         newMsgBroadcast,
         newMsgTo,
         loadNewMsg,

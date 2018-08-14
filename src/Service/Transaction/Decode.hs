@@ -102,7 +102,6 @@ decodeTransactionAndFilterByKey :: PublicKey -> DBValue ->  Maybe TransactionAPI
 decodeTransactionAndFilterByKey pubKey rawTx  = txAPI
   where txInfo = decodeThis "TransactionInfo" rawTx :: TransactionInfo
         tx = _tx (txInfo :: TransactionInfo)
-        -- condition t = _owner t == pubKey || _receiver t == pubKey
         txAPI = if txFilterByKey pubKey tx
           then Just TransactionAPI { _tx = tx, _txHash = rHashT tx}
           else Nothing
@@ -143,23 +142,19 @@ decodeKeyBlock :: InChan InfoMsg -> Value -> IO KeyBlockInfoPoW
 decodeKeyBlock i (Object aValue) = do
   let keyBlock = case parseMaybe (.: "verb") aValue of
         Nothing     -> throw (DecodeException "There is no verb in PoW Key Block")
-        Just kBlock -> kBlock :: BC.ByteString --Map T.Text Value
+        Just kBlock -> kBlock :: BC.ByteString 
   if keyBlock /= "kblock"
     then throw $ DecodeException $ "Expected kblock, but get: " ++ show keyBlock
     else do
     let body = case parseMaybe (.: "body") aValue of
           Nothing     -> throw (DecodeException "Can not parse body of PoW Key Block ")
-          Just kBlock -> kBlock :: BC.ByteString --BSI.ByteString --KeyBlockInfo --Map T.Text Value
+          Just kBlock -> kBlock :: BC.ByteString
 
     case Base64.decode body of
       Left e -> throw (DecodeException (show e))
       Right r -> case Data.Aeson.eitherDecodeStrict $ BC.init $ BC.tail r of
           Left a -> throw (DecodeException $ "There is no PoW Key Block. The error: " ++ a)
           Right keyBlockInfo -> do
-            -- let aKeyBlock = tKBIPoW2KBI keyBlockInfo
-            --     aKeyBlockHash = getKeyBlockHash keyBlockInfo
-
-            -- writeLog i [KeyBlockTag] Info $ "keyBlockHash: " ++ show aKeyBlockHash
             writeLog i [KeyBlockTag] Info $ "keyBlockInfo: " ++ show keyBlockInfo
             return keyBlockInfo
 decodeKeyBlock _ v  = throw $ DecodeException $ "Can not decode PoW Key Block" ++ show v
