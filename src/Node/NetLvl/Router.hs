@@ -30,7 +30,7 @@ import           Node.Data.Key
 import           Node.NetLvl.Messages
 import           Node.Node.Types
 import           Service.Chan
-import           Service.InfoMsg
+import           Service.Types                         ( LoggingTag(..), MsgType(..) )
 import           Service.Sync.SyncJson
 import           Sharding.Sharding                     ()
 

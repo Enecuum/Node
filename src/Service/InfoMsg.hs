@@ -11,10 +11,7 @@ module Service.InfoMsg (
   add,
   timing,
   set,
-  serveInfoMsg,
-  InfoMsg(..),
-  MsgType(..),
-  LogingTag(..)
+  serveInfoMsg
 )  where
 
 import qualified Data.ByteString.Char8                 as BS
@@ -22,6 +19,7 @@ import           Data.List
 import           Network.Socket.ByteString             (sendTo)
 import           Node.BaseFunctions
 
+import           Service.Types                         ( InfoMsg(..), MsgType(..), LoggingTag(..) )
 import           Service.Metrics.Statsd
 import           Service.Network.Base
 import           Service.Network.TCP.Client
@@ -30,37 +28,6 @@ import           System.Clock                          ()
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception                     (SomeException, try)
 import           Control.Monad                         (forever, void)
-
-
-data MsgType = Info | Warning | Error
-
-data LogingTag
-    = ConnectingTag
-    | LoadingShardsTag
-    | BroadcatingTag
-    | BootNodeTag
-    | ShardingLvlTag
-    | NetLvlTag
-    | MiningLvlTag
-    | KeyBlockTag
-    | ServePoATag
-    | ServerBootNodeTag
-    | GCTag
-    | PendingTag
-    | RegularTag
-    | InitTag
-    | SyncTag
-    | BDTag
-  deriving (Show, Enum)
-
-
-instance Show MsgType where
-    show Info    = "info"
-    show Warning = "warning"
-    show Error   = "error"
-
-
-data InfoMsg = Metric String | Log [LogingTag] MsgType String
 
 
 sendToServer :: ClientHandle -> String -> IO ()

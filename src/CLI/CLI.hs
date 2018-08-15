@@ -16,16 +16,28 @@ module CLI.CLI (
     serveCLI
   ) where
 
-import           CLI.Common
-import           Control.Concurrent.Chan.Unagi.Bounded
+import qualified CLI.Common                            as C
+import           Control.Concurrent.Chan.Unagi.Bounded ( InChan )
 import           Control.Monad                         (forever, mapM_)
-import           Data.DeriveTH
+import           Data.DeriveTH                         ( derive
+                                                       , makeIs )
 import           Data.List.Split                       (splitOn)
-import           Node.Node.Types
-import           Service.InfoMsg
-import           Service.Types
+import           Node.Node.Types                       ( MsgToCentralActor )
+import           Service.Types                         ( Trans(..)
+                                                       , Common(..)
+                                                       , Hash(..)
+                                                       , DBPoolDescriptor
+                                                       , MsgTo
+                                                       , InContainerChan
+                                                       , InfoMsg(..)
+                                                       , PartWalletReq(..) )
 import           Service.Types.PublicPrivateKeyPair    (PublicKey)
-import           System.Console.GetOpt
+import           System.Console.GetOpt                 ( OptDescr
+                                                       , getOpt
+                                                       , ArgDescr(..)
+                                                       , OptDescr(..)
+                                                       , ArgOrder(..)
+                                                       , usageInfo )
 
 
 data Flag = Version | Help | Key | Send Trans
@@ -83,37 +95,37 @@ serveCLI descrDB ch aInfoCh aContChan = do
           dispatch :: [Flag] -> IO ()
           dispatch flags = do
             case flags of
-              (Key : _)                         -> getNewKey >>= handle
-              (Send tx : _)                     -> sendNewTrans tx ch aInfoCh >>= handle
-              (ShowKey : _)                     -> getPublicKeys >>= handleList
+              (Key : _)                         -> C.getNewKey >>= handle
+              (Send tx : _)                     -> C.sendNewTrans tx ch aInfoCh >>= handle
+              (ShowKey : _)                     -> C.getPublicKeys >>= handleList
 
-              (SendMessageBroadcast m : _)     -> sendMessageBroadcast m ch >>= handle
-              (SendMessageTo mTo : _)          -> sendMessageTo mTo ch >>= handle
-              (LoadMessages : _)               -> loadMessages ch >>= handle
-              (Balance aPublicKey : _)          -> getBalance descrDB aPublicKey aInfoCh >>= handle
+              (SendMessageBroadcast m : _)      -> C.sendMessageBroadcast m ch >>= handle
+              (SendMessageTo mTo : _)           -> C.sendMessageTo mTo ch >>= handle
+              (LoadMessages : _)                -> C.loadMessages ch >>= handle
+              (Balance aPublicKey : _)          -> C.getBalance descrDB aPublicKey aInfoCh >>= handle
 
-              (Wallet key : _)                  -> getAllTransactionsByWallet (Common descrDB aInfoCh) key >>= handle
-              (PartWallet (PartWalletReq key offset cnt) : _) -> getPartTransactions (Common descrDB aInfoCh) aContChan key (fromEnum offset) (fromEnum cnt) >>= handle
+              (Wallet key : _)                  -> C.getAllTransactionsByWallet (Common descrDB aInfoCh) key >>= handle
+              (PartWallet (PartWalletReq key offset cnt) : _) -> C.getPartTransactions (Common descrDB aInfoCh) aContChan key (fromEnum offset) (fromEnum cnt) >>= handle
 
-              (Block hash : _)                  -> getKeyBlockByHash (Common descrDB aInfoCh) hash >>= handle
-              (MBlock hash : _)                 -> getBlockByHash (Common descrDB aInfoCh) hash >>= handle
-              (Tx hash : _)                     -> getTransactionByHash (Common descrDB aInfoCh) hash >>= handle
-              (Help : _)                        -> getChainInfo (Common descrDB aInfoCh) >>= handle
+              (Block hash : _)                  -> C.getKeyBlockByHash (Common descrDB aInfoCh) hash >>= handle
+              (MBlock hash : _)                 -> C.getBlockByHash (Common descrDB aInfoCh) hash >>= handle
+              (Tx hash : _)                     -> C.getTransactionByHash (Common descrDB aInfoCh) hash >>= handle
+              (Help : _)                        -> C.getChainInfo (Common descrDB aInfoCh) >>= handle
 
-              (Chain : _)                       -> getAllChain (Common descrDB aInfoCh) >>= handle
-              (AllLedger : _)                   -> getAllLedger (Common descrDB aInfoCh) >>= handle
-              (Microblocks : _)                 -> getAllMicroblocks (Common descrDB aInfoCh) >>= handle
-              (Kblocks : _)                     -> getAllKblocks (Common descrDB aInfoCh) >>= handle
-              (Txs : _)                         -> getAllTransactions (Common descrDB aInfoCh) >>= handle
+              (Chain : _)                       -> C.getAllChain (Common descrDB aInfoCh) >>= handle
+              (AllLedger : _)                   -> C.getAllLedger (Common descrDB aInfoCh) >>= handle
+              (Microblocks : _)                 -> C.getAllMicroblocks (Common descrDB aInfoCh) >>= handle
+              (Kblocks : _)                     -> C.getAllKblocks (Common descrDB aInfoCh) >>= handle
+              (Txs : _)                         -> C.getAllTransactions (Common descrDB aInfoCh) >>= handle
  
               _                                 -> putStrLn $ usageInfo "Usage: " options
 
 
-          handle :: Show a => Result a -> IO ()
+          handle :: Show a => C.Result a -> IO ()
           handle (Left err) = putStrLn $ show err
           handle (Right a)  = print a
 
-          handleList :: Show a => Result [a] -> IO ()
+          handleList :: Show a => C.Result [a] -> IO ()
           handleList (Left err) = putStrLn $ show err
           handleList (Right a)  = mapM_ print a
 

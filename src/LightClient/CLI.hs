@@ -30,7 +30,7 @@ import           LightClient.RPC
 import           Network.Socket                     (HostName, PortNumber)
 import qualified Network.WebSockets                 as WS
 import           Service.Network.WebSockets.Client
-import           Service.Types
+import           Service.Types                      hiding ( Info )
 import           Service.Types.PublicPrivateKeyPair
 import           System.Console.GetOpt
 import           System.Environment                 (getArgs)
@@ -39,7 +39,7 @@ import           System.Random
 
 data Flag = Port PortNumber | Host HostName | Version | Help
           | WalletsFile String | TransactionsFile String | KeyGen Int
-          | ShowKey String | Balance PublicKey | Info
+          | ShowKey String | Balance PublicKey | Info 
           | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey | PartWallet PartWalletReq
           | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
           | Microblocks | Txs | AllLedger | Kblocks | Chain | Tables

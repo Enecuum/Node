@@ -11,7 +11,6 @@ import           Node.DBActor
 import           Node.NetLvl.Messages
 import           Node.Node.Types
 import           Service.Chan
-import           Service.InfoMsg                       (InfoMsg)
 import           Service.InfoMsg
 import           Service.Sync.SyncJson
 import           Service.Timer

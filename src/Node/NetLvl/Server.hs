@@ -24,7 +24,7 @@ import           Node.DataActor
 import           Node.NetLvl.Messages
 import           Node.Node.Types
 import           Pending
-import           Service.InfoMsg                       as I
+import           Service.Types                         ( InfoMsg(..), LoggingTag(..), MsgType(..) )
 import           Service.Network.Base
 import           Service.Network.WebSockets.Server
 import           Service.System.Version

@@ -17,7 +17,6 @@ import           Service.Types
 import           System.Clock
 
 import           Node.Data.GlobalLoging
-import           Service.InfoMsg
 -- actor
 -- actor's data
 -- commands for actor
