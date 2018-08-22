@@ -28,8 +28,8 @@ import           Service.Types.PublicPrivateKeyPair    (PublicKey)
 import           System.Console.GetOpt
 
 
-data Flag = Version | Help | Key | Send Trans
-          | ShowKey | Balance PublicKey 
+data Flag = Version | Help | Key | Send1 Trans
+          | ShowKey | Balance PublicKey
           | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey | PartWallet PartWalletReq
 --          | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
           | Microblocks | Txs | AllLedger | Kblocks | Chain | Tables
@@ -40,7 +40,7 @@ derive makeIs ''Flag
 options :: [OptDescr Flag]
 options = [
     Option ['K'] ["get-public-key"] (NoArg Key) "get public key"
-  , Option ['S'] ["send-money-to-from"] (ReqArg (Send . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
+  , Option ['S'] ["send-money-to-from"] (ReqArg (Send1 . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
 
   , Option ['B'] ["get-balance"] (ReqArg (Balance . read) "publicKey") "get balance for public key"
   , Option ['Z'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
@@ -84,7 +84,7 @@ serveCLI descrDB ch aInfoCh aContChan = do
           dispatch flags = do
             case flags of
               (Key : _)                         -> getNewKey >>= handle
-              (Send tx : _)                     -> sendNewTrans tx ch aInfoCh >>= handle
+              (Send1 tx : _)                     -> sendNewTrans tx ch aInfoCh >>= handle
               (ShowKey : _)                     -> getPublicKeys >>= handleList
 
 --              (SendMessageBroadcast m : _)     -> sendMessageBroadcast m ch >>= handle
@@ -105,7 +105,7 @@ serveCLI descrDB ch aInfoCh aContChan = do
               (Microblocks : _)                 -> getAllMicroblocks (Common descrDB aInfoCh) >>= handle
               (Kblocks : _)                     -> getAllKblocks (Common descrDB aInfoCh) >>= handle
               (Txs : _)                         -> getAllTransactions (Common descrDB aInfoCh) >>= handle
- 
+
 --             (Tables: _)                       -> deleteAllDB
               (Help : _)                        -> putStrLn $ usageInfo "Usage: " options
 
@@ -120,4 +120,3 @@ serveCLI descrDB ch aInfoCh aContChan = do
 
 printVersion :: IO ()
 printVersion = putStrLn ("--" ++ "2.0.0" ++ "--")
-

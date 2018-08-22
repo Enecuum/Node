@@ -30,6 +30,7 @@ import           Lens.Micro.TH
 import           Node.DataActor
 import           Service.InfoMsg                       (InfoMsg (..))
 import           Service.Types.PublicPrivateKeyPair
+import           Text.Read (readMaybe)
 
 data CLIException = ValueOfChainIsNotNothing String
                   | WrongKeyOwnerException
@@ -79,6 +80,10 @@ data Trans = Trans {
       , currency        :: Currency
       } deriving (Eq, Show, Generic, Ord)
 
+-- Temp structure for better CLI commands
+data Send = Send Amount String String Currency
+  deriving (Eq, Show, Read, Generic, Ord)
+
 type Id = Integer
 data MsgTo = MsgTo {
         messageTo      :: Id
@@ -88,10 +93,14 @@ data MsgTo = MsgTo {
 instance Read Trans where
     readsPrec _ value =
         case splitOn ":" value of
-             [f1, f2, f3, f4] ->
-                 [(Trans (read f1) (read f2) (read f3) (read f4), [])]
-             x -> error $ "Invalid number of fields in input: " ++ show x
-
+          [f1, f2, f3, f4] ->
+            case (readMaybe f1, readMaybe f2, readMaybe f3, readMaybe f4) of
+              (Nothing, _, _, _) -> error $ "No parse of amount: " ++ f1
+              (_, Nothing, _, _) -> error $ "No parse of 'from' value: " ++ f2
+              (_, _, Nothing, _) -> error $ "No parse of 'to' value: " ++ f3
+              (_, _, _, Nothing) -> error $ "No parse of currency value: " ++ f4
+              (Just am, Just f, Just t, Just cur) -> [(Trans am f t cur, [])]
+          x -> error $ "Invalid number of fields in input: " ++ show x
 
 instance Read MsgTo where
      readsPrec _ value =
@@ -333,3 +342,11 @@ data Common = Common {
 
 type InContainerChan  = InChan (ContainerCommands (M.Map (PublicKey, Int)) Rocks.Iterator)
 type OutContainerChan = OutChan (ContainerCommands (M.Map (PublicKey, Int)) Rocks.Iterator)
+
+-- Temp unsafe function for demo.
+fromSend :: Send -> Trans
+fromSend (Send amount fromS toS cur) =
+  case (parsePublicKeyBase58 fromS, parsePublicKeyBase58 toS) of
+    (Nothing, _) -> error $ "No parse of 'from' public key" ++ fromS
+    (_, Nothing) -> error $ "No parse of 'to' public key" ++ toS
+    (Just from', Just to') -> Trans amount from' to' cur

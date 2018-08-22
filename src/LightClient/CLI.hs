@@ -39,7 +39,7 @@ import           System.Random
 import           System.Exit                        (exitWith, ExitCode(..))
 import           Service.System.Directory           (getKeyFilePath)
 
-data Flag = Key | ShowKey | Balance PublicKey | Send Trans | Help
+data Flag = Key | ShowKey | Balance PublicKey | Send1 Trans | Send2 Send | Help
           | Quit deriving (Eq, Show)
 
 data ArgFlag = Port PortNumber | Host HostName deriving (Eq, Show)
@@ -56,8 +56,9 @@ options = [
     Option ['K'] ["get-public-key"] (NoArg Key) "get public key"
   , Option ['B'] ["get-balance"] (ReqArg (Balance . read) "publicKey") "get balance for public key"
   , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
-  , Option ['S'] ["send-money-to-from"] (ReqArg (Send . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
+  , Option ['S'] ["send-money-to-from"] (ReqArg (Send1 . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
   , Option ['H'] ["help"] (NoArg Help) "show help"
+  , Option ['s'] ["send-money-to-from"] (ReqArg (Send2 . read) "Send \"to\" \"from\" currency ") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
   , Option ['Q'] ["quit"] (NoArg Quit) "exit"
   ]
 
@@ -88,7 +89,8 @@ dispatch flags h p =
       case flags of
         (Key : _)                    -> getKey
         (Balance aPublicKey : _)     -> withClient $ getBalance aPublicKey
-        (Send tx : _)                -> withClient $ sendTrans tx
+        (Send1 tx : _)               -> withClient $ sendTrans tx
+        (Send2 s : _)                -> withClient $ sendTrans $ fromSend s
         (ShowKey : _)                -> showPublicKey
         (Help : _)                   -> putStrLn $ usageInfo "Usage: " options
         (Quit : _)                   -> exitWith ExitSuccess
