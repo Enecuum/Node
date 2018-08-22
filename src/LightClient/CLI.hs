@@ -142,7 +142,7 @@ getSavedKeyPairs = do
 
 getBalance :: PublicKey -> WS.Connection -> IO ()
 getBalance rawKey ch = do
-  result  <- runExceptT $ reqLedger ch rawKey
+  result  <- runExceptT $ reqLedger ch rawKey (-1)
   case result of
     (Left err) -> putStrLn $ "Get Balance error: " ++ show err
     (Right b ) -> putStrLn $ "Balance: " ++ show b

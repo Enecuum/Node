@@ -27,15 +27,15 @@ type Result a = RpcResult IO a
 newTxSig :: Signature (Transaction ::: ()) Hash
 newTxSig = Signature "sendTransaction" ("tx" ::: ())
 
-reqLedgerSig :: Signature (PublicKey ::: ()) Amount
-reqLedgerSig = Signature "getBalance" ("hash" ::: ())
+reqLedgerSig :: Signature (PublicKey ::: Integer ::: ()) Amount
+reqLedgerSig = Signature "getWallet" ("hash" ::: "limit" ::: ())
 
 
 -- Bind function signature with RPC connection
 newTx :: WS.Connection -> Transaction -> Result Hash
 newTx h = toFunction (connectionWithTimeOut h) newTxSig
 
-reqLedger :: WS.Connection -> PublicKey -> Result Amount
+reqLedger :: WS.Connection -> PublicKey -> Integer -> Result Amount
 reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
 
 
