@@ -84,6 +84,8 @@ data Trans = Trans {
 data Send = Send Amount String String Currency
   deriving (Eq, Show, Read, Generic, Ord)
 
+data BalanceResp = BalanceResp Amount
+
 type Id = Integer
 data MsgTo = MsgTo {
         messageTo      :: Id

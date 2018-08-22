@@ -340,3 +340,11 @@ instance ToJSON KeyBlockInfoPoW where
         "solver"       .= aSolver,
         "type"         .= aType
       ]
+
+
+instance ToJSON BalanceResp where
+    toJSON (BalanceResp am) = object [ "balance" .= am]
+
+instance FromJSON BalanceResp where
+    parseJSON (Object v) = BalanceResp <$> (v .: "balance")
+    parseJSON inv        = typeMismatch "BalanceResp" inv

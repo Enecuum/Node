@@ -27,7 +27,7 @@ type Result a = RpcResult IO a
 newTxSig :: Signature (Transaction ::: ()) Hash
 newTxSig = Signature "sendTransaction" ("tx" ::: ())
 
-reqLedgerSig :: Signature (PublicKey ::: Integer ::: ()) Amount
+reqLedgerSig :: Signature (PublicKey ::: Integer ::: ()) BalanceResp
 reqLedgerSig = Signature "getWallet" ("hash" ::: "limit" ::: ())
 
 
@@ -35,7 +35,7 @@ reqLedgerSig = Signature "getWallet" ("hash" ::: "limit" ::: ())
 newTx :: WS.Connection -> Transaction -> Result Hash
 newTx h = toFunction (connectionWithTimeOut h) newTxSig
 
-reqLedger :: WS.Connection -> PublicKey -> Integer -> Result Amount
+reqLedger :: WS.Connection -> PublicKey -> Integer -> Result BalanceResp
 reqLedger h = toFunction (connectionWithTimeOut h) reqLedgerSig
 
 

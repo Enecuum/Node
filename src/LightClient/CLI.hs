@@ -147,7 +147,7 @@ getBalance rawKey ch = do
   result  <- runExceptT $ reqLedger ch rawKey (-1)
   case result of
     (Left err) -> putStrLn $ "Get Balance error: " ++ show err
-    (Right b ) -> putStrLn $ "Balance: " ++ show b
+    (Right (BalanceResp b) ) -> putStrLn $ "Balance: " ++ show b
 
 
 
