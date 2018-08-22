@@ -58,7 +58,6 @@ options = [
   , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
   , Option ['S'] ["send-money-to-from"] (ReqArg (Send1 . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
   , Option ['H'] ["help"] (NoArg Help) "show help"
-  , Option ['s'] ["send-money-to-from"] (ReqArg (Send2 . parseSend) "Send \"to\" \"from\" currency ") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
   , Option ['Q'] ["quit"] (NoArg Quit) "exit"
   ]
 
