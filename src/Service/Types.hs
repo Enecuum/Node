@@ -82,7 +82,7 @@ data Trans = Trans {
 
 -- Temp structure for better CLI commands
 data Send = Send Amount String String Currency
-  deriving (Eq, Show, Read, Generic, Ord)
+  deriving (Eq, Show, Generic, Ord)
 
 data BalanceResp = BalanceResp Amount
 
@@ -345,7 +345,17 @@ data Common = Common {
 type InContainerChan  = InChan (ContainerCommands (M.Map (PublicKey, Int)) Rocks.Iterator)
 type OutContainerChan = OutChan (ContainerCommands (M.Map (PublicKey, Int)) Rocks.Iterator)
 
--- Temp unsafe function for demo.
+-- Temp unsafe functions for demo.
+-- Manual parsing to get more viable error (not a beautiful code)
+parseSend :: String -> Send
+parseSend s = case splitOn " " s of
+  ["Send", amS, fromS, toS, curS] -> case (reads amS, reads curS) of
+    ([], _) -> error $ "No parse of Amount value: " ++ amS
+    (_, []) -> error $ "No parse of Currency value: " ++ curS
+    ([(am, _)], [(cur, _)]) -> Send am fromS toS cur
+    (_, _) -> error $ "No parse of Amount or Currency: " ++ amS ++ ", " ++ curS
+  _ -> error $ "No parse of Send structure: " ++ s
+
 fromSend :: Send -> Trans
 fromSend (Send amount fromS toS cur) =
   case (parsePublicKeyBase58 fromS, parsePublicKeyBase58 toS) of
