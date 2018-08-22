@@ -14,6 +14,9 @@ module Service.Types.PublicPrivateKeyPair(
     ,   getPublicKey
     ,   fromPublicKey256k1
     ,   publicKey256k1
+    ,   base58ToInteger
+    ,   mbBase58ToInteger
+    ,   parsePublicKeyBase58
     ,   PublicKey(..)
     ,   PrivateKey(..)
     ,   KeyPair(..)
@@ -106,6 +109,12 @@ integerToBase58 = BC.unpack . encodeBase58I bitcoinAlphabet
 
 base58ToInteger :: String -> Integer
 base58ToInteger = fromJust . decodeBase58I bitcoinAlphabet . BC.pack
+
+mbBase58ToInteger :: String -> Maybe Integer
+mbBase58ToInteger = decodeBase58I bitcoinAlphabet . BC.pack
+
+parsePublicKeyBase58 :: String -> Maybe PublicKey
+parsePublicKeyBase58 x = mbBase58ToInteger x >>= Just . publicKey256k1
 
 generateNewRandomAnonymousKeyPair :: MonadRandom m => m KeyPair
 generateNewRandomAnonymousKeyPair = do
