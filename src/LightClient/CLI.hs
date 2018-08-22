@@ -58,10 +58,9 @@ options = [
   , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
   , Option ['S'] ["send-money-to-from"] (ReqArg (Send1 . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
   , Option ['H'] ["help"] (NoArg Help) "show help"
-  , Option ['s'] ["send-money-to-from"] (ReqArg (Send2 . read) "Send \"to\" \"from\" currency ") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
+  , Option ['s'] ["send-money-to-from"] (ReqArg (Send2 . parseSend) "Send \"to\" \"from\" currency ") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
   , Option ['Q'] ["quit"] (NoArg Quit) "exit"
   ]
-
 
 control :: IO ()
 control = do
@@ -77,10 +76,15 @@ control = do
                  Nothing       -> return 1555
         putStrLn $ usageInfo "Usage: " options
         forever $ do
-                  req <- splitOn " " <$> getLine
-                  case getOpt Permute options req of
-                    (opts, _, []) -> dispatch opts addr port
-                    (_, _, err)    -> putStrLn $ concat err ++ usageInfo "Usage: " options
+                  rawCommand <- getLine
+                  let req = splitOn " " rawCommand
+
+                  -- Hack for demo
+                  case req of
+                    ("Send":_) -> dispatch [Send2 $ parseSend rawCommand] addr port
+                    _ -> case getOpt Permute options req of
+                      (opts, _, []) -> dispatch opts addr port
+                      (_, _, err)    -> putStrLn $ concat err ++ usageInfo "Usage: " options
 
       (_, _, err)    -> ioError (userError (concat err ++ usageInfo "Usage: enq-cli [OPTION...]" args))
 
