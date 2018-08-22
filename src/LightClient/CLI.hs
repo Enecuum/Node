@@ -53,12 +53,11 @@ args = [
 
 options :: [OptDescr Flag]
 options = [
-    Option ['K'] ["get-public-key"] (NoArg Key) "get public key"
-  , Option ['B'] ["get-balance"] (ReqArg (Balance . read) "publicKey") "get balance for public key"
-  , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys"
-  , Option ['S'] ["send-money-to-from"] (ReqArg (Send1 . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
+    Option ['K'] ["get-public-key"] (NoArg Key) "get public key. Or just type \"create\""
+  , Option ['B'] ["get-balance"] (ReqArg (Balance . read) "publicKey") "get balance for public key. Or just type \"balance <public key>\""
+  , Option ['M'] ["show-my-keys"] (NoArg ShowKey) "show my public keys. Or just type \"keys\""
+  , Option ['S'] ["send-money-to-from"] (ReqArg (Send1 . read) "amount:to:from:currency") "send money to wallet from wallet (ENQ | ETH | DASH | BTC). Or just type \"send <amount> <from> <to> <currency>\""
   , Option ['H'] ["help"] (NoArg Help) "show help"
-  , Option ['s'] ["send-money-to-from"] (ReqArg (Send2 . parseSend) "Send \"to\" \"from\" currency ") "send money to wallet from wallet (ENQ | ETH | DASH | BTC)"
   , Option ['Q'] ["quit"] (NoArg Quit) "exit"
   ]
 
@@ -81,7 +80,10 @@ control = do
 
                   -- Hack for demo
                   case req of
-                    ("Send":_) -> dispatch [Send2 $ parseSend rawCommand] addr port
+                    ("send":_)    -> dispatch [Send2 $ parseSend ("S" ++ tail rawCommand)] addr port
+                    ("create":_)  -> getKey
+                    ("keys":_)    -> showPublicKey
+                    ("balance":t) -> dispatch [Balance $ ((read $ head t) :: PublicKey)] addr port
                     _ -> case getOpt Permute options req of
                       (opts, _, []) -> dispatch opts addr port
                       (_, _, err)    -> putStrLn $ concat err ++ usageInfo "Usage: " options

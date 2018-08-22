@@ -135,7 +135,7 @@ executables:
     - -O2
     dependencies:
     - Node
-  LightClient-exe:
+  enq.wallet:
     main:                Main.hs
     source-dirs:         app/LightClient
     ghc-options:
