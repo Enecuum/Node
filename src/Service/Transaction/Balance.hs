@@ -28,7 +28,6 @@ import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception                     (throw)
 import           Control.Monad                         (liftM, when)
 import           Data.Aeson                            hiding (Error)
--- import           Data.Default                          (def)
 import           Data.Hashable
 import qualified Data.HashTable.IO                     as H
 import           Data.List                             (sort, sortBy)
@@ -40,9 +39,6 @@ import qualified Data.Set                              as Set
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
 import           Service.Chan
-import           Service.InfoMsg                       (InfoMsg (..),
-                                                        LogingTag (..),
-                                                        MsgType (..))
 import           Service.Sync.SyncJson
 import           Service.Transaction.Decode
 import           Service.Transaction.Sprout
@@ -57,11 +53,6 @@ type BalanceTable = H.BasicHashTable PublicKey Amount
 type IsStorno = Bool
 type IsMicroblockNew = Bool
 type IsMacroblockNew = Bool
-
-
-
--- cReward :: Integer
--- cReward = 0
 
 
 initialAmount :: Amount
@@ -81,12 +72,10 @@ updateBalanceTable (Common db i) ht isStorno t@(Transaction fromKey toKey am _ _
     (Just balanceFrom, Just balanceTo) ->
       if not isStorno
       then when ((balanceFrom - am) > 0) $ do
-        -- writeLog i [BDTag] Info $ "Forward tx: fromKey " ++ show fromKey ++ " toKey " ++ show toKey ++ " - amount " ++ show am
         H.insert ht fromKey (balanceFrom - am)
         H.insert ht toKey (balanceTo + am)
         updateTxStatus tKey txI True
       else do --it is storno transaction
-        -- writeLog i [BDTag] Info $ "Storno tx: fromKey " ++ show fromKey ++ " toKey " ++ show toKey ++ " + amount " ++ show am
         H.insert ht fromKey (balanceFrom + am)
         H.insert ht toKey (balanceTo - am)
         updateTxStatus tKey txI False
@@ -158,7 +147,6 @@ addMicroblockToDB c@(Common _ i) m branch =  do
 -- FIX: Write to db atomically
     (isMicroblockNew, isMacroblockNew, macroblock ) <- checkMacroblock c m microblockHash
     aIsMacroblockClosed <- isMacroblockClosed macroblock i
-    -- let goOn = not aIsMacroblockClosed
     let goOn = macroblockIsOk macroblock
           where macroblockIsOk MacroblockBD {..} = length _mblocks <= length _teamKeys
     writeLog i [BDTag] Info ("MacroblockBD :- length _mblocks <= length _teamKeyss " ++ show (not goOn))
@@ -171,7 +159,6 @@ addMicroblockToDB c@(Common _ i) m branch =  do
           writeMacroblockToDB c (_keyBlock (m :: Microblock)) macroblock
           writeMicroblockDB c (tMicroblock2MicroblockBD m)
           writeTransactionDB c (_transactions m) microblockHash
-          -- writeMacroblockToDB db i (_keyBlock (m :: Microblock)) macroblock
           when (aIsMacroblockClosed && branch == Main) $ calculateLedger c False (_keyBlock (m :: Microblock)) macroblock
 
 
@@ -186,10 +173,6 @@ calculateLedger c@(Common _ i) isStorno _ macroblock = do
   writeLog i [BDTag] Info $ "calculateLedger: microblockHashes " ++ show sortedM
   writeLog i [BDTag] Info ("calculateLedger: Start calculate Ledger, isStorno "  ++ show isStorno)
   mapM_ (runLedger c isStorno) (sortedM :: [Microblock])
-  -- case isStorno of False -> writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = cReward})
-  --                  True -> do
-  --                    let aReward = (_reward (macroblock :: MacroblockBD)) - cReward
-  --                    writeMacroblockToDB db i hashKeyBlock (macroblock {_reward = aReward})
 
 
 writeMicroblockDB :: Common -> MicroblockBD -> IO ()

@@ -9,8 +9,6 @@ module CLI.Common (
 
   sendTrans,
   sendNewTrans,
-  generateNTransactions,
-  generateTransactionsForever,
   getNewKey,
   getBlockByHash,
   getKeyBlockByHash,
@@ -27,34 +25,62 @@ module CLI.Common (
   getAllKblocks,
   getAllTransactions,
 
-  CLIException(..),
   Result
 
   )where
 
-import           Control.Concurrent                    (threadDelay)
--- import           Control.Concurrent.Chan
-import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Exception
-import           Control.Monad                         (forever, unless)
-import           Data.List.Split                       (splitOn)
-import           Data.Map                              (Map, fromList, lookup)
-import           Data.Time.Units
-import           System.Random                         (randomRIO)
+import           Control.Concurrent                    ( threadDelay )
+import           Control.Concurrent.Chan.Unagi.Bounded ( InChan
+                                                       , tryWriteChan )
+import           Control.Exception                     ( try
+                                                       , throw
+                                                       , SomeException )
+import           Control.Monad                         ( unless )
+import           Control.Timeout                       ( timeout )
+import           Data.List.Split                       ( splitOn )
+import           Data.Map                              ( Map
+                                                       , fromList
+                                                       , lookup )
+import           Data.Time.Units                       ( Millisecond
+                                                       , Second
+                                                       , getCPUTimeWithUnit
+                                                       , subTime ) 
+import           System.Random                         ( randomRIO )
+import           Control.Concurrent.MVar               ( newEmptyMVar
+                                                       , readMVar )
 
-import           Control.Concurrent.MVar
-import           Node.Crypto                           (verifyEncodeble)
-import           Node.Node.Types
-import           Service.InfoMsg
+import           Node.Crypto                           ( verifyEncodeble )
+import           Node.Node.Types                       ( MsgToCentralActor(..) )
+import qualified Service.InfoMsg                       as I
 import           Service.System.Directory              (getKeyFilePath, getTime)
 import qualified Service.Transaction.Common            as B
-import           Service.Types
-import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeJSON           ()
-
-import           Control.Timeout
-import           Data.Time.Units                       (Second)
-
+import           Service.Types                         ( Transaction(..)
+                                                       , Trans(..)
+                                                       , TransactionAPI
+                                                       , TransactionInfo
+                                                       , MicroblockBD
+                                                       , MicroblockAPI
+                                                       , MacroblockBD
+                                                       , MacroblockAPI
+                                                       , Common(..)
+                                                       , ChainInfo
+                                                       , FullChain
+                                                       , Hash(..)
+                                                       , DBPoolDescriptor
+                                                       , DBKey
+                                                       , MsgTo
+                                                       , CLIException(..)
+                                                       , InContainerChan
+                                                       , InfoMsg(..)
+                                                       , Currency(..) )
+import           Service.Types.PublicPrivateKeyPair    ( PublicKey
+                                                       , PrivateKey
+                                                       , Amount
+                                                       , KeyPair(..)
+                                                       , getPublicKey
+                                                       , getSignature
+                                                       , uncompressPublicKey
+                                                       , generateNewRandomAnonymousKeyPair )
 
 
 type Result a = Either CLIException a
@@ -89,7 +115,7 @@ loadMessages :: InChan MsgToCentralActor -> IO (Result [MsgTo])
 loadMessages _ = return $ Left NotImplementedException
 
 
-getBlockByHash :: Common -> Hash  -> IO (Result MicroblockAPI)
+getBlockByHash :: Common -> Hash -> IO (Result MicroblockAPI)
 getBlockByHash c hash  = try $ do
   mb <- B.getBlockByHashDB c hash
   case mb of
@@ -127,10 +153,8 @@ getAllTransactionsByWallet c key = try $ do
     t  -> return t
 
 
---
-
 getPartTransactions :: Common -> InContainerChan -> PublicKey -> Int -> Int -> IO (Result [TransactionAPI])
-getPartTransactions c inContainerChan key offset aCount = try $ do --return $ Left NotImplementedException
+getPartTransactions c inContainerChan key offset aCount = try $ do 
   tx <- B.getLastTransactions c inContainerChan key offset aCount
   case tx of
     [] -> throw NoTransactionsForPublicKey
@@ -165,10 +189,9 @@ sendTrans tx ch aInfoCh = try $ do
 
 sendNewTrans :: Trans -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result Hash)
 sendNewTrans aTrans ch aInfoCh = do
-  let moneyAmount = Service.Types.txAmount aTrans :: Amount
+  let moneyAmount = txAmount aTrans :: Amount
   let receiverPubKey = recipientPubKey aTrans
   let ownerPubKey = senderPubKey aTrans
-  --timePoint <- getTime
   keyPairs <- getSavedKeyPairs
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
   case Data.Map.lookup ownerPubKey mapPubPriv of
@@ -195,12 +218,10 @@ getBalance descrDB pKey aInfoCh = try $ do
     stTime  <- getCPUTimeWithUnit :: IO Millisecond
     aBalance <- B.getBalanceForKey descrDB pKey
     endTime <- getCPUTimeWithUnit :: IO Millisecond
-    writeInChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
+    writeInChan aInfoCh $ Metric $ I.timing "cl.ld.time" (subTime stTime endTime)
     case aBalance of
       Nothing -> throw NoSuchPublicKeyInDB
       Just b  -> return b
-    --putStrLn "There is no such key in database"
-    -- return result
 
 
 getSavedKeyPairs :: IO [(PublicKey, PrivateKey)]
@@ -223,34 +244,10 @@ getPublicKeys = try $ map fst <$> getSavedKeyPairs
 
 sendMetrics :: Transaction -> InChan InfoMsg -> IO ()
 sendMetrics (Transaction o r a _ _ _ _) m = do
-    writeInChan m $ Metric $ increment "cl.tx.count"
-    writeInChan m $ Metric $ set "cl.tx.wallet" o
-    writeInChan m $ Metric $ set "cl.tx.wallet" r
-    writeInChan m $ Metric $ gauge "cl.tx.amount" a
-
-
--- generateNTransactions :: ManagerMiningMsg a => QuantityTx -> Chan a -> Chan InfoMsg -> IO (Result ())
-generateNTransactions :: QuantityTx -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
-generateNTransactions qTx ch m = try $ do
-  tx <- B.genNTx qTx
-  mapM_ (\x -> do
-          aMVar <- newEmptyMVar
-          writeInChan ch $ NewTransaction x aMVar
-          sendMetrics x m
-        ) tx
-  putStrLn "Transactions are created"
-
-generateTransactionsForever :: InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
-generateTransactionsForever ch m = try $ forever $ do
-                                quantityOfTranscations <- randomRIO (20,30)
-                                tx <- B.genNTx quantityOfTranscations
-                                mapM_ (\x -> do
-                                            aMVar <- newEmptyMVar
-                                            writeInChan ch $ NewTransaction x aMVar
-                                            sendMetrics x m
-                                       ) tx
-                                threadDelay (10^(6 :: Int))
-                                putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
+    writeInChan m $ Metric $ I.increment "cl.tx.count"
+    writeInChan m $ Metric $ I.set "cl.tx.wallet" o
+    writeInChan m $ Metric $ I.set "cl.tx.wallet" r
+    writeInChan m $ Metric $ I.gauge "cl.tx.amount" a
 
 
 -- safe way to write in chan

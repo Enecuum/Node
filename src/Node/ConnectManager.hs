@@ -23,7 +23,7 @@ import           Node.Node.Types
 import           Node.SyncServer
 import           Pending
 import           Service.Chan
-import           Service.InfoMsg
+import           Service.Types                         ( InfoMsg(..), LoggingTag(..), MsgType(..) )
 import           Service.Network.Base
 import           Service.Network.WebSockets.Client
 import           Service.Sync.SyncJson

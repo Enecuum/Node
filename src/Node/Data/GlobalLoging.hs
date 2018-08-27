@@ -4,16 +4,14 @@ module Node.Data.GlobalLoging where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Monad.Extra
-import           Service.InfoMsg
+import           Service.Types  (LoggingTag, InfoMsg(..), MsgType)
 
 
 -- | Write ligs into the channel, where it will be redirected to server.
 writeMetric :: InChan InfoMsg ->  String ->  IO ()
 writeMetric aChan metric = void $ tryWriteChan aChan $ Metric metric
 
---writeLog aChan aMsg = writeChan aChan $ Log [] Info aMsg
-
-writeLog :: InChan InfoMsg -> [LogingTag] -> MsgType -> String -> IO ()
+writeLog :: InChan InfoMsg -> [LoggingTag] -> MsgType -> String -> IO ()
 writeLog aChan aTags aTypes aMsg = void $ tryWriteChan aChan $ Log aTags aTypes aMsg
 
 -------------------------------------------------------------------------------------

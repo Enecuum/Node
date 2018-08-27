@@ -30,7 +30,7 @@ import           Node.Data.Key
 import           Node.NetLvl.Messages
 import           Node.Node.Types
 import           Service.Chan
-import           Service.InfoMsg
+import           Service.Types                         ( LoggingTag(..), MsgType(..) )
 import           Service.Sync.SyncJson
 import           Sharding.Sharding                     ()
 
@@ -140,9 +140,7 @@ routerActorStart aSyncChan (_, aOutChan) aMd = do
                 aNetLog "I create a transaction."
                 void $ C.forkIO $ writeInChan (aData^.transactionsChan) (aTransaction, aVar)
 
---  data ActualConnectInfo = ActualConnectInfo NodeId NodeType (Maybe Connect) deriving Show
 
 toActualConnectInfo :: (NodeId, NodeInfo) -> ActualConnectInfo
 toActualConnectInfo (aNodeId, NodeInfo _ aNodeType aConnect) =
     ActualConnectInfo aNodeId aNodeType aConnect
---------------------------------------------------------------------------------

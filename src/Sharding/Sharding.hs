@@ -3,7 +3,7 @@
     ,   MultiWayIf
     ,   FlexibleContexts
   #-}
-
+-- Not used: not valid for TestNet
 -- 1. Request of block
 -- -> NetLvl -> LogicLvl -> NetLvl ->
 --              | <---------------------------+
@@ -33,9 +33,9 @@ module Sharding.Sharding where
 
 import              Sharding.Types.Node
 import              Control.Concurrent.Chan.Unagi.Bounded
-import qualified    Control.Concurrent as C
+import qualified    Control.Concurrent  as C
 import qualified    Node.Node.Types     as T
-import              Service.InfoMsg
+import              Service.Types       ( InfoMsg )
 import              Lens.Micro.GHC()
 import              Node.Data.Key
 

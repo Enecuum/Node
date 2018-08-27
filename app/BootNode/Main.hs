@@ -29,9 +29,7 @@ main =  do
           Nothing   -> error "Please, specify config file correctly"
           Just conf -> do
 
-            --answerCh <- C.newChan
             (aInfoChanIn, aInfoChanOut) <- newChan 32
-            --descrDB   <- connectOrRecoveryConnect
             poa_p   <- try (getEnv "poaPort") >>= \case
                     Right item              -> return $ read item
                     Left (_::SomeException) -> return $ poaPort conf

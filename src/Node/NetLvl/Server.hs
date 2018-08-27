@@ -11,14 +11,12 @@ module Node.NetLvl.Server (
   )  where
 
 import qualified Control.Concurrent                    as C
--- import qualified Control.Concurrent.Chan               as C
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
 import           Control.Exception
 import           Control.Monad                         (forever, unless, void,
                                                         when)
 import           Data.Aeson                            as A
---import qualified Data.ByteString.Char8                 as B8
 import qualified Data.Text                             as T
 import qualified Network.WebSockets                    as WS
 import           Node.Data.GlobalLoging
@@ -26,10 +24,9 @@ import           Node.DataActor
 import           Node.NetLvl.Messages
 import           Node.Node.Types
 import           Pending
-import           Service.InfoMsg                       as I
+import           Service.Types                         ( InfoMsg(..), LoggingTag(..), MsgType(..) )
 import           Service.Network.Base
 import           Service.Network.WebSockets.Server
--- import           Service.Types
 import           Service.System.Version
 import           System.Random.Shuffle
 

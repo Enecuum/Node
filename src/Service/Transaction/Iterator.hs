@@ -62,9 +62,7 @@ getNLastValues it n = runResourceT $ do
 
 
 nLastValues :: Rocks.Iterator -> Int -> (DBValue -> Bool) -> IO ([DBValue], Rocks.Iterator)
--- nLastValues it n predicate = runResourceT $ do
 nLastValues it n predicate = do
-  -- (_, it) <- Rocks.iterOpenBracket db Rocks.defaultReadOptions
   Rocks.iterLast it
   vs <- findUntil it n maxAttempt predicate
   let values = map fst vs
@@ -75,16 +73,8 @@ nLastValues it n predicate = do
 
 getLastIterator :: Rocks.DB -> IO Rocks.Iterator
 getLastIterator db = runResourceT $ do
-  -- Rocks.iterOpen db Rocks.defaultReadOptions
   (_, it) <- Rocks.iterOpenBracket db Rocks.defaultReadOptions
   return it
-
-
--- getLastIterator :: (MonadResource m) => Rocks.DB -> m Rocks.Iterator
--- getLastIterator db = do
---   -- Rocks.iterOpen db Rocks.defaultReadOptions
---   (_, it) <- Rocks.iterOpenBracket db Rocks.defaultReadOptions
---   return it
 
 
 getAllValues :: Rocks.DB -> IO [DBValue]

@@ -30,7 +30,7 @@ import           LightClient.RPC
 import           Network.Socket                     (HostName, PortNumber)
 import qualified Network.WebSockets                 as WS
 import           Service.Network.WebSockets.Client
-import           Service.Types
+import           Service.Types                      hiding ( Info )
 import           Service.Types.PublicPrivateKeyPair
 import           System.Console.GetOpt
 import           System.Environment                 (getArgs)
@@ -39,9 +39,9 @@ import           System.Random
 
 data Flag = Port PortNumber | Host HostName | Version | Help
           | WalletsFile String | TransactionsFile String | KeyGen Int
-          | ShowKey String | Balance PublicKey | Info
+          | ShowKey String | Balance PublicKey | Info 
           | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey | PartWallet PartWalletReq
---          | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
+          | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
           | Microblocks | Txs | AllLedger | Kblocks | Chain | Tables
 
      deriving (Eq, Ord, Show)
@@ -66,10 +66,10 @@ args = [
   , Option ['W'] ["load-wallet"] (ReqArg (Wallet . read) "publicKey") "get all transactions for wallet"
   , Option ['Q'] ["load-txs-from-wallet"] (ReqArg (PartWallet . read) "publicKey:offset:count") "get n transactions from k'th tx for given wallet"
   , Option ['I'] ["chain-info"] (NoArg Info) "Get total chain info"
--- test
---  , Option ['R'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
---  , Option ['T'] ["send-message-to"] (ReqArg (SendMessageTo . read) "nodeId message") "Send message to the node"
---  , Option ['L'] ["load-new-messages"] (NoArg LoadMessages) "Load new recieved messages"
+
+  , Option ['R'] ["send-message-for-all"] (ReqArg (SendMessageBroadcast . read) "message") "Send broadcast message"
+  , Option ['T'] ["send-message-to"] (ReqArg (SendMessageTo . read) "nodeId message") "Send message to the node"
+  , Option ['L'] ["load-new-messages"] (NoArg LoadMessages) "Load new recieved messages"
 
   , Option ['V'] ["version"] (NoArg Version) "show version number"
   , Option ['H', '?'] ["help"] (NoArg Help) "help"
@@ -126,17 +126,15 @@ dispatch flags h p =
         (Tx hash : _)                    -> withClient $ getTransaction hash
         (Info : _)                       -> withClient   getInfo
 
--- test
---        (SendMessageBroadcast m : _)     -> withClient $ sendMessageBroadcast m
---        (SendMessageTo mTo : _)          -> withClient $ sendMessageTo mTo
---        (LoadMessages : _)               -> withClient   loadMessages
+        (SendMessageBroadcast m : _)     -> withClient $ sendMessageBroadcast m
+        (SendMessageTo mTo : _)          -> withClient $ sendMessageTo mTo
+        (LoadMessages : _)               -> withClient   loadMessages
 
         (Chain : _)                      -> withClient   getAllChain
         (AllLedger : _)                  -> withClient   getAllLedger
         (Microblocks : _)                -> withClient   getAllMicroblocks
         (Kblocks : _)                    -> withClient   getAllKblocks
         (Txs : _)                        -> withClient   getAllTransactions
-        -- (Tables: _)                      -> withClient   deleteAllDB
         (Help : _)                       -> putStrLn $ usageInfo "Usage: " args
         (Version: _)                     -> printVersion
         _                                -> putStrLn $ usageInfo "Wrong input.\nUsage: " args

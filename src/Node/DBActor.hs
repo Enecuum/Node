@@ -16,7 +16,6 @@ import           Data.List.Extra
 import           Data.Maybe
 import           Node.Data.GlobalLoging
 import           Service.Chan
-import           Service.InfoMsg
 import           Service.Sync.SyncJson
 import           Service.Sync.SyncTypes
 import           Service.Transaction.Common

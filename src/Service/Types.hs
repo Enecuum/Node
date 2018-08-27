@@ -28,7 +28,6 @@ import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           GHC.Generics
 import           Lens.Micro.TH
 import           Node.DataActor
-import           Service.InfoMsg                       (InfoMsg (..))
 import           Service.Types.PublicPrivateKeyPair
 
 data CLIException = ValueOfChainIsNotNothing String
@@ -117,6 +116,36 @@ instance Read PartWalletReq where
              x -> error $ "Invalid number of fields in input: " ++ show x
 
 
+data MsgType = Info | Warning | Error
+
+data LoggingTag
+    = ConnectingTag
+    | LoadingShardsTag
+    | BroadcatingTag
+    | BootNodeTag
+    | ShardingLvlTag
+    | NetLvlTag
+    | MiningLvlTag
+    | KeyBlockTag
+    | ServePoATag
+    | ServerBootNodeTag
+    | GCTag
+    | PendingTag
+    | RegularTag
+    | InitTag
+    | SyncTag
+    | BDTag
+  deriving (Show, Enum)
+
+
+instance Show MsgType where
+    show Info    = "info"
+    show Warning = "warning"
+    show Error   = "error"
+
+data InfoMsg = Metric String | Log [LoggingTag] MsgType String
+
+
 
 type Time      = Int -- UnixTimestamp
 type DAG = Gr Transaction Transaction
@@ -141,7 +170,6 @@ data Microblock = Microblock{
     _teamKeys     :: [PublicKey], -- for reward
     _publisher    :: PublicKey,
     _transactions :: [Transaction]
-    -- _numOfBlock   :: Integer
   }
   deriving (Eq, Generic, Ord, Read, Show)
 
@@ -210,49 +238,11 @@ makeLenses ''MacroblockBD
 
 instance Serialize Transaction
 
-
-data Ledger = Ledger { currentTime :: Time, ltable :: [LedgerEntry] }
-  deriving (Show, Generic)
-
-data LedgerEntry = LE { balanceFor :: PublicKey, startTime :: Time, history :: Either (LHistory INVALID) (LHistory VALID) }
-  deriving (Show, Generic)
-
-{-
-data LHistory = Valid { valid :: Time, balance :: Double, prev :: LHistory }
-              | Invalid { invalid :: Time, prev :: LHistory }
-              | End
-  deriving (Show)
--}
-
-data VALID    deriving (Generic)
-data INVALID  deriving (Generic)
-
-data LHistory a where
-      Invalid :: { invalid :: Time,                    history :: LHistory VALID } -> LHistory INVALID
-      Valid   :: { valid   :: Time, balance :: Amount, prev    :: LHistory VALID } -> LHistory VALID
-      End     ::                                                                      LHistory VALID
-
-
-instance Show (LHistory INVALID) where
-  show (Invalid tm hst) = "Invalid { invalid = " ++ show tm ++ ", history = " ++ show hst ++ " }"
-
-instance Show (LHistory VALID) where
-  show End = "End"
-  show (Valid tm bl pr) = "Valid { valid = " ++ show tm ++ ", balance = " ++ show bl ++ ", prev = " ++ show pr ++ " }"
-
-
-type ToPublicKey  = PublicKey
-data MessageForSign = MessageForSign ToPublicKey Amount Time
-instance Serialize MessageForSign
-deriving instance Generic MessageForSign
-
-
 ----- API TYPES
 
 data MacroblockAPI = MacroblockAPI {
      _prevKBlock :: Maybe ByteString
   ,  _nextKBlock :: Maybe ByteString
-  -- ,  _prevHKBlock :: Maybe ByteString
   ,  _difficulty :: Integer
   ,  _height     :: Integer
   ,  _solver     :: PublicKey
@@ -280,7 +270,6 @@ data MicroblockAPI = MicroblockAPI {
     ,_nextMicroblock  :: Maybe ByteString  -- hash of the next microblock if exists
     ,_keyBlock        :: ByteString  -- hash of key-block
     ,_signAPI         :: Signature   -- signature for {K_hash, [Tx],}
-    -- ,_teamKeys        :: [PublicKey] -- for reward
     ,_publisher       :: PublicKey
     ,_transactionsAPI :: [TransactionAPI]
   }
@@ -321,7 +310,6 @@ data DBPoolDescriptor = DBPoolDescriptor {
   , poolMicroblock  :: Pool Rocks.DB
   , poolLedger      :: Pool Rocks.DB
   , poolMacroblock  :: Pool Rocks.DB
-  -- , poolKeyBlock    :: Pool Rocks.DB
   , poolSprout      :: Pool Rocks.DB
   , poolLast        :: Pool Rocks.DB
   }
