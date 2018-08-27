@@ -1,5 +1,6 @@
 {-# LANGUAGE PackageImports #-}
-module Service.Transaction.Common (
+module Service.Transaction.Common
+  (
   connectOrRecoveryConnect,
   getBlockByHashDB,
   getTransactionsByMicroblockHash,
@@ -7,23 +8,37 @@ module Service.Transaction.Common (
   getAllTransactionsDB,
   getBalanceForKey,
   addMicroblockToDB,
-  addMacroblockToDB,
+  addKeyBlockToDB,
+  addKeyBlockToDB2,
   runLedger,
   rHash,
+  genNTx,
   getLastTransactions,
   getTransactionByHashDB,
   getChainInfoDB,
-  DBPoolDescriptor(..)
-  ) where
-import           Service.Transaction.Balance (addMacroblockToDB,
-                                              addMicroblockToDB,
-                                              getBalanceForKey, runLedger)
-import           Service.Transaction.Storage (DBPoolDescriptor (..),
-                                              connectOrRecoveryConnect,
-                                              getAllTransactionsDB,
-                                              getBlockByHashDB, getChainInfoDB,
-                                              getKeyBlockByHashDB,
-                                              getLastTransactions,
-                                              getTransactionByHashDB,
-                                              getTransactionsByMicroblockHash,
-                                              rHash)
+  cleanDB,
+  getAllLedgerKV,
+  getAllMacroblockKV,
+  getAllMicroblockKV,
+  getAllSproutKV,
+  getAllTransactionsKV,
+  getMicroblocks,
+  getKeyBlock,
+  decodeThis
+  )
+  where
+import           Service.Transaction.API             (getAllLedgerKV,
+                                                      getAllMacroblockKV,
+                                                      getAllMicroblockKV,
+                                                      getAllSproutKV,
+                                                      getAllTransactionsKV)
+import           Service.Transaction.Balance         (addKeyBlockToDB,
+                                                      addMicroblockToDB,
+                                                      getBalanceForKey,
+                                                      runLedger)
+import           Service.Transaction.Balance         (addKeyBlockToDB2)
+import           Service.Transaction.Decode
+import           Service.Transaction.Decode          (rHash)
+import           Service.Transaction.LedgerSync      (cleanDB)
+import           Service.Transaction.Storage
+import           Service.Transaction.TransactionsDAG (genNTx)

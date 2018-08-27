@@ -14,8 +14,9 @@ import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA as ECDSA
 import           Data.Aeson
 import           Data.Aeson.Types                     (typeMismatch)
 import           Data.ByteString                      (ByteString)
-import qualified Data.ByteString.Char8             as BS
+import qualified Data.ByteString.Char8                as BS
 
+import           Control.Exception                    (throw)
 import qualified Data.ByteString.Base64               as B
 import           Data.ByteString.Conversion
 import           Data.Text                            (Text, pack, unpack)
@@ -36,7 +37,7 @@ instance ToJSON Currency
 
 instance FromJSON PublicKey where
   parseJSON (String s) = return $ read $ unpack s
-  parseJSON _          = error "PublicKey JSON parse error"
+  parseJSON _          = throw $ DecodeException "PublicKey JSON parse error"
 
 instance ToJSON PublicKey where
   toJSON key = String $ pack $ show key
@@ -73,11 +74,41 @@ instance ToJSON ByteString where
 
 instance FromJSON ByteString where
   parseJSON (String s) = return $ BS.pack $ unpack s
-  parseJSON _          = error "Wrong object format"
+  parseJSON e          = throw $ DecodeException $ "ByteString: Wrong object format" ++ show e
 
-instance ToJSON TransactionInfo
-instance FromJSON TransactionInfo
+instance ToJSON TransactionInfo where
+  toJSON t = object [
+      "tx"       .= _tx (t :: TransactionInfo)
+    , "block"    .= _block t
+    , "index"    .= _index t
+    , "accepted" .= _accepted t
+    ]
 
+instance ToJSON MicroblockBD where
+  toJSON mb = object [
+      "keyBlock"            .= _keyBlock (mb :: MicroblockBD)
+    , "signBD"              .= _signBD (mb :: MicroblockBD)
+    , "publisher"           .= _publisher (mb :: MicroblockBD)
+    , "transactionsHashes"  .= _transactionsHashes (mb :: MicroblockBD)
+    ]
+
+instance FromJSON MicroblockBD where
+    parseJSON (Object aMsg) = do
+        aKeyBlock           <- aMsg .: "keyBlock"
+        aSignBd             <- aMsg .: "signBD"
+        aPublisher          <- aMsg .: "publisher"
+        aTransactionHashes  <- aMsg .: "transactionsHashes"
+        return $ MicroblockBD aKeyBlock aSignBd aPublisher aTransactionHashes
+
+    parseJSON _ = mzero
+
+instance FromJSON TransactionInfo where
+  parseJSON (Object o) = TransactionInfo
+    <$> o .: "tx"
+    <*> o .: "block"
+    <*> o .: "index"
+    <*> o .: "accepted"
+  parseJSON inv        = typeMismatch "TransactionInfo" inv
 
 instance ToJSON ECDSA.Signature where
   toJSON t = object [
@@ -110,8 +141,6 @@ instance ToJSON Transaction where
            "receiver"  .= _receiver tx,
            "amount"    .= _amount tx,
            "currency"  .= _currency tx,
-           -- "timestamp" .= _time (tx :: Transaction),
-           -- "sign"      .= _signature tx,
            "uuid"      .= _uuid tx
            ]
        ++ case _timestamp (tx :: Transaction) of
@@ -138,7 +167,6 @@ instance ToJSON MicroblockAPI where
             "prev_block"   .= _prevMicroblock (bl :: MicroblockAPI)
          ,  "next_block"   .= _nextMicroblock (bl :: MicroblockAPI)
          ,  "k_block"      .= _keyBlock (bl :: MicroblockAPI)
-         -- ,  "team"         .= _teamKeys (bl :: MicroblockAPI)
          ,  "publisher"    .= _publisher (bl :: MicroblockAPI)
          ,  "sign"         .= _signAPI (bl :: MicroblockAPI)
          ,  "transactions" .= _transactionsAPI bl
@@ -150,7 +178,6 @@ instance FromJSON MicroblockAPI where
                <*> o .: "next_block"
                <*> o .: "k_block"
                <*> o .: "sign"
-               -- <*> o .: "team"
                <*> o .: "publisher"
                <*> o .: "transactions"
     parseJSON inv         = typeMismatch "MicroblockAPI" inv
@@ -160,7 +187,6 @@ instance ToJSON MicroblockInfoAPI where
             "prev_block"   .= _prevMicroblock (bl :: MicroblockInfoAPI)
          ,  "next_block"   .= _nextMicroblock (bl :: MicroblockInfoAPI)
          ,  "k_block"      .= _keyBlock (bl :: MicroblockInfoAPI)
-         -- ,  "team"         .= _teamKeys (bl :: MicroblockInfoAPI)
          ,  "publisher"    .= _publisher (bl :: MicroblockInfoAPI)
          ,  "sign"         .= _signAPI (bl :: MicroblockInfoAPI)
          ,  "hash"         .= _hash (bl :: MicroblockInfoAPI)
@@ -172,7 +198,6 @@ instance FromJSON MicroblockInfoAPI where
                <*> o .: "next_block"
                <*> o .: "k_block"
                <*> o .: "sign"
-               -- <*> o .: "team"
                <*> o .: "publisher"
                <*> o .: "hash"
     parseJSON inv         = typeMismatch "MicroblockInfo" inv
@@ -200,7 +225,7 @@ instance FromJSON Microblock where
            aTx        <- aBlock .: "Tx"
            aPublisher <- aBlock .: "publisher"
            aKhash     <- aBlock .: "K_hash"
-           return $ Microblock aKhash aSign aWallets aPublisher aTx 0
+           return $ Microblock aKhash aSign aWallets aPublisher aTx
        _ -> mzero
  parseJSON _ = mzero
 
@@ -208,23 +233,24 @@ instance FromJSON Microblock where
 instance ToJSON MacroblockBD where
     toJSON bl = object  [
             "prev_hash"         .= _prevKBlock (bl :: MacroblockBD)
+         ,  "next_hash"         .= _nextKBlock (bl :: MacroblockBD)
+         ,  "prev_Khash"        .= _prevHKBlock (bl :: MacroblockBD)
          ,  "difficulty"        .= _difficulty (bl :: MacroblockBD)
-         ,  "height"            .= _height (bl :: MacroblockBD)
          ,  "solver"            .= _solver (bl :: MacroblockBD)
          ,  "reward"            .= _reward (bl :: MacroblockBD)
          ,  "timeK"             .= _time (bl :: MacroblockBD)
          ,  "numberK"           .= _number (bl :: MacroblockBD)
          ,  "nonce"             .= _nonce (bl :: MacroblockBD)
-         -- ,  "microblocks_cnt"   .= length (_mblocks bl)
          ,  "microblocks"       .= _mblocks (bl :: MacroblockBD)
          ,  "team_keys"         .= _teamKeys (bl :: MacroblockBD)
        ]
 
 instance FromJSON MacroblockBD where
     parseJSON (Object o) = MacroblockBD
-               <$> o .: "prev_hash"
+               <$> o .:? "prev_hash"
+               <*> o .:? "next_hash"
+               <*> o .:? "prev_Khash"
                <*> o .: "difficulty"
-               <*> o .: "height"
                <*> o .: "solver"
                <*> o .: "reward"
                <*> o .: "timeK"
@@ -243,7 +269,6 @@ instance ToJSON MacroblockAPI where
          ,  "height"            .= _height (bl :: MacroblockAPI)
          ,  "solver"            .= _solver (bl :: MacroblockAPI)
          ,  "reward"            .= _reward (bl :: MacroblockAPI)
---         ,  "microblocks_cnt"   .= length (_mblocksAPI bl)
          ,  "microblocks"       .= _mblocks (bl :: MacroblockAPI)
          ,  "team_keys"         .= _teamKeys (bl :: MacroblockAPI)
        ]
@@ -288,4 +313,25 @@ instance FromJSON KeyBlockInfo where
                          <*> (v .: "number")
                          <*> (v .: "nonce")
                          <*> (v .: "solver")
+                         <*> (v .: "type")
   parseJSON inv        = typeMismatch "KeyBlockInfo" inv
+
+instance FromJSON KeyBlockInfoPoW where
+  parseJSON (Object v) = KeyBlockInfoPoW
+                         <$> (v .: "time")
+                         <*> (v .: "prev_hash")
+                         <*> (v .: "number")
+                         <*> (v .: "nonce")
+                         <*> (v .: "solver")
+                         <*> (v .: "type")
+  parseJSON inv        = typeMismatch "KeyBlockInfo" inv
+
+instance ToJSON KeyBlockInfoPoW where
+    toJSON (KeyBlockInfoPoW aTime aPrevHash aNumber aNonce aSolver aType) = object [
+        "time"         .= aTime,
+        "prev_hash"    .= aPrevHash,
+        "number"       .= aNumber,
+        "nonce"        .= aNonce,
+        "solver"       .= aSolver,
+        "type"         .= aType
+      ]

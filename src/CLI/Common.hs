@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 module CLI.Common (
   sendMessageTo,
   sendMessageBroadcast,
@@ -9,69 +9,98 @@ module CLI.Common (
 
   sendTrans,
   sendNewTrans,
-  generateNTransactions,
-  generateTransactionsForever,
   getNewKey,
   getBlockByHash,
   getKeyBlockByHash,
   getTransactionByHash,
-  getAllTransactions,
+  getAllTransactionsByWallet,
   getPartTransactions,
   getBalance,
   getChainInfo,
   getPublicKeys,
 
-  CLIException(..),
+  getAllChain,
+  getAllLedger,
+  getAllMicroblocks,
+  getAllKblocks,
+  getAllTransactions,
+
   Result
 
   )where
 
-import           Control.Concurrent                    (threadDelay)
--- import           Control.Concurrent.Chan
-import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Exception
-import           Control.Monad                         (forever, unless)
-import           Data.List.Split                       (splitOn)
-import           Data.Map                              (Map, fromList, lookup)
-import           Data.Time.Units
-import           System.Random                         (randomRIO)
+import           Control.Concurrent                    ( threadDelay )
+import           Control.Concurrent.Chan.Unagi.Bounded ( InChan
+                                                       , tryWriteChan )
+import           Control.Exception                     ( try
+                                                       , throw
+                                                       , SomeException )
+import           Control.Monad                         ( unless )
+import           Control.Timeout                       ( timeout )
+import           Data.List.Split                       ( splitOn )
+import           Data.Map                              ( Map
+                                                       , fromList
+                                                       , lookup )
+import           Data.Time.Units                       ( Millisecond
+                                                       , Second
+                                                       , getCPUTimeWithUnit
+                                                       , subTime ) 
+import           System.Random                         ( randomRIO )
+import           Control.Concurrent.MVar               ( newEmptyMVar
+                                                       , readMVar )
 
-import           Control.Concurrent.MVar
-import           Node.Node.Types
-import           Service.InfoMsg
+import           Node.Crypto                           ( verifyEncodeble )
+import           Node.Node.Types                       ( MsgToCentralActor(..) )
+import qualified Service.InfoMsg                       as I
 import           Service.System.Directory              (getKeyFilePath, getTime)
-import           Service.Transaction.Common            as B (getBalanceForKey,
-                                                             getBlockByHashDB,
-                                                             getChainInfoDB,
-                                                             getKeyBlockByHashDB,
-                                                             getLastTransactions,
-                                                             getTransactionByHashDB)
-import           Service.Transaction.Storage           (DBPoolDescriptor,
-                                                        getAllTransactionsDB,
-                                                        rHash)
-import           Service.Transaction.TransactionsDAG   (genNTx)
-import           Service.Types
-import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeJSON           ()
+import qualified Service.Transaction.Common            as B
+import           Service.Types                         ( Transaction(..)
+                                                       , Trans(..)
+                                                       , TransactionAPI
+                                                       , TransactionInfo
+                                                       , MicroblockBD
+                                                       , MicroblockAPI
+                                                       , MacroblockBD
+                                                       , MacroblockAPI
+                                                       , Common(..)
+                                                       , ChainInfo
+                                                       , FullChain
+                                                       , Hash(..)
+                                                       , DBPoolDescriptor
+                                                       , DBKey
+                                                       , MsgTo
+                                                       , CLIException(..)
+                                                       , InContainerChan
+                                                       , InfoMsg(..)
+                                                       , Currency(..) )
+import           Service.Types.PublicPrivateKeyPair    ( PublicKey
+                                                       , PrivateKey
+                                                       , Amount
+                                                       , KeyPair(..)
+                                                       , getPublicKey
+                                                       , getSignature
+                                                       , uncompressPublicKey
+                                                       , generateNewRandomAnonymousKeyPair )
 
-import           Control.Timeout
-import           Data.Time.Units                       (Second)
 
 type Result a = Either CLIException a
 
-data CLIException = WrongKeyOwnerException
-                  | NotImplementedException -- test
-                  | NoTransactionsForPublicKey
-                  | NoSuchPublicKeyInDB
-                  | NoSuchMicroBlockDB
-                  | NoSuchMacroBlockDB
-                  | NoSuchTransactionDB
-                  | NoClosedKeyBlockInDB
-                  | TransactionChanBusyException
-                  | OtherException
-  deriving Show
+getAllChain :: Common -> IO (Result [FullChain])
+getAllChain c = try $ B.getAllSproutKV c
 
-instance Exception CLIException
+getAllLedger :: Common -> IO (Result [(PublicKey, Amount)])
+getAllLedger c = try $ B.getAllLedgerKV c
+
+getAllMicroblocks :: Common -> IO (Result [(DBKey, MicroblockBD)])
+getAllMicroblocks c =  try $ B.getAllMicroblockKV c
+
+getAllKblocks :: Common -> IO (Result [(DBKey, MacroblockBD)])
+getAllKblocks c =  try $ B.getAllMacroblockKV c
+
+getAllTransactions :: Common -> IO (Result [(DBKey, TransactionInfo)])
+getAllTransactions c =  try $ B.getAllTransactionsKV c
+
+
 
 
 sendMessageTo :: MsgTo -> InChan MsgToCentralActor -> IO (Result ())
@@ -86,46 +115,47 @@ loadMessages :: InChan MsgToCentralActor -> IO (Result [MsgTo])
 loadMessages _ = return $ Left NotImplementedException
 
 
-getBlockByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Result MicroblockAPI)
-getBlockByHash db hash aInfoChan = try $ do
-  mb <- B.getBlockByHashDB db hash aInfoChan
+getBlockByHash :: Common -> Hash -> IO (Result MicroblockAPI)
+getBlockByHash c hash  = try $ do
+  mb <- B.getBlockByHashDB c hash
   case mb of
     Nothing -> throw NoSuchMicroBlockDB
     Just m  -> return m
 
 
-getKeyBlockByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Result MacroblockAPI)
-getKeyBlockByHash db (Hash h) aInfoChan = try $ do
-  mb <- B.getKeyBlockByHashDB db (Hash h) aInfoChan
+getKeyBlockByHash :: Common -> Hash -> IO (Result MacroblockAPI)
+getKeyBlockByHash common (Hash h)  = try $ do
+  mb <- B.getKeyBlockByHashDB common (Hash h)
   case mb of
     Nothing -> throw NoSuchMacroBlockDB
     Just m  -> return m
 
-getChainInfo :: DBPoolDescriptor -> InChan InfoMsg -> IO (Result ChainInfo)
-getChainInfo db aInfoChan = do
-  k <- B.getChainInfoDB db aInfoChan
-  return $ Right k
-  -- return $ Right $ ChainInfo 0 0 "" 0 0 0
 
-getTransactionByHash :: DBPoolDescriptor -> Hash -> InChan InfoMsg -> IO (Result TransactionInfo)
-getTransactionByHash db hash _ = try $ do
+getChainInfo :: Common -> IO (Result ChainInfo)
+getChainInfo c = do
+  Right <$> B.getChainInfoDB c
+
+
+
+getTransactionByHash :: Common -> Hash  -> IO (Result TransactionInfo)
+getTransactionByHash (Common db _) hash = try $ do
   tx <- B.getTransactionByHashDB db hash
   case tx of
     Nothing -> throw NoSuchTransactionDB
     Just t  -> return t
 
 
-getAllTransactions :: DBPoolDescriptor -> PublicKey -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
-getAllTransactions pool key _ = try $ do
-  tx <- getAllTransactionsDB pool key
+getAllTransactionsByWallet :: Common -> PublicKey -> IO (Result [TransactionAPI])
+getAllTransactionsByWallet c key = try $ do
+  tx <- B.getAllTransactionsDB c key
   case tx of
     [] -> throw NoTransactionsForPublicKey
     t  -> return t
 
 
-getPartTransactions :: DBPoolDescriptor -> PublicKey -> Int -> Int -> InChan MsgToCentralActor -> IO (Result [TransactionAPI])
-getPartTransactions pool key offset aCount _ = try $ do --return $ Left NotImplementedException
-  tx <- B.getLastTransactions pool key offset aCount
+getPartTransactions :: Common -> InContainerChan -> PublicKey -> Int -> Int -> IO (Result [TransactionAPI])
+getPartTransactions c inContainerChan key offset aCount = try $ do 
+  tx <- B.getLastTransactions c inContainerChan key offset aCount
   case tx of
     [] -> throw NoTransactionsForPublicKey
     t  -> return t
@@ -134,28 +164,34 @@ getPartTransactions pool key offset aCount _ = try $ do --return $ Left NotImple
 sendTrans :: Transaction -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result Hash)
 sendTrans tx ch aInfoCh = try $ do
   aExp <- (timeout (5 :: Second) $ do
-           sendMetrics tx aInfoCh
-           aMVar <- newEmptyMVar
-           cTime <- getTime
-           writeInChan ch $ NewTransaction (tx { _timestamp = Just cTime } ) aMVar
-           r <- readMVar aMVar
-           print r
-           case r of
-             True -> return $ rHash tx
-             _    -> throw TransactionChanBusyException
+           case _signature tx of
+            Just sign ->
+                 if verifyEncodeble pk sign (tx {_signature = Nothing})
+                 then do
+                   sendMetrics tx aInfoCh
+                   aMVar <- newEmptyMVar
+                   cTime <- getTime
+                   writeInChan ch $ NewTransaction (tx { _timestamp = Just cTime } ) aMVar
+                   r <- readMVar aMVar
+                   print r
+                   case r of
+                     True -> return $ B.rHash tx
+                     _    -> throw TransactionChanBusyException
+                 else
+                   throw TransactionInvalidSignatureException
+            _         -> throw TransactionInvalidSignatureException
           )
   case aExp of
     Just h  -> return $ Hash h
     Nothing -> throw TransactionChanBusyException
-
+ where pk = getPublicKey $ uncompressPublicKey $ _owner tx
 
 
 sendNewTrans :: Trans -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result Hash)
 sendNewTrans aTrans ch aInfoCh = do
-  let moneyAmount = Service.Types.txAmount aTrans :: Amount
+  let moneyAmount = txAmount aTrans :: Amount
   let receiverPubKey = recipientPubKey aTrans
   let ownerPubKey = senderPubKey aTrans
-  --timePoint <- getTime
   keyPairs <- getSavedKeyPairs
   let mapPubPriv = fromList keyPairs :: (Map PublicKey PrivateKey)
   case Data.Map.lookup ownerPubKey mapPubPriv of
@@ -182,12 +218,10 @@ getBalance descrDB pKey aInfoCh = try $ do
     stTime  <- getCPUTimeWithUnit :: IO Millisecond
     aBalance <- B.getBalanceForKey descrDB pKey
     endTime <- getCPUTimeWithUnit :: IO Millisecond
-    writeInChan aInfoCh $ Metric $ timing "cl.ld.time" (subTime stTime endTime)
+    writeInChan aInfoCh $ Metric $ I.timing "cl.ld.time" (subTime stTime endTime)
     case aBalance of
       Nothing -> throw NoSuchPublicKeyInDB
       Just b  -> return b
-    --putStrLn "There is no such key in database"
-    -- return result
 
 
 getSavedKeyPairs :: IO [(PublicKey, PrivateKey)]
@@ -210,34 +244,10 @@ getPublicKeys = try $ map fst <$> getSavedKeyPairs
 
 sendMetrics :: Transaction -> InChan InfoMsg -> IO ()
 sendMetrics (Transaction o r a _ _ _ _) m = do
-    writeInChan m $ Metric $ increment "cl.tx.count"
-    writeInChan m $ Metric $ set "cl.tx.wallet" o
-    writeInChan m $ Metric $ set "cl.tx.wallet" r
-    writeInChan m $ Metric $ gauge "cl.tx.amount" a
-
-
--- generateNTransactions :: ManagerMiningMsg a => QuantityTx -> Chan a -> Chan InfoMsg -> IO (Result ())
-generateNTransactions :: QuantityTx -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
-generateNTransactions qTx ch m = try $ do
-  tx <- genNTx qTx
-  mapM_ (\x -> do
-          aMVar <- newEmptyMVar
-          writeInChan ch $ NewTransaction x aMVar
-          sendMetrics x m
-        ) tx
-  putStrLn "Transactions are created"
-
-generateTransactionsForever :: InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result ())
-generateTransactionsForever ch m = try $ forever $ do
-                                quantityOfTranscations <- randomRIO (20,30)
-                                tx <- genNTx quantityOfTranscations
-                                mapM_ (\x -> do
-                                            aMVar <- newEmptyMVar
-                                            writeInChan ch $ NewTransaction x aMVar
-                                            sendMetrics x m
-                                       ) tx
-                                threadDelay (10^(6 :: Int))
-                                putStrLn ("Bundle of " ++ show quantityOfTranscations ++"Transactions was created")
+    writeInChan m $ Metric $ I.increment "cl.tx.count"
+    writeInChan m $ Metric $ I.set "cl.tx.wallet" o
+    writeInChan m $ Metric $ I.set "cl.tx.wallet" r
+    writeInChan m $ Metric $ I.gauge "cl.tx.amount" a
 
 
 -- safe way to write in chan

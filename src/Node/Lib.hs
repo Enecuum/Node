@@ -8,110 +8,83 @@ module Node.Lib where
 
 import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
-import              Control.Concurrent.MVar
+import           Control.Concurrent.MVar
 import           Control.Exception
 import           Control.Monad
-import qualified    Network.WebSockets                  as WS
-import           Data.Aeson
-import          Service.Chan
-import qualified Data.Text                              as T
+import           Node.DBActor
+import           Pending
+
+import           Data.Aeson                            as A
 import qualified Data.ByteString.Lazy                  as L
-import              Service.Network.WebSockets.Client
-import           Data.Maybe
 import           Data.IORef
+import           Data.Maybe
+import qualified Data.ByteString.Char8                 as B8
 import           Lens.Micro
 import           Network.Socket                        (tupleToHostAddress)
 import           Node.Data.Key
-import           Node.FileDB.FileServer
+import           Node.DataActor
 import           Node.Node.Config.Make
 import           Node.Node.Types
-import           Service.InfoMsg                       (InfoMsg)
+import           Node.NetLvl.Server
 import           Service.Network.Base
-import           Service.Transaction.Common            (DBPoolDescriptor (..),
-                                                        addMacroblockToDB,
-                                                        addMicroblockToDB)
-import           Service.Types                         (Microblock, Transaction)
+import           Service.Sync.SyncJson
+import           Service.Types
 import           System.Directory                      (createDirectoryIfMissing)
 import           System.Environment
-import           PoA.Types
+import           Node.ConnectManager
 
--- code examples:
--- http://book.realworldhaskell.org/read/sockets-and-syslog.html
--- docs:
--- https://github.com/ethereum/devp2p/blob/master/rlpx.md
--- https://github.com/ethereum/wiki/wiki/%C3%90%CE%9EVp2p-Wire-Protocol
--- https://www.stackage.org/haddock/lts-10.3/network-2.6.3.2/Network-Socket-ByteString.html
-
--- | Standart function to launch a node.
 startNode
-    :: DBPoolDescriptor
-    -> BuildConfig
-    -> InChan InfoMsg
-    -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ())
-    -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor) -> OutChan (Transaction, MVar Bool) -> InChan Microblock -> MyNodeId -> InChan FileActorRequest -> IO ())
-    -> IO (InChan MsgToCentralActor, OutChan MsgToCentralActor)
-startNode descrDB buildConf infoCh manager startDo = do
+  :: DBPoolDescriptor
+     -> BuildConfig
+     -> InChan InfoMsg
+     -> (InChan SyncEvent
+         -> (InChan MsgToCentralActor, OutChan MsgToCentralActor)
+         -> IORef NetworkNodeData
+         -> IO ())
+     -> ((InChan MsgToCentralActor, OutChan MsgToCentralActor)
+         -> OutChan (Transaction, MVar Bool)
+         -> InChan Microblock
+         -> MyNodeId
+         -> InChan (DataActorRequest Connect)
+         -> IO a)
+     -> IO (InChan MsgToCentralActor, OutChan MsgToCentralActor)
+startNode descrDB buildConf infoCh aManager startDo = do
 
-    --tmp
     createDirectoryIfMissing False "data"
 
-    managerChan <- newChan 128
-    (aMicroblockChan, outMicroblockChan) <- newChan 128
-    (aValueChan, aOutValueChan) <- newChan 128
-    (aTransactionChan, outTransactionChan) <- newChan 128
+
+    managerChan@(aIn, _)                        <- newChan 128
+    (aMicroblockChan, outMicroblockChan)        <- newChan 128
+    (aValueChan, aOutValueChan)                 <- newChan 128
+    (aTransactionChan, outTransactionChan)      <- newChan 128
+    (aInFileRequestChan, aOutFileRequestChan)   <- newChan 128
+    aPendingChan@(inChanPending, _)             <- newChan 128
+    (aInLogerChan, aOutLogerChan)               <- newChan 128
+    aSyncChan@(aInputSync, _)                   <- newChan 128
+    aDBActorChan                                <- newChan 128
+
     config  <- readNodeConfig
     bnList  <- readBootNodeList $ bootNodeList buildConf
-    (aInFileRequestChan, aOutFileRequestChan) <- newChan 128
-    void $ C.forkIO $ startFileServer aOutFileRequestChan
-    md      <- newIORef $ makeNetworkData config infoCh aInFileRequestChan aMicroblockChan aTransactionChan aValueChan
-    void . C.forkIO $ microblockProc descrDB outMicroblockChan aOutValueChan infoCh
-    void . C.forkIO $ manager managerChan md
+    (_, poa_p, _, _, _, _, _) <- getConfigParameters (config^.myNodeId) buildConf aIn
+
+    md  <- newIORef $ makeNetworkData config infoCh aInFileRequestChan aMicroblockChan aTransactionChan aValueChan
+    void . C.forkIO $ pendingActor aPendingChan aMicroblockChan outTransactionChan infoCh
+    void . C.forkIO $ netLvlServer (config^.myNodeId) poa_p aIn infoCh aInFileRequestChan inChanPending aInLogerChan
+    void . C.forkIO $ startDataActor aOutFileRequestChan
+    void . C.forkIO $ startDBActor descrDB outMicroblockChan aOutValueChan infoCh aDBActorChan aSyncChan
+    void . C.forkIO $ aManager aInputSync managerChan md
+    void . C.forkIO $ traficLoger aOutLogerChan
     void $ startDo managerChan outTransactionChan aMicroblockChan (config^.myNodeId) aInFileRequestChan
-    void $ C.forkIO $ connectManager (poaPort buildConf) bnList aInFileRequestChan
+
+    let MyNodeId aId = config^.myNodeId
+
+    void $ C.forkIO $ connectManager aSyncChan aDBActorChan aIn (poaPort buildConf) bnList aInFileRequestChan (NodeId aId) inChanPending infoCh aInLogerChan
     return managerChan
 
-
-
-connectManager :: PortNumber -> [Connect] -> InChan FileActorRequest -> IO ()
-connectManager aPortNumber aBNList aConnectsChan = do
-    forM_ aBNList $ \(Connect aBNIp aBNPort) -> do
-        void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
-            WS.sendTextData aConnect . encode $ AddToListOfConnectsRequest aPortNumber
-    aLoop aBNList
-  where
-    aLoop = \case
-        (Connect aBNIp aBNPort):aTailOfList -> do
-            aVar <- newEmptyMVar
-            writeInChan aConnectsChan $ NumberConnects aVar
-            aPotencialConnectNumber <- takeMVar aVar
-            when (aPotencialConnectNumber == 0) $ do
-                void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
-                    WS.sendTextData aConnect $ encode BNRequestConnects
-                    aMsg <- WS.receiveData aConnect
-                    let BNResponseConnects aConnects = fromJust $ decode aMsg
-                    writeInChan aConnectsChan $ AddToFile aConnects
-                C.threadDelay 1000000
-                aLoop (aTailOfList ++ [Connect aBNIp aBNPort])
-        _       -> return ()
-
-
-data AddToListOfConnectsRequest = AddToListOfConnectsRequest PortNumber
-
-instance ToJSON AddToListOfConnectsRequest where
-    toJSON (AddToListOfConnectsRequest aPort) = object [
-            "tag"  .= ("Action" :: T.Text)
-        ,   "type" .= ("AddToListOfConnects" :: T.Text)
-        ,   "port" .= fromEnum aPort
-      ]
-
-microblockProc :: DBPoolDescriptor -> OutChan Microblock -> OutChan Value -> InChan InfoMsg -> IO ()
-microblockProc descriptor aMicroblockCh aValueChan aInfoCh = do
-    void $ C.forkIO $ forever $ do
-        aMicroblock <- readChan aMicroblockCh
-        addMicroblockToDB descriptor aMicroblock aInfoCh
-    forever $ do
-        aValue <- readChan aValueChan
-        addMacroblockToDB descriptor aValue aInfoCh
+traficLoger :: OutChan B8.ByteString -> IO b
+traficLoger aOutChan = forever $ do
+    aMsg <- readChan aOutChan
+    appendFile "netLog.txt" $ B8.unpack aMsg ++ "\n"
 
 
 readNodeConfig :: IO NodeConfig
@@ -136,17 +109,40 @@ readBootNodeList conf = do
        toNormForm aList = return $ (\(b,c) -> Connect (tupleToHostAddress b) c)
           <$> aList
 
----
 
+getConfigParameters
+    :: Show a1
+    => a1
+    ->  BuildConfig
+    ->  InChan MsgToCentralActor
+    ->  IO (SimpleNodeBuildConfig, PortNumber, String, PortNumber, String, PortNumber, String)
+getConfigParameters aMyNodeId conf _ = do
+  snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case
+          Right item              -> return item
+          Left (_::SomeException) -> error "Please, specify simpleNodeBuildConfig"
 
+  poa_p   <- try (getEnv "poaPort") >>= \case
+          Right item              -> return $ read item
+          Left (_::SomeException) -> return $ poaPort conf
 
-mergeMBlocks :: [Microblock] -> [Microblock] -> [Microblock] -- new old result
-mergeMBlocks [] old = old
-mergeMBlocks (x:xs) olds = if containMBlock x olds
-    then mergeMBlocks xs olds
-    else mergeMBlocks xs (x : olds)
+  stat_h  <- try (getEnv "statsdHost") >>= \case
+          Right item              -> return item
+          Left (_::SomeException) -> return $ host $ statsdBuildConfig conf
 
+  stat_p  <- try (getEnv "statsdPort") >>= \case
+          Right item              -> return $ read item
+          Left (_::SomeException) -> return $ port $ statsdBuildConfig conf
 
-containMBlock :: Microblock -> [Microblock] -> Bool
-containMBlock el elements = or $ (==) <$> [el] <*> elements
--------------------------------------------------------
+  logs_h  <- try (getEnv "logHost") >>= \case
+          Right item              -> return item
+          Left (_::SomeException) -> return $ host $ logsBuildConfig conf
+
+  logs_p  <- try (getEnv "logPort") >>= \case
+          Right item              -> return $ read item
+          Left (_::SomeException) -> return $ port $ logsBuildConfig conf
+
+  log_id  <- try (getEnv "log_id") >>= \case
+          Right item              -> return item
+          Left (_::SomeException) -> return $ show aMyNodeId
+
+  return (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id)

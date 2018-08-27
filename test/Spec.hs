@@ -1,53 +1,42 @@
-{-# Language OverloadedStrings, PackageImports #-}
-import                  Node.Data.Data
-import                  Node.Crypto
-import                  Data.Serialize
-import                  Data.Maybe
-import                  Data.Word
-import                  Network.Socket
-import qualified        Data.ByteString.Lazy      as B
-import qualified        Data.ByteArray            as BA
-import                  Data.IORef
-import                  Crypto.PubKey.ECC.DH
-import                  Crypto.PubKey.ECC.ECDSA
-import                  Crypto.PubKey.ECC.Types
-import                  Crypto.Error
-import                  Crypto.PubKey.ECC.Generate
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports    #-}
 
-import                  Node.Lib
-import                  Boot.Boot
-import                  Boot.Types
-import                  Node.Node.Mining
-import                  Node.Node.Types
-import                  Service.Timer
-import                  Control.Monad
-import                  Data.Monoid
-import                  Control.Concurrent
-import                  Control.Concurrent.Chan
-import                  Control.Concurrent.Async
-
-import                  CLI.CLI
-
-import                  Service.HammingDistance
-import                  PoA
+import           Data.Aeson
+import qualified Data.ByteString.Char8      as BC
+import qualified Data.Serialize             as S (encode)
+import           Service.Transaction.Common
+import           Service.Types
+import           Test.Hspec                 (describe, hspec, it, shouldReturn)
 
 
 main :: IO ()
-main = undefined
+main = hspec $ do
+  describe "Basic DB Functionality" $ do
+    it "should retrieve n transactions for publickey" $  do
+      retrieveNTransactionsForPublickey
+      `shouldReturn` (Nothing)
 
--- проверить,
-{-
-ResponseNetLvlPackage
-    (RequestNetLvlPackage BroadcastListRequest
-        (PackageSignature
-            (MyNodeId 1)
-            (TimeSpec {sec = 1524216260, nsec = 508425014})
-            (Signature {sign_r = 1, sign_s = 1})))
-    (BroadcastListResponse
-        (NodeInfoListLogicLvl [])
-        (NodeInfoListNetLvl [(NodeId 1,1,1)]))
-        (PackageSignature
-            (MyNodeId 1)
-            (TimeSpec {sec = 1, nsec = 1})
-            (Signature {sign_r = 1, sign_s = 1}))
--}
+
+retrieveNTransactionsForPublickey :: IO (Maybe TransactionInfo)
+retrieveNTransactionsForPublickey = return Nothing
+
+
+parseTXInfoJson :: IO (Maybe TransactionInfo)
+parseTXInfoJson = do
+  tx <- genNTx 5
+  let ti = TransactionInfo (tx !! 0) (BC.pack "123") 2 False
+  let eti = Data.Aeson.encode ti
+  print eti
+  let res = Data.Aeson.decode eti :: Maybe TransactionInfo
+  print $ res
+  return res
+
+
+parseTXInfoBin :: IO TransactionInfo
+parseTXInfoBin = do
+  tx <- genNTx 5
+  let ti = TransactionInfo (tx !! 0) (BC.pack "123") 2 False
+  let eti = S.encode ti
+  print eti
+  let res = decodeThis "TransactionInfo" eti
+  return res

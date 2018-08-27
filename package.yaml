@@ -58,6 +58,7 @@ dependencies:
 - microlens-mtl
 - microlens-th
 - microlens-ghc
+- process
 - extra
 - time
 - clock
@@ -99,7 +100,9 @@ dependencies:
 - cryptohash-sha256
 - derive
 - bytestring-conversion
-
+- hspec
+- HUnit
+- hspec-contrib
 
 library:
   source-dirs: src

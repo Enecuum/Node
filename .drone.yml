@@ -37,7 +37,7 @@ pipeline:
     image: dev.enecuum.com:2087/testnet/testnet-master:latest
     when:
       branch:
-        - master
+        - Dev
       status:
         - success
       event:

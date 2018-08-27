@@ -11,7 +11,12 @@ module LightClient.RPC (
         getPartTxs,
         getChainInfo,
 
---test
+        getAllChainRPC,
+        getAllLedgerRPC,
+        getAllMicroblocksRPC,
+        getAllKblocksRPC,
+        getAllTransactionsRPC,
+
         newMsgBroadcast,
         newMsgTo,
         loadNewMsg,
@@ -51,14 +56,13 @@ reqGetTxSig :: Signature (Hash ::: ()) TransactionInfo
 reqGetTxSig = Signature "enq_getTransactionByHash" ("hash" ::: ())
 
 reqGetAllTxsSig :: Signature (PublicKey ::: ()) [TransactionAPI]
-reqGetAllTxsSig = Signature "enq_getAllTransactions" ("address" ::: ())
+reqGetAllTxsSig = Signature "enq_getAllTransactionsByWallet" ("address" ::: ())
 
 reqGetPartTxsSig :: Signature (PublicKey ::: Integer ::: Integer ::: ()) [TransactionAPI]
 reqGetPartTxsSig = Signature "enq_getTransactionsByWallet" ("address" ::: "offset" ::: "count" ::: ())
 
 reqChainInfoSig :: Signature () ChainInfo
 reqChainInfoSig = Signature "enq_getChainInfo" ()
-
 --test
 newMsgBroadcastSig :: Signature (String ::: ()) ()
 newMsgBroadcastSig = Signature "send_message_broadcast" ("x" ::: ())
@@ -93,6 +97,22 @@ getPartTxs h = toFunction (connectionWithTimeOut h) reqGetPartTxsSig
 
 getChainInfo :: WS.Connection -> Result ChainInfo
 getChainInfo h = toFunction (connectionWithTimeOut h) reqChainInfoSig
+
+getAllChainRPC :: WS.Connection -> Result [FullChain]
+getAllChainRPC h = toFunction (connectionWithTimeOut h) (Signature "enq_getAllChain" ())
+
+getAllLedgerRPC :: WS.Connection -> Result [(DBKey, Amount)]
+getAllLedgerRPC h = toFunction (connectionWithTimeOut h) (Signature "enq_getAllLedger" ())
+
+getAllMicroblocksRPC :: WS.Connection -> Result [(DBKey, MicroblockBD)]
+getAllMicroblocksRPC h = toFunction (connectionWithTimeOut h) (Signature "enq_getAllMicroblocks" ())
+
+getAllKblocksRPC :: WS.Connection -> Result [(DBKey, MacroblockBD)]
+getAllKblocksRPC h = toFunction (connectionWithTimeOut h) (Signature  "enq_getAllKblocks" ())
+
+getAllTransactionsRPC :: WS.Connection -> Result [(DBKey, TransactionInfo)]
+getAllTransactionsRPC h = toFunction (connectionWithTimeOut h) (Signature "enq_getAllTransactions" ())
+
 
 
 --test

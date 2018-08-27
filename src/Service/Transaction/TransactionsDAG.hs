@@ -1,27 +1,25 @@
-{-# LANGUAGE GADTs, DisambiguateRecordFields, DuplicateRecordFields, ExistentialQuantification, FlexibleInstances #-}
+{-# LANGUAGE DisambiguateRecordFields  #-}
+{-# LANGUAGE DuplicateRecordFields     #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances         #-}
+{-# LANGUAGE GADTs                     #-}
 
 module Service.Transaction.TransactionsDAG where
 
-import Data.Graph.Inductive
-import Control.Monad (replicateM)
-import Service.Types.PublicPrivateKeyPair
-import Service.System.Directory (getTime)
-import Service.Types
-import Service.Transaction.Skelet (getSkeletDAG)
-import System.Random
+import           Control.Monad                      (replicateM)
+import           Data.Graph.Inductive
+import           Service.System.Directory           (getTime)
+import           Service.Transaction.Skelet         (getSkeletDAG)
+import           Service.Types
+import           Service.Types.PublicPrivateKeyPair
+import           System.Random
 type QuantityOfTransactions = Int
 
 getLabsNodes :: [LNode a] -> [a]
 getLabsNodes = map snd
 
-getLabsEdges :: Gr a b -> [b]
-getLabsEdges = map (\(_,_,l) -> l) . labEdges
 
-
-addLabels :: [((a, b1), (b2, b3))] -> [c] -> [(a, b2, c)]
-addLabels = zipWith (\((n1,_), (n2,_)) l -> (n1, n2, l))
-
-getSignTransactions :: Int -> [LNode KeyPair] -> (Int, Int) -> IO [Transaction] --[LEdge Transaction]
+getSignTransactions :: Int -> [LNode KeyPair] -> (Int, Int) -> IO [Transaction] 
 getSignTransactions quantityOfTx keys'ns (x,y) = do
   let skel = getSkeletDAG keys'ns
   let n    = length skel
@@ -34,10 +32,10 @@ getSignTransactions quantityOfTx keys'ns (x,y) = do
               p <- points, ((_, KeyPair pub1 _), (_, KeyPair pub2 _) ) <- skel, aSum <- sums, sign <- signs, uuid <- uuids ]
   return (take quantityOfTx sts)
 
-getTransactions :: [KeyPair] -> QuantityOfTransactions-> IO [Transaction] --IO DAG
+
+getTransactions :: [KeyPair] -> QuantityOfTransactions-> IO [Transaction] 
 getTransactions keys quantityTx = do
   let quantityRegistereKeyTx       = length keys
-  --let pubs    = map (\(KeyPair pub _) -> pub) keys
   let keys'ns = zip [1..quantityRegistereKeyTx] keys
   let quantityBasicTx = quantityTx-quantityRegistereKeyTx
   basicTx <- loopTransaction keys'ns quantityBasicTx
@@ -55,21 +53,12 @@ loopTransaction keys'ns requiredQuantityOfTransactions = loop []
 
 
 -- generate N transactions
-genNNTx :: Int -> IO [Transaction]
-genNNTx quantityOfTx = do
-    let ratioKeysToTx = 3
-        qKeys = div quantityOfTx ratioKeysToTx
-        quantityOfKeys = if qKeys < 2 then 2 else qKeys
-
-    keys <- replicateM quantityOfKeys generateNewRandomAnonymousKeyPair
-    getTransactions keys quantityOfTx
-
-
--- generate N transactions
 genNTx :: Int -> IO [Transaction]
 genNTx n = do
    let quantityOfKeys = if qKeys <= 2 then 2 else qKeys
                         where qKeys = div n 3
    keys <- replicateM quantityOfKeys generateNewRandomAnonymousKeyPair
    tx <- getTransactions keys n
-   return tx
+   let nTx = take n $ cycle tx
+   return nTx
+

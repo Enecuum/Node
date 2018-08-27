@@ -1,4 +1,6 @@
-{-# LANGUAGE OverloadedStrings, LambdaCase, ScopedTypeVariables #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Service.InfoMsg (
   withRate,
@@ -9,61 +11,30 @@ module Service.InfoMsg (
   add,
   timing,
   set,
-  serveInfoMsg,
-  InfoMsg(..),
-  MsgType(..),
-  LogingTag(..)
+  serveInfoMsg
 )  where
 
-import qualified Data.ByteString.Char8 as BS
-import Network.Socket.ByteString (sendTo)
-import Data.List
-import Node.BaseFunctions
+import qualified Data.ByteString.Char8                 as BS
+import           Data.List
+import           Network.Socket.ByteString             (sendTo)
+import           Node.BaseFunctions
 
-import System.Clock()
-import Service.Network.Base
-import Service.Network.TCP.Client
-import Service.Metrics.Statsd
+import           Service.Types                         ( InfoMsg(..), LoggingTag(..) )
+import           Service.Metrics.Statsd
+import           Service.Network.Base
+import           Service.Network.TCP.Client
+import           System.Clock                          ()
 
-import Control.Monad (void, forever)
-import              Control.Concurrent.Chan.Unagi.Bounded
-import Control.Exception (try, SomeException)
-
-
-data MsgType = Info | Warning | Error
-
-data LogingTag
-    = ConnectingTag
-    | LoadingShardsTag
-    | BroadcatingTag
-    | BootNodeTag
-    | ShardingLvlTag
-    | NetLvlTag
-    | MiningLvlTag
-    | ServePoATag
-    | ServerBootNodeTag
-    | GCTag
-    | PendingTag
-    | RegularTag
-    | InitTag
-    | BDTag
-  deriving (Show, Enum)
-
-
-instance Show MsgType where
-    show Info   = "info"
-    show Warning = "warning"
-    show Error  = "error"
-
-
-data InfoMsg = Metric String | Log [LogingTag] MsgType String
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Exception                     (SomeException, try)
+import           Control.Monad                         (forever, void)
 
 
 sendToServer :: ClientHandle -> String -> IO ()
 sendToServer h s = void $ sendTo (clientSocket h) (BS.pack s) (clientAddress h)
 
-serveInfoMsg :: ConnectInfo -> ConnectInfo -> OutChan InfoMsg -> String -> IO ()
-serveInfoMsg statsdInfo logsInfo chan aId = do
+serveInfoMsg :: ConnectInfo -> ConnectInfo -> OutChan InfoMsg -> String -> Bool -> IO ()
+serveInfoMsg statsdInfo logsInfo chan aId stdout_log = do
     eithMHandler <- try (openConnect (host statsdInfo) (port statsdInfo))
 
     case eithMHandler of
@@ -77,7 +48,7 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
       Right lHandler              -> do
             putStrLn "Logs server connected"
             sendToServer lHandler $ "+node|" ++  aId ++ "|" ++
-                      intercalate "," (show <$> [ConnectingTag .. InitTag]) ++ "\r\n"
+                      intercalate "," (show <$> [ConnectingTag .. BDTag]) ++ "\r\n"
 
     undead (putStrLn "dead of log :))) ") $ forever $ do
         m <- readChan chan
@@ -93,8 +64,10 @@ serveInfoMsg statsdInfo logsInfo chan aId = do
                                    ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
 
                          aFileString = "  !  " ++ aId ++ "|" ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
-                     putStrLn aFileString
                      appendFile "log.txt" aFileString
                      case eithLHandler of
                           Left  _        -> return ()
                           Right lHandler -> sendToServer lHandler aString
+                     if stdout_log 
+                     then putStrLn aFileString
+                     else return ()

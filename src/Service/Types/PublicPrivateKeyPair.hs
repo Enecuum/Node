@@ -1,10 +1,8 @@
-{-# LANGUAGE
-        PackageImports
-    ,   DeriveGeneric
-    ,   GeneralizedNewtypeDeriving
-    ,   StandaloneDeriving
-    ,   TypeSynonymInstances
-  #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PackageImports             #-}
+{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -15,6 +13,7 @@ module Service.Types.PublicPrivateKeyPair(
     ,   uncompressPublicKey
     ,   getPublicKey
     ,   fromPublicKey256k1
+    ,   publicKey256k1
     ,   PublicKey(..)
     ,   PrivateKey(..)
     ,   KeyPair(..)
@@ -22,23 +21,23 @@ module Service.Types.PublicPrivateKeyPair(
     ,   generateNewRandomAnonymousKeyPair
   ) where
 
-import Data.Maybe
-import GHC.Generics
-import Service.Types.SerializeInstances
+import           Data.Maybe
+import           GHC.Generics
+import           Service.Types.SerializeInstances        ()
 
-import            Data.Serialize
-import "cryptonite" Crypto.Random
-import "cryptonite" Crypto.PubKey.ECC.Types
-import "cryptonite" Crypto.Hash.Algorithms
-import "cryptonite" Crypto.PubKey.ECC.Generate
-import qualified "cryptonite"  Crypto.PubKey.ECC.ECDSA as ECDSA
+import           "cryptonite" Crypto.Hash.Algorithms
+import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA    as ECDSA
+import           "cryptonite" Crypto.PubKey.ECC.Generate
+import           "cryptonite" Crypto.PubKey.ECC.Types
+import           "cryptonite" Crypto.Random
+import           Data.Serialize
 
-import qualified    Data.ByteString.Char8 as BC
-import              Data.ByteString.Base58
+import           Data.ByteString.Base58
+import qualified Data.ByteString.Char8                   as BC
 
 
-import              Math.NumberTheory.Moduli
-import Data.Int (Int64)
+import           Data.Int                                (Int64)
+import           Math.NumberTheory.Moduli
 
 type Amount = Int64
 
@@ -48,7 +47,7 @@ compressPublicKey :: ECDSA.PublicKey -> PublicKey
 compressPublicKey pub
     | c == y = publicKey256k1 (x*2)
     | d == y = publicKey256k1 (x*2+1)
-    | otherwise = error "error"
+    | otherwise = error "Can not compress PublicKey"
   where
     (Point x y) = ECDSA.public_q pub
     (c, d) = curveK (ECDSA.public_curve pub) x
@@ -70,12 +69,12 @@ curveK aCurve x = (c, d)
     d = prime - c
 
 publicKey256k1 :: Integer -> PublicKey
-publicKey256k1 = PublicKey256k1 . CompactInteger
+publicKey256k1 = PublicKey256k1
 
 fromPublicKey256k1 :: PublicKey -> Integer
-fromPublicKey256k1 (PublicKey256k1 (CompactInteger i)) = i
+fromPublicKey256k1 (PublicKey256k1 i) = i
 
-newtype PublicKey  = PublicKey256k1 CompactInteger deriving (Generic, Serialize, Eq, Ord, Num, Enum)
+newtype PublicKey  = PublicKey256k1 Integer deriving (Generic, Serialize, Eq, Ord, Num, Enum)
 newtype PrivateKey = PrivateKey256k1 Integer deriving (Generic, Serialize, Eq, Ord)
 
 
@@ -115,4 +114,4 @@ generateNewRandomAnonymousKeyPair = do
 
 -- | Previous version of function was replaced by more generic function
 getSignature :: (Serialize msg, MonadRandom m) => PrivateKey -> msg -> m ECDSA.Signature
-getSignature priv msg = ECDSA.sign (getPrivateKey priv) MD2 (encode msg)
+getSignature priv msg = ECDSA.sign (getPrivateKey priv) SHA3_256 (encode msg)

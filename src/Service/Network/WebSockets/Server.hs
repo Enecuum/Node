@@ -1,6 +1,8 @@
 {-#Language Strict#-}
 module Service.Network.WebSockets.Server (runServer) where
 
+
+import              Node.BaseFunctions
 import              Service.Network.Base
 import              Control.Concurrent
 import              Control.Monad
@@ -12,8 +14,8 @@ import qualified    Network.Socket  as S
 
 
 -- | Run a server app.
-runServer :: PortNumber -> (HostAddress -> ServerApp) -> IO ()
-runServer aPort app = S.withSocketsDo $
+runServer :: PortNumber -> String -> (HostAddress -> ServerApp) -> IO ()
+runServer aPort aErrorMsg app = undead (putStrLn $ "Server will be reload:" ++ aErrorMsg) $ S.withSocketsDo $
   bracket
   (makeListenSocket "0" (fromEnum aPort))
   S.close

@@ -1,70 +1,22 @@
-{-# LANGUAGE ScopedTypeVariables, PackageImports, LambdaCase #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE PackageImports      #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Node.Crypto where
 
-import              Node.Data.Key hiding (PublicKey(..))
+import           Node.Data.Key            hiding (PublicKey (..))
 
-import              Crypto.Error
-import              Crypto.Cipher.Types
-import              Crypto.Random.Types
-import "cryptonite" Crypto.Hash
-import              Crypto.PubKey.ECC.DH
-import              Crypto.PubKey.ECC.ECDSA
+import           Crypto.Cipher.Types
+import           Crypto.Error
+import           "cryptonite" Crypto.Hash
+import           Crypto.PubKey.ECC.DH
+import           Crypto.PubKey.ECC.ECDSA
+import           Crypto.Random.Types
 
-import              Crypto.Cipher.AES   (AES256)
-import              Data.ByteArray (unpack)
+import           Crypto.Cipher.AES        (AES256)
+import           Data.ByteArray           (unpack)
 
-import              Data.ByteString (ByteString, pack)
-import              Data.Serialize
-{-
-makeConnectingRequest
-    ::  MyNodeId
-    ->  PublicPoint
-    ->  PortNumber
-    ->  PrivateKey
-    ->  IO Package
-makeConnectingRequest aMyNodeId aPublicPoint aPortNumber aPrivateKey =
-    Unciphered . ConnectingRequest aPublicPoint aMyNodeId aPortNumber<$>
-        signEncodeble aPrivateKey
-            (aPublicPoint, aMyNodeId, aPortNumber, "ConnectingRequest")
-
---
-verifyConnectingRequest :: Package -> Bool
-verifyConnectingRequest = \case
-    Unciphered
-        (ConnectingRequest aPublicPoint aMyNodeId aPortNumber aSignature) ->
-            verifyEncodeble (idToKey $ toNodeId aMyNodeId)
-                aSignature
-                    (aPublicPoint, aMyNodeId, aPortNumber, "ConnectingRequest")
-    _ -> False
-
-
-disconnectRequest :: Package
-disconnectRequest = Unciphered $ DisconnectRequest []
-
-
-makeCipheredPackage :: Ciphered -> StringKey -> CryptoFailable Package
-makeCipheredPackage aCiphered aStringKey = do
-    encryptedMsg <- encrypt aStringKey $ encode aCiphered
-    pure $ Ciphered (fromByteString encryptedMsg)
-
-
-makeBroadcastRequest :: BroadcastThing -> PrivateKey -> MyNodeId -> IO Ciphered
-makeBroadcastRequest aBroadcastThing aPrivateKey aMyNodeId = do
-    aTime       <- getTime Realtime
-    aSignature  <- signEncodeble aPrivateKey (aMyNodeId, aTime, aBroadcastThing)
-    pure $ BroadcastRequest
-        (PackageSignature aMyNodeId aTime aSignature)
-        aBroadcastThing
-
-
-decryptChipred :: StringKey -> CipheredString -> Maybe Ciphered
-decryptChipred aSecretKey aChipredString = case decode <$> aDecryptedString of
-    Just (Right aChipred) -> Just aChipred
-    _                     -> Nothing
-  where
-    aDecryptedString = maybeCryptoError $
-        encrypt aSecretKey (toByteString aChipredString)
--}
+import           Data.ByteString          (ByteString, pack)
+import           Data.Serialize
 
 verifyEncodeble :: Serialize msg => PublicKey -> Signature -> msg -> Bool
 verifyEncodeble aPublicKey aSignature aMsg = verify SHA3_256
