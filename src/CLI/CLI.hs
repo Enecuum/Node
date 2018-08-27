@@ -17,31 +17,27 @@ module CLI.CLI (
   ) where
 
 import qualified CLI.Common                            as C
-import           Control.Concurrent.Chan.Unagi.Bounded ( InChan )
+import           Control.Concurrent.Chan.Unagi.Bounded (InChan)
 import           Control.Monad                         (forever, mapM_)
-import           Data.DeriveTH                         ( derive
-                                                       , makeIs )
+import           Data.DeriveTH                         (derive, makeIs)
 import           Data.List.Split                       (splitOn)
-import           Node.Node.Types                       ( MsgToCentralActor )
-import           Service.Types                         ( Trans(..)
-                                                       , Common(..)
-                                                       , Hash(..)
-                                                       , DBPoolDescriptor
-                                                       , MsgTo
-                                                       , InContainerChan
-                                                       , InfoMsg(..)
-                                                       , PartWalletReq(..) )
+import           Node.Node.Types                       (MsgToCentralActor)
+import           Service.System.Version                (version)
+import           Service.Types                         (Common (..),
+                                                        DBPoolDescriptor,
+                                                        Hash (..),
+                                                        InContainerChan,
+                                                        InfoMsg (..), MsgTo,
+                                                        PartWalletReq (..),
+                                                        Trans (..))
 import           Service.Types.PublicPrivateKeyPair    (PublicKey)
-import           System.Console.GetOpt                 ( OptDescr
-                                                       , getOpt
-                                                       , ArgDescr(..)
-                                                       , OptDescr(..)
-                                                       , ArgOrder(..)
-                                                       , usageInfo )
-
+import           System.Console.GetOpt                 (ArgDescr (..),
+                                                        ArgOrder (..), OptDescr,
+                                                        OptDescr (..), getOpt,
+                                                        usageInfo)
 
 data Flag = Version | Help | Key | Send Trans
-          | ShowKey | Balance PublicKey 
+          | ShowKey | Balance PublicKey
           | Block Hash | MBlock Hash | Tx Hash | Wallet PublicKey | PartWallet PartWalletReq
           | SendMessageBroadcast String | SendMessageTo MsgTo | LoadMessages
           | Microblocks | Txs | AllLedger | Kblocks | Chain | Tables
@@ -117,8 +113,9 @@ serveCLI descrDB ch aInfoCh aContChan = do
               (Microblocks : _)                 -> C.getAllMicroblocks (Common descrDB aInfoCh) >>= handle
               (Kblocks : _)                     -> C.getAllKblocks (Common descrDB aInfoCh) >>= handle
               (Txs : _)                         -> C.getAllTransactions (Common descrDB aInfoCh) >>= handle
- 
+
               _                                 -> putStrLn $ usageInfo "Usage: " options
+
 
 
           handle :: Show a => C.Result a -> IO ()
@@ -130,5 +127,4 @@ serveCLI descrDB ch aInfoCh aContChan = do
           handleList (Right a)  = mapM_ print a
 
 printVersion :: IO ()
-printVersion = putStrLn ("--" ++ "2.0.0" ++ "--")
-
+printVersion = putStrLn $ "Version: " ++ $(version)

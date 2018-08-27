@@ -23,7 +23,8 @@ module Service.Transaction.Common
   getAllSproutKV,
   getAllTransactionsKV,
   getMicroblocks,
-  getKeyBlock
+  getKeyBlock,
+  decodeThis
   )
   where
 import           Service.Transaction.API             (getAllLedgerKV,

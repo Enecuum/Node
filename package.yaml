@@ -101,6 +101,8 @@ dependencies:
 - derive
 - bytestring-conversion
 - hspec
+- HUnit
+- hspec-contrib
 
 library:
   source-dirs: src
