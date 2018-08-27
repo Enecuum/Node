@@ -19,7 +19,7 @@ import           Data.List
 import           Network.Socket.ByteString             (sendTo)
 import           Node.BaseFunctions
 
-import           Service.Types                         ( InfoMsg(..), MsgType(..), LoggingTag(..) )
+import           Service.Types                         ( InfoMsg(..), LoggingTag(..) )
 import           Service.Metrics.Statsd
 import           Service.Network.Base
 import           Service.Network.TCP.Client
