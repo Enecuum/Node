@@ -28,7 +28,6 @@ import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           GHC.Generics
 import           Lens.Micro.TH
 import           Node.DataActor
-import           Service.InfoMsg                       (InfoMsg (..))
 import           Service.Types.PublicPrivateKeyPair
 
 data CLIException = ValueOfChainIsNotNothing String
@@ -115,6 +114,36 @@ instance Read PartWalletReq where
              [f1, f2, f3] ->
                  [(PartWalletReq (read f1) (read f2) (read f3), [])]
              x -> error $ "Invalid number of fields in input: " ++ show x
+
+
+data MsgType = Info | Warning | Error
+
+data LoggingTag
+    = ConnectingTag
+    | LoadingShardsTag
+    | BroadcatingTag
+    | BootNodeTag
+    | ShardingLvlTag
+    | NetLvlTag
+    | MiningLvlTag
+    | KeyBlockTag
+    | ServePoATag
+    | ServerBootNodeTag
+    | GCTag
+    | PendingTag
+    | RegularTag
+    | InitTag
+    | SyncTag
+    | BDTag
+  deriving (Show, Enum)
+
+
+instance Show MsgType where
+    show Info    = "info"
+    show Warning = "warning"
+    show Error   = "error"
+
+data InfoMsg = Metric String | Log [LoggingTag] MsgType String
 
 
 

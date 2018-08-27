@@ -13,8 +13,6 @@ import           Data.Maybe
 import qualified Data.Serialize                        as S (encode)
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
-import           Service.InfoMsg                       (LogingTag (..),
-                                                        MsgType (..))
 import           Service.Sync.SyncJson
 import           Service.Sync.SyncTypes
 import           Service.Transaction.Balance

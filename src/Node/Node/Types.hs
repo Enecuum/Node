@@ -32,8 +32,7 @@ import           Data.Scientific                       (Scientific, toRealFloat)
 import           Node.Data.Key
 import           Node.DataActor
 import           Node.NetLvl.Messages
-import           Service.InfoMsg
-import           Service.Types                         (Microblock, Transaction)
+import           Service.Types                         (Microblock, Transaction, InfoMsg)
 import qualified Sharding.Types.Node                   as N
 
 

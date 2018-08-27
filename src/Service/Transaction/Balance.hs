@@ -39,9 +39,6 @@ import qualified Data.Set                              as Set
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           Node.Data.GlobalLoging
 import           Service.Chan
-import           Service.InfoMsg                       (InfoMsg (..),
-                                                        LogingTag (..),
-                                                        MsgType (..))
 import           Service.Sync.SyncJson
 import           Service.Transaction.Decode
 import           Service.Transaction.Sprout
