@@ -26,7 +26,6 @@ import           Node.DataActor
 import           Node.Node.Config.Make
 import           Node.Node.Types
 import           Node.NetLvl.Server
-import           Service.InfoMsg
 import           Service.Network.Base
 import           Service.Sync.SyncJson
 import           Service.Types
@@ -51,7 +50,6 @@ startNode
      -> IO (InChan MsgToCentralActor, OutChan MsgToCentralActor)
 startNode descrDB buildConf infoCh aManager startDo = do
 
-    --tmp
     createDirectoryIfMissing False "data"
 
 
@@ -111,7 +109,6 @@ readBootNodeList conf = do
        toNormForm aList = return $ (\(b,c) -> Connect (tupleToHostAddress b) c)
           <$> aList
 
--------------------------------------------------------
 
 getConfigParameters
     :: Show a1

@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, DeriveGeneric, ScopedTypeVariables, MultiWayIf #-}
-
+-- Not used: not valid for TestNet
 module Sharding.ShardDB.ShardIndex where
 {-
 data ShardExistIndex   = ShardExistIndex {

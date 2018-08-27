@@ -19,7 +19,7 @@ import qualified Network.WebSockets                    as WS
 import           Node.Data.GlobalLoging
 import           Node.DataActor
 import           Node.NetLvl.Messages
-import           Service.InfoMsg                       as I
+import           Service.Types                         ( InfoMsg(..), LoggingTag(..), MsgType(..) )
 import           Service.Network.Base
 import           Service.Network.WebSockets.Client
 import           Service.Network.WebSockets.Server

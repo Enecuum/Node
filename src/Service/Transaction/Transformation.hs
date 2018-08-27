@@ -24,7 +24,6 @@ getTeamKeysForMicroblock :: Common -> HashOfKeyBlock -> IO [PublicKey]
 getTeamKeysForMicroblock (Common db i) aHash = do
   mb <- getKeyBlockByHash (Common db i) (Hash aHash)
   case mb of Nothing -> do
-               -- writeLog aInfoChan [BDTag] Error ("No Team Keys For Key block " ++ show aHash)
                return []
              Just r -> return $ _teamKeys (r :: MacroblockBD)
 
@@ -45,7 +44,6 @@ getTxs c mb = do
           case maybeTx of
             Nothing -> throw $ NoSuchTransactionForHash ("hash: " ++ show h)
             Just j  -> return j
--------------------------
 
 
 
@@ -58,7 +56,6 @@ tMicroblockBD2MicroblockAPI c m@MicroblockBD {..} = do
             _nextMicroblock = Nothing,
             _keyBlock,
             _signAPI = _signBD,
-            -- _teamKeys = teamKeys,
             _publisher,
             _transactionsAPI = txAPI
             }
@@ -71,11 +68,9 @@ tMicroblockBD2Microblock c m@MicroblockBD {..} = do
   return Microblock {
   _keyBlock,
   _sign          = _signBD,
-  -- _teamKeys,
   _teamKeys = aTeamkeys,
   _publisher,
   _transactions  = tx
-  -- _numOfBlock
   }
 
 
@@ -114,10 +109,8 @@ tMicroblock2MicroblockBD :: Microblock -> MicroblockBD
 tMicroblock2MicroblockBD Microblock {..} = MicroblockBD {
   _keyBlock,
   _signBD = _sign,
-  -- _teamKeys,
   _publisher,
   _transactionsHashes = map rHashT _transactions
-  -- _numOfBlock = 0
   }
 
 

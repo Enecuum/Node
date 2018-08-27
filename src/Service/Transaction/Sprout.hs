@@ -5,7 +5,6 @@ module Service.Transaction.Sprout where
 import           Data.Maybe
 import           Service.Sync.SyncTypes
 import           Service.Transaction.Decode
--- import           Service.Transaction.Storage
 import           Service.Types
 
 findChain :: Common -> Number -> BranchOfChain -> IO (Number, Maybe HashOfKeyBlock)
