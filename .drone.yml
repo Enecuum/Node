@@ -33,43 +33,11 @@ pipeline:
       event:
         - push
         - tag
-  deploy-bootnode-master:
-    image: peloton/drone-rancher
-    url: https://testnet.enecuum.com:2096
-    secrets:
-      - source: rancher_access_key
-        target: PLUGIN_ACCESS_KEY
-      - source: rancher_secret_key
-        target: PLUGIN_SECRET_KEY
-    docker_image: dev.enecuum.com:2087/testnet/node:latest
-    service: bootnode/bootnode-master
-    batch_size: 1
-    confirm: true
-    timeout: 240
+  deploy-master:
+    image: dev.enecuum.com:2087/testnet/testnet-master:latest
     when:
       branch:
-        - master
-      status:
-        - success
-      event:
-        - push
-        - tag
-  deploy-node-master:
-    image: peloton/drone-rancher
-    url: https://testnet.enecuum.com:2096
-    secrets:
-      - source: rancher_access_key
-        target: PLUGIN_ACCESS_KEY
-      - source: rancher_secret_key
-        target: PLUGIN_SECRET_KEY
-    docker_image: dev.enecuum.com:2087/testnet/node:latest
-    service: node/node-dev
-    batch_size: 14
-    confirm: true
-    timeout: 240
-    when:
-      branch:
-        - master
+        - Dev
       status:
         - success
       event:

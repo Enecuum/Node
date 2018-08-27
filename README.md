@@ -18,6 +18,7 @@ Node relies on actors. The central part of a node is the governing actor. It sto
 <br/>
 <br/>
 
+
 ## Build and Install
 
 ### Install Haskell Stack
@@ -135,6 +136,7 @@ Hint: setting `enableIP` to `0.0.0.0` or leaving it blank allows any IP addresse
 
 <br/>
 <br/>
+
 
 ## JSON-RPC API for Simple Node
 
