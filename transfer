@@ -1,0 +1,4 @@
+#!/bin/sh
+
+if [ $# -eq 0 ]; then echo -e "No arguments specified. Usage:\necho transfer /tmp/test.md"; return 1; fi
+curl -H "Max-Downloads: 1" -H "Max-Days: 1" --progress-bar --upload-file "$1" "https://transfer.sh/" && echo -e "\n"
