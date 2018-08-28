@@ -1,5 +1,5 @@
 {-# Language Strict, LambdaCase, ScopedTypeVariables #-}
-module Service.Network.WebSockets.Client (runClient) where
+module Enecuum.Legacy.Service.Network.WebSockets.Client (runClient) where
 
 import              Network.WebSockets hiding (runClientWith, runClient)
 import qualified    Network.Socket                as S

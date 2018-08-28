@@ -1,13 +1,13 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Sharding.Types.ShardLogic where
+module Enecuum.Legacy.Sharding.Types.ShardLogic where
 
-import              Sharding.Types.ShardTypes
-import              Node.Crypto()
+import              Enecuum.Legacy.Sharding.Types.ShardTypes
+import              Enecuum.Legacy.Node.Crypto()
 
 import              Data.Serialize
-import              Service.Types (Hash(..))
+import              Enecuum.Legacy.Service.Types (Hash(..))
 
 
 

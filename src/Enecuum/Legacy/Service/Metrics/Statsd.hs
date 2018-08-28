@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Service.Metrics.Statsd (
+module Enecuum.Legacy.Service.Metrics.Statsd (
   Stat,
 
   withRate,
@@ -15,7 +15,7 @@ module Service.Metrics.Statsd (
 ) where
 
 import           Data.Time.Units
-import           Service.Types.PublicPrivateKeyPair (Amount, PublicKey)
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount, PublicKey)
 import           Text.Printf
 
 

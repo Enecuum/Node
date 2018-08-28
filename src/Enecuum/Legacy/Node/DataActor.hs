@@ -8,7 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TemplateHaskell       #-}
 
-module Node.DataActor (
+module Enecuum.Legacy.Node.DataActor (
         startDataActor
     ,   getRecords
     ,   DataActorRequest(..)
@@ -20,7 +20,7 @@ module Node.DataActor (
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
 import qualified Data.Set                              as S
-import           Service.Chan
+import           Enecuum.Legacy.Service.Chan
 
 
 data DataActorRequest a where

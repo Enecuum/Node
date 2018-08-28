@@ -1,10 +1,10 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE UndecidableInstances #-}
-module Node.Data.GlobalLoging where
+module Enecuum.Legacy.Node.Data.GlobalLoging where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Monad.Extra
-import           Service.Types  (LoggingTag, InfoMsg(..), MsgType)
+import           Enecuum.Legacy.Service.Types  (LoggingTag, InfoMsg(..), MsgType)
 
 
 -- | Write ligs into the channel, where it will be redirected to server.

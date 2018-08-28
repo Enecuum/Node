@@ -12,7 +12,7 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 
-module LightClient.CLI (
+module Enecuum.Legacy.LightClient.CLI (
     control,
     Trans(..),
   ) where
@@ -26,13 +26,13 @@ import           Data.DeriveTH
 import           Data.List                          (find, sortBy)
 import           Data.List.Split                    (splitOn)
 import           Data.Map                           (Map, fromList, lookup)
-import           LightClient.RPC
+import           Enecuum.Legacy.LightClient.RPC
 import           Network.Socket                     (HostName, PortNumber)
 import qualified Network.WebSockets                 as WS
-import           Service.Network.WebSockets.Client
-import           Service.System.Version             (version)
-import           Service.Types                      hiding (Info)
-import           Service.Types.PublicPrivateKeyPair
+import           Enecuum.Legacy.Service.Network.WebSockets.Client
+import           Enecuum.Legacy.Service.System.Version             (version)
+import           Enecuum.Legacy.Service.Types                      hiding (Info)
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 import           System.Console.GetOpt
 import           System.Environment                 (getArgs)
 import           System.Random

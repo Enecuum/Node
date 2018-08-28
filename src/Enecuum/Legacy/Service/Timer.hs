@@ -1,4 +1,4 @@
-module Service.Timer where
+module Enecuum.Legacy.Service.Timer where
 
 import           Control.Concurrent
 import           Control.Concurrent.Async

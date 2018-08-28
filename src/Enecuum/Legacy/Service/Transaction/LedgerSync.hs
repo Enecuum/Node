@@ -3,7 +3,7 @@
 {-# LANGUAGE PackageImports        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 
-module Service.Transaction.LedgerSync where
+module Enecuum.Legacy.Service.Transaction.LedgerSync where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
@@ -12,15 +12,15 @@ import           Data.List
 import           Data.Maybe
 import qualified Data.Serialize                        as S (encode)
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
-import           Node.Data.GlobalLoging
-import           Service.Sync.SyncJson
-import           Service.Sync.SyncTypes
-import           Service.Transaction.Balance
-import           Service.Transaction.Decode
-import           Service.Transaction.Sprout
-import           Service.Transaction.Storage
-import           Service.Transaction.Transformation
-import           Service.Types
+import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Service.Sync.SyncJson
+import           Enecuum.Legacy.Service.Sync.SyncTypes
+import           Enecuum.Legacy.Service.Transaction.Balance
+import           Enecuum.Legacy.Service.Transaction.Decode
+import           Enecuum.Legacy.Service.Transaction.Sprout
+import           Enecuum.Legacy.Service.Transaction.Storage
+import           Enecuum.Legacy.Service.Transaction.Transformation
+import           Enecuum.Legacy.Service.Types
 
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)

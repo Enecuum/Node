@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Node.ConnectManager where
+module Enecuum.Legacy.Node.ConnectManager where
 
 --
 import qualified Control.Concurrent                    as C
@@ -13,20 +13,20 @@ import           Data.Aeson                            as A
 import qualified Data.ByteString                       as B
 import           Data.Maybe
 import qualified Network.WebSockets                    as WS
-import           Node.Data.GlobalLoging
-import           Node.Data.Key
-import           Node.DataActor
-import           Node.DBActor
-import           Node.NetLvl.Messages
-import           Node.NetLvl.Server
-import           Node.Node.Types
-import           Node.SyncServer
-import           Pending
-import           Service.Chan
-import           Service.Types                         ( InfoMsg(..), LoggingTag(..), MsgType(..) )
-import           Service.Network.Base
-import           Service.Network.WebSockets.Client
-import           Service.Sync.SyncJson
+import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Node.Data.Key
+import           Enecuum.Legacy.Node.DataActor
+import           Enecuum.Legacy.Node.DBActor
+import           Enecuum.Legacy.Node.NetLvl.Messages
+import           Enecuum.Legacy.Node.NetLvl.Server
+import           Enecuum.Legacy.Node.Node.Types
+import           Enecuum.Legacy.Node.SyncServer
+import           Enecuum.Legacy.Pending
+import           Enecuum.Legacy.Service.Chan
+import           Enecuum.Legacy.Service.Types                         ( InfoMsg(..), LoggingTag(..), MsgType(..) )
+import           Enecuum.Legacy.Service.Network.Base
+import           Enecuum.Legacy.Service.Network.WebSockets.Client
+import           Enecuum.Legacy.Service.Sync.SyncJson
 
 --
 connectManager

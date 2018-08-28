@@ -1,5 +1,5 @@
 {-# LANGUAGE PackageImports #-}
-module Service.Transaction.Common
+module Enecuum.Legacy.Service.Transaction.Common
   (
   connectOrRecoveryConnect,
   getBlockByHashDB,
@@ -27,19 +27,19 @@ module Service.Transaction.Common
   decodeThis
   )
   where
-import           Service.Transaction.API             (getAllLedgerKV,
+import           Enecuum.Legacy.Service.Transaction.API             (getAllLedgerKV,
                                                       getAllMacroblockKV,
                                                       getAllMicroblockKV,
                                                       getAllSproutKV,
                                                       getAllTransactionsKV)
-import           Service.Transaction.Balance         (addKeyBlockToDB,
+import           Enecuum.Legacy.Service.Transaction.Balance         (addKeyBlockToDB,
                                                       addMicroblockToDB,
                                                       getBalanceForKey,
                                                       runLedger)
-import           Service.Transaction.Balance         (addKeyBlockToDB2)
-import           Service.Transaction.Decode          (decodeThis,
+import           Enecuum.Legacy.Service.Transaction.Balance         (addKeyBlockToDB2)
+import           Enecuum.Legacy.Service.Transaction.Decode          (decodeThis,
                                                       getTransactionByHashDB,
                                                       rHash)
-import           Service.Transaction.LedgerSync      (cleanDB)
-import           Service.Transaction.Storage
-import           Service.Transaction.TransactionsDAG (genNTx)
+import           Enecuum.Legacy.Service.Transaction.LedgerSync      (cleanDB)
+import           Enecuum.Legacy.Service.Transaction.Storage
+import           Enecuum.Legacy.Service.Transaction.TransactionsDAG (genNTx)

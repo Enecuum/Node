@@ -2,17 +2,17 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings     #-}
 
-module Service.Transaction.Generate where
+module Enecuum.Legacy.Service.Transaction.Generate where
 
 import           Control.Monad                       (replicateM)
 import           Control.Monad.State                 (StateT, evalStateT, get,
                                                       lift, put)
-import           Service.Transaction.Storage         (getKeyBlockHash)
-import           Service.Transaction.TransactionsDAG (genNTx)
-import           Service.Types                       (HashOfKeyBlock,
+import           Enecuum.Legacy.Service.Transaction.Storage         (getKeyBlockHash)
+import           Enecuum.Legacy.Service.Transaction.TransactionsDAG (genNTx)
+import           Enecuum.Legacy.Service.Types                       (HashOfKeyBlock,
                                                       KeyBlockInfoPoW (..),
                                                       Microblock (..))
-import           Service.Types.PublicPrivateKeyPair  (KeyPair (..), generateNewRandomAnonymousKeyPair,
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair  (KeyPair (..), generateNewRandomAnonymousKeyPair,
                                                       getSignature)
 
 

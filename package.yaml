@@ -116,7 +116,7 @@ library:
 executables:
   BootNode-exe:
     main:                Main.hs
-    source-dirs:         app/BootNode
+    source-dirs:         app/Enecuum/Legacy/BootNode
     ghc-options:
     - -threaded
     - -rtsopts
@@ -128,7 +128,7 @@ executables:
 
   SimpleNode-exe:
     main:                Main.hs
-    source-dirs:         app/SimpleNode
+    source-dirs:         app/Enecuum/Legacy/SimpleNode
     ghc-options:
     - -threaded
     - -rtsopts
@@ -139,7 +139,7 @@ executables:
     - Node
   LightClient-exe:
     main:                Main.hs
-    source-dirs:         app/LightClient
+    source-dirs:         app/Enecuum/Legacy/LightClient
     ghc-options:
     - -Wall
     - -O2
@@ -147,7 +147,7 @@ executables:
     - Node
   Tester-exe:
     main:                Main.hs
-    source-dirs:         app/Tester
+    source-dirs:         app/Enecuum/Legacy/Tester
     ghc-options:
     - -Wall
     - -O2

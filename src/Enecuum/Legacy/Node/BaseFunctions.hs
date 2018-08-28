@@ -1,4 +1,4 @@
-module Node.BaseFunctions where
+module Enecuum.Legacy.Node.BaseFunctions where
 
 import Control.Exception
 

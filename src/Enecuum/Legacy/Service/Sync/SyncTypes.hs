@@ -1,5 +1,5 @@
-module Service.Sync.SyncTypes where
-import           Service.Types
+module Enecuum.Legacy.Service.Sync.SyncTypes where
+import           Enecuum.Legacy.Service.Types
 
 
 data KeyBlockContent = KeyBlockContent KeyBlockInfoPoW [HashOfMicroblock] deriving Show

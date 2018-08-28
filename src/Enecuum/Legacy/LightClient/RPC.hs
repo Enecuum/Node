@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeOperators     #-}
 
-module LightClient.RPC (
+module Enecuum.Legacy.LightClient.RPC (
         newTx,
         reqLedger,
         getBlock,
@@ -31,9 +31,9 @@ import qualified Network.WebSockets                 as WS
 
 import           Control.Timeout                    (timeout)
 import           Data.Time.Units                    (Second)
-import           Service.Types
-import           Service.Types.PublicPrivateKeyPair hiding (Signature)
-import           Service.Types.SerializeJSON        ()
+import           Enecuum.Legacy.Service.Types
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair hiding (Signature)
+import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
 
 
 type Result a = RpcResult IO a

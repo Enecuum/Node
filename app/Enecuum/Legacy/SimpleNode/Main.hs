@@ -8,26 +8,26 @@ module Main where
 import qualified Control.Concurrent                    as C
 import           Control.Monad
 import qualified Data.Map                              as M
-import           Service.System.Version
+import           Enecuum.Legacy.Service.System.Version
 import           System.Environment                    (getEnv)
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 
-import           CLI.CLI
-import           CLI.RPC
+import           Enecuum.Legacy.CLI.CLI
+import           Enecuum.Legacy.CLI.RPC
 import           Control.Exception                     (SomeException, try)
 import           Data.IP
 import           Data.Maybe                            (fromJust)
-import           Node.Lib
-import           Node.NetLvl.Router
-import           Node.Node.Types
-import           Service.InfoMsg
-import           Service.Network.Base
-import           Service.Timer
+import           Enecuum.Legacy.Node.Lib
+import           Enecuum.Legacy.Node.NetLvl.Router
+import           Enecuum.Legacy.Node.Node.Types
+import           Enecuum.Legacy.Service.InfoMsg
+import           Enecuum.Legacy.Service.Network.Base
+import           Enecuum.Legacy.Service.Timer
 import           Data.Aeson                            (decode)
 import qualified Data.ByteString.Lazy                  as L
-import           Node.DataActor
-import           Service.Transaction.Common            (connectOrRecoveryConnect)
+import           Enecuum.Legacy.Node.DataActor
+import           Enecuum.Legacy.Service.Transaction.Common            (connectOrRecoveryConnect)
 
 configName :: String
 configName = "configs/config.json"

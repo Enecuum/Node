@@ -4,14 +4,14 @@
 {-# LANGUAGE FlexibleInstances         #-}
 {-# LANGUAGE GADTs                     #-}
 
-module Service.Transaction.TransactionsDAG where
+module Enecuum.Legacy.Service.Transaction.TransactionsDAG where
 
 import           Control.Monad                      (replicateM)
 import           Data.Graph.Inductive
-import           Service.System.Directory           (getTime)
-import           Service.Transaction.Skelet         (getSkeletDAG)
-import           Service.Types
-import           Service.Types.PublicPrivateKeyPair
+import           Enecuum.Legacy.Service.System.Directory           (getTime)
+import           Enecuum.Legacy.Service.Transaction.Skelet         (getSkeletDAG)
+import           Enecuum.Legacy.Service.Types
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 import           System.Random
 type QuantityOfTransactions = Int
 

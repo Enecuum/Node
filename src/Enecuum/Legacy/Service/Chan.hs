@@ -1,4 +1,4 @@
-module Service.Chan where
+module Enecuum.Legacy.Service.Chan where
 
 import           Control.Concurrent
 import           Control.Concurrent.Chan.Unagi.Bounded

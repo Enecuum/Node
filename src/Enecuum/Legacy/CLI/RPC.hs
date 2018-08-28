@@ -2,7 +2,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module CLI.RPC (serveRpc) where
+module Enecuum.Legacy.CLI.RPC (serveRpc) where
 
 import           Control.Concurrent.Chan.Unagi.Bounded ( InChan )
 import           Control.Monad                         (forever)
@@ -15,15 +15,15 @@ import           Network.JsonRpc.Server                ( (:+:)(..)
                                                        , call
                                                        , toMethod
                                                        , Parameter(..))
-import           Service.Network.WebSockets.Server     ( runServer )
-import qualified CLI.Common                            as C
+import           Enecuum.Legacy.Service.Network.WebSockets.Server     ( runServer )
+import qualified Enecuum.Legacy.CLI.Common                            as C
 import           Data.IP                               ( AddrRange
                                                        , IPv6 )
 import           Data.Text                             (pack)
 import           Network.Socket                        (PortNumber)
 import qualified Network.WebSockets                    as WS
-import           Node.Node.Types                       ( MsgToCentralActor )
-import           Service.Types                         ( Transaction(..)
+import           Enecuum.Legacy.Node.Node.Types                       ( MsgToCentralActor )
+import           Enecuum.Legacy.Service.Types                         ( Transaction(..)
                                                        , TransactionAPI
                                                        , TransactionInfo
                                                        , MicroblockBD
@@ -41,7 +41,7 @@ import           Service.Types                         ( Transaction(..)
                                                        , MsgTo
                                                        , InContainerChan
                                                        , InfoMsg(..) )
-import           Service.Types.PublicPrivateKeyPair    ( PublicKey
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair    ( PublicKey
                                                        , Amount )
 
 serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan MsgToCentralActor -> InChan InfoMsg -> InContainerChan -> IO ()

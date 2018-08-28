@@ -6,7 +6,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Service.Types.SerializeJSON where
+module Enecuum.Legacy.Service.Types.SerializeJSON where
 
 
 import           Control.Monad
@@ -22,8 +22,8 @@ import           Data.ByteString.Conversion
 import           Data.Text                            (Text, pack, unpack)
 import qualified Data.Text.Encoding                   as T (decodeUtf8,
                                                             encodeUtf8)
-import           Service.Types
-import           Service.Types.PublicPrivateKeyPair
+import           Enecuum.Legacy.Service.Types
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 
 
 instance FromJSON Trans

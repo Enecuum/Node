@@ -1,11 +1,11 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Service.Transaction.Sprout where
+module Enecuum.Legacy.Service.Transaction.Sprout where
 
 import           Data.Maybe
-import           Service.Sync.SyncTypes
-import           Service.Transaction.Decode
-import           Service.Types
+import           Enecuum.Legacy.Service.Sync.SyncTypes
+import           Enecuum.Legacy.Service.Transaction.Decode
+import           Enecuum.Legacy.Service.Types
 
 findChain :: Common -> Number -> BranchOfChain -> IO (Number, Maybe HashOfKeyBlock)
 findChain c aNumber branch = do

@@ -2,7 +2,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Service.Network.Base (
+module Enecuum.Legacy.Service.Network.Base (
         HostAddress
     ,   ConnectInfo(..)
     ,   ClientHandle(..)

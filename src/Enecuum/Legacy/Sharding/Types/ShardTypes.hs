@@ -2,9 +2,9 @@
         MultiParamTypeClasses
     ,   DeriveGeneric
   #-}
-module Sharding.Types.ShardTypes where
+module Enecuum.Legacy.Sharding.Types.ShardTypes where
 
-import              Service.Types (Hash(..))
+import              Enecuum.Legacy.Service.Types (Hash(..))
 
 
 import              GHC.Generics

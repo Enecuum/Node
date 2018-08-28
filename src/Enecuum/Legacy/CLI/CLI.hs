@@ -12,25 +12,25 @@
 {-# OPTIONS_GHC -fno-warn-incomplete-patterns #-}
 
 
-module CLI.CLI (
+module Enecuum.Legacy.CLI.CLI (
     serveCLI
   ) where
 
-import qualified CLI.Common                            as C
+import qualified Enecuum.Legacy.CLI.Common                            as C
 import           Control.Concurrent.Chan.Unagi.Bounded (InChan)
 import           Control.Monad                         (forever, mapM_)
 import           Data.DeriveTH                         (derive, makeIs)
 import           Data.List.Split                       (splitOn)
-import           Node.Node.Types                       (MsgToCentralActor)
-import           Service.System.Version                (version)
-import           Service.Types                         (Common (..),
+import           Enecuum.Legacy.Node.Node.Types                       (MsgToCentralActor)
+import           Enecuum.Legacy.Service.System.Version                (version)
+import           Enecuum.Legacy.Service.Types                         (Common (..),
                                                         DBPoolDescriptor,
                                                         Hash (..),
                                                         InContainerChan,
                                                         InfoMsg (..), MsgTo,
                                                         PartWalletReq (..),
                                                         Trans (..))
-import           Service.Types.PublicPrivateKeyPair    (PublicKey)
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair    (PublicKey)
 import           System.Console.GetOpt                 (ArgDescr (..),
                                                         ArgOrder (..), OptDescr,
                                                         OptDescr (..), getOpt,

@@ -8,7 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# OPTIONS_GHC -fno-warn-orphans     #-}
 
-module Service.Transaction.Storage where
+module Enecuum.Legacy.Service.Transaction.Storage where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
@@ -26,15 +26,15 @@ import           Data.Pool
 import qualified Data.Serialize                        as S (encode)
 import           Data.Serialize.Put
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
-import           Node.Data.GlobalLoging
-import           Service.System.Directory
-import           Service.Transaction.Decode
-import           Service.Transaction.Iterator
-import           Service.Transaction.Sprout
-import           Service.Transaction.Transformation
-import           Service.Types
-import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeJSON           ()
+import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Service.System.Directory
+import           Enecuum.Legacy.Service.Transaction.Decode
+import           Enecuum.Legacy.Service.Transaction.Iterator
+import           Enecuum.Legacy.Service.Transaction.Sprout
+import           Enecuum.Legacy.Service.Transaction.Transformation
+import           Enecuum.Legacy.Service.Types
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
+import           Enecuum.Legacy.Service.Types.SerializeJSON           ()
 
 -- FIX change def (5 times)
 connectOrRecoveryConnect :: IO DBPoolDescriptor

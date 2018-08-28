@@ -3,7 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TemplateHaskell            #-}
 
-module Node.Data.Key (
+module Enecuum.Legacy.Node.Data.Key (
         StringKey(..)
     ,   PublicKey(..)
     ,   NodeId(..)
@@ -33,10 +33,12 @@ import qualified Data.ByteString                    as B
 import           Data.Serialize
 import           Data.Word
 import           GHC.Generics
-import           Service.Types.PublicPrivateKeyPair (PublicKey (..),
-                                                     compressPublicKey,
-                                                     getPublicKey,
-                                                     uncompressPublicKey)
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
+                                                ( PublicKey(..)
+                                                , compressPublicKey
+                                                , getPublicKey
+                                                , uncompressPublicKey
+                                                )
 import           System.Random
 
 newtype NodeId     = NodeId     Integer deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)

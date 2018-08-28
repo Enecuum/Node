@@ -1,4 +1,4 @@
-module Service.Transaction.Skelet (getSkeletDAG) where
+module Enecuum.Legacy.Service.Transaction.Skelet (getSkeletDAG) where
 
 import Control.Monad.Trans.Class
 import Control.Monad.Trans.State

@@ -1,19 +1,19 @@
 {-# LANGUAGE LambdaCase #-}
-module Node.SyncServer where
+module Enecuum.Legacy.Node.SyncServer where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
 import           Control.Monad
 import           Data.Aeson                            as A
-import           Node.Data.GlobalLoging
-import           Node.Data.Key
-import           Node.DBActor
-import           Node.NetLvl.Messages
-import           Node.Node.Types
-import           Service.Chan
-import           Service.Sync.SyncJson
-import           Service.Timer
-import           Service.Types
+import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Node.Data.Key
+import           Enecuum.Legacy.Node.DBActor
+import           Enecuum.Legacy.Node.NetLvl.Messages
+import           Enecuum.Legacy.Node.Node.Types
+import           Enecuum.Legacy.Service.Chan
+import           Enecuum.Legacy.Service.Sync.SyncJson
+import           Enecuum.Legacy.Service.Timer
+import           Enecuum.Legacy.Service.Types
 
 
 syncServer :: (InChan SyncEvent, OutChan SyncEvent) -> InChan MsgToDB -> InChan MsgToCentralActor -> InChan InfoMsg -> IO b

@@ -9,14 +9,14 @@
 {-# LANGUAGE RecordWildCards       #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 
-module Service.Transaction.Transformation where
+module Enecuum.Legacy.Service.Transaction.Transformation where
 import           Control.Exception
 import           Control.Monad                      (forM)
 import qualified Data.ByteString                    as B
-import           Service.Transaction.Decode
-import           Service.Types
-import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeInstances   (roll, unroll)
+import           Enecuum.Legacy.Service.Transaction.Decode
+import           Enecuum.Legacy.Service.Types
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
+import           Enecuum.Legacy.Service.Types.SerializeInstances   (roll, unroll)
 
 
 -- Helper functions

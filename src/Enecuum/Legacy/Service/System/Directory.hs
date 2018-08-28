@@ -1,4 +1,4 @@
-module Service.System.Directory (
+module Enecuum.Legacy.Service.System.Directory (
     getTime,
     getKeyFilePath,
     createFilesDirectory,

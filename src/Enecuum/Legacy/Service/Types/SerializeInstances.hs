@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Service.Types.SerializeInstances where
+module Enecuum.Legacy.Service.Types.SerializeInstances where
 
 import           Control.Monad
 import           "cryptonite" Crypto.PubKey.ECC.ECDSA

@@ -4,13 +4,13 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 
-module Service.Transaction.API where
+module Enecuum.Legacy.Service.Transaction.API where
 
-import           Service.Transaction.Decode
-import           Service.Transaction.Iterator
-import           Service.Types
-import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeJSON        ()
+import           Enecuum.Legacy.Service.Transaction.Decode
+import           Enecuum.Legacy.Service.Transaction.Iterator
+import           Enecuum.Legacy.Service.Types
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
+import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
 
 
 getAllSproutKV :: Common -> IO [(Integer, (Maybe MainChain, Maybe SproutChain))]

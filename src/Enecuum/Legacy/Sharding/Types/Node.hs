@@ -1,12 +1,12 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, GADTs #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Sharding.Types.Node where
+module Enecuum.Legacy.Sharding.Types.Node where
 
-import              Sharding.Types.ShardTypes
+import              Enecuum.Legacy.Sharding.Types.ShardTypes
 import qualified    Control.Concurrent.Chan as C
 import              Data.Word
-import              Node.Data.Key
+import              Enecuum.Legacy.Node.Data.Key
 
 data ShardingNodeResponse where
     ShardIndexResponse    :: [ShardHash]    -> ShardingNodeResponse

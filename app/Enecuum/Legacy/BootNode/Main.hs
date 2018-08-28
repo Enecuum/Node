@@ -10,11 +10,11 @@ import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception                     (SomeException, try)
 import           Control.Monad
 
-import           BootNodeServer
-import           Node.DataActor
-import           Node.Node.Types
-import           Service.InfoMsg
-import           Service.Network.Base                  (ConnectInfo (..))
+import           Enecuum.Legacy.BootNodeServer
+import           Enecuum.Legacy.Node.DataActor
+import           Enecuum.Legacy.Node.Node.Types
+import           Enecuum.Legacy.Service.InfoMsg
+import           Enecuum.Legacy.Service.Network.Base                  (ConnectInfo (..))
 import           System.Environment
 
 import           Data.Aeson

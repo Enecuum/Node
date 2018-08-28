@@ -11,16 +11,16 @@ import           Crypto.PubKey.ECC.ECDSA           as ECDSA
 import           Data.Aeson
 import qualified Data.ByteString.Lazy.Char8        as B8
 import qualified Data.Text                         as T
-import           Node.Data.Key
-import           Node.NetLvl.Messages
-import           Service.Network.Base
-import           Service.Network.WebSockets.Client
-import           Service.Types
+import           Enecuum.Legacy.Node.Data.Key
+import           Enecuum.Legacy.Node.NetLvl.Messages
+import           Enecuum.Legacy.Service.Network.Base
+import           Enecuum.Legacy.Service.Network.WebSockets.Client
+import           Enecuum.Legacy.Service.Types
 import           System.Environment                (getArgs)
 
 import qualified Network.WebSockets                as WS
-import           Service.System.Version
-import           Service.Transaction.Common
+import           Enecuum.Legacy.Service.System.Version
+import           Enecuum.Legacy.Service.Transaction.Common
 
 testMsg :: Value
 testMsg = object [

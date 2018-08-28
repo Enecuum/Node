@@ -11,7 +11,7 @@
 {-# LANGUAGE StandaloneDeriving        #-}
 {-# LANGUAGE TemplateHaskell           #-}
 
-module Service.Types where
+module Enecuum.Legacy.Service.Types where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
@@ -27,8 +27,8 @@ import           Data.Serialize
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           GHC.Generics
 import           Lens.Micro.TH
-import           Node.DataActor
-import           Service.Types.PublicPrivateKeyPair
+import           Enecuum.Legacy.Node.DataActor
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 
 data CLIException = ValueOfChainIsNotNothing String
                   | WrongKeyOwnerException

@@ -1,9 +1,9 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module Node.Crypto where
+module Enecuum.Legacy.Node.Crypto where
 
-import           Node.Data.Key            hiding (PublicKey (..))
+import           Enecuum.Legacy.Node.Data.Key            hiding (PublicKey (..))
 
 import           Crypto.Cipher.Types
 import           Crypto.Error

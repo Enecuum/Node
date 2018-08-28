@@ -4,7 +4,7 @@
 {-# LANGUAGE LambdaCase               #-}
 {-# LANGUAGE ScopedTypeVariables      #-}
 
-module Node.DBActor where
+module Enecuum.Legacy.Node.DBActor where
 
 import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
@@ -14,13 +14,13 @@ import           Control.Monad
 import           Data.Aeson
 import           Data.List.Extra
 import           Data.Maybe
-import           Node.Data.GlobalLoging
-import           Service.Chan
-import           Service.Sync.SyncJson
-import           Service.Sync.SyncTypes
-import           Service.Transaction.Common
-import           Service.Transaction.LedgerSync
-import           Service.Types
+import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Service.Chan
+import           Enecuum.Legacy.Service.Sync.SyncJson
+import           Enecuum.Legacy.Service.Sync.SyncTypes
+import           Enecuum.Legacy.Service.Transaction.Common
+import           Enecuum.Legacy.Service.Transaction.LedgerSync
+import           Enecuum.Legacy.Service.Types
 
 
 data MsgToDB where

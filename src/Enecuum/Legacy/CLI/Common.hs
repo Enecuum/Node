@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module CLI.Common (
+module Enecuum.Legacy.CLI.Common (
   sendMessageTo,
   sendMessageBroadcast,
   loadMessages,
@@ -49,12 +49,12 @@ import           System.Random                         ( randomRIO )
 import           Control.Concurrent.MVar               ( newEmptyMVar
                                                        , readMVar )
 
-import           Node.Crypto                           ( verifyEncodeble )
-import           Node.Node.Types                       ( MsgToCentralActor(..) )
-import qualified Service.InfoMsg                       as I
-import           Service.System.Directory              (getKeyFilePath, getTime)
-import qualified Service.Transaction.Common            as B
-import           Service.Types                         ( Transaction(..)
+import           Enecuum.Legacy.Node.Crypto                           ( verifyEncodeble )
+import           Enecuum.Legacy.Node.Node.Types                       ( MsgToCentralActor(..) )
+import qualified Enecuum.Legacy.Service.InfoMsg                       as I
+import           Enecuum.Legacy.Service.System.Directory              (getKeyFilePath, getTime)
+import qualified Enecuum.Legacy.Service.Transaction.Common            as B
+import           Enecuum.Legacy.Service.Types                         ( Transaction(..)
                                                        , Trans(..)
                                                        , TransactionAPI
                                                        , TransactionInfo
@@ -73,7 +73,7 @@ import           Service.Types                         ( Transaction(..)
                                                        , InContainerChan
                                                        , InfoMsg(..)
                                                        , Currency(..) )
-import           Service.Types.PublicPrivateKeyPair    ( PublicKey
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair    ( PublicKey
                                                        , PrivateKey
                                                        , Amount
                                                        , KeyPair(..)

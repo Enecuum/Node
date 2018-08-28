@@ -1,4 +1,4 @@
-module Service.System.Version where
+module Enecuum.Legacy.Service.System.Version where
 
 import Language.Haskell.TH
 import System.Process

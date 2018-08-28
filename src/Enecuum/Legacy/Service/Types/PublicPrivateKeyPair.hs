@@ -6,7 +6,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Service.Types.PublicPrivateKeyPair(
+module Enecuum.Legacy.Service.Types.PublicPrivateKeyPair(
         Amount
     ,   ECDSA.Signature
     ,   compressPublicKey
@@ -23,7 +23,7 @@ module Service.Types.PublicPrivateKeyPair(
 
 import           Data.Maybe
 import           GHC.Generics
-import           Service.Types.SerializeInstances        ()
+import           Enecuum.Legacy.Service.Types.SerializeInstances        ()
 
 import           "cryptonite" Crypto.Hash.Algorithms
 import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA    as ECDSA

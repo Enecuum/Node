@@ -7,16 +7,16 @@
 {-# LANGUAGE ScopedTypeVariables      #-}
 {-# LANGUAGE StandaloneDeriving       #-}
 
-module Service.Sync.SyncJson where
+module Enecuum.Legacy.Service.Sync.SyncJson where
 
 import           Control.Exception
 import           Control.Monad
 import           Data.Aeson
 import qualified Data.Text                   as T
-import           Node.Data.Key
-import           Service.Sync.SyncTypes
-import           Service.Transaction.Storage ()
-import           Service.Types
+import           Enecuum.Legacy.Node.Data.Key
+import           Enecuum.Legacy.Service.Sync.SyncTypes
+import           Enecuum.Legacy.Service.Transaction.Storage ()
+import           Enecuum.Legacy.Service.Types
 
 
 type LastNumber = Int

@@ -8,7 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables      #-}
 {-# OPTIONS_GHC -fno-warn-orphans     #-}
 
-module Service.Transaction.Balance
+module Enecuum.Legacy.Service.Transaction.Balance
   ( getBalanceForKey,
     addMicroblockToDB,
     addKeyBlockToDB,
@@ -37,15 +37,15 @@ import           Data.Pool
 import qualified Data.Serialize                        as S (decode, encode)
 import qualified Data.Set                              as Set
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
-import           Node.Data.GlobalLoging
-import           Service.Chan
-import           Service.Sync.SyncJson
-import           Service.Transaction.Decode
-import           Service.Transaction.Sprout
-import           Service.Transaction.Storage
-import           Service.Transaction.Transformation
-import           Service.Types
-import           Service.Types.PublicPrivateKeyPair
+import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Service.Chan
+import           Enecuum.Legacy.Service.Sync.SyncJson
+import           Enecuum.Legacy.Service.Transaction.Decode
+import           Enecuum.Legacy.Service.Transaction.Sprout
+import           Enecuum.Legacy.Service.Transaction.Storage
+import           Enecuum.Legacy.Service.Transaction.Transformation
+import           Enecuum.Legacy.Service.Types
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 
 
 instance Hashable PublicKey

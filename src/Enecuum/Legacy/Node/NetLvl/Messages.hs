@@ -9,7 +9,7 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Node.NetLvl.Messages where
+module Enecuum.Legacy.Node.NetLvl.Messages where
 
 import           Control.Monad.Extra
 import           Data.Aeson
@@ -23,11 +23,11 @@ import           Data.String
 import qualified Data.Text                        as T
 import           Data.Word                        ()
 import           GHC.Generics
-import           Node.Data.Key
-import           Service.Network.Base
-import           Service.Types                    (Microblock (..), Transaction)
-import           Service.Types.SerializeInstances
-import           Service.Types.SerializeJSON      ()
+import           Enecuum.Legacy.Node.Data.Key
+import           Enecuum.Legacy.Service.Network.Base
+import           Enecuum.Legacy.Service.Types                    (Microblock (..), Transaction)
+import           Enecuum.Legacy.Service.Types.SerializeInstances
+import           Enecuum.Legacy.Service.Types.SerializeJSON      ()
 import           Text.Read
 
 

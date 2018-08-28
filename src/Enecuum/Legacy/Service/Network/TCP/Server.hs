@@ -1,4 +1,4 @@
-module Service.Network.TCP.Server (runServer) where
+module Enecuum.Legacy.Service.Network.TCP.Server (runServer) where
 
 import Network.Socket
 import Control.Monad

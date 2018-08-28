@@ -29,15 +29,15 @@
 --      netLvl    ->  ->    netLvl
 --
 --   2 request with id 1 -> node -> block 1
-module Sharding.Sharding where
+module Enecuum.Legacy.Sharding.Sharding where
 
-import              Sharding.Types.Node
+import              Enecuum.Legacy.Sharding.Types.Node
 import              Control.Concurrent.Chan.Unagi.Bounded
 import qualified    Control.Concurrent  as C
-import qualified    Node.Node.Types     as T
-import              Service.Types       ( InfoMsg )
+import qualified    Enecuum.Legacy.Node.Node.Types     as T
+import              Enecuum.Legacy.Service.Types       ( InfoMsg )
 import              Lens.Micro.GHC()
-import              Node.Data.Key
+import              Enecuum.Legacy.Node.Data.Key
 
 makeShardingNode
     ::  MyNodeId

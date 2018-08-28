@@ -1,9 +1,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module Node.Node.Config.Make where
+module Enecuum.Legacy.Node.Node.Config.Make where
 
 import           Data.Aeson.Encode.Pretty
 import qualified Data.ByteString.Lazy     as L
-import           Node.Node.Types
+import           Enecuum.Legacy.Node.Node.Types
 import           System.Directory         (createDirectoryIfMissing)
 
 

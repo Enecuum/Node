@@ -1,9 +1,9 @@
 {-#Language Strict#-}
-module Service.Network.WebSockets.Server (runServer) where
+module Enecuum.Legacy.Service.Network.WebSockets.Server (runServer) where
 
 
-import              Node.BaseFunctions
-import              Service.Network.Base
+import              Enecuum.Legacy.Node.BaseFunctions
+import              Enecuum.Legacy.Service.Network.Base
 import              Control.Concurrent
 import              Control.Monad
 import              Control.Exception

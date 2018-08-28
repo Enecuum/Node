@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 
-module BootNodeServer (
+module Enecuum.Legacy.BootNodeServer (
     bootNodeServer
 ) where
 
@@ -16,14 +16,14 @@ import           Data.Aeson                            as A
 import           Data.Maybe                            ()
 import qualified Data.Text                             as T
 import qualified Network.WebSockets                    as WS
-import           Node.Data.GlobalLoging
-import           Node.DataActor
-import           Node.NetLvl.Messages
-import           Service.Types                         ( InfoMsg(..), LoggingTag(..), MsgType(..) )
-import           Service.Network.Base
-import           Service.Network.WebSockets.Client
-import           Service.Network.WebSockets.Server
-import           Service.System.Version
+import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Node.DataActor
+import           Enecuum.Legacy.Node.NetLvl.Messages
+import           Enecuum.Legacy.Service.Types                         ( InfoMsg(..), LoggingTag(..), MsgType(..) )
+import           Enecuum.Legacy.Service.Network.Base
+import           Enecuum.Legacy.Service.Network.WebSockets.Client
+import           Enecuum.Legacy.Service.Network.WebSockets.Server
+import           Enecuum.Legacy.Service.System.Version
 
 data ConnectTesterActor = AddConnectToList Connect | TestExistedConnect Connect
 

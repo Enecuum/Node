@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Service.InfoMsg (
+module Enecuum.Legacy.Service.InfoMsg (
   withRate,
   increment,
   decrement,
@@ -17,12 +17,12 @@ module Service.InfoMsg (
 import qualified Data.ByteString.Char8                 as BS
 import           Data.List
 import           Network.Socket.ByteString             (sendTo)
-import           Node.BaseFunctions
+import           Enecuum.Legacy.Node.BaseFunctions
 
-import           Service.Types                         ( InfoMsg(..), LoggingTag(..) )
-import           Service.Metrics.Statsd
-import           Service.Network.Base
-import           Service.Network.TCP.Client
+import           Enecuum.Legacy.Service.Types                         ( InfoMsg(..), LoggingTag(..) )
+import           Enecuum.Legacy.Service.Metrics.Statsd
+import           Enecuum.Legacy.Service.Network.Base
+import           Enecuum.Legacy.Service.Network.TCP.Client
 import           System.Clock                          ()
 
 import           Control.Concurrent.Chan.Unagi.Bounded

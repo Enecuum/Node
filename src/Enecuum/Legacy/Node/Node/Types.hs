@@ -11,7 +11,7 @@
 
 -- | Module provides types for storing internal state of a node and messages.
 -- Different nodes use mutually overlapping set of messages
-module Node.Node.Types where
+module Enecuum.Legacy.Node.Node.Types where
 
 import qualified Control.Concurrent.Chan               as C
 import           Control.Concurrent.Chan.Unagi.Bounded
@@ -23,17 +23,17 @@ import           GHC.Generics                          (Generic)
 import           Crypto.PubKey.ECC.ECDSA               as ECDSA
 import           Crypto.Random.Types
 import           Lens.Micro.TH
-import           Service.Network.Base
-import           Service.Sync.SyncJson
+import           Enecuum.Legacy.Service.Network.Base
+import           Enecuum.Legacy.Service.Sync.SyncJson
 
 import           Data.Aeson
 import           Data.Aeson.TH
 import           Data.Scientific                       (Scientific, toRealFloat)
-import           Node.Data.Key
-import           Node.DataActor
-import           Node.NetLvl.Messages
-import           Service.Types                         (Microblock, Transaction, InfoMsg)
-import qualified Sharding.Types.Node                   as N
+import           Enecuum.Legacy.Node.Data.Key
+import           Enecuum.Legacy.Node.DataActor
+import           Enecuum.Legacy.Node.NetLvl.Messages
+import           Enecuum.Legacy.Service.Types                         (Microblock, Transaction, InfoMsg)
+import qualified Enecuum.Legacy.Sharding.Types.Node                   as N
 
 
 instance Show (InChan a) where show _ = "InChan"

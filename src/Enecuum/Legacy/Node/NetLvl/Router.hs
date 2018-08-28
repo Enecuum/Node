@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeSynonymInstances  #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Node.NetLvl.Router (routerActorStart) where
+module Enecuum.Legacy.Node.NetLvl.Router (routerActorStart) where
 
 
 import           System.Random                         ()
@@ -24,15 +24,15 @@ import qualified Data.Map                              as M
 import           Data.Maybe                            (isNothing)
 import           Lens.Micro
 import           Lens.Micro.Mtl                        ()
-import           Node.BaseFunctions
-import           Node.Data.GlobalLoging
-import           Node.Data.Key
-import           Node.NetLvl.Messages
-import           Node.Node.Types
-import           Service.Chan
-import           Service.Types                         ( LoggingTag(..), MsgType(..) )
-import           Service.Sync.SyncJson
-import           Sharding.Sharding                     ()
+import           Enecuum.Legacy.Node.BaseFunctions
+import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Node.Data.Key
+import           Enecuum.Legacy.Node.NetLvl.Messages
+import           Enecuum.Legacy.Node.Node.Types
+import           Enecuum.Legacy.Service.Chan
+import           Enecuum.Legacy.Service.Types                         ( LoggingTag(..), MsgType(..) )
+import           Enecuum.Legacy.Service.Sync.SyncJson
+import           Enecuum.Legacy.Sharding.Sharding                     ()
 
 
 routerActorStart :: InChan SyncEvent -> (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()

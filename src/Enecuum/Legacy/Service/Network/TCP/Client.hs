@@ -1,5 +1,5 @@
 {-#Language TypeSynonymInstances, FlexibleInstances, LambdaCase, ScopedTypeVariables #-}
-module Service.Network.TCP.Client (
+module Enecuum.Legacy.Service.Network.TCP.Client (
     ConnectInfo(..),
     runClient,
     PortNumber(..),
@@ -9,7 +9,7 @@ module Service.Network.TCP.Client (
   ) where
 
 import Network.Socket
-import Service.Network.Base
+import Enecuum.Legacy.Service.Network.Base
 import Control.Exception
 
 class (Show a) => Hosts a where

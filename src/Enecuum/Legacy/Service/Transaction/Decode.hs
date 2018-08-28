@@ -7,7 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables      #-}
 {-# OPTIONS_GHC -fno-warn-orphans     #-}
 
-module Service.Transaction.Decode where
+module Enecuum.Legacy.Service.Transaction.Decode where
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
 import qualified Crypto.Hash.SHA256                    as SHA
@@ -21,10 +21,10 @@ import           Data.Pool
 import qualified Data.Serialize                        as S (Serialize (..),
                                                              decode, encode)
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
-import           Node.Data.GlobalLoging
-import           Service.Types
-import           Service.Types.PublicPrivateKeyPair
-import           Service.Types.SerializeJSON           ()
+import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Service.Types
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
+import           Enecuum.Legacy.Service.Types.SerializeJSON           ()
 
 
 -- for rocksdb Transaction and Microblock

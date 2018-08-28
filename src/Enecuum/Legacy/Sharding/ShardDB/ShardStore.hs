@@ -1,5 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables, MultiWayIf #-}
-module Sharding.ShardDB.ShardStore where
+module Enecuum.Legacy.Sharding.ShardDB.ShardStore where
 
 import Data.Serialize
 import Data.ByteString as B
@@ -9,8 +9,8 @@ import Data.Monoid
 import Data.Maybe
 import Control.Monad
 import System.Directory
-import Service.Types (Hash(..))
-import Sharding.Types.ShardTypes
+import Enecuum.Legacy.Service.Types (Hash(..))
+import Enecuum.Legacy.Sharding.Types.ShardTypes
 
 class ShardName a where
     shardsPath :: a -> String

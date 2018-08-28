@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, DeriveGeneric, ScopedTypeVariables, MultiWayIf #-}
 -- Not used: not valid for TestNet
-module Sharding.ShardDB.ShardIndex where
+module Enecuum.Legacy.Sharding.ShardDB.ShardIndex where
 {-
 data ShardExistIndex   = ShardExistIndex {
       _baseSnapshots  :: [SpaceSnapshot]

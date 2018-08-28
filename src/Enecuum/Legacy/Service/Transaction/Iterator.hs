@@ -2,7 +2,7 @@
 {-# LANGUAGE PackageImports    #-}
 {-# OPTIONS_GHC -fno-warn-orphans     #-}
 
-module Service.Transaction.Iterator where
+module Enecuum.Legacy.Service.Transaction.Iterator where
 import           Control.Monad                      (replicateM)
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Resource
@@ -12,8 +12,8 @@ import qualified Data.ByteString.Internal           as BSI
 import           Data.Pool
 import qualified Data.Serialize                     as S
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
-import           Service.Transaction.Decode
-import           Service.Types
+import           Enecuum.Legacy.Service.Transaction.Decode
+import           Enecuum.Legacy.Service.Types
 
 
 maxAttempt :: Int
