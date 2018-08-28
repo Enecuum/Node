@@ -338,8 +338,7 @@ genesisKeyBlock = KeyBlockInfoPoW{
   _solver = "EMde81cgGToGrGWSNCqm6Y498qBpjEzRczBbvC5MV2Q=",
   _type = 0}
 
-g2 :: HashOfKeyBlock
-g2 = getKeyBlockHash genesisKeyBlock
+
 
 
 type NumberOfKeyBlock = Integer

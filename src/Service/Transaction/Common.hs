@@ -37,8 +37,9 @@ import           Service.Transaction.Balance         (addKeyBlockToDB,
                                                       getBalanceForKey,
                                                       runLedger)
 import           Service.Transaction.Balance         (addKeyBlockToDB2)
-import           Service.Transaction.Decode
-import           Service.Transaction.Decode          (rHash)
+import           Service.Transaction.Decode          (decodeThis,
+                                                      getTransactionByHashDB,
+                                                      rHash)
 import           Service.Transaction.LedgerSync      (cleanDB)
 import           Service.Transaction.Storage
 import           Service.Transaction.TransactionsDAG (genNTx)
