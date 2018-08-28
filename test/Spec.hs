@@ -1,8 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports    #-}
 
--- module Spec where
-
 import           Data.Aeson                   as A (decode, encode)
 import qualified Data.ByteString.Char8        as BC
 import           Data.Either                  (fromRight)
@@ -72,8 +70,6 @@ parseMicroblockJson = TestCase $ do
   (fromJust $ A.decode $ A.encode mb) @?= mb
 
 
--- parseMicroblockBin :: Test
--- parseMicroblockBin = undefined
 parseMicroblockBin :: Test
 parseMicroblockBin = TestCase $ do
   let hashOfKeyBlock = getKeyBlockHash genesisKeyBlock
@@ -101,9 +97,6 @@ parsingTestSuite = TestList [
 -- | Business logic HUnit test suite
 businessLogicTestSuite :: Test
 businessLogicTestSuite = TestList [
-    -- TestLabel "Ledger: balance for key" undefined,
-    -- TestLabel "Ledger: check macroblock is closed" undefined,
-    -- TestLabel "Synchronization: check length of chain" undefined
   ]
 
 
