@@ -1,7 +1,8 @@
 .stack-work/*
 data/*
-Node.cabal
 *.swp
-configs/*
+cabal-helper*build/
 log.txt
 *.csv
+.hspec-failures
+*.cabal
