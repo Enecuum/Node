@@ -4,13 +4,15 @@
 module Enecuum.Config where
 
 import qualified Data.ByteString.Lazy          as L
+import           Data.Text                     (Text)
 import qualified Data.Aeson                    as A
 import           Data.Aeson                               ( FromJSON )
 import           GHC.Generics                             ( Generic )
 
 
+-- Dummy config
 data Config = Config
-  { dummy :: Int
+  { bootNodeAddress :: Text
 
   }
   deriving (Generic, FromJSON)

@@ -54,6 +54,7 @@ default-extensions:
 - PatternSynonyms
 - PolyKinds
 - DefaultSignatures
+- ConstraintKinds
 - NamedFieldPuns
 - TupleSections
 - ViewPatterns
@@ -118,6 +119,7 @@ dependencies:
 - cryptohash-sha256
 - derive
 - bytestring-conversion
+- freer
 
 library:
   source-dirs: src

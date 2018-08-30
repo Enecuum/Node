@@ -6,3 +6,4 @@ log.txt
 *.csv
 .hspec-failures
 *.cabal
+.vscode
