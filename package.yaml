@@ -2,8 +2,8 @@ name:                Node
 version:             0.1.0.7
 github:              "Enecuum/Node"
 license:             BSD3
-author:              "Dmitriy Pavlyuk"
-maintainer:          "al.lastor@enecuum.com"
+author:              "Enecuum"
+maintainer:          "mail@enecuum.com"
 copyright:           "2018  Enecuum"
 
 extra-source-files:
@@ -35,6 +35,29 @@ description:
     # The central actor responsible for storing node state and manage decision,
     # processing external commands and response for them.
 
+default-extensions:
+- GADTs
+- RankNTypes
+- DeriveFunctor
+- DeriveGeneric
+- OverloadedStrings
+- LambdaCase
+- MultiParamTypeClasses
+- ExplicitNamespaces
+- TypeApplications
+- ScopedTypeVariables
+- TypeOperators
+- TypeFamilies
+- DataKinds
+- FlexibleContexts
+- FlexibleInstances
+- PatternSynonyms
+- PolyKinds
+- DefaultSignatures
+- NamedFieldPuns
+- TupleSections
+- ViewPatterns
+- MultiWayIf
 
 dependencies:
 - base >= 4.7 && < 5
@@ -83,35 +106,23 @@ dependencies:
 - text
 - aeson-pretty
 - unordered-containers
-# - cryptohash
 - rocksdb-haskell
 - data-default
 - hashtables
 - resourcet
 - retry
 - exceptions
-# - MonadCatchIO-transformers
 - hashable
-#- postgresql-simple
 - resource-pool
-#- persistent-postgresql
-#- mysql
 - unix-time
 - cryptohash-sha256
 - derive
 - bytestring-conversion
-- hspec
-- HUnit
-- hspec-contrib
 
 library:
   source-dirs: src
   ghc-options:
-  - -threaded
-  - -rtsopts
-  - -with-rtsopts=-N
   - -Wall
-  - -O2
 
 executables:
   BootNode-exe:
@@ -155,13 +166,15 @@ executables:
     - Node
 
 tests:
-  Node-test:
+  functional-tests:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
     - -threaded
     - -rtsopts
-    - -O2
     - -with-rtsopts=-N
     dependencies:
+    - hspec
+    - HUnit
+    - hspec-contrib
     - Node

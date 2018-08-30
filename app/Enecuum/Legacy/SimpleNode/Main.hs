@@ -30,7 +30,7 @@ import           Enecuum.Legacy.Node.DataActor
 import           Enecuum.Legacy.Service.Transaction.Common            (connectOrRecoveryConnect)
 
 configName :: String
-configName = "configs/config.json"
+configName = "configs/Legacy/config.json"
 
 
 main :: IO ()
