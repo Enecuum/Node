@@ -1,48 +1,69 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell#-}
 
 module Enecuum.TGraph where
 
-import           Control.Concurrent.STM.TVar
+import           Data.Map as M
 import           Control.Monad
 import           Control.Monad.STM
-import           Data.Map
+import           Control.Concurrent.STM.TVar
 import           Lens.Micro
 import           Lens.Micro.TH
+import           Data.Maybe
 
+type TGraph a b = Map a (TVar (TNode a b))
 
--- o. graph
 data TNode a b = TNode {
-    _links   :: Map a (TVar (TNode a b)),
-    _rLinks  :: [TVar (TNode a b)],
-    _content :: b
+    _tNodeName  :: a,
+    _graphIndex :: TVar (TGraph a b),
+    _links      :: Map a (TVar (TNode a b)),
+    _rLinks     :: [TVar (TNode a b)],
+    _content    :: b
   }
 
 makeLenses ''TNode
 
-newTNode :: Ord a => b -> STM (TVar (TNode a b))
-newTNode = newTVar . TNode mempty []
+newIndex :: Ord a => STM (TVar (TGraph a b))
+newIndex = newTVar mempty
+
+
+newTNode :: Ord a => TVar (TGraph a b) -> a -> b -> STM ()
+newTNode aIndex aName aContent = do
+    aRes <- findNode aName aIndex
+    when (isNothing aRes) $ do
+        aTNode <- newTVar $ TNode aName aIndex mempty [] aContent
+        modifyTVar aIndex $ insert aName aTNode
+
 
 
 addTNode :: Ord a => TVar (TNode a b) -> a -> b -> STM ()
-addTNode aTNode aLink aContent = do
-    aNode1 <- readTVar aTNode
-    when (notMember aLink $ aNode1^.links) $ do
-        aNewTNode <- newTNode aContent
-        modifyTVar aTNode (links %~ insert aLink aNewTNode)
-        modifyTVar aNewTNode (rLinks %~ (aTNode:))
+addTNode aTNode aLinck aContent = do
+    aNode     <- readTVar aTNode
+    aRes <- findNode aLinck (aNode ^. graphIndex)
+    when (isNothing aRes) $ do
+        aNewTNode <- newTVar $ TNode aLinck (aNode ^. graphIndex) mempty [] aContent
+        modifyTVar (aNode ^. graphIndex) $ insert aLinck aTNode
+        modifyTVar aTNode    (links %~ insert aLinck aNewTNode)
+        modifyTVar aNewTNode (rLinks %~ (aTNode :))
 
 
-addLinck :: Ord a => a -> TVar (TNode a b) -> TVar (TNode a b) -> STM ()
-addLinck aLink aTNode1 aTNode2 = do
-    aNode1 <- readTVar aTNode1
-    when (notMember aLink $ aNode1^.links) $ do
-        modifyTVar aTNode1 (links %~ insert aLink aTNode2)
-        modifyTVar aTNode2 (rLinks %~ (aTNode1:))
+addLinck :: Ord a => TVar (TNode a b) -> TVar (TNode a b) -> STM ()
+addLinck aTNode1 aTNode2 = do
+    aNode2 <- readTVar aTNode2
+    modifyTVar aTNode1 $ links %~ insert (aNode2 ^. tNodeName) aTNode2
+    modifyTVar aTNode2 (rLinks %~ (aTNode1 :))
 
 
 deleteLinck :: Ord a => a -> TVar (TNode a b) -> STM ()
-deleteLinck = undefined
+deleteLinck aLinck aTNode = modifyTVar aTNode (links %~ delete aLinck)
 
 
 deleteNode :: Ord a => TVar (TNode a b) -> STM ()
-deleteNode = undefined
+deleteNode aTNode = do
+    aNode <- readTVar aTNode
+    modifyTVar (aNode ^. graphIndex) $ delete (aNode ^. tNodeName)
+    forM_ (aNode ^. rLinks)
+        $ \aVar -> modifyTVar aVar (links %~ delete (aNode ^. tNodeName))
+
+
+findNode :: Ord a => a -> TVar (TGraph a b) -> STM (Maybe (TVar (TNode a b)))
+findNode aName aTIndex = M.lookup aName <$> readTVar aTIndex
