@@ -11,23 +11,23 @@ import           Eff                                      ( Eff
 
 import qualified Enecuum.Framework.Domain      as D
 
-import           Enecuum.Core.NetworkModel.Language       ( NetworkModelL )
+import           Enecuum.Core.NetworkModel.Language       ( NetworkModel )
 
 data NetworkingL a where
   Connect :: D.ConnectionConfig -> NetworkingL (Maybe D.Connection)
-  WithNetwork :: (Member NetworkModelL effs) => Eff effs a -> NetworkingL a
+  -- WithNetwork :: Eff NetworkModel a -> NetworkingL a
 
-withNetwork
-  :: forall effs1 effs2 a
-   . (Member NetworkModelL effs1, Member NetworkingL effs2)
-  => Eff effs1 a
-  -> Eff effs2 a
-withNetwork = send . WithNetwork
+-- withNetwork
+--   :: forall effs1 effs2 a
+--    . (Member NetworkModel effs1, Member NetworkingL effs2)
+--   => Eff effs1 a
+--   -> Eff effs2 a
+-- withNetwork = send . WithNetwork
 
-withConnection
-  :: Member NetworkingL effs
-  => D.ConnectionConfig
-  -> D.NodeConfig
-  -> (D.Connection -> Eff effs a)
-  -> Eff effs a
-withConnection = error "withConnection not implemented."
+-- withConnection
+--   :: Member NetworkingL effs
+--   => D.ConnectionConfig
+--   -> D.NodeConfig
+--   -> (D.Connection -> Eff effs a)
+--   -> Eff effs a
+-- withConnection = error "withConnection not implemented."

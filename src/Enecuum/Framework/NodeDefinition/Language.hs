@@ -13,23 +13,29 @@ import qualified Data.Aeson                    as A
 import           Data.Aeson                               ( FromJSON )
 import qualified Data.ByteString.Lazy          as BS
 
-import           Enecuum.Core.NetworkModel.Language       ( NetworkModelL )
+import           Enecuum.Core.NetworkModel.Language       ( NetworkSendingL, NetworkListeningL, NetworkSyncL )
 import           Enecuum.Framework.Networking.Language    ( NetworkingL )
 import           Enecuum.Framework.Node.Language          ( NodeL )
 import qualified Enecuum.Framework.Domain      as D
 
-type NodeInteractionL =
-  '[ NetworkModelL
+type NodeModel =
+  '[ NetworkSendingL
+   , NetworkListeningL
+   , NetworkSyncL
    , NetworkingL
    , NodeL
    ]
 
-type Handler = (Eff NodeInteractionL (), Maybe BS.ByteString)
+type Handler = (Eff NodeModel (), Maybe BS.ByteString)
 type HandlersF = Handler -> Handler
 
 data NodeDefinitionL a where
-  Initialization :: Eff NodeInteractionL a -> NodeDefinitionL a
+  Initialization :: Eff NodeModel a -> NodeDefinitionL a
   Serving        :: HandlersF -> NodeDefinitionL D.ServerHandle
+
+type NodeDefinitionModel =
+  '[ NodeDefinitionL
+   ]
 
 makeFreer ''NodeDefinitionL
 

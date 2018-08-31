@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Enecuum.Framework.Domain.Networking where
 
@@ -14,9 +15,7 @@ import           Control.Newtype.Generics                 ( Newtype
 -- TODO: move to some API module.
 newtype FindNodeByTagRequest = FindNodeByTagRequest Text
 newtype FindNodeByTagResponse = FindNodeByTagResponse NodeConfig
-  deriving (Generic)
-
-instance Newtype FindNodeByTagResponse
+  deriving (Generic, Newtype)
 
 -- TODO: more type safety.
 instance T.NetworkMethod () FindNodeByTagRequest FindNodeByTagResponse where

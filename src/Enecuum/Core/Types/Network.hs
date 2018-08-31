@@ -26,3 +26,6 @@ class NetworkMethod cfg req resp | req -> resp, resp -> req where
     toNetworkRequest :: cfg -> req -> NetworkRequest
     fromNetworkResponse :: cfg -> NetworkResponse -> Maybe resp
 
+
+-- TODO: replace by Interval
+type WaitingTimeout = Float

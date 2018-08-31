@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Enecuum.Framework.NodeSpec where
 
@@ -44,12 +45,11 @@ import           GHC.Generics                             ( Generic )
 import           Control.Newtype.Generics                 ( Newtype
                                                           , O
                                                           , pack
+                                                          , unpack
                                                           )
 
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
-import qualified Enecuum.Core.Language         as CL
-import qualified Enecuum.Core.Types            as CT
 
 bootNodeTag = "boot_node"
 masterNodeTag = "master_node"
@@ -77,15 +77,6 @@ server _ = undefined
 firstOf _ = undefined
 
 
-waitOne
-  :: forall req resp result effs
-   . CT.NetworkMethod () req resp
-  => Newtype resp
-  => Float
-  -> (CT.NetworkRequest -> Eff effs ())
-  -> req
-  -> Eff effs (Maybe (O resp))
-waitOne _ networkMethod req = error "waitOne not implemented."
 
 
 -- -- Discovery as it's described in the document:
@@ -104,19 +95,14 @@ waitOne _ networkMethod req = error "waitOne not implemented."
 --     Just bootNodeCfg -> pure bootNodeCfg
 
 
-
-
-
-simpleBootNodeDiscovery :: Eff CL.NetworkModelL D.NodeConfig
+simpleBootNodeDiscovery :: Eff L.NetworkModel D.NodeConfig
 simpleBootNodeDiscovery = do
-  mbBootNodeCfg <- waitSingleResponse 10.0 (CL.multicast localNetwork) $ D.FindNodeByTagRequest bootNodeTag
+  mbBootNodeCfg <- fmap unpack <$> (L.multicastRequest localNetwork 10.0 $ D.FindNodeByTagRequest bootNodeTag)
   case mbBootNodeCfg of
     Nothing          -> error "Boot node discovery failed."
     Just bootNodeCfg -> pure bootNodeCfg
 
-findNodeWith
-  :: CL.NodeLanguage effs
-  => Eff effs D.NodeConfig
+
 findNodeWith discoveryAlg = undefined
 
 
@@ -125,17 +111,15 @@ data NodeEndpoint = NodeEndpoint
   , serverHandle :: D.ServerHandle
   }
 
-acceptHello1
-  :: HelloRequest1 -> Eff L.NodeInteractionL ()
+acceptHello1 :: HelloRequest1 -> Eff L.NodeModel ()
 acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " ++ msg
 
-acceptHello2
-  :: HelloRequest2 -> Eff L.NodeInteractionL ()
+acceptHello2 :: HelloRequest2 -> Eff L.NodeModel ()
 acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " ++ msg
 
 data NodeDef = NodeDef
     { nodeTag :: D.NodeTag
-    , nodeScenario :: Eff L.NodeDefinitionL NodeEndpoint
+    , nodeScenario :: Eff L.NodeDefinitionModel NodeEndpoint
     }
 
 data GetNeighboursRequest = GetNeighboursRequest
@@ -163,7 +147,7 @@ masterNodeServerDef
   = L.serveRequest @HelloRequest1 acceptHello1
   . L.serveRequest @HelloRequest2 acceptHello2
 
-masterNodeInitialization :: Eff L.NodeInteractionL D.NodeID
+masterNodeInitialization :: Eff L.NodeModel D.NodeID
 masterNodeInitialization = do
   bootNodeCfg <- findNodeWith simpleBootNodeDiscovery
   hashID      <- withConnection bootNodeCfg $ request' GetHashIDRequest
@@ -172,7 +156,7 @@ masterNodeInitialization = do
 masterNodeScenario
   :: forall effs
    . D.Config
-  -> Eff L.NodeDefinitionL NodeEndpoint
+  -> Eff L.NodeDefinitionModel NodeEndpoint
 masterNodeScenario bootNodeCfg = do
 
   nodeID       <- L.initialization masterNodeInitialization
