@@ -24,7 +24,7 @@ instance T.NetworkMethod () FindNodeByTagRequest FindNodeByTagResponse where
 data ConnectionConfig = ConnectionConfig
 data Connection = Connection
 
-data ServerHandle = ServerHandle
+data ServerDef = ServerDef
   {
 
   }

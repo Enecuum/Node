@@ -1,6 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -50,89 +47,13 @@ import           Control.Newtype.Generics                 ( Newtype
 
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
+-- import qualified Enecuum.Framework.Runtime     as R
 
-bootNodeTag = "bootNode"
-masterNodeTag = "masterNode"
-
-localNetwork = undefined
-externalNetwork = undefined
-enecuumNetwork = undefined
-
-withConnection = undefined
-
-request node req = undefined
-request' req node = flip request
-
--- -- Discovery as it's described in the document:
--- -- https://docs.enecuum.com/pages/viewpage.action?pageId=3801661
--- bootNodeDiscovery :: (Member CL.NetworkModelL effs) => Eff effs D.NodeConfig
--- bootNodeDiscovery = do
---   mbBootNodeCfg <- firstOf
---     [ waitOne 10.0 (CL.multicast localNetwork)
---       $ D.FindNodeByTagRequest bootNodeTag
---     , waitOne 10.0 (CL.multicast externalNetwork)
---       $ D.FindNodeByTagRequest bootNodeTag
---     , CL.findDNSRecord enecuumNetwork $ D.FindNodeByTagRequest bootNodeTag
---     ]
---   case mbBootNodeCfg of
---     Nothing          -> error "Boot node discovery failed."
---     Just bootNodeCfg -> pure bootNodeCfg
-
-data NodeEndpoint = NodeEndpoint
-  { nodeID :: D.NodeID
-  , serverHandle :: D.ServerHandle
-  }
-
-simpleBootNodeDiscovery :: Eff L.NetworkModel D.NodeConfig
-simpleBootNodeDiscovery = do
-  mbBootNodeCfg <- fmap unpack <$> (L.multicastRequest localNetwork 10.0 $ D.FindNodeByTagRequest bootNodeTag)
-  case mbBootNodeCfg of
-    Nothing          -> error "Boot node discovery failed."
-    Just bootNodeCfg -> pure bootNodeCfg
+import Enecuum.Framework.TestData.Nodes
+import Enecuum.Framework.Testing.Interpreters
 
 
-acceptHello1 :: HelloRequest1 -> Eff L.NodeModel ()
-acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " ++ msg
 
-acceptHello2 :: HelloRequest2 -> Eff L.NodeModel ()
-acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " ++ msg
-
-
-data GetNeighboursRequest = GetNeighboursRequest
-  deriving (Generic, ToJSON, FromJSON)
-data GetHashIDRequest = GetHashIDRequest
-  deriving (Generic, ToJSON, FromJSON)
-data AcceptConnectionRequest = AcceptConnectionRequest
-  deriving (Generic, ToJSON, FromJSON)
-data HelloRequest1 = HelloRequest1 String
-  deriving (Generic, ToJSON, FromJSON)
-data HelloRequest2 = HelloRequest2 String
-  deriving (Generic, ToJSON, FromJSON)
-
-bootNode :: Eff L.NodeDefinitionModel NodeEndpoint
-bootNode = do
-  L.nodeTag bootNodeTag
-  nodeID <- L.initialization $ pure $ D.NodeID "abc"
-  serverHandle <- L.serving $ L.serveRequest @HelloRequest1 acceptHello1
-  pure $ NodeEndpoint nodeID serverHandle
-
-masterNodeServerDef :: L.HandlersF
-masterNodeServerDef
-  = L.serveRequest @HelloRequest1 acceptHello1
-  . L.serveRequest @HelloRequest2 acceptHello2
-
-masterNodeInitialization :: Eff L.NodeModel D.NodeID
-masterNodeInitialization = do
-  bootNodeCfg <- L.evalNetwork simpleBootNodeDiscovery
-  hashID      <- withConnection bootNodeCfg $ request' GetHashIDRequest
-  pure $ D.NodeID hashID
-
-masterNode :: D.Config -> Eff L.NodeDefinitionModel NodeEndpoint
-masterNode bootNodeCfg = do
-  L.nodeTag masterNodeTag
-  nodeID       <- L.initialization masterNodeInitialization
-  serverHandle <- L.serving masterNodeServerDef
-  pure $ NodeEndpoint nodeID serverHandle
 
 runNode = undefined
 
