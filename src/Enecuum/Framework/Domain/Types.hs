@@ -6,5 +6,7 @@ type NodeTag = Text
 
 data NodeConfig = NodeConfig
   {
-    
+
   }
+
+newtype NodeID = NodeID Text

@@ -11,7 +11,7 @@ import           Control.Newtype.Generics                 ( Newtype
                                                           )
 
 -- Raw vision of networking api. Can change significantly.
-
+-- TODO: move to some API module.
 newtype FindNodeByTagRequest = FindNodeByTagRequest Text
 newtype FindNodeByTagResponse = FindNodeByTagResponse NodeConfig
   deriving (Generic)
@@ -22,3 +22,11 @@ instance Newtype FindNodeByTagResponse
 instance T.NetworkMethod () FindNodeByTagRequest FindNodeByTagResponse where
   toNetworkRequest _ (FindNodeByTagRequest _) = T.MulticastRequest "dummy"
   fromNetworkResponse _ (T.NetworkResponse _) = error "fromNetworkResponse not implemented for FindNodeByTagRequest"
+
+data ConnectionConfig = ConnectionConfig
+data Connection = Connection
+
+data ServerHandle = ServerHandle
+  {
+
+  }

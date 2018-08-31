@@ -15,5 +15,4 @@ data NetworkModelL a where
   Multicast :: T.NetworkCfg -> T.NetworkRequest -> NetworkModelL ()
   FindDNSRecord :: T.NetworkCfg -> T.DNSQuery -> NetworkModelL (Maybe T.DNSResponse)
 
-
 makeFreer ''NetworkModelL

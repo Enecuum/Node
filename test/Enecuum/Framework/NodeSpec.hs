@@ -51,8 +51,6 @@ import qualified Enecuum.Language              as L
 import qualified Enecuum.Core.Language         as CL
 import qualified Enecuum.Core.Types            as CT
 
-findNodeWith discoveryAlg = undefined
-
 bootNodeTag = "boot_node"
 masterNodeTag = "master_node"
 
@@ -62,29 +60,18 @@ externalNetwork = undefined
 enecuumNetwork = undefined
 
 
-connect = undefined
 withConnection = undefined
 
 request node req = undefined
 request' req node = flip request
 
-
-data ServerHandle = ServerHandle
-  {
-
-  }
-
 -- Node description lang
 node _ = undefined
-initialization _ = undefined
 
 -- server :: a -> SomeLang ServerHandle
 server _ = undefined
 
 -- startServer _ = undefined
-
-newtype NodeID = NodeID Text
-
 
 
 firstOf _ = undefined
@@ -116,27 +103,46 @@ waitOne _ networkMethod req = error "waitOne not implemented."
 --     Nothing          -> error "Boot node discovery failed."
 --     Just bootNodeCfg -> pure bootNodeCfg
 
--- Simple discovery
-simpleBootNodeDiscovery
-  :: (Member CL.NetworkModelL effs) => Eff effs D.NodeConfig
-simpleBootNodeDiscovery = do
-  mbBootNodeCfg <- waitOne 10.0 (CL.multicast localNetwork)
-    $ D.FindNodeByTagRequest bootNodeTag
-  case mbBootNodeCfg of
-    Nothing          -> error "Boot node discovery failed."
-    Just bootNodeCfg -> pure bootNodeCfg
+-- -- Simple discovery
+-- simpleBootNodeDiscovery
+--   :: Member CL.NetworkModelL effs
+--   => Eff effs D.NodeConfig
+-- simpleBootNodeDiscovery = do
+--   mbBootNodeCfg <- waitOne 10.0 (CL.multicast localNetwork)
+--     $ D.FindNodeByTagRequest bootNodeTag
+--   case mbBootNodeCfg of
+--     Nothing          -> error "Boot node discovery failed."
+--     Just bootNodeCfg -> pure bootNodeCfg
+--
+-- findNodeWith
+--   :: CL.NodeLanguage effs
+--   => Eff effs D.NodeConfig
+-- findNodeWith discoveryAlg = undefined
 
 
-data Node = Node
-  { nodeID :: NodeID
-  , serverHandle :: ServerHandle
+data NodeEndpoint = NodeEndpoint
+  { nodeID :: D.NodeID
+  , serverHandle :: D.ServerHandle
   }
 
-acceptConnection _ = undefined
-acceptHello _ = undefined
+acceptHello1
+  :: forall effs
+   . L.NodeLanguage effs
+  => HelloRequest1
+  -> Eff effs ()
+acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " ++ msg
 
-data ServingL a where
-  Dummy :: ServingL a
+acceptHello2
+  :: forall effs
+   . L.NodeLanguage effs
+  => HelloRequest2
+  -> Eff effs ()
+acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " ++ msg
+
+data NodeDef = NodeDef
+    { nodeTag :: D.NodeTag
+    , nodeScenario :: forall effs. forall effs. ( Member L.NodeDefinitionL effs, L.NodeLanguage effs ) => Eff effs NodeEndpoint
+    }
 
 data GetNeighboursRequest = GetNeighboursRequest
   deriving (Generic, ToJSON, FromJSON)
@@ -144,63 +150,54 @@ data GetHashIDRequest = GetHashIDRequest
   deriving (Generic, ToJSON, FromJSON)
 data AcceptConnectionRequest = AcceptConnectionRequest
   deriving (Generic, ToJSON, FromJSON)
-data HelloRequest = HelloRequest
+data HelloRequest1 = HelloRequest1 String
   deriving (Generic, ToJSON, FromJSON)
-
-sendHashID :: (Member ServingL effs) => GetHashIDRequest -> Eff effs ()
-sendHashID _ = undefined
-
-serveRequest
-  :: (FromJSON req)
-  => (req -> Eff effs ())
-  -> (Eff effs (), Maybe BS.ByteString)
-  -> (Eff effs (), Maybe BS.ByteString)
-serveRequest handler (handled, Just rawReq) = case A.decode rawReq of
-  Just req -> (handled >> handler req, Nothing)
-  Nothing  -> (handled, Just rawReq)
-serveRequest handler (handled, Nothing) = (handled, Nothing)
-
-
-
-serving handlersF = undefined
-
-
+data HelloRequest2 = HelloRequest2 String
+  deriving (Generic, ToJSON, FromJSON)
 
 
 -- bootNode = node bootNodeTag $ do
 --   nodeID <- initialization $ do
---     bootNodeCfg <- findNodeWith simpleBootNodeDiscovery
---     hashID      <- withConnection bootNodeCfg $ request' GetHashIDRequest
 --     pure $ NodeID hashID
-
 --   serverHandle <- serving $ serveRequest sendHashID
-
 --   pure $ Node nodeID serverHandle
+--  where
+--    sendHashID _ = undefined
 
+masterNodeServerDef
+  :: forall effs
+   . ( L.NodeLanguage effs )
+  => L.HandlersF effs
+masterNodeServerDef
+    = L.serveRequest @HelloRequest1 acceptHello1
+    . L.serveRequest @HelloRequest2 acceptHello2
 
+masterNodeInitialization
+  :: forall effs
+   . ( L.NodeLanguage effs )
+  => Eff effs D.NodeID
+masterNodeInitialization =  do
+  -- bootNodeCfg <- findNodeWith simpleBootNodeDiscovery
+  -- hashID      <- withConnection bootNodeCfg $ request' GetHashIDRequest
+  -- pure $ D.NodeID hashID
+  pure $ D.NodeID ""
 
 masterNodeScenario
-  :: forall effs . (Member L.NodeL effs) => D.Config -> Eff effs Node
+  :: forall effs
+   . ( Member L.NodeDefinitionL effs
+     , L.NodeLanguage effs
+     )
+  => D.Config
+  -> Eff effs NodeEndpoint
 masterNodeScenario bootNodeCfg = do
 
-  -- nodeID <- initialization $ do
-  --   bootNodeCfg <- findNodeWith simpleBootNodeDiscovery
-  --   hashID      <- withConnection bootNodeCfg $ request' GetHashIDRequest
-  --   pure $ NodeID hashID
+  nodeID <- L.initialization $ masterNodeInitialization
+  serverHandle <- L.serving masterNodeServerDef
 
-  serverHandle <- serving $ serveRequest @HelloRequest acceptHello
+  pure $ NodeEndpoint nodeID serverHandle
 
-  pure $ Node (NodeID "") serverHandle
-
-
-
-data NodeDef = NodeDef
-  { nodeTag :: D.NodeTag
-  , nodeScenario :: forall effs. (Member L.NodeL effs) => Eff effs Node
-  }
-
-masterNode :: D.Config -> NodeDef
-masterNode cfg = NodeDef masterNodeTag (masterNodeScenario cfg)
+masterNodeDef :: D.Config -> NodeDef
+masterNodeDef cfg = NodeDef masterNodeTag (masterNodeScenario cfg)
 
 
 runNode = undefined
@@ -208,7 +205,7 @@ runNode = undefined
 spec :: Spec
 spec = describe "Master Node test" $ it "Master Node test" $ do
 
-  res <- runNode $ masterNode $ D.Config "boot node addr"
+  res <- runNode $ masterNodeDef $ D.Config "boot node addr"
 
   threadDelay 1000
 
