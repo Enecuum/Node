@@ -92,12 +92,12 @@ firstOf _ = undefined
 
 waitOne
   :: forall req resp result effs
-   . CT.NetworkMethod () req resp result
-  => Newtype result
+   . CT.NetworkMethod () req resp
+  => Newtype resp
   => Float
   -> (CT.NetworkRequest -> Eff effs ())
   -> req
-  -> Eff effs (Maybe (O result))
+  -> Eff effs (Maybe (O resp))
 waitOne _ networkMethod req = error "waitOne not implemented."
 
 
@@ -213,5 +213,3 @@ spec = describe "Master Node test" $ it "Master Node test" $ do
   threadDelay 1000
 
   "a" `shouldBe` "b"
-
-

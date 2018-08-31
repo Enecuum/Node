@@ -9,7 +9,6 @@ import qualified Data.Aeson                    as A
 import           Data.Aeson                               ( FromJSON )
 import           GHC.Generics                             ( Generic )
 
-
 -- Dummy config
 data Config = Config
   { bootNodeAddress :: Text
