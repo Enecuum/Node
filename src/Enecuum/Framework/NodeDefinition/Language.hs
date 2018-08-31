@@ -30,6 +30,7 @@ type Handler = (Eff NodeModel (), Maybe BS.ByteString)
 type HandlersF = Handler -> Handler
 
 data NodeDefinitionL a where
+  NodeTag        :: D.NodeTag -> NodeDefinitionL a
   Initialization :: Eff NodeModel a -> NodeDefinitionL a
   Serving        :: HandlersF -> NodeDefinitionL D.ServerHandle
 

@@ -1,6 +1,8 @@
-module Enecuum.Framework.Domain.Types where
+module Enecuum.Framework.Domain.Node where
 
 import Data.Text (Text)
+
+-- Some of these types can be taken from Legacy.
 
 type NodeTag = Text
 

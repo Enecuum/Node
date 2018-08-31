@@ -51,33 +51,17 @@ import           Control.Newtype.Generics                 ( Newtype
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
 
-bootNodeTag = "boot_node"
-masterNodeTag = "master_node"
+bootNodeTag = "bootNode"
+masterNodeTag = "masterNode"
 
--- Some network model is needed.
 localNetwork = undefined
 externalNetwork = undefined
 enecuumNetwork = undefined
-
 
 withConnection = undefined
 
 request node req = undefined
 request' req node = flip request
-
--- Node description lang
-node _ = undefined
-
--- server :: a -> SomeLang ServerHandle
-server _ = undefined
-
--- startServer _ = undefined
-
-
-firstOf _ = undefined
-
-
-
 
 -- -- Discovery as it's described in the document:
 -- -- https://docs.enecuum.com/pages/viewpage.action?pageId=3801661
@@ -94,6 +78,10 @@ firstOf _ = undefined
 --     Nothing          -> error "Boot node discovery failed."
 --     Just bootNodeCfg -> pure bootNodeCfg
 
+data NodeEndpoint = NodeEndpoint
+  { nodeID :: D.NodeID
+  , serverHandle :: D.ServerHandle
+  }
 
 simpleBootNodeDiscovery :: Eff L.NetworkModel D.NodeConfig
 simpleBootNodeDiscovery = do
@@ -102,10 +90,6 @@ simpleBootNodeDiscovery = do
     Nothing          -> error "Boot node discovery failed."
     Just bootNodeCfg -> pure bootNodeCfg
 
-data NodeEndpoint = NodeEndpoint
-  { nodeID :: D.NodeID
-  , serverHandle :: D.ServerHandle
-  }
 
 acceptHello1 :: HelloRequest1 -> Eff L.NodeModel ()
 acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " ++ msg
@@ -113,10 +97,6 @@ acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " ++ msg
 acceptHello2 :: HelloRequest2 -> Eff L.NodeModel ()
 acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " ++ msg
 
-data NodeDef = NodeDef
-    { nodeTag :: D.NodeTag
-    , nodeScenario :: Eff L.NodeDefinitionModel NodeEndpoint
-    }
 
 data GetNeighboursRequest = GetNeighboursRequest
   deriving (Generic, ToJSON, FromJSON)
@@ -129,14 +109,12 @@ data HelloRequest1 = HelloRequest1 String
 data HelloRequest2 = HelloRequest2 String
   deriving (Generic, ToJSON, FromJSON)
 
-
--- bootNode = node bootNodeTag $ do
---   nodeID <- initialization $ do
---     pure $ NodeID hashID
---   serverHandle <- serving $ serveRequest sendHashID
---   pure $ Node nodeID serverHandle
---  where
---    sendHashID _ = undefined
+bootNode :: Eff L.NodeDefinitionModel NodeEndpoint
+bootNode = do
+  L.nodeTag bootNodeTag
+  nodeID <- L.initialization $ pure $ D.NodeID "abc"
+  serverHandle <- L.serving $ L.serveRequest @HelloRequest1 acceptHello1
+  pure $ NodeEndpoint nodeID serverHandle
 
 masterNodeServerDef :: L.HandlersF
 masterNodeServerDef
@@ -149,27 +127,19 @@ masterNodeInitialization = do
   hashID      <- withConnection bootNodeCfg $ request' GetHashIDRequest
   pure $ D.NodeID hashID
 
-masterNodeScenario
-  :: forall effs
-   . D.Config
-  -> Eff L.NodeDefinitionModel NodeEndpoint
-masterNodeScenario bootNodeCfg = do
-
+masterNode :: D.Config -> Eff L.NodeDefinitionModel NodeEndpoint
+masterNode bootNodeCfg = do
+  L.nodeTag masterNodeTag
   nodeID       <- L.initialization masterNodeInitialization
   serverHandle <- L.serving masterNodeServerDef
-
   pure $ NodeEndpoint nodeID serverHandle
-
-masterNodeDef :: D.Config -> NodeDef
-masterNodeDef cfg = NodeDef masterNodeTag (masterNodeScenario cfg)
-
 
 runNode = undefined
 
 spec :: Spec
 spec = describe "Master Node test" $ it "Master Node test" $ do
 
-  res <- runNode $ masterNodeDef $ D.Config "boot node addr"
+  res <- runNode $ masterNode $ D.Config "boot node addr"
 
   threadDelay 1000
 

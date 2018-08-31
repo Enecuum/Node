@@ -3,7 +3,5 @@ module Enecuum.Framework.Domain
   )
 where
 
-import           Enecuum.Framework.Domain.Types
-                                               as X
-import           Enecuum.Framework.Domain.Networking
-                                               as X
+import           Enecuum.Framework.Domain.Networking as X
+import           Enecuum.Framework.Domain.Node as X
