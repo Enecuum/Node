@@ -103,6 +103,7 @@ dependencies:
 - hspec
 - HUnit
 - hspec-contrib
+- stm
 
 library:
   source-dirs: src
