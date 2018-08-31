@@ -120,6 +120,7 @@ dependencies:
 - derive
 - bytestring-conversion
 - freer
+- newtype-generics
 
 library:
   source-dirs: src

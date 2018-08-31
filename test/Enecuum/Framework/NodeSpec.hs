@@ -40,27 +40,16 @@ import           Data.Aeson                               ( ToJSON
                                                           , FromJSON
                                                           )
 import qualified Data.ByteString.Lazy          as BS
-import GHC.Generics (Generic)
+import           GHC.Generics                             ( Generic )
+import           Control.Newtype.Generics                 ( Newtype
+                                                          , O
+                                                          , pack
+                                                          )
 
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
-
-type NodeRequestResult a = Either String a
-
-data Request = Request
-data Response = Response
-
--- class NodeRequest cfg req resp | req -> resp, resp -> req where
---     toRequest :: cfg -> Request
---     fromResponse :: cfg -> Response -> NodeRequestResult b
-
-
-data NodeFilter = ByTag Text
-
-data MulticastRequest = FindNode NodeFilter
-
-findNodeByTag = FindNode . ByTag
-
+import qualified Enecuum.Core.Language         as CL
+import qualified Enecuum.Core.Types            as CT
 
 findNodeWith discoveryAlg = undefined
 
@@ -71,12 +60,6 @@ masterNodeTag = "master_node"
 localNetwork = undefined
 externalNetwork = undefined
 enecuumNetwork = undefined
-
-firstOf _ = undefined
-
--- Node discovery lang
-multicast = undefined
-waitOne _ = undefined
 
 
 connect = undefined
@@ -103,22 +86,42 @@ server _ = undefined
 newtype NodeID = NodeID Text
 
 
--- Discovery as it described in the document:
--- https://docs.enecuum.com/pages/viewpage.action?pageId=3801661
-bootNodeDiscovery = do
-  mbBootNodeCfg <- firstOf
-    [ waitOne 10.0 $ multicast localNetwork $ findNodeByTag bootNodeTag
-    , waitOne 10.0 $ multicast externalNetwork $ findNodeByTag bootNodeTag
-    , waitOne 10.0 $ multicast enecuumNetwork $ findNodeByTag bootNodeTag
-    ]
-  case mbBootNodeCfg of
-    Nothing          -> error "Boot node discovery failed."
-    Just bootNodeCfg -> pure bootNodeCfg
+
+firstOf _ = undefined
+
+
+waitOne
+  :: forall req resp result effs
+   . CT.NetworkMethod () req resp result
+  => Newtype result
+  => Float
+  -> (CT.NetworkRequest -> Eff effs ())
+  -> req
+  -> Eff effs (Maybe (O result))
+waitOne _ networkMethod req = error "waitOne not implemented."
+
+
+-- -- Discovery as it's described in the document:
+-- -- https://docs.enecuum.com/pages/viewpage.action?pageId=3801661
+-- bootNodeDiscovery :: (Member CL.NetworkModelL effs) => Eff effs D.NodeConfig
+-- bootNodeDiscovery = do
+--   mbBootNodeCfg <- firstOf
+--     [ waitOne 10.0 (CL.multicast localNetwork)
+--       $ D.FindNodeByTagRequest bootNodeTag
+--     , waitOne 10.0 (CL.multicast externalNetwork)
+--       $ D.FindNodeByTagRequest bootNodeTag
+--     , CL.findDNSRecord enecuumNetwork $ D.FindNodeByTagRequest bootNodeTag
+--     ]
+--   case mbBootNodeCfg of
+--     Nothing          -> error "Boot node discovery failed."
+--     Just bootNodeCfg -> pure bootNodeCfg
 
 -- Simple discovery
+simpleBootNodeDiscovery
+  :: (Member CL.NetworkModelL effs) => Eff effs D.NodeConfig
 simpleBootNodeDiscovery = do
-  mbBootNodeCfg <- waitOne 10.0 $ multicast localNetwork $ findNodeByTag
-    bootNodeTag
+  mbBootNodeCfg <- waitOne 10.0 (CL.multicast localNetwork)
+    $ D.FindNodeByTagRequest bootNodeTag
   case mbBootNodeCfg of
     Nothing          -> error "Boot node discovery failed."
     Just bootNodeCfg -> pure bootNodeCfg
@@ -146,11 +149,6 @@ data HelloRequest = HelloRequest
 
 sendHashID :: (Member ServingL effs) => GetHashIDRequest -> Eff effs ()
 sendHashID _ = undefined
-
-
-
-data ReqEff req a
-
 
 serveRequest
   :: (FromJSON req)
@@ -181,7 +179,8 @@ serving handlersF = undefined
 
 
 
-masterNodeScenario :: (Member L.NodeL effs) => D.Config -> Eff effs Node
+masterNodeScenario
+  :: forall effs . (Member L.NodeL effs) => D.Config -> Eff effs Node
 masterNodeScenario bootNodeCfg = do
 
   -- nodeID <- initialization $ do
@@ -197,11 +196,11 @@ masterNodeScenario bootNodeCfg = do
 
 data NodeDef = NodeDef
   { nodeTag :: D.NodeTag
-  , nodeScenario :: forall effs. (Member L.NodeL effs) => Eff effs ()
+  , nodeScenario :: forall effs. (Member L.NodeL effs) => Eff effs Node
   }
 
 masterNode :: D.Config -> NodeDef
-masterNode = NodeDef masterNodeTag . masterNodeScenario
+masterNode cfg = NodeDef masterNodeTag (masterNodeScenario cfg)
 
 
 runNode = undefined

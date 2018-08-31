@@ -1,5 +1,9 @@
 module Enecuum.Framework.Domain
   ( module X
-  ) where
+  )
+where
 
-import Enecuum.Framework.Domain.Types as X
+import           Enecuum.Framework.Domain.Types
+                                               as X
+import           Enecuum.Framework.Domain.Networking
+                                               as X
