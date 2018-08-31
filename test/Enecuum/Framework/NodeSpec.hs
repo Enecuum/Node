@@ -102,10 +102,6 @@ simpleBootNodeDiscovery = do
     Nothing          -> error "Boot node discovery failed."
     Just bootNodeCfg -> pure bootNodeCfg
 
-
-findNodeWith discoveryAlg = undefined
-
-
 data NodeEndpoint = NodeEndpoint
   { nodeID :: D.NodeID
   , serverHandle :: D.ServerHandle
@@ -149,7 +145,7 @@ masterNodeServerDef
 
 masterNodeInitialization :: Eff L.NodeModel D.NodeID
 masterNodeInitialization = do
-  bootNodeCfg <- findNodeWith simpleBootNodeDiscovery
+  bootNodeCfg <- L.evalNetwork simpleBootNodeDiscovery
   hashID      <- withConnection bootNodeCfg $ request' GetHashIDRequest
   pure $ D.NodeID hashID
 

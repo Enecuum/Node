@@ -62,9 +62,6 @@ waitSingleResponse
 waitSingleResponse cfg timeout sendingMethodF req =
   synchronize (sendingMethodF cfg req) (waitForSingleResponse cfg timeout)
 
-
-
-
 multicastRequest
   :: D.NetworkMethod () req resp
   => D.NetworkConfig
