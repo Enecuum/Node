@@ -126,22 +126,16 @@ data NodeEndpoint = NodeEndpoint
   }
 
 acceptHello1
-  :: forall effs
-   . L.NodeLanguage effs
-  => HelloRequest1
-  -> Eff effs ()
+  :: HelloRequest1 -> Eff L.LanguageEffs ()
 acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " ++ msg
 
 acceptHello2
-  :: forall effs
-   . L.NodeLanguage effs
-  => HelloRequest2
-  -> Eff effs ()
+  :: HelloRequest2 -> Eff L.LanguageEffs ()
 acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " ++ msg
 
 data NodeDef = NodeDef
     { nodeTag :: D.NodeTag
-    , nodeScenario :: forall effs. forall effs. ( Member L.NodeDefinitionL effs, L.NodeLanguage effs ) => Eff effs NodeEndpoint
+    , nodeScenario :: forall effs. forall effs. ( Member L.NodeDefinitionL effs ) => Eff effs NodeEndpoint
     }
 
 data GetNeighboursRequest = GetNeighboursRequest
@@ -164,19 +158,14 @@ data HelloRequest2 = HelloRequest2 String
 --  where
 --    sendHashID _ = undefined
 
+masterNodeServerDef :: L.HandlersF
 masterNodeServerDef
-  :: forall effs
-   . ( L.NodeLanguage effs )
-  => L.HandlersF effs
-masterNodeServerDef
-    = L.serveRequest @HelloRequest1 acceptHello1
-    . L.serveRequest @HelloRequest2 acceptHello2
+  = L.serveRequest @HelloRequest1 acceptHello1
+  . L.serveRequest @HelloRequest2 acceptHello2
 
 masterNodeInitialization
-  :: forall effs
-   . ( L.NodeLanguage effs )
-  => Eff effs D.NodeID
-masterNodeInitialization =  do
+  :: Eff L.LanguageEffs D.NodeID
+masterNodeInitialization = do
   -- bootNodeCfg <- findNodeWith simpleBootNodeDiscovery
   -- hashID      <- withConnection bootNodeCfg $ request' GetHashIDRequest
   -- pure $ D.NodeID hashID
@@ -184,14 +173,12 @@ masterNodeInitialization =  do
 
 masterNodeScenario
   :: forall effs
-   . ( Member L.NodeDefinitionL effs
-     , L.NodeLanguage effs
-     )
+   . (Member L.NodeDefinitionL effs)
   => D.Config
   -> Eff effs NodeEndpoint
 masterNodeScenario bootNodeCfg = do
 
-  nodeID <- L.initialization $ masterNodeInitialization
+  nodeID       <- L.initialization masterNodeInitialization
   serverHandle <- L.serving masterNodeServerDef
 
   pure $ NodeEndpoint nodeID serverHandle
@@ -209,4 +196,4 @@ spec = describe "Master Node test" $ it "Master Node test" $ do
 
   threadDelay 1000
 
-  "a" `shouldBe` "b"
+  "a" `shouldBe` ("b" :: String)
