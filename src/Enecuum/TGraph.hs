@@ -67,3 +67,13 @@ deleteNode aTNode = do
 
 findNode :: Ord a => a -> TVar (TGraph a b) -> STM (Maybe (TVar (TNode a b)))
 findNode aName aTIndex = M.lookup aName <$> readTVar aTIndex
+
+
+mapGraph :: (b -> b) -> TVar (TGraph a b) -> STM ()
+mapGraph f aTIndex = do
+    aIndex <- readTVar aTIndex
+    forM_ (elems aIndex) $ \aNode -> modifyTVar aNode (content %~ f)
+
+
+foldMapGraph :: (b -> c) -> TVar (TGraph a b) -> STM c
+foldMapGraph = undefined
