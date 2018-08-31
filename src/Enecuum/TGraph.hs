@@ -26,16 +26,16 @@ newIndex :: Ord a => STM (TVar (TGraph a b))
 newIndex = newTVar mempty
 
 
-newTNode :: Ord a => TVar (TGraph a b) -> a -> b -> STM ()
+newTNode :: Ord a => TVar (TGraph a b) -> a -> b -> STM Bool
 newTNode aIndex aName aContent = do
     aRes <- findNode aName aIndex
     when (isNothing aRes) $ do
         aTNode <- newTVar $ TNode aName aIndex mempty [] aContent
         modifyTVar aIndex $ insert aName aTNode
+    return $ isNothing aRes
 
 
-
-addTNode :: Ord a => TVar (TNode a b) -> a -> b -> STM ()
+addTNode :: Ord a => TVar (TNode a b) -> a -> b -> STM Bool
 addTNode aTNode aLinck aContent = do
     aNode     <- readTVar aTNode
     aRes <- findNode aLinck (aNode ^. graphIndex)
@@ -44,6 +44,7 @@ addTNode aTNode aLinck aContent = do
         modifyTVar (aNode ^. graphIndex) $ insert aLinck aTNode
         modifyTVar aTNode    (links %~ insert aLinck aNewTNode)
         modifyTVar aNewTNode (rLinks %~ (aTNode :))
+    return $ isNothing aRes
 
 
 addLinck :: Ord a => TVar (TNode a b) -> TVar (TNode a b) -> STM ()
@@ -75,5 +76,12 @@ mapGraph f aTIndex = do
     forM_ (elems aIndex) $ \aNode -> modifyTVar aNode (content %~ f)
 
 
-foldMapGraph :: (b -> c) -> TVar (TGraph a b) -> STM c
-foldMapGraph = undefined
+foldGraph :: c -> (b -> c -> c) -> TVar (TGraph a b) -> STM c
+foldGraph c f aTIndex = do
+    aIndex <- readTVar aTIndex
+    aLoop c (elems aIndex)
+  where
+    aLoop aCuum (x:xs) = do
+        aNode <- readTVar x
+        aLoop (f (aNode^.content) aCuum) xs
+    aLoop aCuum _ = return aCuum
