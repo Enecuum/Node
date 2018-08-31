@@ -103,21 +103,21 @@ waitOne _ networkMethod req = error "waitOne not implemented."
 --     Nothing          -> error "Boot node discovery failed."
 --     Just bootNodeCfg -> pure bootNodeCfg
 
--- -- Simple discovery
--- simpleBootNodeDiscovery
---   :: Member CL.NetworkModelL effs
---   => Eff effs D.NodeConfig
--- simpleBootNodeDiscovery = do
---   mbBootNodeCfg <- waitOne 10.0 (CL.multicast localNetwork)
---     $ D.FindNodeByTagRequest bootNodeTag
---   case mbBootNodeCfg of
---     Nothing          -> error "Boot node discovery failed."
---     Just bootNodeCfg -> pure bootNodeCfg
---
--- findNodeWith
---   :: CL.NodeLanguage effs
---   => Eff effs D.NodeConfig
--- findNodeWith discoveryAlg = undefined
+
+
+
+
+simpleBootNodeDiscovery :: Eff CL.NetworkModelL D.NodeConfig
+simpleBootNodeDiscovery = do
+  mbBootNodeCfg <- waitSingleResponse 10.0 (CL.multicast localNetwork) $ D.FindNodeByTagRequest bootNodeTag
+  case mbBootNodeCfg of
+    Nothing          -> error "Boot node discovery failed."
+    Just bootNodeCfg -> pure bootNodeCfg
+
+findNodeWith
+  :: CL.NodeLanguage effs
+  => Eff effs D.NodeConfig
+findNodeWith discoveryAlg = undefined
 
 
 data NodeEndpoint = NodeEndpoint
@@ -126,16 +126,16 @@ data NodeEndpoint = NodeEndpoint
   }
 
 acceptHello1
-  :: HelloRequest1 -> Eff L.LanguageEffs ()
+  :: HelloRequest1 -> Eff L.NodeInteractionL ()
 acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " ++ msg
 
 acceptHello2
-  :: HelloRequest2 -> Eff L.LanguageEffs ()
+  :: HelloRequest2 -> Eff L.NodeInteractionL ()
 acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " ++ msg
 
 data NodeDef = NodeDef
     { nodeTag :: D.NodeTag
-    , nodeScenario :: forall effs. forall effs. ( Member L.NodeDefinitionL effs ) => Eff effs NodeEndpoint
+    , nodeScenario :: Eff L.NodeDefinitionL NodeEndpoint
     }
 
 data GetNeighboursRequest = GetNeighboursRequest
@@ -163,19 +163,16 @@ masterNodeServerDef
   = L.serveRequest @HelloRequest1 acceptHello1
   . L.serveRequest @HelloRequest2 acceptHello2
 
-masterNodeInitialization
-  :: Eff L.LanguageEffs D.NodeID
+masterNodeInitialization :: Eff L.NodeInteractionL D.NodeID
 masterNodeInitialization = do
-  -- bootNodeCfg <- findNodeWith simpleBootNodeDiscovery
-  -- hashID      <- withConnection bootNodeCfg $ request' GetHashIDRequest
-  -- pure $ D.NodeID hashID
-  pure $ D.NodeID ""
+  bootNodeCfg <- findNodeWith simpleBootNodeDiscovery
+  hashID      <- withConnection bootNodeCfg $ request' GetHashIDRequest
+  pure $ D.NodeID hashID
 
 masterNodeScenario
   :: forall effs
-   . (Member L.NodeDefinitionL effs)
-  => D.Config
-  -> Eff effs NodeEndpoint
+   . D.Config
+  -> Eff L.NodeDefinitionL NodeEndpoint
 masterNodeScenario bootNodeCfg = do
 
   nodeID       <- L.initialization masterNodeInitialization

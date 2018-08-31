@@ -6,7 +6,7 @@ import           Data.Text                                ( Text )
 
 -- This is a raw vision of networking model. Will be updated later.
 
-data NetworkCfg = NetworkCfg
+data NetworkConfig = NetworkConfig
 
 data DNSQuery = DNSQuery
 data DNSResponse = DNSResponse

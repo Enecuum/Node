@@ -18,32 +18,20 @@ import           Enecuum.Framework.Networking.Language    ( NetworkingL )
 import           Enecuum.Framework.Node.Language          ( NodeL )
 import qualified Enecuum.Framework.Domain      as D
 
-type LanguageEffs =
+type NodeInteractionL =
   '[ NetworkModelL
    , NetworkingL
    , NodeL
    ]
 
-type Handler = (Eff LanguageEffs (), Maybe BS.ByteString)
+type Handler = (Eff NodeInteractionL (), Maybe BS.ByteString)
 type HandlersF = Handler -> Handler
 
 data NodeDefinitionL a where
-  Initialization :: Eff LanguageEffs a -> NodeDefinitionL a
+  Initialization :: Eff NodeInteractionL a -> NodeDefinitionL a
   Serving        :: HandlersF -> NodeDefinitionL D.ServerHandle
 
-initialization
-  :: forall effs
-   . Member NodeDefinitionL effs
-  => Eff LanguageEffs D.NodeID 
-  -> Eff effs D.NodeID
-initialization = send . Initialization
-
-serving
-  :: forall effs
-   . (Member NodeDefinitionL effs)
-  => HandlersF
-  -> Eff effs D.ServerHandle
-serving = send . Serving
+makeFreer ''NodeDefinitionL
 
 serveRequest
   :: forall req effs
