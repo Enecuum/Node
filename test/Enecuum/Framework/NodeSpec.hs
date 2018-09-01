@@ -53,15 +53,9 @@ import Enecuum.Framework.TestData.Nodes
 import Enecuum.Framework.Testing.Interpreters
 
 
-
-
-runNode = undefined
-
 spec :: Spec
 spec = describe "Master Node test" $ it "Master Node test" $ do
 
   res <- runNode $ masterNode $ D.Config "boot node addr"
-
-  threadDelay 1000
 
   "a" `shouldBe` ("b" :: String)

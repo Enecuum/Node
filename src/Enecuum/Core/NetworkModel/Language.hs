@@ -25,7 +25,7 @@ data NetworkSendingL a where
 
 data NetworkListeningL a where
   WaitForSingleResponse :: D.NetworkConfig -> D.WaitingTimeout -> NetworkListeningL (Maybe D.NetworkResponse)
-  WaitForResponses      :: D.NetworkConfig -> D.WaitingTimeout -> NetworkListeningL [D.NetworkResponse]
+  -- WaitForResponses      :: D.NetworkConfig -> D.WaitingTimeout -> NetworkListeningL [D.NetworkResponse]
 
 data NetworkSyncL a where
   Synchronize :: Eff '[NetworkSendingL] () -> Eff '[NetworkListeningL] a -> NetworkSyncL a

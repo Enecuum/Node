@@ -36,16 +36,17 @@ data NodeDefinitionL a where
 
 type NodeDefinitionModel =
   '[ NodeDefinitionL
+   , IO
    ]
 
 makeFreer ''NodeDefinitionL
 
 serveRequest
-  :: forall req effs
+  :: forall req
    . FromJSON req
-  => (req -> Eff effs ())
-  -> (Eff effs (), Maybe BS.ByteString)
-  -> (Eff effs (), Maybe BS.ByteString)
+  => (req -> Eff NodeModel ())
+  -> (Eff NodeModel (), Maybe BS.ByteString)
+  -> (Eff NodeModel (), Maybe BS.ByteString)
 serveRequest handler (handled, Just rawReq) = case A.decode rawReq of
   Just req -> (handled >> handler req, Nothing)
   Nothing  -> (handled, Just rawReq)
