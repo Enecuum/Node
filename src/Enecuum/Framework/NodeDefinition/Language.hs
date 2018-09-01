@@ -9,9 +9,12 @@ import           Eff                                      ( Eff
                                                           , Member
                                                           , send
                                                           )
+import           Eff.SafeIO                               (SIO)
+import           Eff.Exc                                  (Exc)
 import qualified Data.Aeson                    as A
 import           Data.Aeson                               ( FromJSON )
 import qualified Data.ByteString.Lazy          as BS
+import           Control.Exception                        (SomeException)
 
 import           Enecuum.Core.NetworkModel.Language       ( NetworkSendingL, NetworkListeningL, NetworkSyncL )
 import           Enecuum.Framework.Networking.Language    ( NetworkingL )
@@ -30,13 +33,15 @@ type Handler = (Eff NodeModel (), Maybe BS.ByteString)
 type HandlersF = Handler -> Handler
 
 data NodeDefinitionL a where
-  NodeTag        :: D.NodeTag -> NodeDefinitionL a
+  NodeTag        :: D.NodeTag -> NodeDefinitionL ()
   Initialization :: Eff NodeModel a -> NodeDefinitionL a
   Serving        :: HandlersF -> NodeDefinitionL D.ServerDef
 
-type NodeDefinitionModel =
+type NodeDefinitionModel eff =
   '[ NodeDefinitionL
-   , IO
+   , eff
+   , SIO
+   , Exc SomeException
    ]
 
 makeFreer ''NodeDefinitionL
