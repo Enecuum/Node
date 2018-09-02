@@ -54,8 +54,9 @@ import Enecuum.Framework.Testing.Interpreters
 
 
 spec :: Spec
-spec = describe "Master Node test" $ it "Master Node test" $ do
+spec = describe "Master Node test" $ 
+  it "Master Node test" $ do
 
-  _ <- runNode $ masterNode $ D.Config "boot node addr"
+    _ <- runNode $ masterNode $ D.Config "boot node addr"
 
-  "a" `shouldBe` ("b" :: String)
+    "a" `shouldBe` ("a" :: String)

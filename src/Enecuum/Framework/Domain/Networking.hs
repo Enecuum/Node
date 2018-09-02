@@ -21,6 +21,8 @@ instance T.NetworkMethod () FindNodeByTagRequest FindNodeByTagResponse where
   toNetworkRequest _ (FindNodeByTagRequest _) = T.MulticastRequest "dummy"
   fromNetworkResponse _ (T.NetworkResponse _) = error "fromNetworkResponse not implemented for FindNodeByTagRequest"
 
+
+
 data ConnectionConfig = ConnectionConfig
 data Connection = Connection
 
