@@ -16,7 +16,14 @@ import           Control.Newtype.Generics                 ( Newtype
 
 import qualified Enecuum.Core.Types            as D
 
--- This is a raw vision of networking model. Will be updated later.
+import Enecuum.RuntimeTmp
+
+import           Eff.State                                (State)
+import           Eff.SafeIO                               (SIO)
+import           Eff.Exc                                  (Exc)
+import           Control.Exception                        (SomeException)
+
+-- Low-level network model.
 
 data NetworkSendingL a where
   -- Unicast   :: D.NetworkConfig -> D.NetworkRequest -> NetworkSendingL ()
@@ -27,13 +34,31 @@ data NetworkListeningL a where
   WaitForSingleResponse :: D.NetworkConfig -> D.WaitingTimeout -> NetworkListeningL (Maybe D.NetworkResponse)
   -- WaitForResponses      :: D.NetworkConfig -> D.WaitingTimeout -> NetworkListeningL [D.NetworkResponse]
 
+type NetworkSendingModel =
+  '[ NetworkSendingL
+   , State RuntimeSt
+   , SIO
+   , Exc SomeException
+   ]
+
+type NetworkListeningModel =
+  '[ NetworkListeningL
+   , State RuntimeSt
+   , SIO
+   , Exc SomeException
+   ]
+
+
 data NetworkSyncL a where
-  Synchronize :: Eff '[NetworkSendingL] () -> Eff '[NetworkListeningL] a -> NetworkSyncL a
+  Synchronize :: Eff NetworkSendingModel () -> Eff NetworkListeningModel a -> NetworkSyncL a
 
 type NetworkModel =
-  '[ NetworkSendingL
+  '[ NetworkSyncL
    , NetworkListeningL
-   , NetworkSyncL
+   , NetworkSendingL
+   , State RuntimeSt
+   , SIO
+   , Exc SomeException
    ]
 
 makeFreer ''NetworkSendingL
@@ -42,21 +67,21 @@ makeFreer ''NetworkSendingL
 waitForSingleResponse
   :: D.NetworkConfig 
   -> D.WaitingTimeout
-  -> Eff '[NetworkListeningL] (Maybe D.NetworkResponse)
+  -> Eff NetworkListeningModel (Maybe D.NetworkResponse)
 waitForSingleResponse cfg timeout = send $ WaitForSingleResponse cfg timeout
 
 synchronize
-  :: Eff '[NetworkSendingL] ()
-  -> Eff '[NetworkListeningL] a 
+  :: Eff NetworkSendingModel ()
+  -> Eff NetworkListeningModel a 
   -> Eff NetworkModel a
-synchronize = error "synchronize not implemented"
+synchronize s l = send $ Synchronize s l
 
 
 -- Interface
 waitSingleResponse
   :: D.NetworkConfig 
   -> D.WaitingTimeout
-  -> (D.NetworkConfig -> D.NetworkRequest -> Eff '[NetworkSendingL] ())
+  -> (D.NetworkConfig -> D.NetworkRequest -> Eff NetworkSendingModel ())
   -> D.NetworkRequest
   -> Eff NetworkModel (Maybe D.NetworkResponse)
 waitSingleResponse cfg timeout sendingMethodF req =

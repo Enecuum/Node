@@ -20,7 +20,7 @@ import           Control.Monad.IO.Class                                         
 import           Control.Monad.Trans.Class                                      (lift)
 import           Control.Monad.State.Class                                      (MonadState, get, put)
 import           Control.Exception                                              (SomeException)
-import           Eff                                                            (Eff, Member, handleRelay, runM, send)
+import           Eff                                                            (Eff, Member, handleRelay, runM, send, raise, replaceRelay)
 import           Eff.Exc                                                        (Exc)
 import qualified Eff.State                                                      as S
 import           Eff.State                                                      (State, get, put)
@@ -29,71 +29,85 @@ import           Eff.Reader                                                     
 import           Eff.Reader.Pure                                                (Reader, runReader)
 import           Eff.SafeIO                                                     (SIO, runSafeIO, safeIO)
 import           Eff.Extra ()
+import           Data.TypeLevel (type (++))
 
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
 import           Enecuum.Framework.Testing.Runtime
 
-
+import Enecuum.RuntimeTmp
 
 interpretNetworkSendingL
   :: L.NetworkSendingL a
   -> Eff '[State RuntimeSt, SIO, Exc SomeException] a
-interpretNetworkSendingL (L.Multicast cfg req) = error "L.Multicast cfg req"
+interpretNetworkSendingL (L.Multicast cfg req) = safeIO $ print "L.Multicast cfg req"
 
-runNetworkSendingL
-  :: Eff '[L.NetworkSendingL, State RuntimeSt, SIO, Exc SomeException] a
+interpretNetworkListeningL
+  :: L.NetworkListeningL a
+  -> Eff '[L.NetworkSendingL, State RuntimeSt, SIO, Exc SomeException] a
+interpretNetworkListeningL (L.WaitForSingleResponse cfg timeout) = do
+  safeIO $ print "L.WaitForSingleResponse cfg timeout"
+  pure Nothing
+
+interpretNetworkListeningL'
+  :: L.NetworkListeningL a
   -> Eff '[State RuntimeSt, SIO, Exc SomeException] a
-runNetworkSendingL = handleRelay pure ( (>>=) . interpretNetworkSendingL )
+interpretNetworkListeningL' (L.WaitForSingleResponse cfg timeout) = do
+  safeIO $ print "L.WaitForSingleResponse cfg timeout"
+  pure Nothing
 
 
--- interpretNetworkListeningL
---   :: L.NetworkListeningL a
---   -> Eff '[State RuntimeSt, SIO] a
--- interpretNetworkListeningL (L.WaitForSingleResponse cfg timeout) = error "L.WaitForSingleResponse cfg timeout"
+interpretNetworkSyncL
+  :: L.NetworkSyncL a
+  -> Eff '[L.NetworkListeningL, L.NetworkSendingL, State RuntimeSt, SIO, Exc SomeException] a
+interpretNetworkSyncL (L.Synchronize sending listening) = do
+  safeIO $ print "Synchronize"
+  raise $ raise $ handleRelay pure ( (>>=) . interpretNetworkSendingL ) sending
+  raise $ raise $ handleRelay pure ( (>>=) . interpretNetworkListeningL' ) listening
 
--- runNetworkListeningL
---   :: Eff '[L.NetworkListeningL, State RuntimeSt, SIO] a
---   -> IO a
--- runNetworkListeningL = runM . handleRelay pure ( (>>=) . interpretNetworkListeningL )
+interpretNetworkingL
+  :: L.NetworkingL a
+  -> Eff '[L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, State RuntimeSt, SIO, Exc SomeException] a
+interpretNetworkingL (L.Connect cfg) = do
+  safeIO $ print "Connect cfg"
+  pure $ Just D.Connection
+interpretNetworkingL (L.EvalNetwork networkAction) = do
+  safeIO $ print "Eval Network"
+  networkAction
 
+interpretNodeL
+  :: L.NodeL a
+  -> Eff '[L.NetworkingL, L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, State RuntimeSt, SIO, Exc SomeException] a
+interpretNodeL (L.Dummy) = safeIO $ print "L.Dummy"
 
--- interpretNetworkSyncL
---   :: L.NetworkSyncL a
---   -> Eff '[State RuntimeSt, SIO] a
--- interpretNetworkSyncL (L.Synchronize networkSending networkListening) = error "L.Synchronize networkSending networkListening"
-
--- runNetworkSyncL
---   :: Eff '[L.NetworkSyncL, State RuntimeSt, SIO] a
---   -> IO a
--- runNetworkSyncL = runM . handleRelay pure ( (>>=) . interpretNetworkSyncL )
-
--- interpretNodeL
---   :: L.NodeL a
---   -> Eff '[State RuntimeSt, SIO] a
--- interpretNodeL (L.Dummy) = error "L.Dummy"
-
--- runNodeL
---   :: Eff '[L.NodeL, State RuntimeSt, SIO] a
---   -> IO a
--- runNodeL = runM . handleRelay pure ( (>>=) . interpretNodeL )
-
+runNodeL
+  :: Eff '[L.NodeL, L.NetworkingL, L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, State RuntimeSt, SIO, Exc SomeException] a
+  -> Eff '[State RuntimeSt, SIO, Exc SomeException] a
+runNodeL
+  = handleRelay pure ( (>>=) . interpretNetworkSendingL )
+  . handleRelay pure ( (>>=) . interpretNetworkListeningL )
+  . handleRelay pure ( (>>=) . interpretNetworkSyncL )
+  . handleRelay pure ( (>>=) . interpretNetworkingL )
+  . handleRelay pure ( (>>=) . interpretNodeL )
 
 
 interpretNodeDefinitionL
   :: L.NodeDefinitionL a
   -> Eff '[State RuntimeSt, SIO, Exc SomeException] a
-interpretNodeDefinitionL (L.NodeTag nodeTag')          = nodeTag .= nodeTag'
-interpretNodeDefinitionL (L.Initialization initScript) = error "Initialization initScript"
-interpretNodeDefinitionL (L.Serving handlersF)         = error "Serving handlersF"
+interpretNodeDefinitionL (L.NodeTag nodeTag')          = safeIO $ print "Node tag" --nodeTag .= nodeTag'
+interpretNodeDefinitionL (L.Initialization initScript) = do
+  safeIO $ print "Initialization"
+  runNodeL initScript
+interpretNodeDefinitionL (L.Serving handlersF)         = do
+  safeIO $ print "Serving handlersF"
+  pure $ D.ServerDef
 
-runNodeDefinitionModel
-  :: Eff (L.NodeDefinitionModel (State RuntimeSt)) a
+runNodeDefinitionL
+  :: Eff '[L.NodeDefinitionL, State RuntimeSt, SIO, Exc SomeException] a
   -> Eff '[State RuntimeSt, SIO, Exc SomeException] a
-runNodeDefinitionModel = handleRelay pure ( (>>=) . interpretNodeDefinitionL )
+runNodeDefinitionL = handleRelay pure ( (>>=) . interpretNodeDefinitionL )
 
-
-
-
-
-runNode x = runSafeIO $ evalState defaultRuntimeSt (runNodeDefinitionModel x)
+runNode
+  :: Eff '[L.NodeDefinitionL, State RuntimeSt, SIO, Exc SomeException] a
+  -> IO a
+runNode x = runSafeIO $ evalState defaultRuntimeSt (runNodeDefinitionL x)
