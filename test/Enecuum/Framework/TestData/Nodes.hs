@@ -3,31 +3,21 @@
 
 module Enecuum.Framework.TestData.Nodes where
 
-import           Data.Text                                ( Text )
-import           Eff                                      ( Eff, Member )
+import Enecuum.Prelude
+
 import qualified Data.Aeson                    as A
-import           Data.Aeson                               ( ToJSON
-                                                          , FromJSON
-                                                          )
 import qualified Data.ByteString.Lazy          as BS
-import           GHC.Generics                             ( Generic )
-import           Control.Newtype.Generics                 ( Newtype
-                                                          , O
-                                                          , pack
-                                                          , unpack
-                                                          )
-import           Eff.SafeIO                               (safeIO)
+import           Eff.SafeIO                    (safeIO)
 
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
+import qualified Enecuum.Framework.Lens        as Lens
+import qualified Enecuum.API                   as API
 
 bootNodeTag = "bootNode"
 masterNodeTag = "masterNode"
 
 localNetwork = error "localNetwork"
-
-request node req = error "request"
-request' req node = flip request
 
 -- Just dummy types
 data GetNeighboursRequest = GetNeighboursRequest
@@ -43,7 +33,7 @@ data HelloRequest2 = HelloRequest2 String
 
 simpleBootNodeDiscovery :: Eff L.NetworkModel D.NodeConfig
 simpleBootNodeDiscovery = do
-  mbBootNodeCfg <- fmap unpack <$> (L.multicastRequest localNetwork 10.0 $ D.FindNodeByTagRequest bootNodeTag)
+  mbBootNodeCfg <- fmap unpack <$> (L.multicastRequest localNetwork 10.0 $ API.FindNodeByTagRequest bootNodeTag)
   case mbBootNodeCfg of
     Nothing          -> pure D.NodeConfig     -- Dummy
     Just bootNodeCfg -> pure bootNodeCfg
@@ -63,17 +53,17 @@ bootNode = do
 
 -- TODO: with NodeModel, evalNework not needed.
 -- TODO: make TCP Sockets / WebSockets stuff more correct
-masterNodeInitialization :: Eff L.NodeModel D.NodeID
+masterNodeInitialization :: Eff L.NodeModel (Either Text D.NodeID)
 masterNodeInitialization = do
   bootNodeCfg <- L.evalNetwork simpleBootNodeDiscovery
-  -- hashID      <- withConnection bootNodeCfg $ request' GetHashIDRequest
-  let dummyHashID = ""
-  pure $ D.NodeID dummyHashID
+  eHashID     <- L.withConnection (bootNodeCfg ^. Lens.connectionConfig) GetHashIDRequest
+  pure $ eHashID >>= Right . D.NodeID
 
 masterNode :: (Member L.NodeDefinitionL effs) => D.Config -> Eff effs D.NodeDef
 masterNode _ = do
   _         <- L.nodeTag masterNodeTag
-  nodeID    <- L.initialization masterNodeInitialization
+  -- TODO: handle the error correctly.
+  nodeID    <- D.withSuccess $ L.initialization masterNodeInitialization
   serverDef <- L.serving
     $ L.serve @HelloRequest1 acceptHello1
     . L.serve @HelloRequest2 acceptHello2

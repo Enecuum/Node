@@ -29,7 +29,6 @@ import           Eff.Reader                                                     
 import           Eff.Reader.Pure                                                (Reader, runReader)
 import           Eff.SafeIO                                                     (SIO, runSafeIO, safeIO)
 import           Eff.Extra ()
-import           Data.TypeLevel (type (++))
 
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
@@ -68,9 +67,15 @@ interpretNetworkSyncL (L.Synchronize sending listening) = do
 interpretNetworkingL
   :: L.NetworkingL a
   -> Eff '[L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, State RuntimeSt, SIO, Exc SomeException] a
-interpretNetworkingL (L.Connect cfg) = do
-  safeIO $ print "Connect cfg"
+interpretNetworkingL (L.OpenConnection cfg) = do
+  safeIO $ print "OpenConnection cfg"
   pure $ Just D.Connection
+interpretNetworkingL (L.CloseConnection conn) = do
+  safeIO $ print "CloseConnection conn"
+  pure ()
+interpretNetworkingL (L.SendRequest conn req) = do
+  safeIO $ print "SendRequest conn req"
+  pure D.RpcResponse
 interpretNetworkingL (L.EvalNetwork networkAction) = do
   safeIO $ print "Eval Network"
   networkAction

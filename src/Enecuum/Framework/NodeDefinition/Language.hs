@@ -9,6 +9,7 @@ import           Eff                                      ( Eff
                                                           , Member
                                                           , send
                                                           )
+import Data.Text (Text)
 import qualified Data.Aeson                    as A
 import           Data.Aeson                               ( FromJSON )
 import qualified Data.ByteString.Lazy          as BS

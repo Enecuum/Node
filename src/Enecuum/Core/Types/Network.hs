@@ -1,5 +1,6 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+
 module Enecuum.Core.Types.Network where
 
 import           Data.Text                                ( Text )
