@@ -19,7 +19,7 @@ import qualified Data.ByteString.Lazy                  as L
 import           Data.IORef
 import           Data.Maybe
 import qualified Data.ByteString.Char8                 as B8
-import           Lens.Micro
+import           Control.Lens
 import           Network.Socket                        (tupleToHostAddress)
 import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Node.DataActor
