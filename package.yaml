@@ -115,9 +115,7 @@ dependencies:
 - cryptohash-sha256
 - derive
 - bytestring-conversion
-- hspec
-- HUnit
-- hspec-contrib
+- lens
 
 library:
   source-dirs: src
@@ -174,8 +172,8 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
+    - Node
     - hspec
     - HUnit
     - hspec-contrib
-    - Node
     - newtype-generics
