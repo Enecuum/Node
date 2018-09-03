@@ -8,7 +8,7 @@
 module Enecuum.Dsl.Graph.Interpreter where
 
 import           Universum
-import Eff
+import           Eff
 import           Enecuum.Dsl.Graph.Language
 
 runGraph :: Eff '[GraphDsl] w -> IO w
