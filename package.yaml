@@ -78,10 +78,6 @@ dependencies:
 - arithmoi
 - directory
 - filepath
-- microlens
-- microlens-mtl
-- microlens-th
-- microlens-ghc
 - process
 - extra
 - time
@@ -121,6 +117,7 @@ dependencies:
 - bytestring-conversion
 - freer
 - newtype-generics
+- lens
 
 library:
   source-dirs: src

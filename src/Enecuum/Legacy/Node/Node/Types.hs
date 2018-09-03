@@ -22,7 +22,7 @@ import           GHC.Generics                          (Generic)
 
 import           Crypto.PubKey.ECC.ECDSA               as ECDSA
 import           Crypto.Random.Types
-import           Lens.Micro.TH
+import           Control.Lens
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Sync.SyncJson
 

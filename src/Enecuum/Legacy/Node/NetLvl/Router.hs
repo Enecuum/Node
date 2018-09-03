@@ -22,8 +22,7 @@ import           Data.Aeson                            as A
 import           Data.IORef
 import qualified Data.Map                              as M
 import           Data.Maybe                            (isNothing)
-import           Lens.Micro
-import           Lens.Micro.Mtl                        ()
+import           Control.Lens
 import           Enecuum.Legacy.Node.BaseFunctions
 import           Enecuum.Legacy.Node.Data.GlobalLoging
 import           Enecuum.Legacy.Node.Data.Key

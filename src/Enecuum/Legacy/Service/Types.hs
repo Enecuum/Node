@@ -26,7 +26,7 @@ import           Data.Pool
 import           Data.Serialize
 import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
 import           GHC.Generics
-import           Lens.Micro.TH
+import           Control.Lens.TH
 import           Enecuum.Legacy.Node.DataActor
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 
