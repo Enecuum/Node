@@ -36,7 +36,6 @@ import              Control.Concurrent.Chan.Unagi.Bounded
 import qualified    Control.Concurrent  as C
 import qualified    Enecuum.Legacy.Node.Node.Types     as T
 import              Enecuum.Legacy.Service.Types       ( InfoMsg )
-import              Lens.Micro.GHC()
 import              Enecuum.Legacy.Node.Data.Key
 
 makeShardingNode
