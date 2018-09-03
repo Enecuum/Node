@@ -2,8 +2,6 @@
 
 module Enecuum.Framework.Testing.Runtime where
 
-import           Lens.Micro.TH                       ( makeLenses )
-
 import qualified Enecuum.Domain                as D
 
 import Enecuum.RuntimeTmp          

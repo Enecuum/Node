@@ -22,8 +22,15 @@ localNetwork = error "localNetwork"
 -- Just dummy types
 data GetNeighboursRequest = GetNeighboursRequest
   deriving (Generic, ToJSON, FromJSON)
+
 data GetHashIDRequest = GetHashIDRequest
-  deriving (Generic, ToJSON, FromJSON)
+newtype GetHashIDResponse = GetHashIDResponse Text
+  deriving (Generic, Newtype)
+
+instance D.RpcMethod () GetHashIDRequest GetHashIDResponse where
+  toRpcRequest _ _ = D.RpcRequest
+  fromRpcResponse _ _ = Just $ GetHashIDResponse "1"
+
 data AcceptConnectionRequest = AcceptConnectionRequest
   deriving (Generic, ToJSON, FromJSON)
 data HelloRequest1 = HelloRequest1 String
@@ -35,7 +42,7 @@ simpleBootNodeDiscovery :: Eff L.NetworkModel D.NodeConfig
 simpleBootNodeDiscovery = do
   mbBootNodeCfg <- fmap unpack <$> (L.multicastRequest localNetwork 10.0 $ API.FindNodeByTagRequest bootNodeTag)
   case mbBootNodeCfg of
-    Nothing          -> pure D.NodeConfig     -- Dummy
+    Nothing          -> pure $ D.NodeConfig $ D.ConnectionConfig     -- Dummy
     Just bootNodeCfg -> pure bootNodeCfg
 
 acceptHello1 :: HelloRequest1 -> Eff L.NodeModel ()
@@ -56,7 +63,7 @@ bootNode = do
 masterNodeInitialization :: Eff L.NodeModel (Either Text D.NodeID)
 masterNodeInitialization = do
   bootNodeCfg <- L.evalNetwork simpleBootNodeDiscovery
-  eHashID     <- L.withConnection (bootNodeCfg ^. Lens.connectionConfig) GetHashIDRequest
+  eHashID     <- fmap unpack <$> L.withConnection (bootNodeCfg ^. Lens.connectionConfig) GetHashIDRequest
   pure $ eHashID >>= Right . D.NodeID
 
 masterNode :: (Member L.NodeDefinitionL effs) => D.Config -> Eff effs D.NodeDef

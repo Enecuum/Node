@@ -10,7 +10,7 @@ import Enecuum.Framework.Domain.Networking (ConnectionConfig)
 type NodeTag = Text
 
 data NodeConfig = NodeConfig
-  { _connectionConfig :: ConnectionConfig
+  { _connectionConfig :: ConnectionConfig   -- This is just dummy. Data types will be reworked later.
 
   }
 

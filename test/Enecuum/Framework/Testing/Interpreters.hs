@@ -6,9 +6,6 @@ import qualified Data.Aeson                    as A
 import           Data.Aeson                               ( ToJSON
                                                           , FromJSON
                                                           )
-import           Lens.Micro                       ( (^.), (.~) )
-import           Lens.Micro.Mtl                       ((.=) )
-import           Lens.Micro.TH                       ( makeLenses )
 import qualified Data.ByteString.Lazy          as BS
 import           GHC.Generics                             ( Generic )
 import           Control.Newtype.Generics                 ( Newtype

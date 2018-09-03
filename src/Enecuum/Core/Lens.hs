@@ -5,8 +5,8 @@
 module Enecuum.Core.Lens where
 
 import           Enecuum.Core.Types ( NetworkRequest, NetworkResponse )
-import           Lens.Micro.TH      ( makeFields )
+import           Control.Lens       ( makeFieldsNoPrefix )
 
 
-makeFields ''NetworkRequest
-makeFields ''NetworkResponse
+makeFieldsNoPrefix ''NetworkRequest
+makeFieldsNoPrefix ''NetworkResponse
