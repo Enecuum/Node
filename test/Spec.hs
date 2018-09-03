@@ -1,20 +1,23 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports    #-}
 
-import           Data.Aeson                   as A (decode, encode)
-import qualified Data.ByteString.Char8        as BC
-import           Data.Either                  (fromRight)
-import           Data.Maybe                   (fromJust)
-import qualified Data.Serialize               as S (decode, encode)
-import           Service.Transaction.Common   (decodeThis, genNTx)
-import           Service.Transaction.Generate (genPoAMicroblock,
-                                               generateMicroblocksAndKeyBlocks)
-import           Service.Transaction.Storage  (genesisKeyBlock, getKeyBlockHash)
-import           Service.Types                (Microblock, TransactionInfo (..))
-import           Test.Hspec                   (describe, hspec, it,
-                                               shouldReturn)
-import           Test.Hspec.Contrib.HUnit     (fromHUnitTest)
-import           Test.HUnit                   (Test (..), (@?=))
+import           Data.Aeson                                  as A (decode,
+                                                                   encode)
+import qualified Data.ByteString.Char8                       as BC
+import           Data.Either                                 (fromRight)
+import           Data.Maybe                                  (fromJust)
+import qualified Data.Serialize                              as S (decode,
+                                                                   encode)
+import           Enecuum.Legacy.Service.Transaction.Common   (decodeThis,
+                                                              genNTx)
+import           Enecuum.Legacy.Service.Transaction.Generate (genPoAMicroblock, generateMicroblocksAndKeyBlocks)
+import           Enecuum.Legacy.Service.Transaction.Storage  (genesisKeyBlock,
+                                                              getKeyBlockHash)
+import           Enecuum.Legacy.Service.Types                (Microblock, TransactionInfo (..))
+import           Test.Hspec                                  (describe, hspec,
+                                                              it, shouldReturn)
+import           Test.Hspec.Contrib.HUnit                    (fromHUnitTest)
+import           Test.HUnit                                  (Test (..), (@?=))
 
 
 main :: IO ()
