@@ -1,14 +1,13 @@
 {-# LANGUAGE TemplateHaskell#-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 module Enecuum.TGraph where
 
-import           Data.Map as M
-import           Control.Monad
-import           Control.Monad.STM
+import           Universum
+import qualified Data.Map                      as M
 import           Control.Concurrent.STM.TVar
-import           Lens.Micro
 import           Lens.Micro.TH
-import           Data.Maybe
+
 
 type TGraph a b = Map a (TVar (TNode a b))
 
@@ -31,18 +30,19 @@ newTNode aIndex aName aContent = do
     aRes <- findNode aName aIndex
     when (isNothing aRes) $ do
         aTNode <- newTVar $ TNode aName aIndex mempty [] aContent
-        modifyTVar aIndex $ insert aName aTNode
+        modifyTVar aIndex $ M.insert aName aTNode
     return $ isNothing aRes
 
 
 addTNode :: Ord a => TVar (TNode a b) -> a -> b -> STM Bool
 addTNode aTNode aLinck aContent = do
-    aNode     <- readTVar aTNode
-    aRes <- findNode aLinck (aNode ^. graphIndex)
+    aNode <- readTVar aTNode
+    aRes  <- findNode aLinck (aNode ^. graphIndex)
     when (isNothing aRes) $ do
-        aNewTNode <- newTVar $ TNode aLinck (aNode ^. graphIndex) mempty [] aContent
-        modifyTVar (aNode ^. graphIndex) $ insert aLinck aTNode
-        modifyTVar aTNode    (links %~ insert aLinck aNewTNode)
+        aNewTNode <- newTVar
+            $ TNode aLinck (aNode ^. graphIndex) mempty [] aContent
+        modifyTVar (aNode ^. graphIndex) $ M.insert aLinck aTNode
+        modifyTVar aTNode    (links %~ M.insert aLinck aNewTNode)
         modifyTVar aNewTNode (rLinks %~ (aTNode :))
     return $ isNothing aRes
 
@@ -50,20 +50,20 @@ addTNode aTNode aLinck aContent = do
 addLinck :: Ord a => TVar (TNode a b) -> TVar (TNode a b) -> STM ()
 addLinck aTNode1 aTNode2 = do
     aNode2 <- readTVar aTNode2
-    modifyTVar aTNode1 $ links %~ insert (aNode2 ^. tNodeName) aTNode2
+    modifyTVar aTNode1 $ links %~ M.insert (aNode2 ^. tNodeName) aTNode2
     modifyTVar aTNode2 (rLinks %~ (aTNode1 :))
 
 
 deleteLinck :: Ord a => a -> TVar (TNode a b) -> STM ()
-deleteLinck aLinck aTNode = modifyTVar aTNode (links %~ delete aLinck)
+deleteLinck aLinck aTNode = modifyTVar aTNode (links %~ M.delete aLinck)
 
 
 deleteNode :: Ord a => TVar (TNode a b) -> STM ()
 deleteNode aTNode = do
     aNode <- readTVar aTNode
-    modifyTVar (aNode ^. graphIndex) $ delete (aNode ^. tNodeName)
+    modifyTVar (aNode ^. graphIndex) $ M.delete (aNode ^. tNodeName)
     forM_ (aNode ^. rLinks)
-        $ \aVar -> modifyTVar aVar (links %~ delete (aNode ^. tNodeName))
+        $ \aVar -> modifyTVar aVar (links %~ M.delete (aNode ^. tNodeName))
 
 
 findNode :: Ord a => a -> TVar (TGraph a b) -> STM (Maybe (TVar (TNode a b)))
@@ -81,7 +81,8 @@ foldGraph c f aTIndex = do
     aIndex <- readTVar aTIndex
     aLoop c (elems aIndex)
   where
-    aLoop aCuum (x:xs) = do
+    aLoop aCuum (x : xs) = do
         aNode <- readTVar x
-        aLoop (f (aNode^.content) aCuum) xs
+        aLoop (f (aNode ^. content) aCuum) xs
     aLoop aCuum _ = return aCuum
+

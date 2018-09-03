@@ -83,19 +83,14 @@ dependencies:
 - text
 - aeson-pretty
 - unordered-containers
-# - cryptohash
 - rocksdb-haskell
 - data-default
 - hashtables
 - resourcet
 - retry
 - exceptions
-# - MonadCatchIO-transformers
 - hashable
-#- postgresql-simple
 - resource-pool
-#- persistent-postgresql
-#- mysql
 - unix-time
 - cryptohash-sha256
 - derive
@@ -104,6 +99,8 @@ dependencies:
 - HUnit
 - hspec-contrib
 - stm
+- universum
+- freer
 
 library:
   source-dirs: src
@@ -115,6 +112,17 @@ library:
   - -O2
 
 executables:
+  T-exe:
+    main:                Main.hs
+    source-dirs:         app/TestGraph
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -Wall
+    - -O2
+    dependencies:
+    - Node  
   BootNode-exe:
     main:                Main.hs
     source-dirs:         app/Enecuum/Legacy/BootNode
