@@ -8,8 +8,6 @@ import           Enecuum.Prelude
 
 import qualified Data.ByteString.Lazy          as BS
 
-import qualified Enecuum.Core.Types                      as T
-
 -- Raw vision of networking api. Can change significantly.
 
 type RawData = BS.ByteString

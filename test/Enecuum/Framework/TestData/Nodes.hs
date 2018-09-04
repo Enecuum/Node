@@ -7,7 +7,6 @@ import Enecuum.Prelude
 
 import qualified Data.Aeson                    as A
 import qualified Data.ByteString.Lazy          as BS
-import           Eff.SafeIO                    (safeIO)
 
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L

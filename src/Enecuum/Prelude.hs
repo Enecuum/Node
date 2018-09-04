@@ -3,6 +3,10 @@ module Enecuum.Prelude
   ) where
 
 import           Eff                                      as X ( Eff, Member )
+import           Eff.TH                                   as X ( makeFreer )
+import           Eff.SafeIO                               as X ( SIO, safeIO )
+import           Eff.Exc                                  as X ( Exc )
+import           Control.Exception                        as X ( SomeException )
 import           Data.Text                                as X ( Text )
 import           Data.Aeson                               as X ( ToJSON, FromJSON )
 import           Control.Lens                             as X ( (^.), (.~), (.=) )

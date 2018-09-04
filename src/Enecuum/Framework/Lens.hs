@@ -4,7 +4,10 @@
 
 module Enecuum.Framework.Lens where
 
-import           Enecuum.Framework.Domain ( NodeConfig )
 import           Control.Lens             ( makeFieldsNoPrefix )
 
+import           Enecuum.Framework.Domain
+
+makeFieldsNoPrefix ''NetworkRequest
+makeFieldsNoPrefix ''NetworkResponse
 makeFieldsNoPrefix ''NodeConfig

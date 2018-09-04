@@ -1,6 +1,6 @@
 module Enecuum.Framework.Domain.Node where
 
-import Data.Text (Text)
+import           Enecuum.Prelude
 
 import Enecuum.Framework.Domain.Networking (ConnectionConfig)
 

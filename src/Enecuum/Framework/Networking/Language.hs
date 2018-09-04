@@ -3,15 +3,13 @@
 
 module Enecuum.Framework.Networking.Language where
 
-import           Eff.TH                                   ( makeFreer )
-import           Eff                                      ( Eff, Member, send)
+import           Enecuum.Prelude
+
 import qualified Data.ByteString.Lazy          as BS
 import qualified Data.Aeson                    as A
-import           Data.Aeson                               ( FromJSON )
-import           Data.Text                                ( pack )
 
 import qualified Enecuum.Framework.Domain      as D
-import           Enecuum.Core.NetworkModel.Language       ( NetworkModel )
+import           Enecuum.Framework.NetworkModel.Language       ( NetworkModel )
 
 -- This is a raw view of mid-level networking. Will change significantly.
 -- Supposed to be a mid-level language hiding WebSockets.
@@ -32,9 +30,9 @@ withConnection
   -> req
   -> Eff effs (D.RpcResult resp)
 withConnection cfg req = openConnection cfg >>= \case
-  Nothing -> pure $ Left $ pack "Connecting failed."
+  Nothing -> pure $ Left "Connecting failed."
   Just conn -> do
     rpcResponse <- sendRequest conn $ D.toRpcRequest () req
     case D.fromRpcResponse () rpcResponse of
-      Nothing -> pure $ Left $ pack "Unknown RPC response."
+      Nothing -> pure $ Left "Unknown RPC response."
       Just resp -> pure $ Right resp
