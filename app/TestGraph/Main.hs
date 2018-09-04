@@ -1,37 +1,26 @@
+{-# Language ScopedTypeVariables #-}
 module Main where
 
-import           Enecuum.TGraph
+
+import qualified Enecuum.TGraph as G
+import           Enecuum.Dsl.Graph.Interpreter
 import           Control.Monad
-import           Control.Monad.STM
+import           Control.Concurrent.STM
+import           Enecuum.Dsl.Graph.Language
 import           System.Clock
 
 main :: IO ()
-main = print =<< testMakeGraph
+main = testMakeGraph
 
-testMakeGraph :: IO Int
-testMakeGraph = undefined
-{-    
-    do
-    aIndex <- atomically newIndex
-    forM_ [0 .. 10000 :: Int] $ \i -> do
-        putStrLn $ "Num: " ++ show i
+testMakeGraph :: IO ()
+testMakeGraph = do
+    aGraph :: TVar (G.TGraph Int) <- initGraph
+    forM_ [0 .. 10000] $ \i -> do
         t1 <- getTime Realtime
-        atomically $ forM_ [l * i + 1 .. l * i + l :: Int] $ \i -> do
-            void $ newTNode aIndex i i
-            aNode1 <- findNode (i - 1) aIndex
-            aNode2 <- findNode i aIndex
-            case (aNode1, aNode2) of
-                (Just aJustNode1, Just aJustNode2) ->
-                    addLinck aJustNode1 aJustNode2
-                _ -> return ()
-
+        runGraph aGraph $ forM_ [l * i + 1 .. l * i + l :: Int] $ \j -> do
+            newNode j
+            newLinck (j-1) j
         t2 <- getTime Realtime
-        putStrLn $ "Insert: " ++ show (diffTimeSpec t1 t2)
+        putStrLn $ "Time '" ++ show (i*l) ++ "': " ++ show (diffTimeSpec t1 t2)
 
-    t1  <- getTime Realtime
-    res <- atomically $ foldGraph 0 (+) aIndex
-    t2  <- getTime Realtime
-    putStrLn $ "Sum: " ++ show (diffTimeSpec t1 t2)
-    return res
--}
 l = 10000

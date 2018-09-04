@@ -15,6 +15,9 @@ import           Enecuum.Dsl.Graph.Language
 import           Enecuum.TGraph as G
 import           Enecuum.StringHashable
 
+initGraph :: StringHashable c => IO (TVar (TGraph c))
+initGraph = atomically G.newTGraph
+
 runGraph :: StringHashable c => TVar (TGraph c) -> Eff '[GraphDsl c] w -> IO w
 runGraph _ (Val x) = return x
 runGraph aGraph (E u q) = case extract u of
