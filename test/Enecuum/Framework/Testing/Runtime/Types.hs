@@ -6,20 +6,23 @@ import qualified Enecuum.Domain                as D
 
 type NodeAddress = Text
 
-data NodeRpcServerControl = NodeRpcServerControl
-  {
+data ControlRequest = RpcRequest D.RawData
+data ControlResponse = Ack
 
+data NodeRpcServerControl = NodeRpcServerControl
+  { _request  :: TMVar ControlRequest
+  , _response :: TMVar ControlResponse
   }
 
-data NodeServerHandle = NodeServerHandle
-  { _serverThreadId :: ThreadId
-
+data NodeRpcServerHandle = NodeRpcServerHandle
+  { _threadId :: ThreadId
+  , _control  :: NodeRpcServerControl
   }
 
 data NodeRuntime = NodeRuntime
-  { _nodeAddress :: NodeAddress
-  , _nodeTag :: TVar D.NodeTag
-  , _serverHanlde :: TVar (Maybe NodeServerHandle)
+  { _address   :: NodeAddress
+  , _tag       :: TVar D.NodeTag
+  , _rpcServer :: TMVar NodeRpcServerHandle
   }
 
 data TestRuntime = TestRuntime
@@ -29,9 +32,9 @@ data TestRuntime = TestRuntime
 
 mkEmptyNodeRuntime :: NodeAddress -> IO NodeRuntime
 mkEmptyNodeRuntime addr = do
-  tag <- newTVarIO ("" :: Text)
-  serverHandle <- newTVarIO Nothing
-  pure $ NodeRuntime addr tag serverHandle
+  tag   <- newTVarIO ("" :: Text)
+  handle <- newEmptyTMVarIO
+  pure $ NodeRuntime addr tag handle
 
 mkTestRuntime :: IO TestRuntime
 mkTestRuntime = pure TestRuntime

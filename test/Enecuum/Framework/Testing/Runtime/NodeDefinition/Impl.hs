@@ -25,8 +25,8 @@ import           Enecuum.Framework.Testing.Runtime.Types
 import           Enecuum.Framework.Testing.Runtime.STM
 import           Enecuum.Framework.Testing.Runtime.NetworkModel.Impl
 import           Enecuum.Framework.Testing.Runtime.NodeModel.Impl
-import           Enecuum.Framework.Testing.Runtime.Server (testRpcServer)
-import qualified Enecuum.Framework.Testing.Runtime.Lens     as RLens
+import           Enecuum.Framework.Testing.Runtime.Server             (startNodeRpcServer)
+import qualified Enecuum.Framework.Testing.Runtime.Lens               as RLens
 
 
 interpretNodeDefinitionL
@@ -42,11 +42,8 @@ interpretNodeDefinitionL rt (L.Initialization initScript) = do
   runNodeL rt initScript
 interpretNodeDefinitionL rt (L.Serving handlersF) = do
   safeIO $ print "Serving handlersF"
+  safeIO $ startNodeRpcServer rt handlersF
 
-  control <- safeIO newEmptyMVar
-  serverThreadId <- safeIO $ forkIO $ testRpcServer control handlersF
-
-  pure $ D.ServerDef
 
 runNodeDefinitionL
   :: NodeRuntime
@@ -54,11 +51,12 @@ runNodeDefinitionL
   -> Eff '[SIO, Exc SomeException] a
 runNodeDefinitionL rt = handleRelay pure ( (>>=) . interpretNodeDefinitionL rt )
 
-runNode
+createNode
   :: TestRuntime
   -> NodeAddress
-  -> Eff '[L.NodeDefinitionL, SIO, Exc SomeException] a
-  -> IO a
-runNode rt nodeAddr scenario = do
+  -> Eff '[L.NodeDefinitionL, SIO, Exc SomeException] ()
+  -> IO NodeRuntime
+createNode rt nodeAddr scenario = do
   nodeRt <- mkEmptyNodeRuntime nodeAddr
-  runSafeIO $ runNodeDefinitionL nodeRt scenario
+  void $ runSafeIO $ runNodeDefinitionL nodeRt scenario
+  pure nodeRt

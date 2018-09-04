@@ -5,7 +5,8 @@ module Enecuum.Framework.Testing.Runtime.Lens where
 
 import Enecuum.Prelude (makeFieldsNoPrefix)
 
-import Enecuum.Framework.Testing.Runtime.Types (NodeServerHandle, NodeRuntime)
+import Enecuum.Framework.Testing.Runtime.Types (NodeRpcServerControl, NodeRpcServerHandle, NodeRuntime)
 
-makeFieldsNoPrefix ''NodeServerHandle
+makeFieldsNoPrefix ''NodeRpcServerControl
+makeFieldsNoPrefix ''NodeRpcServerHandle
 makeFieldsNoPrefix ''NodeRuntime

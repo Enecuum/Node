@@ -28,9 +28,9 @@ spec = describe "Master Node test" $
 
     runtime <- mkTestRuntime
 
-    bootNodeControl <- runNode runtime bootNodeAddr $ bootNode
-    masterNodeControl <- runNode runtime masterNode1Addr $ masterNode $ D.Config bootNodeAddr
+    bootNodeRuntime   :: NodeRuntime <- createNode runtime bootNodeAddr      bootNode
+    masterNodeRuntime :: NodeRuntime <- createNode runtime masterNode1Addr $ masterNode $ D.Config bootNodeAddr
 
-    -- response <- sendRequest bootNodeControl HelloRequest1
+    -- response <- sendRequest bootNodeRuntime HelloRequest1
 
     "a" `shouldBe` ("a" :: String)

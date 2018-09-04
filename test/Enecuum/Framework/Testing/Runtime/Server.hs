@@ -11,9 +11,28 @@ import           Enecuum.Framework.Testing.Runtime.STM
 import           Enecuum.Framework.Testing.Runtime.NodeModel.Impl
 import qualified Enecuum.Framework.Testing.Runtime.Lens as RLens
 
-
-testRpcServer
-  :: MVar NodeRpcServerControl
+startNodeRpcServer
+  :: NodeRuntime
   -> L.HandlersF
   -> IO ()
-testRpcServer _ _ = pure ()
+startNodeRpcServer rt handlersF = do
+  control <- NodeRpcServerControl <$> newEmptyTMVarIO <*> newEmptyTMVarIO
+  tId <- forkIO $ go 0 control
+
+  let handle = NodeRpcServerHandle tId control
+  atomically $ putTMVar (rt ^. RLens.rpcServer) handle
+
+  where
+    go :: Integer -> NodeRpcServerControl -> IO ()
+    go iteration control = act iteration control >> go (iteration + 1) control
+
+    act :: Integer -> NodeRpcServerControl -> IO ()
+    act _ control = do
+      req <- atomically $ takeTMVar $ control ^. RLens.request
+      case req of
+        RpcRequest rawData -> do
+          -- let (handleProcessor, _) = handlersF (pure (), Just rawData)
+          -- handle request here
+          atomically $ putTMVar (control ^. RLens.response) Ack
+      
+
