@@ -13,8 +13,6 @@ import           Enecuum.Core.NetworkModel.Language       ( NetworkSendingL, Net
 import           Enecuum.Framework.Networking.Language    ( NetworkingL )
 import qualified Enecuum.Framework.Domain as D
 
-import           Enecuum.RuntimeTmp
-
 data NodeL a where
   Dummy :: NodeL ()
 
@@ -27,7 +25,6 @@ type NodeModel =
    , NetworkSyncL
    , NetworkListeningL
    , NetworkSendingL
-   , State RuntimeSt
    , SIO
    , Exc SomeException
    ]

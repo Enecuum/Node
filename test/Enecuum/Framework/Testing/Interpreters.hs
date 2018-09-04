@@ -35,19 +35,19 @@ import Enecuum.RuntimeTmp
 
 interpretNetworkSendingL
   :: L.NetworkSendingL a
-  -> Eff '[State RuntimeSt, SIO, Exc SomeException] a
+  -> Eff '[SIO, Exc SomeException] a
 interpretNetworkSendingL (L.Multicast cfg req) = safeIO $ print "L.Multicast cfg req"
 
 interpretNetworkListeningL
   :: L.NetworkListeningL a
-  -> Eff '[L.NetworkSendingL, State RuntimeSt, SIO, Exc SomeException] a
+  -> Eff '[L.NetworkSendingL, SIO, Exc SomeException] a
 interpretNetworkListeningL (L.WaitForSingleResponse cfg timeout) = do
   safeIO $ print "L.WaitForSingleResponse cfg timeout"
   pure Nothing
 
 interpretNetworkListeningL'
   :: L.NetworkListeningL a
-  -> Eff '[State RuntimeSt, SIO, Exc SomeException] a
+  -> Eff '[SIO, Exc SomeException] a
 interpretNetworkListeningL' (L.WaitForSingleResponse cfg timeout) = do
   safeIO $ print "L.WaitForSingleResponse cfg timeout"
   pure Nothing
@@ -55,15 +55,15 @@ interpretNetworkListeningL' (L.WaitForSingleResponse cfg timeout) = do
 
 interpretNetworkSyncL
   :: L.NetworkSyncL a
-  -> Eff '[L.NetworkListeningL, L.NetworkSendingL, State RuntimeSt, SIO, Exc SomeException] a
+  -> Eff '[L.NetworkListeningL, L.NetworkSendingL, SIO, Exc SomeException] a
 interpretNetworkSyncL (L.Synchronize sending listening) = do
   safeIO $ print "Synchronize"
-  raise $ raise $ handleRelay pure ( (>>=) . interpretNetworkSendingL ) sending
+  raise $ raise $ handleRelay pure ( (>>=) . interpretNetworkSendingL )    sending
   raise $ raise $ handleRelay pure ( (>>=) . interpretNetworkListeningL' ) listening
 
 interpretNetworkingL
   :: L.NetworkingL a
-  -> Eff '[L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, State RuntimeSt, SIO, Exc SomeException] a
+  -> Eff '[L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, SIO, Exc SomeException] a
 interpretNetworkingL (L.OpenConnection cfg) = do
   safeIO $ print "OpenConnection cfg"
   pure $ Just D.Connection
@@ -79,12 +79,12 @@ interpretNetworkingL (L.EvalNetwork networkAction) = do
 
 interpretNodeL
   :: L.NodeL a
-  -> Eff '[L.NetworkingL, L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, State RuntimeSt, SIO, Exc SomeException] a
+  -> Eff '[L.NetworkingL, L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, SIO, Exc SomeException] a
 interpretNodeL (L.Dummy) = safeIO $ print "L.Dummy"
 
 runNodeL
-  :: Eff '[L.NodeL, L.NetworkingL, L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, State RuntimeSt, SIO, Exc SomeException] a
-  -> Eff '[State RuntimeSt, SIO, Exc SomeException] a
+  :: Eff '[L.NodeL, L.NetworkingL, L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, SIO, Exc SomeException] a
+  -> Eff '[SIO, Exc SomeException] a
 runNodeL
   = handleRelay pure ( (>>=) . interpretNetworkSendingL )
   . handleRelay pure ( (>>=) . interpretNetworkListeningL )
@@ -95,7 +95,7 @@ runNodeL
 
 interpretNodeDefinitionL
   :: L.NodeDefinitionL a
-  -> Eff '[State RuntimeSt, SIO, Exc SomeException] a
+  -> Eff '[SIO, Exc SomeException] a
 interpretNodeDefinitionL (L.NodeTag nodeTag')          = safeIO $ print "Node tag" --nodeTag .= nodeTag'
 interpretNodeDefinitionL (L.Initialization initScript) = do
   safeIO $ print "Initialization"
@@ -105,11 +105,12 @@ interpretNodeDefinitionL (L.Serving handlersF)         = do
   pure $ D.ServerDef
 
 runNodeDefinitionL
-  :: Eff '[L.NodeDefinitionL, State RuntimeSt, SIO, Exc SomeException] a
-  -> Eff '[State RuntimeSt, SIO, Exc SomeException] a
+  :: Eff '[L.NodeDefinitionL, SIO, Exc SomeException] a
+  -> Eff '[SIO, Exc SomeException] a
 runNodeDefinitionL = handleRelay pure ( (>>=) . interpretNodeDefinitionL )
 
 runNode
-  :: Eff '[L.NodeDefinitionL, State RuntimeSt, SIO, Exc SomeException] a
+  :: Eff '[L.NodeDefinitionL, SIO, Exc SomeException] a
   -> IO a
-runNode x = runSafeIO $ evalState defaultRuntimeSt (runNodeDefinitionL x)
+-- runNode x = runSafeIO $ evalState defaultRuntimeSt (runNodeDefinitionL x)
+runNode x = runSafeIO $ runNodeDefinitionL x

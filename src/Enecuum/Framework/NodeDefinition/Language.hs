@@ -17,9 +17,6 @@ import qualified Data.ByteString.Lazy          as BS
 import           Enecuum.Framework.Node.Language          ( NodeModel )
 import qualified Enecuum.Framework.Domain      as D
 
-import  Enecuum.RuntimeTmp      (RuntimeSt)
-
-
 import           Eff.State                                (State)
 import           Eff.SafeIO                               (SIO)
 import           Eff.Exc                                  (Exc)

@@ -16,8 +16,6 @@ import           Control.Newtype.Generics                 ( Newtype
 
 import qualified Enecuum.Core.Types            as D
 
-import Enecuum.RuntimeTmp
-
 import           Eff.State                                (State)
 import           Eff.SafeIO                               (SIO)
 import           Eff.Exc                                  (Exc)
@@ -36,14 +34,12 @@ data NetworkListeningL a where
 
 type NetworkSendingModel =
   '[ NetworkSendingL
-   , State RuntimeSt
    , SIO
    , Exc SomeException
    ]
 
 type NetworkListeningModel =
   '[ NetworkListeningL
-   , State RuntimeSt
    , SIO
    , Exc SomeException
    ]
@@ -56,7 +52,6 @@ type NetworkModel =
   '[ NetworkSyncL
    , NetworkListeningL
    , NetworkSendingL
-   , State RuntimeSt
    , SIO
    , Exc SomeException
    ]
