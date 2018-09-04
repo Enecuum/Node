@@ -1,36 +1,34 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TemplateHaskell#-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
 
 module Enecuum.Dsl.Graph.Language where
 
 import Universum
-import Eff
+import Control.Monad.Freer
 
-class StringHashable a where
-    toHash :: a -> ByteString
-
-
-data GraphDsl a where
-    NewNode     :: StringHashable content => content -> GraphDsl ()
-    DeleteNode  :: StringHashable content => content -> GraphDsl ()
-    NewLinck    :: ByteString -> ByteString -> GraphDsl ()
-    DeleteLinck :: ByteString -> ByteString -> GraphDsl ()
-    FindNode    :: ByteString -> GraphDsl (Maybe (content, Set ByteString))
+import Enecuum.StringHashable
 
 
-newNode, deleteNode :: (Member GraphDsl r, StringHashable content) => content -> Eff r ()
+data GraphDsl content a where
+    NewNode     :: content -> GraphDsl content ()
+    DeleteNode  :: content -> GraphDsl content ()
+    NewLinck    :: content -> content -> GraphDsl content ()
+    DeleteLinck :: content -> content -> GraphDsl content  ()
+    FindNode    :: ByteString -> GraphDsl content (Maybe (content, Set ByteString))
+
+
+newNode, deleteNode :: (Member (GraphDsl content) r, StringHashable content) => content -> Eff r ()
 newNode = send . NewNode
 deleteNode = send . DeleteNode
 
 
-newLinck, deleteLinck :: Member GraphDsl r => ByteString -> ByteString -> Eff r ()
+newLinck, deleteLinck :: (Member (GraphDsl content) r, StringHashable content) => content -> content -> Eff r ()
 newLinck a b = send (NewLinck a b)
 deleteLinck a b = send (DeleteLinck a b)
 
 
-findNode :: Member GraphDsl r => ByteString -> Eff r (Maybe (content, Set ByteString))
+findNode :: Member (GraphDsl content) r => ByteString -> Eff r (Maybe (content, Set ByteString))
 findNode = send . FindNode

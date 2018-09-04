@@ -9,7 +9,9 @@ main :: IO ()
 main = print =<< testMakeGraph
 
 testMakeGraph :: IO Int
-testMakeGraph = do
+testMakeGraph = undefined
+{-    
+    do
     aIndex <- atomically newIndex
     forM_ [0 .. 10000 :: Int] $ \i -> do
         putStrLn $ "Num: " ++ show i
@@ -31,5 +33,5 @@ testMakeGraph = do
     t2  <- getTime Realtime
     putStrLn $ "Sum: " ++ show (diffTimeSpec t1 t2)
     return res
-
+-}
 l = 10000
