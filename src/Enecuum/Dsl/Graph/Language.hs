@@ -15,8 +15,8 @@ import Enecuum.StringHashable
 data GraphDsl content a where
     NewNode     :: content -> GraphDsl content ()
     DeleteNode  :: content -> GraphDsl content ()
-    NewLinck    :: content -> content -> GraphDsl content ()
-    DeleteLinck :: content -> content -> GraphDsl content  ()
+    NewLink    :: content -> content -> GraphDsl content ()
+    DeleteLink :: content -> content -> GraphDsl content  ()
     FindNode    :: ByteString -> GraphDsl content (Maybe (content, Set ByteString))
 
 
@@ -25,9 +25,9 @@ newNode = send . NewNode
 deleteNode = send . DeleteNode
 
 
-newLinck, deleteLinck :: (Member (GraphDsl content) r, StringHashable content) => content -> content -> Eff r ()
-newLinck a b = send (NewLinck a b)
-deleteLinck a b = send (DeleteLinck a b)
+newLink, deleteLink :: (Member (GraphDsl content) r, StringHashable content) => content -> content -> Eff r ()
+newLink a b = send (NewLink a b)
+deleteLink a b = send (DeleteLink a b)
 
 
 findNode :: Member (GraphDsl content) r => ByteString -> Eff r (Maybe (content, Set ByteString))

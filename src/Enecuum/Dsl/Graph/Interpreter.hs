@@ -29,12 +29,12 @@ runGraph aGraph (E u q) = case extract u of
         void . atomically $ G.deleteNode aGraph x
         runGraph aGraph (qApp q ())
 
-    NewLinck    x y -> do
-        void . atomically $ G.newLinck aGraph x y
+    NewLink    x y -> do
+        void . atomically $ G.newLink aGraph x y
         runGraph aGraph (qApp q ())
 
-    DeleteLinck x y -> do
-        void . atomically $ G.deleteLinck aGraph x y
+    DeleteLink x y -> do
+        void . atomically $ G.deleteLink aGraph x y
         runGraph aGraph (qApp q ())
 
     FindNode    x   -> do

@@ -46,8 +46,8 @@ deleteNode aIndex aContent = do
     return $ isJust aMaybeTNode
 
 
-newLinck, deleteLinck :: StringHashable c => TVar (TGraph c) -> c -> c -> STM Bool
-newLinck aIndex x1 x2 = do
+newLink, deleteLink :: StringHashable c => TVar (TGraph c) -> c -> c -> STM Bool
+newLink aIndex x1 x2 = do
     aNodes <- forM [x1, x2] (findNode aIndex . toHash)
     case catMaybes aNodes of
         [n1, n2] -> do
@@ -61,7 +61,7 @@ newLinck aIndex x1 x2 = do
 
         _        -> return False
 
-deleteLinck aIndex x1 x2 = do
+deleteLink aIndex x1 x2 = do
     aNodes <- forM [x1, x2] (findNode aIndex . toHash)
     case catMaybes aNodes of
         [n1, n2] -> do

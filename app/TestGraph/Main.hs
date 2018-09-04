@@ -19,7 +19,7 @@ testMakeGraph = do
         t1 <- getTime Realtime
         runGraph aGraph $ forM_ [l * i + 1 .. l * i + l :: Int] $ \j -> do
             newNode j
-            newLinck (j-1) j
+            newLink (j-1) j
         t2 <- getTime Realtime
         putStrLn $ "Time '" ++ show (i*l) ++ "': " ++ show (diffTimeSpec t1 t2)
 
