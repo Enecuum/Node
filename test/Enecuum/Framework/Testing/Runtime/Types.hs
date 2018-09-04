@@ -3,6 +3,7 @@ module Enecuum.Framework.Testing.Runtime.Types where
 import Enecuum.Prelude
 
 import qualified Enecuum.Domain                as D
+import           Enecuum.Core.Testing.Runtime.Types
 
 type NodeAddress = Text
 
@@ -26,15 +27,16 @@ data NodeRuntime = NodeRuntime
   }
 
 data TestRuntime = TestRuntime
-  {
-
+  { _loggerRuntime :: LoggerRuntime
   }
 
-mkEmptyNodeRuntime :: NodeAddress -> IO NodeRuntime
-mkEmptyNodeRuntime addr = do
+createEmptyNodeRuntime :: NodeAddress -> IO NodeRuntime
+createEmptyNodeRuntime addr = do
   tag   <- newTVarIO ("" :: Text)
   handle <- newEmptyTMVarIO
   pure $ NodeRuntime addr tag handle
 
-mkTestRuntime :: IO TestRuntime
-mkTestRuntime = pure TestRuntime
+createTestRuntime :: IO TestRuntime
+createTestRuntime = do
+  loggerRt <- createLoggerRuntime
+  pure $ TestRuntime loggerRt

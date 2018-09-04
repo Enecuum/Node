@@ -29,30 +29,30 @@ import qualified Enecuum.Framework.Testing.Runtime.Lens     as RLens
 interpretNetworkSendingL
   :: NodeRuntime
   -> L.NetworkSendingL a
-  -> Eff '[SIO, Exc SomeException] a
-interpretNetworkSendingL rt (L.Multicast cfg req) = safeIO $ print "L.Multicast cfg req"
+  -> Eff '[L.LoggerL, SIO, Exc SomeException] a
+interpretNetworkSendingL rt (L.Multicast cfg req) = L.logInfo "L.Multicast cfg req"
 
 interpretNetworkListeningL
   :: NodeRuntime
   -> L.NetworkListeningL a
-  -> Eff '[L.NetworkSendingL, SIO, Exc SomeException] a
+  -> Eff '[L.NetworkSendingL, L.LoggerL, SIO, Exc SomeException] a
 interpretNetworkListeningL rt (L.WaitForSingleResponse cfg timeout) = do
-  safeIO $ print "L.WaitForSingleResponse cfg timeout"
+  L.logInfo "L.WaitForSingleResponse cfg timeout"
   pure Nothing
 
 interpretNetworkListeningL'
   :: NodeRuntime
   -> L.NetworkListeningL a
-  -> Eff '[SIO, Exc SomeException] a
+  -> Eff '[L.LoggerL, SIO, Exc SomeException] a
 interpretNetworkListeningL' rt (L.WaitForSingleResponse cfg timeout) = do
-  safeIO $ print "L.WaitForSingleResponse cfg timeout"
+  L.logInfo "L.WaitForSingleResponse cfg timeout"
   pure Nothing
 
 interpretNetworkSyncL
   :: NodeRuntime
   -> L.NetworkSyncL a
-  -> Eff '[L.NetworkListeningL, L.NetworkSendingL, SIO, Exc SomeException] a
+  -> Eff '[L.NetworkListeningL, L.NetworkSendingL, L.LoggerL, SIO, Exc SomeException] a
 interpretNetworkSyncL rt (L.Synchronize sending listening) = do
-  safeIO $ print "Synchronize"
+  L.logInfo "Synchronize"
   raise $ raise $ handleRelay pure ( (>>=) . interpretNetworkSendingL rt )    sending
   raise $ raise $ handleRelay pure ( (>>=) . interpretNetworkListeningL' rt ) listening

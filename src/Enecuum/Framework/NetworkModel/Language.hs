@@ -7,8 +7,8 @@ import           Enecuum.Prelude
 
 import           Eff                                      ( send )
 
+import           Enecuum.Core.Language                    ( CoreEffects )
 import qualified Enecuum.Framework.Domain                 as D
-
 
 -- Low-level network model.
 
@@ -23,15 +23,13 @@ data NetworkListeningL a where
 
 type NetworkSendingModel =
   '[ NetworkSendingL
-   , SIO
-   , Exc SomeException
    ]
+  ++ CoreEffects
 
 type NetworkListeningModel =
   '[ NetworkListeningL
-   , SIO
-   , Exc SomeException
    ]
+  ++ CoreEffects
 
 
 data NetworkSyncL a where
@@ -41,29 +39,28 @@ type NetworkModel =
   '[ NetworkSyncL
    , NetworkListeningL
    , NetworkSendingL
-   , SIO
-   , Exc SomeException
    ]
+  ++ CoreEffects
 
 makeFreer ''NetworkSendingL
 
 -- Low-level stuff
 waitForSingleResponse
-  :: D.NetworkConfig 
+  :: D.NetworkConfig
   -> D.WaitingTimeout
   -> Eff NetworkListeningModel (Maybe D.NetworkResponse)
 waitForSingleResponse cfg timeout = send $ WaitForSingleResponse cfg timeout
 
 synchronize
   :: Eff NetworkSendingModel ()
-  -> Eff NetworkListeningModel a 
+  -> Eff NetworkListeningModel a
   -> Eff NetworkModel a
 synchronize s l = send $ Synchronize s l
 
 
 -- Interface
 waitSingleResponse
-  :: D.NetworkConfig 
+  :: D.NetworkConfig
   -> D.WaitingTimeout
   -> (D.NetworkConfig -> D.NetworkRequest -> Eff NetworkSendingModel ())
   -> D.NetworkRequest
