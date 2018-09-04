@@ -17,14 +17,16 @@ import qualified Control.Concurrent.Chan               as C
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
 import qualified Data.Map                              as M
-import           Data.Serialize
+import           Data.Serialize                        (Serialize)
+import qualified Data.Serialize                        as S (get, put)
 import           GHC.Generics                          (Generic)
+import           Universum
 
 import           Crypto.PubKey.ECC.ECDSA               as ECDSA
 import           Crypto.Random.Types
-import           Lens.Micro.TH
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Sync.SyncJson
+import           Lens.Micro.TH
 
 import           Data.Aeson
 import           Data.Aeson.TH
@@ -32,9 +34,10 @@ import           Data.Scientific                       (Scientific, toRealFloat)
 import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Node.DataActor
 import           Enecuum.Legacy.Node.NetLvl.Messages
-import           Enecuum.Legacy.Service.Types                         (Microblock, Transaction, InfoMsg)
-import qualified Enecuum.Legacy.Sharding.Types.Node                   as N
-
+import           Enecuum.Legacy.Service.Types          (InfoMsg, Microblock,
+                                                        Transaction)
+import qualified Enecuum.Legacy.Sharding.Types.Node    as N
+import           Prelude                               (show)
 
 instance Show (InChan a) where show _ = "InChan"
 instance Show (MVar a) where show _ = "MVar"
@@ -158,8 +161,8 @@ deriveJSON defaultOptions ''BuildConfig
 instance Serialize NodeConfig
 
 instance Serialize PrivateKey where
-    get = PrivateKey <$> get <*> get
-    put (PrivateKey a b)= put a >> put b
+    get = PrivateKey <$> S.get <*> S.get
+    put (PrivateKey a b)= S.put a >> S.put b
 
 makeNewNodeConfig :: MonadRandom m => m NodeConfig
 makeNewNodeConfig = do

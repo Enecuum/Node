@@ -16,25 +16,38 @@ module Enecuum.Legacy.CLI.CLI (
     serveCLI
   ) where
 
-import qualified Enecuum.Legacy.CLI.Common                            as C
-import           Control.Concurrent.Chan.Unagi.Bounded (InChan)
-import           Control.Monad                         (forever, mapM_)
-import           Data.DeriveTH                         (derive, makeIs)
-import           Data.List.Split                       (splitOn)
-import           Enecuum.Legacy.Node.Node.Types                       (MsgToCentralActor)
-import           Enecuum.Legacy.Service.System.Version                (version)
-import           Enecuum.Legacy.Service.Types                         (Common (..),
-                                                        DBPoolDescriptor,
-                                                        Hash (..),
-                                                        InContainerChan,
-                                                        InfoMsg (..), MsgTo,
-                                                        PartWalletReq (..),
-                                                        Trans (..))
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair    (PublicKey)
-import           System.Console.GetOpt                 (ArgDescr (..),
-                                                        ArgOrder (..), OptDescr,
-                                                        OptDescr (..), getOpt,
-                                                        usageInfo)
+import           Control.Concurrent.Chan.Unagi.Bounded             (InChan)
+import           Control.Monad                                     (forever)
+import           Data.DeriveTH                                     (derive,
+                                                                    makeIs)
+import           Data.List.Split                                   (splitOn)
+import           Data.Text                                         (unpack)
+import qualified Enecuum.Legacy.CLI.Common                         as C
+import           Enecuum.Legacy.Node.Node.Types                    (MsgToCentralActor)
+import           Enecuum.Legacy.Service.System.Version             (version)
+import           Enecuum.Legacy.Service.Types                      (Common (..), DBPoolDescriptor,
+                                                                    Hash (..),
+                                                                    InContainerChan,
+                                                                    InfoMsg (..),
+                                                                    MsgTo,
+                                                                    PartWalletReq (..),
+                                                                    Trans (..))
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (PublicKey)
+import           Prelude                                           (read)
+import           System.Console.GetOpt                             (ArgDescr (..),
+                                                                    ArgOrder (..),
+                                                                    OptDescr,
+                                                                    OptDescr (..),
+                                                                    getOpt,
+                                                                    usageInfo)
+import           Universum                                         hiding
+                                                                    (Option)
+import           Universum                                         (Bool,
+                                                                    Either (..),
+                                                                    IO)
+import           Universum                                         (Eq, Ord,
+                                                                    Show,
+                                                                    String)
 
 data Flag = Version | Help | Key | Send Trans
           | ShowKey | Balance PublicKey
@@ -82,7 +95,7 @@ serveCLI :: DBPoolDescriptor -> InChan MsgToCentralActor -> InChan InfoMsg -> In
 serveCLI descrDB ch aInfoCh aContChan = do
       putStrLn $ usageInfo "Usage: " options
       forever $ do
-               argv <- splitOn " " <$> getLine
+               argv <- (splitOn " " . unpack ) <$> getLine
                case getOpt Permute options argv of
                  (flags, _, []) -> dispatch flags
                  (_, _, err)    -> putStrLn $ concat err ++ usageInfo "Usage: " options
@@ -119,11 +132,11 @@ serveCLI descrDB ch aInfoCh aContChan = do
 
 
           handle :: Show a => C.Result a -> IO ()
-          handle (Left err) = putStrLn $ show err
+          handle (Left err) = print err
           handle (Right a)  = print a
 
           handleList :: Show a => C.Result [a] -> IO ()
-          handleList (Left err) = putStrLn $ show err
+          handleList (Left err) = print err
           handleList (Right a)  = mapM_ print a
 
 printVersion :: IO ()

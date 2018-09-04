@@ -1,6 +1,6 @@
 module Enecuum.Legacy.Service.Sync.SyncTypes where
 import           Enecuum.Legacy.Service.Types
-
+import           Universum
 
 data KeyBlockContent = KeyBlockContent KeyBlockInfoPoW [HashOfMicroblock] deriving Show
 data MicroBlockContent = MicroBlockContent Microblock deriving Show

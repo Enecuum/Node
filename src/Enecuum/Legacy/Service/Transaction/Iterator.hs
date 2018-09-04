@@ -3,18 +3,19 @@
 {-# OPTIONS_GHC -fno-warn-orphans     #-}
 
 module Enecuum.Legacy.Service.Transaction.Iterator where
-import           Control.Monad                      (replicateM)
+import           Control.Monad                             (replicateM)
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.Resource
-import           Control.Monad.Trans.State          (StateT, get, put,
-                                                     runStateT)
-import qualified Data.ByteString.Internal           as BSI
+-- import           Control.Monad.Trans.State                 (StateT, get, put,
+--                                                             runStateT)
+import qualified Data.ByteString.Internal                  as BSI
 import           Data.Pool
-import qualified Data.Serialize                     as S
-import qualified "rocksdb-haskell" Database.RocksDB as Rocks
+import qualified Data.Serialize                            as S
+import qualified "rocksdb-haskell" Database.RocksDB        as Rocks
 import           Enecuum.Legacy.Service.Transaction.Decode
 import           Enecuum.Legacy.Service.Types
-
+import           Prelude                                   (last)
+import           Universum                                 hiding (last)
 
 maxAttempt :: Int
 maxAttempt = 1000

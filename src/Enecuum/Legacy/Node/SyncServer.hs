@@ -1,9 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
+
 module Enecuum.Legacy.Node.SyncServer where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Concurrent.MVar
-import           Control.Monad
+-- import           Control.Concurrent.MVar
+-- import           Control.Monad
 import           Data.Aeson                            as A
 import           Enecuum.Legacy.Node.Data.GlobalLoging
 import           Enecuum.Legacy.Node.Data.Key
@@ -14,7 +15,7 @@ import           Enecuum.Legacy.Service.Chan
 import           Enecuum.Legacy.Service.Sync.SyncJson
 import           Enecuum.Legacy.Service.Timer
 import           Enecuum.Legacy.Service.Types
-
+import           Universum
 
 syncServer :: (InChan SyncEvent, OutChan SyncEvent) -> InChan MsgToDB -> InChan MsgToCentralActor -> InChan InfoMsg -> IO b
 syncServer (aInputSync, outSyncChan) aDBActorChan aManagerChan aInfoChan = do

@@ -10,21 +10,23 @@ module Enecuum.Legacy.Service.Types.SerializeJSON where
 
 
 import           Control.Monad
-import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA as ECDSA
+import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA              as ECDSA
 import           Data.Aeson
-import           Data.Aeson.Types                     (typeMismatch)
-import           Data.ByteString                      (ByteString)
-import qualified Data.ByteString.Char8                as BS
+import           Data.Aeson.Types                                  (typeMismatch)
+import           Data.ByteString                                   (ByteString)
+import qualified Data.ByteString.Char8                             as BS
 
-import           Control.Exception                    (throw)
-import qualified Data.ByteString.Base64               as B
+import           Control.Exception                                 (throw)
+import qualified Data.ByteString.Base64                            as B
 import           Data.ByteString.Conversion
-import           Data.Text                            (Text, pack, unpack)
-import qualified Data.Text.Encoding                   as T (decodeUtf8,
-                                                            encodeUtf8)
+import           Data.Text                                         (Text, pack,
+                                                                    unpack)
+import qualified Data.Text.Encoding                                as T (decodeUtf8,
+                                                                         encodeUtf8)
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
-
+import           Prelude                                           (read)
+import           Universum
 
 instance FromJSON Trans
 instance ToJSON   Trans

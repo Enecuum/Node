@@ -4,45 +4,45 @@
 
 module Enecuum.Legacy.CLI.RPC (serveRpc) where
 
-import           Control.Concurrent.Chan.Unagi.Bounded ( InChan )
-import           Control.Monad                         (forever)
-import           Control.Monad.Except                  (throwError)
-import           Control.Monad.IO.Class                ( liftIO )
-import           Data.Maybe                            (fromMaybe)
-import           Network.JsonRpc.Server                ( (:+:)(..)
-                                                       , rpcError
-                                                       , RpcResult
-                                                       , call
-                                                       , toMethod
-                                                       , Parameter(..))
-import           Enecuum.Legacy.Service.Network.WebSockets.Server     ( runServer )
-import qualified Enecuum.Legacy.CLI.Common                            as C
-import           Data.IP                               ( AddrRange
-                                                       , IPv6 )
-import           Data.Text                             (pack)
-import           Network.Socket                        (PortNumber)
-import qualified Network.WebSockets                    as WS
-import           Enecuum.Legacy.Node.Node.Types                       ( MsgToCentralActor )
-import           Enecuum.Legacy.Service.Types                         ( Transaction(..)
-                                                       , TransactionAPI
-                                                       , TransactionInfo
-                                                       , MicroblockBD
-                                                       , MicroblockAPI
-                                                       , MacroblockBD
-                                                       , MacroblockAPI
-                                                       , Common(..)
-                                                       , ChainInfo
-                                                       , FullChain
-                                                       , Hash(..)
-                                                       , HashOfKeyBlock
-                                                       , HashOfMicroblock
-                                                       , HashOfTransaction
-                                                       , DBPoolDescriptor
-                                                       , MsgTo
-                                                       , InContainerChan
-                                                       , InfoMsg(..) )
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair    ( PublicKey
-                                                       , Amount )
+import           Control.Concurrent.Chan.Unagi.Bounded             (InChan)
+import           Control.Monad                                     (forever)
+import           Control.Monad.Except                              (throwError)
+import           Control.Monad.IO.Class                            (liftIO)
+import           Data.IP                                           (AddrRange,
+                                                                    IPv6)
+import           Data.Maybe                                        (fromMaybe)
+import           Data.Text                                         (pack)
+import qualified Enecuum.Legacy.CLI.Common                         as C
+import           Enecuum.Legacy.Node.Node.Types                    (MsgToCentralActor)
+import           Enecuum.Legacy.Service.Network.WebSockets.Server  (runServer)
+import           Enecuum.Legacy.Service.Types                      (ChainInfo,
+                                                                    Common (..),
+                                                                    DBPoolDescriptor,
+                                                                    FullChain,
+                                                                    Hash (..),
+                                                                    HashOfKeyBlock,
+                                                                    HashOfMicroblock,
+                                                                    HashOfTransaction,
+                                                                    InContainerChan,
+                                                                    InfoMsg (..),
+                                                                    MacroblockAPI,
+                                                                    MacroblockBD,
+                                                                    MicroblockAPI,
+                                                                    MicroblockBD,
+                                                                    MsgTo,
+                                                                    Transaction (..),
+                                                                    TransactionAPI,
+                                                                    TransactionInfo)
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount,
+                                                                    PublicKey)
+import           Network.JsonRpc.Server                            ((:+:) (..), Parameter (..),
+                                                                    RpcResult,
+                                                                    call,
+                                                                    rpcError,
+                                                                    toMethod)
+import           Network.Socket                                    (PortNumber)
+import qualified Network.WebSockets                                as WS
+import           Universum
 
 serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan MsgToCentralActor -> InChan InfoMsg -> InContainerChan -> IO ()
 serveRpc descrDB portNum _ ch aInfoCh aContChan = runServer portNum "serveRpc" $ \_ aPending -> do
@@ -60,7 +60,7 @@ serveRpc descrDB portNum _ ch aInfoCh aContChan = runServer portNum "serveRpc" $
             where
 
               handle f = do
-                         liftIO $ putStrLn "Accepted"
+                         liftIO $ print "Accepted"
                          mTx <- liftIO $ f
                          case mTx of
                               Left e  -> throwError $ rpcError 400 $ pack $ show e

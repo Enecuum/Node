@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveGeneric #-}
-
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Enecuum.Legacy.Service.Network.Base (
@@ -12,11 +11,14 @@ module Enecuum.Legacy.Service.Network.Base (
     ,   sockAddrToHostAddress
   ) where
 
-import Network.Socket
-import Data.List
-import Data.Word
-import Data.Serialize
-import GHC.Generics (Generic)
+import           Data.List
+import           Data.Serialize (Serialize (..), getWord32be)
+import qualified Data.Serialize as S (get, put)
+import           Data.Text      (pack)
+import           Data.Word
+import           GHC.Generics   (Generic)
+import           Network.Socket
+import           Universum
 
 data ConnectInfo = ConnectInfo {
     host :: String
@@ -32,7 +34,7 @@ data ClientHandle = ClientHandle {
 
 instance Serialize PortNumber where
     get = toEnum.fromEnum <$> getWord32be
-    put aPortNumber = put (toEnum.fromEnum $ aPortNumber :: Word32)
+    put aPortNumber = S.put (toEnum.fromEnum $ aPortNumber :: Word32)
 
 
 data Connect = Connect HostAddress PortNumber deriving (Show, Eq, Generic, Ord)
@@ -51,7 +53,7 @@ sockAddrToHostAddress :: SockAddr -> HostAddress
 sockAddrToHostAddress aSockAddr = case aSockAddr of
     SockAddrInet _ aHostAdress                  -> aHostAdress
     SockAddrInet6 _ _  (_, _, _, aHostAdress) _ -> reverseAdr aHostAdress
-    _                          -> error "error: sockAddrToHostAddress"
+    _                          -> error $ pack "error: sockAddrToHostAddress"
 
 
 -- | 1.2.3.4 -> 4.3.2.1

@@ -7,11 +7,13 @@ module Enecuum.Legacy.Service.Transaction.LedgerSync where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import           Control.Monad                         (forM, unless, when)
-import           Data.List
+import           Control.Monad                                     (forM,
+                                                                    unless,
+                                                                    when)
+-- import           Data.List
 import           Data.Maybe
-import qualified Data.Serialize                        as S (encode)
-import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
+import qualified Data.Serialize                                    as S (encode)
+import qualified "rocksdb-haskell" Database.RocksDB                as Rocks
 import           Enecuum.Legacy.Node.Data.GlobalLoging
 import           Enecuum.Legacy.Service.Sync.SyncJson
 import           Enecuum.Legacy.Service.Sync.SyncTypes
@@ -21,7 +23,10 @@ import           Enecuum.Legacy.Service.Transaction.Sprout
 import           Enecuum.Legacy.Service.Transaction.Storage
 import           Enecuum.Legacy.Service.Transaction.Transformation
 import           Enecuum.Legacy.Service.Types
-
+import           Prelude                                           (head, last,
+                                                                    (!!))
+import           Universum                                         hiding (head,
+                                                                    last)
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
 myTail c@(Common _ i) = do
@@ -211,7 +216,7 @@ findMicroblocksForMainChainHelp  c = do
 
 
 cleanDB :: Common -> IO ()
-cleanDB (Common _ i) = do 
+cleanDB (Common _ i) = do
   filenames <- allDB
   mapM_ (\f -> Rocks.destroy f Rocks.defaultOptions) filenames
   bdLog i $ "Delete all tables"

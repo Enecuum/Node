@@ -1,10 +1,10 @@
 module Enecuum.Legacy.Service.Network.TCP.Server (runServer) where
 
-import Network.Socket
-import Control.Monad
-import Control.Concurrent (forkFinally)
-import Network (listenOn, PortID(..))
-
+import           Control.Concurrent (forkFinally)
+import           Control.Monad
+import           Network            (PortID (..), listenOn)
+import           Network.Socket
+import           Universum
 
 -- | Run TCP server.
 runServer :: PortNumber -> (Socket -> IO()) -> IO ()

@@ -17,26 +17,35 @@ module Enecuum.Legacy.LightClient.CLI (
     Trans(..),
   ) where
 
-import           Control.Monad                      (forM_, replicateM_)
-import           Control.Monad.Except               (runExceptT)
-import           Data.Aeson                         (ToJSON)
+import           Control.Monad                                     (replicateM_)
+import           Control.Monad.Except                              (runExceptT)
+import           Data.Aeson                                        (ToJSON)
 import           Data.Aeson.Encode.Pretty
-import qualified Data.ByteString.Lazy.Char8         as BC (putStrLn)
+import qualified Data.ByteString.Lazy.Char8                        as BC (putStrLn)
 import           Data.DeriveTH
-import           Data.List                          (find, sortBy)
-import           Data.List.Split                    (splitOn)
-import           Data.Map                           (Map, fromList, lookup)
+import           Data.List                                         (sortBy)
+import           Data.List.Split                                   (splitOn)
+import           Data.Map                                          (Map,
+                                                                    fromList,
+                                                                    lookup)
 import           Enecuum.Legacy.LightClient.RPC
-import           Network.Socket                     (HostName, PortNumber)
-import qualified Network.WebSockets                 as WS
 import           Enecuum.Legacy.Service.Network.WebSockets.Client
 import           Enecuum.Legacy.Service.System.Version             (version)
 import           Enecuum.Legacy.Service.Types                      hiding (Info)
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
+import           Network.Socket                                    (HostName,
+                                                                    PortNumber)
+import qualified Network.WebSockets                                as WS
 import           System.Console.GetOpt
-import           System.Environment                 (getArgs)
+-- import           System.Environment                                (getArgs)
+import           Data.Text                                         (unpack)
+import           Data.Text                                         (pack)
+import           Prelude                                           (read)
+import           System.IO.Error                                   (ioError,
+                                                                    userError)
 import           System.Random
-
+import           Universum                                         hiding
+                                                                    (Option)
 
 data Flag = Port PortNumber | Host HostName | Version | Help
           | WalletsFile String | TransactionsFile String | KeyGen Int
@@ -146,7 +155,7 @@ dispatch flags h p =
 showPublicKey :: String -> IO ()
 showPublicKey f = do
   pairs <- getSavedKeyPairs f
-  mapM_ (putStrLn . show . fst) pairs
+  mapM_ (print . fst) pairs
 
 genKeys :: Int -> IO ()
 genKeys n = replicateM_ n $ do
@@ -160,7 +169,7 @@ sendTrans transactionsFile walletsFile ch = do
 
   rawTransactions <- lines <$> readFile transactionsFile
   let transactions = map (\[x,y,z] ->(read x :: PublicKey, read y :: PublicKey, read z :: Amount)) $
-                     map (splitOn ";") rawTransactions
+                     map (splitOn ";" . unpack) rawTransactions
 
   forM_ transactions $ \(from, to, am) -> do
     case (Data.Map.lookup from mapPubPriv) of
@@ -175,7 +184,7 @@ sendTrans transactionsFile walletsFile ch = do
         result <- runExceptT $ newTx ch signTx
         case result of
           (Left err) -> putStrLn $ "Send transaction error: " ++ show err
-          (Right (Hash h) ) -> putStrLn ("Transaction done: ") >> prettyPrint (TransactionAPI signTx h)
+          (Right (Hash h) ) -> print ("Transaction done: ") >> prettyPrint (TransactionAPI signTx h)
 
 
 printVersion :: IO ()
@@ -186,7 +195,7 @@ getSavedKeyPairs :: String -> IO [(PublicKey, PrivateKey)]
 getSavedKeyPairs f = do
   result <- readFile f
   let rawKeys = lines result
-  let keys = map (splitOn ";") rawKeys
+  let keys = map (splitOn ";" . unpack) rawKeys
   let pairs = map (\[x,y] -> (read x :: PublicKey, read y :: PrivateKey)) keys
   return pairs
 
@@ -203,7 +212,7 @@ sendMessageBroadcast m ch = do
   result <- runExceptT $ newMsgBroadcast ch m
   case result of
     (Left err) -> putStrLn $ "sendMessageBroadcast error: " ++ show err
-    (Right _ ) -> putStrLn   "Broadcast message was sent"
+    (Right _ ) -> print   "Broadcast message was sent"
 
 
 sendMessageTo :: MsgTo -> WS.Connection -> IO ()
@@ -211,7 +220,7 @@ sendMessageTo mTo ch = do
   result <- runExceptT $ newMsgTo ch mTo
   case result of
     (Left err) -> putStrLn $ "sendMessageTo error: " ++ show err
-    (Right _ ) -> putStrLn   "Message was sent"
+    (Right _ ) -> print   "Message was sent"
 
 
 loadMessages :: WS.Connection -> IO ()
@@ -219,8 +228,14 @@ loadMessages ch = do
   result <- runExceptT $ loadNewMsg ch
   case result of
     (Left err)    -> putStrLn $ "sendMessageBroadcast error: " ++ show err
-    (Right msgs ) -> putStrLn $ "New messages: " ++ (unlines $ map showMsg msgs)
-                  where showMsg (MsgTo aId m) = "Message from " ++ show aId ++ ": " ++ m
+    -- (Right msgs ) -> print "h"
+    (Right msgs ) -> do
+      let msg :: Text = unlines (["hello"] :: [Text])
+      -- print $ (("New messages: "  ++ msg))
+      print msg
+      print $ "New messages: "
+      print $ unlines $ map (pack . showMsg) msgs
+        where showMsg (MsgTo aId m) = ("Message from " ++ show aId ++ ": " ++ m)
 
 
 getAllTransactionsByWallet :: PublicKey -> WS.Connection -> IO ()

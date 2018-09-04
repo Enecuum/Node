@@ -4,15 +4,14 @@
 module Enecuum.Legacy.Node.ConnectManager where
 
 --
-import qualified Control.Concurrent                    as C
+import qualified Control.Concurrent                               as C
 import           Control.Concurrent.Async
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Exception
-import           Control.Monad
-import           Data.Aeson                            as A
-import qualified Data.ByteString                       as B
+-- import           Control.Exception
+-- import           Control.Monad
+import           Data.Aeson                                       as A
+import qualified Data.ByteString                                  as B
 import           Data.Maybe
-import qualified Network.WebSockets                    as WS
 import           Enecuum.Legacy.Node.Data.GlobalLoging
 import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Node.DataActor
@@ -23,10 +22,13 @@ import           Enecuum.Legacy.Node.Node.Types
 import           Enecuum.Legacy.Node.SyncServer
 import           Enecuum.Legacy.Pending
 import           Enecuum.Legacy.Service.Chan
-import           Enecuum.Legacy.Service.Types                         ( InfoMsg(..), LoggingTag(..), MsgType(..) )
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Network.WebSockets.Client
 import           Enecuum.Legacy.Service.Sync.SyncJson
+import           Enecuum.Legacy.Service.Types                     (InfoMsg (..), LoggingTag (..),
+                                                                   MsgType (..))
+import qualified Network.WebSockets                               as WS
+import           Universum
 
 --
 connectManager

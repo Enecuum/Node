@@ -14,21 +14,23 @@ module Enecuum.Legacy.Service.InfoMsg (
   serveInfoMsg
 )  where
 
-import qualified Data.ByteString.Char8                 as BS
+import qualified Data.ByteString.Char8                     as BS
 import           Data.List
-import           Network.Socket.ByteString             (sendTo)
 import           Enecuum.Legacy.Node.BaseFunctions
+import           Network.Socket.ByteString                 (sendTo)
 
-import           Enecuum.Legacy.Service.Types                         ( InfoMsg(..), LoggingTag(..) )
 import           Enecuum.Legacy.Service.Metrics.Statsd
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Network.TCP.Client
-import           System.Clock                          ()
+import           Enecuum.Legacy.Service.Types              (InfoMsg (..),
+                                                            LoggingTag (..))
+import           System.Clock                              ()
 
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Exception                     (SomeException, try)
-import           Control.Monad                         (forever, void)
-
+-- import           Control.Exception                         (SomeException, try)
+import           Control.Monad                             (forever, void)
+import           Data.Text                                 (pack)
+import           Universum                                 hiding (set)
 
 sendToServer :: ClientHandle -> String -> IO ()
 sendToServer h s = void $ sendTo (clientSocket h) (BS.pack s) (clientAddress h)
@@ -39,18 +41,18 @@ serveInfoMsg statsdInfo logsInfo chan aId stdout_log = do
 
     case eithMHandler of
       Left (err :: SomeException) -> putStrLn $ "Metrics server connection error: " ++ show err
-      Right _                     -> putStrLn "Metrics server connected"
+      Right _                     -> putStrLn ("Metrics server connected" :: Text)
 
     eithLHandler <- try (openConnect (host logsInfo) (port logsInfo))
 
     case eithLHandler of
       Left (err :: SomeException) -> putStrLn $ "Logs server connection error: " ++ show err
       Right lHandler              -> do
-            putStrLn "Logs server connected"
+            putStrLn ("Logs server connected" :: Text)
             sendToServer lHandler $ "+node|" ++  aId ++ "|" ++
                       intercalate "," (show <$> [ConnectingTag .. BDTag]) ++ "\r\n"
 
-    undead (putStrLn "dead of log :))) ") $ forever $ do
+    undead (putStrLn ("dead of log " :: String)) $ forever $ do
         m <- readChan chan
         case m of
             Metric s -> case eithMHandler of
@@ -64,10 +66,10 @@ serveInfoMsg statsdInfo logsInfo chan aId stdout_log = do
                                    ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
 
                          aFileString = "  !  " ++ aId ++ "|" ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
-                     appendFile "log.txt" aFileString
+                     appendFile "log.txt" $ pack aFileString
                      case eithLHandler of
                           Left  _        -> return ()
                           Right lHandler -> sendToServer lHandler aString
-                     if stdout_log 
+                     if stdout_log
                      then putStrLn aFileString
                      else return ()

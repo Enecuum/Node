@@ -35,7 +35,7 @@ description:
     # The central actor responsible for storing node state and manage decision,
     # processing external commands and response for them.
 
-
+default-extensions: NoImplicitPrelude
 dependencies:
 - base >= 4.7 && < 5
 - bytestring
@@ -103,6 +103,8 @@ dependencies:
 - hspec
 - HUnit
 - hspec-contrib
+- universum
+
 
 library:
   source-dirs: src

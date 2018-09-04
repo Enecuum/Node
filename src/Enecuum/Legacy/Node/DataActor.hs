@@ -18,10 +18,10 @@ module Enecuum.Legacy.Node.DataActor (
 
 
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Concurrent.MVar
+-- import           Control.Concurrent.MVar
 import qualified Data.Set                              as S
 import           Enecuum.Legacy.Service.Chan
-
+import           Universum
 
 data DataActorRequest a where
     ReadRecords     :: MVar [a]   -> DataActorRequest a

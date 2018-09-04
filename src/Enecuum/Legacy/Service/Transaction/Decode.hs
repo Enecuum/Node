@@ -10,22 +10,24 @@
 module Enecuum.Legacy.Service.Transaction.Decode where
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import qualified Crypto.Hash.SHA256                    as SHA
-import           Data.Aeson                            hiding (Error)
-import           Data.Aeson.Types                      (parseMaybe)
-import qualified Data.ByteString.Base64                as Base64
-import qualified Data.ByteString.Char8                 as BC
-import qualified Data.ByteString.Internal              as BSI
-import           Data.Default                          (def)
+import qualified Crypto.Hash.SHA256                                as SHA
+import           Data.Aeson                                        hiding
+                                                                    (Error)
+import           Data.Aeson.Types                                  (parseMaybe)
+import qualified Data.ByteString.Base64                            as Base64
+import qualified Data.ByteString.Char8                             as BC
+import qualified Data.ByteString.Internal                          as BSI
+import           Data.Default                                      (def)
 import           Data.Pool
-import qualified Data.Serialize                        as S (Serialize (..),
-                                                             decode, encode)
-import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
+import qualified Data.Serialize                                    as S (Serialize (..),
+                                                                         decode,
+                                                                         encode)
+import qualified "rocksdb-haskell" Database.RocksDB                as Rocks
 import           Enecuum.Legacy.Node.Data.GlobalLoging
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
-import           Enecuum.Legacy.Service.Types.SerializeJSON           ()
-
+import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
+import           Universum
 
 -- for rocksdb Transaction and Microblock
 rHashT :: Transaction -> BSI.ByteString
@@ -139,7 +141,7 @@ decodeKeyBlock :: InChan InfoMsg -> Value -> IO KeyBlockInfoPoW
 decodeKeyBlock i (Object aValue) = do
   let keyBlock = case parseMaybe (.: "verb") aValue of
         Nothing     -> throw (DecodeException "There is no verb in PoW Key Block")
-        Just kBlock -> kBlock :: BC.ByteString 
+        Just kBlock -> kBlock :: BC.ByteString
   if keyBlock /= "kblock"
     then throw $ DecodeException $ "Expected kblock, but get: " ++ show keyBlock
     else do

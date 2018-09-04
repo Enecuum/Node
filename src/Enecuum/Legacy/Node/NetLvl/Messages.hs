@@ -9,26 +9,29 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Enecuum.Legacy.Node.NetLvl.Messages where
 
 import           Control.Monad.Extra
 import           Data.Aeson
-import qualified Data.ByteString                  as B
-import qualified Data.ByteString.Char8            as CB
+import qualified Data.ByteString                                 as B
+import qualified Data.ByteString.Char8                           as CB
 import           Data.Char
 import           Data.Hex
 import           Data.IP
 import           Data.Maybe
 import           Data.String
-import qualified Data.Text                        as T
-import           Data.Word                        ()
-import           GHC.Generics
+import qualified Data.Text                                       as T
+import           Data.Word                                       ()
 import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Legacy.Service.Types                    (Microblock (..), Transaction)
+import           Enecuum.Legacy.Service.Types                    (Microblock (..),
+                                                                  Transaction)
 import           Enecuum.Legacy.Service.Types.SerializeInstances
 import           Enecuum.Legacy.Service.Types.SerializeJSON      ()
+import           GHC.Generics
 import           Text.Read
+import           Universum                                       hiding (All)
 
 
 data NetMessage where
@@ -79,13 +82,13 @@ data ActualConnectInfo = ActualConnectInfo NodeId NodeType (Maybe Connect) deriv
 
 instance ToJSON ActualConnectInfo where
     toJSON (ActualConnectInfo aNodeId aNodeType (Just (Connect aIp aPortNumber))) = object [
-            "node_type" .= show aNodeType
+            "node_type" .= (show aNodeType :: Text)
         ,   "node_id"   .= nodeIdToUnxed aNodeId
-        ,   "ip"        .= show (fromHostAddress aIp)
+        ,   "ip"        .= (show (fromHostAddress aIp) :: Text)
         ,   "port"      .= fromEnum aPortNumber
       ]
     toJSON (ActualConnectInfo aNodeId aNodeType Nothing) = object [
-            "node_type" .= show aNodeType
+            "node_type" .= (show aNodeType :: Text)
         ,   "node_id"   .= nodeIdToUnxed aNodeId
       ]
 
@@ -104,7 +107,7 @@ instance FromJSON ActualConnectInfo where
                 aJustPort <- aPort
                 return $ Connect (toHostAddress aIpAdress) (toEnum aJustPort)
         return $ ActualConnectInfo aNodeId (readNodeType aNodeType) aConnect
-    parseJSON s = error ("ActualConnectInfo is not an object: " ++ show s)
+    parseJSON s = error $ T.pack $ ("ActualConnectInfo is not an object: " ++ show s)
 
 unhexNodeId :: MonadPlus m => T.Text -> m NodeId
 unhexNodeId aString = case unhex . fromString . (toUpper <$>) . filter isHexDigit . T.unpack $ aString of
@@ -252,7 +255,7 @@ instance ToJSON NetMessage where
         "type"      .= ("Broadcast"  :: String),
         "msg"       .= aMessage,
         "from"      .= nodeIdToUnxed aIdFrom,
-        "node_type" .= show aNodeType
+        "node_type" .= (show aNodeType :: Text)
       ]
 
     toJSON (ResponseNodeId aNodeId) = object [
@@ -282,21 +285,21 @@ instance ToJSON NetMessage where
     toJSON (ResponseTransactionIsInPending aBool) = object [
         "tag"       .= ("Response"  :: String),
         "type"      .= ("Pending"   :: String),
-        "msg"       .= show aBool
+        "msg"       .= (show aBool :: Text)
        ]
 
     toJSON (MsgNewNode aPPId aNodeType Nothing) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("NewNodeInNet"  :: String),
         "node_id"    .= nodeIdToUnxed aPPId,
-        "node_type"  .= show aNodeType
+        "node_type"  .= (show aNodeType :: Text)
       ]
 
     toJSON (MsgNewNode aPPId aNodeType (Just aConnect)) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("NewNodeInNet"  :: String),
         "node_id"    .= nodeIdToUnxed aPPId,
-        "node_type"  .= show aNodeType,
+        "node_type"  .= (show aNodeType :: Text),
         "connect"   .= aConnect
       ]
 
@@ -363,14 +366,14 @@ instance ToJSON NetMessage where
     toJSON (ActionConnect aNodeType (Just aJustId)) = object [
         "tag"  .= ("Action"      :: String),
         "type" .= ("Connect"  :: String),
-        "node_type" .= show aNodeType,
+        "node_type" .= (show aNodeType :: Text),
         "node_id"   .= nodeIdToUnxed aJustId
       ]
 
     toJSON (ActionConnect aNodeType _) = object [
         "tag"  .= ("Action"      :: String),
         "type" .= ("Connect"  :: String),
-        "node_type" .= show aNodeType
+        "node_type" .= (show aNodeType :: Text)
       ]
 
     toJSON (ActionConnectIsDead aConnect) = object [
@@ -382,7 +385,7 @@ instance ToJSON NetMessage where
 
 instance ToJSON Connect where
     toJSON (Connect aHostAddress aPortNumber) = object [
-        "ip"   .= show (fromHostAddress aHostAddress),
+        "ip"   .= (show (fromHostAddress aHostAddress) :: Text),
         "port" .= fromEnum aPortNumber
       ]
 
@@ -394,4 +397,4 @@ instance FromJSON Connect where
             Nothing      -> mzero
             Just aJustIp -> return $
                 Connect (toHostAddress aJustIp) (toEnum aPort)
-    parseJSON s = error ("FromJSON Connect is not an object: " ++ show s)
+    parseJSON s = error $ T.pack $ ("FromJSON Connect is not an object: " ++ show s)

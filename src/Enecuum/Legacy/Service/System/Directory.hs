@@ -15,7 +15,7 @@ import           System.Directory      (createDirectoryIfMissing,
                                         getHomeDirectory)
 import           System.FilePath       (pathSeparator)
 import           System.FilePath.Posix (takeDirectory)
-
+import           Universum
 
 getTime :: IO Int
 getTime = fromEnum <$> utSeconds <$> getUnixTime

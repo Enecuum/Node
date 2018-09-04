@@ -20,26 +20,24 @@ module Enecuum.Legacy.Node.Data.Key (
     ,   generateClientId
   ) where
 import           Crypto.PubKey.ECC.DH
-import qualified Crypto.PubKey.ECC.ECDSA            as ECDSA
+import qualified Crypto.PubKey.ECC.ECDSA                           as ECDSA
 import           Crypto.PubKey.ECC.Generate
-import           Crypto.PubKey.ECC.Types            (Curve (..),
-                                                     CurveName (SEC_p256k1),
-                                                     getCurveByName)
-import           Crypto.Random.Types                (MonadRandom (..))
+import           Crypto.PubKey.ECC.Types                           (Curve (..), CurveName (SEC_p256k1),
+                                                                    getCurveByName)
+import           Crypto.Random.Types                               (MonadRandom (..))
 import           Data.Aeson.TH
 import           Data.Bits
-import qualified Data.ByteArray                     as BA
-import qualified Data.ByteString                    as B
+import qualified Data.ByteArray                                    as BA
+import qualified Data.ByteString                                   as B
 import           Data.Serialize
 import           Data.Word
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (PublicKey (..),
+                                                                    compressPublicKey,
+                                                                    getPublicKey,
+                                                                    uncompressPublicKey)
 import           GHC.Generics
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
-                                                ( PublicKey(..)
-                                                , compressPublicKey
-                                                , getPublicKey
-                                                , uncompressPublicKey
-                                                )
 import           System.Random
+import           Universum
 
 newtype NodeId     = NodeId     Integer deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)
 newtype MyNodeId   = MyNodeId   Integer deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)

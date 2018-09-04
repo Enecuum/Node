@@ -3,31 +3,33 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell     #-}
 
+
 module Main where
 
-import qualified Control.Concurrent                    as C
+import qualified Control.Concurrent                        as C
 import           Control.Monad
-import qualified Data.Map                              as M
+import qualified Data.Map                                  as M
 import           Enecuum.Legacy.Service.System.Version
-import           System.Environment                    (getEnv)
+import           System.Environment                        (getEnv)
 
 import           Control.Concurrent.Chan.Unagi.Bounded
-
+import           Data.Aeson                                (decode)
+import qualified Data.ByteString.Lazy                      as L
+import           Data.IP
+import           Data.Maybe                                (fromJust)
 import           Enecuum.Legacy.CLI.CLI
 import           Enecuum.Legacy.CLI.RPC
-import           Control.Exception                     (SomeException, try)
-import           Data.IP
-import           Data.Maybe                            (fromJust)
+import           Enecuum.Legacy.Node.DataActor
 import           Enecuum.Legacy.Node.Lib
 import           Enecuum.Legacy.Node.NetLvl.Router
 import           Enecuum.Legacy.Node.Node.Types
 import           Enecuum.Legacy.Service.InfoMsg
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Timer
-import           Data.Aeson                            (decode)
-import qualified Data.ByteString.Lazy                  as L
-import           Enecuum.Legacy.Node.DataActor
-import           Enecuum.Legacy.Service.Transaction.Common            (connectOrRecoveryConnect)
+import           Enecuum.Legacy.Service.Transaction.Common (connectOrRecoveryConnect)
+import           Prelude                                   (read)
+import           System.IO                                 (readIO)
+import           Universum
 
 configName :: String
 configName = "configs/config.json"

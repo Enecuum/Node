@@ -1,4 +1,3 @@
-
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE PackageImports      #-}
@@ -9,29 +8,32 @@ module Enecuum.Legacy.Node.Lib where
 import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
-import           Control.Exception
+-- import           Control.Exception
 import           Control.Monad
 import           Enecuum.Legacy.Node.DBActor
 import           Enecuum.Legacy.Pending
 
 import           Data.Aeson                            as A
-import qualified Data.ByteString.Lazy                  as L
-import           Data.IORef
-import           Data.Maybe
 import qualified Data.ByteString.Char8                 as B8
-import           Lens.Micro
-import           Network.Socket                        (tupleToHostAddress)
+import qualified Data.ByteString.Lazy                  as L
+-- import           Data.IORef
+import           Data.Maybe
+import           Data.Text                             (pack)
+import           Enecuum.Legacy.Node.ConnectManager
 import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Node.DataActor
+import           Enecuum.Legacy.Node.NetLvl.Server
 import           Enecuum.Legacy.Node.Node.Config.Make
 import           Enecuum.Legacy.Node.Node.Types
-import           Enecuum.Legacy.Node.NetLvl.Server
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Sync.SyncJson
 import           Enecuum.Legacy.Service.Types
+import           Lens.Micro
+import           Network.Socket                        (tupleToHostAddress)
+import           Prelude                               (read)
 import           System.Directory                      (createDirectoryIfMissing)
 import           System.Environment
-import           Enecuum.Legacy.Node.ConnectManager
+import           Universum
 
 startNode
   :: DBPoolDescriptor
@@ -84,7 +86,7 @@ startNode descrDB buildConf infoCh aManager startDo = do
 traficLoger :: OutChan B8.ByteString -> IO b
 traficLoger aOutChan = forever $ do
     aMsg <- readChan aOutChan
-    appendFile "netLog.txt" $ B8.unpack aMsg ++ "\n"
+    appendFile "netLog.txt" $ pack $ B8.unpack aMsg ++ "\n"
 
 
 readNodeConfig :: IO NodeConfig
@@ -92,8 +94,8 @@ readNodeConfig =
     try (L.readFile "configs/nodeInfo.json") >>= \case
         Right nodeConfigMsg         -> case decode nodeConfigMsg of
             Just nodeConfigData     -> return nodeConfigData
-            Nothing                 -> putStrLn "Config file can not be readed. New one will be created" >> config
-        Left (_ :: SomeException)   -> putStrLn "ConfigFile will be created." >> config
+            Nothing                 -> putStrLn ("Config file can not be readed. New one will be created" :: String) >> config
+        Left (_ :: SomeException)   -> putStrLn ("ConfigFile will be created." :: String) >> config
   where
     config = do
         makeFileConfig
@@ -119,7 +121,7 @@ getConfigParameters
 getConfigParameters aMyNodeId conf _ = do
   snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case
           Right item              -> return item
-          Left (_::SomeException) -> error "Please, specify simpleNodeBuildConfig"
+          Left (_::SomeException) -> error $ pack "Please, specify simpleNodeBuildConfig"
 
   poa_p   <- try (getEnv "poaPort") >>= \case
           Right item              -> return $ read item

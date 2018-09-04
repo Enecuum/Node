@@ -1,17 +1,18 @@
-{-#Language Strict#-}
+{-# LANGUAGE Strict #-}
+
 module Enecuum.Legacy.Service.Network.WebSockets.Server (runServer) where
 
 
-import              Enecuum.Legacy.Node.BaseFunctions
-import              Enecuum.Legacy.Service.Network.Base
-import              Control.Concurrent
-import              Control.Monad
-import              Control.Exception
-import              Network.WebSockets hiding (runServer)
-import              Network.WebSockets.Connection
-import qualified    Network.WebSockets.Stream     as Stream
-import qualified    Network.Socket  as S
-
+import           Control.Concurrent
+import           Control.Exception                   (allowInterrupt)
+import           Control.Monad
+import           Enecuum.Legacy.Node.BaseFunctions
+import           Enecuum.Legacy.Service.Network.Base
+import qualified Network.Socket                      as S
+import           Network.WebSockets                  hiding (runServer)
+import           Network.WebSockets.Connection
+import qualified Network.WebSockets.Stream           as Stream
+import           Universum
 
 -- | Run a server app.
 runServer :: PortNumber -> String -> (HostAddress -> ServerApp) -> IO ()

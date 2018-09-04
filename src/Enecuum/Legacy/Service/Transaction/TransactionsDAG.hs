@@ -6,20 +6,23 @@
 
 module Enecuum.Legacy.Service.Transaction.TransactionsDAG where
 
-import           Control.Monad                      (replicateM)
+import           Control.Monad                                     (replicateM)
 import           Data.Graph.Inductive
 import           Enecuum.Legacy.Service.System.Directory           (getTime)
 import           Enecuum.Legacy.Service.Transaction.Skelet         (getSkeletDAG)
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 import           System.Random
+import           Universum
+
+
 type QuantityOfTransactions = Int
 
 getLabsNodes :: [LNode a] -> [a]
 getLabsNodes = map snd
 
 
-getSignTransactions :: Int -> [LNode KeyPair] -> (Int, Int) -> IO [Transaction] 
+getSignTransactions :: Int -> [LNode KeyPair] -> (Int, Int) -> IO [Transaction]
 getSignTransactions quantityOfTx keys'ns (x,y) = do
   let skel = getSkeletDAG keys'ns
   let n    = length skel
@@ -33,7 +36,7 @@ getSignTransactions quantityOfTx keys'ns (x,y) = do
   return (take quantityOfTx sts)
 
 
-getTransactions :: [KeyPair] -> QuantityOfTransactions-> IO [Transaction] 
+getTransactions :: [KeyPair] -> QuantityOfTransactions-> IO [Transaction]
 getTransactions keys quantityTx = do
   let quantityRegistereKeyTx       = length keys
   let keys'ns = zip [1..quantityRegistereKeyTx] keys
@@ -61,4 +64,3 @@ genNTx n = do
    tx <- getTransactions keys n
    let nTx = take n $ cycle tx
    return nTx
-
