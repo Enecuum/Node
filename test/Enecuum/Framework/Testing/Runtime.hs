@@ -1,27 +1,7 @@
-{-# LANGUAGE TemplateHaskell #-}
-
-module Enecuum.Framework.Testing.Runtime where
-
-import Enecuum.Prelude
-
-import qualified Enecuum.Domain                as D
-
-data NodeRuntimeSt = NodeRuntimeSt
-  { _nodeTag :: D.NodeTag
-  , _nodeAddress :: Text
-
-  }
-
-makeLenses ''NodeRuntimeSt
-
-defaultNodeRuntimeSt :: NodeRuntimeSt
-defaultNodeRuntimeSt = NodeRuntimeSt "" ""
+module Enecuum.Framework.Testing.Runtime
+  ( module X
+  ) where
 
 
-data TestRuntime = TestRuntime
-  {
-
-  }
-
-mkTestRuntime :: IO TestRuntime
-mkTestRuntime = pure TestRuntime
+import Enecuum.Framework.Testing.Runtime.Types               as X
+import Enecuum.Framework.Testing.Runtime.NodeDefinition.Impl as X (runNode)
