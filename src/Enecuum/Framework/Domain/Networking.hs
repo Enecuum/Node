@@ -6,17 +6,14 @@ module Enecuum.Framework.Domain.Networking where
 
 import           Enecuum.Prelude
 
-import qualified Enecuum.Core.Types                      as T
+import qualified Data.ByteString.Lazy          as BS
 
 -- Raw vision of networking api. Can change significantly.
 
+type RawData = BS.ByteString
+
 data ConnectionConfig = ConnectionConfig
 data Connection = Connection
-
-data ServerDef = ServerDef
-  {
-
-  }
 
 -- Temporary approach untill we clarify all the networking details.
 

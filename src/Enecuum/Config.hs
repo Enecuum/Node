@@ -3,11 +3,10 @@
 
 module Enecuum.Config where
 
+import           Enecuum.Prelude
+
 import qualified Data.ByteString.Lazy          as L
-import           Data.Text                     (Text)
 import qualified Data.Aeson                    as A
-import           Data.Aeson                               ( FromJSON )
-import           GHC.Generics                             ( Generic )
 
 -- Dummy config
 data Config = Config

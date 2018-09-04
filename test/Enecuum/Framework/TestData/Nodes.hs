@@ -7,7 +7,6 @@ import Enecuum.Prelude
 
 import qualified Data.Aeson                    as A
 import qualified Data.ByteString.Lazy          as BS
-import           Eff.SafeIO                    (safeIO)
 
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
@@ -51,12 +50,12 @@ acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " ++ msg
 acceptHello2 :: HelloRequest2 -> Eff L.NodeModel ()
 acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " ++ msg
 
-bootNode ::(Member L.NodeDefinitionL effs) => Eff effs D.NodeDef
+bootNode :: (Member L.NodeDefinitionL effs) => Eff effs ()
 bootNode = do
   _         <- L.nodeTag bootNodeTag
-  nodeID    <- L.initialization $ pure $ D.NodeID "abc"
-  serverDef <- L.serving $ L.serve @HelloRequest1 acceptHello1
-  pure $ D.NodeDef nodeID serverDef
+  _         <- L.initialization $ pure $ D.NodeID "abc"
+  _         <- L.serving $ L.serve @HelloRequest1 acceptHello1
+  pure ()
 
 -- TODO: with NodeModel, evalNework not needed.
 -- TODO: make TCP Sockets / WebSockets stuff more correct
@@ -66,12 +65,12 @@ masterNodeInitialization = do
   eHashID     <- fmap unpack <$> L.withConnection (bootNodeCfg ^. Lens.connectionConfig) GetHashIDRequest
   pure $ eHashID >>= Right . D.NodeID
 
-masterNode :: (Member L.NodeDefinitionL effs) => D.Config -> Eff effs D.NodeDef
+-- TODO: handle the error correctly.
+masterNode :: (Member L.NodeDefinitionL effs) => D.Config -> Eff effs ()
 masterNode _ = do
   _         <- L.nodeTag masterNodeTag
-  -- TODO: handle the error correctly.
-  nodeID    <- D.withSuccess $ L.initialization masterNodeInitialization
-  serverDef <- L.serving
-    $ L.serve @HelloRequest1 acceptHello1
-    . L.serve @HelloRequest2 acceptHello2
-  pure $ D.NodeDef nodeID serverDef
+  _         <- D.withSuccess $ L.initialization masterNodeInitialization
+  _         <- L.serving
+                  $ L.serve @HelloRequest1 acceptHello1
+                  . L.serve @HelloRequest2 acceptHello2
+  pure ()

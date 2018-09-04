@@ -1,9 +1,9 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Enecuum.Core.Types.Network where
+module Enecuum.Framework.Domain.NetworkModel where
 
-import           Data.Text                                ( Text )
+import           Enecuum.Prelude
 
 -- This is a raw vision of networking model. Will be updated later.
 

@@ -6,14 +6,13 @@ module Enecuum.API.RPC where
 
 import           Enecuum.Prelude
 
-import qualified Enecuum.Core.Types                      as T
-import           Enecuum.Framework.Domain.Node           ( NodeConfig )
+import qualified Enecuum.Framework.Domain as D
 
 newtype FindNodeByTagRequest = FindNodeByTagRequest Text
-newtype FindNodeByTagResponse = FindNodeByTagResponse NodeConfig
+newtype FindNodeByTagResponse = FindNodeByTagResponse D.NodeConfig
   deriving (Generic, Newtype)
 
 -- TODO: more type safety.
-instance T.NetworkMethod () FindNodeByTagRequest FindNodeByTagResponse where
-  toNetworkRequest _ (FindNodeByTagRequest _) = T.MulticastRequest "dummy"
-  fromNetworkResponse _ (T.NetworkResponse _) = error "fromNetworkResponse not implemented for FindNodeByTagRequest"
+instance D.NetworkMethod () FindNodeByTagRequest FindNodeByTagResponse where
+  toNetworkRequest _ (FindNodeByTagRequest _) = D.MulticastRequest "dummy"
+  fromNetworkResponse _ (D.NetworkResponse _) = error "fromNetworkResponse not implemented for FindNodeByTagRequest"

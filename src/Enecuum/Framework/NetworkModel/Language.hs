@@ -1,25 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GADTs #-}
 
-module Enecuum.Core.NetworkModel.Language where
+module Enecuum.Framework.NetworkModel.Language where
 
-import           Eff.TH                                   ( makeFreer )
-import           Eff                                      ( Eff
-                                                            , Member
-                                                            , send
-                                                            )
-import           GHC.Generics                             ( Generic )
-import           Control.Newtype.Generics                 ( Newtype
-                                                          , O
-                                                          , unpack
-                                                          )
+import           Enecuum.Prelude
 
-import qualified Enecuum.Core.Types            as D
+import           Eff                                      ( send )
 
-import           Eff.State                                (State)
-import           Eff.SafeIO                               (SIO)
-import           Eff.Exc                                  (Exc)
-import           Control.Exception                        (SomeException)
+import qualified Enecuum.Framework.Domain                 as D
+
 
 -- Low-level network model.
 

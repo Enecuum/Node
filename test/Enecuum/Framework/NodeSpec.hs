@@ -8,55 +8,29 @@
 
 module Enecuum.Framework.NodeSpec where
 
+import Enecuum.Prelude
+
 import           Test.Hspec
-import           Data.Text                                ( Text )
-import           Control.Concurrent                       ( threadDelay )
-import           Eff                                      ( Eff
-                                                          , Member
-                                                          , handleRelay
-                                                          , handleRelayS
-                                                          )
-import           Eff.Exc                                  ( Exc
-                                                          , throwError
-                                                          )
-import qualified Eff.Exc.Pure                  as Exc
-                                                          ( onFail )
-import           Eff.TH                                   ( makeFreer )
-import           Eff.SafeIO                               ( SIO
-                                                          , safeIO
-                                                          , runSafeIO
-                                                          )
-import           Eff.Reader.Pure                          ( Reader
-                                                          , runReader
-                                                          )
-import qualified Eff.Internal                  as EI
-import           Control.Exception                        ( SomeException
-                                                          , try
-                                                          )
-import qualified Data.Aeson                    as A
-import           Data.Aeson                               ( ToJSON
-                                                          , FromJSON
-                                                          )
-import qualified Data.ByteString.Lazy          as BS
-import           GHC.Generics                             ( Generic )
-import           Control.Newtype.Generics                 ( Newtype
-                                                          , O
-                                                          , pack
-                                                          , unpack
-                                                          )
 
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
--- import qualified Enecuum.Framework.Runtime     as R
 
 import Enecuum.Framework.TestData.Nodes
-import Enecuum.Framework.Testing.Interpreters
+import Enecuum.Framework.Testing.Runtime
+
+bootNodeAddr = "boot node addr"
+masterNode1Addr = "master node 1 addr"
 
 
 spec :: Spec
-spec = describe "Master Node test" $ 
+spec = describe "Master Node test" $
   it "Master Node test" $ do
 
-    _ <- runNode $ masterNode $ D.Config "boot node addr"
+    runtime <- mkTestRuntime
+
+    bootNodeRuntime   :: NodeRuntime <- createNode runtime bootNodeAddr      bootNode
+    masterNodeRuntime :: NodeRuntime <- createNode runtime masterNode1Addr $ masterNode $ D.Config bootNodeAddr
+
+    -- response <- sendRequest bootNodeRuntime HelloRequest1
 
     "a" `shouldBe` ("a" :: String)

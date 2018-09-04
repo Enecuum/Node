@@ -1,17 +1,7 @@
-{-# LANGUAGE TemplateHaskell #-}
+module Enecuum.Framework.Testing.Runtime
+  ( module X
+  ) where
 
-module Enecuum.Framework.Testing.Runtime where
 
-import Enecuum.Prelude
-
-import qualified Enecuum.Domain                as D
-
-data RuntimeSt = RuntimeSt
-  { _nodeTag :: D.NodeTag
-
-  }
-
-makeLenses ''RuntimeSt
-
-defaultRuntimeSt :: RuntimeSt
-defaultRuntimeSt = RuntimeSt ""
+import Enecuum.Framework.Testing.Runtime.Types               as X
+import Enecuum.Framework.Testing.Runtime.NodeDefinition.Impl as X (createNode)
