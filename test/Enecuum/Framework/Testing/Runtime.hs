@@ -2,16 +2,16 @@
 
 module Enecuum.Framework.Testing.Runtime where
 
+import Enecuum.Prelude
+
 import qualified Enecuum.Domain                as D
 
-import Enecuum.RuntimeTmp          
+data RuntimeSt = RuntimeSt
+  { _nodeTag :: D.NodeTag
 
--- data RuntimeSt = RuntimeSt
---   { _nodeTag :: D.NodeTag
+  }
 
---   }
-
--- makeLenses ''RuntimeSt
+makeLenses ''RuntimeSt
 
 defaultRuntimeSt :: RuntimeSt
-defaultRuntimeSt = RuntimeSt
+defaultRuntimeSt = RuntimeSt ""
