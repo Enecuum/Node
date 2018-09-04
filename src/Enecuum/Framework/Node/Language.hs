@@ -18,10 +18,6 @@ data NodeL a where
 
 makeFreer ''NodeL
 
-data RuntimeStateL a where
-  RuntimeState :: RuntimeStateL ()
-
-
 type NodeModel =
   '[ NodeL
    , NetworkingL

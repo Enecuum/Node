@@ -106,31 +106,7 @@ runNodeDefinitionL
   -> Eff '[SIO, Exc SomeException] a
 runNodeDefinitionL = handleRelay pure ( (>>=) . interpretNodeDefinitionL )
 
-interpretRuntimeStateL
-  :: L.RuntimeStateL a
-  -> Eff (State RuntimeSt ': effs) a
-interpretRuntimeStateL (L.RuntimeState) = undefined
-
-rr
-  :: Eff (L.RuntimeStateL ': effs) a
-  -> Eff (State RuntimeSt ': effs) a
-rr = replaceRelay pure ( (>>=) . interpretRuntimeStateL )
-
-
-runNodeDefinitionLSt
-  :: Eff '[State RuntimeSt, L.NodeDefinitionL, SIO, Exc SomeException] a
-  -> Eff '[State RuntimeSt, SIO, Exc SomeException] a
-runNodeDefinitionLSt = undefined
-
-runNodeSt
-  :: Eff '[L.RuntimeStateL, L.NodeDefinitionL, SIO, Exc SomeException] a
-  -> IO a
-runNodeSt x = runSafeIO $ evalState defaultRuntimeSt (runNodeDefinitionLSt $ rr x)
-
-
-
 runNode
   :: Eff '[L.NodeDefinitionL, SIO, Exc SomeException] a
   -> IO a
--- runNode x = runSafeIO $ evalState defaultRuntimeSt (runNodeDefinitionL x)
 runNode x = runSafeIO $ runNodeDefinitionL x
