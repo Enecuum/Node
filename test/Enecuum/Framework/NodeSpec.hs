@@ -47,16 +47,23 @@ import           Control.Newtype.Generics                 ( Newtype
 
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
--- import qualified Enecuum.Framework.Runtime     as R
 
 import Enecuum.Framework.TestData.Nodes
 import Enecuum.Framework.Testing.Interpreters
+
+bootNodeAddr = "boot node addr"
+masterNode1Addr = "master node 1 addr"
 
 
 spec :: Spec
 spec = describe "Master Node test" $ 
   it "Master Node test" $ do
 
-    _ <- runNode $ masterNode $ D.Config "boot node addr"
+    runtime <- mkTestRuntime
+
+    bootNodeControl <- runNode runtime bootNodeAddr $ bootNode
+    masterNodeControl <- runNode runtime masterNode1Addr $ masterNode $ D.Config bootNodeAddr
+
+    -- response <- sendRequest bootNodeControl HelloRequest1
 
     "a" `shouldBe` ("a" :: String)

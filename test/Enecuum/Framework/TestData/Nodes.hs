@@ -51,7 +51,7 @@ acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " ++ msg
 acceptHello2 :: HelloRequest2 -> Eff L.NodeModel ()
 acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " ++ msg
 
-bootNode ::(Member L.NodeDefinitionL effs) => Eff effs D.NodeDef
+bootNode :: (Member L.NodeDefinitionL effs) => Eff effs D.NodeDef
 bootNode = do
   _         <- L.nodeTag bootNodeTag
   nodeID    <- L.initialization $ pure $ D.NodeID "abc"

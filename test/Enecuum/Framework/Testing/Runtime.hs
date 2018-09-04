@@ -6,12 +6,22 @@ import Enecuum.Prelude
 
 import qualified Enecuum.Domain                as D
 
-data RuntimeSt = RuntimeSt
+data NodeRuntimeSt = NodeRuntimeSt
   { _nodeTag :: D.NodeTag
+  , _nodeAddress :: Text
 
   }
 
-makeLenses ''RuntimeSt
+makeLenses ''NodeRuntimeSt
 
-defaultRuntimeSt :: RuntimeSt
-defaultRuntimeSt = RuntimeSt ""
+defaultNodeRuntimeSt :: NodeRuntimeSt
+defaultNodeRuntimeSt = NodeRuntimeSt "" ""
+
+
+data TestRuntime = TestRuntime
+  {
+
+  }
+
+mkTestRuntime :: IO TestRuntime
+mkTestRuntime = pure TestRuntime
