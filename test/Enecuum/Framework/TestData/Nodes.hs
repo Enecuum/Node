@@ -75,8 +75,8 @@ bootNode = do
 -- TODO: make TCP Sockets / WebSockets stuff more correct
 masterNodeInitialization :: Eff L.NodeModel (Either Text D.NodeID)
 masterNodeInitialization = do
-  bootNodeAddr <- L.evalNetwork simpleBootNodeDiscovery
-  eHashID      <- fmap unpack <$> L.withConnection (D.ConnectionConfig bootNodeAddr) GetHashIDRequest
+  addr     <- L.evalNetwork simpleBootNodeDiscovery
+  eHashID  <- fmap unpack <$> L.withConnection (D.ConnectionConfig addr) GetHashIDRequest
   pure $ eHashID >>= Right . D.NodeID
 
 -- TODO: handle the error correctly.
