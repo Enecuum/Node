@@ -25,18 +25,21 @@ module Enecuum.Legacy.Service.Transaction.Balance
     ) where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Exception                     (throw)
-import           Control.Monad                         (liftM, when)
-import           Data.Aeson                            hiding (Error)
+import           Control.Exception                                 (throw)
+import           Control.Monad                                     (liftM, when)
+import           Data.Aeson                                        hiding
+                                                                    (Error)
 import           Data.Hashable
-import qualified Data.HashTable.IO                     as H
-import           Data.List                             (sort, sortBy)
+import qualified Data.HashTable.IO                                 as H
+import           Data.List                                         (sort,
+                                                                    sortBy)
 import           Data.Maybe
-import           Data.Ord                              (comparing)
+import           Data.Ord                                          (comparing)
 import           Data.Pool
-import qualified Data.Serialize                        as S (decode, encode)
-import qualified Data.Set                              as Set
-import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
+import qualified Data.Serialize                                    as S (decode,
+                                                                         encode)
+import qualified Data.Set                                          as Set
+import qualified "rocksdb-haskell" Database.RocksDB                as Rocks
 import           Enecuum.Legacy.Node.Data.GlobalLoging
 import           Enecuum.Legacy.Service.Chan
 import           Enecuum.Legacy.Service.Sync.SyncJson
@@ -46,6 +49,7 @@ import           Enecuum.Legacy.Service.Transaction.Storage
 import           Enecuum.Legacy.Service.Transaction.Transformation
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
+import           Enecuum.Prelude
 
 
 instance Hashable PublicKey

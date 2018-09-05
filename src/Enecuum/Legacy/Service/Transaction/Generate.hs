@@ -4,16 +4,20 @@
 
 module Enecuum.Legacy.Service.Transaction.Generate where
 
-import           Control.Monad                       (replicateM)
-import           Control.Monad.State                 (StateT, evalStateT, get,
-                                                      lift, put)
+import           Control.Monad                                      (replicateM)
+-- import           Control.Monad.State                                (StateT,
+--                                                                      evalStateT,
+--                                                                      get, lift,
+--                                                                      put)
 import           Enecuum.Legacy.Service.Transaction.Storage         (getKeyBlockHash)
 import           Enecuum.Legacy.Service.Transaction.TransactionsDAG (genNTx)
 import           Enecuum.Legacy.Service.Types                       (HashOfKeyBlock,
-                                                      KeyBlockInfoPoW (..),
-                                                      Microblock (..))
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair  (KeyPair (..), generateNewRandomAnonymousKeyPair,
-                                                      getSignature)
+                                                                     KeyBlockInfoPoW (..),
+                                                                     Microblock (..))
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair  (KeyPair (..),
+                                                                     generateNewRandomAnonymousKeyPair,
+                                                                     getSignature)
+import           Enecuum.Prelude
 
 
 quantityOfTransactionInMicroblock :: Int
