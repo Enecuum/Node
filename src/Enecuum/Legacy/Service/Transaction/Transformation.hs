@@ -18,8 +18,7 @@ import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 import           Enecuum.Legacy.Service.Types.SerializeInstances   (roll,
                                                                     unroll)
-import           Prelude                                           (read)
-import           Universum
+import           Enecuum.Prelude
 
 
 -- Helper functions

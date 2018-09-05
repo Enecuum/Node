@@ -5,8 +5,8 @@ module Enecuum.Legacy.Node.Node.Config.Make where
 import           Data.Aeson.Encode.Pretty
 import qualified Data.ByteString.Lazy           as L
 import           Enecuum.Legacy.Node.Node.Types
+import           Enecuum.Prelude
 import           System.Directory               (createDirectoryIfMissing)
-import           Universum
 
 makeFileConfig :: IO ()
 makeFileConfig = do

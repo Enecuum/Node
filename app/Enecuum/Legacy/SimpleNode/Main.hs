@@ -27,9 +27,8 @@ import           Enecuum.Legacy.Service.InfoMsg
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Timer
 import           Enecuum.Legacy.Service.Transaction.Common (connectOrRecoveryConnect)
-import           Prelude                                   (read)
+import           Enecuum.Prelude
 import           System.IO                                 (readIO)
-import           Universum
 
 configName :: String
 configName = "configs/config.json"

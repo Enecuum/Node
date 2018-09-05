@@ -1,12 +1,10 @@
 module Enecuum.Legacy.Service.Transaction.Skelet (getSkeletDAG) where
 
 import           Control.Monad.Trans.Class
--- import           Control.Monad.Trans.State
 import           Control.Monad.Trans.Writer
-import           Prelude                    (tail)
+import           Enecuum.Prelude
 import           System.Random
-import           Universum                  hiding (tail)
---type Skelet = [(Node, Node)]
+
 
 completeGraph :: [a] -> [(a,a)]
 completeGraph []            = []

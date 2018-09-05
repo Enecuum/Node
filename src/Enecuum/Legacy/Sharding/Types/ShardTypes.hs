@@ -11,7 +11,8 @@ import           GHC.Generics
 import qualified Data.ByteString              as B
 import           Data.Serialize
 import           Data.Word
-import           Universum
+import           Enecuum.Prelude
+
 
 data ShardHash = ShardHash ShardType Word64 Word64 Word64 Word64 Word64 Word64 Word64 Word64
   deriving (Ord, Eq, Show, Generic)

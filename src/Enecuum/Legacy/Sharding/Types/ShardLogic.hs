@@ -9,7 +9,7 @@ import           Enecuum.Legacy.Sharding.Types.ShardTypes
 
 import           Data.Serialize
 import           Enecuum.Legacy.Service.Types             (Hash (..))
-import           Universum
+import           Enecuum.Prelude
 
 
 

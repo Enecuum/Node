@@ -29,9 +29,9 @@ import           Enecuum.Legacy.Service.Types                    (Microblock (..
                                                                   Transaction)
 import           Enecuum.Legacy.Service.Types.SerializeInstances
 import           Enecuum.Legacy.Service.Types.SerializeJSON      ()
+import           Enecuum.Prelude
 import           GHC.Generics
 import           Text.Read
-import           Universum                                       hiding (All)
 
 
 data NetMessage where
@@ -82,13 +82,13 @@ data ActualConnectInfo = ActualConnectInfo NodeId NodeType (Maybe Connect) deriv
 
 instance ToJSON ActualConnectInfo where
     toJSON (ActualConnectInfo aNodeId aNodeType (Just (Connect aIp aPortNumber))) = object [
-            "node_type" .= (show aNodeType :: Text)
+            "node_type" .= show aNodeType
         ,   "node_id"   .= nodeIdToUnxed aNodeId
-        ,   "ip"        .= (show (fromHostAddress aIp) :: Text)
+        ,   "ip"        .= show (fromHostAddress aIp)
         ,   "port"      .= fromEnum aPortNumber
       ]
     toJSON (ActualConnectInfo aNodeId aNodeType Nothing) = object [
-            "node_type" .= (show aNodeType :: Text)
+            "node_type" .= show aNodeType
         ,   "node_id"   .= nodeIdToUnxed aNodeId
       ]
 
@@ -255,7 +255,7 @@ instance ToJSON NetMessage where
         "type"      .= ("Broadcast"  :: String),
         "msg"       .= aMessage,
         "from"      .= nodeIdToUnxed aIdFrom,
-        "node_type" .= (show aNodeType :: Text)
+        "node_type" .= show aNodeType
       ]
 
     toJSON (ResponseNodeId aNodeId) = object [
@@ -285,21 +285,21 @@ instance ToJSON NetMessage where
     toJSON (ResponseTransactionIsInPending aBool) = object [
         "tag"       .= ("Response"  :: String),
         "type"      .= ("Pending"   :: String),
-        "msg"       .= (show aBool :: Text)
+        "msg"       .= show aBool
        ]
 
     toJSON (MsgNewNode aPPId aNodeType Nothing) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("NewNodeInNet"  :: String),
         "node_id"    .= nodeIdToUnxed aPPId,
-        "node_type"  .= (show aNodeType :: Text)
+        "node_type"  .= show aNodeType
       ]
 
     toJSON (MsgNewNode aPPId aNodeType (Just aConnect)) = object [
         "tag"       .= ("Msg"           :: String),
         "type"      .= ("NewNodeInNet"  :: String),
         "node_id"    .= nodeIdToUnxed aPPId,
-        "node_type"  .= (show aNodeType :: Text),
+        "node_type"  .= show aNodeType,
         "connect"   .= aConnect
       ]
 
@@ -366,14 +366,14 @@ instance ToJSON NetMessage where
     toJSON (ActionConnect aNodeType (Just aJustId)) = object [
         "tag"  .= ("Action"      :: String),
         "type" .= ("Connect"  :: String),
-        "node_type" .= (show aNodeType :: Text),
+        "node_type" .= show aNodeType,
         "node_id"   .= nodeIdToUnxed aJustId
       ]
 
     toJSON (ActionConnect aNodeType _) = object [
         "tag"  .= ("Action"      :: String),
         "type" .= ("Connect"  :: String),
-        "node_type" .= (show aNodeType :: Text)
+        "node_type" .= show aNodeType
       ]
 
     toJSON (ActionConnectIsDead aConnect) = object [
@@ -385,7 +385,7 @@ instance ToJSON NetMessage where
 
 instance ToJSON Connect where
     toJSON (Connect aHostAddress aPortNumber) = object [
-        "ip"   .= (show (fromHostAddress aHostAddress) :: Text),
+        "ip"   .= show (fromHostAddress aHostAddress),
         "port" .= fromEnum aPortNumber
       ]
 

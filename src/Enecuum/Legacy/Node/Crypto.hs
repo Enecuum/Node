@@ -17,7 +17,7 @@ import           Data.ByteArray               (unpack)
 
 import           Data.ByteString              (ByteString, pack)
 import           Data.Serialize
-import           Universum
+import           Enecuum.Prelude
 
 verifyEncodeble :: Serialize msg => PublicKey -> Signature -> msg -> Bool
 verifyEncodeble aPublicKey aSignature aMsg = verify SHA3_256

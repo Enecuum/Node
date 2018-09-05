@@ -8,32 +8,29 @@ module Enecuum.Legacy.Node.Lib where
 import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
--- import           Control.Exception
 import           Control.Monad
-import           Enecuum.Legacy.Node.DBActor
-import           Enecuum.Legacy.Pending
-
 import           Data.Aeson                            as A
 import qualified Data.ByteString.Char8                 as B8
 import qualified Data.ByteString.Lazy                  as L
--- import           Data.IORef
 import           Data.Maybe
 import           Data.Text                             (pack)
 import           Enecuum.Legacy.Node.ConnectManager
 import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Node.DataActor
+import           Enecuum.Legacy.Node.DBActor
 import           Enecuum.Legacy.Node.NetLvl.Server
 import           Enecuum.Legacy.Node.Node.Config.Make
 import           Enecuum.Legacy.Node.Node.Types
+import           Enecuum.Legacy.Pending
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Sync.SyncJson
 import           Enecuum.Legacy.Service.Types
+import           Enecuum.Prelude
 import           Lens.Micro
 import           Network.Socket                        (tupleToHostAddress)
-import           Prelude                               (read)
 import           System.Directory                      (createDirectoryIfMissing)
 import           System.Environment
-import           Universum
+
 
 startNode
   :: DBPoolDescriptor

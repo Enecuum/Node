@@ -36,8 +36,8 @@ import           Enecuum.Legacy.Node.Data.Key
 import qualified Enecuum.Legacy.Node.Node.Types        as T
 import           Enecuum.Legacy.Service.Types          (InfoMsg)
 import           Enecuum.Legacy.Sharding.Types.Node
+import           Enecuum.Prelude
 import           Lens.Micro.GHC                        ()
-import           Universum
 
 makeShardingNode
     ::  MyNodeId

@@ -10,14 +10,11 @@ import           Control.Monad
 
 import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
--- import           Control.Concurrent.MVar
-import           Enecuum.Legacy.Service.Chan
-
--- import           Data.Foldable
 import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Service.Chan
 import           Enecuum.Legacy.Service.Types
+import           Enecuum.Prelude
 import           System.Clock
-import           Universum
 
 -- actor
 -- actor's data

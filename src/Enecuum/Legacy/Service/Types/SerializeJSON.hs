@@ -25,8 +25,8 @@ import qualified Data.Text.Encoding                                as T (decodeU
                                                                          encodeUtf8)
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
-import           Prelude                                           (read)
-import           Universum
+import           Enecuum.Prelude
+
 
 instance FromJSON Trans
 instance ToJSON   Trans

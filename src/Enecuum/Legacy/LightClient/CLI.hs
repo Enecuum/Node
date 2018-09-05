@@ -28,24 +28,22 @@ import           Data.List.Split                                   (splitOn)
 import           Data.Map                                          (Map,
                                                                     fromList,
                                                                     lookup)
+import           Data.Text                                         (unpack)
+import           Data.Text                                         (pack)
 import           Enecuum.Legacy.LightClient.RPC
 import           Enecuum.Legacy.Service.Network.WebSockets.Client
 import           Enecuum.Legacy.Service.System.Version             (version)
 import           Enecuum.Legacy.Service.Types                      hiding (Info)
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
+import           Enecuum.Prelude
 import           Network.Socket                                    (HostName,
                                                                     PortNumber)
 import qualified Network.WebSockets                                as WS
 import           System.Console.GetOpt
--- import           System.Environment                                (getArgs)
-import           Data.Text                                         (unpack)
-import           Data.Text                                         (pack)
-import           Prelude                                           (read)
 import           System.IO.Error                                   (ioError,
                                                                     userError)
 import           System.Random
-import           Universum                                         hiding
-                                                                    (Option)
+
 
 data Flag = Port PortNumber | Host HostName | Version | Help
           | WalletsFile String | TransactionsFile String | KeyGen Int

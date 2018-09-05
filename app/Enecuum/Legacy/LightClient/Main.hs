@@ -1,7 +1,7 @@
 module Main where
 
 import           Enecuum.Legacy.LightClient.CLI (control)
-import           Universum
+import           Enecuum.Prelude
 
 
 main :: IO ()

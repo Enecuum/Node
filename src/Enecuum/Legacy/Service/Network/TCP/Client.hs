@@ -13,12 +13,11 @@ module Enecuum.Legacy.Service.Network.TCP.Client (
     closeConnect
   ) where
 
-import           Enecuum.Legacy.Service.Network.Base
-import           Network.Socket
--- import Control.Exception
 import           Data.Text                           (pack)
-import           Prelude                             (head)
-import           Universum                           hiding (head)
+import           Enecuum.Legacy.Service.Network.Base
+import           Enecuum.Prelude
+import           Network.Socket
+
 
 class (Show a) => Hosts a where
     openConnect :: a -> PortNumber -> IO ClientHandle

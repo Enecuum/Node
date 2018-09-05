@@ -2,8 +2,8 @@ module Enecuum.Legacy.Service.Timer where
 
 import           Control.Concurrent
 import           Control.Concurrent.Async
-import           Control.Monad
-import           Universum
+import           Enecuum.Prelude
+
 
 data MetronomeComand = StopMetronome
 

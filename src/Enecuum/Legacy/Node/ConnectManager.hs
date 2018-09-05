@@ -27,8 +27,8 @@ import           Enecuum.Legacy.Service.Network.WebSockets.Client
 import           Enecuum.Legacy.Service.Sync.SyncJson
 import           Enecuum.Legacy.Service.Types                     (InfoMsg (..), LoggingTag (..),
                                                                    MsgType (..))
+import           Enecuum.Prelude
 import qualified Network.WebSockets                               as WS
-import           Universum
 
 --
 connectManager

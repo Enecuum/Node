@@ -35,9 +35,8 @@ import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (PublicKey (.
                                                                     compressPublicKey,
                                                                     getPublicKey,
                                                                     uncompressPublicKey)
-import           GHC.Generics
+import           Enecuum.Prelude
 import           System.Random
-import           Universum
 
 newtype NodeId     = NodeId     Integer deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)
 newtype MyNodeId   = MyNodeId   Integer deriving (Eq, Ord, Num, Enum, Show, Read, Serialize, Real, Integral)

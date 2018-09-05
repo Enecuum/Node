@@ -23,10 +23,8 @@ import           Enecuum.Legacy.Service.Transaction.Sprout
 import           Enecuum.Legacy.Service.Transaction.Storage
 import           Enecuum.Legacy.Service.Transaction.Transformation
 import           Enecuum.Legacy.Service.Types
-import           Prelude                                           (head, last,
-                                                                    (!!))
-import           Universum                                         hiding (head,
-                                                                    last)
+import           Enecuum.Prelude
+
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
 myTail c@(Common _ i) = do

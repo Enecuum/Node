@@ -12,8 +12,8 @@ import           Enecuum.Legacy.Service.System.Directory           (getTime)
 import           Enecuum.Legacy.Service.Transaction.Skelet         (getSkeletDAG)
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
+import           Enecuum.Prelude
 import           System.Random
-import           Universum
 
 
 type QuantityOfTransactions = Int

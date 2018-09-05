@@ -3,10 +3,10 @@
 {-# LANGUAGE Strict              #-}
 module Enecuum.Legacy.Service.Network.WebSockets.Client (runClient) where
 
--- import           Control.Exception
+import           Enecuum.Prelude
 import qualified Network.Socket     as S
 import           Network.WebSockets hiding (runClient, runClientWith)
-import           Universum
+
 
 runClient :: String       -- ^ Host
           -> Int          -- ^ Port

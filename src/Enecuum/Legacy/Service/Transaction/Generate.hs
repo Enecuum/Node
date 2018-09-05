@@ -17,7 +17,7 @@ import           Enecuum.Legacy.Service.Types                       (HashOfKeyBl
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair  (KeyPair (..),
                                                                      generateNewRandomAnonymousKeyPair,
                                                                      getSignature)
-import           Universum
+import           Enecuum.Prelude
 
 
 quantityOfTransactionInMicroblock :: Int

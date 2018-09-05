@@ -2,8 +2,8 @@ module Enecuum.Legacy.Service.Chan where
 
 import           Control.Concurrent
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Monad
-import           Universum
+import           Enecuum.Prelude
+
 
 -- safe way to write in chan
 writeInChan :: InChan t -> t -> IO ()

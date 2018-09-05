@@ -33,6 +33,7 @@ import           Enecuum.Legacy.Service.Types                      (Common (..),
                                                                     PartWalletReq (..),
                                                                     Trans (..))
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (PublicKey)
+import           Enecuum.Prelude
 import           Prelude                                           (read)
 import           System.Console.GetOpt                             (ArgDescr (..),
                                                                     ArgOrder (..),
@@ -40,14 +41,7 @@ import           System.Console.GetOpt                             (ArgDescr (..
                                                                     OptDescr (..),
                                                                     getOpt,
                                                                     usageInfo)
-import           Universum                                         hiding
-                                                                    (Option)
-import           Universum                                         (Bool,
-                                                                    Either (..),
-                                                                    IO)
-import           Universum                                         (Eq, Ord,
-                                                                    Show,
-                                                                    String)
+
 
 data Flag = Version | Help | Key | Send Trans
           | ShowKey | Balance PublicKey

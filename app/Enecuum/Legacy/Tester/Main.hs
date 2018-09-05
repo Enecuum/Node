@@ -16,13 +16,11 @@ import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Node.NetLvl.Messages
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Network.WebSockets.Client
-import           Enecuum.Legacy.Service.Types
--- import           System.Environment                               (getArgs)
-
 import           Enecuum.Legacy.Service.System.Version
 import           Enecuum.Legacy.Service.Transaction.Common
+import           Enecuum.Legacy.Service.Types
+import           Enecuum.Prelude
 import qualified Network.WebSockets                               as WS
-import           Universum                                        hiding (All)
 
 
 testMsg :: Value

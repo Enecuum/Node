@@ -31,10 +31,9 @@ import           Enecuum.Legacy.Service.Sync.SyncJson
 import           Enecuum.Legacy.Service.Types          (LoggingTag (..),
                                                         MsgType (..))
 import           Enecuum.Legacy.Sharding.Sharding      ()
+import           Enecuum.Prelude
 import           Lens.Micro
 import           Lens.Micro.Mtl                        ()
-import           Universum                             hiding (All)
-import           Universum                             (Either (..), IO)
 
 
 routerActorStart :: InChan SyncEvent -> (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()

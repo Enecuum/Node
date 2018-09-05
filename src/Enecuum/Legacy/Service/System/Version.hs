@@ -1,8 +1,9 @@
 module Enecuum.Legacy.Service.System.Version where
 
+import           Enecuum.Prelude
 import           Language.Haskell.TH
 import           System.Process
-import           Universum
+
 
 version :: Q Exp
 version = do

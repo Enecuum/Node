@@ -20,7 +20,6 @@ import qualified Data.ByteString                                   as B
 import qualified Data.ByteString.Base64                            as Base64
 import qualified Data.ByteString.Internal                          as BSI
 import           Data.Default                                      (def)
--- import           Data.Either
 import           Data.Maybe
 import           Data.Pool
 import qualified Data.Serialize                                    as S (encode)
@@ -35,8 +34,7 @@ import           Enecuum.Legacy.Service.Transaction.Transformation
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
-import           Prelude                                           (show)
-import           Universum                                         hiding (show)
+import           Enecuum.Prelude
 
 
 -- FIX change def (5 times)

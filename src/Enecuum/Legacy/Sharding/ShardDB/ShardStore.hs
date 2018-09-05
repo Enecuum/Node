@@ -9,8 +9,9 @@ import           Data.Maybe
 import           Data.Serialize
 import           Enecuum.Legacy.Service.Types             (Hash (..))
 import           Enecuum.Legacy.Sharding.Types.ShardTypes
+import           Enecuum.Prelude
 import           System.Directory
-import           Universum
+
 
 class ShardName a where
     shardsPath :: a -> String

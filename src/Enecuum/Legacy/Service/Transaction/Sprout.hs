@@ -5,8 +5,7 @@ import           Data.Maybe
 import           Enecuum.Legacy.Service.Sync.SyncTypes
 import           Enecuum.Legacy.Service.Transaction.Decode
 import           Enecuum.Legacy.Service.Types
-import           Prelude                                   ((!!))
-import           Universum
+import           Enecuum.Prelude
 
 
 findChain :: Common -> Number -> BranchOfChain -> IO (Number, Maybe HashOfKeyBlock)

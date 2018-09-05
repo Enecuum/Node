@@ -9,7 +9,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Enecuum.Legacy.Service.Types.SerializeInstances where
 
--- import           Control.Monad
 import           "cryptonite" Crypto.PubKey.ECC.ECDSA
 import           "cryptonite" Crypto.PubKey.ECC.Types
 import qualified Data.Aeson                           as A
@@ -21,9 +20,8 @@ import           Data.List                            (unfoldr)
 import           Data.Serialize                       (Get, Serialize)
 import qualified Data.Serialize                       as S (get, put)
 import           Data.Word
-import           GHC.Generics
-import           Prelude                              (until)
-import           Universum
+import           Enecuum.Prelude
+
 
 newtype CompactInteger = CompactInteger Integer
     deriving (Eq, Show, Enum, Num, Integral, Real, Ord, Bits, A.ToJSON, A.FromJSON, Hashable)

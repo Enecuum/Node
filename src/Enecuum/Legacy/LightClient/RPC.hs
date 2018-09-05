@@ -35,7 +35,8 @@ import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair hiding
                                                                     (Signature)
 import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
-import           Universum
+import           Enecuum.Prelude
+
 
 type Result a = RpcResult IO a
 

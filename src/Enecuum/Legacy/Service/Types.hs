@@ -28,12 +28,8 @@ import qualified Data.Text                                         as T (pack)
 import qualified "rocksdb-haskell" Database.RocksDB                as Rocks
 import           Enecuum.Legacy.Node.DataActor
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
-import           GHC.Generics
+import           Enecuum.Prelude
 import           Lens.Micro.TH
-import           Prelude                                           (read,
-                                                                    readsPrec,
-                                                                    show)
-import           Universum
 
 
 data CLIException = ValueOfChainIsNotNothing String
@@ -95,14 +91,14 @@ instance Read Trans where
         case splitOn ":" value of
              [f1, f2, f3, f4] ->
                  [(Trans (read f1) (read f2) (read f3) (read f4), [])]
-             x -> error $ T.pack $ "Invalid number of fields in input: " ++ Universum.show x
+             x -> error $ T.pack $ "Invalid number of fields in input: " ++ show x
 
 
 instance Read MsgTo where
      readsPrec _ value =
         case splitOn ":" value of
              [t, m] ->  [(MsgTo (read t) m, [])]
-             x      -> error $ T.pack $ "Invalid number of fields in input: " ++ Universum.show x
+             x      -> error $ T.pack $ "Invalid number of fields in input: " ++ show x
 
 data Currency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
 instance Serialize Currency
@@ -119,7 +115,7 @@ instance Read PartWalletReq where
         case splitOn ":" value of
              [f1, f2, f3] ->
                  [(PartWalletReq (read f1) (read f2) (read f3), [])]
-             x -> error $ T.pack $ "Invalid number of fields in input: " ++ Universum.show x
+             x -> error $ T.pack $ "Invalid number of fields in input: " ++ show x
 
 
 data MsgType = Info | Warning | Error

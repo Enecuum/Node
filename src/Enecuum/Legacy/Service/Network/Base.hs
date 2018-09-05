@@ -12,13 +12,14 @@ module Enecuum.Legacy.Service.Network.Base (
   ) where
 
 import           Data.List
-import           Data.Serialize (Serialize (..), getWord32be)
-import qualified Data.Serialize as S (get, put)
-import           Data.Text      (pack)
+import           Data.Serialize  (Serialize (..), getWord32be)
+import qualified Data.Serialize  as S (get, put)
+import           Data.Text       (pack)
 import           Data.Word
-import           GHC.Generics   (Generic)
+import           Enecuum.Prelude
+import           GHC.Generics    (Generic)
 import           Network.Socket
-import           Universum
+
 
 data ConnectInfo = ConnectInfo {
     host :: String

@@ -21,7 +21,8 @@ import           Enecuum.Legacy.Service.Sync.SyncTypes
 import           Enecuum.Legacy.Service.Transaction.Common
 import           Enecuum.Legacy.Service.Transaction.LedgerSync
 import           Enecuum.Legacy.Service.Types
-import           Universum
+import           Enecuum.Prelude
+
 
 data MsgToDB where
     KeyBlockMsgToDB       :: Value -> MsgToDB

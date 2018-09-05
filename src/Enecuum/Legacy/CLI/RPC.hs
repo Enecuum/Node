@@ -35,6 +35,7 @@ import           Enecuum.Legacy.Service.Types                      (ChainInfo,
                                                                     TransactionInfo)
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount,
                                                                     PublicKey)
+import           Enecuum.Prelude
 import           Network.JsonRpc.Server                            ((:+:) (..), Parameter (..),
                                                                     RpcResult,
                                                                     call,
@@ -42,7 +43,7 @@ import           Network.JsonRpc.Server                            ((:+:) (..), 
                                                                     toMethod)
 import           Network.Socket                                    (PortNumber)
 import qualified Network.WebSockets                                as WS
-import           Universum
+
 
 serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan MsgToCentralActor -> InChan InfoMsg -> InContainerChan -> IO ()
 serveRpc descrDB portNum _ ch aInfoCh aContChan = runServer portNum "serveRpc" $ \_ aPending -> do

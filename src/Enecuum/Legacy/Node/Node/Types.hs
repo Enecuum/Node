@@ -15,29 +15,25 @@ module Enecuum.Legacy.Node.Node.Types where
 
 import qualified Control.Concurrent.Chan               as C
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Concurrent.MVar
-import qualified Data.Map                              as M
-import           Data.Serialize                        (Serialize)
-import qualified Data.Serialize                        as S (get, put)
-import           GHC.Generics                          (Generic)
-import           Universum
-
 import           Crypto.PubKey.ECC.ECDSA               as ECDSA
 import           Crypto.Random.Types
-import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Legacy.Service.Sync.SyncJson
-import           Lens.Micro.TH
-
 import           Data.Aeson
 import           Data.Aeson.TH
+import qualified Data.Map                              as M
 import           Data.Scientific                       (Scientific, toRealFloat)
+import           Data.Serialize                        (Serialize)
+import qualified Data.Serialize                        as S (get, put)
 import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Node.DataActor
 import           Enecuum.Legacy.Node.NetLvl.Messages
+import           Enecuum.Legacy.Service.Network.Base
+import           Enecuum.Legacy.Service.Sync.SyncJson
 import           Enecuum.Legacy.Service.Types          (InfoMsg, Microblock,
                                                         Transaction)
 import qualified Enecuum.Legacy.Sharding.Types.Node    as N
-import           Prelude                               (show)
+import           Enecuum.Prelude
+import           GHC.Generics                          (Generic)
+import           Lens.Micro.TH
 
 instance Show (InChan a) where show _ = "InChan"
 instance Show (MVar a) where show _ = "MVar"

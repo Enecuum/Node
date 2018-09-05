@@ -23,8 +23,8 @@ import           Enecuum.Legacy.Service.Network.WebSockets.Server
 import           Enecuum.Legacy.Service.System.Version
 import           Enecuum.Legacy.Service.Types                     (InfoMsg (..), LoggingTag (..),
                                                                    MsgType (..))
+import           Enecuum.Prelude
 import qualified Network.WebSockets                               as WS
-import           Universum
 
 
 data ConnectTesterActor = AddConnectToList Connect | TestExistedConnect Connect

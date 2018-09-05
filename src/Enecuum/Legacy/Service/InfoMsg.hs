@@ -10,27 +10,26 @@ module Enecuum.Legacy.Service.InfoMsg (
   gauge,
   add,
   timing,
-  set,
+  Enecuum.Legacy.Service.Metrics.Statsd.set,
+  -- set,
   serveInfoMsg
 )  where
 
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Monad                             (forever, void)
 import qualified Data.ByteString.Char8                     as BS
 import           Data.List
+import           Data.Text                                 (pack)
 import           Enecuum.Legacy.Node.BaseFunctions
-import           Network.Socket.ByteString                 (sendTo)
-
 import           Enecuum.Legacy.Service.Metrics.Statsd
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Network.TCP.Client
 import           Enecuum.Legacy.Service.Types              (InfoMsg (..),
                                                             LoggingTag (..))
+import           Enecuum.Prelude
+import           Network.Socket.ByteString                 (sendTo)
 import           System.Clock                              ()
 
-import           Control.Concurrent.Chan.Unagi.Bounded
--- import           Control.Exception                         (SomeException, try)
-import           Control.Monad                             (forever, void)
-import           Data.Text                                 (pack)
-import           Universum                                 hiding (set)
 
 sendToServer :: ClientHandle -> String -> IO ()
 sendToServer h s = void $ sendTo (clientSocket h) (BS.pack s) (clientAddress h)

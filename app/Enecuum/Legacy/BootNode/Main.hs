@@ -9,18 +9,16 @@ import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Monad
 
+import           Data.Aeson
+import qualified Data.ByteString.Lazy                  as L
 import           Enecuum.Legacy.BootNodeServer
 import           Enecuum.Legacy.Node.DataActor
 import           Enecuum.Legacy.Node.Node.Types
 import           Enecuum.Legacy.Service.InfoMsg
 import           Enecuum.Legacy.Service.Network.Base   (ConnectInfo (..))
-import           System.Environment
-
-import           Data.Aeson
-import qualified Data.ByteString.Lazy                  as L
+import           Enecuum.Prelude
 import           Network.Socket                        ()
-import           Prelude                               (read)
-import           Universum
+import           System.Environment
 
 
 main :: IO ()

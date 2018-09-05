@@ -17,11 +17,9 @@ module Enecuum.Legacy.Service.Metrics.Statsd (
 import           Data.Time.Units
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount,
                                                                     PublicKey)
-import           Prelude                                           (show)
+import           Enecuum.Prelude
 import           Text.Printf
-import           Universum                                         hiding (Set,
-                                                                    Type, set,
-                                                                    show)
+
 
 type Stat = String
 data Type = Count | Gauge | Timing | Set

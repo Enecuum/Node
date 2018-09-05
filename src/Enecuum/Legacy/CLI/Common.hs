@@ -83,9 +83,8 @@ import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount,
                                                                     getPublicKey,
                                                                     getSignature,
                                                                     uncompressPublicKey)
-import           Prelude                                           (head, read,
-                                                                    (!!))
-import           Universum                                         hiding (head)
+import           Enecuum.Prelude
+
 
 type Result a = Either CLIException a
 

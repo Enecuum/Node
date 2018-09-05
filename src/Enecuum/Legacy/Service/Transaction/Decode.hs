@@ -27,7 +27,8 @@ import           Enecuum.Legacy.Node.Data.GlobalLoging
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
-import           Universum
+import           Enecuum.Prelude
+
 
 -- for rocksdb Transaction and Microblock
 rHashT :: Transaction -> BSI.ByteString

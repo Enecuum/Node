@@ -5,7 +5,7 @@
 
 -- Not used: not valid for TestNet
 module Enecuum.Legacy.Sharding.ShardDB.ShardIndex where
-import           Universum
+
 {-
 data ShardExistIndex   = ShardExistIndex {
       _baseSnapshots  :: [SpaceSnapshot]
