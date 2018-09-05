@@ -9,25 +9,28 @@
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Enecuum.Legacy.Node.NetLvl.Messages where
 
 import           Control.Monad.Extra
 import           Data.Aeson
-import qualified Data.ByteString                  as B
-import qualified Data.ByteString.Char8            as CB
+import qualified Data.ByteString                                 as B
+import qualified Data.ByteString.Char8                           as CB
 import           Data.Char
 import           Data.Hex
 import           Data.IP
 import           Data.Maybe
 import           Data.String
-import qualified Data.Text                        as T
-import           Data.Word                        ()
-import           GHC.Generics
+import qualified Data.Text                                       as T
+import           Data.Word                                       ()
 import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Legacy.Service.Types                    (Microblock (..), Transaction)
+import           Enecuum.Legacy.Service.Types                    (Microblock (..),
+                                                                  Transaction)
 import           Enecuum.Legacy.Service.Types.SerializeInstances
 import           Enecuum.Legacy.Service.Types.SerializeJSON      ()
+import           Enecuum.Prelude
+import           GHC.Generics
 import           Text.Read
 
 
@@ -104,7 +107,7 @@ instance FromJSON ActualConnectInfo where
                 aJustPort <- aPort
                 return $ Connect (toHostAddress aIpAdress) (toEnum aJustPort)
         return $ ActualConnectInfo aNodeId (readNodeType aNodeType) aConnect
-    parseJSON s = error ("ActualConnectInfo is not an object: " ++ show s)
+    parseJSON s = error $ T.pack $ ("ActualConnectInfo is not an object: " ++ show s)
 
 unhexNodeId :: MonadPlus m => T.Text -> m NodeId
 unhexNodeId aString = case unhex . fromString . (toUpper <$>) . filter isHexDigit . T.unpack $ aString of
@@ -394,4 +397,4 @@ instance FromJSON Connect where
             Nothing      -> mzero
             Just aJustIp -> return $
                 Connect (toHostAddress aJustIp) (toEnum aPort)
-    parseJSON s = error ("FromJSON Connect is not an object: " ++ show s)
+    parseJSON s = error $ T.pack $ ("FromJSON Connect is not an object: " ++ show s)

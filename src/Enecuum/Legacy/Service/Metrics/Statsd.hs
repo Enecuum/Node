@@ -15,7 +15,9 @@ module Enecuum.Legacy.Service.Metrics.Statsd (
 ) where
 
 import           Data.Time.Units
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount, PublicKey)
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount,
+                                                                    PublicKey)
+import           Enecuum.Prelude
 import           Text.Printf
 
 

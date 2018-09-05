@@ -1,16 +1,17 @@
-{-# LANGUAGE ScopedTypeVariables, MultiWayIf #-}
+{-# LANGUAGE MultiWayIf          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 module Enecuum.Legacy.Sharding.ShardDB.ShardStore where
 
-import Data.Serialize
-import Data.ByteString as B
-import Data.Hex
-import Control.Exception
-import Data.Monoid
-import Data.Maybe
-import Control.Monad
-import System.Directory
-import Enecuum.Legacy.Service.Types (Hash(..))
-import Enecuum.Legacy.Sharding.Types.ShardTypes
+import           Control.Monad
+import           Data.ByteString                          as B
+import           Data.Hex
+import           Data.Maybe
+import           Data.Serialize
+import           Enecuum.Legacy.Service.Types             (Hash (..))
+import           Enecuum.Legacy.Sharding.Types.ShardTypes
+import           Enecuum.Prelude
+import           System.Directory
+
 
 class ShardName a where
     shardsPath :: a -> String
@@ -35,8 +36,8 @@ loadShard aShardHash = do
     aReading <- try $ B.readFile $ shardsPath aShardHash
     case aReading of
         Right aFileData -> case decode aFileData of
-            Right aShard            -> pure.pure $ aShard
-            Left  _                 -> return Nothing
+            Right aShard -> pure.pure $ aShard
+            Left  _      -> return Nothing
         Left (_ :: SomeException)   -> return Nothing
 
 

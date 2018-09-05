@@ -28,18 +28,18 @@ module Enecuum.Legacy.Service.Transaction.Common
   )
   where
 import           Enecuum.Legacy.Service.Transaction.API             (getAllLedgerKV,
-                                                      getAllMacroblockKV,
-                                                      getAllMicroblockKV,
-                                                      getAllSproutKV,
-                                                      getAllTransactionsKV)
+                                                                     getAllMacroblockKV,
+                                                                     getAllMicroblockKV,
+                                                                     getAllSproutKV,
+                                                                     getAllTransactionsKV)
 import           Enecuum.Legacy.Service.Transaction.Balance         (addKeyBlockToDB,
-                                                      addMicroblockToDB,
-                                                      getBalanceForKey,
-                                                      runLedger)
+                                                                     addMicroblockToDB,
+                                                                     getBalanceForKey,
+                                                                     runLedger)
 import           Enecuum.Legacy.Service.Transaction.Balance         (addKeyBlockToDB2)
-import           Enecuum.Legacy.Service.Transaction.Decode          (decodeThis,
-                                                      getTransactionByHashDB,
-                                                      rHash)
+import           Enecuum.Legacy.Service.Transaction.Decode          (decodeThis, getTransactionByHashDB,
+                                                                     rHash)
 import           Enecuum.Legacy.Service.Transaction.LedgerSync      (cleanDB)
 import           Enecuum.Legacy.Service.Transaction.Storage
 import           Enecuum.Legacy.Service.Transaction.TransactionsDAG (genNTx)
+import           Enecuum.Prelude

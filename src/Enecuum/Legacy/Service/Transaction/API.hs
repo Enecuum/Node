@@ -11,6 +11,7 @@ import           Enecuum.Legacy.Service.Transaction.Iterator
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
+import           Enecuum.Prelude
 
 
 getAllSproutKV :: Common -> IO [(Integer, (Maybe MainChain, Maybe SproutChain))]
