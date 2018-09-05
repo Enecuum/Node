@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies       #-}
 
 module Enecuum.Dsl.Graph.Interpreter where
 
@@ -15,13 +16,19 @@ import           Enecuum.Dsl.Graph.Language
 import           Enecuum.TGraph as G
 import           Enecuum.StringHashable
 
+{-
+data instance Ref (TNode c) = TNodeRef (TVar (TNode c)) 
+data instance Content (TNode c) = TNodeContent c 
+-}
+
+
 initGraph :: StringHashable c => IO (TVar (TGraph c))
 initGraph = atomically G.newTGraph
 
 runGraph :: StringHashable c => TVar (TGraph c) -> Eff '[GraphDsl c] w -> IO w
 runGraph _ (Val x) = return x
 runGraph aGraph (E u q) = case extract u of
-    NewNode     x   -> do
+    NewNode x   -> do
         void . atomically $ G.newNode aGraph x
         runGraph aGraph (qApp q ())
 

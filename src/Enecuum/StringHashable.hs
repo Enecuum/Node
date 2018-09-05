@@ -1,14 +1,17 @@
-{-# LANGUAGE NoImplicitPrelude #-}
+{-# LANGUAGE NoImplicitPrelude          #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Enecuum.StringHashable where
 
 import           Universum
 import           Data.Serialize
 
-class Serialize a => StringHashable a where
-    toHash :: a -> ByteString
+newtype StringHash = StringHash ByteString deriving (Eq, Ord, Serialize)
 
-    toHash = encode
+class Serialize a => StringHashable a where
+    toHash :: a -> StringHash
+
+    toHash = StringHash . encode
 
 instance StringHashable Int
 instance StringHashable Int64
@@ -20,3 +23,6 @@ instance StringHashable Word64
 instance StringHashable Word32
 instance StringHashable Word16
 instance StringHashable Word8
+
+instance StringHashable StringHash where
+    toHash = id
