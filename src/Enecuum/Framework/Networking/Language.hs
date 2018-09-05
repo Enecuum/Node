@@ -5,9 +5,6 @@ module Enecuum.Framework.Networking.Language where
 
 import           Enecuum.Prelude
 
-import qualified Data.ByteString.Lazy          as BS
-import qualified Data.Aeson                    as A
-
 import qualified Enecuum.Framework.Domain      as D
 import           Enecuum.Framework.NetworkModel.Language       ( NetworkModel )
 

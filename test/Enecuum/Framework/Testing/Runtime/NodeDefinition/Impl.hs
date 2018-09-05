@@ -28,7 +28,7 @@ interpretNodeDefinitionL rt (L.NodeTag tag) = do
   safeIO $ atomically $ setNodeTag rt tag
 interpretNodeDefinitionL rt (L.Initialization initScript) = do
   L.logInfo "Initialization"
-  runNodeL rt initScript
+  runNodeModel rt initScript
 interpretNodeDefinitionL rt (L.Serving handlersF) = do
   L.logInfo "Serving handlersF"
   safeIO $ startNodeRpcServer rt handlersF
@@ -50,4 +50,5 @@ createNode rt nodeAddr scenario = do
   runSafeIO
     $ runLoggerL (rt ^. RLens.loggerRuntime)
     $ runNodeDefinitionL nodeRt scenario
+  registerNode rt nodeAddr
   pure nodeRt

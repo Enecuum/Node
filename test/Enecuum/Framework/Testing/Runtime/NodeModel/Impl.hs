@@ -26,7 +26,7 @@ interpretNetworkingL rt (L.CloseConnection conn) = do
   pure ()
 interpretNetworkingL rt (L.SendRequest conn req) = do
   L.logInfo "SendRequest conn req"
-  pure D.RpcResponse
+  pure $ D.RpcResponse ""
 interpretNetworkingL rt (L.EvalNetwork networkAction) = do
   L.logInfo "Eval Network"
   networkAction
@@ -37,11 +37,11 @@ interpretNodeL
   -> Eff '[L.NetworkingL, L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, L.LoggerL, SIO, Exc SomeException] a
 interpretNodeL rt (L.Dummy) = L.logInfo "L.Dummy"
 
-runNodeL
+runNodeModel
   :: NodeRuntime
   -> Eff L.NodeModel a
   -> Eff '[L.LoggerL, SIO, Exc SomeException] a
-runNodeL rt
+runNodeModel rt
   = handleRelay pure ( (>>=) . interpretNetworkSendingL rt )
   . handleRelay pure ( (>>=) . interpretNetworkListeningL rt )
   . handleRelay pure ( (>>=) . interpretNetworkSyncL rt )

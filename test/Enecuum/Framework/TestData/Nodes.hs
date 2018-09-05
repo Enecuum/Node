@@ -20,22 +20,31 @@ localNetwork = error "localNetwork"
 
 -- Just dummy types
 data GetNeighboursRequest = GetNeighboursRequest
-  deriving (Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data GetHashIDRequest = GetHashIDRequest
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 newtype GetHashIDResponse = GetHashIDResponse Text
-  deriving (Generic, Newtype)
+  deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
 
 instance D.RpcMethod () GetHashIDRequest GetHashIDResponse where
-  toRpcRequest _ _ = D.RpcRequest
+  toRpcRequest _ = D.RpcRequest . A.encode
   fromRpcResponse _ _ = Just $ GetHashIDResponse "1"
 
+newtype HelloRequest1  = HelloRequest1 { helloMessage :: Text }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+newtype HelloResponse1 = HelloResponse1 { ackMessage :: Text }
+  deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
+
+instance D.RpcMethod () HelloRequest1 HelloResponse1 where
+  toRpcRequest _ req = D.RpcRequest $ A.encode req
+  fromRpcResponse _ (D.RpcResponse raw) = A.decode raw
+
+data HelloRequest2 = HelloRequest2 Text
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 data AcceptConnectionRequest = AcceptConnectionRequest
-  deriving (Generic, ToJSON, FromJSON)
-data HelloRequest1 = HelloRequest1 String
-  deriving (Generic, ToJSON, FromJSON)
-data HelloRequest2 = HelloRequest2 String
-  deriving (Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 simpleBootNodeDiscovery :: Eff L.NetworkModel D.NodeConfig
 simpleBootNodeDiscovery = do
@@ -45,10 +54,10 @@ simpleBootNodeDiscovery = do
     Just bootNodeCfg -> pure bootNodeCfg
 
 acceptHello1 :: HelloRequest1 -> Eff L.NodeModel ()
-acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " ++ msg
+acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " ++ show msg
 
 acceptHello2 :: HelloRequest2 -> Eff L.NodeModel ()
-acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " ++ msg
+acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " ++ show msg
 
 bootNode :: (Member L.NodeDefinitionL effs) => Eff effs ()
 bootNode = do

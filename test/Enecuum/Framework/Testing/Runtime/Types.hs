@@ -2,6 +2,8 @@ module Enecuum.Framework.Testing.Runtime.Types where
 
 import Enecuum.Prelude
 
+import qualified Data.Map as Map
+
 import qualified Enecuum.Domain                as D
 import           Enecuum.Core.Testing.Runtime.Types
 
@@ -28,15 +30,5 @@ data NodeRuntime = NodeRuntime
 
 data TestRuntime = TestRuntime
   { _loggerRuntime :: LoggerRuntime
+  , _nodes         :: Map.Map NodeAddress NodeRuntime
   }
-
-createEmptyNodeRuntime :: NodeAddress -> IO NodeRuntime
-createEmptyNodeRuntime addr = do
-  tag   <- newTVarIO ("" :: Text)
-  handle <- newEmptyTMVarIO
-  pure $ NodeRuntime addr tag handle
-
-createTestRuntime :: IO TestRuntime
-createTestRuntime = do
-  loggerRt <- createLoggerRuntime
-  pure $ TestRuntime loggerRt
