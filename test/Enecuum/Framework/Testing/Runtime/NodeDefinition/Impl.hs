@@ -15,6 +15,7 @@ import           Enecuum.Framework.Testing.Runtime.Types
 import           Enecuum.Framework.Testing.Runtime.STM
 import           Enecuum.Framework.Testing.Runtime.NetworkModel.Impl
 import           Enecuum.Framework.Testing.Runtime.NodeModel.Impl
+import           Enecuum.Framework.Testing.Runtime.Runtime
 import           Enecuum.Framework.Testing.Runtime.Server             (startNodeRpcServer)
 import qualified Enecuum.Framework.Testing.Runtime.Lens               as RLens
 
@@ -45,10 +46,10 @@ createNode
   -> NodeAddress
   -> Eff '[L.NodeDefinitionL, L.LoggerL, SIO, Exc SomeException] ()
   -> IO NodeRuntime
-createNode rt nodeAddr scenario = do
+createNode testRt nodeAddr scenario = do
   nodeRt <- createEmptyNodeRuntime nodeAddr
   runSafeIO
-    $ runLoggerL (rt ^. RLens.loggerRuntime)
+    $ runLoggerL (testRt ^. RLens.loggerRuntime)
     $ runNodeDefinitionL nodeRt scenario
-  registerNode rt nodeAddr
+  registerNode testRt nodeAddr nodeRt
   pure nodeRt

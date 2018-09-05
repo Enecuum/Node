@@ -30,5 +30,5 @@ data NodeRuntime = NodeRuntime
 
 data TestRuntime = TestRuntime
   { _loggerRuntime :: LoggerRuntime
-  , _nodes         :: Map.Map NodeAddress NodeRuntime
+  , _nodes         :: TMVar (Map.Map NodeAddress NodeRuntime)
   }
