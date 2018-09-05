@@ -15,6 +15,7 @@ module Enecuum.Legacy.Service.Types where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
+import           Control.Lens.TH
 import           Data.ByteString
 import qualified Data.ByteString                                   as B
 import qualified Data.ByteString.Char8                             as C
@@ -29,7 +30,6 @@ import qualified "rocksdb-haskell" Database.RocksDB                as Rocks
 import           Enecuum.Legacy.Node.DataActor
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 import           Enecuum.Prelude
-import           Lens.Micro.TH
 
 
 data CLIException = ValueOfChainIsNotNothing String

@@ -15,6 +15,7 @@ module Enecuum.Legacy.Node.Node.Types where
 
 import qualified Control.Concurrent.Chan               as C
 import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Lens
 import           Crypto.PubKey.ECC.ECDSA               as ECDSA
 import           Crypto.Random.Types
 import           Data.Aeson
@@ -33,7 +34,7 @@ import           Enecuum.Legacy.Service.Types          (InfoMsg, Microblock,
 import qualified Enecuum.Legacy.Sharding.Types.Node    as N
 import           Enecuum.Prelude
 import           GHC.Generics                          (Generic)
-import           Lens.Micro.TH
+
 
 instance Show (InChan a) where show _ = "InChan"
 instance Show (MVar a) where show _ = "MVar"

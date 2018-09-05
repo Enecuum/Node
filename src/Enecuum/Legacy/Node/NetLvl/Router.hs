@@ -15,10 +15,7 @@ import           System.Random                         ()
 
 import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
--- import           Control.Concurrent.MVar
--- import           Control.Monad.Extra
 import           Data.Aeson                            as A
--- import           Data.IORef
 import qualified Data.Map                              as M
 import           Data.Maybe                            (isNothing)
 import           Enecuum.Legacy.Node.BaseFunctions
@@ -32,8 +29,6 @@ import           Enecuum.Legacy.Service.Types          (LoggingTag (..),
                                                         MsgType (..))
 import           Enecuum.Legacy.Sharding.Sharding      ()
 import           Enecuum.Prelude
-import           Lens.Micro
-import           Lens.Micro.Mtl                        ()
 
 
 routerActorStart :: InChan SyncEvent -> (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()

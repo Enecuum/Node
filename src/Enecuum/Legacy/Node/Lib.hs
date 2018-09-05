@@ -11,6 +11,7 @@ import           Control.Concurrent.MVar
 import           Control.Monad
 import           Data.Aeson                            as A
 import qualified Data.ByteString.Char8                 as B8
+import qualified Data.ByteString.Char8                 as B8
 import qualified Data.ByteString.Lazy                  as L
 import           Data.Maybe
 import           Data.Text                             (pack)
@@ -26,7 +27,7 @@ import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Sync.SyncJson
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Prelude
-import           Lens.Micro
+import           Network.Socket                        (tupleToHostAddress)
 import           Network.Socket                        (tupleToHostAddress)
 import           System.Directory                      (createDirectoryIfMissing)
 import           System.Environment
