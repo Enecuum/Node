@@ -43,7 +43,7 @@ runNodeDefinitionL rt = handleRelay pure ( (>>=) . interpretNodeDefinitionL rt )
 
 createNode
   :: TestRuntime
-  -> NodeAddress
+  -> D.NodeAddress
   -> Eff '[L.NodeDefinitionL, L.LoggerL, SIO, Exc SomeException] ()
   -> IO NodeRuntime
 createNode testRt nodeAddr scenario = do

@@ -13,7 +13,10 @@ import qualified Data.ByteString.Lazy          as BS
 
 type RawData = BS.ByteString
 
+type NodeAddress = Text
 data ConnectionConfig = ConnectionConfig
+  { _address :: NodeAddress
+  }
 data Connection = Connection
 
 -- Temporary approach untill we clarify all the networking details.

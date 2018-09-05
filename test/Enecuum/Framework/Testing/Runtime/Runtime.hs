@@ -12,7 +12,7 @@ import           Enecuum.Core.Testing.Runtime.Types
 import           Enecuum.Framework.Testing.Runtime.Types
 import qualified Enecuum.Framework.Testing.Runtime.Lens as RLens
 
-createEmptyNodeRuntime :: NodeAddress -> IO NodeRuntime
+createEmptyNodeRuntime :: D.NodeAddress -> IO NodeRuntime
 createEmptyNodeRuntime addr = do
   tag   <- newTVarIO ("" :: Text)
   handle <- newEmptyTMVarIO
@@ -26,7 +26,7 @@ createTestRuntime = do
 
 registerNode
   :: TestRuntime
-  -> NodeAddress
+  -> D.NodeAddress
   -> NodeRuntime
   -> IO ()
 registerNode testRt addr nodeRt = do
@@ -39,7 +39,7 @@ registerNode testRt addr nodeRt = do
 
 findNode
   :: TestRuntime
-  -> NodeAddress
+  -> D.NodeAddress
   -> IO (Maybe NodeRuntime)
 findNode testRt addr = do
   nodes <- atomically $ readTMVar $ testRt ^. RLens.nodes

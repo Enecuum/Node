@@ -7,8 +7,6 @@ import qualified Data.Map as Map
 import qualified Enecuum.Domain                as D
 import           Enecuum.Core.Testing.Runtime.Types
 
-type NodeAddress = Text
-
 data ControlRequest = RpcRequest D.RawData
 data ControlResponse = Ack
 
@@ -23,12 +21,12 @@ data NodeRpcServerHandle = NodeRpcServerHandle
   }
 
 data NodeRuntime = NodeRuntime
-  { _address   :: NodeAddress
+  { _address   :: D.NodeAddress
   , _tag       :: TVar D.NodeTag
   , _rpcServer :: TMVar NodeRpcServerHandle
   }
 
 data TestRuntime = TestRuntime
   { _loggerRuntime :: LoggerRuntime
-  , _nodes         :: TMVar (Map.Map NodeAddress NodeRuntime)
+  , _nodes         :: TMVar (Map.Map D.NodeAddress NodeRuntime)
   }

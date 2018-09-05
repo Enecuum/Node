@@ -9,7 +9,7 @@ import           Enecuum.Prelude
 import qualified Enecuum.Framework.Domain as D
 
 newtype FindNodeByTagRequest = FindNodeByTagRequest Text
-newtype FindNodeByTagResponse = FindNodeByTagResponse D.NodeConfig
+newtype FindNodeByTagResponse = FindNodeByTagResponse D.NodeAddress
   deriving (Generic, Newtype)
 
 -- TODO: more type safety.

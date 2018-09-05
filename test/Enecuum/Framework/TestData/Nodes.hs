@@ -13,6 +13,11 @@ import qualified Enecuum.Language              as L
 import qualified Enecuum.Framework.Lens        as Lens
 import qualified Enecuum.API                   as API
 
+bootNodeAddr, masterNode1Addr :: D.NodeAddress
+bootNodeAddr = "boot node addr"
+masterNode1Addr = "master node 1 addr"
+
+bootNodeTag, masterNodeTag :: D.NodeTag
 bootNodeTag = "bootNode"
 masterNodeTag = "masterNode"
 
@@ -46,12 +51,12 @@ data HelloRequest2 = HelloRequest2 Text
 data AcceptConnectionRequest = AcceptConnectionRequest
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-simpleBootNodeDiscovery :: Eff L.NetworkModel D.NodeConfig
+simpleBootNodeDiscovery :: Eff L.NetworkModel D.NodeAddress
 simpleBootNodeDiscovery = do
-  mbBootNodeCfg <- fmap unpack <$> (L.multicastRequest localNetwork 10.0 $ API.FindNodeByTagRequest bootNodeTag)
-  case mbBootNodeCfg of
-    Nothing          -> pure $ D.NodeConfig $ D.ConnectionConfig     -- Dummy
-    Just bootNodeCfg -> pure bootNodeCfg
+  mbBootNodeAddr <- fmap unpack <$> (L.multicastRequest localNetwork 10.0 $ API.FindNodeByTagRequest bootNodeTag)
+  case mbBootNodeAddr of
+    Nothing   -> pure bootNodeAddr  -- Temp
+    Just addr -> pure addr
 
 acceptHello1 :: HelloRequest1 -> Eff L.NodeModel ()
 acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " ++ show msg
@@ -70,13 +75,13 @@ bootNode = do
 -- TODO: make TCP Sockets / WebSockets stuff more correct
 masterNodeInitialization :: Eff L.NodeModel (Either Text D.NodeID)
 masterNodeInitialization = do
-  bootNodeCfg <- L.evalNetwork simpleBootNodeDiscovery
-  eHashID     <- fmap unpack <$> L.withConnection (bootNodeCfg ^. Lens.connectionConfig) GetHashIDRequest
+  bootNodeAddr <- L.evalNetwork simpleBootNodeDiscovery
+  eHashID      <- fmap unpack <$> L.withConnection (D.ConnectionConfig bootNodeAddr) GetHashIDRequest
   pure $ eHashID >>= Right . D.NodeID
 
 -- TODO: handle the error correctly.
-masterNode :: (Member L.NodeDefinitionL effs) => D.Config -> Eff effs ()
-masterNode _ = do
+masterNode :: (Member L.NodeDefinitionL effs) => Eff effs ()
+masterNode = do
   _         <- L.nodeTag masterNodeTag
   _         <- D.withSuccess $ L.initialization masterNodeInitialization
   _         <- L.serving

@@ -9,11 +9,11 @@ import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
 import qualified Enecuum.Framework.Lens             as Lens
 
+import           Enecuum.Core.Testing.Runtime.Logger.Impl
 import           Enecuum.Framework.Testing.Runtime.Types
 import           Enecuum.Framework.Testing.Runtime.Runtime
 import           Enecuum.Framework.Testing.Runtime.STM
 import           Enecuum.Framework.Testing.Runtime.NodeModel.Impl
-import           Enecuum.Core.Testing.Runtime.Logger.Impl
 import qualified Enecuum.Framework.Testing.Runtime.Lens as RLens
 
 startNodeRpcServer
@@ -43,15 +43,16 @@ startNodeRpcServer rt handlersF = do
 sendRequest
   :: D.RpcMethod () req resp
   => TestRuntime
-  -> NodeAddress
+  -> D.NodeAddress
   -> req
   -> IO (Either Text resp)
-sendRequest rt addr req = findNode rt addr >>= \case
-  Nothing -> pure $ Left $ append "Node is not registered: " addr
+sendRequest rt toAddr req = findNode rt toAddr >>= \case
+  Nothing -> pure $ Left $ append "Node is not registered: " toAddr
   Just nodeRt -> do
-    res <- runSafeIO
-      $ runLoggerL (rt ^. RLens.loggerRuntime)
-      $ runNodeModel nodeRt $ pure ()
+    -- res <- runSafeIO
+    --   $ runLoggerL (rt ^. RLens.loggerRuntime)
+    --   $ runNodeModel nodeRt
+    --   $ fmap unpack <$> L.withConnection (nodeRt ^. RLens.nodeConfig . Lens.connectionConfig) req
 
-    -- res <- runNodeModel nodeRt $ L.sendRequest req
+
     error "not implemented."

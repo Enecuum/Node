@@ -20,23 +20,17 @@ import Enecuum.Framework.Testing.Runtime
 import qualified Enecuum.Core.Testing.Runtime.Lens as RLens
 import qualified Enecuum.Framework.Testing.Runtime.Lens as RLens
 
-bootNodeAddr, masterNode1Addr :: NodeAddress
-bootNodeAddr = "boot node addr"
-masterNode1Addr = "master node 1 addr"
-
-
 spec :: Spec
 spec = describe "Master Node test" $
   it "Master Node test" $ do
 
     runtime <- createTestRuntime
 
-    bootNodeRuntime   :: NodeRuntime <- createNode runtime bootNodeAddr      bootNode
-    masterNodeRuntime :: NodeRuntime <- createNode runtime masterNode1Addr $ masterNode $ D.Config bootNodeAddr
+    bootNodeRuntime   :: NodeRuntime <- createNode runtime bootNodeAddr    bootNode
+    masterNodeRuntime :: NodeRuntime <- createNode runtime masterNode1Addr masterNode
 
-    eResponse <- sendRequest runtime bootNodeAddr $ HelloRequest1 masterNode1Addr
-
-    eResponse `shouldBe` (Right $ HelloResponse1 "200 OK")
+    -- eResponse <- sendRequest runtime bootNodeAddr $ HelloRequest1 masterNode1Addr
+    -- eResponse `shouldBe` (Right $ HelloResponse1 "200 OK")
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
     msgs <- readTVarIO tMsgs
