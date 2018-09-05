@@ -1,14 +1,18 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE MultiParamTypeClasses#-}
 {-# LANGUAGE TypeFamilies       #-}
 
 module Enecuum.Dsl.Graph.Interpreter where
 
 import           Universum
 import           GHC.Exts
+import           Data.Serialize
 import           Control.Monad.Freer
 import           Control.Monad.Freer.Internal
 
@@ -18,30 +22,39 @@ import           Enecuum.StringHashable
 
 {-
 data instance Ref (TNode c) = TNodeRef (TVar (TNode c)) 
-data instance Content (TNode c) = TNodeContent c 
 -}
+
+data instance Content (TNode c) = TNodeContent c deriving (Generic)
+
+instance Serialize c => Serialize (Content (TNode c))
+instance (Serialize c, StringHashable c) => StringHashable (Content (TNode c)) where
+    toHash (TNodeContent c) = toHash c
+
+instance StringHashable c => ToContent (TNode c) c where
+    toContent a = TNodeContent a
+    fromContent (TNodeContent a) = a
 
 
 initGraph :: StringHashable c => IO (TVar (TGraph c))
 initGraph = atomically G.newTGraph
 
-runGraph :: StringHashable c => TVar (TGraph c) -> Eff '[GraphDsl c] w -> IO w
+runGraph :: StringHashable c => TVar (TGraph c) -> Eff '[GraphDsl (TNode c)] w -> IO w
 runGraph _ (Val x) = return x
 runGraph aGraph (E u q) = case extract u of
     NewNode x   -> do
-        void . atomically $ G.newNode aGraph x
+        void . atomically $ G.newNode aGraph (fromContent x)
         runGraph aGraph (qApp q ())
 
     DeleteNode  x   -> do
-        void . atomically $ G.deleteNode aGraph x
+        void . atomically $ G.deleteNode aGraph (fromContent x)
         runGraph aGraph (qApp q ())
 
     NewLink    x y -> do
-        void . atomically $ G.newLink aGraph x y
+        void . atomically $ G.newLink aGraph (fromContent x) (fromContent y)
         runGraph aGraph (qApp q ())
 
     DeleteLink x y -> do
-        void . atomically $ G.deleteLink aGraph x y
+        void . atomically $ G.deleteLink aGraph (fromContent x) (fromContent y)
         runGraph aGraph (qApp q ())
 
     FindNode    x   -> do
@@ -50,7 +63,7 @@ runGraph aGraph (E u q) = case extract u of
             case aMaybeNode of
                 Just aTNode -> do
                     aNode <- readTVar aTNode
-                    return $ Just (aNode^.content, fromList $ keys $ aNode^.links) 
+                    return $ Just (toContent $ aNode^.content, fromList $ keys $ aNode^.links) 
                 Nothing -> return Nothing
                 
         runGraph aGraph (qApp q aRes)
