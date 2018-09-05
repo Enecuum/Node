@@ -20,11 +20,9 @@ import           Enecuum.Dsl.Graph.Language
 import           Enecuum.TGraph as G
 import           Enecuum.StringHashable
 
-{-
-data instance Ref (TNode c) = TNodeRef (TVar (TNode c)) 
--}
 
 data instance Content (TNode c) = TNodeContent c deriving (Generic)
+data instance Ref (TNode c) = TNodeRef (TVar (TNode c)) deriving (Generic)
 
 instance Serialize c => Serialize (Content (TNode c))
 instance (Serialize c, StringHashable c) => StringHashable (Content (TNode c)) where
@@ -33,6 +31,11 @@ instance (Serialize c, StringHashable c) => StringHashable (Content (TNode c)) w
 instance StringHashable c => ToContent (TNode c) c where
     toContent a = TNodeContent a
     fromContent (TNodeContent a) = a
+
+
+instance ToRef (TNode c) (TVar (TNode c)) where
+    toRef a = TNodeRef a
+    fromRef (TNodeRef a) = a
 
 
 initGraph :: StringHashable c => IO (TVar (TGraph c))
@@ -48,13 +51,25 @@ runGraph aGraph (E u q) = case extract u of
     DeleteNode  x   -> do
         void . atomically $ G.deleteNode aGraph (fromContent x)
         runGraph aGraph (qApp q ())
+    
+    DeleteRNode x  -> do
+        void . atomically $ G.deleteTNode aGraph (fromRef x)
+        runGraph aGraph (qApp q ())
 
     NewLink    x y -> do
         void . atomically $ G.newLink aGraph (fromContent x) (fromContent y)
         runGraph aGraph (qApp q ())
 
+    NewRLink    x y -> do
+        void . atomically $ G.newTLink (fromRef x) (fromRef y)
+        runGraph aGraph (qApp q ())
+
     DeleteLink x y -> do
         void . atomically $ G.deleteLink aGraph (fromContent x) (fromContent y)
+        runGraph aGraph (qApp q ())
+    
+    DeleteRLink x y -> do
+        void . atomically $ G.deleteTLink (fromRef x) (fromRef y)
         runGraph aGraph (qApp q ())
 
     FindNode    x   -> do
@@ -64,6 +79,17 @@ runGraph aGraph (E u q) = case extract u of
                 Just aTNode -> do
                     aNode <- readTVar aTNode
                     return $ Just (toContent $ aNode^.content, fromList $ keys $ aNode^.links) 
+                Nothing -> return Nothing
+                
+        runGraph aGraph (qApp q aRes)
+
+    FindRNode    x   -> do
+        aRes <- atomically $ do
+            aMaybeNode <- G.findNode aGraph x
+            case aMaybeNode of
+                Just aTNode -> do
+                    aNode <- readTVar aTNode
+                    return $ Just (toRef aTNode, fromList $ keys $ aNode^.links) 
                 Nothing -> return Nothing
                 
         runGraph aGraph (qApp q aRes)

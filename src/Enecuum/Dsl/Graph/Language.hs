@@ -22,6 +22,10 @@ class StringHashable (Content a) => ToContent a b | a -> b, b -> a where
     fromContent :: Content a -> b
 
 
+class ToRef a b | a -> b, b -> a where
+    toRef   :: b -> Ref a
+    fromRef :: Ref a -> b
+
 newNode, deleteNode :: (ToContent config c, Member (GraphDsl config) r, StringHashable c) => c -> Eff r ()
 newNode    = send . NewNode . toContent
 deleteNode = send . DeleteNode . toContent
@@ -35,8 +39,19 @@ deleteLink a b = send (DeleteLink (toContent a) (toContent b))
 findNode :: Member (GraphDsl content) r => StringHash -> Eff r (Maybe (Content content, Set StringHash))
 findNode = send . FindNode
 
-data family Content a
+--
+deleteRNode :: (ToRef config c, Member (GraphDsl config) r) => c -> Eff r ()
+deleteRNode = send . DeleteRNode . toRef
 
+newRLink, deleteRLink :: (ToRef config c, Member (GraphDsl config) r) => c -> c -> Eff r ()
+newRLink a b = send (NewRLink (toRef a) (toRef b))
+deleteRLink a b = send (DeleteRLink (toRef a) (toRef b))
+
+findRNode :: Member (GraphDsl config) r => StringHash -> Eff r (Maybe (Ref config, Set StringHash))
+findRNode = send . FindRNode
+
+data family Content a
+data family Ref a
 
 data GraphDsl config a where
     NewNode     :: Content config  -> GraphDsl config ()
@@ -44,12 +59,11 @@ data GraphDsl config a where
     NewLink     :: Content config  -> Content config  -> GraphDsl config ()
     DeleteLink  :: Content config  -> Content config  -> GraphDsl config ()
     FindNode    :: StringHash -> GraphDsl config (Maybe (Content config, Set StringHash))
-{-
+
     DeleteRNode :: Ref config -> GraphDsl config ()
     NewRLink    :: Ref config -> Ref config -> GraphDsl config ()
     DeleteRLink :: Ref config -> Ref config -> GraphDsl config  ()
     FindRNode   :: StringHash -> GraphDsl config (Maybe (Ref config, Set StringHash))
--}
 
 
 
