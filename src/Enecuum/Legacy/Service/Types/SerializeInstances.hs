@@ -1,15 +1,14 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE PackageImports             #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
-
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Enecuum.Legacy.Service.Types.SerializeInstances where
 
-import           Control.Monad
 import           "cryptonite" Crypto.PubKey.ECC.ECDSA
 import           "cryptonite" Crypto.PubKey.ECC.Types
 import qualified Data.Aeson                           as A
@@ -18,9 +17,10 @@ import           Data.Bits
 import           Data.Hashable
 import           Data.Int
 import           Data.List                            (unfoldr)
-import           Data.Serialize
+import           Data.Serialize                       (Get, Serialize)
+import qualified Data.Serialize                       as S (get, put)
 import           Data.Word
-import           GHC.Generics
+import           Enecuum.Prelude
 
 
 newtype CompactInteger = CompactInteger Integer
@@ -31,12 +31,12 @@ instance Serialize CompactInteger where
     put n = do
         let len :: Int8
             len = toEnum ((nrBits (abs n) + 7) `div` 8)
-        put $ len * (toEnum.fromEnum.signum $ n)
-        mapM_ put (unroll (abs n))
+        S.put $ len * (toEnum.fromEnum.signum $ n)
+        mapM_ S.put (unroll (abs n))
 
     get = do
-        lenSig <- get :: Get Int8
-        bytes <- forM [1..abs lenSig] $ \_ -> get :: Get Word8
+        lenSig <- S.get :: Get Int8
+        bytes <- forM [1..abs lenSig] $ \_ -> S.get :: Get Word8
         return $! roll bytes * (toEnum.fromEnum.signum $ lenSig)
 
 
@@ -70,10 +70,10 @@ nrBits k =
 
 -- tested
 instance Serialize Signature where
-    put (Signature a b) = put (CompactInteger a) *> put (CompactInteger b)
+    put (Signature a b) = S.put (CompactInteger a) *> S.put (CompactInteger b)
     get = do
-        CompactInteger a <- get
-        CompactInteger b <- get
+        CompactInteger a <- S.get
+        CompactInteger b <- S.get
         return $ Signature a b
 
 -- automatically get serialization.

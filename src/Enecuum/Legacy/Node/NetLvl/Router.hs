@@ -7,7 +7,6 @@
 {-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
-
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Enecuum.Legacy.Node.NetLvl.Router (routerActorStart) where
 
@@ -16,23 +15,20 @@ import           System.Random                         ()
 
 import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Concurrent.MVar
-import           Control.Monad.Extra
 import           Data.Aeson                            as A
-import           Data.IORef
 import qualified Data.Map                              as M
 import           Data.Maybe                            (isNothing)
-import           Lens.Micro
-import           Lens.Micro.Mtl                        ()
 import           Enecuum.Legacy.Node.BaseFunctions
 import           Enecuum.Legacy.Node.Data.GlobalLoging
 import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Node.NetLvl.Messages
 import           Enecuum.Legacy.Node.Node.Types
 import           Enecuum.Legacy.Service.Chan
-import           Enecuum.Legacy.Service.Types                         ( LoggingTag(..), MsgType(..) )
 import           Enecuum.Legacy.Service.Sync.SyncJson
-import           Enecuum.Legacy.Sharding.Sharding                     ()
+import           Enecuum.Legacy.Service.Types          (LoggingTag (..),
+                                                        MsgType (..))
+import           Enecuum.Legacy.Sharding.Sharding      ()
+import           Enecuum.Prelude
 
 
 routerActorStart :: InChan SyncEvent -> (InChan MsgToCentralActor, OutChan MsgToCentralActor) -> IORef NetworkNodeData -> IO ()

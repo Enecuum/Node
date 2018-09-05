@@ -12,20 +12,19 @@ module Enecuum.Legacy.Service.Transaction.Storage where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
-import           Control.Monad                         (when)
-import qualified Control.Monad.Catch                   as E
+import           Control.Monad                                     (when)
+import qualified Control.Monad.Catch                               as E
 import           Control.Retry
-import qualified Crypto.Hash.SHA256                    as SHA
-import qualified Data.ByteString                       as B
-import qualified Data.ByteString.Base64                as Base64
-import qualified Data.ByteString.Internal              as BSI
-import           Data.Default                          (def)
-import           Data.Either
+import qualified Crypto.Hash.SHA256                                as SHA
+import qualified Data.ByteString                                   as B
+import qualified Data.ByteString.Base64                            as Base64
+import qualified Data.ByteString.Internal                          as BSI
+import           Data.Default                                      (def)
 import           Data.Maybe
 import           Data.Pool
-import qualified Data.Serialize                        as S (encode)
+import qualified Data.Serialize                                    as S (encode)
 import           Data.Serialize.Put
-import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
+import qualified "rocksdb-haskell" Database.RocksDB                as Rocks
 import           Enecuum.Legacy.Node.Data.GlobalLoging
 import           Enecuum.Legacy.Service.System.Directory
 import           Enecuum.Legacy.Service.Transaction.Decode
@@ -34,7 +33,9 @@ import           Enecuum.Legacy.Service.Transaction.Sprout
 import           Enecuum.Legacy.Service.Transaction.Transformation
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
-import           Enecuum.Legacy.Service.Types.SerializeJSON           ()
+import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
+import           Enecuum.Prelude
+
 
 -- FIX change def (5 times)
 connectOrRecoveryConnect :: IO DBPoolDescriptor

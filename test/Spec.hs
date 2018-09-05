@@ -14,6 +14,7 @@ import           Enecuum.Legacy.Service.Transaction.Generate (genPoAMicroblock, 
 import           Enecuum.Legacy.Service.Transaction.Storage  (genesisKeyBlock,
                                                               getKeyBlockHash)
 import           Enecuum.Legacy.Service.Types                (Microblock, TransactionInfo (..))
+import           Enecuum.Prelude
 import           Test.Hspec                                  (describe, hspec,
                                                               it, shouldReturn)
 import           Test.Hspec.Contrib.HUnit                    (fromHUnitTest)

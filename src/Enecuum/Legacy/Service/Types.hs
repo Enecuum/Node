@@ -15,20 +15,22 @@ module Enecuum.Legacy.Service.Types where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
+import           Control.Lens.TH
 import           Data.ByteString
-import qualified Data.ByteString                       as B
-import qualified Data.ByteString.Char8                 as C
-import qualified Data.ByteString.Internal              as BSI
+import qualified Data.ByteString                                   as B
+import qualified Data.ByteString.Char8                             as C
+import qualified Data.ByteString.Internal                          as BSI
 import           Data.Graph.Inductive
-import           Data.List.Split                       (splitOn)
-import qualified Data.Map                              as M
+import           Data.List.Split                                   (splitOn)
+import qualified Data.Map                                          as M
 import           Data.Pool
 import           Data.Serialize
-import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
-import           GHC.Generics
-import           Lens.Micro.TH
+import qualified Data.Text                                         as T (pack)
+import qualified "rocksdb-haskell" Database.RocksDB                as Rocks
 import           Enecuum.Legacy.Node.DataActor
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
+import           Enecuum.Prelude
+
 
 data CLIException = ValueOfChainIsNotNothing String
                   | WrongKeyOwnerException
@@ -89,14 +91,14 @@ instance Read Trans where
         case splitOn ":" value of
              [f1, f2, f3, f4] ->
                  [(Trans (read f1) (read f2) (read f3) (read f4), [])]
-             x -> error $ "Invalid number of fields in input: " ++ show x
+             x -> error $ T.pack $ "Invalid number of fields in input: " ++ show x
 
 
 instance Read MsgTo where
      readsPrec _ value =
         case splitOn ":" value of
              [t, m] ->  [(MsgTo (read t) m, [])]
-             x      -> error $ "Invalid number of fields in input: " ++ show x
+             x      -> error $ T.pack $ "Invalid number of fields in input: " ++ show x
 
 data Currency = ENQ | ETH | DASH | BTC deriving (Ord,Eq,Read,Show,Generic)
 instance Serialize Currency
@@ -113,7 +115,7 @@ instance Read PartWalletReq where
         case splitOn ":" value of
              [f1, f2, f3] ->
                  [(PartWalletReq (read f1) (read f2) (read f3), [])]
-             x -> error $ "Invalid number of fields in input: " ++ show x
+             x -> error $ T.pack $ "Invalid number of fields in input: " ++ show x
 
 
 data MsgType = Info | Warning | Error

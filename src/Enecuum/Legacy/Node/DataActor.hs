@@ -18,9 +18,9 @@ module Enecuum.Legacy.Node.DataActor (
 
 
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Concurrent.MVar
 import qualified Data.Set                              as S
 import           Enecuum.Legacy.Service.Chan
+import           Enecuum.Prelude
 
 
 data DataActorRequest a where

@@ -25,15 +25,17 @@ module Enecuum.Legacy.LightClient.RPC (
         Trans(..)
      ) where
 
-import           Control.Monad                      (void)
+import           Control.Monad                                     (void)
 import           Network.JsonRpc.Client
-import qualified Network.WebSockets                 as WS
+import qualified Network.WebSockets                                as WS
 
-import           Control.Timeout                    (timeout)
-import           Data.Time.Units                    (Second)
+import           Control.Timeout                                   (timeout)
+import           Data.Time.Units                                   (Second)
 import           Enecuum.Legacy.Service.Types
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair hiding (Signature)
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair hiding
+                                                                    (Signature)
 import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
+import           Enecuum.Prelude
 
 
 type Result a = RpcResult IO a

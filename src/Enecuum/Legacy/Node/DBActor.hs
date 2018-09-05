@@ -6,13 +6,13 @@
 
 module Enecuum.Legacy.Node.DBActor where
 
-import qualified Control.Concurrent                    as C
+import qualified Control.Concurrent                            as C
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Concurrent.MVar
-import           Control.Exception
-import           Control.Monad
+-- import           Control.Concurrent.MVar
+-- import           Control.Exception
+-- import           Control.Monad
 import           Data.Aeson
-import           Data.List.Extra
+-- import           Data.List.Extra
 import           Data.Maybe
 import           Enecuum.Legacy.Node.Data.GlobalLoging
 import           Enecuum.Legacy.Service.Chan
@@ -21,6 +21,7 @@ import           Enecuum.Legacy.Service.Sync.SyncTypes
 import           Enecuum.Legacy.Service.Transaction.Common
 import           Enecuum.Legacy.Service.Transaction.LedgerSync
 import           Enecuum.Legacy.Service.Types
+import           Enecuum.Prelude
 
 
 data MsgToDB where
