@@ -30,8 +30,8 @@ import           Enecuum.Legacy.Service.Types                    (Microblock (..
 import           Enecuum.Legacy.Service.Types.SerializeInstances
 import           Enecuum.Legacy.Service.Types.SerializeJSON      ()
 import           Enecuum.Prelude
-import           GHC.Generics
-import           Text.Read
+-- import           GHC.Generics
+-- import           Text.Read
 
 
 data NetMessage where

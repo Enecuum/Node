@@ -42,4 +42,3 @@ import           Enecuum.Legacy.Service.Transaction.Decode          (decodeThis,
 import           Enecuum.Legacy.Service.Transaction.LedgerSync      (cleanDB)
 import           Enecuum.Legacy.Service.Transaction.Storage
 import           Enecuum.Legacy.Service.Transaction.TransactionsDAG (genNTx)
-import           Enecuum.Prelude
