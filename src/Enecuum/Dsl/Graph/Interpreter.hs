@@ -1,12 +1,14 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE MultiParamTypeClasses#-}
-{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE NoImplicitPrelude      #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE DeriveGeneric          #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE TypeOperators          #-}
+{-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE TypeFamilies           #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans   #-}
 
 module Enecuum.Dsl.Graph.Interpreter where
 
@@ -29,12 +31,12 @@ instance (Serialize c, StringHashable c) => StringHashable (Content (TNode c)) w
     toHash (TNodeContent c) = toHash c
 
 instance StringHashable c => ToContent (TNode c) c where
-    toContent a = TNodeContent a
+    toContent = TNodeContent
     fromContent (TNodeContent a) = a
 
 
 instance ToRef (TNode c) (TVar (TNode c)) where
-    toRef a = TNodeRef a
+    toRef = TNodeRef
     fromRef (TNodeRef a) = a
 
 
