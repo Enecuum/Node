@@ -1,6 +1,6 @@
 module Enecuum.Framework.Domain.Error where
 
-
+import Enecuum.Prelude
 
 -- Temporary function for handling errors.
 -- Should not be used in prod (uses unsafe `error`).

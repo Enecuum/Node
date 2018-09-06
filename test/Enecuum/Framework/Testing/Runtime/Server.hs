@@ -47,7 +47,7 @@ sendRequest
   -> req
   -> IO (Either Text resp)
 sendRequest rt toAddr req = findNode rt toAddr >>= \case
-  Nothing -> pure $ Left $ append "Node is not registered: " toAddr
+  Nothing -> pure $ Left $ "Node is not registered: " +| toAddr |+ ""
   Just nodeRt -> do
     -- res <- runSafeIO
     --   $ runLoggerL (rt ^. RLens.loggerRuntime)

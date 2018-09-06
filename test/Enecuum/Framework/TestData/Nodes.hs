@@ -59,10 +59,10 @@ simpleBootNodeDiscovery = do
     Just addr -> pure addr
 
 acceptHello1 :: HelloRequest1 -> Eff L.NodeModel ()
-acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " ++ show msg
+acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " +|| msg ||+ ""
 
 acceptHello2 :: HelloRequest2 -> Eff L.NodeModel ()
-acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " ++ show msg
+acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " +|| msg ||+ ""
 
 bootNode :: (Member L.NodeDefinitionL effs) => Eff effs ()
 bootNode = do
