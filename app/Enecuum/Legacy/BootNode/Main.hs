@@ -23,7 +23,7 @@ import           System.Environment
 
 main :: IO ()
 main =  do
-      enc <- L.readFile "configs/config.json"
+      enc <- L.readFile "configs/Legacy/config.json"
       case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
           Just conf -> do

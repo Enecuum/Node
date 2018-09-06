@@ -93,7 +93,7 @@ Alternatively, you can run LightClient with additional parameters `addr` and `po
 
 ### (Optional) Set your own environment variables:
 
-You can define curstom values for variables in the /configs/config.json:
+You can define curstom values for variables in the /configs/Legacy/config.json:
 
 * `simpleNodeBuildConfig` is the config section for Simple Node.
 
