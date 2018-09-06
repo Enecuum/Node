@@ -1,10 +1,12 @@
-{-# Language Strict, LambdaCase, ScopedTypeVariables #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE Strict              #-}
 module Enecuum.Legacy.Service.Network.WebSockets.Client (runClient) where
 
-import              Network.WebSockets hiding (runClientWith, runClient)
-import qualified    Network.Socket                as S
-import              Control.Exception
-
+import           Prelude
+import qualified Network.Socket     as S
+import           Network.WebSockets hiding (runClient, runClientWith)
+import           Control.Exception 
 
 runClient :: String       -- ^ Host
           -> Int          -- ^ Port

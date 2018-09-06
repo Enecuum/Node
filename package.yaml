@@ -36,6 +36,7 @@ description:
     # processing external commands and response for them.
 
 default-extensions:
+- NoImplicitPrelude
 - GADTs
 - RankNTypes
 - DeriveFunctor
@@ -118,7 +119,11 @@ dependencies:
 - freer
 - newtype-generics
 - lens
+- microlens
+- universum
+- fmt
 - stm
+
 
 library:
   source-dirs: src

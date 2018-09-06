@@ -1,4 +1,3 @@
-
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE PackageImports      #-}
@@ -11,27 +10,31 @@ import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
 import           Control.Exception
 import           Control.Monad
-import           Enecuum.Legacy.Node.DBActor
-import           Enecuum.Legacy.Pending
-
+import           Control.Lens ( (^.) )
 import           Data.Aeson                            as A
-import qualified Data.ByteString.Lazy                  as L
 import           Data.IORef
-import           Data.Maybe
 import qualified Data.ByteString.Char8                 as B8
-import           Control.Lens
-import           Network.Socket                        (tupleToHostAddress)
+import qualified Data.ByteString.Char8                 as B8
+import qualified Data.ByteString.Lazy                  as L
+import           Data.Maybe
+import           Data.Text                             (pack)
+import           Enecuum.Legacy.Node.ConnectManager
 import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Node.DataActor
+import           Enecuum.Legacy.Node.DBActor
+import           Enecuum.Legacy.Node.NetLvl.Server
 import           Enecuum.Legacy.Node.Node.Config.Make
 import           Enecuum.Legacy.Node.Node.Types
-import           Enecuum.Legacy.Node.NetLvl.Server
+import           Enecuum.Legacy.Pending
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Sync.SyncJson
 import           Enecuum.Legacy.Service.Types
+import           Prelude
+import           Network.Socket                        (tupleToHostAddress)
+import           Network.Socket                        (tupleToHostAddress)
 import           System.Directory                      (createDirectoryIfMissing)
 import           System.Environment
-import           Enecuum.Legacy.Node.ConnectManager
+
 
 startNode
   :: DBPoolDescriptor
@@ -92,8 +95,8 @@ readNodeConfig =
     try (L.readFile "configs/nodeInfo.json") >>= \case
         Right nodeConfigMsg         -> case decode nodeConfigMsg of
             Just nodeConfigData     -> return nodeConfigData
-            Nothing                 -> putStrLn "Config file can not be readed. New one will be created" >> config
-        Left (_ :: SomeException)   -> putStrLn "ConfigFile will be created." >> config
+            Nothing                 -> putStrLn ("Config file can not be readed. New one will be created" :: String) >> config
+        Left (_ :: SomeException)   -> putStrLn ("ConfigFile will be created." :: String) >> config
   where
     config = do
         makeFileConfig

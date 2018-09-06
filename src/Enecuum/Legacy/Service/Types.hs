@@ -15,20 +15,22 @@ module Enecuum.Legacy.Service.Types where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Exception
+import           Control.Lens.TH
 import           Data.ByteString
-import qualified Data.ByteString                       as B
-import qualified Data.ByteString.Char8                 as C
-import qualified Data.ByteString.Internal              as BSI
+import qualified Data.ByteString                                   as B
+import qualified Data.ByteString.Char8                             as C
+import qualified Data.ByteString.Internal                          as BSI
 import           Data.Graph.Inductive
-import           Data.List.Split                       (splitOn)
-import qualified Data.Map                              as M
+import           Data.List.Split                                   (splitOn)
+import qualified Data.Map                                          as M
 import           Data.Pool
 import           Data.Serialize
-import qualified "rocksdb-haskell" Database.RocksDB    as Rocks
-import           GHC.Generics
-import           Control.Lens.TH
+import qualified "rocksdb-haskell" Database.RocksDB                as Rocks
 import           Enecuum.Legacy.Node.DataActor
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
+import           Prelude
+import           GHC.Generics (Generic)
+
 
 data CLIException = ValueOfChainIsNotNothing String
                   | WrongKeyOwnerException

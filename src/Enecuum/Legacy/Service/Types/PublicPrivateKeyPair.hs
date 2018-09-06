@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE PackageImports             #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
-
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Enecuum.Legacy.Service.Types.PublicPrivateKeyPair(
@@ -22,22 +22,24 @@ module Enecuum.Legacy.Service.Types.PublicPrivateKeyPair(
   ) where
 
 import           Data.Maybe
+import           Enecuum.Legacy.Service.Types.SerializeInstances ()
 import           GHC.Generics
-import           Enecuum.Legacy.Service.Types.SerializeInstances        ()
 
 import           "cryptonite" Crypto.Hash.Algorithms
-import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA    as ECDSA
+import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA            as ECDSA
 import           "cryptonite" Crypto.PubKey.ECC.Generate
 import           "cryptonite" Crypto.PubKey.ECC.Types
 import           "cryptonite" Crypto.Random
 import           Data.Serialize
 
 import           Data.ByteString.Base58
-import qualified Data.ByteString.Char8                   as BC
+import qualified Data.ByteString.Char8                           as BC
 
 
-import           Data.Int                                (Int64)
+import           Data.Int                                        (Int64)
+import           Prelude
 import           Math.NumberTheory.Moduli
+
 
 type Amount = Int64
 

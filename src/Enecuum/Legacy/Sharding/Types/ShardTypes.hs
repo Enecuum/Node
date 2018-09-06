@@ -1,17 +1,17 @@
-{-# LANGUAGE
-        MultiParamTypeClasses
-    ,   DeriveGeneric
-  #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Enecuum.Legacy.Sharding.Types.ShardTypes where
 
-import              Enecuum.Legacy.Service.Types (Hash(..))
+import           Enecuum.Legacy.Service.Types (Hash (..))
 
 
-import              GHC.Generics
+import           GHC.Generics
 
-import              Data.Word
-import              Data.Serialize
-import qualified    Data.ByteString as B
+import qualified Data.ByteString              as B
+import           Data.Serialize
+import           Data.Word
+import           Enecuum.Prelude
 
 
 data ShardHash = ShardHash ShardType Word64 Word64 Word64 Word64 Word64 Word64 Word64 Word64

@@ -35,6 +35,7 @@ import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
 import           Test.HUnit                               ( Test(..)
                                                           , (@?=)
                                                           )
+import           Prelude
 
 spec :: Spec
 spec = do

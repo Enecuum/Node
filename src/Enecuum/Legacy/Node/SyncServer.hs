@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+
 module Enecuum.Legacy.Node.SyncServer where
 
 import           Control.Concurrent.Chan.Unagi.Bounded
@@ -14,6 +15,7 @@ import           Enecuum.Legacy.Service.Chan
 import           Enecuum.Legacy.Service.Sync.SyncJson
 import           Enecuum.Legacy.Service.Timer
 import           Enecuum.Legacy.Service.Types
+import           Prelude
 
 
 syncServer :: (InChan SyncEvent, OutChan SyncEvent) -> InChan MsgToDB -> InChan MsgToCentralActor -> InChan InfoMsg -> IO b

@@ -7,23 +7,26 @@ module Enecuum.Legacy.BootNodeServer (
     bootNodeServer
 ) where
 
-import qualified Control.Concurrent                    as C
+import qualified Control.Concurrent                               as C
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Exception
-import           Control.Monad                         (forM_, forever, void,
-                                                        when)
-import           Data.Aeson                            as A
-import           Data.Maybe                            ()
-import qualified Data.Text                             as T
-import qualified Network.WebSockets                    as WS
+import           Control.Exception                                    (SomeException, try)
+import           Control.Monad                                    (forever,
+                                                                   void, when, forM_)
+import           Data.Aeson                                       as A
+import           Data.Maybe                                       ()
+import qualified Data.Text                                        as T
 import           Enecuum.Legacy.Node.Data.GlobalLoging
 import           Enecuum.Legacy.Node.DataActor
 import           Enecuum.Legacy.Node.NetLvl.Messages
-import           Enecuum.Legacy.Service.Types                         ( InfoMsg(..), LoggingTag(..), MsgType(..) )
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Network.WebSockets.Client
 import           Enecuum.Legacy.Service.Network.WebSockets.Server
 import           Enecuum.Legacy.Service.System.Version
+import           Enecuum.Legacy.Service.Types                     (InfoMsg (..), LoggingTag (..),
+                                                                   MsgType (..))
+import           Prelude
+import qualified Network.WebSockets                               as WS
+
 
 data ConnectTesterActor = AddConnectToList Connect | TestExistedConnect Connect
 
