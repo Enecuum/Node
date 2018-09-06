@@ -17,8 +17,9 @@ import qualified Enecuum.Language              as L
 
 import Enecuum.Framework.TestData.Nodes
 import Enecuum.Framework.Testing.Runtime
+import Enecuum.Framework.Testing.Types
 import qualified Enecuum.Core.Testing.Runtime.Lens as RLens
-import qualified Enecuum.Framework.Testing.Runtime.Lens as RLens
+import qualified Enecuum.Framework.Testing.Lens as RLens
 
 spec :: Spec
 spec = describe "Master Node test" $
@@ -26,16 +27,20 @@ spec = describe "Master Node test" $
 
     runtime <- createTestRuntime
 
-    bootNodeRuntime   :: NodeRuntime <- createNode runtime bootNodeAddr    bootNode
-    masterNodeRuntime :: NodeRuntime <- createNode runtime masterNode1Addr masterNode
+    bootNodeRuntime   :: NodeRuntime <- startNode runtime bootNodeAddr    bootNode
+    masterNodeRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNode
 
-    -- eResponse <- sendRequest runtime bootNodeAddr $ HelloRequest1 masterNode1Addr
+    eResponse <- sendRequest runtime bootNodeAddr $ HelloRequest1 masterNode1Addr
     -- eResponse `shouldBe` (Right $ HelloResponse1 "200 OK")
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
     msgs <- readTVarIO tMsgs
     msgs `shouldBe`
-      [ "Serving handlersF"
+      [ "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "Serving handlersF"
+      , "CloseConnection conn"
       , "SendRequest conn req"
       , "OpenConnection cfg"
       , "L.WaitForSingleResponse cfg timeout"

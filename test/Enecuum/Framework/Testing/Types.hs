@@ -1,4 +1,4 @@
-module Enecuum.Framework.Testing.Runtime.Types where
+module Enecuum.Framework.Testing.Types where
 
 import Enecuum.Prelude
 

@@ -1,4 +1,4 @@
-module Enecuum.Framework.Testing.Runtime.Runtime where
+module Enecuum.Framework.Testing.Environment.TestRuntime where
 
 import           Enecuum.Prelude
 
@@ -9,14 +9,8 @@ import qualified Enecuum.Language                   as L
 import qualified Enecuum.Framework.Lens             as Lens
 
 import           Enecuum.Core.Testing.Runtime.Types
-import           Enecuum.Framework.Testing.Runtime.Types
-import qualified Enecuum.Framework.Testing.Runtime.Lens as RLens
-
-createEmptyNodeRuntime :: D.NodeAddress -> IO NodeRuntime
-createEmptyNodeRuntime addr = do
-  tag   <- newTVarIO ("" :: Text)
-  handle <- newEmptyTMVarIO
-  pure $ NodeRuntime addr tag handle
+import           Enecuum.Framework.Testing.Types
+import qualified Enecuum.Framework.Testing.Lens as RLens
 
 createTestRuntime :: IO TestRuntime
 createTestRuntime = do
@@ -44,3 +38,18 @@ findNode
 findNode testRt addr = do
   nodes <- atomically $ readTMVar $ testRt ^. RLens.nodes
   pure $ Map.lookup addr nodes
+
+sendRequest
+  :: D.RpcMethod () req resp
+  => TestRuntime
+  -> D.NodeAddress
+  -> req
+  -> IO (Either Text resp)
+sendRequest testRt toAddr req = findNode testRt toAddr >>= \case
+  Nothing -> pure $ Left $ "Destination node is not registered: " +| toAddr |+ ""
+  Just _ -> error "ccc"
+  -- -- This probably should be done using NodeRuntime mechanisms, not language.
+  -- Just nodeRt -> runSafeIO
+  --     $ runLoggerL (testRt ^. RLens.loggerRuntime)
+  --     $ runNodeModel nodeRt
+  --     $ L.withConnection (D.ConnectionConfig $ nodeRt ^. RLens.address) req

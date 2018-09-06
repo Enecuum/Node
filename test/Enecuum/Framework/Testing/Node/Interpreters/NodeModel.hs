@@ -1,4 +1,4 @@
-module Enecuum.Framework.Testing.Runtime.NodeModel.Impl where
+module Enecuum.Framework.Testing.Node.Interpreters.NodeModel where
 
 import Enecuum.Prelude
 
@@ -9,27 +9,11 @@ import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
 import qualified Enecuum.Framework.Lens             as Lens
 
-import           Enecuum.Framework.Testing.Runtime.Types
-import           Enecuum.Framework.Testing.Runtime.STM
-import           Enecuum.Framework.Testing.Runtime.NetworkModel.Impl
-import qualified Enecuum.Framework.Testing.Runtime.Lens     as RLens
+import           Enecuum.Framework.Testing.Types
+import qualified Enecuum.Framework.Testing.Lens              as RLens
 
-interpretNetworkingL
-  :: NodeRuntime
-  -> L.NetworkingL a
-  -> Eff '[L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, L.LoggerL, SIO, Exc SomeException] a
-interpretNetworkingL rt (L.OpenConnection cfg) = do
-  L.logInfo "OpenConnection cfg"
-  pure $ Just D.Connection
-interpretNetworkingL rt (L.CloseConnection conn) = do
-  L.logInfo "CloseConnection conn"
-  pure ()
-interpretNetworkingL rt (L.SendRequest conn req) = do
-  L.logInfo "SendRequest conn req"
-  pure $ D.RpcResponse ""
-interpretNetworkingL rt (L.EvalNetwork networkAction) = do
-  L.logInfo "Eval Network"
-  networkAction
+import           Enecuum.Framework.Testing.Node.Interpreters.NetworkModel
+import           Enecuum.Framework.Testing.Node.Interpreters.Networking
 
 interpretNodeL
   :: NodeRuntime
