@@ -35,7 +35,7 @@ import           Enecuum.Legacy.Service.Types                      (ChainInfo,
                                                                     TransactionInfo)
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount,
                                                                     PublicKey)
-import           Enecuum.Prelude
+import           Prelude
 import           Network.JsonRpc.Server                            ((:+:) (..), Parameter (..),
                                                                     RpcResult,
                                                                     call,

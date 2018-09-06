@@ -11,7 +11,10 @@ module Enecuum.Legacy.Node.NetLvl.Server (
   )  where
 
 import qualified Control.Concurrent                               as C
+import           Control.Concurrent.MVar
 import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Monad
+import           Control.Exception
 import           Data.Aeson                                       as A
 import qualified Data.Text                                        as T
 import           Enecuum.Legacy.Node.Data.GlobalLoging
@@ -32,7 +35,7 @@ import qualified Data.ByteString.Internal                         as BSI
 import           Data.Maybe                                       ()
 import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Service.Sync.SyncJson
-import           Enecuum.Prelude
+import           Prelude
 
 
 netLvlServer :: MyNodeId

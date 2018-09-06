@@ -9,7 +9,7 @@ import qualified Control.Concurrent.Chan                  as C
 import           Data.Word
 import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Sharding.Types.ShardTypes
-import           Enecuum.Prelude
+import           Prelude
 
 
 data ShardingNodeResponse where

@@ -9,8 +9,9 @@ module Enecuum.Legacy.BootNodeServer (
 
 import qualified Control.Concurrent                               as C
 import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Exception                                    (SomeException, try)
 import           Control.Monad                                    (forever,
-                                                                   void, when)
+                                                                   void, when, forM_)
 import           Data.Aeson                                       as A
 import           Data.Maybe                                       ()
 import qualified Data.Text                                        as T
@@ -23,7 +24,7 @@ import           Enecuum.Legacy.Service.Network.WebSockets.Server
 import           Enecuum.Legacy.Service.System.Version
 import           Enecuum.Legacy.Service.Types                     (InfoMsg (..), LoggingTag (..),
                                                                    MsgType (..))
-import           Enecuum.Prelude
+import           Prelude
 import qualified Network.WebSockets                               as WS
 
 

@@ -116,9 +116,13 @@ dependencies:
 - cryptohash-sha256
 - derive
 - bytestring-conversion
+- freer
+- newtype-generics
 - lens
 - microlens
 - universum
+- fmt
+- stm
 
 
 library:
@@ -176,8 +180,8 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - Node
     - hspec
     - HUnit
     - hspec-contrib
+    - Node
     - newtype-generics

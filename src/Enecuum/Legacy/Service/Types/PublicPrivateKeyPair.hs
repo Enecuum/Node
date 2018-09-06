@@ -37,7 +37,7 @@ import qualified Data.ByteString.Char8                           as BC
 
 
 import           Data.Int                                        (Int64)
-import           Enecuum.Prelude
+import           Prelude
 import           Math.NumberTheory.Moduli
 
 

@@ -34,7 +34,8 @@ import           Enecuum.Legacy.Service.Transaction.Transformation
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
-import           Enecuum.Prelude
+import           Prelude
+import           Data.Either
 
 
 -- FIX change def (5 times)

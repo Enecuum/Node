@@ -10,7 +10,7 @@ import           Control.Exception
 import           Control.Monad                                     (forM,
                                                                     unless,
                                                                     when)
--- import           Data.List
+import           Data.List
 import           Data.Maybe
 import qualified Data.Serialize                                    as S (encode)
 import qualified "rocksdb-haskell" Database.RocksDB                as Rocks
@@ -23,7 +23,7 @@ import           Enecuum.Legacy.Service.Transaction.Sprout
 import           Enecuum.Legacy.Service.Transaction.Storage
 import           Enecuum.Legacy.Service.Transaction.Transformation
 import           Enecuum.Legacy.Service.Types
-import           Enecuum.Prelude
+import           Prelude
 
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)

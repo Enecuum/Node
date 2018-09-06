@@ -31,7 +31,7 @@ import           Enecuum.Prelude
 import           System.IO                                 (readIO)
 
 configName :: String
-configName = "configs/config.json"
+configName = "configs/Legacy/config.json"
 
 
 main :: IO ()

@@ -14,6 +14,7 @@
 module Enecuum.Legacy.Node.Node.Types where
 
 import qualified Control.Concurrent.Chan               as C
+import           Control.Concurrent.MVar
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Lens
 import           Crypto.PubKey.ECC.ECDSA               as ECDSA
@@ -32,7 +33,7 @@ import           Enecuum.Legacy.Service.Sync.SyncJson
 import           Enecuum.Legacy.Service.Types          (InfoMsg, Microblock,
                                                         Transaction)
 import qualified Enecuum.Legacy.Sharding.Types.Node    as N
-import           Enecuum.Prelude
+import           Prelude
 import           GHC.Generics                          (Generic)
 
 

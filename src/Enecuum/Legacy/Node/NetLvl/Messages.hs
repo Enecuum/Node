@@ -29,10 +29,9 @@ import           Enecuum.Legacy.Service.Types                    (Microblock (..
                                                                   Transaction)
 import           Enecuum.Legacy.Service.Types.SerializeInstances
 import           Enecuum.Legacy.Service.Types.SerializeJSON      ()
-import           Enecuum.Prelude
--- import           GHC.Generics
--- import           Text.Read
-
+import           Prelude
+import           GHC.Generics
+import           Text.Read
 
 data NetMessage where
     RequestTransaction          :: Int                      ->  NetMessage
@@ -107,7 +106,7 @@ instance FromJSON ActualConnectInfo where
                 aJustPort <- aPort
                 return $ Connect (toHostAddress aIpAdress) (toEnum aJustPort)
         return $ ActualConnectInfo aNodeId (readNodeType aNodeType) aConnect
-    parseJSON s = error $ T.pack $ ("ActualConnectInfo is not an object: " ++ show s)
+    parseJSON s = error $ ("ActualConnectInfo is not an object: " ++ show s)
 
 unhexNodeId :: MonadPlus m => T.Text -> m NodeId
 unhexNodeId aString = case unhex . fromString . (toUpper <$>) . filter isHexDigit . T.unpack $ aString of
@@ -397,4 +396,4 @@ instance FromJSON Connect where
             Nothing      -> mzero
             Just aJustIp -> return $
                 Connect (toHostAddress aJustIp) (toEnum aPort)
-    parseJSON s = error $ T.pack $ ("FromJSON Connect is not an object: " ++ show s)
+    parseJSON s = error $ ("FromJSON Connect is not an object: " ++ show s)

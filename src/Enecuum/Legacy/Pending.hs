@@ -9,12 +9,14 @@ import           Data.Sequence                         as S
 import           Control.Monad
 
 import qualified Control.Concurrent                    as C
+import           Control.Concurrent.MVar
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Enecuum.Legacy.Node.Data.GlobalLoging
 import           Enecuum.Legacy.Service.Chan
 import           Enecuum.Legacy.Service.Types
-import           Enecuum.Prelude
+import           Prelude
 import           System.Clock
+import           Data.Foldable
 
 -- actor
 -- actor's data

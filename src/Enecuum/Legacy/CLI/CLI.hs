@@ -33,8 +33,7 @@ import           Enecuum.Legacy.Service.Types                      (Common (..),
                                                                     PartWalletReq (..),
                                                                     Trans (..))
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (PublicKey)
-import           Enecuum.Prelude
-import           Prelude                                           (read)
+import           Prelude
 import           System.Console.GetOpt                             (ArgDescr (..),
                                                                     ArgOrder (..),
                                                                     OptDescr,
@@ -89,7 +88,7 @@ serveCLI :: DBPoolDescriptor -> InChan MsgToCentralActor -> InChan InfoMsg -> In
 serveCLI descrDB ch aInfoCh aContChan = do
       putStrLn $ usageInfo "Usage: " options
       forever $ do
-               argv <- (splitOn " " . unpack ) <$> getLine
+               argv <- (splitOn " ") <$> getLine
                case getOpt Permute options argv of
                  (flags, _, []) -> dispatch flags
                  (_, _, err)    -> putStrLn $ concat err ++ usageInfo "Usage: " options

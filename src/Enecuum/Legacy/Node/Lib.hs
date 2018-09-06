@@ -8,8 +8,11 @@ module Enecuum.Legacy.Node.Lib where
 import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
+import           Control.Exception
 import           Control.Monad
+import           Control.Lens ( (^.) )
 import           Data.Aeson                            as A
+import           Data.IORef
 import qualified Data.ByteString.Char8                 as B8
 import qualified Data.ByteString.Char8                 as B8
 import qualified Data.ByteString.Lazy                  as L
@@ -26,7 +29,7 @@ import           Enecuum.Legacy.Pending
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Sync.SyncJson
 import           Enecuum.Legacy.Service.Types
-import           Enecuum.Prelude
+import           Prelude
 import           Network.Socket                        (tupleToHostAddress)
 import           Network.Socket                        (tupleToHostAddress)
 import           System.Directory                      (createDirectoryIfMissing)
@@ -84,7 +87,7 @@ startNode descrDB buildConf infoCh aManager startDo = do
 traficLoger :: OutChan B8.ByteString -> IO b
 traficLoger aOutChan = forever $ do
     aMsg <- readChan aOutChan
-    appendFile "netLog.txt" $ pack $ B8.unpack aMsg ++ "\n"
+    appendFile "netLog.txt" $ B8.unpack aMsg ++ "\n"
 
 
 readNodeConfig :: IO NodeConfig
@@ -119,7 +122,7 @@ getConfigParameters
 getConfigParameters aMyNodeId conf _ = do
   snbc    <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case
           Right item              -> return item
-          Left (_::SomeException) -> error $ pack "Please, specify simpleNodeBuildConfig"
+          Left (_::SomeException) -> error "Please, specify simpleNodeBuildConfig"
 
   poa_p   <- try (getEnv "poaPort") >>= \case
           Right item              -> return $ read item

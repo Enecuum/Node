@@ -17,25 +17,26 @@ module Enecuum.Legacy.LightClient.CLI (
     Trans(..),
   ) where
 
-import           Control.Monad                                     (replicateM_)
+import           Control.Monad                                     (replicateM_, void, when, forM_)
 import           Control.Monad.Except                              (runExceptT)
+import           Control.Monad.Extra
 import           Data.Aeson                                        (ToJSON)
 import           Data.Aeson.Encode.Pretty
 import qualified Data.ByteString.Lazy.Char8                        as BC (putStrLn)
 import           Data.DeriveTH
-import           Data.List                                         (sortBy)
+import           Data.List                                         (sortBy, find)
 import           Data.List.Split                                   (splitOn)
 import           Data.Map                                          (Map,
                                                                     fromList,
                                                                     lookup)
-import           Data.Text                                         (unpack)
-import           Data.Text                                         (pack)
+import           Data.Text                                         (Text, pack, unpack)
 import           Enecuum.Legacy.LightClient.RPC
 import           Enecuum.Legacy.Service.Network.WebSockets.Client
 import           Enecuum.Legacy.Service.System.Version             (version)
 import           Enecuum.Legacy.Service.Types                      hiding (Info)
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
-import           Enecuum.Prelude
+import           System.Environment                                (getArgs)
+import           Prelude
 import           Network.Socket                                    (HostName,
                                                                     PortNumber)
 import qualified Network.WebSockets                                as WS
@@ -167,7 +168,7 @@ sendTrans transactionsFile walletsFile ch = do
 
   rawTransactions <- lines <$> readFile transactionsFile
   let transactions = map (\[x,y,z] ->(read x :: PublicKey, read y :: PublicKey, read z :: Amount)) $
-                     map (splitOn ";" . unpack) rawTransactions
+                     map (splitOn ";") rawTransactions
 
   forM_ transactions $ \(from, to, am) -> do
     case (Data.Map.lookup from mapPubPriv) of
@@ -193,7 +194,7 @@ getSavedKeyPairs :: String -> IO [(PublicKey, PrivateKey)]
 getSavedKeyPairs f = do
   result <- readFile f
   let rawKeys = lines result
-  let keys = map (splitOn ";" . unpack) rawKeys
+  let keys = map (splitOn ";") rawKeys
   let pairs = map (\[x,y] -> (read x :: PublicKey, read y :: PrivateKey)) keys
   return pairs
 
@@ -228,11 +229,11 @@ loadMessages ch = do
     (Left err)    -> putStrLn $ "sendMessageBroadcast error: " ++ show err
     -- (Right msgs ) -> print "h"
     (Right msgs ) -> do
-      let msg :: Text = unlines (["hello"] :: [Text])
+      let msg = unlines ["hello"]
       -- print $ (("New messages: "  ++ msg))
       print msg
       print $ "New messages: "
-      print $ unlines $ map (pack . showMsg) msgs
+      print $ unlines $ map showMsg msgs
         where showMsg (MsgTo aId m) = ("Message from " ++ show aId ++ ": " ++ m)
 
 

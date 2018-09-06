@@ -33,9 +33,9 @@ module Enecuum.Legacy.CLI.Common (
 import           Control.Concurrent                                (threadDelay)
 import           Control.Concurrent.Chan.Unagi.Bounded             (InChan,
                                                                     tryWriteChan)
--- import           Control.Concurrent.MVar                           (newEmptyMVar,
---                                                                     readMVar)
-import           Control.Exception                                 (throw)
+import           Control.Concurrent.MVar                           (newEmptyMVar,
+                                                                    readMVar)
+import           Control.Exception                                 (SomeException, throw, try)
 import           Control.Monad                                     (unless)
 import           Control.Timeout                                   (timeout)
 import           Data.List.Split                                   (splitOn)
@@ -83,7 +83,7 @@ import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount,
                                                                     getPublicKey,
                                                                     getSignature,
                                                                     uncompressPublicKey)
-import           Enecuum.Prelude
+import           Prelude
 
 
 type Result a = Either CLIException a
@@ -211,7 +211,7 @@ sendNewTrans aTrans ch aInfoCh = do
 getNewKey :: IO (Result PublicKey)
 getNewKey = try $ do
   (KeyPair aPublicKey aPrivateKey) <- generateNewRandomAnonymousKeyPair
-  getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (pack $ show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
+  getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
   putStrLn ("Public Key " ++ show aPublicKey ++ " was created")
   return aPublicKey
 
@@ -236,7 +236,7 @@ getSavedKeyPairs = do
           return []
     Right keyFileContent       -> do
           let rawKeys = lines keyFileContent
-          let keys = map (splitOn ":" . unpack) rawKeys
+          let keys = map (splitOn ":") rawKeys
           let pairs = map (\x -> (,) (read (head x) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
           return pairs
 

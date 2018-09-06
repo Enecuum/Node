@@ -49,7 +49,7 @@ import           Enecuum.Legacy.Service.Transaction.Storage
 import           Enecuum.Legacy.Service.Transaction.Transformation
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
-import           Enecuum.Prelude
+import           Prelude
 
 
 instance Hashable PublicKey

@@ -27,7 +27,7 @@ import           Enecuum.Legacy.Node.Data.GlobalLoging
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
-import           Enecuum.Prelude
+import           Prelude
 
 
 -- for rocksdb Transaction and Microblock

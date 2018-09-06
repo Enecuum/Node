@@ -17,7 +17,7 @@ import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Service.Sync.SyncTypes
 import           Enecuum.Legacy.Service.Transaction.Storage ()
 import           Enecuum.Legacy.Service.Types
-import           Enecuum.Prelude
+import           Prelude
 
 
 type LastNumber = Int

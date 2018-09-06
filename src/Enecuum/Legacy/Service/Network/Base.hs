@@ -14,11 +14,11 @@ module Enecuum.Legacy.Service.Network.Base (
 import           Data.List
 import           Data.Serialize  (Serialize (..), getWord32be)
 import qualified Data.Serialize  as S (get, put)
-import           Data.Text       (pack)
 import           Data.Word
 import           Enecuum.Prelude
 import           GHC.Generics    (Generic)
 import           Network.Socket
+import qualified Prelude            as P ( show )
 
 
 data ConnectInfo = ConnectInfo {
@@ -45,7 +45,7 @@ instance Serialize Connect
 
 -- | Show host adres in 0.0.0.0 form.
 showHostAddress :: HostAddress -> String
-showHostAddress aHostAdress = intercalate "." $ show <$> [i1, i2, i3, i4]
+showHostAddress aHostAdress = intercalate "." $ P.show <$> [i1, i2, i3, i4]
   where (i1, i2, i3, i4) = hostAddressToTuple aHostAdress
 
 
@@ -54,7 +54,7 @@ sockAddrToHostAddress :: SockAddr -> HostAddress
 sockAddrToHostAddress aSockAddr = case aSockAddr of
     SockAddrInet _ aHostAdress                  -> aHostAdress
     SockAddrInet6 _ _  (_, _, _, aHostAdress) _ -> reverseAdr aHostAdress
-    _                          -> error $ pack "error: sockAddrToHostAddress"
+    _                          -> error "error: sockAddrToHostAddress"
 
 
 -- | 1.2.3.4 -> 4.3.2.1
