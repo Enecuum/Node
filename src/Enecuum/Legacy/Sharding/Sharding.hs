@@ -298,7 +298,7 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMs
             writeLog infoMsgChan [ShardingLvlTag, InitTag] Info "ShiftAction write to chan"
             C.writeChan aChanRequest ShiftAction
 
-    enc <- L.readFile "configs/config.json"
+    enc <- L.readFile "configs/Legacy/config.json"
 
     case A.decode enc of
         Nothing    -> error "config is not valid"
