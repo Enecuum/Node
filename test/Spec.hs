@@ -45,7 +45,7 @@ main = hspec $ do
   describe "Graph eDSL test:" $ do
     fromHUnitTest $ TestLabel "Addition of new node"            testNewNode
     fromHUnitTest $ TestLabel "Deleting of node by hash"        testDeleteNode
-    fromHUnitTest $ TestLabel "Deleting of node by ref"         testDeleteRNode
+    --fromHUnitTest $ TestLabel "Deleting of node by ref"         testDeleteRNode
     fromHUnitTest $ TestLabel "Addition of new Link by content" testNewLink
 
 retrieveNTransactionsForPublickey :: IO (Maybe TransactionInfo)

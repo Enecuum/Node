@@ -35,8 +35,11 @@ newNode aIndex aContent = do
         modifyTVar aIndex $ M.insert aNodeHash aTNode
     return $ isNothing aRes
 
-deleteNode aIndex aContent = do
-    let aNodeHash = toHash aContent
+deleteNode aIndex = deleteHNode aIndex . toHash
+
+
+deleteHNode :: StringHashable c => TVar (TGraph c) -> StringHash -> STM Bool
+deleteHNode aIndex aNodeHash = do
     aTNode <- findNode aIndex aNodeHash
     whenJust aTNode $ deleteTNode aIndex
     return $ isJust aTNode
@@ -47,10 +50,19 @@ newLink = reformLink newTLink
 deleteLink = reformLink deleteTLink
 
 
+newHLink, deleteHLink :: StringHashable c => TVar (TGraph c) -> ReformLink StringHash
+newHLink = reformHLink newTLink
+deleteHLink = reformHLink deleteTLink
+
 reformLink
     :: StringHashable c => ReformTLink c -> TVar (TGraph c) -> ReformLink c
-reformLink f aIndex x1 x2 = do
-    aNodes <- forM [x1, x2] (findNode aIndex . toHash)
+reformLink f aIndex x1 x2 = reformHLink f aIndex (toHash x1) (toHash x2)
+
+
+reformHLink
+    :: StringHashable c => ReformTLink c -> TVar (TGraph c) -> ReformLink StringHash
+reformHLink f aIndex x1 x2 = do
+    aNodes <- forM [x1, x2] (findNode aIndex)
     case catMaybes aNodes of
         [n1, n2] -> f n1 n2
         _        -> return False
