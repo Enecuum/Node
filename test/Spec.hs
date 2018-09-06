@@ -6,16 +6,16 @@ import qualified Data.ByteString.Char8        as BC
 import           Data.Either                  (fromRight)
 import           Data.Maybe                   (fromJust)
 import qualified Data.Serialize               as S (decode, encode)
-import           Service.Transaction.Common   (decodeThis, genNTx)
-import           Service.Transaction.Generate (genPoAMicroblock,
+import           Enecuum.Legacy.Service.Transaction.Common   (decodeThis, genNTx)
+import           Enecuum.Legacy.Service.Transaction.Generate (genPoAMicroblock,
                                                generateMicroblocksAndKeyBlocks)
-import           Service.Transaction.Storage  (genesisKeyBlock, getKeyBlockHash)
-import           Service.Types                (Microblock, TransactionInfo (..))
+import           Enecuum.Legacy.Service.Transaction.Storage  (genesisKeyBlock, getKeyBlockHash)
+import           Enecuum.Legacy.Service.Types                (Microblock, TransactionInfo (..))
 import           Test.Hspec                   (describe, hspec, it,
                                                shouldReturn)
 import           Test.Hspec.Contrib.HUnit     (fromHUnitTest)
 import           Test.HUnit                   (Test (..), (@?=))
-
+import           Enecuum.Dsl.Graph
 
 main :: IO ()
 main = hspec $ do
@@ -42,6 +42,11 @@ main = hspec $ do
   describe "CLI and RPC HUnit tests" $ do
     fromHUnitTest cliRPCTestSuite
 
+  describe "Graph eDSL test:" $ do
+    fromHUnitTest $ TestLabel "Addition of new node"            testNewNode
+    fromHUnitTest $ TestLabel "Deleting of node by hash"        testDeleteNode
+    fromHUnitTest $ TestLabel "Deleting of node by ref"         testDeleteRNode
+    fromHUnitTest $ TestLabel "Addition of new Link by content" testNewLink
 
 retrieveNTransactionsForPublickey :: IO (Maybe TransactionInfo)
 retrieveNTransactionsForPublickey = return Nothing

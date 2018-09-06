@@ -91,7 +91,7 @@ runGraph aGraph (E u q) = case extract u of
             case aMaybeNode of
                 Just aTNode -> do
                     aNode <- readTVar aTNode
-                    return $ Just (toRef aTNode, fromList $ keys $ aNode^.links) 
+                    return $ Just (toRef aTNode, toRef <$> aNode^.links) 
                 Nothing -> return Nothing
                 
         runGraph aGraph (qApp q aRes)

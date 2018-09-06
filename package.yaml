@@ -107,6 +107,7 @@ library:
   ghc-options:
   - -threaded
   - -rtsopts
+  - -fprint-potential-instances
   - -with-rtsopts=-N
   - -Wall
   - -O2
