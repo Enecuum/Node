@@ -72,7 +72,7 @@ acceptHello1 :: HelloRequest1 -> Eff L.NodeModel HelloResponse1
 acceptHello1 (HelloRequest1 msg) = pure $ HelloResponse1 $ "Hello, dear. " +| msg |+ ""
 
 acceptHello2 :: HelloRequest2 -> Eff L.NodeModel HelloResponse2
-acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " +|| msg ||+ ""
+acceptHello2 (HelloRequest2 msg) = pure $ HelloResponse2 $ "Hello, dear2. " +| msg |+ ""
 
 -- TODO: make it working with internal state.
 -- Calculate hashID somehow.
