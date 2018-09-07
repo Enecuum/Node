@@ -1,27 +1,49 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports    #-}
 
-import           Data.Aeson                   as A (decode, encode)
-import qualified Data.ByteString.Char8        as BC
-import           Data.Either                  (fromRight)
-import           Data.Maybe                   (fromJust)
-import qualified Data.Serialize               as S (decode, encode)
-import           Enecuum.Legacy.Service.Transaction.Common   (decodeThis, genNTx)
-import           Enecuum.Legacy.Service.Transaction.Generate (genPoAMicroblock,
-                                               generateMicroblocksAndKeyBlocks)
-import           Enecuum.Legacy.Service.Transaction.Storage  (genesisKeyBlock, getKeyBlockHash)
-import           Enecuum.Legacy.Service.Types                (Microblock, TransactionInfo (..))
-import           Test.Hspec                   (describe, hspec, it,
-                                               shouldReturn)
-import           Test.Hspec.Contrib.HUnit     (fromHUnitTest)
-import           Test.HUnit                   (Test (..), (@?=))
+import           Data.Aeson                    as A
+                                                ( decode
+                                                , encode
+                                                )
+import qualified Data.ByteString.Char8         as BC
+import           Data.Either                    ( fromRight )
+import           Data.Maybe                     ( fromJust )
+import qualified Data.Serialize                as S
+                                                ( decode
+                                                , encode
+                                                )
+import           Enecuum.Legacy.Service.Transaction.Common
+                                                ( decodeThis
+                                                , genNTx
+                                                )
+import           Enecuum.Legacy.Service.Transaction.Generate
+                                                ( genPoAMicroblock
+                                                , generateMicroblocksAndKeyBlocks
+                                                )
+import           Enecuum.Legacy.Service.Transaction.Storage
+                                                ( genesisKeyBlock
+                                                , getKeyBlockHash
+                                                )
+import           Enecuum.Legacy.Service.Types   ( Microblock
+                                                , TransactionInfo(..)
+                                                )
+import           Test.Hspec                     ( describe
+                                                , hspec
+                                                , it
+                                                , shouldReturn
+                                                )
+import           Test.Hspec.Contrib.HUnit       ( fromHUnitTest )
+import           Test.HUnit                     ( Test(..)
+                                                , (@?=)
+                                                )
 import           Enecuum.Dsl.Graph
 
 main :: IO ()
 main = hspec $ do
   describe "Basic DB Functionality" $ do
-    it "should retrieve n transactions for publickey" $  do
-      retrieveNTransactionsForPublickey
+    it "should retrieve n transactions for publickey"
+      $              do
+                       retrieveNTransactionsForPublickey
       `shouldReturn` (Nothing)
 
   describe "Database HUnit tests" $ do
@@ -42,11 +64,15 @@ main = hspec $ do
   describe "CLI and RPC HUnit tests" $ do
     fromHUnitTest cliRPCTestSuite
 
-  describe "Graph eDSL test:" $ do
-    fromHUnitTest $ TestLabel "Addition of new node"            testNewNode
-    fromHUnitTest $ TestLabel "Deleting of node by hash"        testDeleteNode
-    --fromHUnitTest $ TestLabel "Deleting of node by ref"         testDeleteRNode
-    fromHUnitTest $ TestLabel "Addition of new Link by content" testNewLink
+  describe "Graph eDSL test:" $ fromHUnitTest $ TestList
+    [ TestLabel "Addition of new node / geting nod by content" testNewNode
+    , TestLabel "Geting node by hash"                          testGetNodeByHash
+    , TestLabel "Geting node by ref"                           testGetNodeByRef
+    , TestLabel "Deleting of node by content" testDeleteNodeByContent
+    , TestLabel "Deleting of node by hash" testDeleteNodeByHash
+    , TestLabel "Deleting of node by ref" testDeleteNodeByRef
+    , TestLabel "Addition of new Link by content"              testNewLink
+    ]
 
 retrieveNTransactionsForPublickey :: IO (Maybe TransactionInfo)
 retrieveNTransactionsForPublickey = return Nothing
@@ -56,7 +82,7 @@ parseTXInfoJson :: Test
 parseTXInfoJson = TestCase $ do
   tx <- (!! 0) <$> genNTx 5
   let tx1 = TransactionInfo tx (BC.pack "123") 2 False
-  let res =  fromJust $ A.decode $ A.encode tx1
+  let res = fromJust $ A.decode $ A.encode tx1
   res @?= tx1
 
 
@@ -85,24 +111,24 @@ parseMicroblockBin = TestCase $ do
 
 checkKeyBlockInfoHash :: Test
 checkKeyBlockInfoHash = TestCase $ do
-  getKeyBlockHash genesisKeyBlock @?= "4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY="
+  getKeyBlockHash genesisKeyBlock
+    @?= "4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY="
 
 
 -- | Parsing HUnit test suite
 parsingTestSuite :: Test
-parsingTestSuite = TestList [
-    TestLabel "Parse json: TransactionInfo" parseTXInfoJson,
-    TestLabel "Parse json: Microblock" parseMicroblockJson,
-    TestLabel "Parse binary: TransactionInfo" parseTXInfoBin,
-    TestLabel "Parse binary: Microblock" parseMicroblockBin,
-    TestLabel "Transformation: KeyBlockInfo Hash" checkKeyBlockInfoHash
+parsingTestSuite = TestList
+  [ TestLabel "Parse json: TransactionInfo"       parseTXInfoJson
+  , TestLabel "Parse json: Microblock"            parseMicroblockJson
+  , TestLabel "Parse binary: TransactionInfo"     parseTXInfoBin
+  , TestLabel "Parse binary: Microblock"          parseMicroblockBin
+  , TestLabel "Transformation: KeyBlockInfo Hash" checkKeyBlockInfoHash
   ]
 
 
 -- | Business logic HUnit test suite
 businessLogicTestSuite :: Test
-businessLogicTestSuite = TestList [
-  ]
+businessLogicTestSuite = TestList []
 
 
 -- | Network HUnit test suite

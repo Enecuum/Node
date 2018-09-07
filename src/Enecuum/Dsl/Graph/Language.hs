@@ -51,19 +51,25 @@ class ToNodeRef config b where
     toNodeRef   :: b -> NodeRef config
 
 
+newLink', deleteLink' :: (ToNodeRef node b, ToNodeRef node c) => c -> b -> Eff '[GraphDsl node] (W node Bool)
+newLink' a b     = send $ NewLink (toNodeRef a) (toNodeRef b)
+deleteLink' a b  = send $ DeleteLink (toNodeRef a) (toNodeRef b)
 
-newLink, deleteLink :: (ToNodeRef node b, ToNodeRef node c) => c -> b -> Eff '[GraphDsl node] (W node Bool)
-newLink a b = send $ NewLink (toNodeRef a) (toNodeRef b)
-deleteLink a b = send $ DeleteLink (toNodeRef a) (toNodeRef b)
+newLink, deleteLink :: (ToNodeRef node c, ToNodeRef node b) => c -> b -> Eff '[GraphDsl node] ()
+newLink a b    = void $ newLink' a b
+deleteLink a b = void $ deleteLink' a b  
 
+newNode' :: ToContent node c => c -> Eff '[GraphDsl node] (W node Bool)
+newNode' = send . NewNode . toContent
 
-newNode :: ToContent node c => c -> Eff '[GraphDsl node] (W node Bool)
-newNode = send . NewNode . toContent
+newNode :: ToContent node c => c -> Eff '[GraphDsl node] ()
+newNode = void . newNode'
 
+deleteNode' :: ToNodeRef node h => h -> Eff '[GraphDsl node] (W node Bool)
+deleteNode' = send . DeleteNode . toNodeRef
 
-deleteNode :: ToNodeRef node h => h -> Eff '[GraphDsl node] (W node Bool)
-deleteNode = send . DeleteNode . toNodeRef
-
+deleteNode :: ToNodeRef node h => h -> Eff '[GraphDsl node] ()
+deleteNode = void . deleteNode'
 
 getNode :: ToNodeRef node h => h -> Eff '[GraphDsl node] (Maybe node)
 getNode = send . GetNode . toNodeRef

@@ -27,6 +27,10 @@ instance ToNodeRef (DslTNode content) (TVar (TNode content))  where
     toNodeRef   = TNodeRef
 
 
+instance ToNodeRef (DslTNode content) (NodeRef (DslTNode content)) where
+    toNodeRef = identity
+
+
 instance ToNodeRef (DslTNode content) StringHash  where
     toNodeRef   = TNodeHash
 
@@ -37,8 +41,10 @@ instance StringHashable content => ToNodeRef (DslTNode content) content  where
 
 instance Serialize c => Serialize (NodeContent (DslTNode c))
 
+
 instance (Serialize c, StringHashable c) => StringHashable (NodeContent (DslTNode c)) where
     toHash (TNodeContent c) = toHash c
+
 
 instance StringHashable c => ToContent (DslTNode c) c where
     toContent = TNodeContent
@@ -47,9 +53,11 @@ instance StringHashable c => ToContent (DslTNode c) c where
 
 type DslTNode content = DslNode (TVar (TNode content)) content
 
+
 data instance NodeContent (DslNode (TVar (TNode content)) content)
     = TNodeContent content
   deriving (Generic)
+
 
 data instance NodeRef     (DslNode (TVar (TNode content)) content)
     = TNodeRef (TVar (TNode content))
@@ -57,10 +65,9 @@ data instance NodeRef     (DslNode (TVar (TNode content)) content)
   deriving (Generic)
 
 
-
-
 initGraph :: StringHashable c => IO (TVar (TGraph c))
 initGraph = atomically G.newTGraph
+
 
 runGraph :: StringHashable c => TVar (TGraph c) -> Eff '[GraphDsl (DslTNode c)] w -> IO w
 runGraph _ (Val x) = return x
