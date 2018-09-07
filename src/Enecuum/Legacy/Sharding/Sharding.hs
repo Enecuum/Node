@@ -1,8 +1,7 @@
-{-# LANGUAGE
-        LambdaCase
-    ,   MultiWayIf
-    ,   FlexibleContexts
-  #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase       #-}
+{-# LANGUAGE MultiWayIf       #-}
+
 -- Not used: not valid for TestNet
 -- 1. Request of block
 -- -> NetLvl -> LogicLvl -> NetLvl ->
@@ -31,13 +30,15 @@
 --   2 request with id 1 -> node -> block 1
 module Enecuum.Legacy.Sharding.Sharding where
 
-import              Enecuum.Legacy.Sharding.Types.Node
-import              Control.Concurrent.Chan.Unagi.Bounded
-import qualified    Control.Concurrent  as C
-import qualified    Enecuum.Legacy.Node.Node.Types     as T
-import              Enecuum.Legacy.Service.Types       ( InfoMsg )
-import              Lens.Micro.GHC()
-import              Enecuum.Legacy.Node.Data.Key
+
+import qualified Control.Concurrent                    as C
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Enecuum.Legacy.Node.Data.Key
+import qualified Enecuum.Legacy.Node.Node.Types        as T
+import           Enecuum.Legacy.Service.Types          (InfoMsg)
+import           Enecuum.Legacy.Sharding.Types.Node
+import           Enecuum.Prelude
+
 
 makeShardingNode
     ::  MyNodeId
@@ -297,7 +298,7 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMs
             writeLog infoMsgChan [ShardingLvlTag, InitTag] Info "ShiftAction write to chan"
             C.writeChan aChanRequest ShiftAction
 
-    enc <- L.readFile "configs/config.json"
+    enc <- L.readFile "configs/Legacy/config.json"
 
     case A.decode enc of
         Nothing    -> error "config is not valid"

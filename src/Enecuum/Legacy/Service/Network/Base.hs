@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveGeneric #-}
-
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Enecuum.Legacy.Service.Network.Base (
@@ -12,11 +11,15 @@ module Enecuum.Legacy.Service.Network.Base (
     ,   sockAddrToHostAddress
   ) where
 
-import Network.Socket
-import Data.List
-import Data.Word
-import Data.Serialize
-import GHC.Generics (Generic)
+import           Data.List
+import           Data.Serialize  (Serialize (..), getWord32be)
+import qualified Data.Serialize  as S (get, put)
+import           Data.Word
+import           Enecuum.Prelude
+import           GHC.Generics    (Generic)
+import           Network.Socket
+import qualified Prelude            as P ( show )
+
 
 data ConnectInfo = ConnectInfo {
     host :: String
@@ -32,7 +35,7 @@ data ClientHandle = ClientHandle {
 
 instance Serialize PortNumber where
     get = toEnum.fromEnum <$> getWord32be
-    put aPortNumber = put (toEnum.fromEnum $ aPortNumber :: Word32)
+    put aPortNumber = S.put (toEnum.fromEnum $ aPortNumber :: Word32)
 
 
 data Connect = Connect HostAddress PortNumber deriving (Show, Eq, Generic, Ord)
@@ -42,7 +45,7 @@ instance Serialize Connect
 
 -- | Show host adres in 0.0.0.0 form.
 showHostAddress :: HostAddress -> String
-showHostAddress aHostAdress = intercalate "." $ show <$> [i1, i2, i3, i4]
+showHostAddress aHostAdress = intercalate "." $ P.show <$> [i1, i2, i3, i4]
   where (i1, i2, i3, i4) = hostAddressToTuple aHostAdress
 
 

@@ -7,24 +7,23 @@ module Main where
 
 import qualified Control.Concurrent                    as C
 import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Exception                     (SomeException, try)
 import           Control.Monad
 
+import           Data.Aeson
+import qualified Data.ByteString.Lazy                  as L
 import           Enecuum.Legacy.BootNodeServer
 import           Enecuum.Legacy.Node.DataActor
 import           Enecuum.Legacy.Node.Node.Types
 import           Enecuum.Legacy.Service.InfoMsg
-import           Enecuum.Legacy.Service.Network.Base                  (ConnectInfo (..))
-import           System.Environment
-
-import           Data.Aeson
-import qualified Data.ByteString.Lazy                  as L
+import           Enecuum.Legacy.Service.Network.Base   (ConnectInfo (..))
+import           Enecuum.Prelude
 import           Network.Socket                        ()
+import           System.Environment
 
 
 main :: IO ()
 main =  do
-      enc <- L.readFile "configs/config.json"
+      enc <- L.readFile "configs/Legacy/config.json"
       case decode enc :: Maybe BuildConfig of
           Nothing   -> error "Please, specify config file correctly"
           Just conf -> do

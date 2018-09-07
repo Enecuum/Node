@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import           Enecuum.Prelude
 import           Data.Aeson                    as A
                                                 ( decode
                                                 , encode
@@ -26,7 +27,7 @@ import           Test.Hspec.Contrib.HUnit       ( fromHUnitTest )
 import           Test.HUnit                     ( Test(..)
                                                 , (@?=)
                                                 )
-import           Enecuum.Dsl.Graph
+import           Enecuum.Research.Dsl.Graph
 
 main :: IO ()
 main = hspec $ do

@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs      #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiWayIf #-}
+
 module Enecuum.Legacy.Pending where
 
 import           Data.Sequence                         as S
@@ -8,15 +9,15 @@ import           Data.Sequence                         as S
 import           Control.Monad
 
 import qualified Control.Concurrent                    as C
-import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
-import           Enecuum.Legacy.Service.Chan
-
-import           Data.Foldable
-import           Enecuum.Legacy.Service.Types
-import           System.Clock
-
+import           Control.Concurrent.Chan.Unagi.Bounded
 import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Service.Chan
+import           Enecuum.Legacy.Service.Types
+import           Prelude
+import           System.Clock
+import           Data.Foldable
+
 -- actor
 -- actor's data
 -- commands for actor

@@ -14,26 +14,27 @@
 module Enecuum.Legacy.Node.Node.Types where
 
 import qualified Control.Concurrent.Chan               as C
-import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Concurrent.MVar
-import qualified Data.Map                              as M
-import           Data.Serialize
-import           GHC.Generics                          (Generic)
-
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Lens
 import           Crypto.PubKey.ECC.ECDSA               as ECDSA
 import           Crypto.Random.Types
-import           Lens.Micro.TH
-import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Legacy.Service.Sync.SyncJson
-
 import           Data.Aeson
 import           Data.Aeson.TH
+import qualified Data.Map                              as M
 import           Data.Scientific                       (Scientific, toRealFloat)
+import           Data.Serialize                        (Serialize)
+import qualified Data.Serialize                        as S (get, put)
 import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Node.DataActor
 import           Enecuum.Legacy.Node.NetLvl.Messages
-import           Enecuum.Legacy.Service.Types                         (Microblock, Transaction, InfoMsg)
-import qualified Enecuum.Legacy.Sharding.Types.Node                   as N
+import           Enecuum.Legacy.Service.Network.Base
+import           Enecuum.Legacy.Service.Sync.SyncJson
+import           Enecuum.Legacy.Service.Types          (InfoMsg, Microblock,
+                                                        Transaction)
+import qualified Enecuum.Legacy.Sharding.Types.Node    as N
+import           Prelude
+import           GHC.Generics                          (Generic)
 
 
 instance Show (InChan a) where show _ = "InChan"
@@ -158,8 +159,8 @@ deriveJSON defaultOptions ''BuildConfig
 instance Serialize NodeConfig
 
 instance Serialize PrivateKey where
-    get = PrivateKey <$> get <*> get
-    put (PrivateKey a b)= put a >> put b
+    get = PrivateKey <$> S.get <*> S.get
+    put (PrivateKey a b)= S.put a >> S.put b
 
 makeNewNodeConfig :: MonadRandom m => m NodeConfig
 makeNewNodeConfig = do

@@ -12,11 +12,12 @@ module Enecuum.Legacy.Service.Sync.SyncJson where
 import           Control.Exception
 import           Control.Monad
 import           Data.Aeson
-import qualified Data.Text                   as T
+import qualified Data.Text                                  as T
 import           Enecuum.Legacy.Node.Data.Key
 import           Enecuum.Legacy.Service.Sync.SyncTypes
 import           Enecuum.Legacy.Service.Transaction.Storage ()
 import           Enecuum.Legacy.Service.Types
+import           Prelude
 
 
 type LastNumber = Int
@@ -97,7 +98,7 @@ instance FromJSON SyncMessage where
 
             _ -> mzero
 
-    parseJSON _ = mzero 
+    parseJSON _ = mzero
 
 instance ToJSON MicroBlockContent where
   toJSON (MicroBlockContent aMicroblocks) = object [

@@ -2,8 +2,8 @@ name:                Node
 version:             0.1.0.7
 github:              "Enecuum/Node"
 license:             BSD3
-author:              "Dmitriy Pavlyuk"
-maintainer:          "al.lastor@enecuum.com"
+author:              "Enecuum"
+maintainer:          "mail@enecuum.com"
 copyright:           "2018  Enecuum"
 
 extra-source-files:
@@ -35,6 +35,31 @@ description:
     # The central actor responsible for storing node state and manage decision,
     # processing external commands and response for them.
 
+default-extensions:
+- NoImplicitPrelude
+- GADTs
+- RankNTypes
+- DeriveFunctor
+- DeriveGeneric
+- OverloadedStrings
+- LambdaCase
+- MultiParamTypeClasses
+- ExplicitNamespaces
+- TypeApplications
+- ScopedTypeVariables
+- TypeOperators
+- TypeFamilies
+- DataKinds
+- FlexibleContexts
+- FlexibleInstances
+- PatternSynonyms
+- PolyKinds
+- DefaultSignatures
+- ConstraintKinds
+- NamedFieldPuns
+- TupleSections
+- ViewPatterns
+- MultiWayIf
 
 dependencies:
 - base >= 4.7 && < 5
@@ -54,10 +79,6 @@ dependencies:
 - arithmoi
 - directory
 - filepath
-- microlens
-- microlens-mtl
-- microlens-th
-- microlens-ghc
 - process
 - extra
 - time
@@ -95,22 +116,24 @@ dependencies:
 - cryptohash-sha256
 - derive
 - bytestring-conversion
+- freer
+- newtype-generics
+- lens
+- microlens
+- universum
+- fmt
+- stm
 - hspec
 - HUnit
 - hspec-contrib
-- stm
-- universum
-- freer
+
+
+
 
 library:
   source-dirs: src
   ghc-options:
-  - -threaded
-  - -rtsopts
-  - -fprint-potential-instances
-  - -with-rtsopts=-N
   - -Wall
-  - -O2
 
 executables:
   T-exe:
@@ -165,13 +188,16 @@ executables:
     - Node
 
 tests:
-  Node-test:
+  functional-tests:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
     - -threaded
     - -rtsopts
-    - -O2
     - -with-rtsopts=-N
     dependencies:
+    - hspec
+    - HUnit
+    - hspec-contrib
     - Node
+    - newtype-generics

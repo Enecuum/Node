@@ -11,12 +11,14 @@
 
 module Enecuum.Legacy.Service.Transaction.Transformation where
 import           Control.Exception
-import           Control.Monad                      (forM)
-import qualified Data.ByteString                    as B
+import           Control.Monad                                     (forM)
+import qualified Data.ByteString                                   as B
 import           Enecuum.Legacy.Service.Transaction.Decode
 import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
-import           Enecuum.Legacy.Service.Types.SerializeInstances   (roll, unroll)
+import           Enecuum.Legacy.Service.Types.SerializeInstances   (roll,
+                                                                    unroll)
+import           Prelude
 
 
 -- Helper functions

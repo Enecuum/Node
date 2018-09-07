@@ -11,6 +11,7 @@ module Enecuum.Legacy.Service.System.Directory (
   )where
 
 import           Data.UnixTime
+import           Enecuum.Prelude
 import           System.Directory      (createDirectoryIfMissing,
                                         getHomeDirectory)
 import           System.FilePath       (pathSeparator)

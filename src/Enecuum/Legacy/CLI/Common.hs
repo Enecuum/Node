@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+
 module Enecuum.Legacy.CLI.Common (
   sendMessageTo,
   sendMessageBroadcast,
@@ -29,58 +30,60 @@ module Enecuum.Legacy.CLI.Common (
 
   )where
 
-import           Control.Concurrent                    ( threadDelay )
-import           Control.Concurrent.Chan.Unagi.Bounded ( InChan
-                                                       , tryWriteChan )
-import           Control.Exception                     ( try
-                                                       , throw
-                                                       , SomeException )
-import           Control.Monad                         ( unless )
-import           Control.Timeout                       ( timeout )
-import           Data.List.Split                       ( splitOn )
-import           Data.Map                              ( Map
-                                                       , fromList
-                                                       , lookup )
-import           Data.Time.Units                       ( Millisecond
-                                                       , Second
-                                                       , getCPUTimeWithUnit
-                                                       , subTime ) 
-import           System.Random                         ( randomRIO )
-import           Control.Concurrent.MVar               ( newEmptyMVar
-                                                       , readMVar )
+import           Control.Concurrent                                (threadDelay)
+import           Control.Concurrent.Chan.Unagi.Bounded             (InChan,
+                                                                    tryWriteChan)
+import           Control.Concurrent.MVar                           (newEmptyMVar,
+                                                                    readMVar)
+import           Control.Exception                                 (SomeException, throw, try)
+import           Control.Monad                                     (unless)
+import           Control.Timeout                                   (timeout)
+import           Data.List.Split                                   (splitOn)
+import           Data.Map                                          (Map,
+                                                                    fromList,
+                                                                    lookup)
+import           Data.Time.Units                                   (Millisecond,
+                                                                    Second,
+                                                                    getCPUTimeWithUnit,
+                                                                    subTime)
+import           System.Random                                     (randomRIO)
 
-import           Enecuum.Legacy.Node.Crypto                           ( verifyEncodeble )
-import           Enecuum.Legacy.Node.Node.Types                       ( MsgToCentralActor(..) )
-import qualified Enecuum.Legacy.Service.InfoMsg                       as I
-import           Enecuum.Legacy.Service.System.Directory              (getKeyFilePath, getTime)
-import qualified Enecuum.Legacy.Service.Transaction.Common            as B
-import           Enecuum.Legacy.Service.Types                         ( Transaction(..)
-                                                       , Trans(..)
-                                                       , TransactionAPI
-                                                       , TransactionInfo
-                                                       , MicroblockBD
-                                                       , MicroblockAPI
-                                                       , MacroblockBD
-                                                       , MacroblockAPI
-                                                       , Common(..)
-                                                       , ChainInfo
-                                                       , FullChain
-                                                       , Hash(..)
-                                                       , DBPoolDescriptor
-                                                       , DBKey
-                                                       , MsgTo
-                                                       , CLIException(..)
-                                                       , InContainerChan
-                                                       , InfoMsg(..)
-                                                       , Currency(..) )
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair    ( PublicKey
-                                                       , PrivateKey
-                                                       , Amount
-                                                       , KeyPair(..)
-                                                       , getPublicKey
-                                                       , getSignature
-                                                       , uncompressPublicKey
-                                                       , generateNewRandomAnonymousKeyPair )
+import           Data.Text                                         (pack,
+                                                                    unpack)
+import           Enecuum.Legacy.Node.Crypto                        (verifyEncodeble)
+import           Enecuum.Legacy.Node.Node.Types                    (MsgToCentralActor (..))
+import qualified Enecuum.Legacy.Service.InfoMsg                    as I
+import           Enecuum.Legacy.Service.System.Directory           (getKeyFilePath,
+                                                                    getTime)
+import qualified Enecuum.Legacy.Service.Transaction.Common         as B
+import           Enecuum.Legacy.Service.Types                      (CLIException (..),
+                                                                    ChainInfo,
+                                                                    Common (..),
+                                                                    Currency (..),
+                                                                    DBKey,
+                                                                    DBPoolDescriptor,
+                                                                    FullChain,
+                                                                    Hash (..),
+                                                                    InContainerChan,
+                                                                    InfoMsg (..),
+                                                                    MacroblockAPI,
+                                                                    MacroblockBD,
+                                                                    MicroblockAPI,
+                                                                    MicroblockBD,
+                                                                    MsgTo,
+                                                                    Trans (..),
+                                                                    Transaction (..),
+                                                                    TransactionAPI,
+                                                                    TransactionInfo)
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount,
+                                                                    KeyPair (..),
+                                                                    PrivateKey,
+                                                                    PublicKey,
+                                                                    generateNewRandomAnonymousKeyPair,
+                                                                    getPublicKey,
+                                                                    getSignature,
+                                                                    uncompressPublicKey)
+import           Prelude
 
 
 type Result a = Either CLIException a
@@ -154,7 +157,7 @@ getAllTransactionsByWallet c key = try $ do
 
 
 getPartTransactions :: Common -> InContainerChan -> PublicKey -> Int -> Int -> IO (Result [TransactionAPI])
-getPartTransactions c inContainerChan key offset aCount = try $ do 
+getPartTransactions c inContainerChan key offset aCount = try $ do
   tx <- B.getLastTransactions c inContainerChan key offset aCount
   case tx of
     [] -> throw NoTransactionsForPublicKey
@@ -229,7 +232,7 @@ getSavedKeyPairs = do
   result <- try $ getKeyFilePath >>= readFile
   case result of
     Left ( _ :: SomeException) -> do
-          putStrLn "There is no keys"
+          print "There is no keys"
           return []
     Right keyFileContent       -> do
           let rawKeys = lines keyFileContent

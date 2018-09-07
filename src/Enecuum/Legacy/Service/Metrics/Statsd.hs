@@ -15,9 +15,10 @@ module Enecuum.Legacy.Service.Metrics.Statsd (
 ) where
 
 import           Data.Time.Units
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount, PublicKey)
+import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount,
+                                                                    PublicKey)
 import           Text.Printf
-
+import           Prelude
 
 type Stat = String
 data Type = Count | Gauge | Timing | Set

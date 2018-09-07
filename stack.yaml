@@ -14,7 +14,10 @@ extra-deps:
 - rocksdb-haskell-1.0.1
 - unagi-chan-0.4.1.0
 - derive-2.6.4
-- freer-0.2.4.1
+- newtype-generics-0.5.3
+
+- git: https://github.com/restaumatic/freer
+  commit: c43e6e448a61714ab629486cb30129f97e51cc1b
 
 build:
   haddock-arguments:

@@ -10,24 +10,26 @@ module Enecuum.Legacy.Service.InfoMsg (
   gauge,
   add,
   timing,
-  set,
+  Enecuum.Legacy.Service.Metrics.Statsd.set,
+  -- set,
   serveInfoMsg
 )  where
 
-import qualified Data.ByteString.Char8                 as BS
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Monad                             (forever, void)
+import           Control.Exception
+import qualified Data.ByteString.Char8                     as BS
 import           Data.List
-import           Network.Socket.ByteString             (sendTo)
+import           Data.Text                                 (Text)
 import           Enecuum.Legacy.Node.BaseFunctions
-
-import           Enecuum.Legacy.Service.Types                         ( InfoMsg(..), LoggingTag(..) )
 import           Enecuum.Legacy.Service.Metrics.Statsd
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Network.TCP.Client
-import           System.Clock                          ()
-
-import           Control.Concurrent.Chan.Unagi.Bounded
-import           Control.Exception                     (SomeException, try)
-import           Control.Monad                         (forever, void)
+import           Enecuum.Legacy.Service.Types              (InfoMsg (..),
+                                                            LoggingTag (..))
+import           Prelude
+import           Network.Socket.ByteString                 (sendTo)
+import           System.Clock                              ()
 
 
 sendToServer :: ClientHandle -> String -> IO ()
@@ -50,7 +52,7 @@ serveInfoMsg statsdInfo logsInfo chan aId stdout_log = do
             sendToServer lHandler $ "+node|" ++  aId ++ "|" ++
                       intercalate "," (show <$> [ConnectingTag .. BDTag]) ++ "\r\n"
 
-    undead (putStrLn "dead of log :))) ") $ forever $ do
+    undead (putStrLn ("dead of log " :: String)) $ forever $ do
         m <- readChan chan
         case m of
             Metric s -> case eithMHandler of
@@ -68,6 +70,6 @@ serveInfoMsg statsdInfo logsInfo chan aId stdout_log = do
                      case eithLHandler of
                           Left  _        -> return ()
                           Right lHandler -> sendToServer lHandler aString
-                     if stdout_log 
+                     if stdout_log
                      then putStrLn aFileString
                      else return ()

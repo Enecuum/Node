@@ -2,12 +2,13 @@
 module Main where
 
 
-import qualified Enecuum.TGraph as G
-import           Enecuum.Dsl.Graph.Interpreter
-import           Control.Monad
+import qualified Enecuum.Research.TGraph as G
+import           Enecuum.Research.Dsl.Graph.Interpreter
+
 import           Control.Concurrent.STM
-import           Enecuum.Dsl.Graph.Language
+import           Enecuum.Research.Dsl.Graph.Language
 import           System.Clock
+import           Enecuum.Prelude
 
 main :: IO ()
 main = testMakeGraph
