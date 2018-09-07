@@ -22,26 +22,26 @@ startNodeRpcServer
   -> L.HandlersF
   -> IO ()
 startNodeRpcServer nodeRt handlersF = do
-  control <- RpcServerControl <$> newEmptyTMVarIO <*> newEmptyTMVarIO
+  control <- Control <$> newEmptyTMVarIO <*> newEmptyTMVarIO
   tId <- forkIO $ go 0 control
 
   let handle = RpcServerHandle tId control
   atomically $ putTMVar (nodeRt ^. RLens.rpcServer) handle
 
   where
-    go :: Integer -> RpcServerControl -> IO ()
+    go :: Integer -> Control -> IO ()
     go iteration control = act iteration control >> go (iteration + 1) control
 
-    act :: Integer -> RpcServerControl -> IO ()
+    act :: Integer -> Control -> IO ()
     act _ control = do
       req <- atomically $ takeTMVar $ control ^. RLens.request
       case req of
-        RpcServerControlRpcRequest (D.RpcRequest rawDataIn) -> do
+        RpcRequest (D.RpcRequest rawDataIn) -> do
           let (handler, _) = handlersF (pure Nothing, rawDataIn)
           mbResult <- runSafeIO
               $ runLoggerL (nodeRt ^. RLens.loggerRuntime)
               $ runNodeModel nodeRt handler
           let resp = case mbResult of
-                Nothing         -> RpcServerControlErrorResponse $ "Method is not supported: " +|| rawDataIn ||+ ""
-                Just rawDataOut -> RpcServerControlRpcResponse   $ D.RpcResponse rawDataOut
+                Nothing         -> AsErrorResponse $ "Method is not supported: " +|| rawDataIn ||+ ""
+                Just rawDataOut -> AsRpcResponse   $ D.RpcResponse rawDataOut
           atomically $ putTMVar (control ^. RLens.response) resp

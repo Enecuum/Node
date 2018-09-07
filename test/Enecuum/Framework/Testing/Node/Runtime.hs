@@ -21,7 +21,7 @@ import           Enecuum.Framework.Testing.Node.Interpreters.NodeDefinition
 
 createEmptyNodeRuntime
   :: LoggerRuntime
-  -> NetworkControl
+  -> Control
   -> D.NodeAddress
   -> IO NodeRuntime
 createEmptyNodeRuntime loggerRt networkControl addr = do
@@ -39,5 +39,5 @@ startNode testRt nodeAddr scenario = do
   runSafeIO
     $ runLoggerL (testRt ^. RLens.loggerRuntime)
     $ runNodeDefinitionL nodeRt scenario
-  registerNode testRt nodeAddr nodeRt
+  registerNode (testRt ^. RLens.registry) nodeAddr nodeRt
   pure nodeRt

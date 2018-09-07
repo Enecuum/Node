@@ -14,19 +14,36 @@ import           Enecuum.Framework.Testing.Types
 
 import           Enecuum.Framework.Testing.Node.Interpreters.NetworkModel
 
+relayRequest
+  :: NodeRuntime
+  -> D.Connection
+  -> D.RpcRequest
+  -> Eff L.NetworkModel (D.RpcResult D.RpcResponse)
+relayRequest nodeRt conn req = do
+  safeIO
+    $ atomically
+    $ putTMVar (nodeRt ^. RLens.networkControl . RLens.request)
+    $ RelayRpcRequest (conn ^. Lens.clientAddress) (conn ^. Lens.serverAddress) req
+  controlResponse <- safeIO
+    $ atomically
+    $ takeTMVar (nodeRt ^. RLens.networkControl . RLens.response)
+  case controlResponse of
+    AsRpcResponse rpcResponse -> pure $ Right rpcResponse
+    AsErrorResponse err       -> pure $ Left err
+
 interpretNetworkingL
   :: NodeRuntime
   -> L.NetworkingL a
-  -> Eff '[L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, L.LoggerL, SIO, Exc SomeException] a
-interpretNetworkingL rt (L.OpenConnection cfg) = do
+  -> Eff L.NetworkModel a
+interpretNetworkingL nodeRt (L.OpenConnection cfg) = do
   L.logInfo "OpenConnection cfg"
-  pure $ Just D.Connection
-interpretNetworkingL rt (L.CloseConnection conn) = do
+  pure $ Just $ D.Connection (nodeRt ^. RLens.address) (cfg ^. Lens.address)
+interpretNetworkingL nodeRt (L.CloseConnection conn) = do
   L.logInfo "CloseConnection conn"
   pure ()
-interpretNetworkingL rt (L.SendRequest conn req) = do
+interpretNetworkingL nodeRt (L.SendRequest conn req) = do
   L.logInfo "SendRequest conn req"
-  pure $ D.RpcResponse ""
-interpretNetworkingL rt (L.EvalNetwork networkAction) = do
+  relayRequest nodeRt conn req
+interpretNetworkingL nodeRt (L.EvalNetwork networkAction) = do
   L.logInfo "Eval Network"
   networkAction

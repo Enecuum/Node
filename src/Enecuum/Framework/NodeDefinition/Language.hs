@@ -6,6 +6,7 @@ module Enecuum.Framework.NodeDefinition.Language where
 
 import           Enecuum.Prelude
 
+import           Enecuum.Core.Language                    ( CoreEffects )
 import           Enecuum.Framework.Node.Language          ( NodeModel, HandlersF )
 import qualified Enecuum.Framework.Domain                 as D
 
@@ -15,3 +16,8 @@ data NodeDefinitionL a where
   Serving        :: HandlersF -> NodeDefinitionL ()
 
 makeFreer ''NodeDefinitionL
+
+type NodeDefinitionModel =
+  '[ NodeDefinitionL
+   ]
+  ++ CoreEffects

@@ -35,7 +35,8 @@ newtype GetHashIDResponse = GetHashIDResponse Text
 
 instance D.RpcMethod () GetHashIDRequest GetHashIDResponse where
   toRpcRequest _ = D.RpcRequest . A.encode
-  fromRpcResponse _ _ = Right $ GetHashIDResponse "1"
+  fromRpcResponse _ (D.RpcResponse raw)
+    = maybe (Left $ "No parse of get hashID resp" +|| raw ||+ "") Right $ A.decode raw
 
 newtype HelloRequest1  = HelloRequest1 { helloMessage :: Text }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -73,12 +74,18 @@ acceptHello1 (HelloRequest1 msg) = pure $ HelloResponse1 $ "Hello, dear. " +| ms
 acceptHello2 :: HelloRequest2 -> Eff L.NodeModel HelloResponse2
 acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " +|| msg ||+ ""
 
+-- TODO: make it working with internal state.
+-- Calculate hashID somehow.
+acceptGetHashId :: GetHashIDRequest -> Eff L.NodeModel GetHashIDResponse
+acceptGetHashId GetHashIDRequest = pure $ GetHashIDResponse "1"
+
 bootNode :: (Member L.NodeDefinitionL effs) => Eff effs ()
 bootNode = do
-  _         <- L.nodeTag bootNodeTag
-  _         <- L.initialization $ pure $ D.NodeID "abc"
-  _         <- L.serving $ L.serve @HelloRequest1 acceptHello1
-  pure ()
+  L.nodeTag bootNodeTag
+  L.initialization $ pure $ D.NodeID "abc"
+  L.serving
+    $ L.serve @HelloRequest1 @HelloResponse1 acceptHello1
+    . L.serve @GetHashIDRequest @GetHashIDResponse acceptGetHashId
 
 -- TODO: with NodeModel, evalNework not needed.
 -- TODO: make TCP Sockets / WebSockets stuff more correct
@@ -91,9 +98,8 @@ masterNodeInitialization = do
 -- TODO: handle the error correctly.
 masterNode :: (Member L.NodeDefinitionL effs) => Eff effs ()
 masterNode = do
-  _         <- L.nodeTag masterNodeTag
-  _         <- D.withSuccess $ L.initialization masterNodeInitialization
-  _         <- L.serving
-                  $ L.serve @HelloRequest1 @HelloResponse1 acceptHello1
-                  . L.serve @HelloRequest2 @HelloResponse2 acceptHello2
-  pure ()
+  L.nodeTag masterNodeTag
+  void $ D.withSuccess $ L.initialization masterNodeInitialization
+  L.serving
+    $ L.serve @HelloRequest1 @HelloResponse1 acceptHello1
+    . L.serve @HelloRequest2 @HelloResponse2 acceptHello2

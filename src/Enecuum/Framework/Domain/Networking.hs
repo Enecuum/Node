@@ -17,7 +17,11 @@ type NodeAddress = Text
 data ConnectionConfig = ConnectionConfig
   { _address :: NodeAddress
   }
+
 data Connection = Connection
+  { _clientAddress :: NodeAddress
+  , _serverAddress :: NodeAddress
+  }
 
 -- Temporary approach untill we clarify all the networking details.
 

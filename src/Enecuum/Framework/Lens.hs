@@ -8,6 +8,8 @@ import           Control.Lens             ( makeFieldsNoPrefix )
 
 import           Enecuum.Framework.Domain
 
+makeFieldsNoPrefix ''Connection
+makeFieldsNoPrefix ''ConnectionConfig
 makeFieldsNoPrefix ''NetworkRequest
 makeFieldsNoPrefix ''NetworkResponse
 makeFieldsNoPrefix ''NodeConfig
