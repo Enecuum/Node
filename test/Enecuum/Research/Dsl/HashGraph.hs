@@ -16,9 +16,9 @@ import           Enecuum.Research.Dsl.HashGraph.Language
 
 hashGraphTestSuit :: Test
 hashGraphTestSuit = TestList
-    [ TestLabel "Addition of new node / geting nod by content" testNewNode
-    , TestLabel "Geting node by hash"                          testGetNodeByHash
-    , TestLabel "Geting node by ref"                           testGetNodeByRef
+    [ TestLabel "Addition of new node / getting nod by content" testNewNode
+    , TestLabel "Getting node by hash"                         testGetNodeByHash
+    , TestLabel "Getting node by ref"                          testGetNodeByRef
     , TestLabel "Deleting of node by content" testDeleteNodeByContent
     , TestLabel "Deleting of node by hash" testDeleteNodeByHash
     , TestLabel "Deleting of node by ref" testDeleteNodeByRef
