@@ -14,6 +14,7 @@ import           Enecuum.Research.StringHashable
 import           Enecuum.Research.Dsl.HashGraph.Interpreter
 import           Enecuum.Research.Dsl.HashGraph.Language
 
+hashGraphTestSuit :: Test
 hashGraphTestSuit = TestList
     [ TestLabel "Addition of new node / geting nod by content" testNewNode
     , TestLabel "Geting node by hash"                          testGetNodeByHash

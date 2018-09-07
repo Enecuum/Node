@@ -27,7 +27,7 @@ instance ToNodeRef (DslTNode content) (TVar (THashNode content))  where
     toNodeRef   = TNodeRef
 
 
-instance ToNodeRef (DslTNode content) (NodeRef (DslTNode content)) where
+instance ToNodeRef (DslTNode content) (HashNodeRef (DslTNode content)) where
     toNodeRef = identity
 
 
@@ -39,10 +39,10 @@ instance StringHashable content => ToNodeRef (DslTNode content) content  where
     toNodeRef   = TNodeHash . toHash
 
 
-instance Serialize c => Serialize (NodeContent (DslTNode c))
+instance Serialize c => Serialize (HashNodeContent (DslTNode c))
 
 
-instance (Serialize c, StringHashable c) => StringHashable (NodeContent (DslTNode c)) where
+instance (Serialize c, StringHashable c) => StringHashable (HashNodeContent (DslTNode c)) where
     toHash (TNodeContent c) = toHash c
 
 
@@ -54,12 +54,12 @@ instance StringHashable c => ToContent (DslTNode c) c where
 type DslTNode content = DslHashNode (TVar (THashNode content)) content
 
 
-data instance NodeContent (DslHashNode (TVar (THashNode content)) content)
+data instance HashNodeContent (DslHashNode (TVar (THashNode content)) content)
     = TNodeContent content
   deriving (Generic)
 
 
-data instance NodeRef     (DslHashNode (TVar (THashNode content)) content)
+data instance HashNodeRef     (DslHashNode (TVar (THashNode content)) content)
     = TNodeRef (TVar (THashNode content))
     | TNodeHash StringHash
   deriving (Generic)
