@@ -2,11 +2,11 @@
 module Main where
 
 
-import qualified Enecuum.Research.TGraph as G
-import           Enecuum.Research.Dsl.Graph.Interpreter
+import qualified Enecuum.Research.THashGraph as G
+import           Enecuum.Research.Dsl.HashGraph.Interpreter
 
 import           Control.Concurrent.STM
-import           Enecuum.Research.Dsl.Graph.Language
+import           Enecuum.Research.Dsl.HashGraph.Language
 import           System.Clock
 import           Enecuum.Prelude
 
@@ -15,10 +15,10 @@ main = testMakeGraph
 
 testMakeGraph :: IO ()
 testMakeGraph = do
-    aGraph :: TVar (G.TGraph Int) <- initGraph
+    aGraph :: TVar (G.THashGraph Int) <- initHashGraph
     forM_ [0 .. 10000] $ \i -> do
         t1 <- getTime Realtime
-        runGraph aGraph $ forM_ [l * i + 1 .. l * i + l :: Int] $ \j -> do
+        runHashGraph aGraph $ forM_ [l * i + 1 .. l * i + l :: Int] $ \j -> do
             newNode j
             newLink (j-1) j
         t2 <- getTime Realtime

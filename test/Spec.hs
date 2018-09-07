@@ -27,7 +27,7 @@ import           Test.Hspec.Contrib.HUnit       ( fromHUnitTest )
 import           Test.HUnit                     ( Test(..)
                                                 , (@?=)
                                                 )
-import           Enecuum.Research.Dsl.Graph
+import           Enecuum.Research.Dsl.HashGraph
 
 main :: IO ()
 main = hspec $ do
@@ -55,20 +55,8 @@ main = hspec $ do
   describe "CLI and RPC HUnit tests" $ 
     fromHUnitTest cliRPCTestSuite
 
-  describe "Graph eDSL tests:" $ fromHUnitTest $ TestList
-    [ TestLabel "Addition of new node / geting nod by content" testNewNode
-    , TestLabel "Geting node by hash"                          testGetNodeByHash
-    , TestLabel "Geting node by ref"                           testGetNodeByRef
-    , TestLabel "Deleting of node by content" testDeleteNodeByContent
-    , TestLabel "Deleting of node by hash" testDeleteNodeByHash
-    , TestLabel "Deleting of node by ref" testDeleteNodeByRef
-    , TestLabel "Addition of new Link by content"              testNewLinkByContent
-    , TestLabel "Addition of new Link by hash" testNewLinkByHash
-    , TestLabel "Addition of new Link by ref" testNewLinkByRef
-    , TestLabel "Deleting of Link by content" testDeleteLinkByContent
-    , TestLabel "Deleting of Link by hash" testDeleteLinkByHash
-    , TestLabel "Deleting of Link by ref" testDeleteLinkByRef
-    ]
+  describe "HashGraph eDSL tests:" $
+    fromHUnitTest hashGraphTestSuit
 
 retrieveNTransactionsForPublickey :: IO (Maybe TransactionInfo)
 retrieveNTransactionsForPublickey = return Nothing
