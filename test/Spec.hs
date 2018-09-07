@@ -1,32 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports    #-}
 
 import           Data.Aeson                    as A
                                                 ( decode
                                                 , encode
                                                 )
 import qualified Data.ByteString.Char8         as BC
-import           Data.Either                    ( fromRight )
 import           Data.Maybe                     ( fromJust )
 import qualified Data.Serialize                as S
-                                                ( decode
-                                                , encode
-                                                )
 import           Enecuum.Legacy.Service.Transaction.Common
                                                 ( decodeThis
                                                 , genNTx
                                                 )
-import           Enecuum.Legacy.Service.Transaction.Generate
-                                                ( genPoAMicroblock
-                                                , generateMicroblocksAndKeyBlocks
-                                                )
+import           Enecuum.Legacy.Service.Transaction.Generate ( genPoAMicroblock) 
 import           Enecuum.Legacy.Service.Transaction.Storage
                                                 ( genesisKeyBlock
                                                 , getKeyBlockHash
                                                 )
-import           Enecuum.Legacy.Service.Types   ( Microblock
-                                                , TransactionInfo(..)
-                                                )
+import           Enecuum.Legacy.Service.Types   ( TransactionInfo(..) )
 import           Test.Hspec                     ( describe
                                                 , hspec
                                                 , it
@@ -40,28 +30,28 @@ import           Enecuum.Dsl.Graph
 
 main :: IO ()
 main = hspec $ do
-  describe "Basic DB Functionality" $ do
+  describe "Basic DB Functionality" $ 
     it "should retrieve n transactions for publickey"
-      $              do
+      $              
                        retrieveNTransactionsForPublickey
-      `shouldReturn` (Nothing)
+      `shouldReturn` Nothing
 
-  describe "Database HUnit tests" $ do
+  describe "Database HUnit tests" $ 
     fromHUnitTest databaseTestSuite
 
-  describe "Parsing HUnit tests" $ do
+  describe "Parsing HUnit tests" $ 
     fromHUnitTest parsingTestSuite
 
-  describe "Business Logic HUnit tests" $ do
+  describe "Business Logic HUnit tests" $
     fromHUnitTest businessLogicTestSuite
 
-  describe "Network HUnit tests" $ do
+  describe "Network HUnit tests" $ 
     fromHUnitTest networkTestSuite
 
-  describe "Integration HUnit tests" $ do
+  describe "Integration HUnit tests" $ 
     fromHUnitTest integrationTestSuite
 
-  describe "CLI and RPC HUnit tests" $ do
+  describe "CLI and RPC HUnit tests" $ 
     fromHUnitTest cliRPCTestSuite
 
   describe "Graph eDSL tests:" $ fromHUnitTest $ TestList
@@ -115,7 +105,7 @@ parseMicroblockBin = TestCase $ do
 
 
 checkKeyBlockInfoHash :: Test
-checkKeyBlockInfoHash = TestCase $ do
+checkKeyBlockInfoHash = TestCase $ 
   getKeyBlockHash genesisKeyBlock
     @?= "4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY="
 
