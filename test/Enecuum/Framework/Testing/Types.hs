@@ -9,27 +9,40 @@ import qualified Data.Map as Map
 import qualified Enecuum.Domain                as D
 import           Enecuum.Core.Testing.Runtime.Types
 
-data ControlRequest = ControlRpcRequest D.RpcRequest
-data ControlResponse = ControlRpcResponse D.RpcResponse
+data RpcServerControlRequest = RpcServerControlRpcRequest D.RpcRequest
+data RpcServerControlResponse
+  = RpcServerControlRpcResponse D.RpcResponse
+  | RpcServerControlErrorResponse Text
 
-data NodeRpcServerControl = NodeRpcServerControl
-  { _request  :: TMVar ControlRequest
-  , _response :: TMVar ControlResponse
+data NetworkControlRequest = NetworkControlRelayRpcRequest
+data NetworkControlResponse = NetworkControlRpcResponse
+
+data NetworkControl = NetworkControl
+  { _request  :: TMVar NetworkControlRequest
+  , _response :: TMVar NetworkControlResponse
   }
 
-data NodeRpcServerHandle = NodeRpcServerHandle
+data RpcServerControl = RpcServerControl
+  { _request  :: TMVar RpcServerControlRequest
+  , _response :: TMVar RpcServerControlResponse
+  }
+
+data RpcServerHandle = RpcServerHandle
   { _threadId :: ThreadId
-  , _control  :: NodeRpcServerControl
+  , _control  :: RpcServerControl
   }
 
 data NodeRuntime = NodeRuntime
-  { _loggerRuntime :: LoggerRuntime
-  , _address       :: D.NodeAddress
-  , _tag           :: TVar D.NodeTag
-  , _rpcServer     :: TMVar NodeRpcServerHandle
+  { _loggerRuntime  :: LoggerRuntime
+  , _networkControl :: NetworkControl
+  , _address        :: D.NodeAddress
+  , _tag            :: TVar D.NodeTag
+  , _rpcServer      :: TMVar RpcServerHandle
   }
 
 data TestRuntime = TestRuntime
-  { _loggerRuntime :: LoggerRuntime
-  , _nodes         :: TMVar (Map.Map D.NodeAddress NodeRuntime)
+  { _loggerRuntime   :: LoggerRuntime
+  , _networkWorkerId :: ThreadId
+  , _networkControl  :: NetworkControl
+  , _nodes           :: TMVar (Map.Map D.NodeAddress NodeRuntime)
   }

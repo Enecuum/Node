@@ -6,13 +6,15 @@ module Enecuum.Framework.Testing.Lens where
 import Enecuum.Prelude (makeFieldsNoPrefix)
 
 import Enecuum.Framework.Testing.Types
-  ( NodeRpcServerControl
-  , NodeRpcServerHandle
+  ( NetworkControl
+  , RpcServerControl
+  , RpcServerHandle
   , NodeRuntime
   , TestRuntime
   )
 
-makeFieldsNoPrefix ''NodeRpcServerControl
-makeFieldsNoPrefix ''NodeRpcServerHandle
+makeFieldsNoPrefix ''NetworkControl
+makeFieldsNoPrefix ''RpcServerControl
+makeFieldsNoPrefix ''RpcServerHandle
 makeFieldsNoPrefix ''NodeRuntime
 makeFieldsNoPrefix ''TestRuntime

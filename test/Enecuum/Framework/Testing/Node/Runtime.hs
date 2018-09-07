@@ -21,12 +21,13 @@ import           Enecuum.Framework.Testing.Node.Interpreters.NodeDefinition
 
 createEmptyNodeRuntime
   :: LoggerRuntime
+  -> NetworkControl
   -> D.NodeAddress
   -> IO NodeRuntime
-createEmptyNodeRuntime loggerRt addr = do
+createEmptyNodeRuntime loggerRt networkControl addr = do
   tag   <- newTVarIO ("" :: Text)
   handle <- newEmptyTMVarIO
-  pure $ NodeRuntime loggerRt addr tag handle
+  pure $ NodeRuntime loggerRt networkControl addr tag handle
 
 startNode
   :: TestRuntime
@@ -34,7 +35,7 @@ startNode
   -> Eff '[L.NodeDefinitionL, L.LoggerL, SIO, Exc SomeException] ()
   -> IO NodeRuntime
 startNode testRt nodeAddr scenario = do
-  nodeRt <- createEmptyNodeRuntime (testRt ^. RLens.loggerRuntime) nodeAddr
+  nodeRt <- createEmptyNodeRuntime (testRt ^. RLens.loggerRuntime) (testRt ^. RLens.networkControl) nodeAddr
   runSafeIO
     $ runLoggerL (testRt ^. RLens.loggerRuntime)
     $ runNodeDefinitionL nodeRt scenario

@@ -21,6 +21,7 @@ import Enecuum.Framework.Testing.Types
 import qualified Enecuum.Core.Testing.Runtime.Lens as RLens
 import qualified Enecuum.Framework.Testing.Lens as RLens
 
+-- TODO: shut down all workers
 spec :: Spec
 spec = describe "Master Node test" $
   it "Master Node test" $ do
@@ -36,10 +37,7 @@ spec = describe "Master Node test" $
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
     msgs <- readTVarIO tMsgs
     msgs `shouldBe`
-      [ "CloseConnection conn"
-      , "SendRequest conn req"
-      , "OpenConnection cfg"
-      , "Serving handlersF"
+      [ "Serving handlersF"
       , "CloseConnection conn"
       , "SendRequest conn req"
       , "OpenConnection cfg"
@@ -51,5 +49,5 @@ spec = describe "Master Node test" $
       , "Node tag: masterNode"
       , "Serving handlersF"
       , "Initialization"
-      , "Node tag: bootNode"
+      , "Node tag: bootNode" 
       ]

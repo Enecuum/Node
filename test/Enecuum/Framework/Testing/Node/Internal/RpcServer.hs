@@ -16,34 +16,32 @@ import qualified Enecuum.Framework.Testing.Lens as RLens
 
 import           Enecuum.Framework.Testing.Node.Interpreters.NodeModel
 
+-- TODO: consider to use forever.
 startNodeRpcServer
   :: NodeRuntime
   -> L.HandlersF
   -> IO ()
 startNodeRpcServer nodeRt handlersF = do
-  control <- NodeRpcServerControl <$> newEmptyTMVarIO <*> newEmptyTMVarIO
+  control <- RpcServerControl <$> newEmptyTMVarIO <*> newEmptyTMVarIO
   tId <- forkIO $ go 0 control
 
-  let handle = NodeRpcServerHandle tId control
+  let handle = RpcServerHandle tId control
   atomically $ putTMVar (nodeRt ^. RLens.rpcServer) handle
 
   where
-    go :: Integer -> NodeRpcServerControl -> IO ()
+    go :: Integer -> RpcServerControl -> IO ()
     go iteration control = act iteration control >> go (iteration + 1) control
 
-    act :: Integer -> NodeRpcServerControl -> IO ()
+    act :: Integer -> RpcServerControl -> IO ()
     act _ control = do
       req <- atomically $ takeTMVar $ control ^. RLens.request
       case req of
-        ControlRpcRequest (D.RpcRequest rawDataIn) -> do
+        RpcServerControlRpcRequest (D.RpcRequest rawDataIn) -> do
           let (handler, _) = handlersF (pure Nothing, rawDataIn)
           mbResult <- runSafeIO
               $ runLoggerL (nodeRt ^. RLens.loggerRuntime)
               $ runNodeModel nodeRt handler
-          case mbResult of
-            Nothing -> atomically $ putTMVar (control ^. RLens.response)
-                                  $ ControlRpcResponse
-                                  $ D.RpcResponse "errror"
-            Just rawDataOut -> atomically $ putTMVar (control ^. RLens.response)
-                                  $ ControlRpcResponse
-                                  $ D.RpcResponse rawDataOut
+          let resp = case mbResult of
+                Nothing         -> RpcServerControlErrorResponse $ "Method is not supported: " +|| rawDataIn ||+ ""
+                Just rawDataOut -> RpcServerControlRpcResponse   $ D.RpcResponse rawDataOut
+          atomically $ putTMVar (control ^. RLens.response) resp
