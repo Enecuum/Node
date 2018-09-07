@@ -132,7 +132,8 @@ runGraph aGraph (E u q) = case extract u of
                         (toHash $ aNode^.content)
                         (TNodeRef aTNode)
                         (TNodeContent $ aNode^.content)
-                        (TNodeRef <$> aNode^.links) 
+                        (TNodeRef <$> aNode^.links)
+                        (TNodeRef <$> aNode^.rLinks) 
                 Nothing -> return Nothing
                 
         runGraph aGraph (qApp q aRes)

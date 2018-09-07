@@ -64,7 +64,7 @@ main = hspec $ do
   describe "CLI and RPC HUnit tests" $ do
     fromHUnitTest cliRPCTestSuite
 
-  describe "Graph eDSL test:" $ fromHUnitTest $ TestList
+  describe "Graph eDSL tests:" $ fromHUnitTest $ TestList
     [ TestLabel "Addition of new node / geting nod by content" testNewNode
     , TestLabel "Geting node by hash"                          testGetNodeByHash
     , TestLabel "Geting node by ref"                           testGetNodeByRef

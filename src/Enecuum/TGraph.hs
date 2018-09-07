@@ -6,7 +6,6 @@ module Enecuum.TGraph where
 
 import           Universum
 import qualified Data.Map                      as M
-import qualified Data.List                     as L
 
 import           Control.Concurrent.STM.TVar
 
@@ -17,7 +16,7 @@ type TGraph c = Map StringHash (TVar (TNode c))
 
 data TNode c = TNode {
     _links      :: TGraph c,
-    _rLinks     :: [TVar (TNode c)],
+    _rLinks     :: TGraph c,
     _content    :: c
   }
 makeLenses ''TNode
@@ -31,7 +30,7 @@ newNode aIndex aContent = do
     let aNodeHash = toHash aContent
     aRes <- findNode aIndex aNodeHash
     when (isNothing aRes) $ do
-        aTNode <- newTVar $ TNode mempty [] aContent
+        aTNode <- newTVar $ TNode mempty mempty aContent
         modifyTVar aIndex $ M.insert aNodeHash aTNode
     return $ isNothing aRes
 
@@ -91,18 +90,20 @@ newTLink n1 n2 = do
     aNode1 <- readTVar n1
     aNode2 <- readTVar n2
     let hasOfN2 = toHash (aNode2 ^. content)
+        hasOfN1 = toHash (aNode1 ^. content)
         aOk     = M.notMember hasOfN2 (aNode1 ^. links)
     when aOk $ do
         modifyTVar n1 $ links %~ M.insert hasOfN2 n2
-        modifyTVar n2 (rLinks %~ (n1 :))
+        modifyTVar n2 (rLinks %~ M.insert hasOfN1 n1)
     return aOk
 
 deleteTLink n1 n2 = do
     aNode1 <- readTVar n1
     aNode2 <- readTVar n2
     let hasOfN2 = toHash (aNode2 ^. content)
+        hasOfN1 = toHash (aNode1 ^. content)
         aOk     = M.member hasOfN2 (aNode1 ^. links)
     when aOk $ do
         modifyTVar n1 $ links %~ M.delete hasOfN2
-        modifyTVar n2 (rLinks %~ L.delete n1)
+        modifyTVar n2 (rLinks %~ M.delete hasOfN1)
     return aOk

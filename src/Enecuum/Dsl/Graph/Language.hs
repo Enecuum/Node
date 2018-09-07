@@ -38,7 +38,8 @@ data DslNode ref content = Node {
     _nodeHash    :: StringHash,
     _nodeRef     :: NodeRef (DslNode ref content),
     _nodeContent :: NodeContent (DslNode ref content),
-    _nodeLinks   :: Map StringHash (NodeRef (DslNode ref content))
+    _nodeLinks   :: Map StringHash (NodeRef (DslNode ref content)),
+    _noderLinks  :: Map StringHash (NodeRef (DslNode ref content))
   }
 
 
