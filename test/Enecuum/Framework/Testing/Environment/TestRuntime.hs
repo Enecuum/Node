@@ -39,6 +39,16 @@ findNode testRt addr = do
   nodes <- atomically $ readTMVar $ testRt ^. RLens.nodes
   pure $ Map.lookup addr nodes
 
+putControlRequest :: NodeRuntime -> ControlRequest -> STM ()
+putControlRequest nodeRt controlReq = do
+  rpcServer <- readTMVar $ nodeRt ^. RLens.rpcServer
+  putTMVar (rpcServer ^. RLens.control . RLens.request) controlReq
+
+takeControlResponse :: NodeRuntime -> STM ControlResponse
+takeControlResponse nodeRt = do
+  rpcServer <- readTMVar $ nodeRt ^. RLens.rpcServer
+  takeTMVar (rpcServer ^. RLens.control . RLens.response)
+
 sendRequest
   :: D.RpcMethod () req resp
   => TestRuntime
@@ -47,9 +57,10 @@ sendRequest
   -> IO (Either Text resp)
 sendRequest testRt toAddr req = findNode testRt toAddr >>= \case
   Nothing -> pure $ Left $ "Destination node is not registered: " +| toAddr |+ ""
-  Just _ -> error "ccc"
-  -- -- This probably should be done using NodeRuntime mechanisms, not language.
-  -- Just nodeRt -> runSafeIO
-  --     $ runLoggerL (testRt ^. RLens.loggerRuntime)
-  --     $ runNodeModel nodeRt
-  --     $ L.withConnection (D.ConnectionConfig $ nodeRt ^. RLens.address) req
+  Just nodeRt -> do
+    -- TODO: check whether this should be a single transaction (probably not)
+    atomically $ putControlRequest nodeRt $ ControlRpcRequest $ D.toRpcRequest () req
+    controlResp <- atomically $ takeControlResponse nodeRt
+    case controlResp of
+      ControlRpcResponse rpcResp -> pure $ D.fromRpcResponse () rpcResp
+      _ -> pure $ Left "Unknown type of ControlRpcResponse got."

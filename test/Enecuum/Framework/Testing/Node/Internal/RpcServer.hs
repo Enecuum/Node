@@ -9,11 +9,12 @@ import qualified Enecuum.Language                   as L
 import qualified Enecuum.Framework.Lens             as Lens
 
 import           Enecuum.Core.Testing.Runtime.Types
+import           Enecuum.Core.Testing.Runtime.Logger.Impl
 
 import           Enecuum.Framework.Testing.Types
 import qualified Enecuum.Framework.Testing.Lens as RLens
 
-import           Enecuum.Core.Testing.Runtime.Logger.Impl
+import           Enecuum.Framework.Testing.Node.Interpreters.NodeModel
 
 startNodeRpcServer
   :: NodeRuntime
@@ -34,8 +35,15 @@ startNodeRpcServer nodeRt handlersF = do
     act _ control = do
       req <- atomically $ takeTMVar $ control ^. RLens.request
       case req of
-        RpcRequest rawData -> do
-          -- let (handleProcessor, _) = handlersF (pure (), Just rawData)
-          -- handle request here
-          atomically $ putTMVar (control ^. RLens.response) Ack
-          error "RpcRequest"
+        ControlRpcRequest (D.RpcRequest rawDataIn) -> do
+          let (handler, _) = handlersF (pure Nothing, rawDataIn)
+          mbResult <- runSafeIO
+              $ runLoggerL (nodeRt ^. RLens.loggerRuntime)
+              $ runNodeModel nodeRt handler
+          case mbResult of
+            Nothing -> atomically $ putTMVar (control ^. RLens.response)
+                                  $ ControlRpcResponse
+                                  $ D.RpcResponse "errror"
+            Just rawDataOut -> atomically $ putTMVar (control ^. RLens.response)
+                                  $ ControlRpcResponse
+                                  $ D.RpcResponse rawDataOut

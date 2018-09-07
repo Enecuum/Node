@@ -1,3 +1,5 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Enecuum.Framework.Testing.Types where
 
 import Enecuum.Prelude
@@ -7,8 +9,8 @@ import qualified Data.Map as Map
 import qualified Enecuum.Domain                as D
 import           Enecuum.Core.Testing.Runtime.Types
 
-data ControlRequest = RpcRequest D.RawData
-data ControlResponse = Ack
+data ControlRequest = ControlRpcRequest D.RpcRequest
+data ControlResponse = ControlRpcResponse D.RpcResponse
 
 data NodeRpcServerControl = NodeRpcServerControl
   { _request  :: TMVar ControlRequest
@@ -21,9 +23,10 @@ data NodeRpcServerHandle = NodeRpcServerHandle
   }
 
 data NodeRuntime = NodeRuntime
-  { _address   :: D.NodeAddress
-  , _tag       :: TVar D.NodeTag
-  , _rpcServer :: TMVar NodeRpcServerHandle
+  { _loggerRuntime :: LoggerRuntime
+  , _address       :: D.NodeAddress
+  , _tag           :: TVar D.NodeTag
+  , _rpcServer     :: TMVar NodeRpcServerHandle
   }
 
 data TestRuntime = TestRuntime

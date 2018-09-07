@@ -17,7 +17,6 @@ import           Enecuum.Framework.Testing.Node.Interpreters.NetworkModel
 import           Enecuum.Framework.Testing.Node.Interpreters.NodeModel
 import           Enecuum.Framework.Testing.Node.Internal.RpcServer
 
-
 interpretNodeDefinitionL
   :: NodeRuntime
   -> L.NodeDefinitionL a

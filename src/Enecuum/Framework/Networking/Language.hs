@@ -31,6 +31,4 @@ withConnection cfg req = openConnection cfg >>= \case
   Just conn -> do
     rpcResponse <- sendRequest conn $ D.toRpcRequest () req
     closeConnection conn
-    case D.fromRpcResponse () rpcResponse of
-      Nothing -> pure $ Left "Unknown RPC response."
-      Just resp -> pure $ Right resp
+    pure $ D.fromRpcResponse () rpcResponse

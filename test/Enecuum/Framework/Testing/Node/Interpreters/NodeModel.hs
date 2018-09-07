@@ -3,7 +3,6 @@ module Enecuum.Framework.Testing.Node.Interpreters.NodeModel where
 import Enecuum.Prelude
 
 import           Eff                                ( Eff, Member, handleRelay, runM, send, raise, replaceRelay )
-import           Eff.SafeIO                         ( runSafeIO )
 
 import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L

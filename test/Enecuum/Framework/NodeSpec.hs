@@ -31,7 +31,7 @@ spec = describe "Master Node test" $
     masterNodeRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNode
 
     eResponse <- sendRequest runtime bootNodeAddr $ HelloRequest1 masterNode1Addr
-    -- eResponse `shouldBe` (Right $ HelloResponse1 "200 OK")
+    eResponse `shouldBe` (Right $ HelloResponse1 "Hello, dear. master node 1 addr")
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
     msgs <- readTVarIO tMsgs

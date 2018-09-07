@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Enecuum.Framework.TestData.Nodes where
 
@@ -34,7 +35,7 @@ newtype GetHashIDResponse = GetHashIDResponse Text
 
 instance D.RpcMethod () GetHashIDRequest GetHashIDResponse where
   toRpcRequest _ = D.RpcRequest . A.encode
-  fromRpcResponse _ _ = Just $ GetHashIDResponse "1"
+  fromRpcResponse _ _ = Right $ GetHashIDResponse "1"
 
 newtype HelloRequest1  = HelloRequest1 { helloMessage :: Text }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -43,10 +44,18 @@ newtype HelloResponse1 = HelloResponse1 { ackMessage :: Text }
 
 instance D.RpcMethod () HelloRequest1 HelloResponse1 where
   toRpcRequest _ req = D.RpcRequest $ A.encode req
-  fromRpcResponse _ (D.RpcResponse raw) = A.decode raw
+  fromRpcResponse _ (D.RpcResponse raw)
+    = maybe (Left $ "No parse of hello1 resp" +|| raw ||+ "") Right $ A.decode raw
 
-data HelloRequest2 = HelloRequest2 Text
+newtype HelloRequest2  = HelloRequest2 { helloMessage :: Text }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
+newtype HelloResponse2 = HelloResponse2 { ackMessage :: Text }
+  deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
+
+instance D.RpcMethod () HelloRequest2 HelloResponse2 where
+  toRpcRequest _ req = D.RpcRequest $ A.encode req
+  fromRpcResponse _ (D.RpcResponse raw)
+    = maybe (Left $ "No parse of hello2 resp" +|| raw ||+ "") Right $ A.decode raw
 
 data AcceptConnectionRequest = AcceptConnectionRequest
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -58,10 +67,10 @@ simpleBootNodeDiscovery = do
     Nothing   -> pure bootNodeAddr  -- Temp
     Just addr -> pure addr
 
-acceptHello1 :: HelloRequest1 -> Eff L.NodeModel ()
-acceptHello1 (HelloRequest1 msg) = error $ "Accepting HelloRequest1: " +|| msg ||+ ""
+acceptHello1 :: HelloRequest1 -> Eff L.NodeModel HelloResponse1
+acceptHello1 (HelloRequest1 msg) = pure $ HelloResponse1 $ "Hello, dear. " +| msg |+ ""
 
-acceptHello2 :: HelloRequest2 -> Eff L.NodeModel ()
+acceptHello2 :: HelloRequest2 -> Eff L.NodeModel HelloResponse2
 acceptHello2 (HelloRequest2 msg) = error $ "Accepting HelloRequest2: " +|| msg ||+ ""
 
 bootNode :: (Member L.NodeDefinitionL effs) => Eff effs ()
@@ -85,6 +94,6 @@ masterNode = do
   _         <- L.nodeTag masterNodeTag
   _         <- D.withSuccess $ L.initialization masterNodeInitialization
   _         <- L.serving
-                  $ L.serve @HelloRequest1 acceptHello1
-                  . L.serve @HelloRequest2 acceptHello2
+                  $ L.serve @HelloRequest1 @HelloResponse1 acceptHello1
+                  . L.serve @HelloRequest2 @HelloResponse2 acceptHello2
   pure ()
