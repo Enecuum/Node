@@ -71,7 +71,12 @@ main = hspec $ do
     , TestLabel "Deleting of node by content" testDeleteNodeByContent
     , TestLabel "Deleting of node by hash" testDeleteNodeByHash
     , TestLabel "Deleting of node by ref" testDeleteNodeByRef
-    , TestLabel "Addition of new Link by content"              testNewLink
+    , TestLabel "Addition of new Link by content"              testNewLinkByContent
+    , TestLabel "Addition of new Link by hash" testNewLinkByHash
+    , TestLabel "Addition of new Link by ref" testNewLinkByRef
+    , TestLabel "Deleting of Link by content" testDeleteLinkByContent
+    , TestLabel "Deleting of Link by hash" testDeleteLinkByHash
+    , TestLabel "Deleting of Link by ref" testDeleteLinkByRef
     ]
 
 retrieveNTransactionsForPublickey :: IO (Maybe TransactionInfo)

@@ -18,10 +18,8 @@ testNewNode = TestCase $ do
     aNewGraph :: TVar (G.TGraph Int) <- initGraph
     aOk <- runGraph aNewGraph $ do
         newNode 123
-        x <- getNode (123 :: Int)
-        return $ case x of
-            Just (Node _ _ c _) -> 123 == fromContent c
-            Nothing     -> False
+        Just (Node _ _ c _) <- getNode (123 :: Int)
+        return $ 123 == fromContent c
     assertBool "" aOk
 
 
@@ -30,10 +28,8 @@ testGetNodeByHash = TestCase $ do
     aNewGraph :: TVar (G.TGraph Int) <- initGraph
     aOk <- runGraph aNewGraph $ do
         newNode 123
-        x <- getNode (toHash (123 :: Int))
-        return $ case x of
-            Just (Node _ _ c _) -> 123 == fromContent c
-            Nothing     -> False
+        Just (Node _ _ c _) <- getNode (toHash (123 :: Int))
+        return $ 123 == fromContent c
     assertBool "" aOk
 
 
@@ -42,12 +38,9 @@ testGetNodeByRef = TestCase $ do
     aNewGraph :: TVar (G.TGraph Int) <- initGraph
     aOk <- runGraph aNewGraph $ do
         newNode 123
-        x <- getNode (toHash (123 :: Int))
-        case x of
-            Just (Node _ ref _ _) -> do
-                Just (Node _ _ c _) <- getNode ref
-                return $ 123 == fromContent c
-            Nothing     -> return False
+        Just (Node _ ref _ _) <- getNode (toHash (123 :: Int))
+        Just (Node _ _ c _)   <- getNode ref
+        return $ 123 == fromContent c
     assertBool "" aOk
 
 
@@ -77,28 +70,88 @@ testDeleteNodeByRef = TestCase $ do
     aNewGraph :: TVar (G.TGraph Int) <- initGraph
     aOk <- runGraph aNewGraph $ do
         newNode (123 :: Int)
-        aNode  <- getNode (toHash @Int 123)
-        case aNode of
-            (Just (Node _ aRef _ _)) -> do
-                deleteNode aRef
-                isNothing <$> getNode (123 :: Int)
-            _ -> return False
+        Just (Node _ aRef _ _) <- getNode (toHash @Int 123)
+        deleteNode aRef
+        isNothing <$> getNode (123 :: Int)
     assertBool "" aOk
 
 
-testNewLink :: Test
-testNewLink = TestCase $ do
+testNewLinkByContent :: Test
+testNewLinkByContent = TestCase $ do
     aNewGraph :: TVar (G.TGraph Int) <- initGraph
     aOk <- runGraph aNewGraph $ do
-        newNode (123 :: Int)
-        newNode (125 :: Int)
-        newLink (toHash (123 :: Int)) (125 :: Int)
-        x <- getNode (toHash @Int 123)
-        case x of
-            Just (Node _ _ _ l) -> return $ M.member (toHash @Int 125) l
-            Nothing     -> return False
+        newNode 123
+        newNode 125
+        newLink (123 :: Int) (125 :: Int)
+        Just (Node _ _ _ l) <- getNode (toHash @Int 123)
+        return $ M.member (toHash @Int 125) l
     assertBool "" aOk
 
+
+testNewLinkByHash :: Test
+testNewLinkByHash = TestCase $ do
+    aNewGraph :: TVar (G.TGraph Int) <- initGraph
+    aOk <- runGraph aNewGraph $ do
+        newNode 123
+        newNode 125
+        newLink (toHash @Int 123) (toHash @Int 125)
+        Just (Node _ _ _ l) <- getNode (toHash @Int 123)
+        return $ M.member (toHash @Int 125) l
+    assertBool "" aOk
+
+
+testNewLinkByRef :: Test
+testNewLinkByRef = TestCase $ do
+    aNewGraph :: TVar (G.TGraph Int) <- initGraph
+    aOk <- runGraph aNewGraph $ do
+        newNode 123
+        newNode 125
+        Just (Node _ r1 _ _) <- getNode (toHash @Int 123)
+        Just (Node _ r2 _ _) <- getNode (toHash @Int 125)
+        newLink r1 r2
+        Just (Node _ _ _ l) <- getNode (toHash @Int 123)
+        return $ M.member (toHash @Int 125) l
+    assertBool "" aOk
+
+
 --
-testDeleteLink :: Test 
-testDeleteLink = undefined
+testDeleteLinkByContent :: Test 
+testDeleteLinkByContent = TestCase $ do
+    aNewGraph :: TVar (G.TGraph Int) <- initGraph
+    aOk <- runGraph aNewGraph $ do
+        newNode 123
+        newNode 125
+        newLink (123 :: Int) (125 :: Int)
+        deleteLink (123 :: Int) (125 :: Int)
+        Just (Node _ _ _ l) <- getNode (toHash @Int 123)
+        return $ M.notMember (toHash @Int 125) l
+    assertBool "" aOk
+
+
+
+testDeleteLinkByHash :: Test 
+testDeleteLinkByHash = TestCase $ do
+    aNewGraph :: TVar (G.TGraph Int) <- initGraph
+    aOk <- runGraph aNewGraph $ do
+        newNode 123
+        newNode 125
+        newLink (123 :: Int) (125 :: Int)
+        deleteLink (toHash @Int 123) (toHash @Int 125)
+        Just (Node _ _ _ l) <- getNode (toHash @Int 123)
+        return $ M.notMember (toHash @Int 125) l
+    assertBool "" aOk
+
+
+testDeleteLinkByRef :: Test 
+testDeleteLinkByRef = TestCase $ do
+    aNewGraph :: TVar (G.TGraph Int) <- initGraph
+    aOk <- runGraph aNewGraph $ do
+        newNode 123
+        newNode 125
+        newLink (123 :: Int) (125 :: Int)
+        Just (Node _ r1 _ _) <- getNode (toHash @Int 123)
+        Just (Node _ r2 _ _) <- getNode (toHash @Int 125)
+        deleteLink r1 r2
+        Just (Node _ _ _ l) <- getNode (toHash @Int 123)
+        return $ M.notMember (toHash @Int 125) l
+    assertBool "" aOk
