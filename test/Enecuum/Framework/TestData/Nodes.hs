@@ -96,10 +96,11 @@ masterNodeInitialization = do
   pure $ eHashID >>= Right . D.NodeID
 
 -- TODO: handle the error correctly.
-masterNode :: (Member L.NodeDefinitionL effs) => Eff effs ()
+masterNode :: Eff L.NodeDefinitionModel ()
 masterNode = do
   L.nodeTag masterNodeTag
-  void $ D.withSuccess $ L.initialization masterNodeInitialization
+  nodeId <- D.withSuccess $ L.initialization masterNodeInitialization
+  L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
   L.serving
     $ L.serve @HelloRequest1 @HelloResponse1 acceptHello1
     . L.serve @HelloRequest2 @HelloResponse2 acceptHello2

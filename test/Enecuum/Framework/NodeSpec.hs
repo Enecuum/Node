@@ -38,6 +38,7 @@ spec = describe "Master Node test" $
     msgs <- readTVarIO tMsgs
     msgs `shouldBe`
       [ "Serving handlersF"
+      , "Master node got id: NodeID \"1\"."
       , "CloseConnection conn"
       , "SendRequest conn req"
       , "OpenConnection cfg"
@@ -49,5 +50,5 @@ spec = describe "Master Node test" $
       , "Node tag: masterNode"
       , "Serving handlersF"
       , "Initialization"
-      , "Node tag: bootNode" 
+      , "Node tag: bootNode"
       ]
