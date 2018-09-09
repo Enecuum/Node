@@ -22,27 +22,3 @@ import           Prelude
 verifyEncodeble :: Serialize msg => PublicKey -> Signature -> msg -> Bool
 verifyEncodeble aPublicKey aSignature aMsg = verify SHA3_256
     aPublicKey aSignature (encode aMsg)
-
-signEncodeble :: (MonadRandom m, Serialize msg) =>
-    PrivateKey
-    -> msg
-    -> m Signature
-signEncodeble aPrivateKey aMsg = sign aPrivateKey SHA3_256 (encode aMsg)
-
-genKeyPair :: MonadRandom m => Curve -> m (PrivateNumber, PublicPoint)
-genKeyPair cur = do
-    aPrivateKey <- generatePrivate cur
-    pure (aPrivateKey, calculatePublic cur aPrivateKey)
-
-
-encrypt :: StringKey -> ByteString -> CryptoFailable ByteString
-encrypt (StringKey secretKey) aMsg = do
-    cipher :: AES256 <- cipherInit secretKey
-    return $ ctrCombine cipher nullIV aMsg
-
-
-cryptoHash :: Serialize a => a -> ByteString
-cryptoHash = pack . unpack . fastHash
-
-fastHash :: Serialize a => a -> Digest SHA3_512
-fastHash bs = hash $ encode bs :: Digest SHA3_512

@@ -5,11 +5,6 @@
 module Enecuum.Legacy.Service.Transaction.Generate where
 
 import           Control.Monad                                      (replicateM)
--- import           Control.Monad.State                                (StateT,
---                                                                      evalStateT,
---                                                                      get, lift,
---                                                                      put)
-import           Enecuum.Legacy.Service.Transaction.Storage         (getKeyBlockHash)
 import           Enecuum.Legacy.Service.Transaction.TransactionsDAG (genNTx)
 import           Enecuum.Legacy.Service.Types                       (HashOfKeyBlock,
                                                                      KeyBlockInfoPoW (..),
@@ -19,6 +14,7 @@ import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair  (KeyPair (..
                                                                      getSignature)
 import           Enecuum.Prelude
 
+import           Enecuum.Legacy.Refact.Crypto                        ( calculateKeyBlockHash )
 
 quantityOfTransactionInMicroblock :: Int
 quantityOfTransactionInMicroblock = 10
@@ -67,7 +63,7 @@ generateMicroblocksAndKeyBlocks = do
          _nonce = aNonce,
          _solver = aSolver,
          _type = aType}
-       currentHash = getKeyBlockHash key
+       currentHash = calculateKeyBlockHash key
    put (aNumber+1, currentHash)
 
   -- generate Microblocks for KeyBlock

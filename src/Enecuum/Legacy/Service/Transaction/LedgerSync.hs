@@ -25,6 +25,7 @@ import           Enecuum.Legacy.Service.Transaction.Transformation
 import           Enecuum.Legacy.Service.Types
 import           Prelude
 
+import           Enecuum.Legacy.Refact.Crypto ( calculateKeyBlockHash )
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
 myTail c@(Common _ i) = do
@@ -80,7 +81,7 @@ isValidKeyBlockSprout c@(Common _ i) okv = do
     -- check that all chain is linked
     let kBlocks = map (  (\(KeyBlockContent k _) -> k) . snd) okv
         fun :: KeyBlockInfoPoW -> KeyBlockInfoPoW -> Bool
-        fun p n = getKeyBlockHash p == _prev_hash (n :: KeyBlockInfoPoW)
+        fun p n = calculateKeyBlockHash p == _prev_hash (n :: KeyBlockInfoPoW)
         isGood index = fun (kBlocks !! index) (kBlocks !! (index+1))
         isChainReallyLinked = map (\(_,index) -> isGood index) $ zip kBlocks [0..]
         isChainLinked = map (const True) kBlocks
@@ -95,7 +96,7 @@ setKeyBlockSproutData :: Common -> (InChan SyncEvent, OutChan SyncEvent) -> [Key
 setKeyBlockSproutData c aSyncChan kBlocks = do
   -- bdLog i $ show kv
   let fun1 k = addKeyBlockToDB2 c k aSyncChan
-      fun2 k = setChain c (_number (k :: KeyBlockInfoPoW)) (getKeyBlockHash k) Sprout
+      fun2 k = setChain c (_number (k :: KeyBlockInfoPoW)) (calculateKeyBlockHash k) Sprout
   mapM_ fun1 kBlocks
   mapM_ fun2 kBlocks
 

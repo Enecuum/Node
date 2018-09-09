@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports    #-}
 
-module Enecuum.Legacy.Spec where
+module Enecuum.Legacy.CryptoSpec where
 
 import           Data.Aeson                    as A
                                                           ( decode
@@ -22,10 +22,6 @@ import           Enecuum.Legacy.Service.Transaction.Generate
                                                           ( genPoAMicroblock
                                                           , generateMicroblocksAndKeyBlocks
                                                           )
-import           Enecuum.Legacy.Service.Transaction.Storage
-                                                          ( genesisKeyBlock
-                                                          , getKeyBlockHash
-                                                          )
 import           Enecuum.Legacy.Service.Types             ( Microblock
                                                           , TransactionInfo(..)
                                                           )
@@ -35,13 +31,17 @@ import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
 import           Test.HUnit                               ( Test(..)
                                                           , (@?=)
                                                           )
+
+import           Enecuum.Legacy.Refact.Crypto ( calculateKeyBlockHash )
+import           Enecuum.Legacy.Refact.Assets ( genesisKeyBlock )
+
 import           Prelude
 
 spec :: Spec
 spec = do
-  describe "Service tests" $ do
-    fromHUnitTest parsingTestSuite
-
+  describe "Legacy crypto tests" $ do
+    it "Genesis hash calculation" $
+      calculateKeyBlockHash genesisKeyBlock `shouldBe` "4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY="
 
 -- | Parsing HUnit test suite
 parsingTestSuite :: Test
@@ -50,9 +50,7 @@ parsingTestSuite = TestList
   , TestLabel "Parse json: Microblock"            parseMicroblockJson
   , TestLabel "Parse binary: TransactionInfo"     parseTXInfoBin
   , TestLabel "Parse binary: Microblock"          parseMicroblockBin
-  , TestLabel "Transformation: KeyBlockInfo Hash" checkKeyBlockInfoHash
   ]
-
 
 parseTXInfoJson :: Test
 parseTXInfoJson = TestCase $ do
@@ -61,7 +59,6 @@ parseTXInfoJson = TestCase $ do
   let res = fromJust $ A.decode $ A.encode tx1
   res @?= tx1
 
-
 parseTXInfoBin :: Test
 parseTXInfoBin = TestCase $ do
   tx <- (!! 0) <$> genNTx 5
@@ -69,23 +66,15 @@ parseTXInfoBin = TestCase $ do
   let res = decodeThis "TransactionInfo" $ S.encode tx1
   res @?= tx1
 
-
 parseMicroblockJson :: Test
 parseMicroblockJson = TestCase $ do
-  let hashOfKeyBlock = getKeyBlockHash genesisKeyBlock
+  let hashOfKeyBlock = calculateKeyBlockHash genesisKeyBlock
   mb <- genPoAMicroblock hashOfKeyBlock
   (fromJust $ A.decode $ A.encode mb) @?= mb
 
-
 parseMicroblockBin :: Test
 parseMicroblockBin = TestCase $ do
-  let hashOfKeyBlock = getKeyBlockHash genesisKeyBlock
+  let hashOfKeyBlock = calculateKeyBlockHash genesisKeyBlock
   mb <- genPoAMicroblock hashOfKeyBlock
   let dmb = decodeThis "Microblock" $ S.encode mb
   dmb @?= mb
-
-
-checkKeyBlockInfoHash :: Test
-checkKeyBlockInfoHash = TestCase $ do
-  getKeyBlockHash genesisKeyBlock
-    @?= "4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY="

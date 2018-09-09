@@ -6,19 +6,19 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Enecuum.Legacy.Service.Types.PublicPrivateKeyPair(
-        Amount
-    ,   ECDSA.Signature
-    ,   compressPublicKey
-    ,   uncompressPublicKey
-    ,   getPublicKey
-    ,   fromPublicKey256k1
-    ,   publicKey256k1
-    ,   PublicKey(..)
-    ,   PrivateKey(..)
-    ,   KeyPair(..)
-    ,   getSignature
-    ,   generateNewRandomAnonymousKeyPair
+module Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
+  ( Amount
+  , ECDSA.Signature
+  , compressPublicKey
+  , uncompressPublicKey
+  , getPublicKey
+  , fromPublicKey256k1
+  , publicKey256k1
+  , PublicKey(..)
+  , PrivateKey(..)
+  , KeyPair(..)
+  , getSignature
+  , generateNewRandomAnonymousKeyPair
   ) where
 
 import           Data.Maybe
