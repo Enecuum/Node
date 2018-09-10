@@ -8,13 +8,7 @@ import qualified Data.ByteString.Base64                            as Base64
 import qualified Data.ByteString.Internal                          as BSI
 import qualified Data.Serialize                                    as S (encode)
 import           Data.Serialize.Put (putWord8, putWord32le, runPut)
--- import           Enecuum.Legacy.Service.Transaction.Decode
--- import           Enecuum.Legacy.Service.Transaction.Iterator
--- import           Enecuum.Legacy.Service.Transaction.Sprout
--- import           Enecuum.Legacy.Service.Transaction.Transformation
 import           Enecuum.Legacy.Service.Types ( KeyBlockInfoPoW (..) )
--- import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
--- import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
 import           Prelude
 import           Data.Either
 

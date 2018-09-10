@@ -23,7 +23,8 @@ import           Enecuum.Legacy.Service.Transaction.Generate
                                                           , generateMicroblocksAndKeyBlocks
                                                           )
 import           Enecuum.Legacy.Service.Types             ( Microblock
-                                                          , TransactionInfo(..)
+                                                          , TransactionInfo (..)
+                                                          , KeyBlockInfoPoW (..)
                                                           )
 
 import           Test.Hspec
@@ -37,11 +38,28 @@ import           Enecuum.Legacy.Refact.Assets ( genesisKeyBlock )
 
 import           Prelude
 
+keyBlock :: KeyBlockInfoPoW
+keyBlock = KeyBlockInfoPoW
+  { _time      = 1532005108
+  , _prev_hash = "B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw="
+  , _number    = 1
+  , _nonce     = 366080
+  , _solver    = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4="
+  , _type      = 0
+  }
+
 spec :: Spec
 spec = do
+  describe "Legacy parsing tests" $
+    fromHUnitTest parsingTestSuite
+
   describe "Legacy crypto tests" $ do
-    it "Genesis hash calculation" $
-      calculateKeyBlockHash genesisKeyBlock `shouldBe` "4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY="
+    it "Genesis hash calculation" $ do
+      let hash = calculateKeyBlockHash genesisKeyBlock
+      hash `shouldBe` "4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY="
+    it "Some KeyBlock hash calculation" $ do
+      let hash = calculateKeyBlockHash keyBlock
+      hash `shouldBe` "AAABrMjWwW95ZXx5EgIn8gG2c0/xaXi1M4uaGWMH28o="
 
 -- | Parsing HUnit test suite
 parsingTestSuite :: Test
