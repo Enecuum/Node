@@ -22,7 +22,7 @@ import qualified Enecuum.Framework.Testing.Runtime.Lens as RLens
 
 spec :: Spec
 spec = describe "Master Node test" $ do
-  it "broken test" $ True `shouldBe` False
+  --it "broken test" $ True `shouldBe` False
   it "Master Node test" $ do
 
     runtime <- createTestRuntime
