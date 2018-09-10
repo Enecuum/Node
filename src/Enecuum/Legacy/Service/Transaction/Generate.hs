@@ -9,7 +9,8 @@ import           Control.Monad                                      (replicateM)
 --                                                                      evalStateT,
 --                                                                      get, lift,
 --                                                                      put)
-import           Enecuum.Legacy.Service.Transaction.Storage         (getKeyBlockHash)
+import           Enecuum.Legacy.Service.Transaction.Storage         (genesisKeyBlock,
+                                                                     getKeyBlockHash)
 import           Enecuum.Legacy.Service.Transaction.TransactionsDAG (genNTx)
 import           Enecuum.Legacy.Service.Types                       (HashOfKeyBlock,
                                                                      KeyBlockInfoPoW (..),
@@ -32,7 +33,7 @@ quantityOfPoAMiners :: Int
 quantityOfPoAMiners = 3
 
 hashOfgenesis :: HashOfKeyBlock
-hashOfgenesis = "B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw="
+hashOfgenesis = getKeyBlockHash genesisKeyBlock
 
 
 genPoAMicroblock :: HashOfKeyBlock -> IO Microblock
