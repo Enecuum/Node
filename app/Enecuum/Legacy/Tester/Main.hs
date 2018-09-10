@@ -23,7 +23,7 @@ import qualified Network.WebSockets                               as WS
 
 
 testMsg :: Value
-testMsg = object [
+testMsg  object [
     "msg" .= ("testMsg" :: String)
   ]
 
