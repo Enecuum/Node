@@ -53,6 +53,25 @@ keyBlock = T.KeyBlockInfoPoW
   , T._type      = 0
   }
 
+owner     = T.PublicKey256k1 1
+receiver  = T.PublicKey256k1 1
+amount    = (433431 :: T.Amount)
+currency  = T.ENQ
+timestamp = (Nothing :: Maybe T.Time)
+signature = (Nothing :: Maybe T.Signature)
+uuid      = (1 :: Int)
+
+transaction :: T.Transaction
+transaction = T.Transaction
+  { T._owner     = owner     
+  , T._receiver  = receiver  
+  , T._amount    = amount    
+  , T._currency  = currency  
+  , T._timestamp = timestamp 
+  , T._signature = signature 
+  , T._uuid      = uuid      
+  }
+
 spec :: Spec
 spec = do
   describe "Legacy parsing tests" $
@@ -66,27 +85,9 @@ spec = do
       let hash = calculateKeyBlockHash keyBlock
       hash `shouldBe` "AAABrMjWwW95ZXx5EgIn8gG2c0/xaXi1M4uaGWMH28o="
 
-
-  describe "Legacy serialization tests" $ do
+  describe "Legacy Transaction signing / serialization tests" $ do
     it "Serialize Transaction" $ do
-      let owner     = T.PublicKey256k1 1
-      let receiver  = T.PublicKey256k1 1
-      let amount    = (433431 :: T.Amount)
-      let currency  = T.ENQ
-      let timestamp = (Nothing :: Maybe T.Time)
-      let signature = (Nothing :: Maybe T.Signature)
-      let uuid      = (1 :: Int)
-
-      let trans = T.Transaction
-            { T._owner     = owner     
-            , T._receiver  = receiver  
-            , T._amount    = amount    
-            , T._currency  = currency  
-            , T._timestamp = timestamp 
-            , T._signature = signature 
-            , T._uuid      = uuid      
-            }
-      let encoded = BC.unpack $ S.encode trans
+      let encoded = BC.unpack $ S.encode transaction
       let xs :: [String] = map (printf "%02x") encoded
 
       let ownerEncoded     :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ owner     
@@ -96,9 +97,9 @@ spec = do
       let timestampEncoded :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ timestamp 
       let signatureEncoded :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ signature 
       let uuidEncoded      :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ uuid      
-      
+
       let ys :: [String] = join
-            [ ownerEncoded     
+            [ ownerEncoded
             , receiverEncoded  
             , amountEncoded    
             , currencyEncoded  
@@ -108,8 +109,11 @@ spec = do
             ]
 
       xs `shouldBe` ys
-      (intercalate " " xs) `shouldBe` "00 00 00 00 01 00 00 00 00 01 00 00 00 00 00 06 9d 17 00 00 00 00 00 00 00 00 00 00 01"
-    
+      unwords xs `shouldBe` "00 00 00 00 01 00 00 00 00 01 00 00 00 00 00 06 9d 17 00 00 00 00 00 00 00 00 00 00 01"
+
+    it "Signing / verifying" $ do
+      1 `shouldBe` 2
+
 
 -- | Parsing HUnit test suite
 parsingTestSuite :: Test

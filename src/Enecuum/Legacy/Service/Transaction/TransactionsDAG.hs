@@ -30,10 +30,18 @@ getSignTransactions quantityOfTx keys'ns (x,y) = do
   let keys = getLabsNodes keys'ns
   sums   <- replicateM n $ randomRIO (x,y)
   points <- replicateM n getTime
+
+  -- This is wrong. Every transaction should be signed instead.
   signatures  <- mapM (\(KeyPair _ priv, s) -> sign priv (fromIntegral s :: Amount)) (zip keys sums)
   uuids <- replicateM n $ randomRIO (1,25)
-  let sts  = [Transaction pub1 pub2 (fromIntegral aSum) ENQ (Just p) (Just signature) uuid |
-              p <- points, ((_, KeyPair pub1 _), (_, KeyPair pub2 _) ) <- skel, aSum <- sums, signature <- signatures, uuid <- uuids ]
+  let sts = 
+        [ Transaction pub1 pub2 (fromIntegral aSum) ENQ (Just p) (Just signature) uuid
+        | p <- points
+        , ((_, KeyPair pub1 _), (_, KeyPair pub2 _) ) <- skel
+        , aSum <- sums
+        , signature <- signatures
+        , uuid <- uuids 
+        ]
   return (take quantityOfTx sts)
 
 
