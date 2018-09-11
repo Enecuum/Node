@@ -8,7 +8,7 @@ import           Universum                                as X hiding ( All, Opt
 import           Universum.Unsafe                         as X ( head, last, tail, (!!) )
 import           Eff                                      as X ( Eff, Member )
 import           Eff.TH                                   as X ( makeFreer )
-import           Eff.SafeIO                               as X ( SIO, safeIO )
+import           Eff.SafeIO                               as X ( SIO, safeIO, runSafeIO )
 import           Eff.Exc                                  as X ( Exc )
 import           Data.TypeLevel                           as X ( type (++) )
 import           Data.Aeson                               as X ( ToJSON, FromJSON )
