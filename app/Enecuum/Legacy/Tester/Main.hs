@@ -7,7 +7,6 @@ module Main where
 import           Control.Concurrent                               (forkIO,
                                                                    threadDelay)
 import           Control.Concurrent.Async
--- import           Control.Monad
 import           Crypto.PubKey.ECC.ECDSA                          as ECDSA
 import           Data.Aeson
 import qualified Data.ByteString.Lazy.Char8                       as B8
@@ -19,7 +18,7 @@ import           Enecuum.Legacy.Service.Network.WebSockets.Client
 import           Enecuum.Legacy.Service.System.Version
 import           Enecuum.Legacy.Service.Transaction.Common
 import           Enecuum.Legacy.Service.Types
-import           Enecuum.Prelude
+import           Enecuum.Prelude                                  hiding ((.=))
 import qualified Network.WebSockets                               as WS
 
 
