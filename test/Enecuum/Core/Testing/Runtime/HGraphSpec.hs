@@ -1,7 +1,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
-module Enecuum.Core.Testing.Runtime.HGraph where
+module Enecuum.Core.Testing.Runtime.HGraphSpec where
 
 import           Control.Concurrent.STM
 import           Test.HUnit
