@@ -28,16 +28,33 @@ type NodeModel =
   ++ CoreEffects
 
 
-type Handler = (Eff NodeModel (), Maybe D.RawData)
+-- Raw idea of RPC description. Will be reworked.
+
+type Handler = (Eff NodeModel (Maybe D.RawData), D.RawData)
 type HandlersF = Handler -> Handler
 
--- Raw idea of RPC description. Will be reworked.
+tryHandler
+  :: D.RpcMethod () req resp
+  => FromJSON req
+  => ToJSON resp
+  => (req -> Eff NodeModel resp)
+  -> D.RawData
+  -> Eff NodeModel (Maybe D.RawData)
+tryHandler handler rawReq = case A.decode rawReq of
+  Nothing -> pure Nothing
+  Just req -> do
+    resp <- handler req
+    pure $ Just $ A.encode resp
+
 serve
-  :: FromJSON req
-  => (req -> Eff NodeModel ())
-  -> (Eff NodeModel (), Maybe D.RawData)
-  -> (Eff NodeModel (), Maybe D.RawData)
-serve handler (handled, Just rawReq) = case A.decode rawReq of
-  Just req -> (handled >> handler req, Nothing)
-  Nothing  -> (handled, Just rawReq)
-serve _ (handled, Nothing) = (handled, Nothing)
+  :: D.RpcMethod () req resp
+  => FromJSON req
+  => ToJSON resp
+  => (req -> Eff NodeModel resp)
+  -> (Eff NodeModel (Maybe D.RawData), D.RawData)
+  -> (Eff NodeModel (Maybe D.RawData), D.RawData)
+serve handler (prevHandled, rawReq) = (newHandled, rawReq)
+  where
+    newHandled = prevHandled >>= \case
+      Nothing      -> tryHandler handler rawReq
+      Just rawResp -> pure $ Just rawResp

@@ -9,6 +9,7 @@ import Enecuum.Framework.Domain.Networking ( NodeAddress )
 
 type NodeTag = Text
 newtype NodeID = NodeID Text
+  deriving ( Show )
 
 data NodeConfig = NodeConfig
   { _address :: NodeAddress
