@@ -11,23 +11,23 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
 
-module Enecuum.Research.Dsl.HashGraph.Interpreter where
+module Enecuum.Core.HGraph.Dsl.Interpreter where
 
 import           Universum
 import           Data.Serialize
 import           Eff
 import           Eff.Internal
 
-import           Enecuum.Research.Dsl.HashGraph.Language
-import           Enecuum.Research.THashGraph as G
-import           Enecuum.Research.StringHashable
+import           Enecuum.Core.HGraph.Dsl.Language
+import           Enecuum.Core.HGraph.THGraph as G
+import           Enecuum.Core.HGraph.StringHashable
 
 
-instance ToNodeRef (DslTNode content) (TVar (THashNode content))  where
+instance ToNodeRef (DslTNode content) (TVar (THNode content))  where
     toNodeRef   = TNodeRef
 
 
-instance ToNodeRef (DslTNode content) (HashNodeRef (DslTNode content)) where
+instance ToNodeRef (DslTNode content) (HNodeRef (DslTNode content)) where
     toNodeRef = identity
 
 
@@ -39,10 +39,10 @@ instance StringHashable content => ToNodeRef (DslTNode content) content  where
     toNodeRef   = TNodeHash . toHash
 
 
-instance Serialize c => Serialize (HashNodeContent (DslTNode c))
+instance Serialize c => Serialize (HNodeContent (DslTNode c))
 
 
-instance (Serialize c, StringHashable c) => StringHashable (HashNodeContent (DslTNode c)) where
+instance (Serialize c, StringHashable c) => StringHashable (HNodeContent (DslTNode c)) where
     toHash (TNodeContent c) = toHash c
 
 
@@ -51,40 +51,40 @@ instance StringHashable c => ToContent (DslTNode c) c where
     fromContent (TNodeContent a) = a
 
 
-type DslTNode content = DslHashNode (TVar (THashNode content)) content
+type DslTNode content = DslHNode (TVar (THNode content)) content
 
 
-data instance HashNodeContent (DslHashNode (TVar (THashNode content)) content)
+data instance HNodeContent (DslHNode (TVar (THNode content)) content)
     = TNodeContent content
   deriving (Generic)
 
 
-data instance HashNodeRef     (DslHashNode (TVar (THashNode content)) content)
-    = TNodeRef (TVar (THashNode content))
+data instance HNodeRef     (DslHNode (TVar (THNode content)) content)
+    = TNodeRef (TVar (THNode content))
     | TNodeHash StringHash
   deriving (Generic)
 
 
-initHashGraph :: StringHashable c => IO (TVar (THashGraph c))
-initHashGraph = atomically G.newTHashGraph
+initHGraph :: StringHashable c => IO (TVar (THGraph c))
+initHGraph = atomically G.newTHGraph
 
 
-runHashGraph :: StringHashable c => TVar (THashGraph c) -> Eff '[HashGraphDsl (DslTNode c)] w -> IO w
-runHashGraph _ (Val x) = return x
-runHashGraph aGraph (E u q) = case extract u of
+runHGraph :: StringHashable c => TVar (THGraph c) -> Eff '[HGraphDsl (DslTNode c)] w -> IO w
+runHGraph _ (Val x) = return x
+runHGraph aGraph (E u q) = case extract u of
 
     NewNode x   -> do
         aBool <- atomically $ G.newNode aGraph (fromContent x)
-        runHashGraph aGraph (qApp q (W aBool))
+        runHGraph aGraph (qApp q (W aBool))
 
     DeleteNode  x -> do
         aBool <- atomically $ case x of
             TNodeRef aRef -> do
-                G.deleteTHashNode aGraph aRef
+                G.deleteTHNode aGraph aRef
                 return True
             TNodeHash aHash -> G.deleteHNode aGraph aHash
 
-        runHashGraph aGraph (qApp q (W aBool))
+        runHGraph aGraph (qApp q (W aBool))
 
     NewLink    x y -> do
         aBool <- atomically $ case (x, y) of
@@ -100,7 +100,7 @@ runHashGraph aGraph (E u q) = case extract u of
                 case aMaybeNode of
                     Just aTNode -> G.newTLink aTNode r2
                     Nothing     -> return False
-        runHashGraph aGraph (qApp q (W aBool))
+        runHGraph aGraph (qApp q (W aBool))
 
     DeleteLink x y -> do
         aBool <- atomically $ case (x, y) of
@@ -117,7 +117,7 @@ runHashGraph aGraph (E u q) = case extract u of
                     Just aTNode -> G.deleteTLink aTNode r2
                     Nothing     -> return False
 
-        runHashGraph aGraph (qApp q (W aBool))
+        runHGraph aGraph (qApp q (W aBool))
     
 
     GetNode    x   -> do
@@ -128,7 +128,7 @@ runHashGraph aGraph (E u q) = case extract u of
             case aMaybeNode of
                 Just aTNode -> do
                     aNode <- readTVar aTNode
-                    return $ Just $ DslHashNode 
+                    return $ Just $ DslHNode 
                         (toHash $ aNode^.content)
                         (TNodeRef aTNode)
                         (TNodeContent $ aNode^.content)
@@ -136,5 +136,5 @@ runHashGraph aGraph (E u q) = case extract u of
                         (TNodeRef <$> aNode^.rLinks) 
                 Nothing -> return Nothing
                 
-        runHashGraph aGraph (qApp q aRes)
+        runHGraph aGraph (qApp q aRes)
 

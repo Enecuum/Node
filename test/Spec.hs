@@ -27,7 +27,7 @@ import           Test.Hspec.Contrib.HUnit       ( fromHUnitTest )
 import           Test.HUnit                     ( Test(..)
                                                 , (@?=)
                                                 )
-import           Enecuum.Research.Dsl.HashGraph
+import           Enecuum.Core.Testing.Runtime.HGraph
 
 main :: IO ()
 main = hspec $ do
@@ -55,7 +55,7 @@ main = hspec $ do
   describe "CLI and RPC HUnit tests" $ 
     fromHUnitTest cliRPCTestSuite
 
-  describe "HashGraph eDSL tests:" $
+  describe "HGraph eDSL tests:" $
     fromHUnitTest hashGraphTestSuit
 
 retrieveNTransactionsForPublickey :: IO (Maybe TransactionInfo)
