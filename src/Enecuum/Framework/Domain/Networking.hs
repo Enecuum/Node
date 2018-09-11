@@ -17,7 +17,11 @@ type NodeAddress = Text
 data ConnectionConfig = ConnectionConfig
   { _address :: NodeAddress
   }
+
 data Connection = Connection
+  { _clientAddress :: NodeAddress
+  , _serverAddress :: NodeAddress
+  }
 
 -- Temporary approach untill we clarify all the networking details.
 
@@ -31,6 +35,7 @@ data RpcResponse = RpcResponse
 
 type RpcResult a = Either Text a
 
+-- TODO: remove double encode / decode from serving code.
 class RpcMethod cfg req resp | req -> resp, resp -> req where
   toRpcRequest :: cfg -> req -> RpcRequest
-  fromRpcResponse :: cfg -> RpcResponse -> Maybe resp
+  fromRpcResponse :: cfg -> RpcResponse -> RpcResult resp

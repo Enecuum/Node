@@ -7,7 +7,6 @@ module Main where
 import           Control.Concurrent                               (forkIO,
                                                                    threadDelay)
 import           Control.Concurrent.Async
--- import           Control.Monad
 import           Crypto.PubKey.ECC.ECDSA                          as ECDSA
 import           Data.Aeson
 import qualified Data.ByteString.Lazy.Char8                       as B8

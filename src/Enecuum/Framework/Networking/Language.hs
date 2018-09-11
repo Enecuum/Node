@@ -14,7 +14,10 @@ import           Enecuum.Framework.NetworkModel.Language       ( NetworkModel )
 data NetworkingL a where
   OpenConnection :: D.ConnectionConfig -> NetworkingL (Maybe D.Connection)
   CloseConnection :: D.Connection -> NetworkingL ()
-  SendRequest :: D.Connection -> D.RpcRequest -> NetworkingL D.RpcResponse
+
+  -- TODO: we need more realistic model. Maybe, notion of sync / async requests.
+  -- A real web sockets interpreter will show the truth.
+  SendRequest :: D.Connection -> D.RpcRequest -> NetworkingL (D.RpcResult D.RpcResponse)
 
   EvalNetwork :: Eff NetworkModel a -> NetworkingL a
 
@@ -29,7 +32,6 @@ withConnection
 withConnection cfg req = openConnection cfg >>= \case
   Nothing -> pure $ Left "Connecting failed."
   Just conn -> do
-    rpcResponse <- sendRequest conn $ D.toRpcRequest () req
-    case D.fromRpcResponse () rpcResponse of
-      Nothing -> pure $ Left "Unknown RPC response."
-      Just resp -> pure $ Right resp
+    eRpcResponse <- sendRequest conn $ D.toRpcRequest () req
+    closeConnection conn
+    pure $ eRpcResponse >>= D.fromRpcResponse ()
