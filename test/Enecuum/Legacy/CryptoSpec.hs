@@ -11,10 +11,13 @@ import           Data.Aeson                    as A
 import qualified Data.ByteString.Char8         as BC
 import           Data.Either                              ( fromRight )
 import           Data.Maybe                               ( fromJust )
+import           Data.List                                ( intercalate )
 import qualified Data.Serialize                as S
                                                           ( decode
                                                           , encode
                                                           )
+import           Control.Monad                            ( join )
+import           Text.Printf                              ( printf )
 import           Enecuum.Legacy.Service.Transaction.Common
                                                           ( decodeThis
                                                           , genNTx
@@ -63,11 +66,50 @@ spec = do
       let hash = calculateKeyBlockHash keyBlock
       hash `shouldBe` "AAABrMjWwW95ZXx5EgIn8gG2c0/xaXi1M4uaGWMH28o="
 
+
   describe "Legacy serialization tests" $ do
     it "Serialize Transaction" $ do
-      let trans = T.Transaction (T.PublicKey256k1 1) (T.PublicKey256k1 1) 1 T.ENQ Nothing Nothing 1
+      let owner     = T.PublicKey256k1 1
+      let receiver  = T.PublicKey256k1 1
+      let amount    = (433431 :: T.Amount)
+      let currency  = T.ENQ
+      let timestamp = (Nothing :: Maybe T.Time)
+      let signature = (Nothing :: Maybe T.Signature)
+      let uuid      = (1 :: Int)
+
+      let trans = T.Transaction
+            { T._owner     = owner     
+            , T._receiver  = receiver  
+            , T._amount    = amount    
+            , T._currency  = currency  
+            , T._timestamp = timestamp 
+            , T._signature = signature 
+            , T._uuid      = uuid      
+            }
       let encoded = BC.unpack $ S.encode trans
-      encoded `shouldBe` ""
+      let xs :: [String] = map (printf "%02x") encoded
+
+      let ownerEncoded     :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ owner     
+      let receiverEncoded  :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ receiver  
+      let amountEncoded    :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ amount    
+      let currencyEncoded  :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ currency  
+      let timestampEncoded :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ timestamp 
+      let signatureEncoded :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ signature 
+      let uuidEncoded      :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ uuid      
+      
+      let ys :: [String] = join
+            [ ownerEncoded     
+            , receiverEncoded  
+            , amountEncoded    
+            , currencyEncoded  
+            , timestampEncoded 
+            , signatureEncoded 
+            , uuidEncoded      
+            ]
+
+      xs `shouldBe` ys
+      (intercalate " " xs) `shouldBe` "00 00 00 00 01 00 00 00 00 01 00 00 00 00 00 06 9d 17 00 00 00 00 00 00 00 00 00 00 01"
+    
 
 -- | Parsing HUnit test suite
 parsingTestSuite :: Test
