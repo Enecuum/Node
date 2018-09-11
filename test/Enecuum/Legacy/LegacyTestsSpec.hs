@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports    #-}
 
-module Enecuum.Legacy.Spec where
+module Enecuum.Legacy.LegacyTestsSpec where
 
 import           Data.Aeson                    as A
                                                           ( decode
