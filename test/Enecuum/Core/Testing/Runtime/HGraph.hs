@@ -1,3 +1,4 @@
+
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 module Enecuum.Core.Testing.Runtime.HGraph where
@@ -13,9 +14,11 @@ import qualified Enecuum.Core.HGraph.THGraph as G
 import           Enecuum.Core.HGraph.StringHashable
 import           Enecuum.Core.HGraph.Dsl.Interpreter
 import           Enecuum.Core.HGraph.Dsl.Language
+import           Test.Hspec
+import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
 
-hashGraphTestSuit :: Test
-hashGraphTestSuit = TestList
+spec :: Spec
+spec = describe "HGraph eDSL tests" $ fromHUnitTest $ TestList
     [ TestLabel "Addition of new node / getting node by content" testNewNode
     , TestLabel "Getting node by hash"                         testGetNodeByHash
     , TestLabel "Getting node by ref"                          testGetNodeByRef
