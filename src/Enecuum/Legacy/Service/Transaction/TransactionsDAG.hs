@@ -15,6 +15,7 @@ import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 import           Enecuum.Prelude
 import           System.Random
 
+import           Enecuum.Legacy.Refact.Crypto.Signing                ( sign )
 
 type QuantityOfTransactions = Int
 
@@ -29,10 +30,10 @@ getSignTransactions quantityOfTx keys'ns (x,y) = do
   let keys = getLabsNodes keys'ns
   sums   <- replicateM n $ randomRIO (x,y)
   points <- replicateM n getTime
-  signs  <- mapM (\(KeyPair _ priv, s) -> getSignature priv (fromIntegral s :: Amount)) (zip keys sums)
+  signatures  <- mapM (\(KeyPair _ priv, s) -> sign priv (fromIntegral s :: Amount)) (zip keys sums)
   uuids <- replicateM n $ randomRIO (1,25)
-  let sts  = [Transaction pub1 pub2 (fromIntegral aSum) ENQ (Just p) (Just sign) uuid |
-              p <- points, ((_, KeyPair pub1 _), (_, KeyPair pub2 _) ) <- skel, aSum <- sums, sign <- signs, uuid <- uuids ]
+  let sts  = [Transaction pub1 pub2 (fromIntegral aSum) ENQ (Just p) (Just signature) uuid |
+              p <- points, ((_, KeyPair pub1 _), (_, KeyPair pub2 _) ) <- skel, aSum <- sums, signature <- signatures, uuid <- uuids ]
   return (take quantityOfTx sts)
 
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PackageImports    #-}
 
@@ -22,9 +23,10 @@ import           Enecuum.Legacy.Service.Transaction.Generate
                                                           ( genPoAMicroblock
                                                           , generateMicroblocksAndKeyBlocks
                                                           )
+import qualified Enecuum.Legacy.Service.Types                      as T
+import qualified Enecuum.Legacy.Service.Types.PublicPrivateKeyPair as T
 import           Enecuum.Legacy.Service.Types             ( Microblock
                                                           , TransactionInfo (..)
-                                                          , KeyBlockInfoPoW (..)
                                                           )
 
 import           Test.Hspec
@@ -33,19 +35,19 @@ import           Test.HUnit                               ( Test(..)
                                                           , (@?=)
                                                           )
 
-import           Enecuum.Legacy.Refact.Crypto ( calculateKeyBlockHash )
-import           Enecuum.Legacy.Refact.Assets ( genesisKeyBlock )
+import           Enecuum.Legacy.Refact.Hashing            ( calculateKeyBlockHash )
+import           Enecuum.Legacy.Refact.Assets             ( genesisKeyBlock )
 
 import           Prelude
 
-keyBlock :: KeyBlockInfoPoW
-keyBlock = KeyBlockInfoPoW
-  { _time      = 1532005108
-  , _prev_hash = "B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw="
-  , _number    = 1
-  , _nonce     = 366080
-  , _solver    = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4="
-  , _type      = 0
+keyBlock :: T.KeyBlockInfoPoW
+keyBlock = T.KeyBlockInfoPoW
+  { T._time      = 1532005108
+  , T._prev_hash = "B1Vh7/LNOtWGd2+pBPAEAoLF9qJh9qj9agpSTRTNLSw="
+  , T._number    = 1
+  , T._nonce     = 366080
+  , T._solver    = "OvS8LmmcMa4mtEWbifO5ZFkqT6AYRizzQ6mEobMMhz4="
+  , T._type      = 0
   }
 
 spec :: Spec
@@ -53,13 +55,19 @@ spec = do
   describe "Legacy parsing tests" $
     fromHUnitTest parsingTestSuite
 
-  describe "Legacy crypto tests" $ do
+  describe "Legacy hahing tests" $ do
     it "Genesis hash calculation" $ do
       let hash = calculateKeyBlockHash genesisKeyBlock
       hash `shouldBe` "4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY="
     it "Some KeyBlock hash calculation" $ do
       let hash = calculateKeyBlockHash keyBlock
       hash `shouldBe` "AAABrMjWwW95ZXx5EgIn8gG2c0/xaXi1M4uaGWMH28o="
+
+  describe "Legacy serialization tests" $ do
+    it "Serialize Transaction" $ do
+      let trans = T.Transaction (T.PublicKey256k1 1) (T.PublicKey256k1 1) 1 T.ENQ Nothing Nothing 1
+      let encoded = BC.unpack $ S.encode trans
+      encoded `shouldBe` ""
 
 -- | Parsing HUnit test suite
 parsingTestSuite :: Test

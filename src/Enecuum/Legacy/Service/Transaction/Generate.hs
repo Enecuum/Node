@@ -10,11 +10,11 @@ import           Enecuum.Legacy.Service.Types                       (HashOfKeyBl
                                                                      KeyBlockInfoPoW (..),
                                                                      Microblock (..))
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair  (KeyPair (..),
-                                                                     generateNewRandomAnonymousKeyPair,
-                                                                     getSignature)
+                                                                     generateNewRandomAnonymousKeyPair)
 import           Enecuum.Prelude
 
-import           Enecuum.Legacy.Refact.Crypto                        ( calculateKeyBlockHash )
+import           Enecuum.Legacy.Refact.Hashing                       ( calculateKeyBlockHash )
+import           Enecuum.Legacy.Refact.Crypto.Signing                ( sign )
 import           Enecuum.Legacy.Refact.Assets                        ( genesisKeyBlock )
 
 quantityOfTransactionInMicroblock :: Int
@@ -31,17 +31,16 @@ genPoAMicroblock h = do
   tx <- genNTx quantityOfTransactionInMicroblock
   (KeyPair pubKey privateKey) <- generateNewRandomAnonymousKeyPair
   let aPublisher = pubKey
-  aSign <- getSignature privateKey ("Secret message" :: String)
+  signature <- sign privateKey ("Secret message" :: String)
   keys <- replicateM quantityOfPoAMiners generateNewRandomAnonymousKeyPair
-  let aTeamkeys = map (\(KeyPair p _) -> p) keys
-  return Microblock{
-  _keyBlock = h,
-  _sign = aSign,
-  _teamKeys = aTeamkeys,
-  _publisher = aPublisher,
-  _transactions = tx}
-
-
+  let teamKeys = map (\(KeyPair p _) -> p) keys
+  return Microblock
+    { _keyBlock = h
+    , _sign = signature
+    , _teamKeys = teamKeys
+    , _publisher = aPublisher
+    , _transactions = tx
+    }
 
 generateMicroblocksAndKeyBlocks :: StateT (Integer,HashOfKeyBlock) IO (KeyBlockInfoPoW, [Microblock])
 generateMicroblocksAndKeyBlocks = do

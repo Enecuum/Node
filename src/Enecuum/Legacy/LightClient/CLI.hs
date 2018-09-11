@@ -45,6 +45,8 @@ import           System.IO.Error                                   (ioError,
                                                                     userError)
 import           System.Random
 
+import           Enecuum.Legacy.Refact.Crypto.Signing              (sign)
+
 
 data Flag = Port PortNumber | Host HostName | Version | Help
           | WalletsFile String | TransactionsFile String | KeyGen Int
@@ -177,13 +179,13 @@ sendTrans transactionsFile walletsFile ch = do
         uuid <- randomRIO (1,25)
         let tx  = Transaction from to am ENQ Nothing Nothing uuid
 
-        sign  <- getSignature ownerPrivKey tx
-        let signTx  = tx { _signature = Just sign }
+        signature  <- sign ownerPrivKey tx
+        let signedTx  = tx { _signature = Just signature }
 
-        result <- runExceptT $ newTx ch signTx
+        result <- runExceptT $ newTx ch signedTx
         case result of
           (Left err) -> putStrLn $ "Send transaction error: " ++ show err
-          (Right (Hash h) ) -> print ("Transaction done: ") >> prettyPrint (TransactionAPI signTx h)
+          (Right (Hash h) ) -> print ("Transaction done: ") >> prettyPrint (TransactionAPI signedTx h)
 
 
 printVersion :: IO ()

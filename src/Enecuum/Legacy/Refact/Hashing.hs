@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module Enecuum.Legacy.Refact.Crypto where
+module Enecuum.Legacy.Refact.Hashing where
 
 import qualified Crypto.Hash.SHA256                                as SHA
 import qualified Data.ByteString                                   as B

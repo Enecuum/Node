@@ -37,8 +37,8 @@ import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
 import           Prelude
 import           Data.Either
 
-import           Enecuum.Legacy.Refact.Crypto ( calculateKeyBlockHash )
-import           Enecuum.Legacy.Refact.Assets ( genesisKeyBlock )
+import           Enecuum.Legacy.Refact.Hashing ( calculateKeyBlockHash )
+import           Enecuum.Legacy.Refact.Assets  ( genesisKeyBlock )
 
 -- FIX change def (5 times)
 connectOrRecoveryConnect :: IO DBPoolDescriptor

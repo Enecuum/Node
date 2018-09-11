@@ -51,7 +51,7 @@ import           Enecuum.Legacy.Service.Types
 import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 import           Prelude
 
-import           Enecuum.Legacy.Refact.Crypto ( calculateKeyBlockHash )
+import           Enecuum.Legacy.Refact.Hashing ( calculateKeyBlockHash )
 
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount

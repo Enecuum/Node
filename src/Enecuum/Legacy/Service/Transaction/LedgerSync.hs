@@ -25,7 +25,7 @@ import           Enecuum.Legacy.Service.Transaction.Transformation
 import           Enecuum.Legacy.Service.Types
 import           Prelude
 
-import           Enecuum.Legacy.Refact.Crypto ( calculateKeyBlockHash )
+import           Enecuum.Legacy.Refact.Hashing ( calculateKeyBlockHash )
 
 myTail ::  Common -> IO (Number, HashOfKeyBlock)
 myTail c@(Common _ i) = do

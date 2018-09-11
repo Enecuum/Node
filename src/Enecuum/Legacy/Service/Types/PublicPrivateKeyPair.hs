@@ -12,12 +12,12 @@ module Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
   , compressPublicKey
   , uncompressPublicKey
   , getPublicKey
+  , getPrivateKey
   , fromPublicKey256k1
   , publicKey256k1
   , PublicKey(..)
   , PrivateKey(..)
   , KeyPair(..)
-  , getSignature
   , generateNewRandomAnonymousKeyPair
   ) where
 
@@ -42,6 +42,9 @@ import           Math.NumberTheory.Moduli
 
 
 type Amount = Int64
+
+newtype PublicKey  = PublicKey256k1 Integer deriving (Generic, Serialize, Eq, Ord, Num, Enum)
+newtype PrivateKey = PrivateKey256k1 Integer deriving (Generic, Serialize, Eq, Ord)
 
 deriving instance Ord ECDSA.Signature
 
@@ -76,10 +79,6 @@ publicKey256k1 = PublicKey256k1
 fromPublicKey256k1 :: PublicKey -> Integer
 fromPublicKey256k1 (PublicKey256k1 i) = i
 
-newtype PublicKey  = PublicKey256k1 Integer deriving (Generic, Serialize, Eq, Ord, Num, Enum)
-newtype PrivateKey = PrivateKey256k1 Integer deriving (Generic, Serialize, Eq, Ord)
-
-
 getPrivateKey :: PrivateKey -> ECDSA.PrivateKey
 getPrivateKey  (PrivateKey256k1 n)    =
     ECDSA.PrivateKey (getCurveByName SEC_p256k1) n
@@ -113,7 +112,3 @@ generateNewRandomAnonymousKeyPair :: MonadRandom m => m KeyPair
 generateNewRandomAnonymousKeyPair = do
     (pub, priv) <- generate (getCurveByName SEC_p256k1)
     pure $ KeyPair (compressPublicKey pub) (PrivateKey256k1 $ ECDSA.private_d priv)
-
--- | Previous version of function was replaced by more generic function
-getSignature :: (Serialize msg, MonadRandom m) => PrivateKey -> msg -> m ECDSA.Signature
-getSignature priv msg = ECDSA.sign (getPrivateKey priv) SHA3_256 (encode msg)

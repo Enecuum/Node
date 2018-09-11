@@ -81,9 +81,10 @@ import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount,
                                                                     PublicKey,
                                                                     generateNewRandomAnonymousKeyPair,
                                                                     getPublicKey,
-                                                                    getSignature,
                                                                     uncompressPublicKey)
 import           Prelude
+
+import           Enecuum.Legacy.Refact.Crypto.Signing               ( sign )
 
 
 type Result a = Either CLIException a
@@ -103,20 +104,14 @@ getAllKblocks c =  try $ B.getAllMacroblockKV c
 getAllTransactions :: Common -> IO (Result [(DBKey, TransactionInfo)])
 getAllTransactions c =  try $ B.getAllTransactionsKV c
 
-
-
-
 sendMessageTo :: MsgTo -> InChan MsgToCentralActor -> IO (Result ())
 sendMessageTo _ _ = return $ return undefined
-
 
 sendMessageBroadcast :: String -> InChan MsgToCentralActor -> IO (Result ())
 sendMessageBroadcast _ = return $ return $ Left NotImplementedException
 
-
 loadMessages :: InChan MsgToCentralActor -> IO (Result [MsgTo])
 loadMessages _ = return $ Left NotImplementedException
-
 
 getBlockByHash :: Common -> Hash -> IO (Result MicroblockAPI)
 getBlockByHash c hash  = try $ do
@@ -124,7 +119,6 @@ getBlockByHash c hash  = try $ do
   case mb of
     Nothing -> throw NoSuchMicroBlockDB
     Just m  -> return m
-
 
 getKeyBlockByHash :: Common -> Hash -> IO (Result MacroblockAPI)
 getKeyBlockByHash common (Hash h)  = try $ do
@@ -202,9 +196,9 @@ sendNewTrans aTrans ch aInfoCh = do
     Just ownerPrivKey -> do
       uuid <- randomRIO (1,25)
       let tx  = Transaction ownerPubKey receiverPubKey moneyAmount ENQ Nothing Nothing uuid
-      sign <- getSignature ownerPrivKey tx
-      let signTx  = tx { _signature = Just sign }
-      sendTrans signTx ch aInfoCh
+      signature <- sign ownerPrivKey tx
+      let signedTx  = tx { _signature = Just signature }
+      sendTrans signedTx ch aInfoCh
 
 
 
