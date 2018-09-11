@@ -40,6 +40,9 @@ import           Test.HUnit                               ( Test(..)
 
 import           Enecuum.Legacy.Refact.Hashing            ( calculateKeyBlockHash )
 import           Enecuum.Legacy.Refact.Assets             ( genesisKeyBlock )
+import           Enecuum.Legacy.Refact.Crypto.Signing (sign)
+import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA            as ECDSA
+import           Enecuum.Legacy.Node.Crypto (verifyEncodeble)
 
 import           Prelude
 
@@ -63,13 +66,13 @@ uuid      = (1 :: Int)
 
 transaction :: T.Transaction
 transaction = T.Transaction
-  { T._owner     = owner     
-  , T._receiver  = receiver  
-  , T._amount    = amount    
-  , T._currency  = currency  
-  , T._timestamp = timestamp 
-  , T._signature = signature 
-  , T._uuid      = uuid      
+  { T._owner     = owner
+  , T._receiver  = receiver
+  , T._amount    = amount
+  , T._currency  = currency
+  , T._timestamp = timestamp
+  , T._signature = signature
+  , T._uuid      = uuid
   }
 
 spec :: Spec
@@ -77,7 +80,7 @@ spec = do
   describe "Legacy parsing tests" $
     fromHUnitTest parsingTestSuite
 
-  describe "Legacy hahing tests" $ do
+  describe "Legacy hashing tests" $ do
     it "Genesis hash calculation" $ do
       let hash = calculateKeyBlockHash genesisKeyBlock
       hash `shouldBe` "4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY="
@@ -90,29 +93,34 @@ spec = do
       let encoded = BC.unpack $ S.encode transaction
       let xs :: [String] = map (printf "%02x") encoded
 
-      let ownerEncoded     :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ owner     
-      let receiverEncoded  :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ receiver  
-      let amountEncoded    :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ amount    
-      let currencyEncoded  :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ currency  
-      let timestampEncoded :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ timestamp 
-      let signatureEncoded :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ signature 
-      let uuidEncoded      :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ uuid      
+      let ownerEncoded     :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ owner
+      let receiverEncoded  :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ receiver
+      let amountEncoded    :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ amount
+      let currencyEncoded  :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ currency
+      let timestampEncoded :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ timestamp
+      let signatureEncoded :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ signature
+      let uuidEncoded      :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ uuid
 
       let ys :: [String] = join
             [ ownerEncoded
-            , receiverEncoded  
-            , amountEncoded    
-            , currencyEncoded  
-            , timestampEncoded 
-            , signatureEncoded 
-            , uuidEncoded      
+            , receiverEncoded
+            , amountEncoded
+            , currencyEncoded
+            , timestampEncoded
+            , signatureEncoded
+            , uuidEncoded
             ]
 
       xs `shouldBe` ys
       unwords xs `shouldBe` "00 00 00 00 01 00 00 00 00 01 00 00 00 00 00 06 9d 17 00 00 00 00 00 00 00 00 00 00 01"
 
     it "Signing / verifying" $ do
-      1 `shouldBe` 2
+      (T.KeyPair from privFrom) <- T.generateNewRandomAnonymousKeyPair
+      (T.KeyPair to privTo) <- T.generateNewRandomAnonymousKeyPair
+      let tx  = T.Transaction from to 10 T.ENQ Nothing Nothing 1
+      signature <- sign privFrom tx
+      let pk = T.getPublicKey $ T.uncompressPublicKey $ from
+      verifyEncodeble pk signature tx `shouldBe` True
 
 
 -- | Parsing HUnit test suite
