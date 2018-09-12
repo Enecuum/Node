@@ -4,8 +4,7 @@ import Enecuum.Prelude
 
 import qualified Data.Aeson                         as A
 import qualified Data.ByteString.Lazy               as BS
-import           Eff                                (Eff, Member, handleRelay, runM, send, raise, replaceRelay)
-import           Eff.SafeIO                         ( runSafeIO )
+import           Eff                                ( handleRelay, raise )
 
 import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
@@ -14,12 +13,14 @@ import qualified Enecuum.Framework.Lens             as Lens
 import qualified Enecuum.Framework.Testing.Lens     as RLens
 import           Enecuum.Framework.Testing.Types
 
+-- | Interpret NetworkSendingL. Does nothing ATM.
 interpretNetworkSendingL
   :: NodeRuntime
   -> L.NetworkSendingL a
   -> Eff '[L.LoggerL, SIO, Exc SomeException] a
 interpretNetworkSendingL rt (L.Multicast cfg req) = L.logInfo "L.Multicast cfg req"
 
+-- | Interpret NetworkListeningL (with NetworkSendingL in stack). Does nothing ATM.
 interpretNetworkListeningL
   :: NodeRuntime
   -> L.NetworkListeningL a
@@ -28,6 +29,7 @@ interpretNetworkListeningL rt (L.WaitForSingleResponse cfg timeout) = do
   L.logInfo "L.WaitForSingleResponse cfg timeout"
   pure Nothing
 
+-- | Interpret NetworkListeningL. Does nothing ATM.
 interpretNetworkListeningL'
   :: NodeRuntime
   -> L.NetworkListeningL a
@@ -36,6 +38,7 @@ interpretNetworkListeningL' rt (L.WaitForSingleResponse cfg timeout) = do
   L.logInfo "L.WaitForSingleResponse cfg timeout"
   pure Nothing
 
+-- | Interpret NetworkSyncL. Runs underlying NetworkListeningL and NetworkSendingL interpreters.
 interpretNetworkSyncL
   :: NodeRuntime
   -> L.NetworkSyncL a

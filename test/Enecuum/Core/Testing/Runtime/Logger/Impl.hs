@@ -11,7 +11,6 @@ import           Enecuum.Core.Testing.Runtime.Types
 
 -- | Interprets a LoggerL language.
 -- Just pushes the messages into the concurrent list-like storage.
-
 interpretLoggerL
   :: LoggerRuntime
   -> L.LoggerL a
@@ -19,6 +18,7 @@ interpretLoggerL
 interpretLoggerL rt (L.LogMessage _ msg) =
   safeIO $ atomically $ modifyTVar (rt ^. RLens.messages) (msg :)
 
+-- | Runs the LoggerL language.
 runLoggerL
   :: LoggerRuntime
   -> Eff '[L.LoggerL, SIO, Exc SomeException] a

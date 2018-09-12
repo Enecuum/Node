@@ -1,3 +1,4 @@
+-- | This module contains functions to work with node runtime.
 module Enecuum.Framework.Testing.Node.Runtime where
 
 import           Enecuum.Prelude
@@ -19,6 +20,7 @@ import           Enecuum.Core.Testing.Runtime.Logger.Impl
 import           Enecuum.Framework.Testing.Environment.TestRuntime
 import           Enecuum.Framework.Testing.Node.Interpreters.NodeDefinition
 
+-- | Creates node runtime.
 createEmptyNodeRuntime
   :: LoggerRuntime
   -> Control
@@ -29,6 +31,7 @@ createEmptyNodeRuntime loggerRt networkControl addr = do
   handle <- newEmptyTMVarIO
   pure $ NodeRuntime loggerRt networkControl addr tag handle
 
+-- | Starts node using NodeDefinitionL.
 startNode
   :: TestRuntime
   -> D.NodeAddress
