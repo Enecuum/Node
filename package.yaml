@@ -125,6 +125,9 @@ dependencies:
 - stm
 
 
+
+
+
 library:
   source-dirs: src
   ghc-options:
@@ -170,6 +173,7 @@ executables:
     - -O2
     dependencies:
     - Node
+
 
 tests:
   functional-tests:
