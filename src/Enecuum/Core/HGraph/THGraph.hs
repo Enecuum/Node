@@ -27,21 +27,21 @@ newTHGraph = newTVar mempty
 
 newNode, deleteNode :: StringHashable c => TVar (THGraph c) -> c -> STM Bool
 newNode aIndex aContent = do
-    let aNodeHash = toHash aContent
-    aRes <- findNode aIndex aNodeHash
-    when (isNothing aRes) $ do
-        aTHNode <- newTVar $ THNode mempty mempty aContent
-        modifyTVar aIndex $ M.insert aNodeHash aTHNode
-    return $ isNothing aRes
+    let nodeHash = toHash aContent
+    res <- findNode aIndex nodeHash
+    when (isNothing res) $ do
+        tHNode <- newTVar $ THNode mempty mempty aContent
+        modifyTVar aIndex $ M.insert nodeHash tHNode
+    return $ isNothing res
 
 deleteNode aIndex = deleteHNode aIndex . toHash
 
 
 deleteHNode :: StringHashable c => TVar (THGraph c) -> StringHash -> STM Bool
-deleteHNode aIndex aNodeHash = do
-    aTHNode <- findNode aIndex aNodeHash
-    whenJust aTHNode $ deleteTHNode aIndex
-    return $ isJust aTHNode
+deleteHNode aIndex nodeHash = do
+    tHNode <- findNode aIndex nodeHash
+    whenJust tHNode $ deleteTHNode aIndex
+    return $ isJust tHNode
 
 
 newLink, deleteLink :: StringHashable c => TVar (THGraph c) -> ReformLink c
@@ -75,35 +75,35 @@ findNode aTHGraph aNodeName = M.lookup aNodeName <$> readTVar aTHGraph
 
 
 deleteTHNode :: StringHashable c => TVar (THGraph c) -> TVar (THNode c) -> STM ()
-deleteTHNode aIndex aTHNode = do
-    aNode <- readTVar aTHNode
-    let aNodeHash = toHash $ aNode ^. content
-    modifyTVar aIndex $ M.delete aNodeHash
+deleteTHNode aIndex tHNode = do
+    aNode <- readTVar tHNode
+    let nodeHash = toHash $ aNode ^. content
+    modifyTVar aIndex $ M.delete nodeHash
     forM_ (aNode ^. rLinks)
-        $ \aVar -> modifyTVar aVar (links %~ M.delete aNodeHash)
+        $ \aVar -> modifyTVar aVar (links %~ M.delete nodeHash)
 
 type ReformLink  c = c -> c -> STM Bool
 type ReformTLink c = ReformLink (TVar (THNode c))
 
 newTLink, deleteTLink :: StringHashable c => ReformTLink c
 newTLink n1 n2 = do
-    aNode1 <- readTVar n1
-    aNode2 <- readTVar n2
-    let hasOfN2 = toHash (aNode2 ^. content)
-        hasOfN1 = toHash (aNode1 ^. content)
-        aOk     = M.notMember hasOfN2 (aNode1 ^. links)
-    when aOk $ do
+    node1 <- readTVar n1
+    node2 <- readTVar n2
+    let hasOfN2 = toHash (node2 ^. content)
+        hasOfN1 = toHash (node1 ^. content)
+        ok     = M.notMember hasOfN2 (node1 ^. links)
+    when ok $ do
         modifyTVar n1 $ links %~ M.insert hasOfN2 n2
         modifyTVar n2 (rLinks %~ M.insert hasOfN1 n1)
-    return aOk
+    return ok
 
 deleteTLink n1 n2 = do
-    aNode1 <- readTVar n1
-    aNode2 <- readTVar n2
-    let hasOfN2 = toHash (aNode2 ^. content)
-        hasOfN1 = toHash (aNode1 ^. content)
-        aOk     = M.member hasOfN2 (aNode1 ^. links)
-    when aOk $ do
+    node1 <- readTVar n1
+    node2 <- readTVar n2
+    let hasOfN2 = toHash (node2 ^. content)
+        hasOfN1 = toHash (node1 ^. content)
+        ok     = M.member hasOfN2 (node1 ^. links)
+    when ok $ do
         modifyTVar n1 $ links %~ M.delete hasOfN2
         modifyTVar n2 (rLinks %~ M.delete hasOfN1)
-    return aOk
+    return ok

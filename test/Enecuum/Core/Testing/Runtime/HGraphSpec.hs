@@ -36,95 +36,95 @@ spec = describe "HGraph eDSL tests" $ fromHUnitTest $ TestList
 
 testNewNode :: Test
 testNewNode = TestCase $ do
-    aNewGraph :: TVar (G.THGraph Int64) <- initHGraph
-    aOk <- runHGraph aNewGraph $ do
+    newGraph :: TVar (G.THGraph Int64) <- initHGraph
+    ok <- runHGraph newGraph $ do
         newNode 123
         Just (DslHNode _ _ c _ _) <- getNode (123 :: Int64)
         return $ 123 == fromContent c
-    assertBool "" aOk
+    assertBool "" ok
 
 
 testGetNodeByHash :: Test
 testGetNodeByHash = TestCase $ do
-    aNewGraph :: TVar (G.THGraph Int64) <- initHGraph
-    aOk <- runHGraph aNewGraph $ do
+    newGraph :: TVar (G.THGraph Int64) <- initHGraph
+    ok <- runHGraph newGraph $ do
         newNode 123
         Just (DslHNode _ _ c _ _) <- getNode (toHash (123 :: Int64))
         return $ 123 == fromContent c
-    assertBool "" aOk
+    assertBool "" ok
 
 
 testGetNodeByRef :: Test
 testGetNodeByRef = TestCase $ do
-    aNewGraph :: TVar (G.THGraph Int64) <- initHGraph
-    aOk <- runHGraph aNewGraph $ do
+    newGraph :: TVar (G.THGraph Int64) <- initHGraph
+    ok <- runHGraph newGraph $ do
         newNode 123
         Just (DslHNode _ ref _ _ _) <- getNode (toHash (123 :: Int64))
         Just (DslHNode _ _ c _ _)   <- getNode ref
         return $ 123 == fromContent c
-    assertBool "" aOk
+    assertBool "" ok
 
 
 
 testDeleteNodeByContent :: Test
 testDeleteNodeByContent = TestCase $ do
-    aNewGraph :: TVar (G.THGraph Int64) <- initHGraph
-    aOk <- runHGraph aNewGraph $ do
+    newGraph :: TVar (G.THGraph Int64) <- initHGraph
+    ok <- runHGraph newGraph $ do
         newNode (123 :: Int64)
         deleteNode (123 :: Int64)
         isNothing <$> getNode (toHash @Int64 123)
-    assertBool "" aOk
+    assertBool "" ok
 
 
 testDeleteNodeByHash :: Test
 testDeleteNodeByHash = TestCase $ do
-    aNewGraph :: TVar (G.THGraph Int64) <- initHGraph
-    aOk <- runHGraph aNewGraph $ do
+    newGraph :: TVar (G.THGraph Int64) <- initHGraph
+    ok <- runHGraph newGraph $ do
         newNode (123 :: Int64)
         deleteNode $ toHash (123 :: Int64)
         isNothing <$> getNode (toHash @Int64 123)
-    assertBool "" aOk
+    assertBool "" ok
 
 
 testDeleteNodeByRef :: Test
 testDeleteNodeByRef = TestCase $ do
-    aNewGraph :: TVar (G.THGraph Int64) <- initHGraph
-    aOk <- runHGraph aNewGraph $ do
+    newGraph :: TVar (G.THGraph Int64) <- initHGraph
+    ok <- runHGraph newGraph $ do
         newNode (123 :: Int64)
-        Just (DslHNode _ aRef _ _ _) <- getNode (toHash @Int64 123)
-        deleteNode aRef
+        Just (DslHNode _ ref _ _ _) <- getNode (toHash @Int64 123)
+        deleteNode ref
         isNothing <$> getNode (123 :: Int64)
-    assertBool "" aOk
+    assertBool "" ok
 
 
 testNewLinkByContent :: Test
 testNewLinkByContent = TestCase $ do
-    aNewGraph :: TVar (G.THGraph Int64) <- initHGraph
-    aOk <- runHGraph aNewGraph $ do
+    newGraph :: TVar (G.THGraph Int64) <- initHGraph
+    ok <- runHGraph newGraph $ do
         newNode 123
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
         Just (DslHNode _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.member (toHash @Int64 125) l
-    assertBool "" aOk
+    assertBool "" ok
 
 
 testNewLinkByHash :: Test
 testNewLinkByHash = TestCase $ do
-    aNewGraph :: TVar (G.THGraph Int64) <- initHGraph
-    aOk <- runHGraph aNewGraph $ do
+    newGraph :: TVar (G.THGraph Int64) <- initHGraph
+    ok <- runHGraph newGraph $ do
         newNode 123
         newNode 125
         newLink (toHash @Int64 123) (toHash @Int64 125)
         Just (DslHNode _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.member (toHash @Int64 125) l
-    assertBool "" aOk
+    assertBool "" ok
 
 
 testNewLinkByRef :: Test
 testNewLinkByRef = TestCase $ do
-    aNewGraph :: TVar (G.THGraph Int64) <- initHGraph
-    aOk <- runHGraph aNewGraph $ do
+    newGraph :: TVar (G.THGraph Int64) <- initHGraph
+    ok <- runHGraph newGraph $ do
         newNode 123
         newNode 125
         Just (DslHNode _ r1 _ _ _) <- getNode (toHash @Int64 123)
@@ -132,41 +132,41 @@ testNewLinkByRef = TestCase $ do
         newLink r1 r2
         Just (DslHNode _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.member (toHash @Int64 125) l
-    assertBool "" aOk
+    assertBool "" ok
 
 
 --
 testDeleteLinkByContent :: Test 
 testDeleteLinkByContent = TestCase $ do
-    aNewGraph :: TVar (G.THGraph Int64) <- initHGraph
-    aOk <- runHGraph aNewGraph $ do
+    newGraph :: TVar (G.THGraph Int64) <- initHGraph
+    ok <- runHGraph newGraph $ do
         newNode 123
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
         deleteLink (123 :: Int64) (125 :: Int64)
         Just (DslHNode _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.notMember (toHash @Int64 125) l
-    assertBool "" aOk
+    assertBool "" ok
 
 
 
 testDeleteLinkByHash :: Test 
 testDeleteLinkByHash = TestCase $ do
-    aNewGraph :: TVar (G.THGraph Int64) <- initHGraph
-    aOk <- runHGraph aNewGraph $ do
+    newGraph :: TVar (G.THGraph Int64) <- initHGraph
+    ok <- runHGraph newGraph $ do
         newNode 123
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
         deleteLink (toHash @Int64 123) (toHash @Int64 125)
         Just (DslHNode _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.notMember (toHash @Int64 125) l
-    assertBool "" aOk
+    assertBool "" ok
 
 
 testDeleteLinkByRef :: Test 
 testDeleteLinkByRef = TestCase $ do
-    aNewGraph :: TVar (G.THGraph Int64) <- initHGraph
-    aOk <- runHGraph aNewGraph $ do
+    newGraph :: TVar (G.THGraph Int64) <- initHGraph
+    ok <- runHGraph newGraph $ do
         newNode 123
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
@@ -175,4 +175,4 @@ testDeleteLinkByRef = TestCase $ do
         deleteLink r1 r2
         Just (DslHNode _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.notMember (toHash @Int64 125) l
-    assertBool "" aOk
+    assertBool "" ok
