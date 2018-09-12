@@ -10,7 +10,6 @@ newtype StringHash = StringHash ByteString deriving (Eq, Ord, Serialize)
 
 class Serialize a => StringHashable a where
     toHash :: a -> StringHash
-
     toHash = StringHash . encode
 
 instance StringHashable Int
