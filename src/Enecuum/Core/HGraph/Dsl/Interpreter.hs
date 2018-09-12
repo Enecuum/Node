@@ -17,6 +17,7 @@ import           Universum
 import           Data.Serialize
 import           Eff
 import           Eff.Internal
+import           Eff.SafeIO 
 
 import           Enecuum.Core.HGraph.Dsl.Language
 import           Enecuum.Core.HGraph.THGraph as G
@@ -67,6 +68,36 @@ data instance HNodeRef     (DslHNode (TVar (THNode content)) content)
 
 initHGraph :: StringHashable c => IO (TVar (THGraph c))
 initHGraph = atomically G.newTHGraph
+
+{-
+  :: NodeRuntime
+  -> L.NodeDefinitionL a
+  -> Eff '[L.LoggerL, SIO, Exc SomeException] a
+-}
+interpretHGraphDsl
+    :: StringHashable c
+    => TVar (THGraph c)
+    -> HGraphDsl (DslTNode c) a
+    -> Eff '[SIO] a
+
+interpretHGraphDsl graph (NewNode x) =
+    safeIO . atomically $ G.newNode graph (fromContent x)
+
+interpretHGraphDsl graph (GetNode x) =
+    safeIO . atomically $ do
+        aMaybeNode <- case x of
+            TNodeRef aVar   -> return $ Just aVar
+            TNodeHash aHash -> G.findNode graph aHash
+        case aMaybeNode of
+            Just aTNode -> do
+                node <- readTVar aTNode
+                return $ Just $ DslHNode 
+                    (toHash $ node^.content)
+                    (TNodeRef aTNode)
+                    (TNodeContent $ node^.content)
+                    (TNodeRef <$> node^.links)
+                    (TNodeRef <$> node^.rLinks) 
+            Nothing -> return Nothing
 
 
 runHGraph :: StringHashable c => TVar (THGraph c) -> Eff '[HGraphDsl (DslTNode c)] w -> IO w
@@ -138,3 +169,27 @@ runHGraph aGraph (E u q) = case extract u of
                 
         runHGraph aGraph (qApp q aRes)
 
+
+
+{-
+
+        interpretNodeDefinitionL
+  :: NodeRuntime
+  -> L.NodeDefinitionL a
+  -> Eff '[L.LoggerL, SIO, Exc SomeException] a
+interpretNodeDefinitionL rt (L.NodeTag tag) = do
+  L.logInfo $ "Node tag: " +| tag |+ ""
+  safeIO $ atomically $ writeTVar (rt ^. RLens.tag) tag
+interpretNodeDefinitionL rt (L.Initialization initScript) = do
+  L.logInfo "Initialization"
+  runNodeModel rt initScript
+interpretNodeDefinitionL rt (L.Serving handlersF) = do
+  L.logInfo "Serving handlersF"
+  safeIO $ startNodeRpcServer rt handlersF
+
+runNodeDefinitionL
+  :: NodeRuntime
+  -> Eff '[L.NodeDefinitionL, L.LoggerL, SIO, Exc SomeException] a
+  -> Eff '[L.LoggerL, SIO, Exc SomeException] a
+runNodeDefinitionL rt = handleRelay pure ( (>>=) . interpretNodeDefinitionL rt )
+        -}
