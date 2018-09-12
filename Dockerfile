@@ -2,7 +2,7 @@ FROM terrorjack/meikyu:ghc-8.2.2 as builder
 ADD . /usr/src/app
 WORKDIR /usr/src/app
 RUN apk --no-cache add build-base linux-headers rocksdb-dev
-RUN stack build && mkdir bin && stack install --local-bin-path /usr/src/app/bin
+RUN stack build && stack test && mkdir bin && stack install --local-bin-path /usr/src/app/bin
 
 FROM alpine:latest
 ENV bootnode false
