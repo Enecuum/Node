@@ -28,25 +28,19 @@ import           Enecuum.Core.Logger.Language
 instance ToNodeRef (TNodeL content) (TVar (THNode content))  where
     toNodeRef   = TNodeRef
 
-
 instance ToNodeRef (TNodeL content) (HNodeRef (TNodeL content)) where
     toNodeRef = identity
-
 
 instance ToNodeRef (TNodeL content) StringHash  where
     toNodeRef   = TNodeHash
 
-
 instance StringHashable content => ToNodeRef (TNodeL content) content  where
     toNodeRef   = TNodeHash . toHash
 
-
 instance Serialize c => Serialize (HNodeContent (TNodeL c))
-
 
 instance (Serialize c, StringHashable c) => StringHashable (HNodeContent (TNodeL c)) where
     toHash (TNodeContent c) = toHash c
-
 
 instance StringHashable c => ToContent (TNodeL c) c where
     toContent = TNodeContent
@@ -55,11 +49,9 @@ instance StringHashable c => ToContent (TNodeL c) c where
 
 type TNodeL content = HNodeL (TVar (THNode content)) content
 
-
 data instance HNodeContent (HNodeL (TVar (THNode content)) content)
     = TNodeContent content
   deriving (Generic)
-
 
 data instance HNodeRef     (HNodeL (TVar (THNode content)) content)
     = TNodeRef (TVar (THNode content))

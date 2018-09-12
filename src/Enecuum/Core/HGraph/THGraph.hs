@@ -14,13 +14,13 @@ import           Control.Lens (makeLenses)
 
 type THGraph c = Map StringHash (TVar (THNode c))
 
-data THNode c = THNode {
-    _links      :: THGraph c,
-    _rLinks     :: THGraph c,
-    _content    :: c
-  }
-makeLenses ''THNode
+data THNode c = THNode
+    { _links      :: THGraph c
+    , _rLinks     :: THGraph c
+    , _content    :: c
+    }
 
+makeLenses ''THNode
 
 newTHGraph :: StringHashable c => STM (TVar (THGraph c))
 newTHGraph = newTVar mempty
@@ -36,18 +36,15 @@ newNode aIndex aContent = do
 
 deleteNode aIndex = deleteHNode aIndex . toHash
 
-
 deleteHNode :: StringHashable c => TVar (THGraph c) -> StringHash -> STM Bool
 deleteHNode aIndex nodeHash = do
     tHNode <- findNode aIndex nodeHash
     whenJust tHNode $ deleteTHNode aIndex
     return $ isJust tHNode
 
-
 newLink, deleteLink :: StringHashable c => TVar (THGraph c) -> ReformLink c
 newLink = reformLink newTLink
 deleteLink = reformLink deleteTLink
-
 
 newHLink, deleteHLink :: StringHashable c => TVar (THGraph c) -> ReformLink StringHash
 newHLink = reformHLink newTLink
@@ -56,7 +53,6 @@ deleteHLink = reformHLink deleteTLink
 reformLink
     :: StringHashable c => ReformTLink c -> TVar (THGraph c) -> ReformLink c
 reformLink f aIndex x1 x2 = reformHLink f aIndex (toHash x1) (toHash x2)
-
 
 reformHLink
     :: StringHashable c => ReformTLink c -> TVar (THGraph c) -> ReformLink StringHash
@@ -72,7 +68,6 @@ findNode
     -> StringHash
     -> STM (Maybe (TVar (THNode c)))
 findNode aTHGraph aNodeName = M.lookup aNodeName <$> readTVar aTHGraph
-
 
 deleteTHNode :: StringHashable c => TVar (THGraph c) -> TVar (THNode c) -> STM ()
 deleteTHNode aIndex tHNode = do
