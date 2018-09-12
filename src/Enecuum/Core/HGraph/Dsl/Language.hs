@@ -57,7 +57,7 @@ newLink' a b     = send $ NewLink (toNodeRef a) (toNodeRef b)
 deleteLink' a b  = send $ DeleteLink (toNodeRef a) (toNodeRef b)
 
 newLink, deleteLink :: (ToNodeRef node c, ToNodeRef node b) => c -> b -> Eff '[HGraphDsl node] ()
-newLink a b    = void $ newLink' a b
+newLink a b = void $ newLink' a b
 deleteLink a b = void $ deleteLink' a b
 
 newNode' :: ToContent node c => c -> Eff '[HGraphDsl node] (W node Bool)
