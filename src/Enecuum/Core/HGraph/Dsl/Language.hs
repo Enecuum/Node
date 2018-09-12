@@ -16,6 +16,9 @@ import Eff
 
 import Enecuum.Core.HGraph.StringHashable
 
+import           Eff.Exc
+import           Eff.SafeIO 
+
 
 data HGraphDsl node a where
     NewNode     :: HNodeContent node -> HGraphDsl node (W node Bool)
@@ -33,6 +36,8 @@ data family HNodeContent a
 
 data family HNodeRef a
 
+type HGraphModel node = '[HGraphDsl node, SIO, Exc SomeException]
+
 
 data DslHNode ref content = DslHNode {
     _nodeHash    :: StringHash,
@@ -44,6 +49,7 @@ data DslHNode ref content = DslHNode {
 
 
 class StringHashable (HNodeContent config) => ToContent config b | config -> b where
+
     toContent   :: b -> HNodeContent config
     fromContent :: HNodeContent config -> b
 
@@ -52,25 +58,29 @@ class ToNodeRef config b where
     toNodeRef   :: b -> HNodeRef config
 
 
-newLink', deleteLink' :: (ToNodeRef node b, ToNodeRef node c) => c -> b -> Eff '[HGraphDsl node] (W node Bool)
+newLink', deleteLink'
+    :: (ToNodeRef node b, ToNodeRef node c)
+    => c -> b -> Eff (HGraphModel node) (W node Bool)
 newLink' a b     = send $ NewLink (toNodeRef a) (toNodeRef b)
 deleteLink' a b  = send $ DeleteLink (toNodeRef a) (toNodeRef b)
 
-newLink, deleteLink :: (ToNodeRef node c, ToNodeRef node b) => c -> b -> Eff '[HGraphDsl node] ()
+newLink, deleteLink
+    :: (ToNodeRef node c, ToNodeRef node b)
+    => c -> b -> Eff (HGraphModel node) ()
 newLink a b = void $ newLink' a b
 deleteLink a b = void $ deleteLink' a b
 
-newNode' :: ToContent node c => c -> Eff '[HGraphDsl node] (W node Bool)
+newNode' :: ToContent node c => c -> Eff (HGraphModel node) (W node Bool)
 newNode' = send . NewNode . toContent
 
-newNode :: ToContent node c => c -> Eff '[HGraphDsl node] ()
+newNode :: ToContent node c => c -> Eff (HGraphModel node) ()
 newNode = void . newNode'
 
-deleteNode' :: ToNodeRef node h => h -> Eff '[HGraphDsl node] (W node Bool)
+deleteNode' :: ToNodeRef node h => h -> Eff (HGraphModel node) (W node Bool)
 deleteNode' = send . DeleteNode . toNodeRef
 
-deleteNode :: ToNodeRef node h => h -> Eff '[HGraphDsl node] ()
+deleteNode :: ToNodeRef node h => h -> Eff (HGraphModel node) ()
 deleteNode = void . deleteNode'
 
-getNode :: ToNodeRef node h => h -> Eff '[HGraphDsl node] (Maybe node)
+getNode :: ToNodeRef node h => h -> Eff (HGraphModel node) (Maybe node)
 getNode = send . GetNode . toNodeRef

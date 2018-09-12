@@ -17,7 +17,6 @@ import           Universum
 import           Data.Serialize
 import           Eff
 import           Eff.Exc
-import           Eff.Internal
 import           Eff.SafeIO 
 
 import           Enecuum.Core.HGraph.Dsl.Language
@@ -71,16 +70,16 @@ initHGraph :: StringHashable c => IO (TVar (THGraph c))
 initHGraph = atomically G.newTHGraph
 
 
-interpretHGraphDsl
+interpretHGraphL
     :: StringHashable c
     => TVar (THGraph c)
     -> HGraphDsl (DslTNode c) a
     -> Eff '[SIO, Exc SomeException] a
 
-interpretHGraphDsl graph (NewNode x) =
+interpretHGraphL graph (NewNode x) =
     safeIO $ atomically $ W <$> G.newNode graph (fromContent x)
 
-interpretHGraphDsl graph (GetNode x) = safeIO . atomically $ do
+interpretHGraphL graph (GetNode x) = safeIO . atomically $ do
     aMaybeNode <- case x of
         TNodeRef aVar   -> return $ Just aVar
         TNodeHash aHash -> G.findNode graph aHash
@@ -95,13 +94,13 @@ interpretHGraphDsl graph (GetNode x) = safeIO . atomically $ do
                 (TNodeRef <$> node^.rLinks) 
         Nothing -> return Nothing
 
-interpretHGraphDsl graph (DeleteNode x) = safeIO . atomically $ case x of
+interpretHGraphL graph (DeleteNode x) = safeIO . atomically $ case x of
     TNodeRef ref -> do
         G.deleteTHNode graph ref
         return $ W True
     TNodeHash hash -> W <$> G.deleteHNode graph hash
 
-interpretHGraphDsl graph (NewLink x y) = safeIO . atomically $ case (x, y) of
+interpretHGraphL graph (NewLink x y) = safeIO . atomically $ case (x, y) of
     (TNodeRef  r1, TNodeRef  r2) -> W <$> G.newTLink r1 r2
     (TNodeHash r1, TNodeHash r2) -> W <$> G.newHLink graph r1 r2
     (TNodeRef  r1, TNodeHash r2) -> do
@@ -115,7 +114,7 @@ interpretHGraphDsl graph (NewLink x y) = safeIO . atomically $ case (x, y) of
             Just aTNode -> W <$> G.newTLink aTNode r2
             Nothing     -> return $ W False
 
-interpretHGraphDsl graph (DeleteLink x y) = safeIO . atomically $ case (x, y) of
+interpretHGraphL graph (DeleteLink x y) = safeIO . atomically $ case (x, y) of
     (TNodeRef  r1, TNodeRef  r2) -> W <$> G.deleteTLink r1 r2
     (TNodeHash r1, TNodeHash r2) -> W <$> G.deleteHLink graph r1 r2
     (TNodeRef  r1, TNodeHash r2) -> do
@@ -129,97 +128,22 @@ interpretHGraphDsl graph (DeleteLink x y) = safeIO . atomically $ case (x, y) of
             Just aTNode -> W <$> G.deleteTLink aTNode r2
             Nothing     -> return $ W False
 
+runHGraphL
+    :: StringHashable c
+    => TVar (THGraph c)
+    -> Eff '[HGraphDsl (DslTNode c), SIO, Exc SomeException] w
+    -> Eff '[SIO, Exc SomeException] w
+runHGraphL rt = handleRelay pure ( (>>=) . interpretHGraphL rt )
 
+runHGraph
+    :: StringHashable c
+    => TVar (THGraph c)
+    -> Eff '[HGraphDsl (DslTNode c), SIO, Exc SomeException] w
+    -> IO w
+runHGraph graph script = runSafeIO $ runHGraphL graph script
+
+{-
 runHGraph :: StringHashable c => TVar (THGraph c) -> Eff '[HGraphDsl (DslTNode c)] w -> IO w
 runHGraph _ (Val x) = return x
 runHGraph aGraph (E u q) = case extract u of
-
-    NewNode x   -> do
-        aBool <- atomically $ G.newNode aGraph (fromContent x)
-        runHGraph aGraph (qApp q (W aBool))
-
-    DeleteNode  x -> do
-        aBool <- atomically $ case x of
-            TNodeRef aRef -> do
-                G.deleteTHNode aGraph aRef
-                return True
-            TNodeHash aHash -> G.deleteHNode aGraph aHash
-
-        runHGraph aGraph (qApp q (W aBool))
-
-    NewLink    x y -> do
-        aBool <- atomically $ case (x, y) of
-            (TNodeRef  r1, TNodeRef  r2) -> G.newTLink r1 r2
-            (TNodeHash r1, TNodeHash r2) -> G.newHLink aGraph r1 r2
-            (TNodeRef  r1, TNodeHash r2) -> do
-                aMaybeNode <- G.findNode aGraph r2
-                case aMaybeNode of
-                    Just aTNode -> G.newTLink r1 aTNode
-                    Nothing     -> return False
-            (TNodeHash  r1, TNodeRef r2) -> do
-                aMaybeNode <- G.findNode aGraph r1
-                case aMaybeNode of
-                    Just aTNode -> G.newTLink aTNode r2
-                    Nothing     -> return False
-        runHGraph aGraph (qApp q (W aBool))
-
-    DeleteLink x y -> do
-        aBool <- atomically $ case (x, y) of
-            (TNodeRef  r1, TNodeRef  r2) -> G.deleteTLink r1 r2
-            (TNodeHash r1, TNodeHash r2) -> G.deleteHLink aGraph r1 r2
-            (TNodeRef  r1, TNodeHash r2) -> do
-                aMaybeNode <- G.findNode aGraph r2
-                case aMaybeNode of
-                    Just aTNode -> G.deleteTLink r1 aTNode
-                    Nothing     -> return False
-            (TNodeHash  r1, TNodeRef r2) -> do
-                aMaybeNode <- G.findNode aGraph r1
-                case aMaybeNode of
-                    Just aTNode -> G.deleteTLink aTNode r2
-                    Nothing     -> return False
-
-        runHGraph aGraph (qApp q (W aBool))
-    
-
-    GetNode    x   -> do
-        aRes <- atomically $ do
-            aMaybeNode <- case x of
-                TNodeRef aVar   -> return $ Just aVar
-                TNodeHash aHash -> G.findNode aGraph aHash
-            case aMaybeNode of
-                Just aTNode -> do
-                    aNode <- readTVar aTNode
-                    return $ Just $ DslHNode 
-                        (toHash $ aNode^.content)
-                        (TNodeRef aTNode)
-                        (TNodeContent $ aNode^.content)
-                        (TNodeRef <$> aNode^.links)
-                        (TNodeRef <$> aNode^.rLinks) 
-                Nothing -> return Nothing
-                
-        runHGraph aGraph (qApp q aRes)
-
-
-
-{-
-
-        interpretNodeDefinitionL
-  :: NodeRuntime
-  -> L.NodeDefinitionL a
-  -> Eff '[L.LoggerL, SIO, Exc SomeException] a
-interpretNodeDefinitionL rt (L.NodeTag tag) = do
-  L.logInfo $ "Node tag: " +| tag |+ ""
-  safeIO $ atomically $ writeTVar (rt ^. RLens.tag) tag
-interpretNodeDefinitionL rt (L.Initialization initScript) = do
-  L.logInfo "Initialization"
-  runNodeModel rt initScript
-interpretNodeDefinitionL rt (L.Serving handlersF) = do
-  L.logInfo "Serving handlersF"
-  safeIO $ startNodeRpcServer rt handlersF
-
-runNodeDefinitionL
-  :: NodeRuntime
-  -> Eff '[L.NodeDefinitionL, L.LoggerL, SIO, Exc SomeException] a
-  -> Eff '[L.LoggerL, SIO, Exc SomeException] a
-runNodeDefinitionL rt = handleRelay pure ( (>>=) . interpretNodeDefinitionL rt )
-        -}
+-}
