@@ -22,6 +22,7 @@ import           Eff.SafeIO
 import           Enecuum.Core.HGraph.Dsl.Language
 import           Enecuum.Core.HGraph.THGraph as G
 import           Enecuum.Core.HGraph.StringHashable
+import           Enecuum.Core.Logger.Language
 
 
 instance ToNodeRef (DslTNode content) (TVar (THNode content))  where
@@ -135,6 +136,7 @@ runHGraphL
     -> Eff '[SIO, Exc SomeException] w
 runHGraphL rt = handleRelay pure ( (>>=) . interpretHGraphL rt )
 
+
 runHGraph
     :: StringHashable c
     => TVar (THGraph c)
@@ -142,8 +144,3 @@ runHGraph
     -> IO w
 runHGraph graph script = runSafeIO $ runHGraphL graph script
 
-{-
-runHGraph :: StringHashable c => TVar (THGraph c) -> Eff '[HGraphDsl (DslTNode c)] w -> IO w
-runHGraph _ (Val x) = return x
-runHGraph aGraph (E u q) = case extract u of
--}
