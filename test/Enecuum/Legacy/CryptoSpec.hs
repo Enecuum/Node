@@ -123,6 +123,7 @@ spec = do
       let pk = T.getPublicKey $ T.uncompressPublicKey $ owner
       verifyEncodeble pk signature transaction `shouldBe` True
 
+-- | Hex Representation for signed and unsigned transaction
 printHexRepresentation :: IO ()
 printHexRepresentation = do
   signature <- sign ownerPrivateKey transaction
@@ -137,6 +138,7 @@ printHexRepresentation = do
       owner'             = hhexPrint owner
       signedTx'          = hhexPrint signedTx
       signedTxTimeStamp' = hhexPrint signedTxTimeStamp
+      time'              = hhexPrint time
 
   mapM_ print ["transaction", show transaction, transaction']
   mapM_ print ["signature", show signature, signature']
@@ -144,6 +146,7 @@ printHexRepresentation = do
   mapM_ print ["owner", show owner, owner']
   mapM_ print ["signedTx", show signedTx, signedTx']
   mapM_ print ["signedTxTimeStamp", show signedTxTimeStamp, signedTxTimeStamp']
+  mapM_ print ["timestamp", show time, time']
 
 -- | Parsing HUnit test suite
 parsingTestSuite :: Test
