@@ -52,6 +52,4 @@ spec = describe "Master Node test" $
       , "Initialization"
       , "Node tag: bootNode"
       ]
-    
-    1 `shouldBe` 2
-
+      
