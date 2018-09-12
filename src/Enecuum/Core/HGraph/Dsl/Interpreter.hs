@@ -70,7 +70,6 @@ data instance HNodeRef     (DslHNode (TVar (THNode content)) content)
 initHGraph :: StringHashable c => IO (TVar (THGraph c))
 initHGraph = atomically G.newTHGraph
 
-
 interpretHGraphL
     :: StringHashable c
     => TVar (THGraph c)
@@ -136,11 +135,9 @@ runHGraphL
     -> Eff '[SIO, Exc SomeException] w
 runHGraphL rt = handleRelay pure ( (>>=) . interpretHGraphL rt )
 
-
 runHGraph
     :: StringHashable c
     => TVar (THGraph c)
     -> Eff '[HGraphDsl (DslTNode c), SIO, Exc SomeException] w
     -> IO w
 runHGraph graph script = runSafeIO $ runHGraphL graph script
-
