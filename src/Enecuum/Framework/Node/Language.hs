@@ -13,11 +13,15 @@ import           Enecuum.Framework.NetworkModel.Language  ( NetworkSendingL, Net
 import           Enecuum.Framework.Networking.Language    ( NetworkingL )
 import qualified Enecuum.Framework.Domain                 as D
 
+-- | Dummy language for Node.
 data NodeL a where
   Dummy :: NodeL ()
 
 makeFreer ''NodeL
 
+-- | Node model langauges. These langauges should be used in the node scripts.
+-- With these languages, nodes can interact through the network,
+-- work with internal state.
 type NodeModel =
   '[ NodeL
    , NetworkingL
@@ -30,9 +34,17 @@ type NodeModel =
 
 -- Raw idea of RPC description. Will be reworked.
 
+-- | Handler is a function which processes a particular response
+-- if this response is what RawData contains.
 type Handler = (Eff NodeModel (Maybe D.RawData), D.RawData)
+
+-- | HandlersF is a function holding stack of handlers which are handling
+-- different requests.
 type HandlersF = Handler -> Handler
 
+-- | Tries to decode a request into a request the handler accepts.
+-- On success, calls the handler and returns Just result.
+-- On failure, returns Nothing.
 tryHandler
   :: D.RpcMethod () req resp
   => FromJSON req
@@ -46,6 +58,7 @@ tryHandler handler rawReq = case A.decode rawReq of
     resp <- handler req
     pure $ Just $ A.encode resp
 
+-- | Allows to specify a stack of handlers for different RPC requests.
 serve
   :: D.RpcMethod () req resp
   => FromJSON req

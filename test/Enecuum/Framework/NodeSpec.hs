@@ -12,16 +12,13 @@ import Enecuum.Prelude
 
 import           Test.Hspec
 
-import qualified Enecuum.Domain                as D
-import qualified Enecuum.Language              as L
-
-import Enecuum.Framework.TestData.Nodes
-import Enecuum.Framework.Testing.Runtime
-import Enecuum.Framework.Testing.Types
+import           Enecuum.Framework.TestData.RPC
+import           Enecuum.Framework.TestData.Nodes
+import           Enecuum.Framework.Testing.Runtime
+import           Enecuum.Framework.Testing.Types
 import qualified Enecuum.Core.Testing.Runtime.Lens as RLens
 import qualified Enecuum.Framework.Testing.Lens as RLens
 
--- TODO: shut down all workers
 spec :: Spec
 spec = describe "Master Node test" $
   it "Master Node test" $ do
@@ -42,9 +39,6 @@ spec = describe "Master Node test" $
       , "CloseConnection conn"
       , "SendRequest conn req"
       , "OpenConnection cfg"
-      , "L.WaitForSingleResponse cfg timeout"
-      , "L.Multicast cfg req"
-      , "Synchronize"
       , "Eval Network"
       , "Initialization"
       , "Node tag: masterNode"

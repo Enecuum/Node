@@ -9,18 +9,22 @@ import qualified Data.Map as Map
 import qualified Enecuum.Domain                as D
 import           Enecuum.Core.Testing.Runtime.Types
 
+-- | Defines control requests to manipulate by nodes.
 data ControlRequest
-  = RpcRequest D.RpcRequest
-  | RelayRpcRequest
+  = RpcRequest D.RpcRequest   -- ^ Eval RPC request to a node.
+  | RelayRpcRequest           -- ^ Relay RPC request from one node to another.
     { _from    :: D.NodeAddress
     , _to      :: D.NodeAddress
     , _request :: D.RpcRequest
     }
 
+-- | Result of evaluation of control response.
 data ControlResponse
   = AsRpcResponse D.RpcResponse
   | AsErrorResponse Text
 
+-- | Control is the way to evalueate admin control over a node.
+-- Represents the MVar Reqeust-Response pattern (STM version).
 data Control = Control
   { _request  :: TMVar ControlRequest
   , _response :: TMVar ControlResponse
