@@ -18,6 +18,7 @@ import qualified Data.Serialize                as S
                                                           )
 import           Control.Monad                            ( join )
 import           Text.Printf                              ( printf )
+import           Enecuum.Legacy.Service.System.Directory  ( getTime )
 import           Enecuum.Legacy.Service.Transaction.Common
                                                           ( decodeThis
                                                           , genNTx
@@ -56,7 +57,9 @@ keyBlock = T.KeyBlockInfoPoW
   , T._type      = 0
   }
 
-owner     = T.PublicKey256k1 1
+-- owner     = T.PublicKey256k1 1
+owner     = read ("PhZLFMzvuukH4fENMRAzqJxyqfVH9Vn856FjEuwbzy9g") :: T.PublicKey
+ownerPrivateKey = read ("R9BVmBwnASM2mNBVgmnoxYAMR3bQ8HaGWSrWewm2sqV") :: T.PrivateKey
 receiver  = T.PublicKey256k1 1
 amount    = (433431 :: T.Amount)
 currency  = T.ENQ
@@ -75,6 +78,8 @@ transaction = T.Transaction
   , T._uuid      = uuid
   }
 
+hexForPrint xs = map (printf "%02x") $ BC.unpack $ S.encode $ xs
+
 spec :: Spec
 spec = do
   describe "Legacy parsing tests" $
@@ -90,18 +95,17 @@ spec = do
 
   describe "Legacy Transaction signing / serialization tests" $ do
     it "Serialize Transaction" $ do
-      let encoded = BC.unpack $ S.encode transaction
-      let xs :: [String] = map (printf "%02x") encoded
+      let txHex = hexForPrint transaction
 
-      let ownerEncoded     :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ owner
-      let receiverEncoded  :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ receiver
-      let amountEncoded    :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ amount
-      let currencyEncoded  :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ currency
-      let timestampEncoded :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ timestamp
-      let signatureEncoded :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ signature
-      let uuidEncoded      :: [String] = map (printf "%02x") $ BC.unpack $ S.encode $ uuid
+      let ownerEncoded     :: [String] = hexForPrint owner
+      let receiverEncoded  :: [String] = hexForPrint receiver
+      let amountEncoded    :: [String] = hexForPrint amount
+      let currencyEncoded  :: [String] = hexForPrint currency
+      let timestampEncoded :: [String] = hexForPrint timestamp
+      let signatureEncoded :: [String] = hexForPrint signature
+      let uuidEncoded      :: [String] = hexForPrint uuid
 
-      let ys :: [String] = join
+      let txByFieldHex :: [String] = join
             [ ownerEncoded
             , receiverEncoded
             , amountEncoded
@@ -111,17 +115,35 @@ spec = do
             , uuidEncoded
             ]
 
-      xs `shouldBe` ys
-      unwords xs `shouldBe` "00 00 00 00 01 00 00 00 00 01 00 00 00 00 00 06 9d 17 00 00 00 00 00 00 00 00 00 00 01"
+      txHex `shouldBe` txByFieldHex
+      unwords txHex `shouldBe` "01 01 00 00 00 00 00 00 00 21 1f c8 de b7 d7 bf 20 a8 14 8a de 2b 3c c3 ed ba 89 a4 95 13 40 d3 96 6f 8f ff 3b 7a 09 e7 44 51 01 00 00 00 00 01 00 00 00 00 00 06 9d 17 00 00 00 00 00 00 00 00 00 00 01"
 
     it "Signing / verifying" $ do
-      (T.KeyPair from privFrom) <- T.generateNewRandomAnonymousKeyPair
-      (T.KeyPair to privTo) <- T.generateNewRandomAnonymousKeyPair
-      let tx  = T.Transaction from to 10 T.ENQ Nothing Nothing 1
-      signature <- sign privFrom tx
-      let pk = T.getPublicKey $ T.uncompressPublicKey $ from
-      verifyEncodeble pk signature tx `shouldBe` True
+      signature <- sign ownerPrivateKey transaction
+      let pk = T.getPublicKey $ T.uncompressPublicKey $ owner
+      verifyEncodeble pk signature transaction `shouldBe` True
 
+printHexRepresentation :: IO ()
+printHexRepresentation = do
+  signature <- sign ownerPrivateKey transaction
+  let signedTx = transaction {T._signature = Just signature}
+  time <- Just <$> getTime
+  let signedTxTimeStamp = signedTx {T._timestamp = time}
+      hhexPrint xs = unwords $ hexForPrint xs
+
+      transaction'       = hhexPrint transaction
+      signature'         = hhexPrint signature
+      ownerPrivateKey'   = hhexPrint ownerPrivateKey
+      owner'             = hhexPrint owner
+      signedTx'          = hhexPrint signedTx
+      signedTxTimeStamp' = hhexPrint signedTxTimeStamp
+
+  mapM_ print ["transaction", show transaction, transaction']
+  mapM_ print ["signature", show signature, signature']
+  mapM_ print ["ownerPrivateKey", show ownerPrivateKey, ownerPrivateKey']
+  mapM_ print ["owner", show owner, owner']
+  mapM_ print ["signedTx", show signedTx, signedTx']
+  mapM_ print ["signedTxTimeStamp", show signedTxTimeStamp, signedTxTimeStamp']
 
 -- | Parsing HUnit test suite
 parsingTestSuite :: Test
