@@ -52,6 +52,13 @@ import           System.Random                                     (randomRIO)
 import           Data.Text                                         (pack,
                                                                     unpack)
 import           Enecuum.Legacy.Node.Node.Types                    (MsgToCentralActor (..))
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair (Amount,
+                                                                    KeyPair (..),
+                                                                    PrivateKey,
+                                                                    PublicKey,
+                                                                    generateNewRandomAnonymousKeyPair,
+                                                                    getPublicKey,
+                                                                    uncompressPublicKey)
 import           Enecuum.Legacy.Refact.Crypto.Verification         (verifyEncodeble)
 import qualified Enecuum.Legacy.Service.InfoMsg                    as I
 import           Enecuum.Legacy.Service.System.Directory           (getKeyFilePath,
@@ -76,13 +83,6 @@ import           Enecuum.Legacy.Service.Types                      (CLIException
                                                                     Transaction (..),
                                                                     TransactionAPI,
                                                                     TransactionInfo)
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount,
-                                                                    KeyPair (..),
-                                                                    PrivateKey,
-                                                                    PublicKey,
-                                                                    generateNewRandomAnonymousKeyPair,
-                                                                    getPublicKey,
-                                                                    uncompressPublicKey)
 import           Prelude
 
 import           Enecuum.Legacy.Refact.Crypto.Signing              (sign)

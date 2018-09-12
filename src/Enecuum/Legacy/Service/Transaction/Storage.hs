@@ -20,25 +20,25 @@ import qualified Data.ByteString                                   as B
 import qualified Data.ByteString.Base64                            as Base64
 import qualified Data.ByteString.Internal                          as BSI
 import           Data.Default                                      (def)
+import           Data.Either
 import           Data.Maybe
 import           Data.Pool
 import qualified Data.Serialize                                    as S (encode)
 import           Data.Serialize.Put
 import qualified "rocksdb-haskell" Database.RocksDB                as Rocks
 import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair
+import           Enecuum.Legacy.Refact.Crypto.SerializeJSON        ()
 import           Enecuum.Legacy.Service.System.Directory
 import           Enecuum.Legacy.Service.Transaction.Decode
 import           Enecuum.Legacy.Service.Transaction.Iterator
 import           Enecuum.Legacy.Service.Transaction.Sprout
 import           Enecuum.Legacy.Service.Transaction.Transformation
 import           Enecuum.Legacy.Service.Types
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
-import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
 import           Prelude
-import           Data.Either
 
-import           Enecuum.Legacy.Refact.Hashing ( calculateKeyBlockHash )
-import           Enecuum.Legacy.Refact.Assets  ( genesisKeyBlock )
+import           Enecuum.Legacy.Refact.Assets                      (genesisKeyBlock)
+import           Enecuum.Legacy.Refact.Hashing                     (calculateKeyBlockHash)
 
 -- FIX change def (5 times)
 connectOrRecoveryConnect :: IO DBPoolDescriptor

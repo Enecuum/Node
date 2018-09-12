@@ -15,10 +15,10 @@ import           Data.ByteString                                   (ByteString,
                                                                     pack)
 import           Data.Serialize
 import           Enecuum.Legacy.Node.Data.Key                      hiding (PublicKey (..))
-import qualified Enecuum.Legacy.Service.Types.PublicPrivateKeyPair as T
+import qualified Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair as T
 import           Prelude
 
 
 verifyEncodeble :: Serialize msg => PublicKey -> Signature -> msg -> Bool
-verifyEncodeble aPublicKey aSignature aMsg = verify SHA3_256
-    aPublicKey aSignature (encode aMsg)
+verifyEncodeble publicKey signature msg = verify SHA3_256
+    publicKey signature (encode msg)

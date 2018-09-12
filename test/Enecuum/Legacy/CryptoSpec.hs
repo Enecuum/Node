@@ -28,7 +28,7 @@ import           Enecuum.Legacy.Service.Transaction.Generate
                                                           , generateMicroblocksAndKeyBlocks
                                                           )
 import qualified Enecuum.Legacy.Service.Types                      as T
-import qualified Enecuum.Legacy.Service.Types.PublicPrivateKeyPair as T
+import qualified Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair as T
 import           Enecuum.Legacy.Service.Types             ( Microblock
                                                           , TransactionInfo (..)
                                                           )

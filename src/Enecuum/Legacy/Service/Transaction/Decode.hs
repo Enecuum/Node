@@ -24,9 +24,9 @@ import qualified Data.Serialize                                    as S (Seriali
                                                                          encode)
 import qualified "rocksdb-haskell" Database.RocksDB                as Rocks
 import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair
+import           Enecuum.Legacy.Refact.Crypto.SerializeJSON        ()
 import           Enecuum.Legacy.Service.Types
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
-import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
 import           Prelude
 
 

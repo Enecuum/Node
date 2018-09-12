@@ -27,9 +27,9 @@ import           Data.Pool
 import           Data.Serialize
 import qualified "rocksdb-haskell" Database.RocksDB                as Rocks
 import           Enecuum.Legacy.Node.DataActor
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair
+import           GHC.Generics                                      (Generic)
 import           Prelude
-import           GHC.Generics (Generic)
 
 
 data CLIException = ValueOfChainIsNotNothing String

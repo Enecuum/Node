@@ -5,17 +5,17 @@
 module Enecuum.Legacy.Service.Transaction.Generate where
 
 import           Control.Monad                                      (replicateM)
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair  (KeyPair (..),
+                                                                     generateNewRandomAnonymousKeyPair)
 import           Enecuum.Legacy.Service.Transaction.TransactionsDAG (genNTx)
 import           Enecuum.Legacy.Service.Types                       (HashOfKeyBlock,
                                                                      KeyBlockInfoPoW (..),
                                                                      Microblock (..))
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair  (KeyPair (..),
-                                                                     generateNewRandomAnonymousKeyPair)
 import           Enecuum.Prelude
 
-import           Enecuum.Legacy.Refact.Hashing                       ( calculateKeyBlockHash )
-import           Enecuum.Legacy.Refact.Crypto.Signing                ( sign )
-import           Enecuum.Legacy.Refact.Assets                        ( genesisKeyBlock )
+import           Enecuum.Legacy.Refact.Assets                       (genesisKeyBlock)
+import           Enecuum.Legacy.Refact.Crypto.Signing               (sign)
+import           Enecuum.Legacy.Refact.Hashing                      (calculateKeyBlockHash)
 
 quantityOfTransactionInMicroblock :: Int
 quantityOfTransactionInMicroblock = 10

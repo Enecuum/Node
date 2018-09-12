@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
+module Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair
   ( Amount
   , ECDSA.Signature
   , compressPublicKey
@@ -21,24 +21,19 @@ module Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
   , generateNewRandomAnonymousKeyPair
   ) where
 
-import           Data.Maybe
-import           Enecuum.Legacy.Service.Types.SerializeInstances ()
-import           GHC.Generics
-
-import           "cryptonite" Crypto.Hash.Algorithms
 import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA            as ECDSA
 import           "cryptonite" Crypto.PubKey.ECC.Generate
 import           "cryptonite" Crypto.PubKey.ECC.Types
 import           "cryptonite" Crypto.Random
-import           Data.Serialize
-
 import           Data.ByteString.Base58
 import qualified Data.ByteString.Char8                           as BC
-
-
 import           Data.Int                                        (Int64)
-import           Prelude
+import           Data.Maybe
+import           Data.Serialize
+import           Enecuum.Legacy.Refact.Crypto.SerializeInstances ()
+import           GHC.Generics
 import           Math.NumberTheory.Moduli
+import           Prelude
 
 
 type Amount = Int64

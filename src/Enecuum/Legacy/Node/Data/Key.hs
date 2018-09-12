@@ -17,7 +17,6 @@ module Enecuum.Legacy.Node.Data.Key (
     ,   generateClientId
   ) where
 
-import           Crypto.PubKey.ECC.DH
 import qualified Crypto.PubKey.ECC.ECDSA                           as ECDSA
 import           Crypto.PubKey.ECC.Generate
 import           Crypto.PubKey.ECC.Types                           (Curve (..), CurveName (SEC_p256k1),
@@ -25,14 +24,10 @@ import           Crypto.PubKey.ECC.Types                           (Curve (..), 
 import           Crypto.Random.Types                               (MonadRandom (..))
 import           Data.Aeson.TH
 import           Data.Bits
-import qualified Data.ByteArray                                    as BA
-import qualified Data.ByteString                                   as B
 import           Data.Serialize
 import           Data.Word
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (PublicKey (..),
-                                                                    compressPublicKey,
-                                                                    getPublicKey,
-                                                                    uncompressPublicKey)
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair (PublicKey (..),
+                                                                    compressPublicKey)
 import           Enecuum.Prelude
 import           System.Random
 

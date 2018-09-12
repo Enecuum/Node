@@ -6,7 +6,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Enecuum.Legacy.Service.Types.SerializeJSON where
+module Enecuum.Legacy.Refact.Crypto.SerializeJSON where
 
 
 import           Control.Monad
@@ -23,8 +23,8 @@ import           Data.Text                                         (Text, pack,
                                                                     unpack)
 import qualified Data.Text.Encoding                                as T (decodeUtf8,
                                                                          encodeUtf8)
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair
 import           Enecuum.Legacy.Service.Types
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 import           Prelude
 
 
