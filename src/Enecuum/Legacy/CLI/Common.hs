@@ -35,7 +35,8 @@ import           Control.Concurrent.Chan.Unagi.Bounded             (InChan,
                                                                     tryWriteChan)
 import           Control.Concurrent.MVar                           (newEmptyMVar,
                                                                     readMVar)
-import           Control.Exception                                 (SomeException, throw, try)
+import           Control.Exception                                 (SomeException,
+                                                                    throw, try)
 import           Control.Monad                                     (unless)
 import           Control.Timeout                                   (timeout)
 import           Data.List.Split                                   (splitOn)
@@ -50,8 +51,8 @@ import           System.Random                                     (randomRIO)
 
 import           Data.Text                                         (pack,
                                                                     unpack)
-import           Enecuum.Legacy.Node.Crypto                        (verifyEncodeble)
 import           Enecuum.Legacy.Node.Node.Types                    (MsgToCentralActor (..))
+import           Enecuum.Legacy.Refact.Crypto.Verification         (verifyEncodeble)
 import qualified Enecuum.Legacy.Service.InfoMsg                    as I
 import           Enecuum.Legacy.Service.System.Directory           (getKeyFilePath,
                                                                     getTime)
@@ -84,7 +85,7 @@ import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount,
                                                                     uncompressPublicKey)
 import           Prelude
 
-import           Enecuum.Legacy.Refact.Crypto.Signing               ( sign )
+import           Enecuum.Legacy.Refact.Crypto.Signing              (sign)
 
 
 type Result a = Either CLIException a

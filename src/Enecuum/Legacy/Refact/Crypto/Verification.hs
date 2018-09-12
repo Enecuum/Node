@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module Enecuum.Legacy.Node.Crypto where
+module Enecuum.Legacy.Refact.Crypto.Verification where
 
 import           Crypto.Cipher.AES                                 (AES256)
 import           Crypto.Cipher.Types

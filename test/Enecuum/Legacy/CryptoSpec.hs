@@ -43,8 +43,7 @@ import           Enecuum.Legacy.Refact.Hashing            ( calculateKeyBlockHas
 import           Enecuum.Legacy.Refact.Assets             ( genesisKeyBlock )
 import           Enecuum.Legacy.Refact.Crypto.Signing (sign)
 import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA            as ECDSA
-import           Enecuum.Legacy.Node.Crypto (verifyEncodeble)
-
+import           Enecuum.Legacy.Refact.Crypto.Verification (verifyEncodeble)
 import           Prelude
 
 keyBlock :: T.KeyBlockInfoPoW
