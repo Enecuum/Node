@@ -12,8 +12,8 @@ import           Enecuum.Prelude
 
 import qualified Enecuum.Core.HGraph.THGraph as G
 import           Enecuum.Core.HGraph.StringHashable
-import           Enecuum.Core.HGraph.Dsl.Interpreter
-import           Enecuum.Core.HGraph.Dsl.Language
+import           Enecuum.Core.HGraph.Interpreter
+import           Enecuum.Core.HGraph.Language
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
 
@@ -39,7 +39,7 @@ testNewNode = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
     ok <- runHGraph newGraph $ do
         newNode 123
-        Just (DslHNode _ _ c _ _) <- getNode (123 :: Int64)
+        Just (HNodeL _ _ c _ _) <- getNode (123 :: Int64)
         return $ 123 == fromContent c
     assertBool "" ok
 
@@ -49,7 +49,7 @@ testGetNodeByHash = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
     ok <- runHGraph newGraph $ do
         newNode 123
-        Just (DslHNode _ _ c _ _) <- getNode (toHash (123 :: Int64))
+        Just (HNodeL _ _ c _ _) <- getNode (toHash (123 :: Int64))
         return $ 123 == fromContent c
     assertBool "" ok
 
@@ -59,8 +59,8 @@ testGetNodeByRef = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
     ok <- runHGraph newGraph $ do
         newNode 123
-        Just (DslHNode _ ref _ _ _) <- getNode (toHash (123 :: Int64))
-        Just (DslHNode _ _ c _ _)   <- getNode ref
+        Just (HNodeL _ ref _ _ _) <- getNode (toHash (123 :: Int64))
+        Just (HNodeL _ _ c _ _)   <- getNode ref
         return $ 123 == fromContent c
     assertBool "" ok
 
@@ -91,7 +91,7 @@ testDeleteNodeByRef = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
     ok <- runHGraph newGraph $ do
         newNode (123 :: Int64)
-        Just (DslHNode _ ref _ _ _) <- getNode (toHash @Int64 123)
+        Just (HNodeL _ ref _ _ _) <- getNode (toHash @Int64 123)
         deleteNode ref
         isNothing <$> getNode (123 :: Int64)
     assertBool "" ok
@@ -104,7 +104,7 @@ testNewLinkByContent = TestCase $ do
         newNode 123
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
-        Just (DslHNode _ _ _ l _) <- getNode (toHash @Int64 123)
+        Just (HNodeL _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.member (toHash @Int64 125) l
     assertBool "" ok
 
@@ -116,7 +116,7 @@ testNewLinkByHash = TestCase $ do
         newNode 123
         newNode 125
         newLink (toHash @Int64 123) (toHash @Int64 125)
-        Just (DslHNode _ _ _ l _) <- getNode (toHash @Int64 123)
+        Just (HNodeL _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.member (toHash @Int64 125) l
     assertBool "" ok
 
@@ -127,10 +127,10 @@ testNewLinkByRef = TestCase $ do
     ok <- runHGraph newGraph $ do
         newNode 123
         newNode 125
-        Just (DslHNode _ r1 _ _ _) <- getNode (toHash @Int64 123)
-        Just (DslHNode _ r2 _ _ _) <- getNode (toHash @Int64 125)
+        Just (HNodeL _ r1 _ _ _) <- getNode (toHash @Int64 123)
+        Just (HNodeL _ r2 _ _ _) <- getNode (toHash @Int64 125)
         newLink r1 r2
-        Just (DslHNode _ _ _ l _) <- getNode (toHash @Int64 123)
+        Just (HNodeL _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.member (toHash @Int64 125) l
     assertBool "" ok
 
@@ -144,7 +144,7 @@ testDeleteLinkByContent = TestCase $ do
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
         deleteLink (123 :: Int64) (125 :: Int64)
-        Just (DslHNode _ _ _ l _) <- getNode (toHash @Int64 123)
+        Just (HNodeL _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.notMember (toHash @Int64 125) l
     assertBool "" ok
 
@@ -158,7 +158,7 @@ testDeleteLinkByHash = TestCase $ do
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
         deleteLink (toHash @Int64 123) (toHash @Int64 125)
-        Just (DslHNode _ _ _ l _) <- getNode (toHash @Int64 123)
+        Just (HNodeL _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.notMember (toHash @Int64 125) l
     assertBool "" ok
 
@@ -170,9 +170,9 @@ testDeleteLinkByRef = TestCase $ do
         newNode 123
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
-        Just (DslHNode _ r1 _ _ _) <- getNode (toHash @Int64 123)
-        Just (DslHNode _ r2 _ _ _) <- getNode (toHash @Int64 125)
+        Just (HNodeL _ r1 _ _ _) <- getNode (toHash @Int64 123)
+        Just (HNodeL _ r2 _ _ _) <- getNode (toHash @Int64 125)
         deleteLink r1 r2
-        Just (DslHNode _ _ _ l _) <- getNode (toHash @Int64 123)
+        Just (HNodeL _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.notMember (toHash @Int64 125) l
     assertBool "" ok

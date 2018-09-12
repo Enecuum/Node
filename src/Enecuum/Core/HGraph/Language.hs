@@ -9,7 +9,7 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
-module Enecuum.Core.HGraph.Dsl.Language where
+module Enecuum.Core.HGraph.Language where
 
 import Universum
 import Eff
@@ -21,12 +21,12 @@ import           Eff.Exc
 import           Eff.SafeIO 
 
 
-data HGraphDsl node a where
-    NewNode     :: HNodeContent node -> HGraphDsl node (W node Bool)
-    DeleteNode  :: HNodeRef node -> HGraphDsl node (W node Bool)
-    NewLink     :: HNodeRef node -> HNodeRef node -> HGraphDsl node (W node Bool)
-    DeleteLink  :: HNodeRef node -> HNodeRef node -> HGraphDsl node (W node Bool)
-    GetNode     :: HNodeRef node -> HGraphDsl node (Maybe node)
+data HGraphL node a where
+    NewNode     :: HNodeContent node -> HGraphL node (W node Bool)
+    DeleteNode  :: HNodeRef node -> HGraphL node (W node Bool)
+    NewLink     :: HNodeRef node -> HNodeRef node -> HGraphL node (W node Bool)
+    DeleteLink  :: HNodeRef node -> HNodeRef node -> HGraphL node (W node Bool)
+    GetNode     :: HNodeRef node -> HGraphL node (Maybe node)
 
 
 newtype W a b = W b
@@ -37,15 +37,15 @@ data family HNodeContent a
 
 data family HNodeRef a
 
-type HGraphModel node = '[HGraphDsl node, SIO, Exc SomeException]
+type HGraphModel node = '[HGraphL node, SIO, Exc SomeException]
 
 
-data DslHNode ref content = DslHNode {
+data HNodeL ref content = HNodeL {
     _nodeHash    :: StringHash,
-    _nodeRef     :: HNodeRef (DslHNode ref content),
-    _nodeContent :: HNodeContent (DslHNode ref content),
-    _nodeLinks   :: Map StringHash (HNodeRef (DslHNode ref content)),
-    _noderLinks  :: Map StringHash (HNodeRef (DslHNode ref content))
+    _nodeRef     :: HNodeRef (HNodeL ref content),
+    _nodeContent :: HNodeContent (HNodeL ref content),
+    _nodeLinks   :: Map StringHash (HNodeRef (HNodeL ref content)),
+    _noderLinks  :: Map StringHash (HNodeRef (HNodeL ref content))
   }
 
 

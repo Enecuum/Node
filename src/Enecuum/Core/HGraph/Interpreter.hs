@@ -11,7 +11,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
 
-module Enecuum.Core.HGraph.Dsl.Interpreter where
+module Enecuum.Core.HGraph.Interpreter where
 
 import           Universum
 import           Data.Serialize
@@ -19,49 +19,49 @@ import           Eff
 import           Eff.Exc
 import           Eff.SafeIO 
 
-import           Enecuum.Core.HGraph.Dsl.Language
+import           Enecuum.Core.HGraph.Language
 import           Enecuum.Core.HGraph.THGraph as G
 import           Enecuum.Core.HGraph.StringHashable
 import           Enecuum.Core.Logger.Language
 
 
-instance ToNodeRef (DslTNode content) (TVar (THNode content))  where
+instance ToNodeRef (TNodeL content) (TVar (THNode content))  where
     toNodeRef   = TNodeRef
 
 
-instance ToNodeRef (DslTNode content) (HNodeRef (DslTNode content)) where
+instance ToNodeRef (TNodeL content) (HNodeRef (TNodeL content)) where
     toNodeRef = identity
 
 
-instance ToNodeRef (DslTNode content) StringHash  where
+instance ToNodeRef (TNodeL content) StringHash  where
     toNodeRef   = TNodeHash
 
 
-instance StringHashable content => ToNodeRef (DslTNode content) content  where
+instance StringHashable content => ToNodeRef (TNodeL content) content  where
     toNodeRef   = TNodeHash . toHash
 
 
-instance Serialize c => Serialize (HNodeContent (DslTNode c))
+instance Serialize c => Serialize (HNodeContent (TNodeL c))
 
 
-instance (Serialize c, StringHashable c) => StringHashable (HNodeContent (DslTNode c)) where
+instance (Serialize c, StringHashable c) => StringHashable (HNodeContent (TNodeL c)) where
     toHash (TNodeContent c) = toHash c
 
 
-instance StringHashable c => ToContent (DslTNode c) c where
+instance StringHashable c => ToContent (TNodeL c) c where
     toContent = TNodeContent
     fromContent (TNodeContent a) = a
 
 
-type DslTNode content = DslHNode (TVar (THNode content)) content
+type TNodeL content = HNodeL (TVar (THNode content)) content
 
 
-data instance HNodeContent (DslHNode (TVar (THNode content)) content)
+data instance HNodeContent (HNodeL (TVar (THNode content)) content)
     = TNodeContent content
   deriving (Generic)
 
 
-data instance HNodeRef     (DslHNode (TVar (THNode content)) content)
+data instance HNodeRef     (HNodeL (TVar (THNode content)) content)
     = TNodeRef (TVar (THNode content))
     | TNodeHash StringHash
   deriving (Generic)
@@ -73,7 +73,7 @@ initHGraph = atomically G.newTHGraph
 interpretHGraphL
     :: StringHashable c
     => TVar (THGraph c)
-    -> HGraphDsl (DslTNode c) a
+    -> HGraphL (TNodeL c) a
     -> Eff '[SIO, Exc SomeException] a
 
 interpretHGraphL graph (NewNode x) =
@@ -86,7 +86,7 @@ interpretHGraphL graph (GetNode x) = safeIO . atomically $ do
     case aMaybeNode of
         Just aTNode -> do
             node <- readTVar aTNode
-            return $ Just $ DslHNode 
+            return $ Just $ HNodeL 
                 (toHash $ node^.content)
                 (TNodeRef aTNode)
                 (TNodeContent $ node^.content)
@@ -131,13 +131,13 @@ interpretHGraphL graph (DeleteLink x y) = safeIO . atomically $ case (x, y) of
 runHGraphL
     :: StringHashable c
     => TVar (THGraph c)
-    -> Eff '[HGraphDsl (DslTNode c), SIO, Exc SomeException] w
+    -> Eff '[HGraphL (TNodeL c), SIO, Exc SomeException] w
     -> Eff '[SIO, Exc SomeException] w
 runHGraphL rt = handleRelay pure ( (>>=) . interpretHGraphL rt )
 
 runHGraph
     :: StringHashable c
     => TVar (THGraph c)
-    -> Eff '[HGraphDsl (DslTNode c), SIO, Exc SomeException] w
+    -> Eff '[HGraphL (TNodeL c), SIO, Exc SomeException] w
     -> IO w
 runHGraph graph script = runSafeIO $ runHGraphL graph script
