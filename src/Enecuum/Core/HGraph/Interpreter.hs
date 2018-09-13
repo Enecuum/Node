@@ -12,11 +12,11 @@
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
 
 module Enecuum.Core.HGraph.Interpreter (
-        TNodeL
-    ,   initHGraph
-    ,   interpretHGraphL
-    ,   runHGraphL
-    ,   runHGraph
+      TNodeL
+    , initHGraph
+    , interpretHGraphL
+    , runHGraphL
+    , runHGraph
     ) where
 
 import           Universum

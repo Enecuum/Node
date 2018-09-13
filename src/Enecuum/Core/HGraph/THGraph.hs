@@ -4,22 +4,22 @@
 
 module Enecuum.Core.HGraph.THGraph (
     -- * Data
-        THGraph
-    ,   THNode
+      THGraph
+    , THNode
     -- * Lenses
-    ,   rLinks
-    ,   links
-    ,   content
+    , rLinks
+    , links
+    , content
     -- * Work with the graph
-    ,   newNode
-    ,   newTHGraph
-    ,   deleteTHNode
-    ,   deleteHNode
-    ,   deleteTLink
-    ,   deleteHLink
-    ,   newTLink
-    ,   newHLink
-    ,   findNode
+    , newNode
+    , newTHGraph
+    , deleteTHNode
+    , deleteHNode
+    , deleteTLink
+    , deleteHLink
+    , newTLink
+    , newHLink
+    , findNode
     ) where
 
 import           Universum
@@ -34,11 +34,11 @@ import           Control.Lens (makeLenses)
 type THGraph c = Map StringHash (TVar (THNode c))
 
 -- | Node of graph is container for a content with links to and from tne node.
-data THNode c = THNode {
-    _links      :: THGraph c,   -- | Links from the node
-    _rLinks     :: THGraph c,   -- | Links to the node
-    _content    :: c            -- | Conten of the node
-  }
+data THNode c = THNode
+    { _links      :: THGraph c      -- | Links from the node
+    , _rLinks     :: THGraph c      -- | Links to the node
+    , _content    :: c              -- | Conten of the node
+    }
 makeLenses ''THNode
 
 -- | Create a new graph.

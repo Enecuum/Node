@@ -11,25 +11,25 @@
 
 module Enecuum.Core.HGraph.Language (
     -- * Data
-        HGraphL(..)
-    ,   W(..)
-    ,   HNodeContent
-    ,   HGraphModel
-    ,   HNodeRef
-    ,   HNodeL(..)
+      HGraphL(..)
+    , W(..)
+    , HNodeContent
+    , HGraphModel
+    , HNodeRef
+    , HNodeL(..)
     -- * Clases
-    ,   ToContent(..)
-    ,   ToNodeRef(..)
+    , ToContent(..)
+    , ToNodeRef(..)
     -- * Functions
-    ,   newNode'
-    ,   newNode
-    ,   newLink'
-    ,   newLink
-    ,   deleteLink'
-    ,   deleteLink
-    ,   deleteNode'
-    ,   deleteNode
-    ,   getNode
+    , newNode'
+    , newNode
+    , newLink'
+    , newLink
+    , deleteLink'
+    , deleteLink
+    , deleteNode'
+    , deleteNode
+    , getNode
     ) where
 
 import           Universum
@@ -54,13 +54,13 @@ data family HNodeRef a
 
 type HGraphModel node = '[HGraphL node, SIO, Exc SomeException]
 
-data HNodeL ref content = HNodeL {
-    _nodeHash    :: StringHash,
-    _nodeRef     :: HNodeRef (HNodeL ref content),
-    _nodeContent :: HNodeContent (HNodeL ref content),
-    _nodeLinks   :: Map StringHash (HNodeRef (HNodeL ref content)),
-    _noderLinks  :: Map StringHash (HNodeRef (HNodeL ref content))
-  }
+data HNodeL ref content = HNodeL
+    { _nodeHash    :: StringHash
+    , _nodeRef     :: HNodeRef (HNodeL ref content)
+    , _nodeContent :: HNodeContent (HNodeL ref content)
+    , _nodeLinks   :: Map StringHash (HNodeRef (HNodeL ref content))
+    , _noderLinks  :: Map StringHash (HNodeRef (HNodeL ref content))
+    }
 
 class StringHashable (HNodeContent config) => ToContent config b | config -> b where
     toContent   :: b -> HNodeContent config

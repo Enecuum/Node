@@ -52,4 +52,4 @@ spec = describe "Master Node test" $
       , "Initialization"
       , "Node tag: bootNode"
       ]
-
+      

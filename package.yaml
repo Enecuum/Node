@@ -125,13 +125,11 @@ dependencies:
 - stm
 
 
-
-
-
 library:
   source-dirs: src
   ghc-options:
   - -Wall
+  
 
 executables:
   BootNode-exe:
