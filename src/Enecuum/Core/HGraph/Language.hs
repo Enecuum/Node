@@ -9,17 +9,35 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
-module Enecuum.Core.HGraph.Language where
+module Enecuum.Core.HGraph.Language (
+    -- * Data
+      HGraphL(..)
+    , W(..)
+    , HNodeContent
+    , HGraphModel
+    , HNodeRef
+    , HNodeL(..)
+    -- * Clases
+    , ToContent(..)
+    , ToNodeRef(..)
+    -- * Functions
+    , newNode'
+    , newNode
+    , newLink'
+    , newLink
+    , deleteLink'
+    , deleteLink
+    , deleteNode'
+    , deleteNode
+    , getNode
+    ) where
 
-import Universum
-import Eff
-
-import Enecuum.Core.HGraph.StringHashable
-import Enecuum.Core.Logger.Language
-
+import           Universum
+import           Eff
 import           Eff.Exc
-import           Eff.SafeIO 
+import           Eff.SafeIO
 
+import           Enecuum.Core.HGraph.StringHashable
 
 data HGraphL node a where
     NewNode     :: HNodeContent node -> HGraphL node (W node Bool)
@@ -50,7 +68,6 @@ class StringHashable (HNodeContent config) => ToContent config b | config -> b w
 
 class ToNodeRef config b where
     toNodeRef   :: b -> HNodeRef config
-
 
 newLink', deleteLink'
     :: (ToNodeRef node b, ToNodeRef node c)
