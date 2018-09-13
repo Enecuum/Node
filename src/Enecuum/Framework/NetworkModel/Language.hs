@@ -11,6 +11,7 @@ import           Enecuum.Core.Language                    ( CoreEffects )
 import qualified Enecuum.Framework.Domain                 as D
 
 -- Low-level network model.
+-- For now, you can consider it does nothing, and probably we don't need in it at all.
 
 data NetworkSendingL a where
   -- Unicast   :: D.NetworkConfig -> D.NetworkRequest -> NetworkSendingL ()

@@ -2,9 +2,6 @@ module Enecuum.Framework.Testing.Node.Interpreters.Networking where
 
 import Enecuum.Prelude
 
-import           Eff                                ( Eff, Member, handleRelay, runM, send, raise, replaceRelay )
-import           Eff.SafeIO                         ( runSafeIO )
-
 import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
 import qualified Enecuum.Framework.Lens             as Lens
@@ -12,8 +9,7 @@ import qualified Enecuum.Framework.Lens             as Lens
 import qualified Enecuum.Framework.Testing.Lens     as RLens
 import           Enecuum.Framework.Testing.Types
 
-import           Enecuum.Framework.Testing.Node.Interpreters.NetworkModel
-
+-- | Relay request from this node to the network environment.
 relayRequest
   :: NodeRuntime
   -> D.Connection
@@ -31,6 +27,7 @@ relayRequest nodeRt conn req = do
     AsRpcResponse rpcResponse -> pure $ Right rpcResponse
     AsErrorResponse err       -> pure $ Left err
 
+-- | Interpret NetworkingL language.
 interpretNetworkingL
   :: NodeRuntime
   -> L.NetworkingL a
@@ -38,12 +35,12 @@ interpretNetworkingL
 interpretNetworkingL nodeRt (L.OpenConnection cfg) = do
   L.logInfo "OpenConnection cfg"
   pure $ Just $ D.Connection (nodeRt ^. RLens.address) (cfg ^. Lens.address)
-interpretNetworkingL nodeRt (L.CloseConnection conn) = do
+interpretNetworkingL _ (L.CloseConnection _) = do
   L.logInfo "CloseConnection conn"
   pure ()
 interpretNetworkingL nodeRt (L.SendRequest conn req) = do
   L.logInfo "SendRequest conn req"
   relayRequest nodeRt conn req
-interpretNetworkingL nodeRt (L.EvalNetwork networkAction) = do
+interpretNetworkingL _ (L.EvalNetwork networkAction) = do
   L.logInfo "Eval Network"
   networkAction

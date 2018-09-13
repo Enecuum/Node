@@ -17,6 +17,7 @@ import qualified Enecuum.Framework.Testing.Lens as RLens
 import           Enecuum.Framework.Testing.Node.Interpreters.NodeModel
 
 -- TODO: consider to use forever.
+-- | Node RPC server worker.
 startNodeRpcServer
   :: NodeRuntime
   -> L.HandlersF
@@ -36,12 +37,15 @@ startNodeRpcServer nodeRt handlersF = do
     act _ control = do
       req <- atomically $ takeTMVar $ control ^. RLens.request
       case req of
-        RpcRequest (D.RpcRequest rawDataIn) -> do
-          let (handler, _) = handlersF (pure Nothing, rawDataIn)
-          mbResult <- runSafeIO
-              $ runLoggerL (nodeRt ^. RLens.loggerRuntime)
-              $ runNodeModel nodeRt handler
-          let resp = case mbResult of
-                Nothing         -> AsErrorResponse $ "Method is not supported: " +|| rawDataIn ||+ ""
-                Just rawDataOut -> AsRpcResponse   $ D.RpcResponse rawDataOut
-          atomically $ putTMVar (control ^. RLens.response) resp
+        RpcRequest (D.RpcRequest rawDataIn) -> makeRpcRequest control rawDataIn
+        _                                   -> error "Unknown ControlRequest."
+    
+    makeRpcRequest control rawDataIn = do
+      let (handler, _) = handlersF (pure Nothing, rawDataIn)
+      mbResult <- runSafeIO
+          $ runLoggerL (nodeRt ^. RLens.loggerRuntime)
+          $ runNodeModel nodeRt handler
+      let resp = case mbResult of
+            Nothing         -> AsErrorResponse $ "Method is not supported: " +|| rawDataIn ||+ ""
+            Just rawDataOut -> AsRpcResponse   $ D.RpcResponse rawDataOut
+      atomically $ putTMVar (control ^. RLens.response) resp

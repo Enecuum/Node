@@ -11,6 +11,7 @@ type NodeTag = Text
 newtype NodeID = NodeID Text
   deriving ( Show )
 
+-- | Node address in the network.
 data NodeConfig = NodeConfig
   { _address :: NodeAddress
   }
