@@ -5,71 +5,57 @@
 module Enecuum.Legacy.Service.Transaction.Generate where
 
 import           Control.Monad                                      (replicateM)
--- import           Control.Monad.State                                (StateT,
---                                                                      evalStateT,
---                                                                      get, lift,
---                                                                      put)
-import           Enecuum.Legacy.Service.Transaction.Storage         (genesisKeyBlock,
-                                                                     getKeyBlockHash)
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair  (KeyPair (..),
+                                                                     generateNewRandomAnonymousKeyPair)
 import           Enecuum.Legacy.Service.Transaction.TransactionsDAG (genNTx)
 import           Enecuum.Legacy.Service.Types                       (HashOfKeyBlock,
                                                                      KeyBlockInfoPoW (..),
                                                                      Microblock (..))
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair  (KeyPair (..),
-                                                                     generateNewRandomAnonymousKeyPair,
-                                                                     getSignature)
 import           Enecuum.Prelude
 
+import           Enecuum.Legacy.Refact.Assets                       (genesisKeyBlock)
+import           Enecuum.Legacy.Refact.Crypto.Signing               (sign)
+import           Enecuum.Legacy.Refact.Hashing                      (calculateKeyBlockHash)
 
 quantityOfTransactionInMicroblock :: Int
 quantityOfTransactionInMicroblock = 10
 
-
 quantityOfMicroblocksInKeyBlock :: Int
 quantityOfMicroblocksInKeyBlock = 3
 
-
 quantityOfPoAMiners :: Int
 quantityOfPoAMiners = 3
-
-hashOfgenesis :: HashOfKeyBlock
-hashOfgenesis = getKeyBlockHash genesisKeyBlock
-
 
 genPoAMicroblock :: HashOfKeyBlock -> IO Microblock
 genPoAMicroblock h = do
   tx <- genNTx quantityOfTransactionInMicroblock
   (KeyPair pubKey privateKey) <- generateNewRandomAnonymousKeyPair
   let aPublisher = pubKey
-  aSign <- getSignature privateKey ("Secret message" :: String)
+  signature <- sign privateKey ("Secret message" :: String)
   keys <- replicateM quantityOfPoAMiners generateNewRandomAnonymousKeyPair
-  let aTeamkeys = map (\(KeyPair p _) -> p) keys
-  return Microblock{
-  _keyBlock = h,
-  _sign = aSign,
-  _teamKeys = aTeamkeys,
-  _publisher = aPublisher,
-  _transactions = tx}
-
-
+  let teamKeys = map (\(KeyPair p _) -> p) keys
+  return Microblock
+    { _keyBlock = h
+    , _sign = signature
+    , _teamKeys = teamKeys
+    , _publisher = aPublisher
+    , _transactions = tx
+    }
 
 generateMicroblocksAndKeyBlocks :: StateT (Integer,HashOfKeyBlock) IO (KeyBlockInfoPoW, [Microblock])
 generateMicroblocksAndKeyBlocks = do
   -- generate KeyBlock
    (aNumber, prev_hash) <- get
-   let aTime = 0
-       aNonce = 0
-       aType = 0
-       aSolver = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
-       key = KeyBlockInfoPoW{
-         _time = aTime,
-         _prev_hash = prev_hash,
-         _number = aNumber,
-         _nonce = aNonce,
-         _solver = aSolver,
-         _type = aType}
-       currentHash = getKeyBlockHash key
-   put (aNumber+1, currentHash)
+   let key = KeyBlockInfoPoW
+        { _time = 0
+        , _prev_hash = prev_hash
+        , _number = aNumber
+        , _nonce = 0
+        , _solver = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        , _type = 0
+        }
+       currentHash = calculateKeyBlockHash key
+   put (aNumber + 1, currentHash)
 
   -- generate Microblocks for KeyBlock
    lift $ ((,) key) <$> replicateM quantityOfMicroblocksInKeyBlock (genPoAMicroblock currentHash)
@@ -77,3 +63,5 @@ generateMicroblocksAndKeyBlocks = do
 
 genMicroblocksAndKeyBlock :: Int -> IO [(KeyBlockInfoPoW, [Microblock])]
 genMicroblocksAndKeyBlock n = evalStateT (replicateM n generateMicroblocksAndKeyBlocks) (0, hashOfgenesis)
+  where
+    hashOfgenesis = calculateKeyBlockHash genesisKeyBlock

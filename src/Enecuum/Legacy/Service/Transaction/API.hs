@@ -6,11 +6,11 @@
 
 module Enecuum.Legacy.Service.Transaction.API where
 
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair
+import           Enecuum.Legacy.Refact.Crypto.SerializeJSON        ()
 import           Enecuum.Legacy.Service.Transaction.Decode
 import           Enecuum.Legacy.Service.Transaction.Iterator
 import           Enecuum.Legacy.Service.Types
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
-import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
 import           Enecuum.Prelude
 
 

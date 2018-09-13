@@ -17,33 +17,38 @@ module Enecuum.Legacy.LightClient.CLI (
     Trans(..),
   ) where
 
-import           Control.Monad                                     (replicateM_, void, when, forM_)
+import           Control.Monad                                     (forM_,
+                                                                    replicateM_)
 import           Control.Monad.Except                              (runExceptT)
 import           Control.Monad.Extra
 import           Data.Aeson                                        (ToJSON)
 import           Data.Aeson.Encode.Pretty
 import qualified Data.ByteString.Lazy.Char8                        as BC (putStrLn)
 import           Data.DeriveTH
-import           Data.List                                         (sortBy, find)
+import           Data.List                                         (find,
+                                                                    sortBy)
 import           Data.List.Split                                   (splitOn)
 import           Data.Map                                          (Map,
                                                                     fromList,
                                                                     lookup)
-import           Data.Text                                         (Text, pack, unpack)
+import           Data.Text                                         (Text, pack,
+                                                                    unpack)
 import           Enecuum.Legacy.LightClient.RPC
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair
 import           Enecuum.Legacy.Service.Network.WebSockets.Client
 import           Enecuum.Legacy.Service.System.Version             (version)
 import           Enecuum.Legacy.Service.Types                      hiding (Info)
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
-import           System.Environment                                (getArgs)
-import           Prelude
 import           Network.Socket                                    (HostName,
                                                                     PortNumber)
 import qualified Network.WebSockets                                as WS
+import           Prelude
 import           System.Console.GetOpt
+import           System.Environment                                (getArgs)
 import           System.IO.Error                                   (ioError,
                                                                     userError)
 import           System.Random
+
+import           Enecuum.Legacy.Refact.Crypto.Signing              (sign)
 
 
 data Flag = Port PortNumber | Host HostName | Version | Help
@@ -177,13 +182,13 @@ sendTrans transactionsFile walletsFile ch = do
         uuid <- randomRIO (1,25)
         let tx  = Transaction from to am ENQ Nothing Nothing uuid
 
-        sign  <- getSignature ownerPrivKey tx
-        let signTx  = tx { _signature = Just sign }
+        signature  <- sign ownerPrivKey tx
+        let signedTx  = tx { _signature = Just signature }
 
-        result <- runExceptT $ newTx ch signTx
+        result <- runExceptT $ newTx ch signedTx
         case result of
           (Left err) -> putStrLn $ "Send transaction error: " ++ show err
-          (Right (Hash h) ) -> print ("Transaction done: ") >> prettyPrint (TransactionAPI signTx h)
+          (Right (Hash h) ) -> print ("Transaction done: ") >> prettyPrint (TransactionAPI signedTx h)
 
 
 printVersion :: IO ()

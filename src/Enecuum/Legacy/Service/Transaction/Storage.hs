@@ -20,23 +20,25 @@ import qualified Data.ByteString                                   as B
 import qualified Data.ByteString.Base64                            as Base64
 import qualified Data.ByteString.Internal                          as BSI
 import           Data.Default                                      (def)
+import           Data.Either
 import           Data.Maybe
 import           Data.Pool
 import qualified Data.Serialize                                    as S (encode)
 import           Data.Serialize.Put
 import qualified "rocksdb-haskell" Database.RocksDB                as Rocks
 import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair
+import           Enecuum.Legacy.Refact.Crypto.SerializeJSON        ()
 import           Enecuum.Legacy.Service.System.Directory
 import           Enecuum.Legacy.Service.Transaction.Decode
 import           Enecuum.Legacy.Service.Transaction.Iterator
 import           Enecuum.Legacy.Service.Transaction.Sprout
 import           Enecuum.Legacy.Service.Transaction.Transformation
 import           Enecuum.Legacy.Service.Types
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
-import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
 import           Prelude
-import           Data.Either
 
+import           Enecuum.Legacy.Refact.Assets                      (genesisKeyBlock)
+import           Enecuum.Legacy.Refact.Hashing                     (calculateKeyBlockHash)
 
 -- FIX change def (5 times)
 connectOrRecoveryConnect :: IO DBPoolDescriptor
@@ -191,20 +193,6 @@ getAllTransactionsDB (Common descr _) pubKey = do
   txByte <- withResource (poolTransaction descr) getAllValues
   return $ decodeTransactionsAndFilterByKey txByte pubKey
 
-
-getKeyBlockHash :: KeyBlockInfoPoW -> BSI.ByteString
-getKeyBlockHash  KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
-  where bstr = B.concat $ map runPut [
-                  putWord8    (toEnum _type)
-               ,  putWord32le (fromInteger _number)
-               ,  putWord32le (fromInteger _time)
-               ,  putWord32le (fromInteger _nonce)
-               ]  ++  [
-                  fromRight "" $ Base64.decode _prev_hash
-               ,  fromRight "" $ Base64.decode _solver
-               ]
-
-
 updateMacroblockByKeyBlock :: Common -> HashOfKeyBlock -> KeyBlockInfo -> BranchOfChain -> IO ()
 updateMacroblockByKeyBlock c@(Common db i) hashOfKeyBlock keyBlockInfo branch = do
     writeLog i [BDTag] Info $ "keyBlockInfo: " ++ show keyBlockInfo
@@ -290,7 +278,7 @@ getKeyBlockNumber c@(Common _ i) = do
     Nothing -> do
       -- Write genesis block
       let k = tKBIPoW2KBI genesisKeyBlock
-          h = getKeyBlockHash genesisKeyBlock
+          h = calculateKeyBlockHash genesisKeyBlock
       writeLog i [BDTag] Info $ "The first time in history, genesis kblock " ++ show h ++ show k
       updateMacroblockByKeyBlock c h k Main
       writeKeyBlockNumber c 0
@@ -328,20 +316,6 @@ setChainAndDeleteOther (Common descr i ) aNumber hashOfKeyBlock branch = do
 funBranch :: BranchOfChain -> (a, a) -> a
 funBranch Main   = fst
 funBranch Sprout = snd
-
-
-
-genesisKeyBlock :: KeyBlockInfoPoW
-genesisKeyBlock = KeyBlockInfoPoW{
-  _time = 0,
-  _prev_hash = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-  _number = 0,
-  _nonce = 0,
-  _solver = "EMde81cgGToGrGWSNCqm6Y498qBpjEzRczBbvC5MV2Q=",
-  _type = 0}
-
-
-
 
 type NumberOfKeyBlock = Integer
 
