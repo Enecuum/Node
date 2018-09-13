@@ -35,9 +35,9 @@ type THGraph c = Map StringHash (TVar (THNode c))
 
 -- | Node of graph is container for a content with links to and from tne node.
 data THNode c = THNode
-    { _links      :: THGraph c      -- | Links from the node
-    , _rLinks     :: THGraph c      -- | Links to the node
-    , _content    :: c              -- | Conten of the node
+    { _links      :: THGraph c      -- ^ Links from the node
+    , _rLinks     :: THGraph c      -- ^ Links to the node
+    , _content    :: c              -- ^ Conten of the node
     }
 makeLenses ''THNode
 
