@@ -129,6 +129,7 @@ library:
   source-dirs: src
   ghc-options:
   - -Wall
+  
 
 executables:
   BootNode-exe:
@@ -170,6 +171,7 @@ executables:
     - -O2
     dependencies:
     - Node
+
 
 tests:
   functional-tests:

@@ -31,10 +31,10 @@ import qualified Network.WebSockets                                as WS
 
 import           Control.Timeout                                   (timeout)
 import           Data.Time.Units                                   (Second)
-import           Enecuum.Legacy.Service.Types
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair hiding
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair hiding
                                                                     (Signature)
-import           Enecuum.Legacy.Service.Types.SerializeJSON        ()
+import           Enecuum.Legacy.Refact.Crypto.SerializeJSON        ()
+import           Enecuum.Legacy.Service.Types
 import           Enecuum.Prelude
 
 

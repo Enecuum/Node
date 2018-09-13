@@ -41,6 +41,7 @@ import qualified Data.Serialize                                    as S (decode,
 import qualified Data.Set                                          as Set
 import qualified "rocksdb-haskell" Database.RocksDB                as Rocks
 import           Enecuum.Legacy.Node.Data.GlobalLoging
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair
 import           Enecuum.Legacy.Service.Chan
 import           Enecuum.Legacy.Service.Sync.SyncJson
 import           Enecuum.Legacy.Service.Transaction.Decode
@@ -48,9 +49,9 @@ import           Enecuum.Legacy.Service.Transaction.Sprout
 import           Enecuum.Legacy.Service.Transaction.Storage
 import           Enecuum.Legacy.Service.Transaction.Transformation
 import           Enecuum.Legacy.Service.Types
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair
 import           Prelude
 
+import           Enecuum.Legacy.Refact.Hashing                     (calculateKeyBlockHash)
 
 instance Hashable PublicKey
 type BalanceTable = H.BasicHashTable PublicKey Amount
@@ -214,7 +215,7 @@ writeLedgerDB dbLedger aInfoChan bt = do
 addKeyBlockToDB2 :: Common  -> KeyBlockInfoPoW -> (InChan SyncEvent, b) -> IO ()
 addKeyBlockToDB2 c@(Common db i) keyBlockInfo aSyncChan = do
     let aKeyBlock = tKBIPoW2KBI keyBlockInfo
-        aKeyBlockHash = getKeyBlockHash keyBlockInfo
+        aKeyBlockHash = calculateKeyBlockHash keyBlockInfo
 
     writeLog i [BDTag] Info $ "keyBlockHash: " ++ show aKeyBlockHash
     writeLog i [BDTag] Info $ "keyBlockInfo: " ++ show aKeyBlock
