@@ -14,6 +14,8 @@ import           Data.Maybe                                        (fromMaybe)
 import           Data.Text                                         (pack)
 import qualified Enecuum.Legacy.CLI.Common                         as C
 import           Enecuum.Legacy.Node.Node.Types                    (MsgToCentralActor)
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair (Amount,
+                                                                    PublicKey)
 import           Enecuum.Legacy.Service.Network.WebSockets.Server  (runServer)
 import           Enecuum.Legacy.Service.Types                      (ChainInfo,
                                                                     Common (..),
@@ -33,9 +35,6 @@ import           Enecuum.Legacy.Service.Types                      (ChainInfo,
                                                                     Transaction (..),
                                                                     TransactionAPI,
                                                                     TransactionInfo)
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (Amount,
-                                                                    PublicKey)
-import           Prelude
 import           Network.JsonRpc.Server                            ((:+:) (..), Parameter (..),
                                                                     RpcResult,
                                                                     call,
@@ -43,6 +42,7 @@ import           Network.JsonRpc.Server                            ((:+:) (..), 
                                                                     toMethod)
 import           Network.Socket                                    (PortNumber)
 import qualified Network.WebSockets                                as WS
+import           Prelude
 
 
 serveRpc :: DBPoolDescriptor -> PortNumber -> [AddrRange IPv6] -> InChan MsgToCentralActor -> InChan InfoMsg -> InContainerChan -> IO ()

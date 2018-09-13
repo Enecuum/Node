@@ -21,9 +21,9 @@ import           Control.Monad                                     (forever)
 import           Data.DeriveTH                                     (derive,
                                                                     makeIs)
 import           Data.List.Split                                   (splitOn)
-import           Data.Text                                         (unpack)
 import qualified Enecuum.Legacy.CLI.Common                         as C
 import           Enecuum.Legacy.Node.Node.Types                    (MsgToCentralActor)
+import           Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair (PublicKey)
 import           Enecuum.Legacy.Service.System.Version             (version)
 import           Enecuum.Legacy.Service.Types                      (Common (..), DBPoolDescriptor,
                                                                     Hash (..),
@@ -32,7 +32,6 @@ import           Enecuum.Legacy.Service.Types                      (Common (..),
                                                                     MsgTo,
                                                                     PartWalletReq (..),
                                                                     Trans (..))
-import           Enecuum.Legacy.Service.Types.PublicPrivateKeyPair (PublicKey)
 import           Prelude
 import           System.Console.GetOpt                             (ArgDescr (..),
                                                                     ArgOrder (..),

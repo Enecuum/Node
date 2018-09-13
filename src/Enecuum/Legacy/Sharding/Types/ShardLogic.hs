@@ -4,7 +4,6 @@
 
 module Enecuum.Legacy.Sharding.Types.ShardLogic where
 
-import           Enecuum.Legacy.Node.Crypto               ()
 import           Enecuum.Legacy.Sharding.Types.ShardTypes
 
 import           Data.Serialize

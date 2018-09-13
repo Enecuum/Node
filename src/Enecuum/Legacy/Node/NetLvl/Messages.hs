@@ -24,13 +24,13 @@ import           Data.String
 import qualified Data.Text                                       as T
 import           Data.Word                                       ()
 import           Enecuum.Legacy.Node.Data.Key
+import           Enecuum.Legacy.Refact.Crypto.SerializeInstances
+import           Enecuum.Legacy.Refact.Crypto.SerializeJSON      ()
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Types                    (Microblock (..),
                                                                   Transaction)
-import           Enecuum.Legacy.Service.Types.SerializeInstances
-import           Enecuum.Legacy.Service.Types.SerializeJSON      ()
-import           Prelude
 import           GHC.Generics
+import           Prelude
 import           Text.Read
 
 data NetMessage where

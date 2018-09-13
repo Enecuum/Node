@@ -7,7 +7,7 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Enecuum.Legacy.Service.Types.SerializeInstances where
+module Enecuum.Legacy.Refact.Crypto.SerializeInstances where
 
 import           "cryptonite" Crypto.PubKey.ECC.ECDSA
 import           "cryptonite" Crypto.PubKey.ECC.Types
