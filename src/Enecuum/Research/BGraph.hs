@@ -21,11 +21,8 @@ import qualified    Data.Serialize          as S
 import qualified    Crypto.Hash.SHA256      as SHA
 
 import              Enecuum.Prelude
-
-import              Enecuum.Legacy.Service.Transaction.Storage
-    (   getKeyBlockHash
-    ,   genesisKeyBlock
-    )
+import              Enecuum.Legacy.Refact.Hashing (calculateKeyBlockHash)
+import              Enecuum.Legacy.Refact.Assets (genesisKeyBlock)
 import              Enecuum.Legacy.Service.Types
     (   Microblock(..)
     ,   KeyBlockInfoPoW(..)
@@ -41,7 +38,7 @@ type MBlock     = Microblock
 type KBlock     = KeyBlockInfoPoW
 type BGraph     = TVar      (THGraph    NodeContent)
 type BGraphDSL  = HGraphL   (TNodeL   NodeContent)
-type TRef       = HNodeRef  (TNodeL   NodeContent) 
+type TRef       = HNodeRef  (TNodeL   NodeContent)
 
 data NodeContent
     = MBlockContent MBlock
@@ -50,7 +47,7 @@ data NodeContent
 
 instance S.Serialize NodeContent
 instance StringHashable KBlock where
-    toHash = StringHash . getKeyBlockHash
+    toHash = StringHash . calculateKeyBlockHash
 
 instance StringHashable MBlock where
     toHash = StringHash . Base64.encode . SHA.hash . S.encode
