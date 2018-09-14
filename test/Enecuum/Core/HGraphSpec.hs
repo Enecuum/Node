@@ -1,7 +1,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
-module Enecuum.Core.Testing.Runtime.HGraphSpec where
+module Enecuum.Core.HGraphSpec where
 
 import           Control.Concurrent.STM
 import           Test.HUnit
@@ -12,7 +12,7 @@ import           Enecuum.Prelude
 
 import qualified Enecuum.Core.HGraph.THGraph as G
 import           Enecuum.Core.HGraph.StringHashable
-import           Enecuum.Core.HGraph.Interpreter
+import           Enecuum.Core.HGraph.Interpreter          ( runHGraph, initHGraph )
 import           Enecuum.Core.HGraph.Language
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
@@ -20,12 +20,12 @@ import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
 spec :: Spec
 spec = describe "HGraph eDSL tests" $ fromHUnitTest $ TestList
     [ TestLabel "Addition of new node / getting node by content" testNewNode
-    , TestLabel "Getting node by hash"                         testGetNodeByHash
-    , TestLabel "Getting node by ref"                          testGetNodeByRef
+    , TestLabel "Getting node by hash" testGetNodeByHash
+    , TestLabel "Getting node by ref" testGetNodeByRef
     , TestLabel "Deleting of node by content" testDeleteNodeByContent
     , TestLabel "Deleting of node by hash" testDeleteNodeByHash
     , TestLabel "Deleting of node by ref" testDeleteNodeByRef
-    , TestLabel "Addition of new Link by content"              testNewLinkByContent
+    , TestLabel "Addition of new Link by content" testNewLinkByContent
     , TestLabel "Addition of new Link by hash" testNewLinkByHash
     , TestLabel "Addition of new Link by ref" testNewLinkByRef
     , TestLabel "Deleting of Link by content" testDeleteLinkByContent

@@ -37,7 +37,7 @@ type THGraph c = Map StringHash (TVar (THNode c))
 data THNode c = THNode
     { _links      :: THGraph c      -- ^ Links from the node
     , _rLinks     :: THGraph c      -- ^ Links to the node
-    , _content    :: c              -- ^ Conten of the node
+    , _content    :: c              -- ^ Content of the node
     }
 makeLenses ''THNode
 
@@ -45,7 +45,7 @@ makeLenses ''THNode
 newTHGraph :: StringHashable c => STM (TVar (THGraph c))
 newTHGraph = newTVar mempty
 
--- | Add new node in the graph by content of the node.  
+-- | Add new node to the graph by content of the node.  
 newNode :: StringHashable c => TVar (THGraph c) -> c -> STM Bool
 newNode aIndex aContent = do
     let nodeHash = toHash aContent

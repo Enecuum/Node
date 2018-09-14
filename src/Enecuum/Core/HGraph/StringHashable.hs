@@ -12,6 +12,10 @@ class Serialize a => StringHashable a where
     toHash :: a -> StringHash
     toHash = StringHash . encode
 
+-- TODO: make it right.
+-- Currently, there is no "hashing" in here.
+-- https://task.enecuum.com/issues/2718
+
 instance StringHashable Int
 instance StringHashable Int64
 instance StringHashable Int32

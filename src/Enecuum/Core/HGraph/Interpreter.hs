@@ -39,72 +39,67 @@ interpretHGraphL
     => TVar (THGraph c)
     -> HGraphL (TNodeL c) a
     -> Eff '[SIO, Exc SomeException] a
+
 -- create a new node
 interpretHGraphL graph (NewNode x) =
     safeIO $ atomically $ W <$> G.newNode graph (fromContent x)
+
 -- get nodeby hash, content or ref
 interpretHGraphL graph (GetNode x) = safeIO . atomically $ do
-    aMaybeNode <- case x of
-        TNodeRef aVar   -> return $ Just aVar
-        TNodeHash aHash -> G.findNode graph aHash
-    case aMaybeNode of
-        Just aTNode -> do
-            node <- readTVar aTNode
+    mbNode <- case x of
+        TNodeRef tNode     -> return $ Just tNode
+        TNodeHash nodeHash -> G.findNode graph nodeHash
+    case mbNode of
+        Nothing    -> return Nothing
+        Just tNode -> do
+            node <- readTVar tNode
             return $ Just $ HNodeL 
-                (toHash $ node^.content)
-                (TNodeRef aTNode)
-                (TNodeContent $ node^.content)
-                (TNodeRef <$> node^.links)
-                (TNodeRef <$> node^.rLinks) 
-        Nothing -> return Nothing
+                (toHash $ node ^. content)
+                (TNodeRef tNode)
+                (TNodeContent $ node ^. content)
+                (TNodeRef <$> node ^. links)
+                (TNodeRef <$> node ^. rLinks) 
+
 -- delete node by hash, content or ref
 interpretHGraphL graph (DeleteNode x) = safeIO . atomically $ case x of
-    TNodeRef ref -> do
-        G.deleteTHNode graph ref
-        return $ W True
     TNodeHash hash -> W <$> G.deleteHNode graph hash
+    TNodeRef ref   -> G.deleteTHNode graph ref >> return (W True)
+    
 -- create new link by contents, hashes or refs of the node
 interpretHGraphL graph (NewLink x y) = safeIO . atomically $ case (x, y) of
     (TNodeRef  r1, TNodeRef  r2) -> W <$> G.newTLink r1 r2
     (TNodeHash r1, TNodeHash r2) -> W <$> G.newHLink graph r1 r2
-    (TNodeRef  r1, TNodeHash r2) -> do
-        aMaybeNode <- G.findNode graph r2
-        case aMaybeNode of
-            Just aTNode -> W <$> G.newTLink r1 aTNode
-            Nothing     -> return $ W False
-    (TNodeHash  r1, TNodeRef r2) -> do
-        aMaybeNode <- G.findNode graph r1
-        case aMaybeNode of
-            Just aTNode -> W <$> G.newTLink aTNode r2
-            Nothing     -> return $ W False
+    (TNodeRef  r1, TNodeHash r2) -> G.findNode graph r2 >>= \case
+        Just tNode -> W <$> G.newTLink r1 tNode
+        Nothing    -> return $ W False
+    (TNodeHash  r1, TNodeRef r2) -> G.findNode graph r1 >>= \case
+        Just tNode -> W <$> G.newTLink tNode r2
+        Nothing    -> return $ W False
+
 -- delete link inter a nodes by contents, hashes or refs of the node 
 interpretHGraphL graph (DeleteLink x y) = safeIO . atomically $ case (x, y) of
     (TNodeRef  r1, TNodeRef  r2) -> W <$> G.deleteTLink r1 r2
     (TNodeHash r1, TNodeHash r2) -> W <$> G.deleteHLink graph r1 r2
-    (TNodeRef  r1, TNodeHash r2) -> do
-        aMaybeNode <- G.findNode graph r2
-        case aMaybeNode of
-            Just aTNode -> W <$> G.deleteTLink r1 aTNode
-            Nothing     -> return $ W False
-    (TNodeHash  r1, TNodeRef r2) -> do
-        aMaybeNode <- G.findNode graph r1
-        case aMaybeNode of
-            Just aTNode -> W <$> G.deleteTLink aTNode r2
-            Nothing     -> return $ W False
+    (TNodeRef  r1, TNodeHash r2) -> G.findNode graph r2 >>= \case
+        Just tNode -> W <$> G.deleteTLink r1 tNode
+        Nothing    -> return $ W False
+    (TNodeHash  r1, TNodeRef r2) -> G.findNode graph r1 >>= \case
+        Just tNode -> W <$> G.deleteTLink tNode r2
+        Nothing    -> return $ W False
 
 -- | Run H graph interpret.
 runHGraphL
     :: StringHashable c
     => TVar (THGraph c)
-    -> Eff '[HGraphL (TNodeL c), SIO, Exc SomeException] w
+    -> Eff (HGraphModel (TNodeL c)) w
     -> Eff '[SIO, Exc SomeException] w
-runHGraphL rt = handleRelay pure ( (>>=) . interpretHGraphL rt )
+runHGraphL graph = handleRelay pure ( (>>=) . interpretHGraphL graph )
 
 -- | Run H graph interpret in IO monad.
 runHGraph
     :: StringHashable c
     => TVar (THGraph c)
-    -> Eff '[HGraphL (TNodeL c), SIO, Exc SomeException] w
+    -> Eff (HGraphModel (TNodeL c)) w
     -> IO w
 runHGraph graph script = runSafeIO $ runHGraphL graph script
 
