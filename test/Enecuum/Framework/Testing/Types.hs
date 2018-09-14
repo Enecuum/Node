@@ -8,6 +8,8 @@ import qualified Data.Map as Map
 
 import qualified Enecuum.Domain                as D
 import           Enecuum.Core.Testing.Runtime.Types
+import qualified Enecuum.Framework.TestData.TestGraph as TG
+import qualified Enecuum.Framework.Domain.Types as T
 
 -- | Defines control requests to manipulate by nodes.
 data ControlRequest
@@ -43,6 +45,7 @@ data NodeRuntime = NodeRuntime
   , _address        :: D.NodeAddress          -- ^ Address of this node.
   , _tag            :: TVar D.NodeTag         -- ^ Tag of this node.
   , _rpcServer      :: TMVar RpcServerHandle  -- ^ RPC server of this node.
+  , _graph          :: T.LGraph               -- ^ Graph
   }
 
 -- | Registry of nodes acting within a test network.

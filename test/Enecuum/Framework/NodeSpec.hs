@@ -20,8 +20,8 @@ import qualified Enecuum.Core.Testing.Runtime.Lens as RLens
 import qualified Enecuum.Framework.Testing.Lens as RLens
 
 spec :: Spec
-spec = describe "Master Node test" $
-  it "Master Node test" $ do
+spec = describe "Nodes test" $ do
+  it "Master node interacts with boot node" $ do
 
     runtime <- createTestRuntime
 
@@ -40,10 +40,34 @@ spec = describe "Master Node test" $
       , "SendRequest conn req"
       , "OpenConnection cfg"
       , "Eval Network"
-      , "Initialization"
+      , "EvalNodeModel"
       , "Node tag: masterNode"
       , "Serving handlersF"
-      , "Initialization"
+      , "EvalNodeModel"
       , "Node tag: bootNode"
       ]
+  
+  it "Network node requests data from network node" $ do
+
+    runtime <- createTestRuntime
+
+    networkNode1Runtime   :: NodeRuntime <- startNode runtime networkNode1Addr networkNode1
+    networkNode2Runtime   :: NodeRuntime <- startNode runtime networkNode2Addr networkNode2
+
+    let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
+    msgs <- readTVarIO tMsgs
+    msgs `shouldBe`
+      [ "Current balance: -1."
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "EvalNodeModel"
+      , "Node tag: networkNode2"
+      , "Serving handlersF"
+      , "L.EvalGraph"
+      , "EvalNodeModel"
+      , "Node tag: networkNode1"
+      ]
+      
+
       

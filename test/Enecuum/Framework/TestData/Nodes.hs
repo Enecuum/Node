@@ -11,10 +11,16 @@ import qualified Enecuum.Language              as L
 import qualified Enecuum.Framework.Lens        as Lens
 
 import           Enecuum.Framework.TestData.RPC
+import qualified Enecuum.Framework.TestData.TestGraph as TG
+import qualified Enecuum.Framework.Domain.Types as T
 
 bootNodeAddr, masterNode1Addr :: D.NodeAddress
 bootNodeAddr = "boot node addr"
 masterNode1Addr = "master node 1 addr"
+
+networkNode1Addr, networkNode2Addr :: D.NodeAddress
+networkNode1Addr = "networkNode1Addr"
+networkNode2Addr = "networkNode2Addr"
 
 bootNodeTag, masterNodeTag :: D.NodeTag
 bootNodeTag = "bootNode"
@@ -38,7 +44,7 @@ acceptGetHashId GetHashIDRequest = pure $ GetHashIDResponse "1"
 
 -- Boot node scenario
 
-bootNode :: (Member L.NodeDefinitionL effs) => Eff effs ()
+bootNode :: Eff L.NodeDefinitionModel ()
 bootNode = do
   L.nodeTag bootNodeTag
   L.initialization $ pure $ D.NodeID "abc"
@@ -62,3 +68,42 @@ masterNode = do
   L.serving
     $ L.serve @HelloRequest1 @HelloResponse1 acceptHello1
     . L.serve @HelloRequest2 @HelloResponse2 acceptHello2
+
+-- Some network nodes scenarios
+
+acceptGetBalance
+  :: T.LGraphNode
+  -> GetBalanceRequest
+  -> Eff L.NodeModel GetBalanceResponse
+acceptGetBalance txBaseNode GetBalanceRequest = do
+  pure $ GetBalanceResponse (-1)
+
+acceptBalanceChange
+  :: T.LGraphNode
+  -> BalanceChangeRequest
+  -> Eff L.NodeModel BalanceChangeResponse
+acceptBalanceChange = error "acceptBalanceChange not implemented."
+
+newtorkNode1Initialization :: Eff L.NodeModel T.LGraphNode
+newtorkNode1Initialization = L.evalGraphAction $ TG.getTransactionNode TG.nilTransaction >>= \case
+  Nothing -> error "Graph is not ready: no genesis node found."
+  Just txNode -> pure txNode
+
+networkNode1 :: Eff L.NodeDefinitionModel ()
+networkNode1 = do
+  L.nodeTag "networkNode1"
+  txBaseNode <- L.initialization newtorkNode1Initialization
+  L.serving
+    $ L.serve (acceptGetBalance txBaseNode)
+    . L.serve (acceptBalanceChange txBaseNode)
+
+networkNode2Scenario :: Eff L.NodeModel ()
+networkNode2Scenario = do
+    balance <- D.withSuccess 
+      $ fmap unpack <$> L.withConnection (D.ConnectionConfig networkNode1Addr) GetBalanceRequest
+    L.logInfo $ "Current balance: " +|| balance ||+ "."
+
+networkNode2 :: Eff L.NodeDefinitionModel ()
+networkNode2 = do
+  L.nodeTag "networkNode2"
+  L.scenario networkNode2Scenario

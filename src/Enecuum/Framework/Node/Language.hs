@@ -5,19 +5,20 @@ module Enecuum.Framework.Node.Language where
 
 import           Enecuum.Prelude
 
-import qualified Data.ByteString.Lazy          as BS
-import qualified Data.Aeson                    as A
+import qualified Data.Aeson                               as A
+import           Eff                                      ( send )
 
-import           Enecuum.Core.Language                    ( CoreEffects )
+import           Enecuum.Core.Language                    ( CoreEffects, HGraphModel )
+import           Enecuum.Core.HGraph.Language             ( W )
 import           Enecuum.Framework.NetworkModel.Language  ( NetworkSendingL, NetworkListeningL, NetworkSyncL )
 import           Enecuum.Framework.Networking.Language    ( NetworkingL )
 import qualified Enecuum.Framework.Domain                 as D
 
--- | Dummy language for Node.
-data NodeL a where
-  Dummy :: NodeL ()
+import qualified Enecuum.Framework.Domain.Types           as T
 
-makeFreer ''NodeL
+-- | Node language.
+data NodeL a where
+  EvalGraphAction :: Eff T.LGraphModel a -> NodeL a
 
 -- | Node model langauges. These langauges should be used in the node scripts.
 -- With these languages, nodes can interact through the network,
@@ -31,6 +32,8 @@ type NodeModel =
    ]
   ++ CoreEffects
 
+evalGraphAction :: Eff T.LGraphModel a -> Eff NodeModel a
+evalGraphAction = send . EvalGraphAction
 
 -- Raw idea of RPC description. Will be reworked.
 

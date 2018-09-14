@@ -24,8 +24,8 @@ interpretNodeDefinitionL
 interpretNodeDefinitionL rt (L.NodeTag tag) = do
   L.logInfo $ "Node tag: " +| tag |+ ""
   safeIO $ atomically $ writeTVar (rt ^. RLens.tag) tag
-interpretNodeDefinitionL rt (L.Initialization initScript) = do
-  L.logInfo "Initialization"
+interpretNodeDefinitionL rt (L.EvalNodeModel initScript) = do
+  L.logInfo "EvalNodeModel"
   runNodeModel rt initScript
 interpretNodeDefinitionL rt (L.Serving handlersF) = do
   L.logInfo "Serving handlersF"

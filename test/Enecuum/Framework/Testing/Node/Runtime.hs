@@ -19,6 +19,7 @@ import           Enecuum.Core.Testing.Runtime.Logger.Impl
 
 import           Enecuum.Framework.Testing.Environment.TestRuntime
 import           Enecuum.Framework.Testing.Node.Interpreters.NodeDefinition
+import qualified Enecuum.Framework.TestData.TestGraph as TG
 
 -- | Creates node runtime.
 createEmptyNodeRuntime
@@ -27,9 +28,10 @@ createEmptyNodeRuntime
   -> D.NodeAddress
   -> IO NodeRuntime
 createEmptyNodeRuntime loggerRt networkControl addr = do
-  tag   <- newTVarIO ("" :: Text)
+  tag <- newTVarIO ("" :: Text)
   handle <- newEmptyTMVarIO
-  pure $ NodeRuntime loggerRt networkControl addr tag handle
+  graph <- TG.initLGraph
+  pure $ NodeRuntime loggerRt networkControl addr tag handle graph
 
 -- | Starts node using NodeDefinitionL.
 startNode
