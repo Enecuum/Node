@@ -23,11 +23,11 @@ import           Universum
 import           Data.Serialize
 import           Eff
 import           Eff.Exc
-import           Eff.SafeIO 
+import           Eff.SafeIO
 
+import           Data.HGraph.THGraph as G
+import           Data.HGraph.StringHashable (StringHash, StringHashable, toHash)
 import           Enecuum.Core.HGraph.Language
-import           Enecuum.Core.HGraph.THGraph as G
-import           Enecuum.Core.HGraph.StringHashable
 
 -- | Init HGraph.
 initHGraph :: StringHashable c => IO (TVar (THGraph c))
@@ -53,18 +53,18 @@ interpretHGraphL graph (GetNode x) = safeIO . atomically $ do
         Nothing    -> return Nothing
         Just tNode -> do
             node <- readTVar tNode
-            return $ Just $ HNode 
+            return $ Just $ HNode
                 (toHash $ node ^. content)
                 (TNodeRef tNode)
                 (TNodeContent $ node ^. content)
                 (TNodeRef <$> node ^. links)
-                (TNodeRef <$> node ^. rLinks) 
+                (TNodeRef <$> node ^. rLinks)
 
 -- delete node by hash, content or ref
 interpretHGraphL graph (DeleteNode x) = safeIO . atomically $ case x of
     TNodeHash hash -> W <$> G.deleteHNode graph hash
     TNodeRef ref   -> G.deleteTHNode graph ref >> return (W True)
-    
+
 -- create new link by contents, hashes or refs of the node
 interpretHGraphL graph (NewLink x y) = safeIO . atomically $ case (x, y) of
     (TNodeRef  r1, TNodeRef  r2) -> W <$> G.newTLink r1 r2
@@ -76,7 +76,7 @@ interpretHGraphL graph (NewLink x y) = safeIO . atomically $ case (x, y) of
         Just tNode -> W <$> G.newTLink tNode r2
         Nothing    -> return $ W False
 
--- delete link inter a nodes by contents, hashes or refs of the node 
+-- delete link inter a nodes by contents, hashes or refs of the node
 interpretHGraphL graph (DeleteLink x y) = safeIO . atomically $ case (x, y) of
     (TNodeRef  r1, TNodeRef  r2) -> W <$> G.deleteTLink r1 r2
     (TNodeHash r1, TNodeHash r2) -> W <$> G.deleteHLink graph r1 r2
@@ -108,16 +108,16 @@ runHGraph graph script = runSafeIO $ runHGraphL graph script
 --------------------------------------------------------------------------------
 
 instance ToNodeRef (TNodeL content) (TVar (THNode content))  where
-    toNodeRef   = TNodeRef
+    toNodeRef = TNodeRef
 
 instance ToNodeRef (TNodeL content) (HNodeRef (TNodeL content)) where
     toNodeRef = identity
 
 instance ToNodeRef (TNodeL content) StringHash  where
-    toNodeRef   = TNodeHash
+    toNodeRef = TNodeHash
 
 instance StringHashable content => ToNodeRef (TNodeL content) content  where
-    toNodeRef   = TNodeHash . toHash
+    toNodeRef = TNodeHash . toHash
 
 instance Serialize c => Serialize (HNodeContent (TNodeL c))
 
@@ -134,7 +134,7 @@ data instance HNodeContent (HNode (TVar (THNode content)) content)
     = TNodeContent content
   deriving (Generic)
 
-data instance HNodeRef     (HNode (TVar (THNode content)) content)
+data instance HNodeRef (HNode (TVar (THNode content)) content)
     = TNodeRef (TVar (THNode content))
     | TNodeHash StringHash
   deriving (Generic)

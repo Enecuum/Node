@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Enecuum.Core.HGraph.StringHashable where
+module Data.HGraph.StringHashable where
 
 import           Universum
 import           Data.Serialize

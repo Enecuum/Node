@@ -37,7 +37,7 @@ import           Eff
 import           Eff.Exc
 import           Eff.SafeIO
 
-import           Enecuum.Core.HGraph.StringHashable
+import           Data.HGraph.StringHashable
 
 data HGraphL node a where
     NewNode     :: HNodeContent node -> HGraphL node (W node Bool)
@@ -59,7 +59,7 @@ data HNode ref content = HNode
     , _nodeRef     :: HNodeRef (HNode ref content)
     , _nodeContent :: HNodeContent (HNode ref content)
     , _nodeLinks   :: Map StringHash (HNodeRef (HNode ref content))
-    , _noderLinks  :: Map StringHash (HNodeRef (HNode ref content))
+    , _nodeRLinks  :: Map StringHash (HNodeRef (HNode ref content))
     }
 
 class StringHashable (HNodeContent config) => ToContent config b | config -> b where

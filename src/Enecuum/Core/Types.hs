@@ -3,4 +3,4 @@ module Enecuum.Core.Types
   ) where
 
 import Enecuum.Core.Types.Logger as X
-import Enecuum.Core.HGraph.StringHashable as X
+import Data.HGraph.StringHashable as X
