@@ -53,7 +53,7 @@ interpretHGraphL graph (GetNode x) = safeIO . atomically $ do
         Nothing    -> return Nothing
         Just tNode -> do
             node <- readTVar tNode
-            return $ Just $ HNodeL 
+            return $ Just $ HNode 
                 (toHash $ node ^. content)
                 (TNodeRef tNode)
                 (TNodeContent $ node ^. content)
@@ -128,13 +128,13 @@ instance StringHashable c => ToContent (TNodeL c) c where
     toContent = TNodeContent
     fromContent (TNodeContent a) = a
 
-type TNodeL content = HNodeL (TVar (THNode content)) content
+type TNodeL content = HNode (TVar (THNode content)) content
 
-data instance HNodeContent (HNodeL (TVar (THNode content)) content)
+data instance HNodeContent (HNode (TVar (THNode content)) content)
     = TNodeContent content
   deriving (Generic)
 
-data instance HNodeRef     (HNodeL (TVar (THNode content)) content)
+data instance HNodeRef     (HNode (TVar (THNode content)) content)
     = TNodeRef (TVar (THNode content))
     | TNodeHash StringHash
   deriving (Generic)
