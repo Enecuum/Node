@@ -2,7 +2,7 @@
 {-# LANGUAGE NoImplicitPrelude  #-}
 {-# LANGUAGE TemplateHaskell    #-}
 
-module Enecuum.Core.HGraph.THGraph (
+module Data.HGraph.THGraph (
     -- * Data
       THGraph
     , THNode
@@ -27,7 +27,7 @@ import qualified Data.Map                      as M
 
 import           Control.Concurrent.STM.TVar
 
-import           Enecuum.Core.HGraph.StringHashable
+import           Data.HGraph.StringHashable
 import           Control.Lens (makeLenses)
 
 -- | Graph is a set of the nodes.
@@ -45,7 +45,7 @@ makeLenses ''THNode
 newTHGraph :: StringHashable c => STM (TVar (THGraph c))
 newTHGraph = newTVar mempty
 
--- | Add new node to the graph by content of the node.  
+-- | Add new node to the graph by content of the node.
 newNode :: StringHashable c => TVar (THGraph c) -> c -> STM Bool
 newNode aIndex aContent = do
     let nodeHash = toHash aContent
@@ -55,14 +55,14 @@ newNode aIndex aContent = do
         modifyTVar aIndex $ M.insert nodeHash tHNode
     return $ isNothing res
 
--- | Delete the node from the graph by hash of node content. 
+-- | Delete the node from the graph by hash of node content.
 deleteHNode :: StringHashable c => TVar (THGraph c) -> StringHash -> STM Bool
 deleteHNode aIndex nodeHash = do
     tHNode <- findNode aIndex nodeHash
     whenJust tHNode $ deleteTHNode aIndex
     return $ isJust tHNode
 
--- | Creating/deleting of linck by hash of node contens. 
+-- | Creating/deleting of linck by hash of node contens.
 newHLink, deleteHLink :: StringHashable c => TVar (THGraph c) -> ReformLink StringHash
 newHLink = reformHLink newTLink
 deleteHLink = reformHLink deleteTLink
@@ -75,7 +75,7 @@ findNode
     -> STM (Maybe (TVar (THNode c)))
 findNode aTHGraph aNodeName = M.lookup aNodeName <$> readTVar aTHGraph
 
--- | Delete the node from the graph by node ref. 
+-- | Delete the node from the graph by node ref.
 deleteTHNode :: StringHashable c => TVar (THGraph c) -> TVar (THNode c) -> STM ()
 deleteTHNode aIndex tHNode = do
     aNode <- readTVar tHNode
@@ -84,7 +84,7 @@ deleteTHNode aIndex tHNode = do
     forM_ (aNode ^. rLinks)
         $ \aVar -> modifyTVar aVar (links %~ M.delete nodeHash)
 
--- | Creating/deleting of linck by node contens. 
+-- | Creating/deleting of linck by node contens.
 newTLink, deleteTLink :: StringHashable c => ReformTLink c
 newTLink n1 n2 = do
     node1 <- readTVar n1

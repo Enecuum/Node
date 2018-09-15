@@ -28,10 +28,10 @@ import              Enecuum.Legacy.Service.Types
     ,   KeyBlockInfoPoW(..)
     )
 
+import              Data.HGraph.THGraph (THGraph)
+import              Data.HGraph.StringHashable
 import              Enecuum.Core.HGraph.Language
 import              Enecuum.Core.HGraph.Interpreter
-import              Enecuum.Core.HGraph.THGraph (THGraph)
-import              Enecuum.Core.HGraph.StringHashable
 
 
 type MBlock     = Microblock

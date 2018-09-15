@@ -10,8 +10,8 @@ import qualified Data.Map as M
 
 import           Enecuum.Prelude
 
-import qualified Enecuum.Core.HGraph.THGraph as G
-import           Enecuum.Core.HGraph.StringHashable
+import qualified Data.HGraph.THGraph as G
+import           Data.HGraph.StringHashable
 import           Enecuum.Core.HGraph.Interpreter          ( runHGraph, initHGraph )
 import           Enecuum.Core.HGraph.Language
 import           Test.Hspec
