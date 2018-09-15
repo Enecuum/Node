@@ -73,7 +73,7 @@ addMBlock = addBlock _keyBlock MBlockContent
 addBlock f1 f2 block = do
     aNode <- getNode (StringHash $ f1 block)
     case aNode of
-        Just (HNodeL _ ref _ _ _) -> do
+        Just (HNode _ ref _ _ _) -> do
             newNode $ f2 block
             W aOk <- newLink' ref (f2 block)
             return aOk
@@ -83,7 +83,7 @@ getMBlock :: StringHash -> Eff (HGraphModel (TNodeL NodeContent)) (Maybe MBlock)
 getMBlock hash = do
     aNode <- getNode hash
     case aNode of
-        Just (HNodeL _ _ (fromContent -> MBlockContent block) _ _) ->
+        Just (HNode _ _ (fromContent -> MBlockContent block) _ _) ->
             return $ Just block
         _ -> return Nothing
 
@@ -91,19 +91,19 @@ getKBlock :: StringHash -> Eff (HGraphModel (TNodeL NodeContent)) (Maybe KBlock)
 getKBlock hash = do
     aNode <- getNode hash
     case aNode of
-        Just (HNodeL _ _ (fromContent -> KBlockContent block) _ _) ->
+        Just (HNode _ _ (fromContent -> KBlockContent block) _ _) ->
             return $ Just block
         _ -> return Nothing
 
 -- O(n) - n is a number of kblock.
 getLastKBlocks :: Eff (HGraphModel (TNodeL NodeContent)) [KBlock]
 getLastKBlocks = do
-    Just (HNodeL _ aRef _ _ _) <- getNode $ toHash genesisKeyBlock
+    Just (HNode _ aRef _ _ _) <- getNode $ toHash genesisKeyBlock
     aRefs <- getLastKBlocks' aRef
     aKBlocks <- forM aRefs $ \aBRef -> do
         aNode <- getNode aBRef
         case aNode of
-            Just (HNodeL _ _ (fromContent -> KBlockContent block) _ _) ->
+            Just (HNode _ _ (fromContent -> KBlockContent block) _ _) ->
                 return $ Just block
             _ -> return Nothing
     return $ catMaybes aKBlocks
@@ -117,9 +117,9 @@ getLastKBlocks' aRef = do
 
 getNextKBlocks' :: TRef -> Eff (HGraphModel (TNodeL NodeContent)) [TRef]
 getNextKBlocks' aRef = do
-    Just (HNodeL _ _ _ _ rLinks) <- getNode aRef
+    Just (HNode _ _ _ _ rLinks) <- getNode aRef
     aRefs <- forM (elems rLinks) $ \aNRef -> do
-        Just (HNodeL _ _ (fromContent -> block) _ _) <- getNode aNRef
+        Just (HNode _ _ (fromContent -> block) _ _) <- getNode aNRef
         case block of
             KBlockContent _ -> return $ Just aNRef
             _               -> return Nothing

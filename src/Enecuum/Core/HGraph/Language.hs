@@ -16,7 +16,7 @@ module Enecuum.Core.HGraph.Language (
     , HNodeContent
     , HGraphModel
     , HNodeRef
-    , HNodeL(..)
+    , HNode(..)
     -- * Clases
     , ToContent(..)
     , ToNodeRef(..)
@@ -54,12 +54,12 @@ data family HNodeRef a
 
 type HGraphModel node = '[HGraphL node, SIO, Exc SomeException]
 
-data HNodeL ref content = HNodeL
+data HNode ref content = HNode
     { _nodeHash    :: StringHash
-    , _nodeRef     :: HNodeRef (HNodeL ref content)
-    , _nodeContent :: HNodeContent (HNodeL ref content)
-    , _nodeLinks   :: Map StringHash (HNodeRef (HNodeL ref content))
-    , _noderLinks  :: Map StringHash (HNodeRef (HNodeL ref content))
+    , _nodeRef     :: HNodeRef (HNode ref content)
+    , _nodeContent :: HNodeContent (HNode ref content)
+    , _nodeLinks   :: Map StringHash (HNodeRef (HNode ref content))
+    , _noderLinks  :: Map StringHash (HNodeRef (HNode ref content))
     }
 
 class StringHashable (HNodeContent config) => ToContent config b | config -> b where
