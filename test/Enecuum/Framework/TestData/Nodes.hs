@@ -36,6 +36,10 @@ acceptHello2 (HelloRequest2 msg) = pure $ HelloResponse2 $ "Hello, dear2. " +| m
 acceptGetHashId :: GetHashIDRequest -> Eff L.NodeModel GetHashIDResponse
 acceptGetHashId GetHashIDRequest = pure $ GetHashIDResponse "1"
 
+acceptValidationRequest :: ValidationRequest -> Eff L.NodeModel ValidationResponse
+acceptValidationRequest ValidRequest   = pure $ ValidationResponse "correct"
+acceptValidationRequest InvalidRequest = pure $ ValidationResponse "invalid"
+
 -- Boot node scenario
 
 bootNode :: (Member L.NodeDefinitionL effs) => Eff effs ()
@@ -45,6 +49,7 @@ bootNode = do
   L.serving
     $ L.serve @HelloRequest1 @HelloResponse1 acceptHello1
     . L.serve @GetHashIDRequest @GetHashIDResponse acceptGetHashId
+    . L.serve @ValidationRequest @ValidationResponse acceptValidationRequest
 
 -- Master node scenario
 
@@ -52,6 +57,10 @@ masterNodeInitialization :: Eff L.NodeModel (Either Text D.NodeID)
 masterNodeInitialization = do
   addr     <- L.evalNetwork simpleBootNodeDiscovery
   eHashID  <- fmap unpack <$> L.withConnection (D.ConnectionConfig addr) GetHashIDRequest
+  validRes <- fmap unpack <$> L.withConnection (D.ConnectionConfig addr) ValidRequest
+  L.logInfo $ "For the valid request recieved " +|| validRes ||+ "."
+  invalidRes <- fmap unpack <$> L.withConnection (D.ConnectionConfig addr) InvalidRequest
+  L.logInfo $ "For the invalid request recieved " +|| invalidRes ||+ "."
   pure $ eHashID >>= Right . D.NodeID
 
 masterNode :: Eff L.NodeDefinitionModel ()

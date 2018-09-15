@@ -23,6 +23,17 @@ instance D.RpcMethod () GetHashIDRequest GetHashIDResponse where
   fromRpcResponse _ (D.RpcResponse raw)
     = maybe (Left $ "No parse of get hashID resp" +|| raw ||+ "") Right $ A.decode raw
 
+data ValidationRequest = ValidRequest | InvalidRequest
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+newtype ValidationResponse = ValidationResponse Text
+  deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
+
+instance D.RpcMethod () ValidationRequest ValidationResponse where
+  toRpcRequest _ = D.RpcRequest . A.encode
+  fromRpcResponse _ (D.RpcResponse raw)
+    = maybe (Left $ "No parse of validation resp" +|| raw ||+ "") Right $ A.decode raw
+
 newtype HelloRequest1  = HelloRequest1 { helloMessage :: Text }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
