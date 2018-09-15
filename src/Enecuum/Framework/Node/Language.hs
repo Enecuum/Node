@@ -8,17 +8,19 @@ import           Enecuum.Prelude
 import qualified Data.Aeson                               as A
 import           Eff                                      ( send )
 
+import qualified Enecuum.Core.Types                       as T
 import           Enecuum.Core.Language                    ( CoreEffects, HGraphModel )
-import           Enecuum.Core.HGraph.Language             ( W )
 import           Enecuum.Framework.NetworkModel.Language  ( NetworkSendingL, NetworkListeningL, NetworkSyncL )
 import           Enecuum.Framework.Networking.Language    ( NetworkingL )
 import qualified Enecuum.Framework.Domain                 as D
 
-import qualified Enecuum.Framework.Domain.Types           as T
+-- | Graph types.
+type LGraphNode = T.TNodeL D.Transaction
+type LGraphModel = HGraphModel LGraphNode
 
 -- | Node language.
 data NodeL a where
-  EvalGraphAction :: Eff T.LGraphModel a -> NodeL a
+  EvalGraph :: Eff LGraphModel a -> NodeL a
 
 -- | Node model langauges. These langauges should be used in the node scripts.
 -- With these languages, nodes can interact through the network,
@@ -32,8 +34,8 @@ type NodeModel =
    ]
   ++ CoreEffects
 
-evalGraphAction :: Eff T.LGraphModel a -> Eff NodeModel a
-evalGraphAction = send . EvalGraphAction
+evalGraph :: Eff LGraphModel a -> Eff NodeModel a
+evalGraph = send . EvalGraph
 
 -- Raw idea of RPC description. Will be reworked.
 

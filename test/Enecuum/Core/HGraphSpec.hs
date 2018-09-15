@@ -14,6 +14,7 @@ import qualified Data.HGraph.THGraph as G
 import           Data.HGraph.StringHashable
 import           Enecuum.Core.HGraph.Interpreter          ( runHGraph, initHGraph )
 import           Enecuum.Core.HGraph.Language
+import           Enecuum.Core.HGraph.Types
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
 

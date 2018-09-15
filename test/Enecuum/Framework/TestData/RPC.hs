@@ -61,7 +61,7 @@ instance D.RpcMethod () GetBalanceRequest GetBalanceResponse where
 newtype BalanceChangeRequest = BalanceChangeRequest Int
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-newtype BalanceChangeResponse = BalanceChangeResponse { balance :: Int }
+newtype BalanceChangeResponse = BalanceChangeResponse { balance :: Maybe Int }
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
 
 instance D.RpcMethod () BalanceChangeRequest BalanceChangeResponse where

@@ -8,7 +8,7 @@ import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
 import qualified Enecuum.Framework.Lens             as Lens
 import           Enecuum.Core.HGraph.Interpreter    (runHGraph)
-import           Enecuum.Core.HGraph.Language       ( W (..) )
+import           Enecuum.Core.HGraph.Types          ( W (..) )
 
 import           Enecuum.Framework.Testing.Types
 import qualified Enecuum.Framework.Testing.Lens              as RLens
@@ -21,7 +21,7 @@ interpretNodeL
   :: NodeRuntime
   -> L.NodeL a
   -> Eff '[L.NetworkingL, L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, L.LoggerL, SIO, Exc SomeException] a
-interpretNodeL nodeRt (L.EvalGraphAction graphAction) = do
+interpretNodeL nodeRt (L.EvalGraph graphAction) = do
   L.logInfo "L.EvalGraph"
   safeIO $ runHGraph (nodeRt ^. RLens.graph) graphAction
 

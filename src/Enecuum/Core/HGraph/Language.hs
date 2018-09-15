@@ -10,16 +10,9 @@
 {-# LANGUAGE FunctionalDependencies #-}
 
 module Enecuum.Core.HGraph.Language (
-    -- * Data
-      HGraphL(..)
-    , W(..)
-    , HNodeContent
+    -- * Language
+      HGraphL (..)
     , HGraphModel
-    , HNodeRef
-    , HNode(..)
-    -- * Clases
-    , ToContent(..)
-    , ToNodeRef(..)
     -- * Functions
     , newNode'
     , newNode
@@ -37,7 +30,8 @@ import           Eff
 import           Eff.Exc
 import           Eff.SafeIO
 
-import           Data.HGraph.StringHashable
+import           Enecuum.Core.HGraph.Types (HNodeContent, HNodeRef, W, ToContent, ToNodeRef,
+                                            toNodeRef, toContent)
 
 data HGraphL node a where
     NewNode     :: HNodeContent node -> HGraphL node (W node Bool)
@@ -46,28 +40,7 @@ data HGraphL node a where
     DeleteLink  :: HNodeRef node -> HNodeRef node -> HGraphL node (W node Bool)
     GetNode     :: HNodeRef node -> HGraphL node (Maybe node)
 
-newtype W a b = W b
-
-data family HNodeContent a
-
-data family HNodeRef a
-
 type HGraphModel node = '[HGraphL node, SIO, Exc SomeException]
-
-data HNode ref content = HNode
-    { _nodeHash    :: StringHash
-    , _nodeRef     :: HNodeRef (HNode ref content)
-    , _nodeContent :: HNodeContent (HNode ref content)
-    , _nodeLinks   :: Map StringHash (HNodeRef (HNode ref content))
-    , _nodeRLinks  :: Map StringHash (HNodeRef (HNode ref content))
-    }
-
-class StringHashable (HNodeContent config) => ToContent config b | config -> b where
-    toContent   :: b -> HNodeContent config
-    fromContent :: HNodeContent config -> b
-
-class ToNodeRef config b where
-    toNodeRef   :: b -> HNodeRef config
 
 newLink', deleteLink'
     :: (ToNodeRef node b, ToNodeRef node c)

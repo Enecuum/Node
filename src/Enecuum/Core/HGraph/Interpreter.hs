@@ -12,8 +12,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
 
 module Enecuum.Core.HGraph.Interpreter (
-      TNodeL
-    , initHGraph
+      initHGraph
     , interpretHGraphL
     , runHGraphL
     , runHGraph
@@ -27,16 +26,20 @@ import           Eff.SafeIO
 
 import           Data.HGraph.THGraph as G
 import           Data.HGraph.StringHashable (StringHash, StringHashable, toHash)
-import           Enecuum.Core.HGraph.Language
+import           Enecuum.Core.HGraph.Language (HGraphModel, HGraphL (..))
+import           Enecuum.Core.HGraph.Internal.Types (TNodeL)
+import           Enecuum.Core.HGraph.Types (HNodeRef, HNode (..), HNodeContent, W (..),
+                                            ToNodeRef, ToContent,
+                                            fromContent, toContent, toNodeRef)
 
 -- | Init HGraph.
-initHGraph :: StringHashable c => IO (TVar (THGraph c))
+initHGraph :: StringHashable c => IO (TVar (G.THGraph c))
 initHGraph = atomically G.newTHGraph
 
 -- | The interpreter of the language describing the action on graphs.
 interpretHGraphL
     :: StringHashable c
-    => TVar (THGraph c)
+    => TVar (G.THGraph c)
     -> HGraphL (TNodeL c) a
     -> Eff '[SIO, Exc SomeException] a
 
@@ -90,7 +93,7 @@ interpretHGraphL graph (DeleteLink x y) = safeIO . atomically $ case (x, y) of
 -- | Run H graph interpret.
 runHGraphL
     :: StringHashable c
-    => TVar (THGraph c)
+    => TVar (G.THGraph c)
     -> Eff (HGraphModel (TNodeL c)) w
     -> Eff '[SIO, Exc SomeException] w
 runHGraphL graph = handleRelay pure ( (>>=) . interpretHGraphL graph )
@@ -98,7 +101,7 @@ runHGraphL graph = handleRelay pure ( (>>=) . interpretHGraphL graph )
 -- | Run H graph interpret in IO monad.
 runHGraph
     :: StringHashable c
-    => TVar (THGraph c)
+    => TVar (G.THGraph c)
     -> Eff (HGraphModel (TNodeL c)) w
     -> IO w
 runHGraph graph script = runSafeIO $ runHGraphL graph script
@@ -127,8 +130,6 @@ instance (Serialize c, StringHashable c) => StringHashable (HNodeContent (TNodeL
 instance StringHashable c => ToContent (TNodeL c) c where
     toContent = TNodeContent
     fromContent (TNodeContent a) = a
-
-type TNodeL content = HNode (TVar (THNode content)) content
 
 data instance HNodeContent (HNode (TVar (THNode content)) content)
     = TNodeContent content
