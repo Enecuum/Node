@@ -12,6 +12,7 @@ import qualified Enecuum.Domain                     as D
 import           Enecuum.Core.Testing.Runtime.Types
 import           Enecuum.Framework.Testing.Types
 import qualified Enecuum.Framework.Testing.Lens as RLens
+import qualified Enecuum.Core.Types.Logger                as T
 
 -- TODO: consider to use forever.
 -- | Worker for the network environment thread.
@@ -44,7 +45,7 @@ networkWorker control registry = go 0
 -- Starts network environment thread.
 createTestRuntime :: IO TestRuntime
 createTestRuntime = do
-  loggerRt <- createLoggerRuntime
+  loggerRt <- createLoggerRuntime T.Debug
   registry <- newTMVarIO Map.empty
   control  <- Control <$> newEmptyTMVarIO <*> newEmptyTMVarIO
   tId      <- forkIO $ networkWorker control registry

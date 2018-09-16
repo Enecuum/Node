@@ -1,11 +1,24 @@
 module Enecuum.Core.Testing.Runtime.Types where
 
-import Enecuum.Prelude
+import qualified Enecuum.Core.Types as T
+import           Enecuum.Prelude
 
--- | Logger runtime. Stores messages.
+
+
+-- type Formater = String
+
+-- | Logger runtime. Configure logger
 data LoggerRuntime = LoggerRuntime
-  { _messages :: TVar [Text]
+  { _messages     :: TVar [Text]
+  -- , currentFormater :: Formater
+  , _currentLevel :: TVar T.LogLevel
+  , _logFilePath  :: FilePath
   }
 
-createLoggerRuntime :: IO LoggerRuntime
-createLoggerRuntime = LoggerRuntime <$> newTVarIO []
+
+createLoggerRuntime :: T.LogLevel -> IO LoggerRuntime
+createLoggerRuntime level = do
+  mes <- newTVarIO []
+  lvl <- newTVarIO level
+  let appFilename = "appfun.log"
+  pure $ LoggerRuntime {_messages = mes, _currentLevel = lvl, _logFilePath = appFilename}

@@ -123,13 +123,15 @@ dependencies:
 - universum
 - fmt
 - stm
+- hslogger
+- tinylog
 
 
 library:
   source-dirs: src
   ghc-options:
   - -Wall
-  
+
 
 executables:
   BootNode-exe:
