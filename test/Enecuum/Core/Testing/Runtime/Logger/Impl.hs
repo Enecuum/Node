@@ -2,7 +2,7 @@ module Enecuum.Core.Testing.Runtime.Logger.Impl where
 
 import Enecuum.Prelude
 
-import           Eff (Eff, handleRelay)
+import           Control.Monad.Free                         (foldFree)
 
 import qualified Enecuum.Core.Language                      as L
 import qualified Enecuum.Core.Testing.Runtime.Lens          as RLens
@@ -11,16 +11,11 @@ import           Enecuum.Core.Testing.Runtime.Types
 
 -- | Interprets a LoggerL language.
 -- Just pushes the messages into the concurrent list-like storage.
-interpretLoggerL
-  :: LoggerRuntime
-  -> L.LoggerL a
-  -> Eff '[SIO, Exc SomeException] a
-interpretLoggerL rt (L.LogMessage _ msg) =
-  safeIO $ atomically $ modifyTVar (rt ^. RLens.messages) (msg :)
+interpretLoggerL :: LoggerRuntime -> L.LoggerF a -> IO a
+interpretLoggerL loggerRt (L.LogMessage _ msg next) = do
+  atomically $ modifyTVar (loggerRt ^. RLens.messages) (msg :)
+  pure $ next ()
 
 -- | Runs the LoggerL language.
-runLoggerL
-  :: LoggerRuntime
-  -> Eff '[L.LoggerL, SIO, Exc SomeException] a
-  -> Eff '[SIO, Exc SomeException] a
-runLoggerL rt = handleRelay pure ( (>>=) . interpretLoggerL rt )
+runLoggerL :: LoggerRuntime -> L.LoggerL a -> IO a
+runLoggerL loggerRt = foldFree (interpretLoggerL loggerRt)

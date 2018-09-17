@@ -6,6 +6,7 @@ module Enecuum.Prelude
 
 import           Universum                                as X hiding ( All, Option, Set, Type, head, last, set, tail )
 import           Universum.Unsafe                         as X ( head, last, tail, (!!) )
+import           Universum.Functor.Fmap                   as X ( (<<$>>) )
 import           Eff                                      as X ( Eff, Member )
 import           Eff.TH                                   as X ( makeFreer )
 import           Eff.SafeIO                               as X ( SIO, safeIO, runSafeIO )

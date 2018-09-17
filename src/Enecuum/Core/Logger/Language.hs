@@ -19,9 +19,13 @@ instance Functor LoggerF where
 
 type LoggerL next = Free LoggerF next
 
-logMessage :: T.LogLevel -> Text -> LoggerL ()
-logMessage level msg = liftF $ LogMessage level msg id
+class Logger m where
+  logMessage :: T.LogLevel -> Text -> m ()
+
+instance Logger (Free LoggerF) where
+  logMessage level msg = liftF $ LogMessage level msg id
 
 -- | Log message with Info level.
-logInfo :: Text -> LoggerL ()
+logInfo :: Logger m => Text -> m ()
 logInfo = logMessage T.Info
+

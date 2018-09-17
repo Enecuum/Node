@@ -28,14 +28,14 @@ data NetworkingF next where
   EvalNetwork :: NetworkModel a -> (a -> next) -> NetworkingF next
 
   -- | Eval core effect.
-  EvalCoreEffect :: L.CoreEffectModel a -> (a -> next) -> NetworkingF next
+  EvalCoreEffectNetworkingF :: L.CoreEffectModel a -> (a -> next) -> NetworkingF next
 
 instance Functor NetworkingF where
-  fmap g (OpenConnection cfg next)        = OpenConnection cfg        (g . next)
-  fmap g (CloseConnection conn next)      = CloseConnection conn      (g . next)
-  fmap g (SendRequest conn rpcReq next)   = SendRequest conn rpcReq   (g . next)
-  fmap g (EvalNetwork network next)       = EvalNetwork network       (g . next)
-  fmap g (EvalCoreEffect coreEffect next) = EvalCoreEffect coreEffect (g . next)
+  fmap g (OpenConnection cfg next)          = OpenConnection cfg        (g . next)
+  fmap g (CloseConnection conn next)        = CloseConnection conn      (g . next)
+  fmap g (SendRequest conn rpcReq next)     = SendRequest conn rpcReq   (g . next)
+  fmap g (EvalNetwork network next)         = EvalNetwork network       (g . next)
+  fmap g (EvalCoreEffectNetworkingF coreEffect next) = EvalCoreEffectNetworkingF coreEffect (g . next)
 
 type NetworkingL next = Free NetworkingF next
 
@@ -51,8 +51,11 @@ sendRequest conn rpcReq = liftF $ SendRequest conn rpcReq id
 evalNetwork :: NetworkModel a -> NetworkingL a 
 evalNetwork network = liftF $ EvalNetwork network id
 
-evalCoreEffect :: L.CoreEffectModel a -> NetworkingL a
-evalCoreEffect coreEffect = liftF $ EvalCoreEffect coreEffect id
+evalCoreEffectNetworkingF :: L.CoreEffectModel a -> NetworkingL a
+evalCoreEffectNetworkingF coreEffect = liftF $ EvalCoreEffectNetworkingF coreEffect id
+
+instance L.Logger (Free NetworkingF) where
+  logMessage level msg = evalCoreEffectNetworkingF $ L.logMessage level msg
 
 
 -- TODO: this method should declare some error-proof.

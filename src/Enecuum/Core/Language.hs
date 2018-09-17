@@ -24,3 +24,6 @@ type CoreEffectModel next = Free CoreEffectF next
 
 evalLogger :: LoggerL () -> CoreEffectModel ()
 evalLogger logger = liftF $ EvalLogger logger id
+
+instance Logger (Free CoreEffectF) where
+  logMessage level msg = evalLogger $ logMessage level msg

@@ -2,27 +2,29 @@ module Enecuum.Framework.Testing.Node.Interpreters.Networking where
 
 import Enecuum.Prelude
 
+import           Control.Monad.Free                 (foldFree)
+
 import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
 import qualified Enecuum.Framework.Lens             as Lens
 
 import qualified Enecuum.Framework.Testing.Lens     as RLens
 import           Enecuum.Framework.Testing.Types
+import qualified Enecuum.Framework.Testing.Node.Interpreters.NetworkModel as Impl
+import qualified Enecuum.Core.Testing.Runtime.Interpreters as Impl
 
 -- | Relay request from this node to the network environment.
 relayRequest
   :: NodeRuntime
   -> D.Connection
   -> D.RpcRequest
-  -> Eff L.NetworkModel (D.RpcResult D.RpcResponse)
+  -> IO (D.RpcResult D.RpcResponse)
 relayRequest nodeRt conn req = do
-  safeIO
-    $ atomically
-    $ putTMVar (nodeRt ^. RLens.networkControl . RLens.request)
-    $ RelayRpcRequest (conn ^. Lens.clientAddress) (conn ^. Lens.serverAddress) req
-  controlResponse <- safeIO
-    $ atomically
-    $ takeTMVar (nodeRt ^. RLens.networkControl . RLens.response)
+  atomically
+      $ putTMVar (nodeRt ^. RLens.networkControl . RLens.request)
+      $ RelayRpcRequest (conn ^. Lens.clientAddress) (conn ^. Lens.serverAddress) req
+  controlResponse <- atomically
+      $ takeTMVar (nodeRt ^. RLens.networkControl . RLens.response)
   case controlResponse of
     AsRpcResponse rpcResponse -> pure $ Right rpcResponse
     AsErrorResponse err       -> pure $ Left err
@@ -30,17 +32,27 @@ relayRequest nodeRt conn req = do
 -- | Interpret NetworkingL language.
 interpretNetworkingL
   :: NodeRuntime
-  -> L.NetworkingL a
-  -> Eff L.NetworkModel a
-interpretNetworkingL nodeRt (L.OpenConnection cfg) = do
-  L.logInfo "OpenConnection cfg"
-  pure $ Just $ D.Connection (nodeRt ^. RLens.address) (cfg ^. Lens.address)
-interpretNetworkingL _ (L.CloseConnection _) = do
-  L.logInfo "CloseConnection conn"
-  pure ()
-interpretNetworkingL nodeRt (L.SendRequest conn req) = do
-  L.logInfo "SendRequest conn req"
-  relayRequest nodeRt conn req
-interpretNetworkingL _ (L.EvalNetwork networkAction) = do
-  L.logInfo "Eval Network"
-  networkAction
+  -> L.NetworkingF a
+  -> IO a
+
+interpretNetworkingL nodeRt (L.OpenConnection cfg next) = do
+  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "OpenConnection cfg"
+  pure $ next $ Just $ D.Connection (nodeRt ^. RLens.address) (cfg ^. Lens.address)
+
+interpretNetworkingL nodeRt (L.CloseConnection _ next) = do
+  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ next <$> L.logInfo "CloseConnection conn"
+
+interpretNetworkingL nodeRt (L.SendRequest conn req next) = do
+  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "SendRequest conn req"
+  next <$> relayRequest nodeRt conn req
+
+interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) = do
+  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "Eval Network"
+  next <$> Impl.runNetworkModel nodeRt networkAction
+
+interpretNetworkingL nodeRt (L.EvalCoreEffectNetworkingF coreEffect next) =
+  next <$> Impl.runCoreEffectModel (nodeRt ^. RLens.loggerRuntime) coreEffect
+
+-- | Runs networking language.
+runNetworkingL :: NodeRuntime -> L.NetworkingL a -> IO a
+runNetworkingL nodeRt = foldFree (interpretNetworkingL nodeRt)

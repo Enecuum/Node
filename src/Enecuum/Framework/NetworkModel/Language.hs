@@ -44,19 +44,22 @@ waitForSingleResponse cfg timeout = liftF $ WaitForSingleResponse cfg timeout id
 
 data NetworkModelF next where
   Synchronize :: NetworkSendingL () -> NetworkListeningL a -> (a -> next) -> NetworkModelF next
-  EvalCoreEffect :: L.CoreEffectModel a -> (a -> next) -> NetworkModelF next
+  EvalCoreEffectNetworkModelF :: L.CoreEffectModel a -> (a -> next) -> NetworkModelF next
 
 instance Functor NetworkModelF where
   fmap g (Synchronize sending listening next) = Synchronize sending listening (g . next)
-  fmap g (EvalCoreEffect coreEffect next)     = EvalCoreEffect coreEffect (g . next)
+  fmap g (EvalCoreEffectNetworkModelF coreEffect next) = EvalCoreEffectNetworkModelF coreEffect (g . next)
 
 type NetworkModel next = Free NetworkModelF next
 
 synchronize :: NetworkSendingL () -> NetworkListeningL a -> NetworkModel a
 synchronize sending listening = liftF $ Synchronize sending listening id
 
-evalCoreEffect :: L.CoreEffectModel a -> NetworkModel a
-evalCoreEffect coreEffect = liftF $ EvalCoreEffect coreEffect id
+evalCoreEffectNetworkModelF :: L.CoreEffectModel a -> NetworkModel a
+evalCoreEffectNetworkModelF coreEffect = liftF $ EvalCoreEffectNetworkModelF coreEffect id
+
+instance L.Logger (Free NetworkModelF) where
+  logMessage level msg = evalCoreEffectNetworkModelF $ L.logMessage level msg
 
 -- Low-level stuff
 

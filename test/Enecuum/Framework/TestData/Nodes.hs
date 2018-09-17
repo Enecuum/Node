@@ -16,13 +16,19 @@ import           Enecuum.Framework.TestData.RPC
 import qualified Enecuum.Framework.TestData.TestGraph as TG
 import qualified Enecuum.Framework.Domain.Types as T
 
-makeRequestUnsafe
-  :: Member L.NetworkingL effs
-  => D.RpcMethod () req resp
+makeRequestSafe
+  :: D.RpcMethod () req resp
   => D.ConnectionConfig
   -> req
-  -> Eff effs resp
-makeRequestUnsafe cfg = D.withSuccess . L.withConnection cfg
+  -> L.NodeModel (D.RpcResult resp)
+makeRequestSafe cfg = L.evalNetworking . L.withConnection cfg
+
+makeRequestUnsafe
+  :: D.RpcMethod () req resp
+  => D.ConnectionConfig
+  -> req
+  -> L.NodeModel resp
+makeRequestUnsafe cfg = D.withSuccess . L.evalNetworking . L.withConnection cfg
 
 bootNodeAddr, masterNode1Addr :: D.NodeAddress
 bootNodeAddr = "boot node addr"
@@ -38,23 +44,23 @@ masterNodeTag = "masterNode"
 
 -- | Boot node discovery sample scenario.
 -- Currently, does nothing but returns the default boot node address.
-simpleBootNodeDiscovery :: Eff L.NetworkModel D.NodeAddress
+simpleBootNodeDiscovery :: L.NetworkModel D.NodeAddress
 simpleBootNodeDiscovery = pure bootNodeAddr
 
 -- RPC handlers.
 
-acceptHello1 :: HelloRequest1 -> Eff L.NodeModel HelloResponse1
+acceptHello1 :: HelloRequest1 -> L.NodeModel HelloResponse1
 acceptHello1 (HelloRequest1 msg) = pure $ HelloResponse1 $ "Hello, dear. " +| msg |+ ""
 
-acceptHello2 :: HelloRequest2 -> Eff L.NodeModel HelloResponse2
+acceptHello2 :: HelloRequest2 -> L.NodeModel HelloResponse2
 acceptHello2 (HelloRequest2 msg) = pure $ HelloResponse2 $ "Hello, dear2. " +| msg |+ ""
 
-acceptGetHashId :: GetHashIDRequest -> Eff L.NodeModel GetHashIDResponse
+acceptGetHashId :: GetHashIDRequest -> L.NodeModel GetHashIDResponse
 acceptGetHashId GetHashIDRequest = pure $ GetHashIDResponse "1"
 
 -- Scenario 1: master node can interact with boot node.
 
-bootNode :: Eff L.NodeDefinitionModel ()
+bootNode :: L.NodeDefinitionModel ()
 bootNode = do
   L.nodeTag bootNodeTag
   L.initialization $ pure $ D.NodeID "abc"
@@ -62,13 +68,13 @@ bootNode = do
     $ L.serve @HelloRequest1 @HelloResponse1 acceptHello1
     . L.serve @GetHashIDRequest @GetHashIDResponse acceptGetHashId
 
-masterNodeInitialization :: Eff L.NodeModel (Either Text D.NodeID)
+masterNodeInitialization :: L.NodeModel (Either Text D.NodeID)
 masterNodeInitialization = do
-  addr     <- L.evalNetwork simpleBootNodeDiscovery
-  eHashID  <- fmap unpack <$> L.withConnection (D.ConnectionConfig addr) GetHashIDRequest
+  addr     <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
+  eHashID  <- unpack <<$>> makeRequestSafe (D.ConnectionConfig addr) GetHashIDRequest
   pure $ eHashID >>= Right . D.NodeID
 
-masterNode :: Eff L.NodeDefinitionModel ()
+masterNode :: L.NodeDefinitionModel ()
 masterNode = do
   L.nodeTag masterNodeTag
   nodeId <- D.withSuccess $ L.initialization masterNodeInitialization
@@ -130,7 +136,7 @@ tryAddTransaction curNodeHash prevBalance change = L.getNode curNodeHash >>= \ca
 acceptGetBalance
   :: L.LGraphNode
   -> GetBalanceRequest
-  -> Eff L.NodeModel GetBalanceResponse
+  -> L.NodeModel GetBalanceResponse
 acceptGetBalance baseNode GetBalanceRequest = do
   balance <- L.evalGraph (calculateBalance (baseNode ^. Lens.hash) 0)
   pure $ GetBalanceResponse balance
@@ -138,19 +144,19 @@ acceptGetBalance baseNode GetBalanceRequest = do
 acceptBalanceChange
   :: L.LGraphNode
   -> BalanceChangeRequest
-  -> Eff L.NodeModel BalanceChangeResponse
+  -> L.NodeModel BalanceChangeResponse
 acceptBalanceChange baseNode (BalanceChangeRequest change) = do
   mbHashAndBalance <- L.evalGraph $ tryAddTransaction (baseNode ^. Lens.hash) 0 change
   case mbHashAndBalance of
     Nothing -> pure $ BalanceChangeResponse Nothing
     Just (D.StringHash _, balance) -> pure $ BalanceChangeResponse $ Just balance
 
-newtorkNode1Initialization :: Eff L.NodeModel L.LGraphNode
+newtorkNode1Initialization :: L.NodeModel L.LGraphNode
 newtorkNode1Initialization = L.evalGraph $ TG.getTransactionNode TG.nilTransaction >>= \case
   Nothing -> error "Graph is not ready: no genesis node found."
   Just baseNode -> pure baseNode
 
-networkNode1 :: Eff L.NodeDefinitionModel ()
+networkNode1 :: L.NodeDefinitionModel ()
 networkNode1 = do
   L.nodeTag "networkNode1"
   baseNode <- L.initialization newtorkNode1Initialization
@@ -158,7 +164,7 @@ networkNode1 = do
     $ L.serve (acceptGetBalance baseNode)
     . L.serve (acceptBalanceChange baseNode)
 
-networkNode2Scenario :: Eff L.NodeModel ()
+networkNode2Scenario :: L.NodeModel ()
 networkNode2Scenario = do
     let connectCfg = D.ConnectionConfig networkNode1Addr
     -- No balance change
@@ -177,7 +183,7 @@ networkNode2Scenario = do
     balance4 <- unpack <$> makeRequestUnsafe connectCfg GetBalanceRequest
     L.logInfo $ "balance4 (should be 111): " +|| balance4 ||+ "."
 
-networkNode2 :: Eff L.NodeDefinitionModel ()
+networkNode2 :: L.NodeDefinitionModel ()
 networkNode2 = do
   L.nodeTag "networkNode2"
   L.scenario networkNode2Scenario
