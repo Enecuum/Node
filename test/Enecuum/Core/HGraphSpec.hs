@@ -32,6 +32,7 @@ spec = describe "HGraph eDSL tests" $ fromHUnitTest $ TestList
     , TestLabel "Deleting of Link by content" testDeleteLinkByContent
     , TestLabel "Deleting of Link by hash" testDeleteLinkByHash
     , TestLabel "Deleting of Link by ref" testDeleteLinkByRef
+    , TestLabel "List-like graph construction test" testListLikeGraph
     ]
 
 testNewNode :: Test
@@ -161,4 +162,23 @@ testDeleteLinkByRef = TestCase $ do
         deleteLink r1 r2
         Just (HNode _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.notMember (toHash @Int64 125) l
+    assertBool "" ok
+
+testListLikeGraph :: Test
+testListLikeGraph = TestCase $ do
+    newGraph :: TVar (G.THGraph Int64) <- initHGraph
+    ok <- runHGraph newGraph $ do
+        newNode 123
+        newNode 125
+        newNode 127
+        newLink (toHash @Int64 123) (toHash @Int64 125)
+        newLink (toHash @Int64 125) (toHash @Int64 127)
+        Just (HNode _ _ _ l1 _) <- getNode (toHash @Int64 123)
+        Just (HNode _ _ _ l2 _) <- getNode (toHash @Int64 125)
+        return $ all id
+          [ M.member (toHash @Int64 125) l1
+          , M.member (toHash @Int64 127) l2
+          , not (M.member (toHash @Int64 125) l2)
+          , not (M.member (toHash @Int64 127) l1)
+          ]
     assertBool "" ok

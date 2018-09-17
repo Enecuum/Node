@@ -82,60 +82,57 @@ masterNode = do
 
 -- In this scenario, we assume the graph is list-like.
 calculateBalance
-  :: L.LGraphNode
+  :: D.StringHash
   -> Int
   -> Eff L.LGraphModel Int
-calculateBalance curNode curBalance = do
-  let trans = D.fromContent $ curNode ^. Lens.content
-  let balanceChange = trans ^. Lens.change
-  let links = curNode ^. Lens.links
-  case Map.toList links of
-    []                    -> pure $ curBalance + balanceChange
-    [(nextHash, nextRef)] -> L.getNode nextRef >>= \case
-      Just nextNode -> calculateBalance nextNode $ curBalance + balanceChange
-      Nothing       -> error "Invalid reference found."
-    _ -> error "In this test scenario, graph should be list-like."
+calculateBalance curNodeHash curBalance = L.getNode curNodeHash >>= \case
+  Nothing -> error "Invalid reference found."
+  Just curNode -> do
+    let trans = D.fromContent $ curNode ^. Lens.content
+    let balanceChange = trans ^. Lens.change
+    let links = curNode ^. Lens.links
+    case Map.toList links of
+      [] -> pure $ curBalance + balanceChange
+      [(nextNodeHash, _)] -> calculateBalance nextNodeHash $ curBalance + balanceChange
+      _ -> error "In this test scenario, graph should be list-like."
 
 tryAddTransaction'
   :: L.LGraphNode
   -> Int
   -> Int
-  -> Eff L.LGraphModel (Maybe Int)
+  -> Eff L.LGraphModel (Maybe (D.StringHash, Int))
 tryAddTransaction' lastNode lastBalance change
   | lastBalance + change < 0 = pure Nothing
   | otherwise = do
       let newTrans = D.Transaction (lastNode ^. Lens.hash) change
+      let newTransHash = D.toHash newTrans
       L.newNode newTrans
-      mbNewNode <- L.getNode $ D.toHash newTrans
-      case mbNewNode of
-        Nothing -> error "Node insertion failed."
-        Just newNode -> do
-          L.newLink (lastNode ^. Lens.ref) (newNode ^. Lens.ref)
-          pure $ Just $ lastBalance + change
+      L.newLink (lastNode ^. Lens.hash) newTransHash
+      pure $ Just (lastNode ^. Lens.hash, lastBalance + change)
 
 tryAddTransaction
-  :: L.LGraphNode
+  :: D.StringHash
   -> Int
   -> Int
-  -> Eff L.LGraphModel (Maybe Int)
-tryAddTransaction curNode prevBalance change = do
-  let trans = D.fromContent $ curNode ^. Lens.content
-  let curBalanceChange = trans ^. Lens.change
-  let curBalance = prevBalance + curBalanceChange
-  let links = curNode ^. Lens.links
-  case Map.toList links of
-    []                    -> tryAddTransaction' curNode curBalance change
-    [(nextHash, nextRef)] -> L.getNode nextRef >>= \case
-      Just nextNode -> tryAddTransaction nextNode curBalance change
-      Nothing       -> error "Invalid reference found."
-    _ -> error "In this test scenario, graph should be list-like."
+  -> Eff L.LGraphModel (Maybe (D.StringHash, Int))
+tryAddTransaction curNodeHash prevBalance change = L.getNode curNodeHash >>= \case
+  Nothing -> error "Invalid reference found."
+  Just curNode -> do
+    let trans = D.fromContent $ curNode ^. Lens.content
+    let curBalanceChange = trans ^. Lens.change
+    let curBalance = prevBalance + curBalanceChange
+    let links = curNode ^. Lens.links
+    case Map.toList links of
+      [] -> tryAddTransaction' curNode curBalance change
+      [(nextNodeHash, _)] -> tryAddTransaction nextNodeHash curBalance change
+      _ -> error "In this test scenario, graph should be list-like."
 
 acceptGetBalance
   :: L.LGraphNode
   -> GetBalanceRequest
   -> Eff L.NodeModel GetBalanceResponse
 acceptGetBalance baseNode GetBalanceRequest = do
-  balance <- L.evalGraph (calculateBalance baseNode 0)
+  balance <- L.evalGraph (calculateBalance (baseNode ^. Lens.hash) 0)
   pure $ GetBalanceResponse balance
 
 acceptBalanceChange
@@ -143,21 +140,23 @@ acceptBalanceChange
   -> BalanceChangeRequest
   -> Eff L.NodeModel BalanceChangeResponse
 acceptBalanceChange baseNode (BalanceChangeRequest change) = do
-  mbBalance <- L.evalGraph $ tryAddTransaction baseNode 0 change
-  pure $ BalanceChangeResponse mbBalance
+  mbHashAndBalance <- L.evalGraph $ tryAddTransaction (baseNode ^. Lens.hash) 0 change
+  case mbHashAndBalance of
+    Nothing -> pure $ BalanceChangeResponse Nothing
+    Just (D.StringHash _, balance) -> pure $ BalanceChangeResponse $ Just balance
 
 newtorkNode1Initialization :: Eff L.NodeModel L.LGraphNode
 newtorkNode1Initialization = L.evalGraph $ TG.getTransactionNode TG.nilTransaction >>= \case
   Nothing -> error "Graph is not ready: no genesis node found."
-  Just txNode -> pure txNode
+  Just baseNode -> pure baseNode
 
 networkNode1 :: Eff L.NodeDefinitionModel ()
 networkNode1 = do
   L.nodeTag "networkNode1"
-  txBaseNode <- L.initialization newtorkNode1Initialization
+  baseNode <- L.initialization newtorkNode1Initialization
   L.serving
-    $ L.serve (acceptGetBalance txBaseNode)
-    . L.serve (acceptBalanceChange txBaseNode)
+    $ L.serve (acceptGetBalance baseNode)
+    . L.serve (acceptBalanceChange baseNode)
 
 networkNode2Scenario :: Eff L.NodeModel ()
 networkNode2Scenario = do
@@ -174,6 +173,9 @@ networkNode2Scenario = do
     -- Add 101
     balance3 <- unpack <$> (makeRequestUnsafe connectCfg $ BalanceChangeRequest 101)
     L.logInfo $ "balance3 (should be Just 111): " +|| balance3 ||+ "."
+    -- Final balance
+    balance4 <- unpack <$> makeRequestUnsafe connectCfg GetBalanceRequest
+    L.logInfo $ "balance4 (should be 111): " +|| balance4 ||+ "."
 
 networkNode2 :: Eff L.NodeDefinitionModel ()
 networkNode2 = do

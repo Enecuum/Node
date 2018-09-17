@@ -29,3 +29,6 @@ instance StringHashable Word8
 
 instance StringHashable StringHash where
     toHash = id
+
+fromStringHash :: StringHash -> ByteString
+fromStringHash (StringHash sh) = sh

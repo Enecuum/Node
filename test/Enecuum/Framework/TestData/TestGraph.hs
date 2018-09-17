@@ -22,7 +22,7 @@ import           Enecuum.Core.HGraph.Interpreter (initHGraph, runHGraph)
 type LGraph = TVar (G.THGraph D.Transaction)
 
 nilHash :: StringHash
-nilHash = toHash (0 :: Int)
+nilHash = toHash (D.Transaction (toHash @Int 0) 0)
 
 nilTransaction :: D.Transaction
 nilTransaction = D.Transaction nilHash 0
