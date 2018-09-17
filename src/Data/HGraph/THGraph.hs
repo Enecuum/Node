@@ -62,7 +62,7 @@ deleteHNode aIndex nodeHash = do
     whenJust tHNode $ deleteTHNode aIndex
     return $ isJust tHNode
 
--- | Creating/deleting of linck by hash of node contens.
+-- | Creating/deleting of link by hash of node contens.
 newHLink, deleteHLink :: StringHashable c => TVar (THGraph c) -> ReformLink StringHash
 newHLink = reformHLink newTLink
 deleteHLink = reformHLink deleteTLink
@@ -84,7 +84,7 @@ deleteTHNode aIndex tHNode = do
     forM_ (aNode ^. rLinks)
         $ \aVar -> modifyTVar aVar (links %~ M.delete nodeHash)
 
--- | Creating/deleting of linck by node contens.
+-- | Creating/deleting of link by node contens.
 newTLink, deleteTLink :: StringHashable c => ReformTLink c
 newTLink n1 n2 = do
     node1 <- readTVar n1
