@@ -25,3 +25,4 @@ import           Control.Concurrent.STM.TMVar             as X ( TMVar, readTMVa
 import           Text.Read                                as X ( read, readsPrec )
 import           GHC.Base                                 as X ( until )
 import           Fmt                                      as X ( (+|), (+||), (|+), (||+) )
+import           Control.Monad.Free                       as X ( Free (..), liftF)
