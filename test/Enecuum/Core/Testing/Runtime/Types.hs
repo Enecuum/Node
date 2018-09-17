@@ -1,8 +1,8 @@
 module Enecuum.Core.Testing.Runtime.Types where
 
-import qualified Enecuum.Core.Types as T
+import           Enecuum.Core.System.Directory (appFileName)
+import qualified Enecuum.Core.Types            as T
 import           Enecuum.Prelude
-
 
 
 -- type Formater = String

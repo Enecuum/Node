@@ -1,4 +1,4 @@
-module Enecuum.Core.Logger.FSLogger where
+module Enecuum.Core.Logger.Fslogger where
 
 
 import           Eff                          (Eff, handleRelay)
@@ -14,18 +14,14 @@ dispatchLogLevel T.Info    = Info
 dispatchLogLevel T.Warning = Warn
 dispatchLogLevel T.Error   = Error
 
-
--- dispatchMsg :: T.LogLevel -> String -> String -> IO ()
--- dispatchMsg :: T.LogLevel -> Logger -> (Msg -> Msg) -> IO ()
+dispatchMsg :: T.LogLevel -> Logger -> (Msg -> Msg) -> IO ()
 dispatchMsg T.Debug   = debug
 dispatchMsg T.Info    = info
 dispatchMsg T.Warning = warn
 dispatchMsg T.Error   = err
 
-
-
--- -- | Interprets a LoggerL language.
--- -- via package hslogger
+-- | Interprets a LoggerL language.
+-- via package tinylog
 interpretLoggerL :: L.LoggerL a -> Eff '[SIO, Exc SomeException] a
 interpretLoggerL (L.LogMessage logLevel message ) = safeIO $ do
   logger <- new defSettings
@@ -35,10 +31,8 @@ interpretLoggerL (L.LogMessage logLevel message ) = safeIO $ do
 --   updateGlobalLogger comp $ addHandler fh
 
 
-
-
--- -- | Runs the LoggerL language.
--- runLoggerL
---     :: Eff '[L.LoggerL, SIO, Exc SomeException] a
---     -> Eff '[SIO, Exc SomeException] a
--- runLoggerL = handleRelay pure ((>>=) . interpretLoggerL )
+-- | Runs the LoggerL language.
+runLoggerL
+    :: Eff '[L.LoggerL, SIO, Exc SomeException] a
+    -> Eff '[SIO, Exc SomeException] a
+runLoggerL = handleRelay pure ((>>=) . interpretLoggerL )

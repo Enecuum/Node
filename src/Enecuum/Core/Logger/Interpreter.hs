@@ -11,7 +11,7 @@ import Enecuum.Core.Logger.Language
 import qualified Enecuum.Core.Types.Logger as T
 import qualified Data.Text as TXT (unpack)
 import Enecuum.Core.Logger.Hslogger (withLogger)
-import Enecuum.Core.System.Directory (appFilename)
+import Enecuum.Core.System.Directory (defaultLogFileName, appFileName)
 
 dispatchLogLevel :: T.LogLevel -> Priority
 dispatchLogLevel T.Debug   = DEBUG
@@ -34,8 +34,9 @@ interpretLoggerL lo@(L.LogMessage logLevel msg ) = safeIO $ interpretLoggerLBase
 
 -- | Base primitive for the LoggerL language.
 interpretLoggerLBase ::  L.LoggerL a -> IO ()
-interpretLoggerLBase (L.LogMessage logLevel msg ) =
-  withLogger appFilename $ (dispatchMsg logLevel) comp $ TXT.unpack msg
+interpretLoggerLBase (L.LogMessage logLevel msg ) = do
+  file <- appFileName
+  withLogger file $ (dispatchMsg logLevel) comp $ TXT.unpack msg
 interpretLoggerLBase (L.SetConfigForLog level logFilename) =
   withLogger logFilename $ updateGlobalLogger comp $ setLevel $ dispatchLogLevel level
 

@@ -38,7 +38,7 @@ runLoggerL rt = handleRelay pure ( (>>=) . interpretLoggerL rt )
 
 loggerTestWithoutConfig :: IO ()
 loggerTestWithoutConfig = runSafeIO . I.runLoggerL $ do
-  setConfigForLog T.Debug "withoutConfig"
+  -- setConfigForLog T.Debug "withoutConfig"
   loggerTest
 
 loggerTestWithConfig :: T.LogLevel -> IO ()

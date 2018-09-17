@@ -6,14 +6,18 @@ import           System.FilePath  ((</>))
 
 
 getEnecuumDir :: IO FilePath
-getEnecuumDir = do
-    enecuumDir <- liftM (</> "enecuum") getHomeDirectory
-    createDirectoryIfMissing True enecuumDir
-    pure enecuumDir
+getEnecuumDir = createFilePath =<< liftM (</> "enecuum") getHomeDirectory
+
+createFilePath :: FilePath -> IO FilePath
+createFilePath file = do
+  createDirectoryIfMissing True file
+  pure file
 
 logFilePath :: IO FilePath
-logFilePath = liftM (</> "data" </> "logs") getEnecuumDir
+logFilePath = createFilePath =<< liftM (</> "data" </> "logs") getEnecuumDir
 
+appFileName :: IO FilePath
+appFileName = liftM (</> "app.log") logFilePath
 
-appFilename :: FilePath
-appFilename = "app.log"
+defaultLogFileName :: IO FilePath
+defaultLogFileName = liftM (</> "default.log") logFilePath
