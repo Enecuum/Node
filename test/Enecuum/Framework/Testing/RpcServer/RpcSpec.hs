@@ -10,8 +10,14 @@ import           Enecuum.Framework.NodeDefinition.Language
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
 import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Legacy.Service.Network.WebSockets.Client
-import qualified Network.WebSockets                               as WS
+import qualified Enecuum.Framework.Domain.RpcMessages as R
+import           Eff                                ( handleRelay )
+import           Enecuum.Framework.NetworkModel.Interpreter
+import           Enecuum.Framework.Networking.Language
+import           Enecuum.Framework.NetworkModel.Language
+import           Enecuum.Core.Language                    ( CoreEffects )
+import           Enecuum.Framework.Networking.Interpreter
+
 
 spec :: Spec
 spec = describe "RpcServer" $ fromHUnitTest $ TestList
@@ -32,17 +38,27 @@ rpcServerStart = TestCase $ do
 rpcServerTestOk :: Test
 rpcServerTestOk = TestCase $ do
     threadDelay 10000
-    runClient "127.0.0.1" 1666 "/" $ \connect -> do
-        WS.sendTextData connect $ A.encode $ RpcRequest "ok" (A.String "") 1
-        msg <- WS.receiveData connect
-        let Just (RpcResponseResult res _) = A.decode msg
-        assertBool "" (res == A.String "Ok")
+    Just (R.RpcResponseResult res _) <- runSafeIO $ startNetworkingModel $
+        sendRpcRequest localServer (R.RpcRequest "ok" (A.String "") 1)
+    assertBool "" (res == A.String "Ok")
+
 
 rpcServerTestErr :: Test
 rpcServerTestErr = TestCase $ do
     threadDelay 10000
-    runClient "127.0.0.1" 1666 "/" $ \connect -> do
-        WS.sendTextData connect $ A.encode $ RpcRequest "error" (A.String "") 1
-        msg <- WS.receiveData connect
-        let Just (RpcResponseError res _) = A.decode msg
-        assertBool "" (res == A.String ":(")
+    Just (R.RpcResponseError res _) <- runSafeIO $ startNetworkingModel $
+        sendRpcRequest localServer (R.RpcRequest "error" (A.String "") 1)
+    assertBool "" (res == A.String ":(")
+
+localServer = ConnectInfo "127.0.0.1" 1666
+
+startNetworkingModel
+  :: Eff ('[NetworkingL, NetworkSyncL, NetworkListeningL, NetworkSendingL] ++ CoreEffects) a
+  -> Eff '[SIO, Exc SomeException] a
+startNetworkingModel
+    = handleRelay pure ( (>>=) . interpretLoggerL)
+    . handleRelay pure ( (>>=) . interpretNetworkSendingL)
+    . handleRelay pure ( (>>=) . interpretNetworkListeningL)
+    . handleRelay pure ( (>>=) . interpretNetworkSyncL)
+    . handleRelay pure ( (>>=) . interpretNetworkingL)
+

@@ -9,6 +9,7 @@ import           Enecuum.Prelude
 
 import qualified Data.ByteString.Lazy          as BS
 
+
 -- Raw vision of networking api. Can change significantly.
 
 type RawData = BS.ByteString
@@ -16,6 +17,7 @@ type RawData = BS.ByteString
 -- | Node address (like IP)
 
 type NodeAddress = Text
+
 
 -- | Connection options.
 data ConnectionConfig = ConnectionConfig

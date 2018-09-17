@@ -7,7 +7,8 @@ import           Enecuum.Prelude
 
 import qualified Enecuum.Framework.Domain      as D
 import           Enecuum.Framework.NetworkModel.Language       ( NetworkModel )
-
+import           Enecuum.Framework.Domain.RpcMessages
+import           Enecuum.Legacy.Service.Network.Base (ConnectInfo(..))
 -- This is a raw view of mid-level networking. Will change significantly.
 -- Supposed to be a mid-level language hiding WebSockets.
 
@@ -25,6 +26,7 @@ data NetworkingL a where
 
   -- | Eval low-level networking script.
   EvalNetwork :: Eff NetworkModel a -> NetworkingL a
+  SendRpcRequest :: ConnectInfo -> RpcRequest -> NetworkingL (Maybe RpcResponse)
 
 makeFreer ''NetworkingL
 
