@@ -9,7 +9,7 @@ import           Enecuum.Prelude
 import           Enecuum.Core.Language                    ( CoreEffects )
 import           Enecuum.Framework.Node.Language          ( NodeModel, HandlersF )
 import qualified Enecuum.Framework.Domain                 as D
-import           Enecuum.Framework.RpcMethod.Language     (RpcMethod)
+import           Enecuum.Framework.RpcMethod.Language     (RpcMethodModel)
 
 -- | Node description language.
 -- Allows to specify what actions should be done when node starts.
@@ -21,7 +21,7 @@ data NodeDefinitionL a where
   -- | Serving of WS connects.
   Serving        :: HandlersF -> NodeDefinitionL ()
   -- | Serving of Rpc request.
-  ServingRpc     :: [RpcMethod] -> NodeDefinitionL ()
+  ServingRpc     :: Eff RpcMethodModel a -> NodeDefinitionL a
 
 
 makeFreer ''NodeDefinitionL

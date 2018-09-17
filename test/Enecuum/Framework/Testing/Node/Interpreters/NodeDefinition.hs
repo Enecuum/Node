@@ -31,9 +31,9 @@ interpretNodeDefinitionL rt (L.Serving handlersF) = do
   L.logInfo "Serving handlersF"
   safeIO $ startNodeRpcServer rt handlersF
 
-interpretNodeDefinitionL _ (L.ServingRpc _) =
+interpretNodeDefinitionL _ (L.ServingRpc _) = do
   L.logInfo "ServingRpc is undefined"
-
+  undefined
 
 -- | Runs node definition language with node runtime.
 runNodeDefinitionL

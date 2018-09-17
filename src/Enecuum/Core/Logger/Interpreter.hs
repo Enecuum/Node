@@ -15,3 +15,4 @@ runLoggerL
     :: Eff '[L.LoggerL, SIO, Exc SomeException] a
     -> Eff '[SIO, Exc SomeException] a
 runLoggerL = handleRelay pure ((>>=) . interpretLoggerL)
+
