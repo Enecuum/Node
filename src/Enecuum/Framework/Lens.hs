@@ -13,3 +13,5 @@ makeFieldsNoPrefix ''ConnectionConfig
 makeFieldsNoPrefix ''NetworkRequest
 makeFieldsNoPrefix ''NetworkResponse
 makeFieldsNoPrefix ''NodeConfig
+
+makeFieldsNoPrefix ''Transaction

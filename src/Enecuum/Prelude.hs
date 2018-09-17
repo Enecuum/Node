@@ -12,6 +12,7 @@ import           Eff.SafeIO                               as X ( SIO, safeIO, ru
 import           Eff.Exc                                  as X ( Exc )
 import           Data.TypeLevel                           as X ( type (++) )
 import           Data.Aeson                               as X ( ToJSON, FromJSON )
+import           Data.Serialize                           as X ( Serialize )
 import           Control.Lens                             as X ( (.=), at )
 import           Control.Lens.TH                          as X ( makeLenses, makeFieldsNoPrefix )
 import           Control.Monad                            as X ( void, when, unless )
