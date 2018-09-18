@@ -9,7 +9,7 @@ import qualified Enecuum.Core.Testing.Runtime.Lens          as RLens
 import           Enecuum.Core.Testing.Runtime.Types
 import qualified Enecuum.Core.Types.Logger as T
 import Enecuum.Core.Logger.Language
-import qualified Enecuum.Core.Logger.InterpreterHslogger as H (interpretLoggerLBase, runLoggerL)
+import qualified Enecuum.Core.Logger.InterpreterHslogger as H (interpretLoggerLBase, runLoggerL, interpretLoggerLBaseNew)
 
 
 -- | Interprets a LoggerL language
@@ -21,11 +21,12 @@ interpretLoggerL
 interpretLoggerL rt (L.LogMessage logLevel msg) =
   safeIO $ do
   atomically $ modifyTVar (rt ^. RLens.messages) (msg :)
-  lvl <- readTVarIO (rt ^. RLens.currentLevel)
+  fileLevel <- readTVarIO (rt ^. RLens.currentLevel)
   let logFilePath = (rt ^. RLens.logFilePath)
       format = (rt ^. RLens.currentFormat)
-  H.interpretLoggerLBase $ L.SetConfigForLog lvl logFilePath format
-  H.interpretLoggerLBase $ L.LogMessage logLevel msg
+  -- H.interpretLoggerLBase $ L.SetConfigForLog fileLevel logFilePath format
+  -- H.interpretLoggerLBase $ L.LogMessage logLevel msg
+  H.interpretLoggerLBaseNew $ L.LogMessageNew fileLevel logFilePath format logLevel msg
 
 
 -- | Runs the LoggerL language
@@ -43,9 +44,9 @@ loggerTestWithoutConfig = runSafeIO . H.runLoggerL $ do
   loggerTest
 
 
-loggerTestSet :: T.LogLevel -> T.Format -> IO ()
-loggerTestSet level format = do
-  loggerRuntime <- createLoggerRuntime level format Nothing
+loggerTestSet :: T.LogLevel -> T.Format -> FilePath -> IO ()
+loggerTestSet level format filePath = do
+  loggerRuntime <- createLoggerRuntime level format filePath
   runSafeIO $ runLoggerL loggerRuntime loggerTest
 
 

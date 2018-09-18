@@ -18,6 +18,8 @@ data LoggerL a where
   LogMessage :: T.LogLevel -> MesType -> LoggerL ()
   -- | Set config to handler
   SetConfigForLog ::  T.LogLevel -> FilePath -> T.Format -> LoggerL ()
+  -- | Log message with a predefined level.
+  LogMessageNew :: T.LogLevel -> FilePath -> T.Format -> T.LogLevel -> MesType -> LoggerL ()
 
 -- This is a raw vision of the logging language.
 makeFreer ''LoggerL

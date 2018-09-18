@@ -15,14 +15,11 @@ data LoggerRuntime = LoggerRuntime
   }
 
 
-createLoggerRuntime :: T.LogLevel -> T.Format -> Maybe FilePath -> IO LoggerRuntime
+createLoggerRuntime :: T.LogLevel -> T.Format -> FilePath -> IO LoggerRuntime
 createLoggerRuntime level format logFile = do
   mes <- newTVarIO []
   lvl <- newTVarIO level
-  logFileName <- case logFile of
-    Nothing   -> defaultLogFileName
-    Just path -> pure path
   pure $ LoggerRuntime {_messages = mes,
                         _currentLevel = lvl,
                         _currentFormat = format,
-                        _logFilePath = logFileName }
+                        _logFilePath = logFile }

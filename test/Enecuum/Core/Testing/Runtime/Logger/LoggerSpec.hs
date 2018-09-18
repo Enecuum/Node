@@ -12,32 +12,50 @@ logFile :: IO a -> FilePath -> IO Text
 logFile doIO logFile = do
   fileExists <- doesFileExist logFile
   when fileExists $ removeFile logFile
-  doIO
+  _ <- doIO
   content <- readFile logFile
   removeFile logFile
   pure content
 
-getLog fun = logFile fun =<< defaultLogFileName
+getLog :: (FilePath -> IO a) -> FilePath -> IO Text
+getLog  fun filepath = logFile (fun filepath) filepath
 
 spec :: Spec
 spec = do
   describe "Logger tests" $ do
-    it "Generate log file without config" $ do
-      logFileConetnt <- getLog loggerTestWithoutConfig
+    it "Logging with package hslogger. \
+       \Generate log file without config" $ do
+      logFileConetnt <- logFile loggerTestWithoutConfig =<< defaultLogFileName
       logFileConetnt `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
 
-    it "Generate log file with config, set level - Debug (msg > Debug)" $ do
-      logFileConetnt <- getLog $ loggerTestSet T.Debug ""
+    it "Logging with package hslogger. \
+       \Generate log file with config, set level - Debug (msg > Debug)" $ do
+      logFileConetnt <- getLog (loggerTestSet T.Debug T.nullFormat) =<< defaultLogFileName
       logFileConetnt `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
 
-    it "Generate log file with config, set level - Info (msg > Info)" $ do
-      logFileConetnt <- getLog $ loggerTestSet T.Info ""
+    it "Logging with package hslogger. \
+       \Generate log file with config, \
+       \set level - Info (msg > Info)" $ do
+      logFileConetnt <- getLog (loggerTestSet T.Info T.nullFormat) =<< defaultLogFileName
       logFileConetnt `shouldBe` "Info Msg\nWarning Msg\nError Msg\n"
 
-    it "Generate log file with config, set level - Debug, set format - '$prio $loggername: $msg'" $ do
-      logFileConetnt <- getLog $ loggerTestSet T.Debug T.standartFormat
-      logFileConetnt `shouldBe` "DEBUG LoggingExample.Main: Debug Msg\nINFO LoggingExample.Main: Info Msg\nWARNING LoggingExample.Main: Warning Msg\nERROR LoggingExample.Main: Error Msg"
+    it "Logging with package hslogger. \
+       \Generate log file with config, \
+       \set level - Debug, set format - '$prio $loggername: $msg'" $ do
+      logFileConetnt <- getLog (loggerTestSet T.Debug T.standartFormat) =<< defaultLogFileName
+      logFileConetnt `shouldBe` "DEBUG LoggingExample.Main: Debug Msg\n\
+                                \INFO LoggingExample.Main: Info Msg\n\
+                                \WARNING LoggingExample.Main: Warning Msg\n\
+                                \ERROR LoggingExample.Main: Error Msg\n"
 
-    it "Generate log file with config, set filepath" $ do
-      logFileConetnt <- logFile (loggerTestSet T.Debug "") =<< appFileName
+    it "Logging with package hslogger. \
+       \Generate log file with config, set filepath" $ do
+      logFileConetnt <- getLog (loggerTestSet T.Debug T.nullFormat) =<< appFileName
       logFileConetnt `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
+
+    it "Logging with package hslogger. \
+       \Generate log file with config, set filepath, set format, set level" $ do
+      logFileConetnt <- getLog (loggerTestSet T.Info T.standartFormat) =<< appFileName
+      logFileConetnt `shouldBe` "INFO LoggingExample.Main: Info Msg\n\
+                                \WARNING LoggingExample.Main: Warning Msg\n\
+                                \ERROR LoggingExample.Main: Error Msg\n"

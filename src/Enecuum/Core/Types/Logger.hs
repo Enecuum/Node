@@ -10,3 +10,6 @@ type Format = String
 
 standartFormat :: String
 standartFormat = "$prio $loggername: $msg"
+
+nullFormat :: String
+nullFormat = "$msg"
