@@ -11,7 +11,7 @@ import qualified Enecuum.Framework.Lens             as Lens
 import Enecuum.Framework.Networking.Interpreter
 import Enecuum.Framework.NetworkModel.Interpreter
 
-
+{-
 -- | Interpret NodeL. Does nothing ATM.
 interpretNodeL
   :: L.NodeL a
@@ -28,3 +28,4 @@ runNodeModel
   . handleRelay pure ( (>>=) . interpretNetworkSyncL  )
   . handleRelay pure ( (>>=) . interpretNetworkingL  )
   . handleRelay pure ( (>>=) . interpretNodeL  )
+  -}

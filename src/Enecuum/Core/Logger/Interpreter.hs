@@ -1,17 +1,17 @@
 module Enecuum.Core.Logger.Interpreter where
 
 import           Enecuum.Prelude
-import           Eff (Eff, handleRelay)
+import           Control.Monad.Free
 import qualified Enecuum.Core.Language                      as L
 
 
 -- | Interprets a LoggerL language.
 -- Print a log msg in std out.
-interpretLoggerL :: L.LoggerL a -> Eff '[SIO, Exc SomeException] a
-interpretLoggerL (L.LogMessage _ msg) = safeIO $ putStrLn msg
+interpretLoggerL :: L.LoggerF a -> IO a
+interpretLoggerL (L.LogMessage _ msg next) = do
+    putStrLn msg
+    pure $ next ()
 
 -- | Runs the LoggerL language.
-runLoggerL
-    :: Eff '[L.LoggerL, SIO, Exc SomeException] a
-    -> Eff '[SIO, Exc SomeException] a
-runLoggerL = handleRelay pure ((>>=) . interpretLoggerL)
+runLoggerL :: L.LoggerL a -> IO a
+runLoggerL = foldFree interpretLoggerL

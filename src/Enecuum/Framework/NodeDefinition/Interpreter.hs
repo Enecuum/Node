@@ -11,7 +11,7 @@ import qualified Enecuum.Language                   as L
 import Enecuum.Framework.Node.Interpreter
 
 
-
+{-
 -- | Interpret NodeDefinitionL.
 interpretNodeDefinitionL
     :: L.NodeDefinitionL a
@@ -33,3 +33,4 @@ runNodeDefinitionL
   :: Eff '[L.NodeDefinitionL, L.LoggerL, SIO, Exc SomeException] a
   -> Eff '[L.LoggerL, SIO, Exc SomeException] a
 runNodeDefinitionL = handleRelay pure ( (>>=) . interpretNodeDefinitionL)
+-}

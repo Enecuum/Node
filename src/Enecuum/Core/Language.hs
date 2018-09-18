@@ -1,15 +1,29 @@
 module Enecuum.Core.Language
   ( module X
-  , CoreEffects
+  , CoreEffectF (..)
+  , CoreEffectModel
+  , evalLogger
   ) where
 
 import Enecuum.Prelude
 
 import Enecuum.Core.Logger.Language as X
+import Enecuum.Core.HGraph.Language as X
+import qualified Enecuum.Core.Types as T
 
--- | Core effects represent general effects every scenario can make.
-type CoreEffects =
-  '[ LoggerL
-   , SIO
-   , Exc SomeException
-   ]
+
+-- | Core effects container language.
+data CoreEffectF next where
+  -- | Logger effect
+  EvalLogger :: LoggerL () -> (() -> next) -> CoreEffectF next
+
+instance Functor CoreEffectF where
+  fmap g (EvalLogger logger next) = EvalLogger logger (g . next)
+
+type CoreEffectModel next = Free CoreEffectF next
+
+evalLogger :: LoggerL () -> CoreEffectModel ()
+evalLogger logger = liftF $ EvalLogger logger id
+
+instance Logger (Free CoreEffectF) where
+  logMessage level msg = evalLogger $ logMessage level msg

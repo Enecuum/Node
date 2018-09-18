@@ -6,28 +6,57 @@ module Enecuum.Framework.NodeDefinition.Language where
 
 import           Enecuum.Prelude
 
-import           Enecuum.Core.Language                    ( CoreEffects )
-import           Enecuum.Framework.Node.Language          ( NodeModel, HandlersF )
+import qualified Enecuum.Core.Language                    as L
+import qualified Enecuum.Framework.Node.Language          as L
 import qualified Enecuum.Framework.Domain                 as D
 import           Enecuum.Framework.RpcMethod.Language     (RpcMethod)
 
+-- TODO: it's possible to make these steps evaluating step-by-step, in order.
+-- Think about if this really needed.
+
 -- | Node description language.
 -- Allows to specify what actions should be done when node starts.
-data NodeDefinitionL a where
+data NodeDefinitionF next where
   -- | Set node tag. For example, "boot node".
-  NodeTag        :: D.NodeTag -> NodeDefinitionL ()
-  -- | Initialization of the node by evaluating of some node script.
-  Initialization :: Eff NodeModel a -> NodeDefinitionL a
-  -- | Serving of WS connects.
-  Serving        :: HandlersF -> NodeDefinitionL ()
-  -- | Serving of Rpc request.
-  ServingRpc     :: [RpcMethod] -> NodeDefinitionL ()
+  NodeTag        :: D.NodeTag -> (() -> next) -> NodeDefinitionF next
+  -- | Evaluate some node model.
+  EvalNodeModel :: L.NodeModel a -> (a -> next) -> NodeDefinitionF next
+  -- | Serving of RPC requests.
+  Serving        :: L.HandlersF -> (() -> next) -> NodeDefinitionF next
+  -- | Eval core effect.
+  EvalCoreEffectNodeDefinitionF :: L.CoreEffectModel a -> (a -> next) -> NodeDefinitionF next
 
+instance Functor NodeDefinitionF where
+  fmap g (NodeTag tag next)               = NodeTag tag               (g . next)
+  fmap g (EvalNodeModel nodeModel next)   = EvalNodeModel nodeModel   (g . next)
+  fmap g (Serving handlersF next)         = Serving handlersF         (g . next)
+  fmap g (EvalCoreEffectNodeDefinitionF coreEffect next) = EvalCoreEffectNodeDefinitionF coreEffect (g . next)
 
-makeFreer ''NodeDefinitionL
+type NodeDefinitionModel next = Free NodeDefinitionF next
 
--- | Node definition model language.
-type NodeDefinitionModel =
-  '[ NodeDefinitionL
-   ]
-  ++ CoreEffects
+-- | Sets tag for node.
+nodeTag :: D.NodeTag -> NodeDefinitionModel ()
+nodeTag tag = liftF $ NodeTag tag id
+
+-- | Runs node scenario.
+evalNodeModel :: L.NodeModel a -> NodeDefinitionModel a
+evalNodeModel nodeModel = liftF $ EvalNodeModel nodeModel id
+
+-- | Runs RPC server.
+serving :: L.HandlersF -> NodeDefinitionModel ()
+serving handlersF = liftF $ Serving handlersF id
+
+-- | Eval core effect.
+evalCoreEffectNodeDefinitionF :: L.CoreEffectModel a -> NodeDefinitionModel a
+evalCoreEffectNodeDefinitionF coreEffect = liftF $ EvalCoreEffectNodeDefinitionF coreEffect id
+
+-- | Runs scenario as initialization.
+initialization :: L.NodeModel a -> NodeDefinitionModel a
+initialization = evalNodeModel
+
+-- | Runs scenario.
+scenario :: L.NodeModel a -> NodeDefinitionModel a
+scenario = evalNodeModel
+
+instance L.Logger (Free NodeDefinitionF) where
+  logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg

@@ -6,13 +6,15 @@ import Enecuum.Prelude
 
 import qualified Data.Map as Map
 
-import qualified Enecuum.Domain                as D
+import qualified Enecuum.Domain                       as D
 import           Enecuum.Core.Testing.Runtime.Types
+import qualified Enecuum.Framework.TestData.TestGraph as TG
+import qualified Enecuum.Framework.Domain.Types       as T
 
 -- | Defines control requests to manipulate by nodes.
 data ControlRequest
-  = RpcRequest D.RpcRequest   -- ^ Eval RPC request to a node.
-  | RelayRpcRequest           -- ^ Relay RPC request from one node to another.
+  = RpcRequest D.RpcRequest       -- ^ Eval RPC request to a node.
+  | RelayRpcRequest               -- ^ Relay RPC request from one node to another.
     { _from    :: D.NodeAddress   -- ^ From node
     , _to      :: D.NodeAddress   -- ^ To node
     , _request :: D.RpcRequest    -- ^ RPC request to relay
@@ -43,6 +45,7 @@ data NodeRuntime = NodeRuntime
   , _address        :: D.NodeAddress          -- ^ Address of this node.
   , _tag            :: TVar D.NodeTag         -- ^ Tag of this node.
   , _rpcServer      :: TMVar RpcServerHandle  -- ^ RPC server of this node.
+  , _graph          :: TG.LGraph              -- ^ Graph
   }
 
 -- | Registry of nodes acting within a test network.
