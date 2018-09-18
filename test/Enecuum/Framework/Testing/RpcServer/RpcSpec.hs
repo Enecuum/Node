@@ -15,7 +15,6 @@ import           Eff                                ( handleRelay )
 import           Enecuum.Framework.NetworkModel.Interpreter
 import           Enecuum.Framework.Networking.Language
 import           Enecuum.Framework.NetworkModel.Language
-import           Enecuum.Core.Language                    ( CoreEffects )
 import           Enecuum.Framework.Networking.Interpreter
 
 
@@ -32,13 +31,13 @@ serverMethodes = do
 
 rpcServerStart :: Test
 rpcServerStart = TestCase $ do
-    runSafeIO $ runLoggerL $ runNodeDefinitionL $ servingRpc $ serverMethodes
+    runNodeDefinitionL $ servingRpc serverMethodes
     assertBool "" True
 
 rpcServerTestOk :: Test
 rpcServerTestOk = TestCase $ do
     threadDelay 10000
-    Just (R.RpcResponseResult res _) <- runSafeIO $ startNetworkingModel $
+    Just (R.RpcResponseResult res _) <- runNetworkingL $
         sendRpcRequest localServer (R.RpcRequest "ok" (A.String "") 1)
     assertBool "" (res == A.String "Ok")
 
@@ -46,19 +45,8 @@ rpcServerTestOk = TestCase $ do
 rpcServerTestErr :: Test
 rpcServerTestErr = TestCase $ do
     threadDelay 10000
-    Just (R.RpcResponseError res _) <- runSafeIO $ startNetworkingModel $
+    Just (R.RpcResponseError res _) <- runNetworkingL $
         sendRpcRequest localServer (R.RpcRequest "error" (A.String "") 1)
     assertBool "" (res == A.String ":(")
 
 localServer = ConnectInfo "127.0.0.1" 1666
-
-startNetworkingModel
-  :: Eff ('[NetworkingL, NetworkSyncL, NetworkListeningL, NetworkSendingL] ++ CoreEffects) a
-  -> Eff '[SIO, Exc SomeException] a
-startNetworkingModel
-    = handleRelay pure ( (>>=) . interpretLoggerL)
-    . handleRelay pure ( (>>=) . interpretNetworkSendingL)
-    . handleRelay pure ( (>>=) . interpretNetworkListeningL)
-    . handleRelay pure ( (>>=) . interpretNetworkSyncL)
-    . handleRelay pure ( (>>=) . interpretNetworkingL)
-

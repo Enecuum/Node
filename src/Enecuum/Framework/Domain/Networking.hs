@@ -8,6 +8,7 @@ module Enecuum.Framework.Domain.Networking where
 import           Enecuum.Prelude
 
 import qualified Data.ByteString.Lazy          as BS
+import qualified Data.Aeson                    as A
 
 
 -- Raw vision of networking api. Can change significantly.

@@ -9,6 +9,8 @@ import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
 import qualified Network.WebSockets                 as WS
 
+
+import Control.Monad.Free
 import Enecuum.Framework.Node.Interpreter
 import Enecuum.Framework.RpcMethod.Interpreter
 import qualified Data.Map as M
@@ -19,31 +21,27 @@ import           Enecuum.Core.Logger.Interpreter
 import           Enecuum.Legacy.Service.Network.WebSockets.Server  (runServer)
 
 
--- | Interpret NodeDefinitionL.
-interpretNodeDefinitionL
-    :: L.NodeDefinitionL a
-    -> Eff '[L.LoggerL, SIO, Exc SomeException] a
-interpretNodeDefinitionL (L.NodeTag tag) =
+interpretNodeDefinitionL :: L.NodeDefinitionF a -> IO a
+interpretNodeDefinitionL (L.NodeTag tag next) = do
     L.logInfo $ "Node tag: " +| tag |+ ""
-interpretNodeDefinitionL (L.Initialization initScript) = do
-    L.logInfo "Initialization"
-    runNodeModel initScript
-interpretNodeDefinitionL (L.Serving handlersF) = do
+    pure $ next ()
+
+interpretNodeDefinitionL (L.EvalNodeModel initScript next) = do
+    L.logInfo "EvalNodeModel"
+    next <$> runNodeModel initScript
+
+interpretNodeDefinitionL (L.Serving handlersF next) = do
     L.logInfo "Function serving is undefined"
     undefined
 
-interpretNodeDefinitionL (L.ServingRpc initScript) = do
+interpretNodeDefinitionL (L.ServingRpc initScript next) = do
     L.logInfo "Start of servingRpc"
-    m <- safeIO $ atomically $ newTVar mempty
+    m <- atomically $ newTVar mempty
     a <- runRpcMethodL m initScript
-    safeIO $ void $ forkIO $ runRpcServer
-        (runSafeIO . runLoggerL . runNodeModel) m
-    return a
+    void $ forkIO $ runRpcServer runNodeModel m
+    return $ next a
 
-runRpcServer
-    :: (Eff NodeModel L.RpcResponse -> IO L.RpcResponse)
-    -> TVar (M.Map Text L.RpcMethod)
-    -> IO ()
+
 runRpcServer runner methodVar = do
     methods <- readTVarIO methodVar
     runServer 1666 "/" $ \_ pending -> do
@@ -68,11 +66,6 @@ instance ToJSON RpcRequest where
         "id"     A..= requesId 
       ]
 
-callRpc
-    :: (Eff NodeModel L.RpcResponse -> IO L.RpcResponse)
-    -> M.Map Text L.RpcMethod
-    -> ByteString
-    -> IO L.RpcResponse
 callRpc runner methods msg = case A.decodeStrict msg of
     Just (RpcRequest method params reqId) -> case method `M.lookup` methods of
         Just justMethod -> runner $ justMethod params reqId
@@ -82,9 +75,4 @@ callRpc runner methods msg = case A.decodeStrict msg of
     Nothing -> return $ L.RpcResponseError (String "error of request parsing") 0
 
 
-
--- | Runs node definition language with node runtime.
-runNodeDefinitionL
-  :: Eff '[L.NodeDefinitionL, L.LoggerL, SIO, Exc SomeException] a
-  -> Eff '[L.LoggerL, SIO, Exc SomeException] a
-runNodeDefinitionL = handleRelay pure ( (>>=) . interpretNodeDefinitionL)
+runNodeDefinitionL = foldFree interpretNodeDefinitionL

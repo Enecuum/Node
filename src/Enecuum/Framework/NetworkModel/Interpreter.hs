@@ -12,9 +12,11 @@ import qualified Enecuum.Language                   as L
 import qualified Enecuum.Framework.Lens             as Lens
 
 -- | Interpret NetworkSendingL. Does nothing ATM.
+{-
 interpretNetworkSendingL
     :: L.NetworkSendingL a
     -> Eff '[L.LoggerL, SIO, Exc SomeException] a
+    
 interpretNetworkSendingL (L.Multicast cfg req) = L.logInfo "L.Multicast cfg req"
 
 -- | Interpret NetworkListeningL (with NetworkSendingL in stack). Does nothing ATM.
@@ -41,3 +43,4 @@ interpretNetworkSyncL (L.Synchronize sending listening) = do
     L.logInfo "Synchronize"
     raise $ raise $ handleRelay pure ( (>>=) . interpretNetworkSendingL  )    sending
     raise $ raise $ handleRelay pure ( (>>=) . interpretNetworkListeningL' ) listening
+    -}

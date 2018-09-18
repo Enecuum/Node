@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Enecuum.Core.HGraph.StringHashable where
+module Data.HGraph.StringHashable where
 
 import           Universum
 import           Data.Serialize
@@ -11,6 +11,10 @@ newtype StringHash = StringHash ByteString deriving (Eq, Ord, Serialize)
 class Serialize a => StringHashable a where
     toHash :: a -> StringHash
     toHash = StringHash . encode
+
+-- TODO: make it right.
+-- Currently, there is no "hashing" in here.
+-- https://task.enecuum.com/issues/2718
 
 instance StringHashable Int
 instance StringHashable Int64
@@ -25,3 +29,6 @@ instance StringHashable Word8
 
 instance StringHashable StringHash where
     toHash = id
+
+fromStringHash :: StringHash -> ByteString
+fromStringHash (StringHash sh) = sh
