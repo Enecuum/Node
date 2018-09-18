@@ -5,9 +5,8 @@ import Enecuum.Prelude
 import           Control.Monad.Free                         (foldFree)
 
 import qualified Enecuum.Core.Language                      as L
-import qualified Enecuum.Core.Testing.Runtime.Lens          as RLens
 import           Enecuum.Core.Testing.Runtime.Logger.Impl   (runLoggerL)
-import           Enecuum.Core.Testing.Runtime.Types
+import           Enecuum.Core.Testing.Runtime.Types         (LoggerRuntime)
 
 -- | Interprets core effect container language.
 interpretCoreEffectL :: LoggerRuntime -> L.CoreEffectF a -> IO a
