@@ -19,7 +19,7 @@ import qualified    Data.ByteString.Base64  as Base64
 import qualified    Data.Serialize          as S
 
 import qualified    Crypto.Hash.SHA256      as SHA
-
+import              Control.Monad.Free
 import              Enecuum.Prelude
 import              Enecuum.Legacy.Refact.Hashing (calculateKeyBlockHash)
 import              Enecuum.Legacy.Refact.Assets (genesisKeyBlock)
@@ -57,7 +57,7 @@ instance StringHashable NodeContent where
     toHash (MBlockContent x) = toHash x
     toHash (KBlockContent x) = toHash x
 
-
+type BGraphL a = Free (HGraphL (TNodeL NodeContent)) a
 
 initBGraph :: IO BGraph
 initBGraph = do
@@ -65,10 +65,10 @@ initBGraph = do
     runHGraph aRes $ newNode $ KBlockContent genesisKeyBlock
     return aRes
 
-addKBlock :: KBlock -> Eff (HGraphModel (TNodeL NodeContent))  Bool
+addKBlock :: KBlock -> BGraphL Bool
 addKBlock = addBlock _prev_hash KBlockContent
 
-addMBlock :: MBlock -> Eff (HGraphModel (TNodeL NodeContent)) Bool
+addMBlock :: MBlock -> BGraphL Bool
 addMBlock = addBlock _keyBlock MBlockContent
 
 addBlock f1 f2 block = do
@@ -76,11 +76,10 @@ addBlock f1 f2 block = do
     case aNode of
         Just (HNode _ ref _ _ _) -> do
             newNode $ f2 block
-            W aOk <- newLink' ref (f2 block)
-            return aOk
+            newLink' ref (f2 block)
         Nothing -> return False
 
-getMBlock :: StringHash -> Eff (HGraphModel (TNodeL NodeContent)) (Maybe MBlock)
+getMBlock :: StringHash -> BGraphL (Maybe MBlock)
 getMBlock hash = do
     aNode <- getNode hash
     case aNode of
@@ -88,7 +87,7 @@ getMBlock hash = do
             return $ Just block
         _ -> return Nothing
 
-getKBlock :: StringHash -> Eff (HGraphModel (TNodeL NodeContent)) (Maybe KBlock)
+getKBlock :: StringHash -> BGraphL (Maybe KBlock)
 getKBlock hash = do
     aNode <- getNode hash
     case aNode of
@@ -97,7 +96,7 @@ getKBlock hash = do
         _ -> return Nothing
 
 -- O(n) - n is a number of kblock.
-getLastKBlocks :: Eff (HGraphModel (TNodeL NodeContent)) [KBlock]
+getLastKBlocks :: BGraphL [KBlock]
 getLastKBlocks = do
     Just (HNode _ aRef _ _ _) <- getNode $ toHash genesisKeyBlock
     aRefs <- getLastKBlocks' aRef
@@ -109,14 +108,14 @@ getLastKBlocks = do
             _ -> return Nothing
     return $ catMaybes aKBlocks
 
-getLastKBlocks' :: TRef -> Eff (HGraphModel (TNodeL NodeContent)) [TRef]
+getLastKBlocks' :: TRef -> BGraphL [TRef]
 getLastKBlocks' aRef = do
     aRefs <- getNextKBlocks' aRef
     if null aRefs
         then return [aRef]
         else concat <$> forM aRefs getLastKBlocks'
 
-getNextKBlocks' :: TRef -> Eff (HGraphModel (TNodeL NodeContent)) [TRef]
+getNextKBlocks' :: TRef -> BGraphL [TRef]
 getNextKBlocks' aRef = do
     Just (HNode _ _ _ _ rLinks) <- getNode aRef
     aRefs <- forM (elems rLinks) $ \aNRef -> do

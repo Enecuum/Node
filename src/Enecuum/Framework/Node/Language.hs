@@ -5,6 +5,7 @@ module Enecuum.Framework.Node.Language where
 
 import           Enecuum.Prelude
 
+
 import qualified Data.Aeson                               as A
 
 import qualified Enecuum.Core.Types                       as T
@@ -12,15 +13,15 @@ import qualified Enecuum.Core.Language                    as L
 -- import           Enecuum.Framework.NetworkModel.Language  ( NetworkSendingL, NetworkListeningL, NetworkSyncL )
 import qualified Enecuum.Framework.Networking.Language    as L
 import qualified Enecuum.Framework.Domain                 as D
+import qualified Enecuum.Framework.Domain.Types           as D
 
 -- | Graph types.
-type LGraphNode = T.TNodeL D.Transaction
-type LGraphModel = L.HGraphModel LGraphNode
+type LGraphModel next = Free (L.HGraphL (T.TNodeL D.Transaction)) next
 
 -- | Node language.
 data NodeF next where
   -- | Eval graph.
-  EvalGraph      :: Eff LGraphModel a -> (a -> next) -> NodeF next
+  EvalGraph      :: LGraphModel a -> (a -> next) -> NodeF next
   -- | Eval networking.
   EvalNetworking :: L.NetworkingL a -> (a -> next) -> NodeF next
   -- | Eval core effect.
@@ -34,7 +35,7 @@ instance Functor NodeF where
 type NodeModel next = Free NodeF next
 
 -- | Eval graph.
-evalGraph :: Eff LGraphModel a -> NodeModel a
+evalGraph :: LGraphModel a -> NodeModel a
 evalGraph graph = liftF $ EvalGraph graph id
 
 -- | Eval networking.
