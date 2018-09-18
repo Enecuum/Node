@@ -12,6 +12,7 @@ import qualified Enecuum.Language              as L
 import qualified Enecuum.Framework.Lens        as Lens
 import qualified Enecuum.Core.Lens             as Lens
 
+import           Enecuum.Core.HGraph.Internal.Types
 import           Enecuum.Framework.TestData.RPC
 import qualified Enecuum.Framework.TestData.TestGraph as TG
 import qualified Enecuum.Framework.Domain.Types as T
@@ -90,7 +91,7 @@ masterNode = do
 calculateBalance
   :: D.StringHash
   -> Int
-  -> Eff L.LGraphModel Int
+  -> L.LGraphModel Int
 calculateBalance curNodeHash curBalance = L.getNode curNodeHash >>= \case
   Nothing -> error "Invalid reference found."
   Just curNode -> do
@@ -103,10 +104,10 @@ calculateBalance curNodeHash curBalance = L.getNode curNodeHash >>= \case
       _ -> error "In this test scenario, graph should be list-like."
 
 tryAddTransaction'
-  :: L.LGraphNode
+  :: (TNodeL D.Transaction)
   -> Int
   -> Int
-  -> Eff L.LGraphModel (Maybe (D.StringHash, Int))
+  -> L.LGraphModel (Maybe (D.StringHash, Int))
 tryAddTransaction' lastNode lastBalance change
   | lastBalance + change < 0 = pure Nothing
   | otherwise = do
@@ -120,7 +121,7 @@ tryAddTransaction
   :: D.StringHash
   -> Int
   -> Int
-  -> Eff L.LGraphModel (Maybe (D.StringHash, Int))
+  -> L.LGraphModel (Maybe (D.StringHash, Int))
 tryAddTransaction curNodeHash prevBalance change = L.getNode curNodeHash >>= \case
   Nothing -> error "Invalid reference found."
   Just curNode -> do
@@ -134,7 +135,7 @@ tryAddTransaction curNodeHash prevBalance change = L.getNode curNodeHash >>= \ca
       _ -> error "In this test scenario, graph should be list-like."
 
 acceptGetBalance
-  :: L.LGraphNode
+  :: TNodeL D.Transaction
   -> GetBalanceRequest
   -> L.NodeModel GetBalanceResponse
 acceptGetBalance baseNode GetBalanceRequest = do
@@ -142,7 +143,7 @@ acceptGetBalance baseNode GetBalanceRequest = do
   pure $ GetBalanceResponse balance
 
 acceptBalanceChange
-  :: L.LGraphNode
+  :: TNodeL D.Transaction
   -> BalanceChangeRequest
   -> L.NodeModel BalanceChangeResponse
 acceptBalanceChange baseNode (BalanceChangeRequest change) = do
@@ -151,7 +152,7 @@ acceptBalanceChange baseNode (BalanceChangeRequest change) = do
     Nothing -> pure $ BalanceChangeResponse Nothing
     Just (D.StringHash _, balance) -> pure $ BalanceChangeResponse $ Just balance
 
-newtorkNode1Initialization :: L.NodeModel L.LGraphNode
+newtorkNode1Initialization :: L.NodeModel (TNodeL D.Transaction)
 newtorkNode1Initialization = L.evalGraph $ TG.getTransactionNode TG.nilTransaction >>= \case
   Nothing -> error "Graph is not ready: no genesis node found."
   Just baseNode -> pure baseNode
