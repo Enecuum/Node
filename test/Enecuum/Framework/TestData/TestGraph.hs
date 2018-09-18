@@ -1,20 +1,9 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# OPTIONS_GHC -fno-warn-orphans   #-}
-
 module Enecuum.Framework.TestData.TestGraph where
 
 import Enecuum.Prelude
 
-import qualified Data.ByteString.Base64  as Base64
-import qualified Data.Serialize          as S
-import qualified Data.Aeson              as A
 import qualified Data.HGraph.THGraph     as G
 import           Data.HGraph.StringHashable (StringHash, toHash)
-import qualified Crypto.Hash.SHA256      as SHA
-
-import           Enecuum.Prelude
-import           Enecuum.Core.HGraph.Internal.Types
 
 import qualified Enecuum.Language as L
 import qualified Enecuum.Domain as D
@@ -28,17 +17,30 @@ nilHash = toHash (D.Transaction (toHash @Int 0) 0)
 nilTransaction :: D.Transaction
 nilTransaction = D.Transaction nilHash 0
 
+nilTransactionHash :: D.StringHash
+nilTransactionHash = D.toHash nilTransaction
+
 initLGraph :: IO LGraph
 initLGraph = do
     graph <- initHGraph
     runHGraph graph $ L.newNode nilTransaction
-    return graph
+    pure graph
 
-withPrevState = error "withPrevState not implemented"
+type Balance = Int
+type BalanceChange = Int
 
-updateTransaction :: D.Transaction -> Int -> L.LGraphModel Bool
-updateTransaction (D.Transaction prevHash change) = withPrevState prevHash $ \_ -> do
-    error "updateTransaction not implemented"
-
-getTransactionNode :: D.Transaction -> L.LGraphModel (Maybe (TNodeL D.Transaction))
-getTransactionNode = L.getNode . toHash
+-- | Checks if new balance is valid and adds new transaction node.
+-- Returns new node hash and new balance.
+tryAddTransaction'
+  :: D.StringHash
+  -> Balance
+  -> BalanceChange
+  -> L.LGraphModel (Maybe (D.StringHash, Balance))
+tryAddTransaction' lastNodeHash lastBalance change
+  | lastBalance + change < 0 = pure Nothing
+  | otherwise = do
+      let newTrans = D.Transaction lastNodeHash change
+      let newTransHash = D.toHash newTrans
+      L.newNode newTrans
+      L.newLink lastNodeHash newTransHash
+      pure $ Just (newTransHash, lastBalance + change)
