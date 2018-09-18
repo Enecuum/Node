@@ -8,23 +8,36 @@ import           Enecuum.Prelude
 import           System.Directory
 import           Test.Hspec
 
+logFile :: IO a -> FilePath -> IO Text
+logFile doIO logFile = do
+  fileExists <- doesFileExist logFile
+  when fileExists $ removeFile logFile
+  doIO
+  content <- readFile logFile
+  removeFile logFile
+  pure content
 
-logFile fun = do
-      logFile <- appFileName
-      fileExists <- doesFileExist logFile
-      when fileExists $ removeFile logFile
-      fun
-      readFile logFile
+getLog fun = logFile fun =<< defaultLogFileName
 
 spec :: Spec
 spec = do
   describe "Logger tests" $ do
     it "Generate log file without config" $ do
-      logFileConetnt <- logFile loggerTestWithoutConfig
+      logFileConetnt <- getLog loggerTestWithoutConfig
       logFileConetnt `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
-    it "Generate log file with config, set level: msg > Debug" $ do
-      logFileConetnt <- logFile $ loggerTestWithConfig T.Debug
+
+    it "Generate log file with config, set level - Debug (msg > Debug)" $ do
+      logFileConetnt <- getLog $ loggerTestSet T.Debug ""
       logFileConetnt `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
-    it "Generate log file with config, set level: msg > Info" $ do
-      logFileConetnt <- logFile $ loggerTestWithConfig T.Info
+
+    it "Generate log file with config, set level - Info (msg > Info)" $ do
+      logFileConetnt <- getLog $ loggerTestSet T.Info ""
       logFileConetnt `shouldBe` "Info Msg\nWarning Msg\nError Msg\n"
+
+    it "Generate log file with config, set level - Debug, set format - '$prio $loggername: $msg'" $ do
+      logFileConetnt <- getLog $ loggerTestSet T.Debug T.standartFormat
+      logFileConetnt `shouldBe` "DEBUG LoggingExample.Main: Debug Msg\nINFO LoggingExample.Main: Info Msg\nWARNING LoggingExample.Main: Warning Msg\nERROR LoggingExample.Main: Error Msg"
+
+    it "Generate log file with config, set filepath" $ do
+      logFileConetnt <- logFile (loggerTestSet T.Debug "") =<< appFileName
+      logFileConetnt `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"

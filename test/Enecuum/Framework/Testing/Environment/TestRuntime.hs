@@ -45,7 +45,7 @@ networkWorker control registry = go 0
 -- Starts network environment thread.
 createTestRuntime :: IO TestRuntime
 createTestRuntime = do
-  loggerRt <- createLoggerRuntime T.Debug
+  loggerRt <- createLoggerRuntime T.Debug "$prio $loggername: $msg" Nothing
   registry <- newTMVarIO Map.empty
   control  <- Control <$> newEmptyTMVarIO <*> newEmptyTMVarIO
   tId      <- forkIO $ networkWorker control registry

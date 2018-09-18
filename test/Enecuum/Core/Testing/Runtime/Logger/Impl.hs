@@ -9,11 +9,11 @@ import qualified Enecuum.Core.Testing.Runtime.Lens          as RLens
 import           Enecuum.Core.Testing.Runtime.Types
 import qualified Enecuum.Core.Types.Logger as T
 import Enecuum.Core.Logger.Language
-import qualified Enecuum.Core.Logger.Interpreter as I (interpretLoggerLBase, runLoggerL)
+import qualified Enecuum.Core.Logger.InterpreterHslogger as H (interpretLoggerLBase, runLoggerL)
 
 
--- | Interprets a LoggerL language.
--- Just pushes the messages into the concurrent list-like storage.
+-- | Interprets a LoggerL language
+-- via package hslogger.
 interpretLoggerL
   :: LoggerRuntime
   -> L.LoggerL a
@@ -21,14 +21,15 @@ interpretLoggerL
 interpretLoggerL rt (L.LogMessage logLevel msg) =
   safeIO $ do
   atomically $ modifyTVar (rt ^. RLens.messages) (msg :)
-  -- readTVarIO --atomically . readTVar
   lvl <- readTVarIO (rt ^. RLens.currentLevel)
   let logFilePath = (rt ^. RLens.logFilePath)
-  I.interpretLoggerLBase $ L.SetConfigForLog lvl logFilePath
-  I.interpretLoggerLBase $ L.LogMessage logLevel msg
+      format = (rt ^. RLens.currentFormat)
+  H.interpretLoggerLBase $ L.SetConfigForLog lvl logFilePath format
+  H.interpretLoggerLBase $ L.LogMessage logLevel msg
 
 
--- | Runs the LoggerL language.
+-- | Runs the LoggerL language
+-- via package hslogger
 runLoggerL
   :: LoggerRuntime
   -> Eff '[L.LoggerL, SIO, Exc SomeException] a
@@ -37,15 +38,15 @@ runLoggerL rt = handleRelay pure ( (>>=) . interpretLoggerL rt )
 
 
 loggerTestWithoutConfig :: IO ()
-loggerTestWithoutConfig = runSafeIO . I.runLoggerL $ do
+loggerTestWithoutConfig = runSafeIO . H.runLoggerL $ do
   -- setConfigForLog T.Debug "withoutConfig"
   loggerTest
 
-loggerTestWithConfig :: T.LogLevel -> IO ()
-loggerTestWithConfig level = do
-  loggerRuntime <- createLoggerRuntime level
-  runSafeIO $ runLoggerL loggerRuntime loggerTest
 
+loggerTestSet :: T.LogLevel -> T.Format -> IO ()
+loggerTestSet level format = do
+  loggerRuntime <- createLoggerRuntime level format Nothing
+  runSafeIO $ runLoggerL loggerRuntime loggerTest
 
 
 loggerTest = do

@@ -16,8 +16,8 @@ type MesType = Text
 data LoggerL a where
   -- | Log message with a predefined level.
   LogMessage :: T.LogLevel -> MesType -> LoggerL ()
-  -- | SetLevel to handler
-  SetConfigForLog ::  T.LogLevel -> FilePath -> LoggerL ()
+  -- | Set config to handler
+  SetConfigForLog ::  T.LogLevel -> FilePath -> T.Format -> LoggerL ()
 
 -- This is a raw vision of the logging language.
 makeFreer ''LoggerL
