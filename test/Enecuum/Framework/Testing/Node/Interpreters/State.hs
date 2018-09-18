@@ -1,4 +1,4 @@
-module Enecuum.Framework.Testing.Node.Interpreters.NodeModel where
+module Enecuum.Framework.Testing.Node.Interpreters.State where
 
 import Enecuum.Prelude
 
@@ -12,19 +12,32 @@ import           Enecuum.Framework.Testing.Types
 import qualified Enecuum.Framework.Testing.Lens                         as RLens
 import qualified Enecuum.Framework.Testing.Node.Interpreters.Networking as Impl
 
--- | Interpret NodeL.
-interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
+-- | Interpret StateL.
+interpretStateL :: NodeRuntime -> L.StatF a -> IO a
 
-interpretNodeL nodeRt (L.EvalGraph graphAction next) = do
+interpretStateL nodeRt (L.NewVar val next) =
+  next <$> Impl.runNetworkingL nodeRt networkingAction
+
+  -- | Create variable.
+  NewVar :: a -> (D.StateVar a -> next) -> StateF next
+  -- | Read variable.
+  ReadVar :: D.StateVar a -> (a -> next) -> StateF next
+  -- | Write variable.
+  WriteVar :: D.StateVar a -> a ->(() -> next) -> StateF next
+  -- | Eval graph.
+  EvalGraph :: LGraphModel a -> (a -> next) -> StateF next
+  -- | Eval core effect.
+  EvalCoreEffectStateF :: L.CoreEffectModel a -> (a -> next) -> StateF next
+
+
+
+interpretStateL nodeRt (L.EvalGraph graphAction next) = do
   Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "L.EvalGraph"
   next <$> runHGraph (nodeRt ^. RLens.graph) graphAction
 
-interpretNodeL nodeRt (L.EvalNetworking networkingAction next) =
-  next <$> Impl.runNetworkingL nodeRt networkingAction
-
-interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffect next) =
+interpretStateL nodeRt (L.EvalCoreEffectNodeF coreEffect next) =
   next <$> Impl.runCoreEffectModel (nodeRt ^. RLens.loggerRuntime) coreEffect
 
 -- | Runs node model.
 runNodeModel :: NodeRuntime -> L.NodeModel a -> IO a
-runNodeModel nodeRt = foldFree (interpretNodeL nodeRt)
+runNodeModel nodeRt = foldFree (interpretStateL nodeRt)
