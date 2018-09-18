@@ -6,42 +6,53 @@ module Enecuum.Framework.Node.Language where
 import           Enecuum.Prelude
 
 import qualified Data.Aeson                               as A
-import           Eff                                      ( send )
 
 import qualified Enecuum.Core.Types                       as T
-import           Enecuum.Core.Language                    ( CoreEffects, HGraphModel )
-import           Enecuum.Framework.NetworkModel.Language  ( NetworkSendingL, NetworkListeningL, NetworkSyncL )
-import           Enecuum.Framework.Networking.Language    ( NetworkingL )
+import qualified Enecuum.Core.Language                    as L
+-- import           Enecuum.Framework.NetworkModel.Language  ( NetworkSendingL, NetworkListeningL, NetworkSyncL )
+import qualified Enecuum.Framework.Networking.Language    as L
 import qualified Enecuum.Framework.Domain                 as D
 
 -- | Graph types.
 type LGraphNode = T.TNodeL D.Transaction
-type LGraphModel = HGraphModel LGraphNode
+type LGraphModel = L.HGraphModel LGraphNode
 
 -- | Node language.
-data NodeL a where
-  EvalGraph :: Eff LGraphModel a -> NodeL a
+data NodeF next where
+  -- | Eval graph.
+  EvalGraph      :: Eff LGraphModel a -> (a -> next) -> NodeF next
+  -- | Eval networking.
+  EvalNetworking :: L.NetworkingL a -> (a -> next) -> NodeF next
+  -- | Eval core effect.
+  EvalCoreEffectNodeF :: L.CoreEffectModel a -> (a -> next) -> NodeF next
 
--- | Node model langauges. These langauges should be used in the node scripts.
--- With these languages, nodes can interact through the network,
--- work with internal state.
-type NodeModel =
-  '[ NodeL
-   , NetworkingL
-   , NetworkSyncL
-   , NetworkListeningL
-   , NetworkSendingL
-   ]
-  ++ CoreEffects
+instance Functor NodeF where
+  fmap g (EvalGraph graph next)           = EvalGraph graph           (g . next)
+  fmap g (EvalNetworking networking next) = EvalNetworking networking (g . next)
+  fmap g (EvalCoreEffectNodeF coreEffect next) = EvalCoreEffectNodeF coreEffect (g . next)
 
-evalGraph :: Eff LGraphModel a -> Eff NodeModel a
-evalGraph = send . EvalGraph
+type NodeModel next = Free NodeF next
+
+-- | Eval graph.
+evalGraph :: Eff LGraphModel a -> NodeModel a
+evalGraph graph = liftF $ EvalGraph graph id
+
+-- | Eval networking.
+evalNetworking :: L.NetworkingL a -> NodeModel a
+evalNetworking newtorking = liftF $ EvalNetworking newtorking id
+
+-- | Eval core effect.
+evalCoreEffectNodeF :: L.CoreEffectModel a -> NodeModel a
+evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
+
+instance L.Logger (Free NodeF) where
+  logMessage level msg = evalCoreEffectNodeF $ L.logMessage level msg
 
 -- Raw idea of RPC description. Will be reworked.
 
 -- | Handler is a function which processes a particular response
 -- if this response is what RawData contains.
-type Handler = (Eff NodeModel (Maybe D.RawData), D.RawData)
+type Handler = (NodeModel (Maybe D.RawData), D.RawData)
 
 -- | HandlersF is a function holding stack of handlers which are handling
 -- different requests.
@@ -54,9 +65,9 @@ tryHandler
   :: D.RpcMethod () req resp
   => FromJSON req
   => ToJSON resp
-  => (req -> Eff NodeModel resp)
+  => (req -> NodeModel resp)
   -> D.RawData
-  -> Eff NodeModel (Maybe D.RawData)
+  -> NodeModel (Maybe D.RawData)
 tryHandler handler rawReq = case A.decode rawReq of
   Nothing -> pure Nothing
   Just req -> do
@@ -68,9 +79,9 @@ serve
   :: D.RpcMethod () req resp
   => FromJSON req
   => ToJSON resp
-  => (req -> Eff NodeModel resp)
-  -> (Eff NodeModel (Maybe D.RawData), D.RawData)
-  -> (Eff NodeModel (Maybe D.RawData), D.RawData)
+  => (req -> NodeModel resp)
+  -> (NodeModel (Maybe D.RawData), D.RawData)
+  -> (NodeModel (Maybe D.RawData), D.RawData)
 serve handler (prevHandled, rawReq) = (newHandled, rawReq)
   where
     newHandled = prevHandled >>= \case

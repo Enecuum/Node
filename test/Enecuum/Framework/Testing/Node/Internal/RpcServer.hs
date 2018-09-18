@@ -42,9 +42,7 @@ startNodeRpcServer nodeRt handlersF = do
     
     makeRpcRequest control rawDataIn = do
       let (handler, _) = handlersF (pure Nothing, rawDataIn)
-      mbResult <- runSafeIO
-          $ runLoggerL (nodeRt ^. RLens.loggerRuntime)
-          $ runNodeModel nodeRt handler
+      mbResult <- runNodeModel nodeRt handler
       let resp = case mbResult of
             Nothing         -> AsErrorResponse $ "Method is not supported: " +|| rawDataIn ||+ ""
             Just rawDataOut -> AsRpcResponse   $ D.RpcResponse rawDataOut
