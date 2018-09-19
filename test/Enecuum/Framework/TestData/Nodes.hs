@@ -74,9 +74,9 @@ bootNode = do
 masterNodeInitialization :: L.NodeModel (Either Text D.NodeID)
 masterNodeInitialization = do
   addr     <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
-  eHashID  <- getUnsafe (D.ConnectionConfig addr) "getHashIDRequest" GetHashIDRequest
-  pure $ eHashID >>= Right . D.NodeID
-
+  GetHashIDResponse eHashID  <- getUnsafe (D.ConnectionConfig addr) "getHashId" GetHashIDRequest
+  pure $ Right (D.NodeID eHashID)
+  
 masterNode :: L.NodeDefinitionModel ()
 masterNode = do
   L.nodeTag masterNodeTag
@@ -149,6 +149,8 @@ acceptBalanceChange baseNode (A.fromJSON -> A.Success (BalanceChangeRequest chan
     Nothing                        -> makeResult i $ BalanceChangeResponse Nothing
     Just (D.StringHash _, balance) -> makeResult i $ BalanceChangeResponse $ Just balance
 
+
+makeResult :: ToJSON a => Int -> a -> NodeModel RpcResponse
 makeResult i a = pure $ RpcResponseResult (A.toJSON a) i
 
 newtorkNode1Initialization :: L.NodeModel (TNodeL D.Transaction)
@@ -168,19 +170,19 @@ networkNode2Scenario :: L.NodeModel ()
 networkNode2Scenario = do
     let connectCfg = D.ConnectionConfig networkNode1Addr
     -- No balance change
-    GetBalanceResponse balance0 <- getUnsafe connectCfg "getBalanceRequest" GetBalanceRequest
+    GetBalanceResponse balance0 <- getUnsafe connectCfg "getBalance" GetBalanceRequest
     L.logInfo $ "balance0 (should be 0): " +|| balance0 ||+ "."
     -- Add 10
-    BalanceChangeResponse balance1 <- getUnsafe connectCfg "balanceChangeRequest" $ BalanceChangeRequest 10
+    BalanceChangeResponse balance1 <- getUnsafe connectCfg "balanceChange" $ BalanceChangeRequest 10
     L.logInfo $ "balance1 (should be Just 10): " +|| balance1 ||+ "."
     -- Subtract 20
-    BalanceChangeResponse balance2 <- getUnsafe connectCfg "balanceChangeRequest" $ BalanceChangeRequest (-20)
+    BalanceChangeResponse balance2 <- getUnsafe connectCfg "balanceChange" $ BalanceChangeRequest (-20)
     L.logInfo $ "balance2 (should be Nothing): " +|| balance2 ||+ "."
     -- Add 101
-    BalanceChangeResponse balance3 <- getUnsafe connectCfg "balanceChangeRequest" $ BalanceChangeRequest 101
+    BalanceChangeResponse balance3 <- getUnsafe connectCfg "balanceChange" $ BalanceChangeRequest 101
     L.logInfo $ "balance3 (should be Just 111): " +|| balance3 ||+ "."
     -- Final balance
-    GetBalanceResponse balance4 <- getUnsafe connectCfg "getBalanceRequest" GetBalanceRequest
+    GetBalanceResponse balance4 <- getUnsafe connectCfg "getBalance" GetBalanceRequest
     L.logInfo $ "balance4 (should be 111): " +|| balance4 ||+ "."
 
 getUnsafe :: (ToJSON a, FromJSON b) => D.ConnectionConfig -> Text -> a -> Free L.NodeF b

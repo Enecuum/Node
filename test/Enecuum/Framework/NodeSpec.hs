@@ -31,7 +31,7 @@ spec = describe "Nodes test" $ do
     bootNodeRuntime   :: NodeRuntime <- startNode runtime bootNodeAddr    bootNode
     masterNodeRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNode
 
-    Right (RpcResponseResult eResponse _) <- sendRequest runtime bootNodeAddr $ makeRequest "helloRequest1" (HelloRequest1 (infoToText masterNode1Addr))
+    Right (RpcResponseResult eResponse _) <- sendRequest runtime bootNodeAddr $ makeRequest "hello1" (HelloRequest1 (infoToText masterNode1Addr))
     
     A.fromJSON eResponse `shouldBe` (A.Success $ HelloResponse1 ("Hello, dear. " <> infoToText masterNode1Addr))
 
