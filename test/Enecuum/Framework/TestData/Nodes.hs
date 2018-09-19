@@ -13,6 +13,7 @@ import qualified Enecuum.Framework.Lens        as Lens
 import qualified Enecuum.Core.Lens             as Lens
 
 import           Enecuum.Framework.TestData.RPC
+import           Enecuum.Framework.TestData.Validation
 import qualified Enecuum.Framework.TestData.TestGraph as TG
 import qualified Enecuum.Framework.Domain.Types as T
 
@@ -53,8 +54,7 @@ acceptGetHashId :: GetHashIDRequest -> Eff L.NodeModel GetHashIDResponse
 acceptGetHashId GetHashIDRequest = pure $ GetHashIDResponse "1"
 
 acceptValidationRequest :: ValidationRequest -> Eff L.NodeModel ValidationResponse
-acceptValidationRequest ValidRequest   = pure $ ValidationResponse "correct"
-acceptValidationRequest InvalidRequest = pure $ ValidationResponse "invalid"
+acceptValidationRequest req   = pure $ makeResponse $ verifyRequest req
 
 -- Scenario 1: master node can interact with boot node.
 

@@ -26,7 +26,7 @@ instance D.RpcMethod () GetHashIDRequest GetHashIDResponse where
 data ValidationRequest = ValidRequest | InvalidRequest
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-newtype ValidationResponse = ValidationResponse Text
+newtype ValidationResponse = ValidationResponse (Either [Text] Text)
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
 
 instance D.RpcMethod () ValidationRequest ValidationResponse where
