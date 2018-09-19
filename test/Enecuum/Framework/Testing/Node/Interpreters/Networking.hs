@@ -19,7 +19,7 @@ relayRequest
   :: NodeRuntime
   -> D.Connection
   -> RpcRequest
-  -> IO (Either Text D.RpcResponse)
+  -> IO (Either Text RpcResponse)
 relayRequest nodeRt conn req = do
   atomically
       $ putTMVar (nodeRt ^. RLens.networkControl . RLens.request)

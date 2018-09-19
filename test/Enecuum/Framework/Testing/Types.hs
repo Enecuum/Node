@@ -10,19 +10,20 @@ import qualified Enecuum.Domain                       as D
 import           Enecuum.Core.Testing.Runtime.Types
 import qualified Enecuum.Framework.TestData.TestGraph as TG
 import qualified Enecuum.Framework.Domain.Types       as T
+import           Enecuum.Framework.Domain.RpcMessages
 
 -- | Defines control requests to manipulate by nodes.
 data ControlRequest
-  = RpcRequest D.RpcRequest       -- ^ Eval RPC request to a node.
+  = RpcRequest RpcRequest       -- ^ Eval RPC request to a node.
   | RelayRpcRequest               -- ^ Relay RPC request from one node to another.
     { _from    :: D.NodeAddress   -- ^ From node
     , _to      :: D.NodeAddress   -- ^ To node
-    , _request :: D.RpcRequest    -- ^ RPC request to relay
+    , _request :: RpcRequest    -- ^ RPC request to relay
     }
 
 -- | Result of evaluation of control response.
 data ControlResponse
-  = AsRpcResponse D.RpcResponse   -- ^ RPC response wrapped into the control response.
+  = AsRpcResponse RpcResponse   -- ^ RPC response wrapped into the control response.
   | AsErrorResponse Text          -- ^ Keeps an error that occured during the ControlRequest evaluation.
 
 -- | Control is the way to evalueate admin control over a node.
