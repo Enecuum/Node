@@ -1,8 +1,8 @@
 module Main where
 
-import           Enecuum.Config                           ( withConfig )
-import           Enecuum.App                              ( initialize )
-
+import           App.Initialize  (initialize)
+import           Enecuum.Config  (withConfig)
+import           Enecuum.Prelude
 
 main :: IO ()
 main = do
