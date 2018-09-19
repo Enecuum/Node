@@ -45,3 +45,15 @@ startNode testRt nodeAddr scenario = do
   runNodeDefinitionModel nodeRt scenario
   registerNode (testRt ^. RLens.registry) nodeAddr nodeRt
   pure nodeRt
+
+-- | Evaluates node scenario. Does no node registering in the test runtime.
+-- Node scenario can't send messages to other nodes (well, it can, but will fail).
+evaluateNode
+  :: LoggerRuntime
+  -> D.NodeAddress
+  -> L.NodeDefinitionModel a
+  -> IO a
+evaluateNode loggerRt nodeAddr scenario = do
+  control <- createControl
+  nodeRt <- createEmptyNodeRuntime loggerRt control nodeAddr
+  runNodeDefinitionModel nodeRt scenario

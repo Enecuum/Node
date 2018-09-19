@@ -1,10 +1,3 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Enecuum.Framework.NodeSpec where
 
@@ -91,9 +84,9 @@ spec = describe "Nodes test" $ do
       ]
 
   it "Boot node validates requests from Network node" $ do
-    
+
     runtime <- createTestRuntime
-    
+
     bootNodeValidationRuntime   :: NodeRuntime <- startNode runtime bootNodeAddr    bootNodeValidation
     masterNodeValidationRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNodeValidation
 
