@@ -7,7 +7,7 @@ import           Data.HGraph.StringHashable (StringHash, toHash)
 
 import qualified Enecuum.Language as L
 import qualified Enecuum.Domain as D
-import           Enecuum.Core.HGraph.Interpreter (initHGraph, runHGraph)
+import           Enecuum.Core.HGraph.Interpreters.IO (initHGraph, runHGraph)
 
 type LGraph = TVar (G.THGraph D.Transaction)
 

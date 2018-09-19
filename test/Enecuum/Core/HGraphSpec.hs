@@ -12,7 +12,7 @@ import           Enecuum.Prelude
 
 import qualified Data.HGraph.THGraph as G
 import           Data.HGraph.StringHashable
-import           Enecuum.Core.HGraph.Interpreter          ( runHGraph, initHGraph )
+import           Enecuum.Core.HGraph.Interpreters.IO      ( runHGraph, initHGraph )
 import           Enecuum.Core.HGraph.Language
 import           Enecuum.Core.HGraph.Types
 import           Test.Hspec

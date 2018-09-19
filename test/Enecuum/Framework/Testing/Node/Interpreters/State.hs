@@ -10,7 +10,8 @@ import           Unsafe.Coerce                                          (unsafeC
 
 import qualified Enecuum.Language                                       as L
 import qualified Enecuum.Domain                                         as D
-import           Enecuum.Core.HGraph.Interpreter                        (runHGraph)
+import qualified Enecuum.Framework.Lens                                 as Lens
+import           Enecuum.Core.HGraph.Interpreters.STM                   (runHGraph)
 
 import qualified Enecuum.Core.Testing.Runtime.Interpreters              as Impl
 import           Enecuum.Framework.Testing.Types
@@ -34,35 +35,44 @@ getVarNumber nodeRt = do
   putTMVar (nodeRt ^. RLens.varCounter) $ number + 1
   pure $ VarNumber number
 
-newVar' :: NodeRuntime -> Any -> STM D.VarId
-newVar' nodeRt any = do
+newVar' :: NodeRuntime -> a -> STM D.VarId
+newVar' nodeRt a = do
   varNumber <- getVarNumber nodeRt
-  tvar      <- newTVar any
+  tvar      <- newTVar $ unsafeCoerce a
   nodeState <- takeTMVar $ nodeRt ^. RLens.state
   let varId = D.toHash varNumber
   putTMVar (nodeRt ^. RLens.state) $ Map.insert varId (VarHandle varId tvar) nodeState
   pure varId
 
+readVar' :: NodeRuntime -> D.StateVar a -> STM a
+readVar' nodeRt (view Lens.varId -> varId) = do
+  nodeState <- readTMVar $ nodeRt ^. RLens.state
+  case Map.lookup varId nodeState of
+    Nothing                 -> error $ "Var not found: " +|| varId ||+ "."
+    Just (VarHandle _ tvar) -> unsafeCoerce <$> readTVar tvar
+
+writeVar' :: NodeRuntime -> D.StateVar a -> a -> STM ()
+writeVar' nodeRt (view Lens.varId -> varId) val = do
+  nodeState <- readTMVar $ nodeRt ^. RLens.state
+  case Map.lookup varId nodeState of
+    Nothing                 -> error $ "Var not found: " +|| varId ||+ "."
+    Just (VarHandle _ tvar) -> writeTVar tvar $ unsafeCoerce val
+
 
 -- | Interpret StateL as STM.
 interpretStateL :: NodeRuntime -> L.StateF a -> STM a
 
-interpretStateL nodeRt (L.NewVar val next) = do
-  varId <- newVar' nodeRt $ unsafeCoerce val
-  pure $ next $ D.StateVar varId
+interpretStateL nodeRt (L.NewVar val next) =
+  next . D.StateVar <$> newVar' nodeRt val
 
 interpretStateL nodeRt (L.ReadVar var next) =
-  -- next <$> readVar' var
-  error "ReadVar not implemented"
+  next <$> readVar' nodeRt var
 
 interpretStateL nodeRt (L.WriteVar var val next) =
-  -- next <$> writeVar' var val
-  error "WriteVar not implemented"
+  next <$> writeVar' nodeRt var val
 
-interpretStateL nodeRt (L.EvalGraphStateF graphAction next) = do
-  error "Eval graph not implemented."
-  -- Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "L.EvalGraph"
-  -- next <$> runHGraph (nodeRt ^. RLens.graph) graphAction
+interpretStateL nodeRt (L.EvalGraph graphAction next) = do
+  next <$> runHGraph (nodeRt ^. RLens.graph) graphAction
 
 -- | Runs state model as STM.
 runStateL :: NodeRuntime -> L.StateL a -> STM a

@@ -32,7 +32,7 @@ import              Data.HGraph.THGraph (THGraph)
 import              Data.HGraph.StringHashable
 import              Enecuum.Core.HGraph.Language
 import              Enecuum.Core.HGraph.Types
-import              Enecuum.Core.HGraph.Interpreter
+import              Enecuum.Core.HGraph.Interpreters.IO
 import              Enecuum.Core.HGraph.Internal.Types
 
 type MBlock     = Microblock

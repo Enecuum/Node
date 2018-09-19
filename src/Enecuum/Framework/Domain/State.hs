@@ -6,4 +6,6 @@ import           Enecuum.Core.Types (StringHash)
 
 type VarId = StringHash
 
-data StateVar a = StateVar VarId
+data StateVar a = StateVar
+    { _varId :: VarId 
+    }

@@ -41,6 +41,10 @@ networkNode1Addr, networkNode2Addr :: D.NodeAddress
 networkNode1Addr = "networkNode1Addr"
 networkNode2Addr = "networkNode2Addr"
 
+networkNode3Addr, networkNode4Addr :: D.NodeAddress
+networkNode3Addr = "networkNode3Addr"
+networkNode4Addr = "networkNode4Addr"
+
 bootNodeTag, masterNodeTag :: D.NodeTag
 bootNodeTag = "bootNode"
 masterNodeTag = "masterNode"
@@ -125,7 +129,7 @@ acceptGetBalanceTraversing
   -> GetBalanceRequest
   -> L.NodeModel GetBalanceResponse
 acceptGetBalanceTraversing baseNode GetBalanceRequest = do
-  balance <- L.evalGraph (calculateBalanceTraversing (baseNode ^. Lens.hash) 0)
+  balance <- L.evalGraphIO (calculateBalanceTraversing (baseNode ^. Lens.hash) 0)
   pure $ GetBalanceResponse balance
 
 acceptBalanceChangeTraversing
@@ -133,13 +137,13 @@ acceptBalanceChangeTraversing
   -> BalanceChangeRequest
   -> L.NodeModel BalanceChangeResponse
 acceptBalanceChangeTraversing baseNode (BalanceChangeRequest change) = do
-  mbHashAndBalance <- L.evalGraph $ tryAddTransactionTraversing (baseNode ^. Lens.hash) 0 change
+  mbHashAndBalance <- L.evalGraphIO $ tryAddTransactionTraversing (baseNode ^. Lens.hash) 0 change
   case mbHashAndBalance of
     Nothing -> pure $ BalanceChangeResponse Nothing
     Just (D.StringHash _, balance) -> pure $ BalanceChangeResponse $ Just balance
 
 newtorkNode1Initialization :: L.NodeModel (TNodeL D.Transaction)
-newtorkNode1Initialization = L.evalGraph $ L.getNode TG.nilTransactionHash >>= \case
+newtorkNode1Initialization = L.evalGraphIO $ L.getNode TG.nilTransactionHash >>= \case
   Nothing -> error "Graph is not ready: no genesis node found."
   Just baseNode -> pure baseNode
 
@@ -217,7 +221,7 @@ acceptBalanceChange nodeData (BalanceChangeRequest change) =
   L.atomically $ do
     curBalance   <- L.readVar $ nodeData ^. balanceVar
     graphHead    <- L.readVar $ nodeData ^. graphHeadVar
-    mbNewBalance <- L.evalGraphStateF $ TG.tryAddTransaction' graphHead curBalance change
+    mbNewBalance <- L.evalGraph $ TG.tryAddTransaction' graphHead curBalance change
     case mbNewBalance of
       Nothing -> pure $ BalanceChangeResponse Nothing
       Just (newGraphHead, newBalance) -> do
@@ -227,7 +231,7 @@ acceptBalanceChange nodeData (BalanceChangeRequest change) =
 
 newtorkNode3Initialization :: L.NodeModel NetworkNode3Data
 newtorkNode3Initialization = do
-  baseNode <- L.evalGraph $ L.getNode TG.nilTransactionHash >>= \case
+  baseNode <- L.evalGraphIO $ L.getNode TG.nilTransactionHash >>= \case
     Nothing -> error "Graph is not ready: no genesis node found."
     Just baseNode -> pure baseNode
   balanceVar   <- L.atomically $ L.newVar 0
@@ -244,7 +248,7 @@ networkNode3 = do
 
 networkNode4Scenario :: L.NodeModel ()
 networkNode4Scenario = do
-    let connectCfg = D.ConnectionConfig networkNode1Addr
+    let connectCfg = D.ConnectionConfig networkNode3Addr
     void $ makeRequestUnsafe connectCfg $ BalanceChangeRequest 10
     void $ makeRequestUnsafe connectCfg $ BalanceChangeRequest (-20)
     void $ makeRequestUnsafe connectCfg $ BalanceChangeRequest 101

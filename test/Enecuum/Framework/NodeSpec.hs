@@ -51,8 +51,8 @@ spec = describe "Nodes test" $ do
 
     runtime <- createTestRuntime
 
-    networkNode1Runtime   :: NodeRuntime <- startNode runtime networkNode1Addr networkNode1
-    networkNode2Runtime   :: NodeRuntime <- startNode runtime networkNode2Addr networkNode2
+    void $ startNode runtime networkNode1Addr networkNode1
+    void $ startNode runtime networkNode2Addr networkNode2
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
     msgs <- readTVarIO tMsgs
@@ -88,4 +88,38 @@ spec = describe "Nodes test" $ do
       , "L.EvalGraph"
       , "EvalNodeModel"
       , "Node tag: networkNode1"
+      ]
+
+  it "Network node uses state" $ do
+
+    runtime <- createTestRuntime
+
+    void $ startNode runtime networkNode3Addr networkNode3
+    void $ startNode runtime networkNode4Addr networkNode4
+
+    let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
+    msgs <- readTVarIO tMsgs
+    msgs `shouldBe`
+      [ "balance (should be 91): 91."
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "EvalNodeModel"
+      , "Node tag: networkNode4"
+      , "Serving handlersF"
+      , "L.EvalGraph"
+      , "EvalNodeModel"
+      , "Node tag: networkNode3"
       ]

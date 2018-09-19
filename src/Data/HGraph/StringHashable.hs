@@ -6,7 +6,8 @@ module Data.HGraph.StringHashable where
 import           Universum
 import           Data.Serialize
 
-newtype StringHash = StringHash ByteString deriving (Eq, Ord, Serialize)
+newtype StringHash = StringHash ByteString
+    deriving (Eq, Ord, Serialize, Show)
 
 class StringHashable a where
     toHash :: a -> StringHash

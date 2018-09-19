@@ -5,7 +5,7 @@ import Enecuum.Prelude
 import           Control.Monad.Free                                     (foldFree)
 
 import qualified Enecuum.Language                                       as L
-import           Enecuum.Core.HGraph.Interpreter                        (runHGraph)
+import           Enecuum.Core.HGraph.Interpreters.IO                    (runHGraph)
 
 import qualified Enecuum.Core.Testing.Runtime.Interpreters              as Impl
 import           Enecuum.Framework.Testing.Types
@@ -19,7 +19,7 @@ interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) = do
   next <$> (atomically $ Impl.runStateL nodeRt statefulAction)
 
-interpretNodeL nodeRt (L.EvalGraph graphAction next) = do
+interpretNodeL nodeRt (L.EvalGraphIO graphAction next) = do
   Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "L.EvalGraph"
   next <$> runHGraph (nodeRt ^. RLens.graph) graphAction
 

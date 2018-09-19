@@ -20,14 +20,14 @@ data NodeF next where
   EvalNetworking :: L.NetworkingL a -> (a -> next) -> NodeF next
   -- | Eval core effect.
   EvalCoreEffectNodeF :: L.CoreEffectModel a -> (a -> next) -> NodeF next
-  -- | Eval graph.
-  EvalGraph :: L.GraphModel a -> (a -> next) -> NodeF next
+  -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
+  EvalGraphIO :: L.GraphModel a -> (a -> next) -> NodeF next
 
 instance Functor NodeF where
   fmap g (EvalStateAtomically statefulAction next) = EvalStateAtomically statefulAction (g . next)
   fmap g (EvalNetworking networking next)          = EvalNetworking networking          (g . next)
   fmap g (EvalCoreEffectNodeF coreEffect next)     = EvalCoreEffectNodeF coreEffect     (g . next)
-  fmap g (EvalGraph graphAction next)              = EvalGraph graphAction              (g . next)
+  fmap g (EvalGraphIO graphAction next)            = EvalGraphIO graphAction            (g . next)
 
 type NodeModel next = Free NodeF next
 
@@ -47,9 +47,9 @@ evalNetworking newtorking = liftF $ EvalNetworking newtorking id
 evalCoreEffectNodeF :: L.CoreEffectModel a -> NodeModel a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
--- | Eval graph.
-evalGraph :: L.GraphModel a -> NodeModel a
-evalGraph graphAction = liftF $ EvalGraph graphAction id
+-- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
+evalGraphIO :: L.GraphModel a -> NodeModel a
+evalGraphIO graphAction = liftF $ EvalGraphIO graphAction id
 
 instance L.Logger (Free NodeF) where
   logMessage level msg = evalCoreEffectNodeF $ L.logMessage level msg

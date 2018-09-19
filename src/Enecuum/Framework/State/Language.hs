@@ -19,17 +19,14 @@ data StateF next where
   ReadVar :: D.StateVar a -> (a -> next) -> StateF next
   -- | Write variable.
   WriteVar :: D.StateVar a -> a ->(() -> next) -> StateF next
-
-  -- This is WIP.
-  -- | Eval graph.
-  EvalGraphStateF :: GraphModel a -> (a -> next) -> StateF next
+  -- | Eval graph atomically.
+  EvalGraph :: GraphModel a -> (a -> next) -> StateF next
 
 instance Functor StateF where
-  fmap g (NewVar a next)              = NewVar a         (g . next)
-  fmap g (ReadVar var next)           = ReadVar var      (g . next)
-  fmap g (WriteVar var val next)      = WriteVar var val (g . next)
-
-  fmap g (EvalGraphStateF graphAction next) = EvalGraphStateF graphAction (g . next)
+  fmap g (NewVar a next)              = NewVar a              (g . next)
+  fmap g (ReadVar var next)           = ReadVar var           (g . next)
+  fmap g (WriteVar var val next)      = WriteVar var val      (g . next)
+  fmap g (EvalGraph graphAction next) = EvalGraph graphAction (g . next)
 
 type StateL next = Free StateF next
 
@@ -45,6 +42,6 @@ readVar var = liftF $ ReadVar var id
 writeVar :: D.StateVar a -> a -> StateL ()
 writeVar var val = liftF $ WriteVar var val id
 
--- | Eval graph.
-evalGraphStateF :: GraphModel a -> StateL a
-evalGraphStateF graphAction = liftF $ EvalGraphStateF graphAction id
+-- | Eval graph atomically.
+evalGraph :: GraphModel a -> StateL a
+evalGraph graphAction = liftF $ EvalGraph graphAction id
