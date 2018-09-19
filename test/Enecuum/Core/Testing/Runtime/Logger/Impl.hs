@@ -1,11 +1,11 @@
 module Enecuum.Core.Testing.Runtime.Logger.Impl where
 
-import Enecuum.Prelude
+import           Enecuum.Prelude
 
-import           Control.Monad.Free                         (foldFree)
+import           Control.Monad.Free                 (foldFree)
 
-import qualified Enecuum.Core.Language                      as L
-import qualified Enecuum.Core.Testing.Runtime.Lens          as RLens
+import qualified Enecuum.Core.Language              as L
+import qualified Enecuum.Core.Testing.Runtime.Lens  as RLens
 import           Enecuum.Core.Testing.Runtime.Types
 
 

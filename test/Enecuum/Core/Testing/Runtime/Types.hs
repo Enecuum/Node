@@ -1,6 +1,6 @@
 module Enecuum.Core.Testing.Runtime.Types where
 
-import Enecuum.Prelude
+import           Enecuum.Prelude
 
 -- | Logger runtime. Stores messages.
 data LoggerRuntime = LoggerRuntime
