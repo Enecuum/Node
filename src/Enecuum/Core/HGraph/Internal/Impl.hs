@@ -25,12 +25,20 @@ import           Enecuum.Core.HGraph.Types (HNodeRef, HNode (..), HNodeContent, 
                                             ToNodeRef, ToContent,
                                             fromContent, toContent, toNodeRef)
 
--- TODO: function definitions
-
 -- create a new node
+newNode
+  :: (StringHashable c, ToContent config c)
+  => TVar (THGraph c)
+  -> HNodeContent config
+  -> STM Bool
 newNode graph x = G.newNode graph (fromContent x)
 
 -- get nodeby hash, content or ref
+getNode
+  :: StringHashable content
+  => TVar (THGraph content)
+  -> HNodeRef (HNode (TVar (THNode content)) content)
+  -> STM (Maybe (HNode (TVar (THNode content)) content))
 getNode graph x = do
     mbNode <- case x of
         TNodeRef tNode     -> return $ Just tNode
@@ -47,10 +55,21 @@ getNode graph x = do
                 (TNodeRef <$> node ^. rLinks)
 
 -- delete node by hash, content or ref
+deleteNode
+  :: StringHashable c
+  => TVar (THGraph c)
+  -> HNodeRef (HNode (TVar (THNode c)) c)
+  -> STM Bool
 deleteNode graph (TNodeHash hash) = G.deleteHNode graph hash
 deleteNode graph (TNodeRef ref)   = G.deleteTHNode graph ref >> return True
 
 -- create new link by contents, hashes or refs of the node
+newLink
+  :: StringHashable c
+  => TVar (THGraph c)
+  -> HNodeRef (HNode (TVar (THNode c)) c)
+  -> HNodeRef (HNode (TVar (THNode c)) c)
+  -> STM Bool
 newLink graph x y = case (x, y) of
     (TNodeRef  r1, TNodeRef  r2) -> G.newTLink r1 r2
     (TNodeHash r1, TNodeHash r2) -> G.newHLink graph r1 r2
@@ -62,6 +81,12 @@ newLink graph x y = case (x, y) of
         Nothing    -> return $ False
 
 -- delete link inter a nodes by contents, hashes or refs of the node
+deleteLink
+  :: StringHashable c
+  => TVar (THGraph c)
+  -> HNodeRef (HNode (TVar (THNode c)) c)
+  -> HNodeRef (HNode (TVar (THNode c)) c)
+  -> STM Bool
 deleteLink graph x y = case (x, y) of
     (TNodeRef  r1, TNodeRef  r2) -> G.deleteTLink r1 r2
     (TNodeHash r1, TNodeHash r2) -> G.deleteHLink graph r1 r2
