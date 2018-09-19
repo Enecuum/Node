@@ -4,19 +4,18 @@
 module Enecuum.Core.HGraphSpec where
 
 import           Control.Concurrent.STM
-import           Test.HUnit
+import qualified Data.Map                        as M
 import           Data.Maybe
-import qualified Data.Map as M
+import           Test.HUnit
 
 import           Enecuum.Prelude
 
-import qualified Data.HGraph.THGraph as G
 import           Data.HGraph.StringHashable
 import           Enecuum.Core.HGraph.Interpreters.IO      ( runHGraph, initHGraph )
 import           Enecuum.Core.HGraph.Language
 import           Enecuum.Core.HGraph.Types
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
+import           Test.Hspec.Contrib.HUnit        (fromHUnitTest)
 
 spec :: Spec
 spec = describe "HGraph eDSL tests" $ fromHUnitTest $ TestList

@@ -90,6 +90,37 @@ spec = describe "Nodes test" $ do
       , "Node tag: networkNode1"
       ]
 
+  it "Boot node validates requests from Network node" $ do
+    
+    runtime <- createTestRuntime
+    
+    bootNodeValidationRuntime   :: NodeRuntime <- startNode runtime bootNodeAddr    bootNodeValidation
+    masterNodeValidationRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNodeValidation
+
+    let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
+    msgs <- readTVarIO tMsgs
+    msgs `shouldBe`
+      [ "Master node got id: NodeID \"1\"."
+      , "For the invalid request recieved Right (Left [\"invalid\"])."
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "For the valid request recieved Right (Right \"correct\")."
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "Eval Network"
+      , "EvalNodeModel"
+      , "Node tag: masterNode"
+      , "Serving handlersF"
+      , "EvalNodeModel"
+      , "Node tag: bootNode"
+      ]
+
+
   it "Network node uses state" $ do
 
     runtime <- createTestRuntime
