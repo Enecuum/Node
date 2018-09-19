@@ -54,11 +54,12 @@ dispatchLogLevel Error   = ERROR
 
 
 -- | Base primitive for the LoggerL language.
-interpretLoggerL ::  L.LoggerL a -> IO ()
-interpretLoggerL (L.LogMessageWithConfig fileLevel logFilename format logLevel msg ) = do
+interpretLoggerL ::  L.LoggerF a -> IO a
+interpretLoggerL (L.LogMessageWithConfig fileLevel logFilename format logLevel msg next) = do
   withLogger format logFilename (dispatchLogLevel fileLevel) $
     logM comp (dispatchLogLevel logLevel) $ TXT.unpack msg
-interpretLoggerL s = error $ "Expect only LogMessageWithConfig but get: " ++ show s
+  pure $ next ()
+interpretLoggerL _ = error $ "Expect only LogMessageWithConfig"
 
 
 -- | 'comp' is short for 'component'

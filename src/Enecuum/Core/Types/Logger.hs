@@ -26,6 +26,5 @@ data LoggerConfig = LoggerConfig {
   , _logFilePath   :: FilePath
   } deriving (Show, Read)
 
--- deriveJSON defaultOptions ''LoggerConfig
 $(deriveJSON defaultOptions ''LogLevel)
 $(deriveJSON defaultOptions ''LoggerConfig)

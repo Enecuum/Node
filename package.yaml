@@ -124,7 +124,7 @@ dependencies:
 - fmt
 - stm
 - hslogger
-- tinylog
+- validation
 
 
 library:

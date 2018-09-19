@@ -1,8 +1,7 @@
 module Enecuum.Core.Testing.Runtime.Types where
 
-import           Enecuum.Core.System.Directory (appFileName)
-import           Enecuum.Core.System.Directory (defaultLogFileName)
-import qualified Enecuum.Core.Types            as T
+
+import qualified Enecuum.Core.Types as T
 import           Enecuum.Prelude
 
 

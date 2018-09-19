@@ -2,33 +2,29 @@ module Enecuum.Framework.Testing.Node.Interpreters.NodeModel where
 
 import Enecuum.Prelude
 
-import           Eff                                ( handleRelay )
+import           Control.Monad.Free                                     (foldFree)
 
-import qualified Enecuum.Domain                     as D
-import qualified Enecuum.Language                   as L
-import qualified Enecuum.Framework.Lens             as Lens
+import qualified Enecuum.Language                                       as L
+import           Enecuum.Core.HGraph.Interpreter                        (runHGraph)
 
+import qualified Enecuum.Core.Testing.Runtime.Interpreters              as Impl
 import           Enecuum.Framework.Testing.Types
-import qualified Enecuum.Framework.Testing.Lens              as RLens
-
-import           Enecuum.Framework.Testing.Node.Interpreters.NetworkModel
-import           Enecuum.Framework.Testing.Node.Interpreters.Networking
+import qualified Enecuum.Framework.Testing.Lens                         as RLens
+import qualified Enecuum.Framework.Testing.Node.Interpreters.Networking as Impl
 
 -- | Interpret NodeL. Does nothing ATM.
-interpretNodeL
-  :: NodeRuntime
-  -> L.NodeL a
-  -> Eff '[L.NetworkingL, L.NetworkSyncL, L.NetworkListeningL, L.NetworkSendingL, L.LoggerL, SIO, Exc SomeException] a
-interpretNodeL rt (L.Dummy) = L.logInfo "L.Dummy"
+interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
 
--- | Runs node model. Runs interpreters for the underlying languages.
-runNodeModel
-  :: NodeRuntime
-  -> Eff L.NodeModel a
-  -> Eff '[L.LoggerL, SIO, Exc SomeException] a
-runNodeModel rt
-  = handleRelay pure ( (>>=) . interpretNetworkSendingL rt )
-  . handleRelay pure ( (>>=) . interpretNetworkListeningL rt )
-  . handleRelay pure ( (>>=) . interpretNetworkSyncL rt )
-  . handleRelay pure ( (>>=) . interpretNetworkingL rt )
-  . handleRelay pure ( (>>=) . interpretNodeL rt )
+interpretNodeL nodeRt (L.EvalGraph graphAction next) = do
+  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "L.EvalGraph"
+  next <$> runHGraph (nodeRt ^. RLens.graph) graphAction
+
+interpretNodeL nodeRt (L.EvalNetworking networkingAction next) =
+  next <$> Impl.runNetworkingL nodeRt networkingAction
+
+interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffect next) =
+  next <$> Impl.runCoreEffectModel (nodeRt ^. RLens.loggerRuntime) coreEffect
+
+-- | Runs node model.
+runNodeModel :: NodeRuntime -> L.NodeModel a -> IO a
+runNodeModel nodeRt = foldFree (interpretNodeL nodeRt)

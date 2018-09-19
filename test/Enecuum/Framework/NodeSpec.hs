@@ -20,8 +20,8 @@ import qualified Enecuum.Core.Testing.Runtime.Lens as RLens
 import qualified Enecuum.Framework.Testing.Lens as RLens
 
 spec :: Spec
-spec = describe "Master Node test" $
-  it "Master Node test" $ do
+spec = describe "Nodes test" $ do
+  it "Master node interacts with boot node" $ do
 
     runtime <- createTestRuntime
 
@@ -40,10 +40,83 @@ spec = describe "Master Node test" $
       , "SendRequest conn req"
       , "OpenConnection cfg"
       , "Eval Network"
-      , "Initialization"
+      , "EvalNodeModel"
       , "Node tag: masterNode"
       , "Serving handlersF"
-      , "Initialization"
+      , "EvalNodeModel"
       , "Node tag: bootNode"
       ]
-      
+
+  it "Network node requests data from network node" $ do
+
+    runtime <- createTestRuntime
+
+    networkNode1Runtime   :: NodeRuntime <- startNode runtime networkNode1Addr networkNode1
+    networkNode2Runtime   :: NodeRuntime <- startNode runtime networkNode2Addr networkNode2
+
+    let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
+    msgs <- readTVarIO tMsgs
+    msgs `shouldBe`
+      [ "balance4 (should be 111): 111."
+      , "CloseConnection conn"
+      , "L.EvalGraph"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "balance3 (should be Just 111): Just 111."
+      , "CloseConnection conn"
+      , "L.EvalGraph"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "balance2 (should be Nothing): Nothing."
+      , "CloseConnection conn"
+      , "L.EvalGraph"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "balance1 (should be Just 10): Just 10."
+      , "CloseConnection conn"
+      , "L.EvalGraph"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "balance0 (should be 0): 0."
+      , "CloseConnection conn"
+      , "L.EvalGraph"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "EvalNodeModel"
+      , "Node tag: networkNode2"
+      , "Serving handlersF"
+      , "L.EvalGraph"
+      , "EvalNodeModel"
+      , "Node tag: networkNode1"
+      ]
+
+  it "Boot node validates requests from Network node" $ do
+    
+    runtime <- createTestRuntime
+    
+    bootNodeValidationRuntime   :: NodeRuntime <- startNode runtime bootNodeAddr    bootNodeValidation
+    masterNodeValidationRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNodeValidation
+
+    let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
+    msgs <- readTVarIO tMsgs
+    msgs `shouldBe`
+      [ "Master node got id: NodeID \"1\"."
+      , "For the invalid request recieved Right (Left [\"invalid\"])."
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "For the valid request recieved Right (Right \"correct\")."
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "Eval Network"
+      , "EvalNodeModel"
+      , "Node tag: masterNode"
+      , "Serving handlersF"
+      , "EvalNodeModel"
+      , "Node tag: bootNode"
+      ]
+
