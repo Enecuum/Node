@@ -9,4 +9,4 @@ main = do
     args <- getArgs
     case args of
         ["initialize", configFile] -> withConfig configFile initialize
-        _                          -> pure ()
+        _                          -> withConfig "configs/config.json" initialize
