@@ -60,7 +60,7 @@ acceptHello2 (HelloRequest2 msg) = pure $ HelloResponse2 $ "Hello, dear2. " +| m
 acceptGetHashId :: GetHashIDRequest -> L.NodeModel GetHashIDResponse
 acceptGetHashId GetHashIDRequest = pure $ GetHashIDResponse "1"
 
-acceptValidationRequest :: ValidationRequest -> Eff L.NodeModel ValidationResponse
+acceptValidationRequest :: ValidationRequest -> L.NodeModel ValidationResponse
 acceptValidationRequest req   = pure $ makeResponse $ verifyRequest req
 
 -- Scenario 1: master node can interact with boot node.
@@ -195,7 +195,7 @@ networkNode2 = do
 
   -- Scenario 3: boot node can validate data  recieved from master node
 
-bootNodeValidation :: Eff L.NodeDefinitionModel ()
+bootNodeValidation :: L.NodeDefinitionModel ()
 bootNodeValidation = do
   L.nodeTag bootNodeTag
   L.initialization $ pure $ D.NodeID "abc"
@@ -203,17 +203,17 @@ bootNodeValidation = do
     $ L.serve @GetHashIDRequest @GetHashIDResponse acceptGetHashId
     . L.serve @ValidationRequest @ValidationResponse acceptValidationRequest
 
-masterNodeInitializeWithValidation :: Eff L.NodeModel (Either Text D.NodeID)
+masterNodeInitializeWithValidation :: L.NodeModel (Either Text D.NodeID)
 masterNodeInitializeWithValidation = do
-  addr     <- L.evalNetwork simpleBootNodeDiscovery
-  eHashID  <- fmap unpack <$> L.withConnection (D.ConnectionConfig addr) GetHashIDRequest
-  validRes <- fmap unpack <$> L.withConnection (D.ConnectionConfig addr) ValidRequest
+  addr     <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
+  eHashID  <- unpack <<$>> makeRequestSafe (D.ConnectionConfig addr) GetHashIDRequest
+  validRes <- unpack <<$>> makeRequestSafe (D.ConnectionConfig addr) ValidRequest
   L.logInfo $ "For the valid request recieved " +|| validRes ||+ "."
-  invalidRes <- fmap unpack <$> L.withConnection (D.ConnectionConfig addr) InvalidRequest
+  invalidRes <- unpack <<$>> makeRequestSafe (D.ConnectionConfig addr) InvalidRequest
   L.logInfo $ "For the invalid request recieved " +|| invalidRes ||+ "."
   pure $ eHashID >>= Right . D.NodeID
 
-masterNodeValidation :: Eff L.NodeDefinitionModel ()
+masterNodeValidation :: L.NodeDefinitionModel ()
 masterNodeValidation = do
   L.nodeTag masterNodeTag
   nodeId <- D.withSuccess $ L.initialization masterNodeInitializeWithValidation
