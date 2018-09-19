@@ -3,9 +3,8 @@ module Enecuum.Framework.Node.Interpreter where
 import Enecuum.Prelude
 import Control.Monad.Free
 
-import qualified Enecuum.Domain                     as D
+
 import qualified Enecuum.Language                   as L
-import qualified Enecuum.Framework.Lens             as Lens
 
 import Enecuum.Framework.Networking.Interpreter
 import Enecuum.Framework.NetworkModel.Interpreter

@@ -2,7 +2,8 @@ module Enecuum.Framework.Testing.Node.Interpreters.NodeDefinition where
 
 import Enecuum.Prelude
 
-import           Eff                                ( handleRelay )
+import           Control.Monad.Free
+import           Enecuum.Core.Logger.Interpreter
 
 import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
@@ -18,26 +19,20 @@ import           Enecuum.Framework.Testing.Node.Internal.RpcServer
 
 -- | Interpret NodeDefinitionL.
 interpretNodeDefinitionL
-  :: NodeRuntime
-  -> L.NodeDefinitionL a
-  -> Eff '[L.LoggerL, SIO, Exc SomeException] a
-interpretNodeDefinitionL rt (L.NodeTag tag) = do
+  :: NodeRuntime -> L.NodeDefinitionF a -> IO a
+interpretNodeDefinitionL rt (L.NodeTag tag next) = do
   L.logInfo $ "Node tag: " +| tag |+ ""
-  safeIO $ atomically $ writeTVar (rt ^. RLens.tag) tag
-interpretNodeDefinitionL rt (L.Initialization initScript) = do
+  next <$> (atomically $ writeTVar (rt ^. RLens.tag) tag)
+interpretNodeDefinitionL rt (L.EvalNodeModel initScript next) = do
   L.logInfo "Initialization"
-  runNodeModel rt initScript
-interpretNodeDefinitionL rt (L.Serving handlersF) = do
+  next <$> runNodeModel rt initScript
+interpretNodeDefinitionL rt (L.Serving handlersF next) = do
   L.logInfo "Serving handlersF"
-  safeIO $ startNodeRpcServer rt handlersF
+  next <$> startNodeRpcServer rt handlersF
 
-interpretNodeDefinitionL _ (L.ServingRpc _) = do
+interpretNodeDefinitionL _ (L.ServingRpc _ next) = do
   L.logInfo "ServingRpc is undefined"
   undefined
 
 -- | Runs node definition language with node runtime.
-runNodeDefinitionL
-  :: NodeRuntime
-  -> Eff '[L.NodeDefinitionL, L.LoggerL, SIO, Exc SomeException] a
-  -> Eff '[L.LoggerL, SIO, Exc SomeException] a
-runNodeDefinitionL rt = handleRelay pure ( (>>=) . interpretNodeDefinitionL rt )
+runNodeDefinitionL rt = foldFree (interpretNodeDefinitionL rt)
