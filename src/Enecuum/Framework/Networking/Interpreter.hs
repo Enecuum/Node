@@ -11,6 +11,7 @@ import           Enecuum.Legacy.Service.Network.WebSockets.Client
 import           Enecuum.Core.Logger.Interpreter
 import qualified Network.WebSockets                               as WS
 import           Data.Aeson as A
+import qualified Data.Text       as T
 
 
 -- | Interpret NetworkingL language.
@@ -35,8 +36,10 @@ interpretNetworkingL (L.SendRpcRequest (ConnectInfo host port) request next) = d
     L.logInfo "Send rpc request"
     runClient host (fromEnum port) "/" $ \connect -> do
         WS.sendTextData connect $ A.encode request
-        next <$> A.decode <$> WS.receiveData connect
+        next <$> (transformEither T.pack id . A.eitherDecode) <$> WS.receiveData connect
 
-
+transformEither :: (a -> c) -> (b -> d) -> Either a b -> Either c d 
+transformEither f _ (Left a)  = Left (f a)
+transformEither _ f (Right a) = Right (f a)
 
 runNetworkingL = foldFree interpretNetworkingL

@@ -12,6 +12,7 @@ import qualified Enecuum.Domain                     as D
 import           Enecuum.Core.Testing.Runtime.Types
 import           Enecuum.Framework.Testing.Types
 import qualified Enecuum.Framework.Testing.Lens as RLens
+import qualified Enecuum.Framework.Domain.Networking as N
 
 -- TODO: consider to use forever.
 -- | Worker for the network environment thread.
@@ -35,7 +36,7 @@ networkWorker control registry = go 0
         nodes       <- atomically $ takeTMVar registry
         controlResp <- case Map.lookup toAddr nodes of
             Nothing -> pure $ AsErrorResponse
-                            $ "Can't relay to " +| toAddr |+ ": node not found."
+                            $ "Can't relay to " +| N.infoToText toAddr |+ ": node not found."
             Just toNodeRt -> controlRequest toNodeRt $ RpcRequest req
         atomically $ putTMVar (control ^. RLens.response) controlResp
         atomically $ putTMVar registry nodes
@@ -59,7 +60,7 @@ registerNode
 registerNode registry addr nodeRt = do
   nodes <- atomically $ takeTMVar registry
   case Map.lookup addr nodes of
-    Just _ -> error $ "Node is already registered: " +| addr |+ ""
+    Just _ -> error $ "Node is already registered: " +| N.infoToText addr |+ ""
     Nothing -> atomically $ putTMVar registry $ Map.insert addr nodeRt nodes
 
 -- | Lookups a node from the registry.
@@ -90,18 +91,13 @@ controlRequest nodeRt controlReq = do
   atomically $ takeControlResponse nodeRt
 
 -- | Sends some RPC request to the node.
-sendRequest'
-  :: D.RpcMethod () req resp
-  => NodesRegistry
-  -> D.NodeAddress
-  -> req
-  -> IO (Either Text resp)
+sendRequest' :: NodesRegistry -> D.NodeAddress -> RpcRequest -> IO (Either Text RpcResponse)
 sendRequest' registry toAddr req = findNode registry toAddr >>= \case
-  Nothing -> pure $ Left $ "Destination node is not registered: " +| toAddr |+ ""
+  Nothing -> pure $ Left $ "Destination node is not registered: " +| N.infoToText toAddr |+ ""
   Just nodeRt -> do
-    controlResp <- controlRequest nodeRt $ RpcRequest $ D.toRpcRequest () req
+    controlResp <- controlRequest nodeRt $ RpcRequest req
     case controlResp of
-      AsRpcResponse rpcResp -> pure $ D.fromRpcResponse () rpcResp
+      AsRpcResponse rpcResp -> pure rpcResp
       AsErrorResponse err   -> pure $ Left $ "Control error got: " +| err |+ "."
 
 -- | Sends some RPC request to the node.

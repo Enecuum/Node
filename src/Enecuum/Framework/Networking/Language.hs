@@ -23,11 +23,11 @@ data NetworkingF next where
   -- TODO: we need more realistic model. Maybe, notion of sync / async requests.
   -- A real web sockets interpreter will show the truth.
   -- | Send RPC request with the connection.
-  SendRequest :: D.Connection -> D.RpcRequest -> (D.RpcResult D.RpcResponse -> next) -> NetworkingF next
+  SendRequest :: D.Connection -> RpcRequest -> (Either Text RpcResponse -> next) -> NetworkingF next
 
   -- | Eval low-level networking script.
   EvalNetwork :: NetworkModel a -> (a -> next) -> NetworkingF next
-  SendRpcRequest :: ConnectInfo -> RpcRequest -> ((Maybe RpcResponse) -> next) -> NetworkingF next
+  SendRpcRequest :: ConnectInfo -> RpcRequest -> (Either Text RpcResponse -> next) -> NetworkingF next
 
   -- | Eval core effect.
   EvalCoreEffectNetworkingF :: L.CoreEffectModel a -> (a -> next) -> NetworkingF next
@@ -48,13 +48,13 @@ openConnection cfg = liftF $ OpenConnection cfg id
 closeConnection :: D.Connection -> NetworkingL ()
 closeConnection conn = liftF $ CloseConnection conn id
 
-sendRequest :: D.Connection -> D.RpcRequest -> NetworkingL (D.RpcResult D.RpcResponse)
+sendRequest :: D.Connection -> RpcRequest -> NetworkingL (Either Text  RpcResponse)
 sendRequest conn rpcReq = liftF $ SendRequest conn rpcReq id
 
 evalNetwork :: NetworkModel a -> NetworkingL a 
 evalNetwork network = liftF $ EvalNetwork network id
 
-sendRpcRequest :: ConnectInfo -> RpcRequest -> NetworkingL (Maybe RpcResponse)
+sendRpcRequest :: ConnectInfo -> RpcRequest -> NetworkingL (Either Text RpcResponse)
 sendRpcRequest info request = liftF $ SendRpcRequest info request id
 
 evalCoreEffectNetworkingF :: L.CoreEffectModel a -> NetworkingL a
@@ -68,14 +68,10 @@ instance L.Logger (Free NetworkingF) where
 -- It's probably wise to use `bracket` idiom here.
 
 -- | Open connection, send request and close connection.
-withConnection
-  :: D.RpcMethod () req resp
-  => D.ConnectionConfig
-  -> req
-  -> NetworkingL (D.RpcResult resp)
+withConnection :: D.ConnectionConfig -> RpcRequest -> NetworkingL (Either Text RpcResponse)
 withConnection cfg req = openConnection cfg >>= \case
   Nothing -> pure $ Left "Connecting failed."
   Just conn -> do
-    eRpcResponse <- sendRequest conn $ D.toRpcRequest () req
+    response <- sendRequest conn req
     closeConnection conn
-    pure $ eRpcResponse >>= D.fromRpcResponse ()
+    pure response

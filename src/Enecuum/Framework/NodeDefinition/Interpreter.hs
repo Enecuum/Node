@@ -3,9 +3,6 @@ module Enecuum.Framework.NodeDefinition.Interpreter where
 --
 import Enecuum.Prelude
 
-import           Eff                                ( handleRelay )
-
-import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
 import qualified Network.WebSockets                 as WS
 
@@ -19,7 +16,7 @@ import           Enecuum.Framework.RpcMethod.Language as L
 import           Enecuum.Framework.Node.Language
 import           Enecuum.Core.Logger.Interpreter
 import           Enecuum.Legacy.Service.Network.WebSockets.Server  (runServer)
-
+import           Enecuum.Framework.Domain.RpcMessages
 
 interpretNodeDefinitionL :: L.NodeDefinitionF a -> IO a
 interpretNodeDefinitionL (L.NodeTag tag next) = do
@@ -29,10 +26,6 @@ interpretNodeDefinitionL (L.NodeTag tag next) = do
 interpretNodeDefinitionL (L.EvalNodeModel initScript next) = do
     L.logInfo "EvalNodeModel"
     next <$> runNodeModel initScript
-
-interpretNodeDefinitionL (L.Serving handlersF next) = do
-    L.logInfo "Function serving is undefined"
-    undefined
 
 interpretNodeDefinitionL (L.ServingRpc initScript next) = do
     L.logInfo "Start of servingRpc"
@@ -50,29 +43,14 @@ runRpcServer runner methodVar = do
         response    <- callRpc runner methods msg
         WS.sendTextData connect $ A.encode response
 
-data RpcRequest  = RpcRequest  Text A.Value Int
-
-instance FromJSON RpcRequest where
-    parseJSON (Object o) = RpcRequest
-        <$> o .: "method"
-        <*> o .: "params"
-        <*> o .: "id"
-    parseJSON _ = error ""
-
-instance ToJSON RpcRequest where
-    toJSON (RpcRequest method val requesId) = object [
-        "method" A..= method,
-        "params" A..= val,
-        "id"     A..= requesId 
-      ]
 
 callRpc runner methods msg = case A.decodeStrict msg of
     Just (RpcRequest method params reqId) -> case method `M.lookup` methods of
         Just justMethod -> runner $ justMethod params reqId
-        Nothing -> return $ L.RpcResponseError
+        Nothing -> return $ RpcResponseError
             (String $ "The method " <> method <> " is'nt supported.")
             reqId
-    Nothing -> return $ L.RpcResponseError (String "error of request parsing") 0
+    Nothing -> return $ RpcResponseError (String "error of request parsing") 0
 
 
 runNodeDefinitionL = foldFree interpretNodeDefinitionL

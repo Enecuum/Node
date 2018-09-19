@@ -48,7 +48,7 @@ evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
 instance L.Logger (Free NodeF) where
   logMessage level msg = evalCoreEffectNodeF $ L.logMessage level msg
-
+{-
 -- Raw idea of RPC description. Will be reworked.
 
 -- | Handler is a function which processes a particular response
@@ -88,3 +88,4 @@ serve handler (prevHandled, rawReq) = (newHandled, rawReq)
     newHandled = prevHandled >>= \case
       Nothing      -> tryHandler handler rawReq
       Just rawResp -> pure $ Just rawResp
+-}

@@ -16,6 +16,7 @@ import           Enecuum.Framework.NetworkModel.Interpreter
 import           Enecuum.Framework.Networking.Language
 import           Enecuum.Framework.NetworkModel.Language
 import           Enecuum.Framework.Networking.Interpreter
+import           Enecuum.Framework.Domain.RpcMessages
 
 
 spec :: Spec
@@ -37,7 +38,7 @@ rpcServerStart = TestCase $ do
 rpcServerTestOk :: Test
 rpcServerTestOk = TestCase $ do
     threadDelay 10000
-    Just (R.RpcResponseResult res _) <- runNetworkingL $
+    Right (R.RpcResponseResult res _) <- runNetworkingL $
         sendRpcRequest localServer (R.RpcRequest "ok" (A.String "") 1)
     assertBool "" (res == A.String "Ok")
 
@@ -45,7 +46,7 @@ rpcServerTestOk = TestCase $ do
 rpcServerTestErr :: Test
 rpcServerTestErr = TestCase $ do
     threadDelay 10000
-    Just (R.RpcResponseError res _) <- runNetworkingL $
+    Right (R.RpcResponseError res _) <- runNetworkingL $
         sendRpcRequest localServer (R.RpcRequest "error" (A.String "") 1)
     assertBool "" (res == A.String ":(")
 

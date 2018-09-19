@@ -3,12 +3,24 @@ module Enecuum.Framework.Domain.RpcMessages where
 import           Enecuum.Prelude
 import           Data.Aeson as A
 
-data RpcRequest  = RpcRequest  Text A.Value Int
+data RpcRequest  = RpcRequest Text A.Value Int
 
 data RpcResponse
     = RpcResponseResult A.Value Int
     | RpcResponseError A.Value Int
 
+makeRequest :: ToJSON a => Text -> a -> RpcRequest
+makeRequest text a = RpcRequest text (toJSON a) 0
+
+class Content a where
+    content :: a -> A.Value
+
+instance Content RpcRequest where
+    content (RpcRequest _ a _) = a
+
+instance Content RpcResponse where
+    content (RpcResponseResult a _) = a
+    content (RpcResponseError a _) = a
 
 instance FromJSON RpcRequest where
     parseJSON (Object o) = RpcRequest

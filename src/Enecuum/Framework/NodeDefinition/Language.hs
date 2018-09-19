@@ -22,7 +22,7 @@ data NodeDefinitionF next where
   -- | Evaluate some node model.
   EvalNodeModel :: L.NodeModel a -> (a -> next) -> NodeDefinitionF next
   -- | Serving of RPC requests.
-  Serving        :: L.HandlersF -> (() -> next) -> NodeDefinitionF next
+  --Serving        :: L.HandlersF -> (() -> next) -> NodeDefinitionF next
   -- | Serving of Rpc request.
   ServingRpc     :: Free RpcMethodL () -> (() -> next) -> NodeDefinitionF next
   -- | Eval core effect.
@@ -31,7 +31,7 @@ data NodeDefinitionF next where
 instance Functor NodeDefinitionF where
   fmap g (NodeTag tag next)               = NodeTag tag               (g . next)
   fmap g (EvalNodeModel nodeModel next)   = EvalNodeModel nodeModel   (g . next)
-  fmap g (Serving handlersF next)         = Serving handlersF         (g . next)
+  --fmap g (Serving handlersF next)         = Serving handlersF         (g . next)
   fmap g (ServingRpc handlersF next)      = ServingRpc handlersF      (g . next)
   fmap g (EvalCoreEffectNodeDefinitionF coreEffect next) = EvalCoreEffectNodeDefinitionF coreEffect (g . next)
 
@@ -44,11 +44,11 @@ nodeTag tag = liftF $ NodeTag tag id
 -- | Runs node scenario.
 evalNodeModel :: L.NodeModel a -> NodeDefinitionModel a
 evalNodeModel nodeModel = liftF $ EvalNodeModel nodeModel id
-
+{-
 -- | Runs RPC server.
 serving :: L.HandlersF -> NodeDefinitionModel ()
 serving handlersF = liftF $ Serving handlersF id
-
+-}
 servingRpc :: Free RpcMethodL () -> NodeDefinitionModel ()
 servingRpc handlersF = liftF $ ServingRpc handlersF id
 

@@ -12,6 +12,7 @@ import Enecuum.Prelude
 
 import           Test.Hspec
 
+import           Enecuum.Framework.Domain.Networking
 import           Enecuum.Framework.TestData.RPC
 import           Enecuum.Framework.TestData.Nodes
 import           Enecuum.Framework.Testing.Runtime
@@ -28,8 +29,8 @@ spec = describe "Nodes test" $ do
     bootNodeRuntime   :: NodeRuntime <- startNode runtime bootNodeAddr    bootNode
     masterNodeRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNode
 
-    eResponse <- sendRequest runtime bootNodeAddr $ HelloRequest1 masterNode1Addr
-    eResponse `shouldBe` (Right $ HelloResponse1 "Hello, dear. master node 1 addr")
+    eResponse <- sendRequest runtime bootNodeAddr $ HelloRequest1 (infoToText masterNode1Addr)
+    eResponse `shouldBe` (Right $ HelloResponse1 ("Hello, dear. " <> infoToText masterNode1Addr))
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
     msgs <- readTVarIO tMsgs
