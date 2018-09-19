@@ -183,6 +183,7 @@ networkNode2Scenario = do
     GetBalanceResponse balance4 <- getUnsafe connectCfg "getBalanceRequest" GetBalanceRequest
     L.logInfo $ "balance4 (should be 111): " +|| balance4 ||+ "."
 
+getUnsafe :: (ToJSON a, FromJSON b) => D.ConnectionConfig -> Text -> a -> Free L.NodeF b
 getUnsafe connectCfg name arg = do
   A.Success res <- A.fromJSON . content <$> makeRequestUnsafe connectCfg (makeRequest name arg)
   return res

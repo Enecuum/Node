@@ -6,7 +6,7 @@ import           Control.Monad.Free
 import qualified Data.Map as M
 import           Enecuum.Framework.RpcMethod.Language
 import qualified Enecuum.Language                   as L
-import           Enecuum.Core.Logger.Interpreter
+import           Enecuum.Core.Logger.Interpreter()
 
 interpretRpcMethodL
     :: TVar (M.Map Text RpcMethod)

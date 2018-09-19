@@ -19,6 +19,8 @@ import           Enecuum.Framework.Testing.Runtime
 import           Enecuum.Framework.Testing.Types
 import qualified Enecuum.Core.Testing.Runtime.Lens as RLens
 import qualified Enecuum.Framework.Testing.Lens as RLens
+import           Enecuum.Framework.Domain.RpcMessages as R
+import           Data.Aeson as A
 
 spec :: Spec
 spec = describe "Nodes test" $ do
@@ -29,8 +31,9 @@ spec = describe "Nodes test" $ do
     bootNodeRuntime   :: NodeRuntime <- startNode runtime bootNodeAddr    bootNode
     masterNodeRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNode
 
-    eResponse <- sendRequest runtime bootNodeAddr $ HelloRequest1 (infoToText masterNode1Addr)
-    eResponse `shouldBe` (Right $ HelloResponse1 ("Hello, dear. " <> infoToText masterNode1Addr))
+    Right (RpcResponseResult eResponse _) <- sendRequest runtime bootNodeAddr $ makeRequest "helloRequest1" (HelloRequest1 (infoToText masterNode1Addr))
+    
+    A.fromJSON eResponse `shouldBe` (A.Success $ HelloResponse1 ("Hello, dear. " <> infoToText masterNode1Addr))
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
     msgs <- readTVarIO tMsgs

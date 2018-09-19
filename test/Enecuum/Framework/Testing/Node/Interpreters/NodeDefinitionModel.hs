@@ -12,6 +12,7 @@ import           Enecuum.Framework.Testing.Types    (NodeRuntime)
 import           Enecuum.Framework.Testing.Node.Internal.RpcServer (startNodeRpcServer)
 import qualified Enecuum.Core.Testing.Runtime.Interpreters as Impl
 import qualified Enecuum.Framework.Testing.Node.Interpreters.NodeModel as Impl
+import           Enecuum.Framework.RpcMethod.Interpreter
 
 -- | Interpret NodeDefinitionL.
 interpretNodeDefinitionL
@@ -27,9 +28,12 @@ interpretNodeDefinitionL nodeRt (L.EvalNodeModel nodeScript next) = do
   Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "EvalNodeModel"
   next <$> Impl.runNodeModel nodeRt nodeScript
 
-interpretNodeDefinitionL nodeRt (L.Serving handlersF next) = do
+interpretNodeDefinitionL nodeRt (L.ServingRpc handlersF next) = do
   Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "Serving handlersF"
-  next <$> startNodeRpcServer nodeRt handlersF
+  m <- atomically $ newTVar mempty
+  a <- runRpcMethodL m handlersF
+  startNodeRpcServer nodeRt m
+  pure $ next a
 
 interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
   next <$> Impl.runCoreEffectModel (nodeRt ^. RLens.loggerRuntime) coreEffect

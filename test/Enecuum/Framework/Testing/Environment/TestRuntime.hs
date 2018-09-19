@@ -9,10 +9,13 @@ import qualified Data.Map as Map
 
 import qualified Enecuum.Domain                     as D
 
+import           Enecuum.Framework.Testing.Types as T
 import           Enecuum.Core.Testing.Runtime.Types
 import           Enecuum.Framework.Testing.Types
 import qualified Enecuum.Framework.Testing.Lens as RLens
 import qualified Enecuum.Framework.Domain.Networking as N
+import           Enecuum.Framework.Domain.RpcMessages
+
 
 -- TODO: consider to use forever.
 -- | Worker for the network environment thread.
@@ -37,7 +40,7 @@ networkWorker control registry = go 0
         controlResp <- case Map.lookup toAddr nodes of
             Nothing -> pure $ AsErrorResponse
                             $ "Can't relay to " +| N.infoToText toAddr |+ ": node not found."
-            Just toNodeRt -> controlRequest toNodeRt $ RpcRequest req
+            Just toNodeRt -> controlRequest toNodeRt $ T.RpcRequest req
         atomically $ putTMVar (control ^. RLens.response) controlResp
         atomically $ putTMVar registry nodes
 
@@ -95,16 +98,15 @@ sendRequest' :: NodesRegistry -> D.NodeAddress -> RpcRequest -> IO (Either Text 
 sendRequest' registry toAddr req = findNode registry toAddr >>= \case
   Nothing -> pure $ Left $ "Destination node is not registered: " +| N.infoToText toAddr |+ ""
   Just nodeRt -> do
-    controlResp <- controlRequest nodeRt $ RpcRequest req
+    controlResp <- controlRequest nodeRt $ T.RpcRequest req
     case controlResp of
-      AsRpcResponse rpcResp -> pure rpcResp
+      AsRpcResponse rpcResp -> pure $ Right rpcResp
       AsErrorResponse err   -> pure $ Left $ "Control error got: " +| err |+ "."
 
 -- | Sends some RPC request to the node.
 sendRequest
-  :: D.RpcMethod () req resp
-  => TestRuntime
+  :: TestRuntime
   -> D.NodeAddress
-  -> req
-  -> IO (Either Text resp)
-sendRequest testRt = sendRequest' (testRt ^. RLens.registry)
+  -> RpcRequest
+  -> IO (Either Text RpcResponse)
+sendRequest testRt = sendRequest' (testRt ^. RLens.registry) 
