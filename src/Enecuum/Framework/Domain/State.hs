@@ -2,4 +2,8 @@ module Enecuum.Framework.Domain.State where
 
 import           Enecuum.Prelude
 
-data StateVar a = StateVar
+import           Enecuum.Core.Types (StringHash)
+
+type VarId = StringHash
+
+data StateVar a = StateVar VarId

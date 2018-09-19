@@ -35,7 +35,7 @@ tryAddTransaction'
   :: D.StringHash
   -> Balance
   -> BalanceChange
-  -> L.LGraphModel (Maybe (D.StringHash, Balance))
+  -> L.GraphModel (Maybe (D.StringHash, Balance))
 tryAddTransaction' lastNodeHash lastBalance change
   | lastBalance + change < 0 = pure Nothing
   | otherwise = do

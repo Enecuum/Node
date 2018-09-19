@@ -31,12 +31,12 @@ import           Enecuum.Core.HGraph.Types (HNodeRef, HNode (..), HNodeContent, 
                                             fromContent, toContent, toNodeRef)
 
 -- | Init HGraph.
-initHGraph :: StringHashable c => IO (TVar (G.THGraph c))
+initHGraph :: (Serialize c, StringHashable c) => IO (TVar (G.THGraph c))
 initHGraph = atomically G.newTHGraph
 
 -- | The interpreter of the language describing the action on graphs.
 interpretHGraphL
-    :: StringHashable c
+    :: (Serialize c, StringHashable c)
     => TVar (G.THGraph c)
     -> HGraphL (TNodeL c) a
     -> IO a
@@ -98,7 +98,7 @@ interpretHGraphL graph (DeleteLink x y next) = do
 
 -- | Run H graph interpret.
 runHGraphL, runHGraph
-    :: StringHashable c
+    :: (Serialize c, StringHashable c)
     => TVar (G.THGraph c)
     -> Free (HGraphL (TNodeL c)) w
     -> IO w
@@ -128,7 +128,7 @@ instance Serialize c => Serialize (HNodeContent (TNodeL c))
 instance (Serialize c, StringHashable c) => StringHashable (HNodeContent (TNodeL c)) where
     toHash (TNodeContent c) = toHash c
 
-instance StringHashable c => ToContent (TNodeL c) c where
+instance (Serialize c, StringHashable c) => ToContent (TNodeL c) c where
     toContent = TNodeContent
     fromContent (TNodeContent a) = a
 

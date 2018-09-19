@@ -5,7 +5,6 @@ module Enecuum.Framework.Testing.Types where
 import Enecuum.Prelude
 
 import qualified Data.Map as Map
-import           GHC.Any (Any)
 
 import qualified Enecuum.Domain                       as D
 import           Enecuum.Core.Testing.Runtime.Types
@@ -39,9 +38,8 @@ data RpcServerHandle = RpcServerHandle
   , _control  :: Control    -- ^ Server control interface.
   }
 
-type VarId = Int
-data Var = Var VarId (TVar Any)
-type NodeState = Map.Map VarId Var
+data VarHandle = VarHandle D.VarId (TVar Any)
+type NodeState = TMVar (Map.Map D.VarId VarHandle)
 
 -- | Test runtime for every node acting within a particular test runtime.
 data NodeRuntime = NodeRuntime
@@ -51,6 +49,7 @@ data NodeRuntime = NodeRuntime
   , _tag            :: TVar D.NodeTag         -- ^ Tag of this node.
   , _rpcServer      :: TMVar RpcServerHandle  -- ^ RPC server of this node.
   , _graph          :: TG.LGraph              -- ^ Graph
+  , _varCounter     :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
   , _state          :: NodeState              -- ^ State of node.
   }
 

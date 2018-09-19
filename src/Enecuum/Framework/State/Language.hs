@@ -9,7 +9,7 @@ import qualified Enecuum.Core.Language                    as L
 import qualified Enecuum.Framework.Domain                 as D
 
 -- | Graph types.
-type LGraphModel next = Free (L.HGraphL (T.TNodeL D.Transaction)) next
+type GraphModel next = Free (L.HGraphL (T.TNodeL D.Transaction)) next
 
 -- | State language.
 data StateF next where
@@ -19,17 +19,17 @@ data StateF next where
   ReadVar :: D.StateVar a -> (a -> next) -> StateF next
   -- | Write variable.
   WriteVar :: D.StateVar a -> a ->(() -> next) -> StateF next
+
+  -- This is WIP.
   -- | Eval graph.
-  EvalGraph :: LGraphModel a -> (a -> next) -> StateF next
-  -- | Eval core effect.
-  EvalCoreEffectStateF :: L.CoreEffectModel a -> (a -> next) -> StateF next
+  EvalGraphStateF :: GraphModel a -> (a -> next) -> StateF next
 
 instance Functor StateF where
-  fmap g (NewVar a next)                        = NewVar a                        (g . next)
-  fmap g (ReadVar var next)                     = ReadVar var                     (g . next)
-  fmap g (WriteVar var val next)                = WriteVar var val                (g . next)
-  fmap g (EvalGraph graph next)                 = EvalGraph graph                 (g . next)
-  fmap g (EvalCoreEffectStateF coreEffect next) = EvalCoreEffectStateF coreEffect (g . next)
+  fmap g (NewVar a next)              = NewVar a         (g . next)
+  fmap g (ReadVar var next)           = ReadVar var      (g . next)
+  fmap g (WriteVar var val next)      = WriteVar var val (g . next)
+
+  fmap g (EvalGraphStateF graphAction next) = EvalGraphStateF graphAction (g . next)
 
 type StateL next = Free StateF next
 
@@ -46,12 +46,5 @@ writeVar :: D.StateVar a -> a -> StateL ()
 writeVar var val = liftF $ WriteVar var val id
 
 -- | Eval graph.
-evalGraph :: LGraphModel a -> StateL a
-evalGraph graph = liftF $ EvalGraph graph id
-
--- | Eval core effect.
-evalCoreEffectStateF :: L.CoreEffectModel a -> StateL a
-evalCoreEffectStateF coreEffect = liftF $ EvalCoreEffectStateF coreEffect id
-
-instance L.Logger (Free StateF) where
-  logMessage level msg = evalCoreEffectStateF $ L.logMessage level msg
+evalGraphStateF :: GraphModel a -> StateL a
+evalGraphStateF graphAction = liftF $ EvalGraphStateF graphAction id

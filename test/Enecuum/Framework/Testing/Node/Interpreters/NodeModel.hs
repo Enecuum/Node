@@ -11,9 +11,13 @@ import qualified Enecuum.Core.Testing.Runtime.Interpreters              as Impl
 import           Enecuum.Framework.Testing.Types
 import qualified Enecuum.Framework.Testing.Lens                         as RLens
 import qualified Enecuum.Framework.Testing.Node.Interpreters.Networking as Impl
+import qualified Enecuum.Framework.Testing.Node.Interpreters.State      as Impl
 
 -- | Interpret NodeL.
 interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
+
+interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) = do
+  next <$> (atomically $ Impl.runStateL nodeRt statefulAction)
 
 interpretNodeL nodeRt (L.EvalGraph graphAction next) = do
   Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "L.EvalGraph"

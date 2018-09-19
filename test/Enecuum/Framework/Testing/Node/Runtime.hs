@@ -30,7 +30,9 @@ createEmptyNodeRuntime loggerRt networkControl addr = do
   tag <- newTVarIO ("" :: Text)
   handle <- newEmptyTMVarIO
   graph <- TG.initLGraph
-  pure $ NodeRuntime loggerRt networkControl addr tag handle graph
+  varCounter <- newTMVarIO 0
+  state <- newTMVarIO Map.empty
+  pure $ NodeRuntime loggerRt networkControl addr tag handle graph varCounter state
 
 -- | Starts node using NodeDefinitionL.
 startNode

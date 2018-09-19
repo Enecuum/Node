@@ -93,43 +93,46 @@ masterNode = do
 calculateBalanceTraversing
   :: D.StringHash
   -> TG.Balance
-  -> L.LGraphModel TG.Balance
-calculateBalanceTraversing curNodeHash curBalance = L.getNode curNodeHash >>= \case
-  Nothing -> error "Invalid reference found."
-  Just curNode -> do
-    let balanceChange = D.fromContent $ curNode ^. Lens.content . Lens.change
-    case Map.toList (curNode ^. Lens.links) of
-      [] -> pure $ curBalance + balanceChange
-      [(nextNodeHash, _)] -> calculateBalanceTraversing nextNodeHash $ curBalance + balanceChange
-      _ -> error "In this test scenario, graph should be list-like."
+  -> L.GraphModel TG.Balance
+calculateBalanceTraversing curNodeHash curBalance =
+  L.getNode curNodeHash >>= \case
+    Nothing -> error "Invalid reference found."
+    Just curNode -> do
+      let balanceChange = (D.fromContent $ curNode ^. Lens.content) ^. Lens.change
+      case Map.toList (curNode ^. Lens.links) of
+        []                  -> pure $ curBalance + balanceChange
+        [(nextNodeHash, _)] -> calculateBalanceTraversing nextNodeHash $ curBalance + balanceChange
+        _                   -> error "In this test scenario, graph should be list-like."
 
 tryAddTransactionTraversing
   :: D.StringHash
   -> TG.Balance
   -> TG.BalanceChange
-tryAddTransactionTraversing curNodeHash prevBalance change = L.getNode curNodeHash >>= \case
-  Nothing -> error "Invalid reference found."
-  Just curNode -> do
-    let curBalanceChange = D.fromContent $ curNode ^. Lens.content . Lens.change
-    let curBalance = prevBalance + curBalanceChange
-    case Map.toList (curNode ^. Lens.links) of
-      [] -> TG.tryAddTransaction' (curNode ^. Lens.hash) curBalance change
-      [(nextNodeHash, _)] -> tryAddTransactionTraversing nextNodeHash curBalance change
-      _ -> error "In this test scenario, graph should be list-like."
+  -> L.GraphModel (Maybe (D.StringHash, TG.Balance))
+tryAddTransactionTraversing curNodeHash prevBalance change =
+  L.getNode curNodeHash >>= \case
+    Nothing -> error "Invalid reference found."
+    Just curNode -> do
+      let curBalanceChange = (D.fromContent $ curNode ^. Lens.content) ^. Lens.change
+      let curBalance = prevBalance + curBalanceChange
+      case Map.toList (curNode ^. Lens.links) of
+        []                  -> TG.tryAddTransaction' (curNode ^. Lens.hash) curBalance change
+        [(nextNodeHash, _)] -> tryAddTransactionTraversing nextNodeHash curBalance change
+        _                   -> error "In this test scenario, graph should be list-like."
 
 acceptGetBalanceTraversing
   :: TNodeL D.Transaction
   -> GetBalanceRequest
   -> L.NodeModel GetBalanceResponse
 acceptGetBalanceTraversing baseNode GetBalanceRequest = do
-  balance <- L.evalGraph (calculateBalanceByTraversing (baseNode ^. Lens.hash) 0)
+  balance <- L.evalGraph (calculateBalanceTraversing (baseNode ^. Lens.hash) 0)
   pure $ GetBalanceResponse balance
 
-acceptBalanceChange
+acceptBalanceChangeTraversing
   :: TNodeL D.Transaction
   -> BalanceChangeRequest
   -> L.NodeModel BalanceChangeResponse
-acceptBalanceChange baseNode (BalanceChangeRequest change) = do
+acceptBalanceChangeTraversing baseNode (BalanceChangeRequest change) = do
   mbHashAndBalance <- L.evalGraph $ tryAddTransactionTraversing (baseNode ^. Lens.hash) 0 change
   case mbHashAndBalance of
     Nothing -> pure $ BalanceChangeResponse Nothing
@@ -146,7 +149,7 @@ networkNode1 = do
   baseNode <- L.initialization newtorkNode1Initialization
   L.serving
     $ L.serve (acceptGetBalanceTraversing baseNode)
-    . L.serve (acceptBalanceChange baseNode)
+    . L.serve (acceptBalanceChangeTraversing baseNode)
 
 networkNode2Scenario :: L.NodeModel ()
 networkNode2Scenario = do
@@ -167,6 +170,11 @@ networkNode2Scenario = do
     balance4 <- unpack <$> makeRequestUnsafe connectCfg GetBalanceRequest
     L.logInfo $ "balance4 (should be 111): " +|| balance4 ||+ "."
 
+networkNode2 :: L.NodeDefinitionModel ()
+networkNode2 = do
+  L.nodeTag "networkNode2"
+  L.scenario networkNode2Scenario
+
 -- Scenario 3: 2 network nodes can interact (2)
 -- One of them uses state to store some operational data.
 -- It also holds a graph with transactions.
@@ -183,22 +191,23 @@ makeLenses ''NetworkNode3Data
 calculateBalance
   :: D.StringHash
   -> Int
-  -> Eff L.LGraphModel Int
-calculateBalance curNodeHash curBalance = L.getNode curNodeHash >>= \case
-  Nothing -> error "Invalid reference found."
-  Just curNode -> do
-    let balanceChange = D.fromContent $ curNode ^. Lens.content . Lens.change
-    case Map.toList (curNode ^. Lens.links) of
-      [] -> pure $ curBalance + balanceChange
-      [(nextNodeHash, _)] -> calculateBalanceTraversing nextNodeHash $ curBalance + balanceChange
-      _ -> error "In this test scenario, graph should be list-like."
+  -> L.GraphModel Int
+calculateBalance curNodeHash curBalance =
+  L.getNode curNodeHash >>= \case
+    Nothing -> error "Invalid reference found."
+    Just curNode -> do
+      let balanceChange = (D.fromContent $ curNode ^. Lens.content) ^. Lens.change
+      case Map.toList (curNode ^. Lens.links) of
+        [] -> pure $ curBalance + balanceChange
+        [(nextNodeHash, _)] -> calculateBalanceTraversing nextNodeHash $ curBalance + balanceChange
+        _ -> error "In this test scenario, graph should be list-like."
 
 acceptGetBalance
-  :: (L.LGraphNode, L.StateVar Int)
+  :: NetworkNode3Data
   -> GetBalanceRequest
   -> L.NodeModel GetBalanceResponse
-acceptGetBalance (_, curBalanceVar) GetBalanceRequest =
-  GetBalanceResponse <$> L.readVar curBalanceVar
+acceptGetBalance nodeData GetBalanceRequest =
+  GetBalanceResponse <$> (L.atomically $ L.readVar (nodeData ^. balanceVar))
 
 acceptBalanceChange
   :: NetworkNode3Data
@@ -206,22 +215,24 @@ acceptBalanceChange
   -> L.NodeModel BalanceChangeResponse
 acceptBalanceChange nodeData (BalanceChangeRequest change) = 
   L.atomically $ do
-      curBalance <- L.readVar $ nodeData ^. balanceVar
-      graphHead  <- L.readVar $ nodeData ^. graphHeadVar
-      L.evalGraph $ tryAddTransaction' graphHead curBalance change >>= \case
-          Nothing -> pure $ BalanceChangeResponse Nothing
-          Just (D.StringHash newGraphHead, newBalance) -> do
-              L.writeVar (nodeData ^. balanceVar) newBalance
-              L.writeVar (nodeData ^. graphHeadVar) newGraphHead
-              pure $ BalanceChangeResponse $ Just newBalance
+    curBalance   <- L.readVar $ nodeData ^. balanceVar
+    graphHead    <- L.readVar $ nodeData ^. graphHeadVar
+    mbNewBalance <- L.evalGraphStateF $ TG.tryAddTransaction' graphHead curBalance change
+    case mbNewBalance of
+      Nothing -> pure $ BalanceChangeResponse Nothing
+      Just (newGraphHead, newBalance) -> do
+        L.writeVar (nodeData ^. balanceVar) newBalance
+        L.writeVar (nodeData ^. graphHeadVar) newGraphHead
+        pure $ BalanceChangeResponse $ Just newBalance
 
 newtorkNode3Initialization :: L.NodeModel NetworkNode3Data
 newtorkNode3Initialization = do
-  currentBalanceVar <- L.newVar 0
   baseNode <- L.evalGraph $ L.getNode TG.nilTransactionHash >>= \case
     Nothing -> error "Graph is not ready: no genesis node found."
     Just baseNode -> pure baseNode
-  pure $ NetworkNode3Data (baseNode ^. Lens.hash) currentBalanceVar
+  balanceVar   <- L.atomically $ L.newVar 0
+  graphHeadVar <- L.atomically $ L.newVar $ baseNode ^. Lens.hash
+  pure $ NetworkNode3Data graphHeadVar balanceVar
 
 networkNode3 :: L.NodeDefinitionModel ()
 networkNode3 = do
