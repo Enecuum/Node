@@ -14,6 +14,7 @@ import           Data.HGraph.StringHashable (StringHash, toHash)
 import qualified Crypto.Hash.SHA256      as SHA
 
 import           Enecuum.Prelude
+import           Enecuum.Core.HGraph.Internal.Types
 
 import qualified Enecuum.Language as L
 import qualified Enecuum.Domain as D
@@ -35,9 +36,9 @@ initLGraph = do
 
 withPrevState = error "withPrevState not implemented"
 
-updateTransaction :: D.Transaction -> Int -> Eff L.LGraphModel Bool
+updateTransaction :: D.Transaction -> Int -> L.LGraphModel Bool
 updateTransaction (D.Transaction prevHash change) = withPrevState prevHash $ \_ -> do
     error "updateTransaction not implemented"
 
-getTransactionNode :: D.Transaction -> Eff L.LGraphModel (Maybe L.LGraphNode)
+getTransactionNode :: D.Transaction -> L.LGraphModel (Maybe (TNodeL D.Transaction))
 getTransactionNode = L.getNode . toHash

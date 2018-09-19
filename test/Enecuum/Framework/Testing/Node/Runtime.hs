@@ -3,7 +3,6 @@ module Enecuum.Framework.Testing.Node.Runtime where
 
 import           Enecuum.Prelude
 
-import           Eff.SafeIO                         ( runSafeIO )
 import qualified Data.Map as Map
 
 import qualified Enecuum.Domain                     as D
@@ -18,7 +17,7 @@ import qualified Enecuum.Framework.Testing.Lens as RLens
 import           Enecuum.Core.Testing.Runtime.Logger.Impl
 
 import           Enecuum.Framework.Testing.Environment.TestRuntime
-import           Enecuum.Framework.Testing.Node.Interpreters.NodeDefinition
+import           Enecuum.Framework.Testing.Node.Interpreters.NodeDefinitionModel (runNodeDefinitionModel)
 import qualified Enecuum.Framework.TestData.TestGraph as TG
 
 -- | Creates node runtime.
@@ -37,12 +36,10 @@ createEmptyNodeRuntime loggerRt networkControl addr = do
 startNode
   :: TestRuntime
   -> D.NodeAddress
-  -> Eff '[L.NodeDefinitionL, L.LoggerL, SIO, Exc SomeException] ()
+  -> L.NodeDefinitionModel ()
   -> IO NodeRuntime
 startNode testRt nodeAddr scenario = do
   nodeRt <- createEmptyNodeRuntime (testRt ^. RLens.loggerRuntime) (testRt ^. RLens.networkControl) nodeAddr
-  runSafeIO
-    $ runLoggerL (testRt ^. RLens.loggerRuntime)
-    $ runNodeDefinitionL nodeRt scenario
+  runNodeDefinitionModel nodeRt scenario
   registerNode (testRt ^. RLens.registry) nodeAddr nodeRt
   pure nodeRt
