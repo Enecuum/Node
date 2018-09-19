@@ -209,7 +209,7 @@ masterNodeValidation = do
   nodeId <- D.withSuccess $ L.initialization masterNodeInitializeWithValidation
   L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
 
--- Scenario 3: 2 network nodes can interact (2)
+-- Scenario 4: 2 network nodes can interact (2)
 -- One of them uses state to store some operational data.
 -- It also holds a graph with transactions.
 -- Other requests balance and amount change.
@@ -220,21 +220,6 @@ data NetworkNode3Data = NetworkNode3Data
   }
 
 makeLenses ''NetworkNode3Data
-
--- In this scenario, we assume the graph is list-like.
-calculateBalance
-  :: D.StringHash
-  -> Int
-  -> L.GraphModel Int
-calculateBalance curNodeHash curBalance =
-  L.getNode curNodeHash >>= \case
-    Nothing -> error "Invalid reference found."
-    Just curNode -> do
-      let balanceChange = (D.fromContent $ curNode ^. Lens.content) ^. Lens.change
-      case Map.toList (curNode ^. Lens.links) of
-        [] -> pure $ curBalance + balanceChange
-        [(nextNodeHash, _)] -> calculateBalanceTraversing nextNodeHash $ curBalance + balanceChange
-        _ -> error "In this test scenario, graph should be list-like."
 
 acceptGetBalance
   :: NetworkNode3Data
@@ -247,7 +232,7 @@ acceptBalanceChange
   :: NetworkNode3Data
   -> BalanceChangeRequest
   -> L.NodeModel BalanceChangeResponse
-acceptBalanceChange nodeData (BalanceChangeRequest change) = 
+acceptBalanceChange nodeData (BalanceChangeRequest change) =
   L.atomically $ do
     curBalance   <- L.readVar $ nodeData ^. balanceVar
     graphHead    <- L.readVar $ nodeData ^. graphHeadVar
