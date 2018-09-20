@@ -205,19 +205,19 @@ bootNodeValidation :: L.NodeDefinitionModel ()
 bootNodeValidation = do
   L.nodeTag bootNodeTag
   L.initialization $ pure $ D.NodeID "abc"
-  L.serving
-    $ L.serve @GetHashIDRequest @GetHashIDResponse acceptGetHashId
-    . L.serve @ValidationRequest @ValidationResponse acceptValidationRequest
+  L.servingRpc 1000 $ do
+      method "getHashId" acceptGetHashId
+      method "validation" acceptValidationRequest
 
 masterNodeInitializeWithValidation :: L.NodeModel (Either Text D.NodeID)
 masterNodeInitializeWithValidation = do
   addr     <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
-  eHashID  <- unpack <<$>> makeRequestSafe (D.ConnectionConfig addr) GetHashIDRequest
-  validRes <- unpack <<$>> makeRequestSafe (D.ConnectionConfig addr) ValidRequest
+  GetHashIDResponse eHashID  <- makeRequestUnsafe (D.ConnectionConfig addr) "getHashId" GetHashIDRequest
+  validRes :: ValidationResponse <- makeRequestUnsafe (D.ConnectionConfig addr) "validation" ValidRequest
   L.logInfo $ "For the valid request recieved " +|| validRes ||+ "."
-  invalidRes <- unpack <<$>> makeRequestSafe (D.ConnectionConfig addr) InvalidRequest
+  invalidRes :: ValidationResponse <- makeRequestUnsafe (D.ConnectionConfig addr) "validation" InvalidRequest
   L.logInfo $ "For the invalid request recieved " +|| invalidRes ||+ "."
-  pure $ eHashID >>= Right . D.NodeID
+  pure $ Right (D.NodeID eHashID)
 
 masterNodeValidation :: L.NodeDefinitionModel ()
 masterNodeValidation = do
