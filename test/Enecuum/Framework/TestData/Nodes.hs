@@ -24,20 +24,12 @@ import           Enecuum.Framework.RpcMethod.Language
 import           Enecuum.Framework.Node.Language          ( NodeModel )
 
 makeRpcRequest
-  :: (ToJSON a, FromJSON b) => D.ConnectionConfig -> Text -> a -> L.NodeModel (Either Text b)
-makeRpcRequest connectCfg name arg = do
-    res <- L.evalNetworking $ L.withConnection connectCfg (makeRequest name arg)
-    case res of
-        Left txt -> pure $ Left txt
-        Right (RpcResponseError (A.String txt) _) -> pure $ Left txt
-        Right (RpcResponseError err _)            -> pure $ Left (show err)
-        Right (RpcResponseResult val _) -> case A.fromJSON val of
-            A.Error txt -> pure $ Left (Text.pack txt)
-            A.Success resp -> pure $ Right resp
+    :: (ToJSON a, FromJSON b) => D.ConnectionConfig -> Text -> a -> L.NodeModel (Either Text b)
+makeRpcRequest connectCfg name arg = L.evalNetworking $ L.makeRpcRequest connectCfg name arg
             
 
 makeRequestUnsafe
-  :: (ToJSON a, FromJSON b) => D.ConnectionConfig -> Text -> a -> L.NodeModel b
+    :: (ToJSON a, FromJSON b) => D.ConnectionConfig -> Text -> a -> L.NodeModel b
 makeRequestUnsafe connectCfg name arg =
     (\(Right a) -> a) <$> makeRpcRequest connectCfg name arg
 
@@ -159,34 +151,6 @@ acceptBalanceChange baseNode (BalanceChangeRequest change) = do
     Nothing                        -> BalanceChangeResponse Nothing
     Just (D.StringHash _, balance) -> BalanceChangeResponse (Just balance)
 
-
-makeMethod :: (FromJSON a, ToJSON b) => (a -> NodeModel b) -> A.Value -> Int -> NodeModel RpcResponse
-makeMethod f a i = case A.fromJSON a of
-    A.Success req -> do
-        res <- f req
-        pure $ RpcResponseResult (A.toJSON res) i
-    A.Error _     -> pure $ RpcResponseError  (A.toJSON $ A.String "Error in parsing of args") i
-
-
-makeMethod' :: (FromJSON a, ToJSON b) => (a -> NodeModel (Either Text b)) -> A.Value -> Int -> NodeModel RpcResponse
-makeMethod' f a i = case A.fromJSON a of
-    A.Success req -> do
-        res <- f req
-        case res of
-            Right b -> pure $ RpcResponseResult (A.toJSON b) i
-            Left  t -> pure $ RpcResponseError  (A.toJSON $ A.String t) i
-    A.Error _     -> pure $ RpcResponseError  (A.toJSON $ A.String "Error in parsing of args") i
-
-
-class MethodMaker a where
-    method :: Text -> a -> Free RpcMethodL ()
-
-instance (ToJSON b, FromJSON a) => MethodMaker (a -> NodeModel b) where
-    method t f = rpcMethod t (makeMethod f)
-
-instance (ToJSON b, FromJSON a) => MethodMaker (a -> NodeModel (Either Text b)) where
-    method t f = rpcMethod t (makeMethod' f)
-
 makeResult :: ToJSON a => Int -> a -> NodeModel RpcResponse
 makeResult i a = pure $ RpcResponseResult (A.toJSON a) i
 
@@ -194,7 +158,6 @@ newtorkNode1Initialization :: L.NodeModel (TNodeL D.Transaction)
 newtorkNode1Initialization = L.evalGraph $ TG.getTransactionNode TG.nilTransaction >>= \case
   Nothing -> error "Graph is not ready: no genesis node found."
   Just baseNode -> pure baseNode
-
 
 networkNode1 :: L.NodeDefinitionModel ()
 networkNode1 = do
