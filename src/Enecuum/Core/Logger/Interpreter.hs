@@ -3,18 +3,20 @@ module Enecuum.Core.Logger.Interpreter where
 import           Enecuum.Prelude
 import           Control.Monad.Free
 import qualified Enecuum.Core.Language                      as L
+import           Enecuum.Core.Logger.Runtime
+
 
 -- | Interprets a LoggerL language.
 -- Print a log msg in std out.
-interpretLoggerL :: L.LoggerF a -> IO a
-interpretLoggerL (L.LogMessage _ msg next) = do
+interpretLoggerL :: LoggerRuntime -> L.LoggerF a -> IO a
+interpretLoggerL _ (L.LogMessage _ msg next) = do
     putStrLn msg
     pure $ next ()
 
 -- | Runs the LoggerL language.
-runLoggerL :: L.LoggerL a -> IO a
-runLoggerL = foldFree interpretLoggerL
+runLoggerL :: LoggerRuntime -> L.LoggerL a -> IO a
+runLoggerL lR = foldFree (interpretLoggerL lR)
 
 
 instance L.Logger IO where
-    logMessage text msg = runLoggerL $ L.logMessage text msg
+    logMessage text msg = runLoggerL LoggerRuntime $ L.logMessage text msg

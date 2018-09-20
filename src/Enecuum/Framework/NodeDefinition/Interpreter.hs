@@ -17,21 +17,22 @@ import           Enecuum.Framework.Node.Language
 import           Enecuum.Core.Logger.Interpreter
 import           Enecuum.Legacy.Service.Network.WebSockets.Server  (runServer)
 import           Enecuum.Framework.Domain.RpcMessages
+import           Enecuum.Framework.Node.Runtime
 
-interpretNodeDefinitionL :: L.NodeDefinitionF a -> IO a
-interpretNodeDefinitionL (L.NodeTag tag next) = do
+interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF a -> IO a
+interpretNodeDefinitionL _ (L.NodeTag tag next) = do
     L.logInfo $ "Node tag: " +| tag |+ ""
     pure $ next ()
 
-interpretNodeDefinitionL (L.EvalNodeModel initScript next) = do
+interpretNodeDefinitionL nr (L.EvalNodeModel initScript next) = do
     L.logInfo "EvalNodeModel"
-    next <$> runNodeModel initScript
+    next <$> runNodeModel nr initScript
 
-interpretNodeDefinitionL (L.ServingRpc initScript next) = do
+interpretNodeDefinitionL nr (L.ServingRpc initScript next) = do
     L.logInfo "Start of servingRpc"
     m <- atomically $ newTVar mempty
     a <- runRpcMethodL m initScript
-    void $ forkIO $ runRpcServer runNodeModel m
+    void $ forkIO $ runRpcServer (runNodeModel nr) m
     return $ next a
 
 
@@ -53,4 +54,4 @@ callRpc runner methods msg = case A.decodeStrict msg of
     Nothing -> return $ RpcResponseError (String "error of request parsing") 0
 
 
-runNodeDefinitionL = foldFree interpretNodeDefinitionL
+runNodeDefinitionL nr = foldFree (interpretNodeDefinitionL nr)

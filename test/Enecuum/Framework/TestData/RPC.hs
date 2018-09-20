@@ -6,10 +6,6 @@ module Enecuum.Framework.TestData.RPC where
 
 import Enecuum.Prelude
 
-import qualified Data.Aeson                       as A
-
-import qualified Enecuum.Domain                   as D
-
 -- Types for RPC requests.
 
 data GetHashIDRequest = GetHashIDRequest
@@ -26,25 +22,17 @@ data ValidationRequest = ValidRequest | InvalidRequest
 newtype ValidationResponse = ValidationResponse (Either [Text] Text)
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
 
-instance D.RpcMethod () ValidationRequest ValidationResponse where
-  toRpcRequest _ = D.RpcRequest . A.encode
-  fromRpcResponse _ (D.RpcResponse raw)
-    = maybe (Left $ "No parse of validation resp" +|| raw ||+ "") Right $ A.decode raw
-
 newtype HelloRequest1  = HelloRequest1 { helloMessage :: Text }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 newtype HelloResponse1 = HelloResponse1 { ackMessage :: Text }
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
 
-
-
 newtype HelloRequest2  = HelloRequest2 { helloMessage :: Text }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 newtype HelloResponse2 = HelloResponse2 { ackMessage :: Text }
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
-
 
 -------------------------------------------------------------------
 

@@ -7,24 +7,28 @@ import Control.Monad.Free
 import qualified Enecuum.Language                   as L
 
 import Enecuum.Framework.Networking.Interpreter
-import Enecuum.Framework.NetworkModel.Interpreter
+import Enecuum.Framework.Node.Runtime
 import Enecuum.Framework.Node.Language
+
+import Enecuum.Core.HGraph.Interpreter
 import Enecuum.Core.Interpreter
+
 
 
 -- | Interpret NodeL. Does nothing ATM.
 --interpretNodeL (L.Dummy) = L.logInfo "L.Dummy"
 --
-interpretNodeL :: NodeF a -> IO a
-interpretNodeL (L.EvalGraph graphModel next) = undefined
+interpretNodeL :: NodeRuntime -> NodeF a -> IO a
+interpretNodeL nr (L.EvalGraph graphModel next) = 
+    next <$> runHGraphL (_graphRuntime nr) graphModel
 -- | Eval networking.
-interpretNodeL (L.EvalNetworking networking next) = 
+interpretNodeL _ (L.EvalNetworking networking next) = 
     next <$> runNetworkingL networking
 -- | Eval core effect.
-interpretNodeL (L.EvalCoreEffectNodeF coreEffects next) =
-    next <$> runCoreEffectF coreEffects
+interpretNodeL nr (L.EvalCoreEffectNodeF coreEffects next) =
+    next <$> runCoreEffectF (_coreRuntime nr) coreEffects
 
 
 -- | Runs node model. Runs interpreters for the underlying languages.
-runNodeModel :: Free NodeF a -> IO a
-runNodeModel = foldFree interpretNodeL
+runNodeModel :: NodeRuntime -> Free NodeF a -> IO a
+runNodeModel nr = foldFree (interpretNodeL nr)
