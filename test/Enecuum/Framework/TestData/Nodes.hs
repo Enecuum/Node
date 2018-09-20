@@ -53,14 +53,14 @@ simpleBootNodeDiscovery = pure bootNodeAddr
 
 -- RPC handlers.
 
-acceptHello1 :: A.Value -> Int ->  NodeModel RpcResponse
-acceptHello1 (A.fromJSON -> A.Success (HelloRequest1 msg)) i = makeResult i $ HelloResponse1 $ "Hello, dear. " +| msg |+ ""
+acceptHello1 :: HelloRequest1 ->  NodeModel HelloResponse1
+acceptHello1 (HelloRequest1 msg) = pure $ HelloResponse1 $ "Hello, dear. " +| msg |+ ""
 
-acceptHello2 :: A.Value -> Int ->  NodeModel RpcResponse
-acceptHello2 (A.fromJSON -> A.Success (HelloRequest2 msg)) i = makeResult i $ HelloResponse2 $ "Hello, dear2. " +| msg |+ ""
+acceptHello2 :: HelloRequest2 ->  NodeModel HelloResponse2
+acceptHello2 (HelloRequest2 msg) = pure $ HelloResponse2 $ "Hello, dear2. " +| msg |+ ""
 
-acceptGetHashId :: A.Value -> Int ->  NodeModel RpcResponse
-acceptGetHashId (A.fromJSON -> A.Success GetHashIDRequest) i = makeResult i $ GetHashIDResponse "1"
+acceptGetHashId :: GetHashIDRequest ->  NodeModel GetHashIDResponse
+acceptGetHashId GetHashIDRequest = pure $ GetHashIDResponse "1"
 
 acceptValidationRequest :: ValidationRequest -> L.NodeModel ValidationResponse
 acceptValidationRequest req   = pure $ makeResponse $ verifyRequest req
@@ -72,8 +72,8 @@ bootNode = do
   L.nodeTag bootNodeTag
   L.initialization $ pure $ D.NodeID "abc"
   L.servingRpc $ do
-    rpcMethod "hello1"    acceptHello1
-    rpcMethod "getHashId" acceptGetHashId
+    method "hello1"    acceptHello1
+    method "getHashId" acceptGetHashId
 
 masterNodeInitialization :: L.NodeModel (Either Text D.NodeID)
 masterNodeInitialization = do
@@ -87,8 +87,8 @@ masterNode = do
   nodeId <- D.withSuccess $ L.initialization masterNodeInitialization
   L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
   L.servingRpc $ do
-    rpcMethod "hello1" acceptHello1
-    rpcMethod "hello2" acceptHello2
+    method "hello1" acceptHello1
+    method "hello2" acceptHello2
 
 -- Scenario 2: 2 network nodes can interact.
 -- One holds a graph with transactions. Other requests balance and amount change.
@@ -140,20 +140,29 @@ tryAddTransaction curNodeHash prevBalance change = L.getNode curNodeHash >>= \ca
       [(nextNodeHash, _)] -> tryAddTransaction nextNodeHash curBalance change
       _ -> error "In this test scenario, graph should be list-like."
 
-acceptGetBalance :: TNodeL D.Transaction -> A.Value -> Int -> NodeModel RpcResponse
-acceptGetBalance baseNode (A.fromJSON -> A.Success GetBalanceRequest) i = do
+acceptGetBalance :: TNodeL D.Transaction -> GetBalanceRequest -> NodeModel GetBalanceResponse
+acceptGetBalance baseNode GetBalanceRequest = do
   balance <- L.evalGraph (calculateBalance (baseNode ^. Lens.hash) 0)
-  makeResult i $ GetBalanceResponse balance
+  pure $ GetBalanceResponse balance
 
 
-acceptBalanceChange :: TNodeL D.Transaction -> A.Value -> Int -> NodeModel RpcResponse
-acceptBalanceChange baseNode (A.fromJSON -> A.Success (BalanceChangeRequest change)) i = do
+acceptBalanceChange :: TNodeL D.Transaction -> BalanceChangeRequest -> NodeModel BalanceChangeResponse
+acceptBalanceChange baseNode (BalanceChangeRequest change) = do
   mbHashAndBalance <- L.evalGraph $ tryAddTransaction (baseNode ^. Lens.hash) 0 change
-  case mbHashAndBalance of
-    Nothing                        -> makeResult i $ BalanceChangeResponse Nothing
-    Just (D.StringHash _, balance) -> makeResult i $ BalanceChangeResponse $ Just balance
+  pure $ case mbHashAndBalance of
+    Nothing                        -> BalanceChangeResponse Nothing
+    Just (D.StringHash _, balance) -> BalanceChangeResponse (Just balance)
 
+method t f = rpcMethod t (makeMethod f) 
 
+makeMethod :: (FromJSON a, ToJSON b) => (a -> NodeModel b) -> A.Value -> Int -> NodeModel RpcResponse
+makeMethod f a i = case A.fromJSON a of
+    A.Success req -> do
+        res <- f req
+        pure $ RpcResponseResult (A.toJSON res) i
+    A.Error _     -> pure $ RpcResponseError  (A.toJSON $ A.String "Error in parsing of args") i
+
+  
 makeResult :: ToJSON a => Int -> a -> NodeModel RpcResponse
 makeResult i a = pure $ RpcResponseResult (A.toJSON a) i
 
@@ -167,8 +176,10 @@ networkNode1 = do
   L.nodeTag "networkNode1"
   baseNode <- L.initialization newtorkNode1Initialization
   L.servingRpc $ do
-    rpcMethod "getBalance"    (acceptGetBalance baseNode)
-    rpcMethod "balanceChange" (acceptBalanceChange baseNode)
+    method "getBalance"    (acceptGetBalance baseNode)
+    method "balanceChange" (acceptBalanceChange baseNode)
+
+
 
 networkNode2Scenario :: L.NodeModel ()
 networkNode2Scenario = do
