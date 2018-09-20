@@ -14,6 +14,7 @@ import qualified Enecuum.Core.Lens             as Lens
 
 import           Enecuum.Core.HGraph.Internal.Types
 import           Enecuum.Framework.TestData.RPC
+import           Enecuum.Framework.TestData.Validation
 import qualified Enecuum.Framework.TestData.TestGraph as TG
 import qualified Enecuum.Framework.Domain.Types as T
 import           Enecuum.Legacy.Service.Network.Base
@@ -60,6 +61,9 @@ acceptHello2 (A.fromJSON -> A.Success (HelloRequest2 msg)) i = makeResult i $ He
 
 acceptGetHashId :: A.Value -> Int ->  NodeModel RpcResponse
 acceptGetHashId (A.fromJSON -> A.Success GetHashIDRequest) i = makeResult i $ GetHashIDResponse "1"
+
+acceptValidationRequest :: ValidationRequest -> L.NodeModel ValidationResponse
+acceptValidationRequest req   = pure $ makeResponse $ verifyRequest req
 
 -- Scenario 1: master node can interact with boot node.
 
@@ -194,3 +198,29 @@ networkNode2 :: L.NodeDefinitionModel ()
 networkNode2 = do
   L.nodeTag "networkNode2"
   L.scenario networkNode2Scenario
+
+  -- Scenario 3: boot node can validate data  recieved from master node
+
+bootNodeValidation :: L.NodeDefinitionModel ()
+bootNodeValidation = do
+  L.nodeTag bootNodeTag
+  L.initialization $ pure $ D.NodeID "abc"
+  L.serving
+    $ L.serve @GetHashIDRequest @GetHashIDResponse acceptGetHashId
+    . L.serve @ValidationRequest @ValidationResponse acceptValidationRequest
+
+masterNodeInitializeWithValidation :: L.NodeModel (Either Text D.NodeID)
+masterNodeInitializeWithValidation = do
+  addr     <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
+  eHashID  <- unpack <<$>> makeRequestSafe (D.ConnectionConfig addr) GetHashIDRequest
+  validRes <- unpack <<$>> makeRequestSafe (D.ConnectionConfig addr) ValidRequest
+  L.logInfo $ "For the valid request recieved " +|| validRes ||+ "."
+  invalidRes <- unpack <<$>> makeRequestSafe (D.ConnectionConfig addr) InvalidRequest
+  L.logInfo $ "For the invalid request recieved " +|| invalidRes ||+ "."
+  pure $ eHashID >>= Right . D.NodeID
+
+masterNodeValidation :: L.NodeDefinitionModel ()
+masterNodeValidation = do
+  L.nodeTag masterNodeTag
+  nodeId <- D.withSuccess $ L.initialization masterNodeInitializeWithValidation
+  L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
