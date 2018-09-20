@@ -5,7 +5,9 @@ module Enecuum.Framework.Networking.Language where
 
 import           Enecuum.Prelude
 
+import qualified Data.Aeson                    as A
 import qualified Enecuum.Core.Language         as L
+import qualified Data.Text                     as Text
 import qualified Enecuum.Framework.Domain      as D
 import           Enecuum.Framework.NetworkModel.Language       ( NetworkModel )
 import           Enecuum.Framework.Domain.RpcMessages
@@ -75,3 +77,18 @@ withConnection cfg req = openConnection cfg >>= \case
     response <- sendRequest conn req
     closeConnection conn
     pure response
+
+
+--
+makeRpcRequest
+    :: (ToJSON a, FromJSON b) => D.ConnectionConfig -> Text -> a -> NetworkingL (Either Text b)
+makeRpcRequest connectCfg name arg = do
+    res <- withConnection connectCfg (makeRequest name arg)
+    case res of
+        Left txt -> pure $ Left txt
+        Right (RpcResponseError (A.String txt) _) -> pure $ Left txt
+        Right (RpcResponseError err _)            -> pure $ Left (show err)
+        Right (RpcResponseResult val _) -> case A.fromJSON val of
+            A.Error txt -> pure $ Left (Text.pack txt)
+            A.Success resp -> pure $ Right resp
+            
