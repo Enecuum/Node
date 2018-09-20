@@ -28,11 +28,11 @@ interpretNodeDefinitionL nodeRt (L.EvalNodeModel nodeScript next) = do
   Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "EvalNodeModel"
   next <$> Impl.runNodeModel nodeRt nodeScript
 
-interpretNodeDefinitionL nodeRt (L.ServingRpc handlersF next) = do
+interpretNodeDefinitionL nodeRt (L.ServingRpc port handlersF next) = do
   Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "Serving handlersF"
   m <- atomically $ newTVar mempty
   a <- runRpcMethodL m handlersF
-  startNodeRpcServer nodeRt m
+  startNodeRpcServer nodeRt port m
   pure $ next a
 
 interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =

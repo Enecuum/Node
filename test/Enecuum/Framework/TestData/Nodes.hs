@@ -67,7 +67,7 @@ bootNode :: L.NodeDefinitionModel ()
 bootNode = do
   L.nodeTag bootNodeTag
   L.initialization $ pure $ D.NodeID "abc"
-  L.servingRpc $ do
+  L.servingRpc 1000 $ do
     method "hello1"    acceptHello1
     method "getHashId" acceptGetHashId
 
@@ -82,7 +82,7 @@ masterNode = do
   L.nodeTag masterNodeTag
   nodeId <- D.withSuccess $ L.initialization masterNodeInitialization
   L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
-  L.servingRpc $ do
+  L.servingRpc 1000 $ do
     method "hello1" acceptHello1
     method "hello2" acceptHello2
 
@@ -171,7 +171,7 @@ networkNode1 :: L.NodeDefinitionModel ()
 networkNode1 = do
   L.nodeTag "networkNode1"
   baseNode <- L.initialization newtorkNode1Initialization
-  L.servingRpc $ do
+  L.servingRpc 1000 $ do
     method "getBalance"    (acceptGetBalance baseNode)
     method "balanceChange" (acceptBalanceChange baseNode)
 

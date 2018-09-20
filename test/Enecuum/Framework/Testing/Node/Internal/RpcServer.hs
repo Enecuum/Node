@@ -21,13 +21,13 @@ import qualified Enecuum.Framework.Domain.RpcMessages as R
 -- TODO: consider to use forever.
 -- | Node RPC server worker.
 
-startNodeRpcServer nodeRt methodVar = do
+startNodeRpcServer nodeRt port methodVar = do
   methods <- readTVarIO methodVar
   control <- Control <$> newEmptyTMVarIO <*> newEmptyTMVarIO
   tId <- forkIO $ go 0 control methods
 
   let handle = RpcServerHandle tId control
-  atomically $ putTMVar (nodeRt ^. RLens.rpcServer) handle
+  atomically $ putTMVar ( nodeRt ^. RLens.rpcServer) handle
 
   where
 

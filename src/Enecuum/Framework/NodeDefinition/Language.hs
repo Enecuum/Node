@@ -9,7 +9,7 @@ import qualified Enecuum.Core.Language                    as L
 import qualified Enecuum.Framework.Node.Language          as L
 import qualified Enecuum.Framework.Domain                 as D
 import           Enecuum.Framework.RpcMethod.Language     (RpcMethodL)
-
+import           Enecuum.Legacy.Service.Network.Base
 
 -- TODO: it's possible to make these steps evaluating step-by-step, in order.
 -- Think about if this really needed.
@@ -22,14 +22,14 @@ data NodeDefinitionF next where
     -- | Evaluate some node model.
     EvalNodeModel :: L.NodeModel a -> (a -> next) -> NodeDefinitionF next
     -- | Serving of Rpc request.
-    ServingRpc     :: Free RpcMethodL () -> (() -> next) -> NodeDefinitionF next
+    ServingRpc     :: PortNumber -> Free RpcMethodL () -> (() -> next) -> NodeDefinitionF next
     -- | Eval core effect.
     EvalCoreEffectNodeDefinitionF :: L.CoreEffectModel a -> (a -> next) -> NodeDefinitionF next
 
 instance Functor NodeDefinitionF where
     fmap g (NodeTag tag next)               = NodeTag tag               (g . next)
     fmap g (EvalNodeModel nodeModel next)   = EvalNodeModel nodeModel   (g . next)
-    fmap g (ServingRpc handlersF next)      = ServingRpc handlersF      (g . next)
+    fmap g (ServingRpc port handlersF next) = ServingRpc port handlersF (g . next)
     fmap g (EvalCoreEffectNodeDefinitionF coreEffect next) = EvalCoreEffectNodeDefinitionF coreEffect (g . next)
 
 type NodeDefinitionModel next = Free NodeDefinitionF next
@@ -43,8 +43,8 @@ evalNodeModel :: L.NodeModel a -> NodeDefinitionModel a
 evalNodeModel nodeModel = liftF $ EvalNodeModel nodeModel id
 
 -- | Runs RPC server.
-servingRpc :: Free RpcMethodL () -> NodeDefinitionModel ()
-servingRpc handlersF = liftF $ ServingRpc handlersF id
+servingRpc :: PortNumber -> Free RpcMethodL () -> NodeDefinitionModel ()
+servingRpc port handlersF = liftF $ ServingRpc port handlersF id
 
 -- | Eval core effect.
 evalCoreEffectNodeDefinitionF :: L.CoreEffectModel a -> NodeDefinitionModel a

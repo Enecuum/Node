@@ -28,17 +28,17 @@ interpretNodeDefinitionL nr (L.EvalNodeModel initScript next) = do
     L.logInfo "EvalNodeModel"
     next <$> runNodeModel nr initScript
 
-interpretNodeDefinitionL nr (L.ServingRpc initScript next) = do
+interpretNodeDefinitionL nr (L.ServingRpc port initScript next) = do
     L.logInfo "Start of servingRpc"
     m <- atomically $ newTVar mempty
     a <- runRpcMethodL m initScript
-    void $ forkIO $ runRpcServer (runNodeModel nr) m
+    void $ forkIO $ runRpcServer port (runNodeModel nr) m
     return $ next a
 
 
-runRpcServer runner methodVar = do
+runRpcServer port runner methodVar = do
     methods <- readTVarIO methodVar
-    runServer 1666 "/" $ \_ pending -> do
+    runServer port "/" $ \_ pending -> do
         connect     <- WS.acceptRequest pending
         msg         <- WS.receiveData connect
         response    <- callRpc runner methods msg
