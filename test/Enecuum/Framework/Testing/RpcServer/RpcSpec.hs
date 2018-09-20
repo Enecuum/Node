@@ -22,8 +22,7 @@ import           Enecuum.Framework.Node.Runtime
 
 spec :: Spec
 spec = describe "RpcServer" $ fromHUnitTest $ TestList
-    [ TestLabel "start of rpc" rpcServerStart
-    , TestLabel "Test of rpc server/ok" rpcServerTestOk
+    [ TestLabel "Test of rpc server/ok" rpcServerTestOk
     , TestLabel "Test of rpc server/err" rpcServerTestErr
     ]
 
@@ -31,25 +30,22 @@ serverMethodes = do
     rpcMethod "ok"    (\_ i -> return $ RpcResponseResult (A.String "Ok") i)
     rpcMethod "error" (\_ i -> return $ RpcResponseError (A.String ":(") i)
 
-rpcServerStart :: Test
-rpcServerStart = TestCase $ do
-    nr <- makeNodeRuntime
-    runNodeDefinitionL nr $ servingRpc serverMethodes
-    assertBool "" True
 
 rpcServerTestOk :: Test
 rpcServerTestOk = TestCase $ do
-    threadDelay 10000
+    nr <- makeNodeRuntime
+    runNodeDefinitionL nr $ servingRpc 1666 serverMethodes
+    threadDelay 1000
     Right (R.RpcResponseResult res _) <- runNetworkingL $
-        sendRpcRequest localServer (R.RpcRequest "ok" (A.String "") 1)
+        sendRpcRequest (ConnectInfo "127.0.0.1" 1666) (R.RpcRequest "ok" (A.String "") 1)
     assertBool "" (res == A.String "Ok")
 
 
 rpcServerTestErr :: Test
 rpcServerTestErr = TestCase $ do
-    threadDelay 10000
+    nr <- makeNodeRuntime
+    runNodeDefinitionL nr $ servingRpc 1667 serverMethodes
+    threadDelay 1000
     Right (R.RpcResponseError res _) <- runNetworkingL $
-        sendRpcRequest localServer (R.RpcRequest "error" (A.String "") 1)
+        sendRpcRequest  (ConnectInfo "127.0.0.1" 1667) (R.RpcRequest "error" (A.String "") 1)
     assertBool "" (res == A.String ":(")
-
-localServer = ConnectInfo "127.0.0.1" 1666

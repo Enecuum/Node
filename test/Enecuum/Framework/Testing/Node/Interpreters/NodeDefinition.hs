@@ -30,11 +30,11 @@ interpretNodeDefinitionL rt (L.EvalNodeModel initScript next) = do
   L.logInfo "Initialization"
   next <$> runNodeModel rt initScript
 
-interpretNodeDefinitionL nodeRt (L.ServingRpc handlersF next) = do
+interpretNodeDefinitionL nodeRt (L.ServingRpc port handlersF next) = do
   Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "Serving handlersF"
   m <- atomically $ newTVar mempty
   a <- runRpcMethodL m handlersF
-  startNodeRpcServer nodeRt m
+  startNodeRpcServer nodeRt port m
   pure $ next a
 
 -- | Runs node definition language with node runtime.
