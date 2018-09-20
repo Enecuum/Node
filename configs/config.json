@@ -1,0 +1,6 @@
+{
+    "bootNodeAddress": "[((127,0,0,1), 1554)]",
+    "bootNode": false,
+    "networkNode": true,
+    "extPort": 1667
+}
