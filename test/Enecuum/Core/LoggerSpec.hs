@@ -5,11 +5,11 @@ import           Enecuum.Prelude
 import           System.Directory
 import           Test.Hspec
 
-import           Enecuum.Assets.System.Directory              (appFileName, defaultLogFileName)
-import           Enecuum.Core.Logger.Config                   (logConfig)
-import qualified Enecuum.Core.Logger.Language                 as L
-import qualified Enecuum.Core.Logger.Impl.HsLogger            as Impl
-import qualified Enecuum.Core.Types                           as T
+import           Enecuum.Assets.System.Directory   (defaultLogFileName)
+import           Enecuum.Core.Logger.Config        (logConfig)
+import qualified Enecuum.Core.Logger.Impl.HsLogger as Impl
+import qualified Enecuum.Core.Logger.Language      as L
+import qualified Enecuum.Core.Types                as T
 
 scenario :: L.LoggerL ()
 scenario = do
@@ -34,54 +34,33 @@ withLogFile logFile action = do
 spec :: Spec
 spec = do
   describe "Logger tests" $ do
-    it "Debug level" $ do
+    it "Set level, filepath, format via config" $ do
+      (T.LoggerConfig format level logFile) <- logConfig
+      res <- withLogFile logFile
+              $ Impl.withLogger format logFile level
+              $ Impl.runLoggerL scenario
+      res `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
+
+    it "Set level: Debug level" $ do
       logFile <- defaultLogFileName
       res <- withLogFile logFile
               $ Impl.withLogger T.nullFormat logFile T.Debug
               $ Impl.runLoggerL scenario
       res `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
 
-    it "Error level" $ do
+    it "Set level: Error level" $ do
       logFile <- defaultLogFileName
       res <- withLogFile logFile
               $ Impl.withLogger T.nullFormat logFile T.Error
               $ Impl.runLoggerL scenario
       res `shouldBe` "Error Msg\n"
 
-    -- it "Logging with package hslogger. \
-    --    \Generate log file with config, set level - Debug (msg > Debug)" $ do
-    --   (T.LoggerConfig format level filePath) <- logConfig
-    --   logFileConetnt <- writeLog (loggerTestSet level format) filePath
-    --   logFileConetnt `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
-    --
-    -- it "Logging with package hslogger. \
-    --    \Generate log file, set level - Debug (msg > Debug)" $ do
-    --   logFileConetnt <- writeLog (loggerTestSet T.Debug T.nullFormat) =<< defaultLogFileName
-    --   logFileConetnt `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
-    --
-    -- it "Logging with package hslogger. \
-    --    \Generate log file, \
-    --    \set level - Info (msg > Info)" $ do
-    --   logFileConetnt <- writeLog (loggerTestSet T.Info T.nullFormat) =<< defaultLogFileName
-    --   logFileConetnt `shouldBe` "Info Msg\nWarning Msg\nError Msg\n"
-    --
-    -- it "Logging with package hslogger. \
-    --    \Generate log file, \
-    --    \set level - Debug, set format - '$prio $loggername: $msg'" $ do
-    --   logFileConetnt <- writeLog (loggerTestSet T.Debug T.standartFormat) =<< defaultLogFileName
-    --   logFileConetnt `shouldBe` "DEBUG LoggingExample.Main: Debug Msg\n\
-    --                             \INFO LoggingExample.Main: Info Msg\n\
-    --                             \WARNING LoggingExample.Main: Warning Msg\n\
-    --                             \ERROR LoggingExample.Main: Error Msg\n"
-    --
-    -- it "Logging with package hslogger. \
-    --    \Generate log file, set filepath" $ do
-    --   logFileConetnt <- writeLog (loggerTestSet T.Debug T.nullFormat) =<< appFileName
-    --   logFileConetnt `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
-    --
-    -- it "Logging with package hslogger. \
-    --    \Generate log file, set filepath, set format, set level" $ do
-    --   logFileConetnt <- writeLog (loggerTestSet T.Info T.standartFormat) =<< appFileName
-    --   logFileConetnt `shouldBe` "INFO LoggingExample.Main: Info Msg\n\
-    --                             \WARNING LoggingExample.Main: Warning Msg\n\
-    --                             \ERROR LoggingExample.Main: Error Msg\n"
+    it "Set format: '$prio $loggername: $msg'" $ do
+      logFile <- defaultLogFileName
+      res <- withLogFile logFile
+              $ Impl.withLogger T.standartFormat logFile T.Debug
+              $ Impl.runLoggerL scenario
+      res `shouldBe` "DEBUG Node.Main: Debug Msg\n\
+                     \INFO Node.Main: Info Msg\n\
+                     \WARNING Node.Main: Warning Msg\n\
+                     \ERROR Node.Main: Error Msg\n"

@@ -10,7 +10,7 @@ import           System.Log.Handler.Simple (GenericHandler, fileHandler)
 import           System.Log.Logger
 
 import qualified Enecuum.Core.Language     as L
-import qualified Enecuum.Core.Types        as T
+import qualified Enecuum.Core.Types        as T (Format, LogLevel (..))
 
 -- | Opaque type covering all information needed to teardown the logger.
 data HsLoggerHandle = HsLoggerHandle
@@ -18,13 +18,13 @@ data HsLoggerHandle = HsLoggerHandle
   }
 
 component :: String
-component = "LoggingExample.Main"
+component = "Node.Main"
 
 -- | Bracket an IO action which denotes the whole scope where the loggers of
 -- the application are needed to installed. Sets them up before running the action
 -- and tears them down afterwards. Even in case of an exception.
 withLogger :: T.Format -> FilePath -> T.LogLevel -> IO c -> IO c
-withLogger format logFileName level = bracket setupLogger' teardownLogger . const  --msg
+withLogger format logFileName level = bracket setupLogger' teardownLogger . const
   where setupLogger' = setupLogger format logFileName level
 
 -- | Dispatch log level from the LoggerL language

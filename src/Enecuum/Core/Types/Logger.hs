@@ -2,8 +2,8 @@
 
 module Enecuum.Core.Types.Logger where
 
-import           Enecuum.Prelude
 import           Data.Aeson.Extra (noLensPrefix)
+import           Enecuum.Prelude
 
 -- | Logging level.
 data LogLevel = Debug | Info | Warning | Error
@@ -13,9 +13,9 @@ data LogLevel = Debug | Info | Warning | Error
 type Format = String
 
 data LoggerConfig = LoggerConfig
-  { _currentFormat :: Format
-  , _currentLevel  :: LogLevel
-  , _logFilePath   :: FilePath
+  { _format      :: Format
+  , _level       :: LogLevel
+  , _logFilePath :: FilePath
   } deriving (Generic, Show, Read)
 
 instance ToJSON LoggerConfig where toJSON = genericToJSON noLensPrefix
