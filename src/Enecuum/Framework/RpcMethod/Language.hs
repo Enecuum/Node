@@ -8,6 +8,8 @@ import           Data.Aeson as A
 
 import           Enecuum.Framework.Node.Language          ( NodeModel )
 import           Enecuum.Framework.Domain.RpcMessages
+import qualified Data.Text as T
+import           Data.Typeable
 
 -- | Rpc server description language.
 data RpcMethodL a where
@@ -42,10 +44,13 @@ makeMethod' f a i = case A.fromJSON a of
 
 
 class MethodMaker a where
-    method :: Text -> a -> Free RpcMethodL ()
+    method :: a -> Free RpcMethodL ()
 
-instance (ToJSON b, FromJSON a) => MethodMaker (a -> NodeModel b) where
-    method t f = rpcMethod t (makeMethod f)
+instance (Typeable a, Typeable b, ToJSON b, FromJSON a) => MethodMaker (a -> NodeModel b) where
+    method f = rpcMethod (makeMethodeName f) (makeMethod f)
 
-instance (ToJSON b, FromJSON a) => MethodMaker (a -> NodeModel (Either Text b)) where
-    method t f = rpcMethod t (makeMethod' f)
+instance (Typeable a, Typeable b, ToJSON b, FromJSON a) => MethodMaker (a -> NodeModel (Either Text b)) where
+    method f = rpcMethod (makeMethodeName f) (makeMethod' f)
+
+makeMethodeName :: Typeable a => a -> Text
+makeMethodeName = T.pack . takeWhile (/= ' ') . show . typeOf

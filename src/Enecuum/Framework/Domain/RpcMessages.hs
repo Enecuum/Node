@@ -2,6 +2,8 @@ module Enecuum.Framework.Domain.RpcMessages where
 
 import           Enecuum.Prelude
 import           Data.Aeson as A
+import           Data.Text as T
+import           Data.Typeable
 
 data RpcRequest  = RpcRequest Text A.Value Int
 
@@ -9,8 +11,8 @@ data RpcResponse
     = RpcResponseResult A.Value Int
     | RpcResponseError A.Value Int
 
-makeRequest :: ToJSON a => Text -> a -> RpcRequest
-makeRequest text a = RpcRequest text (toJSON a) 0
+makeRequest :: (Typeable a, ToJSON a) => a -> RpcRequest
+makeRequest a = RpcRequest (T.pack . show . typeOf $ a) (toJSON a) 0
 
 class Content a where
     content :: a -> A.Value

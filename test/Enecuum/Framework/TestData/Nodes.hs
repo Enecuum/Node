@@ -25,14 +25,14 @@ import           Enecuum.Framework.RpcMethod.Language
 import           Enecuum.Framework.Node.Language          ( NodeModel )
 
 makeRpcRequest
-    :: (ToJSON a, FromJSON b) => D.ConnectionConfig -> Text -> a -> L.NodeModel (Either Text b)
-makeRpcRequest connectCfg name arg = L.evalNetworking $ L.makeRpcRequest connectCfg name arg
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeModel (Either Text b)
+makeRpcRequest connectCfg arg = L.evalNetworking $ L.makeRpcRequest connectCfg arg
             
 
 makeRequestUnsafe
-    :: (ToJSON a, FromJSON b) => D.ConnectionConfig -> Text -> a -> L.NodeModel b
-makeRequestUnsafe connectCfg name arg =
-    (\(Right a) -> a) <$> makeRpcRequest connectCfg name arg
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeModel b
+makeRequestUnsafe connectCfg arg =
+    (\(Right a) -> a) <$> makeRpcRequest connectCfg arg
 
 
 
@@ -74,13 +74,13 @@ bootNode = do
   L.nodeTag bootNodeTag
   L.initialization $ pure $ D.NodeID "abc"
   L.servingRpc 1000 $ do
-    method "hello1"    acceptHello1
-    method "getHashId" acceptGetHashId
+    method acceptHello1
+    method acceptGetHashId
 
 masterNodeInitialization :: L.NodeModel (Either Text D.NodeID)
 masterNodeInitialization = do
   addr     <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
-  Right (GetHashIDResponse eHashID)  <- makeRpcRequest (D.ConnectionConfig addr) "getHashId" GetHashIDRequest
+  Right (GetHashIDResponse eHashID)  <- makeRpcRequest (D.ConnectionConfig addr) GetHashIDRequest
   pure $ Right (D.NodeID eHashID)
   
 masterNode :: L.NodeDefinitionModel ()
@@ -89,8 +89,8 @@ masterNode = do
   nodeId <- D.withSuccess $ L.initialization masterNodeInitialization
   L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
   L.servingRpc 1000 $ do
-    method "hello1" acceptHello1
-    method "hello2" acceptHello2
+    method acceptHello1
+    method acceptHello2
 
 -- Scenario 2: 2 network nodes can interact.
 -- One holds a graph with transactions. Other requests balance and amount change.
@@ -168,8 +168,8 @@ networkNode1 = do
   L.nodeTag "networkNode1"
   baseNode <- L.initialization newtorkNode1Initialization
   L.servingRpc 1000 $ do
-    method "getBalance"    (acceptGetBalance baseNode)
-    method "balanceChange" (acceptBalanceChange baseNode)
+    method (acceptGetBalance baseNode)
+    method (acceptBalanceChange baseNode)
 
 
 
@@ -177,19 +177,19 @@ networkNode2Scenario :: L.NodeModel ()
 networkNode2Scenario = do
     let connectCfg = D.ConnectionConfig networkNode1Addr
     -- No balance change
-    GetBalanceResponse balance0 <- makeRequestUnsafe connectCfg "getBalance" GetBalanceRequest
+    GetBalanceResponse balance0 <- makeRequestUnsafe connectCfg GetBalanceRequest
     L.logInfo $ "balance0 (should be 0): " +|| balance0 ||+ "."
     -- Add 10
-    BalanceChangeResponse balance1 <- makeRequestUnsafe connectCfg "balanceChange" $ BalanceChangeRequest 10
+    BalanceChangeResponse balance1 <- makeRequestUnsafe connectCfg $ BalanceChangeRequest 10
     L.logInfo $ "balance1 (should be Just 10): " +|| balance1 ||+ "."
     -- Subtract 20
-    BalanceChangeResponse balance2 <- makeRequestUnsafe connectCfg "balanceChange" $ BalanceChangeRequest (-20)
+    BalanceChangeResponse balance2 <- makeRequestUnsafe connectCfg $ BalanceChangeRequest (-20)
     L.logInfo $ "balance2 (should be Nothing): " +|| balance2 ||+ "."
     -- Add 101
-    BalanceChangeResponse balance3 <- makeRequestUnsafe connectCfg "balanceChange" $ BalanceChangeRequest 101
+    BalanceChangeResponse balance3 <- makeRequestUnsafe connectCfg $ BalanceChangeRequest 101
     L.logInfo $ "balance3 (should be Just 111): " +|| balance3 ||+ "."
     -- Final balance
-    GetBalanceResponse balance4 <- makeRequestUnsafe connectCfg "getBalance" GetBalanceRequest
+    GetBalanceResponse balance4 <- makeRequestUnsafe connectCfg GetBalanceRequest
     L.logInfo $ "balance4 (should be 111): " +|| balance4 ||+ "."
 
 
@@ -206,16 +206,16 @@ bootNodeValidation = do
   L.nodeTag bootNodeTag
   L.initialization $ pure $ D.NodeID "abc"
   L.servingRpc 1000 $ do
-      method "getHashId" acceptGetHashId
-      method "validation" acceptValidationRequest
+      method acceptGetHashId
+      method acceptValidationRequest
 
 masterNodeInitializeWithValidation :: L.NodeModel (Either Text D.NodeID)
 masterNodeInitializeWithValidation = do
   addr     <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
-  GetHashIDResponse eHashID  <- makeRequestUnsafe (D.ConnectionConfig addr) "getHashId" GetHashIDRequest
-  validRes :: ValidationResponse <- makeRequestUnsafe (D.ConnectionConfig addr) "validation" ValidRequest
+  GetHashIDResponse eHashID  <- makeRequestUnsafe (D.ConnectionConfig addr) GetHashIDRequest
+  validRes :: ValidationResponse <- makeRequestUnsafe (D.ConnectionConfig addr) ValidRequest
   L.logInfo $ "For the valid request recieved " +|| validRes ||+ "."
-  invalidRes :: ValidationResponse <- makeRequestUnsafe (D.ConnectionConfig addr) "validation" InvalidRequest
+  invalidRes :: ValidationResponse <- makeRequestUnsafe (D.ConnectionConfig addr) InvalidRequest
   L.logInfo $ "For the invalid request recieved " +|| invalidRes ||+ "."
   pure $ Right (D.NodeID eHashID)
 
