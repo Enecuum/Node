@@ -1,4 +1,4 @@
-{ "_currentFormat": "$msg",
-  "_currentLevel": "Debug",
-  "_logFilePath": "/enecuum/data/logs/default.log"
+{ "format": "$msg",
+  "level": "Debug",
+  "logFilePath": "/tmp/logs/default.log"
 }

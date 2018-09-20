@@ -22,8 +22,5 @@ appFileName = liftM (</> "app.log") logFilePath
 defaultLogFileName :: IO FilePath
 defaultLogFileName = liftM (</> "default.log") logFilePath
 
-configFilePath :: IO FilePath
-configFilePath = do
-  dir <- liftM (</> "configs" </> "Core" </> "Logger") getEnecuumDir
-  createFilePath dir
-  pure $ dir </> "config.json"
+configFilePath :: FilePath
+configFilePath = "configs/Core/Logger/config.json"
