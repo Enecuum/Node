@@ -105,11 +105,11 @@ spec = describe "Nodes test" $ do
     msgs <- readTVarIO tMsgs
     msgs `shouldBe`
       [ "Master node got id: NodeID \"1\"."
-      , "For the invalid request recieved Right (Left [\"invalid\"])."
+      , "For the invalid request recieved ValidationResponse (Left [\"invalid\"])."
       , "CloseConnection conn"
       , "SendRequest conn req"
       , "OpenConnection cfg"
-      , "For the valid request recieved Right (Right \"correct\")."
+      , "For the valid request recieved ValidationResponse (Right \"correct\")."
       , "CloseConnection conn"
       , "SendRequest conn req"
       , "OpenConnection cfg"
