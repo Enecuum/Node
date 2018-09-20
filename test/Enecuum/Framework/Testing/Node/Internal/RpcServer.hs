@@ -47,6 +47,6 @@ callRpc runner methods (R.RpcRequest method params reqId) =
     case method `Map.lookup` methods of
       Just justMethod -> runner $ justMethod params reqId
       Nothing -> return $ R.RpcResponseError
-          (A.String $ "The method " <> method <> " is'nt supported.")
+          (A.String $ "The method " <> method <> " isn't supported.")
           reqId
 
