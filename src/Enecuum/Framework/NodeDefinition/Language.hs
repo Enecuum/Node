@@ -22,43 +22,43 @@ data NodeDefinitionF next where
     -- | Set node tag. For example, "boot node".
     NodeTag        :: D.NodeTag -> (() -> next) -> NodeDefinitionF next
     -- | Evaluate some node model.
-    EvalNodeModel :: L.NodeModel a -> (a -> next) -> NodeDefinitionF next
+    EvalNodeL :: L.NodeL a -> (a -> next) -> NodeDefinitionF next
     -- | Serving of Rpc request.
     ServingRpc     :: PortNumber -> Free RpcMethodL () -> (() -> next) -> NodeDefinitionF next
     -- | Eval core effect.
-    EvalCoreEffectNodeDefinitionF :: L.CoreEffectModel a -> (a -> next) -> NodeDefinitionF next
+    EvalCoreEffectNodeDefinitionF :: L.CoreEffect a -> (a -> next) -> NodeDefinitionF next
 
 instance Functor NodeDefinitionF where
     fmap g (NodeTag tag next)               = NodeTag tag               (g . next)
-    fmap g (EvalNodeModel nodeModel next)   = EvalNodeModel nodeModel   (g . next)
+    fmap g (EvalNodeL nodeModel next)   = EvalNodeL nodeModel   (g . next)
     fmap g (ServingRpc port handlersF next) = ServingRpc port handlersF (g . next)
     fmap g (EvalCoreEffectNodeDefinitionF coreEffect next) = EvalCoreEffectNodeDefinitionF coreEffect (g . next)
 
-type NodeDefinitionModel next = Free NodeDefinitionF next
+type NodeDefinitionL next = Free NodeDefinitionF next
 
 -- | Sets tag for node.
-nodeTag :: D.NodeTag -> NodeDefinitionModel ()
+nodeTag :: D.NodeTag -> NodeDefinitionL ()
 nodeTag tag = liftF $ NodeTag tag id
 
 -- | Runs node scenario.
-evalNodeModel :: L.NodeModel a -> NodeDefinitionModel a
-evalNodeModel nodeModel = liftF $ EvalNodeModel nodeModel id
+evalNodeL :: L.NodeL a -> NodeDefinitionL a
+evalNodeL nodeModel = liftF $ EvalNodeL nodeModel id
 
 -- | Runs RPC server.
-servingRpc :: PortNumber -> Free RpcMethodL () -> NodeDefinitionModel ()
+servingRpc :: PortNumber -> Free RpcMethodL () -> NodeDefinitionL ()
 servingRpc port handlersF = liftF $ ServingRpc port handlersF id
 
 -- | Eval core effect.
-evalCoreEffectNodeDefinitionF :: L.CoreEffectModel a -> NodeDefinitionModel a
+evalCoreEffectNodeDefinitionF :: L.CoreEffect a -> NodeDefinitionL a
 evalCoreEffectNodeDefinitionF coreEffect = liftF $ EvalCoreEffectNodeDefinitionF coreEffect id
 
 -- | Runs scenario as initialization.
-initialization :: L.NodeModel a -> NodeDefinitionModel a
-initialization = evalNodeModel
+initialization :: L.NodeL a -> NodeDefinitionL a
+initialization = evalNodeL
 
 -- | Runs scenario.
-scenario :: L.NodeModel a -> NodeDefinitionModel a
-scenario = evalNodeModel
+scenario :: L.NodeL a -> NodeDefinitionL a
+scenario = evalNodeL
 
 instance L.Logger (Free NodeDefinitionF) where
     logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg

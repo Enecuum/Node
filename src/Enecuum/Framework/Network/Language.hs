@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GADTs #-}
 
-module Enecuum.Framework.NetworkModel.Language where
+module Enecuum.Framework.Network.Language where
 
 import           Enecuum.Prelude
 
@@ -42,24 +42,24 @@ waitForSingleResponse cfg timeout = liftF $ WaitForSingleResponse cfg timeout id
 
 -- Network model
 
-data NetworkModelF next where
-  Synchronize :: NetworkSendingL () -> NetworkListeningL a -> (a -> next) -> NetworkModelF next
-  EvalCoreEffectNetworkModelF :: L.CoreEffectModel a -> (a -> next) -> NetworkModelF next
+data NetworkF next where
+  Synchronize :: NetworkSendingL () -> NetworkListeningL a -> (a -> next) -> NetworkF next
+  EvalCoreEffectNetworkF :: L.CoreEffect a -> (a -> next) -> NetworkF next
 
-instance Functor NetworkModelF where
+instance Functor NetworkF where
   fmap g (Synchronize sending listening next) = Synchronize sending listening (g . next)
-  fmap g (EvalCoreEffectNetworkModelF coreEffect next) = EvalCoreEffectNetworkModelF coreEffect (g . next)
+  fmap g (EvalCoreEffectNetworkF coreEffect next) = EvalCoreEffectNetworkF coreEffect (g . next)
 
-type NetworkModel next = Free NetworkModelF next
+type NetworkL next = Free NetworkF next
 
-synchronize :: NetworkSendingL () -> NetworkListeningL a -> NetworkModel a
+synchronize :: NetworkSendingL () -> NetworkListeningL a -> NetworkL a
 synchronize sending listening = liftF $ Synchronize sending listening id
 
-evalCoreEffectNetworkModelF :: L.CoreEffectModel a -> NetworkModel a
-evalCoreEffectNetworkModelF coreEffect = liftF $ EvalCoreEffectNetworkModelF coreEffect id
+evalCoreEffectNetworkF :: L.CoreEffect a -> NetworkL a
+evalCoreEffectNetworkF coreEffect = liftF $ EvalCoreEffectNetworkF coreEffect id
 
-instance L.Logger (Free NetworkModelF) where
-  logMessage level msg = evalCoreEffectNetworkModelF $ L.logMessage level msg
+instance L.Logger (Free NetworkF) where
+  logMessage level msg = evalCoreEffectNetworkF $ L.logMessage level msg
 
 -- Low-level stuff
 
@@ -69,7 +69,7 @@ waitSingleResponse
   -> D.WaitingTimeout
   -> (D.NetworkConfig -> D.NetworkRequest -> NetworkSendingL ())
   -> D.NetworkRequest
-  -> NetworkModel (Maybe D.NetworkResponse)
+  -> NetworkL (Maybe D.NetworkResponse)
 waitSingleResponse cfg timeout sendingMethodF req =
   synchronize (sendingMethodF cfg req) (waitForSingleResponse cfg timeout)
 
@@ -78,7 +78,7 @@ multicastRequest
   => D.NetworkConfig
   -> D.WaitingTimeout
   -> req
-  -> NetworkModel (Maybe resp)
+  -> NetworkL (Maybe resp)
 multicastRequest cfg timeout domainRequest = do
   mbResp <- waitSingleResponse cfg timeout multicast (D.toNetworkRequest () domainRequest)
   pure $ mbResp >>= D.fromNetworkResponse ()

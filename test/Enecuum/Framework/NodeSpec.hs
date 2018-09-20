@@ -44,10 +44,10 @@ spec = describe "Nodes test" $ do
       , "SendRequest conn req"
       , "OpenConnection cfg"
       , "Eval Network"
-      , "EvalNodeModel"
+      , "EvalNodeL"
       , "Node tag: masterNode"
       , "Serving handlersF"
-      , "EvalNodeModel"
+      , "EvalNodeL"
       , "Node tag: bootNode"
       ]
 
@@ -86,11 +86,11 @@ spec = describe "Nodes test" $ do
       , "L.EvalGraph"
       , "SendRequest conn req"
       , "OpenConnection cfg"
-      , "EvalNodeModel"
+      , "EvalNodeL"
       , "Node tag: networkNode2"
       , "Serving handlersF"
       , "L.EvalGraph"
-      , "EvalNodeModel"
+      , "EvalNodeL"
       , "Node tag: networkNode1"
       ]
 
@@ -117,10 +117,10 @@ spec = describe "Nodes test" $ do
       , "SendRequest conn req"
       , "OpenConnection cfg"
       , "Eval Network"
-      , "EvalNodeModel"
+      , "EvalNodeL"
       , "Node tag: masterNode"
       , "Serving handlersF"
-      , "EvalNodeModel"
+      , "EvalNodeL"
       , "Node tag: bootNode"
       ]
 

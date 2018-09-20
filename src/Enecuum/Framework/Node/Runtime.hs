@@ -1,16 +1,18 @@
 
 module Enecuum.Framework.Node.Runtime where
 
-import    Enecuum.Prelude
-import    Enecuum.Core.Runtime
-import    Enecuum.Domain
-import    Data.HGraph.THGraph
-import    Enecuum.Core.HGraph.Interpreter
+import           Enecuum.Prelude
+
+import           Data.HGraph.THGraph (THGraph)
+
+import           Enecuum.Core.Runtime (CoreRuntime, createCoreRuntime)
+import           Enecuum.Core.HGraph.Interpreter (initHGraph)
+import qualified Enecuum.Domain as D
 
 data NodeRuntime = NodeRuntime
     { _coreRuntime  :: CoreRuntime
-    , _graphRuntime :: TVar (THGraph Transaction)
+    , _graph        :: TVar (THGraph D.Transaction)
     }
 
-makeNodeRuntime :: IO NodeRuntime
-makeNodeRuntime = NodeRuntime makeCoreRuntime <$> initHGraph
+createNodeRuntime :: IO NodeRuntime
+createNodeRuntime = NodeRuntime <$> createCoreRuntime <*> initHGraph

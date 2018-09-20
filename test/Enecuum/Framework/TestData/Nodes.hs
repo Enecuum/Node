@@ -21,16 +21,16 @@ import qualified Enecuum.Framework.TestData.TestGraph as TG
 import qualified Enecuum.Framework.Domain.Types as T
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Framework.Domain.RpcMessages
-import           Enecuum.Framework.RpcMethod.Language 
-import           Enecuum.Framework.Node.Language          ( NodeModel )
+import           Enecuum.Framework.RpcMethod.Language
+import           Enecuum.Framework.Node.Language          ( NodeL )
 
 makeRpcRequest
-    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeModel (Either Text b)
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL (Either Text b)
 makeRpcRequest connectCfg arg = L.evalNetworking $ L.makeRpcRequest connectCfg arg
-            
+
 
 makeRequestUnsafe
-    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeModel b
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL b
 makeRequestUnsafe connectCfg arg =
     (\(Right a) -> a) <$> makeRpcRequest connectCfg arg
 
@@ -50,26 +50,26 @@ masterNodeTag = "masterNode"
 
 -- | Boot node discovery sample scenario.
 -- Currently, does nothing but returns the default boot node address.
-simpleBootNodeDiscovery :: L.NetworkModel D.NodeAddress
+simpleBootNodeDiscovery :: L.NetworkL D.NodeAddress
 simpleBootNodeDiscovery = pure bootNodeAddr
 
 -- RPC handlers.
 
-acceptHello1 :: HelloRequest1 ->  NodeModel HelloResponse1
+acceptHello1 :: HelloRequest1 ->  NodeL HelloResponse1
 acceptHello1 (HelloRequest1 msg) = pure $ HelloResponse1 $ "Hello, dear. " +| msg |+ ""
 
-acceptHello2 :: HelloRequest2 ->  NodeModel HelloResponse2
+acceptHello2 :: HelloRequest2 ->  NodeL HelloResponse2
 acceptHello2 (HelloRequest2 msg) = pure $ HelloResponse2 $ "Hello, dear2. " +| msg |+ ""
 
-acceptGetHashId :: GetHashIDRequest ->  NodeModel GetHashIDResponse
+acceptGetHashId :: GetHashIDRequest ->  NodeL GetHashIDResponse
 acceptGetHashId GetHashIDRequest = pure $ GetHashIDResponse "1"
 
-acceptValidationRequest :: ValidationRequest -> L.NodeModel ValidationResponse
+acceptValidationRequest :: ValidationRequest -> L.NodeL ValidationResponse
 acceptValidationRequest req   = pure $ makeResponse $ verifyRequest req
 
 -- Scenario 1: master node can interact with boot node.
 
-bootNode :: L.NodeDefinitionModel ()
+bootNode :: L.NodeDefinitionL ()
 bootNode = do
   L.nodeTag bootNodeTag
   L.initialization $ pure $ D.NodeID "abc"
@@ -77,13 +77,13 @@ bootNode = do
     method acceptHello1
     method acceptGetHashId
 
-masterNodeInitialization :: L.NodeModel (Either Text D.NodeID)
+masterNodeInitialization :: L.NodeL (Either Text D.NodeID)
 masterNodeInitialization = do
   addr     <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
   Right (GetHashIDResponse eHashID)  <- makeRpcRequest (D.ConnectionConfig addr) GetHashIDRequest
   pure $ Right (D.NodeID eHashID)
-  
-masterNode :: L.NodeDefinitionModel ()
+
+masterNode :: L.NodeDefinitionL ()
 masterNode = do
   L.nodeTag masterNodeTag
   nodeId <- D.withSuccess $ L.initialization masterNodeInitialization
@@ -142,28 +142,28 @@ tryAddTransaction curNodeHash prevBalance change = L.getNode curNodeHash >>= \ca
       [(nextNodeHash, _)] -> tryAddTransaction nextNodeHash curBalance change
       _ -> error "In this test scenario, graph should be list-like."
 
-acceptGetBalance :: TNodeL D.Transaction -> GetBalanceRequest -> NodeModel GetBalanceResponse
+acceptGetBalance :: TNodeL D.Transaction -> GetBalanceRequest -> NodeL GetBalanceResponse
 acceptGetBalance baseNode GetBalanceRequest = do
   balance <- L.evalGraph (calculateBalance (baseNode ^. Lens.hash) 0)
   pure $ GetBalanceResponse balance
 
 
-acceptBalanceChange :: TNodeL D.Transaction -> BalanceChangeRequest -> NodeModel BalanceChangeResponse
+acceptBalanceChange :: TNodeL D.Transaction -> BalanceChangeRequest -> NodeL BalanceChangeResponse
 acceptBalanceChange baseNode (BalanceChangeRequest change) = do
   mbHashAndBalance <- L.evalGraph $ tryAddTransaction (baseNode ^. Lens.hash) 0 change
   pure $ case mbHashAndBalance of
     Nothing                        -> BalanceChangeResponse Nothing
     Just (D.StringHash _, balance) -> BalanceChangeResponse (Just balance)
 
-makeResult :: ToJSON a => Int -> a -> NodeModel RpcResponse
+makeResult :: ToJSON a => Int -> a -> NodeL RpcResponse
 makeResult i a = pure $ RpcResponseResult (A.toJSON a) i
 
-newtorkNode1Initialization :: L.NodeModel (TNodeL D.Transaction)
+newtorkNode1Initialization :: L.NodeL (TNodeL D.Transaction)
 newtorkNode1Initialization = L.evalGraph $ TG.getTransactionNode TG.nilTransaction >>= \case
   Nothing -> error "Graph is not ready: no genesis node found."
   Just baseNode -> pure baseNode
 
-networkNode1 :: L.NodeDefinitionModel ()
+networkNode1 :: L.NodeDefinitionL ()
 networkNode1 = do
   L.nodeTag "networkNode1"
   baseNode <- L.initialization newtorkNode1Initialization
@@ -173,7 +173,7 @@ networkNode1 = do
 
 
 
-networkNode2Scenario :: L.NodeModel ()
+networkNode2Scenario :: L.NodeL ()
 networkNode2Scenario = do
     let connectCfg = D.ConnectionConfig networkNode1Addr
     -- No balance change
@@ -194,14 +194,14 @@ networkNode2Scenario = do
 
 
 
-networkNode2 :: L.NodeDefinitionModel ()
+networkNode2 :: L.NodeDefinitionL ()
 networkNode2 = do
   L.nodeTag "networkNode2"
   L.scenario networkNode2Scenario
 
   -- Scenario 3: boot node can validate data  recieved from master node
 
-bootNodeValidation :: L.NodeDefinitionModel ()
+bootNodeValidation :: L.NodeDefinitionL ()
 bootNodeValidation = do
   L.nodeTag bootNodeTag
   L.initialization $ pure $ D.NodeID "abc"
@@ -209,7 +209,7 @@ bootNodeValidation = do
       method acceptGetHashId
       method acceptValidationRequest
 
-masterNodeInitializeWithValidation :: L.NodeModel (Either Text D.NodeID)
+masterNodeInitializeWithValidation :: L.NodeL (Either Text D.NodeID)
 masterNodeInitializeWithValidation = do
   addr     <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
   GetHashIDResponse eHashID  <- makeRequestUnsafe (D.ConnectionConfig addr) GetHashIDRequest
@@ -219,7 +219,7 @@ masterNodeInitializeWithValidation = do
   L.logInfo $ "For the invalid request recieved " +|| invalidRes ||+ "."
   pure $ Right (D.NodeID eHashID)
 
-masterNodeValidation :: L.NodeDefinitionModel ()
+masterNodeValidation :: L.NodeDefinitionL ()
 masterNodeValidation = do
   L.nodeTag masterNodeTag
   nodeId <- D.withSuccess $ L.initialization masterNodeInitializeWithValidation

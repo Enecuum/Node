@@ -2,15 +2,16 @@ module Enecuum.Core.Logger.Impl.HsLogger where
 
 import           Enecuum.Prelude
 
-import qualified Data.Text                 as TXT (unpack)
-import           System.IO                 (Handle)
+import qualified Data.Text                   as TXT (unpack)
+import           System.IO                   (Handle)
 import           System.Log.Formatter
-import           System.Log.Handler        (close, setFormatter)
-import           System.Log.Handler.Simple (GenericHandler, fileHandler)
+import           System.Log.Handler          (close, setFormatter)
+import           System.Log.Handler.Simple   (GenericHandler, fileHandler)
 import           System.Log.Logger
 
-import qualified Enecuum.Core.Language     as L
-import qualified Enecuum.Core.Types        as T (Format, LogLevel (..))
+import qualified Enecuum.Core.Language       as L
+import qualified Enecuum.Core.Types          as T (Format, LogLevel (..))
+import           Enecuum.Core.Logger.Runtime (LoggerRuntime)
 
 -- | Opaque type covering all information needed to teardown the logger.
 data HsLoggerHandle = HsLoggerHandle
@@ -41,8 +42,8 @@ interpretLoggerL (L.LogMessage level msg next) = do
   logM component (dispatchLogLevel level) $ TXT.unpack msg
   pure $ next ()
 
-runLoggerL :: L.LoggerL a -> IO a
-runLoggerL = foldFree interpretLoggerL
+runLoggerL :: LoggerRuntime -> L.LoggerL a -> IO a
+runLoggerL _ = foldFree interpretLoggerL
 
 -- | Setup logger required by the application.
 setupLogger :: T.Format -> FilePath -> T.LogLevel -> IO HsLoggerHandle

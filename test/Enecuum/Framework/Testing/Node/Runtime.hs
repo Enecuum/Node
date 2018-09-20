@@ -14,8 +14,8 @@ import           Enecuum.Core.Testing.Runtime.Types
 import qualified Enecuum.Framework.TestData.TestGraph                            as TG
 import           Enecuum.Framework.Testing.Environment.TestRuntime
 import qualified Enecuum.Framework.Testing.Lens                                  as RLens
-import           Enecuum.Framework.Testing.Node.Interpreters.NodeDefinitionModel (runNodeDefinitionModel)
 import           Enecuum.Framework.Testing.Types
+import           Enecuum.Framework.Testing.Node.Interpreters.NodeDefinition (runNodeDefinitionL)
 
 -- | Creates node runtime.
 createEmptyNodeRuntime
@@ -33,10 +33,10 @@ createEmptyNodeRuntime loggerRt networkControl addr = do
 startNode
   :: TestRuntime
   -> D.NodeAddress
-  -> L.NodeDefinitionModel ()
+  -> L.NodeDefinitionL ()
   -> IO NodeRuntime
 startNode testRt nodeAddr scenario = do
   nodeRt <- createEmptyNodeRuntime (testRt ^. RLens.loggerRuntime) (testRt ^. RLens.networkControl) nodeAddr
-  runNodeDefinitionModel nodeRt scenario
+  runNodeDefinitionL nodeRt scenario
   registerNode (testRt ^. RLens.registry) nodeAddr nodeRt
   pure nodeRt

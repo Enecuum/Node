@@ -1,4 +1,4 @@
-module Enecuum.Framework.Testing.Node.Interpreters.NodeModel where
+module Enecuum.Framework.Testing.Node.Interpreters.Node where
 
 import Enecuum.Prelude
 
@@ -23,8 +23,8 @@ interpretNodeL nodeRt (L.EvalNetworking networkingAction next) =
   next <$> Impl.runNetworkingL nodeRt networkingAction
 
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffect next) =
-  next <$> Impl.runCoreEffectModel (nodeRt ^. RLens.loggerRuntime) coreEffect
+  next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
 
--- | Runs node model.
-runNodeModel :: NodeRuntime -> L.NodeModel a -> IO a
-runNodeModel nodeRt = foldFree (interpretNodeL nodeRt)
+-- | Runs node language.
+runNodeL :: NodeRuntime -> L.NodeL a -> IO a
+runNodeL nodeRt = foldFree (interpretNodeL nodeRt)

@@ -10,7 +10,7 @@ import qualified Enecuum.Framework.Lens             as Lens
 
 import qualified Enecuum.Framework.Testing.Lens     as RLens
 import           Enecuum.Framework.Testing.Types
-import qualified Enecuum.Framework.Testing.Node.Interpreters.NetworkModel as Impl
+import qualified Enecuum.Framework.Testing.Node.Interpreters.Network as Impl
 import qualified Enecuum.Core.Testing.Runtime.Interpreters as Impl
 import           Enecuum.Framework.Domain.RpcMessages
 
@@ -49,10 +49,10 @@ interpretNetworkingL nodeRt (L.SendRequest conn req next) = do
 
 interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) = do
   Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "Eval Network"
-  next <$> Impl.runNetworkModel nodeRt networkAction
+  next <$> Impl.runNetworkL nodeRt networkAction
 
 interpretNetworkingL nodeRt (L.EvalCoreEffectNetworkingF coreEffect next) =
-  next <$> Impl.runCoreEffectModel (nodeRt ^. RLens.loggerRuntime) coreEffect
+  next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
 
 -- | Runs networking language.
 runNetworkingL :: NodeRuntime -> L.NetworkingL a -> IO a

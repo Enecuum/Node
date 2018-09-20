@@ -18,7 +18,7 @@ data NodeF next where
     -- | Eval networking.
     EvalNetworking :: L.NetworkingL a -> (a -> next) -> NodeF next
     -- | Eval core effect.
-    EvalCoreEffectNodeF :: L.CoreEffectModel a -> (a -> next) -> NodeF next
+    EvalCoreEffectNodeF :: L.CoreEffect a -> (a -> next) -> NodeF next
 
 instance Functor NodeF where
     fmap g (EvalGraph graph next) = EvalGraph graph (g . next)
@@ -27,18 +27,18 @@ instance Functor NodeF where
     fmap g (EvalCoreEffectNodeF coreEffect next) =
         EvalCoreEffectNodeF coreEffect (g . next)
 
-type NodeModel next = Free NodeF next
+type NodeL next = Free NodeF next
 
 -- | Eval graph.
-evalGraph :: LGraphModel a -> NodeModel a
+evalGraph :: LGraphModel a -> NodeL a
 evalGraph graph = liftF $ EvalGraph graph id
 
 -- | Eval networking.
-evalNetworking :: L.NetworkingL a -> NodeModel a
+evalNetworking :: L.NetworkingL a -> NodeL a
 evalNetworking newtorking = liftF $ EvalNetworking newtorking id
 
 -- | Eval core effect.
-evalCoreEffectNodeF :: L.CoreEffectModel a -> NodeModel a
+evalCoreEffectNodeF :: L.CoreEffect a -> NodeL a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
 instance L.Logger (Free NodeF) where

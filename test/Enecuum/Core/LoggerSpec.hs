@@ -9,6 +9,7 @@ import           Enecuum.Assets.System.Directory   (defaultLogFileName)
 import           Enecuum.Core.Logger.Config        (logConfig)
 import qualified Enecuum.Core.Logger.Impl.HsLogger as Impl
 import qualified Enecuum.Core.Logger.Language      as L
+import qualified Enecuum.Core.Logger.Runtime       as R
 import qualified Enecuum.Core.Types                as T
 
 scenario :: L.LoggerL ()
@@ -35,31 +36,35 @@ spec :: Spec
 spec = do
   describe "Logger tests" $ do
     it "Set level, filepath, format via config" $ do
+      loggerRt <- R.createLoggerRuntime
       (T.LoggerConfig format level logFile) <- logConfig
       res <- withLogFile logFile
               $ Impl.withLogger format logFile level
-              $ Impl.runLoggerL scenario
+              $ Impl.runLoggerL loggerRt scenario
       res `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
 
     it "Set level: Debug level" $ do
+      loggerRt <- R.createLoggerRuntime
       logFile <- defaultLogFileName
       res <- withLogFile logFile
               $ Impl.withLogger T.nullFormat logFile T.Debug
-              $ Impl.runLoggerL scenario
+              $ Impl.runLoggerL loggerRt scenario
       res `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
 
     it "Set level: Error level" $ do
+      loggerRt <- R.createLoggerRuntime
       logFile <- defaultLogFileName
       res <- withLogFile logFile
               $ Impl.withLogger T.nullFormat logFile T.Error
-              $ Impl.runLoggerL scenario
+              $ Impl.runLoggerL loggerRt scenario
       res `shouldBe` "Error Msg\n"
 
     it "Set format: '$prio $loggername: $msg'" $ do
+      loggerRt <- R.createLoggerRuntime
       logFile <- defaultLogFileName
       res <- withLogFile logFile
               $ Impl.withLogger T.standartFormat logFile T.Debug
-              $ Impl.runLoggerL scenario
+              $ Impl.runLoggerL loggerRt scenario
       res `shouldBe` "DEBUG Node.Main: Debug Msg\n\
                      \INFO Node.Main: Info Msg\n\
                      \WARNING Node.Main: Warning Msg\n\

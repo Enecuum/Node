@@ -1,4 +1,4 @@
-module Enecuum.Framework.Testing.Node.Interpreters.NetworkModel where
+module Enecuum.Framework.Testing.Node.Interpreters.Network where
 
 import Enecuum.Prelude
 
@@ -40,19 +40,19 @@ interpretNetworkListeningL nodeRt (L.WaitForSingleResponse cfg timeout next) = d
 runNetworkListeningL :: NodeRuntime -> L.NetworkListeningL a -> IO a
 runNetworkListeningL nodeRt = foldFree (interpretNetworkListeningL nodeRt)
 
--- | Interpret NetworkSyncL. Runs underlying NetworkListeningL and NetworkSendingL interpreters.
-interpretNetworkModel
+-- | Interpret Network. Runs underlying NetworkListeningL and NetworkSendingL interpreters.
+interpretNetwork
   :: NodeRuntime
-  -> L.NetworkModelF a
+  -> L.NetworkF a
   -> IO a
-interpretNetworkModel nodeRt (L.Synchronize sending listening next) = do
+interpretNetwork nodeRt (L.Synchronize sending listening next) = do
   Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "Synchronize"
   runNetworkSendingL nodeRt sending
   next <$> runNetworkListeningL nodeRt listening
 
-interpretNetworkModel nodeRt (L.EvalCoreEffectNetworkModelF coreEffect next) =
-  next <$> Impl.runCoreEffectModel (nodeRt ^. RLens.loggerRuntime) coreEffect
+interpretNetwork nodeRt (L.EvalCoreEffectNetworkF coreEffect next) =
+  next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
 
--- | Runs NetworkModel language.
-runNetworkModel :: NodeRuntime -> L.NetworkModel a -> IO a
-runNetworkModel nodeRt = foldFree (interpretNetworkModel nodeRt)
+-- | Runs Network language.
+runNetworkL :: NodeRuntime -> L.NetworkL a -> IO a
+runNetworkL nodeRt = foldFree (interpretNetwork nodeRt)

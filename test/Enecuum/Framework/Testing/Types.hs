@@ -11,6 +11,8 @@ import qualified Enecuum.Domain                       as D
 import qualified Enecuum.Framework.Domain.Types       as T
 import           Enecuum.Framework.Domain.RpcMessages
 
+import qualified Enecuum.Framework.TestData.TestGraph as TG
+
 -- | Defines control requests to manipulate by nodes.
 data ControlRequest
   = RpcRequest RpcRequest       -- ^ Eval RPC request to a node.

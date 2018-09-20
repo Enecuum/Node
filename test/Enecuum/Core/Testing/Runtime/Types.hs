@@ -7,7 +7,7 @@ import           Enecuum.Core.Logger.Language
 import qualified Enecuum.Core.Types           as T
 import           Enecuum.Prelude
 
--- | Logger runtime. Configure logger
+-- | Logger runtime. Stores messages.
 data LoggerRuntime = LoggerRuntime
   { _messages     :: TVar [Text]
   }

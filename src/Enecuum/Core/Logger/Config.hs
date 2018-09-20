@@ -18,5 +18,4 @@ logConfig = do
   let (T.LoggerConfig _ _ logFile) = conf
   let dir = dropFileName logFile
   createFilePath dir
-  print "logConfig"
   pure conf
