@@ -17,6 +17,7 @@ import           Enecuum.Framework.Networking.Language
 import           Enecuum.Framework.NetworkModel.Language
 import           Enecuum.Framework.Networking.Interpreter
 import           Enecuum.Framework.Domain.RpcMessages
+import           Enecuum.Framework.Node.Runtime
 
 
 spec :: Spec
@@ -32,7 +33,8 @@ serverMethodes = do
 
 rpcServerStart :: Test
 rpcServerStart = TestCase $ do
-    runNodeDefinitionL $ servingRpc serverMethodes
+    nr <- makeNodeRuntime
+    runNodeDefinitionL nr $ servingRpc serverMethodes
     assertBool "" True
 
 rpcServerTestOk :: Test
