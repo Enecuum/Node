@@ -11,7 +11,9 @@ import qualified Data.Aeson                    as A
 -- Dummy config
 data Config = Config
   { bootNodeAddress :: Text
-
+  , bootNode :: Bool
+  , networkNode :: Bool
+  , extPort :: Int 
   }
   deriving (Generic, FromJSON)
 
