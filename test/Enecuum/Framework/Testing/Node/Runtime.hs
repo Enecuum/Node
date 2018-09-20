@@ -3,26 +3,23 @@ module Enecuum.Framework.Testing.Node.Runtime where
 
 import           Enecuum.Prelude
 
-import qualified Data.Map as Map
+import qualified Data.Map                                                        as Map
 
-import qualified Enecuum.Domain                     as D
-import qualified Enecuum.Language                   as L
-import qualified Enecuum.Framework.Lens             as Lens
+import qualified Enecuum.Domain                                                  as D
+import qualified Enecuum.Framework.Lens                                          as Lens
+import qualified Enecuum.Language                                                as L
 
 import           Enecuum.Core.Testing.Runtime.Types
 
-import           Enecuum.Framework.Testing.Types
-import qualified Enecuum.Framework.Testing.Lens as RLens
-
-import           Enecuum.Core.Testing.Runtime.Logger.Impl
-
+import qualified Enecuum.Framework.TestData.TestGraph                            as TG
 import           Enecuum.Framework.Testing.Environment.TestRuntime
+import qualified Enecuum.Framework.Testing.Lens                                  as RLens
 import           Enecuum.Framework.Testing.Node.Interpreters.NodeDefinitionModel (runNodeDefinitionModel)
-import qualified Enecuum.Framework.TestData.TestGraph as TG
+import           Enecuum.Framework.Testing.Types
 
 -- | Creates node runtime.
 createEmptyNodeRuntime
-  :: LoggerRuntime
+  :: LoggerRuntimeMemory
   -> Control
   -> D.NodeAddress
   -> IO NodeRuntime

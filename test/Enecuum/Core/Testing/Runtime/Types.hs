@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 module Enecuum.Core.Testing.Runtime.Types where
 
 
@@ -6,19 +7,21 @@ import           Enecuum.Prelude
 
 
 -- | Logger runtime. Configure logger
-data LoggerRuntime = LoggerRuntime
-  { _messages      :: TVar [Text]
-  , _currentFormat :: T.Format
-  , _currentLevel  :: TVar T.LogLevel
-  , _logFilePath   :: FilePath
+data LoggerRuntimeMemory = LoggerRuntimeMemory
+  { _messages     :: TVar [Text]
   }
 
+-- | Logger runtime. Configure logger
+data LoggerRuntimeFile = LoggerRuntimeFile
+  { _loggerConfig :: TVar T.LoggerConfig
+  }
 
-createLoggerRuntime :: T.LogLevel -> T.Format -> FilePath -> IO LoggerRuntime
-createLoggerRuntime level format logFile = do
+createLoggerRuntimeMemory :: IO LoggerRuntimeMemory
+createLoggerRuntimeMemory = do
   mes <- newTVarIO []
-  lvl <- newTVarIO level
-  pure $ LoggerRuntime {_messages = mes,
-                        _currentLevel = lvl,
-                        _currentFormat = format,
-                        _logFilePath = logFile }
+  pure $ LoggerRuntimeMemory {_messages = mes }
+
+createLoggerRuntimeFile :: T.LoggerConfig -> IO LoggerRuntimeFile
+createLoggerRuntimeFile config = do
+  configT <- newTVarIO config
+  pure $ LoggerRuntimeFile { _loggerConfig = configT }

@@ -1,16 +1,23 @@
 module Enecuum.Core.Testing.Runtime.Logger.LoggerSpec where
 
-import           Enecuum.Core.Logger.Config               (logConfig)
-import           Enecuum.Core.System.Directory            (appFileName,
-                                                           defaultLogFileName)
-import           Enecuum.Core.Testing.Runtime.Logger.Impl
-import qualified Enecuum.Core.Types.Logger                as T
+import           Control.Concurrent.Chan.Unagi.Bounded
+import           Enecuum.Core.Logger.Config                   (logConfig)
+import           Enecuum.Core.Logger.Language
+import           Enecuum.Core.System.Directory                (appFileName, defaultLogFileName)
+import           Enecuum.Core.Testing.Runtime.Logger.ImplFile (runLoggerL)
+import           Enecuum.Core.Testing.Runtime.Types           (createLoggerRuntimeFile)
+import qualified Enecuum.Core.Types.Logger                    as T
 import           Enecuum.Prelude
 import           System.Directory
 import           Test.Hspec
 
+loggerTest = do
+    logMessage T.Debug "Debug Msg"
+    logMessage T.Info "Info Msg"
+    logMessage T.Warning "Warning Msg"
+    logMessage T.Error "Error Msg"
 
--- | Idempotent function: write log to file
+-- | Idempotent function: write log to file -- TODO change to tempFile
 writeLog :: (FilePath -> IO a)  -- ^ The real writeLog Function
          -> FilePath            -- ^ The filepath to log
          -> IO Text             -- ^ The content of log
@@ -21,6 +28,12 @@ writeLog doIO logFile = do
   content <- readFile logFile
   removeFile logFile
   pure content
+
+-- | Initialize Logger Runtime and run test
+loggerTestSet :: T.LogLevel -> T.Format -> FilePath -> IO ()
+loggerTestSet level format filePath = do
+  loggerRuntime <- createLoggerRuntimeFile (T.LoggerConfig format level filePath)
+  runLoggerL loggerRuntime loggerTest
 
 spec :: Spec
 spec = do

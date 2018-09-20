@@ -2,14 +2,14 @@
 
 module Enecuum.Framework.Testing.Types where
 
-import Enecuum.Prelude
+import           Enecuum.Prelude
 
-import qualified Data.Map as Map
+import qualified Data.Map                             as Map
 
-import qualified Enecuum.Domain                       as D
 import           Enecuum.Core.Testing.Runtime.Types
-import qualified Enecuum.Framework.TestData.TestGraph as TG
+import qualified Enecuum.Domain                       as D
 import qualified Enecuum.Framework.Domain.Types       as T
+import qualified Enecuum.Framework.TestData.TestGraph as TG
 
 -- | Defines control requests to manipulate by nodes.
 data ControlRequest
@@ -40,7 +40,7 @@ data RpcServerHandle = RpcServerHandle
 
 -- | Test runtime for every node acting within a particular test runtime.
 data NodeRuntime = NodeRuntime
-  { _loggerRuntime  :: LoggerRuntime          -- ^ Logger runtime.
+  { _loggerRuntime  :: LoggerRuntimeMemory    -- ^ Logger runtime.
   , _networkControl :: Control                -- ^ Control interface for virtual network.
   , _address        :: D.NodeAddress          -- ^ Address of this node.
   , _tag            :: TVar D.NodeTag         -- ^ Tag of this node.
@@ -57,8 +57,8 @@ type NodesRegistry = TMVar (Map.Map D.NodeAddress NodeRuntime)
 -- from one node to another, it can make RPC requests to nodes,
 -- and can evaluate some control requests over the test network.
 data TestRuntime = TestRuntime
-  { _loggerRuntime   :: LoggerRuntime     -- ^ Logger runtime.
-  , _networkWorkerId :: ThreadId          -- ^ Network environment thread ID.
-  , _networkControl  :: Control           -- ^ Network environment control interface
-  , _registry        :: NodesRegistry     -- ^ Tag of this node.
+  { _loggerRuntime   :: LoggerRuntimeMemory -- ^ Logger runtime.
+  , _networkWorkerId :: ThreadId            -- ^ Network environment thread ID.
+  , _networkControl  :: Control             -- ^ Network environment control interface
+  , _registry        :: NodesRegistry       -- ^ Tag of this node.
   }

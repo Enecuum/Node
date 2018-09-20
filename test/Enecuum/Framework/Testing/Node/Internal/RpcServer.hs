@@ -2,17 +2,17 @@ module Enecuum.Framework.Testing.Node.Internal.RpcServer where
 
 import           Enecuum.Prelude
 
-import qualified Data.Map as Map
+import qualified Data.Map                                              as Map
 
-import qualified Enecuum.Domain                     as D
-import qualified Enecuum.Language                   as L
-import qualified Enecuum.Framework.Lens             as Lens
+import qualified Enecuum.Domain                                        as D
+import qualified Enecuum.Framework.Lens                                as Lens
+import qualified Enecuum.Language                                      as L
 
 import           Enecuum.Core.Testing.Runtime.Types
-import           Enecuum.Core.Testing.Runtime.Logger.Impl
+-- import           Enecuum.Core.Testing.Runtime.Logger.Impl
 
+import qualified Enecuum.Framework.Testing.Lens                        as RLens
 import           Enecuum.Framework.Testing.Types
-import qualified Enecuum.Framework.Testing.Lens as RLens
 
 import           Enecuum.Framework.Testing.Node.Interpreters.NodeModel
 
@@ -39,7 +39,7 @@ startNodeRpcServer nodeRt handlersF = do
       case req of
         RpcRequest (D.RpcRequest rawDataIn) -> makeRpcRequest control rawDataIn
         _                                   -> error "Unknown ControlRequest."
-    
+
     makeRpcRequest control rawDataIn = do
       let (handler, _) = handlersF (pure Nothing, rawDataIn)
       mbResult <- runNodeModel nodeRt handler
