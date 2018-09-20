@@ -12,13 +12,14 @@ import qualified Enecuum.Framework.Testing.Lens     as RLens
 import           Enecuum.Framework.Testing.Types
 import qualified Enecuum.Framework.Testing.Node.Interpreters.NetworkModel as Impl
 import qualified Enecuum.Core.Testing.Runtime.Interpreters as Impl
+import           Enecuum.Framework.Domain.RpcMessages
 
 -- | Relay request from this node to the network environment.
 relayRequest
   :: NodeRuntime
   -> D.Connection
-  -> D.RpcRequest
-  -> IO (D.RpcResult D.RpcResponse)
+  -> RpcRequest
+  -> IO (Either Text RpcResponse)
 relayRequest nodeRt conn req = do
   atomically
       $ putTMVar (nodeRt ^. RLens.networkControl . RLens.request)

@@ -2,7 +2,8 @@ module Enecuum.Framework.Testing.Node.Internal.RpcServer where
 
 import           Enecuum.Prelude
 
-import qualified Data.Map                                              as Map
+import qualified Data.Map as Map
+import qualified Data.Aeson as A
 
 import qualified Enecuum.Domain                                        as D
 import qualified Enecuum.Framework.Lens                                as Lens
@@ -15,35 +16,37 @@ import qualified Enecuum.Framework.Testing.Lens                        as RLens
 import           Enecuum.Framework.Testing.Types
 
 import           Enecuum.Framework.Testing.Node.Interpreters.NodeModel
+import qualified Enecuum.Framework.Domain.RpcMessages as R
 
 -- TODO: consider to use forever.
 -- | Node RPC server worker.
-startNodeRpcServer
-  :: NodeRuntime
-  -> L.HandlersF
-  -> IO ()
-startNodeRpcServer nodeRt handlersF = do
+
+startNodeRpcServer nodeRt port methodVar = do
+  methods <- readTVarIO methodVar
   control <- Control <$> newEmptyTMVarIO <*> newEmptyTMVarIO
-  tId <- forkIO $ go 0 control
+  tId <- forkIO $ go 0 control methods
 
   let handle = RpcServerHandle tId control
-  atomically $ putTMVar (nodeRt ^. RLens.rpcServer) handle
+  atomically $ putTMVar ( nodeRt ^. RLens.rpcServer) handle
 
   where
-    go :: Integer -> Control -> IO ()
-    go iteration control = act iteration control >> go (iteration + 1) control
 
-    act :: Integer -> Control -> IO ()
-    act _ control = do
+    go iteration control methods = do
+      act iteration control methods
+      go (iteration + 1) control methods
+
+    act _ control methods = do
       req <- atomically $ takeTMVar $ control ^. RLens.request
       case req of
-        RpcRequest (D.RpcRequest rawDataIn) -> makeRpcRequest control rawDataIn
+        RpcRequest req -> do
+          resp <- callRpc (runNodeModel nodeRt) methods req
+          atomically $ putTMVar (control ^. RLens.response) (AsRpcResponse resp)
         _                                   -> error "Unknown ControlRequest."
 
-    makeRpcRequest control rawDataIn = do
-      let (handler, _) = handlersF (pure Nothing, rawDataIn)
-      mbResult <- runNodeModel nodeRt handler
-      let resp = case mbResult of
-            Nothing         -> AsErrorResponse $ "Method is not supported: " +|| rawDataIn ||+ ""
-            Just rawDataOut -> AsRpcResponse   $ D.RpcResponse rawDataOut
-      atomically $ putTMVar (control ^. RLens.response) resp
+callRpc runner methods (R.RpcRequest method params reqId) =
+    case method `Map.lookup` methods of
+      Just justMethod -> runner $ justMethod params reqId
+      Nothing -> return $ R.RpcResponseError
+          (A.String $ "The method " <> method <> " isn't supported.")
+          reqId
+
