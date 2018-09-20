@@ -1,6 +1,7 @@
 module Enecuum.Core.Testing.Runtime.Logger.LoggerSpec where
 
-import           Control.Concurrent.Chan.Unagi.Bounded
+-- import           Control.Concurrent.Chan.Unagi.Bounded
+import           Control.Concurrent.Chan
 import           Enecuum.Core.Logger.Config                   (logConfig)
 import           Enecuum.Core.Logger.Language
 import           Enecuum.Core.System.Directory                (appFileName, defaultLogFileName)
@@ -12,6 +13,7 @@ import           System.Directory
 import           Test.Hspec
 
 loggerTest = do
+    -- setupFile T.Debug "log" T.standartFormat
     logMessage T.Debug "Debug Msg"
     logMessage T.Info "Info Msg"
     logMessage T.Warning "Warning Msg"
@@ -32,7 +34,13 @@ writeLog doIO logFile = do
 -- | Initialize Logger Runtime and run test
 loggerTestSet :: T.LogLevel -> T.Format -> FilePath -> IO ()
 loggerTestSet level format filePath = do
-  loggerRuntime <- createLoggerRuntimeFile (T.LoggerConfig format level filePath)
+  fileChan <- newChan
+  loggerRuntime <- createLoggerRuntimeFile fileChan (T.LoggerConfig format level filePath)
+  -- setupFile level filePath format
+  -- forkIO $ forever $ do
+  --   content <- getChanContents fileChan
+  --   print "hello"
+    --write to file
   runLoggerL loggerRuntime loggerTest
 
 spec :: Spec

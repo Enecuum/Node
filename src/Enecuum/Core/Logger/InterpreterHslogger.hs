@@ -39,10 +39,9 @@ teardownLogger handle = do
 -- | Bracket an IO action which denotes the whole scope where the loggers of
 -- the application are needed to installed. Sets them up before running the action
 -- and tears them down afterwards. Even in case of an exception.
-withLogger :: Format -> FilePath -> Priority -> IO c -> IO c
-withLogger format logFileName level = bracket setupLoggerNew teardownLogger . const
+-- withLogger :: Format -> FilePath -> Priority -> IO c -> IO c
+withLogger format logFileName level = bracket setupLoggerNew teardownLogger . const  --msg
   where setupLoggerNew = setupLogger format logFileName level
-
 
 -- | Dispatch log level from the LoggerL language
 -- to the relevant log level of hslogger package
@@ -55,11 +54,12 @@ dispatchLogLevel Error   = ERROR
 
 -- | Base primitive for the LoggerL language.
 interpretLoggerL ::  L.LoggerF a -> IO a
-interpretLoggerL (L.LogMessageWithConfig fileLevel logFilename format logLevel msg next) = do
-  withLogger format logFilename (dispatchLogLevel fileLevel) $
-    logM comp (dispatchLogLevel logLevel) $ TXT.unpack msg
+interpretLoggerL (L.LogMessage level msg next) = do
+  logM comp (dispatchLogLevel level) $ TXT.unpack msg
   pure $ next ()
-interpretLoggerL _ = error $ "Expect only LogMessageWithConfig"
+
+interpretLoggerL (L.SetupFile fileLevel logFilename format next) = do -- msg
+  withLogger format logFilename (dispatchLogLevel fileLevel) $ pure $ next ()
 
 
 -- | 'comp' is short for 'component'
