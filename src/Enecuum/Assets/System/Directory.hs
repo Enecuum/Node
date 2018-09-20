@@ -1,4 +1,4 @@
-module Enecuum.Core.System.Directory where
+module Enecuum.Assets.System.Directory where
 
 import           Enecuum.Prelude
 import           System.Directory (createDirectoryIfMissing, getHomeDirectory)

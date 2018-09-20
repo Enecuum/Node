@@ -5,8 +5,6 @@ module Enecuum.Core.Testing.Runtime.Lens where
 
 import           Enecuum.Prelude                    (makeFieldsNoPrefix)
 
-import           Enecuum.Core.Testing.Runtime.Types (LoggerRuntimeFile,
-                                                     LoggerRuntimeMemory)
+import           Enecuum.Core.Testing.Runtime.Types (LoggerRuntime)
 
-makeFieldsNoPrefix ''LoggerRuntimeMemory
-makeFieldsNoPrefix ''LoggerRuntimeFile
+makeFieldsNoPrefix ''LoggerRuntime

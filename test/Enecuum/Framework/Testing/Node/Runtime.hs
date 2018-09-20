@@ -19,7 +19,7 @@ import           Enecuum.Framework.Testing.Types
 
 -- | Creates node runtime.
 createEmptyNodeRuntime
-  :: LoggerRuntimeMemory
+  :: LoggerRuntime
   -> Control
   -> D.NodeAddress
   -> IO NodeRuntime

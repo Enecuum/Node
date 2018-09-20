@@ -1,12 +1,14 @@
 module Enecuum.Core.Logger.Config where
 
-import           Data.Aeson
-import qualified Data.ByteString.Lazy          as L
-import           Enecuum.Core.Lens
-import           Enecuum.Core.System.Directory (configFilePath)
-import qualified Enecuum.Core.Types            as T
 import           Enecuum.Prelude
+
+import           Data.Aeson
+import qualified Data.ByteString.Lazy            as L
 import           System.Environment
+
+import           Enecuum.Core.Lens
+import           Enecuum.Assets.System.Directory (configFilePath)
+import qualified Enecuum.Core.Types              as T
 
 logConfig :: IO T.LoggerConfig
 logConfig = do
