@@ -24,7 +24,8 @@ import qualified Enecuum.Framework.Node.Interpreter        as Impl
 
 
 interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF a -> IO a
-interpretNodeDefinitionL _ (L.NodeTag tag next) =
+interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
+    atomically $ writeTVar (nodeRt ^. RLens.nodeTag) tag
     pure $ next ()
 
 interpretNodeDefinitionL nodeRt (L.EvalNodeL initScript next) =

@@ -22,6 +22,7 @@ data NodeRuntime = NodeRuntime
     , _servers      :: TVar (Map PortNumber (TChan ServerComand))
     , _varCounter   :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
     , _state        :: NodeState              -- ^ State of node.
+    , _nodeTag      :: TVar Text
     }
 
 createNodeRuntime :: CoreRuntime -> IO NodeRuntime
@@ -31,6 +32,7 @@ createNodeRuntime coreRt = NodeRuntime
     <*> newTVarIO mempty
     <*> newTMVarIO 0
     <*> newTMVarIO Map.empty
+    <*> newTVarIO ""
 
 -- TODO: more wise clearing here.
 clearNodeRuntime :: NodeRuntime -> IO ()
