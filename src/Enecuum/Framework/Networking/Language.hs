@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GADTs #-}
 
 module Enecuum.Framework.Networking.Language where
