@@ -30,8 +30,21 @@ initialize config = do
     nodeRt <- createNodeRuntime coreRt
 
     putStrLn @Text "Starting node..."
-    -- when (bootNode config)   $ runNodeDefinitionL nodeRt $ S.bootNode   config
-    -- when (masterNode config) $ runNodeDefinitionL nodeRt $ S.masterNode config
+    when (bootNode config) $ do
+        putStrLn @Text "Starting boot node..."
+        runNodeDefinitionL nodeRt $ S.bootNode config
+
+        -- TODO: this is a quick hack. Make it right.
+        threadDelay $ 1000 * 1000 * 1000
+        putStrLn @Text "Boot node done."
+
+    when (masterNode config) $ do
+        putStrLn @Text "Starting master node..."
+        runNodeDefinitionL nodeRt $ S.masterNode config
+
+        -- TODO: this is a quick hack. Make it right.
+        threadDelay $ 1000 * 1000 * 1000
+        putStrLn @Text "Master node done."
 
     putStrLn @Text "Clearing node runtime..."
     clearNodeRuntime nodeRt
