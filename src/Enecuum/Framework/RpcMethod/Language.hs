@@ -50,8 +50,6 @@ class MethodMaker a where
 instance (Typeable a, Typeable b, ToJSON b, FromJSON a) => MethodMaker (a -> NodeL b) where
     method f = rpcMethod (makeMethodName f) (makeMethod f)
 
-instance (Typeable a, Typeable b, ToJSON b, FromJSON a) => MethodMaker (a -> NodeL (Either Text b)) where
-    method f = rpcMethod (makeMethodName f) (makeMethod' f)
 
 makeMethodName :: Typeable a => a -> Text
 makeMethodName = T.pack . takeWhile (/= ' ') . show . typeOf
