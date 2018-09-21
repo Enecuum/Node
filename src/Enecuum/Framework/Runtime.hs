@@ -34,6 +34,4 @@ createNodeRuntime coreRt = NodeRuntime
 
 -- TODO: more wise clearing here.
 clearNodeRuntime :: NodeRuntime -> IO ()
-clearNodeRuntime nodeRt = do
-    atomically $ putTMVar (_state nodeRt) Map.empty
-    atomically $ putTMVar (_varCounter nodeRt) 0
+clearNodeRuntime nodeRt = pure ()
