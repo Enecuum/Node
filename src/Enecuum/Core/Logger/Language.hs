@@ -3,15 +3,13 @@
 
 module Enecuum.Core.Logger.Language where
 
-import qualified Enecuum.Core.Types as T (LogLevel (..))
+import qualified Enecuum.Core.Types as T (LogLevel (..), Message)
 import           Enecuum.Prelude
-
-type Message = Text
 
 -- | Language for logging.
 data LoggerF next where
   -- | Log message with a predefined level.
-  LogMessage :: T.LogLevel -> Message -> (() -> next) -> LoggerF next
+  LogMessage :: T.LogLevel -> T.Message -> (() -> next) -> LoggerF next
 
 instance Functor LoggerF where
   fmap g (LogMessage level msg next) = LogMessage level msg (g . next)
@@ -19,23 +17,23 @@ instance Functor LoggerF where
 type LoggerL next = Free LoggerF next
 
 class Logger m where
-  logMessage :: T.LogLevel -> Message -> m ()
+  logMessage :: T.LogLevel -> T.Message -> m ()
 
 instance Logger (Free LoggerF) where
   logMessage level msg = liftF $ LogMessage level msg id
 
 -- | Log message with Info level.
-logInfo :: Logger m => Message -> m ()
+logInfo :: Logger m => T.Message -> m ()
 logInfo = logMessage T.Info
 
 -- | Log message with Error level.
-logError :: Logger m => Message -> m ()
+logError :: Logger m => T.Message -> m ()
 logError = logMessage T.Error
 
 -- | Log message with Debug level.
-logDebug :: Logger m => Message -> m ()
+logDebug :: Logger m => T.Message -> m ()
 logDebug = logMessage T.Debug
 
 -- | Log message with Warning level.
-logWarning :: Logger m => Message -> m ()
+logWarning :: Logger m => T.Message -> m ()
 logWarning = logMessage T.Warning

@@ -17,10 +17,12 @@ import           Enecuum.Interpreters
 import           Enecuum.Language
 import qualified Enecuum.Framework.Domain.RpcMessages as R
 import           Enecuum.Framework.Domain.RpcMessages
-import           Enecuum.Framework.Node.Runtime
+import qualified Enecuum.Runtime as Rt
 import           Enecuum.Framework.Node.Language          ( NodeL )
 import qualified Enecuum.Domain                as D
 import           Enecuum.Framework.Networking.Interpreter
+
+createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.createNodeRuntime
 
 data OkRequest = OkRequest deriving (Show, Eq, Generic, ToJSON, FromJSON)
 data OkResponse = OkResponse deriving (Show, Eq, Generic, ToJSON, FromJSON)

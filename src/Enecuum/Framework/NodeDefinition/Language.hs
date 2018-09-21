@@ -24,17 +24,18 @@ data NodeDefinitionF next where
     -- | Evaluate some node model.
     EvalNodeL :: L.NodeL a -> (a -> next) -> NodeDefinitionF next
     -- | Serving of Rpc request.
-    ServingRpc     :: PortNumber -> Free RpcMethodL () -> (() -> next) -> NodeDefinitionF next
+    ServingRpc     :: PortNumber -> RpcMethodL () -> (() -> next) -> NodeDefinitionF next
+    -- | Stop serving of Rpc server.
+    StopServing    :: PortNumber -> (() -> next) -> NodeDefinitionF next
     -- | Eval core effect.
     EvalCoreEffectNodeDefinitionF :: L.CoreEffect a -> (a -> next) -> NodeDefinitionF next
-    StopServing    :: PortNumber -> (() -> next) -> NodeDefinitionF next
 
 instance Functor NodeDefinitionF where
     fmap g (NodeTag tag next)               = NodeTag tag               (g . next)
-    fmap g (EvalNodeL nodeModel next)   = EvalNodeL nodeModel   (g . next)
+    fmap g (EvalNodeL nodeModel next)       = EvalNodeL nodeModel       (g . next)
     fmap g (ServingRpc port handlersF next) = ServingRpc port handlersF (g . next)
+    fmap g (StopServing port next)          = StopServing port          (g . next)
     fmap g (EvalCoreEffectNodeDefinitionF coreEffect next) = EvalCoreEffectNodeDefinitionF coreEffect (g . next)
-    fmap g (StopServing port next)          = StopServing port (g . next)
 
 type NodeDefinitionL next = Free NodeDefinitionF next
 
@@ -47,7 +48,7 @@ evalNodeL :: L.NodeL a -> NodeDefinitionL a
 evalNodeL nodeModel = liftF $ EvalNodeL nodeModel id
 
 -- | Runs RPC server.
-servingRpc :: PortNumber -> Free RpcMethodL () -> NodeDefinitionL ()
+servingRpc :: PortNumber -> RpcMethodL () -> NodeDefinitionL ()
 servingRpc port handlersF = liftF $ ServingRpc port handlersF id
 
 -- | Eval core effect.

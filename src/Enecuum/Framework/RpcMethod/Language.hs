@@ -12,16 +12,17 @@ import qualified Data.Text as T
 import           Data.Typeable
 
 -- | Rpc server description language.
-data RpcMethodL a where
+data RpcMethodF a where
   -- | Set rpc method to list.
-  RpcMethod :: Text -> RpcMethod -> (() -> a)  -> RpcMethodL a
+  RpcMethod :: Text -> RpcMethod -> (() -> a)  -> RpcMethodF a
 
-instance Functor RpcMethodL where
+instance Functor RpcMethodF where
   fmap g (RpcMethod text method next) = RpcMethod text method (g . next)
 
 type RpcMethod = A.Value -> Int -> NodeL RpcResponse
+type RpcMethodL a = Free RpcMethodF a
 
-rpcMethod :: Text -> RpcMethod -> Free RpcMethodL ()
+rpcMethod :: Text -> RpcMethod -> RpcMethodL ()
 rpcMethod text method = liftF (RpcMethod text method id)
 
 
@@ -44,7 +45,7 @@ makeMethod' f a i = case A.fromJSON a of
 
 
 class MethodMaker a where
-    method :: a -> Free RpcMethodL ()
+    method :: a -> RpcMethodL ()
 
 instance (Typeable a, Typeable b, ToJSON b, FromJSON a) => MethodMaker (a -> NodeL b) where
     method f = rpcMethod (makeMethodName f) (makeMethod f)

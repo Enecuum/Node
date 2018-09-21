@@ -3,8 +3,12 @@
 {-# LANGUAGE FunctionalDependencies #-}
 
 -- | Lenses for Core types.
-module Enecuum.Core.Lens
-  ( module X
-  ) where
+module Enecuum.Core.Lens where
 
-import Enecuum.Core.HGraph.Lens as X
+import           Control.Lens              ( makeFieldsNoPrefix, makeLenses )
+
+import           Enecuum.Core.HGraph.Types (HNode)
+import           Enecuum.Core.Types.Logger (LoggerConfig)
+
+makeLenses         ''HNode
+makeFieldsNoPrefix ''LoggerConfig

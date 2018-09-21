@@ -2,8 +2,6 @@ module Enecuum.Framework.Testing.Node.Interpreters.Node where
 
 import Enecuum.Prelude
 
-import           Control.Monad.Free                                     (foldFree)
-
 import qualified Enecuum.Language                                       as L
 import           Enecuum.Core.HGraph.Interpreters.IO                    (runHGraphIO)
 

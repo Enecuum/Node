@@ -7,6 +7,6 @@ module Enecuum.Framework.RLens where
 
 import           Control.Lens             ( makeFieldsNoPrefix )
 
-import           Enecuum.Framework.Node.Runtime
+import           Enecuum.Framework.Runtime
 
 makeFieldsNoPrefix ''NodeRuntime

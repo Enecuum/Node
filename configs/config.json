@@ -2,5 +2,11 @@
     "bootNodeAddress": "[((127,0,0,1), 1554)]",
     "bootNode": false,
     "masterNode": true,
-    "extPort": 1667
+    "extPort": 1667,
+    "loggerConfig":
+        {
+            "format": "$prio $loggername: $msg",
+            "level": "Debug",
+            "logFilePath": ""
+        }
 }

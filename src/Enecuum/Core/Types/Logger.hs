@@ -21,6 +21,8 @@ data LoggerConfig = LoggerConfig
 instance ToJSON LoggerConfig where toJSON = genericToJSON noLensPrefix
 instance FromJSON LoggerConfig where parseJSON = genericParseJSON noLensPrefix
 
+type Message = Text
+
 standartFormat :: String
 standartFormat = "$prio $loggername: $msg"
 
