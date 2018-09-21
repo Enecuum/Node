@@ -12,7 +12,9 @@ import           Enecuum.Interpreters
 import           Enecuum.Language
 import qualified Enecuum.Framework.Domain.RpcMessages as R
 import           Enecuum.Framework.Domain.RpcMessages
-import           Enecuum.Framework.Node.Runtime
+import qualified Enecuum.Runtime as Rt
+
+createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.createNodeRuntime
 
 -- Tests disabled
 spec :: Spec

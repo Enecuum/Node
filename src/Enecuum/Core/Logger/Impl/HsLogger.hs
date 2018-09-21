@@ -11,7 +11,6 @@ import           System.Log.Logger
 
 import qualified Enecuum.Core.Language       as L
 import qualified Enecuum.Core.Types          as T (Format, LogLevel (..))
-import           Enecuum.Core.Logger.Runtime (LoggerRuntime)
 
 -- | Opaque type covering all information needed to teardown the logger.
 data HsLoggerHandle = HsLoggerHandle
@@ -42,8 +41,8 @@ interpretLoggerL (L.LogMessage level msg next) = do
   logM component (dispatchLogLevel level) $ TXT.unpack msg
   pure $ next ()
 
-runLoggerL :: LoggerRuntime -> L.LoggerL a -> IO a
-runLoggerL _ = foldFree interpretLoggerL
+runLoggerL :: L.LoggerL a -> IO a
+runLoggerL = foldFree interpretLoggerL
 
 -- | Setup logger required by the application.
 setupLogger :: T.Format -> FilePath -> T.LogLevel -> IO HsLoggerHandle

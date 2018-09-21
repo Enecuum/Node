@@ -13,39 +13,37 @@ import           Enecuum.Legacy.Refact.Network.Server
 
 import           Enecuum.Framework.Node.Interpreter
 import           Enecuum.Framework.RpcMethod.Interpreter
-import           Enecuum.Framework.RpcMethod.Language     as L
-import           Enecuum.Framework.Node.Language          hiding (atomically)
 import           Enecuum.Framework.Domain.RpcMessages
-import           Enecuum.Framework.Node.Runtime
-import           Enecuum.Framework.Lens
-import           Enecuum.Framework.NodeDefinition.Language hiding (atomically)
+import           Enecuum.Framework.Runtime                 (NodeRuntime)
+import qualified Enecuum.Framework.Lens
+import qualified Enecuum.Framework.Language                as L
 import qualified Enecuum.Core.RLens                        as RLens
 import qualified Enecuum.Framework.RLens                   as RLens
 import qualified Enecuum.Core.Interpreters                 as Impl
 import qualified Enecuum.Framework.Node.Interpreter        as Impl
 
 
-interpretNodeDefinitionL :: NodeRuntime -> NodeDefinitionF a -> IO a
-interpretNodeDefinitionL _ (NodeTag tag next) =
+interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF a -> IO a
+interpretNodeDefinitionL _ (L.NodeTag tag next) =
     pure $ next ()
 
-interpretNodeDefinitionL nodeRt (EvalNodeL initScript next) =
+interpretNodeDefinitionL nodeRt (L.EvalNodeL initScript next) =
     next <$> Impl.runNodeL nodeRt initScript
 
-interpretNodeDefinitionL nodeRt (ServingRpc port initScript next) = do
+interpretNodeDefinitionL nodeRt (L.ServingRpc port initScript next) = do
     m <- atomically $ newTVar mempty
     a <- runRpcMethodL m initScript
-    s <- atomically $ takeServerChan (nodeRt ^. servers) port
+    s <- atomically $ takeServerChan (nodeRt ^. RLens.servers) port
     void $ forkIO $ runRpcServer s port (runNodeL nodeRt) m
     return $ next a
 
-interpretNodeDefinitionL nodeRt (StopServing port next) = do
+interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
     atomically $ do
-        serversMap <- readTVar (nodeRt ^. servers)
+        serversMap <- readTVar (nodeRt ^. RLens.servers)
         whenJust (serversMap ^. at port) $ \chan  -> writeTChan chan StopServer
     return $ next ()
 
-interpretNodeDefinitionL nodeRt (EvalCoreEffectNodeDefinitionF coreEffect next) =
+interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffect
 
 -- TODO: treadDelay if server in port exist!!!
@@ -53,12 +51,12 @@ takeServerChan
     :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> STM (TChan ServerComand)
 takeServerChan servs port = do
     serversMap <- readTVar servs
-    whenJust (serversMap^.at port) $ \chan  -> writeTChan chan StopServer    
+    whenJust (serversMap ^. at port) $ \chan  -> writeTChan chan StopServer
     chan <- newTChan
     modifyTVar servs (M.insert port chan)
     return chan
 
---runRpcServer :: TChan ServerComand -> PortNumber -> 
+--runRpcServer :: TChan ServerComand -> PortNumber ->
 runRpcServer chan port runner methodVar = do
     methods <- readTVarIO methodVar
     runServer chan port $ \_ pending -> do

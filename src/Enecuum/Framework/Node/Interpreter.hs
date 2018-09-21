@@ -4,7 +4,7 @@ import Enecuum.Prelude
 
 import qualified Enecuum.Framework.Node.Language          as L
 import           Enecuum.Framework.Networking.Interpreter (runNetworkingL)
-import           Enecuum.Framework.Node.Runtime           (NodeRuntime)
+import           Enecuum.Framework.Runtime                (NodeRuntime)
 import           Enecuum.Core.Interpreters                (runHGraphLIO, runCoreEffect)
 import qualified Enecuum.Framework.RLens                  as RLens
 

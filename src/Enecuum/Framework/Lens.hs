@@ -8,7 +8,6 @@ module Enecuum.Framework.Lens where
 import           Control.Lens             ( makeFieldsNoPrefix )
 
 import           Enecuum.Framework.Domain
-import           Enecuum.Framework.Node.Runtime
 
 makeFieldsNoPrefix ''Connection
 makeFieldsNoPrefix ''ConnectionConfig
@@ -18,4 +17,3 @@ makeFieldsNoPrefix ''NodeConfig
 makeFieldsNoPrefix ''StateVar
 
 makeFieldsNoPrefix ''Transaction
-makeFieldsNoPrefix ''NodeRuntime
