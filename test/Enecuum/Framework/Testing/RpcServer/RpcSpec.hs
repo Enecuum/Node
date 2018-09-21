@@ -34,18 +34,23 @@ serverMethodes = do
 rpcServerTestOk :: Test
 rpcServerTestOk = TestCase $ do
     nr <- makeNodeRuntime
-    runNodeDefinitionL nr $ servingRpc 1666 serverMethodes
+    runNodeDefinitionL nr $ servingRpc serverPort serverMethodes
     threadDelay 1000
     Right (R.RpcResponseResult res _) <- runNetworkingL $
-        sendRpcRequest (ConnectInfo "127.0.0.1" 1666) (R.RpcRequest "ok" (A.String "") 1)
+        sendRpcRequest localServer (R.RpcRequest "ok" (A.String "") 1)
+    runNodeDefinitionL nr $ stopServing serverPort
     assertBool "" (res == A.String "Ok")
 
 
 rpcServerTestErr :: Test
 rpcServerTestErr = TestCase $ do
     nr <- makeNodeRuntime
-    runNodeDefinitionL nr $ servingRpc 1667 serverMethodes
+    runNodeDefinitionL nr $ servingRpc serverPort serverMethodes
     threadDelay 1000
     Right (R.RpcResponseError res _) <- runNetworkingL $
-        sendRpcRequest  (ConnectInfo "127.0.0.1" 1667) (R.RpcRequest "error" (A.String "") 1)
+        sendRpcRequest localServer (R.RpcRequest "error" (A.String "") 1)
+    runNodeDefinitionL nr $ stopServing serverPort
     assertBool "" (res == A.String ":(")
+
+serverPort  = 1666
+localServer = ConnectInfo "127.0.0.1" serverPort

@@ -1,5 +1,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE GADTs           #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Enecuum.Framework.NodeDefinition.Language where
 
@@ -20,17 +22,19 @@ data NodeDefinitionF next where
     -- | Set node tag. For example, "boot node".
     NodeTag        :: D.NodeTag -> (() -> next) -> NodeDefinitionF next
     -- | Evaluate some node model.
-    EvalNodeModel :: L.NodeModel a -> (a -> next) -> NodeDefinitionF next
+    EvalNodeL :: L.NodeModel a -> (a -> next) -> NodeDefinitionF next
     -- | Serving of Rpc request.
     ServingRpc     :: PortNumber -> Free RpcMethodL () -> (() -> next) -> NodeDefinitionF next
     -- | Eval core effect.
     EvalCoreEffectNodeDefinitionF :: L.CoreEffectModel a -> (a -> next) -> NodeDefinitionF next
+    StopServing    :: PortNumber -> (() -> next) -> NodeDefinitionF next
 
 instance Functor NodeDefinitionF where
     fmap g (NodeTag tag next)               = NodeTag tag               (g . next)
-    fmap g (EvalNodeModel nodeModel next)   = EvalNodeModel nodeModel   (g . next)
+    fmap g (EvalNodeL nodeModel next)   = EvalNodeL nodeModel   (g . next)
     fmap g (ServingRpc port handlersF next) = ServingRpc port handlersF (g . next)
     fmap g (EvalCoreEffectNodeDefinitionF coreEffect next) = EvalCoreEffectNodeDefinitionF coreEffect (g . next)
+    fmap g (StopServing port next)          = StopServing port (g . next)
 
 type NodeDefinitionModel next = Free NodeDefinitionF next
 
@@ -39,8 +43,8 @@ nodeTag :: D.NodeTag -> NodeDefinitionModel ()
 nodeTag tag = liftF $ NodeTag tag id
 
 -- | Runs node scenario.
-evalNodeModel :: L.NodeModel a -> NodeDefinitionModel a
-evalNodeModel nodeModel = liftF $ EvalNodeModel nodeModel id
+evalNodeL :: L.NodeModel a -> NodeDefinitionModel a
+evalNodeL nodeModel = liftF $ EvalNodeL nodeModel id
 
 -- | Runs RPC server.
 servingRpc :: PortNumber -> Free RpcMethodL () -> NodeDefinitionModel ()
@@ -52,11 +56,14 @@ evalCoreEffectNodeDefinitionF coreEffect = liftF $ EvalCoreEffectNodeDefinitionF
 
 -- | Runs scenario as initialization.
 initialization :: L.NodeModel a -> NodeDefinitionModel a
-initialization = evalNodeModel
+initialization = evalNodeL
 
 -- | Runs scenario.
 scenario :: L.NodeModel a -> NodeDefinitionModel a
-scenario = evalNodeModel
+scenario = evalNodeL
+
+stopServing :: PortNumber -> NodeDefinitionModel ()
+stopServing port = liftF $ StopServing port id
 
 instance L.Logger (Free NodeDefinitionF) where
     logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg

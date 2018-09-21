@@ -24,7 +24,7 @@ interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
   Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo $ "Node tag: " +| tag |+ ""
   next <$> (atomically $ writeTVar (nodeRt ^. RLens.tag) tag)
 
-interpretNodeDefinitionL nodeRt (L.EvalNodeModel nodeScript next) = do
+interpretNodeDefinitionL nodeRt (L.EvalNodeL nodeScript next) = do
   Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "EvalNodeModel"
   next <$> Impl.runNodeModel nodeRt nodeScript
 

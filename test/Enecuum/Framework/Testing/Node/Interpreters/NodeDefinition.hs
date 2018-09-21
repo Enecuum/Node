@@ -26,7 +26,7 @@ interpretNodeDefinitionL
 interpretNodeDefinitionL rt (L.NodeTag tag next) = do
   L.logInfo $ "Node tag: " +| tag |+ ""
   next <$> (atomically $ writeTVar (rt ^. RLens.tag) tag)
-interpretNodeDefinitionL rt (L.EvalNodeModel initScript next) = do
+interpretNodeDefinitionL rt (L.EvalNodeL initScript next) = do
   L.logInfo "Initialization"
   next <$> runNodeModel rt initScript
 
