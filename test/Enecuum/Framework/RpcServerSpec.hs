@@ -1,4 +1,4 @@
-module Enecuum.Framework.RpcSpec where
+module Enecuum.Framework.RpcServerSpec where
 
 import           Enecuum.Prelude
 
