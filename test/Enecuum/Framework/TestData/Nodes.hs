@@ -28,7 +28,7 @@ import           Enecuum.Framework.Node.Language          ( NodeL )
 
 makeRpcRequest
     :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL (Either Text b)
-makeRpcRequest connectCfg arg = L.evalNetworking $ L.makeRpcRequest connectCfg arg
+makeRpcRequest connectCfg arg = L.evalNetworking $ L.makeRpcRequest_ connectCfg arg
 
 
 makeRequestUnsafe

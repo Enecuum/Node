@@ -1,3 +1,7 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE DeriveAnyClass #-}
+
 module Enecuum.Framework.RpcServerSpec where
 
 import           Enecuum.Prelude
@@ -6,6 +10,7 @@ import           Data.Aeson as A
 import           Test.HUnit
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
+import qualified Enecuum.Language              as L
 
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Interpreters
@@ -13,6 +18,15 @@ import           Enecuum.Language
 import qualified Enecuum.Framework.Domain.RpcMessages as R
 import           Enecuum.Framework.Domain.RpcMessages
 import           Enecuum.Framework.Node.Runtime
+import           Enecuum.Framework.Node.Language          ( NodeL )
+import qualified Enecuum.Domain                as D
+import           Enecuum.Framework.Networking.Interpreter
+
+data OkRequest = OkRequest deriving (Show, Eq, Generic, ToJSON, FromJSON)
+data OkResponse = OkResponse deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data ErrRequest = ErrRequest deriving (Show, Eq, Generic, ToJSON, FromJSON)
+data ErrResponse = ErrResponse deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- Tests disabled
 spec :: Spec
@@ -21,31 +35,47 @@ spec = describe "RpcServer" $ fromHUnitTest $ TestList
     , TestLabel "Test of rpc server/err" rpcServerTestErr
     ]
 
-serverMethodes = do
-    rpcMethod "ok"    (\_ i -> return $ RpcResponseResult (A.String "Ok") i)
-    rpcMethod "error" (\_ i -> return $ RpcResponseError (A.String ":(") i)
+okHandler :: OkRequest -> NodeL OkResponse
+okHandler _ = pure OkResponse
 
+errHandler :: ErrRequest -> NodeL ErrResponse
+errHandler _ = pure ErrResponse
 
 rpcServerTestOk :: Test
 rpcServerTestOk = TestCase $ do
     nr <- createNodeRuntime
-    runNodeDefinitionL nr $ servingRpc serverPort serverMethodes
+    runNodeDefinitionL nr $ servingRpc serverPort $ do
+        method okHandler
+        method errHandler
     threadDelay 1000
-    Right (R.RpcResponseResult res _) <- runNetworkingL $
-        sendRpcRequest localServer (R.RpcRequest "ok" (A.String "") 1)
+    res <- runNodeL nr $ makeRpcRequest localServer OkRequest
     runNodeDefinitionL nr $ stopServing serverPort
-    assertBool "" (res == A.String "Ok")
+    assertBool "" (res == Right OkResponse)
 
 
 rpcServerTestErr :: Test
 rpcServerTestErr = TestCase $ do
     nr <- createNodeRuntime
-    runNodeDefinitionL nr $ servingRpc serverPort serverMethodes
+    runNodeDefinitionL nr $ servingRpc serverPort $ do
+        method okHandler
+        method errHandler
     threadDelay 1000
-    Right (R.RpcResponseError res _) <- runNetworkingL $
-        sendRpcRequest localServer (R.RpcRequest "error" (A.String "") 1)
+    res <- runNodeL nr $ makeRpcRequest localServer ErrRequest
     runNodeDefinitionL nr $ stopServing serverPort
-    assertBool "" (res == A.String ":(")
+    assertBool "" (res == Right ErrResponse)
 
 serverPort  = 1666
-localServer = ConnectInfo "127.0.0.1" serverPort
+localServer = D.ConnectionConfig (ConnectInfo "127.0.0.1" serverPort)
+
+
+
+
+makeRpcRequest
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NodeL (Either Text b)
+makeRpcRequest connectCfg arg = L.evalNetworking $ L.makeRpcRequest' connectCfg arg
+
+
+makeRequestUnsafe
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NodeL b
+makeRequestUnsafe connectCfg arg =
+    (\(Right a) -> a) <$> makeRpcRequest connectCfg arg
