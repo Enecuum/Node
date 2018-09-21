@@ -6,7 +6,7 @@ import           Enecuum.Prelude
 import           Data.HGraph.THGraph (THGraph)
 
 import           Enecuum.Core.Runtime (CoreRuntime, createCoreRuntime)
-import           Enecuum.Core.HGraph.Interpreter (initHGraph)
+import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 import qualified Enecuum.Domain as D
 
 data NodeRuntime = NodeRuntime

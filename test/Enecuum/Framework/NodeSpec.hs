@@ -25,7 +25,7 @@ spec = describe "Nodes test" $ do
     masterNodeRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNode
 
     Right (RpcResponseResult eResponse _) <- sendRequest runtime bootNodeAddr $ makeRequest (HelloRequest1 (infoToText masterNode1Addr))
-    
+
     A.fromJSON eResponse `shouldBe` (A.Success $ HelloResponse1 ("Hello, dear. " <> infoToText masterNode1Addr))
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
@@ -144,10 +144,10 @@ spec = describe "Nodes test" $ do
       , "CloseConnection conn"
       , "SendRequest conn req"
       , "OpenConnection cfg"
-      , "EvalNodeModel"
+      , "EvalNodeL"
       , "Node tag: networkNode4"
       , "Serving handlersF"
       , "L.EvalGraph"
-      , "EvalNodeModel"
+      , "EvalNodeL"
       , "Node tag: networkNode3"
       ]

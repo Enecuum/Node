@@ -34,6 +34,7 @@ import              Enecuum.Core.HGraph.Language
 import              Enecuum.Core.HGraph.Types
 import              Enecuum.Core.HGraph.Interpreters.IO
 import              Enecuum.Core.HGraph.Internal.Types
+import              Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 
 type MBlock     = Microblock
 type KBlock     = KeyBlockInfoPoW
@@ -62,7 +63,7 @@ type BGraphL a = Free (HGraphL (TNodeL NodeContent)) a
 initBGraph :: IO BGraph
 initBGraph = do
     aRes <- initHGraph
-    runHGraph aRes $ newNode $ KBlockContent genesisKeyBlock
+    runHGraphIO aRes $ newNode $ KBlockContent genesisKeyBlock
     return aRes
 
 addKBlock :: KBlock -> BGraphL Bool

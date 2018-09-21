@@ -48,9 +48,9 @@ startNode testRt nodeAddr scenario = do
 evaluateNode
   :: LoggerRuntime
   -> D.NodeAddress
-  -> L.NodeDefinitionModel a
+  -> L.NodeDefinitionL a
   -> IO a
 evaluateNode loggerRt nodeAddr scenario = do
   control <- createControl
   nodeRt <- createEmptyNodeRuntime loggerRt control nodeAddr
-  runNodeDefinitionModel nodeRt scenario
+  runNodeDefinitionL nodeRt scenario

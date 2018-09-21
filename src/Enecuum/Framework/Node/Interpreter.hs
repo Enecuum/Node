@@ -6,14 +6,17 @@ import Control.Monad.Free
 import qualified Enecuum.Framework.Node.Language          as L
 import           Enecuum.Framework.Networking.Interpreter (runNetworkingL)
 import           Enecuum.Framework.Node.Runtime           (NodeRuntime)
-import           Enecuum.Core.Interpreters                (runHGraphL, runCoreEffect)
+import           Enecuum.Core.Interpreters                (runHGraphLIO, runCoreEffect)
 import qualified Enecuum.Framework.RLens                  as RLens
 
 
 -- | Interpret NodeL.
 interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
-interpretNodeL nodeRt (L.EvalGraph graphModel next) =
-    next <$> runHGraphL (nodeRt ^. RLens.graph) graphModel
+interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
+    error "L.EvalStateAtomically not implemented."
+
+interpretNodeL nodeRt (L.EvalGraphIO graphModel next) =
+    next <$> runHGraphLIO (nodeRt ^. RLens.graph) graphModel
 
 interpretNodeL _ (L.EvalNetworking networking next) =
     next <$> runNetworkingL networking

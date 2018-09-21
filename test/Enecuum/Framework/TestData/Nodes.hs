@@ -21,7 +21,7 @@ import           Enecuum.Framework.TestData.RPC
 import           Enecuum.Framework.TestData.Validation
 import qualified Enecuum.Framework.TestData.TestGraph as TG
 import qualified Enecuum.Framework.Domain.Types as T
-import           Enecuum.Legacy.Service.Network.Base
+import           Enecuum.Legacy.Service.Network.Base (ConnectInfo (..))
 import           Enecuum.Framework.Domain.RpcMessages
 import           Enecuum.Framework.RpcMethod.Language
 import           Enecuum.Framework.Node.Language          ( NodeL )
@@ -47,8 +47,8 @@ networkNode1Addr = ConnectInfo "0.0.0.2" 1000
 networkNode2Addr = ConnectInfo "0.0.0.3" 1000
 
 networkNode3Addr, networkNode4Addr :: D.NodeAddress
-networkNode3Addr = "networkNode3Addr"
-networkNode4Addr = "networkNode4Addr"
+networkNode3Addr = ConnectInfo "0.0.0.4" 1000
+networkNode4Addr = ConnectInfo "0.0.0.5" 1000
 
 bootNodeTag, masterNodeTag :: D.NodeTag
 bootNodeTag = "bootNode"
@@ -135,7 +135,7 @@ tryAddTransactionTraversing curNodeHash prevBalance change =
 acceptGetBalanceTraversing
   :: TNodeL D.Transaction
   -> GetBalanceRequest
-  -> L.NodeModel GetBalanceResponse
+  -> L.NodeL GetBalanceResponse
 acceptGetBalanceTraversing baseNode GetBalanceRequest = do
   balance <- L.evalGraphIO (calculateBalanceTraversing (baseNode ^. Lens.hash) 0)
   pure $ GetBalanceResponse balance
@@ -143,19 +143,14 @@ acceptGetBalanceTraversing baseNode GetBalanceRequest = do
 acceptBalanceChangeTraversing
   :: TNodeL D.Transaction
   -> BalanceChangeRequest
-  -> L.NodeModel BalanceChangeResponse
+  -> L.NodeL BalanceChangeResponse
 acceptBalanceChangeTraversing baseNode (BalanceChangeRequest change) = do
   mbHashAndBalance <- L.evalGraphIO $ tryAddTransactionTraversing (baseNode ^. Lens.hash) 0 change
   case mbHashAndBalance of
     Nothing -> pure $ BalanceChangeResponse Nothing
     Just (D.StringHash _, balance) -> pure $ BalanceChangeResponse $ Just balance
 
-makeResult :: ToJSON a => Int -> a -> NodeL RpcResponse
-makeResult i a = pure $ RpcResponseResult (A.toJSON a) i
-
 newtorkNode1Initialization :: L.NodeL (TNodeL D.Transaction)
-newtorkNode1Initialization = L.evalGraph $ TG.getTransactionNode TG.nilTransaction >>= \case
-newtorkNode1Initialization :: L.NodeModel (TNodeL D.Transaction)
 newtorkNode1Initialization = L.evalGraphIO $ L.getNode TG.nilTransactionHash >>= \case
   Nothing -> error "Graph is not ready: no genesis node found."
   Just baseNode -> pure baseNode
@@ -165,10 +160,8 @@ networkNode1 = do
   L.nodeTag "networkNode1"
   baseNode <- L.initialization newtorkNode1Initialization
   L.servingRpc 1000 $ do
-    method (acceptGetBalance baseNode)
-    method (acceptBalanceChange baseNode)
-
-
+    method (acceptGetBalanceTraversing baseNode)
+    method (acceptBalanceChangeTraversing baseNode)
 
 networkNode2Scenario :: L.NodeL ()
 networkNode2Scenario = do
@@ -188,8 +181,6 @@ networkNode2Scenario = do
     -- Final balance
     GetBalanceResponse balance4 <- makeRequestUnsafe connectCfg GetBalanceRequest
     L.logInfo $ "balance4 (should be 111): " +|| balance4 ||+ "."
-
-
 
 networkNode2 :: L.NodeDefinitionL ()
 networkNode2 = do
@@ -237,14 +228,14 @@ makeLenses ''NetworkNode3Data
 acceptGetBalance
   :: NetworkNode3Data
   -> GetBalanceRequest
-  -> L.NodeModel GetBalanceResponse
+  -> L.NodeL GetBalanceResponse
 acceptGetBalance nodeData GetBalanceRequest =
   GetBalanceResponse <$> (L.atomically $ L.readVar (nodeData ^. balanceVar))
 
 acceptBalanceChange
   :: NetworkNode3Data
   -> BalanceChangeRequest
-  -> L.NodeModel BalanceChangeResponse
+  -> L.NodeL BalanceChangeResponse
 acceptBalanceChange nodeData (BalanceChangeRequest change) =
   L.atomically $ do
     curBalance   <- L.readVar $ nodeData ^. balanceVar
@@ -257,7 +248,7 @@ acceptBalanceChange nodeData (BalanceChangeRequest change) =
         L.writeVar (nodeData ^. graphHeadVar) newGraphHead
         pure $ BalanceChangeResponse $ Just newBalance
 
-newtorkNode3Initialization :: L.NodeModel NetworkNode3Data
+newtorkNode3Initialization :: L.NodeL NetworkNode3Data
 newtorkNode3Initialization = do
   baseNode <- L.evalGraphIO $ L.getNode TG.nilTransactionHash >>= \case
     Nothing -> error "Graph is not ready: no genesis node found."
@@ -266,25 +257,25 @@ newtorkNode3Initialization = do
   graphHeadVar <- L.atomically $ L.newVar $ baseNode ^. Lens.hash
   pure $ NetworkNode3Data graphHeadVar balanceVar
 
-networkNode3 :: L.NodeDefinitionModel ()
+networkNode3 :: L.NodeDefinitionL ()
 networkNode3 = do
   L.nodeTag "networkNode3"
   nodeData <- L.initialization newtorkNode3Initialization
-  L.serving
-    $ L.serve (acceptGetBalance nodeData)
-    . L.serve (acceptBalanceChange nodeData)
+  L.servingRpc 1000 $ do
+    L.method (acceptGetBalance nodeData)
+    L.method (acceptBalanceChange nodeData)
 
-networkNode4Scenario :: L.NodeModel ()
+networkNode4Scenario :: L.NodeL ()
 networkNode4Scenario = do
     let connectCfg = D.ConnectionConfig networkNode3Addr
-    void $ makeRequestUnsafe connectCfg $ BalanceChangeRequest 10
-    void $ makeRequestUnsafe connectCfg $ BalanceChangeRequest (-20)
-    void $ makeRequestUnsafe connectCfg $ BalanceChangeRequest 101
-    void $ makeRequestUnsafe connectCfg $ BalanceChangeRequest (-20)
-    balance <- unpack <$> makeRequestUnsafe connectCfg GetBalanceRequest
+    _ :: BalanceChangeResponse <- makeRequestUnsafe connectCfg $ BalanceChangeRequest 10
+    _ :: BalanceChangeResponse <- makeRequestUnsafe connectCfg $ BalanceChangeRequest (-20)
+    _ :: BalanceChangeResponse <- makeRequestUnsafe connectCfg $ BalanceChangeRequest 101
+    _ :: BalanceChangeResponse <- makeRequestUnsafe connectCfg $ BalanceChangeRequest (-20)
+    GetBalanceResponse balance <- makeRequestUnsafe connectCfg GetBalanceRequest
     L.logInfo $ "balance (should be 91): " +|| balance ||+ "."
 
-networkNode4 :: L.NodeDefinitionModel ()
+networkNode4 :: L.NodeDefinitionL ()
 networkNode4 = do
   L.nodeTag "networkNode4"
   L.scenario networkNode4Scenario

@@ -7,7 +7,8 @@ import           Data.HGraph.StringHashable (StringHash, toHash)
 
 import qualified Enecuum.Language as L
 import qualified Enecuum.Domain as D
-import           Enecuum.Core.HGraph.Interpreters.IO (initHGraph, runHGraph)
+import           Enecuum.Core.HGraph.Interpreters.IO (runHGraphIO)
+import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 
 type LGraph = TVar (G.THGraph D.Transaction)
 
@@ -23,7 +24,7 @@ nilTransactionHash = D.toHash nilTransaction
 initLGraph :: IO LGraph
 initLGraph = do
     graph <- initHGraph
-    runHGraph graph $ L.newNode nilTransaction
+    runHGraphIO graph $ L.newNode nilTransaction
     pure graph
 
 type Balance = Int

@@ -11,11 +11,10 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
 
-module Enecuum.Core.HGraph.Interpreters.IO (
-      initHGraph
-    , interpretHGraphL
-    , runHGraphL
-    , runHGraph
+module Enecuum.Core.HGraph.Interpreters.IO
+    ( interpretHGraphLIO
+    , runHGraphLIO
+    , runHGraphIO
     ) where
 
 import           Universum
@@ -29,49 +28,44 @@ import           Data.HGraph.StringHashable (StringHashable)
 import           Enecuum.Core.HGraph.Language (HGraphL (..))
 import           Enecuum.Core.HGraph.Internal.Types (TNodeL)
 
--- TODO: move this function to the appropriate place.
--- | Init HGraph.
-initHGraph :: (Serialize c, StringHashable c) => IO (TVar (G.THGraph c))
-initHGraph = atomically G.newTHGraph
-
 -- | The interpreter of the language describing the action on graphs.
-interpretHGraphL
+interpretHGraphLIO
     :: (Serialize c, StringHashable c)
     => TVar (G.THGraph c)
     -> HGraphL (TNodeL c) a
     -> IO a
 
 -- create a new node
-interpretHGraphL graph (NewNode x next) =
+interpretHGraphLIO graph (NewNode x next) =
     next <$> (atomically $ Impl.newNode graph x)
 
 -- get nodeby hash, content or ref
-interpretHGraphL graph (GetNode x next) = do
+interpretHGraphLIO graph (GetNode x next) = do
     node <- atomically $ Impl.getNode graph x
     pure $ next node
 
 -- delete node by hash, content or ref
-interpretHGraphL graph (DeleteNode x next) = do
+interpretHGraphLIO graph (DeleteNode x next) = do
     ok <- atomically $ Impl.deleteNode graph x
     pure $ next ok
 
 -- create new link by contents, hashes or refs of the node
-interpretHGraphL graph (NewLink x y next) = do
+interpretHGraphLIO graph (NewLink x y next) = do
     ok <- atomically $ Impl.newLink graph x y
     pure $ next ok
 
 -- delete link inter a nodes by contents, hashes or refs of the node
-interpretHGraphL graph (DeleteLink x y next) = do
+interpretHGraphLIO graph (DeleteLink x y next) = do
     ok <- atomically $ Impl.deleteLink graph x y
     pure $ next ok
 
 -- | Run H graph interpret.
-runHGraphL, runHGraph
+runHGraphLIO, runHGraphIO
     :: (Serialize c, StringHashable c)
     => TVar (G.THGraph c)
     -> Free (HGraphL (TNodeL c)) w
     -> IO w
-runHGraphL graph = foldFree (interpretHGraphL graph)
+runHGraphLIO graph = foldFree (interpretHGraphLIO graph)
 
 -- | Run H graph interpret in IO monad.
-runHGraph  = runHGraphL
+runHGraphIO  = runHGraphLIO

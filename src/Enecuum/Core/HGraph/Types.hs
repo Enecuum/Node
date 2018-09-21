@@ -1,8 +1,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 
 module Enecuum.Core.HGraph.Types
-    ( W (..)
-    , HNodeContent
+    ( HNodeContent
     , HNodeRef
     , HNode (..)
     -- * Clases
@@ -14,8 +13,6 @@ import           Enecuum.Prelude
 
 import           Data.HGraph.StringHashable (StringHashable, StringHash)
 import           Data.HGraph.THGraph (THNode)
-
-newtype W a b = W b
 
 data family HNodeContent a
 

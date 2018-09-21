@@ -12,7 +12,8 @@ import           Enecuum.Prelude
 
 import           Data.HGraph.StringHashable
 import qualified Data.HGraph.THGraph as G
-import           Enecuum.Core.HGraph.Interpreters.IO ( runHGraph, initHGraph )
+import           Enecuum.Core.HGraph.Interpreters.IO ( runHGraphIO )
+import           Enecuum.Core.HGraph.Internal.Impl ( initHGraph )
 import           Enecuum.Core.HGraph.Language
 import           Enecuum.Core.HGraph.Types
 import           Test.Hspec
@@ -38,7 +39,7 @@ spec = describe "HGraph eDSL tests" $ fromHUnitTest $ TestList
 testNewNode :: Test
 testNewNode = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
-    ok <- runHGraph newGraph $ do
+    ok <- runHGraphIO newGraph $ do
         newNode 123
         Just (HNode _ _ c _ _) <- getNode (123 :: Int64)
         return $ 123 == fromContent c
@@ -47,7 +48,7 @@ testNewNode = TestCase $ do
 testGetNodeByHash :: Test
 testGetNodeByHash = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
-    ok <- runHGraph newGraph $ do
+    ok <- runHGraphIO newGraph $ do
         newNode 123
         Just (HNode _ _ c _ _) <- getNode (toHash (123 :: Int64))
         return $ 123 == fromContent c
@@ -56,7 +57,7 @@ testGetNodeByHash = TestCase $ do
 testGetNodeByRef :: Test
 testGetNodeByRef = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
-    ok <- runHGraph newGraph $ do
+    ok <- runHGraphIO newGraph $ do
         newNode 123
         Just (HNode _ ref _ _ _) <- getNode (toHash (123 :: Int64))
         Just (HNode _ _   c _ _) <- getNode ref
@@ -66,7 +67,7 @@ testGetNodeByRef = TestCase $ do
 testDeleteNodeByContent :: Test
 testDeleteNodeByContent = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
-    ok <- runHGraph newGraph $ do
+    ok <- runHGraphIO newGraph $ do
         newNode (123 :: Int64)
         deleteNode (123 :: Int64)
         isNothing <$> getNode (toHash @Int64 123)
@@ -75,7 +76,7 @@ testDeleteNodeByContent = TestCase $ do
 testDeleteNodeByHash :: Test
 testDeleteNodeByHash = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
-    ok <- runHGraph newGraph $ do
+    ok <- runHGraphIO newGraph $ do
         newNode (123 :: Int64)
         deleteNode $ toHash (123 :: Int64)
         isNothing <$> getNode (toHash @Int64 123)
@@ -84,7 +85,7 @@ testDeleteNodeByHash = TestCase $ do
 testDeleteNodeByRef :: Test
 testDeleteNodeByRef = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
-    ok <- runHGraph newGraph $ do
+    ok <- runHGraphIO newGraph $ do
         newNode (123 :: Int64)
         Just (HNode _ ref _ _ _) <- getNode (toHash @Int64 123)
         deleteNode ref
@@ -94,7 +95,7 @@ testDeleteNodeByRef = TestCase $ do
 testNewLinkByContent :: Test
 testNewLinkByContent = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
-    ok <- runHGraph newGraph $ do
+    ok <- runHGraphIO newGraph $ do
         newNode 123
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
@@ -105,7 +106,7 @@ testNewLinkByContent = TestCase $ do
 testNewLinkByHash :: Test
 testNewLinkByHash = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
-    ok <- runHGraph newGraph $ do
+    ok <- runHGraphIO newGraph $ do
         newNode 123
         newNode 125
         newLink (toHash @Int64 123) (toHash @Int64 125)
@@ -116,7 +117,7 @@ testNewLinkByHash = TestCase $ do
 testNewLinkByRef :: Test
 testNewLinkByRef = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
-    ok <- runHGraph newGraph $ do
+    ok <- runHGraphIO newGraph $ do
         newNode 123
         newNode 125
         Just (HNode _ r1 _ _ _) <- getNode (toHash @Int64 123)
@@ -129,7 +130,7 @@ testNewLinkByRef = TestCase $ do
 testDeleteLinkByContent :: Test
 testDeleteLinkByContent = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
-    ok <- runHGraph newGraph $ do
+    ok <- runHGraphIO newGraph $ do
         newNode 123
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
@@ -141,7 +142,7 @@ testDeleteLinkByContent = TestCase $ do
 testDeleteLinkByHash :: Test
 testDeleteLinkByHash = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
-    ok <- runHGraph newGraph $ do
+    ok <- runHGraphIO newGraph $ do
         newNode 123
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
@@ -153,7 +154,7 @@ testDeleteLinkByHash = TestCase $ do
 testDeleteLinkByRef :: Test
 testDeleteLinkByRef = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
-    ok <- runHGraph newGraph $ do
+    ok <- runHGraphIO newGraph $ do
         newNode 123
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
@@ -167,7 +168,7 @@ testDeleteLinkByRef = TestCase $ do
 testListLikeGraph :: Test
 testListLikeGraph = TestCase $ do
     newGraph :: TVar (G.THGraph Int64) <- initHGraph
-    ok <- runHGraph newGraph $ do
+    ok <- runHGraphIO newGraph $ do
         newNode 123
         newNode 125
         newNode 127

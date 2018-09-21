@@ -16,35 +16,24 @@ data NodeF next where
   -- | Eval networking.
   EvalNetworking :: L.NetworkingL a -> (a -> next) -> NodeF next
   -- | Eval core effect.
-  EvalCoreEffectNodeF :: L.CoreEffectModel a -> (a -> next) -> NodeF next
+  EvalCoreEffectNodeF :: L.CoreEffect a -> (a -> next) -> NodeF next
   -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
   EvalGraphIO :: L.GraphModel a -> (a -> next) -> NodeF next
-    -- | Eval graph.
-    EvalGraph      :: LGraphModel a -> (a -> next) -> NodeF next
-    -- | Eval networking.
-    EvalNetworking :: L.NetworkingL a -> (a -> next) -> NodeF next
-    -- | Eval core effect.
-    EvalCoreEffectNodeF :: L.CoreEffect a -> (a -> next) -> NodeF next
 
 instance Functor NodeF where
   fmap g (EvalStateAtomically statefulAction next) = EvalStateAtomically statefulAction (g . next)
   fmap g (EvalNetworking networking next)          = EvalNetworking networking          (g . next)
   fmap g (EvalCoreEffectNodeF coreEffect next)     = EvalCoreEffectNodeF coreEffect     (g . next)
   fmap g (EvalGraphIO graphAction next)            = EvalGraphIO graphAction            (g . next)
-    fmap g (EvalGraph graph next) = EvalGraph graph (g . next)
-    fmap g (EvalNetworking networking next) =
-        EvalNetworking networking (g . next)
-    fmap g (EvalCoreEffectNodeF coreEffect next) =
-        EvalCoreEffectNodeF coreEffect (g . next)
 
 type NodeL next = Free NodeF next
 
 -- | Eval stateful action atomically.
-evalStateAtomically :: L.StateL a -> NodeModel a
+evalStateAtomically :: L.StateL a -> NodeL a
 evalStateAtomically statefulAction = liftF $ EvalStateAtomically statefulAction id
 
 -- | Alias for convenience.
-atomically :: L.StateL a -> NodeModel a
+atomically :: L.StateL a -> NodeL a
 atomically = evalStateAtomically
 
 -- | Eval networking.
@@ -56,7 +45,7 @@ evalCoreEffectNodeF :: L.CoreEffect a -> NodeL a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
-evalGraphIO :: L.GraphModel a -> NodeModel a
+evalGraphIO :: L.GraphModel a -> NodeL a
 evalGraphIO graphAction = liftF $ EvalGraphIO graphAction id
 
 instance L.Logger (Free NodeF) where
