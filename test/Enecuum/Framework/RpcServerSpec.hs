@@ -18,7 +18,6 @@ import           Enecuum.Language
 import qualified Enecuum.Framework.Domain.RpcMessages as R
 import           Enecuum.Framework.Domain.RpcMessages
 import qualified Enecuum.Runtime as Rt
-import           Enecuum.Framework.Node.Runtime
 import           Enecuum.Framework.Node.Language          ( NodeL )
 import qualified Enecuum.Domain                as D
 import           Enecuum.Framework.Networking.Interpreter
