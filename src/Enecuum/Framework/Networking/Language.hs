@@ -82,26 +82,21 @@ withConnection cfg req = openConnection cfg >>= \case
 
 makeRpcRequest'
     :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NetworkingL (Either Text b)
-makeRpcRequest' (D.ConnectionConfig connectCfg) arg = do
-    res <- sendRpcRequest connectCfg (makeRequest arg)
-    case res of
-        Left txt -> pure $ Left txt
-        Right (RpcResponseError (A.String txt) _) -> pure $ Left txt
-        Right (RpcResponseError err _)            -> pure $ Left (show err)
-        Right (RpcResponseResult val _) -> case A.fromJSON val of
-            A.Error txt -> pure $ Left (Text.pack txt)
-            A.Success resp -> pure $ Right resp
+makeRpcRequest' (D.ConnectionConfig connectCfg) arg =
+    responseValidation =<< sendRpcRequest connectCfg (makeRequest arg)
 
 
---
 makeRpcRequest_
     :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NetworkingL (Either Text b)
-makeRpcRequest_ connectCfg arg = do
-    res <- withConnection connectCfg (makeRequest arg)
-    case res of
-        Left txt -> pure $ Left txt
-        Right (RpcResponseError (A.String txt) _) -> pure $ Left txt
-        Right (RpcResponseError err _)            -> pure $ Left (show err)
-        Right (RpcResponseResult val _) -> case A.fromJSON val of
-            A.Error txt -> pure $ Left (Text.pack txt)
-            A.Success resp -> pure $ Right resp
+makeRpcRequest_ connectCfg arg = 
+    responseValidation =<< withConnection connectCfg (makeRequest arg)
+
+
+responseValidation :: (FromJSON b, Applicative f) => Either Text RpcResponse -> f (Either Text b)
+responseValidation res = case res of
+  Left txt -> pure $ Left txt
+  Right (RpcResponseError (A.String txt) _) -> pure $ Left txt
+  Right (RpcResponseError err _)            -> pure $ Left (show err)
+  Right (RpcResponseResult val _) -> case A.fromJSON val of
+      A.Error txt -> pure $ Left (Text.pack txt)
+      A.Success resp -> pure $ Right resp
