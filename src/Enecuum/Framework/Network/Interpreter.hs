@@ -1,4 +1,4 @@
-module Enecuum.Framework.NetworkModel.Interpreter where
+module Enecuum.Framework.Network.Interpreter where
 
 import Enecuum.Prelude
 
@@ -16,7 +16,7 @@ import qualified Enecuum.Framework.Lens             as Lens
 interpretNetworkSendingL
     :: L.NetworkSendingL a
     -> Eff '[L.LoggerL, SIO, Exc SomeException] a
-    
+
 interpretNetworkSendingL (L.Multicast cfg req) = L.logInfo "L.Multicast cfg req"
 
 -- | Interpret NetworkListeningL (with NetworkSendingL in stack). Does nothing ATM.

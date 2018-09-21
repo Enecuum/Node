@@ -44,13 +44,16 @@ networkWorker control registry = go 0
         atomically $ putTMVar (control ^. RLens.response) controlResp
         atomically $ putTMVar registry nodes
 
+createControl :: IO Control
+createControl = Control <$> newEmptyTMVarIO <*> newEmptyTMVarIO
+
 -- | Creates test runtime.
 -- Starts network environment thread.
 createTestRuntime :: IO TestRuntime
 createTestRuntime = do
   loggerRt <- createLoggerRuntime
   registry <- newTMVarIO Map.empty
-  control  <- Control <$> newEmptyTMVarIO <*> newEmptyTMVarIO
+  control  <- createControl
   tId      <- forkIO $ networkWorker control registry
   pure $ TestRuntime loggerRt tId control registry
 

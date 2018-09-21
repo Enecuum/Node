@@ -1,11 +1,12 @@
 module Enecuum.Core.Runtime where
 
-import Enecuum.Core.Logger.Runtime
+import Enecuum.Prelude
+
+import Enecuum.Core.Logger.Runtime (LoggerRuntime, createLoggerRuntime)
 
 data CoreRuntime = CoreRuntime
     { _loggerRuntime :: LoggerRuntime
     }
 
-
-makeCoreRuntime :: CoreRuntime
-makeCoreRuntime = CoreRuntime makeLoggerRuntime
+createCoreRuntime :: IO CoreRuntime
+createCoreRuntime = CoreRuntime <$> createLoggerRuntime

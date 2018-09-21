@@ -16,13 +16,12 @@ import Enecuum.Framework.RpcMethod.Interpreter
 import qualified Data.Map as M
 import           Data.Aeson as A
 import           Enecuum.Framework.RpcMethod.Language as L
-import           Enecuum.Framework.Node.Language
-import           Enecuum.Core.Logger.Interpreter
+import           Enecuum.Framework.Node.Language          hiding (atomically)
 import           Enecuum.Legacy.Refact.Network.Server
 import           Enecuum.Framework.Domain.RpcMessages
 import           Enecuum.Framework.Node.Runtime
 import           Enecuum.Framework.Lens
-import           Enecuum.Framework.NodeDefinition.Language 
+import           Enecuum.Framework.NodeDefinition.Language hiding (atomically)
 import           Control.Lens.At
 
 interpretNodeDefinitionL :: NodeRuntime -> NodeDefinitionF a -> IO a
@@ -30,13 +29,13 @@ interpretNodeDefinitionL _ (NodeTag tag next) = do
     pure $ next ()
 
 interpretNodeDefinitionL nr (EvalNodeL initScript next) = do
-    next <$> runNodeModel nr initScript
+    next <$> runNodeL nr initScript
 
 interpretNodeDefinitionL nr (ServingRpc port initScript next) = do
     m <- atomically $ newTVar mempty
     a <- runRpcMethodL m initScript
     s <- atomically $ takeServerChan (nr^.servers) port
-    void $ forkIO $ runRpcServer s port (runNodeModel nr) m
+    void $ forkIO $ runRpcServer s port (runNodeL nr) m
     return $ next a
 
 interpretNodeDefinitionL nr (StopServing port next) = do

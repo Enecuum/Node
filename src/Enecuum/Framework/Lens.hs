@@ -2,6 +2,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
 
+-- | Lenses for Framework domain types.
 module Enecuum.Framework.Lens where
 
 import           Control.Lens             ( makeFieldsNoPrefix )
@@ -14,6 +15,7 @@ makeFieldsNoPrefix ''ConnectionConfig
 makeFieldsNoPrefix ''NetworkRequest
 makeFieldsNoPrefix ''NetworkResponse
 makeFieldsNoPrefix ''NodeConfig
+makeFieldsNoPrefix ''StateVar
 
 makeFieldsNoPrefix ''Transaction
 makeFieldsNoPrefix ''NodeRuntime

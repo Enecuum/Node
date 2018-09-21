@@ -35,28 +35,3 @@ data Connection = Connection
   { _clientAddress :: NodeAddress
   , _serverAddress :: NodeAddress
   }
-
--- Temporary approach untill we clarify all the networking details.
-
--- | RPC request which wraps the RPC actions.
-data RpcRequest = RpcRequest
-  { _rawData :: R.RpcRequest
-  }
-
--- | RPC response which wraps the RPC responses.
-data RpcResponse = RpcResponse
-  { _rawData :: R.RpcResponse
-  }
-
--- | Result of RPC call.
-type RpcResult a = Either Text a
-
--- TODO: remove double encode / decode from serving code.
--- | Describes how to convert a particular pair of request and response
--- to the RPC Request and Response.
--- Can take some config having some conversion options.
-{-
-class RpcMethod cfg req resp | req -> resp, resp -> req where
-  toRpcRequest :: cfg -> req -> RpcRequest
-  fromRpcResponse :: cfg -> RpcResponse -> RpcResult resp
--}

@@ -12,7 +12,7 @@ import qualified Data.Aeson                    as A
 data Config = Config
   { bootNodeAddress :: Text
   , bootNode :: Bool
-  , networkNode :: Bool
+  , masterNode :: Bool
   , extPort :: Int 
   }
   deriving (Generic, FromJSON)

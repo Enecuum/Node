@@ -1,0 +1,4 @@
+{ "format": "$msg",
+  "level": "Debug",
+  "logFilePath": "/tmp/logs/default.log"
+}

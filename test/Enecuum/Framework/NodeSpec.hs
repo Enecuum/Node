@@ -1,10 +1,3 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Enecuum.Framework.NodeSpec where
 
@@ -32,7 +25,7 @@ spec = describe "Nodes test" $ do
     masterNodeRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNode
 
     Right (RpcResponseResult eResponse _) <- sendRequest runtime bootNodeAddr $ makeRequest (HelloRequest1 (infoToText masterNode1Addr))
-    
+
     A.fromJSON eResponse `shouldBe` (A.Success $ HelloResponse1 ("Hello, dear. " <> infoToText masterNode1Addr))
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
@@ -44,10 +37,10 @@ spec = describe "Nodes test" $ do
       , "SendRequest conn req"
       , "OpenConnection cfg"
       , "Eval Network"
-      , "EvalNodeModel"
+      , "EvalNodeL"
       , "Node tag: masterNode"
       , "Serving handlersF"
-      , "EvalNodeModel"
+      , "EvalNodeL"
       , "Node tag: bootNode"
       ]
 
@@ -55,8 +48,8 @@ spec = describe "Nodes test" $ do
 
     runtime <- createTestRuntime
 
-    networkNode1Runtime   :: NodeRuntime <- startNode runtime networkNode1Addr networkNode1
-    networkNode2Runtime   :: NodeRuntime <- startNode runtime networkNode2Addr networkNode2
+    void $ startNode runtime networkNode1Addr networkNode1
+    void $ startNode runtime networkNode2Addr networkNode2
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
     msgs <- readTVarIO tMsgs
@@ -86,18 +79,18 @@ spec = describe "Nodes test" $ do
       , "L.EvalGraph"
       , "SendRequest conn req"
       , "OpenConnection cfg"
-      , "EvalNodeModel"
+      , "EvalNodeL"
       , "Node tag: networkNode2"
       , "Serving handlersF"
       , "L.EvalGraph"
-      , "EvalNodeModel"
+      , "EvalNodeL"
       , "Node tag: networkNode1"
       ]
 
   it "Boot node validates requests from Network node" $ do
-    
+
     runtime <- createTestRuntime
-    
+
     bootNodeValidationRuntime   :: NodeRuntime <- startNode runtime bootNodeAddr    bootNodeValidation
     masterNodeValidationRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNodeValidation
 
@@ -117,10 +110,44 @@ spec = describe "Nodes test" $ do
       , "SendRequest conn req"
       , "OpenConnection cfg"
       , "Eval Network"
-      , "EvalNodeModel"
+      , "EvalNodeL"
       , "Node tag: masterNode"
       , "Serving handlersF"
-      , "EvalNodeModel"
+      , "EvalNodeL"
       , "Node tag: bootNode"
       ]
 
+
+  it "Network node uses state" $ do
+
+    runtime <- createTestRuntime
+
+    void $ startNode runtime networkNode3Addr networkNode3
+    void $ startNode runtime networkNode4Addr networkNode4
+
+    let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
+    msgs <- readTVarIO tMsgs
+    msgs `shouldBe`
+      [ "balance (should be 91): 91."
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "CloseConnection conn"
+      , "SendRequest conn req"
+      , "OpenConnection cfg"
+      , "EvalNodeL"
+      , "Node tag: networkNode4"
+      , "Serving handlersF"
+      , "L.EvalGraph"
+      , "EvalNodeL"
+      , "Node tag: networkNode3"
+      ]

@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE GADTs #-}
 
 module Enecuum.Framework.Networking.Language where
@@ -6,13 +5,14 @@ module Enecuum.Framework.Networking.Language where
 import           Enecuum.Prelude
 
 import           Data.Typeable
-import qualified Data.Aeson                    as A
-import qualified Enecuum.Core.Language         as L
-import qualified Data.Text                     as Text
-import qualified Enecuum.Framework.Domain      as D
-import           Enecuum.Framework.NetworkModel.Language       ( NetworkModel )
+import qualified Data.Aeson                           as A
+import qualified Enecuum.Core.Language                as L
+import qualified Data.Text                            as Text
+import qualified Enecuum.Framework.Domain             as D
+import           Enecuum.Framework.Network.Language   (NetworkL)
 import           Enecuum.Framework.Domain.RpcMessages
-import           Enecuum.Legacy.Service.Network.Base (ConnectInfo(..))
+import           Enecuum.Legacy.Service.Network.Base  (ConnectInfo(..))
+
 -- This is a raw view of mid-level networking. Will change significantly.
 -- Supposed to be a mid-level language hiding WebSockets.
 
@@ -29,11 +29,11 @@ data NetworkingF next where
   SendRequest :: D.Connection -> RpcRequest -> (Either Text RpcResponse -> next) -> NetworkingF next
 
   -- | Eval low-level networking script.
-  EvalNetwork :: NetworkModel a -> (a -> next) -> NetworkingF next
+  EvalNetwork :: NetworkL a -> (a -> next) -> NetworkingF next
   SendRpcRequest :: ConnectInfo -> RpcRequest -> (Either Text RpcResponse -> next) -> NetworkingF next
 
   -- | Eval core effect.
-  EvalCoreEffectNetworkingF :: L.CoreEffectModel a -> (a -> next) -> NetworkingF next
+  EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF next
 
 instance Functor NetworkingF where
   fmap g (OpenConnection cfg next)          = OpenConnection cfg        (g . next)
@@ -54,13 +54,13 @@ closeConnection conn = liftF $ CloseConnection conn id
 sendRequest :: D.Connection -> RpcRequest -> NetworkingL (Either Text  RpcResponse)
 sendRequest conn rpcReq = liftF $ SendRequest conn rpcReq id
 
-evalNetwork :: NetworkModel a -> NetworkingL a 
+evalNetwork :: NetworkL a -> NetworkingL a
 evalNetwork network = liftF $ EvalNetwork network id
 
 sendRpcRequest :: ConnectInfo -> RpcRequest -> NetworkingL (Either Text RpcResponse)
 sendRpcRequest info request = liftF $ SendRpcRequest info request id
 
-evalCoreEffectNetworkingF :: L.CoreEffectModel a -> NetworkingL a
+evalCoreEffectNetworkingF :: L.CoreEffect a -> NetworkingL a
 evalCoreEffectNetworkingF coreEffect = liftF $ EvalCoreEffectNetworkingF coreEffect id
 
 instance L.Logger (Free NetworkingF) where
@@ -80,7 +80,6 @@ withConnection cfg req = openConnection cfg >>= \case
     pure response
 
 
---
 makeRpcRequest
     :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NetworkingL (Either Text b)
 makeRpcRequest connectCfg arg = do
@@ -92,4 +91,3 @@ makeRpcRequest connectCfg arg = do
         Right (RpcResponseResult val _) -> case A.fromJSON val of
             A.Error txt -> pure $ Left (Text.pack txt)
             A.Success resp -> pure $ Right resp
-            

@@ -1,18 +1,17 @@
+{-# LANGUAGE GADTs           #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE GADTs #-}
 
 module Enecuum.Core.Logger.Language where
 
+import qualified Enecuum.Core.Types as T (LogLevel (..))
 import           Enecuum.Prelude
 
-import qualified Enecuum.Core.Types as T
+type Message = Text
 
--- This is a raw vision of the logging language.
-
--- | Logging possibilities.
+-- | Language for logging.
 data LoggerF next where
   -- | Log message with a predefined level.
-  LogMessage :: T.LogLevel -> Text -> (() -> next) -> LoggerF next
+  LogMessage :: T.LogLevel -> Message -> (() -> next) -> LoggerF next
 
 instance Functor LoggerF where
   fmap g (LogMessage level msg next) = LogMessage level msg (g . next)
@@ -20,12 +19,23 @@ instance Functor LoggerF where
 type LoggerL next = Free LoggerF next
 
 class Logger m where
-  logMessage :: T.LogLevel -> Text -> m ()
+  logMessage :: T.LogLevel -> Message -> m ()
 
 instance Logger (Free LoggerF) where
   logMessage level msg = liftF $ LogMessage level msg id
 
 -- | Log message with Info level.
-logInfo :: Logger m => Text -> m ()
+logInfo :: Logger m => Message -> m ()
 logInfo = logMessage T.Info
 
+-- | Log message with Error level.
+logError :: Logger m => Message -> m ()
+logError = logMessage T.Error
+
+-- | Log message with Debug level.
+logDebug :: Logger m => Message -> m ()
+logDebug = logMessage T.Debug
+
+-- | Log message with Warning level.
+logWarning :: Logger m => Message -> m ()
+logWarning = logMessage T.Warning
