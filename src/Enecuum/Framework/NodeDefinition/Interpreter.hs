@@ -6,43 +6,47 @@ import Enecuum.Prelude
 import qualified Network.WebSockets                 as WS
 import qualified Data.Map                           as M
 import           Data.Aeson                         as A
+import           Control.Concurrent.STM.TChan
 
-import    Control.Concurrent.STM.TChan
-import    Enecuum.Legacy.Service.Network.Base
-
-import Control.Monad.Free
-import Enecuum.Framework.Node.Interpreter
-import Enecuum.Framework.RpcMethod.Interpreter
-import qualified Data.Map as M
-import           Data.Aeson as A
-import           Enecuum.Framework.RpcMethod.Language as L
-import           Enecuum.Framework.Node.Language          hiding (atomically)
+import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Refact.Network.Server
+
+import           Enecuum.Framework.Node.Interpreter
+import           Enecuum.Framework.RpcMethod.Interpreter
+import           Enecuum.Framework.RpcMethod.Language     as L
+import           Enecuum.Framework.Node.Language          hiding (atomically)
 import           Enecuum.Framework.Domain.RpcMessages
 import           Enecuum.Framework.Node.Runtime
 import           Enecuum.Framework.Lens
 import           Enecuum.Framework.NodeDefinition.Language hiding (atomically)
-import           Control.Lens.At
+import qualified Enecuum.Core.RLens                        as RLens
+import qualified Enecuum.Framework.RLens                   as RLens
+import qualified Enecuum.Core.Interpreters                 as Impl
+import qualified Enecuum.Framework.Node.Interpreter        as Impl
+
 
 interpretNodeDefinitionL :: NodeRuntime -> NodeDefinitionF a -> IO a
-interpretNodeDefinitionL _ (NodeTag tag next) = do
+interpretNodeDefinitionL _ (NodeTag tag next) =
     pure $ next ()
 
-interpretNodeDefinitionL nr (EvalNodeL initScript next) = do
-    next <$> runNodeL nr initScript
+interpretNodeDefinitionL nodeRt (EvalNodeL initScript next) =
+    next <$> Impl.runNodeL nodeRt initScript
 
-interpretNodeDefinitionL nr (ServingRpc port initScript next) = do
+interpretNodeDefinitionL nodeRt (ServingRpc port initScript next) = do
     m <- atomically $ newTVar mempty
     a <- runRpcMethodL m initScript
-    s <- atomically $ takeServerChan (nr^.servers) port
-    void $ forkIO $ runRpcServer s port (runNodeL nr) m
+    s <- atomically $ takeServerChan (nodeRt ^. servers) port
+    void $ forkIO $ runRpcServer s port (runNodeL nodeRt) m
     return $ next a
 
-interpretNodeDefinitionL nr (StopServing port next) = do
+interpretNodeDefinitionL nodeRt (StopServing port next) = do
     atomically $ do
-        serversMap <- readTVar (nr^.servers)
-        whenJust (serversMap^.at port) $ \chan  -> writeTChan chan StopServer
+        serversMap <- readTVar (nodeRt ^. servers)
+        whenJust (serversMap ^. at port) $ \chan  -> writeTChan chan StopServer
     return $ next ()
+
+interpretNodeDefinitionL nodeRt (EvalCoreEffectNodeDefinitionF coreEffect next) =
+    next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffect
 
 -- TODO: treadDelay if server in port exist!!!
 takeServerChan
@@ -73,4 +77,4 @@ callRpc runner methods msg = case A.decodeStrict msg of
     Nothing -> return $ RpcResponseError (String "error of request parsing") 0
 
 
-runNodeDefinitionL nr = foldFree (interpretNodeDefinitionL nr)
+runNodeDefinitionL nodeRt = foldFree (interpretNodeDefinitionL nodeRt)

@@ -1,7 +1,6 @@
 module Enecuum.Framework.Node.Interpreter where
 
 import Enecuum.Prelude
-import Control.Monad.Free
 
 import qualified Enecuum.Framework.Node.Language          as L
 import           Enecuum.Framework.Networking.Interpreter (runNetworkingL)

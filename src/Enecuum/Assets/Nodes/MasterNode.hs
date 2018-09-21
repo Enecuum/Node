@@ -1,7 +1,11 @@
 module Enecuum.Assets.Nodes.MasterNode where
 
-import Enecuum.Config
-import Enecuum.Prelude
+import           Enecuum.Prelude
 
-runMasterNode :: Config -> IO ()
-runMasterNode = undefined
+import           Enecuum.Config (Config)
+import qualified Enecuum.Language as L
+
+masterNode :: Config -> L.NodeDefinitionL ()
+masterNode _ = do
+    L.logInfo "Master node starting..."
+    L.logInfo "Master node finished."

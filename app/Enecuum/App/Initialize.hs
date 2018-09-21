@@ -1,11 +1,15 @@
 module App.Initialize where
 
-import           Enecuum.Config  (Config(..))
 import           Enecuum.Prelude
-import Enecuum.Assets.Scenarios
+
+import           Enecuum.Config  (Config(..))
+import qualified Enecuum.Assets.Scenarios as S
+import           Enecuum.Interpreters (runNodeDefinitionL)
+import           Enecuum.Runtime (createNodeRuntime)
 
 initialize :: Config -> IO ()
 initialize config = do
-    when (bootNode config) $ runBootNode config
-    when (masterNode config) $ runMasterNode config
+    nodeRt <- createNodeRuntime
+    when (bootNode config)   $ runNodeDefinitionL nodeRt $ S.bootNode   config
+    when (masterNode config) $ runNodeDefinitionL nodeRt $ S.masterNode config
     pure ()
