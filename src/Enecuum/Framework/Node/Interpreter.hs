@@ -18,8 +18,8 @@ interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
 interpretNodeL nodeRt (L.EvalGraphIO graphModel next) =
     next <$> Impl.runHGraphLIO (nodeRt ^. RLens.graph) graphModel
 
-interpretNodeL _ (L.EvalNetworking networking next) =
-    next <$> Impl.runNetworkingL networking
+-- interpretNodeL _ (L.EvalNetworking networking next) =
+--     next <$> Impl.runNetworkingL networking
 
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects

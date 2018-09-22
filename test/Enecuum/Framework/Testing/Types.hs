@@ -8,9 +8,7 @@ import qualified Data.Map                             as Map
 
 import           Enecuum.Core.Testing.Runtime.Types
 import qualified Enecuum.Domain                       as D
-import qualified Enecuum.Framework.Domain.Types       as T
 import           Enecuum.Framework.Domain.RpcMessages
-
 import qualified Enecuum.Framework.TestData.TestGraph as TG
 
 -- | Defines control requests to manipulate by nodes.

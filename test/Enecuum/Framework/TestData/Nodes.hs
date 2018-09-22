@@ -11,6 +11,7 @@ import           Control.Lens.TH               (makeLenses)
 
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
+import qualified Enecuum.Blockchain.Lens       as Lens
 import qualified Enecuum.Framework.Lens        as Lens
 import qualified Enecuum.Core.Lens             as Lens
 import qualified Data.Text as Text
@@ -20,7 +21,6 @@ import           Enecuum.Core.HGraph.Internal.Types
 import           Enecuum.Framework.TestData.RPC
 import           Enecuum.Framework.TestData.Validation
 import qualified Enecuum.Framework.TestData.TestGraph as TG
-import qualified Enecuum.Framework.Domain.Types as T
 import           Enecuum.Legacy.Service.Network.Base (ConnectInfo (..))
 import           Enecuum.Framework.Domain.RpcMessages
 import           Enecuum.Framework.RpcMethod.Language
@@ -104,8 +104,8 @@ masterNode = do
 -- In this scenario, we assume the graph is list-like.
 calculateBalanceTraversing
   :: D.StringHash
-  -> TG.Balance
-  -> L.GraphModel TG.Balance
+  -> D.Balance
+  -> L.GraphModel D.Transaction D.Balance
 calculateBalanceTraversing curNodeHash curBalance =
   L.getNode curNodeHash >>= \case
     Nothing -> error "Invalid reference found."
@@ -118,9 +118,9 @@ calculateBalanceTraversing curNodeHash curBalance =
 
 tryAddTransactionTraversing
   :: D.StringHash
-  -> TG.Balance
-  -> TG.BalanceChange
-  -> L.GraphModel (Maybe (D.StringHash, TG.Balance))
+  -> D.Balance
+  -> D.BalanceChange
+  -> L.GraphModel D.Transaction (Maybe (D.StringHash, D.Balance))
 tryAddTransactionTraversing curNodeHash prevBalance change =
   L.getNode curNodeHash >>= \case
     Nothing -> error "Invalid reference found."
@@ -250,9 +250,11 @@ acceptBalanceChange nodeData (BalanceChangeRequest change) =
 
 newtorkNode3Initialization :: L.NodeL NetworkNode3Data
 newtorkNode3Initialization = do
-  baseNode <- L.evalGraphIO $ L.getNode TG.nilTransactionHash >>= \case
-    Nothing -> error "Graph is not ready: no genesis node found."
-    Just baseNode -> pure baseNode
+  -- baseNode <- L.evalGraphIO $ L.getNode TG.nilTransactionHash >>= \case
+  --   Nothing -> error "Graph is not ready: no genesis node found."
+  --   Just baseNode -> pure baseNode
+  let baseNode = undefined
+
   balanceVar   <- L.atomically $ L.newVar 0
   graphHeadVar <- L.atomically $ L.newVar $ baseNode ^. Lens.hash
   pure $ NetworkNode3Data graphHeadVar balanceVar
