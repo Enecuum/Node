@@ -1,5 +1,6 @@
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module Enecuum.Framework.TestData.Nodes where
 
@@ -7,7 +8,7 @@ import Enecuum.Prelude
 
 import qualified Data.Aeson                    as A
 import qualified Data.Map                      as Map
-import           Control.Lens.TH               (makeLenses)
+import           Control.Lens                  (makeFieldsNoPrefix)
 
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
@@ -25,6 +26,7 @@ import           Enecuum.Legacy.Service.Network.Base (ConnectInfo (..))
 import           Enecuum.Framework.Domain.RpcMessages
 import           Enecuum.Framework.RpcMethod.Language
 import           Enecuum.Framework.Node.Language          ( NodeL )
+import           Enecuum.Framework.TestData.Helpers
 
 makeRpcRequest
     :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL (Either Text b)
@@ -101,11 +103,18 @@ masterNode = do
 -- Scenario 2: 2 network nodes can interact.
 -- One holds a graph with transactions. Other requests balance and amount change.
 
+data NetworkNode1Data = NetworkNode1Data
+  { _graph    :: TG.TestGraphVar
+  , _baseNode :: TNodeL D.Transaction
+  }
+
+makeFieldsNoPrefix ''NetworkNode1Data
+
 -- In this scenario, we assume the graph is list-like.
 calculateBalanceTraversing
   :: D.StringHash
   -> D.Balance
-  -> L.GraphModel D.Transaction D.Balance
+  -> TG.TestGraphL D.Balance
 calculateBalanceTraversing curNodeHash curBalance =
   L.getNode curNodeHash >>= \case
     Nothing -> error "Invalid reference found."
@@ -120,7 +129,7 @@ tryAddTransactionTraversing
   :: D.StringHash
   -> D.Balance
   -> D.BalanceChange
-  -> L.GraphModel D.Transaction (Maybe (D.StringHash, D.Balance))
+  -> TG.TestGraphL (Maybe (D.StringHash, D.Balance))
 tryAddTransactionTraversing curNodeHash prevBalance change =
   L.getNode curNodeHash >>= \case
     Nothing -> error "Invalid reference found."
@@ -133,35 +142,38 @@ tryAddTransactionTraversing curNodeHash prevBalance change =
         _                   -> error "In this test scenario, graph should be list-like."
 
 acceptGetBalanceTraversing
-  :: TNodeL D.Transaction
+  :: NetworkNode1Data
   -> GetBalanceRequest
   -> L.NodeL GetBalanceResponse
-acceptGetBalanceTraversing baseNode GetBalanceRequest = do
-  balance <- L.evalGraphIO (calculateBalanceTraversing (baseNode ^. Lens.hash) 0)
+acceptGetBalanceTraversing nodeData GetBalanceRequest = do
+  balance <- withGraphIO nodeData
+      $ (calculateBalanceTraversing (nodeData ^. baseNode . Lens.hash) 0)
   pure $ GetBalanceResponse balance
 
 acceptBalanceChangeTraversing
-  :: TNodeL D.Transaction
+  :: NetworkNode1Data
   -> BalanceChangeRequest
   -> L.NodeL BalanceChangeResponse
-acceptBalanceChangeTraversing baseNode (BalanceChangeRequest change) = do
-  mbHashAndBalance <- L.evalGraphIO $ tryAddTransactionTraversing (baseNode ^. Lens.hash) 0 change
+acceptBalanceChangeTraversing nodeData (BalanceChangeRequest change) = do
+  mbHashAndBalance <- withGraphIO nodeData
+      $ tryAddTransactionTraversing (nodeData ^. baseNode . Lens.hash) 0 change
   case mbHashAndBalance of
     Nothing -> pure $ BalanceChangeResponse Nothing
     Just (D.StringHash _, balance) -> pure $ BalanceChangeResponse $ Just balance
 
-newtorkNode1Initialization :: L.NodeL (TNodeL D.Transaction)
-newtorkNode1Initialization = L.evalGraphIO $ L.getNode TG.nilTransactionHash >>= \case
-  Nothing -> error "Graph is not ready: no genesis node found."
-  Just baseNode -> pure baseNode
+newtorkNode1Initialization :: TG.TestGraphVar -> L.NodeL NetworkNode1Data
+newtorkNode1Initialization g =
+  L.evalGraphIO g $ L.getNode TG.nilTransactionHash >>= \case
+    Nothing -> error "Graph is not ready: no genesis node found."
+    Just baseNode -> pure $ NetworkNode1Data g baseNode
 
-networkNode1 :: L.NodeDefinitionL ()
-networkNode1 = do
+networkNode1 :: TG.TestGraphVar -> L.NodeDefinitionL ()
+networkNode1 g = do
   L.nodeTag "networkNode1"
-  baseNode <- L.initialization newtorkNode1Initialization
+  nodeData <- L.initialization $ newtorkNode1Initialization g
   L.servingRpc 1000 $ do
-    method (acceptGetBalanceTraversing baseNode)
-    method (acceptBalanceChangeTraversing baseNode)
+    method (acceptGetBalanceTraversing nodeData)
+    method (acceptBalanceChangeTraversing nodeData)
 
 networkNode2Scenario :: L.NodeL ()
 networkNode2Scenario = do
@@ -219,11 +231,12 @@ masterNodeValidation = do
 -- Other requests balance and amount change.
 
 data NetworkNode3Data = NetworkNode3Data
-  { _graphHeadVar :: D.StateVar D.StringHash
+  { _graph        :: TG.TestGraphVar
+  , _graphHeadVar :: D.StateVar D.StringHash
   , _balanceVar   :: D.StateVar Int
   }
 
-makeLenses ''NetworkNode3Data
+makeFieldsNoPrefix ''NetworkNode3Data
 
 acceptGetBalance
   :: NetworkNode3Data
@@ -240,7 +253,7 @@ acceptBalanceChange nodeData (BalanceChangeRequest change) =
   L.atomically $ do
     curBalance   <- L.readVar $ nodeData ^. balanceVar
     graphHead    <- L.readVar $ nodeData ^. graphHeadVar
-    mbNewBalance <- L.evalGraph $ TG.tryAddTransaction' graphHead curBalance change
+    mbNewBalance <- withGraph nodeData $ TG.tryAddTransaction' graphHead curBalance change
     case mbNewBalance of
       Nothing -> pure $ BalanceChangeResponse Nothing
       Just (newGraphHead, newBalance) -> do
@@ -248,21 +261,19 @@ acceptBalanceChange nodeData (BalanceChangeRequest change) =
         L.writeVar (nodeData ^. graphHeadVar) newGraphHead
         pure $ BalanceChangeResponse $ Just newBalance
 
-newtorkNode3Initialization :: L.NodeL NetworkNode3Data
-newtorkNode3Initialization = do
-  -- baseNode <- L.evalGraphIO $ L.getNode TG.nilTransactionHash >>= \case
-  --   Nothing -> error "Graph is not ready: no genesis node found."
-  --   Just baseNode -> pure baseNode
-  let baseNode = undefined
-
+newtorkNode3Initialization :: TG.TestGraphVar -> L.NodeL NetworkNode3Data
+newtorkNode3Initialization g = do
+  baseNode <- L.evalGraphIO g $ L.getNode TG.nilTransactionHash >>= \case
+    Nothing -> error "Graph is not ready: no genesis node found."
+    Just baseNode -> pure baseNode
   balanceVar   <- L.atomically $ L.newVar 0
   graphHeadVar <- L.atomically $ L.newVar $ baseNode ^. Lens.hash
-  pure $ NetworkNode3Data graphHeadVar balanceVar
+  pure $ NetworkNode3Data g graphHeadVar balanceVar
 
-networkNode3 :: L.NodeDefinitionL ()
-networkNode3 = do
+networkNode3 :: TG.TestGraphVar -> L.NodeDefinitionL ()
+networkNode3 g = do
   L.nodeTag "networkNode3"
-  nodeData <- L.initialization newtorkNode3Initialization
+  nodeData <- L.initialization $ newtorkNode3Initialization g
   L.servingRpc 1000 $ do
     L.method (acceptGetBalance nodeData)
     L.method (acceptBalanceChange nodeData)

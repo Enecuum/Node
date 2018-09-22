@@ -48,7 +48,7 @@ data NodeRuntime = NodeRuntime
   , _address        :: D.NodeAddress          -- ^ Address of this node.
   , _tag            :: TVar D.NodeTag         -- ^ Tag of this node.
   , _rpcServer      :: TMVar RpcServerHandle  -- ^ RPC server of this node.
-  , _graph          :: TG.LGraph              -- ^ Graph
+  , _graph          :: TG.TestGraphVar        -- ^ Graph
   , _varCounter     :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
   , _state          :: NodeState              -- ^ State of node.
   }

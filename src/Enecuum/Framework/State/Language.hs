@@ -10,15 +10,15 @@ import qualified Enecuum.Framework.Domain                 as D
 import qualified Enecuum.Blockchain.Domain.Transaction    as D
 import qualified Data.HGraph.THGraph                      as G
 import           Data.HGraph.StringHashable               (StringHashable)
+import           Enecuum.Core.HGraph.Interpreters.IO      (runHGraphIO)
 import           Enecuum.Core.HGraph.Interpreters.STM     (runHGraphSTM)
 
--- | Graph types.
-type GraphModel g next = Free (L.HGraphL (T.TNodeL g)) next
 
-
+-- | Wrapper for graph action.
 data GraphAction g x = GraphAction
-  { _runner :: forall r. GraphModel g r -> STM r
-  , _action :: GraphModel g x
+  { _stmRunner :: forall r. L.HGraphL g r -> STM r
+  , _ioRunner :: forall r. L.HGraphL g r -> IO r
+  , _action :: L.HGraphL g x
   }
 
 -- | State language.
@@ -29,20 +29,14 @@ data StateF next where
   ReadVar :: D.StateVar a -> (a -> next) -> StateF next
   -- | Write variable.
   WriteVar :: D.StateVar a -> a ->(() -> next) -> StateF next
-
-  MkGraphAction :: GraphAction g x -> (GraphAction g x -> next) -> StateF next
-  EvalGraphAction :: GraphAction g x -> (x -> next) -> StateF next
-  -- MkGraphAction :: (() -> next) -> StateF next
   -- | Eval graph atomically.
-  EvalGraph :: GraphModel g a -> (a -> next) -> StateF next
+  EvalGraph :: GraphAction g x -> (x -> next) -> StateF next
 
 instance Functor StateF where
-  fmap g (NewVar a next)              = NewVar a              (g . next)
-  fmap g (ReadVar var next)           = ReadVar var           (g . next)
-  fmap g (WriteVar var val next)      = WriteVar var val      (g . next)
-  fmap g (MkGraphAction act next)     = MkGraphAction act (g . next)
-  fmap g (EvalGraphAction act next)   = EvalGraphAction act (g . next)
-  fmap g (EvalGraph graphAction next) = EvalGraph graphAction (g . next)
+  fmap g (NewVar a next)         = NewVar a         (g . next)
+  fmap g (ReadVar var next)      = ReadVar var      (g . next)
+  fmap g (WriteVar var val next) = WriteVar var val (g . next)
+  fmap g (EvalGraph act next)    = EvalGraph act    (g . next)
 
 type StateL next = Free StateF next
 
@@ -58,15 +52,12 @@ readVar var = liftF $ ReadVar var id
 writeVar :: D.StateVar a -> a -> StateL ()
 writeVar var val = liftF $ WriteVar var val id
 
-
-mkGraphAction :: (Serialize g, StringHashable g) => TVar (G.THGraph g) -> GraphModel g a -> StateL (GraphAction g a)
-mkGraphAction g graphAction = Free (MkGraphAction x Pure)
-  where
-    x = GraphAction (runHGraphSTM g) graphAction
-
-evalGraphAction :: GraphAction g a -> StateL a
-evalGraphAction graphAction = liftF $ EvalGraphAction graphAction id
-
 -- | Eval graph atomically.
-evalGraph :: GraphModel g a -> StateL a
-evalGraph graphAction = liftF $ EvalGraph graphAction id
+evalGraph
+  :: (Serialize g, StringHashable g)
+  => TVar (G.THGraph g)
+  -> L.HGraphL g a
+  -> StateL a
+evalGraph g graphAction = liftF $ EvalGraph x id
+  where
+    x = GraphAction (runHGraphSTM g) (runHGraphIO g) graphAction

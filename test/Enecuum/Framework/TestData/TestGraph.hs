@@ -10,7 +10,8 @@ import qualified Enecuum.Domain as D
 import           Enecuum.Core.HGraph.Interpreters.IO (runHGraphIO)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 
-type LGraph = TVar (G.THGraph D.Transaction)
+type TestGraphVar = TVar (G.THGraph D.Transaction)
+type TestGraphL a = L.HGraphL D.Transaction a
 
 nilHash :: StringHash
 nilHash = toHash (D.Transaction (toHash @Int 0) 0)
@@ -21,8 +22,8 @@ nilTransaction = D.Transaction nilHash 0
 nilTransactionHash :: D.StringHash
 nilTransactionHash = D.toHash nilTransaction
 
-initLGraph :: IO LGraph
-initLGraph = do
+initTestGraph :: IO TestGraphVar
+initTestGraph = do
     graph <- initHGraph
     runHGraphIO graph $ L.newNode nilTransaction
     pure graph
@@ -33,7 +34,7 @@ tryAddTransaction'
   :: D.StringHash
   -> D.Balance
   -> D.BalanceChange
-  -> L.GraphModel D.Transaction (Maybe (D.StringHash, D.Balance))
+  -> TestGraphL (Maybe (D.StringHash, D.Balance))
 tryAddTransaction' lastNodeHash lastBalance change
   | lastBalance + change < 0 = pure Nothing
   | otherwise = do

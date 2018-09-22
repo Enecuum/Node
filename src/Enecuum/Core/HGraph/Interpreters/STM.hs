@@ -25,14 +25,14 @@ import           Data.HGraph.THGraph as G
 import qualified Enecuum.Core.HGraph.Internal.Impl as Impl
 
 import           Data.HGraph.StringHashable (StringHashable)
-import           Enecuum.Core.HGraph.Language (HGraphL (..))
+import           Enecuum.Core.HGraph.Language (HGraphF (..), HGraphL)
 import           Enecuum.Core.HGraph.Internal.Types (TNodeL)
 
 -- | The interpreter of the language describing the action on graphs.
 interpretHGraphLSTM
     :: (Serialize c, StringHashable c)
     => TVar (G.THGraph c)
-    -> HGraphL (TNodeL c) a
+    -> HGraphF (TNodeL c) a
     -> STM a
 
 -- create a new node
@@ -63,7 +63,7 @@ interpretHGraphLSTM graph (DeleteLink x y next) = do
 runHGraphLSTM, runHGraphSTM
     :: (Serialize c, StringHashable c)
     => TVar (G.THGraph c)
-    -> Free (HGraphL (TNodeL c)) w
+    -> HGraphL c w
     -> STM w
 runHGraphLSTM graph = foldFree (interpretHGraphLSTM graph)
 
