@@ -14,6 +14,8 @@ data Config = Config
   { bootNodeAddress :: Text
   , bootNode :: Bool
   , masterNode :: Bool
+  , networkNode1 :: Bool
+  , networkNode2 :: Bool
   , extPort :: Int
   , loggerConfig :: LoggerConfig
   }

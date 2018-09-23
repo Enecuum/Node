@@ -3,3 +3,4 @@ module Enecuum.Blockchain.Domain
   ) where
 
 import Enecuum.Blockchain.Domain.Transaction as X
+import Enecuum.Blockchain.Domain.Graph as X
