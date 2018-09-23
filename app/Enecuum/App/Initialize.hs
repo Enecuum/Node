@@ -25,7 +25,7 @@ initialize config = do
     let loggerConfig' = (loggerConfig config) & Lens.logFilePath .~ appLog
 
     putStrLn @Text "Creating logger runtime..."
-    loggerRt <- createLoggerRuntime loggerConfig'
+    loggerRt <- createLoggerRuntime True loggerConfig'
     putStrLn @Text "Creating core runtime..."
     coreRt <- createCoreRuntime loggerRt
     putStrLn @Text "Creating node runtime..."

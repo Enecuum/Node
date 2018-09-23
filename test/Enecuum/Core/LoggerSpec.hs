@@ -38,29 +38,29 @@ spec = do
     it "Set level, filepath, format via config" $ do
       (T.LoggerConfig format level logFile) <- logConfig
       res <- withLogFile logFile
-              $ Impl.withLogger format logFile level
-              $ Impl.runLoggerL scenario
+              $ Impl.withLogger False format logFile level
+              $ \h -> Impl.runLoggerL (Just h) scenario
       res `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
 
     it "Set level: Debug level" $ do
       logFile <- defaultLogFileName
       res <- withLogFile logFile
-              $ Impl.withLogger T.nullFormat logFile T.Debug
-              $ Impl.runLoggerL scenario
+              $ Impl.withLogger False T.nullFormat logFile T.Debug
+              $ \h -> Impl.runLoggerL (Just h) scenario
       res `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
 
     it "Set level: Error level" $ do
       logFile <- defaultLogFileName
       res <- withLogFile logFile
-              $ Impl.withLogger T.nullFormat logFile T.Error
-              $ Impl.runLoggerL scenario
+              $ Impl.withLogger False T.nullFormat logFile T.Error
+              $ \h -> Impl.runLoggerL (Just h) scenario
       res `shouldBe` "Error Msg\n"
 
     it "Set format: '$prio $loggername: $msg'" $ do
       logFile <- defaultLogFileName
       res <- withLogFile logFile
-              $ Impl.withLogger T.standartFormat logFile T.Debug
-              $ Impl.runLoggerL scenario
+              $ Impl.withLogger False T.standartFormat logFile T.Debug
+              $ \h -> Impl.runLoggerL (Just h) scenario
       res `shouldBe` "DEBUG Node.Main: Debug Msg\n\
                      \INFO Node.Main: Info Msg\n\
                      \WARNING Node.Main: Warning Msg\n\
