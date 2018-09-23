@@ -33,12 +33,30 @@ import           Enecuum.Assets.Nodes.Address
 networkNode1Scenario :: L.NodeL ()
 networkNode1Scenario = do
     let connectCfg = D.ConnectionConfig networkNode2Addr
-    _ :: BalanceChangeResponse <- makeRequestUnsafe' connectCfg $ BalanceChangeRequest 10
-    _ :: BalanceChangeResponse <- makeRequestUnsafe' connectCfg $ BalanceChangeRequest (-20)
-    _ :: BalanceChangeResponse <- makeRequestUnsafe' connectCfg $ BalanceChangeRequest 101
-    _ :: BalanceChangeResponse <- makeRequestUnsafe' connectCfg $ BalanceChangeRequest (-20)
+
+    L.logInfo $ "Network node 1: requests balance."
+    GetBalanceResponse balance0 <- makeRequestUnsafe' connectCfg GetBalanceRequest
+    L.logInfo $ "Network node 1: Balance (should be 0): " +|| balance0 ||+ "."
+
+    L.logInfo $ "Network node 1: requests balance change (+10)."
+    BalanceChangeResponse balance1 <- makeRequestUnsafe' connectCfg $ BalanceChangeRequest 10
+    L.logInfo $ "Network node 1: Balance: " +|| balance1 ||+ "."
+
+    L.logInfo $ "Network node 1: requests balance change (-20)."
+    BalanceChangeResponse balance2 <- makeRequestUnsafe' connectCfg $ BalanceChangeRequest (-20)
+    L.logInfo $ "Network node 1: Balance: " +|| balance2 ||+ "."
+
+    L.logInfo $ "Network node 1: requests balance change (+101)."
+    BalanceChangeResponse balance3 <- makeRequestUnsafe' connectCfg $ BalanceChangeRequest 101
+    L.logInfo $ "Network node 1: Balance: " +|| balance3 ||+ "."
+
+    L.logInfo $ "Network node 1: requests balance change (-20)."
+    BalanceChangeResponse balance4 <- makeRequestUnsafe' connectCfg $ BalanceChangeRequest (-20)
+    L.logInfo $ "Network node 1: Balance: " +|| balance4 ||+ "."
+
+    L.logInfo $ "Network node 1: requests balance change (+10)."
     GetBalanceResponse balance <- makeRequestUnsafe' connectCfg GetBalanceRequest
-    L.logInfo $ "balance (should be 91): " +|| balance ||+ "."
+    L.logInfo $ "Network node 1: Balance (should be 91): " +|| balance ||+ "."
 
 networkNode1 :: L.NodeDefinitionL ()
 networkNode1 = do
