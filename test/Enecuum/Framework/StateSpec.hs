@@ -13,13 +13,17 @@ import           Enecuum.Framework.Testing.Types
 import           Enecuum.Core.Testing.Runtime.Types
 import qualified Enecuum.Core.Testing.Runtime.Lens as RLens
 import qualified Enecuum.Framework.Testing.Lens as RLens
+import           Enecuum.Legacy.Service.Network.Base (ConnectInfo (..))
+
+nodeAddress :: D.NodeAddress
+nodeAddress = ConnectInfo "0.0.0.4" 1000
 
 spec :: Spec
 spec = describe "State spec" $ do
 
   it "Create & read var non-atomically" $ do
     loggerRuntime <- createLoggerRuntime
-    res <- evaluateNode loggerRuntime "addr" $ do
+    res <- evaluateNode loggerRuntime nodeAddress $ do
       var <- L.scenario $ L.atomically $ L.newVar "abc"
       val <- L.scenario $ L.atomically $ L.readVar var
       pure val
@@ -27,14 +31,14 @@ spec = describe "State spec" $ do
 
   it "Create & read var atomically" $ do
     loggerRuntime <- createLoggerRuntime
-    res <- evaluateNode loggerRuntime "addr" $ do
+    res <- evaluateNode loggerRuntime nodeAddress $ do
       val <- L.scenario $ L.atomically $ L.newVar "abc" >>= L.readVar
       pure val
     res `shouldBe` ("abc" :: String)
 
   it "Create & write var non-atomically" $ do
     loggerRuntime <- createLoggerRuntime
-    res <- evaluateNode loggerRuntime "addr" $ do
+    res <- evaluateNode loggerRuntime nodeAddress $ do
       var <- L.scenario $ L.atomically $ L.newVar "abc"
       _   <- L.scenario $ L.atomically $ L.writeVar var "cde"
       val <- L.scenario $ L.atomically $ L.readVar var
@@ -43,7 +47,7 @@ spec = describe "State spec" $ do
 
   it "Create & write var atomically" $ do
     loggerRuntime <- createLoggerRuntime
-    res <- evaluateNode loggerRuntime "addr" $ do
+    res <- evaluateNode loggerRuntime nodeAddress $ do
       val <- L.scenario $ L.atomically $ do
                 var <- L.newVar "abc"
                 L.writeVar var "cde"
@@ -53,7 +57,7 @@ spec = describe "State spec" $ do
 
   it "Create & read 2 vars non-atomically" $ do
     loggerRuntime <- createLoggerRuntime
-    res <- evaluateNode loggerRuntime "addr" $ do
+    res <- evaluateNode loggerRuntime nodeAddress $ do
       var1 <- L.scenario $ L.atomically $ L.newVar "abc"
       var2 <- L.scenario $ L.atomically $ L.newVar "cde"
       val1 <- L.scenario $ L.atomically $ L.readVar var1
@@ -63,7 +67,7 @@ spec = describe "State spec" $ do
 
   it "Create & read 2 vars atomically" $ do
     loggerRuntime <- createLoggerRuntime
-    res <- evaluateNode loggerRuntime "addr" $ do
+    res <- evaluateNode loggerRuntime nodeAddress $ do
       vars <- L.scenario $ L.atomically $ (,) <$> L.newVar "abc" <*> L.newVar "cde"
       val1 <- L.scenario $ L.atomically $ L.readVar $ fst vars
       val2 <- L.scenario $ L.atomically $ L.readVar $ snd vars

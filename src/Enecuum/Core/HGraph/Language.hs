@@ -12,6 +12,8 @@
 module Enecuum.Core.HGraph.Language (
     -- * Language
       HGraphL (..)
+    -- * Algebra
+    , HGraphF (..)
     -- * Clases
     , HGraph(..)
     -- * Functions
@@ -23,6 +25,7 @@ module Enecuum.Core.HGraph.Language (
 
 import           Universum
 import           Control.Monad.Free
+import           Enecuum.Core.HGraph.Internal.Types (TNodeL)
 import           Enecuum.Core.HGraph.Types
     ( HNodeContent
     , HNodeRef
@@ -32,12 +35,12 @@ import           Enecuum.Core.HGraph.Types
     , toContent
     )
 
-data HGraphL node a where
-    NewNode     :: HNodeContent node -> (Bool -> a) -> HGraphL node a
-    DeleteNode  :: HNodeRef node -> (Bool -> a) -> HGraphL node a
-    NewLink     :: HNodeRef node -> HNodeRef node -> (Bool -> a) -> HGraphL node a
-    DeleteLink  :: HNodeRef node -> HNodeRef node -> (Bool -> a) -> HGraphL node a
-    GetNode     :: HNodeRef node -> (Maybe node -> a) -> HGraphL node a
+data HGraphF node a where
+    NewNode     :: HNodeContent node -> (Bool -> a) -> HGraphF node a
+    DeleteNode  :: HNodeRef node -> (Bool -> a) -> HGraphF node a
+    NewLink     :: HNodeRef node -> HNodeRef node -> (Bool -> a) -> HGraphF node a
+    DeleteLink  :: HNodeRef node -> HNodeRef node -> (Bool -> a) -> HGraphF node a
+    GetNode     :: HNodeRef node -> (Maybe node -> a) -> HGraphF node a
   deriving (Functor)
 
 class Functor m => HGraph node m | m -> node where
@@ -48,13 +51,15 @@ class Functor m => HGraph node m | m -> node where
     deleteNode' :: ToNodeRef node h => h -> m Bool
     getNode     :: ToNodeRef node h => h -> m (Maybe node)
 
-instance HGraph node (Free (HGraphL node)) where
+instance HGraph node (Free (HGraphF node)) where
     newLink' a b     = liftF (NewLink (toNodeRef a) (toNodeRef b) id)
     deleteLink' a b  = liftF (DeleteLink (toNodeRef a) (toNodeRef b) id)
     newNode' a       = liftF (NewNode (toContent a) id)
     deleteNode' a    = liftF (DeleteNode (toNodeRef a) id)
     getNode a        = liftF (GetNode (toNodeRef a) id)
 
+-- | Graph language.
+type HGraphL g next = Free (HGraphF (TNodeL g)) next
 
 newLink, deleteLink
     :: (HGraph node m, ToNodeRef node b, ToNodeRef node c) => c -> b -> m ()

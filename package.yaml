@@ -123,6 +123,7 @@ dependencies:
 - universum
 - fmt
 - stm
+- hslogger
 - validation
 
 
@@ -130,7 +131,7 @@ library:
   source-dirs: src
   ghc-options:
   - -Wall
-  
+
 
 executables:
   enq-node-haskell:

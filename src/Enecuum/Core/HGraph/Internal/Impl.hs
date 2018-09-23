@@ -21,9 +21,13 @@ import           Enecuum.Core.HGraph.Internal.Types
 import           Data.HGraph.THGraph as G
 import           Data.HGraph.StringHashable (StringHash, StringHashable, toHash)
 import           Enecuum.Core.HGraph.Language ( HGraphL (..))
-import           Enecuum.Core.HGraph.Types (HNodeRef, HNode (..), HNodeContent, W (..),
+import           Enecuum.Core.HGraph.Types (HNodeRef, HNode (..), HNodeContent,
                                             ToNodeRef, ToContent,
                                             fromContent, toContent, toNodeRef)
+
+-- | Init HGraph.
+initHGraph :: (Serialize c, StringHashable c) => IO (TVar (G.THGraph c))
+initHGraph = atomically G.newTHGraph
 
 -- create a new node
 newNode

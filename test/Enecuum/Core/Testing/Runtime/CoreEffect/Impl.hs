@@ -14,5 +14,5 @@ interpretCoreEffectL loggerRt (L.EvalLogger logger next) =
     next <$> runLoggerL loggerRt logger
 
 -- | Runs core effect container language.
-runCoreEffectModel :: LoggerRuntime -> L.CoreEffectModel a -> IO a
-runCoreEffectModel loggerRt = foldFree (interpretCoreEffectL loggerRt)
+runCoreEffect :: LoggerRuntime -> L.CoreEffect a -> IO a
+runCoreEffect loggerRt = foldFree (interpretCoreEffectL loggerRt)

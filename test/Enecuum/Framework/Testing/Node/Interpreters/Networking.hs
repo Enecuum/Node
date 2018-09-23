@@ -10,15 +10,16 @@ import qualified Enecuum.Framework.Lens             as Lens
 
 import qualified Enecuum.Framework.Testing.Lens     as RLens
 import           Enecuum.Framework.Testing.Types
-import qualified Enecuum.Framework.Testing.Node.Interpreters.NetworkModel as Impl
+import qualified Enecuum.Framework.Testing.Node.Interpreters.Network as Impl
 import qualified Enecuum.Core.Testing.Runtime.Interpreters as Impl
+import           Enecuum.Framework.Domain.RpcMessages
 
 -- | Relay request from this node to the network environment.
 relayRequest
   :: NodeRuntime
   -> D.Connection
-  -> D.RpcRequest
-  -> IO (D.RpcResult D.RpcResponse)
+  -> RpcRequest
+  -> IO (Either Text RpcResponse)
 relayRequest nodeRt conn req = do
   atomically
       $ putTMVar (nodeRt ^. RLens.networkControl . RLens.request)
@@ -36,22 +37,19 @@ interpretNetworkingL
   -> IO a
 
 interpretNetworkingL nodeRt (L.OpenConnection cfg next) = do
-  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "OpenConnection cfg"
   pure $ next $ Just $ D.Connection (nodeRt ^. RLens.address) (cfg ^. Lens.address)
 
 interpretNetworkingL nodeRt (L.CloseConnection _ next) =
-  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ next <$> L.logInfo "CloseConnection conn"
+  pure $ next ()
 
 interpretNetworkingL nodeRt (L.SendRequest conn req next) = do
-  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "SendRequest conn req"
   next <$> relayRequest nodeRt conn req
 
 interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) = do
-  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "Eval Network"
-  next <$> Impl.runNetworkModel nodeRt networkAction
+  next <$> Impl.runNetworkL nodeRt networkAction
 
 interpretNetworkingL nodeRt (L.EvalCoreEffectNetworkingF coreEffect next) =
-  next <$> Impl.runCoreEffectModel (nodeRt ^. RLens.loggerRuntime) coreEffect
+  next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
 
 -- | Runs networking language.
 runNetworkingL :: NodeRuntime -> L.NetworkingL a -> IO a

@@ -11,7 +11,7 @@ import           Unsafe.Coerce                                          (unsafeC
 import qualified Enecuum.Language                                       as L
 import qualified Enecuum.Domain                                         as D
 import qualified Enecuum.Framework.Lens                                 as Lens
-import           Enecuum.Core.HGraph.Interpreters.STM                   (runHGraph)
+import           Enecuum.Core.HGraph.Interpreters.STM                   (runHGraphSTM)
 
 import qualified Enecuum.Core.Testing.Runtime.Interpreters              as Impl
 import           Enecuum.Framework.Testing.Types
@@ -71,8 +71,8 @@ interpretStateL nodeRt (L.ReadVar var next) =
 interpretStateL nodeRt (L.WriteVar var val next) =
   next <$> writeVar' nodeRt var val
 
-interpretStateL nodeRt (L.EvalGraph graphAction next) = do
-  next <$> runHGraph (nodeRt ^. RLens.graph) graphAction
+interpretStateL nodeRt (L.EvalGraph (L.GraphAction stmRunner _ act) next) = do
+  next <$> stmRunner act
 
 -- | Runs state model as STM.
 runStateL :: NodeRuntime -> L.StateL a -> STM a

@@ -8,12 +8,16 @@ import           Enecuum.Prelude
 import qualified Data.ByteString.Lazy          as L
 import qualified Data.Aeson                    as A
 
--- Dummy config
+import           Enecuum.Core.Types.Logger     (LoggerConfig)
+
 data Config = Config
   { bootNodeAddress :: Text
   , bootNode :: Bool
-  , networkNode :: Bool
-  , extPort :: Int 
+  , masterNode :: Bool
+  , networkNode1 :: Bool
+  , networkNode2 :: Bool
+  , extPort :: Int
+  , loggerConfig :: LoggerConfig
   }
   deriving (Generic, FromJSON)
 

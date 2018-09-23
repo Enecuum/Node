@@ -2,27 +2,27 @@
 
 module Enecuum.Framework.Testing.Types where
 
-import Enecuum.Prelude
+import           Enecuum.Prelude
 
-import qualified Data.Map as Map
+import qualified Data.Map                             as Map
 
-import qualified Enecuum.Domain                       as D
 import           Enecuum.Core.Testing.Runtime.Types
+import qualified Enecuum.Domain                       as D
+import           Enecuum.Framework.Domain.RpcMessages
 import qualified Enecuum.Framework.TestData.TestGraph as TG
-import qualified Enecuum.Framework.Domain.Types       as T
 
 -- | Defines control requests to manipulate by nodes.
 data ControlRequest
-  = RpcRequest D.RpcRequest       -- ^ Eval RPC request to a node.
+  = RpcRequest RpcRequest       -- ^ Eval RPC request to a node.
   | RelayRpcRequest               -- ^ Relay RPC request from one node to another.
     { _from    :: D.NodeAddress   -- ^ From node
     , _to      :: D.NodeAddress   -- ^ To node
-    , _request :: D.RpcRequest    -- ^ RPC request to relay
+    , _request :: RpcRequest    -- ^ RPC request to relay
     }
 
 -- | Result of evaluation of control response.
 data ControlResponse
-  = AsRpcResponse D.RpcResponse   -- ^ RPC response wrapped into the control response.
+  = AsRpcResponse RpcResponse   -- ^ RPC response wrapped into the control response.
   | AsErrorResponse Text          -- ^ Keeps an error that occured during the ControlRequest evaluation.
 
 -- | Control is the way to evaluate admin control over a node.
@@ -43,12 +43,12 @@ type NodeState = TMVar (Map.Map D.VarId VarHandle)
 
 -- | Test runtime for every node acting within a particular test runtime.
 data NodeRuntime = NodeRuntime
-  { _loggerRuntime  :: LoggerRuntime          -- ^ Logger runtime.
+  { _loggerRuntime  :: LoggerRuntime    -- ^ Logger runtime.
   , _networkControl :: Control                -- ^ Control interface for virtual network.
   , _address        :: D.NodeAddress          -- ^ Address of this node.
   , _tag            :: TVar D.NodeTag         -- ^ Tag of this node.
   , _rpcServer      :: TMVar RpcServerHandle  -- ^ RPC server of this node.
-  , _graph          :: TG.LGraph              -- ^ Graph
+  , _graph          :: TG.TestGraphVar        -- ^ Graph
   , _varCounter     :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
   , _state          :: NodeState              -- ^ State of node.
   }
@@ -62,8 +62,8 @@ type NodesRegistry = TMVar (Map.Map D.NodeAddress NodeRuntime)
 -- from one node to another, it can make RPC requests to nodes,
 -- and can evaluate some control requests over the test network.
 data TestRuntime = TestRuntime
-  { _loggerRuntime   :: LoggerRuntime     -- ^ Logger runtime.
-  , _networkWorkerId :: ThreadId          -- ^ Network environment thread ID.
-  , _networkControl  :: Control           -- ^ Network environment control interface
-  , _registry        :: NodesRegistry     -- ^ Tag of this node.
+  { _loggerRuntime   :: LoggerRuntime -- ^ Logger runtime.
+  , _networkWorkerId :: ThreadId            -- ^ Network environment thread ID.
+  , _networkControl  :: Control             -- ^ Network environment control interface
+  , _registry        :: NodesRegistry       -- ^ Tag of this node.
   }
