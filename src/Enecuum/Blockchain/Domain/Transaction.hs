@@ -1,7 +1,5 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
-module Enecuum.Framework.Domain.Types where
+module Enecuum.Blockchain.Domain.Transaction where
 
 import Enecuum.Prelude
 
@@ -26,3 +24,7 @@ instance S.Serialize Transaction
 
 instance StringHashable Transaction where
     toHash = StringHash . Base64.encode . SHA.hash . S.encode
+
+
+type Balance = Int
+type BalanceChange = Int

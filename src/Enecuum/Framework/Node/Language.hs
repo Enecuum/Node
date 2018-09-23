@@ -8,6 +8,10 @@ import qualified Enecuum.Core.Language                    as L
 import qualified Enecuum.Framework.State.Language         as L
 import qualified Enecuum.Framework.Networking.Language    as L
 import qualified Enecuum.Framework.Domain                 as D
+import qualified Data.HGraph.THGraph                      as G
+import           Data.HGraph.StringHashable               (StringHashable)
+import           Enecuum.Core.HGraph.Interpreters.IO      (runHGraphIO)
+import           Enecuum.Core.HGraph.Interpreters.STM     (runHGraphSTM)
 
 -- | Node language.
 data NodeF next where
@@ -18,7 +22,7 @@ data NodeF next where
   -- | Eval core effect.
   EvalCoreEffectNodeF :: L.CoreEffect a -> (a -> next) -> NodeF next
   -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
-  EvalGraphIO :: L.GraphModel a -> (a -> next) -> NodeF next
+  EvalGraphIO :: L.GraphAction g x -> (x -> next) -> NodeF next
 
 instance Functor NodeF where
   fmap g (EvalStateAtomically statefulAction next) = EvalStateAtomically statefulAction (g . next)
@@ -45,8 +49,14 @@ evalCoreEffectNodeF :: L.CoreEffect a -> NodeL a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
-evalGraphIO :: L.GraphModel a -> NodeL a
-evalGraphIO graphAction = liftF $ EvalGraphIO graphAction id
+evalGraphIO
+  :: (Serialize g, StringHashable g)
+  => TVar (G.THGraph g)
+  -> L.HGraphL g a
+  -> NodeL a
+evalGraphIO g graphAction = liftF $ EvalGraphIO x id
+  where
+    x = L.GraphAction (runHGraphSTM g) (runHGraphIO g) graphAction
 
 instance L.Logger (Free NodeF) where
     logMessage level msg = evalCoreEffectNodeF $ L.logMessage level msg

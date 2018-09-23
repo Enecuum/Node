@@ -15,6 +15,7 @@ import qualified Enecuum.Core.Types          as T (Format, LogLevel (..))
 -- | Opaque type covering all information needed to teardown the logger.
 data HsLoggerHandle = HsLoggerHandle
   { rootLogHandler :: GenericHandler Handle
+  , logLock :: MVar ()
   }
 
 component :: String
@@ -36,13 +37,18 @@ dispatchLogLevel T.Warning = WARNING
 dispatchLogLevel T.Error   = ERROR
 
 -- | Interpret LoggerL language.
-interpretLoggerL :: L.LoggerF a -> IO a
-interpretLoggerL (L.LogMessage level msg next) = do
+interpretLoggerL :: HsLoggerHandle -> L.LoggerF a -> IO a
+interpretLoggerL h (L.LogMessage level msg next) = do
+  -- TODO: Quick hack to log to console.
+  takeMVar $ logLock h
+  print msg
   logM component (dispatchLogLevel level) $ TXT.unpack msg
+  putMVar (logLock h) ()
   pure $ next ()
 
-runLoggerL :: L.LoggerL a -> IO a
-runLoggerL = foldFree interpretLoggerL
+runLoggerL :: Maybe HsLoggerHandle -> L.LoggerL () -> IO ()
+runLoggerL (Just h) l = foldFree (interpretLoggerL h) l
+runLoggerL Nothing _ = pure ()
 
 -- | Setup logger required by the application.
 setupLogger :: T.Format -> FilePath -> T.LogLevel -> IO HsLoggerHandle
@@ -54,8 +60,9 @@ setupLogger format logFileName level = do
       rootLoggerName
       (setLevel DEBUG . setHandlers [logHandler])
   -- return opaque AppLogger handle
-  pure $ HsLoggerHandle logHandler
+  l <- newMVar ()
+  pure $ HsLoggerHandle logHandler l
 
 -- | Tear down the application logger; i.e. close all associated log handlers.
 teardownLogger :: HsLoggerHandle -> IO ()
-teardownLogger handle = close $ rootLogHandler handle
+teardownLogger = close . rootLogHandler

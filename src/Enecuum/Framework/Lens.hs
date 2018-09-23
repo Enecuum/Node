@@ -15,5 +15,3 @@ makeFieldsNoPrefix ''NetworkRequest
 makeFieldsNoPrefix ''NetworkResponse
 makeFieldsNoPrefix ''NodeConfig
 makeFieldsNoPrefix ''StateVar
-
-makeFieldsNoPrefix ''Transaction

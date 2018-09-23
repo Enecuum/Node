@@ -1,4 +1,6 @@
-module Enecuum.Framework.TestData.TestGraph where
+-- TODO: this is copy-paste from tests with little changes.
+
+module Enecuum.Blockchain.Domain.Graph where
 
 import Enecuum.Prelude
 
@@ -6,12 +8,13 @@ import qualified Data.HGraph.THGraph     as G
 import           Data.HGraph.StringHashable (StringHash, toHash)
 
 import qualified Enecuum.Language as L
-import qualified Enecuum.Domain as D
+import qualified Enecuum.Core.Types as D
+import qualified Enecuum.Blockchain.Domain.Transaction as D
 import           Enecuum.Core.HGraph.Interpreters.IO (runHGraphIO)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 
-type TestGraphVar = TVar (G.THGraph D.Transaction)
-type TestGraphL a = L.HGraphL D.Transaction a
+type GraphVar = TVar (G.THGraph D.Transaction)
+type GraphL a = L.HGraphL D.Transaction a
 
 nilHash :: StringHash
 nilHash = toHash (D.Transaction (toHash @Int 0) 0)
@@ -22,8 +25,8 @@ nilTransaction = D.Transaction nilHash 0
 nilTransactionHash :: D.StringHash
 nilTransactionHash = D.toHash nilTransaction
 
-initTestGraph :: IO TestGraphVar
-initTestGraph = do
+initGraph :: IO GraphVar
+initGraph = do
     graph <- initHGraph
     runHGraphIO graph $ L.newNode nilTransaction
     pure graph
@@ -34,7 +37,7 @@ tryAddTransaction'
   :: D.StringHash
   -> D.Balance
   -> D.BalanceChange
-  -> TestGraphL (Maybe (D.StringHash, D.Balance))
+  -> GraphL (Maybe (D.StringHash, D.Balance))
 tryAddTransaction' lastNodeHash lastBalance change
   | lastBalance + change < 0 = pure Nothing
   | otherwise = do

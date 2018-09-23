@@ -10,6 +10,8 @@ import           Enecuum.Interpreters (runNodeDefinitionL)
 import           Enecuum.Runtime (createNodeRuntime, createLoggerRuntime,
                                   clearNodeRuntime, clearLoggerRuntime,
                                   createCoreRuntime, clearCoreRuntime)
+import           Enecuum.Assets.Nodes.Address (networkNode1Addr, networkNode2Addr)
+import qualified Enecuum.Blockchain.Domain.Graph as TG
 
     -- TODO: make this more correct.
     -- TODO: use bracket idiom here
@@ -29,22 +31,25 @@ initialize config = do
     putStrLn @Text "Creating node runtime..."
     nodeRt <- createNodeRuntime coreRt
 
-    putStrLn @Text "Starting node..."
     when (bootNode config) $ do
         putStrLn @Text "Starting boot node..."
         runNodeDefinitionL nodeRt $ S.bootNode config
-
-        -- TODO: this is a quick hack. Make it right.
-        threadDelay $ 1000 * 1000 * 1000
-        putStrLn @Text "Boot node done."
 
     when (masterNode config) $ do
         putStrLn @Text "Starting master node..."
         runNodeDefinitionL nodeRt $ S.masterNode config
 
+    when (networkNode1 config) $ do
+        putStrLn @Text "Starting networkNode1 node..."
+        runNodeDefinitionL nodeRt S.networkNode1
+
+    when (networkNode2 config) $ do
+        putStrLn @Text "Starting networkNode2 node..."
+        graph <- TG.initGraph
+        runNodeDefinitionL nodeRt $ S.networkNode2 graph
+
         -- TODO: this is a quick hack. Make it right.
-        threadDelay $ 1000 * 1000 * 1000
-        putStrLn @Text "Master node done."
+    threadDelay $ 1000 * 1000 * 1000
 
     putStrLn @Text "Clearing node runtime..."
     clearNodeRuntime nodeRt

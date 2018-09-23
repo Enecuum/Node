@@ -26,7 +26,7 @@ createEmptyNodeRuntime
 createEmptyNodeRuntime loggerRt networkControl addr = do
   tag <- newTVarIO ("" :: Text)
   handle <- newEmptyTMVarIO
-  graph <- TG.initLGraph
+  graph <- TG.initTestGraph
   varCounter <- newTMVarIO 0
   state <- newTMVarIO Map.empty
   pure $ NodeRuntime loggerRt networkControl addr tag handle graph varCounter state
@@ -43,6 +43,21 @@ startNode testRt nodeAddr scenario = do
   registerNode (testRt ^. RLens.registry) nodeAddr nodeRt
   pure nodeRt
 
+-- TODO: we need graph creation method.
+
+-- | Starts node using NodeDefinitionL.
+-- Uses graph.
+startNode'
+  :: TestRuntime
+  -> D.NodeAddress
+  -> (TG.TestGraphVar -> L.NodeDefinitionL ())
+  -> IO NodeRuntime
+startNode' testRt nodeAddr scenario = do
+  nodeRt <- createEmptyNodeRuntime (testRt ^. RLens.loggerRuntime) (testRt ^. RLens.networkControl) nodeAddr
+  runNodeDefinitionL nodeRt $ scenario (nodeRt ^. RLens.graph)
+  registerNode (testRt ^. RLens.registry) nodeAddr nodeRt
+  pure nodeRt
+
 -- | Evaluates node scenario. Does no node registering in the test runtime.
 -- Node scenario can't send messages to other nodes (well, it can, but will fail).
 evaluateNode
@@ -53,4 +68,17 @@ evaluateNode
 evaluateNode loggerRt nodeAddr scenario = do
   control <- createControl
   nodeRt <- createEmptyNodeRuntime loggerRt control nodeAddr
-  runNodeDefinitionL nodeRt scenario
+  runNodeDefinitionL nodeRt $ scenario
+
+-- | Evaluates node scenario. Does no node registering in the test runtime.
+-- Node scenario can't send messages to other nodes (well, it can, but will fail).
+-- Uses graph.
+evaluateNode'
+  :: LoggerRuntime
+  -> D.NodeAddress
+  -> (TG.TestGraphVar -> L.NodeDefinitionL a)
+  -> IO a
+evaluateNode' loggerRt nodeAddr scenario = do
+  control <- createControl
+  nodeRt <- createEmptyNodeRuntime loggerRt control nodeAddr
+  runNodeDefinitionL nodeRt $ scenario (nodeRt ^. RLens.graph)

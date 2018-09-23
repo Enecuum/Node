@@ -20,7 +20,6 @@ interpretNetworkSendingL
   -> L.NetworkSendingF a
   -> IO a
 interpretNetworkSendingL nodeRt (L.Multicast cfg req next) = do
-  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "L.Multicast cfg req"
   pure $ next ()
 
 -- | Runs NetworkSendingL language.
@@ -33,7 +32,6 @@ interpretNetworkListeningL
   -> L.NetworkListeningF a
   -> IO a
 interpretNetworkListeningL nodeRt (L.WaitForSingleResponse cfg timeout next) = do
-  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "L.WaitForSingleResponse cfg timeout"
   pure $ next Nothing
 
 -- | Runs NetworkListeningL language.
@@ -46,7 +44,6 @@ interpretNetwork
   -> L.NetworkF a
   -> IO a
 interpretNetwork nodeRt (L.Synchronize sending listening next) = do
-  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "Synchronize"
   runNetworkSendingL nodeRt sending
   next <$> runNetworkListeningL nodeRt listening
 

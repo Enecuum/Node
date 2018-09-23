@@ -37,18 +37,15 @@ interpretNetworkingL
   -> IO a
 
 interpretNetworkingL nodeRt (L.OpenConnection cfg next) = do
-  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "OpenConnection cfg"
   pure $ next $ Just $ D.Connection (nodeRt ^. RLens.address) (cfg ^. Lens.address)
 
 interpretNetworkingL nodeRt (L.CloseConnection _ next) =
-  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ next <$> L.logInfo "CloseConnection conn"
+  pure $ next ()
 
 interpretNetworkingL nodeRt (L.SendRequest conn req next) = do
-  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "SendRequest conn req"
   next <$> relayRequest nodeRt conn req
 
 interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) = do
-  Impl.runLoggerL (nodeRt ^. RLens.loggerRuntime) $ L.logInfo "Eval Network"
   next <$> Impl.runNetworkL nodeRt networkAction
 
 interpretNetworkingL nodeRt (L.EvalCoreEffectNetworkingF coreEffect next) =

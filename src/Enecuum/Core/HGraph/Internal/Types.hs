@@ -21,7 +21,6 @@ import           Enecuum.Core.HGraph.Types (HNode)
 
 import           Data.HGraph.THGraph as G
 import           Data.HGraph.StringHashable (StringHash, StringHashable, toHash)
-import           Enecuum.Core.HGraph.Language (HGraphL (..))
 import           Enecuum.Core.HGraph.Types (HNodeRef, HNode (..), HNodeContent,
                                             ToNodeRef, ToContent,
                                             fromContent, toContent, toNodeRef)

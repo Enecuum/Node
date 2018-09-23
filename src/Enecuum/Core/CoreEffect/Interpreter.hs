@@ -10,7 +10,7 @@ import           Enecuum.Core.Logger.Impl.HsLogger (runLoggerL)
 -- | Interprets core effect.
 interpretCoreEffectF :: Rt.CoreRuntime -> L.CoreEffectF a -> IO a
 interpretCoreEffectF coreRt (L.EvalLogger msg next) =
-    next <$> runLoggerL msg
+    next <$> (runLoggerL (coreRt ^. RLens.loggerRuntime . RLens.hsLoggerHandle)) msg
 
 -- | Runs core effect language.
 runCoreEffect :: Rt.CoreRuntime -> L.CoreEffect a -> IO a

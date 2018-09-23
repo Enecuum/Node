@@ -71,8 +71,8 @@ interpretStateL nodeRt (L.ReadVar var next) =
 interpretStateL nodeRt (L.WriteVar var val next) =
   next <$> writeVar' nodeRt var val
 
-interpretStateL nodeRt (L.EvalGraph graphAction next) = do
-  next <$> runHGraphSTM (nodeRt ^. RLens.graph) graphAction
+interpretStateL nodeRt (L.EvalGraph (L.GraphAction stmRunner _ act) next) = do
+  next <$> stmRunner act
 
 -- | Runs state model as STM.
 runStateL :: NodeRuntime -> L.StateL a -> STM a

@@ -2,8 +2,8 @@
     "bootNodeAddress": "[((127,0,0,1), 1554)]",
     "bootNode": false,
     "masterNode": false,
-    "networkNode1": true,
-    "networkNode2": false,
+    "networkNode1": false,
+    "networkNode2": true,
     "extPort": 1667,
     "loggerConfig":
         {

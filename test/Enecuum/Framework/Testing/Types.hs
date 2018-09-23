@@ -8,9 +8,7 @@ import qualified Data.Map                             as Map
 
 import           Enecuum.Core.Testing.Runtime.Types
 import qualified Enecuum.Domain                       as D
-import qualified Enecuum.Framework.Domain.Types       as T
 import           Enecuum.Framework.Domain.RpcMessages
-
 import qualified Enecuum.Framework.TestData.TestGraph as TG
 
 -- | Defines control requests to manipulate by nodes.
@@ -50,7 +48,7 @@ data NodeRuntime = NodeRuntime
   , _address        :: D.NodeAddress          -- ^ Address of this node.
   , _tag            :: TVar D.NodeTag         -- ^ Tag of this node.
   , _rpcServer      :: TMVar RpcServerHandle  -- ^ RPC server of this node.
-  , _graph          :: TG.LGraph              -- ^ Graph
+  , _graph          :: TG.TestGraphVar        -- ^ Graph
   , _varCounter     :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
   , _state          :: NodeState              -- ^ State of node.
   }
