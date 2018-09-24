@@ -18,53 +18,53 @@ import           Enecuum.Legacy.Service.Network.Base
 
 -- | Node description language.
 -- Allows to specify what actions should be done when node starts.
-data NodeDefinitionF next where
+data NodeDefinitionF cfg  next where
     -- | Set node tag. For example, "boot node".
-    NodeTag        :: D.NodeTag -> (() -> next) -> NodeDefinitionF next
+    NodeTag        :: D.NodeTag -> (() -> next) -> NodeDefinitionF cfg next
     -- | Evaluate some node model.
-    EvalNodeL :: L.NodeL a -> (a -> next) -> NodeDefinitionF next
+    EvalNodeL :: L.NodeL cfg a -> (a -> next) -> NodeDefinitionF cfg next
     -- | Serving of Rpc request.
-    ServingRpc     :: PortNumber -> RpcMethodL () -> (() -> next) -> NodeDefinitionF next
+    ServingRpc     :: PortNumber -> RpcMethodL cfg () -> (() -> next) -> NodeDefinitionF cfg next
     -- | Stop serving of Rpc server.
-    StopServing    :: PortNumber -> (() -> next) -> NodeDefinitionF next
+    StopServing    :: PortNumber -> (() -> next) -> NodeDefinitionF cfg next
     -- | Eval core effect.
-    EvalCoreEffectNodeDefinitionF :: L.CoreEffect a -> (a -> next) -> NodeDefinitionF next
+    EvalCoreEffectNodeDefinitionF :: L.CoreEffect a -> (a -> next) -> NodeDefinitionF cfg next
 
-instance Functor NodeDefinitionF where
+instance Functor (NodeDefinitionF cfg) where
     fmap g (NodeTag tag next)               = NodeTag tag               (g . next)
     fmap g (EvalNodeL nodeModel next)       = EvalNodeL nodeModel       (g . next)
     fmap g (ServingRpc port handlersF next) = ServingRpc port handlersF (g . next)
     fmap g (StopServing port next)          = StopServing port          (g . next)
     fmap g (EvalCoreEffectNodeDefinitionF coreEffect next) = EvalCoreEffectNodeDefinitionF coreEffect (g . next)
 
-type NodeDefinitionL next = Free NodeDefinitionF next
+type NodeDefinitionL cfg next = Free (NodeDefinitionF cfg) next
 
 -- | Sets tag for node.
-nodeTag :: D.NodeTag -> NodeDefinitionL ()
+nodeTag :: D.NodeTag -> NodeDefinitionL cfg ()
 nodeTag tag = liftF $ NodeTag tag id
 
 -- | Runs node scenario.
-evalNodeL :: L.NodeL a -> NodeDefinitionL a
+evalNodeL :: L.NodeL cfg a -> NodeDefinitionL cfg a
 evalNodeL nodeModel = liftF $ EvalNodeL nodeModel id
 
 -- | Runs RPC server.
-servingRpc :: PortNumber -> RpcMethodL () -> NodeDefinitionL ()
+servingRpc :: PortNumber -> RpcMethodL cfg () -> NodeDefinitionL cfg ()
 servingRpc port handlersF = liftF $ ServingRpc port handlersF id
 
 -- | Eval core effect.
-evalCoreEffectNodeDefinitionF :: L.CoreEffect a -> NodeDefinitionL a
+evalCoreEffectNodeDefinitionF :: L.CoreEffect a -> NodeDefinitionL cfg a
 evalCoreEffectNodeDefinitionF coreEffect = liftF $ EvalCoreEffectNodeDefinitionF coreEffect id
 
 -- | Runs scenario as initialization.
-initialization :: L.NodeL a -> NodeDefinitionL a
+initialization :: L.NodeL cfg a -> NodeDefinitionL cfg a
 initialization = evalNodeL
 
 -- | Runs scenario.
-scenario :: L.NodeL a -> NodeDefinitionL a
+scenario :: L.NodeL cfg a -> NodeDefinitionL cfg a
 scenario = evalNodeL
 
-stopServing :: PortNumber -> NodeDefinitionL ()
+stopServing :: PortNumber -> NodeDefinitionL cfg ()
 stopServing port = liftF $ StopServing port id
 
-instance L.Logger (Free NodeDefinitionF) where
+instance L.Logger (Free (NodeDefinitionF cfg)) where
     logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg

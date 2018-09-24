@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module Enecuum.Framework.RpcMethod.Language where
 
@@ -12,21 +13,21 @@ import qualified Data.Text as T
 import           Data.Typeable
 
 -- | Rpc server description language.
-data RpcMethodF a where
+data RpcMethodF cfg a where
   -- | Set rpc method to list.
-  RpcMethod :: Text -> RpcMethod -> (() -> a)  -> RpcMethodF a
+  RpcMethod :: Text -> RpcMethod cfg -> (() -> a)  -> RpcMethodF cfg a
 
-instance Functor RpcMethodF where
+instance Functor (RpcMethodF cfg) where
   fmap g (RpcMethod text method next) = RpcMethod text method (g . next)
 
-type RpcMethod = A.Value -> Int -> NodeL RpcResponse
-type RpcMethodL a = Free RpcMethodF a
+type RpcMethod cfg = A.Value -> Int -> NodeL cfg RpcResponse
+type RpcMethodL cfg a = Free (RpcMethodF cfg) a
 
-rpcMethod :: Text -> RpcMethod -> RpcMethodL ()
+rpcMethod :: Text -> RpcMethod cfg -> RpcMethodL cfg ()
 rpcMethod text method = liftF (RpcMethod text method id)
 
 
-makeMethod :: (FromJSON a, ToJSON b) => (a -> NodeL b) -> A.Value -> Int -> NodeL RpcResponse
+makeMethod :: (FromJSON a, ToJSON b) => (a -> NodeL cfg b) -> RpcMethod cfg
 makeMethod f a i = case A.fromJSON a of
     A.Success req -> do
         res <- f req
@@ -34,7 +35,7 @@ makeMethod f a i = case A.fromJSON a of
     A.Error _     -> pure $ RpcResponseError  (A.toJSON $ A.String "Error in parsing of args") i
 
 
-makeMethod' :: (FromJSON a, ToJSON b) => (a -> NodeL (Either Text b)) -> A.Value -> Int -> NodeL RpcResponse
+makeMethod' :: (FromJSON a, ToJSON b) => (a -> NodeL cfg (Either Text b)) -> RpcMethod cfg
 makeMethod' f a i = case A.fromJSON a of
     A.Success req -> do
         res <- f req
@@ -44,11 +45,12 @@ makeMethod' f a i = case A.fromJSON a of
     A.Error _     -> pure $ RpcResponseError  (A.toJSON $ A.String "Error in parsing of args") i
 
 
-class MethodMaker a where
-    method :: a -> RpcMethodL ()
+class MethodMaker cfg a | a -> cfg where
+    method :: a -> RpcMethodL cfg ()
 
-instance (Typeable a, Typeable b, ToJSON b, FromJSON a) => MethodMaker (a -> NodeL b) where
-    method f = rpcMethod (makeMethodName f) (makeMethod f)
+instance (Typeable a, Typeable cfg, Typeable b, ToJSON b, FromJSON a) =>
+    MethodMaker cfg (a -> NodeL cfg b) where
+        method f = rpcMethod (makeMethodName f) (makeMethod f)
 
 
 makeMethodName :: Typeable a => a -> Text

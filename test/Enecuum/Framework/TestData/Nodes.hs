@@ -27,14 +27,15 @@ import           Enecuum.Framework.Domain.RpcMessages
 import           Enecuum.Framework.RpcMethod.Language
 import           Enecuum.Framework.Node.Language          ( NodeL )
 import           Enecuum.Framework.TestData.Helpers
+import           Enecuum.Framework.Environment
 
 makeRpcRequest
-    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL (Either Text b)
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL cfg (Either Text b)
 makeRpcRequest connectCfg arg = L.evalNetworking $ L.makeRpcRequest_ connectCfg arg
 
 
 makeRequestUnsafe
-    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL b
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL cfg b
 makeRequestUnsafe connectCfg arg =
     (\(Right a) -> a) <$> makeRpcRequest connectCfg arg
 
@@ -63,21 +64,21 @@ simpleBootNodeDiscovery = pure bootNodeAddr
 
 -- RPC handlers.
 
-acceptHello1 :: HelloRequest1 ->  NodeL HelloResponse1
+acceptHello1 :: HelloRequest1 ->  NodeL world HelloResponse1
 acceptHello1 (HelloRequest1 msg) = pure $ HelloResponse1 $ "Hello, dear. " +| msg |+ ""
 
-acceptHello2 :: HelloRequest2 ->  NodeL HelloResponse2
+acceptHello2 :: HelloRequest2 ->  NodeL world HelloResponse2
 acceptHello2 (HelloRequest2 msg) = pure $ HelloResponse2 $ "Hello, dear2. " +| msg |+ ""
 
-acceptGetHashId :: GetHashIDRequest ->  NodeL GetHashIDResponse
+acceptGetHashId :: GetHashIDRequest ->  NodeL world GetHashIDResponse
 acceptGetHashId GetHashIDRequest = pure $ GetHashIDResponse "1"
 
-acceptValidationRequest :: ValidationRequest -> L.NodeL ValidationResponse
+acceptValidationRequest :: ValidationRequest -> L.NodeL world ValidationResponse
 acceptValidationRequest req   = pure $ makeResponse $ verifyRequest req
 
 -- Scenario 1: master node can interact with boot node.
 
-bootNode :: L.NodeDefinitionL ()
+bootNode :: Typeable world => L.NodeDefinitionL world ()
 bootNode = do
   L.nodeTag bootNodeTag
   L.initialization $ pure $ D.NodeID "abc"
@@ -85,13 +86,13 @@ bootNode = do
     method acceptHello1
     method acceptGetHashId
 
-masterNodeInitialization :: L.NodeL (Either Text D.NodeID)
+masterNodeInitialization :: L.NodeL world (Either Text D.NodeID)
 masterNodeInitialization = do
   addr     <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
   Right (GetHashIDResponse eHashID)  <- makeRpcRequest (D.ConnectionConfig addr) GetHashIDRequest
   pure $ Right (D.NodeID eHashID)
 
-masterNode :: L.NodeDefinitionL ()
+masterNode :: Typeable world => L.NodeDefinitionL world ()
 masterNode = do
   L.nodeTag masterNodeTag
   nodeId <- D.withSuccess $ L.initialization masterNodeInitialization
@@ -144,16 +145,17 @@ tryAddTransactionTraversing curNodeHash prevBalance change =
 acceptGetBalanceTraversing
   :: NetworkNode1Data
   -> GetBalanceRequest
-  -> L.NodeL GetBalanceResponse
+  -> L.NodeL world GetBalanceResponse
 acceptGetBalanceTraversing nodeData GetBalanceRequest = do
   balance <- withGraphIO nodeData
       $ (calculateBalanceTraversing (nodeData ^. baseNode . Lens.hash) 0)
   pure $ GetBalanceResponse balance
 
 acceptBalanceChangeTraversing
-  :: NetworkNode1Data
+  :: Typeable world 
+  => NetworkNode1Data
   -> BalanceChangeRequest
-  -> L.NodeL BalanceChangeResponse
+  -> L.NodeL world BalanceChangeResponse
 acceptBalanceChangeTraversing nodeData (BalanceChangeRequest change) = do
   mbHashAndBalance <- withGraphIO nodeData
       $ tryAddTransactionTraversing (nodeData ^. baseNode . Lens.hash) 0 change
@@ -161,13 +163,13 @@ acceptBalanceChangeTraversing nodeData (BalanceChangeRequest change) = do
     Nothing -> pure $ BalanceChangeResponse Nothing
     Just (D.StringHash _, balance) -> pure $ BalanceChangeResponse $ Just balance
 
-newtorkNode1Initialization :: TG.TestGraphVar -> L.NodeL NetworkNode1Data
+newtorkNode1Initialization :: TG.TestGraphVar -> L.NodeL world NetworkNode1Data
 newtorkNode1Initialization g =
   L.evalGraphIO g $ L.getNode TG.nilTransactionHash >>= \case
     Nothing -> error "Graph is not ready: no genesis node found."
     Just baseNode -> pure $ NetworkNode1Data g baseNode
 
-networkNode1 :: TG.TestGraphVar -> L.NodeDefinitionL ()
+networkNode1 :: Typeable world => TG.TestGraphVar -> L.NodeDefinitionL world ()
 networkNode1 g = do
   L.nodeTag "networkNode1"
   nodeData <- L.initialization $ newtorkNode1Initialization g
@@ -175,7 +177,7 @@ networkNode1 g = do
     method (acceptGetBalanceTraversing nodeData)
     method (acceptBalanceChangeTraversing nodeData)
 
-networkNode2Scenario :: L.NodeL ()
+networkNode2Scenario :: L.NodeL world ()
 networkNode2Scenario = do
     let connectCfg = D.ConnectionConfig networkNode1Addr
     -- No balance change
@@ -194,14 +196,14 @@ networkNode2Scenario = do
     GetBalanceResponse balance4 <- makeRequestUnsafe connectCfg GetBalanceRequest
     L.logInfo $ "balance4 (should be 111): " +|| balance4 ||+ "."
 
-networkNode2 :: L.NodeDefinitionL ()
+networkNode2 :: L.NodeDefinitionL world ()
 networkNode2 = do
   L.nodeTag "networkNode2"
   L.scenario networkNode2Scenario
 
   -- Scenario 3: boot node can validate data  recieved from master node
 
-bootNodeValidation :: L.NodeDefinitionL ()
+bootNodeValidation :: Typeable world => L.NodeDefinitionL world ()
 bootNodeValidation = do
   L.nodeTag bootNodeTag
   L.initialization $ pure $ D.NodeID "abc"
@@ -209,7 +211,7 @@ bootNodeValidation = do
       method acceptGetHashId
       method acceptValidationRequest
 
-masterNodeInitializeWithValidation :: L.NodeL (Either Text D.NodeID)
+masterNodeInitializeWithValidation :: L.NodeL world (Either Text D.NodeID)
 masterNodeInitializeWithValidation = do
   addr     <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
   GetHashIDResponse eHashID  <- makeRequestUnsafe (D.ConnectionConfig addr) GetHashIDRequest
@@ -219,7 +221,7 @@ masterNodeInitializeWithValidation = do
   L.logInfo $ "For the invalid request recieved " +|| invalidRes ||+ "."
   pure $ Right (D.NodeID eHashID)
 
-masterNodeValidation :: L.NodeDefinitionL ()
+masterNodeValidation :: L.NodeDefinitionL world ()
 masterNodeValidation = do
   L.nodeTag masterNodeTag
   nodeId <- D.withSuccess $ L.initialization masterNodeInitializeWithValidation
@@ -241,14 +243,14 @@ makeFieldsNoPrefix ''NetworkNode3Data
 acceptGetBalance
   :: NetworkNode3Data
   -> GetBalanceRequest
-  -> L.NodeL GetBalanceResponse
+  -> L.NodeL world GetBalanceResponse
 acceptGetBalance nodeData GetBalanceRequest =
   GetBalanceResponse <$> (L.atomically $ L.readVar (nodeData ^. balanceVar))
 
 acceptBalanceChange
   :: NetworkNode3Data
   -> BalanceChangeRequest
-  -> L.NodeL BalanceChangeResponse
+  -> L.NodeL world BalanceChangeResponse
 acceptBalanceChange nodeData (BalanceChangeRequest change) =
   L.atomically $ do
     curBalance   <- L.readVar $ nodeData ^. balanceVar
@@ -261,7 +263,7 @@ acceptBalanceChange nodeData (BalanceChangeRequest change) =
         L.writeVar (nodeData ^. graphHeadVar) newGraphHead
         pure $ BalanceChangeResponse $ Just newBalance
 
-newtorkNode3Initialization :: TG.TestGraphVar -> L.NodeL NetworkNode3Data
+newtorkNode3Initialization :: TG.TestGraphVar -> L.NodeL world NetworkNode3Data
 newtorkNode3Initialization g = do
   baseNode <- L.evalGraphIO g $ L.getNode TG.nilTransactionHash >>= \case
     Nothing -> error "Graph is not ready: no genesis node found."
@@ -270,7 +272,7 @@ newtorkNode3Initialization g = do
   graphHeadVar <- L.atomically $ L.newVar $ baseNode ^. Lens.hash
   pure $ NetworkNode3Data g graphHeadVar balanceVar
 
-networkNode3 :: TG.TestGraphVar -> L.NodeDefinitionL ()
+networkNode3 :: Typeable world => TG.TestGraphVar -> L.NodeDefinitionL world ()
 networkNode3 g = do
   L.nodeTag "networkNode3"
   nodeData <- L.initialization $ newtorkNode3Initialization g
@@ -278,7 +280,7 @@ networkNode3 g = do
     L.method (acceptGetBalance nodeData)
     L.method (acceptBalanceChange nodeData)
 
-networkNode4Scenario :: L.NodeL ()
+networkNode4Scenario :: L.NodeL world ()
 networkNode4Scenario = do
     let connectCfg = D.ConnectionConfig networkNode3Addr
     _ :: BalanceChangeResponse <- makeRequestUnsafe connectCfg $ BalanceChangeRequest 10
@@ -288,7 +290,7 @@ networkNode4Scenario = do
     GetBalanceResponse balance <- makeRequestUnsafe connectCfg GetBalanceRequest
     L.logInfo $ "balance (should be 91): " +|| balance ||+ "."
 
-networkNode4 :: L.NodeDefinitionL ()
+networkNode4 :: L.NodeDefinitionL world ()
 networkNode4 = do
   L.nodeTag "networkNode4"
   L.scenario networkNode4Scenario

@@ -41,14 +41,14 @@ makeFieldsNoPrefix ''NetworkNode2Data
 acceptGetBalance
   :: NetworkNode2Data
   -> GetBalanceRequest
-  -> L.NodeL GetBalanceResponse
+  -> L.NodeL cfg GetBalanceResponse
 acceptGetBalance nodeData GetBalanceRequest =
   GetBalanceResponse <$> (L.atomically $ L.readVar (nodeData ^. balanceVar))
 
 acceptBalanceChange
   :: NetworkNode2Data
   -> BalanceChangeRequest
-  -> L.NodeL BalanceChangeResponse
+  -> L.NodeL cfg BalanceChangeResponse
 acceptBalanceChange nodeData (BalanceChangeRequest change) = do
   L.logInfo $ "Network node 2: receives balance change: " +|| change ||+ "."
   (l, r) <- L.atomically $ do
@@ -64,7 +64,7 @@ acceptBalanceChange nodeData (BalanceChangeRequest change) = do
   L.logInfo l
   pure r
 
-newtorkNode2Initialization :: TG.GraphVar -> L.NodeL NetworkNode2Data
+newtorkNode2Initialization :: TG.GraphVar -> L.NodeL cfg NetworkNode2Data
 newtorkNode2Initialization g = do
   baseNode <- L.evalGraphIO g $ L.getNode TG.nilTransactionHash >>= \case
     Nothing -> error "Graph is not ready: no genesis node found."
@@ -73,7 +73,7 @@ newtorkNode2Initialization g = do
   graphHeadVar' <- L.atomically $ L.newVar $ baseNode ^. Lens.hash
   pure $ NetworkNode2Data g graphHeadVar' balanceVar'
 
-networkNode2 :: TG.GraphVar -> L.NodeDefinitionL ()
+networkNode2 :: Typeable cfg => TG.GraphVar -> L.NodeDefinitionL cfg ()
 networkNode2 g = do
   L.nodeTag "networkNode2"
   nodeData <- L.initialization $ newtorkNode2Initialization g

@@ -13,6 +13,7 @@ import qualified Enecuum.Framework.Lens             as Lens
 import qualified Enecuum.Framework.Testing.Lens     as RLens
 import           Enecuum.Framework.Testing.Types
 import qualified Enecuum.Core.Testing.Runtime.Interpreters as Impl
+import           Enecuum.Framework.Environment
 
 -- | Interpret NetworkSendingL. Does nothing ATM.
 interpretNetworkSendingL

@@ -27,24 +27,24 @@ withGraphIO
   :: HasGraph s G.GraphVar
   => s
   -> G.GraphL a
-  -> L.NodeL a
+  -> L.NodeL cfg a
 withGraphIO s = L.evalGraphIO (s ^. graph)
 
 makeRpcRequest
-    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL (Either Text b)
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL cfg (Either Text b)
 makeRpcRequest connectCfg arg = L.evalNetworking $ L.makeRpcRequest_ connectCfg arg
 
 makeRpcRequest'
-    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL (Either Text b)
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL cfg (Either Text b)
 makeRpcRequest' connectCfg arg = L.evalNetworking $ L.makeRpcRequest' connectCfg arg
 
 makeRequestUnsafe
-    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL b
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL cfg b
 makeRequestUnsafe connectCfg arg =
     (\(Right a) -> a) <$> makeRpcRequest connectCfg arg
 
 makeRequestUnsafe'
-    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL b
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> L.NodeL cfg b
 makeRequestUnsafe' connectCfg arg =
     (\(Right a) -> a) <$> makeRpcRequest' connectCfg arg
 

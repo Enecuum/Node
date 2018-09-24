@@ -13,6 +13,7 @@ import           Enecuum.Framework.Testing.Types
 import qualified Enecuum.Framework.Testing.Node.Interpreters.Network as Impl
 import qualified Enecuum.Core.Testing.Runtime.Interpreters as Impl
 import           Enecuum.Framework.Domain.RpcMessages
+import           Enecuum.Framework.Environment
 
 -- | Relay request from this node to the network environment.
 relayRequest
@@ -33,16 +34,17 @@ relayRequest nodeRt conn req = do
 -- | Interpret NetworkingL language.
 interpretNetworkingL
   :: NodeRuntime
-  -> L.NetworkingF a
+  -> L.NetworkingF TestWorld a
   -> IO a
 
 interpretNetworkingL nodeRt (L.OpenConnection cfg next) = do
-  pure $ next $ Just $ D.Connection (nodeRt ^. RLens.address) (cfg ^. Lens.address)
+  pure $ next $ Just $ D.TestWorldNetworkConnection $
+    D.Connection (nodeRt ^. RLens.address) (cfg ^. Lens.address)
 
 interpretNetworkingL nodeRt (L.CloseConnection _ next) =
   pure $ next ()
 
-interpretNetworkingL nodeRt (L.SendRequest conn req next) = do
+interpretNetworkingL nodeRt (L.SendRequest (D.TestWorldNetworkConnection conn) req next) = do
   next <$> relayRequest nodeRt conn req
 
 interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) = do
@@ -52,5 +54,5 @@ interpretNetworkingL nodeRt (L.EvalCoreEffectNetworkingF coreEffect next) =
   next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
 
 -- | Runs networking language.
-runNetworkingL :: NodeRuntime -> L.NetworkingL a -> IO a
+runNetworkingL :: NodeRuntime -> L.NetworkingL TestWorld a -> IO a
 runNetworkingL nodeRt = foldFree (interpretNetworkingL nodeRt)

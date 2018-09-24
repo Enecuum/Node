@@ -13,7 +13,7 @@ import           Data.Aeson as A
 import qualified Data.Text       as T
 
 -- | Interpret NetworkingL language.
-interpretNetworkingL :: L.NetworkingF a -> IO a
+interpretNetworkingL :: L.NetworkingF cfg a -> IO a
 interpretNetworkingL (L.OpenConnection _ _)  = do
     error "interpretNetworkingL OpenConnection not implemented."
 
@@ -36,5 +36,5 @@ transformEither f _ (Left a)  = Left (f a)
 transformEither _ f (Right a) = Right (f a)
 
 -- | Run Networking language.
-runNetworkingL :: L.NetworkingL a -> IO a
+runNetworkingL :: L.NetworkingL cfg a -> IO a
 runNetworkingL = foldFree interpretNetworkingL

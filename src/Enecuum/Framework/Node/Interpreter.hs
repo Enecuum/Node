@@ -12,7 +12,7 @@ import qualified Enecuum.Framework.RLens                  as RLens
 
 
 -- | Interpret NodeL.
-interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
+interpretNodeL :: NodeRuntime -> L.NodeF cfg a -> IO a
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
     next <$> (atomically $ Impl.runStateL nodeRt statefulAction)
 
@@ -26,5 +26,5 @@ interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects
 
 -- | Runs node language. Runs interpreters for the underlying languages.
-runNodeL :: NodeRuntime -> L.NodeL a -> IO a
+runNodeL :: NodeRuntime -> L.NodeL cfg a -> IO a
 runNodeL nodeRt = foldFree (interpretNodeL nodeRt)

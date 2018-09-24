@@ -16,6 +16,7 @@ import           Enecuum.Framework.Testing.Environment.TestRuntime
 import qualified Enecuum.Framework.Testing.Lens                                  as RLens
 import           Enecuum.Framework.Testing.Types
 import           Enecuum.Framework.Testing.Node.Interpreters.NodeDefinition (runNodeDefinitionL)
+import           Enecuum.Framework.Environment
 
 -- | Creates node runtime.
 createEmptyNodeRuntime
@@ -35,7 +36,7 @@ createEmptyNodeRuntime loggerRt networkControl addr = do
 startNode
   :: TestRuntime
   -> D.NodeAddress
-  -> L.NodeDefinitionL ()
+  -> L.NodeDefinitionL TestWorld ()
   -> IO NodeRuntime
 startNode testRt nodeAddr scenario = do
   nodeRt <- createEmptyNodeRuntime (testRt ^. RLens.loggerRuntime) (testRt ^. RLens.networkControl) nodeAddr
@@ -50,7 +51,7 @@ startNode testRt nodeAddr scenario = do
 startNode'
   :: TestRuntime
   -> D.NodeAddress
-  -> (TG.TestGraphVar -> L.NodeDefinitionL ())
+  -> (TG.TestGraphVar -> L.NodeDefinitionL TestWorld ())
   -> IO NodeRuntime
 startNode' testRt nodeAddr scenario = do
   nodeRt <- createEmptyNodeRuntime (testRt ^. RLens.loggerRuntime) (testRt ^. RLens.networkControl) nodeAddr
@@ -63,7 +64,7 @@ startNode' testRt nodeAddr scenario = do
 evaluateNode
   :: LoggerRuntime
   -> D.NodeAddress
-  -> L.NodeDefinitionL a
+  -> L.NodeDefinitionL TestWorld a
   -> IO a
 evaluateNode loggerRt nodeAddr scenario = do
   control <- createControl
@@ -76,7 +77,7 @@ evaluateNode loggerRt nodeAddr scenario = do
 evaluateNode'
   :: LoggerRuntime
   -> D.NodeAddress
-  -> (TG.TestGraphVar -> L.NodeDefinitionL a)
+  -> (TG.TestGraphVar -> L.NodeDefinitionL TestWorld a)
   -> IO a
 evaluateNode' loggerRt nodeAddr scenario = do
   control <- createControl

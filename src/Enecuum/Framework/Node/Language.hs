@@ -14,38 +14,38 @@ import           Enecuum.Core.HGraph.Interpreters.IO      (runHGraphIO)
 import           Enecuum.Core.HGraph.Interpreters.STM     (runHGraphSTM)
 
 -- | Node language.
-data NodeF next where
+data NodeF cfg next where
   -- | Eval stateful action atomically.
-  EvalStateAtomically :: L.StateL a -> (a -> next) -> NodeF next
+  EvalStateAtomically :: L.StateL a -> (a -> next) -> NodeF cfg next
   -- | Eval networking.
-  EvalNetworking :: L.NetworkingL a -> (a -> next) -> NodeF next
+  EvalNetworking :: L.NetworkingL cfg a -> (a -> next) -> NodeF cfg next
   -- | Eval core effect.
-  EvalCoreEffectNodeF :: L.CoreEffect a -> (a -> next) -> NodeF next
+  EvalCoreEffectNodeF :: L.CoreEffect a -> (a -> next) -> NodeF cfg next
   -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
-  EvalGraphIO :: L.GraphAction g x -> (x -> next) -> NodeF next
+  EvalGraphIO :: L.GraphAction g x -> (x -> next) -> NodeF cfg next
 
-instance Functor NodeF where
+instance Functor (NodeF cfg) where
   fmap g (EvalStateAtomically statefulAction next) = EvalStateAtomically statefulAction (g . next)
   fmap g (EvalNetworking networking next)          = EvalNetworking networking          (g . next)
   fmap g (EvalCoreEffectNodeF coreEffect next)     = EvalCoreEffectNodeF coreEffect     (g . next)
   fmap g (EvalGraphIO graphAction next)            = EvalGraphIO graphAction            (g . next)
 
-type NodeL next = Free NodeF next
+type NodeL cfg next = Free (NodeF cfg) next
 
 -- | Eval stateful action atomically.
-evalStateAtomically :: L.StateL a -> NodeL a
+evalStateAtomically :: L.StateL a -> NodeL cfg a
 evalStateAtomically statefulAction = liftF $ EvalStateAtomically statefulAction id
 
 -- | Alias for convenience.
-atomically :: L.StateL a -> NodeL a
+atomically :: L.StateL a -> NodeL cfg a
 atomically = evalStateAtomically
 
 -- | Eval networking.
-evalNetworking :: L.NetworkingL a -> NodeL a
+evalNetworking :: L.NetworkingL cfg a -> NodeL cfg a
 evalNetworking newtorking = liftF $ EvalNetworking newtorking id
 
 -- | Eval core effect.
-evalCoreEffectNodeF :: L.CoreEffect a -> NodeL a
+evalCoreEffectNodeF :: L.CoreEffect a -> NodeL cfg a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
@@ -53,10 +53,10 @@ evalGraphIO
   :: (Serialize g, StringHashable g)
   => TVar (G.THGraph g)
   -> L.HGraphL g a
-  -> NodeL a
+  -> NodeL cfg a
 evalGraphIO g graphAction = liftF $ EvalGraphIO x id
   where
     x = L.GraphAction (runHGraphSTM g) (runHGraphIO g) graphAction
 
-instance L.Logger (Free NodeF) where
+instance L.Logger (Free (NodeF cfg)) where
     logMessage level msg = evalCoreEffectNodeF $ L.logMessage level msg

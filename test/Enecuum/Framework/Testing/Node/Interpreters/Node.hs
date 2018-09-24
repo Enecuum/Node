@@ -10,9 +10,10 @@ import           Enecuum.Framework.Testing.Types
 import qualified Enecuum.Framework.Testing.Lens                         as RLens
 import qualified Enecuum.Framework.Testing.Node.Interpreters.Networking as Impl
 import qualified Enecuum.Framework.Testing.Node.Interpreters.State      as Impl
+import           Enecuum.Framework.Environment
 
 -- | Interpret NodeL.
-interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
+interpretNodeL :: NodeRuntime -> L.NodeF TestWorld a -> IO a
 
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) = do
   next <$> (atomically $ Impl.runStateL nodeRt statefulAction)
@@ -27,5 +28,5 @@ interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffect next) =
   next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
 
 -- | Runs node language.
-runNodeL :: NodeRuntime -> L.NodeL a -> IO a
+runNodeL :: NodeRuntime -> L.NodeL TestWorld a -> IO a
 runNodeL nodeRt = foldFree (interpretNodeL nodeRt)

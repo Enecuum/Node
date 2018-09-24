@@ -30,7 +30,7 @@ import           Enecuum.Assets.Nodes.RPC
 import           Enecuum.Assets.Nodes.Address
 
 
-networkNode1Scenario :: L.NodeL ()
+networkNode1Scenario :: L.NodeL cfg ()
 networkNode1Scenario = do
     let connectCfg = D.ConnectionConfig networkNode2Addr
 
@@ -58,7 +58,7 @@ networkNode1Scenario = do
     GetBalanceResponse balance <- makeRequestUnsafe' connectCfg GetBalanceRequest
     L.logInfo $ "Network node 1: Balance (should be 91): " +|| balance ||+ "."
 
-networkNode1 :: L.NodeDefinitionL ()
+networkNode1 :: L.NodeDefinitionL cfg ()
 networkNode1 = do
   L.nodeTag "networkNode1"
   L.scenario networkNode1Scenario
