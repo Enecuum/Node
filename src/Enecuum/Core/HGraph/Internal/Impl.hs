@@ -100,3 +100,6 @@ deleteLink graph x y = case (x, y) of
     (TNodeHash  r1, TNodeRef r2) -> G.findNode graph r1 >>= \case
         Just tNode -> G.deleteTLink tNode r2
         Nothing    -> return $ False
+
+clearGraph :: StringHashable c => TVar (THGraph c) -> STM ()
+clearGraph = G.deleteGraph
