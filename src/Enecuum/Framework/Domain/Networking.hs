@@ -26,7 +26,7 @@ data instance NetworkConnection TestWorld =
 
 data ConnectionComand
     = CloseConnection
-    | SendRequest R.RpcRequest (TVar (Either Text (R.RpcResponse)))
+    | SendRequest R.RpcRequest (TMVar (Either Text R.RpcResponse))
 
 type RawData = BS.ByteString
 
