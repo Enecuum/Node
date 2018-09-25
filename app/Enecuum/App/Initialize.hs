@@ -10,7 +10,6 @@ import           Enecuum.Interpreters (runNodeDefinitionL)
 import           Enecuum.Runtime (createNodeRuntime, createLoggerRuntime,
                                   clearNodeRuntime, clearLoggerRuntime,
                                   createCoreRuntime, clearCoreRuntime)
-import           Enecuum.Assets.Nodes.Address (networkNode1Addr, networkNode2Addr)
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 
     -- TODO: make this more correct.
@@ -47,6 +46,14 @@ initialize config = do
         putStrLn @Text "Starting networkNode2 node..."
         graph <- TG.initGraph
         runNodeDefinitionL nodeRt $ S.networkNode2 graph
+
+    when (networkNode3 config) $ do
+        putStrLn @Text "Starting networkNode3 node..."
+        runNodeDefinitionL nodeRt S.networkNode3
+
+    when (networkNode4 config) $ do
+        putStrLn @Text "Starting networkNode4 node..."
+        runNodeDefinitionL nodeRt $ S.networkNode4 
 
         -- TODO: this is a quick hack. Make it right.
     threadDelay $ 1000 * 1000 * 1000

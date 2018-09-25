@@ -16,6 +16,8 @@ data Config = Config
   , masterNode :: Bool
   , networkNode1 :: Bool
   , networkNode2 :: Bool
+  , networkNode3 :: Bool
+  , networkNode4 :: Bool
   , extPort :: Int
   , loggerConfig :: LoggerConfig
   }

@@ -42,3 +42,10 @@ newtype BalanceChangeRequest = BalanceChangeRequest Int
 newtype BalanceChangeResponse = BalanceChangeResponse { balance :: Maybe Int }
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
 
+-------------------------------------------------------------------
+
+data GetChainLengthRequest = GetChainLengthRequest
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+newtype GetChainLengthResponse = GetChainLengthResponse { chainLength :: Int }
+  deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
