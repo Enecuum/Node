@@ -5,7 +5,7 @@ import           Enecuum.Prelude
 import           Enecuum.Config (Config)
 import qualified Enecuum.Language as L
 
-masterNode :: Config -> L.NodeDefinitionL cfg ()
+masterNode :: Config -> L.NodeDefinitionL ()
 masterNode _ = do
     L.logInfo "Master node setting node tag..."
     L.nodeTag "master node"

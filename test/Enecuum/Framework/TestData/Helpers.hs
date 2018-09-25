@@ -24,5 +24,5 @@ withGraphIO
   :: HasGraph s TG.TestGraphVar
   => s
   -> TG.TestGraphL a
-  -> L.NodeL world a
+  -> L.NodeL a
 withGraphIO s = L.evalGraphIO (s ^. graph)

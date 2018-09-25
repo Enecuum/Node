@@ -30,7 +30,7 @@ import           Enecuum.Assets.Nodes.RPC
 import           Enecuum.Assets.Nodes.Address
 
 
-networkNode1Scenario :: L.NodeL cfg ()
+networkNode1Scenario :: L.NodeL ()
 networkNode1Scenario = do
     let connectCfg = D.ConnectionConfig networkNode2Addr
 
@@ -59,7 +59,7 @@ networkNode1Scenario = do
     L.logInfo $ "Network node 1: Balance (should be 91): " +|| balance ||+ "."
     L.stopNode
 
-networkNode1 :: L.NodeDefinitionL cfg ()
+networkNode1 :: L.NodeDefinitionL ()
 networkNode1 = do
   L.nodeTag "networkNode1"
   L.scenario networkNode1Scenario

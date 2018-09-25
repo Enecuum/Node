@@ -21,7 +21,6 @@ import qualified Enecuum.Runtime as Rt
 import           Enecuum.Framework.Node.Language          ( NodeL )
 import qualified Enecuum.Domain                as D
 import           Enecuum.Framework.Networking.Interpreter
-import           Enecuum.Framework.Environment
 
 createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.createNodeRuntime
 
@@ -38,10 +37,10 @@ spec = describe "RpcServer" $ fromHUnitTest $ TestList
     , TestLabel "Test of rpc server/err" rpcServerTestErr
     ]
 
-okHandler :: OkRequest -> NodeL cfg OkResponse
+okHandler :: OkRequest -> NodeL OkResponse
 okHandler _ = pure OkResponse
 
-errHandler :: ErrRequest -> NodeL cfg ErrResponse
+errHandler :: ErrRequest -> NodeL ErrResponse
 errHandler _ = pure ErrResponse
 
 rpcServerTestOk :: Test
@@ -74,11 +73,11 @@ localServer = D.ConnectionConfig (ConnectInfo "127.0.0.1" serverPort)
 
 
 makeRpcRequest
-    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NodeL RealWorld (Either Text b)
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NodeL (Either Text b)
 makeRpcRequest connectCfg arg = L.evalNetworking $ L.makeRpcRequest_ connectCfg arg
 
 
 makeRequestUnsafe
-    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NodeL RealWorld b
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NodeL b
 makeRequestUnsafe connectCfg arg =
     (\(Right a) -> a) <$> makeRpcRequest connectCfg arg

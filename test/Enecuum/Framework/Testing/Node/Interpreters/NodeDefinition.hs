@@ -13,12 +13,11 @@ import           Enecuum.Framework.Testing.Node.Internal.RpcServer (startNodeRpc
 import qualified Enecuum.Core.Testing.Runtime.Interpreters as Impl
 import qualified Enecuum.Framework.Testing.Node.Interpreters.Node as Impl
 import           Enecuum.Framework.RpcMethod.Interpreter
-import           Enecuum.Framework.Environment
 
 -- | Interpret NodeDefinitionL.
 interpretNodeDefinitionL
   :: NodeRuntime
-  -> L.NodeDefinitionF TestWorld a
+  -> L.NodeDefinitionF a
   -> IO a
 
 interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
@@ -39,6 +38,6 @@ interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next
 -- | Runs node definition language with node runtime.
 runNodeDefinitionL
   :: NodeRuntime
-  -> L.NodeDefinitionL TestWorld a
+  -> L.NodeDefinitionL a
   -> IO a
 runNodeDefinitionL nodeRt = foldFree (interpretNodeDefinitionL nodeRt)

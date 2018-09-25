@@ -18,27 +18,26 @@ import           Enecuum.Legacy.Service.Network.Base  (ConnectInfo(..))
 -- This is a raw view of mid-level networking. Will change significantly.
 -- Supposed to be a mid-level language hiding WebSockets.
 
-
 -- | Allows to work with network: open and close connections, send requests.
-data NetworkingF langConfig next where
+data NetworkingF next where
   -- | Open connection to the node.
-  OpenConnection :: D.ConnectionConfig -> (Maybe (D.NetworkConnection langConfig) -> next) -> NetworkingF langConfig next
+  OpenConnection :: D.ConnectionConfig -> (Maybe D.NetworkConnection -> next) -> NetworkingF next
   -- | Close existing connection.
-  CloseConnection :: D.NetworkConnection langConfig -> (() -> next) -> NetworkingF langConfig next
+  CloseConnection :: D.NetworkConnection -> (() -> next) -> NetworkingF  next
 
   -- TODO: we need more realistic model. Maybe, notion of sync / async requests.
   -- A real web sockets interpreter will show the truth.
   -- | Send RPC request with the connection.
-  SendRequest :: D.NetworkConnection langConfig -> RpcRequest -> (Either Text RpcResponse -> next) -> NetworkingF langConfig next
+  SendRequest :: D.NetworkConnection -> RpcRequest -> (Either Text RpcResponse -> next) -> NetworkingF next
 
   -- | Eval low-level networking script.
-  EvalNetwork :: NetworkL a -> (a -> next) -> NetworkingF langConfig next
-  SendRpcRequest :: ConnectInfo -> RpcRequest -> (Either Text RpcResponse -> next) -> NetworkingF langConfig next
+  EvalNetwork :: NetworkL a -> (a -> next) -> NetworkingF  next
+  SendRpcRequest :: ConnectInfo -> RpcRequest -> (Either Text RpcResponse -> next) -> NetworkingF next
 
   -- | Eval core effect.
-  EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF langConfig next
+  EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF  next
 
-instance Functor (NetworkingF langConfig) where
+instance Functor NetworkingF where
   fmap g (OpenConnection cfg next)          = OpenConnection cfg        (g . next)
   fmap g (CloseConnection conn next)        = CloseConnection conn      (g . next)
   fmap g (SendRequest conn rpcReq next)     = SendRequest conn rpcReq   (g . next)
@@ -46,27 +45,27 @@ instance Functor (NetworkingF langConfig) where
   fmap g (SendRpcRequest info request next) = SendRpcRequest info request (g . next)
   fmap g (EvalCoreEffectNetworkingF coreEffect next) = EvalCoreEffectNetworkingF coreEffect (g . next)
 
-type NetworkingL langConfig next = Free (NetworkingF langConfig) next
+type NetworkingL  next = Free NetworkingF next
 
-openConnection :: D.ConnectionConfig -> NetworkingL langConfig (Maybe (D.NetworkConnection langConfig))
+openConnection :: D.ConnectionConfig -> NetworkingL (Maybe D.NetworkConnection)
 openConnection cfg = liftF $ OpenConnection cfg id
 
-closeConnection :: D.NetworkConnection langConfig -> NetworkingL langConfig ()
+closeConnection :: D.NetworkConnection -> NetworkingL  ()
 closeConnection conn = liftF $ CloseConnection conn id
 
-sendRequest :: D.NetworkConnection langConfig -> RpcRequest -> NetworkingL langConfig (Either Text  RpcResponse)
+sendRequest :: D.NetworkConnection -> RpcRequest -> NetworkingL (Either Text RpcResponse)
 sendRequest conn rpcReq = liftF $ SendRequest conn rpcReq id
 
-evalNetwork :: NetworkL a -> NetworkingL langConfig a
+evalNetwork :: NetworkL a -> NetworkingL  a
 evalNetwork network = liftF $ EvalNetwork network id
 
-sendRpcRequest :: ConnectInfo -> RpcRequest -> NetworkingL langConfig (Either Text RpcResponse)
+sendRpcRequest :: ConnectInfo -> RpcRequest -> NetworkingL (Either Text RpcResponse)
 sendRpcRequest info request = liftF $ SendRpcRequest info request id
 
-evalCoreEffectNetworkingF :: L.CoreEffect a -> NetworkingL langConfig a
+evalCoreEffectNetworkingF :: L.CoreEffect a -> NetworkingL a
 evalCoreEffectNetworkingF coreEffect = liftF $ EvalCoreEffectNetworkingF coreEffect id
 
-instance L.Logger (Free (NetworkingF langConfig)) where
+instance L.Logger (Free NetworkingF) where
   logMessage level msg = evalCoreEffectNetworkingF $ L.logMessage level msg
 
 
@@ -74,7 +73,7 @@ instance L.Logger (Free (NetworkingF langConfig)) where
 -- It's probably wise to use `bracket` idiom here.
 
 -- | Open connection, send request and close connection.
-withConnection :: D.ConnectionConfig -> RpcRequest -> NetworkingL langConfig (Either Text RpcResponse)
+withConnection :: D.ConnectionConfig -> RpcRequest -> NetworkingL  (Either Text RpcResponse)
 withConnection cfg req = openConnection cfg >>= \case
   Nothing -> pure $ Left "Connecting failed."
   Just conn -> do
@@ -84,13 +83,13 @@ withConnection cfg req = openConnection cfg >>= \case
 
 
 makeRpcRequest'
-    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NetworkingL langConfig (Either Text b)
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NetworkingL  (Either Text b)
 makeRpcRequest' (D.ConnectionConfig connectCfg) arg =
     responseValidation =<< sendRpcRequest connectCfg (makeRequest arg)
 
 
 makeRpcRequest_
-    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NetworkingL langConfig (Either Text b)
+    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NetworkingL  (Either Text b)
 makeRpcRequest_ connectCfg arg = 
     responseValidation =<< withConnection connectCfg (makeRequest arg)
 
