@@ -23,12 +23,15 @@ data NodeF cfg next where
   EvalCoreEffectNodeF :: L.CoreEffect a -> (a -> next) -> NodeF cfg next
   -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
   EvalGraphIO :: L.GraphAction g x -> (x -> next) -> NodeF cfg next
+  -- | Stop the node evaluation
+  StopNode :: (() -> next) -> NodeF cfg next
 
 instance Functor (NodeF cfg) where
   fmap g (EvalStateAtomically statefulAction next) = EvalStateAtomically statefulAction (g . next)
   fmap g (EvalNetworking networking next)          = EvalNetworking networking          (g . next)
   fmap g (EvalCoreEffectNodeF coreEffect next)     = EvalCoreEffectNodeF coreEffect     (g . next)
   fmap g (EvalGraphIO graphAction next)            = EvalGraphIO graphAction            (g . next)
+  fmap g (StopNode next)                           = StopNode                           (g . next)
 
 type NodeL cfg next = Free (NodeF cfg) next
 
@@ -47,6 +50,10 @@ evalNetworking newtorking = liftF $ EvalNetworking newtorking id
 -- | Eval core effect.
 evalCoreEffectNodeF :: L.CoreEffect a -> NodeL cfg a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
+
+-- | Stop of node eval.
+stopNode :: NodeL cfg ()
+stopNode = liftF $ StopNode id
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
 evalGraphIO

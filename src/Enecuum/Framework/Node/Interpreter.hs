@@ -25,6 +25,10 @@ interpretNodeL _ (L.EvalNetworking networking next) =
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects
 
+interpretNodeL nodeRt (L.StopNode next) = do
+    atomically $ putTMVar (nodeRt ^. RLens.stopNode) True
+    return $ next ()
+
 -- | Runs node language. Runs interpreters for the underlying languages.
 runNodeL :: NodeRuntime -> L.NodeL RealWorld a -> IO a
 runNodeL nodeRt = foldFree (interpretNodeL nodeRt)

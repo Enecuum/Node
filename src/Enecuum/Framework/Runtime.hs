@@ -23,6 +23,7 @@ data NodeRuntime = NodeRuntime
     , _varCounter   :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
     , _state        :: NodeState              -- ^ State of node.
     , _nodeTag      :: TVar Text
+    , _stopNode     :: TMVar Bool
     }
 
 createNodeRuntime :: CoreRuntime -> IO NodeRuntime
@@ -33,6 +34,7 @@ createNodeRuntime coreRt = NodeRuntime
     <*> newTMVarIO 0
     <*> newTMVarIO Map.empty
     <*> newTVarIO ""
+    <*> (atomically newEmptyTMVar)
 
 -- TODO: more wise clearing here.
 clearNodeRuntime :: NodeRuntime -> IO ()
