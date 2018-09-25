@@ -13,11 +13,9 @@ import           Data.Aeson as A
 import qualified Data.Text       as T
 import           Control.Concurrent.STM.TChan (newTChan, readTChan, writeTChan)
 import           Control.Exception (SomeException)
-import           Enecuum.Framework.Environment
 
 
 instance D.ConnectionClass D.RealConnection where
-     -- :: Monad m => ConnectionConfig -> m (Maybe a)
     openConnection (D.ConnectionConfig (ConnectInfo host port)) = do
         chan <- atomically $ newTChan 
         var <- newEmptyMVar
