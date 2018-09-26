@@ -15,7 +15,7 @@ interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
     next <$> (atomically $ Impl.runStateL nodeRt statefulAction)
 
-interpretNodeL nodeRt (L.EvalGraphIO (L.GraphAction _ ioRunner act) next) = do
+interpretNodeL _ (L.EvalGraphIO (L.GraphAction _ ioRunner act) next) =
   next <$> ioRunner act
 
 interpretNodeL _ (L.EvalNetworking networking next) =

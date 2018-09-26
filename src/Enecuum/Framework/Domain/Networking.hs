@@ -1,4 +1,3 @@
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE StandaloneDeriving     #-}
 
@@ -18,7 +17,7 @@ import Enecuum.Framework.Domain.RpcMessages
 data NetworkConnection where
   NetworkConnection :: ConnectionClass b => b -> NetworkConnection
 
-data RealConnection = RealConnection (TChan ConnectionComand)
+newtype RealConnection = RealConnection (TChan ConnectionComand)
 
 data ConnectionComand
     = CloseConnection

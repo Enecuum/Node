@@ -11,7 +11,7 @@
 
 module Enecuum.Core.HGraph.Language (
     -- * Language
-      HGraphL (..)
+      HGraphL
     -- * Algebra
     , HGraphF (..)
     -- * Clases

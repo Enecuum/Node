@@ -15,9 +15,8 @@ import           Enecuum.Framework.Node.Interpreter
 import           Enecuum.Framework.RpcMethod.Interpreter
 import           Enecuum.Framework.Domain.RpcMessages
 import           Enecuum.Framework.Runtime                 (NodeRuntime)
-import qualified Enecuum.Framework.Lens
+
 import qualified Enecuum.Framework.Language                as L
-import qualified Enecuum.Core.RLens                        as RLens
 import qualified Enecuum.Framework.RLens                   as RLens
 import qualified Enecuum.Core.Interpreters                 as Impl
 import qualified Enecuum.Framework.Node.Interpreter        as Impl
@@ -57,7 +56,13 @@ takeServerChan servs port = do
     modifyTVar servs (M.insert port chan)
     return chan
 
---runRpcServer :: TChan ServerComand -> PortNumber ->
+
+runRpcServer
+    :: TChan ServerComand
+    -> PortNumber
+    -> (t -> IO RpcResponse)
+    -> TVar (Map Text (Value -> Int -> t))
+    -> IO ()
 runRpcServer chan port runner methodVar = do
     methods <- readTVarIO methodVar
     runServer chan port $ \_ pending -> do
@@ -66,7 +71,7 @@ runRpcServer chan port runner methodVar = do
         response    <- callRpc runner methods msg
         WS.sendTextData connect $ A.encode response
 
-
+callRpc :: Monad m => (t -> m RpcResponse) -> Map Text (Value -> Int -> t) -> ByteString -> m RpcResponse
 callRpc runner methods msg = case A.decodeStrict msg of
     Just (RpcRequest method params reqId) -> case method `M.lookup` methods of
         Just justMethod -> runner $ justMethod params reqId
@@ -75,5 +80,5 @@ callRpc runner methods msg = case A.decodeStrict msg of
             reqId
     Nothing -> return $ RpcResponseError (String "error of request parsing") 0
 
-
+runNodeDefinitionL :: NodeRuntime -> Free L.NodeDefinitionF a -> IO a
 runNodeDefinitionL nodeRt = foldFree (interpretNodeDefinitionL nodeRt)

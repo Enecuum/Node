@@ -5,7 +5,6 @@ module Enecuum.Framework.Networking.Language where
 
 import           Enecuum.Prelude
 
-import           Data.Typeable
 import qualified Data.Aeson                           as A
 import qualified Enecuum.Core.Language                as L
 import qualified Data.Text                            as Text

@@ -2,10 +2,9 @@ module Enecuum.Framework.Networking.Interpreter where
 
 import Enecuum.Prelude
 
-import           Control.Monad.Free
+
 import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
-import qualified Enecuum.Framework.Lens             as Lens
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Network.WebSockets.Client
 import qualified Network.WebSockets                               as WS
@@ -32,7 +31,7 @@ instance D.ConnectionClass D.RealConnection where
                             loop
                 loop 
             case res of
-                Left (e :: SomeException) -> putMVar var False
+                Left (_ :: SomeException) -> putMVar var False
                 Right _ -> return ()
         res <- takeMVar var
         if res
@@ -55,16 +54,16 @@ interpretNetworkingL (L.OpenConnection cfg next) = do -- (L.OpenConnection (D.Co
 interpretNetworkingL (L.CloseConnection (D.NetworkConnection conn)  next) = 
     D.closeConnection conn >> pure (next ())
 
-interpretNetworkingL (L.SendRequest (D.NetworkConnection conn) req next) = do
+interpretNetworkingL (L.SendRequest (D.NetworkConnection conn) req next) =
     next <$> D.sendRequest conn req
 
-interpretNetworkingL (L.EvalNetwork _ _)     = do
+interpretNetworkingL (L.EvalNetwork _ _)     =
     error "interpretNetworkingL EvalNetwork not implemented."
 
-interpretNetworkingL (L.SendRpcRequest (ConnectInfo host port) request next) = do
+interpretNetworkingL (L.SendRpcRequest (ConnectInfo host port) request next) =
     runClient host (fromEnum port) "/" $ \connect -> do
         WS.sendTextData connect $ A.encode request
-        next <$> (transformEither T.pack id . A.eitherDecode) <$> WS.receiveData connect
+        next . transformEither T.pack id . A.eitherDecode <$> WS.receiveData connect
 
 transformEither :: (a -> c) -> (b -> d) -> Either a b -> Either c d
 transformEither f _ (Left a)  = Left (f a)

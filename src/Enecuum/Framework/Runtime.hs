@@ -6,7 +6,7 @@ import           Control.Concurrent.STM.TChan
 import qualified Data.Map            as Map
 import           Data.HGraph.THGraph (THGraph)
 
-import           Enecuum.Core.Runtime (CoreRuntime, createCoreRuntime)
+import           Enecuum.Core.Runtime (CoreRuntime)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 import qualified Enecuum.Domain as D
 import           Enecuum.Legacy.Service.Network.Base
@@ -38,4 +38,4 @@ createNodeRuntime coreRt = NodeRuntime
 
 -- TODO: more wise clearing here.
 clearNodeRuntime :: NodeRuntime -> IO ()
-clearNodeRuntime nodeRt = pure ()
+clearNodeRuntime _ = pure ()

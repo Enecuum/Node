@@ -3,11 +3,9 @@
 module Enecuum.Framework.Node.Language where
 
 import           Enecuum.Prelude
-import qualified Enecuum.Core.Types                       as T
 import qualified Enecuum.Core.Language                    as L
 import qualified Enecuum.Framework.State.Language         as L
 import qualified Enecuum.Framework.Networking.Language    as L
-import qualified Enecuum.Framework.Domain                 as D
 import qualified Data.HGraph.THGraph                      as G
 import           Data.HGraph.StringHashable               (StringHashable)
 import           Enecuum.Core.HGraph.Interpreters.IO      (runHGraphIO)

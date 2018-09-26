@@ -7,7 +7,6 @@ import           Control.Concurrent
 import           Control.Concurrent.Async
 import           Control.Exception                   (allowInterrupt)
 import           Control.Monad
-import           Enecuum.Legacy.Node.BaseFunctions
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Prelude
 import qualified Network.Socket                      as S
