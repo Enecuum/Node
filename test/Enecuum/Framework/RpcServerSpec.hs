@@ -74,7 +74,7 @@ localServer = D.ConnectionConfig (ConnectInfo "127.0.0.1" serverPort)
 
 makeRpcRequest
     :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NodeL (Either Text b)
-makeRpcRequest connectCfg arg = L.evalNetworking $ L.makeRpcRequest' connectCfg arg
+makeRpcRequest connectCfg arg = L.evalNetworking $ L.makeRpcRequest_ connectCfg arg
 
 
 makeRequestUnsafe

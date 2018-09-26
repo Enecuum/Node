@@ -1,5 +1,3 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
 -- TODO: this is almost exact copy-paste from testing runtime. Unify it.
 
 module Enecuum.Framework.State.Interpreter where
@@ -9,19 +7,14 @@ import Enecuum.Prelude
 import qualified Data.Map                                               as Map
 import           Unsafe.Coerce                                          (unsafeCoerce)
 
-import qualified Enecuum.Core.Interpreters                              as Impl
-import qualified Enecuum.Core.Language                                  as L
 import qualified Enecuum.Core.Types                                     as D
 import qualified Enecuum.Framework.Language                             as L
 import qualified Enecuum.Framework.Domain                               as D
 import qualified Enecuum.Framework.Runtime                              as Rt
 import qualified Enecuum.Framework.Lens                                 as Lens
 import qualified Enecuum.Framework.RLens                                as RLens
-import qualified Enecuum.Framework.Networking.Interpreter               as Impl
 
 import qualified Data.ByteString.Base64  as Base64
-import qualified Data.Serialize          as S
-import qualified Data.Aeson              as A
 import qualified Crypto.Hash.SHA256      as SHA
 import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
 
@@ -72,7 +65,7 @@ interpretStateL nodeRt (L.ReadVar var next) =
 interpretStateL nodeRt (L.WriteVar var val next) =
   next <$> writeVar' nodeRt var val
 
-interpretStateL nodeRt (L.EvalGraph (L.GraphAction stmRunner _ act) next) = do
+interpretStateL _ (L.EvalGraph (L.GraphAction stmRunner _ act) next) =
   next <$> stmRunner act
 
 -- | Runs state model as STM.

@@ -1,7 +1,7 @@
 module Enecuum.Framework.RpcMethod.Interpreter where
 
 import           Enecuum.Prelude
-import           Control.Monad.Free
+import           Control.Monad.Free()
 
 import qualified Data.Map as M
 import           Enecuum.Framework.RpcMethod.Language

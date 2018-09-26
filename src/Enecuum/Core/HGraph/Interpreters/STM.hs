@@ -1,6 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude      #-}
 {-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE DeriveGeneric          #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE TypeOperators          #-}
@@ -59,6 +58,11 @@ interpretHGraphLSTM graph (DeleteLink x y next) = do
     ok <- Impl.deleteLink graph x y
     pure $ next ok
 
+interpretHGraphLSTM graph (ClearGraph next) = do
+    Impl.clearGraph graph
+    pure $ next ()
+
+    
 -- | Run H graph interpret.
 runHGraphLSTM, runHGraphSTM
     :: (Serialize c, StringHashable c)

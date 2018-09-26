@@ -57,6 +57,7 @@ networkNode1Scenario = do
     L.logInfo $ "Network node 1: requests balance change (+10)."
     GetBalanceResponse balance <- makeRequestUnsafe' connectCfg GetBalanceRequest
     L.logInfo $ "Network node 1: Balance (should be 91): " +|| balance ||+ "."
+    L.stopNode
 
 networkNode1 :: L.NodeDefinitionL ()
 networkNode1 = do
