@@ -1,4 +1,4 @@
-module Enecuum.Language 
+module Enecuum.Language
   ( module X
   ) where
 

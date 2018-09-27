@@ -5,7 +5,6 @@ import Enecuum.Prelude
 
 import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
-import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Service.Network.WebSockets.Client
 import qualified Network.WebSockets                               as WS
 import           Data.Aeson as A
@@ -15,8 +14,8 @@ import           Control.Exception (SomeException)
 
 
 instance D.ConnectionClass D.RealConnection where
-    openConnection (D.ConnectionConfig (ConnectInfo host port)) = do
-        chan <- atomically $ newTChan 
+    openConnection (D.Address host port) = do
+        chan <- atomically newTChan
         var <- newEmptyMVar
         forkIO $ do
             res <- try $ runClient host (fromEnum port) "/" $ \connect -> do
@@ -29,29 +28,29 @@ instance D.ConnectionClass D.RealConnection where
                             let decodeMsg = (transformEither T.pack id . A.eitherDecode) responseMsg
                             atomically $ putTMVar resp decodeMsg
                             loop
-                loop 
+                loop
             case res of
                 Left (_ :: SomeException) -> putMVar var False
                 Right _ -> return ()
         res <- takeMVar var
         if res
-            then pure $ (Just (D.RealConnection chan))
-            else pure $ Nothing
+            then pure (Just (D.RealConnection chan))
+            else pure Nothing
 
     -- :: Monad m => a -> m ()
-    closeConnection (D.RealConnection chan) = atomically $ writeTChan chan D.CloseConnection 
+    closeConnection (D.RealConnection chan) = atomically $ writeTChan chan D.CloseConnection
     sendRequest (D.RealConnection chan) req = do
-        var <- atomically $ newEmptyTMVar
+        var <- atomically newEmptyTMVar
         atomically $ writeTChan chan (D.SendRequest req var)
         atomically $ takeTMVar var
-        
+
 -- | Interpret NetworkingL language.
 interpretNetworkingL :: L.NetworkingF a -> IO a
 interpretNetworkingL (L.OpenConnection cfg next) = do -- (L.OpenConnection (D.ConnectionConfig (ConnectInfo host port)) next)  = do
     conn :: Maybe D.RealConnection <- D.openConnection cfg
     pure $ next $ D.NetworkConnection <$> conn
 
-interpretNetworkingL (L.CloseConnection (D.NetworkConnection conn)  next) = 
+interpretNetworkingL (L.CloseConnection (D.NetworkConnection conn)  next) =
     D.closeConnection conn >> pure (next ())
 
 interpretNetworkingL (L.SendRequest (D.NetworkConnection conn) req next) =
@@ -60,7 +59,7 @@ interpretNetworkingL (L.SendRequest (D.NetworkConnection conn) req next) =
 interpretNetworkingL (L.EvalNetwork _ _)     =
     error "interpretNetworkingL EvalNetwork not implemented."
 
-interpretNetworkingL (L.SendRpcRequest (ConnectInfo host port) request next) =
+interpretNetworkingL (L.SendRpcRequest (D.Address host port) request next) =
     runClient host (fromEnum port) "/" $ \connect -> do
         WS.sendTextData connect $ A.encode request
         next . transformEither T.pack id . A.eitherDecode <$> WS.receiveData connect

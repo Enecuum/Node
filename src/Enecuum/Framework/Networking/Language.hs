@@ -11,33 +11,26 @@ import qualified Data.Text                            as Text
 import qualified Enecuum.Framework.Domain             as D
 import           Enecuum.Framework.Network.Language   (NetworkL)
 import           Enecuum.Framework.Domain.RpcMessages
-import           Enecuum.Legacy.Service.Network.Base  (ConnectInfo(..))
-
-
--- This is a raw view of mid-level networking. Will change significantly.
--- Supposed to be a mid-level language hiding WebSockets.
 
 -- | Allows to work with network: open and close connections, send requests.
 data NetworkingF next where
   -- | Open connection to the node.
-  OpenConnection :: D.ConnectionConfig -> (Maybe D.NetworkConnection -> next) -> NetworkingF next
+  OpenConnection :: D.Address -> (Maybe D.NetworkConnection -> next) -> NetworkingF next
   -- | Close existing connection.
   CloseConnection :: D.NetworkConnection -> (() -> next) -> NetworkingF  next
 
-  -- TODO: we need more realistic model. Maybe, notion of sync / async requests.
-  -- A real web sockets interpreter will show the truth.
-  -- | Send RPC request with the connection.
+  -- | Send message to the the connection.
   SendRequest :: D.NetworkConnection -> RpcRequest -> (Either Text RpcResponse -> next) -> NetworkingF next
 
   -- | Eval low-level networking script.
   EvalNetwork :: NetworkL a -> (a -> next) -> NetworkingF  next
-  SendRpcRequest :: ConnectInfo -> RpcRequest -> (Either Text RpcResponse -> next) -> NetworkingF next
+  SendRpcRequest :: D.Address -> RpcRequest -> (Either Text RpcResponse -> next) -> NetworkingF next
 
   -- | Eval core effect.
   EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF  next
 
 instance Functor NetworkingF where
-  fmap g (OpenConnection cfg next)          = OpenConnection cfg        (g . next)
+  fmap g (OpenConnection address next)      = OpenConnection address    (g . next)
   fmap g (CloseConnection conn next)        = CloseConnection conn      (g . next)
   fmap g (SendRequest conn rpcReq next)     = SendRequest conn rpcReq   (g . next)
   fmap g (EvalNetwork network next)         = EvalNetwork network       (g . next)
@@ -46,8 +39,8 @@ instance Functor NetworkingF where
 
 type NetworkingL  next = Free NetworkingF next
 
-openConnection :: D.ConnectionConfig -> NetworkingL (Maybe D.NetworkConnection)
-openConnection cfg = liftF $ OpenConnection cfg id
+openConnection :: D.Address -> NetworkingL (Maybe D.NetworkConnection)
+openConnection address = liftF $ OpenConnection address id
 
 closeConnection :: D.NetworkConnection -> NetworkingL  ()
 closeConnection conn = liftF $ CloseConnection conn id
@@ -58,8 +51,8 @@ sendRequest conn rpcReq = liftF $ SendRequest conn rpcReq id
 evalNetwork :: NetworkL a -> NetworkingL  a
 evalNetwork network = liftF $ EvalNetwork network id
 
-sendRpcRequest :: ConnectInfo -> RpcRequest -> NetworkingL (Either Text RpcResponse)
-sendRpcRequest info request = liftF $ SendRpcRequest info request id
+sendRpcRequest :: D.Address -> RpcRequest -> NetworkingL (Either Text RpcResponse)
+sendRpcRequest address request = liftF $ SendRpcRequest address request id
 
 evalCoreEffectNetworkingF :: L.CoreEffect a -> NetworkingL a
 evalCoreEffectNetworkingF coreEffect = liftF $ EvalCoreEffectNetworkingF coreEffect id
@@ -67,30 +60,16 @@ evalCoreEffectNetworkingF coreEffect = liftF $ EvalCoreEffectNetworkingF coreEff
 instance L.Logger (Free NetworkingF) where
   logMessage level msg = evalCoreEffectNetworkingF $ L.logMessage level msg
 
-
--- TODO: this method should declare some error-proof.
--- It's probably wise to use `bracket` idiom here.
-
--- | Open connection, send request and close connection.
-withConnection :: D.ConnectionConfig -> RpcRequest -> NetworkingL  (Either Text RpcResponse)
-withConnection cfg req = openConnection cfg >>= \case
-  Nothing -> pure $ Left "Connecting failed."
-  Just conn -> do
-    response <- sendRequest conn req
-    closeConnection conn
-    pure response
-
-
 makeRpcRequest'
-    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NetworkingL  (Either Text b)
-makeRpcRequest' (D.ConnectionConfig connectCfg) arg =
-    responseValidation =<< sendRpcRequest connectCfg (makeRequest arg)
-
-
-makeRpcRequest_
-    :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NetworkingL  (Either Text b)
-makeRpcRequest_ connectCfg arg = 
-    responseValidation =<< withConnection connectCfg (makeRequest arg)
+    :: (Typeable a, ToJSON a, FromJSON b) => D.Address -> a -> NetworkingL (Either Text b)
+makeRpcRequest' address arg =
+    responseValidation =<< sendRpcRequest address (makeRequest arg)
+--
+--
+-- makeRpcRequest_
+--     :: (Typeable a, ToJSON a, FromJSON b) => D.ConnectionConfig -> a -> NetworkingL  (Either Text b)
+-- makeRpcRequest_ connectCfg arg =
+--     responseValidation =<< withConnection connectCfg (makeRequest arg)
 
 
 responseValidation :: (FromJSON b, Applicative f) => Either Text RpcResponse -> f (Either Text b)
