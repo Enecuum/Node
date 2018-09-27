@@ -12,6 +12,7 @@ import qualified Enecuum.Core.Runtime              as R
 import qualified Enecuum.Core.Types                as T
 import qualified Enecuum.Core.Lens as Lens
 import Enecuum.Config (logConfig)
+import System.IO.Silently
 
 scenario :: L.LoggerL ()
 scenario = do
@@ -36,6 +37,15 @@ withLogFile logFile action = do
 spec :: Spec
 spec = do
   describe "Logger tests" $ do
+    it "Test output to console with capture" $ do
+      config <- logConfig configFilePath
+      (output, _) <- capture $ Impl.withLogger config { T._logToConsole = True }
+              $ \h -> Impl.runLoggerL (Just h) scenario
+      output `shouldBe` "DEBUG Node.Main: Debug Msg\n\
+                        \INFO Node.Main: Info Msg\n\
+                        \WARNING Node.Main: Warning Msg\n\
+                        \ERROR Node.Main: Error Msg\n"
+
     it "Set level, filepath, format via config" $ do
       config@(T.LoggerConfig _ _ logFile _ ) <- logConfig configFilePath
       res <- withLogFile logFile
