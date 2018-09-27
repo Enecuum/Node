@@ -10,8 +10,13 @@ import           Data.HGraph.StringHashable (StringHash, toHash)
 import qualified Enecuum.Language as L
 import qualified Enecuum.Core.Types as D
 import qualified Enecuum.Blockchain.Domain.Transaction as D
+import qualified Enecuum.Blockchain.Domain.Block as D
 import           Enecuum.Core.HGraph.Interpreters.IO (runHGraphIO)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
+
+
+type GraphBlockVar = TVar (G.THGraph D.Block)
+type GraphBlockL a = L.HGraphL D.Block a
 
 type GraphVar = TVar (G.THGraph D.Transaction)
 type GraphL a = L.HGraphL D.Transaction a
@@ -22,6 +27,11 @@ nilHash = toHash (D.Transaction (toHash @Int 0) 0)
 nilTransaction :: D.Transaction
 nilTransaction = D.Transaction nilHash 0
 
+
+nilBlock :: D.Block
+nilBlock = D.Block 0
+
+
 nilTransactionHash :: D.StringHash
 nilTransactionHash = D.toHash nilTransaction
 
@@ -30,6 +40,13 @@ initGraph = do
     graph <- initHGraph
     runHGraphIO graph $ L.newNode nilTransaction
     pure graph
+
+initBlockGraph :: IO GraphBlockVar
+initBlockGraph = do
+    graph <- initHGraph
+    runHGraphIO graph $ L.newNode nilBlock
+    pure graph
+
 
 -- | Checks if new balance is valid and adds new transaction node.
 -- Returns new node hash and new balance.
