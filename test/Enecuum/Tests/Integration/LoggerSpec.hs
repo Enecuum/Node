@@ -5,12 +5,14 @@ import           Enecuum.Prelude
 import           System.Directory
 import           Test.Hspec
 
-import           Enecuum.Assets.System.Directory   (defaultLogFileName)
-import           Enecuum.Core.Logger.Config        (logConfig)
+import           Enecuum.Assets.System.Directory   (defaultLogFileName, configFilePath)
 import qualified Enecuum.Core.Logger.Impl.HsLogger as Impl
 import qualified Enecuum.Core.Logger.Language      as L
 import qualified Enecuum.Core.Runtime              as R
 import qualified Enecuum.Core.Types                as T
+import qualified Enecuum.Core.Lens as Lens
+import Enecuum.Config (logConfig)
+import System.IO.Silently
 
 scenario :: L.LoggerL ()
 scenario = do
@@ -35,31 +37,46 @@ withLogFile logFile action = do
 spec :: Spec
 spec = do
   describe "Logger tests" $ do
-    it "Set level, filepath, format via config" $ do
-      (T.LoggerConfig format level logFile) <- logConfig
-      res <- withLogFile logFile
-              $ Impl.withLogger False format logFile level
+    it "Test output to console with capture" $ do
+      config <- logConfig configFilePath
+      (output, _) <- capture $ Impl.withLogger config { T._logToConsole = True }
               $ \h -> Impl.runLoggerL (Just h) scenario
-      res `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
+      output `shouldBe` "DEBUG Node.Main: Debug Msg\n\
+                        \INFO Node.Main: Info Msg\n\
+                        \WARNING Node.Main: Warning Msg\n\
+                        \ERROR Node.Main: Error Msg\n"
+
+    it "Set level, filepath, format via config" $ do
+      config@(T.LoggerConfig _ _ logFile _ ) <- logConfig configFilePath
+      res <- withLogFile logFile
+              $ Impl.withLogger config { T._logToConsole = False }
+              $ \h -> Impl.runLoggerL (Just h) scenario
+      res `shouldBe` "DEBUG Node.Main: Debug Msg\n\
+                     \INFO Node.Main: Info Msg\n\
+                     \WARNING Node.Main: Warning Msg\n\
+                     \ERROR Node.Main: Error Msg\n"
 
     it "Set level: Debug level" $ do
       logFile <- defaultLogFileName
+      let config = T.LoggerConfig T.nullFormat T.Debug logFile False
       res <- withLogFile logFile
-              $ Impl.withLogger False T.nullFormat logFile T.Debug
+              $ Impl.withLogger config
               $ \h -> Impl.runLoggerL (Just h) scenario
       res `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
 
     it "Set level: Error level" $ do
       logFile <- defaultLogFileName
+      let config = T.LoggerConfig T.nullFormat T.Error logFile False
       res <- withLogFile logFile
-              $ Impl.withLogger False T.nullFormat logFile T.Error
+              $ Impl.withLogger config
               $ \h -> Impl.runLoggerL (Just h) scenario
       res `shouldBe` "Error Msg\n"
 
     it "Set format: '$prio $loggername: $msg'" $ do
       logFile <- defaultLogFileName
+      let config = T.LoggerConfig T.standartFormat T.Debug logFile False
       res <- withLogFile logFile
-              $ Impl.withLogger False T.standartFormat logFile T.Debug
+              $ Impl.withLogger config
               $ \h -> Impl.runLoggerL (Just h) scenario
       res `shouldBe` "DEBUG Node.Main: Debug Msg\n\
                      \INFO Node.Main: Info Msg\n\
