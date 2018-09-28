@@ -17,9 +17,9 @@ data CoreRuntime = CoreRuntime
 createVoidLoggerRuntime :: IO LoggerRuntime
 createVoidLoggerRuntime = pure $ LoggerRuntime Nothing
 
-createLoggerRuntime :: Bool -> T.LoggerConfig -> IO LoggerRuntime
-createLoggerRuntime isConsoleLog (T.LoggerConfig fmt lvl filePath) =
-  LoggerRuntime . Just <$> Impl.setupLogger isConsoleLog fmt filePath lvl
+createLoggerRuntime :: T.LoggerConfig -> IO LoggerRuntime
+createLoggerRuntime config =
+  LoggerRuntime . Just <$> Impl.setupLogger config
 
 clearLoggerRuntime :: LoggerRuntime -> IO ()
 clearLoggerRuntime (LoggerRuntime (Just hsLogger)) = Impl.teardownLogger hsLogger

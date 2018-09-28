@@ -18,13 +18,12 @@ import qualified Enecuum.Framework.RLens as Lens
 initialize :: Config -> IO ()
 initialize config = do
     putStrLn @Text "Getting log file..."
-    appLog <- appFileName
-    putStrLn @Text $ "Log file: " +| appLog |+ "."
-
-    let loggerConfig' = (loggerConfig config) & Lens.logFilePath .~ appLog
+    let loggerConfig' = (loggerConfig config)
+    let logFile = loggerConfig' ^. Lens.logFilePath
+    putStrLn @Text $ "Log file: " +| logFile |+ "."
 
     putStrLn @Text "Creating logger runtime..."
-    loggerRt <- createLoggerRuntime True loggerConfig'
+    loggerRt <- createLoggerRuntime $ loggerConfig'
     putStrLn @Text "Creating core runtime..."
     coreRt <- createCoreRuntime loggerRt
     putStrLn @Text "Creating node runtime..."
@@ -36,7 +35,7 @@ initialize config = do
         dispatchScenario config nodeRt scenarioCase)
         -- TODO: this is a quick hack. Make it right.
     atomically $ readTMVar (nodeRt ^. Lens.stopNode)
-    
+
     putStrLn @Text "Clearing node runtime..."
     clearNodeRuntime nodeRt
     putStrLn @Text "Clearing core runtime..."

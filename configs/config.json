@@ -10,6 +10,7 @@
         {
             "format": "$prio $loggername: $msg",
             "level": "Debug",
-            "logFilePath": ""
+            "logFilePath": "/tmp/log/app.log",
+            "logToConsole": true
         }
 }

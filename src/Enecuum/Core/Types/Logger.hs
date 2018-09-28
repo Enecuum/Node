@@ -13,9 +13,10 @@ data LogLevel = Debug | Info | Warning | Error
 type Format = String
 
 data LoggerConfig = LoggerConfig
-  { _format      :: Format
-  , _level       :: LogLevel
-  , _logFilePath :: FilePath
+  { _format       :: Format
+  , _level        :: LogLevel
+  , _logFilePath  :: FilePath
+  , _logToConsole :: Bool
   } deriving (Generic, Show, Read)
 
 instance ToJSON LoggerConfig where toJSON = genericToJSON noLensPrefix
