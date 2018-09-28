@@ -5,7 +5,7 @@
 		"scenario": "Sync",
 		"scenarioRole": "Respondent"
 	}],
-	"extPort": 1667,
+	"extPort": 1668,
     "loggerConfig":
         {
             "format": "$prio $loggername: $msg",
