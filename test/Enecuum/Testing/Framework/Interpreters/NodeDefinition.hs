@@ -11,9 +11,9 @@ import qualified Enecuum.Testing.Framework.Interpreters.Node  as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.State as Impl
 import qualified Enecuum.Testing.Framework.Internal.RpcServer as Impl
 
--- import           Enecuum.Framework.RpcMethod.Interpreter
+import qualified Enecuum.Framework.RpcMethod.Interpreter as Impl
 
-runRpcMethodL = error "runRpcMethodL not implemented."
+-- runRpcMethodL = error "runRpcMethodL not implemented."
 
 -- | Interpret NodeDefinitionL.
 interpretNodeDefinitionL
@@ -29,7 +29,7 @@ interpretNodeDefinitionL nodeRt (L.EvalNodeL nodeScript next) = do
 
 interpretNodeDefinitionL nodeRt (L.ServingRpc port handlersF next) = do
   m <- atomically $ newTVar mempty
-  a <- runRpcMethodL m handlersF
+  a <- Impl.runRpcMethodL m handlersF
   Impl.startNodeRpcServer nodeRt port m
   pure $ next a
 

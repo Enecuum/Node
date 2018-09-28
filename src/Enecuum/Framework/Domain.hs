@@ -8,4 +8,4 @@ import           Enecuum.Framework.Domain.Networking as X
 import           Enecuum.Framework.Domain.Node as X
 import           Enecuum.Framework.Domain.Error as X
 import           Enecuum.Framework.Domain.State as X
-import           Enecuum.Framework.Domain.RpcMessages as X
+import           Enecuum.Framework.Domain.RPC as X

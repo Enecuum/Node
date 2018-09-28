@@ -21,7 +21,7 @@ import qualified Enecuum.Core.Lens             as Lens
 import           Enecuum.Language              (HasGraph)
 
 import           Enecuum.Core.HGraph.Internal.Types
-import           Enecuum.Framework.Domain.RpcMessages
+import           Enecuum.Framework.Domain.RPC
 import           Enecuum.Framework.RpcMethod.Language
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 import           Enecuum.Assets.Nodes.RPC

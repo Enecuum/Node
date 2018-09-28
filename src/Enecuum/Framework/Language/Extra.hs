@@ -38,6 +38,7 @@ withGraphIO
   -> L.NodeL a
 withGraphIO s = L.evalGraphIO (s ^. graph)
 
+-- TODO: make this a type class?
 -- | Makes RPC call.
 makeRpcRequest
     :: (Typeable a, ToJSON a, FromJSON b) => D.Address -> a -> L.NodeL (Either Text b)

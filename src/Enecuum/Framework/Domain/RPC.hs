@@ -1,4 +1,4 @@
-module Enecuum.Framework.Domain.RpcMessages where
+module Enecuum.Framework.Domain.RPC where
 
 import           Enecuum.Prelude
 import           Data.Aeson as A
@@ -11,8 +11,8 @@ data RpcResponse
     = RpcResponseResult A.Value Int
     | RpcResponseError A.Value Int
 
-makeRequest :: (Typeable a, ToJSON a) => a -> RpcRequest
-makeRequest a = RpcRequest (T.pack . show . typeOf $ a) (toJSON a) 0
+toRpcRequest :: (Typeable a, ToJSON a) => a -> RpcRequest
+toRpcRequest a = RpcRequest (T.pack . show . typeOf $ a) (toJSON a) 0
 
 class Content a where
     content :: a -> A.Value
@@ -35,17 +35,17 @@ instance ToJSON RpcRequest where
     toJSON (RpcRequest method val requesId) = object [
         "method" A..= method,
         "params" A..= val,
-        "id"     A..= requesId 
+        "id"     A..= requesId
         ]
 
 instance ToJSON RpcResponse where
     toJSON (RpcResponseResult val requesId) = object [
         "result" A..= val,
-        "id"     A..= requesId 
+        "id"     A..= requesId
         ]
     toJSON (RpcResponseError val requesId) = object [
         "error"  A..= val,
-        "id"     A..= requesId 
+        "id"     A..= requesId
         ]
 
 instance FromJSON RpcResponse where

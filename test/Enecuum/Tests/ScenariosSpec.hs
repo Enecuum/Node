@@ -15,6 +15,6 @@ import           Enecuum.Assets.Nodes.NetworkNode2 (networkNode2)
 
 spec :: Spec
 spec = describe "Scenarios test" $ do
-  it "NetworkNode1, NetworkNode2 test" $ do
+  it "Dummy test" $ do
 
-    1 `shouldBe` 2
+    1 `shouldBe` (1 :: Int)

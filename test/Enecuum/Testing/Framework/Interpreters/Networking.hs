@@ -11,30 +11,17 @@ import qualified Enecuum.Testing.Types                          as T
 import qualified Enecuum.Testing.Core.Interpreters              as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.Network as Impl
 
-data Connection = Connection
-  { _clientAddress :: D.Address
-  , _serverAddress :: D.Address
-  }
-
-data TestConnection = TestConnection (MVar T.NodeRuntime) Connection
-
-instance D.ConnectionClass TestConnection where
-  openConnection (D.Address host port) = error "openConnection not implemented."
-  closeConnection (TestConnection rt conn) = error "closeConnection not implemented."
-  sendRequest (TestConnection rt conn) req = do
-    var <- readMVar rt
-    relayRequest var conn req
-
 -- | Relay request from this node to the network environment.
 relayRequest
   :: T.NodeRuntime
-  -> Connection
+  -> D.Address
+  -> D.Address
   -> D.RpcRequest
   -> IO (Either Text D.RpcResponse)
-relayRequest nodeRt conn req = do
+relayRequest nodeRt from to req = do
   atomically
       $ putTMVar (nodeRt ^. RLens.networkControl . RLens.request)
-      $ T.RelayRpcReq (_clientAddress conn) (_serverAddress conn) req
+      $ T.RelayRpcReq from to req
   controlResponse <- atomically
       $ takeTMVar (nodeRt ^. RLens.networkControl . RLens.response)
   case controlResponse of
@@ -53,11 +40,15 @@ interpretNetworkingL nodeRt (L.CloseConnection _ next) =
   -- pure $ next ()
   error "CloseConnection not implemented."
 
-interpretNetworkingL nodeRt (L.SendRequest (D.NetworkConnection conn) req next) = do
-  -- next <$> D.sendRequest conn req
-  error "SendRequest not implemented."
+-- interpretNetworkingL nodeRt (L.Send (D.NetworkConnection conn) req next) = do
+--   -- next <$> D.sendRequest conn req
+--   error "Send not implemented."
 
-interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) = do
+interpretNetworkingL nodeRt (L.SendRpcRequest toAddr req next) = do
+  res <- relayRequest nodeRt (nodeRt ^. RLens.address) toAddr req
+  pure $ next res
+
+interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) =
   next <$> Impl.runNetworkL nodeRt networkAction
 
 interpretNetworkingL nodeRt (L.EvalCoreEffectNetworkingF coreEffect next) =

@@ -7,7 +7,7 @@ import           Enecuum.Prelude
 import           Data.Aeson as A
 
 import           Enecuum.Framework.Node.Language          ( NodeL )
-import           Enecuum.Framework.Domain.RpcMessages
+import           Enecuum.Framework.Domain.RPC
 import qualified Data.Text as T
 import           Data.Typeable
 
