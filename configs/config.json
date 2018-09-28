@@ -1,11 +1,10 @@
 {
     "bootNodeAddress": "[((127,0,0,1), 1554)]",
-    "bootNode": false,
-    "masterNode": false,
-    "networkNode1": false,
-    "networkNode2": false,
-    "networkNode3": true,
-    "networkNode4": false,
+		"scenarioNode": [{
+				"nodeRole": "NetworkNode",
+				"scenario": "Sync",
+				"scenarioRole": "Respondent"
+		}],
     "extPort": 1667,
     "loggerConfig":
         {
