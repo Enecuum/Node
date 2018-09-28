@@ -23,4 +23,4 @@ defaultLogFileName :: IO FilePath
 defaultLogFileName = liftM (</> "default.log") logFilePath
 
 configFilePath :: FilePath
-configFilePath = "configs/Core/Logger/config.json"
+configFilePath = "./configs/config.json"
