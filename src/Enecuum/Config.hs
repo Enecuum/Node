@@ -10,14 +10,24 @@ import qualified Data.Aeson                    as A
 
 import           Enecuum.Core.Types.Logger     (LoggerConfig)
 
+data NodeRole = BootNode | MasterNode | NetworkNode
+  deriving (Generic, FromJSON, Show, Read, Eq, Ord )
+
+data Scenario = LedgerBalance | Sync
+  deriving (Generic, FromJSON, Show, Read, Eq, Ord )
+
+data ScenarioRole = Respondent | Interviewer
+  deriving (Generic, FromJSON, Show, Read, Eq, Ord)
+
+data ScenarioNode = ScenarioNode
+  { nodeRole     :: NodeRole
+  , scenario     :: Scenario
+  , scenarioRole :: ScenarioRole
+  } deriving (Generic, FromJSON, Show, Read, Eq, Ord)
+
 data Config = Config
   { bootNodeAddress :: Text
-  , bootNode :: Bool
-  , masterNode :: Bool
-  , networkNode1 :: Bool
-  , networkNode2 :: Bool
-  , networkNode3 :: Bool
-  , networkNode4 :: Bool
+  , scenarioNode :: [ScenarioNode]
   , extPort :: Int
   , loggerConfig :: LoggerConfig
   }

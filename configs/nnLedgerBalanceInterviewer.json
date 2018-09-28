@@ -1,16 +1,14 @@
 {
-    "bootNodeAddress": "[((127,0,0,1), 1554)]",
-    "bootNode": false,
-    "masterNode": false,
-    "networkNode1": true,
-    "networkNode2": false,
-    "networkNode3": false,
-    "networkNode4": false,    
-    "extPort": 1667,
-    "loggerConfig":
-        {
-            "format": "$prio $loggername: $msg",
-            "level": "Debug",
-            "logFilePath": ""
-        }
+	"bootNodeAddress": "[((127,0,0,1), 1554)]",
+	"scenarioNode": [{
+		"nodeRole": "NetworkNode",
+		"scenario": "LedgerBalance",
+		"scenarioRole": "Interviewer"
+	}],
+	"extPort": 1667,
+	"loggerConfig": {
+		"format": "$prio $loggername: $msg",
+		"level": "Debug",
+		"logFilePath": ""
+	}
 }
