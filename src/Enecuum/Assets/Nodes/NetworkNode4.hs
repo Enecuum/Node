@@ -28,37 +28,41 @@ import           Enecuum.Blockchain.Language.Extra
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 import           Enecuum.Assets.Nodes.RPC
 import           Enecuum.Assets.Nodes.Address
-import Enecuum.Assets.Nodes.NetworkNode3 (NetworkNodeChainData(..), chainLengthVar)
+import Enecuum.Assets.Nodes.Types
 
 
 checkLengthAndUpdate connectCfg nodeData = do
     L.logInfo $ "Network node 4: requests chain length."
-    GetChainLengthResponse newLength <- makeRequestUnsafe' connectCfg GetChainLengthRequest
-    L.logInfo $ "Network node 4: Network node 3 has Chain (should be 15): " +|| newLength ||+ "."
+    GetChainLengthResponse otherLength <- makeRequestUnsafe' connectCfg GetChainLengthRequest
+    L.logInfo $ "Network node 4: Network node 3 has Chain (should be 15): " +|| otherLength ||+ "."
 
-    L.logInfo $ "Network node 4: update chain length if it's bigger."
-    L.atomically $ do
-      curChain  <- L.readVar $ nodeData ^. chainLengthVar
-      when (curChain < newLength) $ 
-            L.writeVar (nodeData ^. chainLengthVar) newLength
+    L.logInfo $ "Network node 4: update chain if it's bigger."
+    curChain <- L.atomically <$> L.readVar $ nodeData ^. chainVar
+    let curChainLength = length curChain
+    when (curChainLength < otherLength) $ do
+      GetChainFromResponse chainTail <- makeRequestUnsafe' connectCfg (GetChainFromRequest curChainLength)
+      L.atomically $ do
+        updChain <- L.readVar $ nodeData ^. chainVar
+        let restChain = drop (length updChain - curChainLength) chainTail
+        L.writeVar (nodeData ^. chainVar) (curChain ++ restChain)
 
 --networkNode4Scenario :: L.NodeL ()
 networkNode4Scenario nodeData = do
     let connectCfg = D.ConnectionConfig networkNode3Addr
 
-    L.logInfo $ "Network node 4: check current chain length."
-    length0 <- L.atomically $ L.readVar (nodeData ^. chainLengthVar)
-    L.logInfo $ "Network node 4: Chain length (should be 5): " +|| length0 ||+ "."
+    L.logInfo $ "Network node 4: check current chain."
+    chain0 <- L.atomically $ L.readVar (nodeData ^. chainVar)
+    L.logInfo $ "Network node 4: Chain (should has length 5): " +|| chain0 ||+ "."
 
     checkLengthAndUpdate connectCfg nodeData
 
-    L.logInfo $ "Network node 4: check current chain length."
-    length1 <- L.atomically $ L.readVar (nodeData ^. chainLengthVar)
-    L.logInfo $ "Network node 4: Chain length (should be 15): " +|| length1 ||+ "."
+    L.logInfo $ "Network node 4: check current chain."
+    chain1 <- L.atomically $ L.readVar (nodeData ^. chainVar)
+    L.logInfo $ "Network node 4: Chain (should has length 15): " +|| chain1 ||+ "."
 
 newtorkNode4Initialization :: L.NodeL NetworkNodeChainData
 newtorkNode4Initialization = do
-  chainLengthVar'   <- L.atomically $ L.newVar 5
+  chainLengthVar'   <- L.atomically $ L.newVar $ map D.Block [0..4]
   pure $ NetworkNodeChainData chainLengthVar'
 
 networkNode4 :: L.NodeDefinitionL ()

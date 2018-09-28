@@ -27,11 +27,6 @@ nilHash = toHash (D.Transaction (toHash @Int 0) 0)
 nilTransaction :: D.Transaction
 nilTransaction = D.Transaction nilHash 0
 
-
-nilBlock :: D.Block
-nilBlock = D.Block 0
-
-
 nilTransactionHash :: D.StringHash
 nilTransactionHash = D.toHash nilTransaction
 
@@ -39,12 +34,6 @@ initGraph :: IO GraphVar
 initGraph = do
     graph <- initHGraph
     runHGraphIO graph $ L.newNode nilTransaction
-    pure graph
-
-initBlockGraph :: IO GraphBlockVar
-initBlockGraph = do
-    graph <- initHGraph
-    runHGraphIO graph $ L.newNode nilBlock
     pure graph
 
 
@@ -63,3 +52,4 @@ tryAddTransaction' lastNodeHash lastBalance change
       L.newNode newTrans
       L.newLink lastNodeHash newTransHash
       pure $ Just (newTransHash, lastBalance + change)
+

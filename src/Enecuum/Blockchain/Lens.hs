@@ -10,3 +10,4 @@ import           Control.Lens             ( makeFieldsNoPrefix )
 import           Enecuum.Blockchain.Domain
 
 makeFieldsNoPrefix ''Transaction
+makeFieldsNoPrefix ''Block

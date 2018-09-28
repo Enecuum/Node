@@ -29,31 +29,33 @@ import           Enecuum.Blockchain.Language.Extra
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 import           Enecuum.Assets.Nodes.RPC
 import           Enecuum.Assets.Nodes.Address
-
-data NetworkNodeChainData = NetworkNodeChainData
-  {
-     _chainLengthVar   :: D.StateVar Int
-  }
-
-makeFieldsNoPrefix ''NetworkNodeChainData
+import Enecuum.Assets.Nodes.Types
 
 acceptChainLength
   :: NetworkNodeChainData
   -> GetChainLengthRequest
   -> L.NodeL GetChainLengthResponse
 acceptChainLength nodeData GetChainLengthRequest =
-  GetChainLengthResponse <$> (L.atomically $ L.readVar (nodeData ^. chainLengthVar))
+  GetChainLengthResponse <$> length <$> (L.atomically $ L.readVar (nodeData ^. chainVar))
+
+acceptChainFrom
+  :: NetworkNodeChainData
+  -> GetChainFromRequest
+  -> L.NodeL GetChainFromResponse
+acceptChainFrom nodeData (GetChainFromRequest from) =
+  GetChainFromResponse <$> drop from <$> (L.atomically $ L.readVar (nodeData ^. chainVar))
 
 
 newtorkNode3Initialization :: L.NodeL NetworkNodeChainData
 newtorkNode3Initialization = do
-  chainLengthVar'   <- L.atomically $ L.newVar 15
-  pure $ NetworkNodeChainData chainLengthVar'
+  chainVar'   <- L.atomically $ L.newVar $ map D.Block [0..14]
+  pure $ NetworkNodeChainData chainVar'
 
 networkNode3 :: L.NodeDefinitionL ()
 networkNode3 = do
   L.nodeTag "networkNode3"
   nodeData <- L.initialization $ newtorkNode3Initialization
-  L.servingRpc 2003 $ 
+  L.servingRpc 2003 $ do
     L.method (acceptChainLength nodeData)
+    L.method (acceptChainFrom nodeData)
 

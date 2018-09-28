@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Enecuum.Blockchain.Domain.Block where
 
@@ -16,9 +17,9 @@ type BlockID = Int
 
 data Block = Block
     {
-      _id      :: BlockID
+      _id        :: BlockID
     }
-  deriving (Generic)
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
 instance S.Serialize Block
 
