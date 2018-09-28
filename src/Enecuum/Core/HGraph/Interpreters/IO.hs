@@ -59,6 +59,11 @@ interpretHGraphLIO graph (DeleteLink x y next) = do
     ok <- atomically $ Impl.deleteLink graph x y
     pure $ next ok
 
+interpretHGraphLIO graph (ClearGraph next) = do
+    atomically $ Impl.clearGraph graph
+    pure $ next ()
+
+
 -- | Run H graph interpret.
 runHGraphLIO, runHGraphIO
     :: (Serialize c, StringHashable c)

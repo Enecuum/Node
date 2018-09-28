@@ -20,6 +20,7 @@ module Data.HGraph.THGraph (
     , newTLink
     , newHLink
     , findNode
+    , deleteGraph
     ) where
 
 import           Universum
@@ -29,6 +30,7 @@ import           Control.Concurrent.STM.TVar
 
 import           Data.HGraph.StringHashable
 import           Control.Lens (makeLenses)
+import           Control.Lens.Setter ((.=))
 
 -- | Graph is a set of the nodes.
 type THGraph c = Map StringHash (TVar (THNode c))
@@ -47,20 +49,20 @@ newTHGraph = newTVar mempty
 
 -- | Add new node to the graph by content of the node.
 newNode :: StringHashable c => TVar (THGraph c) -> c -> STM Bool
-newNode aIndex aContent = do
-    let nodeHash = toHash aContent
-    res <- findNode aIndex nodeHash
+newNode index nodeContent = do
+    let nodeHash = toHash nodeContent
+    res <- findNode index nodeHash
     when (isNothing res) $ do
-        tHNode <- newTVar $ THNode mempty mempty aContent
-        modifyTVar aIndex $ M.insert nodeHash tHNode
+        tNode <- newTVar $ THNode mempty mempty nodeContent
+        modifyTVar index $ M.insert nodeHash tNode
     return $ isNothing res
 
 -- | Delete the node from the graph by hash of node content.
 deleteHNode :: StringHashable c => TVar (THGraph c) -> StringHash -> STM Bool
-deleteHNode aIndex nodeHash = do
-    tHNode <- findNode aIndex nodeHash
-    whenJust tHNode $ deleteTHNode aIndex
-    return $ isJust tHNode
+deleteHNode index nodeHash = do
+    tNode <- findNode index nodeHash
+    whenJust tNode $ deleteTHNode index
+    return $ isJust tNode
 
 -- | Creating/deleting of link by hash of node contens.
 newHLink, deleteHLink :: StringHashable c => TVar (THGraph c) -> ReformLink StringHash
@@ -73,16 +75,25 @@ findNode
     => TVar (THGraph c)
     -> StringHash
     -> STM (Maybe (TVar (THNode c)))
-findNode aTHGraph aNodeName = M.lookup aNodeName <$> readTVar aTHGraph
+findNode graph nodeName = M.lookup nodeName <$> readTVar graph
 
 -- | Delete the node from the graph by node ref.
 deleteTHNode :: StringHashable c => TVar (THGraph c) -> TVar (THNode c) -> STM ()
-deleteTHNode aIndex tHNode = do
-    aNode <- readTVar tHNode
-    let nodeHash = toHash $ aNode ^. content
-    modifyTVar aIndex $ M.delete nodeHash
-    forM_ (aNode ^. rLinks)
+deleteTHNode index tNode = do
+    node <- readTVar tNode
+    let nodeHash = toHash $ node ^. content
+    modifyTVar index $ M.delete nodeHash
+    forM_ (node ^. rLinks)
         $ \aVar -> modifyTVar aVar (links %~ M.delete nodeHash)
+
+-- | Delete all nodes of graph.
+deleteGraph :: StringHashable c => TVar (THGraph c) -> STM ()
+deleteGraph index = do
+    graph <- readTVar index
+    writeTVar index mempty
+    forM_ (elems graph) $ \var -> modifyTVar var $ execState $ do
+        links  .= mempty
+        rLinks .= mempty
 
 -- | Creating/deleting of link by node contens.
 newTLink, deleteTLink :: StringHashable c => ReformTLink c
@@ -117,8 +128,8 @@ type ReformTLink c = ReformLink (TVar (THNode c))
 
 reformHLink
     :: StringHashable c => ReformTLink c -> TVar (THGraph c) -> ReformLink StringHash
-reformHLink f aIndex x1 x2 = do
-    aNodes <- forM [x1, x2] (findNode aIndex)
+reformHLink f index x1 x2 = do
+    aNodes <- forM [x1, x2] (findNode index)
     case catMaybes aNodes of
         [n1, n2] -> f n1 n2
         _        -> return False

@@ -13,6 +13,20 @@ import           Enecuum.Framework.Testing.Types
 import qualified Enecuum.Framework.Testing.Node.Interpreters.Network as Impl
 import qualified Enecuum.Core.Testing.Runtime.Interpreters as Impl
 import           Enecuum.Framework.Domain.RpcMessages
+import           Enecuum.Legacy.Service.Network.Base
+
+data TestConnection = TestConnection (MVar NodeRuntime) D.Connection 
+
+instance D.ConnectionClass TestConnection where
+    -- :: Monad m => ConnectionConfig -> m (Maybe a)
+  openConnection (D.ConnectionConfig (ConnectInfo host port)) = error ""
+
+
+  -- :: Monad m => a -> m ()
+  closeConnection (TestConnection rt conn) = pure ()
+  sendRequest (TestConnection rt conn) req = do
+    var <- readMVar rt
+    relayRequest var conn req
 
 -- | Relay request from this node to the network environment.
 relayRequest
@@ -31,19 +45,17 @@ relayRequest nodeRt conn req = do
     AsErrorResponse err       -> pure $ Left err
 
 -- | Interpret NetworkingL language.
-interpretNetworkingL
-  :: NodeRuntime
-  -> L.NetworkingF a
-  -> IO a
-
+interpretNetworkingL :: NodeRuntime -> L.NetworkingF a -> IO a
 interpretNetworkingL nodeRt (L.OpenConnection cfg next) = do
-  pure $ next $ Just $ D.Connection (nodeRt ^. RLens.address) (cfg ^. Lens.address)
+  rt <- newMVar nodeRt
+  pure $ next $ Just $ D.NetworkConnection $ TestConnection
+    rt $ D.Connection (nodeRt ^. RLens.address) (cfg ^. Lens.address)
 
 interpretNetworkingL nodeRt (L.CloseConnection _ next) =
   pure $ next ()
 
-interpretNetworkingL nodeRt (L.SendRequest conn req next) = do
-  next <$> relayRequest nodeRt conn req
+interpretNetworkingL nodeRt (L.SendRequest (D.NetworkConnection conn) req next) = do
+  next <$> D.sendRequest conn req
 
 interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) = do
   next <$> Impl.runNetworkL nodeRt networkAction

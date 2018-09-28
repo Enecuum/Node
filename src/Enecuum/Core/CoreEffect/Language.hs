@@ -7,7 +7,7 @@ module Enecuum.Core.CoreEffect.Language
 import           Enecuum.Prelude
 
 import           Enecuum.Core.Logger.Language (Logger, LoggerL, logMessage)
-import qualified Enecuum.Core.Types           as T
+
 
 -- | Core effects container language.
 data CoreEffectF next where

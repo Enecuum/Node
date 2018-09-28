@@ -8,23 +8,17 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE FunctionalDependencies #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans   #-}
 module Enecuum.Core.HGraph.Internal.Types where
 
 import           Universum
 import           Data.Serialize
-import           Control.Monad.Free
-
 import           Data.HGraph.THGraph (THNode)
-import           Enecuum.Core.HGraph.Types (HNode)
-
-import           Data.HGraph.THGraph as G
 import           Data.HGraph.StringHashable (StringHash, StringHashable, toHash)
 import           Enecuum.Core.HGraph.Types (HNodeRef, HNode (..), HNodeContent,
                                             ToNodeRef, ToContent,
                                             fromContent, toContent, toNodeRef)
-
 
 -- This type doesn't look correct. It reveals implementation details
 -- on the language level.

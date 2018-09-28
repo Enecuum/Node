@@ -1,6 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude      #-}
 {-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE DeriveGeneric          #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE TypeOperators          #-}
@@ -15,15 +14,12 @@ module Enecuum.Core.HGraph.Internal.Impl where
 
 import           Universum
 import           Data.Serialize
-import           Control.Monad.Free
 
 import           Enecuum.Core.HGraph.Internal.Types
 import           Data.HGraph.THGraph as G
-import           Data.HGraph.StringHashable (StringHash, StringHashable, toHash)
-import           Enecuum.Core.HGraph.Language ( HGraphL (..))
+import           Data.HGraph.StringHashable (StringHashable, toHash)
 import           Enecuum.Core.HGraph.Types (HNodeRef, HNode (..), HNodeContent,
-                                            ToNodeRef, ToContent,
-                                            fromContent, toContent, toNodeRef)
+                                            ToContent, fromContent)
 
 -- | Init HGraph.
 initHGraph :: (Serialize c, StringHashable c) => IO (TVar (G.THGraph c))
@@ -79,10 +75,10 @@ newLink graph x y = case (x, y) of
     (TNodeHash r1, TNodeHash r2) -> G.newHLink graph r1 r2
     (TNodeRef  r1, TNodeHash r2) -> G.findNode graph r2 >>= \case
         Just tNode -> G.newTLink r1 tNode
-        Nothing    -> return $ False
+        Nothing    -> return False
     (TNodeHash  r1, TNodeRef r2) -> G.findNode graph r1 >>= \case
         Just tNode -> G.newTLink tNode r2
-        Nothing    -> return $ False
+        Nothing    -> return False
 
 -- delete link inter a nodes by contents, hashes or refs of the node
 deleteLink
@@ -96,7 +92,10 @@ deleteLink graph x y = case (x, y) of
     (TNodeHash r1, TNodeHash r2) -> G.deleteHLink graph r1 r2
     (TNodeRef  r1, TNodeHash r2) -> G.findNode graph r2 >>= \case
         Just tNode -> G.deleteTLink r1 tNode
-        Nothing    -> return $ False
+        Nothing    -> return False
     (TNodeHash  r1, TNodeRef r2) -> G.findNode graph r1 >>= \case
         Just tNode -> G.deleteTLink tNode r2
-        Nothing    -> return $ False
+        Nothing    -> return False
+
+clearGraph :: StringHashable c => TVar (THGraph c) -> STM ()
+clearGraph = G.deleteGraph

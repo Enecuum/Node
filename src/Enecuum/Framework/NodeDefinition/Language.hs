@@ -22,11 +22,11 @@ data NodeDefinitionF next where
     -- | Set node tag. For example, "boot node".
     NodeTag        :: D.NodeTag -> (() -> next) -> NodeDefinitionF next
     -- | Evaluate some node model.
-    EvalNodeL :: L.NodeL a -> (a -> next) -> NodeDefinitionF next
+    EvalNodeL :: L.NodeL  a -> (a -> next) -> NodeDefinitionF next
     -- | Serving of Rpc request.
     ServingRpc     :: PortNumber -> RpcMethodL () -> (() -> next) -> NodeDefinitionF next
     -- | Stop serving of Rpc server.
-    StopServing    :: PortNumber -> (() -> next) -> NodeDefinitionF next
+    StopServing    :: PortNumber -> (() -> next) -> NodeDefinitionF  next
     -- | Eval core effect.
     EvalCoreEffectNodeDefinitionF :: L.CoreEffect a -> (a -> next) -> NodeDefinitionF next
 
@@ -37,14 +37,14 @@ instance Functor NodeDefinitionF where
     fmap g (StopServing port next)          = StopServing port          (g . next)
     fmap g (EvalCoreEffectNodeDefinitionF coreEffect next) = EvalCoreEffectNodeDefinitionF coreEffect (g . next)
 
-type NodeDefinitionL next = Free NodeDefinitionF next
+type NodeDefinitionL  next = Free NodeDefinitionF next
 
 -- | Sets tag for node.
 nodeTag :: D.NodeTag -> NodeDefinitionL ()
 nodeTag tag = liftF $ NodeTag tag id
 
 -- | Runs node scenario.
-evalNodeL :: L.NodeL a -> NodeDefinitionL a
+evalNodeL :: L.NodeL  a -> NodeDefinitionL a
 evalNodeL nodeModel = liftF $ EvalNodeL nodeModel id
 
 -- | Runs RPC server.
@@ -52,18 +52,18 @@ servingRpc :: PortNumber -> RpcMethodL () -> NodeDefinitionL ()
 servingRpc port handlersF = liftF $ ServingRpc port handlersF id
 
 -- | Eval core effect.
-evalCoreEffectNodeDefinitionF :: L.CoreEffect a -> NodeDefinitionL a
+evalCoreEffectNodeDefinitionF :: L.CoreEffect a -> NodeDefinitionL  a
 evalCoreEffectNodeDefinitionF coreEffect = liftF $ EvalCoreEffectNodeDefinitionF coreEffect id
 
 -- | Runs scenario as initialization.
-initialization :: L.NodeL a -> NodeDefinitionL a
+initialization :: L.NodeL a -> NodeDefinitionL  a
 initialization = evalNodeL
 
 -- | Runs scenario.
-scenario :: L.NodeL a -> NodeDefinitionL a
+scenario :: L.NodeL a -> NodeDefinitionL  a
 scenario = evalNodeL
 
-stopServing :: PortNumber -> NodeDefinitionL ()
+stopServing :: PortNumber -> NodeDefinitionL  ()
 stopServing port = liftF $ StopServing port id
 
 instance L.Logger (Free NodeDefinitionF) where

@@ -11,7 +11,7 @@ import           Enecuum.Runtime (NodeRuntime(..), createNodeRuntime, createLogg
                                   clearNodeRuntime, clearLoggerRuntime,
                                   createCoreRuntime, clearCoreRuntime)
 import qualified Enecuum.Blockchain.Domain.Graph as TG
-
+import qualified Enecuum.Framework.RLens as Lens
     -- TODO: make this more correct.
     -- TODO: use bracket idiom here
 
@@ -35,8 +35,8 @@ initialize config = do
         putStrLn $ "Starting " ++ (show $ scenarioRole scenarioCase) ++ " role..."
         dispatchScenario config nodeRt scenarioCase)
         -- TODO: this is a quick hack. Make it right.
-    threadDelay $ 1000 * 1000 * 1000
-
+    atomically $ readTMVar (nodeRt ^. Lens.stopNode)
+    
     putStrLn @Text "Clearing node runtime..."
     clearNodeRuntime nodeRt
     putStrLn @Text "Clearing core runtime..."

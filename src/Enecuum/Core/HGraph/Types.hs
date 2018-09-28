@@ -10,9 +10,8 @@ module Enecuum.Core.HGraph.Types
     ) where
 
 import           Enecuum.Prelude
-
 import           Data.HGraph.StringHashable (StringHashable, StringHash)
-import           Data.HGraph.THGraph (THNode)
+
 
 data family HNodeContent a
 

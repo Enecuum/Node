@@ -6,7 +6,7 @@ import           Control.Concurrent.STM.TChan
 import qualified Data.Map            as Map
 import           Data.HGraph.THGraph (THGraph)
 
-import           Enecuum.Core.Runtime (CoreRuntime, createCoreRuntime)
+import           Enecuum.Core.Runtime (CoreRuntime)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 import qualified Enecuum.Domain as D
 import           Enecuum.Legacy.Service.Network.Base
@@ -23,6 +23,7 @@ data NodeRuntime = NodeRuntime
     , _varCounter   :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
     , _state        :: NodeState              -- ^ State of node.
     , _nodeTag      :: TVar Text
+    , _stopNode     :: TMVar Bool
     }
 
 createNodeRuntime :: CoreRuntime -> IO NodeRuntime
@@ -33,7 +34,8 @@ createNodeRuntime coreRt = NodeRuntime
     <*> newTMVarIO 0
     <*> newTMVarIO Map.empty
     <*> newTVarIO ""
+    <*> (atomically newEmptyTMVar)
 
 -- TODO: more wise clearing here.
 clearNodeRuntime :: NodeRuntime -> IO ()
-clearNodeRuntime nodeRt = pure ()
+clearNodeRuntime _ = pure ()

@@ -1,15 +1,5 @@
 module Enecuum.Framework.Network.Interpreter where
 
-import Enecuum.Prelude
-
-import qualified Data.Aeson                         as A
-import qualified Data.ByteString.Lazy               as BS
-import           Eff                                ( handleRelay, raise )
-
-import qualified Enecuum.Domain                     as D
-import qualified Enecuum.Language                   as L
-
-import qualified Enecuum.Framework.Lens             as Lens
 
 -- | Interpret NetworkSendingL. Does nothing ATM.
 {-

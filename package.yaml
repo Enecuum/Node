@@ -125,6 +125,7 @@ dependencies:
 - stm
 - hslogger
 - validation
+- lens-aeson
 
 
 library:

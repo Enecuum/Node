@@ -11,7 +11,7 @@
 
 module Enecuum.Core.HGraph.Language (
     -- * Language
-      HGraphL (..)
+      HGraphL
     -- * Algebra
     , HGraphF (..)
     -- * Clases
@@ -41,6 +41,7 @@ data HGraphF node a where
     NewLink     :: HNodeRef node -> HNodeRef node -> (Bool -> a) -> HGraphF node a
     DeleteLink  :: HNodeRef node -> HNodeRef node -> (Bool -> a) -> HGraphF node a
     GetNode     :: HNodeRef node -> (Maybe node -> a) -> HGraphF node a
+    ClearGraph  :: (() -> a) -> HGraphF node a
   deriving (Functor)
 
 class Functor m => HGraph node m | m -> node where
@@ -50,6 +51,7 @@ class Functor m => HGraph node m | m -> node where
     newNode'    :: ToContent node c => c -> m Bool
     deleteNode' :: ToNodeRef node h => h -> m Bool
     getNode     :: ToNodeRef node h => h -> m (Maybe node)
+    clearGraph  :: m ()
 
 instance HGraph node (Free (HGraphF node)) where
     newLink' a b     = liftF (NewLink (toNodeRef a) (toNodeRef b) id)
@@ -57,6 +59,7 @@ instance HGraph node (Free (HGraphF node)) where
     newNode' a       = liftF (NewNode (toContent a) id)
     deleteNode' a    = liftF (DeleteNode (toNodeRef a) id)
     getNode a        = liftF (GetNode (toNodeRef a) id)
+    clearGraph       = liftF (ClearGraph id)
 
 -- | Graph language.
 type HGraphL g next = Free (HGraphF (TNodeL g)) next
