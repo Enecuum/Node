@@ -126,7 +126,7 @@ dependencies:
 - hslogger
 - validation
 - lens-aeson
-
+- silently
 
 library:
   source-dirs: src
