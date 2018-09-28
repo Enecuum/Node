@@ -16,6 +16,7 @@ import qualified Enecuum.Language              as L
 import qualified Enecuum.Blockchain.Lens       as Lens
 import qualified Enecuum.Framework.Lens        as Lens
 import qualified Enecuum.Core.Lens             as Lens
+import           Enecuum.Language              (HasGraph)
 
 import qualified Enecuum.Core.HGraph.Internal.Types as T
 
@@ -24,16 +25,16 @@ import           Enecuum.TestData.Validation
 import qualified Enecuum.TestData.TestGraph as TG
 
 bootNodeAddr, masterNode1Addr :: D.Address
-bootNodeAddr    = D.Address "0.0.0.0" 1000
-masterNode1Addr = D.Address "0.0.0.1" 1000
+bootNodeAddr    = D.Address "0.0.0.0" 2000
+masterNode1Addr = D.Address "0.0.0.1" 2000
 
 networkNode1Addr, networkNode2Addr :: D.Address
-networkNode1Addr = D.Address "0.0.0.2" 1000
-networkNode2Addr = D.Address "0.0.0.3" 1000
+networkNode1Addr = D.Address "0.0.0.2" 2000
+networkNode2Addr = D.Address "0.0.0.3" 2000
 
 networkNode3Addr, networkNode4Addr :: D.Address
-networkNode3Addr = D.Address "0.0.0.4" 1000
-networkNode4Addr = D.Address "0.0.0.5" 1000
+networkNode3Addr = D.Address "0.0.0.4" 2000
+networkNode4Addr = D.Address "0.0.0.5" 2000
 
 bootNodeTag, masterNodeTag :: D.NodeTag
 bootNodeTag = "bootNode"
@@ -46,13 +47,13 @@ simpleBootNodeDiscovery = pure bootNodeAddr
 
 -- RPC handlers.
 
-acceptHello1 :: HelloRequest1 ->  NodeL HelloResponse1
+acceptHello1 :: HelloRequest1 -> L.NodeL HelloResponse1
 acceptHello1 (HelloRequest1 msg) = pure $ HelloResponse1 $ "Hello, dear. " +| msg |+ ""
 
-acceptHello2 :: HelloRequest2 ->  NodeL HelloResponse2
+acceptHello2 :: HelloRequest2 -> L.NodeL HelloResponse2
 acceptHello2 (HelloRequest2 msg) = pure $ HelloResponse2 $ "Hello, dear2. " +| msg |+ ""
 
-acceptGetHashId :: GetHashIDRequest ->  NodeL GetHashIDResponse
+acceptGetHashId :: GetHashIDRequest -> L.NodeL GetHashIDResponse
 acceptGetHashId GetHashIDRequest = pure $ GetHashIDResponse "1"
 
 acceptValidationRequest :: ValidationRequest -> L.NodeL ValidationResponse
@@ -64,9 +65,9 @@ bootNode :: L.NodeDefinitionL ()
 bootNode = do
   L.nodeTag bootNodeTag
   L.initialization $ pure $ D.NodeID "abc"
-  L.servingRpc 1000 $ do
-    method acceptHello1
-    method acceptGetHashId
+  L.servingRpc 2000 $ do
+      L.method acceptHello1
+      L.method acceptGetHashId
 
 masterNodeInitialization :: L.NodeL (Either Text D.NodeID)
 masterNodeInitialization = do
@@ -79,16 +80,16 @@ masterNode = do
   L.nodeTag masterNodeTag
   nodeId <- D.withSuccess $ L.initialization masterNodeInitialization
   L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
-  L.servingRpc 1000 $ do
-    method acceptHello1
-    method acceptHello2
+  L.servingRpc 2000 $ do
+      L.method acceptHello1
+      L.method acceptHello2
 
 -- Scenario 2: 2 network nodes can interact.
 -- One holds a graph with transactions. Other requests balance and amount change.
 
 data NetworkNode1Data = NetworkNode1Data
   { _graph    :: TG.TestGraphVar
-  , _baseNode :: TNodeL D.Transaction
+  , _baseNode :: T.TNodeL D.Transaction
   }
 
 makeFieldsNoPrefix ''NetworkNode1Data
@@ -129,8 +130,8 @@ acceptGetBalanceTraversing
   -> GetBalanceRequest
   -> L.NodeL GetBalanceResponse
 acceptGetBalanceTraversing nodeData GetBalanceRequest = do
-  balance <- withGraphIO nodeData
-      $ (calculateBalanceTraversing (nodeData ^. baseNode . Lens.hash) 0)
+  balance <- L.withGraphIO nodeData
+      $ calculateBalanceTraversing (nodeData ^. baseNode . Lens.hash) 0
   pure $ GetBalanceResponse balance
 
 acceptBalanceChangeTraversing
@@ -138,7 +139,7 @@ acceptBalanceChangeTraversing
   -> BalanceChangeRequest
   -> L.NodeL BalanceChangeResponse
 acceptBalanceChangeTraversing nodeData (BalanceChangeRequest change) = do
-  mbHashAndBalance <- withGraphIO nodeData
+  mbHashAndBalance <- L.withGraphIO nodeData
       $ tryAddTransactionTraversing (nodeData ^. baseNode . Lens.hash) 0 change
   case mbHashAndBalance of
     Nothing -> pure $ BalanceChangeResponse Nothing
@@ -154,9 +155,9 @@ networkNode1 :: TG.TestGraphVar -> L.NodeDefinitionL ()
 networkNode1 g = do
   L.nodeTag "networkNode1"
   nodeData <- L.initialization $ newtorkNode1Initialization g
-  L.servingRpc 1000 $ do
-    method (acceptGetBalanceTraversing nodeData)
-    method (acceptBalanceChangeTraversing nodeData)
+  L.servingRpc 2000 $ do
+    L.method (acceptGetBalanceTraversing nodeData)
+    L.method (acceptBalanceChangeTraversing nodeData)
 
 networkNode2Scenario :: L.NodeL ()
 networkNode2Scenario = do
@@ -187,9 +188,9 @@ bootNodeValidation :: L.NodeDefinitionL ()
 bootNodeValidation = do
   L.nodeTag bootNodeTag
   L.initialization $ pure $ D.NodeID "abc"
-  L.servingRpc 1000 $ do
-      method acceptGetHashId
-      method acceptValidationRequest
+  L.servingRpc 2000 $ do
+    L.method acceptGetHashId
+    L.method acceptValidationRequest
 
 masterNodeInitializeWithValidation :: L.NodeL (Either Text D.NodeID)
 masterNodeInitializeWithValidation = do
@@ -235,7 +236,7 @@ acceptBalanceChange nodeData (BalanceChangeRequest change) =
   L.atomically $ do
     curBalance   <- L.readVar $ nodeData ^. balanceVar
     graphHead    <- L.readVar $ nodeData ^. graphHeadVar
-    mbNewBalance <- withGraph nodeData $ TG.tryAddTransaction' graphHead curBalance change
+    mbNewBalance <- L.withGraph nodeData $ TG.tryAddTransaction' graphHead curBalance change
     case mbNewBalance of
       Nothing -> pure $ BalanceChangeResponse Nothing
       Just (newGraphHead, newBalance) -> do
@@ -256,7 +257,7 @@ networkNode3 :: TG.TestGraphVar -> L.NodeDefinitionL ()
 networkNode3 g = do
   L.nodeTag "networkNode3"
   nodeData <- L.initialization $ newtorkNode3Initialization g
-  L.servingRpc 1000 $ do
+  L.servingRpc 2000 $ do
     L.method (acceptGetBalance nodeData)
     L.method (acceptBalanceChange nodeData)
 
