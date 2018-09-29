@@ -13,7 +13,7 @@ import           Enecuum.Legacy.Refact.Network.Server
 
 import           Enecuum.Framework.Node.Interpreter
 import           Enecuum.Framework.RpcMethod.Interpreter
-import           Enecuum.Framework.Domain.RpcMessages
+import           Enecuum.Framework.Domain.RPC
 import           Enecuum.Framework.Runtime                 (NodeRuntime)
 
 import qualified Enecuum.Framework.Language                as L

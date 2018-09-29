@@ -9,6 +9,7 @@ import           Enecuum.Prelude
 
 import qualified Data.Aeson                    as A
 import qualified Data.Map                      as Map
+import qualified Data.Text as Text
 import           Control.Lens                  (makeFieldsNoPrefix)
 
 import           Enecuum.Config                (Config)
@@ -17,15 +18,11 @@ import qualified Enecuum.Language              as L
 import qualified Enecuum.Blockchain.Lens       as Lens
 import qualified Enecuum.Framework.Lens        as Lens
 import qualified Enecuum.Core.Lens             as Lens
-import qualified Data.Text as Text
-
+import           Enecuum.Language              (HasGraph)
 
 import           Enecuum.Core.HGraph.Internal.Types
-import           Enecuum.Legacy.Service.Network.Base (ConnectInfo (..))
-import           Enecuum.Framework.Domain.RpcMessages
+import           Enecuum.Framework.Domain.RPC
 import           Enecuum.Framework.RpcMethod.Language
-import           Enecuum.Framework.Node.Language          ( NodeL )
-import           Enecuum.Blockchain.Language.Extra
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 import           Enecuum.Assets.Nodes.RPC
 import           Enecuum.Assets.Nodes.Address
@@ -37,6 +34,14 @@ data NetworkNode2Data = NetworkNode2Data
   }
 
 makeFieldsNoPrefix ''NetworkNode2Data
+--
+
+-- type TestGraphVar = TVar (G.THGraph D.Transaction)
+
+
+-- (L.HasGraph
+--                          NetworkNode2Data
+--                          (TVar (Data.HGraph.THGraph.THGraph D.Transaction)))
 
 acceptGetBalance
   :: NetworkNode2Data
@@ -54,7 +59,7 @@ acceptBalanceChange nodeData (BalanceChangeRequest change) = do
   (l, r) <- L.atomically $ do
         curBalance   <- L.readVar $ nodeData ^. balanceVar
         graphHead    <- L.readVar $ nodeData ^. graphHeadVar
-        mbNewBalance <- withGraph nodeData $ TG.tryAddTransaction' graphHead curBalance change
+        mbNewBalance <- L.withGraph nodeData $ TG.tryAddTransaction' graphHead curBalance change
         case mbNewBalance of
           Nothing -> pure ("Network node 2: no balance change (invalid).", BalanceChangeResponse Nothing)
           Just (newGraphHead, newBalance) -> do
@@ -80,4 +85,3 @@ networkNode2 g = do
   L.servingRpc 2002 $ do
     L.method (acceptGetBalance nodeData)
     L.method (acceptBalanceChange nodeData)
-
