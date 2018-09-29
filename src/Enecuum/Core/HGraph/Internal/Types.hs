@@ -33,7 +33,7 @@ instance ToNodeRef (TNodeL content) (TVar (THNode content))  where
     toNodeRef = TNodeRef
 
 instance ToNodeRef (TNodeL content) (HNodeRef (TNodeL content)) where
-    toNodeRef = identity
+    toNodeRef = id
 
 instance ToNodeRef (TNodeL content) StringHash  where
     toNodeRef = TNodeHash

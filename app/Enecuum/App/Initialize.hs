@@ -47,7 +47,6 @@ initialize config = do
         graph <- TG.initGraph
         runNodeDefinitionL nodeRt $ S.networkNode2 graph
 
-        -- TODO: this is a quick hack. Make it right.
     atomically $ readTMVar (nodeRt ^. Lens.stopNode)
 
     putStrLn @Text "Clearing node runtime..."

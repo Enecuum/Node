@@ -34,14 +34,6 @@ data NetworkNode2Data = NetworkNode2Data
   }
 
 makeFieldsNoPrefix ''NetworkNode2Data
---
-
--- type TestGraphVar = TVar (G.THGraph D.Transaction)
-
-
--- (L.HasGraph
---                          NetworkNode2Data
---                          (TVar (Data.HGraph.THGraph.THGraph D.Transaction)))
 
 acceptGetBalance
   :: NetworkNode2Data

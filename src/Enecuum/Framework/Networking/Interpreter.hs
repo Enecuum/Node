@@ -62,7 +62,7 @@ interpretNetworkingL (L.EvalNetwork _ _) =
 interpretNetworkingL (L.SendRpcRequest (D.Address host port) request next) =
     runClient host (fromEnum port) "/" $ \connect -> do
         WS.sendTextData connect $ A.encode request
-        next . transformEither T.pack identity . A.eitherDecode <$> WS.receiveData connect
+        next . transformEither T.pack id . A.eitherDecode <$> WS.receiveData connect
 
 transformEither :: (a -> c) -> (b -> d) -> Either a b -> Either c d
 transformEither f _ (Left a)  = Left (f a)
