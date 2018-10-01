@@ -28,7 +28,7 @@ data Comand where
     Close       :: Comand
     Send        :: Value -> Comand
 
-newtype ServerHandle = ServerHandle (TChan ServerComand)
+type ServerHandle = TChan ServerComand
 
 -- | Start new server witch port
 startServer :: PortNumber -> Handlers -> IO ServerHandle
@@ -40,11 +40,11 @@ startServer port handlers = do
         void $ race
             (runHandlers conn wsConn handlers)
             (connectManager conn wsConn)
-    return $ ServerHandle chan
+    return chan
 
 -- | Stop the server
-stopServer :: ServerHandle -> IO ()
-stopServer (ServerHandle chan)= atomically $ writeTChan chan StopServer
+stopServer :: ServerHandle -> STM ()
+stopServer chan = writeTChan chan StopServer
 
 -- | Open new connect to adress
 openConnect :: Address -> Handlers -> IO Connection

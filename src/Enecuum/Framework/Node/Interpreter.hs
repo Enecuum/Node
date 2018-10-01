@@ -17,6 +17,8 @@ import           Control.Concurrent.STM.TChan
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Refact.Network.Server
 import           Enecuum.Framework.RpcMethod.Interpreter
+import           Enecuum.Framework.Networking.Internal
+import           Enecuum.Framework.MsgHandler.Interpreter
 
 -- | Interpret NodeL.
 interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
@@ -43,22 +45,42 @@ interpretNodeL nodeRt (L.ServingRpc port initScript next) = do
     void $ forkIO $ runRpcServer s port (runNodeL nodeRt) m
     return $ next a
 
+
+interpretNodeL nodeRt (L.ServingMsg port initScript next) = do
+    m <- atomically $ newTVar mempty
+    a <- runMsgHandlerL m initScript
+    s <- startServer port undefined
+    atomically $ setServerChan (nodeRt ^. RLens.servers) port s
+    return $ next a
+
 interpretNodeL nodeRt (L.StopServing port next) = do
     atomically $ do
         serversMap <- readTVar (nodeRt ^. RLens.servers)
-        whenJust (serversMap ^. at port) $ \chan  -> writeTChan chan StopServer
+        whenJust (serversMap ^. at port) stopServer
     return $ next ()
+
+
+{-
+  fmap g (StopServing port next)                   = StopServing port                   (g . next)
+  fmap g (OpenConnection a b next)                 = OpenConnection  a b                (g . next)
+  fmap g (ServingMsg a b next)                     = ServingMsg a b                     (g . next)
+  fmap g (CloseConnection a next)                  = CloseConnection a                  (g . next)
+-}
 
 --
 -- TODO: treadDelay if server in port exist!!!
 takeServerChan
     :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> STM (TChan ServerComand)
 takeServerChan servs port = do
-    serversMap <- readTVar servs
-    whenJust (serversMap ^. at port) $ \chan  -> writeTChan chan StopServer
     chan <- newTChan
-    modifyTVar servs (M.insert port chan)
+    setServerChan servs port chan
     return chan
+
+setServerChan :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> TChan ServerComand -> STM ()
+setServerChan servs port chan = do
+    serversMap <- readTVar servs
+    whenJust (serversMap ^. at port) stopServer
+    modifyTVar servs (M.insert port chan)
 
 
 runRpcServer
@@ -84,22 +106,6 @@ callRpc runner methods msg = case A.decodeStrict msg of
             reqId
     Nothing -> return $ D.RpcResponseError (A.String "error of request parsing") 0
 
-{-
-
-
-
-  fmap g (EvalStateAtomically statefulAction next) = EvalStateAtomically statefulAction (g . next)
-  fmap g (EvalNetworking networking next)          = EvalNetworking networking          (g . next)
-  fmap g (EvalCoreEffectNodeF coreEffect next)     = EvalCoreEffectNodeF coreEffect     (g . next)
-  fmap g (EvalGraphIO graphAction next)            = EvalGraphIO graphAction            (g . next)
-  fmap g (StopNode next)                           = StopNode                           (g . next)
-  fmap g (ServingRpc port handlersF next)          = ServingRpc port handlersF          (g . next)
-  fmap g (StopServing port next)                   = StopServing port                   (g . next)
-  fmap g (OpenConnection a b next)                 = OpenConnection  a b                (g . next)
-  fmap g (ServingMsg a b next)                     = ServingMsg a b                     (g . next)
-  fmap g (CloseConnection a next)                  = CloseConnection a                  (g . next)
-
--}
 
 -- | Runs node language. Runs interpreters for the underlying languages.
 runNodeL :: NodeRuntime -> L.NodeL a -> IO a
