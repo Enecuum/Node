@@ -72,5 +72,8 @@ servingRpc port handlersF = liftF $ ServingRpc port handlersF id
 stopServing :: PortNumber -> NodeDefinitionL  ()
 stopServing port = liftF $ StopServing port id
 
+
+
 instance L.Logger (Free NodeDefinitionF) where
     logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg
+

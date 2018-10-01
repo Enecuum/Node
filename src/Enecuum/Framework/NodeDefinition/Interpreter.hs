@@ -21,6 +21,7 @@ import qualified Enecuum.Framework.RLens                   as RLens
 import qualified Enecuum.Core.Interpreters                 as Impl
 import qualified Enecuum.Framework.Node.Interpreter        as Impl
 import qualified Enecuum.Framework.Domain.RPC             as D
+import qualified Enecuum.Framework.Domain.Networking      as D
 import qualified Data.Map                                 as M
 import qualified Data.Aeson                               as A
 import qualified Network.WebSockets                       as WS
@@ -28,8 +29,9 @@ import           Control.Concurrent.STM.TChan
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Legacy.Refact.Network.Server
 import           Enecuum.Framework.RpcMethod.Interpreter
-import           Enecuum.Framework.Networking.Internal
+import           Enecuum.Framework.Networking.Internal 
 import           Enecuum.Framework.MsgHandler.Interpreter
+
 
 interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF  a -> IO a
 interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
@@ -45,10 +47,22 @@ interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next
 interpretNodeDefinitionL nodeRt (L.ServingMsg port initScript next) = do
     m <- atomically $ newTVar mempty
     a <- runMsgHandlerL m initScript
-    
-    s <- startServer port undefined
+    handlers <- readTVarIO m
+    s <- startServer port $ (\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers
     atomically $ setServerChan (nodeRt ^. RLens.servers) port s
     return $ next a
+
+{-
+type Address  = ConnectInfo
+type Handler  = A.Value -> D.NetworkConnection -> IO ()
+type Handlers = Map Text Handler
+
+-- TVar (Map Text (MsgHandler m))
+-- type MsgHandler m  = A.Value -> D.NetworkConnection -> m ()
+-- NetworkConnection :: TMVar (TChan Comand) -> NetworkConnection
+-- newtype Connection = (TMVar (TChan Comand))
+
+-}
 
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
     atomically $ do

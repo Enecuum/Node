@@ -30,17 +30,6 @@ interpretNodeL nodeRt (L.StopNode next) = do
     return $ next ()
 
 
-{-
-type Address  = ConnectInfo
-type Handler  = Value -> Connection -> IO ()
-type Handlers = Map Text Handler
-
--- TVar (Map Text (MsgHandler m))
--- type MsgHandler m  = A.Value -> D.NetworkConnection -> m ()
--- data NetworkConnection = NetworkConnection :: TMVar (TChan Comand) -> NetworkConnection
--- newtype Connection = Connection (TMVar (TChan Comand))
-
--}
 
 
 
