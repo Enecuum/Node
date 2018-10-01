@@ -19,7 +19,6 @@ import           Enecuum.Legacy.Refact.Network.Server
 import           Control.Concurrent.Async
 import qualified Enecuum.Framework.Domain.Networking as D
 
-type Address  = ConnectInfo
 type Handler  = Value -> Connection -> IO ()
 type Handlers = Map Text Handler
 
@@ -43,8 +42,8 @@ stopServer :: ServerHandle -> STM ()
 stopServer chan = writeTChan chan StopServer
 
 -- | Open new connect to adress
-openConnect :: Address -> Handlers -> IO D.NetworkConnection
-openConnect (ConnectInfo ip port) handlers = do
+openConnect :: D.Address -> Handlers -> IO D.NetworkConnection
+openConnect (D.Address ip port) handlers = do
     conn <- D.NetworkConnection <$> atomically (newTMVar =<< newTChan) 
     void $ forkIO $ do
         res <- try $ runClient ip (fromEnum port) "/" $

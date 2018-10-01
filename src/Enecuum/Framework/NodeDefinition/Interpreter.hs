@@ -52,18 +52,6 @@ interpretNodeDefinitionL nodeRt (L.ServingMsg port initScript next) = do
     atomically $ setServerChan (nodeRt ^. RLens.servers) port s
     return $ next a
 
-{-
-type Address  = ConnectInfo
-type Handler  = A.Value -> D.NetworkConnection -> IO ()
-type Handlers = Map Text Handler
-
--- TVar (Map Text (MsgHandler m))
--- type MsgHandler m  = A.Value -> D.NetworkConnection -> m ()
--- NetworkConnection :: TMVar (TChan Comand) -> NetworkConnection
--- newtype Connection = (TMVar (TChan Comand))
-
--}
-
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
     atomically $ do
         serversMap <- readTVar (nodeRt ^. RLens.servers)
@@ -85,14 +73,8 @@ takeServerChan
     :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> STM (TChan ServerComand)
 takeServerChan servs port = do
     chan <- newTChan
-    setServerChan servs port chan
+    Impl.setServerChan servs port chan
     return chan
-
-setServerChan :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> TChan ServerComand -> STM ()
-setServerChan servs port chan = do
-    serversMap <- readTVar servs
-    whenJust (serversMap ^. at port) stopServer
-    modifyTVar servs (M.insert port chan)
 
 
 runRpcServer
