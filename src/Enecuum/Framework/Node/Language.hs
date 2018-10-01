@@ -37,6 +37,7 @@ data NodeF next where
   -- | Close existing connection.
   CloseConnection :: D.NetworkConnection -> (() -> next) -> NodeF  next
 
+-- TODO: deriveFunctor ''NodeF
 instance Functor NodeF where
   fmap g (EvalStateAtomically statefulAction next) = EvalStateAtomically statefulAction (g . next)
   fmap g (EvalNetworking networking next)          = EvalNetworking networking          (g . next)
@@ -45,6 +46,9 @@ instance Functor NodeF where
   fmap g (StopNode next)                           = StopNode                           (g . next)
   fmap g (ServingRpc port handlersF next)          = ServingRpc port handlersF          (g . next)
   fmap g (StopServing port next)                   = StopServing port                   (g . next)
+  fmap g (OpenConnection a b next)                 = OpenConnection  a b                (g . next)
+  fmap g (ServingMsg a b next)                     = ServingMsg a b                     (g . next)
+  fmap g (CloseConnection a next)                  = CloseConnection a                  (g . next)
 
 type NodeL  next = Free NodeF next
 
@@ -56,6 +60,8 @@ evalStateAtomically statefulAction = liftF $ EvalStateAtomically statefulAction 
 atomically :: L.StateL a -> NodeL a
 atomically = evalStateAtomically
 
+
+-- TODO: makeLanguage ''NodeF
 -- | Eval networking.
 evalNetworking :: L.NetworkingL a -> NodeL  a
 evalNetworking newtorking = liftF $ EvalNetworking newtorking id

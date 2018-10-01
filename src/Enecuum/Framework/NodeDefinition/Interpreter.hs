@@ -29,56 +29,11 @@ interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
 
 interpretNodeDefinitionL nodeRt (L.EvalNodeL initScript next) =
     next <$> Impl.runNodeL nodeRt initScript
-{-
-interpretNodeDefinitionL nodeRt (L.ServingRpc port initScript next) = do
-    m <- atomically $ newTVar mempty
-    a <- runRpcMethodL m initScript
-    s <- atomically $ takeServerChan (nodeRt ^. RLens.servers) port
-    void $ forkIO $ runRpcServer s port (runNodeL nodeRt) m
-    return $ next a
 
-interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
-    atomically $ do
-        serversMap <- readTVar (nodeRt ^. RLens.servers)
-        whenJust (serversMap ^. at port) $ \chan  -> writeTChan chan StopServer
-    return $ next ()
--}
 interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffect
 
--- TODO: treadDelay if server in port exist!!!
-takeServerChan
-    :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> STM (TChan ServerComand)
-takeServerChan servs port = do
-    serversMap <- readTVar servs
-    whenJust (serversMap ^. at port) $ \chan  -> writeTChan chan StopServer
-    chan <- newTChan
-    modifyTVar servs (M.insert port chan)
-    return chan
 
-
-runRpcServer
-    :: TChan ServerComand
-    -> PortNumber
-    -> (t -> IO RpcResponse)
-    -> TVar (Map Text (Value -> Int -> t))
-    -> IO ()
-runRpcServer chan port runner methodVar = do
-    methods <- readTVarIO methodVar
-    runServer chan port $ \_ pending -> do
-        connect     <- WS.acceptRequest pending
-        msg         <- WS.receiveData connect
-        response    <- callRpc runner methods msg
-        WS.sendTextData connect $ A.encode response
-
-callRpc :: Monad m => (t -> m RpcResponse) -> Map Text (Value -> Int -> t) -> ByteString -> m RpcResponse
-callRpc runner methods msg = case A.decodeStrict msg of
-    Just (RpcRequest method params reqId) -> case method `M.lookup` methods of
-        Just justMethod -> runner $ justMethod params reqId
-        Nothing -> return $ RpcResponseError
-            (String $ "The method " <> method <> " is'nt supported.")
-            reqId
-    Nothing -> return $ RpcResponseError (String "error of request parsing") 0
 
 runNodeDefinitionL :: NodeRuntime -> Free L.NodeDefinitionF a -> IO a
 runNodeDefinitionL nodeRt = foldFree (interpretNodeDefinitionL nodeRt)
