@@ -29,7 +29,7 @@ interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
 
 interpretNodeDefinitionL nodeRt (L.EvalNodeL initScript next) =
     next <$> Impl.runNodeL nodeRt initScript
-
+{-
 interpretNodeDefinitionL nodeRt (L.ServingRpc port initScript next) = do
     m <- atomically $ newTVar mempty
     a <- runRpcMethodL m initScript
@@ -42,7 +42,7 @@ interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
         serversMap <- readTVar (nodeRt ^. RLens.servers)
         whenJust (serversMap ^. at port) $ \chan  -> writeTChan chan StopServer
     return $ next ()
-
+-}
 interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffect
 

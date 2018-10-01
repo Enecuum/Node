@@ -10,8 +10,7 @@ import           Enecuum.Prelude
 import qualified Enecuum.Core.Language                    as L
 import qualified Enecuum.Framework.Node.Language          as L
 import qualified Enecuum.Framework.Domain                 as D
-import           Enecuum.Framework.RpcMethod.Language     (RpcMethodL)
-import           Enecuum.Legacy.Service.Network.Base
+
 
 -- TODO: it's possible to make these steps evaluating step-by-step, in order.
 -- Think about if this really needed.
@@ -23,18 +22,14 @@ data NodeDefinitionF next where
     NodeTag        :: D.NodeTag -> (() -> next) -> NodeDefinitionF next
     -- | Evaluate some node model.
     EvalNodeL :: L.NodeL  a -> (a -> next) -> NodeDefinitionF next
-    -- | Serving of Rpc request.
-    ServingRpc     :: PortNumber -> RpcMethodL () -> (() -> next) -> NodeDefinitionF next
-    -- | Stop serving of Rpc server.
-    StopServing    :: PortNumber -> (() -> next) -> NodeDefinitionF  next
+
     -- | Eval core effect.
     EvalCoreEffectNodeDefinitionF :: L.CoreEffect a -> (a -> next) -> NodeDefinitionF next
 
 instance Functor NodeDefinitionF where
     fmap g (NodeTag tag next)               = NodeTag tag               (g . next)
     fmap g (EvalNodeL nodeModel next)       = EvalNodeL nodeModel       (g . next)
-    fmap g (ServingRpc port handlersF next) = ServingRpc port handlersF (g . next)
-    fmap g (StopServing port next)          = StopServing port          (g . next)
+
     fmap g (EvalCoreEffectNodeDefinitionF coreEffect next) = EvalCoreEffectNodeDefinitionF coreEffect (g . next)
 
 type NodeDefinitionL  next = Free NodeDefinitionF next
@@ -47,9 +42,6 @@ nodeTag tag = liftF $ NodeTag tag id
 evalNodeL :: L.NodeL  a -> NodeDefinitionL a
 evalNodeL nodeModel = liftF $ EvalNodeL nodeModel id
 
--- | Runs RPC server.
-servingRpc :: PortNumber -> RpcMethodL () -> NodeDefinitionL ()
-servingRpc port handlersF = liftF $ ServingRpc port handlersF id
 
 -- | Eval core effect.
 evalCoreEffectNodeDefinitionF :: L.CoreEffect a -> NodeDefinitionL  a
@@ -63,8 +55,6 @@ initialization = evalNodeL
 scenario :: L.NodeL a -> NodeDefinitionL  a
 scenario = evalNodeL
 
-stopServing :: PortNumber -> NodeDefinitionL  ()
-stopServing port = liftF $ StopServing port id
 
 instance L.Logger (Free NodeDefinitionF) where
     logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg

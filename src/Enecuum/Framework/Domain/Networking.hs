@@ -11,9 +11,17 @@ import qualified Data.ByteString.Lazy          as BS
 import qualified Enecuum.Framework.Domain.RPC as R
 import           Enecuum.Framework.Domain.RPC
 import           Network.Socket
+import           Enecuum.Legacy.Refact.Network.Server
+import           Data.Aeson
 
 data NetworkConnection where
-  NetworkConnection :: NetworkConnection
+  NetworkConnection :: TMVar (TChan Comand) -> NetworkConnection
+
+data Comand where
+  Close       :: Comand
+  Send        :: Value -> Comand
+
+newtype ServerHandle = ServerHandle (TChan ServerComand)
 
 -- | Node address (like IP)
 data Address = Address

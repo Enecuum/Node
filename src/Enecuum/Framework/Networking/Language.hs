@@ -13,13 +13,6 @@ import qualified Enecuum.Framework.Domain             as D
 
 -- | Allows to work with network: open and close connections, send requests.
 data NetworkingF next where
-  -- | Open connection to the node.
-  OpenConnection :: D.Address -> (Maybe D.NetworkConnection -> next) -> NetworkingF next
-  -- | Close existing connection.
-  CloseConnection :: D.NetworkConnection -> (() -> next) -> NetworkingF  next
-  -- | Send message to the the connection.
-  -- Send :: D.NetworkConnection -> RpcRequest -> (Either Text RpcResponse -> next) -> NetworkingF next
-
   -- | Eval low-level networking script.
   EvalNetwork :: L.NetworkL a -> (a -> next) -> NetworkingF  next
   SendRpcRequest :: D.Address -> D.RpcRequest -> (Either Text D.RpcResponse -> next) -> NetworkingF next
@@ -28,23 +21,11 @@ data NetworkingF next where
   EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF  next
 
 instance Functor NetworkingF where
-  fmap g (OpenConnection address next)      = OpenConnection address    (g . next)
-  fmap g (CloseConnection conn next)        = CloseConnection conn      (g . next)
-  -- fmap g (Send conn rpcReq next)            = Send conn rpcReq   (g . next)
   fmap g (EvalNetwork network next)         = EvalNetwork network       (g . next)
   fmap g (SendRpcRequest info request next) = SendRpcRequest info request (g . next)
   fmap g (EvalCoreEffectNetworkingF coreEffect next) = EvalCoreEffectNetworkingF coreEffect (g . next)
 
 type NetworkingL  next = Free NetworkingF next
-
-openConnection :: D.Address -> NetworkingL (Maybe D.NetworkConnection)
-openConnection address = liftF $ OpenConnection address id
-
-closeConnection :: D.NetworkConnection -> NetworkingL  ()
-closeConnection conn = liftF $ CloseConnection conn id
-
--- send :: D.NetworkConnection -> RpcRequest -> NetworkingL (Either Text RpcResponse)
--- send conn rpcReq = liftF $ Send conn rpcReq id
 
 evalNetwork :: L.NetworkL a -> NetworkingL  a
 evalNetwork network = liftF $ EvalNetwork network id
@@ -59,9 +40,10 @@ instance L.Logger (Free NetworkingF) where
   logMessage level msg = evalCoreEffectNetworkingF $ L.logMessage level msg
 
 makeRpcRequest'
-    :: (Typeable a, ToJSON a, FromJSON b) => D.Address -> a -> NetworkingL (Either Text b)
+    :: (Typeable a, ToJSON a, FromJSON b) => D.Address -> a -> NetworkingL  (Either Text b)
 makeRpcRequest' address arg =
     responseValidation =<< sendRpcRequest address (D.toRpcRequest arg)
+
 
 responseValidation :: (FromJSON b, Applicative f) => Either Text D.RpcResponse -> f (Either Text b)
 responseValidation res = case res of

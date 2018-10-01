@@ -44,26 +44,13 @@ import           Control.Concurrent.STM.TChan (newTChan, readTChan, writeTChan)
 
 -- | Interpret NetworkingL language.
 interpretNetworkingL :: L.NetworkingF a -> IO a
-interpretNetworkingL (L.OpenConnection address next) =
-    error "OpenConnection not implemented."
-    -- conn :: Maybe D.RealConnection <- D.openConnection cfg
-    -- pure $ next $ D.NetworkConnection <$> conn
-
-interpretNetworkingL (L.CloseConnection D.NetworkConnection next) =
-    error "CloseConnection not implemented."
-    -- D.closeConnection conn >> pure (next ())
-
--- interpretNetworkingL (L.Send (D.NetworkConnection conn) req next) =
---     next <$> D.sendRequest conn req
-
-interpretNetworkingL (L.EvalNetwork _ _) =
-    error "interpretNetworkingL EvalNetwork not implemented."
-
 interpretNetworkingL (L.SendRpcRequest (D.Address host port) request next) =
     runClient host (fromEnum port) "/" $ \connect -> do
         WS.sendTextData connect $ A.encode request
         next . transformEither T.pack id . A.eitherDecode <$> WS.receiveData connect
-
+interpretNetworkingL _ =
+    error "interpretNetworkingL EvalNetwork not implemented."
+        
 transformEither :: (a -> c) -> (b -> d) -> Either a b -> Either c d
 transformEither f _ (Left a)  = Left (f a)
 transformEither _ f (Right a) = Right (f a)
