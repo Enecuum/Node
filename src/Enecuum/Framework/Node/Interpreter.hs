@@ -52,15 +52,6 @@ setServerChan servs port chan = do
     modifyTVar servs (M.insert port chan)
 
 
-{-
-  fmap g (StopServing port next)                   = StopServing port                   (g . next)
-  fmap g (OpenConnection a b next)                 = OpenConnection  a b                (g . next)
-  fmap g (ServingMsg a b next)                     = ServingMsg a b                     (g . next)
-  fmap g (CloseConnection a next)                  = CloseConnection a                  (g . next)
--}
-
---
-
 
 -- | Runs node language. Runs interpreters for the underlying languages.
 runNodeL :: NodeRuntime -> L.NodeL a -> IO a
