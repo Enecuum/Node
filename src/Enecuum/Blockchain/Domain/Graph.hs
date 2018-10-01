@@ -30,8 +30,8 @@ type GraphL a = L.HGraphL Node a
 nilHash :: StringHash
 nilHash = toHash (D.Transaction (toHash @Int 0) 0)
 
-nilTransaction :: D.Transaction
-nilTransaction = D.Transaction nilHash 0
+nilTransaction :: Node
+nilTransaction = NodeTransaction $ D.Transaction nilHash 0
 
 nilTransactionHash :: D.StringHash
 nilTransactionHash = D.toHash nilTransaction
@@ -39,7 +39,7 @@ nilTransactionHash = D.toHash nilTransaction
 initGraph :: IO GraphVar
 initGraph = do
     graph <- initHGraph
-    runHGraphIO graph $ L.newNode $ NodeTransaction nilTransaction
+    runHGraphIO graph $ L.newNode nilTransaction
     pure graph
 
 
@@ -53,8 +53,8 @@ tryAddTransaction'
 tryAddTransaction' lastNodeHash lastBalance change
   | lastBalance + change < 0 = pure Nothing
   | otherwise = do
-      let newTransaction = D.Transaction lastNodeHash change
+      let newTransaction = NodeTransaction $ D.Transaction lastNodeHash change
       let newTransHash = D.toHash newTransaction
-      L.newNode $ NodeTransaction newTransaction
+      L.newNode $ newTransaction
       L.newLink lastNodeHash newTransHash
       pure $ Just (newTransHash, lastBalance + change)
