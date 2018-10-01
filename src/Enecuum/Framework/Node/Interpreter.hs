@@ -9,16 +9,7 @@ import           Enecuum.Framework.Runtime                (NodeRuntime)
 import qualified Enecuum.Core.Interpreters                as Impl
 import qualified Enecuum.Framework.State.Interpreter      as Impl
 import qualified Enecuum.Framework.RLens                  as RLens
-import qualified Enecuum.Framework.Domain.RPC             as D
-import qualified Data.Map                                 as M
-import qualified Data.Aeson                               as A
-import qualified Network.WebSockets                       as WS
-import           Control.Concurrent.STM.TChan
-import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Legacy.Refact.Network.Server
-import           Enecuum.Framework.RpcMethod.Interpreter
-import           Enecuum.Framework.Networking.Internal
-import           Enecuum.Framework.MsgHandler.Interpreter
+
 
 -- | Interpret NodeL.
 interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
@@ -38,26 +29,19 @@ interpretNodeL nodeRt (L.StopNode next) = do
     atomically $ putTMVar (nodeRt ^. RLens.stopNode) True
     return $ next ()
 
-interpretNodeL nodeRt (L.ServingRpc port initScript next) = do
-    m <- atomically $ newTVar mempty
-    a <- runRpcMethodL m initScript
-    s <- atomically $ takeServerChan (nodeRt ^. RLens.servers) port
-    void $ forkIO $ runRpcServer s port (runNodeL nodeRt) m
-    return $ next a
 
+{-
+type Address  = ConnectInfo
+type Handler  = Value -> Connection -> IO ()
+type Handlers = Map Text Handler
 
-interpretNodeL nodeRt (L.ServingMsg port initScript next) = do
-    m <- atomically $ newTVar mempty
-    a <- runMsgHandlerL m initScript
-    s <- startServer port undefined
-    atomically $ setServerChan (nodeRt ^. RLens.servers) port s
-    return $ next a
+-- TVar (Map Text (MsgHandler m))
+-- type MsgHandler m  = A.Value -> D.NetworkConnection -> m ()
+-- data NetworkConnection = NetworkConnection :: TMVar (TChan Comand) -> NetworkConnection
+-- newtype Connection = Connection (TMVar (TChan Comand))
 
-interpretNodeL nodeRt (L.StopServing port next) = do
-    atomically $ do
-        serversMap <- readTVar (nodeRt ^. RLens.servers)
-        whenJust (serversMap ^. at port) stopServer
-    return $ next ()
+-}
+
 
 
 {-
@@ -68,43 +52,6 @@ interpretNodeL nodeRt (L.StopServing port next) = do
 -}
 
 --
--- TODO: treadDelay if server in port exist!!!
-takeServerChan
-    :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> STM (TChan ServerComand)
-takeServerChan servs port = do
-    chan <- newTChan
-    setServerChan servs port chan
-    return chan
-
-setServerChan :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> TChan ServerComand -> STM ()
-setServerChan servs port chan = do
-    serversMap <- readTVar servs
-    whenJust (serversMap ^. at port) stopServer
-    modifyTVar servs (M.insert port chan)
-
-
-runRpcServer
-    :: TChan ServerComand
-    -> PortNumber
-    -> (t -> IO D.RpcResponse)
-    -> TVar (Map Text (A.Value -> Int -> t))
-    -> IO ()
-runRpcServer chan port runner methodVar = do
-    methods <- readTVarIO methodVar
-    runServer chan port $ \_ pending -> do
-        connect     <- WS.acceptRequest pending
-        msg         <- WS.receiveData connect
-        response    <- callRpc runner methods msg
-        WS.sendTextData connect $ A.encode response
-
-callRpc :: Monad m => (t -> m D.RpcResponse) -> Map Text (A.Value -> Int -> t) -> ByteString -> m D.RpcResponse
-callRpc runner methods msg = case A.decodeStrict msg of
-    Just (D.RpcRequest method params reqId) -> case method `M.lookup` methods of
-        Just justMethod -> runner $ justMethod params reqId
-        Nothing -> return $ D.RpcResponseError
-            (A.String $ "The method " <> method <> " is'nt supported.")
-            reqId
-    Nothing -> return $ D.RpcResponseError (A.String "error of request parsing") 0
 
 
 -- | Runs node language. Runs interpreters for the underlying languages.

@@ -27,13 +27,9 @@ data NodeF next where
   EvalGraphIO :: L.GraphAction g x -> (x -> next) -> NodeF next
   -- | Stop the node evaluation
   StopNode :: (() -> next) -> NodeF next
-  -- | Serving of Rpc request.
-  ServingRpc     :: PortNumber -> RpcMethodL (Free NodeF) () -> (() -> next) -> NodeF next
-  -- | Stop serving of Rpc server.
-  StopServing    :: PortNumber -> (() -> next) -> NodeF  next
   -- | Open connection to the node.
   OpenConnection :: D.Address -> MsgHandlerL (Free NodeF) () -> (Maybe D.NetworkConnection -> next) -> NodeF  next
-  ServingMsg     :: PortNumber -> MsgHandlerL (Free NodeF) () -> (() -> next)-> NodeF  next
+
   -- | Close existing connection.
   CloseConnection :: D.NetworkConnection -> (() -> next) -> NodeF  next
 
@@ -44,10 +40,9 @@ instance Functor NodeF where
   fmap g (EvalCoreEffectNodeF coreEffect next)     = EvalCoreEffectNodeF coreEffect     (g . next)
   fmap g (EvalGraphIO graphAction next)            = EvalGraphIO graphAction            (g . next)
   fmap g (StopNode next)                           = StopNode                           (g . next)
-  fmap g (ServingRpc port handlersF next)          = ServingRpc port handlersF          (g . next)
-  fmap g (StopServing port next)                   = StopServing port                   (g . next)
+
   fmap g (OpenConnection a b next)                 = OpenConnection  a b                (g . next)
-  fmap g (ServingMsg a b next)                     = ServingMsg a b                     (g . next)
+
   fmap g (CloseConnection a next)                  = CloseConnection a                  (g . next)
 
 type NodeL  next = Free NodeF next
@@ -74,12 +69,7 @@ evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 stopNode :: NodeL ()
 stopNode = liftF $ StopNode id
 
--- | Runs RPC server.
-servingRpc :: PortNumber -> RpcMethodL (Free NodeF) () -> NodeL ()
-servingRpc port handlersF = liftF $ ServingRpc port handlersF id
 
-stopServing :: PortNumber -> NodeL  ()
-stopServing port = liftF $ StopServing port id
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
 evalGraphIO

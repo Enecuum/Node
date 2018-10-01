@@ -10,7 +10,10 @@ import           Enecuum.Prelude
 import qualified Enecuum.Core.Language                    as L
 import qualified Enecuum.Framework.Node.Language          as L
 import qualified Enecuum.Framework.Domain                 as D
-
+import           Enecuum.Framework.RpcMethod.Language     (RpcMethodL)
+import           Enecuum.Legacy.Service.Network.Base
+import qualified Enecuum.Framework.Domain.Networking      as D
+import           Enecuum.Framework.MsgHandler.Language
 
 -- TODO: it's possible to make these steps evaluating step-by-step, in order.
 -- Think about if this really needed.
@@ -25,12 +28,19 @@ data NodeDefinitionF next where
 
     -- | Eval core effect.
     EvalCoreEffectNodeDefinitionF :: L.CoreEffect a -> (a -> next) -> NodeDefinitionF next
+    -- | Serving of Rpc request.
+    ServingRpc     :: PortNumber -> RpcMethodL (Free L.NodeF) () -> (() -> next) -> NodeDefinitionF next
+    -- | Stop serving of Rpc server.
+    StopServing    :: PortNumber -> (() -> next) -> NodeDefinitionF  next
+    ServingMsg     :: PortNumber -> MsgHandlerL (Free L.NodeF) () -> (() -> next)-> NodeDefinitionF  next
 
 instance Functor NodeDefinitionF where
     fmap g (NodeTag tag next)               = NodeTag tag               (g . next)
     fmap g (EvalNodeL nodeModel next)       = EvalNodeL nodeModel       (g . next)
-
+    fmap g (ServingMsg a b next)                     = ServingMsg a b                     (g . next)
     fmap g (EvalCoreEffectNodeDefinitionF coreEffect next) = EvalCoreEffectNodeDefinitionF coreEffect (g . next)
+    fmap g (ServingRpc port handlersF next)          = ServingRpc port handlersF          (g . next)
+    fmap g (StopServing port next)                   = StopServing port                   (g . next)
 
 type NodeDefinitionL  next = Free NodeDefinitionF next
 
@@ -55,6 +65,12 @@ initialization = evalNodeL
 scenario :: L.NodeL a -> NodeDefinitionL  a
 scenario = evalNodeL
 
+-- | Runs RPC server.
+servingRpc :: PortNumber -> RpcMethodL (Free L.NodeF) () -> NodeDefinitionL ()
+servingRpc port handlersF = liftF $ ServingRpc port handlersF id
+
+stopServing :: PortNumber -> NodeDefinitionL  ()
+stopServing port = liftF $ StopServing port id
 
 instance L.Logger (Free NodeDefinitionF) where
     logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg
