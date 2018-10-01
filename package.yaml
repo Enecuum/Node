@@ -127,6 +127,7 @@ dependencies:
 - validation
 - lens-aeson
 - silently
+- MonadRandom
 
 library:
   source-dirs: src
