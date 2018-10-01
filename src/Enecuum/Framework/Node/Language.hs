@@ -28,8 +28,7 @@ data NodeF next where
   -- | Stop the node evaluation
   StopNode :: (() -> next) -> NodeF next
   -- | Open connection to the node.
-  OpenConnection :: D.Address -> MsgHandlerL (Free NodeF) () -> (D.NetworkConnection -> next) -> NodeF  next
-
+  OpenConnection :: D.Address -> MsgHandlerL NodeL () -> (D.NetworkConnection -> next) -> NodeF  next
   -- | Close existing connection.
   CloseConnection :: D.NetworkConnection -> (() -> next) -> NodeF  next
 
@@ -67,6 +66,14 @@ evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 stopNode :: NodeL ()
 stopNode = liftF $ StopNode id
 
+-- | Open network connection.
+openConnection :: D.Address -> MsgHandlerL NodeL () -> NodeL D.NetworkConnection
+openConnection addr handlers = liftF $ OpenConnection addr handlers id
+
+-- | Close network connection.
+-- TODO: what is the behavior when connection is closed?
+closeConnection :: D.NetworkConnection -> NodeL ()
+closeConnection conn = liftF $ CloseConnection conn id
 
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).

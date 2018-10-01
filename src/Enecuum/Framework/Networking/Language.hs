@@ -15,24 +15,40 @@ import qualified Enecuum.Framework.Domain             as D
 data NetworkingF next where
   -- | Eval low-level networking script.
   EvalNetwork :: L.NetworkL a -> (a -> next) -> NetworkingF  next
+  -- | Send RPC request and wait for the response.
   SendRpcRequest :: D.Address -> D.RpcRequest -> (Either Text D.RpcResponse -> next) -> NetworkingF next
-
+  -- | Send message to the connection.
+  SendMessage :: D.NetworkConnection -> LByteString -> (() -> next)-> NetworkingF next
   -- | Eval core effect.
   EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF  next
 
 instance Functor NetworkingF where
-  fmap g (EvalNetwork network next)         = EvalNetwork network       (g . next)
-  fmap g (SendRpcRequest info request next) = SendRpcRequest info request (g . next)
+  fmap g (EvalNetwork network next)                  = EvalNetwork network                  (g . next)
+  fmap g (SendRpcRequest info request next)          = SendRpcRequest info request          (g . next)
+  fmap g (SendMessage conn msg next)                 = SendMessage conn msg                 (g . next)
   fmap g (EvalCoreEffectNetworkingF coreEffect next) = EvalCoreEffectNetworkingF coreEffect (g . next)
 
 type NetworkingL  next = Free NetworkingF next
 
+-- | Eval low-level networking script.
 evalNetwork :: L.NetworkL a -> NetworkingL  a
 evalNetwork network = liftF $ EvalNetwork network id
 
+-- | Send RPC request and wait for the response.
 sendRpcRequest :: D.Address -> D.RpcRequest -> NetworkingL (Either Text D.RpcResponse)
 sendRpcRequest address request = liftF $ SendRpcRequest address request id
 
+-- | Send message to the connection.
+sendMessage :: D.NetworkConnection -> LByteString -> NetworkingL ()
+sendMessage conn msg = liftF $ SendMessage conn msg id
+
+-- | Send message to the reliable connection.
+-- TODO: distiguish reliable (TCP-like) connection from unreliable (UDP-like).
+-- TODO: make conversion to and from package.
+send :: ToJSON a => D.NetworkConnection -> a -> NetworkingL ()
+send conn = sendMessage conn . A.encode
+
+-- | Eval core effect.
 evalCoreEffectNetworkingF :: L.CoreEffect a -> NetworkingL a
 evalCoreEffectNetworkingF coreEffect = liftF $ EvalCoreEffectNetworkingF coreEffect id
 
