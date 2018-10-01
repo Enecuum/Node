@@ -41,7 +41,9 @@ interpretNodeL nodeRt (L.OpenConnection port initScript next) = do
     handlers <- readTVarIO m
     next <$> I.openConnect port ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
 
-
+interpretNodeL _ (L.CloseConnection conn next) = do
+    I.close conn
+    return $ next ()
 
 setServerChan :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> TChan ServerComand -> STM ()
 setServerChan servs port chan = do
