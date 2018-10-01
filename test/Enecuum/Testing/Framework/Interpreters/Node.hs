@@ -25,6 +25,20 @@ interpretNodeL nodeRt (L.EvalNetworking networkingAction next) =
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffect next) =
   next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
 
+interpretNodeL nodeRt (L.OpenConnection addr handlers next) = do
+  -- rt <- newMVar nodeRt
+  -- pure $ next $ Just $ D.NetworkConnection $ TestConnection
+    -- rt $ Connection (nodeRt ^. RLens.address) (cfg ^. Lens.address)
+  error "OpenConnection not implemented."
+
+interpretNodeL nodeRt (L.CloseConnection _ next) =
+  -- pure $ next ()
+  error "CloseConnection not implemented."
+
+-- interpretNetworkingL nodeRt (L.Send (D.NetworkConnection conn) req next) = do
+--   -- next <$> D.sendRequest conn req
+--   error "Send not implemented."
+
 -- | Runs node language.
 runNodeL :: T.NodeRuntime -> L.NodeL a -> IO a
 runNodeL nodeRt = foldFree (interpretNodeL nodeRt)

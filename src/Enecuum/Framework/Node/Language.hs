@@ -40,12 +40,10 @@ instance Functor NodeF where
   fmap g (EvalCoreEffectNodeF coreEffect next)     = EvalCoreEffectNodeF coreEffect     (g . next)
   fmap g (EvalGraphIO graphAction next)            = EvalGraphIO graphAction            (g . next)
   fmap g (StopNode next)                           = StopNode                           (g . next)
-
   fmap g (OpenConnection a b next)                 = OpenConnection  a b                (g . next)
-
   fmap g (CloseConnection a next)                  = CloseConnection a                  (g . next)
 
-type NodeL  next = Free NodeF next
+type NodeL = Free NodeF
 
 -- | Eval stateful action atomically.
 evalStateAtomically :: L.StateL a -> NodeL  a

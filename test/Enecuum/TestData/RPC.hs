@@ -6,6 +6,8 @@ module Enecuum.TestData.RPC where
 
 import Enecuum.Prelude
 
+import qualified Enecuum.Language as L
+
 -- Types for RPC requests.
 
 data GetHashIDRequest = GetHashIDRequest
@@ -14,13 +16,6 @@ data GetHashIDRequest = GetHashIDRequest
 newtype GetHashIDResponse = GetHashIDResponse Text
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
 
-
-
-data ValidationRequest = ValidRequest | InvalidRequest
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-newtype ValidationResponse = ValidationResponse (Either [Text] Text)
-  deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
 
 newtype HelloRequest1  = HelloRequest1 { helloMessage :: Text }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -47,3 +42,14 @@ newtype BalanceChangeRequest = BalanceChangeRequest Int
 
 newtype BalanceChangeResponse = BalanceChangeResponse { balance :: Maybe Int }
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
+
+-- RPC handlers.
+
+acceptHello1 :: HelloRequest1 -> L.NodeL HelloResponse1
+acceptHello1 (HelloRequest1 msg) = pure $ HelloResponse1 $ "Hello, dear. " +| msg |+ ""
+
+acceptHello2 :: HelloRequest2 -> L.NodeL HelloResponse2
+acceptHello2 (HelloRequest2 msg) = pure $ HelloResponse2 $ "Hello, dear2. " +| msg |+ ""
+
+acceptGetHashId :: GetHashIDRequest -> L.NodeL GetHashIDResponse
+acceptGetHashId GetHashIDRequest = pure $ GetHashIDResponse "1"
