@@ -53,5 +53,5 @@ newtype GetChainLengthResponse = GetChainLengthResponse { chainLength :: Int }
 newtype GetChainFromRequest = GetChainFromRequest { lastBlock :: Int }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-newtype GetChainFromResponse = GetChainFromResponse { blocks :: [D.Block] }
+newtype GetChainFromResponse = GetChainFromResponse { blocks :: [D.KBlock] }
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)

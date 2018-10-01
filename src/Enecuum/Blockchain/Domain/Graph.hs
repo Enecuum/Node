@@ -10,16 +10,22 @@ import           Data.HGraph.StringHashable (StringHash, toHash)
 import qualified Enecuum.Language as L
 import qualified Enecuum.Core.Types as D
 import qualified Enecuum.Blockchain.Domain.Transaction as D
-import qualified Enecuum.Blockchain.Domain.Block as D
+import qualified Enecuum.Blockchain.Domain.KBlock as D
 import           Enecuum.Core.HGraph.Interpreters.IO (runHGraphIO)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
+import qualified Data.Serialize          as S
+import qualified Data.ByteString.Base64  as Base64
+import qualified Crypto.Hash.SHA256      as SHA
+import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
 
 
-type GraphBlockVar = TVar (G.THGraph D.Block)
-type GraphBlockL a = L.HGraphL D.Block a
+data Node = NodeBlock D.KBlock | NodeTransaction D.Transaction deriving (Generic)
+instance S.Serialize Node
+instance StringHashable Node where
+  toHash = StringHash . Base64.encode . SHA.hash . S.encode
 
-type GraphVar = TVar (G.THGraph D.Transaction)
-type GraphL a = L.HGraphL D.Transaction a
+type GraphVar = TVar (G.THGraph Node)
+type GraphL a = L.HGraphL Node a
 
 nilHash :: StringHash
 nilHash = toHash (D.Transaction (toHash @Int 0) 0)
@@ -33,7 +39,7 @@ nilTransactionHash = D.toHash nilTransaction
 initGraph :: IO GraphVar
 initGraph = do
     graph <- initHGraph
-    runHGraphIO graph $ L.newNode nilTransaction
+    runHGraphIO graph $ L.newNode $ NodeTransaction nilTransaction
     pure graph
 
 
@@ -47,9 +53,8 @@ tryAddTransaction'
 tryAddTransaction' lastNodeHash lastBalance change
   | lastBalance + change < 0 = pure Nothing
   | otherwise = do
-      let newTrans = D.Transaction lastNodeHash change
-      let newTransHash = D.toHash newTrans
-      L.newNode newTrans
+      let newTransaction = D.Transaction lastNodeHash change
+      let newTransHash = D.toHash newTransaction
+      L.newNode $ NodeTransaction newTransaction
       L.newLink lastNodeHash newTransHash
       pure $ Just (newTransHash, lastBalance + change)
-

@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 
-module Enecuum.Blockchain.Domain.Block where
+module Enecuum.Blockchain.Domain.KBlock where
 
 import Enecuum.Prelude
 
@@ -13,15 +13,15 @@ import           Data.HGraph.StringHashable (StringHash (..), StringHashable, to
 -- This data structure is for tests of graph incorporation only.
 -- Please, replace it by actual blockchain data.
 
-type BlockID = Int
+type KBlockID = Int
 
-data Block = Block
+data KBlock = Block
     {
-      _id        :: BlockID
+      _id        :: KBlockID
     }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
-instance S.Serialize Block
+instance S.Serialize KBlock
 
-instance StringHashable Block where
+instance StringHashable KBlock where
     toHash = StringHash . Base64.encode . SHA.hash . S.encode

@@ -8,7 +8,7 @@ import           Control.Lens                  (makeFieldsNoPrefix)
 
 data NetworkNodeChainData = NetworkNodeChainData
   {
-     _chainVar   :: D.StateVar [D.Block]
+     _chainVar   :: D.StateVar [D.KBlock]
   }
 
 makeFieldsNoPrefix ''NetworkNodeChainData
