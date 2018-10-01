@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
-module Enecuum.TestData.Nodes.Scenario4.NetworkNode3 where
+module Enecuum.TestData.Nodes.Scenario4 where
 
 import Enecuum.Prelude
 
@@ -21,7 +21,6 @@ import           Enecuum.Language              (HasGraph)
 import qualified Enecuum.Core.HGraph.Internal.Types as T
 
 import           Enecuum.TestData.RPC
-import           Enecuum.TestData.Validation
 import qualified Enecuum.TestData.TestGraph as TG
 import           Enecuum.TestData.Nodes.Address
 
@@ -77,3 +76,17 @@ networkNode3 g = do
   L.servingRpc 2000 $ do
     L.method (acceptGetBalance nodeData)
     L.method (acceptBalanceChange nodeData)
+
+networkNode4Scenario :: L.NodeL ()
+networkNode4Scenario = do
+    _ :: BalanceChangeResponse <- L.makeRpcRequestUnsafe networkNode3Addr $ BalanceChangeRequest 10
+    _ :: BalanceChangeResponse <- L.makeRpcRequestUnsafe networkNode3Addr $ BalanceChangeRequest (-20)
+    _ :: BalanceChangeResponse <- L.makeRpcRequestUnsafe networkNode3Addr $ BalanceChangeRequest 101
+    _ :: BalanceChangeResponse <- L.makeRpcRequestUnsafe networkNode3Addr $ BalanceChangeRequest (-20)
+    GetBalanceResponse balance <- L.makeRpcRequestUnsafe networkNode3Addr GetBalanceRequest
+    L.logInfo $ "balance (should be 91): " +|| balance ||+ "."
+
+networkNode4 :: L.NodeDefinitionL ()
+networkNode4 = do
+  L.nodeTag "networkNode4"
+  L.scenario networkNode4Scenario

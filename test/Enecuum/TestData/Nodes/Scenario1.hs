@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
-module Enecuum.TestData.Nodes.Scenario1.BootNode where
+module Enecuum.TestData.Nodes.Scenario1 where
 
 import Enecuum.Prelude
 
@@ -33,3 +33,22 @@ bootNode = do
   L.servingRpc 2000 $ do
       L.method acceptHello1
       L.method acceptGetHashId
+
+
+simpleBootNodeDiscovery :: L.NetworkL D.Address
+simpleBootNodeDiscovery = pure bootNodeAddr
+
+masterNodeInitialization :: L.NodeL (Either Text D.NodeID)
+masterNodeInitialization = do
+  addr <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
+  GetHashIDResponse eHashID <- L.makeRpcRequestUnsafe addr GetHashIDRequest
+  pure $ Right (D.NodeID eHashID)
+
+masterNode :: L.NodeDefinitionL ()
+masterNode = do
+  L.nodeTag masterNodeTag
+  nodeId <- D.withSuccess $ L.initialization masterNodeInitialization
+  L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
+  L.servingRpc 2000 $ do
+      L.method acceptHello1
+      L.method acceptHello2
