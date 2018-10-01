@@ -13,6 +13,7 @@ import           Enecuum.Core.HGraph.Interpreters.STM     (runHGraphSTM)
 import           Enecuum.Framework.RpcMethod.Language     (RpcMethodL)
 import           Enecuum.Legacy.Service.Network.Base
 import qualified Enecuum.Framework.Domain.Networking      as D
+import           Enecuum.Framework.MsgHandler.Language
 
 -- | Node language.
 data NodeF next where
@@ -31,7 +32,8 @@ data NodeF next where
   -- | Stop serving of Rpc server.
   StopServing    :: PortNumber -> (() -> next) -> NodeF  next
   -- | Open connection to the node.
-  OpenConnection :: D.Address -> (Maybe D.NetworkConnection -> next) -> NodeF  next
+  OpenConnection :: D.Address -> MsgHandlerL (Free NodeF) () -> (Maybe D.NetworkConnection -> next) -> NodeF  next
+  ServingMsg     :: PortNumber -> MsgHandlerL (Free NodeF) () -> (() -> next)-> NodeF  next
   -- | Close existing connection.
   CloseConnection :: D.NetworkConnection -> (() -> next) -> NodeF  next
 
