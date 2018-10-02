@@ -48,9 +48,11 @@ interpretNodeDefinitionL nodeRt (L.ServingMsg port initScript next) = do
     m <- atomically $ newTVar mempty
     a <- runMsgHandlerL m initScript
     handlers <- readTVarIO m
-    --s <- startServer port $ (\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers
-    --atomically $ setServerChan (nodeRt ^. RLens.servers) port s
-    return $ next undefined-- a
+    s <- startServer port 
+        ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
+        (\(D.NetworkConnection addr) -> Impl.insertConnect (nodeRt ^. RLens.connects) addr)
+    atomically $ setServerChan (nodeRt ^. RLens.servers) port s
+    return $ next a
 
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
     atomically $ do

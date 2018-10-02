@@ -16,7 +16,7 @@ import           Enecuum.Framework.RpcMethod.Interpreter
 import           Enecuum.Framework.Networking.Internal  as I
 import           Enecuum.Framework.MsgHandler.Interpreter
 import qualified Data.Map                                 as M
-
+import qualified Enecuum.Framework.Domain.Networking as D
 -- | Interpret NodeL.
 interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
@@ -25,8 +25,8 @@ interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
 interpretNodeL _ (L.EvalGraphIO (L.GraphAction _ ioRunner act) next) =
   next <$> ioRunner act
 
-interpretNodeL _ (L.EvalNetworking networking next) =
-    next <$> Impl.runNetworkingL networking
+interpretNodeL nodeRt (L.EvalNetworking networking next) =
+    next <$> Impl.runNetworkingL nodeRt networking
 
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects
@@ -35,22 +35,33 @@ interpretNodeL nodeRt (L.StopNode next) = do
     atomically $ putTMVar (nodeRt ^. RLens.stopNode) True
     return $ next ()
 
-interpretNodeL nodeRt (L.OpenConnection port initScript next) = do
+interpretNodeL nodeRt (L.OpenConnection addr initScript next) = do
     m <- atomically $ newTVar mempty
-    a <- runMsgHandlerL m initScript
+    runMsgHandlerL m initScript
     handlers <- readTVarIO m
-    next <$> undefined --I.openConnect port ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
+    newCon <- I.openConnect addr ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
+    insertConnect (nodeRt ^. RLens.connects) addr newCon
+    pure $ next (D.NetworkConnection addr)
 
-interpretNodeL _ (L.CloseConnection conn next) = do
-    --I.close conn
+interpretNodeL nodeRt (L.CloseConnection (D.NetworkConnection addr) next) = do
+    atomically $ do
+        m <- readTVar (nodeRt ^. RLens.connects)
+        whenJust (m ^. at addr) $ \con -> do
+            I.close con
+            modifyTVar (nodeRt ^. RLens.connects) $ M.delete addr
     return $ next ()
+
+insertConnect :: TVar (Map D.Address D.ConnectionImplementation) -> D.Address -> D.ConnectionImplementation -> IO ()
+insertConnect m addr newCon = atomically $ do
+    conns <- readTVar $ m
+    whenJust (conns ^. at addr) I.close
+    modifyTVar m $ M.insert addr newCon
 
 setServerChan :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> TChan ServerComand -> STM ()
 setServerChan servs port chan = do
     serversMap <- readTVar servs
     whenJust (serversMap ^. at port) stopServer
     modifyTVar servs (M.insert port chan)
-
 
 
 -- | Runs node language. Runs interpreters for the underlying languages.

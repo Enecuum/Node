@@ -8,7 +8,6 @@ import qualified Data.Text as T
 import           Control.Concurrent.STM.TChan (TChan)
 import           Network.Socket
 import           Enecuum.Legacy.Refact.Network.Server
-import           Data.Aeson
 
 data NetworkConnection where
   NetworkConnection :: Address -> NetworkConnection
