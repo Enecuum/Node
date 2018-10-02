@@ -100,7 +100,9 @@ pingPong = TestCase $ do
                 L.handler (pingHandle succ)
                 L.handler (pongHandle succ)
             L.send conn $ Ping 0
-    assertBool "" =<< succesServer succPort
+    ok <- succesServer succPort
+    runNodeDefinitionL nr1 $ L.stopServing serverPort
+    assertBool "" ok
 
 succesServer :: PortNumber -> IO Bool
 succesServer port = do
