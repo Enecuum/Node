@@ -72,6 +72,7 @@ pingSendingClientNode = L.scenario $ do
 
     conn <- L.open pongServerAddress $ L.handler $ pongHandle countVar
 
+    L.logInfo "client node sends Pong 0."
     L.evalNetworking $ L.send conn $ Ping 0
 
     L.atomically $ do

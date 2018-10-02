@@ -26,24 +26,14 @@ data ControlRequest
     -- { _fromNode :: NodeRuntime   -- ^ From node
     -- , _address  :: D.Address     -- ^ Server address
     -- }
-  | RelayMessageReq
-    { _from    :: NodeID         -- ^ From node
-    , _to      :: NodeID         -- ^ To node
-    , _address :: BindingAddress -- ^ Server-side binded address
-    , _message :: D.RawData      -- ^ Message to relay
-    }
-  | MessageReq BindingAddress D.RawData
+  | MessageReq D.RawData
 
 -- | Result of evaluation of control response.
 data ControlResponse
-  = AsRpcResp D.RpcResponse                  -- ^ RPC response wrapped into the control response.
-  | AsErrorResp Text                         -- ^ Keeps an error that occured during the ControlRequest evaluation.
-  | AsSuccessResp                            -- ^ Indicates success of the operation (if other responses can't be applied.)
-  | AsConnectionAccepted BindingAddress      -- ^ Connection accepted by the server. Server has set some binding address.
-  | AsConnectionEstablished   -- ^ Connection established, and the communication address is set.
-      { _in :: BindingAddress
-      , _out :: BindingAddress
-      }
+  = AsRpcResp D.RpcResponse            -- ^ RPC response wrapped into the control response.
+  | AsErrorResp Text                   -- ^ Keeps an error that occured during the ControlRequest evaluation.
+  | AsSuccessResp                      -- ^ Indicates success of the operation (if other responses can't be applied.)
+  | AsConnectionAccepted BindedServer  -- ^ Connection accepted by the server. Server has set some binding address.
 
 -- | Control is the way to evaluate admin control over a node.
 -- Represents the MVar Reqeust-Response pattern (STM version).
@@ -74,11 +64,17 @@ data VarHandle = VarHandle D.VarId (TVar Any)
 type NodeState = TMVar (Map.Map D.VarId VarHandle)
 
 type BindingAddress = D.Address
-data ConnectionType = Client | Server
+
+-- | Specific server binded to the specific connection.
+data BindedServer = BindedServer
+  { _address :: BindingAddress
+  , _handle :: ServerHandle
+  }
+
+data NodeRole = Client | Server
 data NodeConnection = NodeConnection
-  { _nodeID :: NodeID
-  , _bindingAddress :: BindingAddress
-  , _connType :: ConnectionType
+  { _role         :: NodeRole               -- ^ Initial role of the node.
+  , _bindedServer :: BindedServer           -- ^ Binded server address and handler.
   }
 type NodeConnections = Map.Map BindingAddress NodeConnection
 

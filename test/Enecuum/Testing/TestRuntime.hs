@@ -39,13 +39,6 @@ networkWorker networkControl registry serversRegistry = go 0
             Just toNodeRt -> controlRpcRequest toNodeRt $ T.RpcReq req
         atomically $ putTMVar (networkControl ^. RLens.response) controlResp
 
-  -- relayMessageToNode nodeID bindingAddr msg = do
-  --       nodes       <- atomically $ readTMVar registry
-  --       controlResp <- case Map.lookup nodeID nodes of
-  --           Nothing -> pure $ T.AsErrorResp $ "Can't relay message to " +|| nodeID ||+ ": node not found."
-  --           Just toNodeRt -> controlRequest toNodeRt $ T.MessageReq bindingAddr msg
-  --       atomically $ putTMVar (networkControl ^. RLens.response) controlResp
-
   relayEstablishConnection serverAddr = do
       mbServerHandler <- getServerHandler serverAddr serversRegistry
       controlResp <- case mbServerHandler of

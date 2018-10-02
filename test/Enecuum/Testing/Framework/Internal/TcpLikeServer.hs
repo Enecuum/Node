@@ -14,16 +14,17 @@ import qualified Enecuum.Testing.RLens as RLens
 import qualified Enecuum.Testing.Framework.Interpreters.Node as Impl
 
 
-bindConnection :: T.NodeRuntime -> D.Address -> T.ConnectionType -> IO T.BindingAddress
-bindConnection nodeRt servingAddress connType = do
+bindServer :: T.NodeRuntime -> D.Address -> T.NodeRole -> T.ServerHandle -> IO T.BindedServer
+bindServer nodeRt servingAddress role handle = do
     connections <- atomically $ takeTMVar $ nodeRt ^. RLens.connections
     let bindingAddress = servingAddress & Lens.port .~ fromIntegral (Map.size connections)
-    let newConnection = T.NodeConnection (nodeRt ^. RLens.address) bindingAddress connType
+    let bindedServer = T.BindedServer bindingAddress handle
+    let newConnection = T.NodeConnection role bindedServer
     let newConnections = Map.insert bindingAddress newConnection connections
     atomically $ putTMVar (nodeRt ^. RLens.connections) newConnections
-    pure bindingAddress
+    pure bindedServer
 
--- | Node RPC server worker.
+-- | Node TCP-like accepting server worker.
 -- startNodeTcpLikeServer :: T.NodeRuntime -> D.Address -> methods -> IO ()
 startNodeTcpLikeServer nodeRt servingAddress methodVar = do
 
@@ -33,9 +34,11 @@ startNodeTcpLikeServer nodeRt servingAddress methodVar = do
 
   let handle = T.ServerHandle tId control nodeRt
   atomically $ do
+    -- Own node's accepting servers
     servers <- takeTMVar (nodeRt ^. RLens.servers)
     putTMVar (nodeRt ^. RLens.servers) $ Map.insert servingAddress handle servers
 
+    -- All servers
     serversRegistry <- takeTMVar (nodeRt ^. RLens.serversRegistry)
     putTMVar (nodeRt ^. RLens.serversRegistry) $ Map.insert servingAddress handle serversRegistry
 
@@ -49,11 +52,29 @@ startNodeTcpLikeServer nodeRt servingAddress methodVar = do
       controlReq <- atomically $ takeTMVar $ control ^. RLens.request
       controlResp <- case controlReq of
           T.EstablishConnectionReq -> do
-              bindingAddress <- bindConnection nodeRt servingAddress T.Server
+              serverHandle <- startNodeTcpLikeWorker nodeRt methods
+              bindedServer <- bindServer nodeRt servingAddress T.Server serverHandle
+              pure $ T.AsConnectionAccepted bindedServer
+          _ -> error $ "Control request is not supported in accepting Tcp-like server."
+      atomically $ putTMVar (control ^. RLens.response) controlResp
 
-              -- TODO: handle worker thread
-              -- _ <- startNodeTcpLikeWorker nodeRt methods
 
-              pure $ T.AsConnectionAccepted bindingAddress 
-          _ -> error $ "Control request is not supported in TcpLikeServer."
+-- | Node TCP-like binded server worker.
+startNodeTcpLikeWorker nodeRt methods = do
+
+  control <- T.Control <$> newEmptyTMVarIO <*> newEmptyTMVarIO
+  tId <- forkIO $ go 0 control methods
+
+  pure $ T.ServerHandle tId control nodeRt
+
+  where
+
+    go iteration control methods = do
+      void $ act iteration control methods
+      go (iteration + 1 :: Int) control methods
+
+    act _ control methods = do
+      controlReq <- atomically $ takeTMVar $ control ^. RLens.request
+      controlResp <- case controlReq of
+          _ -> error $ "Control request is not supported in binded Tcp-like server."
       atomically $ putTMVar (control ^. RLens.response) controlResp

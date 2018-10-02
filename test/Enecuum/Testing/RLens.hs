@@ -11,6 +11,7 @@ makeFieldsNoPrefix ''LoggerRuntime
 makeFieldsNoPrefix ''Control
 makeFieldsNoPrefix ''RpcServerHandle
 makeFieldsNoPrefix ''ServerHandle
+makeFieldsNoPrefix ''BindedServer
 makeFieldsNoPrefix ''NodeRuntime
 makeFieldsNoPrefix ''TestRuntime
 makeFieldsNoPrefix ''NodeConnection

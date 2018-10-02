@@ -12,6 +12,7 @@ import qualified Enecuum.Testing.RLens                          as RLens
 import qualified Enecuum.Testing.Types                          as T
 import qualified Enecuum.Testing.Core.Interpreters              as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.Network as Impl
+import           Enecuum.Testing.TestRuntime                    (controlRequest)
 
 -- | Relay request from this node to the network environment for target server node.
 relayRequest'
@@ -30,23 +31,6 @@ relayRequest' nodeRt to req = do
     T.AsErrorResp err       -> pure $ Left err
     _                       -> error "Invalid network control result."
 
--- | Relay message from this node to the network environment for target server node.
-relayMessage'
-  :: T.NodeRuntime
-  -> T.NodeConnection
-  -> D.RawData
-  -> IO (Either Text ())
-relayMessage' nodeRt toNodeConnection msg = do
-      atomically
-          $ putTMVar (nodeRt ^. RLens.networkControl . RLens.request)
-          $ T.RelayMessageReq (nodeRt ^. RLens.address) (toNodeConnection ^. RLens.nodeID) (toNodeConnection ^. RLens.bindingAddress) msg
-      controlResponse <- atomically
-          $ takeTMVar (nodeRt ^. RLens.networkControl . RLens.response)
-      case controlResponse of
-        T.AsSuccessResp    -> pure $ Right ()
-        T.AsErrorResp err  -> pure $ Left err
-        _                  -> error "Invalid network control result."
-
 -- | Send message to the connection.
 sendMessageToConnection
   :: T.NodeRuntime
@@ -57,8 +41,12 @@ sendMessageToConnection nodeRt networkConnection msg = do
   connections <- atomically $ readTMVar $ nodeRt ^. RLens.connections
   -- Checking is connection alive.
   case Map.lookup (networkConnection ^. Lens.address) connections of
-    Nothing -> pure $ Left $ "Failed sending message."
-    Just runtimeConnection -> relayMessage' nodeRt runtimeConnection msg
+    Nothing -> pure $ Left $ "Failed sending message: no conneciton to " +|| networkConnection ^. Lens.address ||+ "."
+    Just nodeConnection -> do
+      controlResp <- controlRequest (nodeConnection ^. RLens.bindedServer . RLens.handle . RLens.control) $ T.MessageReq msg
+      case controlResp of
+        T.AsSuccessResp -> pure $ Right ()
+        _               -> pure $ Left "Unknown control response."
 
 
 
