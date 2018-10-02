@@ -22,7 +22,7 @@ import qualified Enecuum.Framework.Domain.Networking as D
 type Handler  = Value -> Connection -> IO ()
 type Handlers = Map Text Handler
 
-type Connection = D.NetworkConnection
+type Connection = D.ConnectionImplementation
 type ServerHandle = TChan ServerComand
 
 -- | Start new server witch port
@@ -31,7 +31,7 @@ startServer port handlers = do
     chan <- atomically newTChan 
     void $ forkIO $ runServer chan port $ \_ pending -> do
         wsConn <- WS.acceptRequest pending
-        conn <- D.NetworkConnection <$> atomically (newTMVar =<< newTChan)
+        conn <- D.ConnectionImplementation <$> atomically (newTMVar =<< newTChan)
         void $ race
             (runHandlers conn wsConn handlers)
             (connectManager conn wsConn)
@@ -42,9 +42,9 @@ stopServer :: ServerHandle -> STM ()
 stopServer chan = writeTChan chan StopServer
 
 -- | Open new connect to adress
-openConnect :: D.Address -> Handlers -> IO D.NetworkConnection
+openConnect :: D.Address -> Handlers -> IO D.ConnectionImplementation
 openConnect (D.Address ip port) handlers = do
-    conn <- D.NetworkConnection <$> atomically (newTMVar =<< newTChan) 
+    conn <- D.ConnectionImplementation <$> atomically (newTMVar =<< newTChan) 
     void $ forkIO $ do
         res <- try $ runClient ip (fromEnum port) "/" $
             \wsConn -> void $ race
@@ -56,18 +56,18 @@ openConnect (D.Address ip port) handlers = do
     return conn
 
 -- | Close the connect
-close :: D.NetworkConnection -> IO ()
+close :: D.ConnectionImplementation -> IO ()
 close conn = atomically $ do
     writeComand conn D.Close
     closeConn conn
 
 -- | Send msg to node.
-send :: D.NetworkConnection -> LByteString -> IO ()
+send :: D.ConnectionImplementation -> LByteString -> IO ()
 send conn msg = atomically $ writeComand conn $ D.Send msg
 
 --------------------------------------------------------------------------------
 -- * Internal
-runHandlers :: D.NetworkConnection -> WS.Connection -> Handlers -> IO ()
+runHandlers :: D.ConnectionImplementation -> WS.Connection -> Handlers -> IO ()
 runHandlers conn wsConn handlers = do
     msg <- try $ WS.receiveData wsConn
     case msg of
@@ -77,15 +77,15 @@ runHandlers conn wsConn handlers = do
                 \val -> callHandler conn val handlers
             runHandlers conn wsConn handlers
 
-callHandler :: D.NetworkConnection -> Value -> Handlers -> IO ()
+callHandler :: D.ConnectionImplementation -> Value -> Handlers -> IO ()
 callHandler conn val handlers =
     whenJust (val ^? key "tag" . _String) $ \tag ->
         whenJust (handlers^.at tag) $ \handler ->
             handler val conn
 
 -- | Manager for controlling of WS connect.
-connectManager :: D.NetworkConnection -> WS.Connection -> IO ()
-connectManager conn@(D.NetworkConnection c) wsConn = readCommand conn >>= \case
+connectManager :: D.ConnectionImplementation -> WS.Connection -> IO ()
+connectManager conn@(D.ConnectionImplementation c) wsConn = readCommand conn >>= \case
     -- close connection
     Just D.Close -> atomically $ unlessM (isEmptyTMVar c)
         $ void $ takeTMVar c
@@ -99,8 +99,8 @@ connectManager conn@(D.NetworkConnection c) wsConn = readCommand conn >>= \case
     Nothing -> return ()
 
 -- | Read comand to connect manager
-readCommand :: D.NetworkConnection -> IO (Maybe D.Comand)
-readCommand (D.NetworkConnection conn) = atomically $ do
+readCommand :: D.ConnectionImplementation -> IO (Maybe D.Comand)
+readCommand (D.ConnectionImplementation conn) = atomically $ do
     ok <- isEmptyTMVar conn
     if ok then return Nothing
     else do
@@ -108,12 +108,12 @@ readCommand (D.NetworkConnection conn) = atomically $ do
         Just <$> readTChan chan
 
 -- close connection 
-closeConn :: D.NetworkConnection -> STM ()
-closeConn (D.NetworkConnection conn) = unlessM (isEmptyTMVar conn) $
+closeConn :: D.ConnectionImplementation -> STM ()
+closeConn (D.ConnectionImplementation conn) = unlessM (isEmptyTMVar conn) $
     void $ takeTMVar conn
 
-writeComand :: D.NetworkConnection -> D.Comand -> STM ()
-writeComand (D.NetworkConnection conn) cmd =
+writeComand :: D.ConnectionImplementation -> D.Comand -> STM ()
+writeComand (D.ConnectionImplementation conn) cmd =
     unlessM (isEmptyTMVar conn) $ do
         chan <- readTMVar conn
         writeTChan chan cmd

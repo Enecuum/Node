@@ -11,7 +11,9 @@ import           Enecuum.Legacy.Refact.Network.Server
 import           Data.Aeson
 
 data NetworkConnection where
-  NetworkConnection :: TMVar (TChan Comand) -> NetworkConnection
+  NetworkConnection :: Address -> NetworkConnection
+
+data ConnectionImplementation = ConnectionImplementation (TMVar (TChan Comand))
 
 data Comand where
   Close       :: Comand

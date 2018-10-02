@@ -39,10 +39,10 @@ interpretNodeL nodeRt (L.OpenConnection port initScript next) = do
     m <- atomically $ newTVar mempty
     a <- runMsgHandlerL m initScript
     handlers <- readTVarIO m
-    next <$> I.openConnect port ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
+    next <$> undefined --I.openConnect port ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
 
 interpretNodeL _ (L.CloseConnection conn next) = do
-    I.close conn
+    --I.close conn
     return $ next ()
 
 setServerChan :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> TChan ServerComand -> STM ()
