@@ -62,7 +62,7 @@ close conn = atomically $ do
     closeConn conn
 
 -- | Send msg to node.
-send :: D.NetworkConnection -> Value -> IO ()
+send :: D.NetworkConnection -> LByteString -> IO ()
 send conn msg = atomically $ writeComand conn $ D.Send msg
 
 --------------------------------------------------------------------------------
@@ -91,7 +91,7 @@ connectManager conn@(D.NetworkConnection c) wsConn = readCommand conn >>= \case
         $ void $ takeTMVar c
     -- send msg to alies node
     Just (D.Send val) -> do
-        e <- try $ WS.sendTextData wsConn $ encode val
+        e <- try $ WS.sendTextData wsConn val
         case e of
             Right _ -> connectManager conn wsConn 
             Left (_ :: SomeException) -> atomically $ closeConn conn

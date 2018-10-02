@@ -31,10 +31,6 @@ spec :: Spec
 spec = describe "TcpServer" $ fromHUnitTest $ TestList
     [ TestLabel "Ping pong" pingPong]
 
---close conn    = L.evalNetworking $ L.closeConnection conn
-openConnect   = undefined
-openConnect_  = undefined
-
 createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.createNodeRuntime
 
 data Ping = Ping Int
@@ -80,10 +76,10 @@ pingPong = TestCase $ do
         L.handler pongHandle
     
     runNodeDefinitionL nr2 $ do
-        conn <- openConnect serverAddr $ do
+        conn <- L.open serverAddr $ do
             L.handler pingHandle
             L.handler pongHandle
-        whenJust conn $ \c -> L.send c $ Ping 0
+        L.send conn $ Ping 0
     
 
 serverPort = 2000

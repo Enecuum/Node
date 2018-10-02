@@ -67,8 +67,9 @@ stopNode :: NodeL ()
 stopNode = liftF $ StopNode id
 
 -- | Open network connection.
+{-# DEPRECATED openConnection "Use L.open" #-}
 openConnection :: D.Address -> MsgHandlerL NodeL () -> NodeL D.NetworkConnection
-openConnection addr handlers = liftF $ OpenConnection addr handlers id
+openConnection = open
 
 -- | Close network connection.
 -- TODO: what is the behavior when connection is closed?
@@ -76,11 +77,15 @@ openConnection addr handlers = liftF $ OpenConnection addr handlers id
 closeConnection :: D.NetworkConnection -> NodeL ()
 closeConnection = close
 
-class Close a where
-  close :: D.NetworkConnection -> a
 
-instance Close (NodeL ()) where
+
+class Connection a where
+  close :: D.NetworkConnection -> a ()
+  open  :: D.Address -> MsgHandlerL NodeL () -> a D.NetworkConnection
+
+instance Connection (Free NodeF) where
   close conn = liftF $ CloseConnection conn id
+  open addr handl = liftF $ OpenConnection addr handl id
 
 instance L.Send NodeL where
   send conn msg = evalNetworking $ L.send conn msg

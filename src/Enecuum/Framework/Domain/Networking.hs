@@ -15,7 +15,7 @@ data NetworkConnection where
 
 data Comand where
   Close       :: Comand
-  Send        :: Value -> Comand
+  Send        :: LByteString -> Comand
 
 newtype ServerHandle = ServerHandle (TChan ServerComand)
 

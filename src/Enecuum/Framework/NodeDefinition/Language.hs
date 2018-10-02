@@ -76,6 +76,10 @@ instance Serving (RpcMethodL L.NodeL ()) where
 instance Serving (MsgHandlerL L.NodeL ()) where
     serving port handlersF = liftF $ ServingMsg port handlersF id
 
+instance L.Connection (Free NodeDefinitionF) where
+    close conn      = evalNodeL $ L.close conn
+    open addr handl = evalNodeL $ L.open addr handl
+
 instance L.Send (Free NodeDefinitionF) where
     send conn msg = evalNodeL $ L.send conn msg 
 
