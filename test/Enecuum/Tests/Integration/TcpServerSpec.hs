@@ -25,7 +25,7 @@ import           Enecuum.Framework.Node.Language          ( NodeL )
 import qualified Enecuum.Domain                as D
 import           Enecuum.Framework.Networking.Interpreter
 import           Enecuum.Framework.MsgHandler.Language
-import           Enecuum.Framework.Networking.Internal
+import           Enecuum.Framework.Networking.Internal.Internal
 import qualified Data.Map as M
 
 

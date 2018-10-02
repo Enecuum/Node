@@ -10,7 +10,7 @@ import           Enecuum.Core.Runtime (CoreRuntime)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 import qualified Enecuum.Domain as D
 import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Legacy.Refact.Network.Server
+import           Enecuum.Framework.Networking.Internal.TCP.Server
 
 -- TODO: the same types as in test runtime. Unify it.
 data VarHandle = VarHandle D.VarId (TVar Any)

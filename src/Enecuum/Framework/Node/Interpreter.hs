@@ -11,9 +11,8 @@ import qualified Enecuum.Framework.State.Interpreter      as Impl
 import qualified Enecuum.Framework.RLens                  as RLens
 import           Control.Concurrent.STM.TChan
 import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Legacy.Refact.Network.Server
-import           Enecuum.Framework.RpcMethod.Interpreter
-import           Enecuum.Framework.Networking.Internal  as I
+import           Enecuum.Framework.Networking.Internal.TCP.Server
+import           Enecuum.Framework.Networking.Internal.Internal  as I
 import           Enecuum.Framework.MsgHandler.Interpreter
 import qualified Data.Map                                 as M
 import qualified Enecuum.Framework.Domain.Networking as D

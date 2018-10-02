@@ -3,17 +3,17 @@ module Enecuum.Framework.NodeDefinition.Interpreter where
 --
 import Enecuum.Prelude
 
-import qualified Network.WebSockets                 as WS
+
 import qualified Data.Map                           as M
 import           Data.Aeson                         as A
 import           Control.Concurrent.STM.TChan
-
+import qualified Network.Socket.ByteString.Lazy     as S
+import qualified Network.Socket                     as S hiding (recv)
 import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Legacy.Refact.Network.Server
+import           Enecuum.Framework.Networking.Internal.TCP.Server
 
 import           Enecuum.Framework.Node.Interpreter
 import           Enecuum.Framework.RpcMethod.Interpreter
-import           Enecuum.Framework.Domain.RPC
 import           Enecuum.Framework.Runtime                 (NodeRuntime)
 
 import qualified Enecuum.Framework.Language                as L
@@ -22,14 +22,7 @@ import qualified Enecuum.Core.Interpreters                 as Impl
 import qualified Enecuum.Framework.Node.Interpreter        as Impl
 import qualified Enecuum.Framework.Domain.RPC             as D
 import qualified Enecuum.Framework.Domain.Networking      as D
-import qualified Data.Map                                 as M
-import qualified Data.Aeson                               as A
-import qualified Network.WebSockets                       as WS
-import           Control.Concurrent.STM.TChan
-import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Legacy.Refact.Network.Server
-import           Enecuum.Framework.RpcMethod.Interpreter
-import           Enecuum.Framework.Networking.Internal 
+import           Enecuum.Framework.Networking.Internal.Internal 
 import           Enecuum.Framework.MsgHandler.Interpreter
 
 
@@ -87,14 +80,13 @@ runRpcServer
     -> IO ()
 runRpcServer chan port runner methodVar = do
     methods <- readTVarIO methodVar
-    runServer chan port $ \_ pending -> do
-        connect     <- WS.acceptRequest pending
-        msg         <- WS.receiveData connect
+    runServer chan port $ \sock -> do
+        msg         <- S.recv sock (1024*4)
         response    <- callRpc runner methods msg
-        WS.sendTextData connect $ A.encode response
+        S.sendAll sock $ A.encode response
 
-callRpc :: Monad m => (t -> m D.RpcResponse) -> Map Text (A.Value -> Int -> t) -> ByteString -> m D.RpcResponse
-callRpc runner methods msg = case A.decodeStrict msg of
+callRpc :: Monad m => (t -> m D.RpcResponse) -> Map Text (A.Value -> Int -> t) -> LByteString -> m D.RpcResponse
+callRpc runner methods msg = case A.decode msg of
     Just (D.RpcRequest method params reqId) -> case method `M.lookup` methods of
         Just justMethod -> runner $ justMethod params reqId
         Nothing -> return $ D.RpcResponseError
