@@ -12,9 +12,10 @@ data ServerComand = StopServer
 
 -- | Run TCP server.
 runServer :: TChan ServerComand -> PortNumber -> (Socket -> IO()) -> IO ()
-runServer chan aPortNumber aPlainHandler = do
-    sock <- listenOn $ PortNumber aPortNumber
-    let acceptConnect = forever $ do
+runServer chan aPortNumber aPlainHandler = void $ race 
+    (void $ atomically $ readTChan chan) $ do
+        sock <- listenOn $ PortNumber aPortNumber
+        forkFinally (forever $ do
             (conn, _) <- accept sock
-            void $ forkFinally (aPlainHandler conn) (\_ -> close conn)
-    void $ race (void $ atomically $ readTChan chan) acceptConnect
+            void $ forkFinally (aPlainHandler conn) (\_ -> close conn))
+            (\_ -> close sock)
