@@ -21,7 +21,7 @@ interpretNetworkingL (L.SendRpcRequest (D.Address host port) request next) =
 
 --
 interpretNetworkingL (L.SendMessage conn msg next) = do
-    Int.send conn msg
+    --Int.send conn msg
     pure $ next ()
 interpretNetworkingL _ =
     error "interpretNetworkingL EvalNetwork not implemented."
