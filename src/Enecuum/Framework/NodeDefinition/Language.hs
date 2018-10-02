@@ -28,11 +28,12 @@ data NodeDefinitionF next where
 
     -- | Eval core effect.
     EvalCoreEffectNodeDefinitionF :: L.CoreEffect a -> (a -> next) -> NodeDefinitionF next
-    -- | Serving of Rpc request.
-    ServingRpc     :: PortNumber -> RpcMethodL (Free L.NodeF) () -> (() -> next) -> NodeDefinitionF next
+    -- | Start serving of RPC requests.
+    ServingRpc     :: PortNumber -> RpcMethodL L.NodeL () -> (() -> next) -> NodeDefinitionF next
     -- | Stop serving of Rpc server.
     StopServing    :: PortNumber -> (() -> next) -> NodeDefinitionF  next
-    ServingMsg     :: PortNumber -> MsgHandlerL (Free L.NodeF) () -> (() -> next)-> NodeDefinitionF  next
+    -- | Start serving on reliable-kind connection.
+    ServingMsg     :: PortNumber -> MsgHandlerL L.NodeL () -> (() -> next)-> NodeDefinitionF  next
 
 instance Functor NodeDefinitionF where
     fmap g (NodeTag tag next)               = NodeTag tag               (g . next)
@@ -42,7 +43,7 @@ instance Functor NodeDefinitionF where
     fmap g (ServingRpc port handlersF next)          = ServingRpc port handlersF          (g . next)
     fmap g (StopServing port next)                   = StopServing port                   (g . next)
 
-type NodeDefinitionL  next = Free NodeDefinitionF next
+type NodeDefinitionL next = Free NodeDefinitionF next
 
 -- | Sets tag for node.
 nodeTag :: D.NodeTag -> NodeDefinitionL ()
@@ -65,13 +66,18 @@ initialization = evalNodeL
 scenario :: L.NodeL a -> NodeDefinitionL  a
 scenario = evalNodeL
 
--- | Runs RPC server.
-servingRpc :: PortNumber -> RpcMethodL (Free L.NodeF) () -> NodeDefinitionL ()
+-- | Starts RPC server.
+servingRpc :: PortNumber -> RpcMethodL L.NodeL () -> NodeDefinitionL ()
 servingRpc port handlersF = liftF $ ServingRpc port handlersF id
 
+-- | Stops server on the specified port.
+-- TODO: What is the behavior when server is absent?
 stopServing :: PortNumber -> NodeDefinitionL  ()
 stopServing port = liftF $ StopServing port id
 
+-- | Starts server (TCP / WS - like)
+servingMsg :: PortNumber -> MsgHandlerL L.NodeL () -> NodeDefinitionL ()
+servingMsg port handlersF = liftF $ ServingMsg port handlersF id
 
 
 instance L.Logger (Free NodeDefinitionF) where

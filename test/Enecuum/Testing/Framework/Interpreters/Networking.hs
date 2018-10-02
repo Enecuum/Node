@@ -30,23 +30,9 @@ relayRequest nodeRt from to req = do
 
 -- | Interpret NetworkingL language.
 interpretNetworkingL :: T.NodeRuntime -> L.NetworkingF a -> IO a
-interpretNetworkingL nodeRt (L.OpenConnection cfg next) = do
-  -- rt <- newMVar nodeRt
-  -- pure $ next $ Just $ D.NetworkConnection $ TestConnection
-    -- rt $ Connection (nodeRt ^. RLens.address) (cfg ^. Lens.address)
-  error "OpenConnection not implemented."
 
-interpretNetworkingL nodeRt (L.CloseConnection _ next) =
-  -- pure $ next ()
-  error "CloseConnection not implemented."
-
--- interpretNetworkingL nodeRt (L.Send (D.NetworkConnection conn) req next) = do
---   -- next <$> D.sendRequest conn req
---   error "Send not implemented."
-
-interpretNetworkingL nodeRt (L.SendRpcRequest toAddr req next) = do
-  res <- relayRequest nodeRt (nodeRt ^. RLens.address) toAddr req
-  pure $ next res
+interpretNetworkingL nodeRt (L.SendRpcRequest toAddr req next) =
+  next <$> relayRequest nodeRt (nodeRt ^. RLens.address) toAddr req
 
 interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) =
   next <$> Impl.runNetworkL nodeRt networkAction

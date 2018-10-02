@@ -65,6 +65,8 @@ interpretStateL nodeRt (L.ReadVar var next) =
 interpretStateL nodeRt (L.WriteVar var val next) =
   next <$> writeVar' nodeRt var val
 
+interpretStateL _ L.Retry = retry
+
 interpretStateL _ (L.EvalGraph (L.GraphAction stmRunner _ act) next) =
   next <$> stmRunner act
 

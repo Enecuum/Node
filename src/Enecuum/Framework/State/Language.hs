@@ -21,7 +21,7 @@ data GraphAction g x = GraphAction
   , _action :: L.HGraphL g x
   }
 
--- | State language.
+-- | State language. It reflects STM and its behavior.
 data StateF next where
   -- | Create variable.
   NewVar :: a -> (D.StateVar a -> next) -> StateF next
@@ -29,6 +29,8 @@ data StateF next where
   ReadVar :: D.StateVar a -> (a -> next) -> StateF next
   -- | Write variable.
   WriteVar :: D.StateVar a -> a ->(() -> next) -> StateF next
+  -- | Retry until some variable is changed in this atomic block.
+  Retry :: StateF next
   -- | Eval graph atomically.
   EvalGraph :: GraphAction g x -> (x -> next) -> StateF next
 
@@ -36,6 +38,7 @@ instance Functor StateF where
   fmap g (NewVar a next)         = NewVar a         (g . next)
   fmap g (ReadVar var next)      = ReadVar var      (g . next)
   fmap g (WriteVar var val next) = WriteVar var val (g . next)
+  fmap g Retry                   = Retry
   fmap g (EvalGraph act next)    = EvalGraph act    (g . next)
 
 type StateL next = Free StateF next
@@ -51,6 +54,14 @@ readVar var = liftF $ ReadVar var id
 -- | Write variable.
 writeVar :: D.StateVar a -> a -> StateL ()
 writeVar var val = liftF $ WriteVar var val id
+
+-- | Modify variable with function.
+modifyVar :: D.StateVar a -> (a -> a) -> StateL ()
+modifyVar var f = readVar var >>= writeVar var . f
+
+-- | Retry until some variable is changed in this atomic block.
+retry :: StateL a
+retry = liftF Retry
 
 -- | Eval graph atomically.
 evalGraph
