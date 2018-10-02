@@ -72,9 +72,18 @@ openConnection addr handlers = liftF $ OpenConnection addr handlers id
 
 -- | Close network connection.
 -- TODO: what is the behavior when connection is closed?
+{-# DEPRECATED closeConnection "Use L.close" #-}
 closeConnection :: D.NetworkConnection -> NodeL ()
-closeConnection conn = liftF $ CloseConnection conn id
+closeConnection = close
 
+class Close a where
+  close :: D.NetworkConnection -> a
+
+instance Close (NodeL ()) where
+  close conn = liftF $ CloseConnection conn id
+
+instance L.Send NodeL where
+  send conn msg = evalNetworking $ L.send conn msg
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
 evalGraphIO

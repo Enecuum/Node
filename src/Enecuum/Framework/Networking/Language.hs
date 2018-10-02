@@ -45,12 +45,17 @@ sendMessage conn msg = liftF $ SendMessage conn msg id
 -- | Send message to the reliable connection.
 -- TODO: distiguish reliable (TCP-like) connection from unreliable (UDP-like).
 -- TODO: make conversion to and from package.
-send :: ToJSON a => D.NetworkConnection -> a -> NetworkingL ()
-send conn = sendMessage conn . A.encode
+class Send m where
+  send :: ToJSON a => D.NetworkConnection -> a -> m ()
+
+instance Send (Free NetworkingF) where
+  send conn = sendMessage conn . A.encode
 
 -- | Eval core effect.
 evalCoreEffectNetworkingF :: L.CoreEffect a -> NetworkingL a
 evalCoreEffectNetworkingF coreEffect = liftF $ EvalCoreEffectNetworkingF coreEffect id
+
+
 
 instance L.Logger (Free NetworkingF) where
   logMessage level msg = evalCoreEffectNetworkingF $ L.logMessage level msg

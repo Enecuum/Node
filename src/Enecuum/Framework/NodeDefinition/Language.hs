@@ -9,6 +9,7 @@ import           Enecuum.Prelude
 
 import qualified Enecuum.Core.Language                    as L
 import qualified Enecuum.Framework.Node.Language          as L
+import qualified Enecuum.Framework.Networking.Language          as L
 import qualified Enecuum.Framework.Domain                 as D
 import           Enecuum.Framework.RpcMethod.Language     (RpcMethodL)
 import           Enecuum.Legacy.Service.Network.Base
@@ -66,7 +67,20 @@ initialization = evalNodeL
 scenario :: L.NodeL a -> NodeDefinitionL  a
 scenario = evalNodeL
 
+class Serving a where
+    serving :: PortNumber -> a -> NodeDefinitionL ()
+
+instance Serving (RpcMethodL L.NodeL ()) where
+    serving = servingRpc
+
+instance Serving (MsgHandlerL L.NodeL ()) where
+    serving port handlersF = liftF $ ServingMsg port handlersF id
+
+instance L.Send (Free NodeDefinitionF) where
+    send conn msg = evalNodeL $ L.send conn msg 
+
 -- | Starts RPC server.
+{-# DEPRECATED servingRpc "Use L.serving" #-}
 servingRpc :: PortNumber -> RpcMethodL L.NodeL () -> NodeDefinitionL ()
 servingRpc port handlersF = liftF $ ServingRpc port handlersF id
 
