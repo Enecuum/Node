@@ -46,7 +46,7 @@ rpcServerTestOk = TestCase $ do
     runNodeDefinitionL nr $ L.servingRpc serverPort $ do
         L.method okHandler
         L.method errHandler
-    threadDelay 1000
+    threadDelay 5000
     res <- runNodeL nr $ L.makeRpcRequest localServer OkRequest
     runNodeDefinitionL nr $ L.stopServing serverPort
     assertBool "" (res == Right OkResponse)
@@ -58,7 +58,7 @@ rpcServerTestErr = TestCase $ do
     runNodeDefinitionL nr $ L.servingRpc serverPort $ do
         L.method okHandler
         L.method errHandler
-    threadDelay 1000
+    threadDelay 5000
     res <- runNodeL nr $ L.makeRpcRequest localServer ErrRequest
     runNodeDefinitionL nr $ L.stopServing serverPort
     assertBool "" (res == Right ErrResponse)

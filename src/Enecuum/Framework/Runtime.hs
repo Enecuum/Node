@@ -10,7 +10,7 @@ import           Enecuum.Core.Runtime (CoreRuntime)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 import qualified Enecuum.Domain as D
 import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Legacy.Refact.Network.Server
+import           Enecuum.Framework.Networking.Internal.TCP.Server
 
 -- TODO: the same types as in test runtime. Unify it.
 data VarHandle = VarHandle D.VarId (TVar Any)
@@ -24,6 +24,7 @@ data NodeRuntime = NodeRuntime
     , _state        :: NodeState              -- ^ State of node.
     , _nodeTag      :: TVar Text
     , _stopNode     :: TMVar Bool
+    , _connects     :: TVar (Map D.Address D.ConnectionImplementation)
     }
 
 createNodeRuntime :: CoreRuntime -> IO NodeRuntime
@@ -35,6 +36,7 @@ createNodeRuntime coreRt = NodeRuntime
     <*> newTMVarIO Map.empty
     <*> newTVarIO ""
     <*> (atomically newEmptyTMVar)
+    <*> newTVarIO mempty
 
 -- TODO: more wise clearing here.
 clearNodeRuntime :: NodeRuntime -> IO ()

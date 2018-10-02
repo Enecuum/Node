@@ -10,8 +10,6 @@ import qualified Data.HGraph.THGraph                      as G
 import           Data.HGraph.StringHashable               (StringHashable)
 import           Enecuum.Core.HGraph.Interpreters.IO      (runHGraphIO)
 import           Enecuum.Core.HGraph.Interpreters.STM     (runHGraphSTM)
-import           Enecuum.Framework.RpcMethod.Language     (RpcMethodL)
-import           Enecuum.Legacy.Service.Network.Base
 import qualified Enecuum.Framework.Domain.Networking      as D
 import           Enecuum.Framework.MsgHandler.Language
 

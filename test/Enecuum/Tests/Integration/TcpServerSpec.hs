@@ -25,7 +25,7 @@ import           Enecuum.Framework.Node.Language          ( NodeL )
 import qualified Enecuum.Domain                as D
 import           Enecuum.Framework.Networking.Interpreter
 import           Enecuum.Framework.MsgHandler.Language
-import           Enecuum.Framework.Networking.Internal
+import           Enecuum.Framework.Networking.Internal.Internal
 import qualified Data.Map as M
 
 
@@ -110,9 +110,10 @@ succesServer port = do
     void $ forkIO $ do
         threadDelay 1000000
         putMVar mvar False
-    ch <- startServer port $ M.singleton
+    ch <- startServer port (M.singleton
         (makeTagName Succes)
-        (\_ _ -> putMVar mvar True)
+        (\_ _ -> putMVar mvar True))
+        (\_ _ -> pure ())
     ok <- takeMVar mvar
     Enecuum.Prelude.atomically $ stopServer ch
     return ok
