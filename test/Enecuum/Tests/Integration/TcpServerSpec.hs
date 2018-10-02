@@ -25,6 +25,10 @@ import           Enecuum.Framework.Node.Language          ( NodeL )
 import qualified Enecuum.Domain                as D
 import           Enecuum.Framework.Networking.Interpreter
 import           Enecuum.Framework.MsgHandler.Language
+import           Enecuum.Framework.Networking.Internal
+import qualified Data.Map as M
+
+
 
 -- Tests disabled
 spec :: Spec
@@ -35,6 +39,15 @@ createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.c
 
 data Ping = Ping Int
 data Pong = Pong Int
+data Succes = Succes
+
+instance A.ToJSON Succes where
+    toJSON o = A.object
+        [ "tag" A..= makeTagName o
+        ]
+
+instance A.FromJSON Succes where
+    parseJSON _ = pure $ Succes
 
 instance A.ToJSON Ping where
     toJSON o@(Ping i) = A.object
@@ -55,32 +68,54 @@ instance A.FromJSON Pong where
     parseJSON (A.Object o) = Pong <$> o A..: "int"
 
 
-pingHandle :: Ping -> D.NetworkConnection -> L.NodeL ()
-pingHandle (Ping i) conn = do
-    L.logInfo $ "Ping:" +|| i ||+ "."
+pingHandle :: D.NetworkConnection -> Ping -> D.NetworkConnection -> L.NodeL ()
+pingHandle succ (Ping i) conn = do
     when (i < 10)  $ L.send conn (Pong $ i+1)
-    when (i == 10) $ L.close conn
+    when (i == 10) $ do
+        L.send succ Succes
+        L.close conn
 
-pongHandle :: Pong -> D.NetworkConnection -> L.NodeL ()
-pongHandle (Pong i) conn = do
-    L.logInfo $ "Pong:" +|| i ||+ "."
+pongHandle :: D.NetworkConnection -> Pong -> D.NetworkConnection -> L.NodeL ()
+pongHandle succ (Pong i) conn = do
     when (i < 10)  $ L.send conn (Ping $ i+1)
-    when (i == 10) $ L.close conn
+    when (i == 10) $ do
+        L.send succ Succes
+        L.close conn
 
 pingPong :: Test
 pingPong = TestCase $ do
     nr1 <- createNodeRuntime
     nr2 <- createNodeRuntime
-    runNodeDefinitionL nr1 $ L.serving serverPort $ do
-        L.handler pingHandle
-        L.handler pongHandle
-    
-    runNodeDefinitionL nr2 $ do
-        conn <- L.open serverAddr $ do
-            L.handler pingHandle
-            L.handler pongHandle
-        L.send conn $ Ping 0
-    
+    void $ forkIO $ do
+        threadDelay 10000
+        runNodeDefinitionL nr1 $ do
+            succ <- L.open succAdr $ return ()
+            L.serving serverPort $ do
+                L.handler (pingHandle succ)
+                L.handler (pongHandle succ)
+        
+        runNodeDefinitionL nr2 $ do
+            succ <- L.open succAdr $ return ()
+            conn <- L.open serverAddr $ do
+                L.handler (pingHandle succ)
+                L.handler (pongHandle succ)
+            L.send conn $ Ping 0
+    assertBool "" =<< succesServer succPort
+
+succesServer :: PortNumber -> IO Bool
+succesServer port = do
+    mvar <- newEmptyMVar
+    void $ forkIO $ do
+        threadDelay 1000000
+        putMVar mvar False
+    ch <- startServer port $ M.singleton
+        (makeTagName Succes)
+        (\_ _ -> putMVar mvar True)
+    ok <- takeMVar mvar
+    Enecuum.Prelude.atomically $ stopServer ch
+    return ok
 
 serverPort = 2000
+succPort   = 3000
 serverAddr = D.Address "127.0.0.1" serverPort
+succAdr    = D.Address "127.0.0.1" succPort
