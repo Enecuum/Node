@@ -19,17 +19,31 @@ data ControlRequest
     , _to      :: D.Address     -- ^ To node
     , _request :: D.RpcRequest  -- ^ RPC request to relay
     }
-  | EstablishConnectionReq      -- ^ Make connection of client-server type.
-    { _from    :: D.Address     -- ^ From node
-    , _to      :: D.Address     -- ^ To node
+  | RelayEstablishConnectionReq  -- ^ Relay request for connection to client-server.
+    { _address  :: D.Address     -- ^ Server address
+    } 
+  | EstablishConnectionReq       -- ^ Make connection of client-server type.
+    -- { _fromNode :: NodeRuntime   -- ^ From node
+    -- , _address  :: D.Address     -- ^ Server address
+    -- }
+  | RelayMessageReq
+    { _from    :: NodeID         -- ^ From node
+    , _to      :: NodeID         -- ^ To node
+    , _address :: BindingAddress -- ^ Server-side binded address
+    , _message :: D.RawData      -- ^ Message to relay
     }
-  deriving (Show)
+  | MessageReq BindingAddress D.RawData
 
 -- | Result of evaluation of control response.
 data ControlResponse
-  = AsRpcResp D.RpcResponse   -- ^ RPC response wrapped into the control response.
-  | AsErrorResp Text          -- ^ Keeps an error that occured during the ControlRequest evaluation.
-  | AsConnectionEstablished   -- ^ Connection result.
+  = AsRpcResp D.RpcResponse                  -- ^ RPC response wrapped into the control response.
+  | AsErrorResp Text                         -- ^ Keeps an error that occured during the ControlRequest evaluation.
+  | AsSuccessResp                            -- ^ Indicates success of the operation (if other responses can't be applied.)
+  | AsConnectionAccepted BindingAddress      -- ^ Connection accepted by the server. Server has set some binding address.
+  | AsConnectionEstablished   -- ^ Connection established, and the communication address is set.
+      { _in :: BindingAddress
+      , _out :: BindingAddress
+      }
 
 -- | Control is the way to evaluate admin control over a node.
 -- Represents the MVar Reqeust-Response pattern (STM version).
@@ -44,6 +58,13 @@ data RpcServerHandle = RpcServerHandle
   , _control  :: Control    -- ^ Server control interface.
   }
 
+-- | Server handle.
+data ServerHandle = ServerHandle
+  { _threadId    :: ThreadId    -- ^ Server thread ID.
+  , _control     :: Control     -- ^ Server control interface.
+  , _nodeRuntime :: NodeRuntime -- ^ Node runtime.
+  }
+
 -- | Logger runtime. Stores messages.
 data LoggerRuntime = LoggerRuntime
   { _messages     :: TVar [Text]
@@ -52,21 +73,40 @@ data LoggerRuntime = LoggerRuntime
 data VarHandle = VarHandle D.VarId (TVar Any)
 type NodeState = TMVar (Map.Map D.VarId VarHandle)
 
+type BindingAddress = D.Address
+data ConnectionType = Client | Server
+data NodeConnection = NodeConnection
+  { _nodeID :: NodeID
+  , _bindingAddress :: BindingAddress
+  , _connType :: ConnectionType
+  }
+type NodeConnections = Map.Map BindingAddress NodeConnection
+
+type Servers = Map.Map D.Address ServerHandle
+
 -- | Test runtime for every node acting within a particular test runtime.
 data NodeRuntime = NodeRuntime
-  { _loggerRuntime  :: LoggerRuntime    -- ^ Logger runtime.
-  , _networkControl :: Control                -- ^ Control interface for virtual network.
-  , _address        :: D.Address          -- ^ Address of this node.
-  , _tag            :: TVar D.NodeTag         -- ^ Tag of this node.
-  , _rpcServer      :: TMVar RpcServerHandle  -- ^ RPC server of this node.
-  -- , _connections    :: TMVar (Map.Map Int Int)
-  , _graph          :: TG.TestGraphVar        -- ^ Graph
-  , _varCounter     :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
-  , _state          :: NodeState              -- ^ State of node.
+  { _loggerRuntime   :: LoggerRuntime          -- ^ Logger runtime.
+  , _networkControl  :: Control                -- ^ Control interface for virtual network.
+  , _address         :: D.Address              -- ^ Address of this node.
+  , _tag             :: TVar D.NodeTag         -- ^ Tag of this node.
+  , _rpcServer       :: TMVar RpcServerHandle  -- ^ RPC server of this node. (TODO: make multiple RPC servers possible)
+  , _servers         :: TMVar Servers          -- ^ Node own servers.
+  , _connections     :: TMVar NodeConnections
+  , _graph           :: TG.TestGraphVar        -- ^ Graph
+  , _varCounter      :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
+  , _state           :: NodeState              -- ^ State of node.
+  , _serversRegistry :: ServersRegistry        -- ^ Servers in the network.
   }
 
 -- | Registry of nodes acting within a test network.
-type NodesRegistry = TMVar (Map.Map D.Address NodeRuntime)
+-- TODO:
+-- newtype NodeID = NodeID Int
+-- type NodesRegistry = TMVar (Map.Map NodeID NodeRuntime)
+
+type NodeID = D.Address
+type NodesRegistry = TMVar (Map.Map NodeID NodeRuntime)
+type ServersRegistry = TMVar (Map.Map D.Address ServerHandle)
 
 -- | Test runtime describing a virtual network and nodes acting within it.
 -- In the testing runtime, the network environment is represented
@@ -74,8 +114,9 @@ type NodesRegistry = TMVar (Map.Map D.Address NodeRuntime)
 -- from one node to another, it can make RPC requests to nodes,
 -- and can evaluate some control requests over the test network.
 data TestRuntime = TestRuntime
-  { _loggerRuntime   :: LoggerRuntime -- ^ Logger runtime.
+  { _loggerRuntime   :: LoggerRuntime       -- ^ Logger runtime.
   , _networkWorkerId :: ThreadId            -- ^ Network environment thread ID.
   , _networkControl  :: Control             -- ^ Network environment control interface
-  , _registry        :: NodesRegistry       -- ^ Tag of this node.
+  , _registry        :: NodesRegistry       -- ^ Nodes registry.
+  , _serversRegistry :: ServersRegistry     -- ^ Servers available in the network.
   }

@@ -11,20 +11,20 @@ import qualified Enecuum.Testing.Core.Interpreters                 as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.Networking as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.State      as Impl
 
--- | Relay request from this node to the network environment.
+-- | Establish connection with the server through test environment.
 establishConnection
   :: T.NodeRuntime
   -> D.Address
-  -> IO ()
-establishConnection nodeRt to = do
+  -> IO (Either Text T.BindingAddress)
+establishConnection nodeRt toAddress = do
   atomically
       $ putTMVar (nodeRt ^. RLens.networkControl . RLens.request)
-      $ T.EstablishConnectionReq (nodeRt ^. RLens.address) to
+      $ T.RelayEstablishConnectionReq toAddress
   controlResponse <- atomically
       $ takeTMVar (nodeRt ^. RLens.networkControl . RLens.response)
   case controlResponse of
-    T.AsConnectionEstablished -> pure ()
-    T.AsErrorResp msg         -> error $ "Network control error: " <> msg
+    T.AsConnectionEstablished _ outAddr -> pure $ Right outAddr
+    T.AsErrorResp msg         -> pure $ Left $ "Failed to establish connection: " <> msg
     _                         -> error "Invalid network control result."
 
 
@@ -43,10 +43,11 @@ interpretNodeL nodeRt (L.EvalNetworking networkingAction next) =
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffect next) =
   next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
 
-interpretNodeL nodeRt (L.OpenConnection addr handlers next) = do
-  establishConnection nodeRt addr
-  cmd <- newEmptyTMVarIO
-  pure $ next $ D.NetworkConnection cmd
+interpretNodeL nodeRt (L.OpenConnection serverAddress handlers next) = do
+  eBindingAddress <- establishConnection nodeRt serverAddress
+  case eBindingAddress of
+    Left err -> error err
+    Right bindingAddress -> pure $ next $ D.NetworkConnection bindingAddress
 
 interpretNodeL nodeRt (L.CloseConnection _ next) =
   error "CloseConnection not implemented."

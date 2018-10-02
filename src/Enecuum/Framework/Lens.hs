@@ -10,6 +10,7 @@ import           Control.Lens             ( makeFieldsNoPrefix )
 import           Enecuum.Framework.Domain
 
 makeFieldsNoPrefix ''Address
+makeFieldsNoPrefix ''NetworkConnection
 makeFieldsNoPrefix ''NetworkRequest
 makeFieldsNoPrefix ''NetworkResponse
 makeFieldsNoPrefix ''StateVar

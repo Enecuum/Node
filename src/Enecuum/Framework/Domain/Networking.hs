@@ -10,8 +10,9 @@ import           Network.Socket
 import           Enecuum.Legacy.Refact.Network.Server
 import           Data.Aeson
 
-data NetworkConnection where
-  NetworkConnection :: Address -> NetworkConnection
+data NetworkConnection = NetworkConnection
+  { _address :: Address
+  }
 
 data ConnectionImplementation = ConnectionImplementation (TMVar (TChan Comand))
 
@@ -26,8 +27,8 @@ newtype ServerHandle = ServerHandle (TChan ServerComand)
 
 -- | Node address (like IP)
 data Address = Address
-  { host :: String
-  , port :: PortNumber
+  { _host :: String
+  , _port :: PortNumber
   } deriving (Show, Eq, Ord, Generic)
 
 formatAddress :: Address -> Text

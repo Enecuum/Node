@@ -10,5 +10,7 @@ import           Enecuum.Testing.Types
 makeFieldsNoPrefix ''LoggerRuntime
 makeFieldsNoPrefix ''Control
 makeFieldsNoPrefix ''RpcServerHandle
+makeFieldsNoPrefix ''ServerHandle
 makeFieldsNoPrefix ''NodeRuntime
 makeFieldsNoPrefix ''TestRuntime
+makeFieldsNoPrefix ''NodeConnection

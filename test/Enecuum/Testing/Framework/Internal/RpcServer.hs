@@ -39,7 +39,7 @@ startNodeRpcServer nodeRt _ methodVar = do
         T.RpcReq req -> do
           resp <- callRpc (Impl.runNodeL nodeRt) methods req
           atomically $ putTMVar (control ^. RLens.response) (T.AsRpcResp resp)
-        _ -> error $ "Control request is not supported in RpcServer: " +|| controlReq ||+ "."
+        _ -> error "Control request is not supported in RpcServer."
 
 callRpc
   :: Monad m

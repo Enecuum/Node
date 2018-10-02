@@ -1,3 +1,5 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+
 -- | This module contains functions to work with node runtime.
 module Enecuum.Testing.Framework.NodeRuntime where
 
@@ -17,19 +19,63 @@ import qualified Enecuum.Testing.TestRuntime as Impl
 -- Bad dependency from TestData.
 import qualified Enecuum.TestData.TestGraph as TG
 
--- | Creates node runtime.
+-- | Creates empty node runtime.
 createEmptyNodeRuntime
   :: T.LoggerRuntime
   -> T.Control
-  -> D.Address
+  -> T.NodeID
   -> IO T.NodeRuntime
-createEmptyNodeRuntime loggerRt networkControl addr = do
-  tag <- newTVarIO ("" :: Text)
-  handle <- newEmptyTMVarIO
-  graph <- TG.initTestGraph
-  varCounter <- newTMVarIO 0
-  state <- newTMVarIO Map.empty
-  pure $ T.NodeRuntime loggerRt networkControl addr tag handle graph varCounter state
+createEmptyNodeRuntime loggerRt networkControl nodeID = do
+  tag         <- newTVarIO ("" :: Text)
+  rpcServer   <- newEmptyTMVarIO
+  serversRegistry <- newEmptyTMVarIO
+  graph       <- TG.initTestGraph
+  varCounter  <- newTMVarIO 0
+  st          <- newTMVarIO Map.empty
+  servers     <- newTMVarIO Map.empty
+  connections <- newTMVarIO Map.empty
+  pure $ T.NodeRuntime
+        { T._loggerRuntime   = loggerRt
+        , T._networkControl  = networkControl
+        , T._address         = nodeID 
+        , T._tag             = tag 
+        , T._rpcServer       = rpcServer 
+        , T._servers         = servers 
+        , T._connections     = connections 
+        , T._graph           = graph 
+        , T._varCounter      = varCounter 
+        , T._state           = st
+        , T._serversRegistry = serversRegistry
+        }
+
+-- | Creates node runtime. Registers in the test runtime.
+createNodeRuntime
+  :: T.TestRuntime
+  -> T.NodeID
+  -> IO T.NodeRuntime
+createNodeRuntime testRt nodeID = do
+  tag         <- newTVarIO ("" :: Text)
+  rpcServer   <- newEmptyTMVarIO
+  graph       <- TG.initTestGraph
+  varCounter  <- newTMVarIO 0
+  st       <- newTMVarIO Map.empty
+  servers     <- newTMVarIO Map.empty
+  connections <- newTMVarIO Map.empty
+  let nodeRt = T.NodeRuntime
+        { T._loggerRuntime   = testRt ^. RLens.loggerRuntime
+        , T._networkControl  = testRt ^. RLens.networkControl
+        , T._address         = nodeID 
+        , T._tag             = tag 
+        , T._rpcServer       = rpcServer 
+        , T._servers         = servers 
+        , T._connections     = connections 
+        , T._graph           = graph 
+        , T._varCounter      = varCounter 
+        , T._state           = st
+        , T._serversRegistry = testRt ^. RLens.serversRegistry
+        }
+  Impl.registerNode (testRt ^. RLens.registry) nodeID nodeRt
+  pure nodeRt
 
 -- | Starts node using NodeDefinitionL.
 startNode
@@ -38,8 +84,7 @@ startNode
   -> L.NodeDefinitionL ()
   -> IO T.NodeRuntime
 startNode testRt nodeAddr scenario = do
-  nodeRt <- createEmptyNodeRuntime (testRt ^. RLens.loggerRuntime) (testRt ^. RLens.networkControl) nodeAddr
-  Impl.registerNode (testRt ^. RLens.registry) nodeAddr nodeRt
+  nodeRt <- createNodeRuntime testRt nodeAddr 
   Impl.runNodeDefinitionL nodeRt scenario
   pure nodeRt
 
@@ -51,8 +96,7 @@ startNodeWithGraph
   -> (TG.TestGraphVar -> L.NodeDefinitionL ())
   -> IO T.NodeRuntime
 startNodeWithGraph testRt nodeAddr scenario = do
-  nodeRt <- createEmptyNodeRuntime (testRt ^. RLens.loggerRuntime) (testRt ^. RLens.networkControl) nodeAddr
-  Impl.registerNode (testRt ^. RLens.registry) nodeAddr nodeRt
+  nodeRt <- createNodeRuntime testRt nodeAddr
   Impl.runNodeDefinitionL nodeRt $ scenario (nodeRt ^. RLens.graph)
   pure nodeRt
 

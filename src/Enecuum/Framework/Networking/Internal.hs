@@ -53,7 +53,8 @@ openConnect (D.Address ip port) handlers = do
         case res of
             Right _ -> return ()
             Left (_ :: SomeException) -> atomically $ closeConn conn
-    return conn
+    -- return conn
+    error "open connection not implemented"
 
 -- | Close the connect
 close :: D.ConnectionImplementation -> IO ()

@@ -3,6 +3,8 @@ module Enecuum.Testing.Framework.Interpreters.NodeDefinition where
 import Enecuum.Prelude
 
 import qualified Enecuum.Language as L
+import qualified Enecuum.Domain as D
+import qualified Enecuum.Framework.Lens as Lens
 
 import qualified Enecuum.Testing.RLens                        as RLens
 import qualified Enecuum.Testing.Types                        as T
@@ -14,6 +16,9 @@ import qualified Enecuum.Testing.Framework.Internal.TcpLikeServer as Impl (start
 
 import qualified Enecuum.Framework.RpcMethod.Interpreter as Impl (runRpcMethodL)
 import qualified Enecuum.Framework.MsgHandler.Interpreter as Impl (runMsgHandlerL)
+
+mkAddress :: T.NodeRuntime -> D.PortNumber -> D.Address
+mkAddress nodeRt port = (nodeRt ^. RLens.address) & Lens.port .~ port
 
 -- | Interpret NodeDefinitionL.
 interpretNodeDefinitionL
@@ -36,7 +41,7 @@ interpretNodeDefinitionL nodeRt (L.ServingRpc port handlersF next) = do
 interpretNodeDefinitionL nodeRt (L.ServingMsg port handlersF next) = do
   handlersMap <- atomically $ newTVar mempty
   Impl.runMsgHandlerL handlersMap handlersF
-  Impl.startNodeTcpLikeServer nodeRt port handlersMap
+  Impl.startNodeTcpLikeServer nodeRt (mkAddress nodeRt port) handlersMap
   pure $ next ()
 
 interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
