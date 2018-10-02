@@ -93,7 +93,7 @@ pingPong = TestCase $ do
             L.serving serverPort $ do
                 L.handler (pingHandle succ)
                 L.handler (pongHandle succ)
-        
+        threadDelay 10000
         runNodeDefinitionL nr2 $ do
             succ <- L.open succAdr $ return ()
             conn <- L.open serverAddr $ do
