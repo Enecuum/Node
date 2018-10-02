@@ -39,7 +39,7 @@ spec = describe "Nodes test" $ do
 
     runtime <- createTestRuntime
 
-    void $ startNode' runtime networkNode1Addr networkNode1
+    void $ startNodeWithGraph runtime networkNode1Addr networkNode1
     void $ startNode runtime networkNode2Addr networkNode2
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
@@ -71,9 +71,34 @@ spec = describe "Nodes test" $ do
 
     runtime <- createTestRuntime
 
-    void $ startNode' runtime networkNode3Addr networkNode3
+    void $ startNodeWithGraph runtime networkNode3Addr networkNode3
     void $ startNode runtime networkNode4Addr networkNode4
 
+    let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
+    msgs <- readTVarIO tMsgs
+    msgs `shouldBe`
+      [ "balance (should be 91): 91."
+      ]
+
+  it "Ping pong & Retry test" $ do
+
+    runtime <- createTestRuntime
+
+    -- TODO: make running nodes in separate threads correct.
+    print "Starting pong server."
+    node1Id <- forkIO $ void $ startNode runtime pongServerAddress pongServingNode
+
+    print "Waiting for server start."
+    threadDelay $ 1000 * 1000
+
+    print "Starting ping client."
+    node2Id <- forkIO $ void $ startNode runtime pingClientAddress pingSendingClientNode
+  
+    -- TODO: make waiting for nodes correct.
+    print "Delaying."
+    threadDelay $ 1000 * 1000
+
+    print "Checking."
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
     msgs <- readTVarIO tMsgs
     msgs `shouldBe`

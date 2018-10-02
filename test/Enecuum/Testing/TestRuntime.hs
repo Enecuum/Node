@@ -27,10 +27,11 @@ networkWorker control registry = go 0
   act _ = do
     controlReq <- atomically $ takeTMVar $ control ^. RLens.request
     case controlReq of
-      T.RelayRpcReq _ toAddr req -> makeRpcRequestRelay toAddr req
-      _ -> error "Unkwnown ControlResponse."
+      T.RelayRpcReq _ toAddr req               -> relayRpcRequestToNode toAddr req
+      T.EstablishConnectionReq fromAddr toAddr -> createConnection fromAddr toAddr
+      _ -> error "Unkwnown control request."
 
-  makeRpcRequestRelay toAddr req = do
+  relayRpcRequestToNode toAddr req = do
         nodes       <- atomically $ takeTMVar registry
         controlResp <- case Map.lookup toAddr nodes of
             Nothing -> pure $ T.AsErrorResp
@@ -38,6 +39,17 @@ networkWorker control registry = go 0
             Just toNodeRt -> controlRequest toNodeRt $ T.RpcReq req
         atomically $ putTMVar (control ^. RLens.response) controlResp
         atomically $ putTMVar registry nodes
+
+  createConnection fromAddr@(D.Address fromIp fromPort) toAddr@(D.Address toIp toPort) = do
+        nodes       <- atomically $ takeTMVar registry
+        controlResp <- case (Map.lookup fromAddr nodes, Map.lookup toAddr nodes) of
+            (_, Nothing) -> pure $ T.AsErrorResp $ "Can't establish connection. Server node " +| D.formatAddress toAddr |+ " not found."
+            (Nothing, _) -> pure $ T.AsErrorResp $ "Can't establish connection. Client node " +| D.formatAddress fromAddr |+ " not found."
+            (fromNodeRt, toNodeRt) -> do
+                -- atomically $ putTMVar (control ^. RLens.response) controlResp
+                -- atomically $ putTMVar registry nodes
+                pure $ T.AsConnectionEstablished
+        atomically $ putTMVar (control ^. RLens.response) controlResp
 
 createControl :: IO T.Control
 createControl = T.Control <$> newEmptyTMVarIO <*> newEmptyTMVarIO

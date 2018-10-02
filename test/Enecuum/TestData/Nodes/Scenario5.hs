@@ -42,14 +42,14 @@ pongServerAddress = D.Address "0.0.1.4" pongServerPort
 pingClientAddress = D.Address "0.0.1.5" 2000
 
 pingHandle :: D.StateVar Int -> Ping -> D.NetworkConnection -> L.NodeL ()
-pingHandle countVar p@(Ping i) conn = do
-    L.logInfo $ show p
+pingHandle countVar (Ping i) conn = do
+    L.logInfo $ show $ Ping i
     L.evalNetworking $ L.send conn $ Pong i
     L.atomically $ L.writeVar countVar i
 
 pongHandle :: D.StateVar Int -> Pong -> D.NetworkConnection -> L.NodeL ()
-pongHandle countVar p@(Pong i) conn = do
-    L.logInfo $ show p
+pongHandle countVar (Pong i) conn = do
+    L.logInfo $ show $ Pong i
     L.evalNetworking $ L.send conn $ Ping $ i + 1
     L.atomically $ L.writeVar countVar $ i + 1
 
@@ -61,7 +61,7 @@ pongServingNode = do
     L.servingMsg pongServerPort $ L.handler $ pingHandle countVar
 
     L.scenario $ L.atomically $ do
-        pings <- L.readVar $ countVar
+        pings <- L.readVar countVar
         when (pings < 10) L.retry
 
     L.stopServing pongServerPort
@@ -70,7 +70,7 @@ pingSendingClientNode :: L.NodeDefinitionL ()
 pingSendingClientNode = L.scenario $ do
     countVar <- L.atomically $ L.newVar 0
 
-    conn <- L.openConnection pongServerAddress $ L.handler $ pongHandle countVar
+    conn <- L.open pongServerAddress $ L.handler $ pongHandle countVar
 
     L.evalNetworking $ L.send conn $ Ping 0
 
@@ -78,5 +78,5 @@ pingSendingClientNode = L.scenario $ do
         pongs <- L.readVar countVar
         when (pongs < 10) L.retry
 
-    L.closeConnection conn
+    L.close conn
 

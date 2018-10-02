@@ -19,11 +19,17 @@ data ControlRequest
     , _to      :: D.Address     -- ^ To node
     , _request :: D.RpcRequest  -- ^ RPC request to relay
     }
+  | EstablishConnectionReq      -- ^ Make connection of client-server type.
+    { _from    :: D.Address     -- ^ From node
+    , _to      :: D.Address     -- ^ To node
+    }
+  deriving (Show)
 
 -- | Result of evaluation of control response.
 data ControlResponse
   = AsRpcResp D.RpcResponse   -- ^ RPC response wrapped into the control response.
   | AsErrorResp Text          -- ^ Keeps an error that occured during the ControlRequest evaluation.
+  | AsConnectionEstablished   -- ^ Connection result.
 
 -- | Control is the way to evaluate admin control over a node.
 -- Represents the MVar Reqeust-Response pattern (STM version).
@@ -53,6 +59,7 @@ data NodeRuntime = NodeRuntime
   , _address        :: D.Address          -- ^ Address of this node.
   , _tag            :: TVar D.NodeTag         -- ^ Tag of this node.
   , _rpcServer      :: TMVar RpcServerHandle  -- ^ RPC server of this node.
+  -- , _connections    :: TMVar (Map.Map Int Int)
   , _graph          :: TG.TestGraphVar        -- ^ Graph
   , _varCounter     :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
   , _state          :: NodeState              -- ^ State of node.
