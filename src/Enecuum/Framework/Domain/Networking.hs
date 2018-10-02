@@ -13,11 +13,14 @@ import           Data.Aeson
 data NetworkConnection where
   NetworkConnection :: TMVar (TChan Comand) -> NetworkConnection
 
+type RawData = LByteString
+
 data Comand where
   Close       :: Comand
-  Send        :: LByteString -> Comand
+  Send        :: RawData -> Comand
 
 newtype ServerHandle = ServerHandle (TChan ServerComand)
+
 
 -- | Node address (like IP)
 data Address = Address

@@ -41,7 +41,7 @@ startServer port handlers = do
 stopServer :: ServerHandle -> STM ()
 stopServer chan = writeTChan chan StopServer
 
--- | Open new connect to adress
+-- | Open new connect to address
 openConnect :: D.Address -> Handlers -> IO D.NetworkConnection
 openConnect (D.Address ip port) handlers = do
     conn <- D.NetworkConnection <$> atomically (newTMVar =<< newTChan) 

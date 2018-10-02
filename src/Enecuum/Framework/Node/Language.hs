@@ -28,7 +28,7 @@ data NodeF next where
   -- | Stop the node evaluation
   StopNode :: (() -> next) -> NodeF next
   -- | Open connection to the node.
-  OpenConnection :: D.Address -> MsgHandlerL NodeL () -> (D.NetworkConnection -> next) -> NodeF  next
+  OpenConnection :: D.Address -> MsgHandlerL NodeL () -> (D.NetworkConnection -> next) -> NodeF next
   -- | Close existing connection.
   CloseConnection :: D.NetworkConnection -> (() -> next) -> NodeF  next
 

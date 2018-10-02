@@ -58,7 +58,7 @@ setupLogger (T.LoggerConfig format level logFileName isConsoleLog) = do
   -- root Log
   updateGlobalLogger rootLoggerName (setLevel DEBUG . setHandlers [logHandler])
 
-  let handlers = if isConsoleLog == True then [stdoutLog] else []
+  let handlers = if isConsoleLog then [stdoutLog] else []
 
   updateGlobalLogger component (setLevel DEBUG . setHandlers handlers)
 
