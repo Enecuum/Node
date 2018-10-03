@@ -1,46 +1,65 @@
+
+{-# LANGUAGE TemplateHaskell #-}
+
 module Enecuum.TestData.TestGraph where
 
 import Enecuum.Prelude
 
 import qualified Data.HGraph.THGraph     as G
-import           Data.HGraph.StringHashable (StringHash, toHash)
+import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
+import           Control.Lens.TH (makeLenses)
+
+import qualified Data.ByteString.Base64  as Base64
+import qualified Data.Serialize          as S
+import qualified Crypto.Hash.SHA256      as SHA
 
 import qualified Enecuum.Language as L
 import qualified Enecuum.Domain as D
 import           Enecuum.Core.HGraph.Interpreters.IO (runHGraphIO)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 
--- type TestGraphVar = TVar (G.THGraph D.Node)
--- type TestGraphL a = L.HGraphL D.Node a
+data Transaction = Transaction
+    { _prevHash    :: StringHash
+    , _change      :: Int
+    }
+  deriving ( Generic, Show, Eq, Ord, Read)  
 
+instance Serialize Transaction
+instance StringHashable Transaction where
+    toHash = StringHash . Base64.encode . SHA.hash . S.encode
 
--- -- nilHash :: StringHash
--- -- nilHash = toHash (D.Transaction (toHash @Int 0) 0)
+makeLenses ''Transaction
 
--- -- nilTransaction :: D.Transaction
--- -- nilTransaction = D.Transaction nilHash 0
+type TestGraphVar = TVar (G.THGraph Transaction)
+type TestGraphL a = L.HGraphL Transaction a
 
--- -- nilTransactionHash :: D.StringHash
--- -- nilTransactionHash = D.toHash nilTransaction
+nilHash :: StringHash
+nilHash = toHash (Transaction (toHash @Int 0) 0)
 
--- initTestGraph :: IO TestGraphVar
--- initTestGraph = do
---     graph <- initHGraph
---     runHGraphIO graph $ L.newNode D.nilTransaction
---     pure graph
+nilTransaction :: Transaction
+nilTransaction = Transaction nilHash 0
 
--- -- | Checks if new balance is valid and adds new transaction node.
--- -- Returns new node hash and new balance.
--- tryAddTransaction'
---   :: D.StringHash
---   -> D.Balance
---   -> D.BalanceChange
---   -> TestGraphL (Maybe (D.StringHash, D.Balance))
--- tryAddTransaction' lastNodeHash lastBalance change
---   | lastBalance + change < 0 = pure Nothing
---   | otherwise = do
---       let newTrans = D.Transaction lastNodeHash change
---       let newTransHash = D.toHash newTrans
---       L.newNode newTrans
---       L.newLink lastNodeHash newTransHash
---       pure $ Just (newTransHash, lastBalance + change)
+nilTransactionHash :: D.StringHash
+nilTransactionHash = D.toHash nilTransaction
+
+initTestGraph :: IO TestGraphVar
+initTestGraph = do
+    graph <- initHGraph
+    runHGraphIO graph $ L.newNode nilTransaction
+    pure graph
+
+-- | Checks if new balance is valid and adds new transaction node.
+-- Returns new node hash and new balance.
+tryAddTransaction'
+  :: D.StringHash
+  -> D.Balance
+  -> D.BalanceChange
+  -> TestGraphL (Maybe (D.StringHash, D.Balance))
+tryAddTransaction' lastNodeHash lastBalance change
+  | lastBalance + change < 0 = pure Nothing
+  | otherwise = do
+      let newTrans = Transaction lastNodeHash change
+      let newTransHash = D.toHash newTrans
+      L.newNode newTrans
+      L.newLink lastNodeHash newTransHash
+      pure $ Just (newTransHash, lastBalance + change)
