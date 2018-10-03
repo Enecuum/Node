@@ -19,19 +19,20 @@ import qualified Crypto.Hash.SHA256      as SHA
 import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
 
 
-data Node = NodeBlock D.KBlock | NodeTransaction D.Transaction deriving (Generic)
-instance S.Serialize Node
-instance StringHashable Node where
+
+instance S.Serialize NodeContent
+instance StringHashable NodeContent where
   toHash = StringHash . Base64.encode . SHA.hash . S.encode
 
-type GraphVar = TVar (G.THGraph Node)
-type GraphL a = L.HGraphL Node a
+data NodeContent = NodeBlock D.KBlock | NodeTransaction D.Transaction deriving (Generic)  
+type GraphVar = TVar (G.THGraph NodeContent)
+type GraphL a = L.HGraphL NodeContent a
 
 
 nilHashTransaction :: StringHash
 nilHashTransaction = toHash $ NodeTransaction $ D.dummyTx
 
-nilTransaction :: Node
+nilTransaction :: NodeContent
 nilTransaction = NodeTransaction $ D.dummyTx
 
 nilTransactionHash :: D.StringHash

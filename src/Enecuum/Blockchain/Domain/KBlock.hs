@@ -26,8 +26,6 @@ data KBlock = Block
 
 instance S.Serialize KBlock
 
--- instance StringHashable KBlock where
---     toHash = StringHash . Base64.encode . SHA.hash . S.encode
 
 instance ToJSON StringHash where
   toJSON h = undefined  
