@@ -16,7 +16,9 @@ import qualified Enecuum.Framework.Lens as Lens
 
 import qualified Enecuum.Testing.RLens as RLens
 import qualified Enecuum.Testing.Types as T
-import           Enecuum.Core.HGraph.Interpreters.STM
+import           Enecuum.Core.HGraph.Interpreters.STM (runHGraphSTM)
+
+
 newtype VarNumber = VarNumber Int
 
 instance StringHashable VarNumber where
@@ -66,8 +68,8 @@ interpretStateL nodeRt (L.WriteVar var val next) =
 
 interpretStateL _ L.Retry = retry
 
-interpretStateL _ (L.EvalGraph (L.GraphAction stmRunner _ act) next) = do
-  next <$> stmRunner act
+interpretStateL _ (L.EvalGraph gr act next) = do
+  next <$> runHGraphSTM gr act
 
 -- | Runs state model as STM.
 runStateL :: T.NodeRuntime -> L.StateL a -> STM a

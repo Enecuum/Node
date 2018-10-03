@@ -12,6 +12,7 @@ import qualified Enecuum.Testing.Types                             as T
 import qualified Enecuum.Testing.Core.Interpreters                 as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.Networking as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.State      as Impl
+import           Enecuum.Core.HGraph.Interpreters.IO               (runHGraphIO)
 
 -- | Establish connection with the server through test environment.
 -- TODO: check if connection exists.
@@ -50,8 +51,8 @@ interpretNodeL :: T.NodeRuntime -> L.NodeF a -> IO a
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
   next <$> (atomically $ Impl.runStateL nodeRt statefulAction)
 
-interpretNodeL nodeRt (L.EvalGraphIO (L.GraphAction _ ioRunner act) next) =
-  next <$> ioRunner act
+interpretNodeL nodeRt (L.EvalGraphIO gr act next) =
+  next <$> runHGraphIO gr act
 
 interpretNodeL nodeRt (L.EvalNetworking networkingAction next) =
   next <$> Impl.runNetworkingL nodeRt networkingAction
