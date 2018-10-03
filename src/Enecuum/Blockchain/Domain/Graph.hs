@@ -7,6 +7,7 @@ import Enecuum.Prelude
 import qualified Data.HGraph.THGraph     as G
 import           Data.HGraph.StringHashable (StringHash, toHash)
 
+import qualified Enecuum.Core.HGraph.Internal.Types as T
 import qualified Enecuum.Language as L
 import qualified Enecuum.Core.Types as D
 import qualified Enecuum.Blockchain.Domain.Microblock as D
@@ -32,7 +33,7 @@ instance StringHashable NodeContent where
 
 type GraphVar = TVar (G.THGraph NodeContent)
 type GraphL a = L.HGraphL NodeContent a
-
+type GraphNode = T.TNodeL NodeContent
 
 genesisHash :: StringHash
 genesisHash = toHash $ KBlockContent genesisKBlock
