@@ -17,23 +17,33 @@ import qualified Data.Serialize          as S
 import qualified Data.ByteString.Base64  as Base64
 import qualified Crypto.Hash.SHA256      as SHA
 import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
+import              Enecuum.Legacy.Service.Types
+    (   Microblock(..)
+    ,   KeyBlockInfoPoW(..)
+    )
 
+type MBlock     = Microblock
 
+data NodeContent
+  = KBlockContent D.KBlock
+  | TransContent D.Transaction
+  | MBlockContent MBlock
+  deriving (Generic)
 
 instance S.Serialize NodeContent
 instance StringHashable NodeContent where
   toHash = StringHash . Base64.encode . SHA.hash . S.encode
 
-data NodeContent = NodeBlock D.KBlock | NodeTransaction D.Transaction deriving (Generic)  
+
 type GraphVar = TVar (G.THGraph NodeContent)
 type GraphL a = L.HGraphL NodeContent a
 
 
 nilHashTransaction :: StringHash
-nilHashTransaction = toHash $ NodeTransaction $ D.dummyTx
+nilHashTransaction = toHash $ TransContent $ D.dummyTx
 
 nilTransaction :: NodeContent
-nilTransaction = NodeTransaction $ D.dummyTx
+nilTransaction = TransContent $ D.dummyTx
 
 nilTransactionHash :: D.StringHash
 nilTransactionHash = D.toHash nilTransaction
@@ -55,14 +65,14 @@ tryAddTransaction'
 tryAddTransaction' lastNodeHash lastBalance change
   | lastBalance + change < 0 = pure Nothing
   | otherwise = do
-      let newTransaction = NodeTransaction $ D.dummyTx { 
+      let newTransaction = TransContent $ D.dummyTx {
           D._prevHash = lastNodeHash
         , D._change = change
-        }  
+        }
       let newTransHash = D.toHash newTransaction
       L.newNode $ newTransaction
       L.newLink lastNodeHash newTransHash
       pure $ Just (newTransHash, lastBalance + change)
 
--- | Checks if new KBlock has right previous hash.      
--- tryAddKBlock      
+-- | Checks if new KBlock has right previous hash.
+-- tryAddKBlock

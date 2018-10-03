@@ -11,12 +11,16 @@ import qualified Crypto.Hash.SHA256      as SHA
 import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
 import qualified Data.ByteString.Char8                             as BS
 import           Prelude (String)
--- import  Enecuum.Legacy.Refact.Crypto.SerializeJSON
+-- import              Enecuum.Legacy.Service.Types
+--     ,   KeyBlockInfo(..)
+--     )
+
 
 -- This data structure is for tests of graph incorporation only.
 -- Please, replace it by actual blockchain data.
-type KBlockID = Int
+-- data KBlock = KeyBlockInfoPoW
 
+type KBlockID = Int
 data KBlock = Block
     {
       _id        :: KBlockID
@@ -28,10 +32,9 @@ instance S.Serialize KBlock
 
 
 instance ToJSON StringHash where
-  toJSON h = undefined  
+  toJSON h = undefined
   -- toJSON h = StringHash $ toJSON h
 
 instance FromJSON StringHash where
   parseJSON b =  undefined
   -- parseJSON b = parseJSON (StringHash b)
-

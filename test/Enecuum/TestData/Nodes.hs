@@ -102,8 +102,8 @@ calculateBalanceTraversing
 calculateBalanceTraversing curNodeHash curBalance =
   L.getNode curNodeHash >>= \case
     Nothing -> error "Invalid reference found."
-    Just (D.NodeBlock _) -> error "Reference to kblock and to transaction found."
-    Just (D.NodeTransaction curNode) -> do
+    Just (D.KBlockContent _) -> error "Reference to kblock and to transaction found."
+    Just (D.TransContent curNode) -> do
       let balanceChange = (D.fromContent $ curNode ^. Lens.content) ^. Lens.change
       case Map.toList (curNode ^. Lens.links) of
         []                  -> pure $ curBalance + balanceChange
@@ -118,8 +118,8 @@ tryAddTransactionTraversing
 tryAddTransactionTraversing curNodeHash prevBalance change =
   L.getNode curNodeHash >>= \case
     Nothing -> error "Invalid reference found."
-    Just (D.NodeBlock _) ->  error "Reference to kblock and to transaction found."
-    Just (D.NodeTransaction curNode) -> do
+    Just (D.KBlockContent _) ->  error "Reference to kblock and to transaction found."
+    Just (D.TransContent curNode) -> do
       let curBalanceChange = (D.fromContent $ curNode ^. Lens.content) ^. Lens.change
       let curBalance = prevBalance + curBalanceChange
       case Map.toList (curNode ^. Lens.links) of
@@ -148,11 +148,11 @@ acceptBalanceChangeTraversing nodeData (BalanceChangeRequest change) = do
     Just (D.StringHash _, balance) -> pure $ BalanceChangeResponse $ Just balance
 
 newtorkNode1Initialization :: D.GraphVar -> L.NodeL NetworkNode1Data
-newtorkNode1Initialization g = 
+newtorkNode1Initialization g =
   L.evalGraphIO g $ L.getNode D.nilTransactionHash >>= \case
     Nothing -> error "Graph is not ready: no genesis node found."
-    Just (D.NodeBlock _) -> error "Reference to kblock and to transaction found."
-    Just (D.NodeTransaction baseNode) -> pure $ NetworkNode1Data g baseNode
+    Just (D.KBlockContent _) -> error "Reference to kblock and to transaction found."
+    Just (D.TransContent baseNode) -> pure $ NetworkNode1Data g baseNode
 
 networkNode1 :: D.GraphVar -> L.NodeDefinitionL ()
 networkNode1 g = do
@@ -251,8 +251,8 @@ newtorkNode3Initialization :: D.GraphVar -> L.NodeL NetworkNode3Data
 newtorkNode3Initialization g = do
   baseNode <- L.evalGraphIO g $ L.getNode D.nilTransactionHash >>= \case
     Nothing -> error "Graph is not ready: no genesis node found."
-    Just (D.NodeBlock _) -> error "Reference to kblock and to transaction found."
-    Just (D.NodeTransaction baseNode) -> pure baseNode
+    Just (D.KBlockContent _) -> error "Reference to kblock and to transaction found."
+    Just (D.TransContent baseNode) -> pure baseNode
   balanceVar   <- L.atomically $ L.newVar 0
   graphHeadVar <- L.atomically $ L.newVar $ baseNode ^. Lens.hash
   pure $ NetworkNode3Data g graphHeadVar balanceVar
