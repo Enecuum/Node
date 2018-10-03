@@ -5,10 +5,8 @@ module Enecuum.Testing.Framework.Interpreters.State where
 import Enecuum.Prelude
 
 import qualified Crypto.Hash.SHA256         as SHA
-import qualified Data.Aeson                 as A
 import qualified Data.ByteString.Base64     as Base64
 import qualified Data.Map                   as Map
-import qualified Data.Serialize             as S
 import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
 import           Unsafe.Coerce              (unsafeCoerce)
 
@@ -18,7 +16,7 @@ import qualified Enecuum.Framework.Lens as Lens
 
 import qualified Enecuum.Testing.RLens as RLens
 import qualified Enecuum.Testing.Types as T
-
+import           Enecuum.Core.HGraph.Interpreters.STM
 newtype VarNumber = VarNumber Int
 
 instance StringHashable VarNumber where
@@ -66,8 +64,8 @@ interpretStateL nodeRt (L.ReadVar var next) =
 interpretStateL nodeRt (L.WriteVar var val next) =
   next <$> writeVar' nodeRt var val
 
-interpretStateL nodeRt (L.EvalGraph (L.GraphAction stmRunner _ act) next) = do
-  next <$> stmRunner act
+interpretStateL nodeRt (L.EvalGraph gr act next) = do
+  next <$> runHGraphSTM gr act
 
 -- | Runs state model as STM.
 runStateL :: T.NodeRuntime -> L.StateL a -> STM a

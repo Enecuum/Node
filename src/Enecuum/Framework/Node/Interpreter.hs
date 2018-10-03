@@ -16,13 +16,15 @@ import           Enecuum.Framework.Networking.Internal.Internal  as I
 import           Enecuum.Framework.MsgHandler.Interpreter
 import qualified Data.Map                                 as M
 import qualified Enecuum.Framework.Domain.Networking as D
+import           Enecuum.Core.HGraph.Interpreters.IO
+import           Enecuum.Core.HGraph.Internal.Impl
 -- | Interpret NodeL.
 interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
     next <$> (atomically $ Impl.runStateL nodeRt statefulAction)
 
-interpretNodeL _ (L.EvalGraphIO (L.GraphAction _ ioRunner act) next) =
-  next <$> ioRunner act
+interpretNodeL _ (L.EvalGraphIO gr act next) =
+  next <$> runHGraphIO gr act
 
 interpretNodeL nodeRt (L.EvalNetworking networking next) =
     next <$> Impl.runNetworkingL nodeRt networking
@@ -49,6 +51,9 @@ interpretNodeL nodeRt (L.CloseConnection (D.NetworkConnection addr) next) = do
             I.close con
             modifyTVar (nodeRt ^. RLens.connects) $ M.delete addr
     return $ next ()
+
+interpretNodeL _ (L.NewGraph next) =
+    next <$> initHGraph 
 
 insertConnect :: TVar (Map D.Address D.ConnectionImplementation) -> D.Address -> D.ConnectionImplementation -> IO ()
 insertConnect m addr newCon = atomically $ do

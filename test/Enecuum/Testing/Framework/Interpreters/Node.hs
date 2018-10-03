@@ -10,14 +10,16 @@ import qualified Enecuum.Testing.Core.Interpreters                 as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.Networking as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.State      as Impl
 
+import           Enecuum.Core.HGraph.Internal.Impl
+import           Enecuum.Core.HGraph.Interpreters.IO 
 -- | Interpret NodeL.
 interpretNodeL :: T.NodeRuntime -> L.NodeF a -> IO a
 
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) = do
   next <$> (atomically $ Impl.runStateL nodeRt statefulAction)
 
-interpretNodeL nodeRt (L.EvalGraphIO (L.GraphAction _ ioRunner act) next) = do
-  next <$> ioRunner act
+interpretNodeL nodeRt (L.EvalGraphIO gr act next) = do
+  next <$> runHGraphIO gr act
 
 interpretNodeL nodeRt (L.EvalNetworking networkingAction next) =
   next <$> Impl.runNetworkingL nodeRt networkingAction
@@ -30,6 +32,7 @@ interpretNodeL nodeRt (L.OpenConnection addr handlers next) = do
   -- pure $ next $ Just $ D.NetworkConnection $ TestConnection
     -- rt $ Connection (nodeRt ^. RLens.address) (cfg ^. Lens.address)
   error "OpenConnection not implemented."
+interpretNodeL _ (L.NewGraph next) = next <$> initHGraph 
 
 interpretNodeL nodeRt (L.CloseConnection _ next) =
   -- pure $ next ()

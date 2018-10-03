@@ -2,7 +2,6 @@ module Enecuum.TestData.TestGraph where
 
 import Enecuum.Prelude
 
-import qualified Data.HGraph.THGraph     as G
 import           Data.HGraph.StringHashable (StringHash, toHash)
 
 import qualified Enecuum.Language as L
@@ -10,7 +9,7 @@ import qualified Enecuum.Domain as D
 import           Enecuum.Core.HGraph.Interpreters.IO (runHGraphIO)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 
-type TestGraphVar = TVar (G.THGraph D.Transaction)
+type TestGraphVar = D.TGraph D.Transaction
 type TestGraphL a = L.HGraphL D.Transaction a
 
 nilHash :: StringHash

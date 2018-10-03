@@ -4,7 +4,6 @@ import           Enecuum.Prelude
 
 import           Control.Concurrent.STM.TChan
 import qualified Data.Map            as Map
-import           Data.HGraph.THGraph (THGraph)
 
 import           Enecuum.Core.Runtime (CoreRuntime)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
@@ -18,7 +17,7 @@ type NodeState = TMVar (Map.Map D.VarId VarHandle)
 
 data NodeRuntime = NodeRuntime
     { _coreRuntime  :: CoreRuntime
-    , _graph        :: TVar (THGraph D.Transaction)
+    , _graph        :: D.TGraph D.Transaction
     , _servers      :: TVar (Map PortNumber (TChan ServerComand))
     , _varCounter   :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
     , _state        :: NodeState              -- ^ State of node.

@@ -38,7 +38,7 @@ import              Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 
 type MBlock     = Microblock
 type KBlock     = KeyBlockInfoPoW
-type BGraph     = TVar      (THGraph    NodeContent)
+type BGraph     = TGraph NodeContent
 type BGraphDSL  = HGraphF   (TNodeL   NodeContent)
 type TRef       = HNodeRef  (TNodeL   NodeContent)
 
