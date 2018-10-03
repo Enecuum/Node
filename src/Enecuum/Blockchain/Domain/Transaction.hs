@@ -15,7 +15,7 @@ import qualified Enecuum.Legacy.Service.Types as Legacy
 -- This data structure is for tests of graph incorporation only.
 -- Please, replace it by actual blockchain data.
 
-type TransactionID = Int
+-- type TransactionID = Int
 
 data Transaction = Transaction
     { _prevHash    :: StringHash

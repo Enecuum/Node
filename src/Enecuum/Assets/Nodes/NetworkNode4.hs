@@ -63,7 +63,7 @@ networkNode4Scenario nodeData = do
 
 newtorkNode4Initialization :: L.NodeL NetworkNodeChainData
 newtorkNode4Initialization = do
-  let blocks = map (\i -> D.Block i (D.toHash i)) [1..5]
+  let blocks = D.generateKBlocks  5 
   chainLengthVar'   <- L.atomically $ L.newVar blocks 
   pure $ NetworkNodeChainData chainLengthVar'
 

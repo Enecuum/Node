@@ -17,12 +17,7 @@ import qualified Data.Serialize          as S
 import qualified Data.ByteString.Base64  as Base64
 import qualified Crypto.Hash.SHA256      as SHA
 import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
-import              Enecuum.Legacy.Service.Types
-    (   Microblock(..)
-    ,   KeyBlockInfoPoW(..)
-    )
-
-type MBlock     = Microblock
+import Enecuum.Blockchain.Domain.Microblock (MBlock)
 
 data NodeContent
   = KBlockContent D.KBlock
@@ -31,6 +26,7 @@ data NodeContent
   deriving (Generic)
 
 instance S.Serialize NodeContent
+
 instance StringHashable NodeContent where
   toHash = StringHash . Base64.encode . SHA.hash . S.encode
 

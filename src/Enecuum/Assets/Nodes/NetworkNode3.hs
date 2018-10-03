@@ -40,7 +40,7 @@ acceptChainFrom nodeData (GetChainFromRequest from) =
 
 newtorkNode3Initialization :: L.NodeL NetworkNodeChainData
 newtorkNode3Initialization = do
-  let blocks = map (\i -> D.Block i (D.toHash i)) [1..15]  
+  let blocks = D.generateKBlocks 15 
   chainVar'   <- L.atomically $ L.newVar blocks
   pure $ NetworkNodeChainData chainVar'
 
