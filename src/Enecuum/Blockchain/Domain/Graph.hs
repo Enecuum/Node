@@ -9,6 +9,7 @@ import           Data.HGraph.StringHashable (StringHash, toHash)
 
 import qualified Enecuum.Language as L
 import qualified Enecuum.Core.Types as D
+import qualified Enecuum.Blockchain.Domain.Microblock as D
 import qualified Enecuum.Blockchain.Domain.Transaction as D
 import qualified Enecuum.Blockchain.Domain.KBlock as D
 import           Enecuum.Core.HGraph.Interpreters.IO (runHGraphIO)
@@ -17,12 +18,10 @@ import qualified Data.Serialize          as S
 import qualified Data.ByteString.Base64  as Base64
 import qualified Crypto.Hash.SHA256      as SHA
 import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
-import Enecuum.Blockchain.Domain.Microblock (MBlock)
 
 data NodeContent
   = KBlockContent D.KBlock
-  | TransContent D.Transaction
-  | MBlockContent MBlock
+  | MBlockContent D.Microblock
   deriving (Generic)
 
 instance S.Serialize NodeContent
@@ -35,40 +34,20 @@ type GraphVar = TVar (G.THGraph NodeContent)
 type GraphL a = L.HGraphL NodeContent a
 
 
-nilHashTransaction :: StringHash
-nilHashTransaction = toHash $ TransContent $ D.dummyTx
+genesisHash :: StringHash
+genesisHash = toHash $ KBlockContent genesisKBlock
 
-nilTransaction :: NodeContent
-nilTransaction = TransContent $ D.dummyTx
-
-nilTransactionHash :: D.StringHash
-nilTransactionHash = D.toHash nilTransaction
+genesisKBlock :: D.KBlock
+genesisKBlock = D.KBlock
+    { D._prevHash   = toHash (0 :: Int)
+    , D._number     = 0
+    , D._nonce      = 0
+    , D._solver     = toHash (0 :: Int)
+    }
 
 initGraph :: IO GraphVar
 initGraph = do
     graph <- initHGraph
-    runHGraphIO graph $ L.newNode nilTransaction
+    runHGraphIO graph $ L.newNode $ KBlockContent genesisKBlock
     pure graph
 
-
--- | Checks if new balance is valid and adds new transaction node.
--- Returns new node hash and new balance.
-tryAddTransaction'
-  :: D.StringHash
-  -> D.Balance
-  -> D.BalanceChange
-  -> GraphL (Maybe (D.StringHash, D.Balance))
-tryAddTransaction' lastNodeHash lastBalance change
-  | lastBalance + change < 0 = pure Nothing
-  | otherwise = do
-      let newTransaction = TransContent $ D.dummyTx {
-          D._prevHash = lastNodeHash
-        , D._change = change
-        }
-      let newTransHash = D.toHash newTransaction
-      L.newNode $ newTransaction
-      L.newLink lastNodeHash newTransHash
-      pure $ Just (newTransHash, lastBalance + change)
-
--- | Checks if new KBlock has right previous hash.
--- tryAddKBlock

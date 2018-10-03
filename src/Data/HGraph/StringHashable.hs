@@ -1,10 +1,12 @@
+{-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE NoImplicitPrelude          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Data.HGraph.StringHashable where
 
-import           Universum
+import           Enecuum.Prelude
 import           Data.Serialize
+import qualified Data.Aeson as A
 
 newtype StringHash = StringHash ByteString
     deriving (Eq, Ord, Serialize, Show, Read, Generic)
@@ -35,3 +37,16 @@ instance StringHashable StringHash where
 
 fromStringHash :: StringHash -> ByteString
 fromStringHash (StringHash sh) = sh
+
+
+data StringHashSerializable = StringHashSerializable
+   { bytes :: Text
+   }
+  deriving (Generic, ToJSON, FromJSON)
+
+instance ToJSON StringHash where
+    toJSON (StringHash bytes) = toJSON $ StringHashSerializable $ show bytes
+
+instance FromJSON StringHash where
+    parseJSON obj = undefined
+        

@@ -47,9 +47,5 @@ initialize config = do
 dispatchScenario :: Config -> NodeRuntime -> ScenarioNode -> IO ()
 dispatchScenario config nodeRt (ScenarioNode BootNode _ _) = runNodeDefinitionL nodeRt $ S.bootNode config
 dispatchScenario config nodeRt (ScenarioNode MasterNode _ _) = runNodeDefinitionL nodeRt $ S.masterNode config
-dispatchScenario _ nodeRt (ScenarioNode NetworkNode LedgerBalance Respondent) = do
-    graph <- TG.initGraph
-    runNodeDefinitionL nodeRt $ S.networkNode2 graph
-dispatchScenario _ nodeRt (ScenarioNode NetworkNode LedgerBalance Interviewer) = runNodeDefinitionL nodeRt S.networkNode1
 dispatchScenario _ nodeRt (ScenarioNode NetworkNode Sync Respondent)  = runNodeDefinitionL nodeRt S.networkNode3
 dispatchScenario _ nodeRt (ScenarioNode NetworkNode Sync Interviewer) = runNodeDefinitionL nodeRt $ S.networkNode4

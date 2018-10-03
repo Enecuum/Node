@@ -12,6 +12,6 @@ generateKBlocks n = undefined
 generateTransactions :: Int -> [Transaction]
 generateTransactions n = undefined  
 
-generateMicroblocks :: Int -> [MBlock]
+generateMicroblocks :: Int -> [Microblock]
 generateMicroblocks n = undefined
 

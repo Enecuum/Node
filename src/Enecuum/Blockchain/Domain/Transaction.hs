@@ -18,15 +18,9 @@ import qualified Enecuum.Legacy.Service.Types as Legacy
 -- type TransactionID = Int
 
 data Transaction = Transaction
-    { _prevHash    :: StringHash
-    , _change      :: Int
-    , _owner     :: Legacy.PublicKey
-    , _receiver  :: Legacy.PublicKey
-    -- , _amount    :: Legacy.Amount
-    , _currency  :: Legacy.Currency
-    , _timestamp :: Maybe Legacy.Time
-    , _signature :: Maybe Legacy.Signature
-    -- , _uuid      :: Int    
+    { _owner     :: Int
+    , _receiver  :: Int
+    , _amount    :: Int
     }
   deriving ( Generic, Show, Eq, Ord, Read)  
 
@@ -40,12 +34,8 @@ type Balance = Int
 type BalanceChange = Int
 
 
-dummyTx = Transaction { 
-  _prevHash  = toHash @Int 0
-, _change    = 0
-, _owner     = (1 :: Legacy.PublicKey)
-, _receiver  = (2 :: Legacy.PublicKey)
-, _currency  = Legacy.ENQ
-, _timestamp = Nothing
-, _signature = Nothing
-}
+dummyTx = Transaction
+    { _amount    = 0
+    , _owner     = 1
+    , _receiver  = 2
+    }
