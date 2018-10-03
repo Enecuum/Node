@@ -10,28 +10,24 @@ import           Enecuum.Prelude
 import           Network.Socket
 import           Control.Concurrent.STM.TChan
 
+
 data ServerComand = StopServer
 
 -- | Run TCP server.
 runServer :: TChan ServerComand -> PortNumber -> (Socket -> IO()) -> IO ()
-runServer chan port handler = void $ race 
-    (void $ atomically $ readTChan chan) $ do
-        sock <- listenOn $ PortNumber port
-        finally (forever $ do
-            (conn, _) <- accept sock
-            void $ forkFinally
-                (handler conn)
-                (\_ -> close conn))
-            
-            (close sock)
+runServer chan port handler = bracket 
+    (listenOn $ PortNumber port)
+    close
+    (\sock -> finally 
+        (void $ race
+            (void $ atomically $ readTChan chan)
+            (acceptConnects sock handler))
+        (close sock))
 
-listenPort :: Show a => a -> IO Socket
-listenPort port = do
-    serveraddr <- head <$> getAddrInfo
-        (Just (defaultHints {addrFlags = [AI_PASSIVE]}))
-        Nothing 
-        (Just $ show port)
-    sock <- socket (addrFamily serveraddr) Stream defaultProtocol
-    bind sock (addrAddress serveraddr)
-    listen sock 5
-    return sock
+
+acceptConnects :: forall a b. Socket -> (Socket -> IO a) -> IO b
+acceptConnects sock handler = forever $ do
+    (conn, _) <- accept sock
+    void $ forkFinally
+        (handler conn)
+        (\_ -> close conn)
