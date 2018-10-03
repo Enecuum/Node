@@ -13,7 +13,7 @@ import qualified Enecuum.Blockchain.Domain.Transaction as D
 import           Enecuum.Core.HGraph.Interpreters.IO (runHGraphIO)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 
-type GraphVar = TVar (G.THGraph D.Transaction)
+type GraphVar = D.TGraph D.Transaction
 type GraphL a = L.HGraphL D.Transaction a
 
 nilHash :: StringHash
