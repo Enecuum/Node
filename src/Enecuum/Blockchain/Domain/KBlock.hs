@@ -9,19 +9,31 @@ import qualified Data.Serialize          as S
 import qualified Crypto.Hash.SHA256      as SHA
 
 import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
+import qualified Data.ByteString.Char8                             as BS
+import           Prelude (String)
+-- import  Enecuum.Legacy.Refact.Crypto.SerializeJSON
 
 -- This data structure is for tests of graph incorporation only.
 -- Please, replace it by actual blockchain data.
-
 type KBlockID = Int
 
 data KBlock = Block
     {
       _id        :: KBlockID
+    , _prevKBlockHash  :: StringHash
     }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
 instance S.Serialize KBlock
 
-instance StringHashable KBlock where
-    toHash = StringHash . Base64.encode . SHA.hash . S.encode
+-- instance StringHashable KBlock where
+--     toHash = StringHash . Base64.encode . SHA.hash . S.encode
+
+instance ToJSON StringHash where
+  toJSON h = undefined  
+  -- toJSON h = StringHash $ toJSON h
+
+instance FromJSON StringHash where
+  parseJSON b =  undefined
+  -- parseJSON b = parseJSON (StringHash b)
+

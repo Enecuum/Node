@@ -27,11 +27,12 @@ instance StringHashable Node where
 type GraphVar = TVar (G.THGraph Node)
 type GraphL a = L.HGraphL Node a
 
-nilHash :: StringHash
-nilHash = toHash (D.Transaction (toHash @Int 0) 0)
+
+nilHashTransaction :: StringHash
+nilHashTransaction = toHash $ NodeTransaction $ D.dummyTx
 
 nilTransaction :: Node
-nilTransaction = NodeTransaction $ D.Transaction nilHash 0
+nilTransaction = NodeTransaction $ D.dummyTx
 
 nilTransactionHash :: D.StringHash
 nilTransactionHash = D.toHash nilTransaction
@@ -53,8 +54,14 @@ tryAddTransaction'
 tryAddTransaction' lastNodeHash lastBalance change
   | lastBalance + change < 0 = pure Nothing
   | otherwise = do
-      let newTransaction = NodeTransaction $ D.Transaction lastNodeHash change
+      let newTransaction = NodeTransaction $ D.dummyTx { 
+          D._prevHash = lastNodeHash
+        , D._change = change
+        }  
       let newTransHash = D.toHash newTransaction
       L.newNode $ newTransaction
       L.newLink lastNodeHash newTransHash
       pure $ Just (newTransHash, lastBalance + change)
+
+-- | Checks if new KBlock has right previous hash.      
+-- tryAddKBlock      

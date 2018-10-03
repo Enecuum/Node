@@ -18,7 +18,7 @@ type NodeState = TMVar (Map.Map D.VarId VarHandle)
 
 data NodeRuntime = NodeRuntime
     { _coreRuntime  :: CoreRuntime
-    , _graph        :: TVar (THGraph D.Transaction)
+    , _graph        :: TVar (THGraph D.Node)
     , _servers      :: TVar (Map PortNumber (TChan ServerComand))
     , _varCounter   :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
     , _state        :: NodeState              -- ^ State of node.

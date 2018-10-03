@@ -24,6 +24,9 @@ import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Assets.Nodes.Types
 
 
+-- checkLengthAndUpdate
+--   :: HasChainVar s (D.StateVar [D.KBlock]) =>
+--      D.Address -> s -> Free L.NodeF ()
 checkLengthAndUpdate address nodeData = do
     L.logInfo $ "Network node 4: requests chain length."
     GetChainLengthResponse otherLength <- L.makeRpcRequestUnsafe address GetChainLengthRequest
@@ -33,11 +36,18 @@ checkLengthAndUpdate address nodeData = do
     curChain <- L.atomically <$> L.readVar $ nodeData ^. chainVar
     let curChainLength = length curChain
     when (curChainLength < otherLength) $ do
-      GetChainFromResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromRequest curChainLength)
-      L.atomically $ do
+      GetChainFromResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromRequest curChainLength )
+      logs <- L.atomically $ do
         updChain <- L.readVar $ nodeData ^. chainVar
-        let restChain = drop (length updChain - curChainLength) chainTail
+        let l1 = "updChain: " :: Text.Text
+        let l2 = (show updChain :: Text.Text)
+        let restChain = chainTail
+        let l3 = "restChain: " :: Text.Text
+        let l4 = (show restChain :: Text.Text)
         L.writeVar (nodeData ^. chainVar) (curChain ++ restChain)
+        let messages =  (l1 : l2 : l3 : l4 : [] ) 
+        pure messages  
+      forM_ logs L.logInfo
 
 --networkNode4Scenario :: L.NodeL ()
 networkNode4Scenario nodeData = do
@@ -53,7 +63,8 @@ networkNode4Scenario nodeData = do
 
 newtorkNode4Initialization :: L.NodeL NetworkNodeChainData
 newtorkNode4Initialization = do
-  chainLengthVar'   <- L.atomically $ L.newVar $ map D.Block [0..4]
+  let blocks = map (\i -> D.Block i (D.toHash i)) [1..5]
+  chainLengthVar'   <- L.atomically $ L.newVar blocks 
   pure $ NetworkNodeChainData chainLengthVar'
 
 networkNode4 :: L.NodeDefinitionL ()

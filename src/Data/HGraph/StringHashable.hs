@@ -7,7 +7,7 @@ import           Universum
 import           Data.Serialize
 
 newtype StringHash = StringHash ByteString
-    deriving (Eq, Ord, Serialize, Show)
+    deriving (Eq, Ord, Serialize, Show, Read, Generic)
 
 class StringHashable a where
     toHash :: a -> StringHash
