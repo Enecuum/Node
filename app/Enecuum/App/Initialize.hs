@@ -49,3 +49,4 @@ dispatchScenario config nodeRt (ScenarioNode BootNode _ _) = runNodeDefinitionL 
 dispatchScenario config nodeRt (ScenarioNode MasterNode _ _) = runNodeDefinitionL nodeRt $ S.masterNode config
 dispatchScenario _ nodeRt (ScenarioNode NetworkNode Sync Respondent)  = runNodeDefinitionL nodeRt S.networkNode3
 dispatchScenario _ nodeRt (ScenarioNode NetworkNode Sync Interviewer) = runNodeDefinitionL nodeRt $ S.networkNode4
+dispatchScenario _ nodeRt (ScenarioNode PoW SyncKblock Soly) = runNodeDefinitionL nodeRt $ S.powNode
