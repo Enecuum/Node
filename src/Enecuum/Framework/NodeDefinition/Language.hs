@@ -1,4 +1,3 @@
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE GADTs           #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -7,10 +6,10 @@ module Enecuum.Framework.NodeDefinition.Language where
 
 import           Enecuum.Prelude
 
-import qualified Enecuum.Core.Language                    as L
-import qualified Enecuum.Framework.Node.Language          as L
-import qualified Enecuum.Framework.Domain                 as D
-import           Enecuum.Framework.RpcMethod.Language     (RpcMethodL)
+import qualified Enecuum.Core.Language                as L
+import qualified Enecuum.Framework.Domain             as D
+import qualified Enecuum.Framework.Node.Language      as L
+import           Enecuum.Framework.RpcMethod.Language (RpcMethodL)
 import           Enecuum.Legacy.Service.Network.Base
 
 -- TODO: it's possible to make these steps evaluating step-by-step, in order.
@@ -68,3 +67,6 @@ stopServing port = liftF $ StopServing port id
 
 instance L.Logger (Free NodeDefinitionF) where
     logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg
+
+instance L.ERandom (Free NodeDefinitionF) where
+    getRandomInt n =  evalCoreEffectNodeDefinitionF $ L.getRandomInt n
