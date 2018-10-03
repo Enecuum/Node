@@ -43,10 +43,11 @@ errHandler _ = pure ErrResponse
 rpcServerTestOk :: Test
 rpcServerTestOk = TestCase $ do
     nr <- createNodeRuntime
-    runNodeDefinitionL nr $ L.servingRpc serverPort $ do
+    threadDelay 10000
+    runNodeDefinitionL nr $ L.serving serverPort $ do
         L.method okHandler
         L.method errHandler
-    threadDelay 5000
+    threadDelay 10000
     res <- runNodeL nr $ L.makeRpcRequest localServer OkRequest
     runNodeDefinitionL nr $ L.stopServing serverPort
     assertBool "" (res == Right OkResponse)
@@ -55,10 +56,11 @@ rpcServerTestOk = TestCase $ do
 rpcServerTestErr :: Test
 rpcServerTestErr = TestCase $ do
     nr <- createNodeRuntime
-    runNodeDefinitionL nr $ L.servingRpc serverPort $ do
+    threadDelay 10000
+    runNodeDefinitionL nr $ L.serving serverPort $ do
         L.method okHandler
         L.method errHandler
-    threadDelay 5000
+    threadDelay 10000
     res <- runNodeL nr $ L.makeRpcRequest localServer ErrRequest
     runNodeDefinitionL nr $ L.stopServing serverPort
     assertBool "" (res == Right ErrResponse)
