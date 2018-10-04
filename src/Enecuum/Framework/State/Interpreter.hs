@@ -17,6 +17,8 @@ import qualified Enecuum.Framework.RLens                                as RLens
 import qualified Data.ByteString.Base64  as Base64
 import qualified Crypto.Hash.SHA256      as SHA
 import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
+import           Enecuum.Core.HGraph.Interpreters.STM
+
 
 newtype VarNumber = VarNumber Int
 
@@ -65,8 +67,10 @@ interpretStateL nodeRt (L.ReadVar var next) =
 interpretStateL nodeRt (L.WriteVar var val next) =
   next <$> writeVar' nodeRt var val
 
-interpretStateL _ (L.EvalGraph (L.GraphAction stmRunner _ act) next) =
-  next <$> stmRunner act
+interpretStateL _ L.Retry = retry
+
+interpretStateL _ (L.EvalGraph gr act next) =
+  next <$> runHGraphSTM gr act
 
 -- | Runs state model as STM.
 runStateL :: Rt.NodeRuntime -> L.StateL a -> STM a

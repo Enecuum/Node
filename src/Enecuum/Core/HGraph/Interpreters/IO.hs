@@ -21,17 +21,16 @@ import           Universum
 import           Data.Serialize
 import           Control.Monad.Free
 
-import           Data.HGraph.THGraph as G
 import qualified Enecuum.Core.HGraph.Internal.Impl as Impl
 
 import           Data.HGraph.StringHashable (StringHashable)
 import           Enecuum.Core.HGraph.Language (HGraphF (..), HGraphL)
 import           Enecuum.Core.HGraph.Internal.Types (TNodeL)
-
+import           Enecuum.Core.HGraph.Types
 -- | The interpreter of the language describing the action on graphs.
 interpretHGraphLIO
     :: (Serialize c, StringHashable c)
-    => TVar (G.THGraph c)
+    => TGraph c
     -> HGraphF (TNodeL c) a
     -> IO a
 
@@ -67,7 +66,7 @@ interpretHGraphLIO graph (ClearGraph next) = do
 -- | Run H graph interpret.
 runHGraphLIO, runHGraphIO
     :: (Serialize c, StringHashable c)
-    => TVar (G.THGraph c)
+    => TGraph c
     -> HGraphL c w
     -> IO w
 runHGraphLIO graph = foldFree (interpretHGraphLIO graph)
