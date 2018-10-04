@@ -1,9 +1,9 @@
 module Enecuum.Core.Random.Interpreter where
 
 import           Enecuum.Prelude
-import qualified Enecuum.Core.Language       as L
+import qualified Enecuum.Core.Language     as L
 import qualified Control.Monad.Random.Lazy as R
-import System.Random
+import           System.Random hiding (next)
 
 -- | Interpret RandomL language.
 interpretRandomL :: L.ERandomF a -> IO a
@@ -14,10 +14,6 @@ interpretRandomL (L.EvalRand r g next) = do
     let a = R.evalRand r g
     pure $ next a
 
-runL l = foldFree interpretRandomL l
+runL :: L.ERandomL a -> IO a
+runL = foldFree interpretRandomL
 
-scenario :: L.ERandomL [Integer]
-scenario = do
-    replicateM 10 $ L.getRandomInt (5,10)
-
-go = runL scenario

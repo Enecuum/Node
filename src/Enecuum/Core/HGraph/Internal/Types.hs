@@ -20,8 +20,11 @@ import           Enecuum.Core.HGraph.Types (HNodeRef, HNode (..), HNodeContent,
                                             ToNodeRef, ToContent,
                                             fromContent, toContent, toNodeRef)
 
+
+
 -- This type doesn't look correct. It reveals implementation details
 -- on the language level.
+
 
 type TNodeL content = HNode (TVar (THNode content)) content
 
