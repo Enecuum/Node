@@ -68,8 +68,9 @@ acceptKBlock nodeData (AcceptKeyBlockRequest kBlock) = do
 
 
 
-graphNodeInitialization :: TG.GraphVar -> L.NodeL GraphNodeData
-graphNodeInitialization g = do
+graphNodeInitialization :: L.NodeL GraphNodeData
+graphNodeInitialization = do
+    g <- L.newGraph
     baseNode <- L.evalGraphIO g $ L.getNode TG.genesisHash >>= \case
         Nothing       -> error "Genesis node not found. Graph is not ready."
         Just baseNode -> pure baseNode
@@ -77,10 +78,10 @@ graphNodeInitialization g = do
     pure $ GraphNodeData g baseNodeVar
 
 
-graphNode :: TG.GraphVar -> L.NodeDefinitionL ()
-graphNode g = do
+graphNode :: L.NodeDefinitionL ()
+graphNode = do
     L.nodeTag "graphNode"
-    nodeData <- L.initialization $ graphNodeInitialization g
+    nodeData <- L.initialization $ graphNodeInitialization
 
-    L.servingRpc 2001 $ do
+    L.serving 2001 $
         L.method $ acceptKBlock nodeData
