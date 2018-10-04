@@ -1,12 +1,11 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-
+{-# LANGUAGE DeriveAnyClass        #-}
 module Enecuum.Tests.Integration.TcpServerSpec where
 
 --
 
 import           Enecuum.Prelude
 
-import           Data.Aeson as A
 import           Test.HUnit
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
@@ -31,37 +30,9 @@ createNodeRuntime :: IO Rt.NodeRuntime
 createNodeRuntime =
     Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.createNodeRuntime
 
-newtype Ping = Ping Int
-newtype Pong = Pong Int
-data Succes = Succes
-
-instance A.ToJSON Succes where
-    toJSON o = A.object
-        [ "tag" A..= makeTagName o
-        ]
-
-instance A.FromJSON Succes where
-    parseJSON _ = pure $ Succes
-
-instance A.ToJSON Ping where
-    toJSON o@(Ping i) = A.object
-        [ "tag" A..= makeTagName o
-        , "int" A..= i
-        ]
-
-instance A.ToJSON Pong where
-    toJSON o@(Pong i) = A.object
-        [ "tag" A..= makeTagName o
-        , "int" A..= i
-        ]
-
-instance A.FromJSON Ping where
-    parseJSON (A.Object o) = Ping <$> o A..: "int"
-    parseJSON _            = error "Error of ping parsing."
-
-instance A.FromJSON Pong where
-    parseJSON (A.Object o) = Pong <$> o A..: "int"
-    parseJSON _            = error "Error of pong parsing."
+newtype Ping = Ping Int deriving (Generic, ToJSON, FromJSON)
+newtype Pong = Pong Int deriving (Generic, ToJSON, FromJSON)
+data Succes = Succes    deriving (Generic, ToJSON, FromJSON)
 
 
 pingHandle :: D.NetworkConnection -> Ping -> D.NetworkConnection -> L.NodeL ()
@@ -83,13 +54,13 @@ pingPong = TestCase $ do
     nr1 <- createNodeRuntime
     nr2 <- createNodeRuntime
     void $ forkIO $ do
-        threadDelay 20000
+        threadDelay 5000
         runNodeDefinitionL nr1 $ do
             succConn <- L.open succAdr $ return ()
             L.serving serverPort $ do
                 L.handler (pingHandle succConn)
                 L.handler (pongHandle succConn)
-        threadDelay 20000
+        threadDelay 5000
         runNodeDefinitionL nr2 $ do
             succConn <- L.open succAdr $ return ()
             conn <- L.open serverAddr $ do

@@ -44,7 +44,7 @@ startNodeTcpLikeWorker nodeLRunner nodeRt handlers mbBackConn = do
           T.AcceptBackConnectionReq bindedServer -> do
               atomically $ putTMVar tBackConn (D.NetworkConnection $ bindedServer ^. RLens.address)
               registerConnection nodeRt bindedServer
-              
+
           T.MessageReq msg -> do
               backConn <- atomically $ readTMVar tBackConn
               case decode msg of
@@ -58,13 +58,11 @@ callHandler
   :: (L.NodeL () -> IO ())
   -> D.NetworkConnection
   -> Map Text (A.Value -> D.NetworkConnection -> L.NodeL ())
-  -> A.Value
+  -> D.NetworkMsg
   -> IO ()
-callHandler nodeLRunner backConn handlers val = 
-  case val ^? ALens.key "tag" . ALens._String of
-    Nothing -> error "Message is malformed. No 'tag' was found."
-    Just tag -> case Map.lookup tag handlers of
-      Nothing -> pure () -- TODO: some error response here.
-      Just method -> void $ forkIO $ nodeLRunner (method val backConn)
+callHandler nodeLRunner backConn handlers (D.NetworkMsg tag val) = 
+    case Map.lookup tag handlers of
+        Nothing -> pure () -- TODO: some error response here.
+        Just method -> void $ forkIO $ nodeLRunner (method val backConn)
     
 

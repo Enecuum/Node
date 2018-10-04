@@ -10,6 +10,7 @@ import qualified Enecuum.Core.Language                as L
 import qualified Enecuum.Framework.Network.Language   as L
 import qualified Data.Text                            as Text
 import qualified Enecuum.Framework.Domain             as D
+import qualified Enecuum.Framework.MsgHandler.Language as L
 
 -- | Allows to work with network: open and close connections, send requests.
 data NetworkingF next where
@@ -46,10 +47,11 @@ sendMessage conn msg = liftF $ SendMessage conn msg id
 -- TODO: distiguish reliable (TCP-like) connection from unreliable (UDP-like).
 -- TODO: make conversion to and from package.
 class Send m where
-  send :: ToJSON a => D.NetworkConnection -> a -> m ()
+  send :: (Typeable a, ToJSON a) => D.NetworkConnection -> a -> m ()
 
 instance Send (Free NetworkingF) where
-  send conn = sendMessage conn . A.encode
+  send conn msg = sendMessage conn . A.encode $
+    D.NetworkMsg (L.makeTagName msg) (toJSON msg)
 
 -- | Eval core effect.
 evalCoreEffectNetworkingF :: L.CoreEffect a -> NetworkingL a
