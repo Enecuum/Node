@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Enecuum.Blockchain.Domain.Transaction where
 
@@ -22,7 +23,7 @@ data Transaction = Transaction
     , _receiver  :: Int
     , _amount    :: Int
     }
-  deriving ( Generic, Show, Eq, Ord, Read)  
+  deriving ( Generic, Show, Eq, Ord, Read, ToJSON, FromJSON)  
 
 instance S.Serialize Transaction
 
