@@ -50,3 +50,6 @@ dispatchScenario config nodeRt (ScenarioNode MasterNode _ _) = runNodeDefinition
 dispatchScenario _ nodeRt (ScenarioNode NetworkNode Sync Respondent)  = runNodeDefinitionL nodeRt S.networkNode3
 dispatchScenario _ nodeRt (ScenarioNode NetworkNode Sync Interviewer) = runNodeDefinitionL nodeRt $ S.networkNode4
 dispatchScenario _ nodeRt (ScenarioNode PoW SyncKblock Soly) = runNodeDefinitionL nodeRt $ S.powNode
+dispatchScenario _ _ (ScenarioNode role scenario scenarioRole) = 
+    error $ mconcat mes 
+      where mes :: [Text] = ("This scenario: " :: Text)  : (show @Text role) : (show @Text scenario) : (show @Text scenarioRole) : (" doesn't exist" :: Text) : []

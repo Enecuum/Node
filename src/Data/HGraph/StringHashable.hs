@@ -21,6 +21,7 @@ toHashGeneric = StringHash . encode
 -- Currently, there is no "hashing" in here.
 -- https://task.enecuum.com/issues/2718
 
+instance StringHashable Integer where toHash = toHashGeneric
 instance StringHashable Int where toHash = toHashGeneric
 instance StringHashable Int64 where toHash = toHashGeneric
 instance StringHashable Int32 where toHash = toHashGeneric
