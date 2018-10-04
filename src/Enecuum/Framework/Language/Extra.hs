@@ -21,21 +21,25 @@ class HasGraph s a | s -> a where
   graph :: Lens' s a
 
 -- | Evals some graph action (atomically) having a structure that contains a graph variable.
+{-
 withGraph
   :: HasGraph s (TVar (THGraph d))
   => (Serialize d, StringHashable d)
   => s
   -> L.HGraphL d a
   -> L.StateL a
+-}
 withGraph s = L.evalGraph (s ^. graph)
 
 -- | Evals some graph action (non-atomically) having a structure that contains a graph variable.
+{-}
 withGraphIO
   :: HasGraph s (TVar (THGraph d))
   => (Serialize d, StringHashable d)
   => s
   -> L.HGraphL d a
   -> L.NodeL a
+  -}
 withGraphIO s = L.evalGraphIO (s ^. graph)
 
 -- TODO: make this a type class?

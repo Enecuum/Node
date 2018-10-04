@@ -13,6 +13,7 @@ import qualified Data.ByteString.Base64  as Base64
 import qualified Data.Serialize          as S
 import qualified Crypto.Hash.SHA256      as SHA
 
+
 import qualified Enecuum.Language as L
 import qualified Enecuum.Domain as D
 import           Enecuum.Core.HGraph.Interpreters.IO (runHGraphIO)
@@ -30,8 +31,9 @@ instance StringHashable Transaction where
 
 makeLenses ''Transaction
 
-type TestGraphVar = TVar (G.THGraph Transaction)
+type TestGraphVar = D.TGraph Transaction
 type TestGraphL a = L.HGraphL Transaction a
+
 
 nilHash :: StringHash
 nilHash = toHash (Transaction (toHash @Int 0) 0)

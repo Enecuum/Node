@@ -31,8 +31,8 @@ instance StringHashable NodeContent where
   toHash = StringHash . Base64.encode . SHA.hash . S.encode
 
 
-type GraphVar = TVar (G.THGraph NodeContent)
-type GraphL a = L.HGraphL NodeContent a
+type GraphVar  = D.TGraph NodeContent
+type GraphL a  = L.HGraphL NodeContent a
 type GraphNode = T.TNodeL NodeContent
 
 genesisHash :: StringHash

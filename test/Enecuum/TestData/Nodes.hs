@@ -45,20 +45,6 @@ masterNodeTag = "masterNode"
 simpleBootNodeDiscovery :: L.NetworkL D.Address
 simpleBootNodeDiscovery = pure bootNodeAddr
 
--- RPC handlers.
-
-acceptHello1 :: HelloRequest1 -> L.NodeL HelloResponse1
-acceptHello1 (HelloRequest1 msg) = pure $ HelloResponse1 $ "Hello, dear. " +| msg |+ ""
-
-acceptHello2 :: HelloRequest2 -> L.NodeL HelloResponse2
-acceptHello2 (HelloRequest2 msg) = pure $ HelloResponse2 $ "Hello, dear2. " +| msg |+ ""
-
-acceptGetHashId :: GetHashIDRequest -> L.NodeL GetHashIDResponse
-acceptGetHashId GetHashIDRequest = pure $ GetHashIDResponse "1"
-
-acceptValidationRequest :: ValidationRequest -> L.NodeL ValidationResponse
-acceptValidationRequest req   = pure $ makeResponse $ verifyRequest req
-
 -- Scenario 1: master node can interact with boot node.
 
 bootNode :: L.NodeDefinitionL ()

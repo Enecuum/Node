@@ -7,7 +7,7 @@ import           Test.Hspec
 import           Data.Aeson as A
 
 import           Enecuum.TestData.RPC
-import           Enecuum.TestData.Nodes
+import           Enecuum.TestData.Nodes.Scenarios
 import           Enecuum.Testing
 import qualified Enecuum.Testing as T
 import qualified Enecuum.Testing.RLens as RLens
@@ -34,7 +34,7 @@ spec = describe "Nodes test" $ do
     msgs `shouldBe`
       [ "Master node got id: NodeID \"1\"."
       ]
-
+{-
   it "Network node requests data from network node" $ do
 
     runtime <- createTestRuntime
@@ -51,7 +51,7 @@ spec = describe "Nodes test" $ do
       , "balance1 (should be Just 10): Just 10."
       , "balance0 (should be 0): 0."
       ]
-
+-}
   it "Boot node validates requests from Network node" $ do
 
     runtime <- createTestRuntime

@@ -10,3 +10,4 @@ import           Enecuum.Framework.State.Language as X
 import           Enecuum.Framework.Node.Language as X
 import           Enecuum.Framework.RpcMethod.Language as X
 import           Enecuum.Framework.Language.Extra as X
+import           Enecuum.Framework.MsgHandler.Language as X
