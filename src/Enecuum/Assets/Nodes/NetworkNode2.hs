@@ -74,6 +74,6 @@ networkNode2 :: TG.GraphVar -> L.NodeDefinitionL ()
 networkNode2 g = do
   L.nodeTag "networkNode2"
   nodeData <- L.initialization $ newtorkNode2Initialization g
-  L.servingRpc 2002 $ do
+  L.serving 2002 $ do
     L.method (acceptGetBalance nodeData)
     L.method (acceptBalanceChange nodeData)
