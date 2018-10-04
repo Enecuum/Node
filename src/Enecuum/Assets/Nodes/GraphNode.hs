@@ -26,21 +26,38 @@ data GraphNodeData = GraphNodeData
     { _graph         :: TG.GraphVar
     , _kBlockPending :: D.StateVar [D.KBlock]
     , _curNode       :: D.StateVar D.StringHash
+    , _logVar        :: D.StateVar [Text]
     }
 
 makeFieldsNoPrefix ''GraphNodeData
 
+-- stateLog :: GraphNodeData -> Text -> L.StateL ()
+stateLog nodeData msg = L.modifyVar (nodeData ^. logVar) (msg:)
 
+-- writeLog :: GraphNodeData -> Free L.NodeF ()
+writeLog nodeData = do
+    tmpLog <- L.atomically $ do
+        tmpLog <- L.readVar (nodeData ^. logVar)
+        L.writeVar (nodeData ^. logVar) []
+        pure tmpLog
+    forM_ (reverse tmpLog) L.logInfo
+
+-- | Get kBlock by Hash
 getKBlock :: GraphNodeData -> StringHash -> L.StateL (Maybe D.KBlock)
-getKBlock nodeData hash = L.withGraph nodeData $ do
-    maybeKBlock <- L.getNode hash
-    case maybeKBlock of
-        Just (D.HNode _ _ (D.fromContent -> D.KBlockContent kBlock) _ _)
-            -> pure $ Just kBlock
-        _ -> pure Nothing
+getKBlock nodeData hash = do
+    (res, tmpLog) <- L.withGraph nodeData $ do
+        maybeKBlock <- L.getNode hash
+        case maybeKBlock of
+            Just (D.HNode _ _ (D.fromContent -> D.KBlockContent kBlock) _ _)
+                -> pure $ (Just kBlock,  "kBlock found by hash")
+            _ -> pure (Nothing, "")
+    stateLog nodeData tmpLog
+    pure res
 
+-- Get Top kBlock
 getTopKeyBlock :: GraphNodeData -> L.StateL D.KBlock
 getTopKeyBlock nodeData = do
+    stateLog nodeData "Getting of top keyblock"
     topNodeHash    <- L.readVar $ nodeData ^. curNode
     Just topKBlock <- getKBlock nodeData topNodeHash
     pure topKBlock
@@ -52,39 +69,36 @@ moveKBlockToGraph nodeData = do
     topKBlock <- getTopKeyBlock nodeData
     pending   <- L.readVar (nodeData ^. kBlockPending)
     case pending of
-        []          -> pure False
+        []          -> do
+            stateLog nodeData "Pending is empty"
+            pure False
         kBlock:newPending | kBlockIsNext kBlock topKBlock -> do
             L.writeVar (nodeData ^. kBlockPending) newPending
+            stateLog nodeData "Moving KBlock from pending to graph."
             addKBlock nodeData kBlock
-        _ -> pure False
+        _ -> do
+            stateLog nodeData "Is impossible move block from pending to graph."
+            pure False
+
 
 kBlockIsNext :: D.KBlock -> D.KBlock -> Bool
 kBlockIsNext kBlock topKBlock = 
     kBlock ^. Lens.number   == topKBlock ^. Lens.number + 1 &&
     kBlock ^. Lens.prevHash == toHash topKBlock
 
--- | Add new key block too pending. 
+-- | Add new key block to pending. 
 addBlockToPending :: GraphNodeData -> D.KBlock -> L.StateL Bool
 addBlockToPending nodeData kBlock = do
+    stateLog nodeData "Addition of block to pending"
     L.modifyVar
         (nodeData ^. kBlockPending)
         (\pending -> sortOn (^. Lens.number) $ kBlock:pending)
     pure True
 
-validateKBlock :: GraphNodeData -> D.KBlock -> L.StateL Bool
-validateKBlock nodeData kBlock = do
-    topKBlock <- getTopKeyBlock nodeData
-    pure $ (1 + topKBlock ^. Lens.number == kBlock ^. Lens.number)
-        && (kBlock ^. Lens.prevHash == toHash topKBlock)
-
-validationKBlockForPending :: GraphNodeData -> D.KBlock -> L.StateL Bool
-validationKBlockForPending nodeData kBlock = do
-    topKBlock <- getTopKeyBlock nodeData
-    pure $ topKBlock ^. Lens.number < (kBlock ^. Lens.number)
-
+-- | Add key block to graph        
 addKBlock :: GraphNodeData -> D.KBlock -> L.StateL Bool
 addKBlock nodeData kBlock = do
-    -- Add kblock to end of chain.
+    stateLog nodeData "Addition kblock to end of chain"
     let kBlock' = D.KBlockContent kBlock
     ref <- L.readVar (nodeData ^. curNode)
     L.withGraph nodeData $ do
@@ -94,10 +108,11 @@ addKBlock nodeData kBlock = do
     L.writeVar (nodeData ^. curNode) $ toHash kBlock'
     return True
 
+-- | Add microblock to graph
 addMBlock :: GraphNodeData -> D.Microblock -> L.StateL Bool
 addMBlock nodeData mblock@(D.Microblock hash _) = do
-    -- Add mblock to end of chain.
     kblock <- getKBlock nodeData hash
+    stateLog nodeData $ "Addition of mblock to graph. In graph is needed kblock? " <> show (isJust kblock)
     when (isJust kblock) $ L.withGraph nodeData $ do
         L.newNode (D.MBlockContent mblock)
         L.newLink hash (D.MBlockContent mblock)
@@ -110,7 +125,7 @@ acceptKBlock nodeData (AcceptKeyBlockRequest kBlock) = do
         topKBlock <- getTopKeyBlock nodeData
         if  | kBlock ^. Lens.number >  topKBlock ^. Lens.number + 1 ->
                 addBlockToPending nodeData kBlock
-            
+
             | kBlockIsNext kBlock topKBlock -> do
                 void $ addKBlock nodeData kBlock
                 let loop = whenM (moveKBlockToGraph nodeData) loop
@@ -118,15 +133,16 @@ acceptKBlock nodeData (AcceptKeyBlockRequest kBlock) = do
                 pure True
 
             | otherwise -> pure False
-
+    writeLog nodeData
     pure $ AcceptKeyBlockResponse res
 
 -- | Accept mBlock 
 acceptMBlock :: GraphNodeData -> AcceptMicroblockRequest -> L.NodeL AcceptMicroblockResponse
-acceptMBlock nodeData (AcceptMicroblockRequest mBlock) =
+acceptMBlock nodeData (AcceptMicroblockRequest mBlock) = do
+    writeLog nodeData
     AcceptMicroblockResponse <$> L.atomically (addMBlock nodeData mBlock)
 
-
+-- | Initialization of graph node
 graphNodeInitialization :: L.NodeL GraphNodeData
 graphNodeInitialization = do
     g <- L.newGraph
@@ -134,10 +150,12 @@ graphNodeInitialization = do
         Nothing       -> error "Genesis node not found. Graph is not ready."
         Just baseNode -> pure baseNode
     
-    L.atomically $
-        GraphNodeData g <$> L.newVar [] <*> L.newVar (baseNode ^. Lens.hash) 
+    L.atomically $ GraphNodeData g
+        <$> L.newVar []
+        <*> L.newVar (baseNode ^. Lens.hash)
+        <*> L.newVar []
 
-
+-- | Start of graph node
 graphNode :: L.NodeDefinitionL ()
 graphNode = do
     L.nodeTag "graphNode"
