@@ -7,23 +7,18 @@ module Enecuum.Assets.Nodes.GraphNode where
 
 import           Enecuum.Prelude
 
-import qualified Data.Aeson                    as A
-import qualified Data.Map                      as Map
 import           Control.Lens                  (makeFieldsNoPrefix)
 
-import           Enecuum.Config                (Config)
+
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
 import qualified Enecuum.Blockchain.Lens       as Lens
-import qualified Enecuum.Framework.Lens        as Lens
 import qualified Enecuum.Core.Lens             as Lens
-import qualified Data.Text as Text
+
 import           Enecuum.Framework.Language.Extra (HasGraph)
 
 import qualified Enecuum.Blockchain.Domain.Graph as TG
-import           Enecuum.Assets.Nodes.RPC
-import           Enecuum.Assets.Nodes.Address
-import           Enecuum.Assets.Nodes.Types
+import           Enecuum.Assets.Nodes.Messages
 
 data GraphNodeData = GraphNodeData
     { _graph :: TG.GraphVar
@@ -31,12 +26,6 @@ data GraphNodeData = GraphNodeData
     }
 
 makeFieldsNoPrefix ''GraphNodeData
-
-newtype AcceptKeyBlockRequest  = AcceptKeyBlockRequest { kBlock :: D.KBlock }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data AcceptKeyBlockResponse = AcceptKeyBlockResponse { accepted :: Bool }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 
 validateKBlock :: GraphNodeData -> D.KBlock -> L.StateL Bool
@@ -61,7 +50,7 @@ acceptKBlock nodeData (AcceptKeyBlockRequest kBlock) = do
 
         validated <- validateKBlock nodeData kBlock
         case validated of
-            True -> addBlock nodeData kBlock
+            True  -> addBlock nodeData kBlock
             False -> pure False
 
     pure $ AcceptKeyBlockResponse result
