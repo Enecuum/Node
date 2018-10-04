@@ -12,7 +12,7 @@ data ERandomF next where
     EvalRand :: Rand g a -> g -> (a -> next) -> ERandomF next
 
 instance Functor ERandomF where
-  fmap g (GetRandomInt i next) = GetRandomInt i (g . next)
+  fmap g (GetRandomInt range next) = GetRandomInt range (g . next)
   fmap g (EvalRand gen a next) = EvalRand gen a (g . next)
 
 type ERandomL next = Free ERandomF next
@@ -22,5 +22,5 @@ class ERandom m where
   evalRand :: Rand g a -> g -> m a
 
 instance ERandom (Free ERandomF) where
-  getRandomInt k = liftF $ GetRandomInt k id
+  getRandomInt range = liftF $ GetRandomInt range id
   evalRand r g = liftF $ EvalRand r g id

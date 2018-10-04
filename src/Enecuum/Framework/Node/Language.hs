@@ -88,13 +88,21 @@ instance L.Send NodeL where
   send conn msg = evalNetworking $ L.send conn msg
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
+evalGraphIO
+  :: ( T.StringHashable c
+     , Serialize c
+     )
+  => T.TGraph c
+  -> Free (L.HGraphF (T.TNodeL c)) a
+  -> NodeL a
 evalGraphIO g graphAction = liftF $ EvalGraphIO g graphAction id
 
 instance L.Logger (Free NodeF) where
     logMessage level msg = evalCoreEffectNodeF $ L.logMessage level msg
 
 instance L.ERandom (Free NodeF) where
-    getRandomInt n =  evalCoreEffectNodeF $ L.getRandomInt n    
+    getRandomInt = evalCoreEffectNodeF . L.getRandomInt
+    evalRand r g = evalCoreEffectNodeF $ L.evalRand r g
 
 newGraph :: (Serialize c, T.StringHashable c) => NodeL (T.TGraph c)
 newGraph = liftF $ NewGraph id

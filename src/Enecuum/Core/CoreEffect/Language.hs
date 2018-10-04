@@ -7,14 +7,14 @@ module Enecuum.Core.CoreEffect.Language
 import           Enecuum.Prelude
 
 import           Enecuum.Core.Logger.Language (Logger, LoggerL, logMessage)
-import           Enecuum.Core.Random.Language (ERandom, ERandomL, getRandomInt)
+import           Enecuum.Core.Random.Language (ERandom, ERandomL, getRandomInt, evalRand)
 
 -- | Core effects container language.
 data CoreEffectF next where
   -- | Logger effect
   EvalLogger :: LoggerL () -> (() -> next) -> CoreEffectF next
   -- | Random effect
-  EvalRandom :: ERandomL g -> (a -> next) -> CoreEffectF next
+  EvalRandom :: ERandomL a -> (a -> next) -> CoreEffectF next
 
 instance Functor CoreEffectF where
   fmap g (EvalLogger logger next) = EvalLogger logger (g . next)
@@ -28,9 +28,9 @@ evalLogger logger = liftF $ EvalLogger logger id
 instance Logger (Free CoreEffectF) where
   logMessage level msg = evalLogger $ logMessage level msg
 
-
--- evalRandom :: ERandomL a -> CoreEffect ()
+evalRandom :: ERandomL a -> CoreEffect a
 evalRandom g = liftF $ EvalRandom g id
 
 instance ERandom (Free CoreEffectF) where
-  getRandomInt r = evalRandom $ getRandomInt r
+  getRandomInt = evalRandom . getRandomInt
+  evalRand r g = evalRandom $ evalRand r g

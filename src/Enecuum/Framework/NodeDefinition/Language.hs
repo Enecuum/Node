@@ -12,7 +12,6 @@ import qualified Enecuum.Framework.Node.Language       as L
 import qualified Enecuum.Framework.Networking.Language as L
 import           Enecuum.Framework.RpcMethod.Language  (RpcMethodL)
 import           Enecuum.Legacy.Service.Network.Base
-import qualified Enecuum.Framework.Domain.Networking   as D
 import           Enecuum.Framework.MsgHandler.Language
 
 -- TODO: it's possible to make these steps evaluating step-by-step, in order.
@@ -101,5 +100,5 @@ instance L.Logger (Free NodeDefinitionF) where
     logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg
 
 instance L.ERandom (Free NodeDefinitionF) where
-    getRandomInt n =  evalCoreEffectNodeDefinitionF $ L.getRandomInt n
-
+    getRandomInt =  evalCoreEffectNodeDefinitionF . L.getRandomInt
+    evalRand r g = evalCoreEffectNodeDefinitionF  $ L.evalRand r g
