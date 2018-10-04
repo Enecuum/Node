@@ -13,6 +13,7 @@ import qualified Enecuum.Testing.Types                          as T
 import qualified Enecuum.Testing.Core.Interpreters              as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.Network as Impl
 import           Enecuum.Testing.TestRuntime                    (controlRequest)
+import           Enecuum.Testing.Framework.Internal.TcpLikeServerBinding (closeConnection)
 
 -- | Relay request from this node to the network environment for target server node.
 relayRequest'
@@ -37,11 +38,14 @@ sendMessageToConnection
   -> D.NetworkConnection
   -> D.RawData
   -> IO (Either Text ())
-sendMessageToConnection nodeRt networkConnection msg = do
+sendMessageToConnection nodeRt connection msg = do
   connections <- atomically $ readTMVar $ nodeRt ^. RLens.connections
   -- Checking is connection alive.
-  case Map.lookup (networkConnection ^. Lens.address) connections of
-    Nothing -> pure $ Left $ "Failed sending message: no conneciton to " +|| networkConnection ^. Lens.address ||+ "."
+  case Map.lookup (connection ^. Lens.address) connections of
+    Nothing -> do
+        -- Dead connection, should remove it
+        closeConnection nodeRt connection
+        pure $ Left $ "Connection died, connection worker killed: " +|| connection ||+ "."
     Just nodeConnection -> do
       controlResp <- controlRequest (nodeConnection ^. RLens.bindedServer . RLens.handle . RLens.control) $ T.MessageReq msg
       case controlResp of
@@ -57,10 +61,8 @@ interpretNetworkingL nodeRt (L.SendRpcRequest toAddr req next) =
   next <$> relayRequest' nodeRt toAddr req
 
 interpretNetworkingL nodeRt (L.SendMessage conn msg next) = do
-  eResult <- sendMessageToConnection nodeRt conn msg
-  case eResult of
-    Right _ -> pure $ next ()
-    Left err -> error err
+  void $ sendMessageToConnection nodeRt conn msg
+  pure $ next ()
 
 interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) =
   next <$> Impl.runNetworkL nodeRt networkAction

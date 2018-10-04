@@ -84,23 +84,20 @@ spec = describe "Nodes test" $ do
 
     runtime <- createTestRuntime
 
-    -- TODO: make running nodes in separate threads correct.
-    print "Starting pong server."
-    node1Id <- forkIO $ void $ startNode runtime pongServerAddress pongServingNode
-
-    print "Waiting for server start."
-    threadDelay $ 1000 * 1000
-
-    print "Starting ping client."
-    node2Id <- forkIO $ void $ startNode runtime pingClientAddress pingSendingClientNode
+    void $ forkIO $ void $ startNode runtime pongServerAddress pongServingNode
+    void $ startNode runtime pingClientAddress pingSendingClientNode
   
-    -- TODO: make waiting for nodes correct.
-    print "Delaying."
-    threadDelay $ 1000 * 1000
+    threadDelay $ 1000 * 1000 * 2
 
-    print "Checking."
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
     msgs <- readTVarIO tMsgs
     msgs `shouldBe`
-      [ "balance (should be 91): 91."
+      [ "Pong handle received: Pong {pong = 3}. Sending Ping {ping = 4}."
+      , "Ping handle received: Ping {ping = 3}. Sending Pong {pong = 3}."
+      , "Pong handle received: Pong {pong = 2}. Sending Ping {ping = 3}."
+      , "Ping handle received: Ping {ping = 2}. Sending Pong {pong = 2}."
+      , "Pong handle received: Pong {pong = 1}. Sending Ping {ping = 2}."
+      , "Ping handle received: Ping {ping = 1}. Sending Pong {pong = 1}."
+      , "Pong handle received: Pong {pong = 0}. Sending Ping {ping = 1}."
+      , "Ping handle received: Ping {ping = 0}. Sending Pong {pong = 0}."
       ]

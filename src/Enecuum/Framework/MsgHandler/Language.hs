@@ -26,7 +26,7 @@ msgHandler :: Text -> MsgHandler m -> MsgHandlerL m ()
 msgHandler text f = liftF (MsgHandler text f id)
 
 makeHandler :: (FromJSON a, Monad m) => (a -> D.NetworkConnection -> m ()) -> MsgHandler m
-makeHandler f a = case A.fromJSON a of
+makeHandler f raw = case A.fromJSON raw of
     A.Success req -> \conn -> f req conn
     A.Error _     -> \_ -> pure ()
 

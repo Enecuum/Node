@@ -13,6 +13,8 @@ import qualified Enecuum.Testing.Types as T
 import qualified Enecuum.Testing.Core.LoggerRuntime as T
 import qualified Enecuum.Testing.RLens as RLens
 
+-- TODO: Test runtime is too complex. Maybe, it can be done much better.
+
 -- | Worker for the network environment thread.
 -- Serves control request:
 -- - Relay RPC request from one node to another.
@@ -43,7 +45,7 @@ networkWorker networkControl registry serversRegistry = go 0
       mbServerHandler <- getServerHandler serverAddr serversRegistry
       controlResp <- case mbServerHandler of
           Nothing           -> pure $ T.AsErrorResp $ "Can't establish connection. Server node " +|| serverAddr ||+ " not found."
-          Just serverHandle -> controlRequest (serverHandle ^. RLens.control) $ T.EstablishConnectionReq
+          Just serverHandle -> controlRequest (serverHandle ^. RLens.control) T.EstablishConnectionReq
       atomically $ putTMVar (networkControl ^. RLens.response) controlResp
 
 

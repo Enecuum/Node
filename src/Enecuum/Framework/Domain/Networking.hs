@@ -12,6 +12,7 @@ import           Enecuum.Legacy.Refact.Network.Server
 data NetworkConnection = NetworkConnection
   { _address :: Address
   }
+  deriving (Show, Eq, Ord, Generic)
 
 data ConnectionImplementation = ConnectionImplementation (TMVar (TChan Comand))
 
@@ -23,10 +24,11 @@ data Comand where
 
 newtype ServerHandle = ServerHandle (TChan ServerComand)
 
+type Host = String
 
 -- | Node address (like IP)
 data Address = Address
-  { _host :: String
+  { _host :: Host
   , _port :: PortNumber
   } deriving (Show, Eq, Ord, Generic)
 

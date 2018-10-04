@@ -6,6 +6,7 @@ import qualified Data.Map as Map
 
 import qualified Enecuum.Domain                                    as D
 import qualified Enecuum.Language                                  as L
+import qualified Enecuum.Framework.Lens                            as Lens
 
 import qualified Enecuum.Testing.RLens                             as RLens
 import qualified Enecuum.Testing.Types                             as T
@@ -13,6 +14,12 @@ import qualified Enecuum.Testing.Core.Interpreters                 as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.Networking as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.State      as Impl
 import           Enecuum.Core.HGraph.Interpreters.IO               (runHGraphIO)
+import           Enecuum.Testing.Framework.Internal.TcpLikeServerWorker  (startNodeTcpLikeWorker)
+import           Enecuum.Testing.Framework.Internal.TcpLikeServerBinding (bindServer, registerConnection, closeConnection)
+import           Enecuum.Testing.TestRuntime                             (controlRequest)
+
+import qualified Enecuum.Framework.MsgHandler.Interpreter as Impl (runMsgHandlerL)
+
 
 -- | Establish connection with the server through test environment.
 -- TODO: check if connection exists.
@@ -31,19 +38,17 @@ establishConnection nodeRt toAddress = do
     T.AsErrorResp msg                   -> pure $ Left $ "Failed to establish connection: " <> msg
     _                                   -> error "Invalid network control result."
 
-
--- | Register connection in the node connections list.
--- TODO: check if connection exists.
-registerConnection
-  :: T.NodeRuntime
+-- | Send client connection to the binded server.
+sendClientConnection
+  :: T.BindedServer
   -> T.BindedServer
-  -> IO ()
-registerConnection nodeRt bindedServer = atomically $ do
-    connections <- takeTMVar (nodeRt ^. RLens.connections)
-    let newConnection = T.NodeConnection T.Server bindedServer
-    let newConnections = Map.insert (bindedServer ^. RLens.address) newConnection connections
-    putTMVar (nodeRt ^. RLens.connections) newConnections
-
+  -> IO (Either Text ())
+sendClientConnection bindedServer bindedClientsideServer = do
+    controlResp <- controlRequest (bindedServer ^. RLens.handle . RLens.control)
+        $ T.AcceptBackConnectionReq bindedClientsideServer
+    case controlResp of
+      T.AsSuccessResp -> pure $ Right ()
+      _               -> pure $ Left "Unknown control response."
 
 -- | Interpret NodeL.
 interpretNodeL :: T.NodeRuntime -> L.NodeF a -> IO a
@@ -51,7 +56,7 @@ interpretNodeL :: T.NodeRuntime -> L.NodeF a -> IO a
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
   next <$> (atomically $ Impl.runStateL nodeRt statefulAction)
 
-interpretNodeL nodeRt (L.EvalGraphIO gr act next) =
+interpretNodeL _ (L.EvalGraphIO gr act next) =
   next <$> runHGraphIO gr act
 
 interpretNodeL nodeRt (L.EvalNetworking networkingAction next) =
@@ -60,16 +65,37 @@ interpretNodeL nodeRt (L.EvalNetworking networkingAction next) =
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffect next) =
   next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
 
-interpretNodeL nodeRt (L.OpenConnection serverAddress handlers next) = do
-  eAcceptedConnection <- establishConnection nodeRt serverAddress
-  case eAcceptedConnection of
+interpretNodeL nodeRt (L.OpenConnection serverAddress handlersF next) = do
+  -- Asking the server to accept connection
+  eBindedServer <- establishConnection nodeRt serverAddress
+  case eBindedServer of
     Left err -> error err
     Right bindedServer -> do
-      registerConnection nodeRt bindedServer
-      pure $ next $ D.NetworkConnection $ bindedServer ^. RLens.address
+        let bindedServerConnection = D.NetworkConnection $ bindedServer ^. RLens.address
 
-interpretNodeL nodeRt (L.CloseConnection _ next) =
-  error "CloseConnection not implemented."
+        -- Collecting hanlders for this connection
+        tHandlers <- atomically $ newTVar mempty
+        Impl.runMsgHandlerL tHandlers handlersF
+        handlers <- readTVarIO tHandlers
+
+        -- Starting client side connection worker & registering this connection.
+        let thisHost = nodeRt ^. RLens.address . Lens.host
+        clientsideServerHandle <- startNodeTcpLikeWorker (runNodeL nodeRt) nodeRt handlers (Just bindedServerConnection)
+        bindedClientsideServer <- bindServer nodeRt thisHost T.Client clientsideServerHandle
+
+        -- Sending client side connection to server.
+        eResult <- sendClientConnection bindedServer bindedClientsideServer
+        case eResult of
+          Left err -> error err
+          Right _ -> do
+              -- registering bindedServer.
+              registerConnection nodeRt bindedServer
+              pure $ next bindedServerConnection
+
+interpretNodeL nodeRt (L.CloseConnection conn next) =
+  next <$> closeConnection nodeRt conn
+
+interpretNodeL _ _ = error "not implemented."
 
 -- | Runs node language.
 runNodeL :: T.NodeRuntime -> L.NodeL a -> IO a

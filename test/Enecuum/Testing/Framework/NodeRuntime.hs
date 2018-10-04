@@ -32,7 +32,6 @@ createEmptyNodeRuntime loggerRt networkControl nodeID = do
   graph       <- TG.initTestGraph
   varCounter  <- newTMVarIO 0
   st          <- newTMVarIO Map.empty
-  servers     <- newTMVarIO Map.empty
   connections <- newTMVarIO Map.empty
   pure $ T.NodeRuntime
         { T._loggerRuntime   = loggerRt
@@ -40,7 +39,6 @@ createEmptyNodeRuntime loggerRt networkControl nodeID = do
         , T._address         = nodeID 
         , T._tag             = tag 
         , T._rpcServer       = rpcServer 
-        , T._servers         = servers 
         , T._connections     = connections 
         , T._graph           = graph 
         , T._varCounter      = varCounter 
@@ -59,7 +57,6 @@ createNodeRuntime testRt nodeID = do
   graph       <- TG.initTestGraph
   varCounter  <- newTMVarIO 0
   st       <- newTMVarIO Map.empty
-  servers     <- newTMVarIO Map.empty
   connections <- newTMVarIO Map.empty
   let nodeRt = T.NodeRuntime
         { T._loggerRuntime   = testRt ^. RLens.loggerRuntime
@@ -67,7 +64,6 @@ createNodeRuntime testRt nodeID = do
         , T._address         = nodeID 
         , T._tag             = tag 
         , T._rpcServer       = rpcServer 
-        , T._servers         = servers 
         , T._connections     = connections 
         , T._graph           = graph 
         , T._varCounter      = varCounter 

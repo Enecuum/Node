@@ -21,11 +21,11 @@ data ControlRequest
     }
   | RelayEstablishConnectionReq  -- ^ Relay request for connection to client-server.
     { _address  :: D.Address     -- ^ Server address
-    } 
+    }
   | EstablishConnectionReq       -- ^ Make connection of client-server type.
-    -- { _fromNode :: NodeRuntime   -- ^ From node
-    -- , _address  :: D.Address     -- ^ Server address
-    -- }
+  | AcceptBackConnectionReq      -- ^ Accept back connection by the connection worker.
+    { _connection :: BindedServer
+    }
   | MessageReq D.RawData
 
 -- | Result of evaluation of control response.
@@ -54,6 +54,13 @@ data ServerHandle = ServerHandle
   , _control     :: Control     -- ^ Server control interface.
   , _nodeRuntime :: NodeRuntime -- ^ Node runtime.
   }
+-- | Connection worker handle.
+data ConnectionWorkerHandle = ConnectionWorkerHandle
+  { _threadId    :: ThreadId    -- ^ Server thread ID.
+  , _control     :: Control     -- ^ Server control interface.
+  , _nodeRuntime :: NodeRuntime -- ^ Node runtime.
+  , _backConnection :: TMVar D.NetworkConnection -- ^ back connection to client.
+  }
 
 -- | Logger runtime. Stores messages.
 data LoggerRuntime = LoggerRuntime
@@ -68,7 +75,7 @@ type BindingAddress = D.Address
 -- | Specific server binded to the specific connection.
 data BindedServer = BindedServer
   { _address :: BindingAddress
-  , _handle :: ServerHandle
+  , _handle :: ConnectionWorkerHandle
   }
 
 data NodeRole = Client | Server
@@ -87,7 +94,6 @@ data NodeRuntime = NodeRuntime
   , _address         :: D.Address              -- ^ Address of this node.
   , _tag             :: TVar D.NodeTag         -- ^ Tag of this node.
   , _rpcServer       :: TMVar RpcServerHandle  -- ^ RPC server of this node. (TODO: make multiple RPC servers possible)
-  , _servers         :: TMVar Servers          -- ^ Node own servers.
   , _connections     :: TMVar NodeConnections
   , _graph           :: TG.TestGraphVar        -- ^ Graph
   , _varCounter      :: TMVar Int              -- ^ Vars counter. Used to generate VarId.

@@ -12,7 +12,7 @@ import qualified Enecuum.Testing.Core.Interpreters            as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.Node  as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.State as Impl
 import qualified Enecuum.Testing.Framework.Internal.RpcServer as Impl (startNodeRpcServer)
-import qualified Enecuum.Testing.Framework.Internal.TcpLikeServer as Impl (startNodeTcpLikeServer)
+import qualified Enecuum.Testing.Framework.Internal.TcpLikeServer as Impl (startNodeTcpLikeServer, stopNodeTcpLikeServer)
 
 import qualified Enecuum.Framework.RpcMethod.Interpreter as Impl (runRpcMethodL)
 import qualified Enecuum.Framework.MsgHandler.Interpreter as Impl (runMsgHandlerL)
@@ -42,6 +42,10 @@ interpretNodeDefinitionL nodeRt (L.ServingMsg port handlersF next) = do
   handlersMap <- atomically $ newTVar mempty
   Impl.runMsgHandlerL handlersMap handlersF
   Impl.startNodeTcpLikeServer nodeRt (mkAddress nodeRt port) handlersMap
+  pure $ next ()
+
+interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
+  Impl.stopNodeTcpLikeServer nodeRt port
   pure $ next ()
 
 interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
