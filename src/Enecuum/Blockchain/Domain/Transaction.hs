@@ -1,4 +1,7 @@
-
+{-# LANGUAGE DeriveAnyClass         #-}
+{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE FunctionalDependencies #-}
 module Enecuum.Blockchain.Domain.Transaction where
 
 import Enecuum.Prelude
@@ -18,11 +21,11 @@ import qualified Enecuum.Legacy.Service.Types as Legacy
 -- type TransactionID = Int
 
 data Transaction = Transaction
-    { _owner     :: Int
-    , _receiver  :: Int
-    , _amount    :: Int
+    { _owner     :: Integer
+    , _receiver  :: Integer
+    , _amount    :: Integer
     }
-  deriving ( Generic, Show, Eq, Ord, Read)  
+  deriving ( Generic, Show, Eq, Ord, Read, ToJSON, FromJSON)  
 
 instance S.Serialize Transaction
 

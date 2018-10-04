@@ -9,3 +9,5 @@ networkNode2Addr = D.Address "127.0.0.2" 2002
 networkNode3Addr = D.Address "127.0.0.1" 2003
 networkNode4Addr = D.Address "127.0.0.1" 2004
 powAddr = D.Address "127.0.0.1" 2005
+poaAddr = D.Address "127.0.0.1" 2006
+nnAddr = D.Address "127.0.0.1" 2007
