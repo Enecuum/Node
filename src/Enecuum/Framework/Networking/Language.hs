@@ -67,6 +67,9 @@ makeRpcRequest'
 makeRpcRequest' address arg =
     responseValidation =<< sendRpcRequest address (D.toRpcRequest arg)
 
+instance L.ERandom (Free NetworkingF) where
+    getRandomInt = evalCoreEffectNetworkingF . L.getRandomInt
+    evalRand r g = evalCoreEffectNetworkingF $ L.evalRand r g
 
 responseValidation :: (FromJSON b, Applicative f) => Either Text D.RpcResponse -> f (Either Text b)
 responseValidation res = case res of

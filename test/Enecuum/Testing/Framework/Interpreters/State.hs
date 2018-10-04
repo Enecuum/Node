@@ -1,5 +1,3 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
 module Enecuum.Testing.Framework.Interpreters.State where
 
 import Enecuum.Prelude
@@ -16,11 +14,14 @@ import qualified Enecuum.Framework.Lens as Lens
 
 import qualified Enecuum.Testing.RLens as RLens
 import qualified Enecuum.Testing.Types as T
-import           Enecuum.Core.HGraph.Interpreters.STM
+import           Enecuum.Core.HGraph.Interpreters.STM (runHGraphSTM)
+
 newtype VarNumber = VarNumber Int
 
 instance StringHashable VarNumber where
   toHash (VarNumber n) = StringHash . Base64.encode . SHA.hash $ show ("VarNumber " +|| n ||+ "" :: String)
+
+-- TODO: this is almost copy-pasted to real runtime.
 
 getVarNumber :: T.NodeRuntime -> STM VarNumber
 getVarNumber nodeRt = do
