@@ -98,11 +98,9 @@ runHandlers conn netConn wsConn handlers = do
                 \val -> callHandler netConn val handlers
             runHandlers conn netConn wsConn handlers
 
-callHandler :: D.NetworkConnection -> Value -> Handlers -> IO ()
-callHandler conn val handlers =
-    whenJust (val ^? key "tag" . _String) $ \tag ->
-        whenJust (handlers^.at tag) $ \handler ->
-            handler val conn
+callHandler :: D.NetworkConnection -> D.NetworkMsg -> Handlers -> IO ()
+callHandler conn (D.NetworkMsg tag val) handlers =
+    whenJust (handlers^.at tag) $ \handler -> handler val conn
 
 -- | Manager for controlling of WS connect.
 connectManager :: D.ConnectionImplementation -> S.Socket -> IO ()

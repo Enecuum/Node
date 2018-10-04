@@ -1,10 +1,12 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DeriveAnyClass         #-}
 
 module Enecuum.Framework.Domain.Networking where
 
 import           Enecuum.Prelude
 import qualified Data.Text as T
 
+import qualified Data.Aeson as A
 import           Control.Concurrent.STM.TChan (TChan)
 import           Network.Socket
 import           Enecuum.Legacy.Refact.Network.Server
@@ -19,6 +21,8 @@ data Comand where
   Send        :: LByteString -> Comand
 
 newtype ServerHandle = ServerHandle (TChan ServerComand)
+
+data NetworkMsg = NetworkMsg Text A.Value deriving (Generic, ToJSON, FromJSON)
 
 -- | Node address (like IP)
 data Address = Address
