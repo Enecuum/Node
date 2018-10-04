@@ -13,6 +13,7 @@ import qualified Enecuum.Framework.Networking.Language as L
 import           Enecuum.Framework.RpcMethod.Language  (RpcMethodL)
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Framework.MsgHandler.Language
+import           Enecuum.Framework.StdinHandlers.Language
 
 -- TODO: it's possible to make these steps evaluating step-by-step, in order.
 -- Think about if this really needed.
@@ -33,6 +34,8 @@ data NodeDefinitionF next where
     StopServing    :: PortNumber -> (() -> next) -> NodeDefinitionF  next
     -- | Start serving on reliable-kind connection.
     ServingMsg     :: PortNumber -> MsgHandlerL L.NodeL () -> (() -> next)-> NodeDefinitionF  next
+    Std            :: StdinHandlerL () -> (() -> next) -> NodeDefinitionF  next
+
 
 instance Functor NodeDefinitionF where
     fmap g (NodeTag tag next)               = NodeTag tag               (g . next)
@@ -41,8 +44,12 @@ instance Functor NodeDefinitionF where
     fmap g (EvalCoreEffectNodeDefinitionF coreEffect next) = EvalCoreEffectNodeDefinitionF coreEffect (g . next)
     fmap g (ServingRpc port handlersF next)          = ServingRpc port handlersF          (g . next)
     fmap g (StopServing port next)                   = StopServing port                   (g . next)
+    fmap g (Std handlersF next)                      = Std handlersF   (g . next)
 
 type NodeDefinitionL next = Free NodeDefinitionF next
+
+std :: StdinHandlerL () -> NodeDefinitionL ()
+std handlers = liftF $ Std handlers id
 
 -- | Sets tag for node.
 nodeTag :: D.NodeTag -> NodeDefinitionL ()
