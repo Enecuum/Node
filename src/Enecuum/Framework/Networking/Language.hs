@@ -19,7 +19,7 @@ data NetworkingF next where
   -- | Send RPC request and wait for the response.
   SendRpcRequest :: D.Address -> D.RpcRequest -> (Either Text D.RpcResponse -> next) -> NetworkingF next
   -- | Send message to the connection.
-  SendMessage :: D.NetworkConnection -> LByteString -> (() -> next)-> NetworkingF next
+  SendMessage :: D.NetworkConnection -> D.RawData -> (() -> next)-> NetworkingF next
   -- | Eval core effect.
   EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF  next
 
@@ -40,7 +40,7 @@ sendRpcRequest :: D.Address -> D.RpcRequest -> NetworkingL (Either Text D.RpcRes
 sendRpcRequest address request = liftF $ SendRpcRequest address request id
 
 -- | Send message to the connection.
-sendMessage :: D.NetworkConnection -> LByteString -> NetworkingL ()
+sendMessage :: D.NetworkConnection -> D.RawData -> NetworkingL ()
 sendMessage conn msg = liftF $ SendMessage conn msg id
 
 -- | Send message to the reliable connection.

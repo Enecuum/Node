@@ -29,8 +29,7 @@ import           Enecuum.TestData.Nodes.Address
 bootNode :: L.NodeDefinitionL ()
 bootNode = do
   L.nodeTag bootNodeTag
-  L.initialization $ pure $ D.NodeID "abc"
-  L.servingRpc 2000 $ do
+  L.serving 2000 $ do
       L.method acceptHello1
       L.method acceptGetHashId
 
@@ -49,6 +48,6 @@ masterNode = do
   L.nodeTag masterNodeTag
   nodeId <- D.withSuccess $ L.initialization masterNodeInitialization
   L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
-  L.servingRpc 2000 $ do
+  L.serving 2000 $ do
       L.method acceptHello1
       L.method acceptHello2

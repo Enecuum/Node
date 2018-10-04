@@ -11,23 +11,27 @@ import           Control.Concurrent.STM.TChan (TChan)
 import           Network.Socket
 import           Enecuum.Legacy.Refact.Network.Server
 
-data NetworkConnection where
-  NetworkConnection :: Address -> NetworkConnection
+data NetworkConnection = NetworkConnection
+  { _address :: Address
+  }
+  deriving (Show, Eq, Ord, Generic)
 
-data ConnectionImplementation = ConnectionImplementation (TMVar (TChan Comand))
+type RawData = LByteString
 
 data Comand where
   Close       :: Comand
-  Send        :: LByteString -> Comand
+  Send        :: RawData -> Comand
 
 newtype ServerHandle = ServerHandle (TChan ServerComand)
 
 data NetworkMsg = NetworkMsg Text A.Value deriving (Generic, ToJSON, FromJSON)
 
+type Host = String
+
 -- | Node address (like IP)
 data Address = Address
-  { host :: String
-  , port :: PortNumber
+  { _host :: Host
+  , _port :: PortNumber
   } deriving (Show, Eq, Ord, Generic)
 
 formatAddress :: Address -> Text
