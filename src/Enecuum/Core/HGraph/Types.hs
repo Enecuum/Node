@@ -7,11 +7,12 @@ module Enecuum.Core.HGraph.Types
     -- * Clases
     , ToContent (..)
     , ToNodeRef (..)
+    , TGraph (..)
     ) where
 
 import           Enecuum.Prelude
 import           Data.HGraph.StringHashable (StringHashable, StringHash)
-
+import           Data.HGraph.THGraph as G
 
 data family HNodeContent a
 
@@ -24,6 +25,8 @@ data HNode ref content = HNode
     , _links   :: Map StringHash (HNodeRef (HNode ref content))
     , _rLinks  :: Map StringHash (HNodeRef (HNode ref content))
     }
+
+newtype TGraph content = TGraph (TVar (G.THGraph content))
 
 class StringHashable (HNodeContent config) => ToContent config b | config -> b where
     toContent   :: b -> HNodeContent config

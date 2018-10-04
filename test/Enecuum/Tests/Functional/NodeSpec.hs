@@ -7,7 +7,7 @@ import           Test.Hspec
 import           Data.Aeson as A
 
 import           Enecuum.TestData.RPC
-import           Enecuum.TestData.Nodes
+import           Enecuum.TestData.Nodes.Scenarios
 import           Enecuum.Testing
 import qualified Enecuum.Testing as T
 import qualified Enecuum.Testing.RLens as RLens
