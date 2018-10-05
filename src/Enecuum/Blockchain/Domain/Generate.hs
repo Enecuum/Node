@@ -18,7 +18,7 @@ generateNKBlocks = generateKBlocks genesisHash
 generateNKBlocksWithOrder = createKBlocks genesisHash
 
 -- Generate bunch of key blocks (randomly or in order)
-createKBlocks :: StringHash -> Integer -> Ordering -> Free L.NodeF [KBlock]
+createKBlocks :: StringHash -> Integer -> Ordering -> L.NodeL [KBlock]
 createKBlocks prevKBlockHash from order = do
   kBlockBunch <- generateKBlocks prevKBlockHash from
   kBlockIndices <- generateIndices order
@@ -30,7 +30,7 @@ generateKBlocks :: StringHash -> Integer -> Free L.NodeF [KBlock]
 generateKBlocks prevHash from = loopGenKBlock prevHash from (from + kBlockInBunch)
 
 -- loop - state substitute : create new Kblock using hash of previous
-loopGenKBlock :: StringHash -> Integer -> Integer -> Free L.NodeF [KBlock]
+loopGenKBlock :: StringHash -> Integer -> Integer -> L.NodeL [KBlock]
 loopGenKBlock prevHash from to = do
   let kblock = genKBlock prevHash from
       newPrevHash = toHash kblock
@@ -67,7 +67,7 @@ genMicroblock hashofKeyBlock tx = Microblock
     , _transactions = tx
     }
 
-generateIndices :: Ordering -> Free L.NodeF [Integer]
+generateIndices :: Ordering -> L.NodeL [Integer]
 generateIndices order = do
   case order of
     RandomOrder -> loopGenIndices [0 .. kBlockInBunch]
@@ -81,7 +81,7 @@ generateIndices order = do
 -- [1,3] - 1
 -- [3] - 3
 -- the result: [2,4,5,1,3]
-loopGenIndices :: [Integer] -> Free L.NodeF [Integer]
+loopGenIndices :: [Integer] -> L.NodeL [Integer]
 loopGenIndices numbers = do
   if (not $ null numbers)
     then do

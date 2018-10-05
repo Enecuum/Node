@@ -32,16 +32,24 @@ sendKBlock nodeData from KeyBlockRequest = do
   kBlocks <- D.createKBlocks prevKBlockHash from D.RandomOrder
   pure $ KeyBlockResponse kBlocks
 
+
+genKBlockProcess :: PoWNodeData -> L.NodeL ()
+genKBlockProcess = do
+    forM_ [0, D.kBlockInBunch ..] (\from -> do
+        L.method $ sendKBlock nodeData from)
+
+
 powNode :: L.NodeDefinitionL ()
 powNode = do
     L.nodeTag "PoW node"
     L.logInfo "Generate Key Block"
-    let (D.Address _ port) = powAddr
+
     -- initialize with genesis hash
     nodeData <- L.initialization $ powNodeInitialization D.genesisHash
-    L.serving port $ do
-      forM_ [0, D.kBlockInBunch ..] (\from -> do
-        L.method $ sendKBlock nodeData from)
+
+    forever $ do
+        delay $ 1000 * 1000
+        L.scenario $ genKBlockProcess nodeData
 
 powNodeInitialization :: StringHash -> L.NodeL PoWNodeData
 powNodeInitialization genesisHash = do
