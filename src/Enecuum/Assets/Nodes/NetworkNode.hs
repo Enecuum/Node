@@ -15,10 +15,10 @@ data TransactionRequest  = TransactionRequest { }
 data TransactionResponse = TransactionResponse { transaction :: [D.Transaction] }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-getTx:: TransactionRequest -> L.NodeL TransactionResponse
+
+getTx :: TransactionRequest -> L.NodeL TransactionResponse
 getTx TransactionRequest =  do
-  numbers <- replicateM 10 $ L.getRandomInt (0, 1000)
-  let tx = map genTransaction numbers
+  tx <- D.genNTransactions 10
   pure $ TransactionResponse tx
 
 nnNode :: L.NodeDefinitionL ()
@@ -29,9 +29,3 @@ nnNode = do
     L.serving port $ do
       L.method $ getTx
 
-genTransaction :: Integer -> D.Transaction
-genTransaction i =  D.Transaction
-    { _owner     = i
-    , _receiver  = i + 100
-    , _amount    = i + 7
-    }

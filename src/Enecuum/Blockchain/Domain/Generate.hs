@@ -29,13 +29,6 @@ loopGenKBlock prevHash from to = do
       return (kblock:rest)
     else return []
 
-generateTransactions :: Int -> [Transaction]
-generateTransactions n = undefined
-
-generateMicroblocks :: Int -> [Microblock]
-generateMicroblocks n = undefined
-
-
 genKBlock :: StringHash -> Integer -> KBlock
 genKBlock prevHash i = KBlock
     { _prevHash   = prevHash
@@ -43,3 +36,23 @@ genKBlock prevHash i = KBlock
     , _nonce      = i
     , _solver     = toHash (i + 3)
     }
+
+genNTransactions :: Int -> L.NodeL [Transaction]
+genNTransactions k =  do
+  numbers <- replicateM k $ L.getRandomInt (0, 1000)
+  pure $ map genTransaction numbers
+
+genTransaction :: Integer -> Transaction
+genTransaction i =  Transaction
+    { _owner     = i
+    , _receiver  = i + 100
+    , _amount    = i + 7
+    }
+
+genMicroblock :: StringHash -> [Transaction] -> Microblock
+genMicroblock hashofKeyBlock tx = Microblock
+    { _keyBlock     = hashofKeyBlock
+    , _transactions = tx
+    }
+
+

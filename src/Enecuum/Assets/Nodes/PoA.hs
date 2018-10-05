@@ -32,8 +32,3 @@ poaNode = do
       L.method $ getMicroblock
 
 
-genMicroblock :: D.StringHash -> [D.Transaction] -> D.Microblock
-genMicroblock hashofKeyBlock tx = D.Microblock
-    { _keyBlock     = hashofKeyBlock
-    , _transactions = tx
-    }
