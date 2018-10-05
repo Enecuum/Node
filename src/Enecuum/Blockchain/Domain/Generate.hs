@@ -67,6 +67,10 @@ genMicroblock hashofKeyBlock tx = Microblock
     , _transactions = tx
     }
 
+genRandMicroblock :: KBlock -> L.NodeL Microblock
+genRandMicroblock kBlock = 
+    genMicroblock (toHash kBlock) <$> genNTransactions 10
+
 generateIndices :: Ordering -> L.NodeL [Integer]
 generateIndices order = do
   case order of
