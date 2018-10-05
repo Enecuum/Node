@@ -2,15 +2,14 @@ module App.Initialize where
 
 import           Enecuum.Prelude
 
-import           Enecuum.Config  (Config(..))
+import           Enecuum.Config  (Config(..), ScenarioNode(..),NodeRole(..), Scenario(..), ScenarioRole(..))
 import qualified Enecuum.Core.Lens as Lens
 import qualified Enecuum.Assets.Scenarios as S
 import           Enecuum.Assets.System.Directory (appFileName)
 import           Enecuum.Interpreters (runNodeDefinitionL)
-import           Enecuum.Runtime (createNodeRuntime, createLoggerRuntime,
+import           Enecuum.Runtime (NodeRuntime(..), createNodeRuntime, createLoggerRuntime,
                                   clearNodeRuntime, clearLoggerRuntime,
                                   createCoreRuntime, clearCoreRuntime)
-import           Enecuum.Assets.Nodes.Address (networkNode1Addr, networkNode2Addr)
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 import qualified Enecuum.Framework.RLens as Lens
     -- TODO: make this more correct.
@@ -29,24 +28,12 @@ initialize config = do
     coreRt <- createCoreRuntime loggerRt
     putStrLn @Text "Creating node runtime..."
     nodeRt <- createNodeRuntime coreRt
-
-    when (bootNode config) $ do
-        putStrLn @Text "Starting boot node..."
-        runNodeDefinitionL nodeRt $ S.bootNode config
-
-    when (masterNode config) $ do
-        putStrLn @Text "Starting master node..."
-        runNodeDefinitionL nodeRt $ S.masterNode config
-
-    when (networkNode1 config) $ do
-        putStrLn @Text "Starting networkNode1 node..."
-        runNodeDefinitionL nodeRt S.networkNode1
-
-    when (networkNode2 config) $ do
-        putStrLn @Text "Starting networkNode2 node..."
-        graph <- TG.initGraph
-        runNodeDefinitionL nodeRt $ S.networkNode2 graph
-
+    forM_ (scenarioNode config) $ (\scenarioCase-> forkIO $ do
+        putStrLn $ "Starting " ++ (show $ nodeRole scenarioCase) ++ " node..."
+        putStrLn $ "Starting " ++ (show $ scenario scenarioCase) ++ " scenario..."
+        putStrLn $ "Starting " ++ (show $ scenarioRole scenarioCase) ++ " role..."
+        dispatchScenario config nodeRt scenarioCase)
+        -- TODO: this is a quick hack. Make it right.
     atomically $ readTMVar (nodeRt ^. Lens.stopNode)
 
     putStrLn @Text "Clearing node runtime..."
@@ -55,3 +42,10 @@ initialize config = do
     clearCoreRuntime coreRt
     putStrLn @Text "Clearing logger runtime..."
     clearLoggerRuntime loggerRt
+
+
+dispatchScenario :: Config -> NodeRuntime -> ScenarioNode -> IO ()
+dispatchScenario config nodeRt (ScenarioNode BootNode _ _) = runNodeDefinitionL nodeRt $ S.bootNode config
+dispatchScenario config nodeRt (ScenarioNode MasterNode _ _) = runNodeDefinitionL nodeRt $ S.masterNode config
+dispatchScenario _ nodeRt (ScenarioNode NetworkNode Sync Respondent)  = runNodeDefinitionL nodeRt S.networkNode3
+dispatchScenario _ nodeRt (ScenarioNode NetworkNode Sync Interviewer) = runNodeDefinitionL nodeRt $ S.networkNode4

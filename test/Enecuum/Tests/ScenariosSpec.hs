@@ -10,9 +10,6 @@ import qualified Enecuum.Domain as D
 import           Enecuum.Testing
 import qualified Enecuum.Testing.RLens as RLens
 
-import           Enecuum.Assets.Nodes.NetworkNode1 (networkNode1)
-import           Enecuum.Assets.Nodes.NetworkNode2 (networkNode2)
-
 spec :: Spec
 spec = describe "Scenarios test" $ do
   it "Dummy test" $ do

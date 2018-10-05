@@ -4,5 +4,5 @@ module Enecuum.Assets.Scenarios (
 
 import Enecuum.Assets.Nodes.MasterNode as X
 import Enecuum.Assets.Nodes.BootNode as X
-import Enecuum.Assets.Nodes.NetworkNode1 as X
-import Enecuum.Assets.Nodes.NetworkNode2 as X
+import Enecuum.Assets.Nodes.NetworkNode3 as X
+import Enecuum.Assets.Nodes.NetworkNode4 as X

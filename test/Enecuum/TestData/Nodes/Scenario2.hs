@@ -3,7 +3,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 
 module Enecuum.TestData.Nodes.Scenario2 where
-
+{-
 import Enecuum.Prelude
 
 import qualified Data.Aeson                    as A
@@ -122,3 +122,5 @@ networkNode2 :: L.NodeDefinitionL ()
 networkNode2 = do
   L.nodeTag "networkNode2"
   L.scenario networkNode2Scenario
+
+-}

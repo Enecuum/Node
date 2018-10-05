@@ -6,7 +6,7 @@
 module Enecuum.Assets.Nodes.RPC where
 
 import Enecuum.Prelude
-
+import Enecuum.Blockchain.Domain as D
 -- Types for RPC requests.
 
 data GetHashIDRequest = GetHashIDRequest
@@ -42,3 +42,16 @@ newtype BalanceChangeRequest = BalanceChangeRequest Int
 newtype BalanceChangeResponse = BalanceChangeResponse { balance :: Maybe Int }
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
 
+-------------------------------------------------------------------
+
+data GetChainLengthRequest = GetChainLengthRequest
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+newtype GetChainLengthResponse = GetChainLengthResponse { chainLength :: Int }
+  deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
+
+newtype GetChainFromRequest = GetChainFromRequest { lastBlock :: Int }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+newtype GetChainFromResponse = GetChainFromResponse { blocks :: [D.KBlock] }
+  deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)

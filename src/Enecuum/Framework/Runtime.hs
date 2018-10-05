@@ -19,7 +19,7 @@ data ConnectionImplementation = ConnectionImplementation (TMVar (TChan D.Comand)
 
 data NodeRuntime = NodeRuntime
     { _coreRuntime  :: CoreRuntime
-    , _graph        :: D.TGraph D.Transaction
+    , _graph        :: D.TGraph D.NodeContent
     , _servers      :: TVar (Map PortNumber (TChan ServerComand))
     , _varCounter   :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
     , _state        :: NodeState              -- ^ State of node.

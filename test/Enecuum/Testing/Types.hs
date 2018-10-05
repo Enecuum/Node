@@ -89,6 +89,7 @@ type Servers = Map.Map D.Address ServerHandle
 
 -- | Test runtime for every node acting within a particular test runtime.
 data NodeRuntime = NodeRuntime
+<<<<<<< HEAD
   { _loggerRuntime   :: LoggerRuntime          -- ^ Logger runtime.
   , _networkControl  :: Control                -- ^ Control interface for virtual network.
   , _address         :: D.Address              -- ^ Address of this node.
@@ -99,6 +100,16 @@ data NodeRuntime = NodeRuntime
   , _varCounter      :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
   , _state           :: NodeState              -- ^ State of node.
   , _serversRegistry :: ServersRegistry        -- ^ Servers in the network.
+=======
+  { _loggerRuntime  :: LoggerRuntime    -- ^ Logger runtime.
+  , _networkControl :: Control                -- ^ Control interface for virtual network.
+  , _address        :: D.Address          -- ^ Address of this node.
+  , _tag            :: TVar D.NodeTag         -- ^ Tag of this node.
+  , _rpcServer      :: TMVar RpcServerHandle  -- ^ RPC server of this node.
+  , _graph          :: TG.TestGraphVar             -- ^ Graph
+  , _varCounter     :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
+  , _state          :: NodeState              -- ^ State of node.
+>>>>>>> feature/graph-scenario
   }
 
 -- | Registry of nodes acting within a test network.
