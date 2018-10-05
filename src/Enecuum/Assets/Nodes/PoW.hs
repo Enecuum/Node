@@ -9,12 +9,16 @@ import Enecuum.Prelude
 import qualified Enecuum.Language              as L
 import qualified Enecuum.Domain                as D
 
-import           Enecuum.Assets.Nodes.Address (grpahNodeRpcAddress)
+import           Enecuum.Assets.Nodes.Address (graphNodeRpcAddress)
 import           Data.HGraph.StringHashable (StringHash (..))
 import           Enecuum.Assets.Nodes.Messages (SuccessMsg (..))
 
+type IterationsCount = Int
+type EnableDelays = Bool
+
 data PoWNodeData = PoWNodeData
-    { _prevHash :: D.StateVar StringHash
+    { _enableDelays :: EnableDelays
+    , _prevHash :: D.StateVar StringHash
     , _prevNumber :: D.StateVar Integer
     }
 
@@ -28,7 +32,7 @@ data KeyBlockResponse = KeyBlockResponse { kBlock :: [D.KBlock] }
 
 sendKBlock :: D.KBlock -> L.NodeL ()
 sendKBlock kBlock = do
-    eResult <- L.makeRpcRequest grpahNodeRpcAddress kBlock
+    eResult <- L.makeRpcRequest graphNodeRpcAddress kBlock
     case eResult of
       Left msg -> L.logInfo $ "KBlock sending failed: " +|| msg ||+ "."
       Right SuccessMsg -> L.logInfo "KBlock sending success."
@@ -37,33 +41,35 @@ kBlockProcess :: PoWNodeData -> L.NodeL ()
 kBlockProcess nodeData = do
     prevKBlockHash   <- L.atomically <$> L.readVar $ nodeData ^. prevHash
     prevKBlockNumber <- L.atomically <$> L.readVar $ nodeData ^. prevNumber
-    
+
     (lastHash, kBlocks) <- D.generateKBlocks prevKBlockHash prevKBlockNumber
-    L.logInfo $ "KBlocks generated: " +|| kBlocks ||+ "."
+    -- L.logInfo $ "KBlocks generated: " +|| kBlocks ||+ "."
     L.logInfo $ "Last hash: " +|| lastHash ||+ "."
 
     L.atomically $ L.writeVar (nodeData ^. prevHash) lastHash
-    L.atomically $ L.writeVar (nodeData ^. prevNumber) (prevKBlockNumber + (fromIntegral $ length kBlocks))
+    L.atomically $ L.writeVar (nodeData ^. prevNumber) $ prevKBlockNumber + (fromIntegral $ length kBlocks)
 
     forM_ kBlocks $ \kBlock -> do
         L.logInfo $ "Sending KBlock: " +|| kBlock ||+ "."
         sendKBlock kBlock
-        L.delay $ 1000 * 1000
-
+        when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
 
 powNode :: L.NodeDefinitionL ()
-powNode = do
+powNode = powNode' True 10
+
+powNode' :: EnableDelays -> IterationsCount -> L.NodeDefinitionL ()
+powNode' delaysEnabled iterationsCount = do
     L.nodeTag "PoW node"
     L.logInfo "Generating Key Blocks."
 
-    nodeData <- L.initialization $ powNodeInitialization D.genesisHash
+    nodeData <- L.initialization $ powNodeInitialization delaysEnabled D.genesisHash
 
-    forever $ do
-        L.delay $ 1000 * 1000 * 10
+    replicateM_ iterationsCount $ do
+        when delaysEnabled $ L.delay $ 1000 * 1000 * 10
         L.scenario $ kBlockProcess nodeData
 
-powNodeInitialization :: StringHash -> L.NodeL PoWNodeData
-powNodeInitialization genesisHash = do
+powNodeInitialization :: EnableDelays -> StringHash -> L.NodeL PoWNodeData
+powNodeInitialization delaysEnabled genesisHash = do
   h <- L.atomically $ L.newVar genesisHash
   n <- L.atomically $ L.newVar 1
-  pure $ PoWNodeData h n
+  pure $ PoWNodeData delaysEnabled h n
