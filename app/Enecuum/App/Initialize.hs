@@ -50,6 +50,7 @@ initialize config = do
 dispatchScenario :: Config -> ScenarioNode -> L.NodeDefinitionL ()
 dispatchScenario config (ScenarioNode BootNode _ _) = S.bootNode config
 dispatchScenario config (ScenarioNode MasterNode _ _) = S.masterNode config
+dispatchScenario _ (ScenarioNode Client _ _)          = S.clientNode
 dispatchScenario _ (ScenarioNode NetworkNode Sync Respondent)  = S.networkNode3
 dispatchScenario _ (ScenarioNode NetworkNode Sync Interviewer) = S.networkNode4
 dispatchScenario _ (ScenarioNode PoW SyncKblock Soly) = S.powNode
