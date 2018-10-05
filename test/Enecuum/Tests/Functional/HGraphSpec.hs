@@ -1,12 +1,15 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+
 module Enecuum.Tests.Functional.HGraphSpec where
 
 import           Control.Concurrent.STM
 import qualified Data.Map as M
 import           Data.Maybe
 import           Test.HUnit
+import qualified Data.Aeson as A
 
 import           Enecuum.Prelude
 import           Enecuum.Domain as D
@@ -19,23 +22,47 @@ import           Enecuum.Core.HGraph.Language
 import           Enecuum.Core.HGraph.Types
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit (fromHUnitTest)
+import           Test.QuickCheck (property)
+
+data SomeStructure = SomeStructure
+    { someData :: String
+    , someInt :: Int
+    }
+  deriving (Generic, Serialize)
+
+instance StringHashable SomeStructure where
+    toHash = toHashGeneric
 
 spec :: Spec
-spec = describe "HGraph eDSL tests" $ fromHUnitTest $ TestList
-    [ TestLabel "Addition of new node / getting node by content" testNewNode
-    , TestLabel "Getting node by hash" testGetNodeByHash
-    , TestLabel "Getting node by ref" testGetNodeByRef
-    , TestLabel "Deleting of node by content" testDeleteNodeByContent
-    , TestLabel "Deleting of node by hash" testDeleteNodeByHash
-    , TestLabel "Deleting of node by ref" testDeleteNodeByRef
-    , TestLabel "Addition of new Link by content" testNewLinkByContent
-    , TestLabel "Addition of new Link by hash" testNewLinkByHash
-    , TestLabel "Addition of new Link by ref" testNewLinkByRef
-    , TestLabel "Deleting of Link by content" testDeleteLinkByContent
-    , TestLabel "Deleting of Link by hash" testDeleteLinkByHash
-    , TestLabel "Deleting of Link by ref" testDeleteLinkByRef
-    , TestLabel "List-like graph construction test" testListLikeGraph
-    ]
+spec = do
+    describe "HGraph eDSL tests" $ fromHUnitTest $ TestList
+        [ TestLabel "Addition of new node / getting node by content" testNewNode
+        , TestLabel "Getting node by hash" testGetNodeByHash
+        , TestLabel "Getting node by ref" testGetNodeByRef
+        , TestLabel "Deleting of node by content" testDeleteNodeByContent
+        , TestLabel "Deleting of node by hash" testDeleteNodeByHash
+        , TestLabel "Deleting of node by ref" testDeleteNodeByRef
+        , TestLabel "Addition of new Link by content" testNewLinkByContent
+        , TestLabel "Addition of new Link by hash" testNewLinkByHash
+        , TestLabel "Addition of new Link by ref" testNewLinkByRef
+        , TestLabel "Deleting of Link by content" testDeleteLinkByContent
+        , TestLabel "Deleting of Link by hash" testDeleteLinkByHash
+        , TestLabel "Deleting of Link by ref" testDeleteLinkByRef
+        , TestLabel "List-like graph construction test" testListLikeGraph
+        ]
+    describe "StringHash tests" $ do
+        it "StringHash serialize / deserialize property test" $
+            property $ \rndStrHash -> let
+                origHash = StringHash $ encodeUtf8 (rndStrHash :: String)
+                serialized = A.encode origHash
+                deserialized = A.decode serialized
+                in Just origHash == deserialized
+        it "StringHash serialize / deserialize test" $ do
+            let origHash = toHash $ SomeStructure "abC5435" 232
+            let serialized = A.encode origHash
+            let deserialized = A.decode serialized
+            Just origHash `shouldBe` deserialized
+    
 
 testNewNode :: Test
 testNewNode = TestCase $ do
@@ -184,3 +211,4 @@ testListLikeGraph = TestCase $ do
           , not (M.member (toHash @Int64 127) l1)
           ]
     assertBool "" ok
+
