@@ -1,0 +1,16 @@
+{
+	"bootNodeAddress": "[((127,0,0,1), 1554)]",
+	"scenarioNode": [{
+		"nodeRole": "PoA",
+		"scenario": "SyncKblock",
+		"scenarioRole": "Soly"
+	}],
+	"extPort": 1668,
+  "loggerConfig":
+      {
+          "format": "$prio $loggername: $msg",
+          "level": "Debug",
+          "logFilePath": "/tmp/log/PoW.log",
+          "logToConsole": true
+      }
+}
