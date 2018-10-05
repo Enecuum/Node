@@ -21,6 +21,7 @@ import           Enecuum.Framework.Language.Extra (HasGraph)
 
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 import           Enecuum.Assets.Nodes.Messages
+import           Enecuum.Assets.Nodes.Address
 
 data GraphNodeData = GraphNodeData
     { _graph         :: TG.GraphVar
@@ -179,7 +180,7 @@ graphNode = do
     L.nodeTag "graphNode"
     nodeData <- L.initialization graphNodeInitialization
 
-    L.serving 2001 $ do
+    L.serving graphNodeRpcPort $ do
         L.methodE $ acceptKBlock nodeData
         L.methodE $ acceptMBlock nodeData
         L.method  $ getLastKBlock nodeData

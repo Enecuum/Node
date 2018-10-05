@@ -11,3 +11,9 @@ networkNode4Addr = D.Address "127.0.0.1" 2004
 powAddr = D.Address "127.0.0.1" 2005
 poaAddr = D.Address "127.0.0.1" 2006
 nnAddr = D.Address "127.0.0.1" 2007
+
+graphNodeRpcPort :: D.PortNumber
+graphNodeRpcPort = 2008
+
+grpahNodeRpcAddress :: D.Address
+grpahNodeRpcAddress = D.Address "127.0.0.1" graphNodeRpcPort
