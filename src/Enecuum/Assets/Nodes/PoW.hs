@@ -11,7 +11,6 @@ import           Enecuum.Prelude hiding (Ordering)
 import Enecuum.Assets.Nodes.Address (powAddr)
 import           Data.HGraph.StringHashable (StringHash (..),toHash)
 import Data.List (delete)
-import           System.Random
 
 data Ordering = InOrder | RandomOrder
 data PoWNodeData = PoWNodeData
@@ -90,7 +89,7 @@ powNode = do
 
     forM_ [0, kBlockInBunch ..] (\from -> do
 
-      L.servingRpc port $ L.method $ sendKBlock nodeData from)
+      L.serving port $ L.method $ sendKBlock nodeData from)
 
 powNodeInitialization :: StringHash -> L.NodeL PoWNodeData
 powNodeInitialization genesisHash = do
