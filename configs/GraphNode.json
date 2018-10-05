@@ -1,0 +1,16 @@
+{
+	"bootNodeAddress": "[((127,0,0,1), 1554)]",
+	"scenarioNode": [{
+		"nodeRole": "GraphNode",
+		"scenario": "SyncKblock",
+		"scenarioRole": "Respondent"
+	}],
+	"extPort": 1668,
+  "loggerConfig":
+      {
+          "format": "$prio $loggername: $msg",
+          "level": "Debug",
+          "logFilePath": "/tmp/log/GraphNode.log",
+          "logToConsole": true
+      }
+}
