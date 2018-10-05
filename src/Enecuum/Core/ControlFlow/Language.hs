@@ -2,9 +2,7 @@ module Enecuum.Core.ControlFlow.Language where
 
 import           Enecuum.Prelude
 
--- | Language for logging.
 data ControlFlowF next where
-    -- | Log message with a predefined level.
     Delay :: Int -> (() -> next) -> ControlFlowF next
 
 instance Functor ControlFlowF where
