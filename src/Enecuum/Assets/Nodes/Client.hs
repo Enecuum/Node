@@ -29,6 +29,12 @@ getWalletBalance (GetWalletBalance walletId) = do
         L.makeRpcRequest graphNodeAddr (M.GetWalletBalance walletId)
     pure . eitherToText $ res
 
+{-
+Requests:
+    {"method":"GetLastKBlock"}
+    {"method":"GetWalletBalance", "walletID":"1234"}
+-}
+
 clientNode :: L.NodeDefinitionL ()
 clientNode = do
     L.logInfo "Client started"
