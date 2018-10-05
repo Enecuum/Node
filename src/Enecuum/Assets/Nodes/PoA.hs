@@ -29,7 +29,7 @@ poaNode = do
         poaData <- L.atomically (PoANodeData <$> L.newVar D.genesisKBlock)
         forever $ do
             L.delay $ 100 * 1000
-            kBlock <- L.makeRpcRequest grpahNodeRpcAddress GetLastKBlock
+            kBlock <- L.makeRpcRequest graphNodeRpcAddress GetLastKBlock
             case kBlock of
                 Left _ -> return ()
                 Right block -> do
@@ -37,5 +37,5 @@ poaNode = do
                     when (block /= currentBlock) $ do
                         L.atomically $ L.writeVar (poaData^.currentLastKeyBlock) block
                         mBlock <- D.genRandMicroblock block
-                        _ :: Either Text SuccessMsg <- L.makeRpcRequest grpahNodeRpcAddress mBlock
+                        _ :: Either Text SuccessMsg <- L.makeRpcRequest graphNodeRpcAddress mBlock
                         pure ()
