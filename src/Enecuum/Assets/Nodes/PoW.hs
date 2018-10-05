@@ -26,38 +26,22 @@ data KeyBlockRequest  = KeyBlockRequest
 data KeyBlockResponse = KeyBlockResponse { kBlock :: [D.KBlock] }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-kBlockInBunch :: Integer
-kBlockInBunch = 5
+
 
 -- Create and send bunch of kblocks
 sendKBlock :: PoWNodeData -> Integer -> KeyBlockRequest -> L.NodeL KeyBlockResponse
 sendKBlock nodeData from KeyBlockRequest = do
   prevKBlockHash <- L.atomically <$> L.readVar $ nodeData ^. prevHash
-  kBlockBunch <- generateKBlocks prevKBlockHash from
+  kBlockBunch <- D.generateKBlocks prevKBlockHash from
   kBlockIndices <- generateIndices RandomOrder
   let kBlocks = map ((kBlockBunch !! )  . fromIntegral) kBlockIndices
   pure $ KeyBlockResponse kBlocks
 
--- Generate bunch of key blocks
-generateKBlocks :: StringHash -> Integer -> Free L.NodeF [D.KBlock]
-generateKBlocks prevHash from = loopGenKBlock prevHash from (from + kBlockInBunch)
-
--- loop - state substitute : create new Kblock using hash of previous
-loopGenKBlock :: StringHash -> Integer -> Integer -> Free L.NodeF [D.KBlock]
-loopGenKBlock prevHash from to = do
-  let kblock = genKBlock prevHash from
-      newPrevHash = toHash kblock
-  if (from < to)
-    then do
-      rest <- loopGenKBlock newPrevHash (from + 1) to
-      return (kblock:rest)
-    else return []
-
 generateIndices :: Ordering -> Free L.NodeF [Integer]
 generateIndices order = do
   case order of
-    RandomOrder -> loopGenIndices [0 .. kBlockInBunch]
-    InOrder -> pure $ [0 .. kBlockInBunch]
+    RandomOrder -> loopGenIndices [0 .. D.kBlockInBunch]
+    InOrder -> pure $ [0 .. D.kBlockInBunch]
 
 -- loop: choose randomly one from the rest of list Integers
 -- example:
@@ -87,7 +71,7 @@ powNode = do
     -- initialize with genesis hash
     nodeData <- L.initialization $ powNodeInitialization D.genesisHash
 
-    forM_ [0, kBlockInBunch ..] (\from -> do
+    forM_ [0, D.kBlockInBunch ..] (\from -> do
 
       L.serving port $ L.method $ sendKBlock nodeData from)
 
@@ -96,11 +80,3 @@ powNodeInitialization genesisHash = do
   h <- L.atomically $ L.newVar genesisHash
   pure $ PoWNodeData h
 
-
-genKBlock :: StringHash -> Integer -> D.KBlock
-genKBlock prevHash i = D.KBlock
-    { _prevHash   = prevHash
-    , _number     = i
-    , _nonce      = i
-    , _solver     = toHash (i + 3)
-    }
