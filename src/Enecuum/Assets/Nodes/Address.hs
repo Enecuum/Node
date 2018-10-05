@@ -12,8 +12,8 @@ powAddr = D.Address "127.0.0.1" 2005
 poaAddr = D.Address "127.0.0.1" 2006
 nnAddr = D.Address "127.0.0.1" 2007
 
-graphNodePort :: D.PortNumber
-graphNodePort = 2008
+graphNodeRpcPort :: D.PortNumber
+graphNodeRpcPort = 2008
 
-grpahNodeAddress :: D.Address
-grpahNodeAddress = D.Address "127.0.0.1" graphNodePort
+grpahNodeRpcAddress :: D.Address
+grpahNodeRpcAddress = D.Address "127.0.0.1" graphNodeRpcPort

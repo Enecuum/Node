@@ -18,27 +18,27 @@ generateNKBlocks = generateKBlocks genesisHash
 generateNKBlocksWithOrder = createKBlocks genesisHash
 
 -- Generate bunch of key blocks (randomly or in order)
-createKBlocks :: StringHash -> Integer -> Ordering -> L.NodeL [KBlock]
+createKBlocks :: StringHash -> Integer -> Ordering -> L.NodeL (StringHash, [KBlock])
 createKBlocks prevKBlockHash from order = do
-  kBlockBunch <- generateKBlocks prevKBlockHash from
+  (lastHash, kBlockBunch) <- generateKBlocks prevKBlockHash from
   kBlockIndices <- generateIndices order
   let kBlocks = map ((kBlockBunch !! )  . fromIntegral) kBlockIndices
-  pure kBlocks
+  pure (lastHash, kBlocks)
 
 -- Generate bunch of key blocks (in order)
-generateKBlocks :: StringHash -> Integer -> Free L.NodeF [KBlock]
+generateKBlocks :: StringHash -> Integer -> L.NodeL (StringHash, [KBlock])
 generateKBlocks prevHash from = loopGenKBlock prevHash from (from + kBlockInBunch)
 
 -- loop - state substitute : create new Kblock using hash of previous
-loopGenKBlock :: StringHash -> Integer -> Integer -> L.NodeL [KBlock]
+loopGenKBlock :: StringHash -> Integer -> Integer -> L.NodeL (StringHash, [KBlock])
 loopGenKBlock prevHash from to = do
   let kblock = genKBlock prevHash from
       newPrevHash = toHash kblock
   if (from < to)
     then do
-      rest <- loopGenKBlock newPrevHash (from + 1) to
-      return (kblock:rest)
-    else return []
+      (lastHash, rest) <- loopGenKBlock newPrevHash (from + 1) to
+      return (lastHash, kblock:rest)
+    else return (newPrevHash, [])
 
 genKBlock :: StringHash -> Integer -> KBlock
 genKBlock prevHash i = KBlock

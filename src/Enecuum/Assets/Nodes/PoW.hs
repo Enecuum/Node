@@ -9,12 +9,13 @@ import Enecuum.Prelude
 import qualified Enecuum.Language              as L
 import qualified Enecuum.Domain                as D
 
-import Enecuum.Assets.Nodes.Address (powAddr)
+import           Enecuum.Assets.Nodes.Address (grpahNodeRpcAddress)
 import           Data.HGraph.StringHashable (StringHash (..))
+import           Enecuum.Assets.Nodes.Messages (SuccessMsg (..))
 
 data PoWNodeData = PoWNodeData
-    {
-      _prevHash :: D.StateVar StringHash
+    { _prevHash :: D.StateVar StringHash
+    , _prevNumber :: D.StateVar Integer
     }
 
 makeFieldsNoPrefix ''PoWNodeData
@@ -25,33 +26,44 @@ data KeyBlockRequest  = KeyBlockRequest
 data KeyBlockResponse = KeyBlockResponse { kBlock :: [D.KBlock] }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
--- Send bunch of kblocks
-sendKBlock :: PoWNodeData -> Integer -> KeyBlockRequest -> L.NodeL KeyBlockResponse
-sendKBlock nodeData from KeyBlockRequest = do
-  prevKBlockHash <- L.atomically <$> L.readVar $ nodeData ^. prevHash
-  kBlocks <- D.createKBlocks prevKBlockHash from D.RandomOrder
-  pure $ KeyBlockResponse kBlocks
+sendKBlock :: D.KBlock -> L.NodeL ()
+sendKBlock kBlock = do
+    eResult <- L.makeRpcRequest grpahNodeRpcAddress kBlock
+    case eResult of
+      Left msg -> L.logInfo $ "KBlock sending failed: " +|| msg ||+ "."
+      Right SuccessMsg -> L.logInfo "KBlock sending success."
 
+kBlockProcess :: PoWNodeData -> L.NodeL ()
+kBlockProcess nodeData = do
+    prevKBlockHash   <- L.atomically <$> L.readVar $ nodeData ^. prevHash
+    prevKBlockNumber <- L.atomically <$> L.readVar $ nodeData ^. prevNumber
+    
+    (lastHash, kBlocks) <- D.generateKBlocks prevKBlockHash prevKBlockNumber
+    L.logInfo $ "KBlocks generated: " +|| kBlocks ||+ "."
+    L.logInfo $ "Last hash: " +|| lastHash ||+ "."
 
-genKBlockProcess :: PoWNodeData -> L.NodeL ()
-genKBlockProcess = do
-    forM_ [0, D.kBlockInBunch ..] (\from -> do
-        L.method $ sendKBlock nodeData from)
+    L.atomically $ L.writeVar (nodeData ^. prevHash) lastHash
+    L.atomically $ L.writeVar (nodeData ^. prevNumber) $ fromIntegral $ length kBlocks
+
+    forM_ kBlocks $ \kBlock -> do
+        L.logInfo $ "Sending KBlock: " +|| kBlock ||+ "."
+        sendKBlock kBlock
+        L.delay $ 1000 * 1000
 
 
 powNode :: L.NodeDefinitionL ()
 powNode = do
     L.nodeTag "PoW node"
-    L.logInfo "Generate Key Block"
+    L.logInfo "Generating Key Blocks."
 
-    -- initialize with genesis hash
     nodeData <- L.initialization $ powNodeInitialization D.genesisHash
 
     forever $ do
-        delay $ 1000 * 1000
-        L.scenario $ genKBlockProcess nodeData
+        L.delay $ 1000 * 1000
+        L.scenario $ kBlockProcess nodeData
 
 powNodeInitialization :: StringHash -> L.NodeL PoWNodeData
 powNodeInitialization genesisHash = do
   h <- L.atomically $ L.newVar genesisHash
-  pure $ PoWNodeData h
+  n <- L.atomically $ L.newVar 0
+  pure $ PoWNodeData h n
