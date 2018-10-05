@@ -12,8 +12,8 @@ import           Enecuum.Core.Types.Logger     (LoggerConfig(..))
 import           System.FilePath.Windows       (dropFileName)
 import           System.Directory (createDirectoryIfMissing)
 
-data NodeRole = BootNode | MasterNode | NetworkNode | PoW | PoA | GraphNode
-  deriving (Generic, FromJSON, Show, Read, Eq, Ord)
+data NodeRole = BootNode | MasterNode | NetworkNode | PoW | PoA | Client | GraphNode
+  deriving (Generic, FromJSON, Show, Read, Eq, Ord )
 
 data Scenario = LedgerBalance | Sync | SyncKblock
   deriving (Generic, FromJSON, Show, Read, Eq, Ord)
