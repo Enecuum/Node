@@ -119,7 +119,7 @@ addMBlock nodeData mblock@(D.Microblock hash _) = do
     pure $ isJust kblock
 
 -- | Accept kBlock 
-acceptKBlock :: GraphNodeData -> D.KBlock -> L.NodeL (Either Text SuccesMsg)
+acceptKBlock :: GraphNodeData -> D.KBlock -> L.NodeL (Either Text SuccessMsg)
 acceptKBlock nodeData kBlock = do
     res <- L.atomically $ do
         topKBlock <- getTopKeyBlock nodeData
@@ -135,21 +135,33 @@ acceptKBlock nodeData kBlock = do
             | otherwise -> pure False
     writeLog nodeData
     if res
-        then pure $ Right SuccesMsg
+        then pure $ Right SuccessMsg
         else pure $ Left "Error of kblock accepting"
 
 
 -- | Accept mBlock 
-acceptMBlock :: GraphNodeData -> D.Microblock -> L.NodeL (Either Text SuccesMsg)
+acceptMBlock :: GraphNodeData -> D.Microblock -> L.NodeL (Either Text SuccessMsg)
 acceptMBlock nodeData mBlock = do
     writeLog nodeData
     res <- L.atomically (addMBlock nodeData mBlock)
     if res
-        then pure $ Right SuccesMsg
+        then pure $ Right SuccessMsg
         else pure $ Left "Error of mblock accepting"
 
 getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
-getLastKBlock nodeData _ = L.atomically $ getTopKeyBlock nodeData
+getLastKBlock nodeData _ = do
+    L.logInfo "Geting of last kblock." 
+    L.atomically $ getTopKeyBlock nodeData
+
+getGraphNode :: GraphNodeData -> GetGraphNode -> L.NodeL (Either Text D.NodeContent)
+getGraphNode nodeData (GetGraphNode hash) = do
+    L.logInfo "Geting graph node by hash." 
+    L.atomically $ L.withGraph nodeData $ do
+        maybeKBlock <- L.getNode hash
+        case maybeKBlock of
+            Just (D.HNode _ _ block _ _)
+                -> pure $ Right $ D.fromContent block
+            _   -> pure $ Left "Block not exist in graph." 
 
 -- | Initialization of graph node
 graphNodeInitialization :: L.NodeL GraphNodeData
@@ -171,3 +183,4 @@ graphNode = do
         L.methodE $ acceptKBlock nodeData
         L.methodE $ acceptMBlock nodeData
         L.method  $ getLastKBlock nodeData
+        L.methodE $ getGraphNode nodeData
