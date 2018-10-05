@@ -9,33 +9,22 @@ import           Enecuum.Prelude
 import qualified Enecuum.Domain                as D
 import           Data.HGraph.StringHashable
 
-newtype AcceptKeyBlockRequest  = AcceptKeyBlockRequest { kBlock :: D.KBlock }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data AcceptKeyBlockResponse = AcceptKeyBlockResponse { accepted :: Bool }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-newtype AcceptMicroblockRequest  = AcceptMicroblockRequest { microblock :: D.Microblock }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data AcceptMicroblockResponse = AcceptMicroblockResponse { accepted :: Bool }
+data SuccesMsg   = SuccesMsg 
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 type WalletId = Int
 
-data GetLastKBlockRequest = GetLastKBlockRequest
+data GetLastKBlock = GetLastKBlock
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data GetLastKBlockResponse = GetLastKBlockResponse {kBlock :: D.KBlock}
+data GetWalletBalance = GetWalletBalance { walletId :: WalletId }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
---data GetBlockRequest = GetBlockRequest {hash :: StringHash}
+data GetGraphNode = GetGraphNode {hash :: StringHash}
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-
-data GetBalanceOfWalletRequest = GetBalanceOfWalletRequest { walletId :: WalletId }
-    deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data GetBalanceOfWalletResponse = GetBalanceOfWalletResponse
-    { walletId :: WalletId
-    , balance  :: Int
-    }
-    deriving (Show, Eq, Generic, ToJSON, FromJSON)
+data WalletBalanceMsg = WalletBalanceMsg
+  { walletId :: WalletId
+  , balance  :: Int
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)

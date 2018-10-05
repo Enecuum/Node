@@ -119,8 +119,8 @@ addMBlock nodeData mblock@(D.Microblock hash _) = do
     pure $ isJust kblock
 
 -- | Accept kBlock 
-acceptKBlock :: GraphNodeData -> AcceptKeyBlockRequest -> L.NodeL AcceptKeyBlockResponse
-acceptKBlock nodeData (AcceptKeyBlockRequest kBlock) = do
+acceptKBlock :: GraphNodeData -> D.KBlock -> L.NodeL (Either Text SuccesMsg)
+acceptKBlock nodeData kBlock = do
     res <- L.atomically $ do
         topKBlock <- getTopKeyBlock nodeData
         if  | kBlock ^. Lens.number >  topKBlock ^. Lens.number + 1 ->
@@ -134,25 +134,31 @@ acceptKBlock nodeData (AcceptKeyBlockRequest kBlock) = do
 
             | otherwise -> pure False
     writeLog nodeData
-    pure $ AcceptKeyBlockResponse res
+    if res
+        then pure $ Right SuccesMsg
+        else pure $ Left "Error of kblock accepting"
+
 
 -- | Accept mBlock 
-acceptMBlock :: GraphNodeData -> AcceptMicroblockRequest -> L.NodeL AcceptMicroblockResponse
-acceptMBlock nodeData (AcceptMicroblockRequest mBlock) = do
+acceptMBlock :: GraphNodeData -> D.Microblock -> L.NodeL (Either Text SuccesMsg)
+acceptMBlock nodeData mBlock = do
     writeLog nodeData
-    AcceptMicroblockResponse <$> L.atomically (addMBlock nodeData mBlock)
+    res <- L.atomically (addMBlock nodeData mBlock)
+    if res
+        then pure $ Right SuccesMsg
+        else pure $ Left "Error of mblock accepting"
+
+getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
+getLastKBlock nodeData _ = L.atomically $ getTopKeyBlock nodeData
 
 -- | Initialization of graph node
 graphNodeInitialization :: L.NodeL GraphNodeData
 graphNodeInitialization = do
     g <- L.newGraph
-    baseNode <- L.evalGraphIO g $ L.getNode TG.genesisHash >>= \case
-        Nothing       -> error "Genesis node not found. Graph is not ready."
-        Just baseNode -> pure baseNode
-    
+    L.evalGraphIO g $ L.newNode $ D.KBlockContent D.genesisKBlock
     L.atomically $ GraphNodeData g
         <$> L.newVar []
-        <*> L.newVar (baseNode ^. Lens.hash)
+        <*> L.newVar D.genesisHash
         <*> L.newVar []
 
 -- | Start of graph node
@@ -162,5 +168,6 @@ graphNode = do
     nodeData <- L.initialization graphNodeInitialization
 
     L.serving 2001 $ do
-        L.method $ acceptKBlock nodeData
-        L.method $ acceptMBlock nodeData
+        L.methodE $ acceptKBlock nodeData
+        L.methodE $ acceptMBlock nodeData
+        L.method  $ getLastKBlock nodeData
