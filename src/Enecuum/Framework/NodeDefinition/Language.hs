@@ -110,3 +110,7 @@ instance L.Logger (Free NodeDefinitionF) where
 instance L.ERandom (Free NodeDefinitionF) where
     getRandomInt =  evalCoreEffectNodeDefinitionF . L.getRandomInt
     evalRand r g = evalCoreEffectNodeDefinitionF  $ L.evalRand r g
+
+
+instance L.ControlFlow (Free NodeDefinitionF) where
+    delay = evalCoreEffectNodeDefinitionF . L.delay

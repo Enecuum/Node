@@ -6,7 +6,7 @@ import qualified Enecuum.Core.Language                    as L
 
 import qualified Enecuum.Testing.Core.Interpreters.Logger as Impl
 import qualified Enecuum.Testing.Types                    as T
-
+import           Enecuum.Testing.Core.Interpreters.ControlFlow
 -- Using real implementation
 import           Enecuum.Core.Random.Interpreter (runERandomL)
 
@@ -18,6 +18,8 @@ interpretCoreEffectL loggerRt (L.EvalLogger logger next) =
 interpretCoreEffectL _ (L.EvalRandom eRnd next) =
     next <$> runERandomL eRnd
 
+interpretCoreEffectL _ (L.EvalControlFlow flow next) =
+    next <$> runControlFlow flow
 
 -- | Runs core effect container language.
 runCoreEffect :: T.LoggerRuntime -> L.CoreEffect a -> IO a

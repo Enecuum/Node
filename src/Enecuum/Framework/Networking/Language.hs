@@ -71,6 +71,9 @@ instance L.ERandom (Free NetworkingF) where
     getRandomInt = evalCoreEffectNetworkingF . L.getRandomInt
     evalRand r g = evalCoreEffectNetworkingF $ L.evalRand r g
 
+instance L.ControlFlow (Free NetworkingF) where
+    delay = evalCoreEffectNetworkingF . L.delay
+
 responseValidation :: (FromJSON b, Applicative f) => Either Text D.RpcResponse -> f (Either Text b)
 responseValidation res = case res of
   Left txt -> pure $ Left txt
