@@ -27,8 +27,8 @@ data NodeContent
   deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialize)
 
 instance StringHashable NodeContent where
-  toHash = StringHash . Base64.encode . SHA.hash . S.encode
-
+  toHash (KBlockContent block)= toHash block
+  toHash (MBlockContent block)= toHash block
 
 type GraphVar  = D.TGraph NodeContent
 type GraphL a  = L.HGraphL NodeContent a
