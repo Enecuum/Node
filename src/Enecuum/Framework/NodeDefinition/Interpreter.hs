@@ -24,7 +24,9 @@ import qualified Enecuum.Framework.Domain.RPC             as D
 import qualified Enecuum.Framework.Domain.Networking      as D
 import           Enecuum.Framework.Networking.Internal.Internal 
 import           Enecuum.Framework.MsgHandler.Interpreter
-
+import           Enecuum.Framework.StdinHandlers.Interpreter as Imp
+import           Data.Aeson.Lens
+import qualified Data.Text as T
 
 interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF  a -> IO a
 interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
@@ -60,7 +62,28 @@ interpretNodeDefinitionL nodeRt (L.ServingRpc port initScript next) = do
     void $ forkIO $ runRpcServer s port (runNodeL nodeRt) m
     return $ next a
 
+interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
+    m <- atomically $ newTVar mempty
+    a <- runStdinHandlerL m handlers
+    void $ forkIO $ do
+        m' <- readTVarIO m
+        forever $ do
+            putTextLn =<< callHandler nodeRt m' =<< getLine
+    pure $ next ()
 
+--
+callHandler :: NodeRuntime -> Map Text (Value -> L.NodeL Text) -> Text -> IO Text
+callHandler nodeRt methods msg = do
+    let val = A.decode $ fromString $ T.unpack msg
+    case val of
+        Just ((^? key "method" . _String ) -> Just method) ->
+            case methods^.at method of
+                Just justMethod ->Impl.runNodeL nodeRt $ justMethod (fromJust $ val)
+                Nothing -> pure $ "The method " <> method <> " is'nt supported."
+        Nothing -> pure "Error of request parsing."
+
+
+fromJust (Just a) = a
 --
 -- TODO: treadDelay if server in port exist!!!
 takeServerChan

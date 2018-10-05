@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 -- TODO: this is copy-paste from tests with little changes.
 
 module Enecuum.Blockchain.Domain.Graph where
@@ -23,9 +24,7 @@ import           Data.HGraph.StringHashable (StringHash (..), StringHashable, to
 data NodeContent
   = KBlockContent D.KBlock
   | MBlockContent D.Microblock
-  deriving (Generic)
-
-instance S.Serialize NodeContent
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialize)
 
 instance StringHashable NodeContent where
   toHash = StringHash . Base64.encode . SHA.hash . S.encode
