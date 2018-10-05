@@ -16,6 +16,6 @@ msgHandler (Msg text) = pure text
 
 clientNode :: L.NodeDefinitionL ()
 clientNode = do
-    L.logInfo "!!!!"
+    L.logInfo "Client started"
     L.std $ do
         L.stdHandler msgHandler
