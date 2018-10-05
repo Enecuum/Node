@@ -9,7 +9,7 @@ import           Enecuum.Prelude
 import qualified Enecuum.Domain                as D
 import           Data.HGraph.StringHashable
 
-data SuccessMsg   = SuccessMsg 
+data SuccessMsg = SuccessMsg 
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 type WalletId = Int
