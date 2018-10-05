@@ -127,14 +127,17 @@ calculateLedger nodeData mblock = do
     ledgerW <- L.readVar $ nodeData ^. ledger
     forM_ (mblock ^. Lens.transactions ) $ \ tx -> do
         let owner = tx ^. Lens.owner
+            receiver = tx ^. Lens.receiver
             amount = tx ^. Lens.amount
             currentBalance = lookup owner ledgerW
         case currentBalance of
             Nothing -> stateLog nodeData $ "Can't find wallet in ledger: " +|| show owner
             Just balance -> if (balance >= amount)
                 then do
-                    let newLedger = insert owner (balance - amount) ledgerW
+                    let receiverBalance = fromMaybe 0 $ lookup receiver ledgerW
+                        newLedger = insert owner (balance - amount) (insert receiver (receiverBalance + amount) ledgerW)
                     L.writeVar (nodeData ^. ledger ) newLedger
+                    stateLog nodeData $ "Tx complete: from " +|| show owner +|| " , to " +|| show receiver ||+ " , amount " +|| show amount
                 else
                     stateLog nodeData $ "Wallet trying to spend more than it have" +|| show owner
 
