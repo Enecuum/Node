@@ -21,23 +21,24 @@ import qualified Enecuum.Language as L
 initialize :: Config -> IO ()
 initialize config = do
     putStrLn @Text "Getting log file..."
-    let loggerConfig' = (loggerConfig config)
-    let logFile = loggerConfig' ^. Lens.logFilePath
+    let loggerConfig' = loggerConfig config
+    let logFile       = loggerConfig' ^. Lens.logFilePath
     putStrLn @Text $ "Log file: " +| logFile |+ "."
 
     putStrLn @Text "Creating logger runtime..."
-    loggerRt <- createLoggerRuntime $ loggerConfig'
+    loggerRt <- createLoggerRuntime loggerConfig'
     putStrLn @Text "Creating core runtime..."
     coreRt <- createCoreRuntime loggerRt
     putStrLn @Text "Creating node runtime..."
     nodeRt <- createNodeRuntime coreRt
-    forM_ (scenarioNode config) $ (\scenarioCase-> forkIO $ runNodeDefinitionL nodeRt $ do
-        L.logInfo $ "Starting " +|| nodeRole scenarioCase ||+ " node..."
-        L.logInfo $ "Starting " +|| scenario scenarioCase ||+ " scenario..."
-        L.logInfo $ "Starting " +|| scenarioRole scenarioCase ||+ " role..."
-        dispatchScenario config scenarioCase)
-        -- TODO: this is a quick hack. Make it right.
-    atomically $ readTMVar (nodeRt ^. Lens.stopNode)
+
+    forM_ (scenarioNode config) $ \scenarioCase-> forkIO $ runNodeDefinitionL nodeRt $ do
+        L.logInfo $ "Starting node.\n  Role: " +|| nodeRole scenarioCase ||+ 
+                    "\n  Scenario: " +|| scenario scenarioCase ||+ 
+                    "\n  Case: " +|| scenarioRole scenarioCase ||+ "..."
+        dispatchScenario config scenarioCase
+
+    void $ atomically $ readTMVar (nodeRt ^. Lens.stopNode)
 
     putStrLn @Text "Clearing node runtime..."
     clearNodeRuntime nodeRt
@@ -54,5 +55,6 @@ dispatchScenario _ (ScenarioNode NetworkNode Sync Interviewer) = S.networkNode4
 dispatchScenario _ (ScenarioNode PoW SyncKblock Soly) = S.powNode
 dispatchScenario _ (ScenarioNode PoA SyncKblock Soly) = S.poaNode
 dispatchScenario _ (ScenarioNode NetworkNode SyncKblock Soly) = S.nnNode
+dispatchScenario _ (ScenarioNode GraphNode _ _) = S.graphNode
 dispatchScenario _ (ScenarioNode role scenario scenarioRole) = error mes
   where mes = "This scenario: " +|| role ||+ scenario ||+ scenarioRole ||+ " doesn't exist"

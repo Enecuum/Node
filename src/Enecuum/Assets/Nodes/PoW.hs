@@ -51,7 +51,7 @@ generateIndices order = do
 -- [1,3] - 1
 -- [3] - 3
 -- the result: [2,4,5,1,3]
-loopGenIndices :: [Integer] -> Free L.NodeF [Integer]
+loopGenIndices :: [Integer] -> L.NodeL [Integer]
 loopGenIndices numbers = do
   if (not $ null numbers)
     then do
