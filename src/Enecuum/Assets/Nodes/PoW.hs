@@ -43,7 +43,7 @@ kBlockProcess nodeData = do
     L.logInfo $ "Last hash: " +|| lastHash ||+ "."
 
     L.atomically $ L.writeVar (nodeData ^. prevHash) lastHash
-    L.atomically $ L.writeVar (nodeData ^. prevNumber) $ fromIntegral $ length kBlocks
+    L.atomically $ L.writeVar (nodeData ^. prevNumber) (prevKBlockNumber + (fromIntegral $ length kBlocks))
 
     forM_ kBlocks $ \kBlock -> do
         L.logInfo $ "Sending KBlock: " +|| kBlock ||+ "."

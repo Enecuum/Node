@@ -20,13 +20,13 @@ instance A.FromJSON GetLastKBlock where
 getLastKBlockHandler :: GetLastKBlock -> L.NodeL Text
 getLastKBlockHandler _ = do
     res :: Either Text D.KBlock <-
-        L.makeRpcRequest graphNodeAddr M.GetLastKBlock
+        L.makeRpcRequest grpahNodeRpcAddress M.GetLastKBlock
     pure . eitherToText $ res
 
 getWalletBalance :: GetWalletBalance -> L.NodeL Text
 getWalletBalance (GetWalletBalance walletId) = do
     res :: Either Text M.WalletBalanceMsg <-
-        L.makeRpcRequest graphNodeAddr (M.GetWalletBalance walletId)
+        L.makeRpcRequest grpahNodeRpcAddress (M.GetWalletBalance walletId)
     pure . eitherToText $ res
 
 {-
