@@ -7,6 +7,8 @@ module Data.HGraph.StringHashable where
 import           Enecuum.Prelude
 import           Data.Serialize
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as A
+import qualified Data.ByteString as BS
 
 newtype StringHash = StringHash ByteString
     deriving (Eq, Ord, Serialize, Show, Read, Generic)
@@ -40,14 +42,15 @@ fromStringHash :: StringHash -> ByteString
 fromStringHash (StringHash sh) = sh
 
 
-data StringHashSerializable = StringHashSerializable
-   { bytes :: Text
+newtype StringHashSerializable = StringHashSerializable
+   { bytes :: [Word8]
    }
   deriving (Generic, ToJSON, FromJSON)
 
 instance ToJSON StringHash where
-    toJSON (StringHash bytes) = toJSON $ StringHashSerializable $ show bytes
+    toJSON (StringHash bytes) = toJSON $ StringHashSerializable $ BS.unpack bytes
 
 instance FromJSON StringHash where
-    parseJSON obj = undefined
+    parseJSON = A.withObject "StringHashSerializable" $ \v ->
+        StringHash . BS.pack <$> ((v A..: "bytes") :: A.Parser [Word8])
         

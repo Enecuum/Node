@@ -200,6 +200,7 @@ tests:
     dependencies:
     - hspec
     - HUnit
+    - QuickCheck
     - hspec-contrib
     - Node
     - newtype-generics
