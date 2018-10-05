@@ -2,20 +2,40 @@ module Enecuum.Assets.Nodes.Client where
 
 import           Enecuum.Prelude
 
+import qualified Enecuum.Domain as D
 import qualified Data.Aeson as A
-import           Enecuum.Config (Config)
 import qualified Enecuum.Language as L
+import qualified Enecuum.Assets.Nodes.Messages as M
+import           Enecuum.Assets.Nodes.Address
 
-data Msg = Msg Text 
+data GetLastKBlock    = GetLastKBlock
+newtype GetWalletBalance = GetWalletBalance M.WalletId
 
-instance A.FromJSON Msg where
-    parseJSON (A.Object o) = Msg <$> o A..: "msg"
+instance A.FromJSON GetWalletBalance where
+    parseJSON (A.Object o) = GetWalletBalance <$> o A..: "walletID"
 
-msgHandler :: Msg -> L.NodeL Text
-msgHandler (Msg text) = pure text
+instance A.FromJSON GetLastKBlock where
+    parseJSON _ = pure GetLastKBlock
+
+getLastKBlockHandler :: GetLastKBlock -> L.NodeL Text
+getLastKBlockHandler _ = do
+    res :: Either Text D.KBlock <-
+        L.makeRpcRequest graphNodeAddr M.GetLastKBlock
+    pure . eitherToText $ res
+
+getWalletBalance :: GetWalletBalance -> L.NodeL Text
+getWalletBalance (GetWalletBalance walletId) = do
+    res :: Either Text M.WalletBalanceMsg <-
+        L.makeRpcRequest graphNodeAddr (M.GetWalletBalance walletId)
+    pure . eitherToText $ res
 
 clientNode :: L.NodeDefinitionL ()
 clientNode = do
     L.logInfo "Client started"
     L.std $ do
-        L.stdHandler msgHandler
+        L.stdHandler getLastKBlockHandler
+        L.stdHandler getWalletBalance
+
+eitherToText :: Show a => Either Text a -> Text
+eitherToText (Left a)  = a
+eitherToText (Right a) = show a
