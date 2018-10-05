@@ -68,7 +68,9 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
     void $ forkIO $ do
         m' <- readTVarIO m
         forever $ do
-            putTextLn =<< callHandler nodeRt m' =<< getLine
+            line <- getLine
+            res <- callHandler nodeRt m' line
+            putTextLn res 
     pure $ next ()
 
 --

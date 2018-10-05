@@ -201,7 +201,7 @@ graphNode = do
     L.nodeTag "graphNode"
     nodeData <- L.initialization graphNodeInitialization
 
-    L.serving 2001 $ do
+    L.serving graphNodeRpcPort $ do
         L.methodE $ acceptKBlock nodeData
         L.methodE $ acceptMBlock nodeData
         L.method  $ getLastKBlock nodeData
