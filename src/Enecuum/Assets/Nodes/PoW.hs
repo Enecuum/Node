@@ -15,8 +15,8 @@ import           System.Random
 
 data Ordering = InOrder | RandomOrder
 data PoWNodeData = PoWNodeData
-    { _kBlocks :: D.StateVar [D.KBlock]
-    , _prevHash :: StringHash
+    {
+      _prevHash :: D.StateVar StringHash
     }
 
 makeFieldsNoPrefix ''PoWNodeData
@@ -27,43 +27,58 @@ data KeyBlockRequest  = KeyBlockRequest
 data KeyBlockResponse = KeyBlockResponse { kBlock :: [D.KBlock] }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+kBlockInBunch :: Integer
+kBlockInBunch = 5
 
-kBlockInBunch :: Integer  
-kBlockInBunch = 5  
+-- Create and send bunch of kblocks
+sendKBlock :: PoWNodeData -> Integer -> KeyBlockRequest -> L.NodeL KeyBlockResponse
+sendKBlock nodeData from KeyBlockRequest = do
+  prevKBlockHash <- L.atomically <$> L.readVar $ nodeData ^. prevHash
+  kBlockBunch <- generateKBlocks prevKBlockHash from
+  kBlockIndices <- generateIndices RandomOrder
+  let kBlocks = map ((kBlockBunch !! )  . fromIntegral) kBlockIndices
+  pure $ KeyBlockResponse kBlocks
 
-sendKBlock :: PoWNodeData -> KeyBlockRequest -> L.NodeL KeyBlockResponse
-sendKBlock nodeData KeyBlockRequest = do
-  kblocks <- L.atomically $ L.readVar $ nodeData ^. kBlocks
-  pure $ KeyBlockResponse kblocks
+-- Generate bunch of key blocks
+generateKBlocks :: StringHash -> Integer -> Free L.NodeF [D.KBlock]
+generateKBlocks prevHash from = loopGenKBlock prevHash from (from + kBlockInBunch)
 
+-- loop - state substitute : create new Kblock using hash of previous
+loopGenKBlock :: StringHash -> Integer -> Integer -> Free L.NodeF [D.KBlock]
+loopGenKBlock prevHash from to = do
+  let kblock = genKBlock prevHash from
+      newPrevHash = toHash kblock
+  if (from < to)
+    then do
+      rest <- loopGenKBlock newPrevHash (from + 1) to
+      return (kblock:rest)
+    else return []
 
--- someNode = do
---   kBlockBunch <- generateKBlocks prevKBlockHash 5
---   kBlockIndices <- generateIndices RandomOrder 5   -- [0..4]
---   forM_ send
+generateIndices :: Ordering -> Free L.NodeF [Integer]
+generateIndices order = do
+  case order of
+    RandomOrder -> loopGenIndices [0 .. kBlockInBunch]
+    InOrder -> pure $ [0 .. kBlockInBunch]
 
-
-generateKBlocks :: StringHash -> Integer -> Free L.NodeDefinitionF [D.KBlock]
-generateKBlocks _ from = do
-  pure $ map genKBlocks [from .. from + kBlockInBunch]
-
-loopGenIndices :: [Integer] -> Free L.NodeDefinitionF [Integer]
+-- loop: choose randomly one from the rest of list Integers
+-- example:
+-- [1,2,3,4,5] - 2
+-- [1,3,4,5] - 4
+-- [1,3,5] - 5
+-- [1,3] - 1
+-- [3] - 3
+-- the result: [2,4,5,1,3]
+loopGenIndices :: [Integer] -> Free L.NodeF [Integer]
 loopGenIndices numbers = do
   if (not $ null numbers)
     then do
       let maxIndex = fromIntegral $ length numbers - 1
-      p <- fromIntegral <$> L.getRandomInt (0, maxIndex)  
+      p <- fromIntegral <$> L.getRandomInt (0, maxIndex)
       let result = numbers !! p
       -- choose next number from rest
       rest <- loopGenIndices $ delete result numbers
       return (result:rest)
-    else return []    
-
-generateIndices :: Ordering -> Free L.NodeDefinitionF [Integer]
-generateIndices order = do
-  case order of
-    RandomOrder -> loopGenIndices [0 .. kBlockInBunch]
-    InOrder -> pure $ [0 .. kBlockInBunch]  
+    else return []
 
 powNode :: L.NodeDefinitionL ()
 powNode = do
@@ -71,25 +86,21 @@ powNode = do
     L.logInfo "Generate Key Block"
     let (D.Address _ port) = powAddr
     -- initialize with genesis hash
+    nodeData <- L.initialization $ powNodeInitialization D.genesisHash
+
     forM_ [0, kBlockInBunch ..] (\from -> do
-      -- prevKBlockHash <- L.atomically <$> L.readVar $ nodeData ^. prevHash
-      let prevKBlockHash = undefined
-      kBlockBunch <- generateKBlocks prevKBlockHash from 
-      kBlockIndices <- generateIndices RandomOrder 
-      let kBlocks = map ((kBlockBunch !! )  . fromIntegral) kBlockIndices 
-      let genesisHash = undefined
-      nodeData <- L.initialization $ powNodeInitialization genesisHash kBlocks
-      L.servingRpc port $ L.method $ sendKBlock nodeData)
 
-powNodeInitialization :: StringHash -> [D.KBlock] -> L.NodeL PoWNodeData
-powNodeInitialization genesisHash kblocks = do
-  b <- L.atomically $ L.newVar kblocks
-  pure $ PoWNodeData b genesisHash
+      L.servingRpc port $ L.method $ sendKBlock nodeData from)
+
+powNodeInitialization :: StringHash -> L.NodeL PoWNodeData
+powNodeInitialization genesisHash = do
+  h <- L.atomically $ L.newVar genesisHash
+  pure $ PoWNodeData h
 
 
-genKBlocks :: Integer -> D.KBlock
-genKBlocks i = D.KBlock
-    { _prevHash   = toHash i
+genKBlock :: StringHash -> Integer -> D.KBlock
+genKBlock prevHash i = D.KBlock
+    { _prevHash   = prevHash
     , _number     = i
     , _nonce      = i
     , _solver     = toHash (i + 3)
