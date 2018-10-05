@@ -88,7 +88,7 @@ moveKBlockToGraph nodeData = do
 kBlockIsNext :: D.KBlock -> D.KBlock -> Bool
 kBlockIsNext kBlock topKBlock = 
     kBlock ^. Lens.number   == topKBlock ^. Lens.number + 1 
-    && kBlock ^. Lens.prevHash == toHash topKBlock
+    && kBlock ^. Lens.prevHash == toHash (D.KBlockContent topKBlock)
 
 -- | Add new key block to pending.
 addBlockToPending :: GraphNodeData -> D.KBlock -> L.StateL Bool
