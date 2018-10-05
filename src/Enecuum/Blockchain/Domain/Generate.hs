@@ -1,13 +1,13 @@
 module Enecuum.Blockchain.Domain.Generate where
 
-import Enecuum.Prelude hiding (Ordering)
-import Enecuum.Blockchain.Domain.Graph
-import Enecuum.Blockchain.Domain.KBlock
-import Enecuum.Blockchain.Domain.Transaction
-import Enecuum.Blockchain.Domain.Microblock
-import Data.HGraph.StringHashable (StringHash (..),toHash)
-import qualified Enecuum.Language              as L
-import Data.List (delete)
+import           Data.HGraph.StringHashable            (StringHash (..), toHash)
+import           Data.List                             (delete)
+import           Enecuum.Blockchain.Domain.Graph
+import           Enecuum.Blockchain.Domain.KBlock
+import           Enecuum.Blockchain.Domain.Microblock
+import           Enecuum.Blockchain.Domain.Transaction
+import qualified Enecuum.Language                      as L
+import           Enecuum.Prelude                       hiding (Ordering)
 
 data Ordering = InOrder | RandomOrder
 
@@ -25,7 +25,7 @@ createKBlocks prevKBlockHash from order = do
   let kBlocks = map ((kBlockBunch !! )  . fromIntegral) kBlockIndices
   pure kBlocks
 
--- Generate bunch of key blocks
+-- Generate bunch of key blocks (in order)
 generateKBlocks :: StringHash -> Integer -> Free L.NodeF [KBlock]
 generateKBlocks prevHash from = loopGenKBlock prevHash from (from + kBlockInBunch)
 
@@ -49,16 +49,17 @@ genKBlock prevHash i = KBlock
     }
 
 genNTransactions :: Int -> L.NodeL [Transaction]
-genNTransactions k =  do
-  numbers <- replicateM k $ L.getRandomInt (0, 1000)
-  pure $ map genTransaction numbers
+genNTransactions k = replicateM k genTransaction
 
-genTransaction :: Integer -> Transaction
-genTransaction i =  Transaction
-    { _owner     = i
-    , _receiver  = i + 100
-    , _amount    = i + 7
-    }
+genTransaction :: L.NodeL Transaction
+genTransaction = do
+    owner <- L.getRandomInt (1,5)
+    receiver <- L.getRandomInt (1,5)
+    amount <- L.getRandomInt (0,100)
+    pure Transaction {
+        _owner     = owner
+      , _receiver  = receiver
+      , _amount    = amount}
 
 genMicroblock :: StringHash -> [Transaction] -> Microblock
 genMicroblock hashofKeyBlock tx = Microblock
@@ -70,7 +71,7 @@ generateIndices :: Ordering -> Free L.NodeF [Integer]
 generateIndices order = do
   case order of
     RandomOrder -> loopGenIndices [0 .. kBlockInBunch]
-    InOrder -> pure $ [0 .. kBlockInBunch]
+    InOrder     -> pure $ [0 .. kBlockInBunch]
 
 -- loop: choose randomly one from the rest of list Integers
 -- example:
