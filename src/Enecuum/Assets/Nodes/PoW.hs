@@ -65,5 +65,5 @@ powNode = do
 powNodeInitialization :: StringHash -> L.NodeL PoWNodeData
 powNodeInitialization genesisHash = do
   h <- L.atomically $ L.newVar genesisHash
-  n <- L.atomically $ L.newVar 0
+  n <- L.atomically $ L.newVar 1
   pure $ PoWNodeData h n

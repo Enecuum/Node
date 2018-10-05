@@ -60,7 +60,9 @@ getTopKeyBlock :: GraphNodeData -> L.StateL D.KBlock
 getTopKeyBlock nodeData = do
     stateLog nodeData "Getting of top keyblock"
     topNodeHash    <- L.readVar $ nodeData ^. curNode
+    stateLog nodeData $ "Hash of current top keyblock is " <> show topNodeHash
     Just topKBlock <- getKBlock nodeData topNodeHash
+    stateLog nodeData $ "Current top keyblock is " <> show topKBlock
     pure topKBlock
 
 -- | Move one block from pending to graph if it is possibly and remove it from pending.
@@ -84,8 +86,8 @@ moveKBlockToGraph nodeData = do
 
 kBlockIsNext :: D.KBlock -> D.KBlock -> Bool
 kBlockIsNext kBlock topKBlock = 
-    kBlock ^. Lens.number   == topKBlock ^. Lens.number + 1 &&
-    kBlock ^. Lens.prevHash == toHash topKBlock
+    kBlock ^. Lens.number   == topKBlock ^. Lens.number + 1 
+    && kBlock ^. Lens.prevHash == toHash topKBlock
 
 -- | Add new key block to pending. 
 addBlockToPending :: GraphNodeData -> D.KBlock -> L.StateL Bool
@@ -122,16 +124,17 @@ addMBlock nodeData mblock@(D.Microblock hash _) = do
 -- | Accept kBlock 
 acceptKBlock :: GraphNodeData -> D.KBlock -> L.NodeL (Either Text SuccessMsg)
 acceptKBlock nodeData kBlock = do
+    L.logInfo $ "Accepted kBlock" <> show kBlock
     res <- L.atomically $ do
         topKBlock <- getTopKeyBlock nodeData
-        if  | kBlock ^. Lens.number >  topKBlock ^. Lens.number + 1 ->
-                addBlockToPending nodeData kBlock
-
-            | kBlockIsNext kBlock topKBlock -> do
+        if  | kBlockIsNext kBlock topKBlock -> do
                 void $ addKBlock nodeData kBlock
                 let loop = whenM (moveKBlockToGraph nodeData) loop
                 loop
                 pure True
+
+            | kBlock ^. Lens.number > topKBlock ^. Lens.number + 1 ->
+                addBlockToPending nodeData kBlock
 
             | otherwise -> pure False
     writeLog nodeData
