@@ -15,6 +15,12 @@ newtype AcceptKeyBlockRequest  = AcceptKeyBlockRequest { kBlock :: D.KBlock }
 data AcceptKeyBlockResponse = AcceptKeyBlockResponse { accepted :: Bool }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+newtype AcceptMicroblockRequest  = AcceptMicroblockRequest { microblock :: D.Microblock }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data AcceptMicroblockResponse = AcceptMicroblockResponse { accepted :: Bool }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 type WalletId = Int
 
 data GetBalanceOfWalletRequest = GetBalanceOfWalletRequest { walletId :: WalletId }

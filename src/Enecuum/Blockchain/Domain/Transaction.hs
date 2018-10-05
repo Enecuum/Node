@@ -1,7 +1,5 @@
-{-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE DeriveAnyClass #-}
+
 module Enecuum.Blockchain.Domain.Transaction where
 
 import Enecuum.Prelude
@@ -11,8 +9,8 @@ import qualified Data.Serialize          as S
 import qualified Crypto.Hash.SHA256      as SHA
 
 import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
-import qualified Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair as Legacy 
-import qualified Enecuum.Legacy.Service.Types as Legacy 
+import qualified Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair as Legacy
+import qualified Enecuum.Legacy.Service.Types as Legacy
 
 
 -- This data structure is for tests of graph incorporation only.
@@ -25,7 +23,7 @@ data Transaction = Transaction
     , _receiver  :: Integer
     , _amount    :: Integer
     }
-  deriving ( Generic, Show, Eq, Ord, Read, ToJSON, FromJSON)  
+  deriving ( Generic, Show, Eq, Ord, Read, ToJSON, FromJSON)
 
 instance S.Serialize Transaction
 

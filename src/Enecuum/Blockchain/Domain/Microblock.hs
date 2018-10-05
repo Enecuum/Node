@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass         #-}
+
 module Enecuum.Blockchain.Domain.Microblock where
 
 import Enecuum.Prelude
@@ -15,10 +17,7 @@ data Microblock = Microblock
     { _keyBlock     :: StringHash
     , _transactions :: [Transaction]
     }
-    deriving (Eq, Generic, Ord, Read, Show)
-
-
-instance Serialize Microblock
+    deriving (Eq, Generic, Ord, Read, Show, ToJSON, FromJSON, Serialize)
 
 instance StringHashable Microblock where
   toHash = StringHash . Base64.encode . SHA.hash . S.encode
