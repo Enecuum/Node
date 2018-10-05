@@ -59,7 +59,7 @@ powNode = do
     nodeData <- L.initialization $ powNodeInitialization D.genesisHash
 
     forever $ do
-        L.delay $ 1000 * 1000
+        L.delay $ 1000 * 1000 * 10
         L.scenario $ kBlockProcess nodeData
 
 powNodeInitialization :: StringHash -> L.NodeL PoWNodeData
