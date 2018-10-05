@@ -53,7 +53,6 @@ interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
         whenJust (serversMap ^. at port) stopServer
     return $ next ()
 
---
 interpretNodeDefinitionL nodeRt (L.ServingRpc port initScript next) = do
     m <- atomically $ newTVar mempty
     a <- runRpcMethodL m initScript

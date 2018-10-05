@@ -6,10 +6,12 @@ import           Data.Text as T
 import           Data.Typeable
 
 data RpcRequest  = RpcRequest Text A.Value Int
+    deriving (Show)
 
 data RpcResponse
     = RpcResponseResult A.Value Int
     | RpcResponseError A.Value Int
+    deriving (Show)
 
 toRpcRequest :: (Typeable a, ToJSON a) => a -> RpcRequest
 toRpcRequest a = RpcRequest (T.pack . show . typeOf $ a) (toJSON a) 0

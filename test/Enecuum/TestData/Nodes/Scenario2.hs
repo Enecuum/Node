@@ -95,7 +95,7 @@ networkNode1 :: TG.TestGraphVar -> L.NodeDefinitionL ()
 networkNode1 g = do
   L.nodeTag "networkNode1"
   nodeData <- L.initialization $ newtorkNode1Initialization g
-  L.servingRpc 2000 $ do
+  L.serving 2000 $ do
     L.method (acceptGetBalanceTraversing nodeData)
     L.method (acceptBalanceChangeTraversing nodeData)
 

@@ -26,7 +26,7 @@ instance Functor StateF where
   fmap g (NewVar a next)         = NewVar a         (g . next)
   fmap g (ReadVar var next)      = ReadVar var      (g . next)
   fmap g (WriteVar var val next) = WriteVar var val (g . next)
-  fmap g Retry                   = Retry
+  fmap _ Retry                   = Retry
   fmap g (EvalGraph gr act next) = EvalGraph gr act (g . next)
 
 
@@ -53,5 +53,12 @@ retry :: StateL a
 retry = liftF Retry
 
 -- | Eval graph atomically.
+evalGraph
+  :: ( T.StringHashable c
+     , Serialize c
+     ) 
+  => T.TGraph c
+  -> Free (L.HGraphF (T.TNodeL c)) a
+  -> StateL a
 evalGraph g act = liftF $ EvalGraph g act id
 

@@ -39,7 +39,7 @@ spec = describe "Nodes test" $ do
 
     runtime <- createTestRuntime
 
-    void $ startNode' runtime networkNode1Addr networkNode1
+    void $ startNodeWithGraph runtime networkNode1Addr networkNode1
     void $ startNode runtime networkNode2Addr networkNode2
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
@@ -71,7 +71,7 @@ spec = describe "Nodes test" $ do
 
     runtime <- createTestRuntime
 
-    void $ startNode' runtime networkNode3Addr networkNode3
+    void $ startNodeWithGraph runtime networkNode3Addr networkNode3
     void $ startNode runtime networkNode4Addr networkNode4
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages

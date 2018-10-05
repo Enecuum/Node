@@ -1,3 +1,5 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+
 -- | This module contains functions to work with node runtime.
 module Enecuum.Testing.Framework.NodeRuntime where
 
@@ -17,19 +19,59 @@ import qualified Enecuum.Testing.TestRuntime as Impl
 -- Bad dependency from TestData.
 import qualified Enecuum.TestData.TestGraph as TG
 
--- | Creates node runtime.
+-- | Creates empty node runtime.
 createEmptyNodeRuntime
   :: T.LoggerRuntime
   -> T.Control
-  -> D.Address
+  -> T.NodeID
   -> IO T.NodeRuntime
-createEmptyNodeRuntime loggerRt networkControl addr = do
-  tag <- newTVarIO ("" :: Text)
-  handle <- newEmptyTMVarIO
-  graph <- TG.initTestGraph
-  varCounter <- newTMVarIO 0
-  state <- newTMVarIO Map.empty
-  pure $ T.NodeRuntime loggerRt networkControl addr tag handle graph varCounter state
+createEmptyNodeRuntime loggerRt networkControl nodeID = do
+  tag         <- newTVarIO ("" :: Text)
+  rpcServer   <- newEmptyTMVarIO
+  serversRegistry <- newEmptyTMVarIO
+  graph       <- TG.initTestGraph
+  varCounter  <- newTMVarIO 0
+  st          <- newTMVarIO Map.empty
+  connections <- newTMVarIO Map.empty
+  pure $ T.NodeRuntime
+        { T._loggerRuntime   = loggerRt
+        , T._networkControl  = networkControl
+        , T._address         = nodeID 
+        , T._tag             = tag 
+        , T._rpcServer       = rpcServer 
+        , T._connections     = connections 
+        , T._graph           = graph 
+        , T._varCounter      = varCounter 
+        , T._state           = st
+        , T._serversRegistry = serversRegistry
+        }
+
+-- | Creates node runtime. Registers in the test runtime.
+createNodeRuntime
+  :: T.TestRuntime
+  -> T.NodeID
+  -> IO T.NodeRuntime
+createNodeRuntime testRt nodeID = do
+  tag         <- newTVarIO ("" :: Text)
+  rpcServer   <- newEmptyTMVarIO
+  graph       <- TG.initTestGraph
+  varCounter  <- newTMVarIO 0
+  st       <- newTMVarIO Map.empty
+  connections <- newTMVarIO Map.empty
+  let nodeRt = T.NodeRuntime
+        { T._loggerRuntime   = testRt ^. RLens.loggerRuntime
+        , T._networkControl  = testRt ^. RLens.networkControl
+        , T._address         = nodeID 
+        , T._tag             = tag 
+        , T._rpcServer       = rpcServer 
+        , T._connections     = connections 
+        , T._graph           = graph 
+        , T._varCounter      = varCounter 
+        , T._state           = st
+        , T._serversRegistry = testRt ^. RLens.serversRegistry
+        }
+  Impl.registerNode (testRt ^. RLens.registry) nodeID nodeRt
+  pure nodeRt
 
 -- | Starts node using NodeDefinitionL.
 startNode
@@ -38,22 +80,20 @@ startNode
   -> L.NodeDefinitionL ()
   -> IO T.NodeRuntime
 startNode testRt nodeAddr scenario = do
-  nodeRt <- createEmptyNodeRuntime (testRt ^. RLens.loggerRuntime) (testRt ^. RLens.networkControl) nodeAddr
+  nodeRt <- createNodeRuntime testRt nodeAddr 
   Impl.runNodeDefinitionL nodeRt scenario
-  Impl.registerNode (testRt ^. RLens.registry) nodeAddr nodeRt
   pure nodeRt
 
 -- | Starts node using NodeDefinitionL.
 -- Uses graph.
-startNode'
+startNodeWithGraph
   :: T.TestRuntime
   -> D.Address
   -> (TG.TestGraphVar -> L.NodeDefinitionL ())
   -> IO T.NodeRuntime
-startNode' testRt nodeAddr scenario = do
-  nodeRt <- createEmptyNodeRuntime (testRt ^. RLens.loggerRuntime) (testRt ^. RLens.networkControl) nodeAddr
+startNodeWithGraph testRt nodeAddr scenario = do
+  nodeRt <- createNodeRuntime testRt nodeAddr
   Impl.runNodeDefinitionL nodeRt $ scenario (nodeRt ^. RLens.graph)
-  Impl.registerNode (testRt ^. RLens.registry) nodeAddr nodeRt
   pure nodeRt
 
 -- | Evaluates node scenario. Does no node registering in the test runtime.
@@ -71,12 +111,12 @@ evaluateNode loggerRt nodeAddr scenario = do
 -- | Evaluates node scenario. Does no node registering in the test runtime.
 -- Node scenario can't send messages to other nodes (well, it can, but will fail).
 -- Uses graph.
-evaluateNode'
+evaluateNodeWithGraph
   :: T.LoggerRuntime
   -> D.Address
   -> (TG.TestGraphVar -> L.NodeDefinitionL a)
   -> IO a
-evaluateNode' loggerRt nodeAddr scenario = do
+evaluateNodeWithGraph loggerRt nodeAddr scenario = do
   control <- Impl.createControl
   nodeRt <- createEmptyNodeRuntime loggerRt control nodeAddr
   Impl.runNodeDefinitionL nodeRt $ scenario (nodeRt ^. RLens.graph)
