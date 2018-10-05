@@ -65,5 +65,5 @@ rpcServerTestErr = TestCase $ do
     runNodeDefinitionL nr $ L.stopServing serverPort
     assertBool "" (res == Right ErrResponse)
 
-serverPort  = 1666
+serverPort  = 2001
 localServer = D.Address "127.0.0.1" serverPort

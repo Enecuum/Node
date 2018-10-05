@@ -1,10 +1,11 @@
 {
-    "bootNodeAddress": "[((127,0,0,1), 1554)]",
-    "bootNode": false,
-    "masterNode": false,
-    "networkNode1": false,
-    "networkNode2": true,
-    "extPort": 1667,
+	"bootNodeAddress": "[((127,0,0,1), 1554)]",
+	"scenarioNode": [{
+		"nodeRole": "NetworkNode",
+		"scenario": "LedgerBalance",
+		"scenarioRole": "Respondent"
+	}],
+	"extPort": 1667,
     "loggerConfig":
         {
             "format": "$prio $loggername: $msg",

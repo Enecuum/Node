@@ -10,3 +10,5 @@ import           Control.Lens             ( makeFieldsNoPrefix )
 import           Enecuum.Blockchain.Domain
 
 makeFieldsNoPrefix ''Transaction
+makeFieldsNoPrefix ''KBlock
+makeFieldsNoPrefix ''Microblock

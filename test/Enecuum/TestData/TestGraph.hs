@@ -1,22 +1,45 @@
+
+{-# LANGUAGE TemplateHaskell #-}
+
 module Enecuum.TestData.TestGraph where
 
 import Enecuum.Prelude
 
-import           Data.HGraph.StringHashable (StringHash, toHash)
+import qualified Data.HGraph.THGraph     as G
+import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
+import           Control.Lens.TH (makeLenses)
+
+import qualified Data.ByteString.Base64  as Base64
+import qualified Data.Serialize          as S
+import qualified Crypto.Hash.SHA256      as SHA
+
 
 import qualified Enecuum.Language as L
 import qualified Enecuum.Domain as D
 import           Enecuum.Core.HGraph.Interpreters.IO (runHGraphIO)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 
-type TestGraphVar = D.TGraph D.Transaction
-type TestGraphL a = L.HGraphL D.Transaction a
+data Transaction = Transaction
+    { _prevHash    :: StringHash
+    , _change      :: Int
+    }
+  deriving ( Generic, Show, Eq, Ord, Read)  
+
+instance Serialize Transaction
+instance StringHashable Transaction where
+    toHash = StringHash . Base64.encode . SHA.hash . S.encode
+
+makeLenses ''Transaction
+
+type TestGraphVar = D.TGraph Transaction
+type TestGraphL a = L.HGraphL Transaction a
+
 
 nilHash :: StringHash
-nilHash = toHash (D.Transaction (toHash @Int 0) 0)
+nilHash = toHash (Transaction (toHash @Int 0) 0)
 
-nilTransaction :: D.Transaction
-nilTransaction = D.Transaction nilHash 0
+nilTransaction :: Transaction
+nilTransaction = Transaction nilHash 0
 
 nilTransactionHash :: D.StringHash
 nilTransactionHash = D.toHash nilTransaction
@@ -37,7 +60,7 @@ tryAddTransaction'
 tryAddTransaction' lastNodeHash lastBalance change
   | lastBalance + change < 0 = pure Nothing
   | otherwise = do
-      let newTrans = D.Transaction lastNodeHash change
+      let newTrans = Transaction lastNodeHash change
       let newTransHash = D.toHash newTrans
       L.newNode newTrans
       L.newLink lastNodeHash newTransHash

@@ -12,12 +12,24 @@ import           Enecuum.Core.Types.Logger     (LoggerConfig(..))
 import           System.FilePath.Windows       (dropFileName)
 import           System.Directory (createDirectoryIfMissing)
 
+data NodeRole = BootNode | MasterNode | NetworkNode | PoW | PoA
+  deriving (Generic, FromJSON, Show, Read, Eq, Ord )
+
+data Scenario = LedgerBalance | Sync | SyncKblock
+  deriving (Generic, FromJSON, Show, Read, Eq, Ord )
+
+data ScenarioRole = Respondent | Interviewer | Soly
+  deriving (Generic, FromJSON, Show, Read, Eq, Ord)
+
+data ScenarioNode = ScenarioNode
+  { nodeRole     :: NodeRole
+  , scenario     :: Scenario
+  , scenarioRole :: ScenarioRole
+  } deriving (Generic, FromJSON, Show, Read, Eq, Ord)
+
 data Config = Config
   { bootNodeAddress :: Text
-  , bootNode :: Bool
-  , masterNode :: Bool
-  , networkNode1 :: Bool
-  , networkNode2 :: Bool
+  , scenarioNode :: [ScenarioNode]
   , extPort :: Int
   , loggerConfig :: LoggerConfig
   }
