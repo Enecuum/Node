@@ -35,8 +35,6 @@ type NodeL = Free NodeF
 
 makeFunctorInstance ''NodeF
 
-
-
 -- | Eval stateful action atomically.
 evalStateAtomically :: L.StateL a -> NodeL  a
 evalStateAtomically statefulAction = liftF $ EvalStateAtomically statefulAction id

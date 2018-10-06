@@ -12,9 +12,7 @@ data ERandomF next where
     -- | Eval Rand operation.
     EvalRand :: Rand g a -> g -> (a -> next) -> ERandomF next
 
-instance Functor ERandomF where
-  fmap g (GetRandomInt range next) = GetRandomInt range (g . next)
-  fmap g (EvalRand gen a next) = EvalRand gen a (g . next)
+makeFunctorInstance ''ERandomF
 
 type ERandomL next = Free ERandomF next
 
