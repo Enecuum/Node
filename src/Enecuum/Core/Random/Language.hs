@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Enecuum.Core.Random.Language where
 
 import           Control.Monad.Random hiding (Random, next)
