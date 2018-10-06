@@ -1,4 +1,6 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TemplateHaskell #-}
+
 
 module Enecuum.Framework.Node.Language where
 
@@ -9,6 +11,7 @@ import qualified Enecuum.Framework.Networking.Language    as L
 import qualified Enecuum.Framework.Domain.Networking      as D
 import           Enecuum.Framework.MsgHandler.Language
 import qualified Enecuum.Core.Types                       as T
+import           Language.Haskell.TH.MakeFunctor
 
 -- | Node language.
 data NodeF next where
@@ -28,18 +31,11 @@ data NodeF next where
   -- | Close existing connection.
   CloseConnection :: D.NetworkConnection -> (() -> next) -> NodeF  next
 
--- TODO: deriveFunctor ''NodeF
-instance Functor NodeF where
-  fmap g (EvalStateAtomically statefulAction next) = EvalStateAtomically statefulAction (g . next)
-  fmap g (EvalNetworking networking next)          = EvalNetworking networking          (g . next)
-  fmap g (EvalCoreEffectNodeF coreEffect next)     = EvalCoreEffectNodeF coreEffect     (g . next)
-  fmap g (EvalGraphIO gr act next)                 = EvalGraphIO gr act            (g . next)
-  fmap g (StopNode next)                           = StopNode                           (g . next)
-  fmap g (OpenConnection a b next)                 = OpenConnection  a b                (g . next)
-  fmap g (CloseConnection a next)                  = CloseConnection a                  (g . next)
-  fmap g (NewGraph next)                           = NewGraph                           (g . next)
-
 type NodeL = Free NodeF
+
+makeFunctorInstance ''NodeF
+
+
 
 -- | Eval stateful action atomically.
 evalStateAtomically :: L.StateL a -> NodeL  a

@@ -3,6 +3,7 @@ module Enecuum.Core.Random.Language where
 
 import           Control.Monad.Random hiding (Random, next)
 import           Enecuum.Prelude
+import           Language.Haskell.TH.MakeFunctor
 
 -- | Language for Random.
 data ERandomF next where

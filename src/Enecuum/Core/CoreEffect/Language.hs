@@ -1,3 +1,4 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Enecuum.Core.CoreEffect.Language
   ( CoreEffectF (..)
   , CoreEffect
@@ -9,6 +10,7 @@ import           Enecuum.Prelude
 import           Enecuum.Core.Logger.Language (Logger, LoggerL, logMessage)
 import           Enecuum.Core.Random.Language (ERandom, ERandomL, getRandomInt, evalRand)
 import           Enecuum.Core.ControlFlow.Language (ControlFlowL, ControlFlow(..))
+import           Language.Haskell.TH.MakeFunctor
 
 -- | Core effects container language.
 data CoreEffectF next where
@@ -18,10 +20,7 @@ data CoreEffectF next where
   EvalRandom      :: ERandomL a     -> (a  -> next) -> CoreEffectF next
   EvalControlFlow :: ControlFlowL a -> (a  -> next) -> CoreEffectF next
 
-instance Functor CoreEffectF where
-  fmap g (EvalLogger logger next) = EvalLogger logger (g . next)
-  fmap g (EvalRandom n next)      = EvalRandom n (g . next)
-  fmap g (EvalControlFlow n next) = EvalControlFlow n (g .next)
+makeFunctorInstance ''CoreEffectF
 
 type CoreEffect next = Free CoreEffectF next
 
