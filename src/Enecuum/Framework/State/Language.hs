@@ -26,8 +26,6 @@ data StateF next where
 
 makeFunctorInstance ''StateF
 
-
-
 type StateL next = Free StateF next
 
 -- | Create variable.
