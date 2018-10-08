@@ -33,10 +33,10 @@ data GraphNodeData = GraphNodeData
 
 makeFieldsNoPrefix ''GraphNodeData
 
--- stateLog :: GraphNodeData -> Text -> L.StateL ()
+stateLog :: GraphNodeData -> Text -> L.StateL ()
 stateLog nodeData msg = L.modifyVar (nodeData ^. logVar) (msg:)
 
--- writeLog :: GraphNodeData -> Free L.NodeF ()
+writeLog :: GraphNodeData -> L.NodeL ()
 writeLog nodeData = do
     tmpLog <- L.atomically $ do
         tmpLog <- L.readVar (nodeData ^. logVar)
@@ -46,24 +46,21 @@ writeLog nodeData = do
 
 -- | Get kBlock by Hash
 getKBlock :: GraphNodeData -> StringHash -> L.StateL (Maybe D.KBlock)
-getKBlock nodeData hash = do
-    (res, tmpLog) <- L.withGraph nodeData $ do
-        maybeKBlock <- L.getNode hash
-        case maybeKBlock of
-            Just (D.HNode _ _ (D.fromContent -> D.KBlockContent kBlock) _ _)
-                -> pure $ (Just kBlock,  "kBlock found by hash")
-            _ -> pure (Nothing, "")
-    stateLog nodeData tmpLog
+getKBlock nodeData hash = do 
+    (res, mbMsg) <- L.withGraph nodeData $ do 
+        maybeKBlock <- L.getNode hash 
+        case maybeKBlock of 
+            Just (D.HNode _ _ (D.fromContent -> D.KBlockContent kBlock) _ _) 
+                -> pure $ (Just kBlock,  Nothing) 
+            _ -> pure (Nothing, Just $ "KBlock not found by hash: " <> show hash) 
+    whenJust mbMsg $ stateLog nodeData
     pure res
 
 -- Get Top kBlock
 getTopKeyBlock :: GraphNodeData -> L.StateL D.KBlock
 getTopKeyBlock nodeData = do
-    stateLog nodeData "Getting of top keyblock"
     topNodeHash    <- L.readVar $ nodeData ^. curNode
-    stateLog nodeData $ "Hash of current top keyblock is " <> show topNodeHash
     Just topKBlock <- getKBlock nodeData topNodeHash
-    stateLog nodeData $ "Current top keyblock is " <> show topKBlock
     pure topKBlock
 
 -- | Move one block from pending to graph if it is possibly and remove it from pending.
@@ -74,14 +71,14 @@ moveKBlockToGraph nodeData = do
     pending   <- L.readVar (nodeData ^. kBlockPending)
     case pending of
         []          -> do
-            stateLog nodeData "Pending is empty"
+            -- stateLog nodeData "Pending is empty"
             pure False
         kBlock:newPending | kBlockIsNext kBlock topKBlock -> do
             L.writeVar (nodeData ^. kBlockPending) newPending
             stateLog nodeData "Moving KBlock from pending to graph."
             addKBlock nodeData kBlock
         _ -> do
-            stateLog nodeData "Is impossible move block from pending to graph."
+            stateLog nodeData "It's impossible to move block from pending to graph."
             pure False
 
 
@@ -93,7 +90,7 @@ kBlockIsNext kBlock topKBlock =
 -- | Add new key block to pending.
 addBlockToPending :: GraphNodeData -> D.KBlock -> L.StateL Bool
 addBlockToPending nodeData kBlock = do
-    stateLog nodeData "Addition of block to pending"
+    stateLog nodeData "Adding KBlock to pending"
     L.modifyVar
         (nodeData ^. kBlockPending)
         (\pending -> sortOn (^. Lens.number) $ kBlock:pending)
@@ -102,7 +99,7 @@ addBlockToPending nodeData kBlock = do
 -- | Add key block to graph
 addKBlock :: GraphNodeData -> D.KBlock -> L.StateL Bool
 addKBlock nodeData kBlock = do
-    stateLog nodeData "Addition kblock to end of chain"
+    stateLog nodeData "Adding KBlock to the graph."
     let kBlock' = D.KBlockContent kBlock
     ref <- L.readVar (nodeData ^. curNode)
     L.withGraph nodeData $ do
@@ -116,8 +113,11 @@ addKBlock nodeData kBlock = do
 addMBlock :: GraphNodeData -> D.Microblock -> L.StateL Bool
 addMBlock nodeData mblock@(D.Microblock hash _) = do
     kblock <- getKBlock nodeData hash
-    stateLog nodeData $ "Addition of mblock to graph. In graph is needed kblock? " <> show (isJust kblock)
+    
+    unless (isJust kblock) $ stateLog nodeData $ "Can't add MBlock to the graph: KBlock not found (" +|| hash ||+ ")."
+
     when (isJust kblock) $ do
+        stateLog nodeData $ "Adding MBlock to the graph for KBlock (" +|| hash ||+ ")."
         calculateLedger nodeData mblock
         L.withGraph nodeData $ do
             L.newNode (D.MBlockContent mblock)
@@ -133,20 +133,20 @@ calculateLedger nodeData mblock = do
             amount = tx ^. Lens.amount
             currentBalance = lookup owner ledgerW
         case currentBalance of
-            Nothing -> stateLog nodeData $ "Can't find wallet in ledger: " +|| show owner
+            Nothing -> stateLog nodeData $ "Can't find wallet in ledger: " +|| owner ||+ "."
             Just balance -> if (balance >= amount)
                 then do
                     let receiverBalance = fromMaybe 0 $ lookup receiver ledgerW
                         newLedger = insert owner (balance - amount) (insert receiver (receiverBalance + amount) ledgerW)
                     L.writeVar (nodeData ^. ledger ) newLedger
-                    stateLog nodeData $ "Tx complete: from " +|| show owner +|| " , to " +|| show receiver ||+ " , amount " +|| show amount
+                    stateLog nodeData $ "Tx complete: from " +|| owner ||+ " , to " +|| receiver ||+ " , amount " +|| amount ||+ "."
                 else
-                    stateLog nodeData $ "Wallet trying to spend more than it have" +|| show owner
+                    stateLog nodeData $ "Wallet " +|| owner ||+ " is trying to spend more than it has."
 
 -- | Accept kBlock
 acceptKBlock :: GraphNodeData -> D.KBlock -> L.NodeL (Either Text SuccessMsg)
 acceptKBlock nodeData kBlock = do
-    L.logInfo $ "Accepted kBlock" <> show kBlock
+    L.logInfo $ "\nAccepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
     res <- L.atomically $ do
         topKBlock <- getTopKeyBlock nodeData
         if  | kBlockIsNext kBlock topKBlock -> do
@@ -168,26 +168,18 @@ acceptKBlock nodeData kBlock = do
 -- | Accept mBlock
 acceptMBlock :: GraphNodeData -> D.Microblock -> L.NodeL (Either Text SuccessMsg)
 acceptMBlock nodeData mBlock = do
-    writeLog nodeData
+    L.logInfo $ "Accepting MBlock " +|| mBlock ||+ "."
     res <- L.atomically (addMBlock nodeData mBlock)
+    writeLog nodeData
     if res
         then pure $ Right SuccessMsg
         else pure $ Left "Error of mblock accepting"
 
 getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
-    L.logInfo "Geting of last kblock."
-    L.atomically $ getTopKeyBlock nodeData
-
-getGraphNode :: GraphNodeData -> GetGraphNode -> L.NodeL (Either Text D.NodeContent)
-getGraphNode nodeData (GetGraphNode hash) = do
-    L.logInfo "Geting graph node by hash."
-    L.atomically $ L.withGraph nodeData $ do
-        maybeKBlock <- L.getNode hash
-        case maybeKBlock of
-            Just (D.HNode _ _ block _ _)
-                -> pure $ Right $ D.fromContent block
-            _   -> pure $ Left "Block does not exist in graph."
+    kBlock <- L.atomically $ getTopKeyBlock nodeData
+    L.logInfo $ "Top KBlock requested: " +|| kBlock ||+ "."
+    pure kBlock
 
 getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
 getBalance nodeData (GetWalletBalance wallet) = do
@@ -199,13 +191,13 @@ getBalance nodeData (GetWalletBalance wallet) = do
                 -> pure $ Right $ WalletBalanceMsg wallet balance
             _   -> pure $ Left "Wallet does not exist in graph."
 
-
 -- | Initialization of graph node
 graphNodeInitialization :: L.NodeL GraphNodeData
 graphNodeInitialization = do
     g <- L.newGraph
     let wallets = zip [1..5] (repeat 100)
     L.evalGraphIO g $ L.newNode $ D.KBlockContent D.genesisKBlock
+    L.logInfo $ "Genesis block (" +|| D.genesisHash ||+ "): " +|| D.genesisKBlock ||+ "."
     L.atomically $ GraphNodeData g
         <$> L.newVar []
         <*> L.newVar D.genesisHash
@@ -222,5 +214,4 @@ graphNode = do
         L.methodE $ acceptKBlock nodeData
         L.methodE $ acceptMBlock nodeData
         L.method $ getLastKBlock nodeData
-        L.methodE $ getGraphNode nodeData
         L.methodE $ getBalance nodeData

@@ -10,7 +10,7 @@ import qualified Enecuum.Language              as L
 import qualified Enecuum.Domain                as D
 
 import           Enecuum.Assets.Nodes.Address (graphNodeRpcAddress)
-import           Data.HGraph.StringHashable (StringHash (..))
+import           Data.HGraph.StringHashable (StringHash (..), toHash)
 import           Enecuum.Assets.Nodes.Messages (SuccessMsg (..))
 
 type IterationsCount = Int
@@ -50,7 +50,7 @@ kBlockProcess nodeData = do
     L.atomically $ L.writeVar (nodeData ^. prevNumber) $ prevKBlockNumber + (fromIntegral $ length kBlocks)
 
     forM_ kBlocks $ \kBlock -> do
-        L.logInfo $ "Sending KBlock: " +|| kBlock ||+ "."
+        L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
         sendKBlock kBlock
         when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
 
