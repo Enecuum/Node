@@ -66,5 +66,5 @@ clientNode = do
         L.stdHandler startNBlockPacketGenerationHandler
 
 eitherToText :: Show a => Either Text a -> Text
-eitherToText (Left a)  = a
+eitherToText (Left a)  = "Server error: " <> a
 eitherToText (Right a) = show a

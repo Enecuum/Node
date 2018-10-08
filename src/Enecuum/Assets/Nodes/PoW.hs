@@ -79,6 +79,7 @@ powNode' delaysEnabled iterationsCount = do
     nodeData <- L.initialization $ powNodeInitialization delaysEnabled D.genesisHash
     L.serving 2005 $ do
         L.method $ foreverChainGenerationHandle nodeData
+        L.method $ nBlockPacketGenerationHandle nodeData
     forever $ do
         when delaysEnabled $ L.delay $ 1000 * 1000
         ok <- L.scenario $ L.atomically $ do
