@@ -53,6 +53,7 @@ Requests:
     {"method":"GetLastKBlock"}
     {"method":"StartForeverChainGeneration"}
     {"method":"StartNBlockPacketGeneration", "number" : 2}
+    {"method":"StartNBlockPacketGeneration", "number" : 1}
     {"method":"GetWalletBalance", "walletID": 3}
 -}
 
