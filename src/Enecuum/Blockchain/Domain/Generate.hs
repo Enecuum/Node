@@ -12,7 +12,7 @@ import           Enecuum.Prelude                       hiding (Ordering)
 data Ordering = InOrder | RandomOrder
 
 kBlockInBunch :: Integer
-kBlockInBunch = 5
+kBlockInBunch = 3
 
 generateNKBlocks = generateKBlocks genesisHash
 generateNKBlocksWithOrder = createKBlocks genesisHash
