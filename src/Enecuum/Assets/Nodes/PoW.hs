@@ -59,7 +59,7 @@ kBlockProcess nodeData = do
 foreverChainGenerationHandle
     :: PoWNodeData -> ForeverChainGeneration -> L.NodeL SuccessMsg
 foreverChainGenerationHandle powNodeData _ = do
-    L.atomically $ L.writeVar (powNodeData^.requiredBlockNumber) (10^100)
+    L.atomically $ L.writeVar (powNodeData^.requiredBlockNumber) (10^6)
     pure SuccessMsg 
 
 nBlockPacketGenerationHandle
