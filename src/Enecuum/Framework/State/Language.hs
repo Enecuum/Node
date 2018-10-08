@@ -19,7 +19,7 @@ data StateF next where
   -- | Write variable.
   WriteVar :: D.StateVar a -> a -> (() -> next) -> StateF next
   -- | Retry until some variable is changed in this atomic block.
-  Retry :: (() -> next) -> StateF next
+  Retry :: (a -> next) -> StateF next
   -- | Eval graph atomically.
   EvalGraph :: (Serialize c, T.StringHashable c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) x -> (x -> next) -> StateF next
 
@@ -44,7 +44,7 @@ modifyVar :: D.StateVar a -> (a -> a) -> StateL ()
 modifyVar var f = readVar var >>= writeVar var . f
 
 -- | Retry until some variable is changed in this atomic block.
-retry :: StateL ()
+retry :: StateL a
 retry = liftF $ Retry id
 
 -- | Eval graph atomically.
