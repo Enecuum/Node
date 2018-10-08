@@ -9,7 +9,7 @@ import Enecuum.Prelude
 import qualified Enecuum.Language              as L
 import qualified Enecuum.Domain                as D
 
-import           Enecuum.Assets.Nodes.Address (graphNodeRpcAddress)
+import           Enecuum.Assets.Nodes.Address (graphNodeRpcAddress, powNodeRpcPort)
 import           Data.HGraph.StringHashable (StringHash (..), toHash)
 import           Enecuum.Assets.Nodes.Messages (
     SuccessMsg (..), ForeverChainGeneration(..), NBlockPacketGeneration(..))
@@ -59,7 +59,7 @@ kBlockProcess nodeData = do
 foreverChainGenerationHandle
     :: PoWNodeData -> ForeverChainGeneration -> L.NodeL SuccessMsg
 foreverChainGenerationHandle powNodeData _ = do
-    L.atomically $ L.writeVar (powNodeData^.requiredBlockNumber) (10^100)
+    L.atomically $ L.writeVar (powNodeData^.requiredBlockNumber) (10 ^ 100)
     pure SuccessMsg 
 
 nBlockPacketGenerationHandle
@@ -69,22 +69,23 @@ nBlockPacketGenerationHandle powNodeData (NBlockPacketGeneration i) = do
     pure SuccessMsg 
 
 powNode :: L.NodeDefinitionL ()
-powNode = powNode' True 10
+powNode = powNode' True
 
-powNode' :: EnableDelays -> IterationsCount -> L.NodeDefinitionL ()
-powNode' delaysEnabled iterationsCount = do
+powNode' :: EnableDelays -> L.NodeDefinitionL ()
+powNode' delaysEnabled = do
     L.nodeTag "PoW node"
     L.logInfo "Generating Key Blocks."
 
     nodeData <- L.initialization $ powNodeInitialization delaysEnabled D.genesisHash
-    L.serving 2005 $ do
+    L.serving powNodeRpcPort $ do
         L.method $ foreverChainGenerationHandle nodeData
         L.method $ nBlockPacketGenerationHandle nodeData
+
     forever $ do
         when delaysEnabled $ L.delay $ 1000 * 1000
         ok <- L.scenario $ L.atomically $ do
-            i <- L.readVar (nodeData^.requiredBlockNumber)
-            when (i > 0) $ L.writeVar (nodeData^.requiredBlockNumber) (i - 1)
+            i <- L.readVar (nodeData ^. requiredBlockNumber)
+            when (i > 0) $ L.writeVar (nodeData ^. requiredBlockNumber) (i - 1)
             pure $ i > 0
         when ok $ L.scenario $ kBlockProcess nodeData
 

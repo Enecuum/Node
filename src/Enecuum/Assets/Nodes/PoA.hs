@@ -7,7 +7,7 @@ module Enecuum.Assets.Nodes.PoA where
 
 import           Enecuum.Assets.Nodes.Address
 import           Data.HGraph.StringHashable   (toHash)
-import           Enecuum.Assets.Nodes.Address (poaAddr)
+import           Enecuum.Assets.Nodes.Address (poaNodeAddress)
 import qualified Enecuum.Domain               as D
 import qualified Enecuum.Language             as L
 import           Enecuum.Prelude

@@ -26,7 +26,7 @@ instance A.FromJSON StartNBlockPacketGeneration where
     parseJSON (A.Object o) = StartNBlockPacketGeneration <$> o A..: "number"
 
 sendRequestToPoW request = do
-    res :: Either Text M.SuccessMsg <- L.makeRpcRequest powAddr request
+    res :: Either Text M.SuccessMsg <- L.makeRpcRequest powNodeRpcAddress request
     pure . eitherToText $ res
 
 startForeverChainGenerationHandler :: StartForeverChainGeneration -> L.NodeL Text
