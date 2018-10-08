@@ -51,11 +51,11 @@ dispatchScenario :: Config -> ScenarioNode -> L.NodeDefinitionL ()
 dispatchScenario config (ScenarioNode BootNode _ _) = S.bootNode config
 dispatchScenario config (ScenarioNode MasterNode _ _) = S.masterNode config
 dispatchScenario _ (ScenarioNode Client _ _)          = S.clientNode
-dispatchScenario _ (ScenarioNode NetworkNode Sync Respondent)  = S.networkNode3
-dispatchScenario _ (ScenarioNode NetworkNode Sync Interviewer) = S.networkNode4
-dispatchScenario _ (ScenarioNode PoW SyncKblock Soly) = S.powNode
-dispatchScenario _ (ScenarioNode PoA SyncKblock Soly) = S.poaNode
-dispatchScenario _ (ScenarioNode NetworkNode SyncKblock Soly) = S.nnNode
+dispatchScenario _ (ScenarioNode NetworkNode SyncChain Respondent)  = S.networkNode3
+dispatchScenario _ (ScenarioNode NetworkNode SyncChain Interviewer) = S.networkNode4
+dispatchScenario _ (ScenarioNode PoW Full Soly) = S.powNode
+dispatchScenario _ (ScenarioNode PoA Full Soly) = S.poaNode
+dispatchScenario _ (ScenarioNode NetworkNode Full Soly) = S.nnNode
 dispatchScenario _ (ScenarioNode GraphNode _ _) = S.graphNode
 dispatchScenario _ (ScenarioNode role scenario scenarioRole) = error mes
   where mes = "This scenario: " +|| role ||+ scenario ||+ scenarioRole ||+ " doesn't exist"
