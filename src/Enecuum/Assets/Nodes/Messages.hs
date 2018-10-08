@@ -23,6 +23,12 @@ data GetWalletBalance = GetWalletBalance { walletId :: WalletId }
 data GetGraphNode = GetGraphNode {hash :: StringHash}
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+data ForeverChainGeneration = ForeverChainGeneration
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data NBlockPacketGeneration = NBlockPacketGeneration {number :: Int}
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 data WalletBalanceMsg = WalletBalanceMsg
   { walletId :: WalletId
   , balance  :: Int
