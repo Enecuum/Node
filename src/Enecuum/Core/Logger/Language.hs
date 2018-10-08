@@ -5,14 +5,14 @@ module Enecuum.Core.Logger.Language where
 
 import qualified Enecuum.Core.Types as T (LogLevel (..), Message)
 import           Enecuum.Prelude
+import           Language.Haskell.TH.MakeFunctor
 
 -- | Language for logging.
 data LoggerF next where
   -- | Log message with a predefined level.
   LogMessage :: T.LogLevel -> T.Message -> (() -> next) -> LoggerF next
 
-instance Functor LoggerF where
-  fmap g (LogMessage level msg next) = LogMessage level msg (g . next)
+makeFunctorInstance ''LoggerF
 
 type LoggerL next = Free LoggerF next
 

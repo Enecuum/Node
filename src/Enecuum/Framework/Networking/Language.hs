@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs          #-}
 {-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Enecuum.Framework.Networking.Language where
 
@@ -11,6 +12,7 @@ import qualified Enecuum.Framework.Network.Language   as L
 import qualified Data.Text                            as Text
 import qualified Enecuum.Framework.Domain             as D
 import qualified Enecuum.Framework.MsgHandler.Language as L
+import           Language.Haskell.TH.MakeFunctor
 
 -- | Allows to work with network: open and close connections, send requests.
 data NetworkingF next where
@@ -23,11 +25,7 @@ data NetworkingF next where
   -- | Eval core effect.
   EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF  next
 
-instance Functor NetworkingF where
-  fmap g (EvalNetwork network next)                  = EvalNetwork network                  (g . next)
-  fmap g (SendRpcRequest info request next)          = SendRpcRequest info request          (g . next)
-  fmap g (SendMessage conn msg next)                 = SendMessage conn msg                 (g . next)
-  fmap g (EvalCoreEffectNetworkingF coreEffect next) = EvalCoreEffectNetworkingF coreEffect (g . next)
+makeFunctorInstance ''NetworkingF
 
 type NetworkingL  next = Free NetworkingF next
 
