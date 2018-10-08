@@ -15,6 +15,7 @@ import           Enecuum.Framework.RpcMethod.Language  (RpcMethodL)
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Framework.MsgHandler.Language
 import           Enecuum.Framework.StdinHandlers.Language
+import           Language.Haskell.TH.MakeFunctor
 
 -- TODO: it's possible to make these steps evaluating step-by-step, in order.
 -- Think about if this really needed.
@@ -37,15 +38,7 @@ data NodeDefinitionF next where
     ServingMsg     :: PortNumber -> MsgHandlerL L.NodeL () -> (() -> next)-> NodeDefinitionF  next
     Std            :: StdinHandlerL () -> (() -> next) -> NodeDefinitionF  next
 
-
-instance Functor NodeDefinitionF where
-    fmap g (NodeTag tag next)               = NodeTag tag               (g . next)
-    fmap g (EvalNodeL nodeModel next)       = EvalNodeL nodeModel       (g . next)
-    fmap g (ServingMsg a b next)                     = ServingMsg a b                     (g . next)
-    fmap g (EvalCoreEffectNodeDefinitionF coreEffect next) = EvalCoreEffectNodeDefinitionF coreEffect (g . next)
-    fmap g (ServingRpc port handlersF next)          = ServingRpc port handlersF          (g . next)
-    fmap g (StopServing port next)                   = StopServing port                   (g . next)
-    fmap g (Std handlersF next)                      = Std handlersF   (g . next)
+makeFunctorInstance ''NodeDefinitionF
 
 type NodeDefinitionL next = Free NodeDefinitionF next
 
