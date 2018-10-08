@@ -21,7 +21,7 @@ import qualified Data.Text as Text
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 import           Enecuum.Assets.Nodes.RPC
 import           Enecuum.Assets.Nodes.Address
-import           Enecuum.Assets.Nodes.Types
+import           Enecuum.Assets.Nodes.Types.SyncChain
 
 
 -- checkLengthAndUpdate

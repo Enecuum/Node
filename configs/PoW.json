@@ -2,7 +2,7 @@
 	"bootNodeAddress": "[((127,0,0,1), 1554)]",
 	"scenarioNode": [{
 		"nodeRole": "PoW",
-		"scenario": "SyncKblock",
+		"scenario": "Full",
 		"scenarioRole": "Soly"
 	}],
 	"extPort": 1668,

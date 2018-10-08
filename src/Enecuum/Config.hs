@@ -15,7 +15,7 @@ import           System.Directory (createDirectoryIfMissing)
 data NodeRole = BootNode | MasterNode | NetworkNode | PoW | PoA | Client | GraphNode
   deriving (Generic, FromJSON, Show, Read, Eq, Ord )
 
-data Scenario = LedgerBalance | Sync | SyncKblock
+data Scenario = LedgerBalance | SyncChain | SyncKblock | Full
   deriving (Generic, FromJSON, Show, Read, Eq, Ord)
 
 data ScenarioRole = Respondent | Interviewer | Soly
