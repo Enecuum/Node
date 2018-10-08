@@ -9,17 +9,19 @@ import Enecuum.Prelude
 import qualified Enecuum.Language              as L
 import qualified Enecuum.Domain                as D
 
-import           Enecuum.Assets.Nodes.Address (graphNodeRpcAddress)
-import           Data.HGraph.StringHashable (StringHash (..))
-import           Enecuum.Assets.Nodes.Messages (SuccessMsg (..))
+import           Enecuum.Assets.Nodes.Address (graphNodeRpcAddress, powNodeRpcPort)
+import           Data.HGraph.StringHashable (StringHash (..), toHash)
+import           Enecuum.Assets.Nodes.Messages (
+    SuccessMsg (..), ForeverChainGeneration(..), NBlockPacketGeneration(..))
 
 type IterationsCount = Int
 type EnableDelays = Bool
 
 data PoWNodeData = PoWNodeData
-    { _enableDelays :: EnableDelays
-    , _prevHash :: D.StateVar StringHash
-    , _prevNumber :: D.StateVar Integer
+    { _enableDelays        :: EnableDelays
+    , _prevHash            :: D.StateVar StringHash
+    , _prevNumber          :: D.StateVar Integer
+    , _requiredBlockNumber :: D.StateVar Int
     }
 
 makeFieldsNoPrefix ''PoWNodeData
@@ -50,26 +52,46 @@ kBlockProcess nodeData = do
     L.atomically $ L.writeVar (nodeData ^. prevNumber) $ prevKBlockNumber + (fromIntegral $ length kBlocks)
 
     forM_ kBlocks $ \kBlock -> do
-        L.logInfo $ "Sending KBlock: " +|| kBlock ||+ "."
+        L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
         sendKBlock kBlock
         when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
 
-powNode :: L.NodeDefinitionL ()
-powNode = powNode' True 10
+foreverChainGenerationHandle
+    :: PoWNodeData -> ForeverChainGeneration -> L.NodeL SuccessMsg
+foreverChainGenerationHandle powNodeData _ = do
+    L.atomically $ L.writeVar (powNodeData^.requiredBlockNumber) (10^6)
+    pure SuccessMsg 
 
-powNode' :: EnableDelays -> IterationsCount -> L.NodeDefinitionL ()
-powNode' delaysEnabled iterationsCount = do
+nBlockPacketGenerationHandle
+    :: PoWNodeData -> NBlockPacketGeneration -> L.NodeL SuccessMsg
+nBlockPacketGenerationHandle powNodeData (NBlockPacketGeneration i) = do
+    L.atomically $ L.modifyVar (powNodeData^.requiredBlockNumber) (+i)
+    pure SuccessMsg 
+
+powNode :: L.NodeDefinitionL ()
+powNode = powNode' True
+
+powNode' :: EnableDelays -> L.NodeDefinitionL ()
+powNode' delaysEnabled = do
     L.nodeTag "PoW node"
     L.logInfo "Generating Key Blocks."
 
     nodeData <- L.initialization $ powNodeInitialization delaysEnabled D.genesisHash
+    L.serving powNodeRpcPort $ do
+        L.method $ foreverChainGenerationHandle nodeData
+        L.method $ nBlockPacketGenerationHandle nodeData
 
-    replicateM_ iterationsCount $ do
-        when delaysEnabled $ L.delay $ 1000 * 1000 * 10
-        L.scenario $ kBlockProcess nodeData
+    forever $ do
+        when delaysEnabled $ L.delay $ 1000 * 1000
+        ok <- L.scenario $ L.atomically $ do
+            i <- L.readVar (nodeData ^. requiredBlockNumber)
+            when (i > 0) $ L.writeVar (nodeData ^. requiredBlockNumber) (i - 1)
+            pure $ i > 0
+        when ok $ L.scenario $ kBlockProcess nodeData
 
 powNodeInitialization :: EnableDelays -> StringHash -> L.NodeL PoWNodeData
 powNodeInitialization delaysEnabled genesisHash = do
   h <- L.atomically $ L.newVar genesisHash
   n <- L.atomically $ L.newVar 1
-  pure $ PoWNodeData delaysEnabled h n
+  b <- L.atomically $ L.newVar 0
+  pure $ PoWNodeData delaysEnabled h n b

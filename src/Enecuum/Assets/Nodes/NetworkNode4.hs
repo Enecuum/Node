@@ -64,8 +64,9 @@ networkNode4Scenario nodeData = do
 newtorkNode4Initialization :: L.NodeL NetworkNodeChainData
 newtorkNode4Initialization = do
   (_, blocks) <- D.generateNKBlocks 5
+  log <- L.atomically $ L.newVar []
   chainLengthVar' <- L.atomically $ L.newVar blocks 
-  pure $ NetworkNodeChainData chainLengthVar'
+  pure $ NetworkNodeChainData chainLengthVar' log
 
 networkNode4 :: L.NodeDefinitionL ()
 networkNode4 = do
