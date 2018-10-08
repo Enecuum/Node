@@ -210,5 +210,5 @@ graphNode = do
     L.serving graphNodeRpcPort $ do
         L.methodE $ acceptKBlock nodeData
         L.methodE $ acceptMBlock nodeData
-        L.method  $ getLastKBlock nodeData
+        L.method $ getLastKBlock nodeData
         L.methodE $ getGraphNode nodeData
