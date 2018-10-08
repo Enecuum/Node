@@ -58,7 +58,9 @@ genNTransactions k = replicateM k genTransaction
 genTransaction :: L.NodeL Transaction
 genTransaction = do
     owner <- L.getRandomInt (1,5)
-    receiver <- L.getRandomInt (1,5)
+    let rest = delete owner [1..5]
+    receiverIndex <- fromIntegral <$> L.getRandomInt (0,3)
+    let receiver = rest !! receiverIndex
     amount <- L.getRandomInt (0,100)
     pure Transaction {
         _owner     = owner
