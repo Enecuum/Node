@@ -177,8 +177,9 @@ acceptMBlock nodeData mBlock = do
 
 getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
+    L.logInfo "Top KBlock requested."
     kBlock <- L.atomically $ getTopKeyBlock nodeData
-    L.logInfo $ "Top KBlock requested: " +|| kBlock ||+ "."
+    L.logInfo $ "Top KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
     pure kBlock
 
 getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
@@ -213,5 +214,5 @@ graphNode = do
     L.serving graphNodeRpcPort $ do
         L.methodE $ acceptKBlock nodeData
         L.methodE $ acceptMBlock nodeData
-        L.method $ getLastKBlock nodeData
+        L.method  $ getLastKBlock nodeData
         L.methodE $ getBalance nodeData
