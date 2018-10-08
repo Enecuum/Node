@@ -151,7 +151,7 @@ calculateLedger nodeData mblock = do
                                         ", [" +|| receiver ||+ "]: " +|| receiverBalance + amount ||+ ""
                         -- stateLog nodeData $ "New Ledger " +|| newLedger ||+ "."                    
                     else
-                        stateLog nodeData $ "Tx rejected (negative balance): " +|| owner ||+ " -> " +|| receiver ||+ ", amount: " +|| amount ||+ "."
+                        stateLog nodeData $ "Tx rejected (negative balance): [" +|| owner ||+ "] -> [" +|| receiver ||+ "], amount: " +|| amount ||+ "."
 
 -- | Accept kBlock
 acceptKBlock :: GraphNodeData -> D.KBlock -> L.NodeL (Either Text SuccessMsg)
