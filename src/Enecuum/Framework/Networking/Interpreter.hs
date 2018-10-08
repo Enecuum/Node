@@ -17,10 +17,13 @@ import qualified Enecuum.Framework.Networking.Internal.TCP.Client as TCP
 interpretNetworkingL :: NodeRuntime -> L.NetworkingF a -> IO a
 interpretNetworkingL _ (L.SendRpcRequest (D.Address host port) request next) = do
     var <- newEmptyMVar
-    TCP.runClient host port $ \connect -> do
+    ok <- try $ TCP.runClient host port $ \connect -> do
         S.sendAll connect $ A.encode request
         msg <- S.recv connect (1024 * 4)
         putMVar var (transformEither T.pack id $ A.eitherDecode msg)
+    case ok of
+        Right _ -> pure ()
+        Left (_ :: SomeException) -> putMVar var $ Left "Server size does not exist."
     res <- takeMVar var
     return $ next res
 
