@@ -74,7 +74,6 @@ powNode = powNode' True
 powNode' :: EnableDelays -> L.NodeDefinitionL ()
 powNode' delaysEnabled = do
     L.nodeTag "PoW node"
-    L.logInfo "Generating Key Blocks."
 
     nodeData <- L.initialization $ powNodeInitialization delaysEnabled D.genesisHash
     L.serving powNodeRpcPort $ do

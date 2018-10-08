@@ -133,19 +133,25 @@ calculateLedger nodeData mblock = do
             receiver = tx ^. Lens.receiver
             amount = tx ^. Lens.amount
             currentBalance = lookup owner ledgerW
-        case currentBalance of
-            Nothing -> stateLog nodeData $ "Can't find wallet in ledger: " +|| owner ||+ "."
-            Just balance -> if (balance >= amount)
-                then do
-                    -- stateLog nodeData $ "Before tx owner " +|| owner ||+ " has balance: " +|| balance ||+ "."
-                    let receiverBalance = fromMaybe 0 $ lookup receiver ledgerW
-                    -- stateLog nodeData $ "Before tx receiver " +|| receiver ||+ " has balance: " +|| receiverBalance ||+ "."
-                    let newLedger = insert owner (balance - amount) (insert receiver (receiverBalance + amount) ledgerW)
-                    L.writeVar (nodeData ^. ledger ) newLedger
-                    stateLog nodeData $ "Tx complete: from " +|| owner ||+ " , to " +|| receiver ||+ " , amount " +|| amount ||+ "."
-                    stateLog nodeData $ "New Ledger " +|| newLedger ||+ "."                    
-                else
-                    stateLog nodeData $ "Wallet " +|| owner ||+ " is trying to spend more than it has."
+        
+        when (owner == receiver) $ stateLog nodeData $ "Tx rejected (same owner and receiver): " +|| owner ||+ "."
+
+        when (owner /= receiver) $ do
+            case currentBalance of
+                Nothing -> stateLog nodeData $ "Can't find wallet in ledger: " +|| owner ||+ "."
+                Just ownerBalance -> if ownerBalance >= amount
+                    then do
+                        -- stateLog nodeData $ "Before tx owner " +|| owner ||+ " has balance: " +|| balance ||+ "."
+                        let receiverBalance = fromMaybe 0 $ lookup receiver ledgerW
+                        -- stateLog nodeData $ "Before tx receiver " +|| receiver ||+ " has balance: " +|| receiverBalance ||+ "."
+                        let newLedger = insert owner (ownerBalance - amount) (insert receiver (receiverBalance + amount) ledgerW)
+                        L.writeVar (nodeData ^. ledger ) newLedger
+                        stateLog nodeData $ "Tx accepted: from [" +|| owner ||+ "] to [" +|| receiver ||+ "], amount: " +|| amount ||+
+                                        ". [" +|| owner ||+ "]: " +|| ownerBalance - amount ||+
+                                        ", [" +|| receiver ||+ "]: " +|| receiverBalance + amount ||+ ""
+                        -- stateLog nodeData $ "New Ledger " +|| newLedger ||+ "."                    
+                    else
+                        stateLog nodeData $ "Tx rejected (negative balance): " +|| owner ||+ " -> " +|| receiver ||+ ", amount: " +|| amount ||+ "."
 
 -- | Accept kBlock
 acceptKBlock :: GraphNodeData -> D.KBlock -> L.NodeL (Either Text SuccessMsg)
@@ -172,7 +178,7 @@ acceptKBlock nodeData kBlock = do
 -- | Accept mBlock
 acceptMBlock :: GraphNodeData -> D.Microblock -> L.NodeL (Either Text SuccessMsg)
 acceptMBlock nodeData mBlock = do
-    L.logInfo $ "Accepting MBlock " +|| mBlock ||+ "."
+    L.logInfo "Accepting MBlock."
     res <- L.atomically (addMBlock nodeData mBlock)
     writeLog nodeData
     if res
@@ -188,7 +194,7 @@ getLastKBlock nodeData _ = do
 
 getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
 getBalance nodeData (GetWalletBalance wallet) = do
-    L.logInfo $ "Getting balance for wallet" +|| show wallet
+    L.logInfo $ "Requested balance for wallet " +|| wallet ||+ "."
     curLedger <- L.atomically $ L.readVar $ nodeData ^. ledger
     let maybeBalance = lookup wallet curLedger
     case maybeBalance of

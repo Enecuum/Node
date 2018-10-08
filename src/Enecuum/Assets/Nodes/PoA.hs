@@ -5,11 +5,14 @@
 
 module Enecuum.Assets.Nodes.PoA where
 
+import qualified Data.Text as T
+
 import           Enecuum.Assets.Nodes.Address
 import           Data.HGraph.StringHashable   (toHash)
 import           Enecuum.Assets.Nodes.Address (poaNodeAddress)
 import qualified Enecuum.Domain               as D
 import qualified Enecuum.Language             as L
+import qualified Enecuum.Blockchain.Lens      as Lens
 import           Enecuum.Prelude
 import           Enecuum.Assets.Nodes.Messages
 
@@ -20,6 +23,15 @@ data PoANodeData = PoANodeData {
 
 makeFieldsNoPrefix ''PoANodeData
 
+showTransaction :: D.Transaction -> Text -> Text
+showTransaction tx t = t <>
+    ("\n    Tx: [" +|| tx ^. Lens.owner ||+ 
+    "] -> [" +|| tx ^. Lens.receiver ||+ 
+    "], amount: " +|| tx ^. Lens.amount ||+ "."
+    )
+
+showTransactions :: D.Microblock -> Text
+showTransactions mBlock = foldr showTransaction "" $ mBlock ^. Lens.transactions
 
 poaNode :: L.NodeDefinitionL ()
 poaNode = do
@@ -29,13 +41,15 @@ poaNode = do
         poaData <- L.atomically (PoANodeData <$> L.newVar D.genesisKBlock)
         forever $ do
             L.delay $ 100 * 1000
-            kBlock <- L.makeRpcRequest graphNodeRpcAddress GetLastKBlock
-            case kBlock of
+            eKBlock <- L.makeRpcRequest graphNodeRpcAddress GetLastKBlock
+            case eKBlock of
                 Left _ -> return ()
                 Right block -> do
                     currentBlock <- L.atomically $ L.readVar (poaData^.currentLastKeyBlock)
                     when (block /= currentBlock) $ do
+                        L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ "). Generating transactions & MBlock..."
                         L.atomically $ L.writeVar (poaData^.currentLastKeyBlock) block
                         mBlock <- D.genRandMicroblock block
+                        L.logInfo $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
                         _ :: Either Text SuccessMsg <- L.makeRpcRequest graphNodeRpcAddress mBlock
                         pure ()
