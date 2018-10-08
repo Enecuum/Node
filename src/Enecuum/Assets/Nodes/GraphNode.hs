@@ -126,8 +126,9 @@ addMBlock nodeData mblock@(D.Microblock hash _) = do
 
 calculateLedger :: GraphNodeData -> D.Microblock -> Free L.StateF ()
 calculateLedger nodeData mblock = do
-    ledgerW <- L.readVar $ nodeData ^. ledger
     forM_ (mblock ^. Lens.transactions ) $ \ tx -> do
+        ledgerW <- L.readVar $ nodeData ^. ledger
+        -- stateLog nodeData $ "Current Ledger " +|| ledgerW ||+ "." 
         let owner = tx ^. Lens.owner
             receiver = tx ^. Lens.receiver
             amount = tx ^. Lens.amount
@@ -136,10 +137,13 @@ calculateLedger nodeData mblock = do
             Nothing -> stateLog nodeData $ "Can't find wallet in ledger: " +|| owner ||+ "."
             Just balance -> if (balance >= amount)
                 then do
+                    -- stateLog nodeData $ "Before tx owner " +|| owner ||+ " has balance: " +|| balance ||+ "."
                     let receiverBalance = fromMaybe 0 $ lookup receiver ledgerW
-                        newLedger = insert owner (balance - amount) (insert receiver (receiverBalance + amount) ledgerW)
+                    -- stateLog nodeData $ "Before tx receiver " +|| receiver ||+ " has balance: " +|| receiverBalance ||+ "."
+                    let newLedger = insert owner (balance - amount) (insert receiver (receiverBalance + amount) ledgerW)
                     L.writeVar (nodeData ^. ledger ) newLedger
                     stateLog nodeData $ "Tx complete: from " +|| owner ||+ " , to " +|| receiver ||+ " , amount " +|| amount ||+ "."
+                    stateLog nodeData $ "New Ledger " +|| newLedger ||+ "."                    
                 else
                     stateLog nodeData $ "Wallet " +|| owner ||+ " is trying to spend more than it has."
 
