@@ -187,7 +187,18 @@ getGraphNode nodeData (GetGraphNode hash) = do
         case maybeKBlock of
             Just (D.HNode _ _ block _ _)
                 -> pure $ Right $ D.fromContent block
-            _   -> pure $ Left "Block not exist in graph."
+            _   -> pure $ Left "Block does not exist in graph."
+
+getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
+getBalance nodeData (GetWalletBalance wallet) = do
+    L.logInfo $ "Getting balance for wallet" +|| show wallet
+    curLedger <- L.atomically $ L.readVar $ nodeData ^. ledger
+    let maybeBalance = lookup wallet curLedger
+    case maybeBalance of
+            Just balance
+                -> pure $ Right $ WalletBalanceMsg wallet balance
+            _   -> pure $ Left "Wallet does not exist in graph."
+
 
 -- | Initialization of graph node
 graphNodeInitialization :: L.NodeL GraphNodeData
@@ -212,3 +223,4 @@ graphNode = do
         L.methodE $ acceptMBlock nodeData
         L.method $ getLastKBlock nodeData
         L.methodE $ getGraphNode nodeData
+        L.methodE $ getBalance nodeData

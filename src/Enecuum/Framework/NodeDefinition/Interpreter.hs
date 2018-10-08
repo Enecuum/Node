@@ -81,7 +81,7 @@ callHandler nodeRt methods msg = do
         Just ((^? key "method" . _String ) -> Just method) ->
             case methods^.at method of
                 Just justMethod ->Impl.runNodeL nodeRt $ justMethod (fromJust $ val)
-                Nothing -> pure $ "The method " <> method <> " is'nt supported."
+                Nothing -> pure $ "The method " <> method <> " isn't supported."
         Nothing -> pure "Error of request parsing."
 
 
@@ -114,7 +114,7 @@ callRpc runner methods msg = case A.decode msg of
     Just (D.RpcRequest method params reqId) -> case method `M.lookup` methods of
         Just justMethod -> runner $ justMethod params reqId
         Nothing -> return $ D.RpcResponseError
-            (A.String $ "The method " <> method <> " is'nt supported.")
+            (A.String $ "The method " <> method <> " isn't supported.")
             reqId
     Nothing -> return $ D.RpcResponseError (A.String "error of request parsing") 0
 
