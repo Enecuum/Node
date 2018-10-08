@@ -1,7 +1,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-
 module Enecuum.Framework.State.Language where
 
 import           Enecuum.Prelude
