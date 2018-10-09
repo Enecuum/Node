@@ -7,7 +7,7 @@ data ControlFlowF next where
 
 instance Functor ControlFlowF where
     fmap g (Delay i next) = Delay i (g . next)
-  
+
 type ControlFlowL next = Free ControlFlowF next
 
 class ControlFlow m where

@@ -49,7 +49,12 @@ data PendingAction where
 data Pending = Pending (Seq (Transaction, TimeSpec)) (Seq (Transaction, TimeSpec))
 
 
-pendingActor :: (InChan PendingAction, OutChan PendingAction) -> InChan Microblock -> OutChan (Transaction, MVar Bool) -> InChan InfoMsg -> IO ()
+pendingActor
+    :: (InChan PendingAction, OutChan PendingAction)
+    -> InChan Microblock
+    -> OutChan (Transaction, MVar Bool)
+    -> InChan InfoMsg
+    -> IO ()
 pendingActor (aInChan, aOutChan) aMicroblockChan aTransactionChan aInfoChan = do
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for microblocks"
 
@@ -57,8 +62,7 @@ pendingActor (aInChan, aOutChan) aMicroblockChan aTransactionChan aInfoChan = do
         aBlockChan <- dupChan aMicroblockChan
         -- blocks re-pack
         forever $ readChan aBlockChan >>= \case
-            Microblock _ _ _ _ aTransactions  ->
-                writeInChan aInChan $ RemoveTransactions aTransactions
+            Microblock _ _ _ _ aTransactions -> writeInChan aInChan $ RemoveTransactions aTransactions
 
     -- transactions re-pack
     writeLog aInfoChan [PendingTag, InitTag] Info "Init. Pending actor for transactions"
@@ -72,54 +76,51 @@ pendingActor (aInChan, aOutChan) aMicroblockChan aTransactionChan aInfoChan = do
   where
     loop (Pending aNewTransaactions aOldTransactions) = readChan aOutChan >>= \case
         AddTransaction aTransaction aMVar -> do
-            writeLog aInfoChan [PendingTag] Info $
-                "Add transaction to pending" ++ show aTransaction
+            writeLog aInfoChan [PendingTag] Info $ "Add transaction to pending" ++ show aTransaction
             aNaw <- getTime Realtime
             let aSizeOfOldTransactions = S.length aOldTransactions
                 aSizeOfNewTransactions = S.length aNewTransaactions
-                aSize = aSizeOfNewTransactions + aSizeOfOldTransactions
+                aSize                  = aSizeOfNewTransactions + aSizeOfOldTransactions
 
-            if  | aSize < 500                  -> do
+            if
+                | aSize < 500 -> do
                     writeLog aInfoChan [PendingTag] Info "Pending size < 500"
                     putMVar aMVar True
-                    loop $ Pending
-                        (aNewTransaactions :|> (aTransaction, aNaw))
-                        aOldTransactions
+                    loop $ Pending (aNewTransaactions :|> (aTransaction, aNaw)) aOldTransactions
                 | otherwise -> do
                     putMVar aMVar False
                     loop $ Pending aNewTransaactions aOldTransactions
 
-        RemoveTransactions  aTransactions           -> do
+        RemoveTransactions aTransactions -> do
             writeLog aInfoChan [PendingTag] Info "Remove transactions from pending. From pendig."
             let aFilter = S.filter (\(t, _) -> t `notElem` aTransactions)
             loop $ Pending (aFilter aNewTransaactions) (aFilter aOldTransactions)
 
         -- transactions request
 
-        GetTransaction      aCount aResponseChan    -> do
+        GetTransaction aCount aResponseChan -> do
             writeLog aInfoChan [PendingTag] Info $ "Request " ++ show aCount ++ " transactions from pending"
             let aSizeOfNewTransactions = S.length aNewTransaactions
                 -- if there are a lot of transactions
-            if  | aCount < aSizeOfNewTransactions -> do
-                    -- send n new transactions and replace it to "old"
+            if
+                | aCount < aSizeOfNewTransactions -> do
+            -- send n new transactions and replace it to "old"
                     let (aHead, aTail) = S.splitAt aCount aNewTransaactions
                     C.writeChan aResponseChan $ fst <$> toList aHead
                     loop $ Pending aTail (aOldTransactions >< aHead)
-
-
                 | otherwise -> do
-                    -- take from "old" needed count of txs
-                    -- add new txs from "new" to "old"
-                    -- used "old" txs and put it to the end
+            -- take from "old" needed count of txs
+            -- add new txs from "new" to "old"
+            -- used "old" txs and put it to the end
                     let (aHead, aTail) = S.splitAt (aCount - aSizeOfNewTransactions) aOldTransactions
                     C.writeChan aResponseChan $ fst <$> toList (aNewTransaactions >< aHead)
                     loop $ Pending Empty (aTail >< aNewTransaactions >< aHead)
 --
-        GetPending aResponseChan                -> do
+        GetPending aResponseChan -> do
             C.writeChan aResponseChan $ fst <$> toList (aNewTransaactions >< aOldTransactions)
             loop $ Pending aNewTransaactions aOldTransactions
 
-        IsInPending aTransaction aResponseChan  -> do
+        IsInPending aTransaction aResponseChan -> do
             C.writeChan aResponseChan $ (aTransaction `elem`) $ fst <$> toList (aNewTransaactions >< aOldTransactions)
             loop $ Pending aNewTransaactions aOldTransactions
 

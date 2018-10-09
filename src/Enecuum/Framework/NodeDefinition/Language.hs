@@ -50,20 +50,20 @@ nodeTag :: D.NodeTag -> NodeDefinitionL ()
 nodeTag tag = liftF $ NodeTag tag id
 
 -- | Runs node scenario.
-evalNodeL :: L.NodeL  a -> NodeDefinitionL a
+evalNodeL :: L.NodeL a -> NodeDefinitionL a
 evalNodeL nodeModel = liftF $ EvalNodeL nodeModel id
 
 
 -- | Eval core effect.
-evalCoreEffectNodeDefinitionF :: L.CoreEffect a -> NodeDefinitionL  a
+evalCoreEffectNodeDefinitionF :: L.CoreEffect a -> NodeDefinitionL a
 evalCoreEffectNodeDefinitionF coreEffect = liftF $ EvalCoreEffectNodeDefinitionF coreEffect id
 
 -- | Runs scenario as initialization.
-initialization :: L.NodeL a -> NodeDefinitionL  a
+initialization :: L.NodeL a -> NodeDefinitionL a
 initialization = evalNodeL
 
 -- | Runs scenario.
-scenario :: L.NodeL a -> NodeDefinitionL  a
+scenario :: L.NodeL a -> NodeDefinitionL a
 scenario = evalNodeL
 
 class Serving a where
@@ -89,7 +89,7 @@ servingRpc port handlersF = liftF $ ServingRpc port handlersF id
 
 -- | Stops server on the specified port.
 -- TODO: What is the behavior when server is absent?
-stopServing :: PortNumber -> NodeDefinitionL  ()
+stopServing :: PortNumber -> NodeDefinitionL ()
 stopServing port = liftF $ StopServing port id
 
 -- | Starts server (TCP / WS - like)

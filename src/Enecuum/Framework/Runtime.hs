@@ -29,15 +29,16 @@ data NodeRuntime = NodeRuntime
     }
 
 createNodeRuntime :: CoreRuntime -> IO NodeRuntime
-createNodeRuntime coreRt = NodeRuntime
-    <$> pure coreRt
-    <*> initHGraph
-    <*> newTVarIO mempty
-    <*> newTMVarIO 0
-    <*> newTMVarIO Map.empty
-    <*> newTVarIO ""
-    <*> (atomically newEmptyTMVar)
-    <*> newTVarIO mempty
+createNodeRuntime coreRt =
+    NodeRuntime
+        <$> pure coreRt
+        <*> initHGraph
+        <*> newTVarIO mempty
+        <*> newTMVarIO 0
+        <*> newTMVarIO Map.empty
+        <*> newTVarIO ""
+        <*> (atomically newEmptyTMVar)
+        <*> newTVarIO mempty
 
 -- TODO: more wise clearing here.
 clearNodeRuntime :: NodeRuntime -> IO ()

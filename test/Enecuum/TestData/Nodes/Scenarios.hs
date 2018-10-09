@@ -1,4 +1,4 @@
-module Enecuum.TestData.Nodes.Scenarios 
+module Enecuum.TestData.Nodes.Scenarios
     ( module X
     ) where
 

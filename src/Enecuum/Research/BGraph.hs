@@ -84,42 +84,37 @@ getMBlock :: StringHash -> BGraphL (Maybe MBlock)
 getMBlock hash = do
     aNode <- getNode hash
     case aNode of
-        Just (HNode _ _ (fromContent -> MBlockContent block) _ _) ->
-            return $ Just block
+        Just (HNode _ _ (fromContent -> MBlockContent block) _ _) -> return $ Just block
         _ -> return Nothing
 
 getKBlock :: StringHash -> BGraphL (Maybe KBlock)
 getKBlock hash = do
     aNode <- getNode hash
     case aNode of
-        Just (HNode _ _ (fromContent -> KBlockContent block) _ _) ->
-            return $ Just block
+        Just (HNode _ _ (fromContent -> KBlockContent block) _ _) -> return $ Just block
         _ -> return Nothing
 
 -- O(n) - n is a number of kblock.
 getLastKBlocks :: BGraphL [KBlock]
 getLastKBlocks = do
     Just (HNode _ aRef _ _ _) <- getNode $ toHash genesisKeyBlock
-    aRefs <- getLastKBlocks' aRef
-    aKBlocks <- forM aRefs $ \aBRef -> do
+    aRefs                     <- getLastKBlocks' aRef
+    aKBlocks                  <- forM aRefs $ \aBRef -> do
         aNode <- getNode aBRef
         case aNode of
-            Just (HNode _ _ (fromContent -> KBlockContent block) _ _) ->
-                return $ Just block
+            Just (HNode _ _ (fromContent -> KBlockContent block) _ _) -> return $ Just block
             _ -> return Nothing
     return $ catMaybes aKBlocks
 
 getLastKBlocks' :: TRef -> BGraphL [TRef]
 getLastKBlocks' aRef = do
     aRefs <- getNextKBlocks' aRef
-    if null aRefs
-        then return [aRef]
-        else concat <$> forM aRefs getLastKBlocks'
+    if null aRefs then return [aRef] else concat <$> forM aRefs getLastKBlocks'
 
 getNextKBlocks' :: TRef -> BGraphL [TRef]
 getNextKBlocks' aRef = do
     Just (HNode _ _ _ _ rLinks) <- getNode aRef
-    aRefs <- forM (elems rLinks) $ \aNRef -> do
+    aRefs                       <- forM (elems rLinks) $ \aNRef -> do
         Just (HNode _ _ (fromContent -> block) _ _) <- getNode aNRef
         case block of
             KBlockContent _ -> return $ Just aNRef

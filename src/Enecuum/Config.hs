@@ -40,15 +40,15 @@ withConfig configName act = act =<< getConfigBase configName
 
 getConfigBase :: FilePath -> IO Config
 getConfigBase configName = do
-  configContents <- L.readFile configName
-  case A.decode configContents of
-    Nothing     -> error "Please, specify config file correctly"
-    Just config -> pure config
+    configContents <- L.readFile configName
+    case A.decode configContents of
+        Nothing     -> error "Please, specify config file correctly"
+        Just config -> pure config
 
 logConfig :: FilePath -> IO LoggerConfig
 logConfig configName = do
-  config <- getConfigBase configName
-  let logConf@(LoggerConfig _ _ logFile _) = loggerConfig config
-      dir = dropFileName logFile
-  createDirectoryIfMissing True dir
-  pure logConf
+    config <- getConfigBase configName
+    let logConf@(LoggerConfig _ _ logFile _) = loggerConfig config
+        dir = dropFileName logFile
+    createDirectoryIfMissing True dir
+    pure logConf

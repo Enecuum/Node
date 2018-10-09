@@ -64,10 +64,9 @@ instance HGraph node (Free (HGraphF node)) where
 -- | Graph language.
 type HGraphL g next = Free (HGraphF (TNodeL g)) next
 
-newLink, deleteLink
-    :: (HGraph node m, ToNodeRef node b, ToNodeRef node c) => c -> b -> m ()
-newLink a b      = void $ newLink' a b
-deleteLink a b   = void $ deleteLink' a b
+newLink, deleteLink :: (HGraph node m, ToNodeRef node b, ToNodeRef node c) => c -> b -> m ()
+newLink a b = void $ newLink' a b
+deleteLink a b = void $ deleteLink' a b
 
 deleteNode :: (HGraph node m, ToNodeRef node h) => h -> m ()
 deleteNode = void . deleteNode'

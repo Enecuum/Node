@@ -36,7 +36,7 @@ type NodeL = Free NodeF
 makeFunctorInstance ''NodeF
 
 -- | Eval stateful action atomically.
-evalStateAtomically :: L.StateL a -> NodeL  a
+evalStateAtomically :: L.StateL a -> NodeL a
 evalStateAtomically statefulAction = liftF $ EvalStateAtomically statefulAction id
 
 -- | Alias for convenience.
@@ -46,7 +46,7 @@ atomically = evalStateAtomically
 
 -- TODO: makeLanguage ''NodeF
 -- | Eval networking.
-evalNetworking :: L.NetworkingL a -> NodeL  a
+evalNetworking :: L.NetworkingL a -> NodeL a
 evalNetworking newtorking = liftF $ EvalNetworking newtorking id
 
 -- | Eval core effect.
@@ -82,13 +82,7 @@ instance L.Send NodeL where
   send conn msg = evalNetworking $ L.send conn msg
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
-evalGraphIO
-  :: ( T.StringHashable c
-     , Serialize c
-     )
-  => T.TGraph c
-  -> Free (L.HGraphF (T.TNodeL c)) a
-  -> NodeL a
+evalGraphIO :: (T.StringHashable c, Serialize c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) a -> NodeL a
 evalGraphIO g graphAction = liftF $ EvalGraphIO g graphAction id
 
 instance L.Logger (Free NodeF) where

@@ -21,39 +21,31 @@ mkAddress :: T.NodeRuntime -> D.PortNumber -> D.Address
 mkAddress nodeRt port = (nodeRt ^. RLens.address) & Lens.port .~ port
 
 -- | Interpret NodeDefinitionL.
-interpretNodeDefinitionL
-  :: T.NodeRuntime
-  -> L.NodeDefinitionF a
-  -> IO a
+interpretNodeDefinitionL :: T.NodeRuntime -> L.NodeDefinitionF a -> IO a
 
-interpretNodeDefinitionL nodeRt (L.NodeTag tag next) =
-  next <$> atomically (writeTVar (nodeRt ^. RLens.tag) tag)
+interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = next <$> atomically (writeTVar (nodeRt ^. RLens.tag) tag)
 
-interpretNodeDefinitionL nodeRt (L.EvalNodeL nodeScript next) =
-  next <$> Impl.runNodeL nodeRt nodeScript
+interpretNodeDefinitionL nodeRt (L.EvalNodeL nodeScript next) = next <$> Impl.runNodeL nodeRt nodeScript
 
 interpretNodeDefinitionL nodeRt (L.ServingRpc port handlersF next) = do
-  methodsMap <- atomically $ newTVar mempty
-  Impl.runRpcMethodL methodsMap handlersF
-  Impl.startNodeRpcServer nodeRt port methodsMap
-  pure $ next ()
+    methodsMap <- atomically $ newTVar mempty
+    Impl.runRpcMethodL methodsMap handlersF
+    Impl.startNodeRpcServer nodeRt port methodsMap
+    pure $ next ()
 
 interpretNodeDefinitionL nodeRt (L.ServingMsg port handlersF next) = do
-  handlersMap <- atomically $ newTVar mempty
-  Impl.runMsgHandlerL handlersMap handlersF
-  Impl.startNodeTcpLikeServer nodeRt (mkAddress nodeRt port) handlersMap
-  pure $ next ()
+    handlersMap <- atomically $ newTVar mempty
+    Impl.runMsgHandlerL handlersMap handlersF
+    Impl.startNodeTcpLikeServer nodeRt (mkAddress nodeRt port) handlersMap
+    pure $ next ()
 
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
-  Impl.stopNodeTcpLikeServer nodeRt port
-  pure $ next ()
+    Impl.stopNodeTcpLikeServer nodeRt port
+    pure $ next ()
 
 interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
-  next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
+    next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
 
 -- | Runs node definition language with node runtime.
-runNodeDefinitionL
-  :: T.NodeRuntime
-  -> L.NodeDefinitionL a
-  -> IO a
+runNodeDefinitionL :: T.NodeRuntime -> L.NodeDefinitionL a -> IO a
 runNodeDefinitionL nodeRt = foldFree (interpretNodeDefinitionL nodeRt)

@@ -18,11 +18,11 @@ newtype ValidationResponse = ValidationResponse (Either [Text] Text)
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
 
 verifyRequest :: ValidationRequest -> Validation [Text] Text
-verifyRequest ValidRequest = _Success # "correct"
+verifyRequest ValidRequest   = _Success # "correct"
 verifyRequest InvalidRequest = _Failure # ["invalid"]
 
 makeResponse :: Validation [Text] Text -> ValidationResponse
 makeResponse = ValidationResponse . toEither
 
 acceptValidationRequest :: ValidationRequest -> L.NodeL ValidationResponse
-acceptValidationRequest req   = pure $ makeResponse $ verifyRequest req
+acceptValidationRequest req = pure $ makeResponse $ verifyRequest req

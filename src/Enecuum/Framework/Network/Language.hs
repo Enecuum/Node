@@ -65,20 +65,15 @@ instance L.Logger (Free NetworkF) where
 
 -- Interface
 waitSingleResponse
-  :: D.NetworkConfig
-  -> D.WaitingTimeout
-  -> (D.NetworkConfig -> D.NetworkRequest -> NetworkSendingL ())
-  -> D.NetworkRequest
-  -> NetworkL (Maybe D.NetworkResponse)
+    :: D.NetworkConfig
+    -> D.WaitingTimeout
+    -> (D.NetworkConfig -> D.NetworkRequest -> NetworkSendingL ())
+    -> D.NetworkRequest
+    -> NetworkL (Maybe D.NetworkResponse)
 waitSingleResponse cfg timeout sendingMethodF req =
-  synchronize (sendingMethodF cfg req) (waitForSingleResponse cfg timeout)
+    synchronize (sendingMethodF cfg req) (waitForSingleResponse cfg timeout)
 
-multicastRequest
-  :: D.NetworkMethod () req resp
-  => D.NetworkConfig
-  -> D.WaitingTimeout
-  -> req
-  -> NetworkL (Maybe resp)
+multicastRequest :: D.NetworkMethod () req resp => D.NetworkConfig -> D.WaitingTimeout -> req -> NetworkL (Maybe resp)
 multicastRequest cfg timeout domainRequest = do
-  mbResp <- waitSingleResponse cfg timeout multicast (D.toNetworkRequest () domainRequest)
-  pure $ mbResp >>= D.fromNetworkResponse ()
+    mbResp <- waitSingleResponse cfg timeout multicast (D.toNetworkRequest () domainRequest)
+    pure $ mbResp >>= D.fromNetworkResponse ()

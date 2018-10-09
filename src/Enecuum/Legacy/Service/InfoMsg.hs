@@ -40,36 +40,37 @@ serveInfoMsg statsdInfo logsInfo chan aId stdout_log = do
     eithMHandler <- try (openConnect (host statsdInfo) (port statsdInfo))
 
     case eithMHandler of
-      Left (err :: SomeException) -> putStrLn $ "Metrics server connection error: " ++ show err
-      Right _                     -> putStrLn "Metrics server connected"
+        Left  (err :: SomeException) -> putStrLn $ "Metrics server connection error: " ++ show err
+        Right _                      -> putStrLn "Metrics server connected"
 
     eithLHandler <- try (openConnect (host logsInfo) (port logsInfo))
 
     case eithLHandler of
-      Left (err :: SomeException) -> putStrLn $ "Logs server connection error: " ++ show err
-      Right lHandler              -> do
+        Left  (err :: SomeException) -> putStrLn $ "Logs server connection error: " ++ show err
+        Right lHandler               -> do
             putStrLn "Logs server connected"
-            sendToServer lHandler $ "+node|" ++  aId ++ "|" ++
-                      intercalate "," (show <$> [ConnectingTag .. BDTag]) ++ "\r\n"
+            sendToServer lHandler
+                $  "+node|"
+                ++ aId
+                ++ "|"
+                ++ intercalate "," (show <$> [ConnectingTag .. BDTag])
+                ++ "\r\n"
 
     undead (putStrLn ("dead of log " :: String)) $ forever $ do
         m <- readChan chan
         case m of
             Metric s -> case eithMHandler of
-                          Left  _        -> return ()
-                          Right mHandler -> sendToServer mHandler s
+                Left  _        -> return ()
+                Right mHandler -> sendToServer mHandler s
 
             Log aTags aMsgType aMsg -> do
-                     let aTagsList = intercalate "," (show <$> aTags)
+                let aTagsList   = intercalate "," (show <$> aTags)
 
-                         aString = "+log|" ++ aTagsList ++ "|" ++ aId  ++ "|"
-                                   ++ show aMsgType ++  "|" ++ aMsg ++"\r\n"
+                    aString     = "+log|" ++ aTagsList ++ "|" ++ aId ++ "|" ++ show aMsgType ++ "|" ++ aMsg ++ "\r\n"
 
-                         aFileString = "  !  " ++ aId ++ "|" ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++"\n"
-                     appendFile "log.txt" aFileString
-                     case eithLHandler of
-                          Left  _        -> return ()
-                          Right lHandler -> sendToServer lHandler aString
-                     if stdout_log
-                     then putStrLn aFileString
-                     else return ()
+                    aFileString = "  !  " ++ aId ++ "|" ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++ "\n"
+                appendFile "log.txt" aFileString
+                case eithLHandler of
+                    Left  _        -> return ()
+                    Right lHandler -> sendToServer lHandler aString
+                if stdout_log then putStrLn aFileString else return ()

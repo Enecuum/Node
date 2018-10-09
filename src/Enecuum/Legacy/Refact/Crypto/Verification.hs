@@ -8,5 +8,4 @@ import           Data.Serialize
 import           Prelude
 
 verifyEncodeble :: Serialize msg => PublicKey -> Signature -> msg -> Bool
-verifyEncodeble publicKey signature msg = verify SHA3_256
-    publicKey signature (encode msg)
+verifyEncodeble publicKey signature msg = verify SHA3_256 publicKey signature (encode msg)

@@ -37,37 +37,36 @@ spec :: Spec
 spec = do
     describe "HGraph eDSL tests" $ fromHUnitTest $ TestList
         [ TestLabel "Addition of new node / getting node by content" testNewNode
-        , TestLabel "Getting node by hash" testGetNodeByHash
-        , TestLabel "Getting node by ref" testGetNodeByRef
-        , TestLabel "Deleting of node by content" testDeleteNodeByContent
-        , TestLabel "Deleting of node by hash" testDeleteNodeByHash
-        , TestLabel "Deleting of node by ref" testDeleteNodeByRef
-        , TestLabel "Addition of new Link by content" testNewLinkByContent
-        , TestLabel "Addition of new Link by hash" testNewLinkByHash
-        , TestLabel "Addition of new Link by ref" testNewLinkByRef
-        , TestLabel "Deleting of Link by content" testDeleteLinkByContent
-        , TestLabel "Deleting of Link by hash" testDeleteLinkByHash
-        , TestLabel "Deleting of Link by ref" testDeleteLinkByRef
-        , TestLabel "List-like graph construction test" testListLikeGraph
+        , TestLabel "Getting node by hash"                           testGetNodeByHash
+        , TestLabel "Getting node by ref"                            testGetNodeByRef
+        , TestLabel "Deleting of node by content"                    testDeleteNodeByContent
+        , TestLabel "Deleting of node by hash"                       testDeleteNodeByHash
+        , TestLabel "Deleting of node by ref"                        testDeleteNodeByRef
+        , TestLabel "Addition of new Link by content"                testNewLinkByContent
+        , TestLabel "Addition of new Link by hash"                   testNewLinkByHash
+        , TestLabel "Addition of new Link by ref"                    testNewLinkByRef
+        , TestLabel "Deleting of Link by content"                    testDeleteLinkByContent
+        , TestLabel "Deleting of Link by hash"                       testDeleteLinkByHash
+        , TestLabel "Deleting of Link by ref"                        testDeleteLinkByRef
+        , TestLabel "List-like graph construction test"              testListLikeGraph
         ]
     describe "StringHash tests" $ do
-        it "StringHash serialize / deserialize property test" $
-            property $ \rndStrHash -> let
-                origHash = StringHash $ encodeUtf8 (rndStrHash :: String)
-                serialized = A.encode origHash
+        it "StringHash serialize / deserialize property test" $ property $ \rndStrHash ->
+            let origHash     = StringHash $ encodeUtf8 (rndStrHash :: String)
+                serialized   = A.encode origHash
                 deserialized = A.decode serialized
-                in Just origHash == deserialized
+            in  Just origHash == deserialized
         it "StringHash serialize / deserialize test" $ do
-            let origHash = toHash $ SomeStructure "abC5435" 232
-            let serialized = A.encode origHash
+            let origHash     = toHash $ SomeStructure "abC5435" 232
+            let serialized   = A.encode origHash
             let deserialized = A.decode serialized
             Just origHash `shouldBe` deserialized
-    
+
 
 testNewNode :: Test
 testNewNode = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
-    ok <- runHGraphIO newGraph $ do
+    ok                         <- runHGraphIO newGraph $ do
         newNode 123
         Just (HNode _ _ c _ _) <- getNode (123 :: Int64)
         return $ 123 == fromContent c
@@ -76,7 +75,7 @@ testNewNode = TestCase $ do
 testGetNodeByHash :: Test
 testGetNodeByHash = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
-    ok <- runHGraphIO newGraph $ do
+    ok                         <- runHGraphIO newGraph $ do
         newNode 123
         Just (HNode _ _ c _ _) <- getNode (toHash (123 :: Int64))
         return $ 123 == fromContent c
@@ -85,7 +84,7 @@ testGetNodeByHash = TestCase $ do
 testGetNodeByRef :: Test
 testGetNodeByRef = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
-    ok <- runHGraphIO newGraph $ do
+    ok                         <- runHGraphIO newGraph $ do
         newNode 123
         Just (HNode _ ref _ _ _) <- getNode (toHash (123 :: Int64))
         Just (HNode _ _   c _ _) <- getNode ref
@@ -95,7 +94,7 @@ testGetNodeByRef = TestCase $ do
 testDeleteNodeByContent :: Test
 testDeleteNodeByContent = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
-    ok <- runHGraphIO newGraph $ do
+    ok                         <- runHGraphIO newGraph $ do
         newNode (123 :: Int64)
         deleteNode (123 :: Int64)
         isNothing <$> getNode (toHash @Int64 123)
@@ -104,7 +103,7 @@ testDeleteNodeByContent = TestCase $ do
 testDeleteNodeByHash :: Test
 testDeleteNodeByHash = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
-    ok <- runHGraphIO newGraph $ do
+    ok                         <- runHGraphIO newGraph $ do
         newNode (123 :: Int64)
         deleteNode $ toHash (123 :: Int64)
         isNothing <$> getNode (toHash @Int64 123)
@@ -113,7 +112,7 @@ testDeleteNodeByHash = TestCase $ do
 testDeleteNodeByRef :: Test
 testDeleteNodeByRef = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
-    ok <- runHGraphIO newGraph $ do
+    ok                         <- runHGraphIO newGraph $ do
         newNode (123 :: Int64)
         Just (HNode _ ref _ _ _) <- getNode (toHash @Int64 123)
         deleteNode ref
@@ -123,7 +122,7 @@ testDeleteNodeByRef = TestCase $ do
 testNewLinkByContent :: Test
 testNewLinkByContent = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
-    ok <- runHGraphIO newGraph $ do
+    ok                         <- runHGraphIO newGraph $ do
         newNode 123
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
@@ -134,7 +133,7 @@ testNewLinkByContent = TestCase $ do
 testNewLinkByHash :: Test
 testNewLinkByHash = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
-    ok <- runHGraphIO newGraph $ do
+    ok                         <- runHGraphIO newGraph $ do
         newNode 123
         newNode 125
         newLink (toHash @Int64 123) (toHash @Int64 125)
@@ -145,7 +144,7 @@ testNewLinkByHash = TestCase $ do
 testNewLinkByRef :: Test
 testNewLinkByRef = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
-    ok <- runHGraphIO newGraph $ do
+    ok                         <- runHGraphIO newGraph $ do
         newNode 123
         newNode 125
         Just (HNode _ r1 _ _ _) <- getNode (toHash @Int64 123)
@@ -158,10 +157,10 @@ testNewLinkByRef = TestCase $ do
 testDeleteLinkByContent :: Test
 testDeleteLinkByContent = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
-    ok <- runHGraphIO newGraph $ do
+    ok                         <- runHGraphIO newGraph $ do
         newNode 123
         newNode 125
-        newLink (123 :: Int64) (125 :: Int64)
+        newLink    (123 :: Int64) (125 :: Int64)
         deleteLink (123 :: Int64) (125 :: Int64)
         Just (HNode _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.notMember (toHash @Int64 125) l
@@ -170,10 +169,10 @@ testDeleteLinkByContent = TestCase $ do
 testDeleteLinkByHash :: Test
 testDeleteLinkByHash = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
-    ok <- runHGraphIO newGraph $ do
+    ok                         <- runHGraphIO newGraph $ do
         newNode 123
         newNode 125
-        newLink (123 :: Int64) (125 :: Int64)
+        newLink    (123 :: Int64)      (125 :: Int64)
         deleteLink (toHash @Int64 123) (toHash @Int64 125)
         Just (HNode _ _ _ l _) <- getNode (toHash @Int64 123)
         return $ M.notMember (toHash @Int64 125) l
@@ -182,7 +181,7 @@ testDeleteLinkByHash = TestCase $ do
 testDeleteLinkByRef :: Test
 testDeleteLinkByRef = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
-    ok <- runHGraphIO newGraph $ do
+    ok                         <- runHGraphIO newGraph $ do
         newNode 123
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
@@ -196,7 +195,7 @@ testDeleteLinkByRef = TestCase $ do
 testListLikeGraph :: Test
 testListLikeGraph = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
-    ok <- runHGraphIO newGraph $ do
+    ok                         <- runHGraphIO newGraph $ do
         newNode 123
         newNode 125
         newNode 127
@@ -204,11 +203,12 @@ testListLikeGraph = TestCase $ do
         newLink (toHash @Int64 125) (toHash @Int64 127)
         Just (HNode _ _ _ l1 _) <- getNode (toHash @Int64 123)
         Just (HNode _ _ _ l2 _) <- getNode (toHash @Int64 125)
-        return $ all id
-          [ M.member (toHash @Int64 125) l1
-          , M.member (toHash @Int64 127) l2
-          , not (M.member (toHash @Int64 125) l2)
-          , not (M.member (toHash @Int64 127) l1)
-          ]
+        return $ all
+            id
+            [ M.member (toHash @Int64 125) l1
+            , M.member (toHash @Int64 127) l2
+            , not (M.member (toHash @Int64 125) l2)
+            , not (M.member (toHash @Int64 127) l1)
+            ]
     assertBool "" ok
 

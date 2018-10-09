@@ -68,37 +68,28 @@ withGraphIO s = L.evalGraphIO (s ^. graph)
 
 -- TODO: make this a type class?
 -- | Makes RPC call.
-makeRpcRequest
-    :: (Typeable a, ToJSON a, FromJSON b) => D.Address -> a -> L.NodeL (Either Text b)
+makeRpcRequest :: (Typeable a, ToJSON a, FromJSON b) => D.Address -> a -> L.NodeL (Either Text b)
 makeRpcRequest connectCfg arg = L.evalNetworking $ L.makeRpcRequest' connectCfg arg
 
 -- | Makes unsafe RPC call. Not recommended to use.
-makeRpcRequestUnsafe
-    :: (Typeable a, ToJSON a, FromJSON b) => D.Address -> a -> L.NodeL b
+makeRpcRequestUnsafe :: (Typeable a, ToJSON a, FromJSON b) => D.Address -> a -> L.NodeL b
 makeRpcRequestUnsafe connectCfg arg = makeRpcRequest connectCfg arg >>= \case
-    Left err -> error err
-    Right a  -> pure a
+    Left  err -> error err
+    Right a   -> pure a
 
 
 -- | Forces node to stop (actually just fills the `finished` field in the data structure. Use `nodeFinishPending` to await `finished`.)
 -- To use it, you need to export HasFinished type class unqualified to the scope of your data type lenses
 -- (made by `makeFieldsNoPrefix`):
 -- import Enecuum.Language (HasFinished)
-setNodeFinished
-  :: HasFinished s (D.StateVar Bool)
-  => s
-  -> NodeFinished
-  -> L.NodeL Text
+setNodeFinished :: HasFinished s (D.StateVar Bool) => s -> NodeFinished -> L.NodeL Text
 setNodeFinished nodeData NodeFinished = do
-  L.atomically $ L.writeVar (nodeData ^. finished) True
-  pure "Finished."
+    L.atomically $ L.writeVar (nodeData ^. finished) True
+    pure "Finished."
 
 -- | Makes node awaiting for finishing.
 -- To use it, you need to export HasFinished type class unqualified to the scope of your data type lenses
 -- (made by `makeFieldsNoPrefix`):
 -- import Enecuum.Language (HasFinished)
-nodeFinishPending
-  :: HasFinished s (D.StateVar Bool)
-  => s
-  -> L.NodeDefinitionL ()
+nodeFinishPending :: HasFinished s (D.StateVar Bool) => s -> L.NodeDefinitionL ()
 nodeFinishPending nodeData = L.scenario $ L.atomically $ unlessM (L.readVar $ nodeData ^. finished) L.retry

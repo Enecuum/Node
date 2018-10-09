@@ -30,7 +30,7 @@ makeFunctorInstance ''NetworkingF
 type NetworkingL  next = Free NetworkingF next
 
 -- | Eval low-level networking script.
-evalNetwork :: L.NetworkL a -> NetworkingL  a
+evalNetwork :: L.NetworkL a -> NetworkingL a
 evalNetwork network = liftF $ EvalNetwork network id
 
 -- | Send RPC request and wait for the response.
@@ -60,10 +60,8 @@ evalCoreEffectNetworkingF coreEffect = liftF $ EvalCoreEffectNetworkingF coreEff
 instance L.Logger (Free NetworkingF) where
   logMessage level msg = evalCoreEffectNetworkingF $ L.logMessage level msg
 
-makeRpcRequest'
-    :: (Typeable a, ToJSON a, FromJSON b) => D.Address -> a -> NetworkingL  (Either Text b)
-makeRpcRequest' address arg =
-    responseValidation =<< sendRpcRequest address (D.toRpcRequest arg)
+makeRpcRequest' :: (Typeable a, ToJSON a, FromJSON b) => D.Address -> a -> NetworkingL (Either Text b)
+makeRpcRequest' address arg = responseValidation =<< sendRpcRequest address (D.toRpcRequest arg)
 
 instance L.ERandom (Free NetworkingF) where
     getRandomInt = evalCoreEffectNetworkingF . L.getRandomInt
@@ -74,9 +72,9 @@ instance L.ControlFlow (Free NetworkingF) where
 
 responseValidation :: (FromJSON b, Applicative f) => Either Text D.RpcResponse -> f (Either Text b)
 responseValidation res = case res of
-  Left txt -> pure $ Left txt
-  Right (D.RpcResponseError (A.String txt) _) -> pure $ Left txt
-  Right (D.RpcResponseError err _)            -> pure $ Left (show err)
-  Right (D.RpcResponseResult val _) -> case A.fromJSON val of
-      A.Error txt    -> pure $ Left (Text.pack txt)
-      A.Success resp -> pure $ Right resp
+    Left  txt -> pure $ Left txt
+    Right (D.RpcResponseError  (A.String txt) _) -> pure $ Left txt
+    Right (D.RpcResponseError  err            _) -> pure $ Left (show err)
+    Right (D.RpcResponseResult val            _) -> case A.fromJSON val of
+        A.Error   txt  -> pure $ Left (Text.pack txt)
+        A.Success resp -> pure $ Right resp

@@ -13,13 +13,15 @@ import           Prelude
 import           Data.Either
 
 calculateKeyBlockHash :: KeyBlockInfoPoW -> BSI.ByteString
-calculateKeyBlockHash  KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
-  where bstr = B.concat $ map runPut
-                [ putWord8    (toEnum _type)
-                , putWord32le (fromInteger _number)
-                , putWord32le (fromInteger _time)
-                , putWord32le (fromInteger _nonce)
-                ] ++
-                [ fromRight "" $ Base64.decode _prev_hash
-                , fromRight "" $ Base64.decode _solver
-                ]
+calculateKeyBlockHash KeyBlockInfoPoW {..} = Base64.encode . SHA.hash $ bstr
+  where
+    bstr =
+        B.concat
+            $  map
+                   runPut
+                   [ putWord8 (toEnum _type)
+                   , putWord32le (fromInteger _number)
+                   , putWord32le (fromInteger _time)
+                   , putWord32le (fromInteger _nonce)
+                   ]
+            ++ [fromRight "" $ Base64.decode _prev_hash, fromRight "" $ Base64.decode _solver]

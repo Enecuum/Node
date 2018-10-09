@@ -7,5 +7,5 @@ import Enecuum.Prelude
 
 withSuccess :: (Show err, Monad m) => m (Either err a) -> m a
 withSuccess act = act >>= \case
-  Left err -> error $ show err
-  Right a -> pure a
+    Left  err -> error $ show err
+    Right a   -> pure a

@@ -10,8 +10,8 @@ getEnecuumDir = createFilePath =<< liftM (</> "enecuum") getHomeDirectory
 
 createFilePath :: FilePath -> IO FilePath
 createFilePath file = do
-  createDirectoryIfMissing True file
-  pure file
+    createDirectoryIfMissing True file
+    pure file
 
 logFilePath :: IO FilePath
 logFilePath = createFilePath =<< liftM (</> "data" </> "logs") getEnecuumDir

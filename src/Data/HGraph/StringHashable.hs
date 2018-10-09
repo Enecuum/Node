@@ -53,4 +53,4 @@ instance ToJSON StringHash where
 instance FromJSON StringHash where
     parseJSON = A.withObject "StringHashSerializable" $ \v ->
         StringHash . BS.pack <$> ((v A..: "bytes") :: A.Parser [Word8])
-        
+

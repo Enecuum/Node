@@ -10,7 +10,7 @@ import           Enecuum.Legacy.Service.Types          (InfoMsg (..),
 import           Enecuum.Prelude
 
 -- | Write ligs into the channel, where it will be redirected to server.
-writeMetric :: InChan InfoMsg ->  String ->  IO ()
+writeMetric :: InChan InfoMsg -> String -> IO ()
 writeMetric aChan metric = void $ tryWriteChan aChan $ Metric metric
 
 writeLog :: InChan InfoMsg -> [LoggingTag] -> MsgType -> String -> IO ()

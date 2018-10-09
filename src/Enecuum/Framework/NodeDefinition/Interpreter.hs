@@ -22,30 +22,29 @@ import qualified Enecuum.Core.Interpreters                 as Impl
 import qualified Enecuum.Framework.Node.Interpreter        as Impl
 import qualified Enecuum.Framework.Domain.RPC             as D
 import qualified Enecuum.Framework.Domain.Networking      as D
-import           Enecuum.Framework.Networking.Internal.Internal 
+import           Enecuum.Framework.Networking.Internal.Internal
 import           Enecuum.Framework.MsgHandler.Interpreter
 import           Enecuum.Framework.StdinHandlers.Interpreter as Imp
 import           Data.Aeson.Lens
 import qualified Data.Text as T
 
-interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF  a -> IO a
+interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF a -> IO a
 interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
     atomically $ writeTVar (nodeRt ^. RLens.nodeTag) tag
     pure $ next ()
 
-interpretNodeDefinitionL nodeRt (L.EvalNodeL initScript next) =
-    next <$> Impl.runNodeL nodeRt initScript
+interpretNodeDefinitionL nodeRt (L.EvalNodeL initScript next) = next <$> Impl.runNodeL nodeRt initScript
 
 interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffect
 
 interpretNodeDefinitionL nodeRt (L.ServingMsg port initScript next) = do
-    m <- atomically $ newTVar mempty
-    a <- runMsgHandlerL m initScript
+    m        <- atomically $ newTVar mempty
+    a        <- runMsgHandlerL m initScript
     handlers <- readTVarIO m
-    s <- startServer port 
-        ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
-        (\(D.NetworkConnection addr) -> Impl.insertConnect (nodeRt ^. RLens.connects) addr)
+    s        <- startServer port
+                            ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
+                            (\(D.NetworkConnection addr) -> Impl.insertConnect (nodeRt ^. RLens.connects) addr)
     atomically $ setServerChan (nodeRt ^. RLens.servers) port s
     return $ next a
 
@@ -69,8 +68,8 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
         m' <- readTVarIO m
         forever $ do
             line <- getLine
-            res <- callHandler nodeRt m' line
-            putTextLn res 
+            res  <- callHandler nodeRt m' line
+            putTextLn res
     pure $ next ()
 
 --
@@ -78,18 +77,16 @@ callHandler :: NodeRuntime -> Map Text (Value -> L.NodeL Text) -> Text -> IO Tex
 callHandler nodeRt methods msg = do
     let val = A.decode $ fromString $ T.unpack msg
     case val of
-        Just ((^? key "method" . _String ) -> Just method) ->
-            case methods^.at method of
-                Just justMethod ->Impl.runNodeL nodeRt $ justMethod (fromJust $ val)
-                Nothing -> pure $ "The method " <> method <> " isn't supported."
+        Just ((^? key "method" . _String ) -> Just method) -> case methods ^. at method of
+            Just justMethod -> Impl.runNodeL nodeRt $ justMethod (fromJust $ val)
+            Nothing         -> pure $ "The method " <> method <> " isn't supported."
         Nothing -> pure "Error of request parsing."
 
 
 fromJust (Just a) = a
 --
 -- TODO: treadDelay if server in port exist!!!
-takeServerChan
-    :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> STM (TChan ServerComand)
+takeServerChan :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> STM (TChan ServerComand)
 takeServerChan servs port = do
     chan <- newTChan
     Impl.setServerChan servs port chan
@@ -97,25 +94,19 @@ takeServerChan servs port = do
 
 
 runRpcServer
-    :: TChan ServerComand
-    -> PortNumber
-    -> (t -> IO D.RpcResponse)
-    -> TVar (Map Text (A.Value -> Int -> t))
-    -> IO ()
+    :: TChan ServerComand -> PortNumber -> (t -> IO D.RpcResponse) -> TVar (Map Text (A.Value -> Int -> t)) -> IO ()
 runRpcServer chan port runner methodVar = do
     methods <- readTVarIO methodVar
     runServer chan port $ \sock -> do
-        msg         <- S.recv sock (1024*4)
-        response    <- callRpc runner methods msg
+        msg      <- S.recv sock (1024 * 4)
+        response <- callRpc runner methods msg
         S.sendAll sock $ A.encode response
 
 callRpc :: Monad m => (t -> m D.RpcResponse) -> Map Text (A.Value -> Int -> t) -> LByteString -> m D.RpcResponse
 callRpc runner methods msg = case A.decode msg of
     Just (D.RpcRequest method params reqId) -> case method `M.lookup` methods of
         Just justMethod -> runner $ justMethod params reqId
-        Nothing -> return $ D.RpcResponseError
-            (A.String $ "The method " <> method <> " isn't supported.")
-            reqId
+        Nothing         -> return $ D.RpcResponseError (A.String $ "The method " <> method <> " isn't supported.") reqId
     Nothing -> return $ D.RpcResponseError (A.String "error of request parsing") 0
 
 

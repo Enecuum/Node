@@ -12,14 +12,11 @@ import           Enecuum.Core.Random.Interpreter (runERandomL)
 
 -- | Interprets core effect container language.
 interpretCoreEffectL :: T.LoggerRuntime -> L.CoreEffectF a -> IO a
-interpretCoreEffectL loggerRt (L.EvalLogger logger next) =
-    next <$> Impl.runLoggerL loggerRt logger
+interpretCoreEffectL loggerRt (L.EvalLogger      logger next) = next <$> Impl.runLoggerL loggerRt logger
 
-interpretCoreEffectL _ (L.EvalRandom eRnd next) =
-    next <$> runERandomL eRnd
+interpretCoreEffectL _        (L.EvalRandom      eRnd   next) = next <$> runERandomL eRnd
 
-interpretCoreEffectL _ (L.EvalControlFlow flow next) =
-    next <$> runControlFlow flow
+interpretCoreEffectL _        (L.EvalControlFlow flow   next) = next <$> runControlFlow flow
 
 -- | Runs core effect container language.
 runCoreEffect :: T.LoggerRuntime -> L.CoreEffect a -> IO a

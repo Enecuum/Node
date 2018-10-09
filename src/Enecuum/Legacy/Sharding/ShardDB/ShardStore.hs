@@ -38,9 +38,9 @@ loadShard aShardHash = do
     aReading <- try $ B.readFile $ shardsPath aShardHash
     case aReading of
         Right aFileData -> case decode aFileData of
-            Right aShard -> pure.pure $ aShard
+            Right aShard -> pure . pure $ aShard
             Left  _      -> return Nothing
-        Left (_ :: SomeException)   -> return Nothing
+        Left (_ :: SomeException) -> return Nothing
 
 
 saveShard :: Shard -> IO ()

@@ -30,9 +30,9 @@ msgHandler text f = liftF (StdinHandler text f id)
 makeStdHandler :: FromJSON a => (a -> L.NodeL Text) -> A.Value -> L.NodeL Text
 makeStdHandler f raw = case A.fromJSON raw of
     A.Success req -> f req
-    A.Error _     -> pure "Error of request parsing"
+    A.Error   _   -> pure "Error of request parsing"
 
-stdHandler  :: (Typeable a, FromJSON a) => (a -> L.NodeL Text) -> StdinHandlerL ()
+stdHandler :: (Typeable a, FromJSON a) => (a -> L.NodeL Text) -> StdinHandlerL ()
 stdHandler f = msgHandler (makeTagName f) (makeStdHandler f)
 
 makeTagName :: Typeable a => a -> Text

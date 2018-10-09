@@ -12,8 +12,8 @@ import qualified Enecuum.Testing.Types as T
 -- Just pushes the messages into the concurrent list-like storage.
 interpretLoggerL :: T.LoggerRuntime -> L.LoggerF a -> IO a
 interpretLoggerL loggerRt (L.LogMessage _ msg next) = do
-  atomically $ modifyTVar (loggerRt ^. RLens.messages) (msg :)
-  pure $ next ()
+    atomically $ modifyTVar (loggerRt ^. RLens.messages) (msg :)
+    pure $ next ()
 
 -- | Runs the LoggerL language
 -- save to memory

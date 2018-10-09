@@ -14,10 +14,10 @@ genesisSolver = "EMde81cgGToGrGWSNCqm6Y498qBpjEzRczBbvC5MV2Q="
 
 genesisKeyBlock :: KeyBlockInfoPoW
 genesisKeyBlock = KeyBlockInfoPoW
-  { _time      = 0
-  , _prev_hash = genesisIndicationHash
-  , _number    = 0
-  , _nonce     = 0
-  , _solver    = genesisSolver
-  , _type      = 0
-  }
+    { _time      = 0
+    , _prev_hash = genesisIndicationHash
+    , _number    = 0
+    , _nonce     = 0
+    , _solver    = genesisSolver
+    , _type      = 0
+    }

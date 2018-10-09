@@ -35,8 +35,4 @@ type Balance = Int
 type BalanceChange = Int
 
 
-dummyTx = Transaction
-    { _amount    = 0
-    , _owner     = 1
-    , _receiver  = 2
-    }
+dummyTx = Transaction {_amount = 0, _owner = 1, _receiver = 2}

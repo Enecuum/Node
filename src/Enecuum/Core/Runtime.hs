@@ -18,12 +18,11 @@ createVoidLoggerRuntime :: IO LoggerRuntime
 createVoidLoggerRuntime = pure $ LoggerRuntime Nothing
 
 createLoggerRuntime :: T.LoggerConfig -> IO LoggerRuntime
-createLoggerRuntime config =
-  LoggerRuntime . Just <$> Impl.setupLogger config
+createLoggerRuntime config = LoggerRuntime . Just <$> Impl.setupLogger config
 
 clearLoggerRuntime :: LoggerRuntime -> IO ()
 clearLoggerRuntime (LoggerRuntime (Just hsLogger)) = Impl.teardownLogger hsLogger
-clearLoggerRuntime _ = pure ()
+clearLoggerRuntime _                               = pure ()
 
 createCoreRuntime :: LoggerRuntime -> IO CoreRuntime
 createCoreRuntime = pure . CoreRuntime

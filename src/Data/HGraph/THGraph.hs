@@ -70,11 +70,7 @@ newHLink = reformHLink newTLink
 deleteHLink = reformHLink deleteTLink
 
 -- | Find node in graph by hash of node content.
-findNode
-    :: StringHashable c
-    => TVar (THGraph c)
-    -> StringHash
-    -> STM (Maybe (TVar (THNode c)))
+findNode :: StringHashable c => TVar (THGraph c) -> StringHash -> STM (Maybe (TVar (THNode c)))
 findNode graph nodeName = M.lookup nodeName <$> readTVar graph
 
 -- | Delete the node from the graph by node ref.
@@ -83,8 +79,7 @@ deleteTHNode index tNode = do
     node <- readTVar tNode
     let nodeHash = toHash $ node ^. content
     modifyTVar index $ M.delete nodeHash
-    forM_ (node ^. rLinks)
-        $ \aVar -> modifyTVar aVar (links %~ M.delete nodeHash)
+    forM_ (node ^. rLinks) $ \aVar -> modifyTVar aVar (links %~ M.delete nodeHash)
 
 -- | Delete all nodes of graph.
 deleteGraph :: StringHashable c => TVar (THGraph c) -> STM ()
@@ -92,7 +87,7 @@ deleteGraph index = do
     graph <- readTVar index
     writeTVar index mempty
     forM_ (elems graph) $ \var -> modifyTVar var $ execState $ do
-        links  .= mempty
+        links .= mempty
         rLinks .= mempty
 
 -- | Creating/deleting of link by node contens.
@@ -102,7 +97,7 @@ newTLink n1 n2 = do
     node2 <- readTVar n2
     let hasOfN2 = toHash (node2 ^. content)
         hasOfN1 = toHash (node1 ^. content)
-        ok     = M.notMember hasOfN2 (node1 ^. links)
+        ok      = M.notMember hasOfN2 (node1 ^. links)
     when ok $ do
         modifyTVar n1 $ links %~ M.insert hasOfN2 n2
         modifyTVar n2 (rLinks %~ M.insert hasOfN1 n1)
@@ -113,7 +108,7 @@ deleteTLink n1 n2 = do
     node2 <- readTVar n2
     let hasOfN2 = toHash (node2 ^. content)
         hasOfN1 = toHash (node1 ^. content)
-        ok     = M.member hasOfN2 (node1 ^. links)
+        ok      = M.member hasOfN2 (node1 ^. links)
     when ok $ do
         modifyTVar n1 $ links %~ M.delete hasOfN2
         modifyTVar n2 (rLinks %~ M.delete hasOfN1)
@@ -126,8 +121,7 @@ deleteTLink n1 n2 = do
 type ReformLink  c = c -> c -> STM Bool
 type ReformTLink c = ReformLink (TVar (THNode c))
 
-reformHLink
-    :: StringHashable c => ReformTLink c -> TVar (THGraph c) -> ReformLink StringHash
+reformHLink :: StringHashable c => ReformTLink c -> TVar (THGraph c) -> ReformLink StringHash
 reformHLink f index x1 x2 = do
     aNodes <- forM [x1, x2] (findNode index)
     case catMaybes aNodes of

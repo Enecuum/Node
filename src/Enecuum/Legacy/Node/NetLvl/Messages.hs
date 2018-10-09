@@ -119,12 +119,12 @@ nodeIdToUnxed (NodeId aPoint) = CB.unpack . hex . B.pack $ unroll aPoint
 
 myTextUnhex :: T.Text -> Maybe B.ByteString
 myTextUnhex aString = fromString <$> aUnxeded
-    where
-        aUnxeded :: Maybe String
-        aUnxeded = unhex aNewString
+  where
+    aUnxeded :: Maybe String
+    aUnxeded = unhex aNewString
 
-        aNewString :: String
-        aNewString = T.unpack aString
+    aNewString :: String
+    aNewString = T.unpack aString
 
 
 instance FromJSON NetMessage where
@@ -216,11 +216,10 @@ instance FromJSON NetMessage where
     parseJSON _ = mzero
 
 readNodeType :: (IsString a, Eq a) => a -> NodeType
-readNodeType aNodeType
-    | aNodeType == "PoW" = PoW
-    | aNodeType == "PoA" = PoA
-    | aNodeType == "NN"  = NN
-    | otherwise          = All
+readNodeType aNodeType | aNodeType == "PoW" = PoW
+                       | aNodeType == "PoA" = PoA
+                       | aNodeType == "NN"  = NN
+                       | otherwise          = All
 
 
 instance ToJSON NetMessage where
