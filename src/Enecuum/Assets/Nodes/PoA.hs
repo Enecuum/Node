@@ -26,17 +26,8 @@ makeFieldsNoPrefix ''PoANodeData
 
 showTransaction :: D.Transaction -> Text -> Text
 showTransaction tx t =
-    t
-        <> (   "\n    Tx: ["
-           +|| tx
-           ^.  Lens.owner
-           ||+ "] -> ["
-           +|| tx
-           ^.  Lens.receiver
-           ||+ "], amount: "
-           +|| tx
-           ^.  Lens.amount
-           ||+ "."
+    t <> ( "\n    Tx: [" +|| tx ^.  Lens.owner ||+ "] -> [" +|| tx ^.  Lens.receiver
+           ||+ "], amount: " +|| tx ^.  Lens.amount ||+ "."
            )
 
 showTransactions :: D.Microblock -> Text

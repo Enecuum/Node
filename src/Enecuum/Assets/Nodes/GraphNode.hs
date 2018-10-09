@@ -126,7 +126,7 @@ calculateLedger :: GraphNodeData -> D.Microblock -> Free L.StateF ()
 calculateLedger nodeData mblock = do
     forM_ (mblock ^. Lens.transactions) $ \tx -> do
         ledgerW <- L.readVar $ nodeData ^. ledger
-        -- stateLog nodeData $ "Current Ledger " +|| ledgerW ||+ "." 
+        -- stateLog nodeData $ "Current Ledger " +|| ledgerW ||+ "."
         let owner          = tx ^. Lens.owner
             receiver       = tx ^. Lens.receiver
             amount         = tx ^. Lens.amount
@@ -148,33 +148,12 @@ calculateLedger nodeData mblock = do
                                                (insert receiver (receiverBalance + amount) ledgerW)
                         L.writeVar (nodeData ^. ledger) newLedger
                         stateLog nodeData
-                            $   "Tx accepted: from ["
-                            +|| owner
-                            ||+ "] to ["
-                            +|| receiver
-                            ||+ "], amount: "
-                            +|| amount
-                            ||+ ". ["
-                            +|| owner
-                            ||+ "]: "
-                            +|| ownerBalance
-                            -   amount
-                            ||+ ", ["
-                            +|| receiver
-                            ||+ "]: "
-                            +|| receiverBalance
-                            +   amount
-                            ||+ ""
--- stateLog nodeData $ "New Ledger " +|| newLedger ||+ "."                    
+                            $   "Tx accepted: from [" +|| owner ||+ "] to [" +|| receiver ||+ "], amount: " +|| amount ||+ ". ["
+                            +|| owner ||+ "]: " +|| ownerBalance - amount ||+ ", [" +|| receiver ||+ "]: " +|| receiverBalance + amount ||+ ""
+-- stateLog nodeData $ "New Ledger " +|| newLedger ||+ "."
                     else
                         stateLog nodeData
-                        $   "Tx rejected (negative balance): ["
-                        +|| owner
-                        ||+ "] -> ["
-                        +|| receiver
-                        ||+ "], amount: "
-                        +|| amount
-                        ||+ "."
+                        $   "Tx rejected (negative balance): [" +|| owner ||+ "] -> [" +|| receiver ||+ "], amount: " +|| amount ||+ "."
 
 -- | Accept kBlock
 acceptKBlock :: GraphNodeData -> D.KBlock -> L.NodeL (Either Text SuccessMsg)

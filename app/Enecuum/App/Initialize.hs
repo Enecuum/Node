@@ -34,13 +34,9 @@ initialize config = do
 
     forM_ (scenarioNode config) $ \scenarioCase -> forkIO $ runNodeDefinitionL nodeRt $ do
         L.logInfo
-            $   "Starting node.\n  Role: "
-            +|| nodeRole scenarioCase
-            ||+ "\n  Scenario: "
-            +|| scenario scenarioCase
-            ||+ "\n  Case: "
-            +|| scenarioRole scenarioCase
-            ||+ "..."
+            $   "Starting node.\n  Role: " +|| nodeRole scenarioCase
+            ||+ "\n  Scenario: " +|| scenario scenarioCase
+            ||+ "\n  Case: " +|| scenarioRole scenarioCase ||+ "..."
         dispatchScenario config scenarioCase
 
     void $ atomically $ readTMVar (nodeRt ^. Lens.stopNode)
