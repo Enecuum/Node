@@ -71,15 +71,15 @@ closeConnection = close
 
 
 class Connection a where
-  close :: D.NetworkConnection -> a ()
-  open  :: D.Address -> MsgHandlerL NodeL () -> a D.NetworkConnection
+    close :: D.NetworkConnection -> a ()
+    open  :: D.Address -> MsgHandlerL NodeL () -> a D.NetworkConnection
 
 instance Connection (Free NodeF) where
-  close conn = liftF $ CloseConnection conn id
-  open addr handl = liftF $ OpenConnection addr handl id
+    close conn = liftF $ CloseConnection conn id
+    open addr handl = liftF $ OpenConnection addr handl id
 
 instance L.Send NodeL where
-  send conn msg = evalNetworking $ L.send conn msg
+    send conn msg = evalNetworking $ L.send conn msg
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
 evalGraphIO :: (T.StringHashable c, Serialize c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) a -> NodeL a

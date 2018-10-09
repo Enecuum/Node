@@ -59,7 +59,7 @@ evalCoreEffectNetworkF :: L.CoreEffect a -> NetworkL a
 evalCoreEffectNetworkF coreEffect = liftF $ EvalCoreEffectNetworkF coreEffect id
 
 instance L.Logger (Free NetworkF) where
-  logMessage level msg = evalCoreEffectNetworkF $ L.logMessage level msg
+    logMessage level msg = evalCoreEffectNetworkF $ L.logMessage level msg
 
 -- Low-level stuff
 

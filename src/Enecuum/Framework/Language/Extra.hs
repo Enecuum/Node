@@ -22,14 +22,14 @@ import           Data.HGraph.THGraph                   (THGraph)
 -- (made by `makeFieldsNoPrefix`):
 -- import Enecuum.Language (HasGraph)
 class HasGraph s a | s -> a where
-  graph :: Lens' s a
+    graph :: Lens' s a
 
 -- | Allows to extract `finished` variable from any structure.
 -- To use it, you need to export it unqualified in scope of your data type lenses
 -- (made by `makeFieldsNoPrefix`):
 -- import Enecuum.Language (HasFinished)
 class HasFinished s a | s -> a where
-  finished :: Lens' s a
+    finished :: Lens' s a
 
 data NodeFinished = NodeFinished
   deriving (Show, Eq, Generic)
