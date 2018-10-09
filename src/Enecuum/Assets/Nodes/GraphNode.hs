@@ -17,7 +17,7 @@ import qualified Enecuum.Blockchain.Lens       as Lens
 import qualified Enecuum.Core.Lens             as Lens
 import           Data.HGraph.StringHashable
 
-import           Enecuum.Framework.Language.Extra (HasGraph)
+import           Enecuum.Framework.Language.Extra (HasGraph, HasFinished)
 
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 import           Enecuum.Assets.Nodes.Messages
@@ -29,6 +29,7 @@ data GraphNodeData = GraphNodeData
     , _curNode       :: D.StateVar D.StringHash
     , _logVar        :: D.StateVar [Text]
     , _ledger        :: D.StateVar (Map Integer Integer)
+    , _finished      :: D.StateVar Bool
     }
 
 makeFieldsNoPrefix ''GraphNodeData
@@ -203,8 +204,8 @@ getBalance nodeData (GetWalletBalance wallet) = do
             _   -> pure $ Left "Wallet does not exist in graph."
 
 -- | Initialization of graph node
-graphNodeInitialization :: L.NodeL GraphNodeData
-graphNodeInitialization = do
+graphNodeInitialization :: L.NodeDefinitionL GraphNodeData
+graphNodeInitialization = L.scenario $ do
     g <- L.newGraph
     let wallets = zip [1..5] (repeat 100)
     L.evalGraphIO g $ L.newNode $ D.KBlockContent D.genesisKBlock
@@ -214,15 +215,20 @@ graphNodeInitialization = do
         <*> L.newVar D.genesisHash
         <*> L.newVar []
         <*> L.newVar (fromList wallets)
+        <*> L.newVar False
 
 -- | Start of graph node
 graphNode :: L.NodeDefinitionL ()
 graphNode = do
     L.nodeTag "graphNode"
-    nodeData <- L.initialization graphNodeInitialization
+    nodeData <- graphNodeInitialization
 
     L.serving graphNodeRpcPort $ do
         L.methodE $ acceptKBlock nodeData
         L.methodE $ acceptMBlock nodeData
         L.method  $ getLastKBlock nodeData
         L.methodE $ getBalance nodeData
+    
+    L.std $ L.stdHandler $ L.setNodeFinished nodeData
+    L.nodeFinishPending nodeData
+    L.stopServing graphNodeRpcPort

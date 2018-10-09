@@ -15,11 +15,12 @@ import qualified Enecuum.Language             as L
 import qualified Enecuum.Blockchain.Lens      as Lens
 import           Enecuum.Prelude
 import           Enecuum.Assets.Nodes.Messages
+import           Enecuum.Framework.Language.Extra (HasFinished)
 
-data PoANodeData = PoANodeData {
-        _currentLastKeyBlock :: D.StateVar D.KBlock
+data PoANodeData = PoANodeData
+    { _currentLastKeyBlock :: D.StateVar D.KBlock
+    , _finished            :: D.StateVar Bool
     }
-
 
 makeFieldsNoPrefix ''PoANodeData
 
@@ -37,15 +38,18 @@ poaNode :: L.NodeDefinitionL ()
 poaNode = do
     L.nodeTag "PoA node"
     L.logInfo "Starting of PoA node"
-    L.scenario $ do
-        poaData <- L.atomically (PoANodeData <$> L.newVar D.genesisKBlock)
+    poaData <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar False)
+
+    L.std $ L.stdHandler $ L.setNodeFinished poaData
+    
+    L.scenario $
         forever $ do
             L.delay $ 100 * 1000
             eKBlock <- L.makeRpcRequest graphNodeRpcAddress GetLastKBlock
             case eKBlock of
                 Left _ -> return ()
                 Right block -> do
-                    currentBlock <- L.atomically $ L.readVar (poaData^.currentLastKeyBlock)
+                    currentBlock <- L.atomically $ L.readVar (poaData ^. currentLastKeyBlock)
                     when (block /= currentBlock) $ do
                         L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ "). Generating transactions & MBlock..."
                         L.atomically $ L.writeVar (poaData^.currentLastKeyBlock) block
@@ -53,3 +57,5 @@ poaNode = do
                         L.logInfo $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
                         _ :: Either Text SuccessMsg <- L.makeRpcRequest graphNodeRpcAddress mBlock
                         pure ()
+
+    L.nodeFinishPending poaData
