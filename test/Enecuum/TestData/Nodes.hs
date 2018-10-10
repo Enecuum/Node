@@ -41,7 +41,7 @@ bootNodeTag = "bootNode"
 masterNodeTag = "masterNode"
 
 -- | Boot node discovery sample scenario.
--- Currently, does nothing but pures the default boot node address.
+-- Currently, does nothing but returns the default boot node address.
 simpleBootNodeDiscovery :: L.NetworkL D.Address
 simpleBootNodeDiscovery = pure bootNodeAddr
 
