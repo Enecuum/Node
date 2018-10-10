@@ -23,7 +23,7 @@ import           Control.Newtype.Generics                 as X ( Newtype, O, pac
 import           Control.Concurrent                       as X ( ThreadId, threadDelay, forkIO )
 import           Control.Concurrent.STM                   as X ( retry )
 import           Control.Concurrent.STM.TVar              as X ( modifyTVar )
-import           Control.Concurrent.STM.TMVar             as X ( TMVar, readTMVar, newTMVar, newTMVarIO, newEmptyTMVar, newEmptyTMVarIO, takeTMVar, putTMVar )
+import           Control.Concurrent.STM.TMVar             as X ( TMVar, readTMVar, newTMVar, newTMVarIO, newEmptyTMVar, newEmptyTMVarIO, takeTMVar, putTMVar, tryReadTMVar )
 import           Text.Read                                as X ( read, readsPrec )
 import           GHC.Base                                 as X ( until )
 import           Fmt                                      as X ( (+|), (+||), (|+), (||+) )

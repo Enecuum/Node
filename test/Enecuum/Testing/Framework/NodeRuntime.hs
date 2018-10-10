@@ -29,6 +29,7 @@ createEmptyNodeRuntime loggerRt networkControl nodeID = do
     varCounter      <- newTMVarIO 0
     st              <- newTMVarIO Map.empty
     connections     <- newTMVarIO Map.empty
+    processes   <- newTMVarIO Map.empty
     pure $ T.NodeRuntime
         { T._loggerRuntime   = loggerRt
         , T._networkControl  = networkControl
@@ -40,6 +41,7 @@ createEmptyNodeRuntime loggerRt networkControl nodeID = do
         , T._varCounter      = varCounter
         , T._state           = st
         , T._serversRegistry = serversRegistry
+        , T._processes       = processes
         }
 
 -- | Creates node runtime. Registers in the test runtime.
@@ -51,6 +53,7 @@ createNodeRuntime testRt nodeID = do
     varCounter  <- newTMVarIO 0
     st          <- newTMVarIO Map.empty
     connections <- newTMVarIO Map.empty
+    processes   <- newTMVarIO Map.empty
     let nodeRt = T.NodeRuntime
             { T._loggerRuntime   = testRt ^. RLens.loggerRuntime
             , T._networkControl  = testRt ^. RLens.networkControl
@@ -62,6 +65,7 @@ createNodeRuntime testRt nodeID = do
             , T._varCounter      = varCounter
             , T._state           = st
             , T._serversRegistry = testRt ^. RLens.serversRegistry
+            , T._processes       = processes
             }
     Impl.registerNode (testRt ^. RLens.registry) nodeID nodeRt
     pure nodeRt

@@ -26,6 +26,7 @@ data NodeRuntime = NodeRuntime
     , _nodeTag      :: TVar Text
     , _stopNode     :: TMVar Bool
     , _connects     :: TVar (Map D.Address ConnectionImplementation)
+    , _processes    :: TMVar (Map D.ProcessId ThreadId)
     }
 
 createNodeRuntime :: CoreRuntime -> IO NodeRuntime
@@ -37,8 +38,9 @@ createNodeRuntime coreRt =
         <*> newTMVarIO 0
         <*> newTMVarIO Map.empty
         <*> newTVarIO ""
-        <*> (atomically newEmptyTMVar)
+        <*> atomically newEmptyTMVar
         <*> newTVarIO mempty
+        <*> newTMVarIO Map.empty
 
 -- TODO: more wise clearing here.
 clearNodeRuntime :: NodeRuntime -> IO ()

@@ -39,9 +39,11 @@ data NodeDefinitionF next where
     Std            :: StdinHandlerL () -> (() -> next) -> NodeDefinitionF next
     -- Process interface. TODO: It's probably wise to move it to own language.
     -- | Fork a process for node.
-    ForkProcess :: L.NodeL a -> (D.ProcessHandle a -> next) -> NodeDefinitionF next
+    ForkProcess :: L.NodeL a -> (D.ProcessPtr a -> next) -> NodeDefinitionF next
     -- | Try get result (non-blocking).
-    TryGetResult :: D.ProcessHandle a -> (Maybe a -> next) -> NodeDefinitionF next
+    TryGetResult :: D.ProcessPtr a -> (Maybe a -> next) -> NodeDefinitionF next
+    -- | Await for result (blocking).
+    AwaitResult :: D.ProcessPtr a -> (a -> next) -> NodeDefinitionF next
 
 
 makeFunctorInstance ''NodeDefinitionF
@@ -60,7 +62,7 @@ evalNodeL :: L.NodeL a -> NodeDefinitionL a
 evalNodeL action = liftF $ EvalNodeL action id
 
 -- | Fork a process for node.
-fork :: L.NodeL a -> NodeDefinitionL (D.ProcessHandle a)
+fork :: L.NodeL a -> NodeDefinitionL (D.ProcessPtr a)
 fork action = liftF $ ForkProcess action id
 
 -- | Fork a process for node.
@@ -68,8 +70,12 @@ process :: L.NodeL () -> NodeDefinitionL ()
 process = void . fork
 
 -- | Try get result from a process (non-blocking).
-tryGetResult :: D.ProcessHandle a -> NodeDefinitionL (Maybe a)
+tryGetResult :: D.ProcessPtr a -> NodeDefinitionL (Maybe a)
 tryGetResult handle = liftF $ TryGetResult handle id
+
+-- | Await for result from a process (blocking).
+awaitResult :: D.ProcessPtr a -> NodeDefinitionL a
+awaitResult handle = liftF $ AwaitResult handle id
 
 -- | Eval core effect.
 evalCoreEffectNodeDefinitionF :: L.CoreEffect a -> NodeDefinitionL a

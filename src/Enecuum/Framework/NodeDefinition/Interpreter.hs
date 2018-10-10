@@ -12,7 +12,7 @@ import qualified Network.Socket                     as S hiding (recv)
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Framework.Networking.Internal.TCP.Server
 
-import           Enecuum.Framework.Node.Interpreter
+import           Enecuum.Framework.Node.Interpreter (runNodeL, setServerChan)
 import           Enecuum.Framework.RpcMethod.Interpreter
 import           Enecuum.Framework.Runtime                 (NodeRuntime, getNextId)
 
@@ -20,14 +20,21 @@ import qualified Enecuum.Framework.Language                as L
 import qualified Enecuum.Framework.RLens                   as RLens
 import qualified Enecuum.Core.Interpreters                 as Impl
 import qualified Enecuum.Framework.Node.Interpreter        as Impl
-import qualified Enecuum.Framework.Domain.RPC             as D
-import qualified Enecuum.Framework.Domain.Networking      as D
-import qualified Enecuum.Framework.Domain.Process         as D
+import qualified Enecuum.Framework.Domain.RPC              as D
+import qualified Enecuum.Framework.Domain.Networking       as D
+import qualified Enecuum.Framework.Domain.Process          as D
 import           Enecuum.Framework.Networking.Internal.Internal
 import           Enecuum.Framework.MsgHandler.Interpreter
 import           Enecuum.Framework.StdinHandlers.Interpreter as Imp
 import           Data.Aeson.Lens
 import qualified Data.Text as T
+
+addProcess :: NodeRuntime -> D.ProcessPtr a -> ThreadId -> IO ()
+addProcess nodeRt pPtr threadId = do
+    pId <- D.getProcessId pPtr
+    ps <- atomically $ takeTMVar $ nodeRt ^. RLens.processes
+    let newPs = M.insert pId threadId ps
+    atomically $ putTMVar (nodeRt ^. RLens.processes) newPs
 
 interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF a -> IO a
 interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
@@ -73,19 +80,31 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
             putTextLn res
     pure $ next ()
 
+-- TODO: make a separate language and use its interpreter in test runtime too.
 interpretNodeDefinitionL nodeRt (L.ForkProcess action next) = do
-    threadId <- forkIO $ Impl.runNodeL nodeRt action
-    handle <- atomically (getNextId nodeRt) >>= D.createProcessHandle threadId
-    pure $ next handle
+    (pPtr, pVar) <- atomically (getNextId nodeRt) >>= D.createProcessPtr
+    threadId <- forkIO $ do
+        res <- runNodeL nodeRt action
+        atomically $ putTMVar pVar res
+    addProcess nodeRt pPtr threadId
+    pure $ next pPtr
 
-interpretNodeDefinitionL nodeRt (L.TryGetResult handle next) = error "not impl"
+interpretNodeDefinitionL _ (L.TryGetResult pPtr next) = do
+    pVar <- D.getProcessVar pPtr
+    mbResult <- atomically $ tryReadTMVar pVar
+    pure $ next mbResult
+
+interpretNodeDefinitionL _ (L.AwaitResult pPtr next) = do
+    pVar <- D.getProcessVar pPtr
+    result <- atomically $ takeTMVar pVar
+    pure $ next result
 
 --
 callHandler :: NodeRuntime -> Map Text (Value -> L.NodeL Text) -> Text -> IO Text
 callHandler nodeRt methods msg = do
     let val = A.decode $ fromString $ T.unpack msg
     case val of
-        Just ((^? key "method" . _String ) -> Just method) -> case methods ^. at method of
+        Just ((^? key "method" . _String) -> Just method) -> case methods ^. at method of
             Just justMethod -> Impl.runNodeL nodeRt $ justMethod (fromJust $ val)
             Nothing         -> pure $ "The method " <> method <> " isn't supported."
         Nothing -> pure "Error of request parsing."

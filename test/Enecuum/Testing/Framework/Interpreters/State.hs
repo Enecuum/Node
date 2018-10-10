@@ -25,8 +25,7 @@ instance StringHashable VarNumber where
 
 getVarNumber :: T.NodeRuntime -> STM VarNumber
 getVarNumber nodeRt = do
-    number <- takeTMVar $ nodeRt ^. RLens.varCounter
-    putTMVar (nodeRt ^. RLens.varCounter) $ number + 1
+    number <- T.getNextId nodeRt
     pure $ VarNumber number
 
 newVar' :: T.NodeRuntime -> a -> STM D.VarId
