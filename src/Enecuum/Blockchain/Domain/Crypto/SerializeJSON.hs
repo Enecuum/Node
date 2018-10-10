@@ -8,22 +8,19 @@
 
 module Enecuum.Blockchain.Domain.Crypto.SerializeJSON where
 
+import           Control.Exception                                     (throw)
 import           Control.Monad
-import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA              as ECDSA
+import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA                  as ECDSA
 import           Data.Aeson
-import           Data.Aeson.Types                                  (typeMismatch)
-import           Data.ByteString                                   (ByteString)
-import qualified Data.ByteString.Char8                             as BS
-
-import           Control.Exception                                 (throw)
-import qualified Data.ByteString.Base64                            as B
+import           Data.Aeson.Types                                      (typeMismatch)
+import           Data.ByteString                                       (ByteString)
+import qualified Data.ByteString.Base64                                as B
+import qualified Data.ByteString.Char8                                 as BS
 import           Data.ByteString.Conversion
-import           Data.Text                                         (Text, pack,
-                                                                    unpack)
-import qualified Data.Text.Encoding                                as T (decodeUtf8,
-                                                                         encodeUtf8)
+import           Data.Text                                             (Text, pack, unpack)
+import qualified Data.Text.Encoding                                    as T (decodeUtf8, encodeUtf8)
 import           Enecuum.Blockchain.Domain.Crypto.PublicPrivateKeyPair
-import           Enecuum.Prelude hiding (unpack, pack)
+import           Enecuum.Prelude                                       hiding (pack, unpack, (.=))
 
 
 
@@ -65,3 +62,14 @@ instance FromJSON ByteString where
   parseJSON (String s) = pure $ BS.pack $ unpack s
   -- parseJSON e          = error "ByteString: Wrong object format" ++ show e
 
+instance ToJSON ECDSA.Signature where
+  toJSON t = object [
+    "sign_r" .= intToBase64Text  (ECDSA.sign_r t),
+    "sign_s" .= intToBase64Text  (ECDSA.sign_s t) ]
+
+instance FromJSON ECDSA.Signature where
+  parseJSON (Object v) = do
+    s_r <- base64TextToInt =<< v .: "sign_r"
+    s_s <- base64TextToInt =<< v .: "sign_s"
+    pure $ ECDSA.Signature s_r s_s
+  parseJSON inv        = typeMismatch "Signature" inv

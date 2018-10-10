@@ -8,7 +8,8 @@ module Enecuum.Core.CoreEffect.Language
 import           Enecuum.Prelude
 
 import           Enecuum.Core.Logger.Language (Logger, LoggerL, logMessage)
-import           Enecuum.Core.Random.Language (ERandom, ERandomL, getRandomInt, evalRand)
+import           Enecuum.Core.Random.Language 
+--(ERandom, ERandomL, getRandomInt, evalRand, evalMonadRandom, NRandom, NRandomL)
 import           Enecuum.Core.ControlFlow.Language (ControlFlowL, ControlFlow(..))
 import           Language.Haskell.TH.MakeFunctor
 
@@ -18,6 +19,7 @@ data CoreEffectF next where
   EvalLogger      :: LoggerL ()     -> (() -> next) -> CoreEffectF next
   -- | Random effect
   EvalRandom      :: ERandomL a     -> (a  -> next) -> CoreEffectF next
+  -- | ControlFlow effect
   EvalControlFlow :: ControlFlowL a -> (a  -> next) -> CoreEffectF next
 
 makeFunctorInstance ''CoreEffectF
@@ -39,6 +41,14 @@ evalControlFlow a = liftF $ EvalControlFlow a id
 instance ERandom (Free CoreEffectF) where
   getRandomInt = evalRandom . getRandomInt
   evalRand r g = evalRandom $ evalRand r g
+  -- evalMonadRandom = evalRandom $ evalMonadRandom
+
+-- evalRandomN :: NRandomL a -> CoreEffect a
+-- evalRandomN g = undefined -- liftF $ EvalMonadRandom g id
+-- -- evalRandomN g = liftF $ EvalMonadRandom g id
+
+-- instance NRandom (Free CoreEffectF) where  
+--   evalMonadRandom = evalRandomN $ evalMonadRandom
 
 instance ControlFlow (Free CoreEffectF) where
   delay i = evalControlFlow $ delay i

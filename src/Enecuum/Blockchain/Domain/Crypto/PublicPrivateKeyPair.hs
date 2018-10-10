@@ -6,9 +6,8 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Enecuum.Blockchain.Domain.Crypto.PublicPrivateKeyPair 
-  ( Amount
-  , ECDSA.Signature
+module Enecuum.Blockchain.Domain.Crypto.PublicPrivateKeyPair
+  ( ECDSA.Signature
   , compressPublicKey
   , uncompressPublicKey
   , getPublicKey
@@ -21,22 +20,20 @@ module Enecuum.Blockchain.Domain.Crypto.PublicPrivateKeyPair
   , generateNewRandomAnonymousKeyPair
   ) where
 
-import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA            as ECDSA
+import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA                as ECDSA
 import           "cryptonite" Crypto.PubKey.ECC.Generate
 import           "cryptonite" Crypto.PubKey.ECC.Types
-import           "cryptonite" Crypto.Random (MonadRandom)
+import           "cryptonite" Crypto.Random                          (MonadRandom)
 import           Data.ByteString.Base58
-import qualified Data.ByteString.Char8                           as BC
-import           Data.Int                                        (Int64)
+import qualified Data.ByteString.Char8                               as BC
+import           Data.Int                                            (Int64)
 import           Data.Maybe
 import           Data.Serialize
-import           Enecuum.Legacy.Refact.Crypto.SerializeInstances ()
+import           Enecuum.Blockchain.Domain.Crypto.SerializeInstances ()
 import           GHC.Generics
 import           Math.NumberTheory.Moduli
 import           Prelude
 
-
-type Amount = Int64
 
 newtype PublicKey  = PublicKey256k1 Integer deriving (Generic, Serialize, Eq, Ord, Num, Enum)
 newtype PrivateKey = PrivateKey256k1 Integer deriving (Generic, Serialize, Eq, Ord)
@@ -79,7 +76,7 @@ getPublicKey :: (Integer, Integer) -> ECDSA.PublicKey
 getPublicKey (n1, n2) = ECDSA.PublicKey (getCurveByName SEC_p256k1) (Point n1 n2)
 
 data KeyPair    = KeyPair { getPub :: PublicKey, getPriv :: PrivateKey }
-  deriving (Show, Generic)
+  deriving (Show, Generic, Eq, Ord)
 
 
 instance Read PublicKey where

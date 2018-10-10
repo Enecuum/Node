@@ -81,7 +81,7 @@ data NetworkNode1Data = NetworkNode1Data
 makeFieldsNoPrefix ''NetworkNode1Data
 
 -- In this scenario, we assume the graph is list-like.
-calculateBalanceTraversing :: D.StringHash -> D.Balance -> TG.TestGraphL D.Balance
+calculateBalanceTraversing :: D.StringHash -> TG.Balance -> TG.TestGraphL TG.Balance
 calculateBalanceTraversing curNodeHash curBalance = L.getNode curNodeHash >>= \case
     Nothing      -> error "Invalid reference found."
     Just curNode -> do
@@ -92,7 +92,7 @@ calculateBalanceTraversing curNodeHash curBalance = L.getNode curNodeHash >>= \c
             _                   -> error "In this test scenario, graph should be list-like."
 
 tryAddTransactionTraversing
-    :: D.StringHash -> D.Balance -> D.BalanceChange -> TG.TestGraphL (Maybe (D.StringHash, D.Balance))
+    :: D.StringHash -> TG.Balance -> TG.BalanceChange -> TG.TestGraphL (Maybe (D.StringHash, TG.Balance))
 tryAddTransactionTraversing curNodeHash prevBalance change = L.getNode curNodeHash >>= \case
     Nothing      -> error "Invalid reference found."
     Just curNode -> do

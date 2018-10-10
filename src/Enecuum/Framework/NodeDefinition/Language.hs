@@ -105,5 +105,8 @@ instance L.ERandom (Free NodeDefinitionF) where
     evalRand r g = evalCoreEffectNodeDefinitionF  $ L.evalRand r g
 
 
+-- instance L.NRandom (Free NodeDefinitionF) where
+--     evalMonadRandom = evalCoreEffectNodeDefinitionF $ L.evalMonadRandom
+
 instance L.ControlFlow (Free NodeDefinitionF) where
     delay = evalCoreEffectNodeDefinitionF . L.delay

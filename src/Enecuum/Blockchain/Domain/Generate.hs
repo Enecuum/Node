@@ -1,18 +1,24 @@
-{-# LANGUAGE PackageImports             #-}
+{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 module Enecuum.Blockchain.Domain.Generate where
 
+import           "cryptonite" Crypto.Random            (MonadRandom)
 import           Data.HGraph.StringHashable            (StringHash (..), toHash)
 import           Data.List                             (delete)
+import           Enecuum.Blockchain.Domain.Crypto
 import           Enecuum.Blockchain.Domain.Graph
 import           Enecuum.Blockchain.Domain.KBlock
 import           Enecuum.Blockchain.Domain.Microblock
 import           Enecuum.Blockchain.Domain.Transaction
+import           Enecuum.Blockchain.Domain.Types
 import qualified Enecuum.Language                      as L
 import           Enecuum.Prelude                       hiding (Ordering)
-import Enecuum.Blockchain.Domain.Crypto 
-import           "cryptonite" Crypto.Random (MonadRandom)
 
 data Ordering = InOrder | RandomOrder
+data Boundary = Off | On
+
+-- quantityOfWallets :: Integer
+-- quantityOfWallets = 5
 
 kBlockInBunch :: Integer
 kBlockInBunch = 3
@@ -51,20 +57,74 @@ genKBlock :: StringHash -> Integer -> KBlock
 genKBlock prevHash i = KBlock {_prevHash = prevHash, _number = i, _nonce = i, _solver = toHash (i + 3)}
 
 genNTransactions :: Int -> L.NodeL [Transaction]
-genNTransactions k = replicateM k genTransaction
+genNTransactions k = replicateM k $ genTransaction On
 
-genTransaction :: L.NodeL Transaction
-genTransaction = do
-    -- owner <- L.getRandomInt (1, 5)
-    -- let rest = delete owner [1 .. 5]
-    -- receiverIndex <- fromIntegral <$> L.getRandomInt (0, 3)
-    -- let receiver = rest !! receiverIndex
+dummyTx = Transaction
+ {
+   _amount = 0,
+   _owner = read "QYy3AT4a3Z88MpEoGDixRgxtWW8v3RfSbJLFQEyFZwMe" :: PublicKey,
+   _receiver = read "pYeXNM7cn2B6A68rH9PYLCCgrXWiVbucfNW1XMW3Q4G" :: PublicKey
+  }
+
+publicKeys1 :: [PublicKey]
+publicKeys1 = map (\a -> read a )
+    [
+    "8fM3up1pPDUgMnYZzKiBpsnrvNopjSoURSnpYbm5aZKz",
+    "4vCovnpyuooGBi7t4LcEGeiQYA2pEKc4hixFGRGADw4X",
+    "GS5xDwfTffg86Wyv8uy3H4vVQYqTXBFKPxGPy1Ksp2NS",
+    "Jh8vrASby8nrVG7N3PLZjqSpbrpXFGmfpMd1nrYifZou",
+    "8LZQhs3Z7WiBZbQvTTeXCcCtXfJYtk6RNxxBExo9PEQm"
+    ]
+
+privateKeys1 :: [PrivateKey]
+privateKeys1 = map (\a -> read a )
+    [
+          "FDabUqrGEd1i3rfZpqHJkzhvqP9QEpKveoEwmknfJJFa"
+        , "DKAJTFr1bFWHE7psYX976YZis1Fqwkh3ikFAgKaw6bWj"
+        , "6uU38xA2ucJ2zEqgg1zs5j3U8hx8RL3thVFNmhk3Nbsq"
+        , "3n8QPsZwUJxUK85VrgTEuybyj1zDnUeMeovntB5EdqWP"
+        , "MzwHKfF4vGsQB2hgcK3MFKY9TaFaUe78NJwQehfjZ5s"
+    ]
+
+wallets1 :: [KeyPair]
+wallets1 = map (\(pub,priv) -> KeyPair pub priv) $ zip publicKeys1 privateKeys1
+
+genTransaction :: Boundary -> L.NodeL Transaction
+genTransaction isFromRange = do
+    (ownerKeyPair, receiverKeyPair) <- case isFromRange of
+        On -> do
+            let quantityOfWallets = fromIntegral $ length wallets1
+            ownerIndex <- fromIntegral <$> L.getRandomInt (0, quantityOfWallets - 1)
+            let owner = wallets1 !! ownerIndex
+            let rest = delete owner wallets1
+            receiverIndex <- fromIntegral <$> L.getRandomInt (0, quantityOfWallets - 2)
+            let receiver = rest !! receiverIndex
+            pure (owner, receiver)
+        Off -> do
+            owner <- L.generateKeyPair
+            receiver <- L.generateKeyPair
+            pure (owner, receiver)
+
     amount <- L.getRandomInt (0, 100)
-    -- kp <- L.evalRand $ generateNewRandomAnonymousKeyPair
-    -- (KeyPair pub priv) <- L.evalRand $ generateNewRandomAnonymousKeyPair
-    let owner = undefined
-        receiver = undefined
-    pure Transaction {_owner = owner, _receiver = receiver, _amount = amount}
+    
+    let owner = getPub ownerKeyPair
+        receiver = getPub receiverKeyPair
+        currency = ENQ
+        tx = TransactionForSign {
+            _owner = owner
+          , _receiver = receiver
+          , _amount = amount
+          , _currency = currency}
+    signature <- L.sign (getPriv ownerKeyPair) tx
+
+    let transaction = Transaction {
+        _owner = owner
+      , _receiver = receiver
+      , _amount = amount
+      , _currency = currency
+      , _signature = signature        
+    }
+    pure transaction
 
 genMicroblock :: StringHash -> [Transaction] -> Microblock
 genMicroblock hashofKeyBlock tx = Microblock {_keyBlock = hashofKeyBlock, _transactions = tx}
@@ -97,6 +157,3 @@ loopGenIndices numbers = do
             rest <- loopGenIndices $ delete result numbers
             pure (result : rest)
         else pure []
-
-dirty :: MonadRandom m => m KeyPair
-dirty =  generateNewRandomAnonymousKeyPair       
