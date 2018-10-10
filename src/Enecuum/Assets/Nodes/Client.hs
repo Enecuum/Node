@@ -44,19 +44,16 @@ startForeverChainGenerationHandler :: StartForeverChainGeneration -> L.NodeL Tex
 startForeverChainGenerationHandler _ = sendRequestToPoW M.ForeverChainGeneration
 
 startNBlockPacketGenerationHandler :: StartNBlockPacketGeneration -> L.NodeL Text
-startNBlockPacketGenerationHandler (StartNBlockPacketGeneration i) = 
-    sendRequestToPoW $ M.NBlockPacketGeneration i
+startNBlockPacketGenerationHandler (StartNBlockPacketGeneration i) = sendRequestToPoW $ M.NBlockPacketGeneration i
 
 getLastKBlockHandler :: GetLastKBlock -> L.NodeL Text
 getLastKBlockHandler _ = do
-    res :: Either Text D.KBlock <-
-        L.makeRpcRequest graphNodeRpcAddress M.GetLastKBlock
+    res :: Either Text D.KBlock <- L.makeRpcRequest graphNodeRpcAddress M.GetLastKBlock
     pure . eitherToText $ res
 
 getWalletBalance :: GetWalletBalance -> L.NodeL Text
 getWalletBalance (GetWalletBalance walletId) = do
-    res :: Either Text M.WalletBalanceMsg <-
-        L.makeRpcRequest graphNodeRpcAddress (M.GetWalletBalance walletId)
+    res :: Either Text M.WalletBalanceMsg <- L.makeRpcRequest graphNodeRpcAddress (M.GetWalletBalance walletId)
     pure . eitherToText $ res
 
 {-
@@ -83,5 +80,5 @@ clientNode = do
     L.nodeFinishPending nodeData
 
 eitherToText :: Show a => Either Text a -> Text
-eitherToText (Left a)  = "Server error: " <> a
+eitherToText (Left  a) = "Server error: " <> a
 eitherToText (Right a) = show a

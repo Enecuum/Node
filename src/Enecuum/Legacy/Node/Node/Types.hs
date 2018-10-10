@@ -99,13 +99,13 @@ data NetworkNodeData = NetworkNodeData {
 makeLenses ''NetworkNodeData
 
 makeNetworkData
-    ::  NodeConfig
-    ->  InChan InfoMsg
-    ->  InChan (DataActorRequest Connect)
-    ->  InChan Microblock
-    ->  InChan (Transaction, MVar Bool)
-    ->  InChan Value
-    ->  NetworkNodeData
+    :: NodeConfig
+    -> InChan InfoMsg
+    -> InChan (DataActorRequest Connect)
+    -> InChan Microblock
+    -> InChan (Transaction, MVar Bool)
+    -> InChan Value
+    -> NetworkNodeData
 makeNetworkData aNodeConfig = NetworkNodeData M.empty aNodeConfig Nothing
 
 
@@ -164,7 +164,7 @@ instance Serialize PrivateKey where
 
 makeNewNodeConfig :: MonadRandom m => m NodeConfig
 makeNewNodeConfig = do
-    (aPublicKey,     aPrivateKey)  <- generateKeyPair
+    (aPublicKey, aPrivateKey) <- generateKeyPair
     let aId = keyToId aPublicKey
     return $ NodeConfig aPrivateKey (toMyNodeId aId)
 

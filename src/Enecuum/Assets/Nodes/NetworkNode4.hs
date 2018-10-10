@@ -36,18 +36,18 @@ checkLengthAndUpdate address nodeData = do
     curChain <- L.atomically <$> L.readVar $ nodeData ^. chainVar
     let curChainLength = length curChain
     when (curChainLength < otherLength) $ do
-      GetChainFromResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromRequest curChainLength )
-      logs <- L.atomically $ do
-        updChain <- L.readVar $ nodeData ^. chainVar
-        let l1 = "updChain: " :: Text.Text
-        let l2 = (show updChain :: Text.Text)
-        let restChain = chainTail
-        let l3 = "restChain: " :: Text.Text
-        let l4 = (show restChain :: Text.Text)
-        L.writeVar (nodeData ^. chainVar) (curChain ++ restChain)
-        let messages =  (l1 : l2 : l3 : l4 : [] ) 
-        pure messages  
-      forM_ logs L.logInfo
+        GetChainFromResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromRequest curChainLength)
+        logs                           <- L.atomically $ do
+            updChain <- L.readVar $ nodeData ^. chainVar
+            let l1        = "updChain: " :: Text.Text
+            let l2        = (show updChain :: Text.Text)
+            let restChain = chainTail
+            let l3        = "restChain: " :: Text.Text
+            let l4        = (show restChain :: Text.Text)
+            L.writeVar (nodeData ^. chainVar) (curChain ++ restChain)
+            let messages = (l1 : l2 : l3 : l4 : [])
+            pure messages
+        forM_ logs L.logInfo
 
 --networkNode4Scenario :: L.NodeL ()
 networkNode4Scenario nodeData = do
@@ -63,13 +63,13 @@ networkNode4Scenario nodeData = do
 
 newtorkNode4Initialization :: L.NodeL NetworkNodeChainData
 newtorkNode4Initialization = do
-  (_, blocks) <- D.generateNKBlocks 5
-  log <- L.atomically $ L.newVar []
-  chainLengthVar' <- L.atomically $ L.newVar blocks 
-  pure $ NetworkNodeChainData chainLengthVar' log
+    (_, blocks)     <- D.generateNKBlocks 5
+    log             <- L.atomically $ L.newVar []
+    chainLengthVar' <- L.atomically $ L.newVar blocks
+    pure $ NetworkNodeChainData chainLengthVar' log
 
 networkNode4 :: L.NodeDefinitionL ()
 networkNode4 = do
-  L.nodeTag "networkNode4"
-  nodeData <- L.initialization $ newtorkNode4Initialization
-  L.scenario $ networkNode4Scenario nodeData
+    L.nodeTag "networkNode4"
+    nodeData <- L.initialization $ newtorkNode4Initialization
+    L.scenario $ networkNode4Scenario nodeData

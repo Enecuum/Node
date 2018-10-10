@@ -38,13 +38,13 @@ sendKBlock :: D.KBlock -> L.NodeL ()
 sendKBlock kBlock = do
     eResult <- L.makeRpcRequest graphNodeRpcAddress kBlock
     case eResult of
-      Left msg -> L.logInfo $ "KBlock sending failed: " +|| msg ||+ "."
-      Right SuccessMsg -> L.logInfo "KBlock sending success."
+        Left  msg        -> L.logInfo $ "KBlock sending failed: " +|| msg ||+ "."
+        Right SuccessMsg -> L.logInfo "KBlock sending success."
 
 kBlockProcess :: PoWNodeData -> L.NodeL ()
 kBlockProcess nodeData = do
-    prevKBlockHash   <- L.atomically <$> L.readVar $ nodeData ^. prevHash
-    prevKBlockNumber <- L.atomically <$> L.readVar $ nodeData ^. prevNumber
+    prevKBlockHash      <- L.atomically <$> L.readVar $ nodeData ^. prevHash
+    prevKBlockNumber    <- L.atomically <$> L.readVar $ nodeData ^. prevNumber
 
     (lastHash, kBlocks) <- D.generateKBlocks prevKBlockHash prevKBlockNumber
     -- L.logInfo $ "KBlocks generated: " +|| kBlocks ||+ "."
@@ -58,17 +58,15 @@ kBlockProcess nodeData = do
         sendKBlock kBlock
         when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
 
-foreverChainGenerationHandle
-    :: PoWNodeData -> ForeverChainGeneration -> L.NodeL SuccessMsg
+foreverChainGenerationHandle :: PoWNodeData -> ForeverChainGeneration -> L.NodeL SuccessMsg
 foreverChainGenerationHandle powNodeData _ = do
-    L.atomically $ L.writeVar (powNodeData^.requiredBlockNumber) (10 ^ 6)
-    pure SuccessMsg 
+    L.atomically $ L.writeVar (powNodeData ^. requiredBlockNumber) (10 ^ 6)
+    pure SuccessMsg
 
-nBlockPacketGenerationHandle
-    :: PoWNodeData -> NBlockPacketGeneration -> L.NodeL SuccessMsg
+nBlockPacketGenerationHandle :: PoWNodeData -> NBlockPacketGeneration -> L.NodeL SuccessMsg
 nBlockPacketGenerationHandle powNodeData (NBlockPacketGeneration i) = do
-    L.atomically $ L.modifyVar (powNodeData^.requiredBlockNumber) (+i)
-    pure SuccessMsg 
+    L.atomically $ L.modifyVar (powNodeData ^. requiredBlockNumber) (+ i)
+    pure SuccessMsg
 
 powNode :: L.NodeDefinitionL ()
 powNode = powNode' True
@@ -88,7 +86,7 @@ powNode' delaysEnabled = do
     forever $ L.scenario $ do
         L.atomically $ do
             i <- L.readVar $ nodeData ^. requiredBlockNumber
-            when (i == 0) L.retry
+            when       (i == 0)                          L.retry
             L.writeVar (nodeData ^. requiredBlockNumber) (i - 1)
         kBlockProcess nodeData
 
@@ -97,8 +95,8 @@ powNode' delaysEnabled = do
 
 powNodeInitialization :: EnableDelays -> StringHash -> L.NodeL PoWNodeData
 powNodeInitialization delaysEnabled genesisHash = do
-  h <- L.atomically $ L.newVar genesisHash
-  n <- L.atomically $ L.newVar 1
-  b <- L.atomically $ L.newVar 0
-  f <- L.atomically $ L.newVar False
-  pure $ PoWNodeData delaysEnabled h n b f
+    h <- L.atomically $ L.newVar genesisHash
+    n <- L.atomically $ L.newVar 1
+    b <- L.atomically $ L.newVar 0
+    f <- L.atomically $ L.newVar False
+    pure $ PoWNodeData delaysEnabled h n b f

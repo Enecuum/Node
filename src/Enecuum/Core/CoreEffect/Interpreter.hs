@@ -14,11 +14,9 @@ interpretCoreEffectF :: Rt.CoreRuntime -> L.CoreEffectF a -> IO a
 interpretCoreEffectF coreRt (L.EvalLogger msg next) =
     next <$> (runLoggerL (coreRt ^. RLens.loggerRuntime . RLens.hsLoggerHandle)) msg
 
-interpretCoreEffectF _ (L.EvalRandom eRnd next) =
-    next <$> runERandomL eRnd
+interpretCoreEffectF _      (L.EvalRandom      eRnd next) = next <$> runERandomL eRnd
 
-interpretCoreEffectF coreRt (L.EvalControlFlow f next) =
-    next <$> runControlFlow coreRt f
+interpretCoreEffectF coreRt (L.EvalControlFlow f    next) = next <$> runControlFlow coreRt f
 
 -- | Runs core effect language.
 runCoreEffect :: Rt.CoreRuntime -> L.CoreEffect a -> IO a

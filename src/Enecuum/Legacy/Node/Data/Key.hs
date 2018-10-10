@@ -53,16 +53,15 @@ keyToId :: ECDSA.PublicKey -> NodeId
 keyToId key = case compressPublicKey key of
     PublicKey256k1 a -> NodeId $ toInteger a
 
-generateKeyPair :: MonadRandom m =>  m (ECDSA.PublicKey, ECDSA.PrivateKey)
+generateKeyPair :: MonadRandom m => m (ECDSA.PublicKey, ECDSA.PrivateKey)
 generateKeyPair = generate curve_256
 
-generateClientId :: [Word64] ->  IO NodeId
+generateClientId :: [Word64] -> IO NodeId
 generateClientId list = do
-      aRand <- randomIO :: IO Word64
-      return $ NodeId $ fromIntegral $ mask .|. ( shiftL aRand ((length list)*2))
+    aRand <- randomIO :: IO Word64
+    return $ NodeId $ fromIntegral $ mask .|. (shiftL aRand ((length list) * 2))
+  where
+    bitsmask []       _ = 0
+    bitsmask (x : xs) n = (bitsmask xs (n + 1)) .|. (shiftL x (2 * n))
 
-      where
-        bitsmask []     _ =  0
-        bitsmask (x:xs) n =  (bitsmask xs (n+1)) .|. (shiftL x (2*n))
-
-        mask = bitsmask (reverse list) 0
+    mask = bitsmask (reverse list) 0

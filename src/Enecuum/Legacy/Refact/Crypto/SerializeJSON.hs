@@ -55,17 +55,17 @@ encodeToText = T.decodeUtf8 . B.encode
 decodeFromText :: (MonadPlus m) => Text -> m ByteString
 decodeFromText aStr = case B.decode . T.encodeUtf8 $ aStr of
     Right a -> return a
-    Left _  -> mzero
+    Left  _ -> mzero
 
 intToBase64Text :: Integer -> Text
 intToBase64Text i = encodeToText $ toByteString' i
 
 base64TextToInt :: (MonadPlus m) => Text -> m Integer
 base64TextToInt b = do
-     bs <- decodeFromText b
-     case fromByteString bs of
-       Just i -> return i
-       _      -> mzero
+    bs <- decodeFromText b
+    case fromByteString bs of
+        Just i -> return i
+        _      -> mzero
 
 
 instance ToJSON Hash

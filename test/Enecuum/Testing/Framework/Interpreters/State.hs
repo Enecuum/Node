@@ -25,50 +25,47 @@ instance StringHashable VarNumber where
 
 getVarNumber :: T.NodeRuntime -> STM VarNumber
 getVarNumber nodeRt = do
-  number <- takeTMVar $ nodeRt ^. RLens.varCounter
-  putTMVar (nodeRt ^. RLens.varCounter) $ number + 1
-  pure $ VarNumber number
+    number <- takeTMVar $ nodeRt ^. RLens.varCounter
+    putTMVar (nodeRt ^. RLens.varCounter) $ number + 1
+    pure $ VarNumber number
 
 newVar' :: T.NodeRuntime -> a -> STM D.VarId
 newVar' nodeRt a = do
-  varNumber <- getVarNumber nodeRt
-  tvar      <- newTVar $ unsafeCoerce a
-  nodeState <- takeTMVar $ nodeRt ^. RLens.state
-  let varId = D.toHash varNumber
-  putTMVar (nodeRt ^. RLens.state) $ Map.insert varId (T.VarHandle varId tvar) nodeState
-  pure varId
+    varNumber <- getVarNumber nodeRt
+    tvar      <- newTVar $ unsafeCoerce a
+    nodeState <- takeTMVar $ nodeRt ^. RLens.state
+    let varId = D.toHash varNumber
+    putTMVar (nodeRt ^. RLens.state) $ Map.insert varId (T.VarHandle varId tvar) nodeState
+    pure varId
 
 readVar' :: T.NodeRuntime -> D.StateVar a -> STM a
 readVar' nodeRt (view Lens.varId -> varId) = do
-  nodeState <- readTMVar $ nodeRt ^. RLens.state
-  case Map.lookup varId nodeState of
-    Nothing                 -> error $ "Var not found: " +|| varId ||+ "."
-    Just (T.VarHandle _ tvar) -> unsafeCoerce <$> readTVar tvar
+    nodeState <- readTMVar $ nodeRt ^. RLens.state
+    case Map.lookup varId nodeState of
+        Nothing                   -> error $ "Var not found: " +|| varId ||+ "."
+        Just (T.VarHandle _ tvar) -> unsafeCoerce <$> readTVar tvar
 
 writeVar' :: T.NodeRuntime -> D.StateVar a -> a -> STM ()
 writeVar' nodeRt (view Lens.varId -> varId) val = do
-  nodeState <- readTMVar $ nodeRt ^. RLens.state
-  case Map.lookup varId nodeState of
-    Nothing                 -> error $ "Var not found: " +|| varId ||+ "."
-    Just (T.VarHandle _ tvar) -> writeTVar tvar $ unsafeCoerce val
+    nodeState <- readTMVar $ nodeRt ^. RLens.state
+    case Map.lookup varId nodeState of
+        Nothing                   -> error $ "Var not found: " +|| varId ||+ "."
+        Just (T.VarHandle _ tvar) -> writeTVar tvar $ unsafeCoerce val
 
 
 -- | Interpret StateL as STM.
 interpretStateL :: T.NodeRuntime -> L.StateF a -> STM a
 
-interpretStateL nodeRt (L.NewVar val next) =
-  next . D.StateVar <$> newVar' nodeRt val
+interpretStateL nodeRt (L.NewVar  val next     ) = next . D.StateVar <$> newVar' nodeRt val
 
-interpretStateL nodeRt (L.ReadVar var next) =
-  next <$> readVar' nodeRt var
+interpretStateL nodeRt (L.ReadVar var next     ) = next <$> readVar' nodeRt var
 
-interpretStateL nodeRt (L.WriteVar var val next) =
-  next <$> writeVar' nodeRt var val
+interpretStateL nodeRt (L.WriteVar var val next) = next <$> writeVar' nodeRt var val
 
-interpretStateL _ (L.Retry _) = retry
+interpretStateL _      (L.Retry _              ) = retry
 
-interpretStateL _ (L.EvalGraph gr act next) = do
-  next <$> runHGraphSTM gr act
+interpretStateL _      (L.EvalGraph gr act next) = do
+    next <$> runHGraphSTM gr act
 
 -- | Runs state model as STM.
 runStateL :: T.NodeRuntime -> L.StateL a -> STM a

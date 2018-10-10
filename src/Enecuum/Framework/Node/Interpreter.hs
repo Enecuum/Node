@@ -23,11 +23,9 @@ interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
     next <$> (atomically $ Impl.runStateL nodeRt statefulAction)
 
-interpretNodeL _ (L.EvalGraphIO gr act next) =
-  next <$> runHGraphIO gr act
+interpretNodeL _      (L.EvalGraphIO gr act next       ) = next <$> runHGraphIO gr act
 
-interpretNodeL nodeRt (L.EvalNetworking networking next) =
-    next <$> Impl.runNetworkingL nodeRt networking
+interpretNodeL nodeRt (L.EvalNetworking networking next) = next <$> Impl.runNetworkingL nodeRt networking
 
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects
@@ -40,7 +38,7 @@ interpretNodeL nodeRt (L.OpenConnection addr initScript next) = do
     m <- atomically $ newTVar mempty
     runMsgHandlerL m initScript
     handlers <- readTVarIO m
-    newCon <- I.openConnect addr ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
+    newCon   <- I.openConnect addr ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
     insertConnect (nodeRt ^. RLens.connects) addr newCon
     pure $ next (D.NetworkConnection addr)
 
@@ -52,8 +50,7 @@ interpretNodeL nodeRt (L.CloseConnection (D.NetworkConnection addr) next) = do
             modifyTVar (nodeRt ^. RLens.connects) $ M.delete addr
     return $ next ()
 
-interpretNodeL _ (L.NewGraph next) =
-    next <$> initHGraph 
+interpretNodeL _ (L.NewGraph next) = next <$> initHGraph
 
 insertConnect :: TVar (Map D.Address ConnectionImplementation) -> D.Address -> ConnectionImplementation -> IO ()
 insertConnect m addr newCon = atomically $ do
@@ -64,8 +61,8 @@ insertConnect m addr newCon = atomically $ do
 setServerChan :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> TChan ServerComand -> STM ()
 setServerChan servs port chan = do
     serversMap <- readTVar servs
-    whenJust (serversMap ^. at port) stopServer
-    modifyTVar servs (M.insert port chan)
+    whenJust   (serversMap ^. at port) stopServer
+    modifyTVar servs                   (M.insert port chan)
 
 
 -- | Runs node language. Runs interpreters for the underlying languages.

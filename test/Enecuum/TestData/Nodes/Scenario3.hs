@@ -29,23 +29,23 @@ import           Enecuum.TestData.Validation
 
 bootNodeValidation :: L.NodeDefinitionL ()
 bootNodeValidation = do
-  L.nodeTag bootNodeTag
-  L.initialization $ pure $ D.NodeID "abc"
-  L.serving 2000 $ do
-    L.method acceptGetHashId
-    L.method acceptValidationRequest
+    L.nodeTag bootNodeTag
+    L.initialization $ pure $ D.NodeID "abc"
+    L.serving 2000 $ do
+        L.method acceptGetHashId
+        L.method acceptValidationRequest
 
 masterNodeInitializeWithValidation :: L.NodeL (Either Text D.NodeID)
 masterNodeInitializeWithValidation = do
-  GetHashIDResponse eHashID <- L.makeRpcRequestUnsafe bootNodeAddr GetHashIDRequest
-  validRes :: ValidationResponse <- L.makeRpcRequestUnsafe bootNodeAddr ValidRequest
-  L.logInfo $ "For the valid request recieved " +|| validRes ||+ "."
-  invalidRes :: ValidationResponse <- L.makeRpcRequestUnsafe bootNodeAddr InvalidRequest
-  L.logInfo $ "For the invalid request recieved " +|| invalidRes ||+ "."
-  pure $ Right (D.NodeID eHashID)
+    GetHashIDResponse eHashID      <- L.makeRpcRequestUnsafe bootNodeAddr GetHashIDRequest
+    validRes :: ValidationResponse <- L.makeRpcRequestUnsafe bootNodeAddr ValidRequest
+    L.logInfo $ "For the valid request recieved " +|| validRes ||+ "."
+    invalidRes :: ValidationResponse <- L.makeRpcRequestUnsafe bootNodeAddr InvalidRequest
+    L.logInfo $ "For the invalid request recieved " +|| invalidRes ||+ "."
+    pure $ Right (D.NodeID eHashID)
 
 masterNodeValidation :: L.NodeDefinitionL ()
 masterNodeValidation = do
-  L.nodeTag masterNodeTag
-  nodeId <- D.withSuccess $ L.initialization masterNodeInitializeWithValidation
-  L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
+    L.nodeTag masterNodeTag
+    nodeId <- D.withSuccess $ L.initialization masterNodeInitializeWithValidation
+    L.logInfo $ "Master node got id: " +|| nodeId ||+ "."

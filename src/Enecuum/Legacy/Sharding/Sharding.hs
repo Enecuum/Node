@@ -40,12 +40,7 @@ import           Enecuum.Legacy.Sharding.Types.Node
 import           Enecuum.Prelude
 
 
-makeShardingNode
-    ::  MyNodeId
-    ->  C.Chan ShardingNodeAction
-    ->  InChan T.MsgToCentralActor
-    ->  InChan InfoMsg
-    ->  IO ()
+makeShardingNode :: MyNodeId -> C.Chan ShardingNodeAction -> InChan T.MsgToCentralActor -> InChan InfoMsg -> IO ()
 makeShardingNode _ _ _ _ = return ()
 {-
 

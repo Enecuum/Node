@@ -68,7 +68,7 @@ instance Gauge Double
 instance Gauge Amount
 
 timing :: Stat -> Millisecond -> String
-timing stat value = fmtDatagram stat (fromIntegral value::Integer)  Timing
+timing stat value = fmtDatagram stat (fromIntegral value :: Integer) Timing
 
 
 class (Datagram a, Eq a) => Set a where

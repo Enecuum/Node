@@ -51,21 +51,18 @@ unroll = unfoldr step
     step i = Just (fromIntegral i, i `shiftR` 8)
 
 roll :: (Integral a, Bits a) => [Word8] -> a
-roll   = foldr unstep 0
-  where
-    unstep b a = a `shiftL` 8 .|. fromIntegral b
+roll = foldr unstep 0 where unstep b a = a `shiftL` 8 .|. fromIntegral b
 
 nrBits :: (Ord a, Integral a) => a -> Int
 nrBits k =
     let expMax = until (\e -> 2 ^ e > k) (* 2) 1
         findNr :: Int -> Int -> Int
-        findNr lo hi
-            | mid == lo = hi
-            | 2 ^ mid <= k = findNr mid hi
-            | 2 ^ mid > k  = findNr lo mid
-            | otherwise = error "Service.Types.SerializeInstances: nrBits"
-         where mid = (lo + hi) `div` 2
-    in findNr (expMax `div` 2) expMax
+        findNr lo hi | mid == lo    = hi
+                     | 2 ^ mid <= k = findNr mid hi
+                     | 2 ^ mid > k  = findNr lo mid
+                     | otherwise    = error "Service.Types.SerializeInstances: nrBits"
+            where mid = (lo + hi) `div` 2
+    in  findNr (expMax `div` 2) expMax
 
 
 -- tested

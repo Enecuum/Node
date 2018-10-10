@@ -20,7 +20,7 @@ metronomeLinear aMinT aMaxT aFunc = void $ forkIO $ aLoop 0
         let aTime = if aMinT * x < aMaxT then aMinT * x else aMaxT
         threadDelay aTime
         aFunc
-        aLoop (x+1)
+        aLoop (x + 1)
 
 
 metronome :: Int -> IO () -> IO ()

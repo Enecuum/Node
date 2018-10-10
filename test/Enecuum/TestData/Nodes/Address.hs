@@ -3,7 +3,7 @@ module Enecuum.TestData.Nodes.Address where
 import qualified Enecuum.Domain as D
 
 bootNodeAddr, masterNode1Addr :: D.Address
-bootNodeAddr    = D.Address "0.0.0.0" 2000
+bootNodeAddr = D.Address "0.0.0.0" 2000
 masterNode1Addr = D.Address "0.0.0.1" 2000
 
 networkNode1Addr, networkNode2Addr :: D.Address

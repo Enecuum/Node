@@ -22,30 +22,29 @@ import           Enecuum.Testing.Framework.Internal.TcpLikeServerBinding (bindSe
 startNodeTcpLikeServer :: T.NodeRuntime -> D.Address -> TVar (Map Text (L.MsgHandler L.NodeL)) -> IO ()
 startNodeTcpLikeServer nodeRt servingAddress handlersVar = do
 
-  handlers <- readTVarIO handlersVar
-  control <- T.Control <$> newEmptyTMVarIO <*> newEmptyTMVarIO
-  tId <- forkIO $ go 0 control handlers
+    handlers <- readTVarIO handlersVar
+    control  <- T.Control <$> newEmptyTMVarIO <*> newEmptyTMVarIO
+    tId      <- forkIO $ go 0 control handlers
 
-  let handle = T.ServerHandle tId control nodeRt
-  atomically $ do
-    serversRegistry <- takeTMVar (nodeRt ^. RLens.serversRegistry)
-    putTMVar (nodeRt ^. RLens.serversRegistry) $ Map.insert servingAddress handle serversRegistry
-
+    let handle = T.ServerHandle tId control nodeRt
+    atomically $ do
+        serversRegistry <- takeTMVar (nodeRt ^. RLens.serversRegistry)
+        putTMVar (nodeRt ^. RLens.serversRegistry) $ Map.insert servingAddress handle serversRegistry
   where
 
     go iteration control handlers = do
-      void $ act iteration control handlers
-      go (iteration + 1 :: Int) control handlers
+        void $ act iteration control handlers
+        go (iteration + 1 :: Int) control handlers
 
     act _ control handlers = do
-      controlReq <- atomically $ takeTMVar $ control ^. RLens.request
-      controlResp <- case controlReq of
-          T.EstablishConnectionReq -> do
-              workerHandle <- startNodeTcpLikeWorker (Impl.runNodeL nodeRt) nodeRt handlers Nothing
-              bindedServer <- bindServer nodeRt (servingAddress ^. Lens.host) T.Server workerHandle
-              pure $ T.AsConnectionAccepted bindedServer
-          _ -> error "Control request is not supported in accepting Tcp-like server."
-      atomically $ putTMVar (control ^. RLens.response) controlResp
+        controlReq  <- atomically $ takeTMVar $ control ^. RLens.request
+        controlResp <- case controlReq of
+            T.EstablishConnectionReq -> do
+                workerHandle <- startNodeTcpLikeWorker (Impl.runNodeL nodeRt) nodeRt handlers Nothing
+                bindedServer <- bindServer nodeRt (servingAddress ^. Lens.host) T.Server workerHandle
+                pure $ T.AsConnectionAccepted bindedServer
+            _ -> error "Control request is not supported in accepting Tcp-like server."
+        atomically $ putTMVar (control ^. RLens.response) controlResp
 
 
 
@@ -55,6 +54,6 @@ stopNodeTcpLikeServer nodeRt port = do
     let servingAddress = (nodeRt ^. RLens.address) & Lens.port .~ port
     serversRegistry <- atomically $ takeTMVar (nodeRt ^. RLens.serversRegistry)
     case Map.lookup servingAddress serversRegistry of
-      Nothing -> pure ()
-      Just serverHandle -> killThread $ serverHandle ^. RLens.threadId
+        Nothing           -> pure ()
+        Just serverHandle -> killThread $ serverHandle ^. RLens.threadId
     atomically $ putTMVar (nodeRt ^. RLens.serversRegistry) $ Map.delete servingAddress serversRegistry

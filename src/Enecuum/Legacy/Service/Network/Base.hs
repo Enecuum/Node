@@ -46,14 +46,14 @@ instance Serialize Connect
 -- | Show host adres in 0.0.0.0 form.
 showHostAddress :: HostAddress -> String
 showHostAddress aHostAdress = intercalate "." $ P.show <$> [i1, i2, i3, i4]
-  where (i1, i2, i3, i4) = hostAddressToTuple aHostAdress
+    where (i1, i2, i3, i4) = hostAddressToTuple aHostAdress
 
 
 -- | Transform SockAddr to HostAddress.
 sockAddrToHostAddress :: SockAddr -> HostAddress
 sockAddrToHostAddress aSockAddr = case aSockAddr of
-    SockAddrInet _ aHostAdress                  -> aHostAdress
-    SockAddrInet6 _ _  (_, _, _, aHostAdress) _ -> reverseAdr aHostAdress
+    SockAddrInet _ aHostAdress -> aHostAdress
+    SockAddrInet6 _ _ (_, _, _, aHostAdress) _ -> reverseAdr aHostAdress
     _                          -> error "error: sockAddrToHostAddress"
 
 

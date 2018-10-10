@@ -11,4 +11,4 @@ interpretControlFlowF _ (L.Delay i next) = do
 
 runControlFlow :: Rt.CoreRuntime -> Free L.ControlFlowF a -> IO a
 runControlFlow coreRt = foldFree (interpretControlFlowF coreRt)
-        
+

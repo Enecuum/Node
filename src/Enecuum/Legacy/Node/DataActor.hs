@@ -44,11 +44,9 @@ startDataActor aChan = aLoop S.empty
         ReadRecords aMVar -> do
             putMVar aMVar $ S.toList aData
             aLoop aData
-        DeleteRecords aConnect -> aLoop $
-            S.delete aConnect aData
-        AddRecords aNewConnects -> aLoop $
-            S.union aData (S.fromList aNewConnects)
-        NumberOfRecords aMVar -> do
+        DeleteRecords   aConnect     -> aLoop $ S.delete aConnect aData
+        AddRecords      aNewConnects -> aLoop $ S.union aData (S.fromList aNewConnects)
+        NumberOfRecords aMVar        -> do
             putMVar aMVar $ S.size aData
             aLoop aData
 
@@ -72,6 +70,6 @@ startContainerActor aEmpty aChan = aLoop aEmpty
         Predicate f aVar -> putMVar aVar (f aData) >> aLoop aData
         Lookup    f aVar -> putMVar aVar (f aData) >> aLoop aData
         -- insert, delete, adjust, updateWithKey
-        Update    f      -> aLoop (f aData)
+        Update f         -> aLoop (f aData)
         -- size, length
-        Size      f aVar -> putMVar aVar (f aData) >> aLoop aData
+        Size f aVar      -> putMVar aVar (f aData) >> aLoop aData

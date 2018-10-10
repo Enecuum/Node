@@ -18,29 +18,23 @@ import    Control.Concurrent.STM.TChan
 data ServerComand = StopServer
 
 runServer :: TChan ServerComand -> PortNumber -> (HostAddress -> ServerApp) -> IO ()
-runServer chan port app =
-    void $ race (void $ atomically $ readTChan chan) (runServer' port app)
+runServer chan port app = void $ race (void $ atomically $ readTChan chan) (runServer' port app)
 
 -- | Run a server app.
 runServer' :: PortNumber -> (HostAddress -> ServerApp) -> IO ()
 runServer' port app = S.withSocketsDo $ bracket
     (makeListenSocket "0" (fromEnum port))
     S.close
-    (\sock ->
-        mask_ $ forever $ do
+    (\sock -> mask_ $ forever $ do
         allowInterrupt
         (conn, sockAddr) <- S.accept sock
-        void $ forkIOWithUnmask $ \unmask ->
-            finally (unmask $ runApp conn defaultConnectionOptions
-                (app (sockAddrToHostAddress sockAddr))) (S.close conn)
-        )
+        void
+            $ forkIOWithUnmask
+            $ \unmask -> finally
+                  (unmask $ runApp conn defaultConnectionOptions (app (sockAddrToHostAddress sockAddr)))
+                  (S.close conn)
+    )
 
 
-runApp ::
-    S.Socket
-    -> ConnectionOptions
-    -> ServerApp
-    -> IO ()
-runApp socket opts = bracket
-    (makePendingConnection socket opts)
-    (Stream.close . pendingStream)
+runApp :: S.Socket -> ConnectionOptions -> ServerApp -> IO ()
+runApp socket opts = bracket (makePendingConnection socket opts) (Stream.close . pendingStream)

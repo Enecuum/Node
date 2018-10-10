@@ -18,51 +18,49 @@ import Enecuum.Testing.Framework.Internal.TcpLikeServerBinding (registerConnecti
 
 -- | Node TCP-like binded server worker.
 startNodeTcpLikeWorker
-  :: (L.NodeL () -> IO ()) 
-  -> T.NodeRuntime 
-  -> Map Text (L.MsgHandler L.NodeL)
-  -> Maybe D.NetworkConnection 
-  -> IO T.ConnectionWorkerHandle
+    :: (L.NodeL () -> IO ())
+    -> T.NodeRuntime
+    -> Map Text (L.MsgHandler L.NodeL)
+    -> Maybe D.NetworkConnection
+    -> IO T.ConnectionWorkerHandle
 startNodeTcpLikeWorker nodeLRunner nodeRt handlers mbBackConn = do
 
-  control <- T.Control <$> newEmptyTMVarIO <*> newEmptyTMVarIO
-  tBackConn <- maybe newEmptyTMVarIO newTMVarIO mbBackConn
+    control   <- T.Control <$> newEmptyTMVarIO <*> newEmptyTMVarIO
+    tBackConn <- maybe newEmptyTMVarIO newTMVarIO mbBackConn
 
-  tId <- forkIO $ go 0 control tBackConn
+    tId       <- forkIO $ go 0 control tBackConn
 
-  pure $ T.ConnectionWorkerHandle tId control nodeRt tBackConn
-
+    pure $ T.ConnectionWorkerHandle tId control nodeRt tBackConn
   where
 
     go iteration control tBackConn = do
-      void $ act iteration control tBackConn
-      go (iteration + 1 :: Int) control tBackConn
+        void $ act iteration control tBackConn
+        go (iteration + 1 :: Int) control tBackConn
 
     act _ control tBackConn = do
-      controlReq <- atomically $ takeTMVar $ control ^. RLens.request
-      case controlReq of
-          T.AcceptBackConnectionReq bindedServer -> do
-              atomically $ putTMVar tBackConn (D.NetworkConnection $ bindedServer ^. RLens.address)
-              registerConnection nodeRt bindedServer
+        controlReq <- atomically $ takeTMVar $ control ^. RLens.request
+        case controlReq of
+            T.AcceptBackConnectionReq bindedServer -> do
+                atomically $ putTMVar tBackConn (D.NetworkConnection $ bindedServer ^. RLens.address)
+                registerConnection nodeRt bindedServer
 
-          T.MessageReq msg -> do
-              backConn <- atomically $ readTMVar tBackConn
-              case decode msg of
-                  Nothing -> pure () -- TODO: error response here.
-                  Just val -> callHandler nodeLRunner backConn handlers val
-          _ -> error "Control request is not supported in binded Tcp-like server."
-      atomically $ putTMVar (control ^. RLens.response) T.AsSuccessResp
+            T.MessageReq msg -> do
+                backConn <- atomically $ readTMVar tBackConn
+                case decode msg of
+                    Nothing  -> pure () -- TODO: error response here.
+                    Just val -> callHandler nodeLRunner backConn handlers val
+            _ -> error "Control request is not supported in binded Tcp-like server."
+        atomically $ putTMVar (control ^. RLens.response) T.AsSuccessResp
 
 
 callHandler
-  :: (L.NodeL () -> IO ())
-  -> D.NetworkConnection
-  -> Map Text (A.Value -> D.NetworkConnection -> L.NodeL ())
-  -> D.NetworkMsg
-  -> IO ()
-callHandler nodeLRunner backConn handlers (D.NetworkMsg tag val) = 
-    case Map.lookup tag handlers of
-        Nothing -> pure () -- TODO: some error response here.
-        Just method -> void $ forkIO $ nodeLRunner (method val backConn)
-    
+    :: (L.NodeL () -> IO ())
+    -> D.NetworkConnection
+    -> Map Text (A.Value -> D.NetworkConnection -> L.NodeL ())
+    -> D.NetworkMsg
+    -> IO ()
+callHandler nodeLRunner backConn handlers (D.NetworkMsg tag val) = case Map.lookup tag handlers of
+    Nothing     -> pure () -- TODO: some error response here.
+    Just method -> void $ forkIO $ nodeLRunner (method val backConn)
+
 

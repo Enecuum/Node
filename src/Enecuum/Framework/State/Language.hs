@@ -48,12 +48,6 @@ retry :: StateL a
 retry = liftF $ Retry id
 
 -- | Eval graph atomically.
-evalGraph
-  :: ( T.StringHashable c
-     , Serialize c
-     ) 
-  => T.TGraph c
-  -> Free (L.HGraphF (T.TNodeL c)) a
-  -> StateL a
+evalGraph :: (T.StringHashable c, Serialize c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) a -> StateL a
 evalGraph g act = liftF $ EvalGraph g act id
 

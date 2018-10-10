@@ -110,7 +110,7 @@ getAllMicroblocksRPC :: WS.Connection -> Result [(DBKey, MicroblockBD)]
 getAllMicroblocksRPC h = toFunction (connectionWithTimeOut h) (Signature "enq_getAllMicroblocks" ())
 
 getAllKblocksRPC :: WS.Connection -> Result [(DBKey, MacroblockBD)]
-getAllKblocksRPC h = toFunction (connectionWithTimeOut h) (Signature  "enq_getAllKblocks" ())
+getAllKblocksRPC h = toFunction (connectionWithTimeOut h) (Signature "enq_getAllKblocks" ())
 
 getAllTransactionsRPC :: WS.Connection -> Result [(DBKey, TransactionInfo)]
 getAllTransactionsRPC h = toFunction (connectionWithTimeOut h) (Signature "enq_getAllTransactions" ())
@@ -129,10 +129,10 @@ loadNewMsg h = toFunction (connectionWithTimeOut h) loadNewMsgSig
 
 connectionWithTimeOut :: WS.Connection -> Connection IO
 connectionWithTimeOut h input = do
-  result <- timeout (10 :: Second) $ connection h input
-  case result of
-    Just a  -> return a
-    Nothing -> return (error "Connection error: out of time-out")
+    result <- timeout (10 :: Second) $ connection h input
+    case result of
+        Just a  -> return a
+        Nothing -> return (error "Connection error: out of time-out")
 
 -- Connect to a server
 connection :: WS.Connection -> Connection IO

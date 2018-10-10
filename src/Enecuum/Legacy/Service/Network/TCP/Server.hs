@@ -7,7 +7,7 @@ import           Network            (PortID (..), listenOn)
 import           Network.Socket
 
 -- | Run TCP server.
-runServer :: PortNumber -> (Socket -> IO()) -> IO ()
+runServer :: PortNumber -> (Socket -> IO ()) -> IO ()
 runServer aPortNumber aPlainHandler = withSocketsDo $ do
     sock <- listenOn $ PortNumber aPortNumber
     forever $ do

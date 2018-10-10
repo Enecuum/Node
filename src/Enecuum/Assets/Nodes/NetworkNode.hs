@@ -17,9 +17,9 @@ data TransactionResponse = TransactionResponse { transaction :: [D.Transaction] 
 
 
 getTx :: TransactionRequest -> L.NodeL TransactionResponse
-getTx TransactionRequest =  do
-  tx <- D.genNTransactions 10
-  pure $ TransactionResponse tx
+getTx TransactionRequest = do
+    tx <- D.genNTransactions 10
+    pure $ TransactionResponse tx
 
 nnNode :: L.NodeDefinitionL ()
 nnNode = do
@@ -27,5 +27,5 @@ nnNode = do
     L.logInfo "Generate Transactions"
     let (D.Address _ port) = nnAddr
     L.serving port $ do
-      L.method $ getTx
+        L.method $ getTx
 

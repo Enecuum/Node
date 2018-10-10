@@ -23,32 +23,26 @@ import           Enecuum.Assets.Nodes.RPC
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Assets.Nodes.Types.SyncChain
 
-acceptChainLength
-  :: NetworkNodeChainData
-  -> GetChainLengthRequest
-  -> L.NodeL GetChainLengthResponse
+acceptChainLength :: NetworkNodeChainData -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
 acceptChainLength nodeData GetChainLengthRequest =
-  GetChainLengthResponse <$> length <$> (L.atomically $ L.readVar (nodeData ^. chainVar))
+    GetChainLengthResponse <$> length <$> (L.atomically $ L.readVar (nodeData ^. chainVar))
 
-acceptChainFrom
-  :: NetworkNodeChainData
-  -> GetChainFromRequest
-  -> L.NodeL GetChainFromResponse
+acceptChainFrom :: NetworkNodeChainData -> GetChainFromRequest -> L.NodeL GetChainFromResponse
 acceptChainFrom nodeData (GetChainFromRequest from) =
-  GetChainFromResponse <$> drop from <$> (L.atomically $ L.readVar (nodeData ^. chainVar))
+    GetChainFromResponse <$> drop from <$> (L.atomically $ L.readVar (nodeData ^. chainVar))
 
 
 newtorkNode3Initialization :: L.NodeL NetworkNodeChainData
 newtorkNode3Initialization = do
-  (_, blocks) <- D.generateNKBlocks 15
-  log <- L.atomically $ L.newVar []  
-  chainVar' <- L.atomically $ L.newVar blocks
-  pure $ NetworkNodeChainData chainVar' log
+    (_, blocks) <- D.generateNKBlocks 15
+    log         <- L.atomically $ L.newVar []
+    chainVar'   <- L.atomically $ L.newVar blocks
+    pure $ NetworkNodeChainData chainVar' log
 
 networkNode3 :: L.NodeDefinitionL ()
 networkNode3 = do
-  L.nodeTag "networkNode3"
-  nodeData <- L.initialization $ newtorkNode3Initialization
-  L.serving 2003 $ do
-    L.method (acceptChainLength nodeData)
-    L.method (acceptChainFrom nodeData)
+    L.nodeTag "networkNode3"
+    nodeData <- L.initialization $ newtorkNode3Initialization
+    L.serving 2003 $ do
+        L.method (acceptChainLength nodeData)
+        L.method (acceptChainFrom nodeData)

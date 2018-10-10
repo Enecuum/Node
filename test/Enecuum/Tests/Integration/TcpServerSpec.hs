@@ -23,12 +23,10 @@ import qualified Data.Map as M
 
 -- Tests disabled
 spec :: Spec
-spec = describe "TcpServer" $ fromHUnitTest $ TestList
-    [ TestLabel "Ping pong" pingPong]
+spec = describe "TcpServer" $ fromHUnitTest $ TestList [TestLabel "Ping pong" pingPong]
 
 createNodeRuntime :: IO Rt.NodeRuntime
-createNodeRuntime =
-    Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.createNodeRuntime
+createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.createNodeRuntime
 
 newtype Ping = Ping Int deriving (Generic, ToJSON, FromJSON)
 newtype Pong = Pong Int deriving (Generic, ToJSON, FromJSON)
@@ -37,14 +35,14 @@ data Succes = Succes    deriving (Generic, ToJSON, FromJSON)
 
 pingHandle :: D.NetworkConnection -> Ping -> D.NetworkConnection -> L.NodeL ()
 pingHandle succConn (Ping i) conn = do
-    when (i < 10)  $ L.send conn (Pong $ i+1)
+    when (i < 10) $ L.send conn (Pong $ i + 1)
     when (i == 10) $ do
         L.send succConn Succes
         L.close conn
 
 pongHandle :: D.NetworkConnection -> Pong -> D.NetworkConnection -> L.NodeL ()
 pongHandle succConn (Pong i) conn = do
-    when (i < 10)  $ L.send conn (Ping $ i+1)
+    when (i < 10) $ L.send conn (Ping $ i + 1)
     when (i == 10) $ do
         L.send succConn Succes
         L.close conn
@@ -63,7 +61,7 @@ pingPong = TestCase $ do
         threadDelay 5000
         runNodeDefinitionL nr2 $ do
             succConn <- L.open succAdr $ return ()
-            conn <- L.open serverAddr $ do
+            conn     <- L.open serverAddr $ do
                 L.handler (pingHandle succConn)
                 L.handler (pongHandle succConn)
             L.send conn $ Ping 0
@@ -77,18 +75,15 @@ succesServer port = do
     void $ forkIO $ do
         threadDelay 1000000
         putMVar mvar False
-    ch <- startServer port (M.singleton
-        (makeTagName Succes)
-        (\_ _ -> putMVar mvar True))
-        (\_ _ -> pure ())
+    ch <- startServer port (M.singleton (makeTagName Succes) (\_ _ -> putMVar mvar True)) (\_ _ -> pure ())
     ok <- takeMVar mvar
     Enecuum.Prelude.atomically $ stopServer ch
     return ok
 
 serverPort, succPort :: PortNumber
 serverPort = 2000
-succPort   = 3000
+succPort = 3000
 
 serverAddr, succAdr :: D.Address
 serverAddr = D.Address "127.0.0.1" serverPort
-succAdr    = D.Address "127.0.0.1" succPort
+succAdr = D.Address "127.0.0.1" succPort

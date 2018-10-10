@@ -38,12 +38,7 @@ genesisHash :: StringHash
 genesisHash = toHash $ KBlockContent genesisKBlock
 
 genesisKBlock :: D.KBlock
-genesisKBlock = D.KBlock
-    { D._prevHash   = toHash (0 :: Int)
-    , D._number     = 0
-    , D._nonce      = 0
-    , D._solver     = toHash (0 :: Int)
-    }
+genesisKBlock = D.KBlock {D._prevHash = toHash (0 :: Int), D._number = 0, D._nonce = 0, D._solver = toHash (0 :: Int)}
 
 initGraph :: IO GraphVar
 initGraph = do

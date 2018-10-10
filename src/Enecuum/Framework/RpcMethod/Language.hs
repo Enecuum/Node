@@ -30,7 +30,7 @@ makeMethod f a i = case A.fromJSON a of
     A.Success req -> do
         res <- f req
         pure $ RpcResponseResult (A.toJSON res) i
-    A.Error _     -> pure $ RpcResponseError  (A.toJSON $ A.String "Error in parsing of args") i
+    A.Error _ -> pure $ RpcResponseError (A.toJSON $ A.String "Error in parsing of args") i
 
 makeMethod' :: (FromJSON a, ToJSON b, Monad m) => (a -> m (Either Text b)) -> RpcMethod m
 makeMethod' f a i = case A.fromJSON a of
@@ -38,15 +38,16 @@ makeMethod' f a i = case A.fromJSON a of
         res <- f req
         case res of
             Right b -> pure $ RpcResponseResult (A.toJSON b) i
-            Left  t -> pure $ RpcResponseError  (A.toJSON $ A.String t) i
-    A.Error _     -> pure $ RpcResponseError  (A.toJSON $ A.String "Error in parsing of args") i
+            Left  t -> pure $ RpcResponseError (A.toJSON $ A.String t) i
+    A.Error _ -> pure $ RpcResponseError (A.toJSON $ A.String "Error in parsing of args") i
 
-method
-    :: (Typeable a, Typeable b, ToJSON b, FromJSON a, Typeable m, Monad m) => (a -> m b) -> RpcMethodL m ()
+method :: (Typeable a, Typeable b, ToJSON b, FromJSON a, Typeable m, Monad m) => (a -> m b) -> RpcMethodL m ()
 method f = rpcMethod (makeMethodName f) (makeMethod f)
 
 methodE
-    :: (Typeable a, Typeable b, ToJSON b, FromJSON a, Typeable m, Monad m) => (a -> m (Either Text b)) -> RpcMethodL m ()
+    :: (Typeable a, Typeable b, ToJSON b, FromJSON a, Typeable m, Monad m)
+    => (a -> m (Either Text b))
+    -> RpcMethodL m ()
 methodE f = rpcMethod (makeMethodName f) (makeMethod' f)
 
 makeMethodName :: Typeable a => a -> Text

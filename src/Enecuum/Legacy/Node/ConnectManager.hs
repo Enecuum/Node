@@ -32,27 +32,28 @@ import qualified Network.WebSockets                               as WS
 
 --
 connectManager
-    ::  (InChan SyncEvent, OutChan SyncEvent)
-    ->  (InChan MsgToDB, b1)
-    ->  InChan MsgToCentralActor
-    ->  PortNumber
-    ->  [Connect]
-    ->  InChan (DataActorRequest Connect)
-    ->  NodeId
-    ->  InChan PendingAction
-    ->  InChan InfoMsg
-    ->  InChan B.ByteString
-    ->  IO b2
-connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aConnectsChan aMyNodeId inChanPending aInfoChan aInLogerChan = do
-    writeLog aInfoChan [ConnectingTag, InitTag] Info "Manager of connecting started."
-    void $ C.forkIO $ syncServer aSyncChan inDBActorChan aManagerChan aInfoChan
-    forM_ aBNList $ \(Connect aBNIp aBNPort) -> do
-        void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
-            WS.sendTextData aConnect . encode $ ActionAddToConnectList aPortNumber
-    aConnectLoop aBNList
+    :: (InChan SyncEvent, OutChan SyncEvent)
+    -> (InChan MsgToDB, b1)
+    -> InChan MsgToCentralActor
+    -> PortNumber
+    -> [Connect]
+    -> InChan (DataActorRequest Connect)
+    -> NodeId
+    -> InChan PendingAction
+    -> InChan InfoMsg
+    -> InChan B.ByteString
+    -> IO b2
+connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aConnectsChan aMyNodeId inChanPending aInfoChan aInLogerChan
+    = do
+        writeLog aInfoChan [ConnectingTag, InitTag] Info "Manager of connecting started."
+        void $ C.forkIO $ syncServer aSyncChan inDBActorChan aManagerChan aInfoChan
+        forM_ aBNList $ \(Connect aBNIp aBNPort) -> do
+            void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
+                WS.sendTextData aConnect . encode $ ActionAddToConnectList aPortNumber
+        aConnectLoop aBNList
   where
     aRequestOfPotencialConnects = \case -- IDEA: add random to BN list
-        (Connect aBNIp aBNPort):aTailOfList -> do
+        (Connect aBNIp aBNPort) : aTailOfList -> do
             aPotencialConnectNumber <- takeRecords aConnectsChan NumberOfRecords
             when (aPotencialConnectNumber == 0) $ do
                 void . C.forkIO $ runClient (showHostAddress aBNIp) (fromEnum aBNPort) "/" $ \aConnect -> do
@@ -62,35 +63,45 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
                     writeInChan aConnectsChan $ AddRecords aConnects
                 C.threadDelay sec
                 aRequestOfPotencialConnects (aTailOfList ++ [Connect aBNIp aBNPort])
-        _       -> return ()
+        _ -> return ()
 
-    aConnectLoop aBootNodeList  = do
+    aConnectLoop aBootNodeList = do
         aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
-        if null aActualConnects then do
-            aNumberOfConnects <- takeRecords aConnectsChan NumberOfRecords
-            when (aNumberOfConnects == 0) $ aRequestOfPotencialConnects aBootNodeList
-            aConnects <- takeRecords aConnectsChan ReadRecords
-            forM_ aConnects (connectToNN aConnectsChan aMyNodeId inChanPending aInfoChan aManagerChan (fst aSyncChan) aInLogerChan)
-            C.threadDelay $ 2 * sec
-            aConnectLoop aBootNodeList
-        else do
-            C.threadDelay $ 10 * sec
-            aConnectLoop aBootNodeList
+        if null aActualConnects
+            then do
+                aNumberOfConnects <- takeRecords aConnectsChan NumberOfRecords
+                when (aNumberOfConnects == 0) $ aRequestOfPotencialConnects aBootNodeList
+                aConnects <- takeRecords aConnectsChan ReadRecords
+                forM_
+                    aConnects
+                    (connectToNN aConnectsChan
+                                 aMyNodeId
+                                 inChanPending
+                                 aInfoChan
+                                 aManagerChan
+                                 (fst aSyncChan)
+                                 aInLogerChan
+                    )
+                C.threadDelay $ 2 * sec
+                aConnectLoop aBootNodeList
+            else do
+                C.threadDelay $ 10 * sec
+                aConnectLoop aBootNodeList
 
 connectToNN
-    ::  InChan (DataActorRequest Connect)
-    ->  NodeId
-    ->  InChan PendingAction
-    ->  InChan InfoMsg
-    ->  InChan MsgToCentralActor
-    ->  InChan SyncEvent
-    ->  InChan B.ByteString
-    ->  Connect
-    ->  IO ()
-connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aSync aInLogerChan aConn@(Connect aIp aPort)  = do
-    writeLog aInfoChan [NetLvlTag] Info $ "Try connecting to: "  ++ showHostAddress aIp
+    :: InChan (DataActorRequest Connect)
+    -> NodeId
+    -> InChan PendingAction
+    -> InChan InfoMsg
+    -> InChan MsgToCentralActor
+    -> InChan SyncEvent
+    -> InChan B.ByteString
+    -> Connect
+    -> IO ()
+connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aSync aInLogerChan aConn@(Connect aIp aPort) = do
+    writeLog aInfoChan [NetLvlTag] Info $ "Try connecting to: " ++ showHostAddress aIp
     aOk <- try $ runClient (showHostAddress aIp) (fromEnum aPort) "/" $ \aConnect -> do
-        writeLog aInfoChan [NetLvlTag] Info $ "Connecting to: "  ++ showHostAddress aIp
+        writeLog aInfoChan [NetLvlTag] Info $ "Connecting to: " ++ showHostAddress aIp
         WS.sendTextData aConnect . A.encode $ ActionConnect NN (Just aMyNodeId)
         aMsg <- WS.receiveData aConnect
         case A.eitherDecodeStrict aMsg of
@@ -104,22 +115,20 @@ connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aSync aInLogerC
                     (msgSender ch aMyNodeId aConnect aOutChan)
                     (msgReceiver ch aInfoChan aFileServerChan NN (IdFrom aNodeId) aConnect inChanPending aInLogerChan)
 
-            Right (ActionConnect _ (Just aNodeId))
-                | aMyNodeId /= aNodeId -> do
-                    (aInpChan, aOutChan) <- newChan 64
-                    sendActionToCentralActor ch $ NewConnect aNodeId NN aInpChan Nothing
-                    void $ C.forkIO $ do
-                        C.threadDelay sec
-                        writeInChan aSync RestartSync
-                    void $ race
-                        (msgSender ch aMyNodeId aConnect aOutChan)
-                        (msgReceiver ch aInfoChan aFileServerChan NN (IdFrom aNodeId) aConnect inChanPending aInLogerChan)
+            Right (ActionConnect _ (Just aNodeId)) | aMyNodeId /= aNodeId -> do
+                (aInpChan, aOutChan) <- newChan 64
+                sendActionToCentralActor ch $ NewConnect aNodeId NN aInpChan Nothing
+                void $ C.forkIO $ do
+                    C.threadDelay sec
+                    writeInChan aSync RestartSync
+                void $ race
+                    (msgSender ch aMyNodeId aConnect aOutChan)
+                    (msgReceiver ch aInfoChan aFileServerChan NN (IdFrom aNodeId) aConnect inChanPending aInLogerChan)
             _ -> return ()
 
     case aOk of
-        Left (_ :: SomeException) ->
-            void $ tryWriteChan aFileServerChan $ DeleteRecords aConn
-        _ -> return ()
+        Left (_ :: SomeException) -> void $ tryWriteChan aFileServerChan $ DeleteRecords aConn
+        _                         -> return ()
 
 --
 sec :: Int

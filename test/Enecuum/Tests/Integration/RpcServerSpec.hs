@@ -30,9 +30,7 @@ data ErrResponse = ErrResponse deriving (Show, Eq, Generic, ToJSON, FromJSON)
 -- Tests disabled
 spec :: Spec
 spec = describe "RpcServer" $ fromHUnitTest $ TestList
-    [ TestLabel "Test of rpc server/ok" rpcServerTestOk
-    , TestLabel "Test of rpc server/err" rpcServerTestErr
-    ]
+    [TestLabel "Test of rpc server/ok" rpcServerTestOk, TestLabel "Test of rpc server/err" rpcServerTestErr]
 
 okHandler :: OkRequest -> L.NodeL OkResponse
 okHandler _ = pure OkResponse
@@ -65,5 +63,5 @@ rpcServerTestErr = TestCase $ do
     runNodeDefinitionL nr $ L.stopServing serverPort
     assertBool "" (res == Right ErrResponse)
 
-serverPort  = 2001
+serverPort = 2001
 localServer = D.Address "127.0.0.1" serverPort

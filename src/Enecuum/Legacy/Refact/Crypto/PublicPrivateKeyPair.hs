@@ -44,28 +44,26 @@ newtype PrivateKey = PrivateKey256k1 Integer deriving (Generic, Serialize, Eq, O
 deriving instance Ord ECDSA.Signature
 
 compressPublicKey :: ECDSA.PublicKey -> PublicKey
-compressPublicKey pub
-    | c == y = publicKey256k1 (x*2)
-    | d == y = publicKey256k1 (x*2+1)
-    | otherwise = error "Can not compress PublicKey"
+compressPublicKey pub | c == y    = publicKey256k1 (x * 2)
+                      | d == y    = publicKey256k1 (x * 2 + 1)
+                      | otherwise = error "Can not compress PublicKey"
   where
     (Point x y) = ECDSA.public_q pub
-    (c, d) = curveK (ECDSA.public_curve pub) x
+    (c, d)      = curveK (ECDSA.public_curve pub) x
 
 uncompressPublicKey :: PublicKey -> (Integer, Integer)
-uncompressPublicKey aKey
-    | aa == 0   = (x, c)
-    | otherwise = (x, d)
+uncompressPublicKey aKey | aa == 0   = (x, c)
+                         | otherwise = (x, d)
   where
-    k = fromPublicKey256k1 aKey
-    (x, aa)  = k `divMod` 2
-    (c, d) = curveK (getCurveByName SEC_p256k1) x
+    k       = fromPublicKey256k1 aKey
+    (x, aa) = k `divMod` 2
+    (c, d ) = curveK (getCurveByName SEC_p256k1) x
 
 curveK :: Curve -> Integer -> (Integer, Integer)
 curveK aCurve x = (c, d)
   where
     (CurveFP (CurvePrime prime (CurveCommon a b _ _ _))) = aCurve
-    c = fromJust $ (( x^(3 :: Int) + x*a + b) `mod` prime ) `sqrtModP` prime
+    c = fromJust $ ((x ^ (3 :: Int) + x * a + b) `mod` prime) `sqrtModP` prime
     d = prime - c
 
 publicKey256k1 :: Integer -> PublicKey
@@ -75,8 +73,7 @@ fromPublicKey256k1 :: PublicKey -> Integer
 fromPublicKey256k1 (PublicKey256k1 i) = i
 
 getPrivateKey :: PrivateKey -> ECDSA.PrivateKey
-getPrivateKey  (PrivateKey256k1 n)    =
-    ECDSA.PrivateKey (getCurveByName SEC_p256k1) n
+getPrivateKey (PrivateKey256k1 n) = ECDSA.PrivateKey (getCurveByName SEC_p256k1) n
 
 getPublicKey :: (Integer, Integer) -> ECDSA.PublicKey
 getPublicKey (n1, n2) = ECDSA.PublicKey (getCurveByName SEC_p256k1) (Point n1 n2)

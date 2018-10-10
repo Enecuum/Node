@@ -28,15 +28,10 @@ import           Enecuum.Core.HGraph.Language (HGraphF (..), HGraphL)
 import           Enecuum.Core.HGraph.Internal.Types (TNodeL)
 import           Enecuum.Core.HGraph.Types
 -- | The interpreter of the language describing the action on graphs.
-interpretHGraphLIO
-    :: (Serialize c, StringHashable c)
-    => TGraph c
-    -> HGraphF (TNodeL c) a
-    -> IO a
+interpretHGraphLIO :: (Serialize c, StringHashable c) => TGraph c -> HGraphF (TNodeL c) a -> IO a
 
 -- create a new node
-interpretHGraphLIO graph (NewNode x next) =
-    next <$> (atomically $ Impl.newNode graph x)
+interpretHGraphLIO graph (NewNode x next) = next <$> (atomically $ Impl.newNode graph x)
 
 -- get nodeby hash, content or ref
 interpretHGraphLIO graph (GetNode x next) = do
@@ -64,12 +59,8 @@ interpretHGraphLIO graph (ClearGraph next) = do
 
 
 -- | Run H graph interpret.
-runHGraphLIO, runHGraphIO
-    :: (Serialize c, StringHashable c)
-    => TGraph c
-    -> HGraphL c w
-    -> IO w
+runHGraphLIO, runHGraphIO :: (Serialize c, StringHashable c) => TGraph c -> HGraphL c w -> IO w
 runHGraphLIO graph = foldFree (interpretHGraphLIO graph)
 
 -- | Run H graph interpret in IO monad.
-runHGraphIO  = runHGraphLIO
+runHGraphIO = runHGraphLIO

@@ -17,24 +17,22 @@ import qualified Enecuum.Language as L
 
 spec :: Spec
 spec = describe "Nodes test" $ do
-  it "Master node interacts with boot node" $ do
+    it "Master node interacts with boot node" $ do
 
-    runtime <- createTestRuntime
+        runtime                          <- createTestRuntime
 
-    bootNodeRuntime   :: NodeRuntime <- startNode runtime bootNodeAddr    bootNode
-    masterNodeRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNode
+        bootNodeRuntime :: NodeRuntime   <- startNode runtime bootNodeAddr bootNode
+        masterNodeRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNode
 
-    -- TODO: restore control requests
-    -- Right (D.RpcResponseResult eResponse _) <- T.sendRequest runtime bootNodeAddr
-    --     $ L.makeRpcRequest (HelloRequest1 (D.formatAddress masterNode1Addr))
-    -- A.fromJSON eResponse `shouldBe` (A.Success $ HelloResponse1 ("Hello, dear. " <> D.formatAddress masterNode1Addr))
+        -- TODO: restore control requests
+        -- Right (D.RpcResponseResult eResponse _) <- T.sendRequest runtime bootNodeAddr
+        --     $ L.makeRpcRequest (HelloRequest1 (D.formatAddress masterNode1Addr))
+        -- A.fromJSON eResponse `shouldBe` (A.Success $ HelloResponse1 ("Hello, dear. " <> D.formatAddress masterNode1Addr))
 
-    let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
-    msgs <- readTVarIO tMsgs
-    msgs `shouldBe`
-      [ "Master node got id: NodeID \"1\"."
-      ]
-{-
+        let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
+        msgs <- readTVarIO tMsgs
+        msgs `shouldBe` ["Master node got id: NodeID \"1\"."]
+  {-
   it "Network node requests data from network node" $ do
 
     runtime <- createTestRuntime
@@ -52,30 +50,28 @@ spec = describe "Nodes test" $ do
       , "balance0 (should be 0): 0."
       ]
 -}
-  it "Boot node validates requests from Network node" $ do
+    it "Boot node validates requests from Network node" $ do
 
-    runtime <- createTestRuntime
+        runtime <- createTestRuntime
 
-    bootNodeValidationRuntime   :: NodeRuntime <- startNode runtime bootNodeAddr    bootNodeValidation
-    masterNodeValidationRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNodeValidation
+        bootNodeValidationRuntime :: NodeRuntime <- startNode runtime bootNodeAddr bootNodeValidation
+        masterNodeValidationRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNodeValidation
 
-    let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
-    msgs <- readTVarIO tMsgs
-    msgs `shouldBe`
-      [ "Master node got id: NodeID \"1\"."
-      , "For the invalid request recieved ValidationResponse (Left [\"invalid\"])."
-      , "For the valid request recieved ValidationResponse (Right \"correct\")."
-      ]
+        let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
+        msgs <- readTVarIO tMsgs
+        msgs
+            `shouldBe` [ "Master node got id: NodeID \"1\"."
+                       , "For the invalid request recieved ValidationResponse (Left [\"invalid\"])."
+                       , "For the valid request recieved ValidationResponse (Right \"correct\")."
+                       ]
 
-  it "Network node uses state" $ do
+    it "Network node uses state" $ do
 
-    runtime <- createTestRuntime
+        runtime <- createTestRuntime
 
-    void $ startNodeWithGraph runtime networkNode3Addr networkNode3
-    void $ startNode runtime networkNode4Addr networkNode4
+        void $ startNodeWithGraph runtime networkNode3Addr networkNode3
+        void $ startNode runtime networkNode4Addr networkNode4
 
-    let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
-    msgs <- readTVarIO tMsgs
-    msgs `shouldBe`
-      [ "balance (should be 91): 91."
-      ]
+        let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
+        msgs <- readTVarIO tMsgs
+        msgs `shouldBe` ["balance (should be 91): 91."]

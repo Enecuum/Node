@@ -23,7 +23,7 @@ data Transaction = Transaction
     { _prevHash    :: StringHash
     , _change      :: Int
     }
-  deriving ( Generic, Show, Eq, Ord, Read)  
+  deriving ( Generic, Show, Eq, Ord, Read)
 
 instance Serialize Transaction
 instance StringHashable Transaction where
@@ -52,16 +52,12 @@ initTestGraph = do
 
 -- | Checks if new balance is valid and adds new transaction node.
 -- Returns new node hash and new balance.
-tryAddTransaction'
-  :: D.StringHash
-  -> D.Balance
-  -> D.BalanceChange
-  -> TestGraphL (Maybe (D.StringHash, D.Balance))
+tryAddTransaction' :: D.StringHash -> D.Balance -> D.BalanceChange -> TestGraphL (Maybe (D.StringHash, D.Balance))
 tryAddTransaction' lastNodeHash lastBalance change
-  | lastBalance + change < 0 = pure Nothing
-  | otherwise = do
-      let newTrans = Transaction lastNodeHash change
-      let newTransHash = D.toHash newTrans
-      L.newNode newTrans
-      L.newLink lastNodeHash newTransHash
-      pure $ Just (newTransHash, lastBalance + change)
+    | lastBalance + change < 0 = pure Nothing
+    | otherwise = do
+        let newTrans     = Transaction lastNodeHash change
+        let newTransHash = D.toHash newTrans
+        L.newNode newTrans
+        L.newLink lastNodeHash newTransHash
+        pure $ Just (newTransHash, lastBalance + change)

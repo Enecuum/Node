@@ -13,4 +13,4 @@ interpretStdinHandlerL m (StdinHandler name method' next) = do
 runStdinHandlerL :: TVar (Map Text StdinHandler) -> StdinHandlerL a -> IO a
 runStdinHandlerL m = foldFree (interpretStdinHandlerL m)
 
-    
+

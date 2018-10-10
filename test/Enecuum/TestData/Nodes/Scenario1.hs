@@ -28,10 +28,10 @@ import           Enecuum.TestData.Nodes.Address
 
 bootNode :: L.NodeDefinitionL ()
 bootNode = do
-  L.nodeTag bootNodeTag
-  L.serving 2000 $ do
-      L.method acceptHello1
-      L.method acceptGetHashId
+    L.nodeTag bootNodeTag
+    L.serving 2000 $ do
+        L.method acceptHello1
+        L.method acceptGetHashId
 
 
 simpleBootNodeDiscovery :: L.NetworkL D.Address
@@ -39,15 +39,15 @@ simpleBootNodeDiscovery = pure bootNodeAddr
 
 masterNodeInitialization :: L.NodeL (Either Text D.NodeID)
 masterNodeInitialization = do
-  addr <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
-  GetHashIDResponse eHashID <- L.makeRpcRequestUnsafe addr GetHashIDRequest
-  pure $ Right (D.NodeID eHashID)
+    addr                      <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
+    GetHashIDResponse eHashID <- L.makeRpcRequestUnsafe addr GetHashIDRequest
+    pure $ Right (D.NodeID eHashID)
 
 masterNode :: L.NodeDefinitionL ()
 masterNode = do
-  L.nodeTag masterNodeTag
-  nodeId <- D.withSuccess $ L.initialization masterNodeInitialization
-  L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
-  L.serving 2000 $ do
-      L.method acceptHello1
-      L.method acceptHello2
+    L.nodeTag masterNodeTag
+    nodeId <- D.withSuccess $ L.initialization masterNodeInitialization
+    L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
+    L.serving 2000 $ do
+        L.method acceptHello1
+        L.method acceptHello2

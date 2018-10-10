@@ -25,9 +25,9 @@ successMsg = "Ok."
 acceptKBlock :: KBlockCheckData -> D.KBlock -> L.NodeL (Either Text SuccessMsg)
 acceptKBlock (KBlockCheckData numVar) kBlock = do
     n <- L.atomically $ do
-            n <- L.readVar numVar
-            L.writeVar numVar $ n + 1
-            pure n
+        n <- L.readVar numVar
+        L.writeVar numVar $ n + 1
+        pure n
     when (n /= kBlock ^. Lens.number) $ L.logInfo failMsg
     when (n == kBlock ^. Lens.number) $ L.logInfo successMsg
     pure $ Right SuccessMsg
@@ -39,7 +39,7 @@ powBlockAcceptorNode = do
 
 spec :: Spec
 spec = describe "PoW node test" $ do
-  it "fake test for PoW" $ True `shouldBe` True
+    it "fake test for PoW" $ True `shouldBe` True
 {-
   it "PoW node test, 1 iteration, in order" $ do
     runtime <- createTestRuntime
