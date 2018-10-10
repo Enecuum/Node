@@ -23,7 +23,7 @@ class (Show a) => Hosts a where
 -- | Run a TCP client.
 runClient :: Hosts a => a -> PortNumber -> (Socket -> IO ()) -> IO ()
 runClient aHostAddress port aPlainHandler = withSocketsDo $ do
-    connection <- openConnect aHostAddress port)
+    connection <- openConnect aHostAddress port
     finally (aPlainHandler connection) (close connection)
 
 instance Hosts HostAddress where
