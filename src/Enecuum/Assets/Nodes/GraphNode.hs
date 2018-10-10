@@ -3,6 +3,7 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiWayIf             #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Enecuum.Assets.Nodes.GraphNode where
 
@@ -18,7 +19,6 @@ import qualified Enecuum.Core.Lens             as Lens
 import           Data.HGraph.StringHashable
 
 import           Enecuum.Framework.Language.Extra (HasGraph, HasFinished)
-
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Assets.Nodes.Address
@@ -28,7 +28,7 @@ data GraphNodeData = GraphNodeData
     , _kBlockPending :: D.StateVar [D.KBlock]
     , _curNode       :: D.StateVar D.StringHash
     , _logVar        :: D.StateVar [Text]
-    , _ledger        :: D.StateVar (Map Integer Integer)
+    , _ledger        :: D.StateVar (Map WalletId Integer)
     , _finished      :: D.StateVar Bool
     }
 
@@ -126,12 +126,11 @@ calculateLedger :: GraphNodeData -> D.Microblock -> Free L.StateF ()
 calculateLedger nodeData mblock = do
     forM_ (mblock ^. Lens.transactions) $ \tx -> do
         ledgerW <- L.readVar $ nodeData ^. ledger
-        -- stateLog nodeData $ "Current Ledger " +|| ledgerW ||+ "."
-        let owner          = tx ^. Lens.owner
+        let 
+            owner          = tx ^. Lens.owner            
             receiver       = tx ^. Lens.receiver
             amount         = tx ^. Lens.amount
             currentBalance = lookup owner ledgerW
-
         when (owner == receiver) $ stateLog nodeData $ "Tx rejected (same owner and receiver): " +|| owner ||+ "."
 
         when (owner /= receiver) $ do
@@ -139,21 +138,16 @@ calculateLedger nodeData mblock = do
                 Nothing           -> stateLog nodeData $ "Can't find wallet in ledger: " +|| owner ||+ "."
                 Just ownerBalance -> if ownerBalance >= amount
                     then do
--- stateLog nodeData $ "Before tx owner " +|| owner ||+ " has balance: " +|| balance ||+ "."
                         let receiverBalance = fromMaybe 0 $ lookup receiver ledgerW
-                        -- stateLog nodeData $ "Before tx receiver " +|| receiver ||+ " has balance: " +|| receiverBalance ||+ "."
-                        let
-                            newLedger = insert owner
+                        let newLedger = insert owner
                                                (ownerBalance - amount)
                                                (insert receiver (receiverBalance + amount) ledgerW)
                         L.writeVar (nodeData ^. ledger) newLedger
                         stateLog nodeData
                             $   "Tx accepted: from [" +|| owner ||+ "] to [" +|| receiver ||+ "], amount: " +|| amount ||+ ". ["
                             +|| owner ||+ "]: " +|| ownerBalance - amount ||+ ", [" +|| receiver ||+ "]: " +|| receiverBalance + amount ||+ ""
--- stateLog nodeData $ "New Ledger " +|| newLedger ||+ "."
                     else
-                        stateLog nodeData
-                        $   "Tx rejected (negative balance): [" +|| owner ||+ "] -> [" +|| receiver ||+ "], amount: " +|| amount ||+ "."
+                        stateLog nodeData $ "Tx rejected (negative balance): [" +|| owner ||+ "] -> [" +|| receiver ||+ "], amount: " +|| amount ||+ "."
 
 -- | Accept kBlock
 acceptKBlock :: GraphNodeData -> D.KBlock -> L.NodeL (Either Text SuccessMsg)
@@ -201,7 +195,7 @@ getBalance nodeData (GetWalletBalance wallet) = do
 graphNodeInitialization :: L.NodeDefinitionL GraphNodeData
 graphNodeInitialization = L.scenario $ do
     g <- L.newGraph
-    let wallets = zip [1 .. 5] (repeat 100)
+    let wallets = fromList $ zip [1 .. 5] (repeat 100)
     L.evalGraphIO g $ L.newNode $ D.KBlockContent D.genesisKBlock
     L.logInfo $ "Genesis block (" +|| D.genesisHash ||+ "): " +|| D.genesisKBlock ||+ "."
     L.atomically
@@ -209,7 +203,7 @@ graphNodeInitialization = L.scenario $ do
         <$> L.newVar []
         <*> L.newVar D.genesisHash
         <*> L.newVar []
-        <*> L.newVar (fromList wallets)
+        <*> L.newVar wallets
         <*> L.newVar False
 
 -- | Start of graph node

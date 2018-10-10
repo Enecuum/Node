@@ -9,8 +9,7 @@ import qualified Data.Serialize          as S
 import qualified Crypto.Hash.SHA256      as SHA
 
 import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
-import qualified Enecuum.Legacy.Refact.Crypto.PublicPrivateKeyPair as Legacy
-import qualified Enecuum.Legacy.Service.Types as Legacy
+import Enecuum.Blockchain.Domain.Crypto 
 
 
 -- This data structure is for tests of graph incorporation only.
@@ -19,8 +18,8 @@ import qualified Enecuum.Legacy.Service.Types as Legacy
 -- type TransactionID = Int
 
 data Transaction = Transaction
-    { _owner     :: Integer
-    , _receiver  :: Integer
+    { _owner     :: PublicKey
+    , _receiver  :: PublicKey
     , _amount    :: Integer
     }
   deriving ( Generic, Show, Eq, Ord, Read, ToJSON, FromJSON)
@@ -34,5 +33,9 @@ instance S.Serialize Transaction
 type Balance = Int
 type BalanceChange = Int
 
-
-dummyTx = Transaction {_amount = 0, _owner = 1, _receiver = 2}
+dummyTx = Transaction 
+ {
+   _amount = 0, 
+   _owner = read "QYy3AT4a3Z88MpEoGDixRgxtWW8v3RfSbJLFQEyFZwMe" :: PublicKey, 
+   _receiver = read "pYeXNM7cn2B6A68rH9PYLCCgrXWiVbucfNW1XMW3Q4G" :: PublicKey 
+  }

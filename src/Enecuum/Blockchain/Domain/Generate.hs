@@ -1,3 +1,4 @@
+{-# LANGUAGE PackageImports             #-}
 module Enecuum.Blockchain.Domain.Generate where
 
 import           Data.HGraph.StringHashable            (StringHash (..), toHash)
@@ -8,6 +9,8 @@ import           Enecuum.Blockchain.Domain.Microblock
 import           Enecuum.Blockchain.Domain.Transaction
 import qualified Enecuum.Language                      as L
 import           Enecuum.Prelude                       hiding (Ordering)
+import Enecuum.Blockchain.Domain.Crypto 
+import           "cryptonite" Crypto.Random (MonadRandom)
 
 data Ordering = InOrder | RandomOrder
 
@@ -52,11 +55,15 @@ genNTransactions k = replicateM k genTransaction
 
 genTransaction :: L.NodeL Transaction
 genTransaction = do
-    owner <- L.getRandomInt (1, 5)
-    let rest = delete owner [1 .. 5]
-    receiverIndex <- fromIntegral <$> L.getRandomInt (0, 3)
-    let receiver = rest !! receiverIndex
+    -- owner <- L.getRandomInt (1, 5)
+    -- let rest = delete owner [1 .. 5]
+    -- receiverIndex <- fromIntegral <$> L.getRandomInt (0, 3)
+    -- let receiver = rest !! receiverIndex
     amount <- L.getRandomInt (0, 100)
+    -- kp <- L.evalRand $ generateNewRandomAnonymousKeyPair
+    -- (KeyPair pub priv) <- L.evalRand $ generateNewRandomAnonymousKeyPair
+    let owner = undefined
+        receiver = undefined
     pure Transaction {_owner = owner, _receiver = receiver, _amount = amount}
 
 genMicroblock :: StringHash -> [Transaction] -> Microblock
@@ -90,3 +97,6 @@ loopGenIndices numbers = do
             rest <- loopGenIndices $ delete result numbers
             pure (result : rest)
         else pure []
+
+dirty :: MonadRandom m => m KeyPair
+dirty =  generateNewRandomAnonymousKeyPair       
