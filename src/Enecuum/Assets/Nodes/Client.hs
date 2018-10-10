@@ -36,6 +36,7 @@ data ClientNodeData = ClientNodeData
 
 makeFieldsNoPrefix ''ClientNodeData
 
+sendRequestToPoW :: forall a. (ToJSON a, Typeable a) => a -> L.NodeL Text
 sendRequestToPoW request = do
     res :: Either Text M.SuccessMsg <- L.makeRpcRequest powNodeRpcAddress request
     pure . eitherToText $ res

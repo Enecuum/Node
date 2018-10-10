@@ -47,7 +47,6 @@ kBlockProcess nodeData = do
     prevKBlockNumber    <- L.atomically <$> L.readVar $ nodeData ^. prevNumber
 
     (lastHash, kBlocks) <- D.generateKBlocks prevKBlockHash prevKBlockNumber
-    -- L.logInfo $ "KBlocks generated: " +|| kBlocks ||+ "."
     L.logInfo $ "Last hash: " +|| lastHash ||+ "."
 
     L.atomically $ L.writeVar (nodeData ^. prevHash) lastHash
@@ -82,11 +81,10 @@ powNode' delaysEnabled = do
 
     L.std $ L.stdHandler $ L.setNodeFinished nodeData
 
-    -- This should be a process
-    forever $ L.scenario $ do
+    L.process $ do
         L.atomically $ do
             i <- L.readVar $ nodeData ^. requiredBlockNumber
-            when       (i == 0)                          L.retry
+            when (i == 0) L.retry
             L.writeVar (nodeData ^. requiredBlockNumber) (i - 1)
         kBlockProcess nodeData
 

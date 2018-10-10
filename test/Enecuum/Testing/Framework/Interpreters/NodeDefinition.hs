@@ -46,6 +46,12 @@ interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
 interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
 
+interpretNodeDefinitionL nodeRt (L.ForkProcess action next) = error "not implemented.."
+
+interpretNodeDefinitionL nodeRt (L.TryGetResult handle next) = error "not impl"
+
+interpretNodeDefinitionL _ (L.Std _ _) = error "STD not implemented in test runtime."
+
 -- | Runs node definition language with node runtime.
 runNodeDefinitionL :: T.NodeRuntime -> L.NodeDefinitionL a -> IO a
 runNodeDefinitionL nodeRt = foldFree (interpretNodeDefinitionL nodeRt)

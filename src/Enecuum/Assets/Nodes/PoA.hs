@@ -26,9 +26,8 @@ makeFieldsNoPrefix ''PoANodeData
 
 showTransaction :: D.Transaction -> Text -> Text
 showTransaction tx t =
-    t <> ( "\n    Tx: [" +|| tx ^.  Lens.owner ||+ "] -> [" +|| tx ^.  Lens.receiver
-           ||+ "], amount: " +|| tx ^.  Lens.amount ||+ "."
-           )
+    t <> ("\n    Tx: [" +|| tx ^.  Lens.owner ||+ "] -> [" +|| tx ^.  Lens.receiver ||+
+          "], amount: " +|| tx ^.  Lens.amount ||+ ".")
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr showTransaction "" $ mBlock ^. Lens.transactions
@@ -41,7 +40,7 @@ poaNode = do
 
     L.std $ L.stdHandler $ L.setNodeFinished poaData
 
-    L.scenario $ forever $ do
+    L.process $ do
         L.delay $ 100 * 1000
         eKBlock <- L.makeRpcRequest graphNodeRpcAddress GetLastKBlock
         case eKBlock of
@@ -53,11 +52,7 @@ poaNode = do
                     L.atomically $ L.writeVar (poaData ^. currentLastKeyBlock) block
                     mBlock <- D.genRandMicroblock block
                     L.logInfo
-                        $   "MBlock generated ("
-                        +|| toHash mBlock
-                        ||+ ". Transactions:"
-                        +|  showTransactions mBlock
-                        |+  ""
+                        $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
                     _ :: Either Text SuccessMsg <- L.makeRpcRequest graphNodeRpcAddress mBlock
                     pure ()
 

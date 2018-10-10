@@ -14,7 +14,7 @@ import           Enecuum.Framework.Networking.Internal.TCP.Server
 
 import           Enecuum.Framework.Node.Interpreter
 import           Enecuum.Framework.RpcMethod.Interpreter
-import           Enecuum.Framework.Runtime                 (NodeRuntime)
+import           Enecuum.Framework.Runtime                 (NodeRuntime, getNextId)
 
 import qualified Enecuum.Framework.Language                as L
 import qualified Enecuum.Framework.RLens                   as RLens
@@ -22,6 +22,7 @@ import qualified Enecuum.Core.Interpreters                 as Impl
 import qualified Enecuum.Framework.Node.Interpreter        as Impl
 import qualified Enecuum.Framework.Domain.RPC             as D
 import qualified Enecuum.Framework.Domain.Networking      as D
+import qualified Enecuum.Framework.Domain.Process         as D
 import           Enecuum.Framework.Networking.Internal.Internal
 import           Enecuum.Framework.MsgHandler.Interpreter
 import           Enecuum.Framework.StdinHandlers.Interpreter as Imp
@@ -33,14 +34,14 @@ interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
     atomically $ writeTVar (nodeRt ^. RLens.nodeTag) tag
     pure $ next ()
 
-interpretNodeDefinitionL nodeRt (L.EvalNodeL initScript next) = next <$> Impl.runNodeL nodeRt initScript
+interpretNodeDefinitionL nodeRt (L.EvalNodeL action next) = next <$> Impl.runNodeL nodeRt action
 
 interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffect
 
-interpretNodeDefinitionL nodeRt (L.ServingMsg port initScript next) = do
+interpretNodeDefinitionL nodeRt (L.ServingMsg port action next) = do
     m        <- atomically $ newTVar mempty
-    a        <- runMsgHandlerL m initScript
+    a        <- runMsgHandlerL m action
     handlers <- readTVarIO m
     s        <- startServer port
                             ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
@@ -54,9 +55,9 @@ interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
         whenJust (serversMap ^. at port) stopServer
     pure $ next ()
 
-interpretNodeDefinitionL nodeRt (L.ServingRpc port initScript next) = do
+interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
     m <- atomically $ newTVar mempty
-    a <- runRpcMethodL m initScript
+    a <- runRpcMethodL m action
     s <- atomically $ takeServerChan (nodeRt ^. RLens.servers) port
     void $ forkIO $ runRpcServer s port (runNodeL nodeRt) m
     pure $ next a
@@ -71,6 +72,13 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
             res  <- callHandler nodeRt m' line
             putTextLn res
     pure $ next ()
+
+interpretNodeDefinitionL nodeRt (L.ForkProcess action next) = do
+    threadId <- forkIO $ Impl.runNodeL nodeRt action
+    handle <- atomically (getNextId nodeRt) >>= D.createProcessHandle threadId
+    pure $ next handle
+
+interpretNodeDefinitionL nodeRt (L.TryGetResult handle next) = error "not impl"
 
 --
 callHandler :: NodeRuntime -> Map Text (Value -> L.NodeL Text) -> Text -> IO Text

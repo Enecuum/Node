@@ -21,7 +21,7 @@ data NodeRuntime = NodeRuntime
     { _coreRuntime  :: CoreRuntime
     , _graph        :: D.TGraph D.NodeContent
     , _servers      :: TVar (Map PortNumber (TChan ServerComand))
-    , _varCounter   :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
+    , _idCounter    :: TMVar Int              -- ^ ID counter. Used to generate VarIds, ProcessIds.
     , _state        :: NodeState              -- ^ State of node.
     , _nodeTag      :: TVar Text
     , _stopNode     :: TMVar Bool
@@ -43,3 +43,9 @@ createNodeRuntime coreRt =
 -- TODO: more wise clearing here.
 clearNodeRuntime :: NodeRuntime -> IO ()
 clearNodeRuntime _ = pure ()
+
+getNextId :: NodeRuntime -> STM Int
+getNextId nodeRt = do
+    number <- takeTMVar $ _idCounter nodeRt
+    putTMVar (_idCounter nodeRt) $ number + 1
+    pure number
