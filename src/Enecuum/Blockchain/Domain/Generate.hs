@@ -41,8 +41,8 @@ loopGenKBlock prevHash from to = do
     if (from < to)
         then do
             rest <- loopGenKBlock newPrevHash (from + 1) to
-            return (kblock : rest)
-        else return []
+            pure (kblock : rest)
+        else pure []
 
 genKBlock :: StringHash -> Integer -> KBlock
 genKBlock prevHash i = KBlock {_prevHash = prevHash, _number = i, _nonce = i, _solver = toHash (i + 3)}
@@ -88,5 +88,5 @@ loopGenIndices numbers = do
             let result = numbers !! p
             -- choose next number from rest
             rest <- loopGenIndices $ delete result numbers
-            return (result : rest)
-        else return []
+            pure (result : rest)
+        else pure []

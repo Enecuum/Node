@@ -30,28 +30,28 @@ main = do
 
             (aInfoChanIn, aInfoChanOut) <- newChan 32
             poa_p                       <- try (getEnv "poaPort") >>= \case
-                Right item                 -> return $ read item
-                Left  (_ :: SomeException) -> return $ poaPort conf
+                Right item                 -> pure $ read item
+                Left  (_ :: SomeException) -> pure $ poaPort conf
 
             stat_h <- try (getEnv "statsdHost") >>= \case
-                Right item                 -> return item
-                Left  (_ :: SomeException) -> return $ host $ statsdBuildConfig conf
+                Right item                 -> pure item
+                Left  (_ :: SomeException) -> pure $ host $ statsdBuildConfig conf
 
             stat_p <- try (getEnv "statsdPort") >>= \case
-                Right item                 -> return $ read item
-                Left  (_ :: SomeException) -> return $ port $ statsdBuildConfig conf
+                Right item                 -> pure $ read item
+                Left  (_ :: SomeException) -> pure $ port $ statsdBuildConfig conf
 
             logs_h <- try (getEnv "logHost") >>= \case
-                Right item                 -> return item
-                Left  (_ :: SomeException) -> return $ host $ logsBuildConfig conf
+                Right item                 -> pure item
+                Left  (_ :: SomeException) -> pure $ host $ logsBuildConfig conf
 
             logs_p <- try (getEnv "logPort") >>= \case
-                Right item                 -> return $ read item
-                Left  (_ :: SomeException) -> return $ port $ logsBuildConfig conf
+                Right item                 -> pure $ read item
+                Left  (_ :: SomeException) -> pure $ port $ logsBuildConfig conf
 
             log_id <- try (getEnv "log_id") >>= \case
-                Right item                 -> return item
-                Left  (_ :: SomeException) -> return "0"
+                Right item                 -> pure item
+                Left  (_ :: SomeException) -> pure "0"
             (aFileChan, aOutFileRequestChan) <- newChan 16
             void $ C.forkIO $ startDataActor aOutFileRequestChan
             void $ C.forkIO $ bootNodeServer poa_p aInfoChanIn aFileChan

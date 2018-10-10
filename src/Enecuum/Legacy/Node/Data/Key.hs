@@ -59,7 +59,7 @@ generateKeyPair = generate curve_256
 generateClientId :: [Word64] -> IO NodeId
 generateClientId list = do
     aRand <- randomIO :: IO Word64
-    return $ NodeId $ fromIntegral $ mask .|. (shiftL aRand ((length list) * 2))
+    pure $ NodeId $ fromIntegral $ mask .|. (shiftL aRand ((length list) * 2))
   where
     bitsmask []       _ = 0
     bitsmask (x : xs) n = (bitsmask xs (n + 1)) .|. (shiftL x (2 * n))

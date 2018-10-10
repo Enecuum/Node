@@ -64,7 +64,7 @@ initBGraph :: IO BGraph
 initBGraph = do
     aRes <- initHGraph
     runHGraphIO aRes $ newNode $ KBlockContent genesisKeyBlock
-    return aRes
+    pure aRes
 
 addKBlock :: KBlock -> BGraphL Bool
 addKBlock = addBlock _prev_hash KBlockContent
@@ -78,21 +78,21 @@ addBlock f1 f2 block = do
         Just (HNode _ ref _ _ _) -> do
             newNode $ f2 block
             newLink' ref (f2 block)
-        Nothing -> return False
+        Nothing -> pure False
 
 getMBlock :: StringHash -> BGraphL (Maybe MBlock)
 getMBlock hash = do
     aNode <- getNode hash
     case aNode of
-        Just (HNode _ _ (fromContent -> MBlockContent block) _ _) -> return $ Just block
-        _ -> return Nothing
+        Just (HNode _ _ (fromContent -> MBlockContent block) _ _) -> pure $ Just block
+        _ -> pure Nothing
 
 getKBlock :: StringHash -> BGraphL (Maybe KBlock)
 getKBlock hash = do
     aNode <- getNode hash
     case aNode of
-        Just (HNode _ _ (fromContent -> KBlockContent block) _ _) -> return $ Just block
-        _ -> return Nothing
+        Just (HNode _ _ (fromContent -> KBlockContent block) _ _) -> pure $ Just block
+        _ -> pure Nothing
 
 -- O(n) - n is a number of kblock.
 getLastKBlocks :: BGraphL [KBlock]
@@ -102,14 +102,14 @@ getLastKBlocks = do
     aKBlocks                  <- forM aRefs $ \aBRef -> do
         aNode <- getNode aBRef
         case aNode of
-            Just (HNode _ _ (fromContent -> KBlockContent block) _ _) -> return $ Just block
-            _ -> return Nothing
-    return $ catMaybes aKBlocks
+            Just (HNode _ _ (fromContent -> KBlockContent block) _ _) -> pure $ Just block
+            _ -> pure Nothing
+    pure $ catMaybes aKBlocks
 
 getLastKBlocks' :: TRef -> BGraphL [TRef]
 getLastKBlocks' aRef = do
     aRefs <- getNextKBlocks' aRef
-    if null aRefs then return [aRef] else concat <$> forM aRefs getLastKBlocks'
+    if null aRefs then pure [aRef] else concat <$> forM aRefs getLastKBlocks'
 
 getNextKBlocks' :: TRef -> BGraphL [TRef]
 getNextKBlocks' aRef = do
@@ -117,6 +117,6 @@ getNextKBlocks' aRef = do
     aRefs                       <- forM (elems rLinks) $ \aNRef -> do
         Just (HNode _ _ (fromContent -> block) _ _) <- getNode aNRef
         case block of
-            KBlockContent _ -> return $ Just aNRef
-            _               -> return Nothing
-    return $ catMaybes aRefs
+            KBlockContent _ -> pure $ Just aNRef
+            _               -> pure Nothing
+    pure $ catMaybes aRefs

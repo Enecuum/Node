@@ -166,9 +166,9 @@ loadMyShardIndex = do
     aReading <- try $ B.readFile shardIndexFileName
     case aReading of
         Right aFileData -> case decode aFileData of
-            Right aShardIndex       -> return aShardIndex
-            Left  _                 -> return empty
-        Left (_ :: SomeException)   -> return empty
+            Right aShardIndex       -> pure aShardIndex
+            Left  _                 -> pure empty
+        Left (_ :: SomeException)   -> pure empty
 
 
 saveMyShardIndex :: ShardIndex -> IO ()

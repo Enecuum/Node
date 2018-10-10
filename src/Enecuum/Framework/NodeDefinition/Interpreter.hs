@@ -46,20 +46,20 @@ interpretNodeDefinitionL nodeRt (L.ServingMsg port initScript next) = do
                             ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
                             (\(D.NetworkConnection addr) -> Impl.insertConnect (nodeRt ^. RLens.connects) addr)
     atomically $ setServerChan (nodeRt ^. RLens.servers) port s
-    return $ next a
+    pure $ next a
 
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
     atomically $ do
         serversMap <- readTVar (nodeRt ^. RLens.servers)
         whenJust (serversMap ^. at port) stopServer
-    return $ next ()
+    pure $ next ()
 
 interpretNodeDefinitionL nodeRt (L.ServingRpc port initScript next) = do
     m <- atomically $ newTVar mempty
     a <- runRpcMethodL m initScript
     s <- atomically $ takeServerChan (nodeRt ^. RLens.servers) port
     void $ forkIO $ runRpcServer s port (runNodeL nodeRt) m
-    return $ next a
+    pure $ next a
 
 interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
     m <- atomically $ newTVar mempty
@@ -90,7 +90,7 @@ takeServerChan :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> ST
 takeServerChan servs port = do
     chan <- newTChan
     Impl.setServerChan servs port chan
-    return chan
+    pure chan
 
 
 runRpcServer
@@ -106,8 +106,8 @@ callRpc :: Monad m => (t -> m D.RpcResponse) -> Map Text (A.Value -> Int -> t) -
 callRpc runner methods msg = case A.decode msg of
     Just (D.RpcRequest method params reqId) -> case method `M.lookup` methods of
         Just justMethod -> runner $ justMethod params reqId
-        Nothing         -> return $ D.RpcResponseError (A.String $ "The method " <> method <> " isn't supported.") reqId
-    Nothing -> return $ D.RpcResponseError (A.String "error of request parsing") 0
+        Nothing         -> pure $ D.RpcResponseError (A.String $ "The method " <> method <> " isn't supported.") reqId
+    Nothing -> pure $ D.RpcResponseError (A.String "error of request parsing") 0
 
 
 runNodeDefinitionL :: NodeRuntime -> Free L.NodeDefinitionF a -> IO a

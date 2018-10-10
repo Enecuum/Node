@@ -32,7 +32,7 @@ interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
 
 interpretNodeL nodeRt (L.StopNode next) = do
     atomically $ putTMVar (nodeRt ^. RLens.stopNode) True
-    return $ next ()
+    pure $ next ()
 
 interpretNodeL nodeRt (L.OpenConnection addr initScript next) = do
     m <- atomically $ newTVar mempty
@@ -48,7 +48,7 @@ interpretNodeL nodeRt (L.CloseConnection (D.NetworkConnection addr) next) = do
         whenJust (m ^. at addr) $ \con -> do
             I.close con
             modifyTVar (nodeRt ^. RLens.connects) $ M.delete addr
-    return $ next ()
+    pure $ next ()
 
 interpretNodeL _ (L.NewGraph next) = next <$> initHGraph
 

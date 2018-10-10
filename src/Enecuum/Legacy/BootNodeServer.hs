@@ -49,10 +49,10 @@ bootNodeServer aReceivePort aInfoChan aFileServerChan = do
         TestExistedConnect aConn@(Connect aHostAdress aPort) -> void $ C.forkIO $ do
             aConnects <- getRecords aFileServerChan
             when (aConn `elem` aConnects) $ do
-                aOk <- try $ runClient (showHostAddress aHostAdress) (fromEnum aPort) "/" $ \_ -> return ()
+                aOk <- try $ runClient (showHostAddress aHostAdress) (fromEnum aPort) "/" $ \_ -> pure ()
                 case aOk of
                     Left (_ :: SomeException) -> void $ tryWriteChan aFileServerChan $ DeleteRecords aConn
-                    _                         -> return ()
+                    _                         -> pure ()
 
     runServer aReceivePort "bootNodeServer" $ \aHostAdress aPending -> do
         aConnect <- WS.acceptRequest aPending

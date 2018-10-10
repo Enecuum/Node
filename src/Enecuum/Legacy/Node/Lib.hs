@@ -93,7 +93,7 @@ startNode descrDB buildConf infoCh aManager startDo = do
                                      inChanPending
                                      infoCh
                                      aInLogerChan
-    return managerChan
+    pure managerChan
 
 traficLoger :: OutChan B8.ByteString -> IO b
 traficLoger aOutChan = forever $ do
@@ -104,7 +104,7 @@ traficLoger aOutChan = forever $ do
 readNodeConfig :: IO NodeConfig
 readNodeConfig = try (L.readFile "configs/nodeInfo.json") >>= \case
     Right nodeConfigMsg -> case decode nodeConfigMsg of
-        Just nodeConfigData -> return nodeConfigData
+        Just nodeConfigData -> pure nodeConfigData
         Nothing             -> putStrLn ("Config file can not be readed. New one will be created" :: String) >> config
     Left (_ :: SomeException) -> putStrLn ("ConfigFile will be created." :: String) >> config
   where
@@ -115,10 +115,10 @@ readNodeConfig = try (L.readFile "configs/nodeInfo.json") >>= \case
 readBootNodeList :: String -> IO [Connect]
 readBootNodeList conf = do
     bnList <- try (getEnv "bootNodeList") >>= \case
-        Right item                 -> return item
-        Left  (_ :: SomeException) -> return conf
+        Right item                 -> pure item
+        Left  (_ :: SomeException) -> pure conf
     toNormForm $ read bnList
-    where toNormForm aList = return $ (\(b, c) -> Connect (tupleToHostAddress b) c) <$> aList
+    where toNormForm aList = pure $ (\(b, c) -> Connect (tupleToHostAddress b) c) <$> aList
 
 
 getConfigParameters
@@ -129,31 +129,31 @@ getConfigParameters
     -> IO (SimpleNodeBuildConfig, PortNumber, String, PortNumber, String, PortNumber, String)
 getConfigParameters aMyNodeId conf _ = do
     snbc <- try (pure $ fromJust $ simpleNodeBuildConfig conf) >>= \case
-        Right item                 -> return item
+        Right item                 -> pure item
         Left  (_ :: SomeException) -> error "Please, specify simpleNodeBuildConfig"
 
     poa_p <- try (getEnv "poaPort") >>= \case
-        Right item                 -> return $ read item
-        Left  (_ :: SomeException) -> return $ poaPort conf
+        Right item                 -> pure $ read item
+        Left  (_ :: SomeException) -> pure $ poaPort conf
 
     stat_h <- try (getEnv "statsdHost") >>= \case
-        Right item                 -> return item
-        Left  (_ :: SomeException) -> return $ host $ statsdBuildConfig conf
+        Right item                 -> pure item
+        Left  (_ :: SomeException) -> pure $ host $ statsdBuildConfig conf
 
     stat_p <- try (getEnv "statsdPort") >>= \case
-        Right item                 -> return $ read item
-        Left  (_ :: SomeException) -> return $ port $ statsdBuildConfig conf
+        Right item                 -> pure $ read item
+        Left  (_ :: SomeException) -> pure $ port $ statsdBuildConfig conf
 
     logs_h <- try (getEnv "logHost") >>= \case
-        Right item                 -> return item
-        Left  (_ :: SomeException) -> return $ host $ logsBuildConfig conf
+        Right item                 -> pure item
+        Left  (_ :: SomeException) -> pure $ host $ logsBuildConfig conf
 
     logs_p <- try (getEnv "logPort") >>= \case
-        Right item                 -> return $ read item
-        Left  (_ :: SomeException) -> return $ port $ logsBuildConfig conf
+        Right item                 -> pure $ read item
+        Left  (_ :: SomeException) -> pure $ port $ logsBuildConfig conf
 
     log_id <- try (getEnv "log_id") >>= \case
-        Right item                 -> return item
-        Left  (_ :: SomeException) -> return $ show aMyNodeId
+        Right item                 -> pure item
+        Left  (_ :: SomeException) -> pure $ show aMyNodeId
 
-    return (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id)
+    pure (snbc, poa_p, stat_h, stat_p, logs_h, logs_p, log_id)

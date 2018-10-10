@@ -34,7 +34,7 @@ getNLastValuesT = do
     value <- Rocks.iterValue it
     Rocks.iterPrev it
     put it
-    return value
+    pure value
 
 
 type Count = Int
@@ -46,13 +46,13 @@ findUntil it count maximum' predicate = if count > 0 && maximum' > 0
         (rawTx, newIter) <- runStateT getNLastValuesT it
         print $ "newIter == it" ++ show (newIter == it)
         case rawTx of
-            Nothing -> return []
+            Nothing -> pure []
             Just v  -> if predicate v
                 then do
                     rest <- findUntil newIter (count - 1) (maximum' - 1) predicate
-                    return ((v, newIter) : rest)
+                    pure ((v, newIter) : rest)
                 else findUntil newIter count (maximum' - 1) predicate
-    else return []
+    else pure []
 
 
 getNLastValues :: Rocks.Iterator -> Int -> IO ([Maybe DBValue], Rocks.Iterator)
@@ -69,12 +69,12 @@ nLastValues it n predicate = do
         lastIter = snd $ last vs
     print $ map ((== it) . snd) vs
     print $ "it == lastIter " ++ show (it == lastIter)
-    return (values, lastIter)
+    pure (values, lastIter)
 
 getLastIterator :: Rocks.DB -> IO Rocks.Iterator
 getLastIterator db = runResourceT $ do
     (_, it) <- Rocks.iterOpenBracket db Rocks.defaultReadOptions
-    return it
+    pure it
 
 
 getAllValues :: Rocks.DB -> IO [DBValue]
@@ -98,7 +98,7 @@ getAllKV db = withResource db getAllItems
 getAllAndDecode :: Pool Rocks.DB -> (DBKey -> a) -> (DBValue -> b) -> IO [(a, b)]
 getAllAndDecode db funcK funcV = do
     result <- withResource db getAllItems
-    return $ map (\(k, v) -> (funcK k, funcV v)) result
+    pure $ map (\(k, v) -> (funcK k, funcV v)) result
 
 
 getAllAndDecode2 :: (S.Serialize b, S.Serialize a) => Pool Rocks.DB -> DecodeType -> DecodeType -> IO [(a, b)]

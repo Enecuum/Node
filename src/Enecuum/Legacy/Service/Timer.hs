@@ -39,4 +39,4 @@ stopebleMetronome :: Int -> IO () -> IO (Chan MetronomeComand)
 stopebleMetronome x aFunc = do
     chan <- newChan
     void . forkIO . void $ race (metronome x aFunc) (void $ readChan chan)
-    return chan
+    pure chan

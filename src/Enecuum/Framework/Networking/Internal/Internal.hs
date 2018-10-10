@@ -38,16 +38,16 @@ startServer port handlers ins = do
         let networkConnecion = D.NetworkConnection $ D.Address addr port
         ins networkConnecion conn
         void $ race (runHandlers conn networkConnecion sock handlers) (connectManager conn sock)
-    return chan
+    pure chan
 
 getAdress :: S.Socket -> IO String
 getAdress socket = do
     sockAddr <- S.getSocketName socket
     case sockAddr of
-        S.SockAddrInet _ hostAddress      -> return $ show $ fromHostAddress hostAddress
-        S.SockAddrInet6 _ _ hostAddress _ -> return $ show $ fromHostAddress6 hostAddress
-        S.SockAddrUnix string             -> return string
-        S.SockAddrCan  i                  -> return $ show i
+        S.SockAddrInet _ hostAddress      -> pure $ show $ fromHostAddress hostAddress
+        S.SockAddrInet6 _ _ hostAddress _ -> pure $ show $ fromHostAddress6 hostAddress
+        S.SockAddrUnix string             -> pure string
+        S.SockAddrCan  i                  -> pure $ show i
 
 -- | Stop the server
 stopServer :: ServerHandle -> STM ()
@@ -61,9 +61,9 @@ openConnect addr@(D.Address ip port) handlers = do
         res <- try $ TCP.runClient ip port $ \wsConn ->
             void $ race (runHandlers conn (D.NetworkConnection addr) wsConn handlers) (connectManager conn wsConn)
         case res of
-            Right _                    -> return ()
+            Right _                    -> pure ()
             Left  (_ :: SomeException) -> atomically $ closeConn conn
-    return conn
+    pure conn
 
 -- | Close the connect
 close :: ConnectionImplementation -> STM ()
@@ -101,14 +101,14 @@ connectManager conn@(ConnectionImplementation c) wsConn = readCommand conn >>= \
             Right _                    -> connectManager conn wsConn
             Left  (_ :: SomeException) -> atomically $ closeConn conn
     -- conect is closed, stop of command reading
-    Nothing -> return ()
+    Nothing -> pure ()
 
 -- | Read comand to connect manager
 readCommand :: ConnectionImplementation -> IO (Maybe D.Comand)
 readCommand (ConnectionImplementation conn) = atomically $ do
     ok <- isEmptyTMVar conn
     if ok
-        then return Nothing
+        then pure Nothing
         else do
             chan <- readTMVar conn
             Just <$> readTChan chan

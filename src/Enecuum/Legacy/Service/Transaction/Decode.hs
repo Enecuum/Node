@@ -90,7 +90,7 @@ getMicroBlockByHashDB (Common db _) mHash = do
     res <- decodeRaw "MicroblockBD" <$> getByHash (poolMicroblock db) mHash
     case res of
         Nothing -> throw (NoSuchMicroBlockForHash $ show mHash)
-        Just j  -> return j
+        Just j  -> pure j
 
 
 --Transaction
@@ -123,8 +123,8 @@ getChain :: Common -> Number -> IO Chain
 getChain (Common descr _) aNumber = do
     maybeV <- funR (poolSprout descr) (S.encode aNumber)
     case maybeV of
-        Nothing -> return (Nothing, Nothing)
-        Just m  -> return $ decodeThis "Chain" m
+        Nothing -> pure (Nothing, Nothing)
+        Just m  -> pure $ decodeThis "Chain" m
 
 
 --Ledger
@@ -156,5 +156,5 @@ decodeKeyBlock i (Object aValue) = do
                     Left  a            -> throw (DecodeException $ "There is no PoW Key Block. The error: " ++ a)
                     Right keyBlockInfo -> do
                         writeLog i [KeyBlockTag] Info $ "keyBlockInfo: " ++ show keyBlockInfo
-                        return keyBlockInfo
+                        pure keyBlockInfo
 decodeKeyBlock _ v = throw $ DecodeException $ "Can not decode PoW Key Block" ++ show v

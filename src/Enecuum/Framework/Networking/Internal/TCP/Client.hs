@@ -29,7 +29,7 @@ closeConnect = close
 runClient :: Hosts a => a -> PortNumber -> (Socket -> IO ()) -> IO ()
 runClient aHostAddress aPort aPlainHandler = withSocketsDo $ do
     aHandle <- (try $ openConnect aHostAddress aPort) >>= \case
-        Right h -> return h
+        Right h -> pure h
         Left (err :: SomeException) ->
             error
                 $  "TCP socket connection exception on "
@@ -55,4 +55,4 @@ instance Hosts String where
             (Just $ show aPort)
         aSocket <- socket (addrFamily aServerAddr) Stream defaultProtocol
         connect aSocket $ addrAddress aServerAddr
-        return  aSocket
+        pure  aSocket

@@ -77,8 +77,8 @@ third (_, _, c) = c
 -- find length of my chain
 takeMyTail :: InChan MsgToDB -> IO Number
 takeMyTail aDBActorChan = takeRecords aDBActorChan MyTail >>= \case
-    Just (aNum, _) -> return aNum
-    Nothing        -> return 0
+    Just (aNum, _) -> pure aNum
+    Nothing        -> pure 0
 
 
 takeTailNum :: Response (Number, a) -> Number
