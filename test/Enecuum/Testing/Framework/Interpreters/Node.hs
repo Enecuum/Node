@@ -18,7 +18,7 @@ import           Enecuum.Testing.Framework.Internal.TcpLikeServerWorker  (startN
 import           Enecuum.Testing.Framework.Internal.TcpLikeServerBinding (bindServer, registerConnection, closeConnection)
 import           Enecuum.Testing.TestRuntime                             (controlRequest)
 
-import qualified Enecuum.Framework.MsgHandler.Interpreter as Impl (runMsgHandlerL)
+import qualified Enecuum.Framework.Handler.Tcp.Interpreter as Impl (runTcpHandlerL)
 
 
 -- | Establish connection with the server through test environment.
@@ -54,17 +54,17 @@ interpretNodeL nodeRt (L.EvalNetworking networkingAction next) = next <$> Impl.r
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffect next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
 
-interpretNodeL nodeRt (L.OpenConnection serverAddress handlersF next) = do
+interpretNodeL nodeRt (L.OpenTcpConnection serverAddress handlersF next) = do
   -- Asking the server to accept connection
     eBindedServer <- establishConnection nodeRt serverAddress
     case eBindedServer of
         Left  err          -> error err
         Right bindedServer -> do
-            let bindedServerConnection = D.NetworkConnection $ bindedServer ^. RLens.address
+            let bindedServerConnection = D.TcpConnection $ bindedServer ^. RLens.address
 
             -- Collecting hanlders for this connection
             tHandlers <- atomically $ newTVar mempty
-            Impl.runMsgHandlerL tHandlers handlersF
+            Impl.runTcpHandlerL tHandlers handlersF
             handlers <- readTVarIO tHandlers
 
             -- Starting client side connection worker & registering this connection.
@@ -84,7 +84,7 @@ interpretNodeL nodeRt (L.OpenConnection serverAddress handlersF next) = do
                     registerConnection nodeRt bindedServer
                     pure $ next bindedServerConnection
 
-interpretNodeL nodeRt (L.CloseConnection conn next) = next <$> closeConnection nodeRt conn
+interpretNodeL nodeRt (L.CloseTcpConnection conn next) = next <$> closeConnection nodeRt conn
 
 interpretNodeL _      _                             = error "not implemented."
 

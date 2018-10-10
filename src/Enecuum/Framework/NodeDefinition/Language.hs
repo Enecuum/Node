@@ -11,10 +11,13 @@ import qualified Enecuum.Core.Language                 as L
 import qualified Enecuum.Framework.Domain              as D
 import qualified Enecuum.Framework.Node.Language       as L
 import qualified Enecuum.Framework.Networking.Language as L
-import           Enecuum.Framework.RpcMethod.Language  (RpcMethodL)
 import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Framework.MsgHandler.Language
-import           Enecuum.Framework.StdinHandlers.Language
+
+import           Enecuum.Framework.Handler.Rpc.Language  (RpcHandlerL)
+import           Enecuum.Framework.Handler.Tcp.Language
+import           Enecuum.Framework.Handler.Udp.Language
+import           Enecuum.Framework.Handler.Cmd.Language
+
 import           Language.Haskell.TH.MakeFunctor
 
 -- TODO: it's possible to make these steps evaluating step-by-step, in order.
@@ -26,23 +29,24 @@ data NodeDefinitionF next where
     -- | Set node tag. For example, "boot node".
     NodeTag        :: D.NodeTag -> (() -> next) -> NodeDefinitionF next
     -- | Evaluate some node model.
-    EvalNodeL :: L.NodeL  a -> (a -> next) -> NodeDefinitionF next
+    EvalNodeL      :: L.NodeL  a -> (a -> next) -> NodeDefinitionF next
 
     -- | Eval core effect.
     EvalCoreEffectNodeDefinitionF :: L.CoreEffect a -> (a -> next) -> NodeDefinitionF next
     -- | Start serving of RPC requests.
-    ServingRpc     :: PortNumber -> RpcMethodL L.NodeL () -> (() -> next) -> NodeDefinitionF next
+    ServingRpc     :: PortNumber -> RpcHandlerL L.NodeL () -> (() -> next) -> NodeDefinitionF next
     -- | Stop serving of Rpc server.
     StopServing    :: PortNumber -> (() -> next) -> NodeDefinitionF  next
     -- | Start serving on reliable-kind connection.
-    ServingMsg     :: PortNumber -> MsgHandlerL L.NodeL () -> (() -> next)-> NodeDefinitionF  next
-    Std            :: StdinHandlerL () -> (() -> next) -> NodeDefinitionF  next
+    ServingTcp     :: PortNumber -> TcpHandlerL L.NodeL () -> (() -> next)-> NodeDefinitionF  next
+    ServingUdp     :: PortNumber -> UdpHandlerL L.NodeL () -> (() -> next)-> NodeDefinitionF  next
+    Std            :: CmdHandlerL () -> (() -> next) -> NodeDefinitionF  next
 
 makeFunctorInstance ''NodeDefinitionF
 
 type NodeDefinitionL next = Free NodeDefinitionF next
 
-std :: StdinHandlerL () -> NodeDefinitionL ()
+std :: CmdHandlerL () -> NodeDefinitionL ()
 std handlers = liftF $ Std handlers id
 
 -- | Sets tag for node.
@@ -69,22 +73,22 @@ scenario = evalNodeL
 class Serving a where
     serving :: PortNumber -> a -> NodeDefinitionL ()
 
-instance Serving (RpcMethodL L.NodeL ()) where
+instance Serving (RpcHandlerL L.NodeL ()) where
     serving = servingRpc
 
-instance Serving (MsgHandlerL L.NodeL ()) where
-    serving port handlersF = liftF $ ServingMsg port handlersF id
+instance Serving (TcpHandlerL L.NodeL ()) where
+    serving port handlersF = liftF $ ServingTcp port handlersF id
 
 instance L.Connection (Free NodeDefinitionF) where
     close conn      = evalNodeL $ L.close conn
     open addr handl = evalNodeL $ L.open addr handl
 
-instance L.Send (Free NodeDefinitionF) where
+instance L.Send D.TcpConnection (Free NodeDefinitionF) where
     send conn msg = evalNodeL $ L.send conn msg
 
 -- | Starts RPC server.
 {-# DEPRECATED servingRpc "Use L.serving" #-}
-servingRpc :: PortNumber -> RpcMethodL L.NodeL () -> NodeDefinitionL ()
+servingRpc :: PortNumber -> RpcHandlerL L.NodeL () -> NodeDefinitionL ()
 servingRpc port handlersF = liftF $ ServingRpc port handlersF id
 
 -- | Stops server on the specified port.
@@ -93,16 +97,16 @@ stopServing :: PortNumber -> NodeDefinitionL ()
 stopServing port = liftF $ StopServing port id
 
 -- | Starts server (TCP / WS - like)
-servingMsg :: PortNumber -> MsgHandlerL L.NodeL () -> NodeDefinitionL ()
-servingMsg port handlersF = liftF $ ServingMsg port handlersF id
+servingMsg :: PortNumber -> TcpHandlerL L.NodeL () -> NodeDefinitionL ()
+servingMsg port handlersF = liftF $ ServingTcp port handlersF id
 
 
 instance L.Logger (Free NodeDefinitionF) where
     logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg
 
 instance L.ERandom (Free NodeDefinitionF) where
-    getRandomInt =  evalCoreEffectNodeDefinitionF . L.getRandomInt
-    evalRand r g = evalCoreEffectNodeDefinitionF  $ L.evalRand r g
+    getRandomInt = evalCoreEffectNodeDefinitionF . L.getRandomInt
+    evalRand r g = evalCoreEffectNodeDefinitionF $ L.evalRand r g
 
 
 instance L.ControlFlow (Free NodeDefinitionF) where

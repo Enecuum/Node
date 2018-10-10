@@ -7,17 +7,17 @@ import qualified Data.Text as T
 
 import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
-import qualified Enecuum.Framework.Networking.Internal.Internal as Int
+import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection as Int
 import           Enecuum.Framework.Runtime
 import qualified Enecuum.Framework.RLens as RL
 import qualified Network.Socket.ByteString.Lazy     as S
-import qualified Enecuum.Framework.Networking.Internal.TCP.Client as TCP
+import           Enecuum.Framework.Networking.Internal.Client
 
 -- | Interpret NetworkingL language.
 interpretNetworkingL :: NodeRuntime -> L.NetworkingF a -> IO a
-interpretNetworkingL _ (L.SendRpcRequest (D.Address host port) request next) = do
+interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
     var <- newEmptyMVar
-    ok  <- try $ TCP.runClient host port $ \connect -> do
+    ok  <- try $ runClient D.TCP addr $ \connect -> do
         S.sendAll connect $ A.encode request
         msg <- S.recv connect (1024 * 4)
         putMVar var (transformEither T.pack id $ A.eitherDecode msg)
@@ -27,7 +27,7 @@ interpretNetworkingL _ (L.SendRpcRequest (D.Address host port) request next) = d
     res <- takeMVar var
     pure $ next res
 
-interpretNetworkingL nr (L.SendMessage (D.NetworkConnection conn) msg next) = do
+interpretNetworkingL nr (L.SendMessage (D.TcpConnection conn) msg next) = do
     atomically $ do
         m <- readTVar $ nr ^. RL.connects
         whenJust (m ^. at conn) $ \con -> Int.send con msg

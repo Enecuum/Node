@@ -16,7 +16,7 @@ import           Enecuum.Interpreters
 import           Enecuum.Language
 import qualified Enecuum.Runtime as Rt
 import qualified Enecuum.Domain                as D
-import           Enecuum.Framework.Networking.Internal.Internal
+import           Enecuum.Framework.Networking.Internal.Tcp.Connection
 import qualified Data.Map as M
 
 
@@ -33,14 +33,14 @@ newtype Pong = Pong Int deriving (Generic, ToJSON, FromJSON)
 data Succes = Succes    deriving (Generic, ToJSON, FromJSON)
 
 
-pingHandle :: D.NetworkConnection -> Ping -> D.NetworkConnection -> L.NodeL ()
+pingHandle :: D.TcpConnection -> Ping -> D.TcpConnection -> L.NodeL ()
 pingHandle succConn (Ping i) conn = do
     when (i < 10) $ L.send conn (Pong $ i + 1)
     when (i == 10) $ do
         L.send succConn Succes
         L.close conn
 
-pongHandle :: D.NetworkConnection -> Pong -> D.NetworkConnection -> L.NodeL ()
+pongHandle :: D.TcpConnection -> Pong -> D.TcpConnection -> L.NodeL ()
 pongHandle succConn (Pong i) conn = do
     when (i < 10) $ L.send conn (Ping $ i + 1)
     when (i == 10) $ do
@@ -75,7 +75,7 @@ succesServer port = do
     void $ forkIO $ do
         threadDelay 1000000
         putMVar mvar False
-    ch <- startServer port (M.singleton (makeTagName Succes) (\_ _ -> putMVar mvar True)) (\_ _ -> pure ())
+    ch <- startServer port (M.singleton (D.toTag Succes) (\_ _ -> putMVar mvar True)) (\_ _ -> pure ())
     ok <- takeMVar mvar
     Enecuum.Prelude.atomically $ stopServer ch
     pure ok
