@@ -54,13 +54,13 @@ pingPong = TestCase $ do
     void $ forkIO $ do
         threadDelay 5000
         runNodeDefinitionL nr1 $ do
-            succConn <- L.open succAdr $ return ()
+            succConn <- L.open succAdr $ pure ()
             L.serving serverPort $ do
                 L.handler (pingHandle succConn)
                 L.handler (pongHandle succConn)
         threadDelay 5000
         runNodeDefinitionL nr2 $ do
-            succConn <- L.open succAdr $ return ()
+            succConn <- L.open succAdr $ pure ()
             conn     <- L.open serverAddr $ do
                 L.handler (pingHandle succConn)
                 L.handler (pongHandle succConn)
@@ -78,7 +78,7 @@ succesServer port = do
     ch <- startServer port (M.singleton (makeTagName Succes) (\_ _ -> putMVar mvar True)) (\_ _ -> pure ())
     ok <- takeMVar mvar
     Enecuum.Prelude.atomically $ stopServer ch
-    return ok
+    pure ok
 
 serverPort, succPort :: PortNumber
 serverPort = 2000

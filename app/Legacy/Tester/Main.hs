@@ -40,12 +40,12 @@ connectWithNN aStr aType aConnect = do
 
     aMsg      <- receiveMsg aConnect (aStr ++ "Receiving of ID...") (aStr ++ "ID received.")
 
-    aMyNodeId <- return $ case decode aMsg of
+    aMyNodeId <- pure $ case decode aMsg of
         Just (ResponseNodeId aId) -> aId
         Just _ -> error $ T.pack $ aStr ++ "FAIL. The received msg not a response for connect request! "
         _ -> error "FAIL. Error in the parsing!"
     print $ aStr ++ "received ID = " ++ show aMyNodeId
-    return aMyNodeId
+    pure aMyNodeId
 
 
 connectHowNN :: String -> NodeId -> WS.Connection -> IO NodeId
@@ -53,12 +53,12 @@ connectHowNN aStr aMyNodeId aConnect = do
     print $ aStr ++ "Sending of hello request"
     sendMsg aConnect $ ActionConnect NN (Just aMyNodeId)
     aMsg    <- receiveMsg aConnect (aStr ++ "Receiving of ID...") (aStr ++ "ID received.")
-    aNodeId <- return $ case decode aMsg of
+    aNodeId <- pure $ case decode aMsg of
         Just (ActionConnect NN (Just aNodeId)) -> aNodeId
         Just _ -> error $ T.pack $ aStr ++ "FAIL. The received msg not a response for connect request! "
         _      -> error "FAIL. Error in the parsing!"
     print $ aStr ++ "received ID = " ++ show aNodeId
-    return aNodeId
+    pure aNodeId
 
 
 checkOfPending :: WS.Connection -> IO [Transaction]
@@ -66,24 +66,24 @@ checkOfPending aConnect = do
     sendMsg aConnect $ RequestPending Nothing
     aPendingResonce <- receiveMsg aConnect "   Checking. Pending is empty?" "   Response from pendig received."
 
-    ResponseTransactions aTransactions <- return $ case decode aPendingResonce of
+    ResponseTransactions aTransactions <- pure $ case decode aPendingResonce of
         Just aTransactions@(ResponseTransactions _) -> aTransactions
         Just _ -> error "FAIL. The received msg not a response for pending request!"
         _      -> error "FAIL. Error in the parsing!"
 
-    return aTransactions
+    pure aTransactions
 
 receivingOfBroadcast :: [Char] -> WS.Connection -> IO NodeId
 receivingOfBroadcast aStr aConnect = do
     aMsg <- receiveMsg aConnect (aStr ++ "Receiving of broadcast...") (aStr ++ "Broadcast msg received.")
 
-    MsgBroadcast (IdFrom aNodeId) _ aValue <- return $ case decode aMsg of
+    MsgBroadcast (IdFrom aNodeId) _ aValue <- pure $ case decode aMsg of
         Just aMsgBroadcast@(MsgBroadcast _ _ _) -> aMsgBroadcast
         Just _ -> error $ T.pack $ aStr ++ "FAIL. The received msg not a response for broadcast! "
         _      -> error "FAIL. Error in the parsing!"
 
     unless (aValue == testMsg) $ error $ T.pack $ aStr ++ "The broadcast msg is broaken."
-    return aNodeId
+    pure aNodeId
 
 sendMsg :: ToJSON a => WS.Connection -> a -> IO ()
 sendMsg aConnect aMsg = do
@@ -97,7 +97,7 @@ receiveMsg aConnect aStr1 aStr2 = do
     aMsg <- WS.receiveData aConnect
     printBS aMsg
     print aStr2
-    return aMsg
+    pure aMsg
 
 checkVersion :: WS.Connection -> IO ()
 checkVersion aConnect = do
@@ -106,7 +106,7 @@ checkVersion aConnect = do
 
     aMsg     <- receiveMsg aConnect "   Receiving version response..." "   Received version response."
 
-    aVersion <- return $ case decode aMsg of
+    aVersion <- pure $ case decode aMsg of
         Just (ResponseVersion aVersion) -> aVersion
         Just _                          -> error $ "   FAIL. The received msg not a version response! "
         _                               -> error "FAIL. Error in the parsing!"
@@ -141,7 +141,7 @@ main = do
 
                 aMsg <- receiveMsg aConnect "   Receiving from BN list of connects..." "   Received list of NN from BN."
 
-                aConnects <- return $ case decode aMsg of
+                aConnects <- pure $ case decode aMsg of
                     Just (ResponsePotentialConnects aConnects) -> aConnects
                     Just _ -> error $ "   FAIL. The received msg not a list of connects! "
                     _      -> error "FAIL. Error in the parsing!"
@@ -174,14 +174,14 @@ main = do
                 unless (aNodeId == aMyNodeId) $ error $ "1| The node ID en broadcast msg is broaken."
 
                 aMsg <- receiveMsg aConnect "1| Receiving msg from second node..." "1| Received msg from second node."
-                MsgMsgTo _ _ aValue <- return $ case decode aMsg of
+                MsgMsgTo _ _ aValue <- pure $ case decode aMsg of
                     Just aMsgTo@(MsgMsgTo _ _ _) -> aMsgTo
 
                     _                            -> error $ "1| FAIL. The received msg not a correct!"
                 unless (aValue == testMsg) $ error "1| The broadcast msg is broaken."
 
                 putMVar testsOk True
-                return ()
+                pure ()
 
             void $ takeMVar aIdOfFirsClientVar
             print "2| Connecting of CN to NN..."
@@ -241,13 +241,13 @@ main = do
                 aMsg1 <- receiveMsg aConnect
                                     ("1| " ++ "Receiving of msg Microblock...")
                                     ("1| " ++ "Received msg Microblock.")
-                void $ return $ case decode aMsg1 of
+                void $ pure $ case decode aMsg1 of
                     Just (MsgMicroblock _) -> 0 :: Int
                     _                      -> error $ "1| FAIL. The received msg not a correct!"
                 aMsg2 <- receiveMsg aConnect
                                     ("1| " ++ "Receiving of msg KeyBlock...")
                                     ("1| " ++ "Received msg KeyBlock.")
-                void $ return $ case decode aMsg2 of
+                void $ pure $ case decode aMsg2 of
                     Just (MsgKeyBlock _) -> 0 :: Int
                     _                    -> error $ "1| FAIL. The received msg not a correct!"
                 putMVar testsOk True
@@ -290,7 +290,7 @@ main = do
             runClient ip 1554 "/" $ socketActor $ \aConnect -> forM_ (lines aTrafic) $ \aMsg -> do
                 threadDelay 50000
                 WS.sendTextData aConnect $ aMsg --B8.pack aMsg
-        _ -> return ()
+        _ -> pure ()
 
 
 socketActor :: (WS.Connection -> IO a) -> WS.Connection -> IO ()

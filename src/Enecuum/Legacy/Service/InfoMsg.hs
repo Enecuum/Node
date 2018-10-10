@@ -60,7 +60,7 @@ serveInfoMsg statsdInfo logsInfo chan aId stdout_log = do
         m <- readChan chan
         case m of
             Metric s -> case eithMHandler of
-                Left  _        -> return ()
+                Left  _        -> pure ()
                 Right mHandler -> sendToServer mHandler s
 
             Log aTags aMsgType aMsg -> do
@@ -71,6 +71,6 @@ serveInfoMsg statsdInfo logsInfo chan aId stdout_log = do
                     aFileString = "  !  " ++ aId ++ "|" ++ show aMsgType ++ "|" ++ aTagsList ++ "|" ++ aMsg ++ "\n"
                 appendFile "log.txt" aFileString
                 case eithLHandler of
-                    Left  _        -> return ()
+                    Left  _        -> pure ()
                     Right lHandler -> sendToServer lHandler aString
-                if stdout_log then putStrLn aFileString else return ()
+                if stdout_log then putStrLn aFileString else pure ()

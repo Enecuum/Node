@@ -41,7 +41,7 @@ import           Enecuum.Prelude
 
 
 makeShardingNode :: MyNodeId -> C.Chan ShardingNodeAction -> InChan T.MsgToCentralActor -> InChan InfoMsg -> IO ()
-makeShardingNode _ _ _ _ = return ()
+makeShardingNode _ _ _ _ = pure ()
 {-
 
 sizeOfShardStore:: Int
@@ -300,8 +300,8 @@ initOfShardingNode aChanOfNetLevel aChanRequest aMyNodeId aMyNodePosition infoMs
         Just aEnc  -> do
             let shardEnable = T.sharding $ fromJust $ T.simpleNodeBuildConfig aEnc
             case shardEnable of
-              True ->  return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan 1
-              _    ->  return $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan maxBound
+              True ->  pure $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan 1
+              _    ->  pure $ makeEmptyShardingNode S.empty aMyNodeId aMyNodePosition aMyShardsIndex infoMsgChan maxBound
 
 shiftTheShardingNode :: T.ManagerMsg msg =>
         InChan msg

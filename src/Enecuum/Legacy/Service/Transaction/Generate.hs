@@ -34,7 +34,7 @@ genPoAMicroblock h = do
     signature <- sign privateKey ("Secret message" :: String)
     keys      <- replicateM quantityOfPoAMiners generateNewRandomAnonymousKeyPair
     let teamKeys = map (\(KeyPair p _) -> p) keys
-    return Microblock
+    pure Microblock
         { _keyBlock     = h
         , _sign         = signature
         , _teamKeys     = teamKeys

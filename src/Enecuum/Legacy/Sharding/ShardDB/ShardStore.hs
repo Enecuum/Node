@@ -39,8 +39,8 @@ loadShard aShardHash = do
     case aReading of
         Right aFileData -> case decode aFileData of
             Right aShard -> pure . pure $ aShard
-            Left  _      -> return Nothing
-        Left (_ :: SomeException) -> return Nothing
+            Left  _      -> pure Nothing
+        Left (_ :: SomeException) -> pure Nothing
 
 
 saveShard :: Shard -> IO ()

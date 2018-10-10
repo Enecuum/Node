@@ -139,8 +139,8 @@ routerActorStart aSyncChan (_, aOutChan) aMd = do
                 let aConnects = toActualConnectInfo <$> (M.toList $ aData ^. connects)
                 C.putMVar aVar (filter (\(ActualConnectInfo _ aNodeType _) -> aNodeType == NN) aConnects)
 
-            MsgFromSharding _                -> return ()
-            CleanAction                      -> return ()
+            MsgFromSharding _                -> pure ()
+            CleanAction                      -> pure ()
 
             NewTransaction aTransaction aVar -> do
                 aNetLog "I create a transaction."

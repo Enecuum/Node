@@ -72,8 +72,8 @@ updateBalanceTable (Common db i) ht isStorno t@(Transaction fromKey toKey am _ _
     txI <- getTransactionByHashDB db (Hash tKey)
     writeLog i [BDTag] Info $ "Transaction " ++ show txI ++ " isStorno " ++ show isStorno
     case (v1, v2) of
-        (Nothing         , _             ) -> return ()
-        (_               , Nothing       ) -> return ()
+        (Nothing         , _             ) -> pure ()
+        (_               , Nothing       ) -> pure ()
         (Just balanceFrom, Just balanceTo) -> if not isStorno
             then when ((balanceFrom - am) > 0) $ do
                 H.insert       ht   fromKey (balanceFrom - am)
@@ -139,8 +139,8 @@ checkMacroblock c@(Common _ i) microblock microblockHash = do
     if microblockHash `elem` hashes -- microblockIsAlreadyInMacroblock
         then do
             writeLog i [BDTag] Info $ "Microblock is already in macroblock: " ++ show True
-            return (False, True, mbUpdated)  -- Microblock already in MacroblockBD - do Nothing
-        else return (True, True, mbUpdated)
+            pure (False, True, mbUpdated)  -- Microblock already in MacroblockBD - do Nothing
+        else pure (True, True, mbUpdated)
 
 
 -- main function for Microblock
@@ -257,12 +257,12 @@ addMicroblockHashesToMacroBlock c@(Common db i) hashOfKeyBlock hashesOfMicrobloc
     macroblock <- S.encode <$> case val of
         Nothing -> do
             writeLog i [BDTag] Info ("There is no KeyBlock with hash " ++ show hashOfKeyBlock)
-            return (dummyMacroblock { _mblocks = hashesOfMicroblock } :: MacroblockBD)
+            pure (dummyMacroblock { _mblocks = hashesOfMicroblock } :: MacroblockBD)
         Just j -> do
             let currentHashes = Set.fromList $ _mblocks (j :: MacroblockBD)
                 newHashes     = Set.fromList hashesOfMicroblock
                 allHashes     = sort $ Set.elems $ Set.union currentHashes newHashes
-            return (j { _mblocks = allHashes } :: MacroblockBD)
+            pure (j { _mblocks = allHashes } :: MacroblockBD)
     funW (poolMacroblock db) [(hashOfKeyBlock, macroblock)]
     let mes = foldr1 (++) ["Write hashes microblocks ", show hashesOfMicroblock, " to key block ", show hashOfKeyBlock]
     writeLog i [BDTag] Info mes

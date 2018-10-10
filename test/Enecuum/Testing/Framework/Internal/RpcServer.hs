@@ -39,4 +39,4 @@ startNodeRpcServer nodeRt _ methodVar = do
 callRpc :: Monad m => (t -> m D.RpcResponse) -> Map Text (A.Value -> Int -> t) -> D.RpcRequest -> m D.RpcResponse
 callRpc runner methods (D.RpcRequest method params reqId) = case method `Map.lookup` methods of
     Just justMethod -> runner $ justMethod params reqId
-    Nothing         -> return $ D.RpcResponseError (A.String $ "The method " <> method <> " isn't supported.") reqId
+    Nothing         -> pure $ D.RpcResponseError (A.String $ "The method " <> method <> " isn't supported.") reqId

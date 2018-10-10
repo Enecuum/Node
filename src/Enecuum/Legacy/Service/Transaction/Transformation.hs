@@ -27,14 +27,14 @@ getTeamKeysForMicroblock (Common db i) aHash = do
     mb <- getKeyBlockByHash (Common db i) (Hash aHash)
     case mb of
         Nothing -> do
-            return []
-        Just r -> return $ _teamKeys (r :: MacroblockBD)
+            pure []
+        Just r -> pure $ _teamKeys (r :: MacroblockBD)
 
 
 getTxsMicroblock :: Common -> MicroblockBD -> IO [Transaction]
 getTxsMicroblock c mb = do
     txDecoded <- getTxs c mb
-    return $ map (\t -> _tx (t :: TransactionInfo)) txDecoded
+    pure $ map (\t -> _tx (t :: TransactionInfo)) txDecoded
 
 
 getTxs :: Common -> MicroblockBD -> IO [TransactionInfo]
@@ -47,7 +47,7 @@ getTxs c mb = do
         maybeTx <- getTransactionByHashDB d (Hash h)
         case maybeTx of
             Nothing -> throw $ NoSuchTransactionForHash ("hash: " ++ show h)
-            Just j  -> return j
+            Just j  -> pure j
 
 
 
@@ -55,7 +55,7 @@ tMicroblockBD2MicroblockAPI :: Common -> MicroblockBD -> IO MicroblockAPI
 tMicroblockBD2MicroblockAPI c m@MicroblockBD {..} = do
     tx <- getTxsMicroblock c m
     let txAPI = map (\t -> TransactionAPI {_tx = t, _txHash = rHashT t}) tx
-    return MicroblockAPI
+    pure MicroblockAPI
         { _prevMicroblock  = Nothing
         , _nextMicroblock  = Nothing
         , _keyBlock
@@ -69,7 +69,7 @@ tMicroblockBD2Microblock :: Common -> MicroblockBD -> IO Microblock
 tMicroblockBD2Microblock c m@MicroblockBD {..} = do
     tx        <- getTxsMicroblock c m
     aTeamkeys <- getTeamKeysForMicroblock c _keyBlock
-    return Microblock {_keyBlock , _sign = _signBD, _teamKeys = aTeamkeys, _publisher , _transactions = tx}
+    pure Microblock {_keyBlock , _sign = _signBD, _teamKeys = aTeamkeys, _publisher , _transactions = tx}
 
 
 tKeyBlockToPoWType :: KeyBlockInfo -> KeyBlockInfoPoW
@@ -132,7 +132,7 @@ tMacroblock2KeyBlockInfo MacroblockBD {..} = KeyBlockInfo
 
 tMacroblock2ChainInfo :: Maybe (DBKey, MacroblockBD) -> IO ChainInfo
 tMacroblock2ChainInfo kv = case kv of
-    Nothing -> return ChainInfo
+    Nothing -> pure ChainInfo
         { _emission        = 0
         , _curr_difficulty = 0
         , _last_block      = ""
@@ -140,7 +140,7 @@ tMacroblock2ChainInfo kv = case kv of
         , _txs_num         = 0
         , _nodes_num       = 0  -- quantity of all approved transactions   -- quantity of all active nodes
         }
-    Just (aKeyBlockHash, MacroblockBD {..}) -> return ChainInfo
+    Just (aKeyBlockHash, MacroblockBD {..}) -> pure ChainInfo
         { _emission        = _reward
         , _curr_difficulty = _difficulty
         , _last_block      = aKeyBlockHash
@@ -181,7 +181,7 @@ tMacroblock2MacroblockAPI c MacroblockBD {..} = do
                 }
             )
             microblocks
-    return MacroblockAPI
+    pure MacroblockAPI
         { _prevKBlock
         , _nextKBlock = Nothing
         , _difficulty
@@ -197,4 +197,4 @@ decodeTx :: [DBValue] -> IO [TransactionAPI]
 decodeTx txInfo = do
     let fun1 t = _tx (decodeThis "TransactionInfo" t :: TransactionInfo)
     let fun2 t = TransactionAPI {_tx = t, _txHash = rHashT t}
-    return $ map (fun2 . fun1) txInfo
+    pure $ map (fun2 . fun1) txInfo

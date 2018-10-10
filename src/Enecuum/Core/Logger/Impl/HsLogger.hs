@@ -61,7 +61,7 @@ setupLogger (T.LoggerConfig format level logFileName isConsoleLog) = do
 
     updateGlobalLogger component (setLevel DEBUG . setHandlers handlers)
 
-    -- return opaque HsLoggerHandle handle
+    -- pure opaque HsLoggerHandle handle
     pure $ HsLoggerHandle logHandler stdoutLog
 
 -- | Tear down the application logger; i.e. close all associated log handlers.

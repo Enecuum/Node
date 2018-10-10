@@ -69,7 +69,7 @@ testNewNode = TestCase $ do
     ok                         <- runHGraphIO newGraph $ do
         newNode 123
         Just (HNode _ _ c _ _) <- getNode (123 :: Int64)
-        return $ 123 == fromContent c
+        pure $ 123 == fromContent c
     assertBool "" ok
 
 testGetNodeByHash :: Test
@@ -78,7 +78,7 @@ testGetNodeByHash = TestCase $ do
     ok                         <- runHGraphIO newGraph $ do
         newNode 123
         Just (HNode _ _ c _ _) <- getNode (toHash (123 :: Int64))
-        return $ 123 == fromContent c
+        pure $ 123 == fromContent c
     assertBool "" ok
 
 testGetNodeByRef :: Test
@@ -88,7 +88,7 @@ testGetNodeByRef = TestCase $ do
         newNode 123
         Just (HNode _ ref _ _ _) <- getNode (toHash (123 :: Int64))
         Just (HNode _ _   c _ _) <- getNode ref
-        return $ 123 == fromContent c
+        pure $ 123 == fromContent c
     assertBool "" ok
 
 testDeleteNodeByContent :: Test
@@ -127,7 +127,7 @@ testNewLinkByContent = TestCase $ do
         newNode 125
         newLink (123 :: Int64) (125 :: Int64)
         Just (HNode _ _ _ l _) <- getNode (toHash @Int64 123)
-        return $ M.member (toHash @Int64 125) l
+        pure $ M.member (toHash @Int64 125) l
     assertBool "" ok
 
 testNewLinkByHash :: Test
@@ -138,7 +138,7 @@ testNewLinkByHash = TestCase $ do
         newNode 125
         newLink (toHash @Int64 123) (toHash @Int64 125)
         Just (HNode _ _ _ l _) <- getNode (toHash @Int64 123)
-        return $ M.member (toHash @Int64 125) l
+        pure $ M.member (toHash @Int64 125) l
     assertBool "" ok
 
 testNewLinkByRef :: Test
@@ -151,7 +151,7 @@ testNewLinkByRef = TestCase $ do
         Just (HNode _ r2 _ _ _) <- getNode (toHash @Int64 125)
         newLink r1 r2
         Just (HNode _ _ _ l _) <- getNode (toHash @Int64 123)
-        return $ M.member (toHash @Int64 125) l
+        pure $ M.member (toHash @Int64 125) l
     assertBool "" ok
 
 testDeleteLinkByContent :: Test
@@ -163,7 +163,7 @@ testDeleteLinkByContent = TestCase $ do
         newLink    (123 :: Int64) (125 :: Int64)
         deleteLink (123 :: Int64) (125 :: Int64)
         Just (HNode _ _ _ l _) <- getNode (toHash @Int64 123)
-        return $ M.notMember (toHash @Int64 125) l
+        pure $ M.notMember (toHash @Int64 125) l
     assertBool "" ok
 
 testDeleteLinkByHash :: Test
@@ -175,7 +175,7 @@ testDeleteLinkByHash = TestCase $ do
         newLink    (123 :: Int64)      (125 :: Int64)
         deleteLink (toHash @Int64 123) (toHash @Int64 125)
         Just (HNode _ _ _ l _) <- getNode (toHash @Int64 123)
-        return $ M.notMember (toHash @Int64 125) l
+        pure $ M.notMember (toHash @Int64 125) l
     assertBool "" ok
 
 testDeleteLinkByRef :: Test
@@ -189,7 +189,7 @@ testDeleteLinkByRef = TestCase $ do
         Just (HNode _ r2 _ _ _) <- getNode (toHash @Int64 125)
         deleteLink r1 r2
         Just (HNode _ _ _ l _) <- getNode (toHash @Int64 123)
-        return $ M.notMember (toHash @Int64 125) l
+        pure $ M.notMember (toHash @Int64 125) l
     assertBool "" ok
 
 testListLikeGraph :: Test
@@ -203,7 +203,7 @@ testListLikeGraph = TestCase $ do
         newLink (toHash @Int64 125) (toHash @Int64 127)
         Just (HNode _ _ _ l1 _) <- getNode (toHash @Int64 123)
         Just (HNode _ _ _ l2 _) <- getNode (toHash @Int64 125)
-        return $ all
+        pure $ all
             id
             [ M.member (toHash @Int64 125) l1
             , M.member (toHash @Int64 127) l2

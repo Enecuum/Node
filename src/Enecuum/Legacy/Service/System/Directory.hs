@@ -26,44 +26,44 @@ getEnecuumDir = do
     homeDir <- getHomeDirectory
     let enecuumDir = homeDir ++ [pathSeparator] ++ "enecuum"
     createDirectoryIfMissing True enecuumDir
-    return enecuumDir
+    pure enecuumDir
 
 
 getKeyFilePath :: IO FilePath
 getKeyFilePath = do
     enecuumDir <- getEnecuumDir
-    return (enecuumDir ++ [pathSeparator] ++ "key.txt")
+    pure (enecuumDir ++ [pathSeparator] ++ "key.txt")
 
 
 getTransactionFilePath :: IO FilePath
 getTransactionFilePath = do
     enecuumDir <- getEnecuumDir
-    return (enecuumDir ++ [pathSeparator] ++ "tx.db")
+    pure (enecuumDir ++ [pathSeparator] ++ "tx.db")
 
 getLedgerFilePath :: IO FilePath
 getLedgerFilePath = do
     enecuumDir <- getEnecuumDir
-    return (enecuumDir ++ [pathSeparator] ++ "ledger.db")
+    pure (enecuumDir ++ [pathSeparator] ++ "ledger.db")
 
 getMicroblockFilePath :: IO FilePath
 getMicroblockFilePath = do
     enecuumDir <- getEnecuumDir
-    return (enecuumDir ++ [pathSeparator] ++ "microblock.db")
+    pure (enecuumDir ++ [pathSeparator] ++ "microblock.db")
 
 getMacroblockFilePath :: IO FilePath
 getMacroblockFilePath = do
     enecuumDir <- getEnecuumDir
-    return (enecuumDir ++ [pathSeparator] ++ "macroblock.db")
+    pure (enecuumDir ++ [pathSeparator] ++ "macroblock.db")
 
 getSproutFilePath :: IO FilePath
 getSproutFilePath = do
     enecuumDir <- getEnecuumDir
-    return (enecuumDir ++ [pathSeparator] ++ "sprout.db")
+    pure (enecuumDir ++ [pathSeparator] ++ "sprout.db")
 
 getLastFilePath :: IO FilePath
 getLastFilePath = do
     enecuumDir <- getEnecuumDir
-    return (enecuumDir ++ [pathSeparator] ++ "last.db")
+    pure (enecuumDir ++ [pathSeparator] ++ "last.db")
 
 createFilesDirectory :: FilePath -> IO ()
 createFilesDirectory path = createDirectoryIfMissing True $ takeDirectory path

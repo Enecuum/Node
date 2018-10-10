@@ -45,7 +45,7 @@ poaNode = do
         L.delay $ 100 * 1000
         eKBlock <- L.makeRpcRequest graphNodeRpcAddress GetLastKBlock
         case eKBlock of
-            Left  _     -> return ()
+            Left  _     -> pure ()
             Right block -> do
                 currentBlock <- L.atomically $ L.readVar (poaData ^. currentLastKeyBlock)
                 when (block /= currentBlock) $ do

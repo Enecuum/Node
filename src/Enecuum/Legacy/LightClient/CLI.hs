@@ -103,12 +103,12 @@ control = do
     case getOpt Permute args argv of
         (flags, _, []) -> do
             addr <- case find isHost flags of
-                Just (Host a) -> return a
-                Nothing       -> return "127.0.0.1"
+                Just (Host a) -> pure a
+                Nothing       -> pure "127.0.0.1"
 
             port <- case find isPort flags of
-                Just (Port p) -> return p
-                Nothing       -> return 1555
+                Just (Port p) -> pure p
+                Nothing       -> pure 1555
 
             dispatch (filter (\e -> not (isPort e || isHost e)) flags) addr port
         (_, _, err) -> ioError (userError (concat err ++ usageInfo "Usage: enq-cli [OPTION...]" args))
@@ -117,13 +117,13 @@ dispatch :: [Flag] -> HostName -> PortNumber -> IO ()
 dispatch flags h p = case flags of
     (WalletsFile wf : _) -> do
         tf <- case find isTransactionsFile flags of
-            Just (TransactionsFile tf) -> return tf
+            Just (TransactionsFile tf) -> pure tf
             Nothing                    -> error "Please, specify file contains transactions"
         withClient $ sendTrans tf wf
 
     (TransactionsFile tf : _) -> do
         wf <- case find isWalletsFile flags of
-            Just (WalletsFile wf) -> return wf
+            Just (WalletsFile wf) -> pure wf
             Nothing               -> error "Please, specify file contains wallets"
         withClient $ sendTrans tf wf
 
@@ -197,7 +197,7 @@ getSavedKeyPairs f = do
     let rawKeys = lines result
     let keys    = map (splitOn ";") rawKeys
     let pairs   = map (\[x, y] -> (read x :: PublicKey, read y :: PrivateKey)) keys
-    return pairs
+    pure pairs
 
 getBalance :: PublicKey -> WS.Connection -> IO ()
 getBalance rawKey ch = do

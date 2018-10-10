@@ -156,7 +156,7 @@ newtype Hash = Hash ByteString deriving (Ord, Eq, Show, Generic)
 instance Serialize Hash
 
 instance Read Hash where
-       readsPrec _ value = return (Hash $ C.pack value,"")
+       readsPrec _ value = pure (Hash $ C.pack value,"")
 
 data MicroblockV1 = MicroblockV1{
                   hashCurrentMicroblock  :: HashOfMicroblock,

@@ -106,27 +106,27 @@ getAllTransactions :: Common -> IO (Result [(DBKey, TransactionInfo)])
 getAllTransactions c = try $ B.getAllTransactionsKV c
 
 sendMessageTo :: MsgTo -> InChan MsgToCentralActor -> IO (Result ())
-sendMessageTo _ _ = return $ return undefined
+sendMessageTo _ _ = pure $ return undefined
 
 sendMessageBroadcast :: String -> InChan MsgToCentralActor -> IO (Result ())
-sendMessageBroadcast _ = return $ return $ Left NotImplementedException
+sendMessageBroadcast _ = pure $ return $ Left NotImplementedException
 
 loadMessages :: InChan MsgToCentralActor -> IO (Result [MsgTo])
-loadMessages _ = return $ Left NotImplementedException
+loadMessages _ = pure $ Left NotImplementedException
 
 getBlockByHash :: Common -> Hash -> IO (Result MicroblockAPI)
 getBlockByHash c hash = try $ do
     mb <- B.getBlockByHashDB c hash
     case mb of
         Nothing -> throw NoSuchMicroBlockDB
-        Just m  -> return m
+        Just m  -> pure m
 
 getKeyBlockByHash :: Common -> Hash -> IO (Result MacroblockAPI)
 getKeyBlockByHash common (Hash h) = try $ do
     mb <- B.getKeyBlockByHashDB common (Hash h)
     case mb of
         Nothing -> throw NoSuchMacroBlockDB
-        Just m  -> return m
+        Just m  -> pure m
 
 
 getChainInfo :: Common -> IO (Result ChainInfo)
@@ -140,7 +140,7 @@ getTransactionByHash (Common db _) hash = try $ do
     tx <- B.getTransactionByHashDB db hash
     case tx of
         Nothing -> throw NoSuchTransactionDB
-        Just t  -> return t
+        Just t  -> pure t
 
 
 getAllTransactionsByWallet :: Common -> PublicKey -> IO (Result [TransactionAPI])
@@ -148,7 +148,7 @@ getAllTransactionsByWallet c key = try $ do
     tx <- B.getAllTransactionsDB c key
     case tx of
         [] -> throw NoTransactionsForPublicKey
-        t  -> return t
+        t  -> pure t
 
 
 getPartTransactions :: Common -> InContainerChan -> PublicKey -> Int -> Int -> IO (Result [TransactionAPI])
@@ -156,7 +156,7 @@ getPartTransactions c inContainerChan key offset aCount = try $ do
     tx <- B.getLastTransactions c inContainerChan key offset aCount
     case tx of
         [] -> throw NoTransactionsForPublicKey
-        t  -> return t
+        t  -> pure t
 
 
 sendTrans :: Transaction -> InChan MsgToCentralActor -> InChan InfoMsg -> IO (Result Hash)
@@ -173,13 +173,13 @@ sendTrans tx ch aInfoCh = try $ do
                         r <- readMVar aMVar
                         print r
                         case r of
-                            True -> return $ B.rHash tx
+                            True -> pure $ B.rHash tx
                             _    -> throw TransactionChanBusyException
                     else throw TransactionInvalidSignatureException
                 _ -> throw TransactionInvalidSignatureException
         )
     case aExp of
-        Just h  -> return $ Hash h
+        Just h  -> pure $ Hash h
         Nothing -> throw TransactionChanBusyException
     where pk = getPublicKey $ uncompressPublicKey $ _owner tx
 
@@ -207,7 +207,7 @@ getNewKey = try $ do
     (KeyPair aPublicKey aPrivateKey) <- generateNewRandomAnonymousKeyPair
     getKeyFilePath >>= (\keyFileName -> appendFile keyFileName (show aPublicKey ++ ":" ++ show aPrivateKey ++ "\n"))
     putStrLn ("Public Key " ++ show aPublicKey ++ " was created")
-    return aPublicKey
+    pure aPublicKey
 
 
 getBalance :: DBPoolDescriptor -> PublicKey -> InChan InfoMsg -> IO (Result Amount)
@@ -218,7 +218,7 @@ getBalance descrDB pKey aInfoCh = try $ do
     writeInChan aInfoCh $ Metric $ I.timing "cl.ld.time" (subTime stTime endTime)
     case aBalance of
         Nothing -> throw NoSuchPublicKeyInDB
-        Just b  -> return b
+        Just b  -> pure b
 
 
 getSavedKeyPairs :: IO [(PublicKey, PrivateKey)]
@@ -227,12 +227,12 @@ getSavedKeyPairs = do
     case result of
         Left (_ :: SomeException) -> do
             print "There is no keys"
-            return []
+            pure []
         Right keyFileContent -> do
             let rawKeys = lines keyFileContent
             let keys    = map (splitOn ":") rawKeys
             let pairs   = map (\x -> (,) (read (head x) :: PublicKey) (read (x !! 1) :: PrivateKey)) keys
-            return pairs
+            pure pairs
 
 
 getPublicKeys :: IO (Result [PublicKey])
