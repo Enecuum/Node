@@ -84,7 +84,7 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
         WriteChain aChain -> do
             aLog "Received chain."
             aRes      <- try $ myTail aData
-            aJustTail <- return $ case aRes of
+            aJustTail <- pure $ case aRes of
                 Right aJustRes             -> fst aJustRes
                 Left  (_ :: SomeException) -> 0
             if fromEnum aJustTail < length aChain
@@ -104,26 +104,26 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
                                   case cExeption of
                                       Right _                    -> aLog "Block loaded ok."
                                       Left  (e :: SomeException) -> aLog $ "Error of KeyBlock loading: " ++ show e
-                else return ()
+                else pure ()
 
         GetChain aVar -> do
             aLog "Received chain."
             aTail   <- try $ myTail aData
             -- getting number of key bloks.
             aNumber <- case aTail of
-                Right (aNum, _)            -> return aNum
+                Right (aNum, _)            -> pure aNum
                 Left  (e :: SomeException) -> do
                     aLog $ "Error of myTail: " ++ show e
-                    return 0
+                    pure 0
 
             aChain <- forM [1 .. fromEnum aNumber] $ \aNum -> do
                 aMicroblocks <- try $ getMicroblocks aData (toInteger aNum)
                 aKeyBlock    <- try $ getKeyBlock aData (toInteger aNum)
                 case (aKeyBlock, aMicroblocks) of
-                    (Right rKeyBlock, Right rMicroblocks) -> return $ Just $ Chunk rKeyBlock rMicroblocks
-                    (Left  (_ :: SomeException), Left (_ :: SomeException)) -> return Nothing
-                    (_                         , Left (_ :: SomeException)) -> return Nothing
-                    (Left (_ :: SomeException) , _                        ) -> return Nothing
+                    (Right rKeyBlock, Right rMicroblocks) -> pure $ Just $ Chunk rKeyBlock rMicroblocks
+                    (Left  (_ :: SomeException), Left (_ :: SomeException)) -> pure Nothing
+                    (_                         , Left (_ :: SomeException)) -> pure Nothing
+                    (Left (_ :: SomeException) , _                        ) -> pure Nothing
             putMVar aVar $ catMaybes aChain
 
         MyTail aMVar -> do
@@ -153,10 +153,10 @@ startDBActor descriptor aMicroblockCh aValueChan aInfoCh (aInChan, aOutChan) aSy
             aLog $ "Setting a blocks: " ++ show aKeyBlockContent
             _aIsValid <- try $ isValidKeyBlockSprout aData aKeyBlockContent
             aIsValid  <- case _aIsValid of
-                Right aBool                -> return aBool
+                Right aBool                -> pure aBool
                 Left  (e :: SomeException) -> do
                     aLog $ "Validation false: " ++ show e
-                    return False
+                    pure False
 
             when aIsValid $ do
                 let kBlocks = map (\(_, (KeyBlockContent k _)) -> k) $ aKeyBlockContent

@@ -21,7 +21,7 @@ getSkeletDAG as =
     in  zip as (tail as) ++ execWriter (runStateT skel gen)
 
 mkSkel :: (Random b, Eq b, Num b, RandomGen g) => [(a, a)] -> (b, b) -> StateT g (Writer [(a, a)]) ()
-mkSkel []       _      = return ()
+mkSkel []       _      = pure ()
 mkSkel (e : es) (x, y) = do
     gen1 <- get
     let (a, gen2) = randomR (x, y) gen1

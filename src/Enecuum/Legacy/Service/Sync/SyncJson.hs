@@ -71,7 +71,7 @@ instance FromJSON Chunk where
     parseJSON (Object aMessage) = do
         aBlock       <- aMessage .: "block"
         aMicroBlocks <- aMessage .: "microblocks"
-        return $ Chunk aBlock aMicroBlocks
+        pure $ Chunk aBlock aMicroBlocks
     parseJSON v = throw $ DecodeException $ "Can not parse chunk " ++ show v
 
 instance ToJSON Chunk where
@@ -85,15 +85,15 @@ instance FromJSON SyncMessage where
     parseJSON (Object aMessage) = do
         sync  :: T.Text <- aMessage .:"sync"
         case (T.unpack sync) of
-            "tail" -> return RequestTail
+            "tail" -> pure RequestTail
             "peak" -> ResponseTail <$> aMessage .: "tail"
-            "sync" -> return RequestChain
+            "sync" -> pure RequestChain
             "chunk"-> ResponseChain <$> aMessage .: "chunk"
 
             "error"-> do
                 msg <- aMessage .: "msg"
                 errorCode   <- aMessage .: "errorCode"
-                return $ StatusSyncMessage msg errorCode
+                pure $ StatusSyncMessage msg errorCode
 
 
             _ -> mzero
@@ -108,7 +108,7 @@ instance ToJSON MicroBlockContent where
 instance FromJSON MicroBlockContent where
     parseJSON (Object mbc) = do
         aMicroblocks    <- mbc .: "micro_block"
-        return $ MicroBlockContent aMicroblocks
+        pure $ MicroBlockContent aMicroblocks
     parseJSON _ = mzero
 
 --------------------------------------------------------------------------------

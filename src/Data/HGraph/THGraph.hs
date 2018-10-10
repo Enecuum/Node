@@ -55,14 +55,14 @@ newNode index nodeContent = do
     when (isNothing res) $ do
         tNode <- newTVar $ THNode mempty mempty nodeContent
         modifyTVar index $ M.insert nodeHash tNode
-    return $ isNothing res
+    pure $ isNothing res
 
 -- | Delete the node from the graph by hash of node content.
 deleteHNode :: StringHashable c => TVar (THGraph c) -> StringHash -> STM Bool
 deleteHNode index nodeHash = do
     tNode <- findNode index nodeHash
     whenJust tNode $ deleteTHNode index
-    return $ isJust tNode
+    pure $ isJust tNode
 
 -- | Creating/deleting of link by hash of node contens.
 newHLink, deleteHLink :: StringHashable c => TVar (THGraph c) -> ReformLink StringHash
@@ -101,7 +101,7 @@ newTLink n1 n2 = do
     when ok $ do
         modifyTVar n1 $ links %~ M.insert hasOfN2 n2
         modifyTVar n2 (rLinks %~ M.insert hasOfN1 n1)
-    return ok
+    pure ok
 
 deleteTLink n1 n2 = do
     node1 <- readTVar n1
@@ -112,7 +112,7 @@ deleteTLink n1 n2 = do
     when ok $ do
         modifyTVar n1 $ links %~ M.delete hasOfN2
         modifyTVar n2 (rLinks %~ M.delete hasOfN1)
-    return ok
+    pure ok
 
 --------------------------------------------------------------------------------
 -- INTERNAL
@@ -126,4 +126,4 @@ reformHLink f index x1 x2 = do
     aNodes <- forM [x1, x2] (findNode index)
     case catMaybes aNodes of
         [n1, n2] -> f n1 n2
-        _        -> return False
+        _        -> pure False

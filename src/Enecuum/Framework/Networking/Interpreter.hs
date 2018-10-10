@@ -25,7 +25,7 @@ interpretNetworkingL _ (L.SendRpcRequest (D.Address host port) request next) = d
         Right _                    -> pure ()
         Left  (_ :: SomeException) -> putMVar var $ Left "Server size does not exist."
     res <- takeMVar var
-    return $ next res
+    pure $ next res
 
 interpretNetworkingL nr (L.SendMessage (D.NetworkConnection conn) msg next) = do
     atomically $ do

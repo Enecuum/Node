@@ -53,8 +53,8 @@ main = do
                 (snbc, _, stat_h, stat_p, logs_h, logs_p, log_id) <- getConfigParameters aMyNodeId conf ch
 
                 cli_m <- try (getEnv "cliMode") >>= \case
-                    Right item                 -> return item
-                    Left  (_ :: SomeException) -> return $ cliMode snbc
+                    Right item                 -> pure item
+                    Left  (_ :: SomeException) -> pure $ cliMode snbc
 
                 void $ C.forkIO $ serveInfoMsg (ConnectInfo stat_h stat_p)
                                                (ConnectInfo logs_h logs_p)
@@ -65,33 +65,33 @@ main = do
                 void $ C.forkIO $ case cli_m of
                     "rpc" -> do
                         rpcbc <- try (pure $ fromJust $ rpcBuildConfig snbc) >>= \case
-                            Right item                 -> return item
+                            Right item                 -> pure item
                             Left  (_ :: SomeException) -> error "Please, specify RPCBuildConfig"
 
                         rpc_p <- try (getEnv "rpcPort") >>= \case
-                            Right item                 -> return $ read item
-                            Left  (_ :: SomeException) -> return $ rpcPort rpcbc
+                            Right item                 -> pure $ read item
+                            Left  (_ :: SomeException) -> pure $ rpcPort rpcbc
 
                         ip_en <-
                             join
                             $   enableIPsList
                             <$> (try (getEnv "enableIP") >>= \case
-                                    Right item                 -> return $ read item
-                                    Left  (_ :: SomeException) -> return $ enableIP rpcbc
+                                    Right item                 -> pure $ read item
+                                    Left  (_ :: SomeException) -> pure $ enableIP rpcbc
                                 )
 
                         serveRpc rocksDB rpc_p ip_en ch aInfoChanIn aInContainerChan
                     "cli" -> serveCLI rocksDB ch aInfoChanIn aInContainerChan
-                    _     -> return ()
+                    _     -> pure ()
             forever $ C.threadDelay 10000000000
 
 
 enableIPsList :: [String] -> IO [AddrRange IPv6]
-enableIPsList []  = return [read "::/0"]
+enableIPsList []  = pure [read "::/0"]
 enableIPsList ips = sequence $ map
     (\ip_s -> try (readIO ip_s :: IO IPRange) >>= \case
-        Right (IPv4Range r       ) -> if r == read "0.0.0.0" then return $ read "::/0" else return $ ipv4RangeToIPv6 r
-        Right (IPv6Range r       ) -> if r == read "::" then return $ read "::/0" else return r
+        Right (IPv4Range r       ) -> if r == read "0.0.0.0" then pure $ read "::/0" else return $ ipv4RangeToIPv6 r
+        Right (IPv6Range r       ) -> if r == read "::" then pure $ read "::/0" else return r
         Left  (_ :: SomeException) -> error $ "Wrong IP format"
     )
     ips

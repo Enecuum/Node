@@ -42,7 +42,7 @@ getSignTransactions quantityOfTx keys'ns (x, y) = do
             , signature <- signatures
             , uuid      <- uuids
             ]
-    return (take quantityOfTx sts)
+    pure (take quantityOfTx sts)
 
 
 getTransactions :: [KeyPair] -> QuantityOfTransactions -> IO [Transaction]
@@ -51,7 +51,7 @@ getTransactions keys quantityTx = do
     let keys'ns                = zip [1 .. quantityRegistereKeyTx] keys
     let quantityBasicTx        = quantityTx - quantityRegistereKeyTx
     basicTx <- loopTransaction keys'ns quantityBasicTx
-    return basicTx
+    pure basicTx
 
 
 -- accumulate Transcations in acc until it satisfies required Quantity Of Transactions
@@ -61,7 +61,7 @@ loopTransaction keys'ns requiredQuantityOfTransactions = loop []
     loop acc = do
         let amountRange = (10, 20)
         tx <- getSignTransactions requiredQuantityOfTransactions keys'ns amountRange
-        if length acc >= requiredQuantityOfTransactions then return acc else loop (tx ++ acc)
+        if length acc >= requiredQuantityOfTransactions then pure acc else loop (tx ++ acc)
 
 
 -- generate N transactions
@@ -71,4 +71,4 @@ genNTx n = do
     keys <- replicateM quantityOfKeys generateNewRandomAnonymousKeyPair
     tx   <- getTransactions keys n
     let nTx = take n $ cycle tx
-    return nTx
+    pure nTx

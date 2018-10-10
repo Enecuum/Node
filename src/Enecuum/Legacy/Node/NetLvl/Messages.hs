@@ -104,13 +104,13 @@ instance FromJSON ActualConnectInfo where
         let aConnect = do
                 aIpAdress <- readMaybe =<< aIp
                 aJustPort <- aPort
-                return $ Connect (toHostAddress aIpAdress) (toEnum aJustPort)
-        return $ ActualConnectInfo aNodeId (readNodeType aNodeType) aConnect
+                pure $ Connect (toHostAddress aIpAdress) (toEnum aJustPort)
+        pure $ ActualConnectInfo aNodeId (readNodeType aNodeType) aConnect
     parseJSON s = error $ ("ActualConnectInfo is not an object: " ++ show s)
 
 unhexNodeId :: MonadPlus m => T.Text -> m NodeId
 unhexNodeId aString = case unhex . fromString . (toUpper <$>) . filter isHexDigit . T.unpack $ aString of
-    Just aDecodeString -> return . NodeId . roll $ B.unpack aDecodeString
+    Just aDecodeString -> pure . NodeId . roll $ B.unpack aDecodeString
     Nothing            -> mzero
 
 nodeIdToUnxed :: NodeId -> String
@@ -136,11 +136,11 @@ instance FromJSON NetMessage where
 
             ("Request","PotentialConnects")    -> do
                 aFull :: Maybe T.Text <- aMessage .:? "full"
-                return $ RequestPotentialConnects (isJust aFull)
+                pure $ RequestPotentialConnects (isJust aFull)
 
-            ("Request","PoWList")           -> return RequestPoWList
-            ("Request","ActualConnectList") -> return RequestActualConnects
-            ("Request", "Version")          -> return $ RequestVersion
+            ("Request","PoWList")           -> pure RequestPoWList
+            ("Request","ActualConnectList") -> pure RequestActualConnects
+            ("Request", "Version")          -> pure $ RequestVersion
 
             ("Request", "Pending") ->
                 RequestPending <$> aMessage .:? "transaction"
@@ -150,7 +150,7 @@ instance FromJSON NetMessage where
                 aFrom :: T.Text <- aMessage .: "from"
                 aNodeType :: T.Text <-  aMessage .: "node_type"
                 aIdFrom   <- unhexNodeId aFrom
-                return $ MsgBroadcast (IdFrom aIdFrom) (readNodeType aNodeType) aMsg
+                pure $ MsgBroadcast (IdFrom aIdFrom) (readNodeType aNodeType) aMsg
 
             ("Msg", "MsgTo") -> do
                 aFrom :: T.Text <- aMessage .: "from"
@@ -158,7 +158,7 @@ instance FromJSON NetMessage where
                 aMsg  :: Value  <- aMessage .: "msg"
                 aIdFrom   <- unhexNodeId aFrom
                 aIdTo     <- unhexNodeId aTo
-                return $ MsgMsgTo (IdFrom aIdFrom) (IdTo aIdTo) aMsg
+                pure $ MsgMsgTo (IdFrom aIdFrom) (IdTo aIdTo) aMsg
 
             ("Msg", "Microblock") ->
                 MsgMicroblock <$> aMessage .: "microblock"
@@ -173,17 +173,17 @@ instance FromJSON NetMessage where
                 aNodeType :: T.Text <-  aMessage .: "node_type"
                 aNodeId   <- unhexNodeId aId
                 aConnect  <- aMessage .: "connect"
-                return $ MsgNewNode aNodeId (readNodeType aNodeType) aConnect
+                pure $ MsgNewNode aNodeId (readNodeType aNodeType) aConnect
 
             ("Response", "NodeId") -> do
                 aPPId :: T.Text <- aMessage .: "node_id"
 
                 aNodeId  <- unhexNodeId aPPId
-                return $ ResponseNodeId aNodeId
+                pure $ ResponseNodeId aNodeId
 
             ("Response", "Version")          -> do
                 aVersion <- aMessage .: "version"
-                return $ ResponseVersion $ T.unpack aVersion
+                pure $ ResponseVersion $ T.unpack aVersion
 
             ("Response", "PotentialConnects") ->
                 ResponsePotentialConnects <$> aMessage .: "connects"
@@ -207,8 +207,8 @@ instance FromJSON NetMessage where
                 case aId of
                     Just aNodeId -> do
                         aJustId <- unhexNodeId aNodeId
-                        return $ ActionConnect (readNodeType aNodeType) (Just aJustId)
-                    Nothing -> return $ ActionConnect (readNodeType aNodeType) Nothing
+                        pure $ ActionConnect (readNodeType aNodeType) (Just aJustId)
+                    Nothing -> pure $ ActionConnect (readNodeType aNodeType) Nothing
 
             _ -> mzero
 
@@ -393,6 +393,6 @@ instance FromJSON Connect where
         aPort   <- aConnect .: "port"
         case readMaybe aIp of
             Nothing      -> mzero
-            Just aJustIp -> return $
+            Just aJustIp -> pure $
                 Connect (toHostAddress aJustIp) (toEnum aPort)
     parseJSON s = error $ ("FromJSON Connect is not an object: " ++ show s)

@@ -35,13 +35,13 @@ myTail c@(Common _ i) = do
     bdLog i $ "Get number of key block: " ++ show nNumber ++ "Hash: " ++ show hashMaybe
     case hashMaybe of
         Nothing -> throw NoLastKeyBlock
-        Just h  -> return (nNumber, h)
+        Just h  -> pure (nNumber, h)
 
 
 peekNPreviousKeyBlocks :: Common -> From -> To -> IO [(Number, HashOfKeyBlock)]
 peekNPreviousKeyBlocks c from to = do
     vM <- forM [from .. to] $ getM c
-    return [ (k, v) | (k, Just v) <- zip [from .. to] vM ]
+    pure [ (k, v) | (k, Just v) <- zip [from .. to] vM ]
 
 
 getKeyBlockSproutData :: Common -> From -> To -> IO [(Number, HashOfKeyBlock, KeyBlockContent)]
@@ -58,7 +58,7 @@ getKeyBlockSproutData c from to = do
                 let hashesOfMicroblocks = _mblocks (j :: MacroblockBD)
                     keyBlock            = (tKeyBlockToPoWType . tMacroblock2KeyBlockInfo) j
                     keyBlockContent     = KeyBlockContent keyBlock hashesOfMicroblocks
-                return (aNumber, hashofkeyblock, keyBlockContent)
+                pure (aNumber, hashofkeyblock, keyBlockContent)
 
 
 pair3 :: (a, b, c) -> c
@@ -89,7 +89,7 @@ isValidKeyBlockSprout c@(Common _ i) okv = do
         allTrue             = and isOk
 
     unless allTrue $ bdLog i $ concatMap show (isFoundationOk : isChainReallyLinked)
-    return allTrue
+    pure allTrue
 
 
 setKeyBlockSproutData :: Common -> (InChan SyncEvent, OutChan SyncEvent) -> [KeyBlockInfoPoW] -> IO ()
@@ -106,11 +106,11 @@ getRestSproutData :: Common -> HashOfMicroblock -> IO MicroBlockContent
 getRestSproutData c hashOfMicroblock = do
     microblockBD <- getMicroBlockByHashDB c (Hash hashOfMicroblock)
     microblock   <- tMicroblockBD2Microblock c microblockBD
-    return $ MicroBlockContent microblock
+    pure $ MicroBlockContent microblock
 
 
 isValidRestOfSprout :: Common -> MicroBlockContent -> IO Bool
-isValidRestOfSprout _ _ = return True -- Fix verify transaction signature
+isValidRestOfSprout _ _ = pure True -- Fix verify transaction signature
 
 
 setRestSproutData :: Common -> (Number, HashOfKeyBlock, MicroBlockContent) -> IO ()
@@ -201,7 +201,7 @@ getAllMacroblockByHash co hashesOfKeyBlock = forM hashesOfKeyBlock $ findAllMacr
                     $  writeLog i [BDTag] Warning
                     $  "mblocks is empty for hash: "
                     ++ show h
-                return (h, j)
+                pure (h, j)
 
 
 findMicroblocksForMainChain :: Common -> IO ()
@@ -214,7 +214,7 @@ findMicroblocksForMainChainHelp c = do
     mainChainKHashes <- map snd <$> findWholeChainSince c 0 Main
     macroblock       <- map snd <$> getAllMacroblockByHash c mainChainKHashes
     let hashesOfMicroblocks = concatMap (\m -> _mblocks (m :: MacroblockBD)) macroblock
-    return hashesOfMicroblocks
+    pure hashesOfMicroblocks
 
 
 cleanDB :: Common -> IO ()

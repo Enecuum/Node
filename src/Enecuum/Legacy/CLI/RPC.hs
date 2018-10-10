@@ -70,7 +70,7 @@ serveRpc descrDB portNum _ ch aInfoCh aContChan = runServer portNum "serveRpc" $
             mTx <- liftIO $ f
             case mTx of
                 Left  e -> throwError $ rpcError 400 $ pack $ show e
-                Right r -> liftIO $ return r
+                Right r -> liftIO $ pure r
 
 
         methods =

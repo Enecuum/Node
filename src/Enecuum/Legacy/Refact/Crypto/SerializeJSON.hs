@@ -38,7 +38,7 @@ instance FromJSON Currency
 instance ToJSON Currency
 
 instance FromJSON PublicKey where
-  parseJSON (String s) = return $ read $ unpack s
+  parseJSON (String s) = pure $ read $ unpack s
   parseJSON _          = throw $ DecodeException "PublicKey JSON parse error"
 
 instance ToJSON PublicKey where
@@ -54,7 +54,7 @@ encodeToText = T.decodeUtf8 . B.encode
 
 decodeFromText :: (MonadPlus m) => Text -> m ByteString
 decodeFromText aStr = case B.decode . T.encodeUtf8 $ aStr of
-    Right a -> return a
+    Right a -> pure a
     Left  _ -> mzero
 
 intToBase64Text :: Integer -> Text
@@ -64,7 +64,7 @@ base64TextToInt :: (MonadPlus m) => Text -> m Integer
 base64TextToInt b = do
     bs <- decodeFromText b
     case fromByteString bs of
-        Just i -> return i
+        Just i -> pure i
         _      -> mzero
 
 
@@ -75,7 +75,7 @@ instance ToJSON ByteString where
   toJSON h = String $ pack $ BS.unpack h
 
 instance FromJSON ByteString where
-  parseJSON (String s) = return $ BS.pack $ unpack s
+  parseJSON (String s) = pure $ BS.pack $ unpack s
   parseJSON e          = throw $ DecodeException $ "ByteString: Wrong object format" ++ show e
 
 instance ToJSON TransactionInfo where
@@ -100,7 +100,7 @@ instance FromJSON MicroblockBD where
         aSignBd             <- aMsg .: "signBD"
         aPublisher          <- aMsg .: "publisher"
         aTransactionHashes  <- aMsg .: "transactionsHashes"
-        return $ MicroblockBD aKeyBlock aSignBd aPublisher aTransactionHashes
+        pure $ MicroblockBD aKeyBlock aSignBd aPublisher aTransactionHashes
 
     parseJSON _ = mzero
 
@@ -121,7 +121,7 @@ instance FromJSON ECDSA.Signature where
   parseJSON (Object v) = do
     s_r <- base64TextToInt =<< v .: "sign_r"
     s_s <- base64TextToInt =<< v .: "sign_s"
-    return $ ECDSA.Signature s_r s_s
+    pure $ ECDSA.Signature s_r s_s
   parseJSON inv        = typeMismatch "Signature" inv
 
 
@@ -227,7 +227,7 @@ instance FromJSON Microblock where
            aTx        <- aBlock .: "Tx"
            aPublisher <- aBlock .: "publisher"
            aKhash     <- aBlock .: "K_hash"
-           return $ Microblock aKhash aSign aWallets aPublisher aTx
+           pure $ Microblock aKhash aSign aWallets aPublisher aTx
        _ -> mzero
  parseJSON _ = mzero
 

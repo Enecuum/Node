@@ -131,12 +131,12 @@ connectionWithTimeOut :: WS.Connection -> Connection IO
 connectionWithTimeOut h input = do
     result <- timeout (10 :: Second) $ connection h input
     case result of
-        Just a  -> return a
-        Nothing -> return (error "Connection error: out of time-out")
+        Just a  -> pure a
+        Nothing -> pure (error "Connection error: out of time-out")
 
 -- Connect to a server
 connection :: WS.Connection -> Connection IO
 connection handle input = do
     void $ WS.sendTextData handle input
     ans <- WS.receiveData handle
-    return (Just ans)
+    pure (Just ans)

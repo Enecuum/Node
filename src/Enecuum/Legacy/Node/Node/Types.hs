@@ -134,7 +134,7 @@ toDouble :: Scientific -> Double
 toDouble = toRealFloat
 
 instance FromJSON PortNumber where
-    parseJSON (Number s) = return.toEnum.fromEnum.toDouble $ s
+    parseJSON (Number s) = pure.toEnum.fromEnum.toDouble $ s
     parseJSON _          = error "i've felt with the portnumber parsing"
 
 
@@ -166,7 +166,7 @@ makeNewNodeConfig :: MonadRandom m => m NodeConfig
 makeNewNodeConfig = do
     (aPublicKey, aPrivateKey) <- generateKeyPair
     let aId = keyToId aPublicKey
-    return $ NodeConfig aPrivateKey (toMyNodeId aId)
+    pure $ NodeConfig aPrivateKey (toMyNodeId aId)
 
 
 

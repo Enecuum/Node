@@ -105,7 +105,7 @@ addKBlock nodeData kBlock = do
         L.newLink ref kBlock'
     -- change of curNode.
     L.writeVar (nodeData ^. curNode) $ toHash kBlock'
-    return True
+    pure True
 
 -- | Add microblock to graph
 addMBlock :: GraphNodeData -> D.Microblock -> L.StateL Bool

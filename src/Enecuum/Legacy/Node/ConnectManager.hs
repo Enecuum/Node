@@ -63,7 +63,7 @@ connectManager aSyncChan (inDBActorChan, _) aManagerChan aPortNumber aBNList aCo
                     writeInChan aConnectsChan $ AddRecords aConnects
                 C.threadDelay sec
                 aRequestOfPotencialConnects (aTailOfList ++ [Connect aBNIp aBNPort])
-        _ -> return ()
+        _ -> pure ()
 
     aConnectLoop aBootNodeList = do
         aActualConnects <- takeRecords aManagerChan ActualConnectsToNNRequest
@@ -124,11 +124,11 @@ connectToNN aFileServerChan aMyNodeId inChanPending aInfoChan ch aSync aInLogerC
                 void $ race
                     (msgSender ch aMyNodeId aConnect aOutChan)
                     (msgReceiver ch aInfoChan aFileServerChan NN (IdFrom aNodeId) aConnect inChanPending aInLogerChan)
-            _ -> return ()
+            _ -> pure ()
 
     case aOk of
         Left (_ :: SomeException) -> void $ tryWriteChan aFileServerChan $ DeleteRecords aConn
-        _                         -> return ()
+        _                         -> pure ()
 
 --
 sec :: Int

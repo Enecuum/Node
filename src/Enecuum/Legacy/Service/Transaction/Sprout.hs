@@ -14,7 +14,7 @@ findChain c aNumber branch = do
             Main   -> fst
             Sprout -> snd
     chain <- fun <$> getChain c aNumber
-    return (aNumber, chain)
+    pure (aNumber, chain)
 
 
 getM :: Common -> Number -> IO (Maybe HashOfKeyBlock)
@@ -29,33 +29,33 @@ findWholeChainSince c aNumber branch = do
         then do
             rest <- findWholeChainSince c (aNumber + 1) branch
             let chain = (fst chainJ, fromJust (snd chainJ))
-            return (chain : rest)
-        else return []
+            pure (chain : rest)
+        else pure []
 
 
 findConsequentChainSinceUntil :: Common -> HashOfKeyBlock -> HashOfKeyBlock -> Limit -> IO [(HashOfKeyBlock, Number)]
 findConsequentChainSinceUntil c h searchedHash limit = do
     macroblockMaybe <- getKeyBlockByHash c (Hash h)
     case macroblockMaybe of
-        Nothing         -> return []
+        Nothing         -> pure []
         Just macroblock -> case _prevHKBlock macroblock of
-            Nothing             -> return []
+            Nothing             -> pure []
             Just hashPrevKBlock -> if limit > 0 && hashPrevKBlock /= searchedHash
                 then do
                     let aNumber = _number (macroblock :: MacroblockBD)
                     rest <- findConsequentChainSinceUntil c hashPrevKBlock searchedHash (limit - 1)
-                    return ((hashPrevKBlock, aNumber) : rest)
-                else return []
+                    pure ((hashPrevKBlock, aNumber) : rest)
+                else pure []
 
 
 bbb :: IO [(Int, Maybe Int)]
-bbb = return [(1, Just 1), (2, Just 2), (25, Just 25), (3, Nothing), (4, Just 4)]
+bbb = pure [(1, Just 1), (2, Just 2), (25, Just 25), (3, Nothing), (4, Just 4)]
 
 
 pickByNumber :: Int -> IO (Int, Maybe Int)
 pickByNumber i = do
     c <- bbb
-    return $ c !! i
+    pure $ c !! i
 
 
 findSinceAndUntil :: Int -> IO [(Int, Maybe Int)]
@@ -65,5 +65,5 @@ findSinceAndUntil i = do
     if second p
         then do
             rest <- findSinceAndUntil (i + 1)
-            return (p : rest)
-        else return []
+            pure (p : rest)
+        else pure []

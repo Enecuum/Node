@@ -37,7 +37,7 @@ instance Serialize CompactInteger where
     get = do
         lenSig <- S.get :: Get Int8
         bytes <- forM [1..abs lenSig] $ \_ -> S.get :: Get Word8
-        return $! roll bytes * (toEnum.fromEnum.signum $ lenSig)
+        pure $! roll bytes * (toEnum.fromEnum.signum $ lenSig)
 
 
 --
@@ -71,7 +71,7 @@ instance Serialize Signature where
     get = do
         CompactInteger a <- S.get
         CompactInteger b <- S.get
-        return $ Signature a b
+        pure $ Signature a b
 
 -- automatically get serialization.
 deriving instance Generic PublicPoint
