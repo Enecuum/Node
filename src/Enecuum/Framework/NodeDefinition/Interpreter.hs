@@ -8,9 +8,9 @@ import           Control.Concurrent.STM.TChan
 import qualified Network.Socket.ByteString.Lazy     as S
 import qualified Network.Socket                     as S hiding (recv)
 import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Framework.Networking.Internal.TCP.Server
+import           Enecuum.Framework.Networking.Internal.Tcp.Server
 import           Enecuum.Framework.Node.Interpreter
-import           Enecuum.Framework.RpcMethod.Interpreter
+
 import           Enecuum.Framework.Runtime                 (NodeRuntime)
 import qualified Enecuum.Framework.Language                as L
 import qualified Enecuum.Framework.RLens                   as RLens
@@ -18,9 +18,10 @@ import qualified Enecuum.Core.Interpreters                 as Impl
 import qualified Enecuum.Framework.Node.Interpreter        as Impl
 import qualified Enecuum.Framework.Domain.RPC             as D
 import qualified Enecuum.Framework.Domain.Networking      as D
-import           Enecuum.Framework.Networking.Internal.Internal
-import           Enecuum.Framework.MsgHandler.Interpreter
-import           Enecuum.Framework.StdinHandlers.Interpreter as Imp
+import           Enecuum.Framework.Networking.Internal.Tcp.Connection
+import           Enecuum.Framework.Handler.Rpc.Interpreter
+import           Enecuum.Framework.Handler.Tcp.Interpreter
+import           Enecuum.Framework.Handler.Cmd.Interpreter as Imp
 import           Data.Aeson.Lens
 import qualified Data.Text as T
 
@@ -34,13 +35,14 @@ interpretNodeDefinitionL nodeRt (L.EvalNodeL initScript next) = next <$> Impl.ru
 interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffect
 
-interpretNodeDefinitionL nodeRt (L.ServingMsg port initScript next) = do
+interpretNodeDefinitionL nodeRt (L.ServingTcp port initScript next) = do
     m        <- atomically $ newTVar mempty
-    a        <- runMsgHandlerL m initScript
+    a        <- runTcpHandlerL m initScript
     handlers <- readTVarIO m
-    s        <- startServer port
-                            ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
-                            (\(D.NetworkConnection addr) -> Impl.insertConnect (nodeRt ^. RLens.connects) addr)
+    s        <- startServer
+        port
+        ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
+        (\(D.TcpConnection addr) -> Impl.insertConnect (nodeRt ^. RLens.connects) addr)
     atomically $ setServerChan (nodeRt ^. RLens.servers) port s
     pure $ next a
 
@@ -52,14 +54,14 @@ interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
 
 interpretNodeDefinitionL nodeRt (L.ServingRpc port initScript next) = do
     m <- atomically $ newTVar mempty
-    a <- runRpcMethodL m initScript
+    a <- runRpcHandlerL m initScript
     s <- atomically $ takeServerChan (nodeRt ^. RLens.servers) port
     void $ forkIO $ runRpcServer s port (runNodeL nodeRt) m
     pure $ next a
 
 interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
     m <- atomically $ newTVar mempty
-    a <- runStdinHandlerL m handlers
+    a <- runCmdHandlerL m handlers
     void $ forkIO $ do
         m' <- readTVarIO m
         forever $ do
@@ -82,7 +84,7 @@ callHandler nodeRt methods msg = do
 fromJust (Just a) = a
 --
 -- TODO: treadDelay if server in port exist!!!
-takeServerChan :: TVar (Map PortNumber (TChan ServerComand)) -> PortNumber -> STM (TChan ServerComand)
+takeServerChan :: TVar (Map PortNumber (TChan D.ServerComand)) -> PortNumber -> STM (TChan D.ServerComand)
 takeServerChan servs port = do
     chan <- newTChan
     Impl.setServerChan servs port chan
@@ -90,10 +92,10 @@ takeServerChan servs port = do
 
 
 runRpcServer
-    :: TChan ServerComand -> PortNumber -> (t -> IO D.RpcResponse) -> TVar (Map Text (A.Value -> Int -> t)) -> IO ()
+    :: TChan D.ServerComand -> PortNumber -> (t -> IO D.RpcResponse) -> TVar (Map Text (A.Value -> Int -> t)) -> IO ()
 runRpcServer chan port runner methodVar = do
     methods <- readTVarIO methodVar
-    runServer chan port $ \sock -> do
+    runTCPServer chan port $ \sock -> do
         msg      <- S.recv sock (1024 * 4)
         response <- callRpc runner methods msg
         S.sendAll sock $ A.encode response

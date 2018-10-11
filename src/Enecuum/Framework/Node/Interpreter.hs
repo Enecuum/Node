@@ -11,9 +11,9 @@ import qualified Enecuum.Framework.State.Interpreter      as Impl
 import qualified Enecuum.Framework.RLens                  as RLens
 import           Control.Concurrent.STM.TChan
 import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Framework.Networking.Internal.TCP.Server
-import           Enecuum.Framework.Networking.Internal.Internal  as I
-import           Enecuum.Framework.MsgHandler.Interpreter
+import           Enecuum.Framework.Networking.Internal.Tcp.Server
+import           Enecuum.Framework.Networking.Internal.Tcp.Connection  as I
+import           Enecuum.Framework.Handler.Tcp.Interpreter
 import qualified Data.Map                                 as M
 import qualified Enecuum.Framework.Domain.Networking as D
 import           Enecuum.Core.HGraph.Interpreters.IO
@@ -34,15 +34,15 @@ interpretNodeL nodeRt (L.StopNode next) = do
     atomically $ putTMVar (nodeRt ^. RLens.stopNode) True
     pure $ next ()
 
-interpretNodeL nodeRt (L.OpenConnection addr initScript next) = do
+interpretNodeL nodeRt (L.OpenTcpConnection addr initScript next) = do
     m <- atomically $ newTVar mempty
-    runMsgHandlerL m initScript
+    runTcpHandlerL m initScript
     handlers <- readTVarIO m
     newCon   <- I.openConnect addr ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
     insertConnect (nodeRt ^. RLens.connects) addr newCon
-    pure $ next (D.NetworkConnection addr)
+    pure $ next (D.TcpConnection addr)
 
-interpretNodeL nodeRt (L.CloseConnection (D.NetworkConnection addr) next) = do
+interpretNodeL nodeRt (L.CloseTcpConnection (D.TcpConnection addr) next) = do
     atomically $ do
         m <- readTVar (nodeRt ^. RLens.connects)
         whenJust (m ^. at addr) $ \con -> do
