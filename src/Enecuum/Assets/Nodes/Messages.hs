@@ -34,3 +34,22 @@ data WalletBalanceMsg = WalletBalanceMsg
   , balance  :: Integer
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
+-------------------------------------------------------------------
+
+data GetChainLengthRequest = GetChainLengthRequest
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+newtype GetChainLengthResponse = GetChainLengthResponse { chainLength :: Integer }
+  deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
+
+data GetChainFromToRequest = GetChainFromToRequest { fromBlock :: Integer, toBlock :: Integer }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+newtype GetChainFromToResponse = GetChainFromToResponse { blocks :: [D.KBlock] }
+  deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
+
+newtype GetMBlocksForKBlockRequest = GetMBlocksForKBlockRequest { kblock :: StringHash }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+newtype GetMBlocksForKBlockResponse = GetMBlocksForKBlockResponse { mblocks :: [D.Microblock] }
+  deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)

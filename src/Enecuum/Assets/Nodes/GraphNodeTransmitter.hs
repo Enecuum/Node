@@ -197,6 +197,44 @@ getBalance nodeData (GetWalletBalance wallet) = do
         Just balance -> pure $ Right $ WalletBalanceMsg wallet balance
         _            -> pure $ Left "Wallet does not exist in graph."
 
+acceptChainLength :: GraphNodeData -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
+acceptChainLength nodeData GetChainLengthRequest = do
+    L.logInfo "Answering chain length"
+    topKBlock <- L.atomically $ getTopKeyBlock nodeData        
+    writeLog nodeData
+    pure $ GetChainLengthResponse $ topKBlock ^. Lens.number
+    
+findBlocksByNumber :: GraphNodeData -> Integer -> D.KBlock -> L.StateL [D.KBlock]
+findBlocksByNumber nodeData num prev = 
+    let cNum = prev ^. Lens.number in
+    if 
+        | cNum < num -> pure []
+        | cNum == num -> pure [prev]
+        | cNum > num -> do
+            maybeNext <- getKBlock nodeData (prev ^. Lens.prevHash)
+            case maybeNext of
+                Nothing -> error "Broken chain"
+                Just next -> (:) prev <$> findBlocksByNumber nodeData num next
+            
+
+acceptChainFromTo :: GraphNodeData -> GetChainFromToRequest -> L.NodeL (Either Text GetChainFromToResponse)
+acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
+    L.logInfo $ "Answering chain from " +|| show from ||+ " to " +|| show to
+    if from > to
+        then pure $ Left "From is grater than to"
+        else do
+            kBlockList <- L.atomically $ do
+                topKBlock <- getTopKeyBlock nodeData
+                findBlocksByNumber nodeData from topKBlock
+            writeLog nodeData    
+            pure $ Right $ GetChainFromToResponse (reverse $ drop (fromEnum to) kBlockList)
+
+acceptMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL (Either Text GetMBlocksForKBlockResponse)
+acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
+    L.logInfo $ "Answering microblocks for kBlock " +|| show hash
+    
+    undefined
+
 -- | Initialization of graph node
 graphNodeInitialization :: L.NodeDefinitionL GraphNodeData
 graphNodeInitialization = L.scenario $ do
@@ -223,6 +261,9 @@ graphNodeTransmitter = do
         L.methodE $ acceptMBlock nodeData
         L.method $ getLastKBlock nodeData
         L.methodE $ getBalance nodeData
+        L.method $ acceptChainLength nodeData
+        L.methodE $ acceptChainFromTo nodeData
+        L.methodE $ acceptMBlockForKBlocks nodeData
 
     L.std $ L.stdHandler $ L.setNodeFinished nodeData
     L.nodeFinishPending nodeData
