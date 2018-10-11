@@ -26,7 +26,7 @@ createEmptyNodeRuntime loggerRt networkControl nodeID = do
     rpcServer       <- newEmptyTMVarIO
     serversRegistry <- newEmptyTMVarIO
     graph           <- TG.initTestGraph
-    varCounter      <- newTMVarIO 0
+    idCounter       <- newTMVarIO 0
     st              <- newTMVarIO Map.empty
     connections     <- newTMVarIO Map.empty
     processes   <- newTMVarIO Map.empty
@@ -38,7 +38,7 @@ createEmptyNodeRuntime loggerRt networkControl nodeID = do
         , T._rpcServer       = rpcServer
         , T._connections     = connections
         , T._graph           = graph
-        , T._varCounter      = varCounter
+        , T._idCounter       = idCounter
         , T._state           = st
         , T._serversRegistry = serversRegistry
         , T._processes       = processes
@@ -50,7 +50,7 @@ createNodeRuntime testRt nodeID = do
     tag         <- newTVarIO ("" :: Text)
     rpcServer   <- newEmptyTMVarIO
     graph       <- TG.initTestGraph
-    varCounter  <- newTMVarIO 0
+    idCounter   <- newTMVarIO 0
     st          <- newTMVarIO Map.empty
     connections <- newTMVarIO Map.empty
     processes   <- newTMVarIO Map.empty
@@ -62,7 +62,7 @@ createNodeRuntime testRt nodeID = do
             , T._rpcServer       = rpcServer
             , T._connections     = connections
             , T._graph           = graph
-            , T._varCounter      = varCounter
+            , T._idCounter       = idCounter
             , T._state           = st
             , T._serversRegistry = testRt ^. RLens.serversRegistry
             , T._processes       = processes

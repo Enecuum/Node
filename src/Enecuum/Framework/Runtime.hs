@@ -9,7 +9,7 @@ import           Enecuum.Core.Runtime (CoreRuntime)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 import qualified Enecuum.Domain as D
 import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Framework.Networking.Internal.TCP.Server
+
 
 -- TODO: the same types as in test runtime. Unify it.
 data VarHandle = VarHandle D.VarId (TVar Any)
@@ -20,7 +20,7 @@ data ConnectionImplementation = ConnectionImplementation (TMVar (TChan D.Comand)
 data NodeRuntime = NodeRuntime
     { _coreRuntime  :: CoreRuntime
     , _graph        :: D.TGraph D.NodeContent
-    , _servers      :: TVar (Map PortNumber (TChan ServerComand))
+    , _servers      :: TVar (Map PortNumber (TChan D.ServerComand))
     , _idCounter    :: TMVar Int              -- ^ ID counter. Used to generate VarIds, ProcessIds.
     , _state        :: NodeState              -- ^ State of node.
     , _nodeTag      :: TVar Text

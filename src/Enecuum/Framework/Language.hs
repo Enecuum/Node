@@ -8,7 +8,7 @@ import           Enecuum.Framework.NodeDefinition.Language as X
 import           Enecuum.Framework.Networking.Language as X
 import           Enecuum.Framework.State.Language as X
 import           Enecuum.Framework.Node.Language as X
-import           Enecuum.Framework.RpcMethod.Language as X
+import           Enecuum.Framework.Handler.Rpc.Language as X
 import           Enecuum.Framework.Language.Extra as X
-import           Enecuum.Framework.MsgHandler.Language as X
-import           Enecuum.Framework.StdinHandlers.Language as X
+import           Enecuum.Framework.Handler.Tcp.Language as X
+import           Enecuum.Framework.Handler.Cmd.Language as X

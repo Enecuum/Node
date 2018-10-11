@@ -1,7 +1,7 @@
 module Enecuum.Testing.Framework.Interpreters.NodeDefinition where
 
 import Enecuum.Prelude
-import qualified Data.Map
+import qualified Data.Map as M
 
 import qualified Enecuum.Language as L
 import qualified Enecuum.Domain as D
@@ -15,8 +15,8 @@ import qualified Enecuum.Testing.Framework.Interpreters.State as Impl
 import qualified Enecuum.Testing.Framework.Internal.RpcServer as Impl (startNodeRpcServer)
 import qualified Enecuum.Testing.Framework.Internal.TcpLikeServer as Impl (startNodeTcpLikeServer, stopNodeTcpLikeServer)
 
-import qualified Enecuum.Framework.RpcMethod.Interpreter as Impl (runRpcMethodL)
-import qualified Enecuum.Framework.MsgHandler.Interpreter as Impl (runMsgHandlerL)
+import qualified Enecuum.Framework.Handler.Rpc.Interpreter as Impl (runRpcHandlerL)
+import qualified Enecuum.Framework.Handler.Tcp.Interpreter as Impl (runTcpHandlerL)
 
 addProcess :: T.NodeRuntime -> D.ProcessPtr a -> ThreadId -> IO ()
 addProcess nodeRt pPtr threadId = do
@@ -31,21 +31,21 @@ mkAddress nodeRt port = (nodeRt ^. RLens.address) & Lens.port .~ port
 -- | Interpret NodeDefinitionL.
 interpretNodeDefinitionL :: T.NodeRuntime -> L.NodeDefinitionF a -> IO a
 
-interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = 
+interpretNodeDefinitionL nodeRt (L.NodeTag tag next) =
     next <$> atomically (writeTVar (nodeRt ^. RLens.tag) tag)
 
-interpretNodeDefinitionL nodeRt (L.EvalNodeL nodeScript next) = 
+interpretNodeDefinitionL nodeRt (L.EvalNodeL nodeScript next) =
     next <$> Impl.runNodeL nodeRt nodeScript
 
 interpretNodeDefinitionL nodeRt (L.ServingRpc port handlersF next) = do
     methodsMap <- atomically $ newTVar mempty
-    Impl.runRpcMethodL methodsMap handlersF
+    Impl.runRpcHandlerL methodsMap handlersF
     Impl.startNodeRpcServer nodeRt port methodsMap
     pure $ next ()
 
-interpretNodeDefinitionL nodeRt (L.ServingMsg port handlersF next) = do
+interpretNodeDefinitionL nodeRt (L.ServingTcp port handlersF next) = do
     handlersMap <- atomically $ newTVar mempty
-    Impl.runMsgHandlerL handlersMap handlersF
+    Impl.runTcpHandlerL handlersMap handlersF
     Impl.startNodeTcpLikeServer nodeRt (mkAddress nodeRt port) handlersMap
     pure $ next ()
 
@@ -73,7 +73,6 @@ interpretNodeDefinitionL _ (L.AwaitResult pPtr next) = do
     pVar <- D.getProcessVar pPtr
     result <- atomically $ takeTMVar pVar
     pure $ next result
-
 
 interpretNodeDefinitionL _ (L.Std _ _) = error "STD not implemented in test runtime."
 

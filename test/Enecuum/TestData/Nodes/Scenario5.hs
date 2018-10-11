@@ -29,31 +29,10 @@ import           Enecuum.TestData.Nodes.Address
 -- Scenario 5: Permanent connection Ping-Pong
 
 data Ping = Ping { ping :: Int }
-  deriving (Show, Generic)
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 data Pong = Pong { pong :: Int }
-  deriving (Show, Generic)
-
-instance A.ToJSON Ping where
-    toJSON o@(Ping i) = A.object
-        [ "tag" A..= L.makeTagName o
-        , "int" A..= i
-        ]
-
-instance A.ToJSON Pong where
-    toJSON o@(Pong i) = A.object
-        [ "tag" A..= L.makeTagName o
-        , "int" A..= i
-        ]
-
-instance A.FromJSON Ping where
-    parseJSON (A.Object o) = Ping <$> o A..: "int"
-    parseJSON _            = error "Error of ping parsing."
-
-instance A.FromJSON Pong where
-    parseJSON (A.Object o) = Pong <$> o A..: "int"
-    parseJSON _            = error "Error of pong parsing."
-
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 pongServerPort, pingClientPort :: D.PortNumber
 pongServerPort = 2000
@@ -66,14 +45,14 @@ pingClientAddress = D.Address "0.0.1.5" pingClientPort
 pingPongThreshold :: Int
 pingPongThreshold = 3
 
-pingHandle :: D.StateVar Int -> Ping -> D.NetworkConnection -> L.NodeL ()
+pingHandle :: D.StateVar Int -> Ping -> D.TcpConnection -> L.NodeL ()
 pingHandle countVar (Ping i) conn = do
     L.logInfo $ "Ping handle received: " +|| Ping i ||+ ". Sending " +|| Pong i ||+ "."
     L.send conn $ Pong i
     when (i >= pingPongThreshold) $ L.close conn
     L.atomically $ L.writeVar countVar i
 
-pongHandle :: D.StateVar Int -> Pong -> D.NetworkConnection -> L.NodeL ()
+pongHandle :: D.StateVar Int -> Pong -> D.TcpConnection -> L.NodeL ()
 pongHandle countVar (Pong i) conn = do
     L.logInfo $ "Pong handle received: " +|| Pong i ||+ ". Sending " +|| Ping (i + 1) ||+ "."
     L.send conn $ Ping $ i + 1

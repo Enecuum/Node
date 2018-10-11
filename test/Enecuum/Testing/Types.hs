@@ -59,7 +59,7 @@ data ConnectionWorkerHandle = ConnectionWorkerHandle
   { _threadId    :: ThreadId    -- ^ Server thread ID.
   , _control     :: Control     -- ^ Server control interface.
   , _nodeRuntime :: NodeRuntime -- ^ Node runtime.
-  , _backConnection :: TMVar D.NetworkConnection -- ^ back connection to client.
+  , _backConnection :: TMVar D.TcpConnection -- ^ back connection to client.
   }
 
 -- | Logger runtime. Stores messages.
