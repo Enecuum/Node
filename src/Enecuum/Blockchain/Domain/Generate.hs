@@ -1,5 +1,5 @@
-{-# LANGUAGE PackageImports #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE PackageImports        #-}
 module Enecuum.Blockchain.Domain.Generate where
 
 import           "cryptonite" Crypto.Random            (MonadRandom)
@@ -13,21 +13,31 @@ import           Enecuum.Blockchain.Domain.Transaction
 import           Enecuum.Blockchain.Domain.Types
 import qualified Enecuum.Language                      as L
 import           Enecuum.Prelude                       hiding (Ordering)
+import Enecuum.Core.Types.Logger
 
+-- | Order for key blocks
 data Ordering = InOrder | RandomOrder
-data Boundary = Off | On
 
--- quantityOfWallets :: Integer
--- quantityOfWallets = 5
+-- | Boundary for transaction generation (On - for demo purpose, Off - for production)
+data Boundary = Off | On
 
 kBlockInBunch :: Integer
 kBlockInBunch = 3
 
+transactionsInMicroblock :: Int
+transactionsInMicroblock = 3
+
+generateNKBlocks :: (L.ERandom m, Monad m) => Integer -> m (StringHash, [KBlock])
 generateNKBlocks = generateKBlocks genesisHash
+
+generateNKBlocksWithOrder :: Integer -> Ordering -> L.ERandomL (StringHash, [KBlock])
 generateNKBlocksWithOrder = createKBlocks genesisHash
 
 -- Generate bunch of key blocks (randomly or in order)
-createKBlocks :: StringHash -> Integer -> Ordering -> L.NodeL (StringHash, [KBlock])
+-- createKBlocks :: StringHash -> Integer -> Ordering -> L.ERandomL (StringHash, [KBlock])
+createKBlocks
+  :: (Monad m, L.ERandom m) =>
+     StringHash -> Integer -> Ordering -> m (StringHash, [KBlock])
 createKBlocks prevKBlockHash from order = do
     (lastHash, kBlockBunch) <- generateKBlocks prevKBlockHash from
     kBlockIndices           <- generateIndices order
@@ -35,7 +45,9 @@ createKBlocks prevKBlockHash from order = do
     pure (lastHash, kBlocks)
 
 -- Generate bunch of key blocks (in order)
-generateKBlocks :: StringHash -> Integer -> L.NodeL (StringHash, [KBlock])
+-- generateKBlocks :: StringHash -> Integer -> L.ERandomL (StringHash, [KBlock])
+generateKBlocks
+  :: Monad m => StringHash -> Integer -> m (StringHash, [KBlock])
 generateKBlocks prevHash from = do
     blocks <- loopGenKBlock prevHash from (from + kBlockInBunch)
     case blocks of
@@ -43,7 +55,7 @@ generateKBlocks prevHash from = do
         _  -> pure (toHash $ last blocks, blocks)
 
 -- loop - state substitute : create new Kblock using hash of previous
-loopGenKBlock :: StringHash -> Integer -> Integer -> L.NodeL [KBlock]
+loopGenKBlock :: Monad m => StringHash -> Integer -> Integer -> m [KBlock]
 loopGenKBlock prevHash from to = do
     let kblock      = genKBlock prevHash from
         newPrevHash = toHash kblock
@@ -56,7 +68,9 @@ loopGenKBlock prevHash from to = do
 genKBlock :: StringHash -> Integer -> KBlock
 genKBlock prevHash i = KBlock {_prevHash = prevHash, _number = i, _nonce = i, _solver = toHash (i + 3)}
 
-genNTransactions :: Int -> L.NodeL [Transaction]
+-- genNTransactions :: Int -> L.ERandomL [Transaction]
+genNTransactions
+  :: (L.ERandom m, Monad m) => Int -> m [Transaction]
 genNTransactions k = replicateM k $ genTransaction On
 
 dummyTx = Transaction
@@ -86,10 +100,14 @@ privateKeys1 = map (\a -> read a )
         , "MzwHKfF4vGsQB2hgcK3MFKY9TaFaUe78NJwQehfjZ5s"
     ]
 
+-- | Wallets for demo purpose
 wallets1 :: [KeyPair]
 wallets1 = map (\(pub,priv) -> KeyPair pub priv) $ zip publicKeys1 privateKeys1
 
-genTransaction :: Boundary -> L.NodeL Transaction
+-- | Generate signed transaction
+-- genTransaction :: Boundary -> L.ERandomL Transaction
+genTransaction
+  :: (Monad m, L.ERandom m) => Boundary -> m Transaction
 genTransaction isFromRange = do
     (ownerKeyPair, receiverKeyPair) <- case isFromRange of
         On -> do
@@ -106,7 +124,7 @@ genTransaction isFromRange = do
             pure (owner, receiver)
 
     amount <- L.getRandomInt (0, 100)
-    
+
     let owner = getPub ownerKeyPair
         receiver = getPub receiverKeyPair
         currency = ENQ
@@ -122,17 +140,41 @@ genTransaction isFromRange = do
       , _receiver = receiver
       , _amount = amount
       , _currency = currency
-      , _signature = signature        
+      , _signature = signature
     }
     pure transaction
 
-genMicroblock :: StringHash -> [Transaction] -> Microblock
-genMicroblock hashofKeyBlock tx = Microblock {_keyBlock = hashofKeyBlock, _transactions = tx}
+-- | Generate signed microblock   
+-- genMicroblock :: StringHash -> [Transaction] -> L.ERandomL Microblock
+genMicroblock
+  :: (Monad m, L.ERandom m) =>
+     StringHash -> [Transaction] -> m Microblock
+genMicroblock hashofKeyBlock tx = do
+    (KeyPair publisherPubKey publisherPrivKey)<- L.generateKeyPair
+    let mb = MicroblockForSign {
+        _keyBlock = hashofKeyBlock
+      , _transactions = tx
+      , _publisher = publisherPubKey}
 
-genRandMicroblock :: KBlock -> L.NodeL Microblock
-genRandMicroblock kBlock = genMicroblock (toHash kBlock) <$> genNTransactions 3
+    signature <- L.sign publisherPrivKey mb
+    let microblock = Microblock {
+        _keyBlock = hashofKeyBlock
+      , _transactions = tx
+      , _publisher = publisherPubKey
+      , _signature = signature
+      }
+    pure microblock
 
-generateIndices :: Ordering -> L.NodeL [Integer]
+-- genRandMicroblock :: KBlock -> L.ERandomL Microblock
+-- genRandMicroblock
+--   :: (Monad m, L.ERandom m,
+--       Data.HGraph.StringHashable.StringHashable a) =>
+--      a -> m Microblock
+genRandMicroblock kBlock = genMicroblock (toHash kBlock) =<< genNTransactions transactionsInMicroblock
+
+-- | Generate indices with order
+-- generateIndices :: Ordering -> L.ERandomL [Integer]
+generateIndices :: (L.ERandom m, Monad m) => Ordering -> m [Integer]
 generateIndices order = do
     case order of
         RandomOrder -> loopGenIndices [0 .. kBlockInBunch]
@@ -146,7 +188,8 @@ generateIndices order = do
 -- [1,3] - 1
 -- [3] - 3
 -- the result: [2,4,5,1,3]
-loopGenIndices :: [Integer] -> L.NodeL [Integer]
+-- loopGenIndices :: [Integer] -> L.ERandomL [Integer]
+loopGenIndices :: (Monad m, L.ERandom m, Eq a) => [a] -> m [a]
 loopGenIndices numbers = do
     if (not $ null numbers)
         then do

@@ -103,7 +103,8 @@ instance L.Logger (Free NodeDefinitionF) where
 instance L.ERandom (Free NodeDefinitionF) where
     getRandomInt =  evalCoreEffectNodeDefinitionF . L.getRandomInt
     evalRand r g = evalCoreEffectNodeDefinitionF  $ L.evalRand r g
-
+    generateKeyPair = evalCoreEffectNodeDefinitionF $ L.generateKeyPair
+    sign key msg = evalCoreEffectNodeDefinitionF $ L.sign key msg 
 
 -- instance L.NRandom (Free NodeDefinitionF) where
 --     evalMonadRandom = evalCoreEffectNodeDefinitionF $ L.evalMonadRandom

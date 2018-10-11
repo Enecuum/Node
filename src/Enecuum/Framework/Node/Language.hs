@@ -1,16 +1,16 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs           #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 
 module Enecuum.Framework.Node.Language where
 
-import           Enecuum.Prelude
-import qualified Enecuum.Core.Language                    as L
-import qualified Enecuum.Framework.State.Language         as L
-import qualified Enecuum.Framework.Networking.Language    as L
-import qualified Enecuum.Framework.Domain.Networking      as D
+import qualified Enecuum.Core.Language                 as L
+import qualified Enecuum.Core.Types                    as T
+import qualified Enecuum.Framework.Domain.Networking   as D
 import           Enecuum.Framework.MsgHandler.Language
-import qualified Enecuum.Core.Types                       as T
+import qualified Enecuum.Framework.Networking.Language as L
+import qualified Enecuum.Framework.State.Language      as L
+import           Enecuum.Prelude
 import           Language.Haskell.TH.MakeFunctor
 
 -- | Node language.
@@ -91,8 +91,10 @@ instance L.Logger (Free NodeF) where
 instance L.ERandom (Free NodeF) where
     getRandomInt = evalCoreEffectNodeF . L.getRandomInt
     evalRand r g = evalCoreEffectNodeF $ L.evalRand r g
+    generateKeyPair = evalCoreEffectNodeF $ L.generateKeyPair
+    sign key msg = evalCoreEffectNodeF $ L.sign key msg
 
--- instance L.NRandom (Free NodeF) where    
+-- instance L.NRandom (Free NodeF) where
 --     evalMonadRandom = evalCoreEffectNodeF $ L.evalMonadRandom
 
 instance L.ControlFlow (Free NodeF) where

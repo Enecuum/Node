@@ -8,3 +8,4 @@ import Enecuum.Blockchain.Domain.Graph as X
 import Enecuum.Blockchain.Domain.Microblock as X
 import Enecuum.Blockchain.Domain.Generate as X
 import Enecuum.Blockchain.Domain.Crypto as X
+import Enecuum.Blockchain.Domain.Types as X

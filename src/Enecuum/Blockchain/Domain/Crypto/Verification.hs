@@ -4,8 +4,8 @@
 module Enecuum.Blockchain.Domain.Crypto.Verification where
 
 import           "cryptonite" Crypto.Hash (SHA3_256(..))
-import           Crypto.PubKey.ECC.ECDSA (Signature, PublicKey,verify)
-import           Data.Serialize (Serialize, encode)
+import           Crypto.PubKey.ECC.ECDSA (Signature, PublicKey, verify)
+import           Data.Serialize (encode)
 import           Enecuum.Prelude
 
 verifyEncodable :: Serialize msg => PublicKey -> Signature -> msg -> Bool

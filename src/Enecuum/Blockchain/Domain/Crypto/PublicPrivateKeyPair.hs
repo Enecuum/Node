@@ -27,13 +27,10 @@ import           "cryptonite" Crypto.Random                          (MonadRando
 import           Data.ByteString.Base58
 import qualified Data.ByteString.Char8                               as BC
 import           Data.Int                                            (Int64)
-import           Data.Maybe
-import           Data.Serialize
 import           Enecuum.Blockchain.Domain.Crypto.SerializeInstances ()
-import           GHC.Generics
+import           Enecuum.Prelude
 import           Math.NumberTheory.Moduli
-import           Prelude
-
+import           Prelude                                             (show)
 
 newtype PublicKey  = PublicKey256k1 Integer deriving (Generic, Serialize, Eq, Ord, Num, Enum)
 newtype PrivateKey = PrivateKey256k1 Integer deriving (Generic, Serialize, Eq, Ord)

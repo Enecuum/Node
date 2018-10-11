@@ -1,34 +1,29 @@
 {-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiWayIf             #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE TypeApplications       #-}
 
 module Enecuum.Assets.Nodes.GraphNode where
 
-import           Enecuum.Prelude
-import Data.Map (fromList, lookup, insert, Map(..))
-import           Control.Lens                  (makeFieldsNoPrefix)
-
-
-import qualified Enecuum.Domain                as D
-import qualified Enecuum.Language              as L
-import qualified Enecuum.Blockchain.Lens       as Lens
-import qualified Enecuum.Core.Lens             as Lens
 import           Data.HGraph.StringHashable
-
-import           Enecuum.Framework.Language.Extra (HasGraph, HasFinished)
-import qualified Enecuum.Blockchain.Domain.Graph as TG
-import           Enecuum.Assets.Nodes.Messages
+import           Data.Map                         (Map, fromList, insert, lookup)
 import           Enecuum.Assets.Nodes.Address
+import           Enecuum.Assets.Nodes.Messages
+import qualified Enecuum.Blockchain.Domain.Graph  as TG
+import qualified Enecuum.Blockchain.Lens          as Lens
+import qualified Enecuum.Domain                   as D
+import           Enecuum.Framework.Language.Extra (HasFinished, HasGraph)
+import qualified Enecuum.Language                 as L
+import           Enecuum.Prelude
 
 data GraphNodeData = GraphNodeData
     { _graph         :: TG.GraphVar
     , _kBlockPending :: D.StateVar [D.KBlock]
     , _curNode       :: D.StateVar D.StringHash
     , _logVar        :: D.StateVar [Text]
-    , _ledger        :: D.StateVar (Map WalletId Integer)
+    , _ledger        :: D.StateVar (Map WalletId D.Amount)
     , _finished      :: D.StateVar Bool
     }
 
@@ -109,7 +104,8 @@ addKBlock nodeData kBlock = do
 
 -- | Add microblock to graph
 addMBlock :: GraphNodeData -> D.Microblock -> L.StateL Bool
-addMBlock nodeData mblock@(D.Microblock hash _) = do
+addMBlock nodeData mblock = do
+    let hash = mblock ^. Lens.keyBlock
     kblock <- getKBlock nodeData hash
 
     unless (isJust kblock) $ stateLog nodeData $ "Can't add MBlock to the graph: KBlock not found (" +|| hash ||+ ")."
@@ -126,8 +122,8 @@ calculateLedger :: GraphNodeData -> D.Microblock -> Free L.StateF ()
 calculateLedger nodeData mblock = do
     forM_ (mblock ^. Lens.transactions) $ \tx -> do
         ledgerW <- L.readVar $ nodeData ^. ledger
-        let 
-            owner          = tx ^. Lens.owner            
+        let
+            owner          = tx ^. Lens.owner
             receiver       = tx ^. Lens.receiver
             amount         = tx ^. Lens.amount
             currentBalance = lookup owner ledgerW

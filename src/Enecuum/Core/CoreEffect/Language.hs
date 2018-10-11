@@ -3,6 +3,7 @@ module Enecuum.Core.CoreEffect.Language
   ( CoreEffectF (..)
   , CoreEffect
   , evalLogger
+  , evalRandom
   ) where
 
 import           Enecuum.Prelude
@@ -41,6 +42,8 @@ evalControlFlow a = liftF $ EvalControlFlow a id
 instance ERandom (Free CoreEffectF) where
   getRandomInt = evalRandom . getRandomInt
   evalRand r g = evalRandom $ evalRand r g
+  generateKeyPair = evalRandom $ generateKeyPair
+  sign key msg = evalRandom $ sign key msg  
   -- evalMonadRandom = evalRandom $ evalMonadRandom
 
 -- evalRandomN :: NRandomL a -> CoreEffect a

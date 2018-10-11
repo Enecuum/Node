@@ -13,3 +13,4 @@ makeFieldsNoPrefix ''Transaction
 makeFieldsNoPrefix ''TransactionForSign
 makeFieldsNoPrefix ''KBlock
 makeFieldsNoPrefix ''Microblock
+makeFieldsNoPrefix ''MicroblockForSign 

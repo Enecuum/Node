@@ -1,9 +1,7 @@
 module Enecuum.Framework.NodeDefinition.Interpreter where
 
 --
-import Enecuum.Prelude
-
-
+import Enecuum.Prelude hiding (fromJust)
 import qualified Data.Map                           as M
 import           Data.Aeson                         as A
 import           Control.Concurrent.STM.TChan
@@ -11,11 +9,9 @@ import qualified Network.Socket.ByteString.Lazy     as S
 import qualified Network.Socket                     as S hiding (recv)
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Framework.Networking.Internal.TCP.Server
-
 import           Enecuum.Framework.Node.Interpreter
 import           Enecuum.Framework.RpcMethod.Interpreter
 import           Enecuum.Framework.Runtime                 (NodeRuntime)
-
 import qualified Enecuum.Framework.Language                as L
 import qualified Enecuum.Framework.RLens                   as RLens
 import qualified Enecuum.Core.Interpreters                 as Impl
