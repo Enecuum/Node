@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DeriveAnyClass        #-}
-module Enecuum.Tests.Integration.TcpServerSpec where
+module Enecuum.Tests.Integration.UdpServerSpec where
 
 --
 
@@ -13,17 +13,23 @@ import qualified Enecuum.Language              as L
 
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Interpreters
-import           Enecuum.Language
 import qualified Enecuum.Runtime as Rt
 import qualified Enecuum.Domain                as D
-import           Enecuum.Framework.Networking.Internal.Tcp.Connection
+import           Enecuum.Framework.Networking.Internal.Udp.Connection
+import           Enecuum.Framework.Networking.Internal.Udp.Server
+import           Enecuum.Framework.Networking.Internal.Client
 import qualified Data.Map as M
+import qualified Network.Socket.ByteString.Lazy as S
+import           Control.Concurrent.STM.TChan
 
 
 
 -- Tests disabled
 spec :: Spec
-spec = describe "TcpServer" $ fromHUnitTest $ TestList [TestLabel "Ping pong" pingPong]
+spec = describe "UdpServer" $ fromHUnitTest $ TestList
+    [ TestLabel "Ping pong"          pingPong
+    , TestLabel "client server test" clientServerTest
+    ]
 
 createNodeRuntime :: IO Rt.NodeRuntime
 createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.createNodeRuntime
@@ -33,18 +39,18 @@ newtype Pong = Pong Int deriving (Generic, ToJSON, FromJSON)
 data Succes = Succes    deriving (Generic, ToJSON, FromJSON)
 
 
-pingHandle :: D.TcpConnection -> Ping -> D.TcpConnection -> L.NodeL ()
-pingHandle succConn (Ping i) conn = do
+pingHandle :: Ping -> D.UdpConnection -> L.NodeL ()
+pingHandle (Ping i) conn = do
     when (i < 10) $ L.send conn (Pong $ i + 1)
     when (i == 10) $ do
-        L.send succConn Succes
+        L.send succAdr Succes
         L.close conn
 
-pongHandle :: D.TcpConnection -> Pong -> D.TcpConnection -> L.NodeL ()
-pongHandle succConn (Pong i) conn = do
+pongHandle :: Pong -> D.UdpConnection -> L.NodeL ()
+pongHandle (Pong i) conn = do
     when (i < 10) $ L.send conn (Ping $ i + 1)
     when (i == 10) $ do
-        L.send succConn Succes
+        L.send succAdr Succes
         L.close conn
 
 pingPong :: Test
@@ -54,16 +60,14 @@ pingPong = TestCase $ do
     void $ forkIO $ do
         threadDelay 5000
         runNodeDefinitionL nr1 $ do
-            succConn <- L.open succAdr $ pure ()
             L.serving serverPort $ do
-                L.handler (pingHandle succConn)
-                L.handler (pongHandle succConn)
+                L.udpHandler pingHandle
+                L.udpHandler pongHandle
         threadDelay 5000
         runNodeDefinitionL nr2 $ do
-            succConn <- L.open succAdr $ pure ()
-            conn :: D.TcpConnection <- L.open serverAddr $ do
-                L.handler (pingHandle succConn)
-                L.handler (pongHandle succConn)
+            conn :: D.UdpConnection <- L.open serverAddr $ do
+                L.udpHandler pingHandle
+                L.udpHandler pongHandle
             L.send conn $ Ping 0
     ok <- succesServer succPort
     runNodeDefinitionL nr1 $ L.stopServing serverPort
@@ -81,9 +85,22 @@ succesServer port = do
     pure ok
 
 serverPort, succPort :: PortNumber
-serverPort = 2000
-succPort = 3000
+serverPort = 4000
+succPort = 5000
 
 serverAddr, succAdr :: D.Address
 serverAddr = D.Address "127.0.0.1" serverPort
 succAdr = D.Address "127.0.0.1" succPort
+
+clientServerTest = TestCase $ do
+    mvar <- newEmptyMVar
+    chan <- atomically $ newTChan 
+    void $ forkIO $ runUDPServer chan 7000 (\_ _ _ -> putMVar mvar True)
+    threadDelay 10000
+    void $ forkIO $ runClient D.UDP (D.Address "127.0.0.1" 7000) $
+        \sock -> void $ S.send sock "ok" 
+    void $ forkIO $ do
+        threadDelay 1000000
+        putMVar mvar False
+    ok <- takeMVar mvar
+    assertBool "" ok

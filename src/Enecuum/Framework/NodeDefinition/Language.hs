@@ -1,6 +1,7 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE GADTs           #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Enecuum.Framework.NodeDefinition.Language where
 
@@ -99,11 +100,18 @@ instance Serving (RpcHandlerL L.NodeL ()) where
 instance Serving (TcpHandlerL L.NodeL ()) where
     serving port handlersF = liftF $ ServingTcp port handlersF id
 
-instance L.Connection (Free NodeDefinitionF) where
-    close conn      = evalNodeL $ L.close conn
-    open addr handl = evalNodeL $ L.open addr handl
+instance Serving (UdpHandlerL L.NodeL ()) where
+    serving port handlersF = liftF $ ServingUdp port handlersF id
 
-instance L.Send D.TcpConnection (Free NodeDefinitionF) where
+instance L.Connection (Free NodeDefinitionF) D.TcpConnection (TcpHandlerL L.NodeL ()) where
+    close conn       = evalNodeL $ L.close conn
+    open  addr handl = evalNodeL $ L.open  addr handl
+
+instance L.Connection (Free NodeDefinitionF) D.UdpConnection (UdpHandlerL L.NodeL ()) where
+    close conn       = evalNodeL $ L.close conn
+    open  addr handl = evalNodeL $ L.open  addr handl
+
+instance L.Send a L.NodeL => L.Send a (Free NodeDefinitionF) where
     send conn msg = evalNodeL $ L.send conn msg
 
 -- | Starts RPC server.

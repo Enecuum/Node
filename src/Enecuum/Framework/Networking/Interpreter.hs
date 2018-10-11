@@ -7,7 +7,8 @@ import qualified Data.Text as T
 
 import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
-import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection as Int
+import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection as Tcp
+import qualified Enecuum.Framework.Networking.Internal.Udp.Connection as Udp
 import           Enecuum.Framework.Runtime
 import qualified Enecuum.Framework.RLens as RL
 import qualified Network.Socket.ByteString.Lazy     as S
@@ -29,8 +30,18 @@ interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
 
 interpretNetworkingL nr (L.SendMessage (D.TcpConnection conn) msg next) = do
     atomically $ do
-        m <- readTVar $ nr ^. RL.connects
-        whenJust (m ^. at conn) $ \con -> Int.send con msg
+        m <- readTVar $ nr ^. RL.tcpConnects
+        whenJust (m ^. at conn) $ \con -> Tcp.send con msg
+    pure $ next ()
+
+interpretNetworkingL nr (L.SendUdpMsgByConnection (D.UdpConnection conn) msg next) = do
+    atomically $ do
+        m <- readTVar $ nr ^. RL.udpConnects
+        whenJust (m ^. at conn) $ \con -> Udp.send con msg
+    pure $ next ()
+
+interpretNetworkingL _ (L.SendUdpMsgByAddress adr msg next) = do
+    Udp.sendUdpMsg adr msg
     pure $ next ()
 
 interpretNetworkingL _ _ = error "interpretNetworkingL EvalNetwork not implemented."

@@ -1,5 +1,7 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE UndecidableInstances   #-}
 
 
 module Enecuum.Framework.Node.Language where
@@ -64,17 +66,19 @@ openConnection = open
 closeConnection :: D.TcpConnection -> NodeL ()
 closeConnection = close
 
+class Connection a con hend | con -> hend where
+    close :: con -> a ()
+    open  :: D.Address -> hend -> a con
 
+instance Connection (Free NodeF) D.TcpConnection (TcpHandlerL NodeL ()) where
+    close conn       = liftF $ CloseTcpConnection conn id
+    open  addr handl = liftF $ OpenTcpConnection  addr handl id
 
-class Connection a where
-    close :: D.TcpConnection -> a ()
-    open  :: D.Address -> TcpHandlerL NodeL () -> a D.TcpConnection
+instance Connection (Free NodeF) D.UdpConnection (UdpHandlerL NodeL ()) where
+    close conn       = liftF $ CloseUdpConnection conn id
+    open  addr handl = liftF $ OpenUdpConnection  addr handl id
 
-instance Connection (Free NodeF) where
-    close conn = liftF $ CloseTcpConnection conn id
-    open addr handl = liftF $ OpenTcpConnection addr handl id
-
-instance L.Send D.TcpConnection NodeL where
+instance L.Send a (Free L.NetworkingF) => L.Send a NodeL where
     send conn msg = evalNetworking $ L.send conn msg
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
