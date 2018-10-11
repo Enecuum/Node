@@ -13,17 +13,23 @@ import qualified Enecuum.Language              as L
 
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Interpreters
-import           Enecuum.Language
 import qualified Enecuum.Runtime as Rt
 import qualified Enecuum.Domain                as D
 import           Enecuum.Framework.Networking.Internal.Udp.Connection
+import           Enecuum.Framework.Networking.Internal.Udp.Server
+import           Enecuum.Framework.Networking.Internal.Client
 import qualified Data.Map as M
+import qualified Network.Socket.ByteString.Lazy as S
+import           Control.Concurrent.STM.TChan
 
 
 
 -- Tests disabled
 spec :: Spec
-spec = describe "UdpServer" $ fromHUnitTest $ TestList [TestLabel "Ping pong" pingPong]
+spec = describe "UdpServer" $ fromHUnitTest $ TestList
+    [ TestLabel "Ping pong"          pingPong
+    , TestLabel "client server test" clientServerTest
+    ]
 
 createNodeRuntime :: IO Rt.NodeRuntime
 createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.createNodeRuntime
@@ -87,3 +93,17 @@ succPort = 5000
 serverAddr, succAdr :: D.Address
 serverAddr = D.Address "127.0.0.1" serverPort
 succAdr = D.Address "127.0.0.1" succPort
+
+
+clientServerTest = TestCase $ do
+    mvar <- newEmptyMVar
+    chan <- atomically $ newTChan 
+    void $ forkIO $ runUDPServer chan 7000 (\_ _ _ -> putMVar mvar True)
+    threadDelay 10000
+    void $ forkIO $ runClient D.UDP (D.Address "127.0.0.1" 7000) $
+        \sock -> void $ S.send sock "ok" 
+    void $ forkIO $ do
+        threadDelay 1000000
+        putMVar mvar False
+    ok <- takeMVar mvar
+    assertBool "" ok

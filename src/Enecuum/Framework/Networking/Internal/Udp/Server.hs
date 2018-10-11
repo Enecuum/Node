@@ -22,7 +22,7 @@ runUDPServer chan port handler = bracket (listenUDP port) close $ \sock -> do
             tryMR (sendTo sock (B.toStrict msg) reciver) (\_ -> pure ()) 
 
         talk :: IO ()
-        talk = forever $ tryMR (recvFrom sock (1024*4)) $
+        talk = forever $ tryMR (recvFrom sock (1024)) $
             \(msg, addr) -> handler (B.fromStrict msg) respChan addr
 
     finally (serv chan sendMsg talk) (close sock)
@@ -36,7 +36,6 @@ listenUDP port = do
         (Just (defaultHints {addrFlags = [AI_PASSIVE]}))
         Nothing 
         (Just $ show port)
-    sock <- socket (addrFamily serveraddr) Stream defaultProtocol
+    sock <- socket (addrFamily serveraddr) Datagram defaultProtocol
     bind sock (addrAddress serveraddr)
-    listen sock 5
     pure sock
