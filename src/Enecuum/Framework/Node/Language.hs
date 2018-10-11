@@ -66,9 +66,9 @@ openConnection = open
 closeConnection :: D.TcpConnection -> NodeL ()
 closeConnection = close
 
-class Connection a con hend | con -> hend where
+class Connection a con handler | con -> handler where
     close :: con -> a ()
-    open  :: D.Address -> hend -> a con
+    open  :: D.Address -> handler -> a con
 
 instance Connection (Free NodeF) D.TcpConnection (TcpHandlerL NodeL ()) where
     close conn       = liftF $ CloseTcpConnection conn id
