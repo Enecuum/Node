@@ -1,13 +1,13 @@
 {-# LANGUAGE LambdaCase#-}
-module Enecuum.Framework.Networking.Internal.Udp.Connection where
- {-
+module Enecuum.Framework.Networking.Internal.Udp.Connection
     ( close
     , send
     , startServer
     , stopServer
     , openConnect
+    , sendUdpMsg
     ) where
--}
+
 import           Enecuum.Prelude
 import           Data.Aeson
 import           Control.Concurrent.Chan
@@ -21,7 +21,7 @@ import           Enecuum.Framework.Runtime (ConnectionVar (..))
 import qualified Enecuum.Framework.Domain.Networking as D
 import           Enecuum.Framework.Networking.Internal.Client
 import           Enecuum.Framework.Networking.Internal.Udp.Server 
-import qualified Network.Socket as S hiding (recv)
+import qualified Network.Socket as S hiding (recv, send, sendAll)
 import qualified Network.Socket.ByteString.Lazy as S
 import           Control.Monad.Extra
 
@@ -87,6 +87,9 @@ readCommand conn = atomically $ do
             chan <- readTMVar conn
             Just <$> readTChan chan
 
+sendUdpMsg :: D.Address -> LByteString -> IO ()
+sendUdpMsg addr msg = runClient UDP addr $ \sock -> S.sendAll sock msg
+
 -- | Open new connect to adress
 openConnect :: D.Address -> Handlers -> IO UdpConnectionVar
 openConnect addr handlers = do
@@ -115,3 +118,4 @@ connectManager conn sock = readCommand conn >>= \case
             \_ -> connectManager conn sock
     -- conect is closed, stop of command reading
     Nothing           -> pure ()
+
