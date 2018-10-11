@@ -48,12 +48,12 @@ startNBlockPacketGenerationHandler (StartNBlockPacketGeneration i) = sendRequest
 
 getLastKBlockHandler :: GetLastKBlock -> L.NodeL Text
 getLastKBlockHandler _ = do
-    res :: Either Text D.KBlock <- L.makeRpcRequest graphNodeRpcAddress M.GetLastKBlock
+    res :: Either Text D.KBlock <- L.makeRpcRequest graphNodeTransmitterRpcAddress M.GetLastKBlock
     pure . eitherToText $ res
 
 getWalletBalance :: GetWalletBalance -> L.NodeL Text
 getWalletBalance (GetWalletBalance walletId) = do
-    res :: Either Text M.WalletBalanceMsg <- L.makeRpcRequest graphNodeRpcAddress (M.GetWalletBalance walletId)
+    res :: Either Text M.WalletBalanceMsg <- L.makeRpcRequest graphNodeTransmitterRpcAddress (M.GetWalletBalance walletId)
     pure . eitherToText $ res
 
 {-

@@ -9,7 +9,7 @@ import Enecuum.Prelude
 import qualified Enecuum.Language              as L
 import qualified Enecuum.Domain                as D
 
-import           Enecuum.Assets.Nodes.Address (graphNodeRpcAddress, powNodeRpcPort)
+import           Enecuum.Assets.Nodes.Address (graphNodeTransmitterRpcAddress, powNodeRpcPort)
 import           Data.HGraph.StringHashable (StringHash (..), toHash)
 import           Enecuum.Assets.Nodes.Messages (
     SuccessMsg (..), ForeverChainGeneration(..), NBlockPacketGeneration(..))
@@ -36,7 +36,7 @@ data KeyBlockResponse = KeyBlockResponse { kBlock :: [D.KBlock] }
 
 sendKBlock :: D.KBlock -> L.NodeL ()
 sendKBlock kBlock = do
-    eResult <- L.makeRpcRequest graphNodeRpcAddress kBlock
+    eResult <- L.makeRpcRequest graphNodeTransmitterRpcAddress kBlock
     case eResult of
         Left  msg        -> L.logInfo $ "KBlock sending failed: " +|| msg ||+ "."
         Right SuccessMsg -> L.logInfo "KBlock sending success."

@@ -43,7 +43,7 @@ poaNode = do
 
     L.scenario $ forever $ do
         L.delay $ 100 * 1000
-        eKBlock <- L.makeRpcRequest graphNodeRpcAddress GetLastKBlock
+        eKBlock <- L.makeRpcRequest graphNodeTransmitterRpcAddress GetLastKBlock
         case eKBlock of
             Left  _     -> pure ()
             Right block -> do
@@ -58,7 +58,7 @@ poaNode = do
                         ||+ ". Transactions:"
                         +|  showTransactions mBlock
                         |+  ""
-                    _ :: Either Text SuccessMsg <- L.makeRpcRequest graphNodeRpcAddress mBlock
+                    _ :: Either Text SuccessMsg <- L.makeRpcRequest graphNodeTransmitterRpcAddress mBlock
                     pure ()
 
     L.nodeFinishPending poaData

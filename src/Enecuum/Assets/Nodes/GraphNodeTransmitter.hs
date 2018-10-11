@@ -4,7 +4,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiWayIf             #-}
 
-module Enecuum.Assets.Nodes.GraphNode where
+module Enecuum.Assets.Nodes.GraphNodeTransmitter (graphNodeTransmitter) where
 
 import           Enecuum.Prelude
 import Data.Map (fromList, lookup, insert, Map(..))
@@ -213,12 +213,12 @@ graphNodeInitialization = L.scenario $ do
         <*> L.newVar False
 
 -- | Start of graph node
-graphNode :: L.NodeDefinitionL ()
-graphNode = do
-    L.nodeTag "graphNode"
+graphNodeTransmitter :: L.NodeDefinitionL ()
+graphNodeTransmitter = do
+    L.nodeTag "graphNodeTransmitter"
     nodeData <- graphNodeInitialization
 
-    L.serving graphNodeRpcPort $ do
+    L.serving graphNodeTransmitterRpcPort $ do
         L.methodE $ acceptKBlock nodeData
         L.methodE $ acceptMBlock nodeData
         L.method $ getLastKBlock nodeData
@@ -226,4 +226,4 @@ graphNode = do
 
     L.std $ L.stdHandler $ L.setNodeFinished nodeData
     L.nodeFinishPending nodeData
-    L.stopServing graphNodeRpcPort
+    L.stopServing graphNodeTransmitterRpcPort
