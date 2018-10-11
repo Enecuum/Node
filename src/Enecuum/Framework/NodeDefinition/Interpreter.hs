@@ -1,12 +1,11 @@
 module Enecuum.Framework.NodeDefinition.Interpreter where
 
---
 import Enecuum.Prelude
-
 
 import qualified Data.Map                           as M
 import           Data.Aeson                         as A
 import           Control.Concurrent.STM.TChan
+import           Control.Concurrent                 (killThread)
 import qualified Network.Socket.ByteString.Lazy     as S
 import qualified Network.Socket                     as S hiding (recv)
 import           Enecuum.Legacy.Service.Network.Base
@@ -32,9 +31,9 @@ import qualified Data.Text as T
 addProcess :: NodeRuntime -> D.ProcessPtr a -> ThreadId -> IO ()
 addProcess nodeRt pPtr threadId = do
     pId <- D.getProcessId pPtr
-    ps <- atomically $ takeTMVar $ nodeRt ^. RLens.processes
+    ps <- atomically $ readTVar $ nodeRt ^. RLens.processes
     let newPs = M.insert pId threadId ps
-    atomically $ putTMVar (nodeRt ^. RLens.processes) newPs
+    atomically $ writeTVar (nodeRt ^. RLens.processes) newPs
 
 interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF a -> IO a
 interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
@@ -137,6 +136,13 @@ callRpc runner methods msg = case A.decode msg of
         Nothing         -> pure $ D.RpcResponseError (A.String $ "The method " <> method <> " isn't supported.") reqId
     Nothing -> pure $ D.RpcResponseError (A.String "error of request parsing") 0
 
-
 runNodeDefinitionL :: NodeRuntime -> Free L.NodeDefinitionF a -> IO a
 runNodeDefinitionL nodeRt = foldFree (interpretNodeDefinitionL nodeRt)
+
+-- TODO: move it somewhere.
+clearNodeRuntime :: NodeRuntime -> IO ()
+clearNodeRuntime nodeRt = do
+    serverPorts <- M.keys <$> readTVarIO (nodeRt ^. RLens.servers)
+    threadIds <- M.elems <$> readTVarIO (nodeRt ^. RLens.processes)
+    mapM_ (runNodeDefinitionL nodeRt . L.stopServing) serverPorts
+    mapM_ killThread threadIds

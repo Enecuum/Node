@@ -10,7 +10,7 @@ import qualified Data.Aeson as A
 import qualified Enecuum.Language as L
 import qualified Enecuum.Assets.Nodes.Messages as M
 import           Enecuum.Assets.Nodes.Address
-import           Enecuum.Framework.Language.Extra (HasFinished)
+import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
 
 data GetLastKBlock       = GetLastKBlock
 newtype GetWalletBalance = GetWalletBalance M.WalletId
@@ -28,13 +28,6 @@ instance A.FromJSON StartForeverChainGeneration where
 
 instance A.FromJSON StartNBlockPacketGeneration where
     parseJSON = A.withObject "StartNBlockPacketGeneration" $ \o -> StartNBlockPacketGeneration <$> o A..: "number"
-
-
-data ClientNodeData = ClientNodeData
-    { _finished :: D.StateVar Bool
-    }
-
-makeFieldsNoPrefix ''ClientNodeData
 
 sendRequestToPoW :: forall a. (ToJSON a, Typeable a) => a -> L.NodeL Text
 sendRequestToPoW request = do
@@ -64,21 +57,22 @@ Requests:
     {"method":"StartNBlockPacketGeneration", "number" : 2}
     {"method":"StartNBlockPacketGeneration", "number" : 1}
     {"method":"GetWalletBalance", "walletID": 2}
-    {"method":"NodeFinished"}
+    {"method":"StopNode"}
 -}
 
 clientNode :: L.NodeDefinitionL ()
 clientNode = do
     L.logInfo "Client started"
-    nodeData <- ClientNodeData <$> L.scenario (L.atomically $ L.newVar True)
+    stateVar <- L.scenario $ L.atomically $ L.newVar NodeActing
+
     L.std $ do
         L.stdHandler getLastKBlockHandler
         L.stdHandler getWalletBalance
         L.stdHandler startForeverChainGenerationHandler
         L.stdHandler startNBlockPacketGenerationHandler
-        L.stdHandler $ L.setNodeFinished nodeData
+        L.stdHandler $ L.stopNodeHandler' stateVar
 
-    L.nodeFinishPending nodeData
+    L.awaitNodeFinished' stateVar
 
 eitherToText :: Show a => Either Text a -> Text
 eitherToText (Left  a) = "Server error: " <> a

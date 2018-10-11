@@ -13,7 +13,7 @@ import           Enecuum.Assets.Nodes.Address (graphNodeRpcAddress, powNodeRpcPo
 import           Data.HGraph.StringHashable (StringHash (..), toHash)
 import           Enecuum.Assets.Nodes.Messages (
     SuccessMsg (..), ForeverChainGeneration(..), NBlockPacketGeneration(..))
-import           Enecuum.Framework.Language.Extra (HasFinished)
+import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 
 type IterationsCount = Int
 type EnableDelays = Bool
@@ -23,7 +23,7 @@ data PoWNodeData = PoWNodeData
     , _prevHash            :: D.StateVar StringHash
     , _prevNumber          :: D.StateVar Integer
     , _requiredBlockNumber :: D.StateVar Int
-    , _finished            :: D.StateVar Bool
+    , _status              :: D.StateVar NodeStatus
     }
 
 makeFieldsNoPrefix ''PoWNodeData
@@ -59,7 +59,7 @@ kBlockProcess nodeData = do
 
 foreverChainGenerationHandle :: PoWNodeData -> ForeverChainGeneration -> L.NodeL SuccessMsg
 foreverChainGenerationHandle powNodeData _ = do
-    L.atomically $ L.writeVar (powNodeData ^. requiredBlockNumber) (10 ^ 6)
+    L.atomically $ L.writeVar (powNodeData ^. requiredBlockNumber) (10 ^ (6 :: Int))
     pure SuccessMsg
 
 nBlockPacketGenerationHandle :: PoWNodeData -> NBlockPacketGeneration -> L.NodeL SuccessMsg
@@ -79,7 +79,7 @@ powNode' delaysEnabled = do
         L.method $ foreverChainGenerationHandle nodeData
         L.method $ nBlockPacketGenerationHandle nodeData
 
-    L.std $ L.stdHandler $ L.setNodeFinished nodeData
+    L.std $ L.stdHandler $ L.stopNodeHandler nodeData
 
     L.process $ do
         L.atomically $ do
@@ -88,7 +88,7 @@ powNode' delaysEnabled = do
             L.writeVar (nodeData ^. requiredBlockNumber) (i - 1)
         kBlockProcess nodeData
 
-    L.nodeFinishPending nodeData
+    L.awaitNodeFinished nodeData
     L.stopServing powNodeRpcPort
 
 powNodeInitialization :: EnableDelays -> StringHash -> L.NodeL PoWNodeData
@@ -96,5 +96,5 @@ powNodeInitialization delaysEnabled genesisHash = do
     h <- L.atomically $ L.newVar genesisHash
     n <- L.atomically $ L.newVar 1
     b <- L.atomically $ L.newVar 0
-    f <- L.atomically $ L.newVar False
+    f <- L.atomically $ L.newVar NodeActing
     pure $ PoWNodeData delaysEnabled h n b f

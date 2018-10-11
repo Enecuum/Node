@@ -24,9 +24,8 @@ data NodeRuntime = NodeRuntime
     , _idCounter    :: TMVar Int              -- ^ ID counter. Used to generate VarIds, ProcessIds.
     , _state        :: NodeState              -- ^ State of node.
     , _nodeTag      :: TVar Text
-    , _stopNode     :: TMVar Bool
     , _connects     :: TVar (Map D.Address ConnectionImplementation)
-    , _processes    :: TMVar (Map D.ProcessId ThreadId)
+    , _processes    :: TVar (Map D.ProcessId ThreadId)
     }
 
 createNodeRuntime :: CoreRuntime -> IO NodeRuntime
@@ -38,13 +37,8 @@ createNodeRuntime coreRt =
         <*> newTMVarIO 0
         <*> newTMVarIO Map.empty
         <*> newTVarIO ""
-        <*> atomically newEmptyTMVar
         <*> newTVarIO mempty
-        <*> newTMVarIO Map.empty
-
--- TODO: more wise clearing here.
-clearNodeRuntime :: NodeRuntime -> IO ()
-clearNodeRuntime _ = pure ()
+        <*> newTVarIO mempty
 
 getNextId :: NodeRuntime -> STM Int
 getNextId nodeRt = do

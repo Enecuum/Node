@@ -15,11 +15,11 @@ import qualified Enecuum.Language             as L
 import qualified Enecuum.Blockchain.Lens      as Lens
 import           Enecuum.Prelude
 import           Enecuum.Assets.Nodes.Messages
-import           Enecuum.Framework.Language.Extra (HasFinished)
+import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 
 data PoANodeData = PoANodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock
-    , _finished            :: D.StateVar Bool
+    , _status              :: D.StateVar NodeStatus
     }
 
 makeFieldsNoPrefix ''PoANodeData
@@ -36,9 +36,9 @@ poaNode :: L.NodeDefinitionL ()
 poaNode = do
     L.nodeTag "PoA node"
     L.logInfo "Starting of PoA node"
-    poaData <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar False)
+    poaData <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing)
 
-    L.std $ L.stdHandler $ L.setNodeFinished poaData
+    L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
     L.process $ do
         L.delay $ 100 * 1000
@@ -56,4 +56,4 @@ poaNode = do
                     _ :: Either Text SuccessMsg <- L.makeRpcRequest graphNodeRpcAddress mBlock
                     pure ()
 
-    L.nodeFinishPending poaData
+    L.awaitNodeFinished poaData
