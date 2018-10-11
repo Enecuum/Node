@@ -5,7 +5,7 @@ import Enecuum.Prelude
 import qualified Enecuum.Framework.State.Language         as L
 import qualified Enecuum.Framework.Node.Language          as L
 import qualified Enecuum.Framework.Networking.Interpreter as Impl
-import           Enecuum.Framework.Runtime                (NodeRuntime, ConnectionImplementation)
+import           Enecuum.Framework.Runtime                (NodeRuntime, ConnectionVar)
 import qualified Enecuum.Core.Interpreters                as Impl
 import qualified Enecuum.Framework.State.Interpreter      as Impl
 import qualified Enecuum.Framework.RLens                  as RLens
@@ -52,7 +52,7 @@ interpretNodeL nodeRt (L.CloseTcpConnection (D.TcpConnection addr) next) = do
 
 interpretNodeL _ (L.NewGraph next) = next <$> initHGraph
 
-insertConnect :: TVar (Map D.Address ConnectionImplementation) -> D.Address -> ConnectionImplementation -> IO ()
+insertConnect :: TVar (Map D.Address ConnectionVar) -> D.Address -> ConnectionVar -> IO ()
 insertConnect m addr newCon = atomically $ do
     conns <- readTVar $ m
     whenJust (conns ^. at addr) I.close

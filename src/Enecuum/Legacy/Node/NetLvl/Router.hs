@@ -1,13 +1,14 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE PackageImports        #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE MultiWayIf            #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TypeFamilies          #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -fno-warn-orphans  #-}
 module Enecuum.Legacy.Node.NetLvl.Router (routerActorStart) where
 
 
@@ -17,7 +18,7 @@ import qualified Control.Concurrent                    as C
 import           Control.Concurrent.MVar
 import           Control.Concurrent.Chan.Unagi.Bounded
 import           Control.Monad ( void, when, forM_ )
-import           Control.Monad.Extra
+import "extra"   Control.Monad.Extra
 import           Control.Lens ( (^.), (%~), at )
 import           Data.Aeson                            as A
 import           Data.IORef

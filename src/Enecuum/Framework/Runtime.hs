@@ -15,7 +15,7 @@ import           Enecuum.Legacy.Service.Network.Base
 data VarHandle = VarHandle D.VarId (TVar Any)
 type NodeState = TMVar (Map.Map D.VarId VarHandle)
 
-data ConnectionImplementation = ConnectionImplementation (TMVar (TChan D.Comand))
+data ConnectionVar = ConnectionVar (TMVar (TChan D.Comand))
 
 data NodeRuntime = NodeRuntime
     { _coreRuntime  :: CoreRuntime
@@ -25,7 +25,7 @@ data NodeRuntime = NodeRuntime
     , _state        :: NodeState              -- ^ State of node.
     , _nodeTag      :: TVar Text
     , _stopNode     :: TMVar Bool
-    , _connects     :: TVar (Map D.Address ConnectionImplementation)
+    , _connects     :: TVar (Map D.Address ConnectionVar)
     }
 
 createNodeRuntime :: CoreRuntime -> IO NodeRuntime
