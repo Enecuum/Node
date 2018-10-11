@@ -17,7 +17,6 @@ import           Control.Concurrent.STM.TMVar
 import           Enecuum.Legacy.Service.Network.Base
 import           Data.Aeson.Lens
 import           Control.Concurrent.Async
-import           Enecuum.Framework.Runtime (ConnectionVar (..))
 import qualified Enecuum.Framework.Domain.Networking as D
 import           Enecuum.Framework.Networking.Internal.Client
 import           Enecuum.Framework.Networking.Internal.Udp.Server 
@@ -31,12 +30,8 @@ type Handlers   = Map Text Handler
 type ServerHandle = TChan D.ServerComand
 -- ByteString -> (Chan SendMsg) -> SockAddr
 
-data UdpConnectionVar
-    = ServerUdp S.SockAddr (TChan SendMsg)
-    | ClientUdp (TMVar (TChan D.Comand))
-
 -- | Start new server witch port
-startServer :: PortNumber -> Handlers -> (D.UdpConnection -> UdpConnectionVar -> IO ()) -> IO ServerHandle
+startServer :: PortNumber -> Handlers -> (D.UdpConnection -> D.UdpConnectionVar -> IO ()) -> IO ServerHandle
 startServer port handlers insertConnect = do
     chan <- atomically newTChan
     void $ forkIO $ runUDPServer chan port $ \msg msgChan sockAddr -> do
@@ -44,7 +39,7 @@ startServer port handlers insertConnect = do
         let host       = D.sockAddrToHost sockAddr
             connection = D.UdpConnection $ D.Address host port
 
-        insertConnect connection (ServerUdp sockAddr msgChan)
+        insertConnect connection (D.ServerUdpConnectionVar sockAddr msgChan)
         runHandlers   connection handlers msg
     pure chan
 
@@ -58,9 +53,9 @@ stopServer :: ServerHandle -> STM ()
 stopServer chan = writeTChan chan D.StopServer
 
 -- | Send msg to node.
-send :: UdpConnectionVar -> LByteString -> STM ()
-send (ClientUdp conn)          msg = writeComand conn $ D.Send  msg
-send (ServerUdp sockAddr chan) msg = writeTChan  chan $ SendMsg sockAddr msg
+send :: D.UdpConnectionVar -> LByteString -> STM ()
+send (D.ClientUdpConnectionVar conn)          msg = writeComand conn $ D.Send  msg
+send (D.ServerUdpConnectionVar sockAddr chan) msg = writeTChan  chan $ D.SendMsg sockAddr msg
 
 writeComand :: TMVar (TChan D.Comand) -> D.Comand -> STM ()
 writeComand conn cmd = unlessM (isEmptyTMVar conn) $ do
@@ -68,9 +63,9 @@ writeComand conn cmd = unlessM (isEmptyTMVar conn) $ do
     writeTChan chan cmd
 
 -- | Close the connect
-close :: UdpConnectionVar -> STM ()
-close (ClientUdp conn) = writeComand conn D.Close >> closeConn conn
-close (ServerUdp _ _)  = pure ()
+close :: D.UdpConnectionVar -> STM ()
+close (D.ClientUdpConnectionVar conn) = writeComand conn D.Close >> closeConn conn
+close (D.ServerUdpConnectionVar _ _)  = pure ()
 
 -- close connection
 closeConn :: TMVar (TChan D.Comand) -> STM ()
@@ -91,7 +86,7 @@ sendUdpMsg :: D.Address -> LByteString -> IO ()
 sendUdpMsg addr msg = runClient UDP addr $ \sock -> S.sendAll sock msg
 
 -- | Open new connect to adress
-openConnect :: D.Address -> Handlers -> IO UdpConnectionVar
+openConnect :: D.Address -> Handlers -> IO D.UdpConnectionVar
 openConnect addr handlers = do
     conn <- atomically (newTMVar =<< newTChan)
     void $ forkIO $ do
@@ -100,7 +95,7 @@ openConnect addr handlers = do
                 (readMessages (D.UdpConnection addr) handlers sock)
                 (connectManager conn sock))
             (atomically $ closeConn conn)
-    pure $ ClientUdp conn
+    pure $ D.ClientUdpConnectionVar conn
 
 readMessages :: D.UdpConnection -> Handlers -> S.Socket -> IO ()
 readMessages conn handlers sock = tryMR (S.recv sock (1024 * 4)) $ \msg -> do 

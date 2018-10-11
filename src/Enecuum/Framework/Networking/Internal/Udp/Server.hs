@@ -11,9 +11,8 @@ import           Enecuum.Domain as D
 import           Control.Monad.Extra
 import           Data.ByteString.Lazy as B (toStrict, fromStrict)
 
-data SendMsg = SendMsg SockAddr LByteString
 
-runUDPServer :: TChan ServerComand -> PortNumber -> (LByteString -> (TChan SendMsg) -> SockAddr -> IO ()) -> IO ()
+runUDPServer :: TChan ServerComand -> PortNumber -> (LByteString -> (TChan D.SendMsg) -> SockAddr -> IO ()) -> IO ()
 runUDPServer chan port handler = bracket (listenUDP port) close $ \sock -> do
     respChan <- atomically $ newTChan
     let 

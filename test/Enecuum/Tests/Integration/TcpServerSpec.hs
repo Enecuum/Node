@@ -61,7 +61,7 @@ pingPong = TestCase $ do
         threadDelay 5000
         runNodeDefinitionL nr2 $ do
             succConn <- L.open succAdr $ pure ()
-            conn     <- L.open serverAddr $ do
+            conn :: D.TcpConnection <- L.open serverAddr $ do
                 L.handler (pingHandle succConn)
                 L.handler (pongHandle succConn)
             L.send conn $ Ping 0

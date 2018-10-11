@@ -9,13 +9,13 @@ import           Enecuum.Core.Runtime (CoreRuntime)
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 import qualified Enecuum.Domain as D
 import           Enecuum.Legacy.Service.Network.Base
-
+import qualified Network.Socket as S
 
 -- TODO: the same types as in test runtime. Unify it.
 data VarHandle = VarHandle D.VarId (TVar Any)
 type NodeState = TMVar (Map.Map D.VarId VarHandle)
 
-data ConnectionVar = ConnectionVar (TMVar (TChan D.Comand))
+
 
 data NodeRuntime = NodeRuntime
     { _coreRuntime  :: CoreRuntime
@@ -25,7 +25,8 @@ data NodeRuntime = NodeRuntime
     , _state        :: NodeState              -- ^ State of node.
     , _nodeTag      :: TVar Text
     , _stopNode     :: TMVar Bool
-    , _connects     :: TVar (Map D.Address ConnectionVar)
+    , _tcpConnects  :: TVar (Map D.Address D.TcpConnectionVar)
+    , _udpConnects  :: TVar (Map D.Address D.UdpConnectionVar)
     }
 
 createNodeRuntime :: CoreRuntime -> IO NodeRuntime
@@ -38,6 +39,7 @@ createNodeRuntime coreRt =
         <*> newTMVarIO Map.empty
         <*> newTVarIO ""
         <*> (atomically newEmptyTMVar)
+        <*> newTVarIO mempty
         <*> newTVarIO mempty
 
 -- TODO: more wise clearing here.
