@@ -39,18 +39,18 @@ newtype Pong = Pong Int deriving (Generic, ToJSON, FromJSON)
 data Succes = Succes    deriving (Generic, ToJSON, FromJSON)
 
 
-pingHandle :: D.UdpConnection -> Ping -> D.UdpConnection -> L.NodeL ()
-pingHandle succConn (Ping i) conn = do
+pingHandle :: Ping -> D.UdpConnection -> L.NodeL ()
+pingHandle (Ping i) conn = do
     when (i < 10) $ L.send conn (Pong $ i + 1)
     when (i == 10) $ do
-        L.send succConn Succes
+        L.send succAdr Succes
         L.close conn
 
-pongHandle :: D.UdpConnection -> Pong -> D.UdpConnection -> L.NodeL ()
-pongHandle succConn (Pong i) conn = do
+pongHandle :: Pong -> D.UdpConnection -> L.NodeL ()
+pongHandle (Pong i) conn = do
     when (i < 10) $ L.send conn (Ping $ i + 1)
     when (i == 10) $ do
-        L.send succConn Succes
+        L.send succAdr Succes
         L.close conn
 
 pingPong :: Test
@@ -60,16 +60,14 @@ pingPong = TestCase $ do
     void $ forkIO $ do
         threadDelay 5000
         runNodeDefinitionL nr1 $ do
-            succConn <- L.open succAdr $ pure ()
             L.serving serverPort $ do
-                L.udpHandler (pingHandle succConn)
-                L.udpHandler (pongHandle succConn)
+                L.udpHandler pingHandle
+                L.udpHandler pongHandle
         threadDelay 5000
         runNodeDefinitionL nr2 $ do
-            succConn <- L.open succAdr $ pure ()
             conn :: D.UdpConnection <- L.open serverAddr $ do
-                L.udpHandler (pingHandle succConn)
-                L.udpHandler (pongHandle succConn)
+                L.udpHandler pingHandle
+                L.udpHandler pongHandle
             L.send conn $ Ping 0
     ok <- succesServer succPort
     runNodeDefinitionL nr1 $ L.stopServing serverPort
@@ -93,7 +91,6 @@ succPort = 5000
 serverAddr, succAdr :: D.Address
 serverAddr = D.Address "127.0.0.1" serverPort
 succAdr = D.Address "127.0.0.1" succPort
-
 
 clientServerTest = TestCase $ do
     mvar <- newEmptyMVar
