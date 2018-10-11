@@ -7,7 +7,7 @@
 module Enecuum.Assets.Nodes.GraphNodeTransmitter (graphNodeTransmitter) where
 
 import           Enecuum.Prelude
-import Data.Map (fromList, lookup, insert, Map(..))
+import Data.Map (fromList, lookup, insert, Map(..), elems)
 import           Control.Lens                  (makeFieldsNoPrefix)
 
 
@@ -232,8 +232,19 @@ acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
 acceptMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL (Either Text GetMBlocksForKBlockResponse)
 acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
     L.logInfo $ "Answering microblocks for kBlock " +|| show hash
-    
-    undefined
+    mBlockList <- L.atomically $ L.withGraph nodeData $ do 
+        mNodes <- L.getNode hash
+        case mNodes of
+            Nothing -> undefined
+            Just (D.HNode _ _ _ _ rLinks) -> do
+                aMBlocks                       <- forM (Data.Map.elems rLinks) $ \aNRef -> do
+                    Just (D.HNode _ _ (D.fromContent -> block) _ _) <- L.getNode aNRef
+                    case block of
+                        D.MBlockContent mBlock -> pure $ Just mBlock
+                        _               -> pure Nothing
+                pure $ catMaybes aMBlocks
+         
+    pure $ Right $ GetMBlocksForKBlockResponse mBlockList
 
 -- | Initialization of graph node
 graphNodeInitialization :: L.NodeDefinitionL GraphNodeData
