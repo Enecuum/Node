@@ -7,6 +7,7 @@ import           "cryptonite" Crypto.Hash (SHA3_256(..))
 import           Crypto.PubKey.ECC.ECDSA (Signature, PublicKey, verify)
 import           Data.Serialize (encode)
 import           Enecuum.Prelude
+import qualified Enecuum.Blockchain.Domain.Crypto.PublicPrivateKeyPair  as Enq
 
-verifyEncodable :: Serialize msg => PublicKey -> Signature -> msg -> Bool
-verifyEncodable publicKey signature msg = verify SHA3_256 publicKey signature (encode msg)
+verifyEncodable :: Serialize msg => Enq.PublicKey -> Signature -> msg -> Bool
+verifyEncodable publicKey signature msg = verify SHA3_256 (Enq.getPublicKey $ Enq.uncompressPublicKey publicKey) signature (encode msg)

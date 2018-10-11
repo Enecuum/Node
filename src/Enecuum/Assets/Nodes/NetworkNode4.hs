@@ -63,7 +63,7 @@ networkNode4Scenario nodeData = do
 
 newtorkNode4Initialization :: L.NodeL NetworkNodeChainData
 newtorkNode4Initialization = do
-    (_, blocks)     <- L.evalCoreEffectNodeF $ L.evalRandom $ D.generateNKBlocks 5
+    (_, blocks)     <- D.generateNKBlocks 5
     log             <- L.atomically $ L.newVar []
     chainLengthVar' <- L.atomically $ L.newVar blocks
     pure $ NetworkNodeChainData chainLengthVar' log
