@@ -36,8 +36,9 @@ createNodeRuntime coreRt =
         <*> initHGraph
         <*> newTVarIO mempty
         <*> newTMVarIO 0
-        <*> newTMVarIO Map.empty
+        <*> newTMVarIO mempty
         <*> newTVarIO ""
+        <*> newTVarIO mempty
         <*> newTVarIO mempty
         <*> newTVarIO mempty
 
