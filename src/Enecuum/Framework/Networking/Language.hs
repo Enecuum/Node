@@ -11,17 +11,19 @@ import qualified Enecuum.Core.Language                as L
 import qualified Enecuum.Framework.Network.Language   as L
 import qualified Data.Text                            as Text
 import qualified Enecuum.Framework.Domain             as D
-import qualified Enecuum.Framework.MsgHandler.Language as L
+import qualified Enecuum.Framework.Handler.Tcp.Language as L
 import           Language.Haskell.TH.MakeFunctor
 
 -- | Allows to work with network: open and close connections, send requests.
 data NetworkingF next where
   -- | Eval low-level networking script.
-  EvalNetwork :: L.NetworkL a -> (a -> next) -> NetworkingF  next
+  EvalNetwork               :: L.NetworkL a -> (a -> next) -> NetworkingF  next
   -- | Send RPC request and wait for the response.
-  SendRpcRequest :: D.Address -> D.RpcRequest -> (Either Text D.RpcResponse -> next) -> NetworkingF next
+  SendRpcRequest            :: D.Address -> D.RpcRequest -> (Either Text D.RpcResponse -> next) -> NetworkingF next
   -- | Send message to the connection.
-  SendMessage :: D.NetworkConnection -> D.RawData -> (() -> next)-> NetworkingF next
+  SendMessage               :: D.TcpConnection -> D.RawData -> (() -> next)-> NetworkingF next
+  SendUdpMsgByConnection    :: D.UdpConnection -> D.RawData -> (() -> next)-> NetworkingF next
+  SendUdpMsgByAddress       :: D.Address       -> D.RawData -> (() -> next)-> NetworkingF next
   -- | Eval core effect.
   EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF  next
 
@@ -38,24 +40,22 @@ sendRpcRequest :: D.Address -> D.RpcRequest -> NetworkingL (Either Text D.RpcRes
 sendRpcRequest address request = liftF $ SendRpcRequest address request id
 
 -- | Send message to the connection.
-sendMessage :: D.NetworkConnection -> D.RawData -> NetworkingL ()
+sendMessage :: D.TcpConnection -> D.RawData -> NetworkingL ()
 sendMessage conn msg = liftF $ SendMessage conn msg id
 
 -- | Send message to the reliable connection.
 -- TODO: distiguish reliable (TCP-like) connection from unreliable (UDP-like).
 -- TODO: make conversion to and from package.
-class Send m where
-    send :: (Typeable a, ToJSON a) => D.NetworkConnection -> a -> m ()
+class Send con m where
+    send :: (Typeable a, ToJSON a) => con -> a -> m ()
 
-instance Send (Free NetworkingF) where
+instance Send D.TcpConnection (Free NetworkingF) where
     send conn msg = sendMessage conn . A.encode $
-      D.NetworkMsg (L.makeTagName msg) (toJSON msg)
+        D.NetworkMsg (D.toTag msg) (toJSON msg)
 
 -- | Eval core effect.
 evalCoreEffectNetworkingF :: L.CoreEffect a -> NetworkingL a
 evalCoreEffectNetworkingF coreEffect = liftF $ EvalCoreEffectNetworkingF coreEffect id
-
-
 
 instance L.Logger (Free NetworkingF) where
   logMessage level msg = evalCoreEffectNetworkingF $ L.logMessage level msg

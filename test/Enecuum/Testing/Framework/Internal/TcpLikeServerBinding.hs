@@ -23,7 +23,7 @@ registerConnection nodeRt bindedServer = atomically $ do
     putTMVar (nodeRt ^. RLens.connections) newConnections
 
 -- | Remove connection
-removeConnection :: T.NodeRuntime -> D.NetworkConnection -> IO (Maybe T.BindedServer)
+removeConnection :: T.NodeRuntime -> D.TcpConnection -> IO (Maybe T.BindedServer)
 removeConnection nodeRt connection = atomically $ do
     connections                  <- takeTMVar (nodeRt ^. RLens.connections)
     (mbNodeConn, newConnections) <- case Map.lookup (connection ^. Lens.address) connections of
@@ -52,7 +52,7 @@ stopBindedServer bindedServer = killThread $ bindedServer ^. RLens.handle . RLen
 
 -- | Establish connection with the server through test environment.
 -- TODO: check if connection exists.
-closeConnection :: T.NodeRuntime -> D.NetworkConnection -> IO ()
+closeConnection :: T.NodeRuntime -> D.TcpConnection -> IO ()
 closeConnection nodeRt connection = removeConnection nodeRt connection >>= \case
     Nothing           -> pure ()
     Just bindedServer -> stopBindedServer bindedServer

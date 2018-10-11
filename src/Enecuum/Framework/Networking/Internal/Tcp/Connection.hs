@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase#-}
-module Enecuum.Framework.Networking.Internal.Internal
+module Enecuum.Framework.Networking.Internal.Tcp.Connection
     ( close
     , send
     , startServer
@@ -7,7 +7,6 @@ module Enecuum.Framework.Networking.Internal.Internal
     , openConnect
     ) where
 
-import           Data.IP
 import           Enecuum.Prelude
 import           Data.Aeson
 import           Control.Concurrent.STM.TChan
@@ -18,51 +17,46 @@ import           Data.Aeson.Lens
 import           Control.Concurrent.Async
 import           Enecuum.Framework.Runtime (ConnectionImplementation (..))
 import qualified Enecuum.Framework.Domain.Networking as D
-import qualified Enecuum.Framework.Networking.Internal.TCP.Client as TCP
-import qualified Enecuum.Framework.Networking.Internal.TCP.Server as TCP
+import           Enecuum.Framework.Networking.Internal.Client
+import           Enecuum.Framework.Networking.Internal.Tcp.Server 
 import qualified Network.Socket.ByteString.Lazy as S
 import qualified Network.Socket as S hiding (recv)
+import           Enecuum.Control.Monad.Extra
 
-type Handler    = Value -> D.NetworkConnection -> IO ()
+type Handler    = Value -> D.TcpConnection -> IO ()
 type Handlers   = Map Text Handler
 
-type ServerHandle = TChan TCP.ServerComand
+type ServerHandle = TChan D.ServerComand
 
 -- | Start new server witch port
-startServer :: PortNumber -> Handlers -> (D.NetworkConnection -> ConnectionImplementation -> IO ()) -> IO ServerHandle
+startServer :: PortNumber -> Handlers -> (D.TcpConnection -> ConnectionImplementation -> IO ()) -> IO ServerHandle
 startServer port handlers ins = do
     chan <- atomically newTChan
-    void $ forkIO $ TCP.runServer chan port $ \sock -> do
+    void $ forkIO $ runTCPServer chan port $ \sock -> do
         addr <- getAdress sock
         conn <- ConnectionImplementation <$> atomically (newTMVar =<< newTChan)
-        let networkConnecion = D.NetworkConnection $ D.Address addr port
+        let networkConnecion = D.TcpConnection $ D.Address addr port
         ins networkConnecion conn
         void $ race (runHandlers conn networkConnecion sock handlers) (connectManager conn sock)
     pure chan
 
-getAdress :: S.Socket -> IO String
-getAdress socket = do
-    sockAddr <- S.getSocketName socket
-    case sockAddr of
-        S.SockAddrInet _ hostAddress      -> pure $ show $ fromHostAddress hostAddress
-        S.SockAddrInet6 _ _ hostAddress _ -> pure $ show $ fromHostAddress6 hostAddress
-        S.SockAddrUnix string             -> pure string
-        S.SockAddrCan  i                  -> pure $ show i
+getAdress :: S.Socket -> IO D.Host
+getAdress socket = D.sockAddrToHost <$> S.getSocketName socket
 
 -- | Stop the server
 stopServer :: ServerHandle -> STM ()
-stopServer chan = writeTChan chan TCP.StopServer
+stopServer chan = writeTChan chan D.StopServer
 
 -- | Open new connect to adress
 openConnect :: D.Address -> Handlers -> IO ConnectionImplementation
-openConnect addr@(D.Address ip port) handlers = do
+openConnect addr handlers = do
     conn <- ConnectionImplementation <$> atomically (newTMVar =<< newTChan)
     void $ forkIO $ do
-        res <- try $ TCP.runClient ip port $ \wsConn ->
-            void $ race (runHandlers conn (D.NetworkConnection addr) wsConn handlers) (connectManager conn wsConn)
-        case res of
-            Right _                    -> pure ()
-            Left  (_ :: SomeException) -> atomically $ closeConn conn
+        tryML
+            (runClient TCP addr $ \wsConn -> void $ race
+                (runHandlers conn (D.TcpConnection addr) wsConn handlers)
+                (connectManager conn wsConn))
+            (atomically $ closeConn conn)
     pure conn
 
 -- | Close the connect
@@ -77,16 +71,13 @@ send conn msg = writeComand conn $ D.Send msg
 
 --------------------------------------------------------------------------------
 -- * Internal
-runHandlers :: ConnectionImplementation -> D.NetworkConnection -> S.Socket -> Handlers -> IO ()
+runHandlers :: ConnectionImplementation -> D.TcpConnection -> S.Socket -> Handlers -> IO ()
 runHandlers conn netConn wsConn handlers = do
-    msg <- try $ S.recv wsConn (1024 * 4)
-    case msg of
-        Left  (_ :: SomeException) -> atomically $ closeConn conn
-        Right rawMsg               -> do
-            whenJust (decode rawMsg) $ \val -> callHandler netConn val handlers
-            runHandlers conn netConn wsConn handlers
+    tryM (S.recv wsConn (1024 * 4)) (atomically $ closeConn conn) $ \msg -> do
+        whenJust (decode msg) $ \val -> callHandler netConn val handlers
+        runHandlers conn netConn wsConn handlers
 
-callHandler :: D.NetworkConnection -> D.NetworkMsg -> Handlers -> IO ()
+callHandler :: D.TcpConnection -> D.NetworkMsg -> Handlers -> IO ()
 callHandler conn (D.NetworkMsg tag val) handlers = whenJust (handlers ^. at tag) $ \handler -> handler val conn
 
 -- | Manager for controlling of WS connect.
@@ -96,10 +87,8 @@ connectManager conn@(ConnectionImplementation c) wsConn = readCommand conn >>= \
     Just D.Close      -> atomically $ unlessM (isEmptyTMVar c) $ void $ takeTMVar c
     -- send msg to alies node
     Just (D.Send val) -> do
-        e <- try $ S.sendAll wsConn val
-        case e of
-            Right _                    -> connectManager conn wsConn
-            Left  (_ :: SomeException) -> atomically $ closeConn conn
+        tryM (S.sendAll wsConn val) (atomically $ closeConn conn) $ \_ ->
+            connectManager conn wsConn
     -- conect is closed, stop of command reading
     Nothing -> pure ()
 

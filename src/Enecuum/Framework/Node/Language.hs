@@ -9,27 +9,30 @@ import qualified Enecuum.Core.Language                    as L
 import qualified Enecuum.Framework.State.Language         as L
 import qualified Enecuum.Framework.Networking.Language    as L
 import qualified Enecuum.Framework.Domain.Networking      as D
-import           Enecuum.Framework.MsgHandler.Language
+import           Enecuum.Framework.Handler.Tcp.Language
+import           Enecuum.Framework.Handler.Udp.Language
 import qualified Enecuum.Core.Types                       as T
 import           Language.Haskell.TH.MakeFunctor
 
 -- | Node language.
 data NodeF next where
-  -- | Eval stateful action atomically.
-  EvalStateAtomically :: L.StateL a -> (a -> next) -> NodeF next
-  -- | Eval networking.
-  EvalNetworking :: L.NetworkingL a -> (a -> next) -> NodeF next
-  -- | Eval core effect.
-  EvalCoreEffectNodeF :: L.CoreEffect a -> (a -> next) -> NodeF next
-  -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
-  EvalGraphIO :: (Serialize c, T.StringHashable c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) x -> (x -> next) -> NodeF next
-  NewGraph  :: (Serialize c, T.StringHashable c) => (T.TGraph c -> next) -> NodeF next
-  -- | Stop the node evaluation
-  StopNode :: (() -> next) -> NodeF next
-  -- | Open connection to the node.
-  OpenConnection :: D.Address -> MsgHandlerL NodeL () -> (D.NetworkConnection -> next) -> NodeF next
-  -- | Close existing connection.
-  CloseConnection :: D.NetworkConnection -> (() -> next) -> NodeF  next
+    -- | Eval stateful action atomically.
+    EvalStateAtomically :: L.StateL a -> (a -> next) -> NodeF next
+    -- | Eval networking.
+    EvalNetworking :: L.NetworkingL a -> (a -> next) -> NodeF next
+    -- | Eval core effect.
+    EvalCoreEffectNodeF :: L.CoreEffect a -> (a -> next) -> NodeF next
+    -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
+    EvalGraphIO :: (Serialize c, T.StringHashable c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) x -> (x -> next) -> NodeF next
+    NewGraph  :: (Serialize c, T.StringHashable c) => (T.TGraph c -> next) -> NodeF next
+    -- | Stop the node evaluation
+    StopNode :: (() -> next) -> NodeF next
+    -- | Open connection to the node.
+    OpenTcpConnection :: D.Address -> TcpHandlerL NodeL () -> (D.TcpConnection -> next) -> NodeF next
+    OpenUdpConnection :: D.Address -> UdpHandlerL NodeL () -> (D.UdpConnection -> next) -> NodeF next
+    -- | Close existing connection.
+    CloseTcpConnection :: D.TcpConnection -> (() -> next) -> NodeF  next
+    CloseUdpConnection :: D.UdpConnection -> (() -> next) -> NodeF  next
 
 type NodeL = Free NodeF
 
@@ -42,7 +45,6 @@ evalStateAtomically statefulAction = liftF $ EvalStateAtomically statefulAction 
 -- | Alias for convenience.
 atomically :: L.StateL a -> NodeL a
 atomically = evalStateAtomically
-
 
 -- TODO: makeLanguage ''NodeF
 -- | Eval networking.
@@ -59,26 +61,26 @@ stopNode = liftF $ StopNode id
 
 -- | Open network connection.
 {-# DEPRECATED openConnection "Use L.open" #-}
-openConnection :: D.Address -> MsgHandlerL NodeL () -> NodeL D.NetworkConnection
+openConnection :: D.Address -> TcpHandlerL NodeL () -> NodeL D.TcpConnection
 openConnection = open
 
 -- | Close network connection.
 -- TODO: what is the behavior when connection is closed?
 {-# DEPRECATED closeConnection "Use L.close" #-}
-closeConnection :: D.NetworkConnection -> NodeL ()
+closeConnection :: D.TcpConnection -> NodeL ()
 closeConnection = close
 
 
 
 class Connection a where
-    close :: D.NetworkConnection -> a ()
-    open  :: D.Address -> MsgHandlerL NodeL () -> a D.NetworkConnection
+    close :: D.TcpConnection -> a ()
+    open  :: D.Address -> TcpHandlerL NodeL () -> a D.TcpConnection
 
 instance Connection (Free NodeF) where
-    close conn = liftF $ CloseConnection conn id
-    open addr handl = liftF $ OpenConnection addr handl id
+    close conn = liftF $ CloseTcpConnection conn id
+    open addr handl = liftF $ OpenTcpConnection addr handl id
 
-instance L.Send NodeL where
+instance L.Send D.TcpConnection NodeL where
     send conn msg = evalNetworking $ L.send conn msg
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).

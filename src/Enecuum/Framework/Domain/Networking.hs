@@ -6,21 +6,30 @@ module Enecuum.Framework.Domain.Networking where
 import           Enecuum.Prelude
 import qualified Data.Text as T
 
+import           Data.IP
 import qualified Data.Aeson as A
 import           Control.Concurrent.STM.TChan (TChan)
 import           Network.Socket
-import           Enecuum.Legacy.Refact.Network.Server
+import qualified Network.Socket as S hiding (recv)
 
-data NetworkConnection = NetworkConnection
-  { _address :: Address
-  }
-  deriving (Show, Eq, Ord, Generic)
+data TcpConnection = TcpConnection
+    { _address :: Address
+    }
+    deriving (Show, Eq, Ord, Generic)
+
+data UdpConnection = UdpConnection
+    { _address :: Address
+    }
+    deriving (Show, Eq, Ord, Generic)
+
+data Protocol     = UDP | TCP
+data ServerComand = StopServer
 
 type RawData = LByteString
 
 data Comand where
-  Close       :: Comand
-  Send        :: RawData -> Comand
+    Close :: Comand
+    Send  :: RawData -> Comand
 
 newtype ServerHandle = ServerHandle (TChan ServerComand)
 
@@ -28,11 +37,19 @@ data NetworkMsg = NetworkMsg Text A.Value deriving (Generic, ToJSON, FromJSON)
 
 type Host = String
 
+
+sockAddrToHost :: S.SockAddr -> Host
+sockAddrToHost sockAddr = case sockAddr of
+    S.SockAddrInet _ hostAddress      -> show $ fromHostAddress hostAddress
+    S.SockAddrInet6 _ _ hostAddress _ -> show $ fromHostAddress6 hostAddress
+    S.SockAddrUnix string             -> string
+    S.SockAddrCan  i                  -> show i
+
 -- | Node address (like IP)
 data Address = Address
-  { _host :: Host
-  , _port :: PortNumber
-  } deriving (Show, Eq, Ord, Generic)
+    { _host :: Host
+    , _port :: PortNumber
+    } deriving (Show, Eq, Ord, Generic)
 
 formatAddress :: Address -> Text
 formatAddress (Address addr port) = T.pack addr <> ":" <> show port
