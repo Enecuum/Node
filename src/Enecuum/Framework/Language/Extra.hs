@@ -44,14 +44,7 @@ instance A.FromJSON StopNode where
 -- To use it, you need to export HasGraph type class unqualified to the scope of your data type lenses
 -- (made by `makeFieldsNoPrefix`):
 -- import Enecuum.Language (HasGraph)
-{-
-withGraph
-  :: HasGraph s (TVar (THGraph d))
-  => (Serialize d, StringHashable d)
-  => s
-  -> L.HGraphL d a
-  -> L.StateL a
--}
+
 withGraph
     :: (HasGraph s (D.TGraph c), Serialize c, StringHashable c)
     => s
@@ -63,14 +56,12 @@ withGraph s = L.evalGraph (s ^. graph)
 -- To use it, you need to export HasGraph type class unqualified to the scope of your data type lenses
 -- (made by `makeFieldsNoPrefix`):
 -- import Enecuum.Language (HasGraph)
-{-}
+
 withGraphIO
-  :: HasGraph s (TVar (THGraph d))
-  => (Serialize d, StringHashable d)
-  => s
-  -> L.HGraphL d a
-  -> L.NodeL a
-  -}
+    :: (HasGraph s (D.TGraph c), Serialize c, StringHashable c)
+    => s
+    -> Free (L.HGraphF (D.TNodeL c)) a
+    -> L.NodeL a
 withGraphIO s = L.evalGraphIO (s ^. graph)
 
 -- TODO: make this a type class?
@@ -105,8 +96,7 @@ stopNodeHandler' statusVar StopNode = do
 -- (made by `makeFieldsNoPrefix`):
 -- import Enecuum.Language (HasStatus)
 awaitNodeFinished :: HasStatus s (D.StateVar NodeStatus) => s -> L.NodeDefinitionL ()
-awaitNodeFinished nodeData = do
-    L.scenario $ L.atomically $ unlessM isNodeFinished L.retry
+awaitNodeFinished nodeData = L.scenario $ L.atomically $ unlessM isNodeFinished L.retry
     where
         isNodeFinished = do
             s <- L.readVar $ nodeData ^. status
@@ -116,9 +106,18 @@ awaitNodeFinished nodeData = do
 awaitNodeFinished'
     :: D.StateVar NodeStatus
     -> L.NodeDefinitionL ()
-awaitNodeFinished' statusVar = do
-    L.scenario $ L.atomically $ unlessM isNodeFinished L.retry
+awaitNodeFinished' statusVar = L.scenario $ L.atomically $ unlessM isNodeFinished L.retry
     where
         isNodeFinished = do
             s <- L.readVar statusVar
             pure $ s == NodeFinished
+
+-- | Makes node awaiting forever.
+awaitNodeForever :: L.NodeDefinitionL ()
+awaitNodeForever = L.scenario $ L.atomically $ do
+    -- This is a little trick to make STM thinking that something can change.
+    -- So it won't stop with message:
+    -- 'thread blocked indefinitely in an STM transaction'
+    xVar <- L.newVar @Int 1
+    x <- L.readVar xVar
+    when (x == 1) L.retry

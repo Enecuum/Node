@@ -226,4 +226,3 @@ graphNode = do
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.awaitNodeFinished nodeData
-    L.stopServing graphNodeRpcPort

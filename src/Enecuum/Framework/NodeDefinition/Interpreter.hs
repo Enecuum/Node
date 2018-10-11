@@ -34,7 +34,7 @@ import qualified Data.Text as T
 addProcess :: NodeRuntime -> D.ProcessPtr a -> ThreadId -> IO ()
 addProcess nodeRt pPtr threadId = do
     pId <- D.getProcessId pPtr
-    ps <- atomically $ readTVar $ nodeRt ^. RLens.processes
+    ps <- readTVarIO $ nodeRt ^. RLens.processes
     let newPs = M.insert pId threadId ps
     atomically $ writeTVar (nodeRt ^. RLens.processes) newPs
 
@@ -120,9 +120,9 @@ callHandler nodeRt methods msg = do
     let val = A.decode $ fromString $ T.unpack msg
     case val of
         Just ((^? key "method" . _String) -> Just method) -> case methods ^. at method of
-            Just justMethod -> Impl.runNodeL nodeRt $ justMethod (fromJust $ val)
+            Just justMethod -> Impl.runNodeL nodeRt $ justMethod (fromJust val)
             Nothing         -> pure $ "The method " <> method <> " isn't supported."
-        Nothing -> pure "Error of request parsing."
+        _ -> pure "Error of request parsing."
 
 
 fromJust (Just a) = a

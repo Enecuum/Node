@@ -89,7 +89,6 @@ powNode' delaysEnabled = do
         kBlockProcess nodeData
 
     L.awaitNodeFinished nodeData
-    L.stopServing powNodeRpcPort
 
 powNodeInitialization :: EnableDelays -> StringHash -> L.NodeL PoWNodeData
 powNodeInitialization delaysEnabled genesisHash = do
