@@ -43,6 +43,12 @@ sendRpcRequest address request = liftF $ SendRpcRequest address request id
 sendMessage :: D.TcpConnection -> D.RawData -> NetworkingL ()
 sendMessage conn msg = liftF $ SendMessage conn msg id
 
+sendUdpMsgByConnection :: D.UdpConnection -> D.RawData -> NetworkingL ()
+sendUdpMsgByConnection conn msg = liftF $ SendUdpMsgByConnection conn msg id
+
+sendUdpMsgByAddress :: D.Address -> D.RawData -> NetworkingL ()
+sendUdpMsgByAddress addr msg = liftF $ SendUdpMsgByAddress addr msg id
+
 -- | Send message to the reliable connection.
 -- TODO: distiguish reliable (TCP-like) connection from unreliable (UDP-like).
 -- TODO: make conversion to and from package.
@@ -51,6 +57,14 @@ class Send con m where
 
 instance Send D.TcpConnection (Free NetworkingF) where
     send conn msg = sendMessage conn . A.encode $
+        D.NetworkMsg (D.toTag msg) (toJSON msg)
+
+instance Send D.UdpConnection (Free NetworkingF) where
+    send conn msg = sendUdpMsgByConnection conn . A.encode $
+        D.NetworkMsg (D.toTag msg) (toJSON msg)
+
+instance Send D.Address (Free NetworkingF) where
+    send conn msg = sendUdpMsgByAddress conn . A.encode $
         D.NetworkMsg (D.toTag msg) (toJSON msg)
 
 -- | Eval core effect.

@@ -8,22 +8,22 @@ import           Network.Socket.ByteString
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.Chan
 import           Enecuum.Domain as D
-import           Enecuum.Control.Monad.Extra
+import           Control.Monad.Extra
+import           Data.ByteString.Lazy as B (toStrict, fromStrict)
 
-data SendMsg = SendMsg SockAddr ByteString
 
-runUDPServer :: TChan ServerComand -> PortNumber -> (ByteString -> (Chan SendMsg) -> SockAddr -> IO ()) -> IO ()
+runUDPServer :: TChan ServerComand -> PortNumber -> (LByteString -> (TChan D.SendMsg) -> SockAddr -> IO ()) -> IO ()
 runUDPServer chan port handler = bracket (listenUDP port) close $ \sock -> do
-    respChan <- newChan
+    respChan <- atomically $ newTChan
     let 
         sendMsg :: IO ()
         sendMsg = forever $ do
-            SendMsg reciver msg <- readChan respChan
-            tryMR (sendTo sock msg reciver) (\_ -> pure ()) 
+            SendMsg reciver msg <- atomically $ readTChan respChan
+            tryMR (sendTo sock (B.toStrict msg) reciver) (\_ -> pure ()) 
 
         talk :: IO ()
-        talk = forever $ tryMR (recvFrom sock (1024*4)) $
-            \(msg, addr) -> handler msg respChan addr
+        talk = forever $ tryMR (recvFrom sock (1024)) $
+            \(msg, addr) -> handler (B.fromStrict msg) respChan addr
 
     finally (serv chan sendMsg talk) (close sock)
 
@@ -36,7 +36,6 @@ listenUDP port = do
         (Just (defaultHints {addrFlags = [AI_PASSIVE]}))
         Nothing 
         (Just $ show port)
-    sock <- socket (addrFamily serveraddr) Stream defaultProtocol
+    sock <- socket (addrFamily serveraddr) Datagram defaultProtocol
     bind sock (addrAddress serveraddr)
-    listen sock 5
     pure sock

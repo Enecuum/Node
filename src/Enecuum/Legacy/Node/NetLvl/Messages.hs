@@ -8,11 +8,12 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE PackageImports             #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Enecuum.Legacy.Node.NetLvl.Messages where
 
-import           Control.Monad.Extra
+import "extra"   Control.Monad.Extra
 import           Data.Aeson
 import qualified Data.ByteString                                 as B
 import qualified Data.ByteString.Char8                           as CB

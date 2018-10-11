@@ -11,4 +11,5 @@ import           Enecuum.Framework.Node.Language as X
 import           Enecuum.Framework.Handler.Rpc.Language as X
 import           Enecuum.Framework.Language.Extra as X
 import           Enecuum.Framework.Handler.Tcp.Language as X
+import           Enecuum.Framework.Handler.Udp.Language as X hiding (makeHandler)
 import           Enecuum.Framework.Handler.Cmd.Language as X

@@ -20,12 +20,15 @@ import qualified Enecuum.Framework.Language                as L
 import qualified Enecuum.Framework.RLens                   as RLens
 import qualified Enecuum.Core.Interpreters                 as Impl
 import qualified Enecuum.Framework.Node.Interpreter        as Impl
-import qualified Enecuum.Framework.Domain.RPC             as D
-import qualified Enecuum.Framework.Domain.Networking      as D
-import           Enecuum.Framework.Networking.Internal.Tcp.Connection
+import qualified Enecuum.Framework.Domain.RPC              as D
+import qualified Enecuum.Framework.Domain.Networking       as D
+import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection as Tcp
 import           Enecuum.Framework.Handler.Rpc.Interpreter
-import           Enecuum.Framework.Handler.Tcp.Interpreter
-import           Enecuum.Framework.Handler.Cmd.Interpreter as Imp
+import qualified Enecuum.Framework.Handler.Tcp.Interpreter as Tcp
+import qualified Enecuum.Framework.Handler.Udp.Interpreter as Udp
+import qualified Enecuum.Framework.Networking.Internal.Udp.Connection as Udp
+
+import           Enecuum.Framework.Handler.Cmd.Interpreter as Cmd
 import           Data.Aeson.Lens
 import qualified Data.Text as T
 
@@ -39,21 +42,34 @@ interpretNodeDefinitionL nodeRt (L.EvalNodeL initScript next) = next <$> Impl.ru
 interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffect
 
+
 interpretNodeDefinitionL nodeRt (L.ServingTcp port initScript next) = do
     m        <- atomically $ newTVar mempty
-    a        <- runTcpHandlerL m initScript
+    a        <- Tcp.runTcpHandlerL m initScript
     handlers <- readTVarIO m
-    s        <- startServer
+    s        <- Tcp.startServer
         port
         ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
-        (\(D.TcpConnection addr) -> Impl.insertConnect (nodeRt ^. RLens.connects) addr)
+        (\(D.TcpConnection addr) -> Impl.insertConnect (nodeRt ^. RLens.tcpConnects) addr)
     atomically $ setServerChan (nodeRt ^. RLens.servers) port s
     pure $ next a
+
+interpretNodeDefinitionL nodeRt (L.ServingUdp port initScript next) = do
+    m        <- atomically $ newTVar mempty
+    a        <- Udp.runUdpHandlerL m initScript
+    handlers <- readTVarIO m
+    s        <- Udp.startServer
+        port
+        ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
+        (\(D.UdpConnection addr) -> Impl.insertUdpConnect (nodeRt ^. RLens.udpConnects) addr)
+    atomically $ setServerChan (nodeRt ^. RLens.servers) port s
+    pure $ next a
+
 
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
     atomically $ do
         serversMap <- readTVar (nodeRt ^. RLens.servers)
-        whenJust (serversMap ^. at port) stopServer
+        whenJust (serversMap ^. at port) Tcp.stopServer
     pure $ next ()
 
 interpretNodeDefinitionL nodeRt (L.ServingRpc port initScript next) = do
