@@ -96,9 +96,10 @@ data NodeRuntime = NodeRuntime
   , _rpcServer       :: TMVar RpcServerHandle  -- ^ RPC server of this node. (TODO: make multiple RPC servers possible)
   , _connections     :: TMVar NodeConnections
   , _graph           :: TG.TestGraphVar        -- ^ Graph
-  , _varCounter      :: TMVar Int              -- ^ Vars counter. Used to generate VarId.
+  , _idCounter       :: TMVar Int              -- ^ ID counter. Used to generate VarId and other ids.
   , _state           :: NodeState              -- ^ State of node.
   , _serversRegistry :: ServersRegistry        -- ^ Servers in the network.
+  , _processes       :: TMVar (Map D.ProcessId ThreadId)  -- ^ Processes.
   }
 
 -- | Registry of nodes acting within a test network.
@@ -122,3 +123,9 @@ data TestRuntime = TestRuntime
   , _registry        :: NodesRegistry       -- ^ Nodes registry.
   , _serversRegistry :: ServersRegistry     -- ^ Servers available in the network.
   }
+
+getNextId :: NodeRuntime -> STM Int
+getNextId nodeRt = do
+    number <- takeTMVar $ _idCounter nodeRt
+    putTMVar (_idCounter nodeRt) $ number + 1
+    pure number

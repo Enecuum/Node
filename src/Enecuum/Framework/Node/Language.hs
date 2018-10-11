@@ -27,8 +27,6 @@ data NodeF next where
     -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
     EvalGraphIO :: (Serialize c, T.StringHashable c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) x -> (x -> next) -> NodeF next
     NewGraph  :: (Serialize c, T.StringHashable c) => (T.TGraph c -> next) -> NodeF next
-    -- | Stop the node evaluation
-    StopNode :: (() -> next) -> NodeF next
     -- | Open connection to the node.
     OpenTcpConnection :: D.Address -> TcpHandlerL NodeL () -> (D.TcpConnection -> next) -> NodeF next
     OpenUdpConnection :: D.Address -> UdpHandlerL NodeL () -> (D.UdpConnection -> next) -> NodeF next
@@ -56,10 +54,6 @@ evalNetworking newtorking = liftF $ EvalNetworking newtorking id
 -- | Eval core effect.
 evalCoreEffectNodeF :: L.CoreEffect a -> NodeL a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
-
--- | Stop of node eval.
-stopNode :: NodeL ()
-stopNode = liftF $ StopNode id
 
 -- | Open network connection.
 {-# DEPRECATED openConnection "Use L.open" #-}

@@ -23,6 +23,7 @@ import qualified Data.Map                                 as M
 import qualified Enecuum.Framework.Domain.Networking as D
 import           Enecuum.Core.HGraph.Interpreters.IO
 import           Enecuum.Core.HGraph.Internal.Impl
+
 -- | Interpret NodeL.
 interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
@@ -34,10 +35,6 @@ interpretNodeL nodeRt (L.EvalNetworking networking next) = next <$> Impl.runNetw
 
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects
-
-interpretNodeL nodeRt (L.StopNode next) = do
-    atomically $ putTMVar (nodeRt ^. RLens.stopNode) True
-    pure $ next ()
 
 interpretNodeL nodeRt (L.OpenTcpConnection addr initScript next) = do
     m <- atomically $ newTVar mempty
@@ -88,8 +85,8 @@ insertUdpConnect m addr newCon = atomically $ do
 setServerChan :: TVar (Map PortNumber (TChan D.ServerComand)) -> PortNumber -> TChan D.ServerComand -> STM ()
 setServerChan servs port chan = do
     serversMap <- readTVar servs
-    whenJust   (serversMap ^. at port) Tcp.stopServer
-    modifyTVar servs                   (M.insert port chan)
+    whenJust (serversMap ^. at port) Tcp.stopServer
+    modifyTVar servs (M.insert port chan)
 
 -- | Runs node language. Runs interpreters for the underlying languages.
 runNodeL :: NodeRuntime -> L.NodeL a -> IO a
