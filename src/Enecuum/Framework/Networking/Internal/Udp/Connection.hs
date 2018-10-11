@@ -21,8 +21,8 @@ import           Enecuum.Framework.Runtime (ConnectionVar (..))
 import qualified Enecuum.Framework.Domain.Networking as D
 import           Enecuum.Framework.Networking.Internal.Client
 import           Enecuum.Framework.Networking.Internal.Udp.Server 
-import qualified Network.Socket.ByteString.Lazy as S
 import qualified Network.Socket as S hiding (recv)
+import qualified Network.Socket.ByteString.Lazy as S
 import           Control.Monad.Extra
 
 type Handler    = Value -> D.UdpConnection -> IO ()
@@ -77,40 +77,9 @@ closeConn :: TMVar (TChan D.Comand) -> STM ()
 closeConn conn = unlessM (isEmptyTMVar conn) $ void $ takeTMVar conn
 
 
-{-
--- | Open new connect to adress
-openConnect :: D.Address -> Handlers -> IO UdpConnectionVar
-openConnect addr handlers = do
-    conn <- UdpConnectionVar <$> atomically (newTMVar =<< newTChan)
-    void $ forkIO $ do
-        tryML
-            (runClient UDP addr $ \wsConn -> void $ race
-                (runHandlers conn (D.UdpConnection addr) wsConn handlers)
-                (connectManager conn wsConn))
-            (atomically $ closeConn conn)
-    pure conn
--}
-
-
---------------------------------------------------------------------------------
--- * Internal
-{-
-
--- | Manager for controlling of WS connect.
-connectManager :: ConnectionVar -> S.Socket -> IO ()
-connectManager conn@(ConnectionVar c) wsConn = readCommand conn >>= \case
-    -- close connection
-    Just D.Close      -> atomically $ unlessM (isEmptyTMVar c) $ void $ takeTMVar c
-    -- send msg to alies node
-    Just (D.Send val) -> do
-        tryM (S.sendAll wsConn val) (atomically $ closeConn conn) $ \_ ->
-            connectManager conn wsConn
-    -- conect is closed, stop of command reading
-    Nothing -> pure ()
-
 -- | Read comand to connect manager
-readCommand :: ConnectionVar -> IO (Maybe D.Comand)
-readCommand (ConnectionVar conn) = atomically $ do
+readCommand :: TMVar (TChan D.Comand) -> IO (Maybe D.Comand)
+readCommand conn = atomically $ do
     ok <- isEmptyTMVar conn
     if ok
         then pure Nothing
@@ -118,4 +87,31 @@ readCommand (ConnectionVar conn) = atomically $ do
             chan <- readTMVar conn
             Just <$> readTChan chan
 
--}
+-- | Open new connect to adress
+openConnect :: D.Address -> Handlers -> IO UdpConnectionVar
+openConnect addr handlers = do
+    conn <- atomically (newTMVar =<< newTChan)
+    void $ forkIO $ do
+        tryML
+            (runClient UDP addr $ \sock -> void $ race
+                (readMessages (D.UdpConnection addr) handlers sock)
+                (connectManager conn sock))
+            (atomically $ closeConn conn)
+    pure $ ClientUdp conn
+
+readMessages :: D.UdpConnection -> Handlers -> S.Socket -> IO ()
+readMessages conn handlers sock = tryMR (S.recv sock (1024 * 4)) $ \msg -> do 
+    runHandlers conn handlers msg
+    readMessages conn handlers sock
+
+-- | Manager for controlling of WS connect.
+connectManager :: TMVar (TChan D.Comand) -> S.Socket -> IO ()
+connectManager conn sock = readCommand conn >>= \case
+    -- close connection
+    Just D.Close      -> atomically $ unlessM (isEmptyTMVar conn) $ void $ takeTMVar conn
+    -- send msg to alies node
+    Just (D.Send val) -> do
+        tryM (S.sendAll sock val) (atomically $ closeConn conn) $
+            \_ -> connectManager conn sock
+    -- conect is closed, stop of command reading
+    Nothing           -> pure ()
