@@ -26,6 +26,7 @@ import           Enecuum.Framework.Handler.Rpc.Interpreter
 import qualified Enecuum.Framework.Handler.Tcp.Interpreter as Tcp
 import qualified Enecuum.Framework.Handler.Udp.Interpreter as Udp
 import qualified Enecuum.Framework.Networking.Internal.Udp.Connection as Udp
+import qualified Enecuum.Framework.Networking.Internal.Connection     as Con
 
 import           Enecuum.Framework.Handler.Cmd.Interpreter as Cmd
 import           Data.Aeson.Lens
@@ -52,7 +53,7 @@ interpretNodeDefinitionL nodeRt (L.ServingTcp port action next) = do
     m        <- atomically $ newTVar mempty
     a        <- Tcp.runTcpHandlerL m action
     handlers <- readTVarIO m
-    s        <- Tcp.startServer
+    s        <- Con.startServer
         port
         ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
         (\(D.Connection addr) -> Impl.insertConnect (nodeRt ^. RLens.tcpConnects) addr)
@@ -74,7 +75,7 @@ interpretNodeDefinitionL nodeRt (L.ServingUdp port initScript next) = do
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
     atomically $ do
         serversMap <- readTVar (nodeRt ^. RLens.servers)
-        whenJust (serversMap ^. at port) Tcp.stopServer
+        whenJust (serversMap ^. at port) Con.stopServer
     pure $ next ()
 
 interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do

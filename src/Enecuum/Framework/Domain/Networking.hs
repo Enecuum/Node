@@ -20,9 +20,11 @@ data Connection a = Connection
     }
     deriving (Show, Eq, Ord, Generic)
 
-data TcpConnectionVar = TcpConnectionVar (TMVar (TChan Comand))
+data family ConnectionVar a
+data instance ConnectionVar Tcp
+    = TcpConnectionVar (TMVar (TChan Comand))
 
-data UdpConnectionVar
+data instance ConnectionVar Udp
     = ServerUdpConnectionVar S.SockAddr (TChan SendMsg)
     | ClientUdpConnectionVar (TMVar (TChan Comand))
 

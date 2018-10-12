@@ -31,7 +31,7 @@ type ServerHandle = TChan D.ServerComand
 -- ByteString -> (Chan SendMsg) -> SockAddr
 
 -- | Start new server witch port
-startServer :: PortNumber -> Handlers -> (D.Connection D.Udp -> D.UdpConnectionVar -> IO ()) -> IO ServerHandle
+startServer :: PortNumber -> Handlers -> (D.Connection D.Udp -> D.ConnectionVar D.Udp -> IO ()) -> IO ServerHandle
 startServer port handlers insertConnect = do
     chan <- atomically newTChan
     void $ forkIO $ runUDPServer chan port $ \msg msgChan sockAddr -> do
@@ -53,7 +53,7 @@ stopServer :: ServerHandle -> STM ()
 stopServer chan = writeTChan chan D.StopServer
 
 -- | Send msg to node.
-send :: D.UdpConnectionVar -> LByteString -> STM ()
+send :: D.ConnectionVar D.Udp -> LByteString -> STM ()
 send (D.ClientUdpConnectionVar conn)          msg = writeComand conn $ D.Send  msg
 send (D.ServerUdpConnectionVar sockAddr chan) msg = writeTChan  chan $ D.SendMsg sockAddr msg
 
@@ -63,7 +63,7 @@ writeComand conn cmd = unlessM (isEmptyTMVar conn) $ do
     writeTChan chan cmd
 
 -- | Close the connect
-close :: D.UdpConnectionVar -> STM ()
+close :: D.ConnectionVar D.Udp -> STM ()
 close (D.ClientUdpConnectionVar conn) = writeComand conn D.Close >> closeConn conn
 close (D.ServerUdpConnectionVar _ _)  = pure ()
 
@@ -86,7 +86,7 @@ sendUdpMsg :: D.Address -> LByteString -> IO ()
 sendUdpMsg addr msg = runClient UDP addr $ \sock -> S.sendAll sock msg
 
 -- | Open new connect to adress
-openConnect :: D.Address -> Handlers -> IO D.UdpConnectionVar
+openConnect :: D.Address -> Handlers -> IO (D.ConnectionVar D.Udp)
 openConnect addr handlers = do
     conn <- atomically (newTMVar =<< newTChan)
     void $ forkIO $ do

@@ -18,7 +18,7 @@ import qualified Enecuum.Runtime as Rt
 import qualified Enecuum.Domain                as D
 import           Enecuum.Framework.Networking.Internal.Tcp.Connection
 import qualified Data.Map as M
-
+import qualified Enecuum.Framework.Networking.Internal.Connection     as Con
 
 
 -- Tests disabled
@@ -69,15 +69,18 @@ pingPong = TestCase $ do
     runNodeDefinitionL nr1 $ L.stopServing serverPort
     assertBool "" ok
 
+emptFunc :: D.Connection D.Tcp -> D.ConnectionVar D.Tcp -> IO ()
+emptFunc _ _ = pure ()
+
 succesServer :: PortNumber -> IO Bool
 succesServer port = do
     mvar <- newEmptyMVar
     void $ forkIO $ do
         threadDelay 1000000
         putMVar mvar False
-    ch <- startServer port (M.singleton (D.toTag Succes) (\_ _ -> putMVar mvar True)) (\_ _ -> pure ())
+    ch <- Con.startServer port (M.singleton (D.toTag Succes) (\_ _ -> putMVar mvar True)) emptFunc
     ok <- takeMVar mvar
-    Enecuum.Prelude.atomically $ stopServer ch
+    Enecuum.Prelude.atomically $ Con.stopServer ch
     pure ok
 
 serverPort, succPort :: PortNumber

@@ -18,6 +18,7 @@ import qualified Enecuum.Framework.Handler.Tcp.Interpreter             as Tcp
 import qualified Enecuum.Framework.Networking.Internal.Udp.Server      as Udp
 import qualified Enecuum.Framework.Networking.Internal.Udp.Connection  as Udp
 import qualified Enecuum.Framework.Handler.Udp.Interpreter             as Udp
+import qualified Enecuum.Framework.Networking.Internal.Connection     as Con
 
 import qualified Data.Map                                 as M
 import qualified Enecuum.Framework.Domain.Networking as D
@@ -40,7 +41,7 @@ interpretNodeL nodeRt (L.OpenTcpConnection addr initScript next) = do
     m <- atomically $ newTVar mempty
     Tcp.runTcpHandlerL m initScript
     handlers <- readTVarIO m
-    newCon   <- Tcp.openConnect addr ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
+    newCon   <- Con.openConnect addr ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
     insertConnect (nodeRt ^. RLens.tcpConnects) addr newCon
     pure $ next (D.Connection addr)
 
@@ -56,7 +57,7 @@ interpretNodeL nodeRt (L.CloseTcpConnection (D.Connection addr) next) = do
     atomically $ do
         m <- readTVar (nodeRt ^. RLens.tcpConnects)
         whenJust (m ^. at addr) $ \con -> do
-            Tcp.close con
+            Con.close con
             modifyTVar (nodeRt ^. RLens.tcpConnects) $ M.delete addr
     pure $ next ()
 --
@@ -70,13 +71,13 @@ interpretNodeL nodeRt (L.CloseUdpConnection (D.Connection addr) next) = do
 
 interpretNodeL _ (L.NewGraph next) = next <$> initHGraph
 
-insertConnect :: TVar (Map D.Address D.TcpConnectionVar) -> D.Address -> D.TcpConnectionVar -> IO ()
+insertConnect :: TVar (Map D.Address (D.ConnectionVar D.Tcp) ) -> D.Address -> D.ConnectionVar D.Tcp -> IO ()
 insertConnect m addr newCon = atomically $ do
     conns <- readTVar $ m
-    whenJust (conns ^. at addr) Tcp.close
+    whenJust (conns ^. at addr) Con.close
     modifyTVar m $ M.insert addr newCon
 
-insertUdpConnect :: TVar (Map D.Address D.UdpConnectionVar) -> D.Address -> D.UdpConnectionVar -> IO ()
+insertUdpConnect :: TVar (Map D.Address (D.ConnectionVar D.Udp)) -> D.Address -> D.ConnectionVar D.Udp -> IO ()
 insertUdpConnect m addr newCon = atomically $ do
     conns <- readTVar $ m
     whenJust (conns ^. at addr) Udp.close
@@ -85,7 +86,7 @@ insertUdpConnect m addr newCon = atomically $ do
 setServerChan :: TVar (Map PortNumber (TChan D.ServerComand)) -> PortNumber -> TChan D.ServerComand -> STM ()
 setServerChan servs port chan = do
     serversMap <- readTVar servs
-    whenJust (serversMap ^. at port) Tcp.stopServer
+    whenJust (serversMap ^. at port) Con.stopServer
     modifyTVar servs (M.insert port chan)
 
 -- | Runs node language. Runs interpreters for the underlying languages.
