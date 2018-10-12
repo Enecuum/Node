@@ -38,6 +38,20 @@ addProcess nodeRt pPtr threadId = do
     let newPs = M.insert pId threadId ps
     atomically $ writeTVar (nodeRt ^. RLens.processes) newPs
 
+startServing
+    :: (Impl.ConnectsLens a, Con.NetworkConnection a)
+    => NodeRuntime -> PortNumber -> L.NetworkHandlerL a (Free L.NodeF) b -> IO b
+startServing nodeRt port initScript = do
+    m        <- atomically $ newTVar mempty
+    a        <- Net.runNetworkHandlerL m initScript
+    handlers <- readTVarIO m
+    s        <- Con.startServer
+        port
+        ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
+        (\(D.Connection addr) -> Impl.insertConnect (nodeRt ^. Impl.connectsLens) addr)
+    atomically $ setServerChan (nodeRt ^. RLens.servers) port s
+    pure $ a
+
 interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF a -> IO a
 interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
     atomically $ writeTVar (nodeRt ^. RLens.nodeTag) tag
@@ -48,28 +62,11 @@ interpretNodeDefinitionL nodeRt (L.EvalNodeL action next) = next <$> Impl.runNod
 interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffect
 
-interpretNodeDefinitionL nodeRt (L.ServingTcp port action next) = do
-    m        <- atomically $ newTVar mempty
-    a        <- Net.runNetworkHandlerL m action
-    handlers <- readTVarIO m
-    s        <- Con.startServer
-        port
-        ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
-        (\(D.Connection addr) -> Impl.insertConnect (nodeRt ^. RLens.tcpConnects) addr)
-    atomically $ setServerChan (nodeRt ^. RLens.servers) port s
-    pure $ next a
+interpretNodeDefinitionL nodeRt (L.ServingTcp port action next) =
+    next <$> startServing nodeRt port action 
 
-interpretNodeDefinitionL nodeRt (L.ServingUdp port initScript next) = do
-    m        <- atomically $ newTVar mempty
-    a        <- Net.runNetworkHandlerL m initScript
-    handlers <- readTVarIO m
-    s        <- Udp.startServer
-        port
-        ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
-        (\(D.Connection addr) -> Impl.insertUdpConnect (nodeRt ^. RLens.udpConnects) addr)
-    atomically $ setServerChan (nodeRt ^. RLens.servers) port s
-    pure $ next a
-
+interpretNodeDefinitionL nodeRt (L.ServingUdp port action next) = do
+    next <$> startServing nodeRt port action 
 
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
     atomically $ do

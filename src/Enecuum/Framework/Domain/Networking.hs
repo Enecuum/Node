@@ -15,6 +15,8 @@ import qualified Network.Socket as S hiding (recv)
 data Udp
 data Tcp
 
+data Protocol a = UDP | TCP
+
 data Connection a = Connection
     { _address :: Address
     }
@@ -28,7 +30,7 @@ data instance ConnectionVar Udp
     = ServerUdpConnectionVar S.SockAddr (TChan SendMsg)
     | ClientUdpConnectionVar (TMVar (TChan Comand))
 
-data Protocol     = UDP | TCP
+
 data ServerComand = StopServer
 
 type RawData = LByteString
