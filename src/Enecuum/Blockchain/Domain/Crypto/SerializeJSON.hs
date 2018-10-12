@@ -8,7 +8,6 @@
 
 module Enecuum.Blockchain.Domain.Crypto.SerializeJSON where
 
-import           Control.Exception                                     (throw)
 import           Control.Monad
 import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA                  as ECDSA
 import           Data.Aeson

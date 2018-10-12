@@ -8,12 +8,11 @@ module Enecuum.Core.Random.Language where
 import           Control.Monad.Random             hiding (Random, next)
 import           Enecuum.Prelude
 import           Language.Haskell.TH.MakeFunctor
--- import           "cryptonite" Crypto.Random (MonadRandom)
 import           Enecuum.Blockchain.Domain.Crypto
 
 -- | Language for Random.
 data ERandomF next where
-    -- | Get integer from range
+    -- | Get Int from range
     GetRandomInt :: (Int, Int) -> (Int -> next) -> ERandomF next
     EvalRand :: Rand g a -> g -> (a -> next) -> ERandomF next
     GenerateKeyPair :: (KeyPair -> next) -> ERandomF next
