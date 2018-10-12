@@ -15,20 +15,19 @@ import qualified Enecuum.Language             as L
 import qualified Enecuum.Blockchain.Lens      as Lens
 import           Enecuum.Prelude
 import           Enecuum.Assets.Nodes.Messages
-import           Enecuum.Framework.Language.Extra (HasFinished)
+import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 
 data PoANodeData = PoANodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock
-    , _finished            :: D.StateVar Bool
+    , _status              :: D.StateVar NodeStatus
     }
 
 makeFieldsNoPrefix ''PoANodeData
 
 showTransaction :: D.Transaction -> Text -> Text
 showTransaction tx t =
-    t <> ( "\n    Tx: [" +|| tx ^.  Lens.owner ||+ "] -> [" +|| tx ^.  Lens.receiver
-           ||+ "], amount: " +|| tx ^.  Lens.amount ||+ "."
-           )
+    t <> ("\n    Tx: [" +|| tx ^.  Lens.owner ||+ "] -> [" +|| tx ^.  Lens.receiver ||+
+          "], amount: " +|| tx ^.  Lens.amount ||+ ".")
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr showTransaction "" $ mBlock ^. Lens.transactions
@@ -37,11 +36,11 @@ poaNode :: L.NodeDefinitionL ()
 poaNode = do
     L.nodeTag "PoA node"
     L.logInfo "Starting of PoA node"
-    poaData <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar False)
+    poaData <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing)
 
-    L.std $ L.stdHandler $ L.setNodeFinished poaData
+    L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    L.scenario $ forever $ do
+    L.process $ do
         L.delay $ 100 * 1000
         eKBlock <- L.makeRpcRequest graphNodeTransmitterRpcAddress GetLastKBlock
         case eKBlock of
@@ -53,12 +52,8 @@ poaNode = do
                     L.atomically $ L.writeVar (poaData ^. currentLastKeyBlock) block
                     mBlock <- D.genRandMicroblock block
                     L.logInfo
-                        $   "MBlock generated ("
-                        +|| toHash mBlock
-                        ||+ ". Transactions:"
-                        +|  showTransactions mBlock
-                        |+  ""
+                        $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
                     _ :: Either Text SuccessMsg <- L.makeRpcRequest graphNodeTransmitterRpcAddress mBlock
                     pure ()
 
-    L.nodeFinishPending poaData
+    L.awaitNodeFinished poaData

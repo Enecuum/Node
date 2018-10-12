@@ -22,10 +22,19 @@ data UdpConnection = UdpConnection
     }
     deriving (Show, Eq, Ord, Generic)
 
+
+data TcpConnectionVar = TcpConnectionVar (TMVar (TChan Comand))
+
+data UdpConnectionVar
+    = ServerUdpConnectionVar S.SockAddr (TChan SendMsg)
+    | ClientUdpConnectionVar (TMVar (TChan Comand))
+
 data Protocol     = UDP | TCP
 data ServerComand = StopServer
 
 type RawData = LByteString
+
+data SendMsg = SendMsg SockAddr LByteString
 
 data Comand where
     Close :: Comand

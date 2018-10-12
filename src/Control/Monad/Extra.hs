@@ -1,7 +1,9 @@
-module Enecuum.Control.Monad.Extra where
+{-# LANGUAGE PackageImports #-}
+module Control.Monad.Extra (module X, tryMR, tryML, tryM) where
 
-import           Control.Monad
-import           Enecuum.Prelude
+import                   Control.Monad
+import qualified "extra" Control.Monad.Extra as X  
+import                   Enecuum.Prelude
 
 tryMR :: MonadCatch m => m t -> (t -> m ()) -> m ()
 tryMR operation f = tryM operation (pure ()) f

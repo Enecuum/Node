@@ -17,7 +17,7 @@ import qualified Enecuum.Blockchain.Lens       as Lens
 import qualified Enecuum.Core.Lens             as Lens
 import           Data.HGraph.StringHashable
 
-import           Enecuum.Framework.Language.Extra (HasGraph, HasFinished)
+import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
 
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 import           Enecuum.Assets.Nodes.Messages
@@ -279,6 +279,5 @@ graphNodeTransmitter = do
         L.methodE $ acceptChainFromTo nodeData
         L.methodE $ acceptMBlockForKBlocks nodeData
 
-    L.std $ L.stdHandler $ L.setNodeFinished nodeData
-    L.nodeFinishPending nodeData
-    L.stopServing graphNodeTransmitterRpcPort
+    L.std $ L.stdHandler $ L.stopNodeHandler nodeData
+    L.awaitNodeFinished nodeData

@@ -2,13 +2,13 @@ module App.Initialize where
 
 import           Enecuum.Prelude
 
-import           Enecuum.Config  (Config(..), ScenarioNode(..),NodeRole(..), Scenario(..), ScenarioRole(..))
+import           Enecuum.Config  (Config(..), ScenarioNode(..), NodeRole(..), Scenario(..), ScenarioRole(..))
 import qualified Enecuum.Core.Lens as Lens
 import qualified Enecuum.Assets.Scenarios as S
 import           Enecuum.Assets.System.Directory (appFileName)
-import           Enecuum.Interpreters (runNodeDefinitionL)
+import           Enecuum.Interpreters (runNodeDefinitionL, clearNodeRuntime)
 import           Enecuum.Runtime (NodeRuntime(..), createNodeRuntime, createLoggerRuntime,
-                                  clearNodeRuntime, clearLoggerRuntime,
+                                  clearLoggerRuntime,
                                   createCoreRuntime, clearCoreRuntime)
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 import qualified Enecuum.Framework.RLens as Lens
@@ -32,14 +32,12 @@ initialize config = do
     putStrLn @Text "Creating node runtime..."
     nodeRt <- createNodeRuntime coreRt
 
-    forM_ (scenarioNode config) $ \scenarioCase -> forkIO $ runNodeDefinitionL nodeRt $ do
+    forM_ (scenarioNode config) $ \scenarioCase -> runNodeDefinitionL nodeRt $ do
         L.logInfo
             $   "Starting node.\n  Role: " +|| nodeRole scenarioCase
             ||+ "\n  Scenario: " +|| scenario scenarioCase
             ||+ "\n  Case: " +|| scenarioRole scenarioCase ||+ "..."
         dispatchScenario config scenarioCase
-
-    void $ atomically $ readTMVar (nodeRt ^. Lens.stopNode)
 
     putStrLn @Text "Clearing node runtime..."
     clearNodeRuntime nodeRt
