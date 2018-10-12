@@ -29,7 +29,7 @@ data GraphNodeData = GraphNodeData
     , _curNode       :: D.StateVar D.StringHash
     , _logVar        :: D.StateVar [Text]
     , _ledger        :: D.StateVar (Map Integer Integer)
-    , _finished      :: D.StateVar Bool
+    , _status        :: D.StateVar NodeStatus
     }
 
 makeFieldsNoPrefix ''GraphNodeData
@@ -262,8 +262,7 @@ graphNodeInitialization = L.scenario $ do
         <*> L.newVar D.genesisHash
         <*> L.newVar []
         <*> L.newVar (fromList wallets)
-        <*> L.newVar False
-
+        <*> L.newVar NodeActing
 -- | Start of graph node
 graphNodeTransmitter :: L.NodeDefinitionL ()
 graphNodeTransmitter = do
