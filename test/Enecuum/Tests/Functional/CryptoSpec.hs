@@ -4,7 +4,6 @@ module Enecuum.Tests.Functional.CryptoSpec where
 import           Data.HGraph.StringHashable          (fromStringHash)
 import           Enecuum.Blockchain.Domain
 import qualified Enecuum.Blockchain.Domain.KBlock    as New
-import qualified Enecuum.Core.CoreEffect.Interpreter as I
 import qualified Enecuum.Core.Random.Interpreter     as I
 import qualified Enecuum.Language                    as L
 import qualified Enecuum.Legacy.Refact.Assets        as Old (genesisKeyBlock)
@@ -26,22 +25,13 @@ spec = do
 
 testVerifySignedTransaction :: Test
 testVerifySignedTransaction = TestCase $ do
-    (Transaction {..}) <- I.runERandomL $ genTransaction On
-    let txForSign = TransactionForSign {
-            _owner = _owner
-          , _receiver = _receiver
-          , _amount = _amount
-          , _currency = _currency}
-    verifyEncodable _owner _signature txForSign `shouldBe` True
+    t <- I.runERandomL $ genTransaction On
+    verifyTransaction t `shouldBe` True
 
 testVerifySignedMicroblock :: Test
 testVerifySignedMicroblock = TestCase $ do
-    (Microblock {..}) <- I.runERandomL $ genRandMicroblock genesisKBlock
-    let mbForSign = MicroblockForSign {
-            _keyBlock = _keyBlock
-          , _transactions = _transactions
-          , _publisher = _publisher}
-    verifyEncodable _publisher _signature mbForSign `shouldBe` True
+    mb <- I.runERandomL $ genRandMicroblock genesisKBlock
+    verifyMicroblock mb `shouldBe` True
 
 testGenesisKblockHash :: Test
 testGenesisKblockHash = TestCase $ do
@@ -61,7 +51,7 @@ newKBlockToOld KBlock{..} = Old.KeyBlockInfoPoW {
 
 testKblockHash :: Test
 testKblockHash = TestCase $ do
-    k <- replicateM 1000 (I.runCoreEffect undefined $ L.evalRandom genRandKeyBlock)
+    k <- replicateM 1000 (I.runERandomL genRandKeyBlock)
     let new = map New.calculateKeyBlockHash k
         old = map (Old.calculateKeyBlockHash . newKBlockToOld) k
     new `shouldBe` old

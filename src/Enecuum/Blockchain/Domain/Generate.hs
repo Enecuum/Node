@@ -127,43 +127,17 @@ genTransaction isFromRange = do
             pure (owner, receiver)
 
     amount <- fromIntegral <$> L.getRandomInt (0, 100)
-
     let owner = getPub ownerKeyPair
         receiver = getPub receiverKeyPair
         currency = ENQ
-        tx = TransactionForSign
-            { _owner = owner
-            , _receiver = receiver
-            , _amount = amount
-            , _currency = currency
-            }
-    signature <- L.sign (getPriv ownerKeyPair) tx
-
-    let transaction = Transaction
-            { _owner = owner
-            , _receiver = receiver
-            , _amount = amount
-            , _currency = currency
-            , _signature = signature
-            }
+    transaction <- signTransaction owner (getPriv ownerKeyPair) receiver amount currency    
     pure transaction
 
 -- | Generate signed microblock
 genMicroblock :: (Monad m, L.ERandom m) => StringHash -> [Transaction] -> m Microblock
 genMicroblock hashofKeyBlock tx = do
     (KeyPair publisherPubKey publisherPrivKey)<- L.generateKeyPair
-    let mb = MicroblockForSign {
-        _keyBlock = hashofKeyBlock
-      , _transactions = tx
-      , _publisher = publisherPubKey}
-
-    signature <- L.sign publisherPrivKey mb
-    let microblock = Microblock {
-        _keyBlock = hashofKeyBlock
-      , _transactions = tx
-      , _publisher = publisherPubKey
-      , _signature = signature
-      }
+    microblock <- signMicroblock hashofKeyBlock tx publisherPubKey publisherPrivKey
     pure microblock
 
 genRandMicroblock :: (Monad m, L.ERandom m) => KBlock -> m Microblock
