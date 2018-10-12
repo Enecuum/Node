@@ -34,20 +34,15 @@ generateNKBlocksWithOrder :: Integer -> Ordering -> L.ERandomL (StringHash, [KBl
 generateNKBlocksWithOrder = createKBlocks genesisHash
 
 -- Generate bunch of key blocks (randomly or in order)
--- createKBlocks :: StringHash -> Integer -> Ordering -> L.ERandomL (StringHash, [KBlock])
-createKBlocks
-  :: (Monad m, L.ERandom m) =>
-     StringHash -> Integer -> Ordering -> m (StringHash, [KBlock])
+createKBlocks :: (Monad m, L.ERandom m) => StringHash -> Integer -> Ordering -> m (StringHash, [KBlock])
 createKBlocks prevKBlockHash from order = do
     (lastHash, kBlockBunch) <- generateKBlocks prevKBlockHash from
     kBlockIndices           <- generateIndices order
-    let kBlocks = map ((kBlockBunch !!) . fromIntegral) kBlockIndices
+    let kBlocks = map (kBlockBunch !!) kBlockIndices
     pure (lastHash, kBlocks)
 
 -- Generate bunch of key blocks (in order)
--- generateKBlocks :: StringHash -> Integer -> L.ERandomL (StringHash, [KBlock])
-generateKBlocks
-  :: Monad m => StringHash -> Integer -> m (StringHash, [KBlock])
+generateKBlocks :: Monad m => StringHash -> Integer -> m (StringHash, [KBlock])
 generateKBlocks prevHash from = do
     blocks <- loopGenKBlock prevHash from (from + kBlockInBunch)
     case blocks of
@@ -68,9 +63,7 @@ loopGenKBlock prevHash from to = do
 genKBlock :: StringHash -> Integer -> KBlock
 genKBlock prevHash i = KBlock {_prevHash = prevHash, _number = i, _nonce = i, _solver = toHash (i + 3)}
 
--- genNTransactions :: Int -> L.ERandomL [Transaction]
-genNTransactions
-  :: (L.ERandom m, Monad m) => Int -> m [Transaction]
+genNTransactions :: (L.ERandom m, Monad m) => Int -> m [Transaction]
 genNTransactions k = replicateM k $ genTransaction On
 
 dummyTx = Transaction
@@ -105,17 +98,15 @@ wallets1 :: [KeyPair]
 wallets1 = map (\(pub,priv) -> KeyPair pub priv) $ zip publicKeys1 privateKeys1
 
 -- | Generate signed transaction
--- genTransaction :: Boundary -> L.ERandomL Transaction
-genTransaction
-  :: (Monad m, L.ERandom m) => Boundary -> m Transaction
+genTransaction :: (Monad m, L.ERandom m) => Boundary -> m Transaction
 genTransaction isFromRange = do
     (ownerKeyPair, receiverKeyPair) <- case isFromRange of
         On -> do
-            let quantityOfWallets = fromIntegral $ length wallets1
-            ownerIndex <- fromIntegral <$> L.getRandomInt (0, quantityOfWallets - 1)
+            let quantityOfWallets = length wallets1
+            ownerIndex <- L.getRandomInt (0, quantityOfWallets - 1)
             let owner = wallets1 !! ownerIndex
             let rest = delete owner wallets1
-            receiverIndex <- fromIntegral <$> L.getRandomInt (0, quantityOfWallets - 2)
+            receiverIndex <- L.getRandomInt (0, quantityOfWallets - 2)
             let receiver = rest !! receiverIndex
             pure (owner, receiver)
         Off -> do
@@ -123,7 +114,7 @@ genTransaction isFromRange = do
             receiver <- L.generateKeyPair
             pure (owner, receiver)
 
-    amount <- L.getRandomInt (0, 100)
+    amount <- fromIntegral <$> L.getRandomInt (0, 100)
 
     let owner = getPub ownerKeyPair
         receiver = getPub receiverKeyPair
@@ -144,11 +135,8 @@ genTransaction isFromRange = do
     }
     pure transaction
 
--- | Generate signed microblock   
--- genMicroblock :: StringHash -> [Transaction] -> L.ERandomL Microblock
-genMicroblock
-  :: (Monad m, L.ERandom m) =>
-     StringHash -> [Transaction] -> m Microblock
+-- | Generate signed microblock
+genMicroblock :: (Monad m, L.ERandom m) => StringHash -> [Transaction] -> m Microblock
 genMicroblock hashofKeyBlock tx = do
     (KeyPair publisherPubKey publisherPrivKey)<- L.generateKeyPair
     let mb = MicroblockForSign {
@@ -165,21 +153,16 @@ genMicroblock hashofKeyBlock tx = do
       }
     pure microblock
 
--- genRandMicroblock :: KBlock -> L.ERandomL Microblock
--- genRandMicroblock
---   :: (Monad m, L.ERandom m,
---       Data.HGraph.StringHashable.StringHashable a) =>
---      a -> m Microblock
+genRandMicroblock :: (Monad m, L.ERandom m) => KBlock -> m Microblock
 genRandMicroblock kBlock = genMicroblock (toHash kBlock) =<< genNTransactions transactionsInMicroblock
 
 -- | Generate indices with order
--- generateIndices :: Ordering -> L.ERandomL [Integer]
-generateIndices :: (L.ERandom m, Monad m) => Ordering -> m [Integer]
+generateIndices :: (L.ERandom m, Monad m) => Ordering -> m [Int]
 generateIndices order = do
-    case order of
+    n <- case order of
         RandomOrder -> loopGenIndices [0 .. kBlockInBunch]
         InOrder     -> pure $ [0 .. kBlockInBunch]
-
+    pure $ map fromIntegral n 
 -- loop: choose randomly one from the rest of list Integers
 -- example:
 -- [1,2,3,4,5] - 2
@@ -188,13 +171,12 @@ generateIndices order = do
 -- [1,3] - 1
 -- [3] - 3
 -- the result: [2,4,5,1,3]
--- loopGenIndices :: [Integer] -> L.ERandomL [Integer]
 loopGenIndices :: (Monad m, L.ERandom m, Eq a) => [a] -> m [a]
 loopGenIndices numbers = do
     if (not $ null numbers)
         then do
-            let maxIndex = fromIntegral $ length numbers - 1
-            p <- fromIntegral <$> L.getRandomInt (0, maxIndex)
+            let maxIndex = length numbers - 1
+            p <- L.getRandomInt (0, maxIndex)
             let result = numbers !! p
             -- choose next number from rest
             rest <- loopGenIndices $ delete result numbers

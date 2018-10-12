@@ -4,10 +4,9 @@ module Enecuum.Blockchain.Domain.Transaction where
 
 import           Enecuum.Prelude
 
-import qualified Crypto.Hash.SHA256               as SHA
-import qualified Data.ByteString.Base64           as Base64
-import           Data.HGraph.StringHashable       (StringHash (..), StringHashable, toHash)
-import qualified Data.Serialize                   as S
+-- import qualified Crypto.Hash.SHA256               as SHA
+-- import qualified Data.ByteString.Base64           as Base64
+-- import           Data.HGraph.StringHashable       (StringHash (..), StringHashable, toHash)
 import           Enecuum.Blockchain.Domain.Crypto
 import           Enecuum.Blockchain.Domain.Types
 
@@ -21,9 +20,7 @@ data Transaction = Transaction
     , _currency  :: Currency
     , _signature :: Signature
     }
-  deriving ( Generic, Show, Eq, Ord, Read, ToJSON, FromJSON)
-
-instance S.Serialize Transaction
+  deriving ( Generic, Show, Eq, Ord, Read, ToJSON, FromJSON, Serialize)
 
 data TransactionForSign = TransactionForSign
     { _owner     :: PublicKey
@@ -31,9 +28,7 @@ data TransactionForSign = TransactionForSign
     , _amount    :: Amount
     , _currency  :: Currency
     }
-  deriving ( Generic, Show, Eq, Ord, Read, ToJSON, FromJSON)
-
-instance S.Serialize TransactionForSign
+  deriving ( Generic, Show, Eq, Ord, Read, ToJSON, FromJSON, Serialize)
 
 -- instance StringHashable Transaction where
 --     toHash = StringHash . Base64.encode . SHA.hash . S.encode

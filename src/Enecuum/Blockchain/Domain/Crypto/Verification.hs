@@ -4,7 +4,7 @@
 module Enecuum.Blockchain.Domain.Crypto.Verification where
 
 import           "cryptonite" Crypto.Hash (SHA3_256(..))
-import           Crypto.PubKey.ECC.ECDSA (Signature, PublicKey, verify)
+import           Crypto.PubKey.ECC.ECDSA (Signature, verify)
 import           Data.Serialize (encode)
 import           Enecuum.Prelude
 import qualified Enecuum.Blockchain.Domain.Crypto.PublicPrivateKeyPair  as Enq

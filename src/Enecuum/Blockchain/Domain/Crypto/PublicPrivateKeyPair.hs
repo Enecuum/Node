@@ -26,7 +26,6 @@ import           "cryptonite" Crypto.PubKey.ECC.Types
 import           "cryptonite" Crypto.Random                          (MonadRandom)
 import           Data.ByteString.Base58
 import qualified Data.ByteString.Char8                               as BC
-import           Data.Int                                            (Int64)
 import           Enecuum.Blockchain.Domain.Crypto.SerializeInstances ()
 import           Enecuum.Prelude
 import           Math.NumberTheory.Moduli

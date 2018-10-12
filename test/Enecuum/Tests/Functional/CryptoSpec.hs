@@ -29,7 +29,7 @@ testVerifySignedTransaction = TestCase $ do
 
 testVerifySignedMicroblock :: Test
 testVerifySignedMicroblock = TestCase $ do
-    mb@(Microblock {..}) <- I.runERandomL $ genRandMicroblock genesisHash
+    mb@(Microblock {..}) <- I.runERandomL $ genRandMicroblock genesisKBlock
     let mbForSign = MicroblockForSign {
             _keyBlock = _keyBlock
           , _transactions = _transactions
