@@ -39,14 +39,14 @@ newtype Pong = Pong Int deriving (Generic, ToJSON, FromJSON)
 data Succes = Succes    deriving (Generic, ToJSON, FromJSON)
 
 
-pingHandle :: Ping -> D.UdpConnection -> L.NodeL ()
+pingHandle :: Ping -> D.Connection D.Udp -> L.NodeL ()
 pingHandle (Ping i) conn = do
     when (i < 10) $ L.send conn (Pong $ i + 1)
     when (i == 10) $ do
         L.send succAdr Succes
         L.close conn
 
-pongHandle :: Pong -> D.UdpConnection -> L.NodeL ()
+pongHandle :: Pong -> D.Connection D.Udp -> L.NodeL ()
 pongHandle (Pong i) conn = do
     when (i < 10) $ L.send conn (Ping $ i + 1)
     when (i == 10) $ do
@@ -65,7 +65,7 @@ pingPong = TestCase $ do
                 L.udpHandler pongHandle
         threadDelay 5000
         runNodeDefinitionL nr2 $ do
-            conn :: D.UdpConnection <- L.open serverAddr $ do
+            conn :: D.Connection D.Udp <- L.open serverAddr $ do
                 L.udpHandler pingHandle
                 L.udpHandler pongHandle
             L.send conn $ Ping 0

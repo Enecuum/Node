@@ -28,13 +28,13 @@ interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
     res <- takeMVar var
     pure $ next res
 
-interpretNetworkingL nr (L.SendMessage (D.TcpConnection conn) msg next) = do
+interpretNetworkingL nr (L.SendMessage (D.Connection conn) msg next) = do
     atomically $ do
         m <- readTVar $ nr ^. RL.tcpConnects
         whenJust (m ^. at conn) $ \con -> Tcp.send con msg
     pure $ next ()
 
-interpretNetworkingL nr (L.SendUdpMsgByConnection (D.UdpConnection conn) msg next) = do
+interpretNetworkingL nr (L.SendUdpMsgByConnection (D.Connection conn) msg next) = do
     atomically $ do
         m <- readTVar $ nr ^. RL.udpConnects
         whenJust (m ^. at conn) $ \con -> Udp.send con msg

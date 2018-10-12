@@ -55,7 +55,7 @@ interpretNodeDefinitionL nodeRt (L.ServingTcp port action next) = do
     s        <- Tcp.startServer
         port
         ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
-        (\(D.TcpConnection addr) -> Impl.insertConnect (nodeRt ^. RLens.tcpConnects) addr)
+        (\(D.Connection addr) -> Impl.insertConnect (nodeRt ^. RLens.tcpConnects) addr)
     atomically $ setServerChan (nodeRt ^. RLens.servers) port s
     pure $ next a
 
@@ -66,7 +66,7 @@ interpretNodeDefinitionL nodeRt (L.ServingUdp port initScript next) = do
     s        <- Udp.startServer
         port
         ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
-        (\(D.UdpConnection addr) -> Impl.insertUdpConnect (nodeRt ^. RLens.udpConnects) addr)
+        (\(D.Connection addr) -> Impl.insertUdpConnect (nodeRt ^. RLens.udpConnects) addr)
     atomically $ setServerChan (nodeRt ^. RLens.servers) port s
     pure $ next a
 

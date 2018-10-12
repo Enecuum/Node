@@ -103,11 +103,11 @@ instance Serving (TcpHandlerL L.NodeL ()) where
 instance Serving (UdpHandlerL L.NodeL ()) where
     serving port handlersF = liftF $ ServingUdp port handlersF id
 
-instance L.Connection (Free NodeDefinitionF) D.TcpConnection (TcpHandlerL L.NodeL ()) where
+instance L.Connection (Free NodeDefinitionF) (D.Connection D.Tcp) (TcpHandlerL L.NodeL ()) where
     close conn       = evalNodeL $ L.close conn
     open  addr handl = evalNodeL $ L.open  addr handl
 
-instance L.Connection (Free NodeDefinitionF) D.UdpConnection (UdpHandlerL L.NodeL ()) where
+instance L.Connection (Free NodeDefinitionF) (D.Connection D.Udp) (UdpHandlerL L.NodeL ()) where
     close conn       = evalNodeL $ L.close conn
     open  addr handl = evalNodeL $ L.open  addr handl
 

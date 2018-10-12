@@ -45,14 +45,14 @@ pingClientAddress = D.Address "0.0.1.5" pingClientPort
 pingPongThreshold :: Int
 pingPongThreshold = 3
 
-pingHandle :: D.StateVar Int -> Ping -> D.TcpConnection -> L.NodeL ()
+pingHandle :: D.StateVar Int -> Ping -> D.Connection D.Tcp -> L.NodeL ()
 pingHandle countVar (Ping i) conn = do
     L.logInfo $ "Ping handle received: " +|| Ping i ||+ ". Sending " +|| Pong i ||+ "."
     L.send conn $ Pong i
     when (i >= pingPongThreshold) $ L.close conn
     L.atomically $ L.writeVar countVar i
 
-pongHandle :: D.StateVar Int -> Pong -> D.TcpConnection -> L.NodeL ()
+pongHandle :: D.StateVar Int -> Pong -> D.Connection D.Tcp -> L.NodeL ()
 pongHandle countVar (Pong i) conn = do
     L.logInfo $ "Pong handle received: " +|| Pong i ||+ ". Sending " +|| Ping (i + 1) ||+ "."
     L.send conn $ Ping $ i + 1
@@ -76,7 +76,7 @@ pingSendingClientNode :: L.NodeDefinitionL ()
 pingSendingClientNode = L.scenario $ do
     countVar <- L.atomically $ L.newVar 0
 
-    conn :: D.TcpConnection <- L.open pongServerAddress $ L.handler $ pongHandle countVar
+    conn :: D.Connection D.Tcp <- L.open pongServerAddress $ L.handler $ pongHandle countVar
     L.send conn $ Ping 0
 
     L.atomically $ do

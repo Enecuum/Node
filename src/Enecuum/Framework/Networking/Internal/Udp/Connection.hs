@@ -24,26 +24,26 @@ import qualified Network.Socket as S hiding (recv, send, sendAll)
 import qualified Network.Socket.ByteString.Lazy as S
 import           Control.Monad.Extra
 
-type Handler    = Value -> D.UdpConnection -> IO ()
+type Handler    = Value -> D.Connection D.Udp -> IO ()
 type Handlers   = Map Text Handler
 
 type ServerHandle = TChan D.ServerComand
 -- ByteString -> (Chan SendMsg) -> SockAddr
 
 -- | Start new server witch port
-startServer :: PortNumber -> Handlers -> (D.UdpConnection -> D.UdpConnectionVar -> IO ()) -> IO ServerHandle
+startServer :: PortNumber -> Handlers -> (D.Connection D.Udp -> D.UdpConnectionVar -> IO ()) -> IO ServerHandle
 startServer port handlers insertConnect = do
     chan <- atomically newTChan
     void $ forkIO $ runUDPServer chan port $ \msg msgChan sockAddr -> do
 
         let host       = D.sockAddrToHost sockAddr
-            connection = D.UdpConnection $ D.Address host port
+            connection = D.Connection $ D.Address host port
 
         insertConnect connection (D.ServerUdpConnectionVar sockAddr msgChan)
         runHandlers   connection handlers msg
     pure chan
 
-runHandlers :: D.UdpConnection -> Handlers -> LByteString -> IO ()
+runHandlers :: D.Connection D.Udp -> Handlers -> LByteString -> IO ()
 runHandlers netConn handlers msg =
     whenJust (decode msg) $ \(D.NetworkMsg tag val) ->
         whenJust (handlers ^. at tag) $ \handler -> handler val netConn
@@ -92,12 +92,12 @@ openConnect addr handlers = do
     void $ forkIO $ do
         tryML
             (runClient UDP addr $ \sock -> void $ race
-                (readMessages (D.UdpConnection addr) handlers sock)
+                (readMessages (D.Connection addr) handlers sock)
                 (connectManager conn sock))
             (atomically $ closeConn conn)
     pure $ D.ClientUdpConnectionVar conn
 
-readMessages :: D.UdpConnection -> Handlers -> S.Socket -> IO ()
+readMessages :: D.Connection D.Udp -> Handlers -> S.Socket -> IO ()
 readMessages conn handlers sock = tryMR (S.recv sock (1024 * 4)) $ \msg -> do 
     runHandlers conn handlers msg
     readMessages conn handlers sock

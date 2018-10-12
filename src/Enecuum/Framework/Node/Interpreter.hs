@@ -42,7 +42,7 @@ interpretNodeL nodeRt (L.OpenTcpConnection addr initScript next) = do
     handlers <- readTVarIO m
     newCon   <- Tcp.openConnect addr ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
     insertConnect (nodeRt ^. RLens.tcpConnects) addr newCon
-    pure $ next (D.TcpConnection addr)
+    pure $ next (D.Connection addr)
 
 interpretNodeL nodeRt (L.OpenUdpConnection addr initScript next) = do
     m <- atomically $ newTVar mempty
@@ -50,9 +50,9 @@ interpretNodeL nodeRt (L.OpenUdpConnection addr initScript next) = do
     handlers <- readTVarIO m
     newCon   <- Udp.openConnect addr ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
     insertUdpConnect (nodeRt ^. RLens.udpConnects) addr newCon
-    pure $ next (D.UdpConnection addr)
+    pure $ next (D.Connection addr)
 
-interpretNodeL nodeRt (L.CloseTcpConnection (D.TcpConnection addr) next) = do
+interpretNodeL nodeRt (L.CloseTcpConnection (D.Connection addr) next) = do
     atomically $ do
         m <- readTVar (nodeRt ^. RLens.tcpConnects)
         whenJust (m ^. at addr) $ \con -> do
@@ -60,7 +60,7 @@ interpretNodeL nodeRt (L.CloseTcpConnection (D.TcpConnection addr) next) = do
             modifyTVar (nodeRt ^. RLens.tcpConnects) $ M.delete addr
     pure $ next ()
 --
-interpretNodeL nodeRt (L.CloseUdpConnection (D.UdpConnection addr) next) = do
+interpretNodeL nodeRt (L.CloseUdpConnection (D.Connection addr) next) = do
     atomically $ do
         m <- readTVar (nodeRt ^. RLens.udpConnects)
         whenJust (m ^. at addr) $ \con -> do

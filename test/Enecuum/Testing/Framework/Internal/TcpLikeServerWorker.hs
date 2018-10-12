@@ -21,7 +21,7 @@ startNodeTcpLikeWorker
     :: (L.NodeL () -> IO ())
     -> T.NodeRuntime
     -> Map Text (L.TcpHandler L.NodeL)
-    -> Maybe D.TcpConnection
+    -> Maybe (D.Connection D.Tcp)
     -> IO T.ConnectionWorkerHandle
 startNodeTcpLikeWorker nodeLRunner nodeRt handlers mbBackConn = do
 
@@ -41,7 +41,7 @@ startNodeTcpLikeWorker nodeLRunner nodeRt handlers mbBackConn = do
         controlReq <- atomically $ takeTMVar $ control ^. RLens.request
         case controlReq of
             T.AcceptBackConnectionReq bindedServer -> do
-                atomically $ putTMVar tBackConn (D.TcpConnection $ bindedServer ^. RLens.address)
+                atomically $ putTMVar tBackConn (D.Connection $ bindedServer ^. RLens.address)
                 registerConnection nodeRt bindedServer
 
             T.MessageReq msg -> do
@@ -55,8 +55,8 @@ startNodeTcpLikeWorker nodeLRunner nodeRt handlers mbBackConn = do
 
 callHandler
     :: (L.NodeL () -> IO ())
-    -> D.TcpConnection
-    -> Map Text (A.Value -> D.TcpConnection -> L.NodeL ())
+    -> D.Connection D.Tcp 
+    -> Map Text (A.Value -> D.Connection D.Tcp -> L.NodeL ())
     -> D.NetworkMsg
     -> IO ()
 callHandler nodeLRunner backConn handlers (D.NetworkMsg tag val) = case Map.lookup tag handlers of

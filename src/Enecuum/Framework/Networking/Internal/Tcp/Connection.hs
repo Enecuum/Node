@@ -22,19 +22,19 @@ import qualified Network.Socket.ByteString.Lazy as S
 import qualified Network.Socket as S hiding (recv)
 import           Control.Monad.Extra
 
-type Handler    = Value -> D.TcpConnection -> IO ()
+type Handler    = Value -> D.Connection D.Tcp -> IO ()
 type Handlers   = Map Text Handler
 
 type ServerHandle = TChan D.ServerComand
 
 -- | Start new server witch port
-startServer :: PortNumber -> Handlers -> (D.TcpConnection -> D.TcpConnectionVar -> IO ()) -> IO ServerHandle
+startServer :: PortNumber -> Handlers -> (D.Connection D.Tcp -> D.TcpConnectionVar -> IO ()) -> IO ServerHandle
 startServer port handlers ins = do
     chan <- atomically newTChan
     void $ forkIO $ runTCPServer chan port $ \sock -> do
         addr <- getAdress sock
         conn <- D.TcpConnectionVar <$> atomically (newTMVar =<< newTChan)
-        let networkConnecion = D.TcpConnection $ D.Address addr port
+        let networkConnecion = D.Connection $ D.Address addr port
         ins networkConnecion conn
         void $ race (runHandlers conn networkConnecion sock handlers) (connectManager conn sock)
     pure chan
@@ -53,7 +53,7 @@ openConnect addr handlers = do
     void $ forkIO $ do
         tryML
             (runClient TCP addr $ \wsConn -> void $ race
-                (runHandlers conn (D.TcpConnection addr) wsConn handlers)
+                (runHandlers conn (D.Connection addr) wsConn handlers)
                 (connectManager conn wsConn))
             (atomically $ closeConn conn)
     pure conn
@@ -70,13 +70,13 @@ send conn msg = writeComand conn $ D.Send msg
 
 --------------------------------------------------------------------------------
 -- * Internal
-runHandlers :: D.TcpConnectionVar -> D.TcpConnection -> S.Socket -> Handlers -> IO ()
+runHandlers :: D.TcpConnectionVar -> D.Connection D.Tcp -> S.Socket -> Handlers -> IO ()
 runHandlers conn netConn wsConn handlers = do
     tryM (S.recv wsConn (1024 * 4)) (atomically $ closeConn conn) $ \msg -> do
         whenJust (decode msg) $ \val -> callHandler netConn val handlers
         runHandlers conn netConn wsConn handlers
 
-callHandler :: D.TcpConnection -> D.NetworkMsg -> Handlers -> IO ()
+callHandler :: D.Connection D.Tcp -> D.NetworkMsg -> Handlers -> IO ()
 callHandler conn (D.NetworkMsg tag val) handlers = whenJust (handlers ^. at tag) $ \handler -> handler val conn
 
 -- | Manager for controlling of WS connect.

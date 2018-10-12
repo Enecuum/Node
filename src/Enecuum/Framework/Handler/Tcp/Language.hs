@@ -17,16 +17,16 @@ data TcpHandlerF m a where
 instance Functor (TcpHandlerF m) where
     fmap g (TcpHandler text f next) = TcpHandler text f (g . next)
 
-type TcpHandler m  = A.Value -> D.TcpConnection -> m ()
+type TcpHandler m  = A.Value -> D.Connection D.Tcp -> m ()
 type TcpHandlerL m a = Free (TcpHandlerF m) a
 
 msgHandler :: Text -> TcpHandler m -> TcpHandlerL m ()
 msgHandler text f = liftF (TcpHandler text f id)
 
-makeHandler :: (FromJSON a, Monad m) => (a -> D.TcpConnection -> m ()) -> TcpHandler m
+makeHandler :: (FromJSON a, Monad m) => (a -> D.Connection D.Tcp -> m ()) -> TcpHandler m
 makeHandler f raw = case A.fromJSON raw of
     A.Success req -> \conn -> f req conn
     A.Error   _   -> \_ -> pure ()
 
-handler :: (Typeable a, FromJSON a, Typeable m, Monad m) => (a -> D.TcpConnection -> m ()) -> TcpHandlerL m ()
+handler :: (Typeable a, FromJSON a, Typeable m, Monad m) => (a -> D.Connection D.Tcp -> m ()) -> TcpHandlerL m ()
 handler f = msgHandler (D.toTag f) (makeHandler f)

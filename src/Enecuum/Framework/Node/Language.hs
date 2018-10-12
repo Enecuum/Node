@@ -28,11 +28,11 @@ data NodeF next where
     EvalGraphIO :: (Serialize c, T.StringHashable c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) x -> (x -> next) -> NodeF next
     NewGraph  :: (Serialize c, T.StringHashable c) => (T.TGraph c -> next) -> NodeF next
     -- | Open connection to the node.
-    OpenTcpConnection :: D.Address -> TcpHandlerL NodeL () -> (D.TcpConnection -> next) -> NodeF next
-    OpenUdpConnection :: D.Address -> UdpHandlerL NodeL () -> (D.UdpConnection -> next) -> NodeF next
+    OpenTcpConnection :: D.Address -> TcpHandlerL NodeL () -> (D.Connection D.Tcp -> next) -> NodeF next
+    OpenUdpConnection :: D.Address -> UdpHandlerL NodeL () -> (D.Connection D.Udp -> next) -> NodeF next
     -- | Close existing connection.
-    CloseTcpConnection :: D.TcpConnection -> (() -> next) -> NodeF  next
-    CloseUdpConnection :: D.UdpConnection -> (() -> next) -> NodeF  next
+    CloseTcpConnection :: D.Connection D.Tcp -> (() -> next) -> NodeF  next
+    CloseUdpConnection :: D.Connection D.Udp -> (() -> next) -> NodeF  next
 
 type NodeL = Free NodeF
 
@@ -57,24 +57,24 @@ evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
 -- | Open network connection.
 {-# DEPRECATED openConnection "Use L.open" #-}
-openConnection :: D.Address -> TcpHandlerL NodeL () -> NodeL D.TcpConnection
+openConnection :: D.Address -> TcpHandlerL NodeL () -> NodeL (D.Connection D.Tcp)
 openConnection = open
 
 -- | Close network connection.
 -- TODO: what is the behavior when connection is closed?
 {-# DEPRECATED closeConnection "Use L.close" #-}
-closeConnection :: D.TcpConnection -> NodeL ()
+closeConnection :: D.Connection D.Tcp -> NodeL ()
 closeConnection = close
 
 class Connection a con handler | con -> handler where
     close :: con -> a ()
     open  :: D.Address -> handler -> a con
 
-instance Connection (Free NodeF) D.TcpConnection (TcpHandlerL NodeL ()) where
+instance Connection (Free NodeF) (D.Connection D.Tcp) (TcpHandlerL NodeL ()) where
     close conn       = liftF $ CloseTcpConnection conn id
     open  addr handl = liftF $ OpenTcpConnection  addr handl id
 
-instance Connection (Free NodeF) D.UdpConnection (UdpHandlerL NodeL ()) where
+instance Connection (Free NodeF) (D.Connection D.Udp) (UdpHandlerL NodeL ()) where
     close conn       = liftF $ CloseUdpConnection conn id
     open  addr handl = liftF $ OpenUdpConnection  addr handl id
 
