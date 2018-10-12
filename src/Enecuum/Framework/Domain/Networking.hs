@@ -14,6 +14,7 @@ import qualified Network.Socket as S hiding (recv)
 
 data Udp = Udp
 data Tcp = Tcp
+data Rpc = Rpc
 
 data Protocol a = UDP | TCP
 

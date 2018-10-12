@@ -55,7 +55,7 @@ pingPong = TestCase $ do
         threadDelay 5000
         runNodeDefinitionL nr1 $ do
             succConn <- L.open D.Tcp succAdr $ pure ()
-            L.serving serverPort $ do
+            L.serving D.Tcp serverPort $ do
                 L.handler (pingHandle succConn)
                 L.handler (pongHandle succConn)
         threadDelay 5000

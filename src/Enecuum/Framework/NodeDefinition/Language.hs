@@ -90,17 +90,17 @@ initialization = evalNodeL
 scenario :: L.NodeL a -> NodeDefinitionL a
 scenario = evalNodeL
 
-class Serving a where
-    serving :: PortNumber -> a -> NodeDefinitionL ()
+class Serving c a where
+    serving :: c -> PortNumber -> a -> NodeDefinitionL ()
 
-instance Serving (RpcHandlerL L.NodeL ()) where
-    serving = servingRpc
+instance Serving D.Rpc (RpcHandlerL L.NodeL ()) where
+    serving _ port handlersF = servingRpc port handlersF
 
-instance Serving (NetworkHandlerL D.Tcp L.NodeL ()) where
-    serving port handlersF = liftF $ ServingTcp port handlersF id
+instance Serving D.Tcp (NetworkHandlerL D.Tcp L.NodeL ()) where
+    serving _ port handlersF = liftF $ ServingTcp port handlersF id
 
-instance Serving (NetworkHandlerL D.Udp L.NodeL ()) where
-    serving port handlersF = liftF $ ServingUdp port handlersF id
+instance Serving D.Udp (NetworkHandlerL D.Udp L.NodeL ()) where
+    serving _ port handlersF = liftF $ ServingUdp port handlersF id
 
 instance L.Connection (Free L.NodeF) a => L.Connection (Free NodeDefinitionF) a where
     close   conn       = evalNodeL $ L.close conn

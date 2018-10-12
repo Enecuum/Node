@@ -60,7 +60,7 @@ pingPong = TestCase $ do
     void $ forkIO $ do
         threadDelay 5000
         runNodeDefinitionL nr1 $ do
-            L.serving serverPort $ do
+            L.serving D.Udp serverPort $ do
                 L.handler pingHandle
                 L.handler pongHandle
         threadDelay 5000
