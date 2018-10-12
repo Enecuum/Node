@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 -- TODO: this is copy-paste from tests with little changes.
 
 module Enecuum.Blockchain.Domain.Graph where
