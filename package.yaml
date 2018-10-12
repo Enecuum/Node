@@ -129,6 +129,7 @@ dependencies:
 - silently
 - th-abstraction
 - MonadRandom
+- entropy
 
 library:
   source-dirs: src

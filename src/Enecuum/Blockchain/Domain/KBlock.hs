@@ -33,8 +33,8 @@ genesisIndicationHash = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 genesisSolver :: IsString a => a
 genesisSolver = "EMde81cgGToGrGWSNCqm6Y498qBpjEzRczBbvC5MV2Q="
 
-genesisKBlockType :: Word8
-genesisKBlockType = 0
+kBlockType :: Int
+kBlockType = 0
 
 genesisKBlock :: KBlock
 genesisKBlock = KBlock
@@ -49,7 +49,7 @@ calculateKeyBlockHash :: KBlock -> BSI.ByteString
 calculateKeyBlockHash KBlock {..} = Base64.encode . SHA.hash . B.concat $ bstr
   where
     bstr = map runPut
-            [ putWord8 genesisKBlockType
+            [ putWord8 (toEnum kBlockType)
             , putWord32le (fromInteger _number)
             , putWord32le (fromInteger _time)
             , putWord32le (fromInteger _nonce)

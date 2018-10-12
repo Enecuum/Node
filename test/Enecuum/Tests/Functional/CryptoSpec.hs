@@ -1,25 +1,31 @@
 {-# LANGUAGE RecordWildCards #-}
 module Enecuum.Tests.Functional.CryptoSpec where
 
+import           Data.HGraph.StringHashable          (fromStringHash)
 import           Enecuum.Blockchain.Domain
--- import qualified Enecuum.Blockchain.Lens   as Lens
-import qualified Enecuum.Core.Random.Interpreter as I
+import qualified Enecuum.Blockchain.Domain.KBlock    as New
+import qualified Enecuum.Core.CoreEffect.Interpreter as I
+import qualified Enecuum.Core.Random.Interpreter     as I
+import qualified Enecuum.Language                    as L
+import qualified Enecuum.Legacy.Refact.Assets        as Old (genesisKeyBlock)
+import qualified Enecuum.Legacy.Refact.Hashing       as Old (calculateKeyBlockHash)
+import qualified Enecuum.Legacy.Service.Types        as Old (KeyBlockInfoPoW (..))
 import           Enecuum.Prelude
-import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit  (fromHUnitTest)
-import           Test.HUnit                (Test (..), (@?=))
-
+import           Test.Hspec                          (Spec, describe, shouldBe)
+import           Test.Hspec.Contrib.HUnit            (fromHUnitTest)
+import           Test.HUnit                          (Test (..))
 
 spec :: Spec
 spec = do
     describe "Crypto spec tests" $ fromHUnitTest $ TestList
         [ TestLabel "Verify transaction signature" testVerifySignedTransaction
-        , TestLabel "Verify microblock signature" testVerifySignedMicroblock]
-
+        , TestLabel "Verify microblock signature" testVerifySignedMicroblock
+        , TestLabel "Kblock hash calculation for genesis key block: legacy and new are the same" testGenesisKblockHash
+        , TestLabel "Kblock hash calculation for random key blocks: legacy and new are the same" testKblockHash]
 
 testVerifySignedTransaction :: Test
 testVerifySignedTransaction = TestCase $ do
-    tx@(Transaction {..}) <- I.runERandomL $ genTransaction On
+    (Transaction {..}) <- I.runERandomL $ genTransaction On
     let txForSign = TransactionForSign {
             _owner = _owner
           , _receiver = _receiver
@@ -29,10 +35,32 @@ testVerifySignedTransaction = TestCase $ do
 
 testVerifySignedMicroblock :: Test
 testVerifySignedMicroblock = TestCase $ do
-    mb@(Microblock {..}) <- I.runERandomL $ genRandMicroblock genesisKBlock
+    (Microblock {..}) <- I.runERandomL $ genRandMicroblock genesisKBlock
     let mbForSign = MicroblockForSign {
             _keyBlock = _keyBlock
           , _transactions = _transactions
           , _publisher = _publisher}
     verifyEncodable _publisher _signature mbForSign `shouldBe` True
 
+testGenesisKblockHash :: Test
+testGenesisKblockHash = TestCase $ do
+    let new = New.calculateKeyBlockHash New.genesisKBlock
+        old = Old.calculateKeyBlockHash Old.genesisKeyBlock
+    new `shouldBe` old
+
+newKBlockToOld :: KBlock -> Old.KeyBlockInfoPoW
+newKBlockToOld KBlock{..} = Old.KeyBlockInfoPoW {
+    _time      = _time
+  , _prev_hash = fromStringHash _prevHash
+  , _number    = _number
+  , _nonce     = _nonce
+  , _solver    = fromStringHash _solver
+  , _type      = New.kBlockType
+}
+
+testKblockHash :: Test
+testKblockHash = TestCase $ do
+    k <- replicateM 1000 (I.runCoreEffect undefined $ L.evalRandom genRandKeyBlock)
+    let new = map New.calculateKeyBlockHash k
+        old = map (Old.calculateKeyBlockHash . newKBlockToOld) k
+    new `shouldBe` old

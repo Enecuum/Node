@@ -2,18 +2,15 @@
 {-# LANGUAGE PackageImports        #-}
 module Enecuum.Blockchain.Domain.Generate where
 
-import           "cryptonite" Crypto.Random            (MonadRandom)
 import           Data.HGraph.StringHashable            (StringHash (..), toHash)
 import           Data.List                             (delete)
 import           Enecuum.Blockchain.Domain.Crypto
-import           Enecuum.Blockchain.Domain.Graph
 import           Enecuum.Blockchain.Domain.KBlock
 import           Enecuum.Blockchain.Domain.Microblock
 import           Enecuum.Blockchain.Domain.Transaction
 import           Enecuum.Blockchain.Domain.Types
 import qualified Enecuum.Language                      as L
 import           Enecuum.Prelude                       hiding (Ordering)
-import Enecuum.Core.Types.Logger
 
 -- | Order for key blocks
 data Ordering = InOrder | RandomOrder
@@ -60,6 +57,22 @@ loopGenKBlock prevHash from to = do
             pure (kblock : rest)
         else pure []
 
+genRandKeyBlock :: (Monad m, L.ERandom m) => m KBlock
+genRandKeyBlock = do
+    number <- fromIntegral <$> L.getRandomInt (1,1000)
+    nonce <- fromIntegral <$> L.getRandomInt (1,1000)
+    time <- fromIntegral <$> L.getRandomInt (1,1000)
+    r <- L.getRandomInt (1,1000)
+    prevHash <- L.getRandomByteString r
+    solver <- L.getRandomByteString r
+    pure $ KBlock 
+        { _prevHash = StringHash prevHash
+        , _number = number
+        , _nonce = nonce
+        , _solver = StringHash solver
+        , _time = time
+        } 
+
 genKBlock :: StringHash -> Integer -> KBlock
 genKBlock prevHash i = KBlock 
     { _prevHash = prevHash
@@ -72,15 +85,8 @@ genKBlock prevHash i = KBlock
 genNTransactions :: (L.ERandom m, Monad m) => Int -> m [Transaction]
 genNTransactions k = replicateM k $ genTransaction On
 
-dummyTx = Transaction
- {
-   _amount = 0,
-   _owner = read "QYy3AT4a3Z88MpEoGDixRgxtWW8v3RfSbJLFQEyFZwMe" :: PublicKey,
-   _receiver = read "pYeXNM7cn2B6A68rH9PYLCCgrXWiVbucfNW1XMW3Q4G" :: PublicKey
-  }
-
 publicKeys1 :: [PublicKey]
-publicKeys1 = map (\a -> read a )
+publicKeys1 = map read
     [
     "8fM3up1pPDUgMnYZzKiBpsnrvNopjSoURSnpYbm5aZKz",
     "4vCovnpyuooGBi7t4LcEGeiQYA2pEKc4hixFGRGADw4X",
@@ -90,7 +96,7 @@ publicKeys1 = map (\a -> read a )
     ]
 
 privateKeys1 :: [PrivateKey]
-privateKeys1 = map (\a -> read a )
+privateKeys1 = map read
     [
           "FDabUqrGEd1i3rfZpqHJkzhvqP9QEpKveoEwmknfJJFa"
         , "DKAJTFr1bFWHE7psYX976YZis1Fqwkh3ikFAgKaw6bWj"
@@ -169,7 +175,8 @@ generateIndices order = do
     n <- case order of
         RandomOrder -> loopGenIndices [0 .. kBlockInBunch]
         InOrder     -> pure $ [0 .. kBlockInBunch]
-    pure $ map fromIntegral n 
+    pure $ map fromIntegral n
+
 -- loop: choose randomly one from the rest of list Integers
 -- example:
 -- [1,2,3,4,5] - 2
