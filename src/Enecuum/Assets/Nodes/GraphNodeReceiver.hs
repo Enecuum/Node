@@ -155,38 +155,7 @@ calculateLedger nodeData mblock = do
                         stateLog nodeData
                         $   "Tx rejected (negative balance): [" +|| owner ||+ "] -> [" +|| receiver ||+ "], amount: " +|| amount ||+ "."
 
--- | Accept kBlock
-acceptKBlock :: GraphNodeData -> D.KBlock -> L.NodeL (Either Text SuccessMsg)
-acceptKBlock nodeData kBlock = do
-    L.logInfo $ "\nAccepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-    res <- L.atomically $ do
-        topKBlock <- getTopKeyBlock nodeData
-        if
-            | kBlockIsNext kBlock topKBlock -> do
-                void $ addKBlock nodeData kBlock
-                let loop = whenM (moveKBlockToGraph nodeData) loop
-                loop
-                pure True
-            | kBlock ^. Lens.number > topKBlock ^. Lens.number + 1 -> addBlockToPending nodeData kBlock
-            | otherwise -> pure False
-    writeLog nodeData
-    if res then pure $ Right SuccessMsg else pure $ Left "Error of kblock accepting"
 
-
--- | Accept mBlock
-acceptMBlock :: GraphNodeData -> D.Microblock -> L.NodeL (Either Text SuccessMsg)
-acceptMBlock nodeData mBlock = do
-    L.logInfo "Accepting MBlock."
-    res <- L.atomically (addMBlock nodeData mBlock)
-    writeLog nodeData
-    if res then pure $ Right SuccessMsg else pure $ Left "Error of mblock accepting"
-
-getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
-getLastKBlock nodeData _ = do
-    -- L.logInfo "Top KBlock requested."
-    kBlock <- L.atomically $ getTopKeyBlock nodeData
-    -- L.logInfo $ "Top KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-    pure kBlock
 
 getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
 getBalance nodeData (GetWalletBalance wallet) = do
@@ -196,6 +165,31 @@ getBalance nodeData (GetWalletBalance wallet) = do
     case maybeBalance of
         Just balance -> pure $ Right $ WalletBalanceMsg wallet balance
         _            -> pure $ Left "Wallet does not exist in graph."
+
+graphSynchro :: GraphNodeData -> D.Address -> L.NodeL ()
+graphSynchro nodeData address = do
+    L.logInfo $ "Requests chain length."
+    GetChainLengthResponse otherLength <- L.makeRpcRequestUnsafe address GetChainLengthRequest
+    L.logInfo $ "GraphNodeReceiver has Chain length: " +|| otherLength ||+ "."
+
+    L.logInfo $ "GraphNodeReceiver: update chain if it's bigger."
+    curChainLength <- L.atomically $ do
+        topKBlock <- getTopKeyBlock nodeData
+        pure $ topKBlock ^. Lens.number
+    
+    L.logInfo $ "Current chain length " +|| show curChainLength
+    
+
+    when (curChainLength < otherLength) $ do
+        GetChainFromToResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromToRequest (curChainLength + 1) otherLength)
+        L.logInfo $ "Chain tail received from " +|| show (curChainLength + 1) ||+ " to " +|| show otherLength ||+ " : " +|| show chainTail
+        L.atomically $ forM_ chainTail (addKBlock nodeData)
+        for_ chainTail $ \kBlock -> do
+            let hash = toHash kBlock
+            GetMBlocksForKBlockResponse mBlocks <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest hash)
+            L.logInfo $ "Mblocks received for kBlock " +|| show hash ||+ " : " +|| show mBlocks
+            L.atomically $ forM_ mBlocks (addMBlock nodeData)
+    L.logInfo $ "Graph sychro finished"
 
 -- | Initialization of graph node
 graphNodeInitialization :: L.NodeDefinitionL GraphNodeData
@@ -218,10 +212,9 @@ graphNodeReceiver = do
     L.nodeTag "graphNodeReceiver"
     nodeData <- graphNodeInitialization
 
-    
+    L.scenario $ graphSynchro nodeData graphNodeTransmitterRpcAddress
 
     L.serving graphNodeReceiverRpcPort $ do
-        L.method $ getLastKBlock nodeData
         L.methodE $ getBalance nodeData
 
     L.std $ L.stdHandler $ L.setNodeFinished nodeData

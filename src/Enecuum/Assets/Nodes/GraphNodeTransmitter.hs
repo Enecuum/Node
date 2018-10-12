@@ -233,18 +233,20 @@ acceptMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL
 acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
     L.logInfo $ "Answering microblocks for kBlock " +|| show hash
     mBlockList <- L.atomically $ L.withGraph nodeData $ do 
-        mNodes <- L.getNode hash
-        case mNodes of
-            Nothing -> undefined
+        node <- L.getNode hash
+        case node of
+            Nothing -> pure Nothing
             Just (D.HNode _ _ _ _ rLinks) -> do
                 aMBlocks                       <- forM (Data.Map.elems rLinks) $ \aNRef -> do
                     Just (D.HNode _ _ (D.fromContent -> block) _ _) <- L.getNode aNRef
                     case block of
                         D.MBlockContent mBlock -> pure $ Just mBlock
                         _               -> pure Nothing
-                pure $ catMaybes aMBlocks
-         
-    pure $ Right $ GetMBlocksForKBlockResponse mBlockList
+                pure $ Just $ catMaybes aMBlocks
+    writeLog nodeData     
+    case mBlockList of
+        Nothing -> pure $ Left "KBlock does't exist"  
+        Just blockList -> pure $ Right $ GetMBlocksForKBlockResponse blockList
 
 -- | Initialization of graph node
 graphNodeInitialization :: L.NodeDefinitionL GraphNodeData
