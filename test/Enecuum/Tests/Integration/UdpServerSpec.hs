@@ -65,7 +65,7 @@ pingPong = TestCase $ do
                 L.handler pongHandle
         threadDelay 5000
         runNodeDefinitionL nr2 $ do
-            conn :: D.Connection D.Udp <- L.open serverAddr $ do
+            conn <- L.open D.Udp serverAddr $ do
                 L.handler pingHandle
                 L.handler pongHandle
             L.send conn $ Ping 0

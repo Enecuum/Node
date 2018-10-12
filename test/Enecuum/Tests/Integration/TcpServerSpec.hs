@@ -54,14 +54,14 @@ pingPong = TestCase $ do
     void $ forkIO $ do
         threadDelay 5000
         runNodeDefinitionL nr1 $ do
-            succConn <- L.open succAdr $ pure ()
+            succConn <- L.open D.Tcp succAdr $ pure ()
             L.serving serverPort $ do
                 L.handler (pingHandle succConn)
                 L.handler (pongHandle succConn)
         threadDelay 5000
         runNodeDefinitionL nr2 $ do
-            succConn <- L.open succAdr $ pure ()
-            conn :: D.Connection D.Tcp <- L.open serverAddr $ do
+            succConn <- L.open D.Tcp succAdr $ pure ()
+            conn     <- L.open D.Tcp serverAddr $ do
                 L.handler (pingHandle succConn)
                 L.handler (pongHandle succConn)
             L.send conn $ Ping 0
