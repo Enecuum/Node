@@ -1,5 +1,7 @@
-{-# LANGUAGE GADTs           #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE UndecidableInstances   #-}
 
 
 module Enecuum.Framework.Node.Language where
@@ -25,8 +27,6 @@ data NodeF next where
     -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
     EvalGraphIO :: (Serialize c, T.StringHashable c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) x -> (x -> next) -> NodeF next
     NewGraph  :: (Serialize c, T.StringHashable c) => (T.TGraph c -> next) -> NodeF next
-    -- | Stop the node evaluation
-    StopNode :: (() -> next) -> NodeF next
     -- | Open connection to the node.
     OpenTcpConnection :: D.Address -> TcpHandlerL NodeL () -> (D.TcpConnection -> next) -> NodeF next
     OpenUdpConnection :: D.Address -> UdpHandlerL NodeL () -> (D.UdpConnection -> next) -> NodeF next
@@ -55,10 +55,6 @@ evalNetworking newtorking = liftF $ EvalNetworking newtorking id
 evalCoreEffectNodeF :: L.CoreEffect a -> NodeL a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
--- | Stop of node eval.
-stopNode :: NodeL ()
-stopNode = liftF $ StopNode id
-
 -- | Open network connection.
 {-# DEPRECATED openConnection "Use L.open" #-}
 openConnection :: D.Address -> TcpHandlerL NodeL () -> NodeL D.TcpConnection
@@ -70,17 +66,19 @@ openConnection = open
 closeConnection :: D.TcpConnection -> NodeL ()
 closeConnection = close
 
+class Connection a con handler | con -> handler where
+    close :: con -> a ()
+    open  :: D.Address -> handler -> a con
 
+instance Connection (Free NodeF) D.TcpConnection (TcpHandlerL NodeL ()) where
+    close conn       = liftF $ CloseTcpConnection conn id
+    open  addr handl = liftF $ OpenTcpConnection  addr handl id
 
-class Connection a where
-    close :: D.TcpConnection -> a ()
-    open  :: D.Address -> TcpHandlerL NodeL () -> a D.TcpConnection
+instance Connection (Free NodeF) D.UdpConnection (UdpHandlerL NodeL ()) where
+    close conn       = liftF $ CloseUdpConnection conn id
+    open  addr handl = liftF $ OpenUdpConnection  addr handl id
 
-instance Connection (Free NodeF) where
-    close conn = liftF $ CloseTcpConnection conn id
-    open addr handl = liftF $ OpenTcpConnection addr handl id
-
-instance L.Send D.TcpConnection NodeL where
+instance L.Send a (Free L.NetworkingF) => L.Send a NodeL where
     send conn msg = evalNetworking $ L.send conn msg
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).

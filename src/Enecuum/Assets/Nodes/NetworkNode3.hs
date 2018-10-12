@@ -42,7 +42,8 @@ newtorkNode3Initialization = do
 networkNode3 :: L.NodeDefinitionL ()
 networkNode3 = do
     L.nodeTag "networkNode3"
-    nodeData <- L.initialization $ newtorkNode3Initialization
+    nodeData <- L.initialization newtorkNode3Initialization
     L.serving 2003 $ do
         L.method (acceptChainLength nodeData)
         L.method (acceptChainFrom nodeData)
+    L.awaitNodeForever

@@ -11,3 +11,4 @@ import           Enecuum.Framework.Domain.State         as X
 import           Enecuum.Framework.Domain.RPC           as X
 import           Enecuum.Framework.Domain.Tags          as X
 import           Network.Socket                         as X (PortNumber)
+import           Enecuum.Framework.Domain.Process       as X

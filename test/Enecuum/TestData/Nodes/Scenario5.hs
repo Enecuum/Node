@@ -76,7 +76,7 @@ pingSendingClientNode :: L.NodeDefinitionL ()
 pingSendingClientNode = L.scenario $ do
     countVar <- L.atomically $ L.newVar 0
 
-    conn     <- L.open pongServerAddress $ L.handler $ pongHandle countVar
+    conn :: D.TcpConnection <- L.open pongServerAddress $ L.handler $ pongHandle countVar
     L.send conn $ Ping 0
 
     L.atomically $ do

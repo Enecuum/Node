@@ -9,12 +9,14 @@ module Enecuum.Assets.Nodes.GraphNode where
 
 import           Data.HGraph.StringHashable
 import           Data.Map                         (Map, fromList, insert, lookup)
+import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
+import qualified Enecuum.Blockchain.Domain.Graph as TG
+import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Assets.Nodes.Messages
 import qualified Enecuum.Blockchain.Domain.Graph  as TG
 import qualified Enecuum.Blockchain.Lens          as Lens
 import qualified Enecuum.Domain                   as D
-import           Enecuum.Framework.Language.Extra (HasFinished, HasGraph)
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude
 
@@ -24,7 +26,7 @@ data GraphNodeData = GraphNodeData
     , _curNode       :: D.StateVar D.StringHash
     , _logVar        :: D.StateVar [Text]
     , _ledger        :: D.StateVar (Map WalletId D.Amount)
-    , _finished      :: D.StateVar Bool
+    , _status        :: D.StateVar NodeStatus
     }
 
 makeFieldsNoPrefix ''GraphNodeData
@@ -200,7 +202,7 @@ graphNodeInitialization = L.scenario $ do
         <*> L.newVar D.genesisHash
         <*> L.newVar []
         <*> L.newVar wallets
-        <*> L.newVar False
+        <*> L.newVar NodeActing
 
 -- | Start of graph node
 graphNode :: L.NodeDefinitionL ()
@@ -214,6 +216,5 @@ graphNode = do
         L.method $ getLastKBlock nodeData
         L.methodE $ getBalance nodeData
 
-    L.std $ L.stdHandler $ L.setNodeFinished nodeData
-    L.nodeFinishPending nodeData
-    L.stopServing graphNodeRpcPort
+    L.std $ L.stdHandler $ L.stopNodeHandler nodeData
+    L.awaitNodeFinished nodeData
