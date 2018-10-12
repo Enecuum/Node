@@ -61,17 +61,20 @@ pingPong = TestCase $ do
         threadDelay 5000
         runNodeDefinitionL nr1 $ do
             L.serving serverPort $ do
-                L.udpHandler pingHandle
-                L.udpHandler pongHandle
+                L.handler pingHandle
+                L.handler pongHandle
         threadDelay 5000
         runNodeDefinitionL nr2 $ do
             conn :: D.Connection D.Udp <- L.open serverAddr $ do
-                L.udpHandler pingHandle
-                L.udpHandler pongHandle
+                L.handler pingHandle
+                L.handler pongHandle
             L.send conn $ Ping 0
     ok <- succesServer succPort
     runNodeDefinitionL nr1 $ L.stopServing serverPort
     assertBool "" ok
+
+emptFunc :: D.Connection D.Udp -> D.ConnectionVar D.Udp -> IO ()
+emptFunc _ _ = pure ()
 
 succesServer :: PortNumber -> IO Bool
 succesServer port = do
@@ -79,7 +82,7 @@ succesServer port = do
     void $ forkIO $ do
         threadDelay 1000000
         putMVar mvar False
-    ch <- startServer port (M.singleton (D.toTag Succes) (\_ _ -> putMVar mvar True)) (\_ _ -> pure ())
+    ch <- startServer port (M.singleton (D.toTag Succes) (\_ _ -> putMVar mvar True)) emptFunc
     ok <- takeMVar mvar
     Enecuum.Prelude.atomically $ stopServer ch
     pure ok

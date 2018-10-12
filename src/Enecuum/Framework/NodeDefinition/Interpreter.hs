@@ -23,8 +23,7 @@ import qualified Enecuum.Framework.Domain.Networking       as D
 import qualified Enecuum.Framework.Domain.Process          as D
 import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection as Tcp
 import           Enecuum.Framework.Handler.Rpc.Interpreter
-import qualified Enecuum.Framework.Handler.Tcp.Interpreter as Tcp
-import qualified Enecuum.Framework.Handler.Udp.Interpreter as Udp
+import qualified Enecuum.Framework.Handler.Network.Interpreter         as Net
 import qualified Enecuum.Framework.Networking.Internal.Udp.Connection as Udp
 import qualified Enecuum.Framework.Networking.Internal.Connection     as Con
 
@@ -51,7 +50,7 @@ interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next
 
 interpretNodeDefinitionL nodeRt (L.ServingTcp port action next) = do
     m        <- atomically $ newTVar mempty
-    a        <- Tcp.runTcpHandlerL m action
+    a        <- Net.runNetworkHandlerL m action
     handlers <- readTVarIO m
     s        <- Con.startServer
         port
@@ -62,7 +61,7 @@ interpretNodeDefinitionL nodeRt (L.ServingTcp port action next) = do
 
 interpretNodeDefinitionL nodeRt (L.ServingUdp port initScript next) = do
     m        <- atomically $ newTVar mempty
-    a        <- Udp.runUdpHandlerL m initScript
+    a        <- Net.runNetworkHandlerL m initScript
     handlers <- readTVarIO m
     s        <- Udp.startServer
         port

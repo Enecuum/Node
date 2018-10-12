@@ -11,9 +11,8 @@ import qualified Enecuum.Core.Language                    as L
 import qualified Enecuum.Framework.State.Language         as L
 import qualified Enecuum.Framework.Networking.Language    as L
 import qualified Enecuum.Framework.Domain.Networking      as D
-import           Enecuum.Framework.Handler.Tcp.Language
-import           Enecuum.Framework.Handler.Udp.Language
 import qualified Enecuum.Core.Types                       as T
+import           Enecuum.Framework.Handler.Network.Language
 import           Language.Haskell.TH.MakeFunctor
 
 -- | Node language.
@@ -28,8 +27,8 @@ data NodeF next where
     EvalGraphIO :: (Serialize c, T.StringHashable c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) x -> (x -> next) -> NodeF next
     NewGraph  :: (Serialize c, T.StringHashable c) => (T.TGraph c -> next) -> NodeF next
     -- | Open connection to the node.
-    OpenTcpConnection :: D.Address -> TcpHandlerL NodeL () -> (D.Connection D.Tcp -> next) -> NodeF next
-    OpenUdpConnection :: D.Address -> UdpHandlerL NodeL () -> (D.Connection D.Udp -> next) -> NodeF next
+    OpenTcpConnection :: D.Address -> NetworkHandlerL D.Tcp NodeL () -> (D.Connection D.Tcp -> next) -> NodeF next
+    OpenUdpConnection :: D.Address -> NetworkHandlerL D.Udp NodeL () -> (D.Connection D.Udp -> next) -> NodeF next
     -- | Close existing connection.
     CloseTcpConnection :: D.Connection D.Tcp -> (() -> next) -> NodeF  next
     CloseUdpConnection :: D.Connection D.Udp -> (() -> next) -> NodeF  next
@@ -57,7 +56,7 @@ evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
 -- | Open network connection.
 {-# DEPRECATED openConnection "Use L.open" #-}
-openConnection :: D.Address -> TcpHandlerL NodeL () -> NodeL (D.Connection D.Tcp)
+openConnection :: D.Address -> NetworkHandlerL D.Tcp NodeL () -> NodeL (D.Connection D.Tcp)
 openConnection = open
 
 -- | Close network connection.
@@ -70,11 +69,11 @@ class Connection a con handler | con -> handler where
     close :: con -> a ()
     open  :: D.Address -> handler -> a con
 
-instance Connection (Free NodeF) (D.Connection D.Tcp) (TcpHandlerL NodeL ()) where
+instance Connection (Free NodeF) (D.Connection D.Tcp) (NetworkHandlerL D.Tcp NodeL ()) where
     close conn       = liftF $ CloseTcpConnection conn id
     open  addr handl = liftF $ OpenTcpConnection  addr handl id
 
-instance Connection (Free NodeF) (D.Connection D.Udp) (UdpHandlerL NodeL ()) where
+instance Connection (Free NodeF) (D.Connection D.Udp) (NetworkHandlerL D.Udp NodeL ()) where
     close conn       = liftF $ CloseUdpConnection conn id
     open  addr handl = liftF $ OpenUdpConnection  addr handl id
 

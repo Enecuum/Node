@@ -13,11 +13,10 @@ import           Control.Concurrent.STM.TChan
 import           Enecuum.Legacy.Service.Network.Base
 import qualified Enecuum.Framework.Networking.Internal.Tcp.Server      as Tcp
 import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection  as Tcp
-import qualified Enecuum.Framework.Handler.Tcp.Interpreter             as Tcp
 
 import qualified Enecuum.Framework.Networking.Internal.Udp.Server      as Udp
 import qualified Enecuum.Framework.Networking.Internal.Udp.Connection  as Udp
-import qualified Enecuum.Framework.Handler.Udp.Interpreter             as Udp
+import qualified Enecuum.Framework.Handler.Network.Interpreter         as Net
 import qualified Enecuum.Framework.Networking.Internal.Connection     as Con
 
 import qualified Data.Map                                 as M
@@ -39,7 +38,7 @@ interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
 
 interpretNodeL nodeRt (L.OpenTcpConnection addr initScript next) = do
     m <- atomically $ newTVar mempty
-    Tcp.runTcpHandlerL m initScript
+    Net.runNetworkHandlerL m initScript
     handlers <- readTVarIO m
     newCon   <- Con.openConnect addr ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
     insertConnect (nodeRt ^. RLens.tcpConnects) addr newCon
@@ -47,7 +46,7 @@ interpretNodeL nodeRt (L.OpenTcpConnection addr initScript next) = do
 
 interpretNodeL nodeRt (L.OpenUdpConnection addr initScript next) = do
     m <- atomically $ newTVar mempty
-    Udp.runUdpHandlerL m initScript
+    Net.runNetworkHandlerL m initScript
     handlers <- readTVarIO m
     newCon   <- Udp.openConnect addr ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
     insertUdpConnect (nodeRt ^. RLens.udpConnects) addr newCon

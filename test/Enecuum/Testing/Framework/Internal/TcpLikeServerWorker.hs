@@ -20,7 +20,7 @@ import Enecuum.Testing.Framework.Internal.TcpLikeServerBinding (registerConnecti
 startNodeTcpLikeWorker
     :: (L.NodeL () -> IO ())
     -> T.NodeRuntime
-    -> Map Text (L.TcpHandler L.NodeL)
+    -> Map Text (L.NetworkHandler D.Tcp L.NodeL)
     -> Maybe (D.Connection D.Tcp)
     -> IO T.ConnectionWorkerHandle
 startNodeTcpLikeWorker nodeLRunner nodeRt handlers mbBackConn = do

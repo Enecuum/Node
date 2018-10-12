@@ -14,8 +14,7 @@ import qualified Enecuum.Framework.Node.Language       as L
 import qualified Enecuum.Framework.Networking.Language as L
 import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Framework.Handler.Rpc.Language  (RpcHandlerL)
-import           Enecuum.Framework.Handler.Tcp.Language
-import           Enecuum.Framework.Handler.Udp.Language
+import           Enecuum.Framework.Handler.Network.Language
 import           Enecuum.Framework.Handler.Cmd.Language
 import           Language.Haskell.TH.MakeFunctor (makeFunctorInstance)
 
@@ -36,8 +35,8 @@ data NodeDefinitionF next where
     -- | Stop serving of Rpc server.
     StopServing    :: PortNumber -> (() -> next) -> NodeDefinitionF next
     -- | Start serving on reliable-kind connection.
-    ServingTcp     :: PortNumber -> TcpHandlerL L.NodeL () -> (() -> next)-> NodeDefinitionF  next
-    ServingUdp     :: PortNumber -> UdpHandlerL L.NodeL () -> (() -> next)-> NodeDefinitionF  next
+    ServingTcp     :: PortNumber -> NetworkHandlerL D.Tcp L.NodeL () -> (() -> next)-> NodeDefinitionF  next
+    ServingUdp     :: PortNumber -> NetworkHandlerL D.Udp L.NodeL () -> (() -> next)-> NodeDefinitionF  next
     Std            :: CmdHandlerL () -> (() -> next) -> NodeDefinitionF  next
     -- Process interface. TODO: It's probably wise to move it to own language.
     -- | Fork a process for node.
@@ -97,17 +96,17 @@ class Serving a where
 instance Serving (RpcHandlerL L.NodeL ()) where
     serving = servingRpc
 
-instance Serving (TcpHandlerL L.NodeL ()) where
+instance Serving (NetworkHandlerL D.Tcp L.NodeL ()) where
     serving port handlersF = liftF $ ServingTcp port handlersF id
 
-instance Serving (UdpHandlerL L.NodeL ()) where
+instance Serving (NetworkHandlerL D.Udp L.NodeL ()) where
     serving port handlersF = liftF $ ServingUdp port handlersF id
 
-instance L.Connection (Free NodeDefinitionF) (D.Connection D.Tcp) (TcpHandlerL L.NodeL ()) where
+instance L.Connection (Free NodeDefinitionF) (D.Connection D.Tcp) (NetworkHandlerL D.Tcp L.NodeL ()) where
     close conn       = evalNodeL $ L.close conn
     open  addr handl = evalNodeL $ L.open  addr handl
 
-instance L.Connection (Free NodeDefinitionF) (D.Connection D.Udp) (UdpHandlerL L.NodeL ()) where
+instance L.Connection (Free NodeDefinitionF) (D.Connection D.Udp) (NetworkHandlerL D.Udp L.NodeL ()) where
     close conn       = evalNodeL $ L.close conn
     open  addr handl = evalNodeL $ L.open  addr handl
 
@@ -125,7 +124,7 @@ stopServing :: PortNumber -> NodeDefinitionL ()
 stopServing port = liftF $ StopServing port id
 
 -- | Starts server (TCP / WS - like)
-servingMsg :: PortNumber -> TcpHandlerL L.NodeL () -> NodeDefinitionL ()
+servingMsg :: PortNumber -> NetworkHandlerL D.Tcp L.NodeL () -> NodeDefinitionL ()
 servingMsg port handlersF = liftF $ ServingTcp port handlersF id
 
 
