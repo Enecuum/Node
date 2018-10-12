@@ -7,7 +7,7 @@
 module Enecuum.Assets.Nodes.GraphNodeTransmitter (graphNodeTransmitter) where
 
 import           Enecuum.Prelude
-import Data.Map (fromList, lookup, insert, Map(..), elems)
+import Data.Map (fromList, lookup, insert, Map(..), elems, keys)
 import           Control.Lens                  (makeFieldsNoPrefix)
 
 
@@ -237,8 +237,8 @@ acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
         node <- L.getNode hash
         case node of
             Nothing -> pure Nothing
-            Just (D.HNode _ _ _ _ rLinks) -> do
-                aMBlocks                       <- forM (Data.Map.elems rLinks) $ \aNRef -> do
+            Just (D.HNode _ _ _ links _) -> do
+                aMBlocks                       <- forM (Data.Map.keys links) $ \aNRef -> do
                     Just (D.HNode _ _ (D.fromContent -> block) _ _) <- L.getNode aNRef
                     case block of
                         D.MBlockContent mBlock -> pure $ Just mBlock
