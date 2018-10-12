@@ -225,9 +225,10 @@ acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
         else do
             kBlockList <- L.atomically $ do
                 topKBlock <- getTopKeyBlock nodeData
-                findBlocksByNumber nodeData from topKBlock
+                chain <- findBlocksByNumber nodeData from topKBlock
+                pure $ drop (fromEnum $ (topKBlock ^. Lens.number) - to) chain
             writeLog nodeData    
-            pure $ Right $ GetChainFromToResponse (reverse $ drop (fromEnum to) kBlockList)
+            pure $ Right $ GetChainFromToResponse (reverse kBlockList)
 
 acceptMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL (Either Text GetMBlocksForKBlockResponse)
 acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
