@@ -61,7 +61,13 @@ loopGenKBlock prevHash from to = do
         else pure []
 
 genKBlock :: StringHash -> Integer -> KBlock
-genKBlock prevHash i = KBlock {_prevHash = prevHash, _number = i, _nonce = i, _solver = toHash (i + 3)}
+genKBlock prevHash i = KBlock 
+    { _prevHash = prevHash
+    , _number = i
+    , _nonce = i
+    , _solver = toHash (i + 3)
+    , _time = i
+    }
 
 genNTransactions :: (L.ERandom m, Monad m) => Int -> m [Transaction]
 genNTransactions k = replicateM k $ genTransaction On
@@ -119,20 +125,21 @@ genTransaction isFromRange = do
     let owner = getPub ownerKeyPair
         receiver = getPub receiverKeyPair
         currency = ENQ
-        tx = TransactionForSign {
-            _owner = owner
-          , _receiver = receiver
-          , _amount = amount
-          , _currency = currency}
+        tx = TransactionForSign
+            { _owner = owner
+            , _receiver = receiver
+            , _amount = amount
+            , _currency = currency
+            }
     signature <- L.sign (getPriv ownerKeyPair) tx
 
-    let transaction = Transaction {
-        _owner = owner
-      , _receiver = receiver
-      , _amount = amount
-      , _currency = currency
-      , _signature = signature
-    }
+    let transaction = Transaction
+            { _owner = owner
+            , _receiver = receiver
+            , _amount = amount
+            , _currency = currency
+            , _signature = signature
+            }
     pure transaction
 
 -- | Generate signed microblock
