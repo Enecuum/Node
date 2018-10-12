@@ -19,9 +19,10 @@ spec :: Spec
 spec = do
     describe "Crypto spec tests" $ fromHUnitTest $ TestList
         [ TestLabel "Verify transaction signature" testVerifySignedTransaction
-        , TestLabel "Verify microblock signature" testVerifySignedMicroblock
-        , TestLabel "Kblock hash calculation for genesis key block: legacy and new are the same" testGenesisKblockHash
-        , TestLabel "Kblock hash calculation for random key blocks: legacy and new are the same" testKblockHash]
+        , TestLabel "Verify microblock signature" testVerifySignedMicroblock]
+    describe "Key block hash calculation" $ fromHUnitTest $ TestList    
+        [ TestLabel "Hash calculation for genesis key block: legacy and new are the same" testGenesisKblockHash
+        , TestLabel "Hash calculation for random key blocks: legacy and new are the same" testKblockHash]
 
 testVerifySignedTransaction :: Test
 testVerifySignedTransaction = TestCase $ do
