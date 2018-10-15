@@ -48,7 +48,7 @@ signMicroblock hashofKeyBlock tx publisherPubKey publisherPrivKey = do
             , _transactions = tx
             , _publisher = publisherPubKey
             }
-    signature <- L.sign publisherPrivKey mb
+    signature <- L.evalCoreCrypto $ L.sign publisherPrivKey mb
     pure $ Microblock
             { _keyBlock = hashofKeyBlock
             , _transactions = tx

@@ -133,11 +133,9 @@ instance L.Logger (Free NodeDefinitionF) where
     logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg
 
 instance L.ERandom (Free NodeDefinitionF) where
+    evalCoreCrypto = evalCoreEffectNodeDefinitionF . L.evalCoreCrypto
     getRandomInt =  evalCoreEffectNodeDefinitionF . L.getRandomInt
     getRandomByteString = evalCoreEffectNodeDefinitionF . L.getRandomByteString
-    evalRand r g = evalCoreEffectNodeDefinitionF  $ L.evalRand r g
-    generateKeyPair = evalCoreEffectNodeDefinitionF $ L.generateKeyPair
-    sign key msg = evalCoreEffectNodeDefinitionF $ L.sign key msg
 
 instance L.ControlFlow (Free NodeDefinitionF) where
     delay = evalCoreEffectNodeDefinitionF . L.delay

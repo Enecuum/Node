@@ -1,25 +1,25 @@
 {-# LANGUAGE RecordWildCards #-}
 module Enecuum.Tests.Functional.CryptoSpec where
 
-import           Data.HGraph.StringHashable          (fromStringHash)
+import           Data.HGraph.StringHashable       (fromStringHash)
 import           Enecuum.Blockchain.Domain
-import qualified Enecuum.Blockchain.Domain.KBlock    as New
-import qualified Enecuum.Core.Random.Interpreter     as I
-import qualified Enecuum.Language                    as L
-import qualified Enecuum.Legacy.Refact.Assets        as Old (genesisKeyBlock)
-import qualified Enecuum.Legacy.Refact.Hashing       as Old (calculateKeyBlockHash)
-import qualified Enecuum.Legacy.Service.Types        as Old (KeyBlockInfoPoW (..))
+import qualified Enecuum.Blockchain.Domain.KBlock as New
+import qualified Enecuum.Core.Interpreters        as I
+import qualified Enecuum.Language                 as L
+import qualified Enecuum.Legacy.Refact.Assets     as Old (genesisKeyBlock)
+import qualified Enecuum.Legacy.Refact.Hashing    as Old (calculateKeyBlockHash)
+import qualified Enecuum.Legacy.Service.Types     as Old (KeyBlockInfoPoW (..))
 import           Enecuum.Prelude
-import           Test.Hspec                          (Spec, describe, shouldBe)
-import           Test.Hspec.Contrib.HUnit            (fromHUnitTest)
-import           Test.HUnit                          (Test (..))
+import           Test.Hspec                       (Spec, describe, shouldBe)
+import           Test.Hspec.Contrib.HUnit         (fromHUnitTest)
+import           Test.HUnit                       (Test (..))
 
 spec :: Spec
 spec = do
     describe "Crypto spec tests" $ fromHUnitTest $ TestList
         [ TestLabel "Verify transaction signature" testVerifySignedTransaction
         , TestLabel "Verify microblock signature" testVerifySignedMicroblock]
-    describe "Key block hash calculation" $ fromHUnitTest $ TestList    
+    describe "Key block hash calculation" $ fromHUnitTest $ TestList
         [ TestLabel "Hash calculation for genesis key block: legacy and new are the same" testGenesisKblockHash
         , TestLabel "Hash calculation for random key blocks: legacy and new are the same" testKblockHash]
 

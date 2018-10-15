@@ -65,16 +65,16 @@ genRandKeyBlock = do
     r <- L.getRandomInt (1,1000)
     prevHash <- L.getRandomByteString r
     solver <- L.getRandomByteString r
-    pure $ KBlock 
+    pure $ KBlock
         { _prevHash = StringHash prevHash
         , _number = number
         , _nonce = nonce
         , _solver = StringHash solver
         , _time = time
-        } 
+        }
 
 genKBlock :: StringHash -> Integer -> KBlock
-genKBlock prevHash i = KBlock 
+genKBlock prevHash i = KBlock
     { _prevHash = prevHash
     , _number = i
     , _nonce = i
@@ -122,21 +122,21 @@ genTransaction isFromRange = do
             let receiver = rest !! receiverIndex
             pure (owner, receiver)
         Off -> do
-            owner <- L.generateKeyPair
-            receiver <- L.generateKeyPair
+            owner <- L.evalCoreCrypto $ L.generateKeyPair
+            receiver <- L.evalCoreCrypto $ L.generateKeyPair
             pure (owner, receiver)
 
     amount <- fromIntegral <$> L.getRandomInt (0, 100)
     let owner = getPub ownerKeyPair
         receiver = getPub receiverKeyPair
         currency = ENQ
-    transaction <- signTransaction owner (getPriv ownerKeyPair) receiver amount currency    
+    transaction <- signTransaction owner (getPriv ownerKeyPair) receiver amount currency
     pure transaction
 
 -- | Generate signed microblock
 genMicroblock :: (Monad m, L.ERandom m) => StringHash -> [Transaction] -> m Microblock
 genMicroblock hashofKeyBlock tx = do
-    (KeyPair publisherPubKey publisherPrivKey)<- L.generateKeyPair
+    (KeyPair publisherPubKey publisherPrivKey)<- L.evalCoreCrypto $ L.generateKeyPair
     microblock <- signMicroblock hashofKeyBlock tx publisherPubKey publisherPrivKey
     pure microblock
 
