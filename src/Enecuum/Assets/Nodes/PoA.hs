@@ -50,6 +50,6 @@ poaNode = do
                 L.logInfo
                     $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
 
-                L.send graphNodeTransmitterUdpAddress mBlock
+                L.sendUdp graphNodeTransmitterUdpAddress mBlock
 
     L.awaitNodeFinished poaData

@@ -41,7 +41,7 @@ kBlockProcess nodeData = do
 
     forM_ kBlocks $ \kBlock -> do
         L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-        L.send graphNodeTransmitterUdpAddress kBlock
+        L.sendUdp graphNodeTransmitterUdpAddress kBlock
         when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
 
 foreverChainGenerationHandle :: PoWNodeData -> ForeverChainGeneration -> L.NodeL SuccessMsg
