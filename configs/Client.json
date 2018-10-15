@@ -12,5 +12,10 @@
           "level": "Debug",
           "logFilePath": "/tmp/log/app.log",
           "logToConsole": true
+      },
+   "clientConfig":
+      {
+          "host": "127.0.0.1",
+          "port": 2008
       }
 }
