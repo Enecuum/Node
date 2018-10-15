@@ -1,8 +1,10 @@
 {-# LANGUAGE RecordWildCards #-}
 module Enecuum.Tests.Functional.CryptoSpec where
 
+import qualified Data.Aeson                       as A
 import           Data.HGraph.StringHashable       (fromStringHash)
-import           Enecuum.Blockchain.Domain
+import qualified Data.Serialize                   as S
+import qualified Enecuum.Blockchain.Domain        as D
 import qualified Enecuum.Blockchain.Domain.KBlock as New
 import qualified Enecuum.Core.Interpreters        as I
 import qualified Enecuum.Language                 as L
@@ -22,16 +24,31 @@ spec = do
     describe "Key block hash calculation" $ fromHUnitTest $ TestList
         [ TestLabel "Hash calculation for genesis key block: legacy and new are the same" testGenesisKblockHash
         , TestLabel "Hash calculation for random key blocks: legacy and new are the same" testKblockHash]
+    describe "Public key serialization" $ fromHUnitTest $ TestList
+        [ TestLabel "Public key JSON serialization" testPublicKeyJsonSerialization
+        , TestLabel "Public key binary serialization" testPublicKeyBinarySerialization]
+
+testPublicKeyJsonSerialization :: Test
+testPublicKeyJsonSerialization = TestCase $ do
+    keys <- replicateM 1000 $ I.runERandomL $ L.evalCoreCrypto $ L.generateKeyPair
+    let pubs = map (\(D.KeyPair pub _) -> pub) keys
+    map (A.decode . A.encode) pubs `shouldBe` map Just pubs
+
+testPublicKeyBinarySerialization :: Test
+testPublicKeyBinarySerialization = TestCase $ do
+    keys <- replicateM 1000 $ I.runERandomL $ L.evalCoreCrypto $ L.generateKeyPair
+    let pubs = map (\(D.KeyPair pub _) -> pub) keys
+    map (S.decode . S.encode) pubs `shouldBe` map Right pubs
 
 testVerifySignedTransaction :: Test
 testVerifySignedTransaction = TestCase $ do
-    t <- I.runERandomL $ genTransaction On
-    verifyTransaction t `shouldBe` True
+    t <- I.runERandomL $ D.genTransaction D.On
+    D.verifyTransaction t `shouldBe` True
 
 testVerifySignedMicroblock :: Test
 testVerifySignedMicroblock = TestCase $ do
-    mb <- I.runERandomL $ genRandMicroblock genesisKBlock
-    verifyMicroblock mb `shouldBe` True
+    mb <- I.runERandomL $ D.genRandMicroblock D.genesisKBlock
+    D.verifyMicroblock mb `shouldBe` True
 
 testGenesisKblockHash :: Test
 testGenesisKblockHash = TestCase $ do
@@ -39,8 +56,8 @@ testGenesisKblockHash = TestCase $ do
         old = Old.calculateKeyBlockHash Old.genesisKeyBlock
     new `shouldBe` old
 
-newKBlockToOld :: KBlock -> Old.KeyBlockInfoPoW
-newKBlockToOld KBlock{..} = Old.KeyBlockInfoPoW {
+newKBlockToOld :: D.KBlock -> Old.KeyBlockInfoPoW
+newKBlockToOld D.KBlock{..} = Old.KeyBlockInfoPoW {
     _time      = _time
   , _prev_hash = fromStringHash _prevHash
   , _number    = _number
@@ -51,7 +68,7 @@ newKBlockToOld KBlock{..} = Old.KeyBlockInfoPoW {
 
 testKblockHash :: Test
 testKblockHash = TestCase $ do
-    k <- replicateM 1000 (I.runERandomL genRandKeyBlock)
+    k <- replicateM 1000 (I.runERandomL D.genRandKeyBlock)
     let new = map New.calculateKeyBlockHash k
         old = map (Old.calculateKeyBlockHash . newKBlockToOld) k
     new `shouldBe` old

@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Enecuum.Blockchain.Domain.Crypto.PublicPrivateKeyPair
+module Enecuum.Blockchain.Domain.Crypto.Keys
   ( ECDSA.Signature
   , compressPublicKey
   , uncompressPublicKey
@@ -26,13 +26,12 @@ import           "cryptonite" Crypto.PubKey.ECC.Types
 import           "cryptonite" Crypto.Random                          (MonadRandom)
 import           Data.ByteString.Base58
 import qualified Data.ByteString.Char8                               as BC
-import           Enecuum.Blockchain.Domain.Crypto.SerializeInstances ()
 import           Enecuum.Prelude
 import           Math.NumberTheory.Moduli
 import           Prelude                                             (show)
 
-newtype PublicKey  = PublicKey256k1 Integer deriving (Generic, Serialize, Eq, Ord, Num, Enum)
-newtype PrivateKey = PrivateKey256k1 Integer deriving (Generic, Serialize, Eq, Ord)
+newtype PublicKey  = PublicKey256k1 Integer deriving (Generic, Serialize, Eq, Ord, Num, Enum, FromJSON, ToJSON)
+newtype PrivateKey = PrivateKey256k1 Integer deriving (Generic, Serialize, Eq, Ord, FromJSON, ToJSON)
 
 deriving instance Ord ECDSA.Signature
 
@@ -97,3 +96,4 @@ generateNewRandomAnonymousKeyPair :: MonadRandom m => m KeyPair
 generateNewRandomAnonymousKeyPair = do
     (pub, priv) <- generate (getCurveByName SEC_p256k1)
     pure $ KeyPair (compressPublicKey pub) (PrivateKey256k1 $ ECDSA.private_d priv)
+
