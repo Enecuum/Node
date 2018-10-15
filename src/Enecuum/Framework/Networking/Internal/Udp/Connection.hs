@@ -26,14 +26,14 @@ import qualified Network.Socket.ByteString.Lazy as S
 import           Control.Monad.Extra
 
 instance NetworkConnection D.Udp where
-    startServer port handlers insertConnect = do
+    startServer port handlers insertConnect loger = do
         chan <- atomically newTChan
         void $ forkIO $ runUDPServer chan port $ \msg msgChan sockAddr -> do
             let host       = D.sockAddrToHost sockAddr
                 connection = D.Connection $ D.Address host port
     
             insertConnect connection (D.ServerUdpConnectionVar sockAddr msgChan)
-            runHandlers   connection handlers msg
+            runHandlers   connection handlers loger msg
         pure chan
 
     send (D.ClientUdpConnectionVar conn)          msg = writeComand conn $ D.Send  msg
@@ -42,21 +42,22 @@ instance NetworkConnection D.Udp where
     close (D.ClientUdpConnectionVar conn) = writeComand conn D.Close >> closeConn conn
     close (D.ServerUdpConnectionVar _ _)  = pure ()
 
-    openConnect addr handlers = do
+    openConnect addr handlers loger = do
         conn <- atomically (newTMVar =<< newTChan)
         void $ forkIO $ do
             tryML
                 (runClient UDP addr $ \sock -> void $ race
-                    (readMessages (D.Connection addr) handlers sock)
+                    (readMessages (D.Connection addr) handlers loger sock)
                     (connectManager conn sock))
                 (atomically $ closeConn conn)
         pure $ D.ClientUdpConnectionVar conn
 
 
-runHandlers :: D.Connection D.Udp -> Handlers D.Udp -> LByteString -> IO ()
-runHandlers netConn handlers msg =
-    whenJust (decode msg) $ \(D.NetworkMsg tag val) ->
-        whenJust (handlers ^. at tag) $ \handler -> handler val netConn
+runHandlers :: D.Connection D.Udp -> Handlers D.Udp -> (Text -> IO ()) -> LByteString -> IO ()
+runHandlers netConn handlers loger msg = case decode msg of
+    Just (D.NetworkMsg tag val) -> whenJust (handlers ^. at tag) $
+        \handler -> handler val netConn
+    Nothing                     -> loger $ "Error in decoding en msg: " <> show msg
 
 writeComand :: TMVar (TChan D.Comand) -> D.Comand -> STM ()
 writeComand conn cmd = unlessM (isEmptyTMVar conn) $ do
@@ -80,10 +81,10 @@ readCommand conn = atomically $ do
 sendUdpMsg :: D.Address -> LByteString -> IO ()
 sendUdpMsg addr msg = runClient UDP addr $ \sock -> S.sendAll sock msg
 
-readMessages :: D.Connection D.Udp -> Handlers D.Udp -> S.Socket -> IO ()
-readMessages conn handlers sock = tryMR (S.recv sock (1024 * 4)) $ \msg -> do 
-    runHandlers conn handlers msg
-    readMessages conn handlers sock
+readMessages :: D.Connection D.Udp -> Handlers D.Udp -> (Text -> IO ()) -> S.Socket -> IO ()
+readMessages conn handlers loger sock = tryMR (S.recv sock (1024 * 4)) $ \msg -> do 
+    runHandlers conn handlers loger msg
+    readMessages conn handlers loger sock
 
 -- | Manager for controlling of WS connect.
 connectManager :: TMVar (TChan D.Comand) -> S.Socket -> IO ()

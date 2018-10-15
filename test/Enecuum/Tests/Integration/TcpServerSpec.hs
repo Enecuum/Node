@@ -78,7 +78,7 @@ succesServer port = do
     void $ forkIO $ do
         threadDelay 1000000
         putMVar mvar False
-    ch <- Con.startServer port (M.singleton (D.toTag Succes) (\_ _ -> putMVar mvar True)) emptFunc
+    ch <- Con.startServer port (M.singleton (D.toTag Succes) (\_ _ -> putMVar mvar True)) emptFunc putTextLn
     ok <- takeMVar mvar
     Enecuum.Prelude.atomically $ Con.stopServer ch
     pure ok

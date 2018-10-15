@@ -25,8 +25,8 @@ stopServer :: ServerHandle -> STM ()
 stopServer chan = writeTChan chan D.StopServer
 
 class NetworkConnection protocol where
-    startServer :: PortNumber -> Handlers protocol -> (D.Connection protocol -> D.ConnectionVar protocol -> IO ()) -> IO ServerHandle
+    startServer :: PortNumber -> Handlers protocol -> (D.Connection protocol -> D.ConnectionVar protocol -> IO ()) -> (Text -> IO ()) -> IO ServerHandle
     -- | Send msg to node.
     send        :: D.ConnectionVar protocol -> LByteString -> STM ()
     close       :: D.ConnectionVar protocol -> STM ()
-    openConnect :: D.Address -> Handlers protocol -> IO (D.ConnectionVar protocol)
+    openConnect :: D.Address -> Handlers protocol -> (Text -> IO ()) -> IO (D.ConnectionVar protocol)

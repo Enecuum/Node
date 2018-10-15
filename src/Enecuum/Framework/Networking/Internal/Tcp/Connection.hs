@@ -24,22 +24,22 @@ type Handlers   = Map Text Handler
 type ServerHandle = TChan D.ServerComand
 -}
 instance NetworkConnection D.Tcp where
-    startServer port handlers ins = do
+    startServer port handlers ins loger = do
         chan <- atomically newTChan
         void $ forkIO $ runTCPServer chan port $ \sock -> do
             addr <- getAdress sock
             conn <- D.TcpConnectionVar <$> atomically (newTMVar =<< newTChan)
             let networkConnecion = D.Connection $ D.Address addr port
             ins networkConnecion conn
-            void $ race (runHandlers conn networkConnecion sock handlers) (connectManager conn sock)
+            void $ race (runHandlers conn networkConnecion sock handlers loger) (connectManager conn sock)
         pure chan
 
-    openConnect addr handlers = do
+    openConnect addr handlers loger = do
         conn <- D.TcpConnectionVar <$> atomically (newTMVar =<< newTChan)
         void $ forkIO $ do
             tryML
                 (runClient TCP addr $ \wsConn -> void $ race
-                    (runHandlers conn (D.Connection addr) wsConn handlers)
+                    (runHandlers conn (D.Connection addr) wsConn handlers loger)
                     (connectManager conn wsConn))
                 (atomically $ closeConn conn)
         pure conn
@@ -62,11 +62,13 @@ getAdress socket = D.sockAddrToHost <$> S.getSocketName socket
 
 --------------------------------------------------------------------------------
 -- * Internal
-runHandlers :: D.ConnectionVar D.Tcp -> D.Connection D.Tcp -> S.Socket -> Handlers D.Tcp -> IO ()
-runHandlers conn netConn wsConn handlers = do
+runHandlers :: D.ConnectionVar D.Tcp -> D.Connection D.Tcp -> S.Socket -> Handlers D.Tcp -> (Text -> IO ()) -> IO ()
+runHandlers conn netConn wsConn handlers loger = do
     tryM (S.recv wsConn (1024 * 4)) (atomically $ closeConn conn) $ \msg -> do
-        whenJust (decode msg) $ \val -> callHandler netConn val handlers
-        runHandlers conn netConn wsConn handlers
+        case decode msg of
+            Just val -> callHandler netConn val handlers
+            Nothing  -> loger $ "Error in decoding en msg: " <> show msg
+        runHandlers conn netConn wsConn handlers loger
 
 callHandler :: D.Connection D.Tcp -> D.NetworkMsg -> Handlers D.Tcp -> IO ()
 callHandler conn (D.NetworkMsg tag val) handlers = whenJust (handlers ^. at tag) $ \handler -> handler val conn
