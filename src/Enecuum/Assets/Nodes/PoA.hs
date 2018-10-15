@@ -7,9 +7,8 @@ module Enecuum.Assets.Nodes.PoA where
 
 import qualified Data.Text as T
 
-import           Enecuum.Assets.Nodes.Address
 import           Data.HGraph.StringHashable   (toHash)
-import           Enecuum.Assets.Nodes.Address (poaNodeAddress)
+import           Enecuum.Assets.Nodes.Address (poaNodeAddress, graphNodeRpcAddress, graphNodeUdpAddress)
 import qualified Enecuum.Domain               as D
 import qualified Enecuum.Language             as L
 import qualified Enecuum.Blockchain.Lens      as Lens
@@ -40,7 +39,7 @@ poaNode = do
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    L.process $ do
+    L.process $ forever $ do
         L.delay $ 100 * 1000
         eKBlock <- L.makeRpcRequest graphNodeRpcAddress GetLastKBlock
         case eKBlock of
@@ -53,7 +52,6 @@ poaNode = do
                     mBlock <- D.genRandMicroblock block
                     L.logInfo
                         $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
-                    _ :: Either Text SuccessMsg <- L.makeRpcRequest graphNodeRpcAddress mBlock
-                    pure ()
+                    L.send graphNodeUdpAddress mBlock
 
     L.awaitNodeFinished poaData

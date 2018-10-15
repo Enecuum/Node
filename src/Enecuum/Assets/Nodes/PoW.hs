@@ -9,7 +9,7 @@ import Enecuum.Prelude
 import qualified Enecuum.Language              as L
 import qualified Enecuum.Domain                as D
 
-import           Enecuum.Assets.Nodes.Address (graphNodeRpcAddress, powNodeRpcPort)
+import           Enecuum.Assets.Nodes.Address (graphNodeUdpAddress, powNodeRpcPort)
 import           Data.HGraph.StringHashable (StringHash (..), toHash)
 import           Enecuum.Assets.Nodes.Messages (
     SuccessMsg (..), ForeverChainGeneration(..), NBlockPacketGeneration(..))
@@ -28,19 +28,6 @@ data PoWNodeData = PoWNodeData
 
 makeFieldsNoPrefix ''PoWNodeData
 
-data KeyBlockRequest  = KeyBlockRequest
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data KeyBlockResponse = KeyBlockResponse { kBlock :: [D.KBlock] }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-sendKBlock :: D.KBlock -> L.NodeL ()
-sendKBlock kBlock = do
-    eResult <- L.makeRpcRequest graphNodeRpcAddress kBlock
-    case eResult of
-        Left  msg        -> L.logInfo $ "KBlock sending failed: " +|| msg ||+ "."
-        Right SuccessMsg -> L.logInfo "KBlock sending success."
-
 kBlockProcess :: PoWNodeData -> L.NodeL ()
 kBlockProcess nodeData = do
     prevKBlockHash      <- L.atomically <$> L.readVar $ nodeData ^. prevHash
@@ -54,7 +41,7 @@ kBlockProcess nodeData = do
 
     forM_ kBlocks $ \kBlock -> do
         L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-        sendKBlock kBlock
+        L.send graphNodeUdpAddress kBlock
         when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
 
 foreverChainGenerationHandle :: PoWNodeData -> ForeverChainGeneration -> L.NodeL SuccessMsg
@@ -81,7 +68,7 @@ powNode' delaysEnabled = do
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
 
-    L.process $ do
+    L.process $ forever $ do
         L.atomically $ do
             i <- L.readVar $ nodeData ^. requiredBlockNumber
             when (i == 0) L.retry
