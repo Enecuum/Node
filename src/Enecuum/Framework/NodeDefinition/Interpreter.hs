@@ -106,19 +106,17 @@ interpretNodeDefinitionL _ (L.AwaitResult pPtr next) = do
     result <- atomically $ takeTMVar pVar
     pure $ next result
 
---
 callHandler :: NodeRuntime -> Map Text (Value -> L.NodeL Text) -> Text -> IO Text
 callHandler nodeRt methods msg = do
-    let val = A.decode $ fromString $ T.unpack msg
+    val <- try $ pure $ A.decode $ fromString $ T.unpack msg
     case val of
-        Just ((^? key "method" . _String) -> Just method) -> case methods ^. at method of
-            Just justMethod -> Impl.runNodeL nodeRt $ justMethod (fromJust val)
-            Nothing         -> pure $ "The method " <> method <> " isn't supported."
-        _ -> pure "Error of request parsing."
+        Right (Just jval@((^? key "method" . _String) -> Just method)) -> 
+            case methods ^. at method of
+                Just justMethod -> Impl.runNodeL nodeRt $ justMethod jval
+                Nothing         -> pure $ "The method " <> method <> " isn't supported."
+        Right _                    -> pure "Error of request parsing."
+        Left  (_ :: SomeException) -> pure "Error of request parsing."
 
-
-fromJust (Just a) = a
---
 -- TODO: treadDelay if server in port exist!!!
 takeServerChan :: TVar (Map PortNumber (TChan D.ServerComand)) -> PortNumber -> STM (TChan D.ServerComand)
 takeServerChan servs port = do
