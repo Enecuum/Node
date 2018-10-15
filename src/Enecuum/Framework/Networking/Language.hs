@@ -77,10 +77,6 @@ instance L.Logger (Free NetworkingF) where
 makeRpcRequest' :: (Typeable a, ToJSON a, FromJSON b) => D.Address -> a -> NetworkingL (Either Text b)
 makeRpcRequest' address arg = responseValidation =<< sendRpcRequest address (D.toRpcRequest arg)
 
-instance L.ERandom (Free NetworkingF) where
-    getRandomInt = evalCoreEffectNetworkingF . L.getRandomInt
-    evalRand r g = evalCoreEffectNetworkingF $ L.evalRand r g
-
 instance L.ControlFlow (Free NetworkingF) where
     delay = evalCoreEffectNetworkingF . L.delay
 

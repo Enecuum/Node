@@ -6,8 +6,6 @@
 module Enecuum.Framework.NodeDefinition.Language where
 
 import           Enecuum.Prelude
-
-
 import qualified Enecuum.Core.Language                 as L
 import qualified Enecuum.Framework.Domain              as D
 import qualified Enecuum.Framework.Node.Language       as L
@@ -128,9 +126,11 @@ instance L.Logger (Free NodeDefinitionF) where
     logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg
 
 instance L.ERandom (Free NodeDefinitionF) where
-    getRandomInt = evalCoreEffectNodeDefinitionF . L.getRandomInt
-    evalRand r g = evalCoreEffectNodeDefinitionF $ L.evalRand r g
-
+    getRandomInt =  evalCoreEffectNodeDefinitionF . L.getRandomInt
+    getRandomByteString = evalCoreEffectNodeDefinitionF . L.getRandomByteString
+    evalRand r g = evalCoreEffectNodeDefinitionF  $ L.evalRand r g
+    generateKeyPair = evalCoreEffectNodeDefinitionF $ L.generateKeyPair
+    sign key msg = evalCoreEffectNodeDefinitionF $ L.sign key msg
 
 instance L.ControlFlow (Free NodeDefinitionF) where
     delay = evalCoreEffectNodeDefinitionF . L.delay

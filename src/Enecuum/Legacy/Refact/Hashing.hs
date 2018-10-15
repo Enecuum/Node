@@ -6,7 +6,6 @@ import qualified Crypto.Hash.SHA256                                as SHA
 import qualified Data.ByteString                                   as B
 import qualified Data.ByteString.Base64                            as Base64
 import qualified Data.ByteString.Internal                          as BSI
-import qualified Data.Serialize                                    as S (encode)
 import           Data.Serialize.Put (putWord8, putWord32le, runPut)
 import           Enecuum.Legacy.Service.Types ( KeyBlockInfoPoW (..) )
 import           Prelude
