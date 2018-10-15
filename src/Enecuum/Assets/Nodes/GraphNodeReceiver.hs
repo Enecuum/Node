@@ -156,6 +156,31 @@ calculateLedger nodeData mblock = do
 
 
 
+-- | Accept kBlock
+acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Udp -> L.NodeL ()
+acceptKBlock nodeData kBlock _ = do
+    L.logInfo $ "\nAccepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
+    res <- L.atomically $ do
+        topKBlock <- getTopKeyBlock nodeData
+        if
+            | kBlockIsNext kBlock topKBlock -> do
+                void $ addKBlock nodeData kBlock
+                let loop = whenM (moveKBlockToGraph nodeData) loop
+                loop
+                pure True
+            | kBlock ^. Lens.number > topKBlock ^. Lens.number + 1 -> addBlockToPending nodeData kBlock
+            | otherwise -> pure False
+    writeLog nodeData
+
+
+
+-- | Accept mBlock
+acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Udp -> L.NodeL ()
+acceptMBlock nodeData mBlock _ = do
+    L.logInfo "Accepting MBlock."
+    res <- L.atomically (addMBlock nodeData mBlock)
+    writeLog nodeData
+
 getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
 getBalance nodeData (GetWalletBalance wallet) = do
     L.logInfo $ "Requested balance for wallet " +|| wallet ||+ "."
@@ -211,7 +236,7 @@ graphNodeReceiver = do
     nodeData <- graphNodeInitialization
 
     L.scenario $ graphSynchro nodeData graphNodeTransmitterRpcAddress
-    L.serving D.Rpc graphNodeReceiverRpcPort $ 
+    L.serving D.Rpc graphNodeReceiverRpcPort $
         L.methodE $ getBalance nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
