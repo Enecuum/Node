@@ -1,24 +1,27 @@
 {-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiWayIf             #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE TypeApplications       #-}
 
-module Enecuum.Assets.Nodes.GraphNode where
+module Enecuum.Assets.Nodes.GraphNodeTransmitter (graphNodeTransmitter) where
 
+import           Enecuum.Prelude
+import Data.Map (fromList, lookup, insert, Map(..), elems, keys, empty)
+import           Control.Lens                  (makeFieldsNoPrefix)
+
+
+import qualified Enecuum.Domain                as D
+import qualified Enecuum.Language              as L
+import qualified Enecuum.Blockchain.Lens       as Lens
+import qualified Enecuum.Core.Lens             as Lens
 import           Data.HGraph.StringHashable
-import           Data.Map                         (Map, fromList, insert, lookup)
+
 import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
+
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Assets.Nodes.Address
-import           Enecuum.Assets.Nodes.Messages
-import qualified Enecuum.Blockchain.Domain.Graph  as TG
-import qualified Enecuum.Blockchain.Lens          as Lens
-import qualified Enecuum.Domain                   as D
-import qualified Enecuum.Language                 as L
-import           Enecuum.Prelude
 
 data GraphNodeData = GraphNodeData
     { _graph         :: TG.GraphVar
@@ -106,8 +109,7 @@ addKBlock nodeData kBlock = do
 
 -- | Add microblock to graph
 addMBlock :: GraphNodeData -> D.Microblock -> L.StateL Bool
-addMBlock nodeData mblock = do
-    let hash = mblock ^. Lens.keyBlock
+addMBlock nodeData mblock@(D.Microblock hash _ _ _) = do
     kblock <- getKBlock nodeData hash
 
     unless (isJust kblock) $ stateLog nodeData $ "Can't add MBlock to the graph: KBlock not found (" +|| hash ||+ ")."
@@ -124,28 +126,35 @@ calculateLedger :: GraphNodeData -> D.Microblock -> Free L.StateF ()
 calculateLedger nodeData mblock = do
     forM_ (mblock ^. Lens.transactions) $ \tx -> do
         ledgerW <- L.readVar $ nodeData ^. ledger
-        let
-            owner          = tx ^. Lens.owner
+        -- stateLog nodeData $ "Current Ledger " +|| ledgerW ||+ "."
+        let owner          = tx ^. Lens.owner
             receiver       = tx ^. Lens.receiver
             amount         = tx ^. Lens.amount
             currentBalance = lookup owner ledgerW
+
         when (owner == receiver) $ stateLog nodeData $ "Tx rejected (same owner and receiver): " +|| owner ||+ "."
 
         when (owner /= receiver) $ do
-            case currentBalance of
-                Nothing           -> stateLog nodeData $ "Can't find wallet in ledger: " +|| owner ||+ "."
-                Just ownerBalance -> if ownerBalance >= amount
-                    then do
-                        let receiverBalance = fromMaybe 0 $ lookup receiver ledgerW
-                        let newLedger = insert owner
-                                               (ownerBalance - amount)
-                                               (insert receiver (receiverBalance + amount) ledgerW)
-                        L.writeVar (nodeData ^. ledger) newLedger
-                        stateLog nodeData
-                            $   "Tx accepted: from [" +|| owner ||+ "] to [" +|| receiver ||+ "], amount: " +|| amount ||+ ". ["
-                            +|| owner ||+ "]: " +|| ownerBalance - amount ||+ ", [" +|| receiver ||+ "]: " +|| receiverBalance + amount ||+ ""
-                    else
-                        stateLog nodeData $ "Tx rejected (negative balance): [" +|| owner ||+ "] -> [" +|| receiver ||+ "], amount: " +|| amount ||+ "."
+            ownerBalance <- case currentBalance of
+                    Nothing           -> (stateLog nodeData $ "Can't find wallet in ledger: " +|| owner ||+ ".") >> pure 100
+                    Just ownerBalance -> pure ownerBalance 
+            if ownerBalance >= amount 
+            then do
+-- stateLog nodeData $ "Before tx owner " +|| owner ||+ " has balance: " +|| balance ||+ "."
+                let receiverBalance = fromMaybe 0 $ lookup receiver ledgerW
+                -- stateLog nodeData $ "Before tx receiver " +|| receiver ||+ " has balance: " +|| receiverBalance ||+ "."
+                let
+                    newLedger = insert owner
+                                       (ownerBalance - amount)
+                                       (insert receiver (receiverBalance + amount) ledgerW)
+                L.writeVar (nodeData ^. ledger) newLedger
+                stateLog nodeData
+                    $   "Tx accepted: from [" +|| owner ||+ "] to [" +|| receiver ||+ "], amount: " +|| amount ||+ ". ["
+                    +|| owner ||+ "]: " +|| ownerBalance - amount ||+ ", [" +|| receiver ||+ "]: " +|| receiverBalance + amount ||+ ""
+-- stateLog nodeData $ "New Ledger " +|| newLedger ||+ "."
+            else
+                stateLog nodeData
+                $   "Tx rejected (negative balance): [" +|| owner ||+ "] -> [" +|| receiver ||+ "], amount: " +|| amount ||+ "."
 
 -- | Accept kBlock
 acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Udp -> L.NodeL ()
@@ -164,14 +173,12 @@ acceptKBlock nodeData kBlock _ = do
     writeLog nodeData
 
 
-
 -- | Accept mBlock
 acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Udp -> L.NodeL ()
 acceptMBlock nodeData mBlock _ = do
     L.logInfo "Accepting MBlock."
     res <- L.atomically (addMBlock nodeData mBlock)
     writeLog nodeData
-
 
 getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
@@ -189,11 +196,62 @@ getBalance nodeData (GetWalletBalance wallet) = do
         Just balance -> pure $ Right $ WalletBalanceMsg wallet balance
         _            -> pure $ Left "Wallet does not exist in graph."
 
+acceptChainLength :: GraphNodeData -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
+acceptChainLength nodeData GetChainLengthRequest = do
+    L.logInfo "Answering chain length"
+    topKBlock <- L.atomically $ getTopKeyBlock nodeData        
+    writeLog nodeData
+    pure $ GetChainLengthResponse $ topKBlock ^. Lens.number
+    
+findBlocksByNumber :: GraphNodeData -> Integer -> D.KBlock -> L.StateL [D.KBlock]
+findBlocksByNumber nodeData num prev = 
+    let cNum = prev ^. Lens.number in
+    if 
+        | cNum < num -> pure []
+        | cNum == num -> pure [prev]
+        | cNum > num -> do
+            maybeNext <- getKBlock nodeData (prev ^. Lens.prevHash)
+            case maybeNext of
+                Nothing -> error "Broken chain"
+                Just next -> (:) prev <$> findBlocksByNumber nodeData num next
+            
+
+acceptChainFromTo :: GraphNodeData -> GetChainFromToRequest -> L.NodeL (Either Text GetChainFromToResponse)
+acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
+    L.logInfo $ "Answering chain from " +|| show from ||+ " to " +|| show to
+    if from > to
+        then pure $ Left "From is grater than to"
+        else do
+            kBlockList <- L.atomically $ do
+                topKBlock <- getTopKeyBlock nodeData
+                chain <- findBlocksByNumber nodeData from topKBlock
+                pure $ drop (fromEnum $ (topKBlock ^. Lens.number) - to) chain
+            writeLog nodeData    
+            pure $ Right $ GetChainFromToResponse (reverse kBlockList)
+
+acceptMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL (Either Text GetMBlocksForKBlockResponse)
+acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
+    L.logInfo $ "Answering microblocks for kBlock " +|| show hash
+    mBlockList <- L.atomically $ L.withGraph nodeData $ do 
+        node <- L.getNode hash
+        case node of
+            Nothing -> pure Nothing
+            Just (D.HNode _ _ _ links _) -> do
+                aMBlocks                       <- forM (Data.Map.keys links) $ \aNRef -> do
+                    Just (D.HNode _ _ (D.fromContent -> block) _ _) <- L.getNode aNRef
+                    case block of
+                        D.MBlockContent mBlock -> pure $ Just mBlock
+                        _               -> pure Nothing
+                pure $ Just $ catMaybes aMBlocks
+    writeLog nodeData     
+    case mBlockList of
+        Nothing -> pure $ Left "KBlock does't exist"  
+        Just blockList -> pure $ Right $ GetMBlocksForKBlockResponse blockList
+
 -- | Initialization of graph node
 graphNodeInitialization :: L.NodeDefinitionL GraphNodeData
 graphNodeInitialization = L.scenario $ do
     g <- L.newGraph
-    let wallets = fromList $ zip [1 .. 5] (repeat 100)
     L.evalGraphIO g $ L.newNode $ D.KBlockContent D.genesisKBlock
     L.logInfo $ "Genesis block (" +|| D.genesisHash ||+ "): " +|| D.genesisKBlock ||+ "."
     L.atomically
@@ -201,22 +259,24 @@ graphNodeInitialization = L.scenario $ do
         <$> L.newVar []
         <*> L.newVar D.genesisHash
         <*> L.newVar []
-        <*> L.newVar wallets
+        <*> L.newVar Data.Map.empty
         <*> L.newVar NodeActing
-
 -- | Start of graph node
-graphNode :: L.NodeDefinitionL ()
-graphNode = do
-    L.nodeTag "graphNode"
+graphNodeTransmitter :: L.NodeDefinitionL ()
+graphNodeTransmitter = do
+    L.nodeTag "graphNodeTransmitter"
     nodeData <- graphNodeInitialization
 
-    L.serving D.Udp graphNodeUdpPort $ do
-        L.handler $ acceptKBlock nodeData
+    L.serving D.Udp graphNodeTransmitterUdpPort $ do
         L.handler $ acceptMBlock nodeData
+        L.handler $ acceptKBlock nodeData
 
-    L.serving D.Rpc graphNodeRpcPort $ do
-        L.method $ getLastKBlock nodeData
+    L.serving D.Rpc graphNodeTransmitterRpcPort $ do
+        L.method  $ getLastKBlock nodeData
         L.methodE $ getBalance nodeData
+        L.method  $ acceptChainLength nodeData
+        L.methodE $ acceptChainFromTo nodeData
+        L.methodE $ acceptMBlockForKBlocks nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.awaitNodeFinished nodeData

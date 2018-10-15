@@ -8,7 +8,7 @@ module Enecuum.Assets.Nodes.PoA where
 import qualified Data.Text as T
 
 import           Data.HGraph.StringHashable   (toHash)
-import           Enecuum.Assets.Nodes.Address (poaNodeAddress, graphNodeRpcAddress, graphNodeUdpAddress)
+import           Enecuum.Assets.Nodes.Address (poaNodeAddress, graphNodeTransmitterRpcAddress, graphNodeTransmitterUdpAddress)
 import qualified Enecuum.Domain               as D
 import qualified Enecuum.Language             as L
 import qualified Enecuum.Blockchain.Lens      as Lens
@@ -41,17 +41,15 @@ poaNode = do
 
     L.process $ forever $ do
         L.delay $ 100 * 1000
-        eKBlock <- L.makeRpcRequest graphNodeRpcAddress GetLastKBlock
-        case eKBlock of
-            Left  _     -> pure ()
-            Right block -> do
-                currentBlock <- L.atomically $ L.readVar (poaData ^. currentLastKeyBlock)
-                when (block /= currentBlock) $ do
-                    L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ "). Generating transactions & MBlock..."
-                    L.atomically $ L.writeVar (poaData ^. currentLastKeyBlock) block
-                    mBlock <- D.genRandMicroblock block
-                    L.logInfo
-                        $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
-                    L.send graphNodeUdpAddress mBlock
+        whenRightM (L.makeRpcRequest graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> do
+            currentBlock <- L.atomically $ L.readVar (poaData ^. currentLastKeyBlock)
+            when (block /= currentBlock) $ do
+                L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ "). Generating transactions & MBlock..."
+                L.atomically $ L.writeVar (poaData ^. currentLastKeyBlock) block
+                mBlock <- D.genRandMicroblock block
+                L.logInfo
+                    $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
+
+                L.notify graphNodeTransmitterUdpAddress mBlock
 
     L.awaitNodeFinished poaData

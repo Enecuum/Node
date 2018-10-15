@@ -1,16 +1,16 @@
 {
 	"bootNodeAddress": "[((127,0,0,1), 1554)]",
 	"scenarioNode": [{
-		"nodeRole": "Client",
-		"scenario": "LedgerBalance",
-		"scenarioRole": "Soly"
+		"nodeRole": "GraphNodeReceiver",
+		"scenario": "Full",
+		"scenarioRole": "Respondent"
 	}],
 	"extPort": 1668,
   "loggerConfig":
       {
           "format": "$prio $loggername: $msg",
           "level": "Debug",
-          "logFilePath": "/tmp/log/app.log",
+          "logFilePath": "/tmp/log/GraphNode.log",
           "logToConsole": true
       }
 }

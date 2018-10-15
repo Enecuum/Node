@@ -29,7 +29,6 @@ instance NetworkConnection D.Udp where
     startServer port handlers insertConnect = do
         chan <- atomically newTChan
         void $ forkIO $ runUDPServer chan port $ \msg msgChan sockAddr -> do
-    
             let host       = D.sockAddrToHost sockAddr
                 connection = D.Connection $ D.Address host port
     

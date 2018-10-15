@@ -63,9 +63,12 @@ instance Send (D.Connection D.Udp) (Free NetworkingF) where
     send conn msg = sendUdpMsgByConnection conn . A.encode $
         D.NetworkMsg (D.toTag msg) (toJSON msg)
 
-instance Send D.Address (Free NetworkingF) where
-    send conn msg = sendUdpMsgByAddress conn . A.encode $
+instance SendUdp (Free NetworkingF) where
+    notify conn msg = sendUdpMsgByAddress conn . A.encode $
         D.NetworkMsg (D.toTag msg) (toJSON msg)
+
+class SendUdp m where
+    notify :: (Typeable a, ToJSON a) => D.Address -> a -> m ()
 
 -- | Eval core effect.
 evalCoreEffectNetworkingF :: L.CoreEffect a -> NetworkingL a
