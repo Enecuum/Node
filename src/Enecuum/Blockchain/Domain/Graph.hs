@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 -- TODO: this is copy-paste from tests with little changes.
 
 module Enecuum.Blockchain.Domain.Graph where
@@ -34,15 +35,9 @@ type GraphVar  = D.TGraph NodeContent
 type GraphL a  = L.HGraphL NodeContent a
 type GraphNode = T.TNodeL NodeContent
 
-genesisHash :: StringHash
-genesisHash = toHash $ KBlockContent genesisKBlock
-
-genesisKBlock :: D.KBlock
-genesisKBlock = D.KBlock {D._prevHash = toHash (0 :: Int), D._number = 0, D._nonce = 0, D._solver = toHash (0 :: Int)}
-
 initGraph :: IO GraphVar
 initGraph = do
     graph <- initHGraph
-    runHGraphIO graph $ L.newNode $ KBlockContent genesisKBlock
+    runHGraphIO graph $ L.newNode $ KBlockContent D.genesisKBlock
     pure graph
 

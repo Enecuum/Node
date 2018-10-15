@@ -21,9 +21,11 @@ import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 
 data Transaction = Transaction
     { _prevHash    :: StringHash
-    , _change      :: Int
+    , _change      :: BalanceChange
     }
   deriving ( Generic, Show, Eq, Ord, Read)
+type Balance = Int
+type BalanceChange = Int
 
 instance Serialize Transaction
 instance StringHashable Transaction where
@@ -52,7 +54,7 @@ initTestGraph = do
 
 -- | Checks if new balance is valid and adds new transaction node.
 -- Returns new node hash and new balance.
-tryAddTransaction' :: D.StringHash -> D.Balance -> D.BalanceChange -> TestGraphL (Maybe (D.StringHash, D.Balance))
+tryAddTransaction' :: D.StringHash -> Balance -> BalanceChange -> TestGraphL (Maybe (D.StringHash, Balance))
 tryAddTransaction' lastNodeHash lastBalance change
     | lastBalance + change < 0 = pure Nothing
     | otherwise = do

@@ -8,16 +8,16 @@ module Enecuum.Framework.NodeDefinition.Language where
 import           Enecuum.Prelude
 
 
-import qualified Enecuum.Core.Language                 as L
-import qualified Enecuum.Framework.Domain              as D
-import qualified Enecuum.Framework.Node.Language       as L
-import qualified Enecuum.Framework.Networking.Language as L
-import           Enecuum.Legacy.Service.Network.Base
-import           Enecuum.Framework.Handler.Rpc.Language  (RpcHandlerL)
+import qualified Enecuum.Core.Language                  as L
+import qualified Enecuum.Framework.Domain               as D
+import           Enecuum.Framework.Handler.Cmd.Language
+import           Enecuum.Framework.Handler.Rpc.Language (RpcHandlerL)
 import           Enecuum.Framework.Handler.Tcp.Language
 import           Enecuum.Framework.Handler.Udp.Language
-import           Enecuum.Framework.Handler.Cmd.Language
-import           Language.Haskell.TH.MakeFunctor (makeFunctorInstance)
+import qualified Enecuum.Framework.Networking.Language  as L
+import qualified Enecuum.Framework.Node.Language        as L
+import           Enecuum.Legacy.Service.Network.Base
+import           Language.Haskell.TH.MakeFunctor        (makeFunctorInstance)
 
 -- TODO: it's possible to make these steps evaluating step-by-step, in order.
 -- Think about if this really needed.
@@ -133,9 +133,11 @@ instance L.Logger (Free NodeDefinitionF) where
     logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg
 
 instance L.ERandom (Free NodeDefinitionF) where
-    getRandomInt = evalCoreEffectNodeDefinitionF . L.getRandomInt
-    evalRand r g = evalCoreEffectNodeDefinitionF $ L.evalRand r g
-
+    getRandomInt =  evalCoreEffectNodeDefinitionF . L.getRandomInt
+    getRandomByteString = evalCoreEffectNodeDefinitionF . L.getRandomByteString
+    evalRand r g = evalCoreEffectNodeDefinitionF  $ L.evalRand r g
+    generateKeyPair = evalCoreEffectNodeDefinitionF $ L.generateKeyPair
+    sign key msg = evalCoreEffectNodeDefinitionF $ L.sign key msg
 
 instance L.ControlFlow (Free NodeDefinitionF) where
     delay = evalCoreEffectNodeDefinitionF . L.delay

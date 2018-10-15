@@ -90,7 +90,10 @@ instance L.Logger (Free NodeF) where
 
 instance L.ERandom (Free NodeF) where
     getRandomInt = evalCoreEffectNodeF . L.getRandomInt
+    getRandomByteString = evalCoreEffectNodeF . L.getRandomByteString
     evalRand r g = evalCoreEffectNodeF $ L.evalRand r g
+    generateKeyPair = evalCoreEffectNodeF $ L.generateKeyPair
+    sign key msg = evalCoreEffectNodeF $ L.sign key msg
 
 instance L.ControlFlow (Free NodeF) where
     delay =  evalCoreEffectNodeF . L.delay
