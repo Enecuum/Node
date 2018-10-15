@@ -9,7 +9,7 @@
 module Enecuum.Blockchain.Domain.Crypto.Keys
   ( ECDSA.Signature
   , compressPublicKey
-  , uncompressPublicKey
+  , decompressPublicKey
   , getPublicKey
   , getPrivateKey
   , fromPublicKey256k1
@@ -42,6 +42,9 @@ compressPublicKey pub | c == y    = publicKey256k1 (x * 2)
   where
     (Point x y) = ECDSA.public_q pub
     (c, d)      = curveK (ECDSA.public_curve pub) x
+
+decompressPublicKey :: PublicKey -> ECDSA.PublicKey 
+decompressPublicKey = getPublicKey . uncompressPublicKey
 
 uncompressPublicKey :: PublicKey -> (Integer, Integer)
 uncompressPublicKey aKey | aa == 0   = (x, c)

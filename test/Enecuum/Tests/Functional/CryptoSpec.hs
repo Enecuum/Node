@@ -27,17 +27,28 @@ spec = do
     describe "Public key serialization" $ fromHUnitTest $ TestList
         [ TestLabel "Public key JSON serialization" testPublicKeyJsonSerialization
         , TestLabel "Public key binary serialization" testPublicKeyBinarySerialization]
+    describe "Compress public key" $ fromHUnitTest $ TestList
+        [ TestLabel "Compress/decompess public key" testCompressPublicKey]
 
+
+generatePublicKeys = do
+    keys <- replicateM 1000 $ I.runERandomL $ L.evalCoreCrypto $ L.generateKeyPair       
+    let pubs = map (\(D.KeyPair pub _) -> pub) keys
+    pure pubs 
+
+testCompressPublicKey :: Test
+testCompressPublicKey = TestCase $ do
+    pubs <- generatePublicKeys
+    map (D.compressPublicKey . D.decompressPublicKey) pubs `shouldBe` pubs
+    
 testPublicKeyJsonSerialization :: Test
 testPublicKeyJsonSerialization = TestCase $ do
-    keys <- replicateM 1000 $ I.runERandomL $ L.evalCoreCrypto $ L.generateKeyPair
-    let pubs = map (\(D.KeyPair pub _) -> pub) keys
+    pubs <- generatePublicKeys
     map (A.decode . A.encode) pubs `shouldBe` map Just pubs
 
 testPublicKeyBinarySerialization :: Test
 testPublicKeyBinarySerialization = TestCase $ do
-    keys <- replicateM 1000 $ I.runERandomL $ L.evalCoreCrypto $ L.generateKeyPair
-    let pubs = map (\(D.KeyPair pub _) -> pub) keys
+    pubs <- generatePublicKeys
     map (S.decode . S.encode) pubs `shouldBe` map Right pubs
 
 testVerifySignedTransaction :: Test
