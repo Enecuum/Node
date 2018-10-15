@@ -18,7 +18,7 @@ import qualified Enecuum.Runtime as Rt
 import qualified Enecuum.Domain                as D
 import           Enecuum.Framework.Networking.Internal.Tcp.Connection
 import qualified Data.Map as M
-
+import qualified Enecuum.Framework.Networking.Internal.Connection     as Con
 
 
 -- Tests disabled
@@ -33,14 +33,14 @@ newtype Pong = Pong Int deriving (Generic, ToJSON, FromJSON)
 data Succes = Succes    deriving (Generic, ToJSON, FromJSON)
 
 
-pingHandle :: D.TcpConnection -> Ping -> D.TcpConnection -> L.NodeL ()
+pingHandle :: D.Connection D.Tcp -> Ping -> D.Connection D.Tcp -> L.NodeL ()
 pingHandle succConn (Ping i) conn = do
     when (i < 10) $ L.send conn (Pong $ i + 1)
     when (i == 10) $ do
         L.send succConn Succes
         L.close conn
 
-pongHandle :: D.TcpConnection -> Pong -> D.TcpConnection -> L.NodeL ()
+pongHandle :: D.Connection D.Tcp -> Pong -> D.Connection D.Tcp -> L.NodeL ()
 pongHandle succConn (Pong i) conn = do
     when (i < 10) $ L.send conn (Ping $ i + 1)
     when (i == 10) $ do
@@ -54,14 +54,14 @@ pingPong = TestCase $ do
     void $ forkIO $ do
         threadDelay 5000
         runNodeDefinitionL nr1 $ do
-            succConn <- L.open succAdr $ pure ()
-            L.serving serverPort $ do
+            succConn <- L.open D.Tcp succAdr $ pure ()
+            L.serving D.Tcp serverPort $ do
                 L.handler (pingHandle succConn)
                 L.handler (pongHandle succConn)
         threadDelay 5000
         runNodeDefinitionL nr2 $ do
-            succConn <- L.open succAdr $ pure ()
-            conn :: D.TcpConnection <- L.open serverAddr $ do
+            succConn <- L.open D.Tcp succAdr $ pure ()
+            conn     <- L.open D.Tcp serverAddr $ do
                 L.handler (pingHandle succConn)
                 L.handler (pongHandle succConn)
             L.send conn $ Ping 0
@@ -69,15 +69,18 @@ pingPong = TestCase $ do
     runNodeDefinitionL nr1 $ L.stopServing serverPort
     assertBool "" ok
 
+emptFunc :: D.Connection D.Tcp -> D.ConnectionVar D.Tcp -> IO ()
+emptFunc _ _ = pure ()
+
 succesServer :: PortNumber -> IO Bool
 succesServer port = do
     mvar <- newEmptyMVar
     void $ forkIO $ do
         threadDelay 1000000
         putMVar mvar False
-    ch <- startServer port (M.singleton (D.toTag Succes) (\_ _ -> putMVar mvar True)) (\_ _ -> pure ())
+    ch <- Con.startServer port (M.singleton (D.toTag Succes) (\_ _ -> putMVar mvar True)) emptFunc
     ok <- takeMVar mvar
-    Enecuum.Prelude.atomically $ stopServer ch
+    Enecuum.Prelude.atomically $ Con.stopServer ch
     pure ok
 
 serverPort, succPort :: PortNumber

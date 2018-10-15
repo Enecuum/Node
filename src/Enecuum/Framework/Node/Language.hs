@@ -11,9 +11,8 @@ import qualified Enecuum.Core.Language                    as L
 import qualified Enecuum.Framework.State.Language         as L
 import qualified Enecuum.Framework.Networking.Language    as L
 import qualified Enecuum.Framework.Domain.Networking      as D
-import           Enecuum.Framework.Handler.Tcp.Language
-import           Enecuum.Framework.Handler.Udp.Language
 import qualified Enecuum.Core.Types                       as T
+import           Enecuum.Framework.Handler.Network.Language
 import           Language.Haskell.TH.MakeFunctor
 
 -- | Node language.
@@ -28,11 +27,11 @@ data NodeF next where
     EvalGraphIO :: (Serialize c, T.StringHashable c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) x -> (x -> next) -> NodeF next
     NewGraph  :: (Serialize c, T.StringHashable c) => (T.TGraph c -> next) -> NodeF next
     -- | Open connection to the node.
-    OpenTcpConnection :: D.Address -> TcpHandlerL NodeL () -> (D.TcpConnection -> next) -> NodeF next
-    OpenUdpConnection :: D.Address -> UdpHandlerL NodeL () -> (D.UdpConnection -> next) -> NodeF next
+    OpenTcpConnection :: D.Address -> NetworkHandlerL D.Tcp NodeL () -> (D.Connection D.Tcp -> next) -> NodeF next
+    OpenUdpConnection :: D.Address -> NetworkHandlerL D.Udp NodeL () -> (D.Connection D.Udp -> next) -> NodeF next
     -- | Close existing connection.
-    CloseTcpConnection :: D.TcpConnection -> (() -> next) -> NodeF  next
-    CloseUdpConnection :: D.UdpConnection -> (() -> next) -> NodeF  next
+    CloseTcpConnection :: D.Connection D.Tcp -> (() -> next) -> NodeF  next
+    CloseUdpConnection :: D.Connection D.Udp -> (() -> next) -> NodeF  next
 
 type NodeL = Free NodeF
 
@@ -55,28 +54,18 @@ evalNetworking newtorking = liftF $ EvalNetworking newtorking id
 evalCoreEffectNodeF :: L.CoreEffect a -> NodeL a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
--- | Open network connection.
-{-# DEPRECATED openConnection "Use L.open" #-}
-openConnection :: D.Address -> TcpHandlerL NodeL () -> NodeL D.TcpConnection
-openConnection = open
 
--- | Close network connection.
--- TODO: what is the behavior when connection is closed?
-{-# DEPRECATED closeConnection "Use L.close" #-}
-closeConnection :: D.TcpConnection -> NodeL ()
-closeConnection = close
+class Connection a con where
+    close :: D.Connection con -> a ()
+    open  :: con -> D.Address -> NetworkHandlerL con NodeL () -> a (D.Connection con)
 
-class Connection a con handler | con -> handler where
-    close :: con -> a ()
-    open  :: D.Address -> handler -> a con
+instance Connection (Free NodeF) D.Tcp where
+    close   conn       = liftF $ CloseTcpConnection conn id
+    open  _ addr handl = liftF $ OpenTcpConnection  addr handl id
 
-instance Connection (Free NodeF) D.TcpConnection (TcpHandlerL NodeL ()) where
-    close conn       = liftF $ CloseTcpConnection conn id
-    open  addr handl = liftF $ OpenTcpConnection  addr handl id
-
-instance Connection (Free NodeF) D.UdpConnection (UdpHandlerL NodeL ()) where
-    close conn       = liftF $ CloseUdpConnection conn id
-    open  addr handl = liftF $ OpenUdpConnection  addr handl id
+instance Connection (Free NodeF) D.Udp where
+    close   conn       = liftF $ CloseUdpConnection conn id
+    open  _ addr handl = liftF $ OpenUdpConnection  addr handl id
 
 instance L.Send a (Free L.NetworkingF) => L.Send a NodeL where
     send conn msg = evalNetworking $ L.send conn msg

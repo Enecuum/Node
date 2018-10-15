@@ -25,8 +25,8 @@ data NodeRuntime = NodeRuntime
     , _state        :: NodeState              -- ^ State of node.
     , _nodeTag      :: TVar Text
     , _processes    :: TVar (Map D.ProcessId ThreadId)
-    , _tcpConnects  :: TVar (Map D.Address D.TcpConnectionVar)
-    , _udpConnects  :: TVar (Map D.Address D.UdpConnectionVar)
+    , _tcpConnects  :: TVar (Map D.Address (D.ConnectionVar D.Tcp))
+    , _udpConnects  :: TVar (Map D.Address (D.ConnectionVar D.Udp))
     }
 
 createNodeRuntime :: CoreRuntime -> IO NodeRuntime

@@ -16,7 +16,7 @@ import qualified Enecuum.Testing.Framework.Internal.RpcServer as Impl (startNode
 import qualified Enecuum.Testing.Framework.Internal.TcpLikeServer as Impl (startNodeTcpLikeServer, stopNodeTcpLikeServer)
 
 import qualified Enecuum.Framework.Handler.Rpc.Interpreter as Impl (runRpcHandlerL)
-import qualified Enecuum.Framework.Handler.Tcp.Interpreter as Impl (runTcpHandlerL)
+import qualified Enecuum.Framework.Handler.Network.Interpreter as Impl 
 
 addProcess :: T.NodeRuntime -> D.ProcessPtr a -> ThreadId -> IO ()
 addProcess nodeRt pPtr threadId = do
@@ -45,7 +45,7 @@ interpretNodeDefinitionL nodeRt (L.ServingRpc port handlersF next) = do
 
 interpretNodeDefinitionL nodeRt (L.ServingTcp port handlersF next) = do
     handlersMap <- atomically $ newTVar mempty
-    Impl.runTcpHandlerL handlersMap handlersF
+    Impl.runNetworkHandlerL handlersMap handlersF
     Impl.startNodeTcpLikeServer nodeRt (mkAddress nodeRt port) handlersMap
     pure $ next ()
 

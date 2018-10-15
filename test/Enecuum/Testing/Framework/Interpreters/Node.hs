@@ -18,7 +18,7 @@ import           Enecuum.Testing.Framework.Internal.TcpLikeServerWorker  (startN
 import           Enecuum.Testing.Framework.Internal.TcpLikeServerBinding (bindServer, registerConnection, closeConnection)
 import           Enecuum.Testing.TestRuntime                             (controlRequest)
 
-import qualified Enecuum.Framework.Handler.Tcp.Interpreter as Impl (runTcpHandlerL)
+import qualified Enecuum.Framework.Handler.Network.Interpreter as Net
 
 
 -- | Establish connection with the server through test environment.
@@ -60,11 +60,11 @@ interpretNodeL nodeRt (L.OpenTcpConnection serverAddress handlersF next) = do
     case eBindedServer of
         Left  err          -> error err
         Right bindedServer -> do
-            let bindedServerConnection = D.TcpConnection $ bindedServer ^. RLens.address
+            let bindedServerConnection = D.Connection $ bindedServer ^. RLens.address
 
             -- Collecting hanlders for this connection
             tHandlers <- atomically $ newTVar mempty
-            Impl.runTcpHandlerL tHandlers handlersF
+            Net.runNetworkHandlerL tHandlers handlersF
             handlers <- readTVarIO tHandlers
 
             -- Starting client side connection worker & registering this connection.

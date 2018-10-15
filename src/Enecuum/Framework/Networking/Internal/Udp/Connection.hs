@@ -9,6 +9,7 @@ module Enecuum.Framework.Networking.Internal.Udp.Connection
     ) where
 
 import           Enecuum.Prelude
+import           Enecuum.Framework.Networking.Internal.Connection
 import           Data.Aeson
 import           Control.Concurrent.Chan
 import           Control.Concurrent.STM.TChan
@@ -24,53 +25,48 @@ import qualified Network.Socket as S hiding (recv, send, sendAll)
 import qualified Network.Socket.ByteString.Lazy as S
 import           Control.Monad.Extra
 
-type Handler    = Value -> D.UdpConnection -> IO ()
-type Handlers   = Map Text Handler
+instance NetworkConnection D.Udp where
+    startServer port handlers insertConnect = do
+        chan <- atomically newTChan
+        void $ forkIO $ runUDPServer chan port $ \msg msgChan sockAddr -> do
+    
+            let host       = D.sockAddrToHost sockAddr
+                connection = D.Connection $ D.Address host port
+    
+            insertConnect connection (D.ServerUdpConnectionVar sockAddr msgChan)
+            runHandlers   connection handlers msg
+        pure chan
 
-type ServerHandle = TChan D.ServerComand
--- ByteString -> (Chan SendMsg) -> SockAddr
+    send (D.ClientUdpConnectionVar conn)          msg = writeComand conn $ D.Send  msg
+    send (D.ServerUdpConnectionVar sockAddr chan) msg = writeTChan  chan $ D.SendMsg sockAddr msg
 
--- | Start new server witch port
-startServer :: PortNumber -> Handlers -> (D.UdpConnection -> D.UdpConnectionVar -> IO ()) -> IO ServerHandle
-startServer port handlers insertConnect = do
-    chan <- atomically newTChan
-    void $ forkIO $ runUDPServer chan port $ \msg msgChan sockAddr -> do
+    close (D.ClientUdpConnectionVar conn) = writeComand conn D.Close >> closeConn conn
+    close (D.ServerUdpConnectionVar _ _)  = pure ()
 
-        let host       = D.sockAddrToHost sockAddr
-            connection = D.UdpConnection $ D.Address host port
+    openConnect addr handlers = do
+        conn <- atomically (newTMVar =<< newTChan)
+        void $ forkIO $ do
+            tryML
+                (runClient UDP addr $ \sock -> void $ race
+                    (readMessages (D.Connection addr) handlers sock)
+                    (connectManager conn sock))
+                (atomically $ closeConn conn)
+        pure $ D.ClientUdpConnectionVar conn
 
-        insertConnect connection (D.ServerUdpConnectionVar sockAddr msgChan)
-        runHandlers   connection handlers msg
-    pure chan
 
-runHandlers :: D.UdpConnection -> Handlers -> LByteString -> IO ()
+runHandlers :: D.Connection D.Udp -> Handlers D.Udp -> LByteString -> IO ()
 runHandlers netConn handlers msg =
     whenJust (decode msg) $ \(D.NetworkMsg tag val) ->
         whenJust (handlers ^. at tag) $ \handler -> handler val netConn
-
--- | Stop the server
-stopServer :: ServerHandle -> STM ()
-stopServer chan = writeTChan chan D.StopServer
-
--- | Send msg to node.
-send :: D.UdpConnectionVar -> LByteString -> STM ()
-send (D.ClientUdpConnectionVar conn)          msg = writeComand conn $ D.Send  msg
-send (D.ServerUdpConnectionVar sockAddr chan) msg = writeTChan  chan $ D.SendMsg sockAddr msg
 
 writeComand :: TMVar (TChan D.Comand) -> D.Comand -> STM ()
 writeComand conn cmd = unlessM (isEmptyTMVar conn) $ do
     chan <- readTMVar conn
     writeTChan chan cmd
 
--- | Close the connect
-close :: D.UdpConnectionVar -> STM ()
-close (D.ClientUdpConnectionVar conn) = writeComand conn D.Close >> closeConn conn
-close (D.ServerUdpConnectionVar _ _)  = pure ()
-
 -- close connection
 closeConn :: TMVar (TChan D.Comand) -> STM ()
 closeConn conn = unlessM (isEmptyTMVar conn) $ void $ takeTMVar conn
-
 
 -- | Read comand to connect manager
 readCommand :: TMVar (TChan D.Comand) -> IO (Maybe D.Comand)
@@ -85,19 +81,7 @@ readCommand conn = atomically $ do
 sendUdpMsg :: D.Address -> LByteString -> IO ()
 sendUdpMsg addr msg = runClient UDP addr $ \sock -> S.sendAll sock msg
 
--- | Open new connect to adress
-openConnect :: D.Address -> Handlers -> IO D.UdpConnectionVar
-openConnect addr handlers = do
-    conn <- atomically (newTMVar =<< newTChan)
-    void $ forkIO $ do
-        tryML
-            (runClient UDP addr $ \sock -> void $ race
-                (readMessages (D.UdpConnection addr) handlers sock)
-                (connectManager conn sock))
-            (atomically $ closeConn conn)
-    pure $ D.ClientUdpConnectionVar conn
-
-readMessages :: D.UdpConnection -> Handlers -> S.Socket -> IO ()
+readMessages :: D.Connection D.Udp -> Handlers D.Udp -> S.Socket -> IO ()
 readMessages conn handlers sock = tryMR (S.recv sock (1024 * 4)) $ \msg -> do 
     runHandlers conn handlers msg
     readMessages conn handlers sock
