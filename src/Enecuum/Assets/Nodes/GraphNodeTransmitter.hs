@@ -70,16 +70,11 @@ moveKBlockToGraph nodeData = do
     topKBlock <- getTopKeyBlock nodeData
     pending   <- L.readVar (nodeData ^. kBlockPending)
     case pending of
-        [] -> do
-            -- stateLog nodeData "Pending is empty"
-            pure False
         kBlock : newPending | kBlockIsNext kBlock topKBlock -> do
             L.writeVar (nodeData ^. kBlockPending) newPending
-            stateLog   nodeData                    "Moving KBlock from pending to graph."
-            addKBlock  nodeData                    kBlock
-        _ -> do
-            stateLog nodeData "It's impossible to move block from pending to graph."
-            pure False
+            stateLog nodeData "Moving KBlock from pending to graph."
+            addKBlock nodeData kBlock
+        _ -> pure False
 
 
 kBlockIsNext :: D.KBlock -> D.KBlock -> Bool
@@ -90,7 +85,7 @@ kBlockIsNext kBlock topKBlock =
 -- | Add new key block to pending.
 addBlockToPending :: GraphNodeData -> D.KBlock -> L.StateL Bool
 addBlockToPending nodeData kBlock = do
-    stateLog    nodeData                    "Adding KBlock to pending"
+    stateLog nodeData "Adding KBlock to pending"
     L.modifyVar (nodeData ^. kBlockPending) (\pending -> sortOn (^. Lens.number) $ kBlock : pending)
     pure True
 
@@ -177,7 +172,7 @@ acceptKBlock nodeData kBlock _ = do
 acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Udp -> L.NodeL ()
 acceptMBlock nodeData mBlock _ = do
     L.logInfo "Accepting MBlock."
-    res <- L.atomically (addMBlock nodeData mBlock)
+    void $ L.atomically (addMBlock nodeData mBlock)
     writeLog nodeData
 
 getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
