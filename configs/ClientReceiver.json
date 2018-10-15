@@ -1,0 +1,21 @@
+{
+	"bootNodeAddress": "[((127,0,0,1), 1554)]",
+	"scenarioNode": [{
+		"nodeRole": "Client",
+		"scenario": "LedgerBalance",
+		"scenarioRole": "Soly"
+	}],
+	"extPort": 1668,
+  "loggerConfig":
+      {
+          "format": "$prio $loggername: $msg",
+          "level": "Debug",
+          "logFilePath": "/tmp/log/app.log",
+          "logToConsole": true
+      },
+   "clientConfig":
+      {
+          "host": "127.0.0.1",
+          "port": 2009
+      }
+}

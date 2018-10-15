@@ -7,7 +7,7 @@
 module Enecuum.Assets.Nodes.GraphNodeTransmitter (graphNodeTransmitter) where
 
 import           Enecuum.Prelude
-import Data.Map (fromList, lookup, insert, Map(..), elems, keys)
+import Data.Map (fromList, lookup, insert, Map(..), elems, keys, empty)
 import           Control.Lens                  (makeFieldsNoPrefix)
 
 
@@ -28,7 +28,7 @@ data GraphNodeData = GraphNodeData
     , _kBlockPending :: D.StateVar [D.KBlock]
     , _curNode       :: D.StateVar D.StringHash
     , _logVar        :: D.StateVar [Text]
-    , _ledger        :: D.StateVar (Map D.PublicKey Integer)
+    , _ledger        :: D.StateVar (Map WalletId D.Amount)
     , _status        :: D.StateVar NodeStatus
     }
 
@@ -135,25 +135,26 @@ calculateLedger nodeData mblock = do
         when (owner == receiver) $ stateLog nodeData $ "Tx rejected (same owner and receiver): " +|| owner ||+ "."
 
         when (owner /= receiver) $ do
-            case currentBalance of
-                Nothing           -> stateLog nodeData $ "Can't find wallet in ledger: " +|| owner ||+ "."
-                Just ownerBalance -> if ownerBalance >= amount
-                    then do
+            ownerBalance <- case currentBalance of
+                    Nothing           -> (stateLog nodeData $ "Can't find wallet in ledger: " +|| owner ||+ ".") >> pure 100
+                    Just ownerBalance -> pure ownerBalance 
+            if ownerBalance >= amount 
+            then do
 -- stateLog nodeData $ "Before tx owner " +|| owner ||+ " has balance: " +|| balance ||+ "."
-                        let receiverBalance = fromMaybe 0 $ lookup receiver ledgerW
-                        -- stateLog nodeData $ "Before tx receiver " +|| receiver ||+ " has balance: " +|| receiverBalance ||+ "."
-                        let
-                            newLedger = insert owner
-                                               (ownerBalance - amount)
-                                               (insert receiver (receiverBalance + amount) ledgerW)
-                        L.writeVar (nodeData ^. ledger) newLedger
-                        stateLog nodeData
-                            $   "Tx accepted: from [" +|| owner ||+ "] to [" +|| receiver ||+ "], amount: " +|| amount ||+ ". ["
-                            +|| owner ||+ "]: " +|| ownerBalance - amount ||+ ", [" +|| receiver ||+ "]: " +|| receiverBalance + amount ||+ ""
+                let receiverBalance = fromMaybe 0 $ lookup receiver ledgerW
+                -- stateLog nodeData $ "Before tx receiver " +|| receiver ||+ " has balance: " +|| receiverBalance ||+ "."
+                let
+                    newLedger = insert owner
+                                       (ownerBalance - amount)
+                                       (insert receiver (receiverBalance + amount) ledgerW)
+                L.writeVar (nodeData ^. ledger) newLedger
+                stateLog nodeData
+                    $   "Tx accepted: from [" +|| owner ||+ "] to [" +|| receiver ||+ "], amount: " +|| amount ||+ ". ["
+                    +|| owner ||+ "]: " +|| ownerBalance - amount ||+ ", [" +|| receiver ||+ "]: " +|| receiverBalance + amount ||+ ""
 -- stateLog nodeData $ "New Ledger " +|| newLedger ||+ "."
-                    else
-                        stateLog nodeData
-                        $   "Tx rejected (negative balance): [" +|| owner ||+ "] -> [" +|| receiver ||+ "], amount: " +|| amount ||+ "."
+            else
+                stateLog nodeData
+                $   "Tx rejected (negative balance): [" +|| owner ||+ "] -> [" +|| receiver ||+ "], amount: " +|| amount ||+ "."
 
 -- | Accept kBlock
 acceptKBlock :: GraphNodeData -> D.KBlock -> L.NodeL (Either Text SuccessMsg)
@@ -253,7 +254,6 @@ acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
 graphNodeInitialization :: L.NodeDefinitionL GraphNodeData
 graphNodeInitialization = L.scenario $ do
     g <- L.newGraph
-    let wallets = zip [1 .. 5] (repeat 100)
     L.evalGraphIO g $ L.newNode $ D.KBlockContent D.genesisKBlock
     L.logInfo $ "Genesis block (" +|| D.genesisHash ||+ "): " +|| D.genesisKBlock ||+ "."
     L.atomically
@@ -261,7 +261,7 @@ graphNodeInitialization = L.scenario $ do
         <$> L.newVar []
         <*> L.newVar D.genesisHash
         <*> L.newVar []
-        <*> L.newVar (fromList wallets)
+        <*> L.newVar Data.Map.empty
         <*> L.newVar NodeActing
 -- | Start of graph node
 graphNodeTransmitter :: L.NodeDefinitionL ()
