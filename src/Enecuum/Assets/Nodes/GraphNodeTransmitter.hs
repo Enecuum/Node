@@ -109,7 +109,8 @@ addKBlock nodeData kBlock = do
 
 -- | Add microblock to graph
 addMBlock :: GraphNodeData -> D.Microblock -> L.StateL Bool
-addMBlock nodeData mblock@(D.Microblock hash _ _ _) = do
+addMBlock nodeData mblock = do
+    let hash = mblock ^. Lens.keyBlock
     kblock <- getKBlock nodeData hash
 
     unless (isJust kblock) $ stateLog nodeData $ "Can't add MBlock to the graph: KBlock not found (" +|| hash ||+ ")."
@@ -157,8 +158,8 @@ calculateLedger nodeData mblock = do
                 $   "Tx rejected (negative balance): [" +|| owner ||+ "] -> [" +|| receiver ||+ "], amount: " +|| amount ||+ "."
 
 -- | Accept kBlock
-acceptKBlock :: GraphNodeData -> D.KBlock -> L.NodeL (Either Text SuccessMsg)
-acceptKBlock nodeData kBlock = do
+acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Udp -> L.NodeL ()
+acceptKBlock nodeData kBlock _ = do
     L.logInfo $ "\nAccepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
     res <- L.atomically $ do
         topKBlock <- getTopKeyBlock nodeData
@@ -171,16 +172,15 @@ acceptKBlock nodeData kBlock = do
             | kBlock ^. Lens.number > topKBlock ^. Lens.number + 1 -> addBlockToPending nodeData kBlock
             | otherwise -> pure False
     writeLog nodeData
-    if res then pure $ Right SuccessMsg else pure $ Left "Error of kblock accepting"
+
 
 
 -- | Accept mBlock
-acceptMBlock :: GraphNodeData -> D.Microblock -> L.NodeL (Either Text SuccessMsg)
-acceptMBlock nodeData mBlock = do
+acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Udp -> L.NodeL ()
+acceptMBlock nodeData mBlock _ = do
     L.logInfo "Accepting MBlock."
     res <- L.atomically (addMBlock nodeData mBlock)
     writeLog nodeData
-    if res then pure $ Right SuccessMsg else pure $ Left "Error of mblock accepting"
 
 getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
@@ -269,9 +269,11 @@ graphNodeTransmitter = do
     L.nodeTag "graphNodeTransmitter"
     nodeData <- graphNodeInitialization
 
+    L.serving D.Udp graphNodeTransmitterUdpPort $ do
+        L.handler $ acceptKBlock nodeData
+        L.handler $ acceptMBlock nodeData
+
     L.serving D.Rpc graphNodeTransmitterRpcPort $ do
-        L.methodE $ acceptKBlock nodeData
-        L.methodE $ acceptMBlock nodeData
         L.method $ getLastKBlock nodeData
         L.methodE $ getBalance nodeData
         L.method $ acceptChainLength nodeData
