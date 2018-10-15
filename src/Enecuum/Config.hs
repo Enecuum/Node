@@ -8,9 +8,11 @@ import           Enecuum.Prelude
 import qualified Data.ByteString.Lazy          as L
 import qualified Data.Aeson                    as A
 
+
 import           Enecuum.Core.Types.Logger     (LoggerConfig(..))
 import           System.FilePath.Windows       (dropFileName)
 import           System.Directory (createDirectoryIfMissing)
+import           Enecuum.Framework.Domain.Networking
 
 data NodeRole = BootNode | MasterNode | NetworkNode | PoW | PoA | Client | GraphNodeTransmitter | GraphNodeReceiver
   deriving (Generic, FromJSON, Show, Read, Eq, Ord )
@@ -27,11 +29,17 @@ data ScenarioNode = ScenarioNode
   , scenarioRole :: ScenarioRole
   } deriving (Generic, FromJSON, Show, Read, Eq, Ord)
 
+data ClientConfig = ClientConfig 
+  {  host :: String
+  ,  port :: Int
+  } deriving (Generic, FromJSON, Show, Read, Eq, Ord)
+
 data Config = Config
   { bootNodeAddress :: Text
   , scenarioNode :: [ScenarioNode]
   , extPort :: Int
   , loggerConfig :: LoggerConfig
+  , clientConfig :: Maybe ClientConfig
   }
   deriving (Generic, FromJSON)
 
@@ -44,6 +52,11 @@ getConfigBase configName = do
     case A.decode configContents of
         Nothing     -> error "Please, specify config file correctly"
         Just config -> pure config
+
+readClientConfig :: Config -> Maybe Address
+readClientConfig (Config _ _ _ _ (Just config)) = Just $ Address (host config) (toEnum $ port config)
+readClientConfig _ = Nothing
+
 
 logConfig :: FilePath -> IO LoggerConfig
 logConfig configName = do
