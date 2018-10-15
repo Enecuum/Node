@@ -28,7 +28,7 @@ relayRequest' nodeRt to req = do
         _                         -> error "Invalid network control result."
 
 -- | Send message to the connection.
-sendMessageToConnection :: T.NodeRuntime -> D.TcpConnection -> D.RawData -> IO (Either Text ())
+sendMessageToConnection :: T.NodeRuntime -> D.Connection D.Tcp  -> D.RawData -> IO (Either Text ())
 sendMessageToConnection nodeRt connection msg = do
     connections <- atomically $ readTMVar $ nodeRt ^. RLens.connections
     -- Checking is connection alive.

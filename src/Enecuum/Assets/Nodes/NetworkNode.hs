@@ -26,5 +26,5 @@ nnNode = do
     L.nodeTag "Network Node"
     L.logInfo "Generate Transactions"
     let (D.Address _ port) = nnAddr
-    L.serving port $ L.method getTx
+    L.serving D.Rpc port $ L.method getTx
     L.awaitNodeForever

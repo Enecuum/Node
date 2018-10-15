@@ -28,7 +28,7 @@ data GraphNodeData = GraphNodeData
     , _kBlockPending :: D.StateVar [D.KBlock]
     , _curNode       :: D.StateVar D.StringHash
     , _logVar        :: D.StateVar [Text]
-    , _ledger        :: D.StateVar (Map Integer Integer)
+    , _ledger        :: D.StateVar (Map D.PublicKey Integer)
     , _status        :: D.StateVar NodeStatus
     }
 
@@ -109,7 +109,7 @@ addKBlock nodeData kBlock = do
 
 -- | Add microblock to graph
 addMBlock :: GraphNodeData -> D.Microblock -> L.StateL Bool
-addMBlock nodeData mblock@(D.Microblock hash _) = do
+addMBlock nodeData mblock@(D.Microblock hash _ _ _) = do
     kblock <- getKBlock nodeData hash
 
     unless (isJust kblock) $ stateLog nodeData $ "Can't add MBlock to the graph: KBlock not found (" +|| hash ||+ ")."
@@ -269,7 +269,7 @@ graphNodeTransmitter = do
     L.nodeTag "graphNodeTransmitter"
     nodeData <- graphNodeInitialization
 
-    L.serving graphNodeTransmitterRpcPort $ do
+    L.serving D.Rpc graphNodeTransmitterRpcPort $ do
         L.methodE $ acceptKBlock nodeData
         L.methodE $ acceptMBlock nodeData
         L.method $ getLastKBlock nodeData

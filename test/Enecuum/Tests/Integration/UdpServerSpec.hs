@@ -39,14 +39,14 @@ newtype Pong = Pong Int deriving (Generic, ToJSON, FromJSON)
 data Succes = Succes    deriving (Generic, ToJSON, FromJSON)
 
 
-pingHandle :: Ping -> D.UdpConnection -> L.NodeL ()
+pingHandle :: Ping -> D.Connection D.Udp -> L.NodeL ()
 pingHandle (Ping i) conn = do
     when (i < 10) $ L.send conn (Pong $ i + 1)
     when (i == 10) $ do
         L.send succAdr Succes
         L.close conn
 
-pongHandle :: Pong -> D.UdpConnection -> L.NodeL ()
+pongHandle :: Pong -> D.Connection D.Udp -> L.NodeL ()
 pongHandle (Pong i) conn = do
     when (i < 10) $ L.send conn (Ping $ i + 1)
     when (i == 10) $ do
@@ -60,18 +60,21 @@ pingPong = TestCase $ do
     void $ forkIO $ do
         threadDelay 5000
         runNodeDefinitionL nr1 $ do
-            L.serving serverPort $ do
-                L.udpHandler pingHandle
-                L.udpHandler pongHandle
+            L.serving D.Udp serverPort $ do
+                L.handler pingHandle
+                L.handler pongHandle
         threadDelay 5000
         runNodeDefinitionL nr2 $ do
-            conn :: D.UdpConnection <- L.open serverAddr $ do
-                L.udpHandler pingHandle
-                L.udpHandler pongHandle
+            conn <- L.open D.Udp serverAddr $ do
+                L.handler pingHandle
+                L.handler pongHandle
             L.send conn $ Ping 0
     ok <- succesServer succPort
     runNodeDefinitionL nr1 $ L.stopServing serverPort
     assertBool "" ok
+
+emptFunc :: D.Connection D.Udp -> D.ConnectionVar D.Udp -> IO ()
+emptFunc _ _ = pure ()
 
 succesServer :: PortNumber -> IO Bool
 succesServer port = do
@@ -79,7 +82,7 @@ succesServer port = do
     void $ forkIO $ do
         threadDelay 1000000
         putMVar mvar False
-    ch <- startServer port (M.singleton (D.toTag Succes) (\_ _ -> putMVar mvar True)) (\_ _ -> pure ())
+    ch <- startServer port (M.singleton (D.toTag Succes) (\_ _ -> putMVar mvar True)) emptFunc
     ok <- takeMVar mvar
     Enecuum.Prelude.atomically $ stopServer ch
     pure ok

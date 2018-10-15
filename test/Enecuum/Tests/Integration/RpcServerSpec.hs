@@ -42,7 +42,7 @@ rpcServerTestOk :: Test
 rpcServerTestOk = TestCase $ do
     nr <- createNodeRuntime
     threadDelay 10000
-    runNodeDefinitionL nr $ L.serving serverPort $ do
+    runNodeDefinitionL nr $ L.serving D.Rpc serverPort $ do
         L.method okHandler
         L.method errHandler
     threadDelay 10000
@@ -55,7 +55,7 @@ rpcServerTestErr :: Test
 rpcServerTestErr = TestCase $ do
     nr <- createNodeRuntime
     threadDelay 10000
-    runNodeDefinitionL nr $ L.serving serverPort $ do
+    runNodeDefinitionL nr $ L.serving D.Rpc serverPort $ do
         L.method okHandler
         L.method errHandler
     threadDelay 10000

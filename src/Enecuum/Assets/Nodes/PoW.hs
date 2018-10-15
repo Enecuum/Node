@@ -75,7 +75,7 @@ powNode' delaysEnabled = do
     L.nodeTag "PoW node"
 
     nodeData <- L.initialization $ powNodeInitialization delaysEnabled D.genesisHash
-    L.serving powNodeRpcPort $ do
+    L.serving D.Rpc powNodeRpcPort $ do
         L.method $ foreverChainGenerationHandle nodeData
         L.method $ nBlockPacketGenerationHandle nodeData
 

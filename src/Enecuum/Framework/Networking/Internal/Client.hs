@@ -8,12 +8,12 @@ import           Enecuum.Domain as D
 import           Enecuum.Prelude
 
 -- | Run client.
-runClient :: D.Protocol -> D.Address -> (Socket -> IO ()) -> IO ()
+runClient :: D.Protocol a -> D.Address -> (Socket -> IO ()) -> IO ()
 runClient protocol address handler = do
     connection <- openConnect protocol address
     finally (handler connection) (close connection)
 
-openConnect :: D.Protocol -> D.Address -> IO Socket
+openConnect :: D.Protocol a -> D.Address -> IO Socket
 openConnect protocol (D.Address host port) = do
     let connectType = case protocol of
             D.TCP -> Stream

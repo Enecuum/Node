@@ -11,7 +11,7 @@ import qualified Enecuum.Core.Language                as L
 import qualified Enecuum.Framework.Network.Language   as L
 import qualified Data.Text                            as Text
 import qualified Enecuum.Framework.Domain             as D
-import qualified Enecuum.Framework.Handler.Tcp.Language as L
+import qualified Enecuum.Framework.Handler.Network.Language as L
 import           Language.Haskell.TH.MakeFunctor
 
 -- | Allows to work with network: open and close connections, send requests.
@@ -21,8 +21,8 @@ data NetworkingF next where
   -- | Send RPC request and wait for the response.
   SendRpcRequest            :: D.Address -> D.RpcRequest -> (Either Text D.RpcResponse -> next) -> NetworkingF next
   -- | Send message to the connection.
-  SendMessage               :: D.TcpConnection -> D.RawData -> (() -> next)-> NetworkingF next
-  SendUdpMsgByConnection    :: D.UdpConnection -> D.RawData -> (() -> next)-> NetworkingF next
+  SendMessage               :: D.Connection D.Tcp -> D.RawData -> (() -> next)-> NetworkingF next
+  SendUdpMsgByConnection    :: D.Connection D.Udp -> D.RawData -> (() -> next)-> NetworkingF next
   SendUdpMsgByAddress       :: D.Address       -> D.RawData -> (() -> next)-> NetworkingF next
   -- | Eval core effect.
   EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF  next
@@ -40,10 +40,10 @@ sendRpcRequest :: D.Address -> D.RpcRequest -> NetworkingL (Either Text D.RpcRes
 sendRpcRequest address request = liftF $ SendRpcRequest address request id
 
 -- | Send message to the connection.
-sendMessage :: D.TcpConnection -> D.RawData -> NetworkingL ()
+sendMessage :: D.Connection D.Tcp-> D.RawData -> NetworkingL ()
 sendMessage conn msg = liftF $ SendMessage conn msg id
 
-sendUdpMsgByConnection :: D.UdpConnection -> D.RawData -> NetworkingL ()
+sendUdpMsgByConnection :: D.Connection D.Udp -> D.RawData -> NetworkingL ()
 sendUdpMsgByConnection conn msg = liftF $ SendUdpMsgByConnection conn msg id
 
 sendUdpMsgByAddress :: D.Address -> D.RawData -> NetworkingL ()
@@ -55,11 +55,11 @@ sendUdpMsgByAddress addr msg = liftF $ SendUdpMsgByAddress addr msg id
 class Send con m where
     send :: (Typeable a, ToJSON a) => con -> a -> m ()
 
-instance Send D.TcpConnection (Free NetworkingF) where
+instance Send (D.Connection D.Tcp) (Free NetworkingF) where
     send conn msg = sendMessage conn . A.encode $
         D.NetworkMsg (D.toTag msg) (toJSON msg)
 
-instance Send D.UdpConnection (Free NetworkingF) where
+instance Send (D.Connection D.Udp) (Free NetworkingF) where
     send conn msg = sendUdpMsgByConnection conn . A.encode $
         D.NetworkMsg (D.toTag msg) (toJSON msg)
 
@@ -76,10 +76,6 @@ instance L.Logger (Free NetworkingF) where
 
 makeRpcRequest' :: (Typeable a, ToJSON a, FromJSON b) => D.Address -> a -> NetworkingL (Either Text b)
 makeRpcRequest' address arg = responseValidation =<< sendRpcRequest address (D.toRpcRequest arg)
-
-instance L.ERandom (Free NetworkingF) where
-    getRandomInt = evalCoreEffectNetworkingF . L.getRandomInt
-    evalRand r g = evalCoreEffectNetworkingF $ L.evalRand r g
 
 instance L.ControlFlow (Free NetworkingF) where
     delay = evalCoreEffectNetworkingF . L.delay

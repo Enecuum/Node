@@ -1,34 +1,31 @@
 {-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiWayIf             #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE TypeApplications       #-}
 
 module Enecuum.Assets.Nodes.GraphNodeReceiver (graphNodeReceiver) where
 
-import           Enecuum.Prelude
-import Data.Map (fromList, lookup, insert, Map(..))
-import           Control.Lens                  (makeFieldsNoPrefix)
-
-
-import qualified Enecuum.Domain                as D
-import qualified Enecuum.Language              as L
-import qualified Enecuum.Blockchain.Lens       as Lens
-import qualified Enecuum.Core.Lens             as Lens
 import           Data.HGraph.StringHashable
-
+import           Data.Map                         (Map, fromList, insert, lookup)
 import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
-
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Assets.Nodes.Address
+import           Enecuum.Assets.Nodes.Messages
+import qualified Enecuum.Blockchain.Domain.Graph  as TG
+import qualified Enecuum.Blockchain.Lens          as Lens
+import qualified Enecuum.Domain                   as D
+import qualified Enecuum.Language                 as L
+import           Enecuum.Prelude
 
 data GraphNodeData = GraphNodeData
     { _graph         :: TG.GraphVar
     , _kBlockPending :: D.StateVar [D.KBlock]
     , _curNode       :: D.StateVar D.StringHash
     , _logVar        :: D.StateVar [Text]
-    , _ledger        :: D.StateVar (Map Integer Integer)
+    , _ledger        :: D.StateVar (Map WalletId D.Amount)
     , _status        :: D.StateVar NodeStatus
     }
 
@@ -109,7 +106,8 @@ addKBlock nodeData kBlock = do
 
 -- | Add microblock to graph
 addMBlock :: GraphNodeData -> D.Microblock -> L.StateL Bool
-addMBlock nodeData mblock@(D.Microblock hash _) = do
+addMBlock nodeData mblock = do
+    let hash = mblock ^. Lens.keyBlock
     kblock <- getKBlock nodeData hash
 
     unless (isJust kblock) $ stateLog nodeData $ "Can't add MBlock to the graph: KBlock not found (" +|| hash ||+ ")."
@@ -126,12 +124,11 @@ calculateLedger :: GraphNodeData -> D.Microblock -> Free L.StateF ()
 calculateLedger nodeData mblock = do
     forM_ (mblock ^. Lens.transactions) $ \tx -> do
         ledgerW <- L.readVar $ nodeData ^. ledger
-        -- stateLog nodeData $ "Current Ledger " +|| ledgerW ||+ "."
-        let owner          = tx ^. Lens.owner
+        let
+            owner          = tx ^. Lens.owner
             receiver       = tx ^. Lens.receiver
             amount         = tx ^. Lens.amount
             currentBalance = lookup owner ledgerW
-
         when (owner == receiver) $ stateLog nodeData $ "Tx rejected (same owner and receiver): " +|| owner ||+ "."
 
         when (owner /= receiver) $ do
@@ -139,21 +136,16 @@ calculateLedger nodeData mblock = do
                 Nothing           -> stateLog nodeData $ "Can't find wallet in ledger: " +|| owner ||+ "."
                 Just ownerBalance -> if ownerBalance >= amount
                     then do
--- stateLog nodeData $ "Before tx owner " +|| owner ||+ " has balance: " +|| balance ||+ "."
                         let receiverBalance = fromMaybe 0 $ lookup receiver ledgerW
-                        -- stateLog nodeData $ "Before tx receiver " +|| receiver ||+ " has balance: " +|| receiverBalance ||+ "."
-                        let
-                            newLedger = insert owner
+                        let newLedger = insert owner
                                                (ownerBalance - amount)
                                                (insert receiver (receiverBalance + amount) ledgerW)
                         L.writeVar (nodeData ^. ledger) newLedger
                         stateLog nodeData
                             $   "Tx accepted: from [" +|| owner ||+ "] to [" +|| receiver ||+ "], amount: " +|| amount ||+ ". ["
                             +|| owner ||+ "]: " +|| ownerBalance - amount ||+ ", [" +|| receiver ||+ "]: " +|| receiverBalance + amount ||+ ""
--- stateLog nodeData $ "New Ledger " +|| newLedger ||+ "."
                     else
-                        stateLog nodeData
-                        $   "Tx rejected (negative balance): [" +|| owner ||+ "] -> [" +|| receiver ||+ "], amount: " +|| amount ||+ "."
+                        stateLog nodeData $ "Tx rejected (negative balance): [" +|| owner ||+ "] -> [" +|| receiver ||+ "], amount: " +|| amount ||+ "."
 
 
 
@@ -195,7 +187,7 @@ graphSynchro nodeData address = do
 graphNodeInitialization :: L.NodeDefinitionL GraphNodeData
 graphNodeInitialization = L.scenario $ do
     g <- L.newGraph
-    let wallets = zip [1 .. 5] (repeat 100)
+    let wallets = fromList $ zip [1 .. 5] (repeat 100)
     L.evalGraphIO g $ L.newNode $ D.KBlockContent D.genesisKBlock
     L.logInfo $ "Genesis block (" +|| D.genesisHash ||+ "): " +|| D.genesisKBlock ||+ "."
     L.atomically
@@ -203,7 +195,7 @@ graphNodeInitialization = L.scenario $ do
         <$> L.newVar []
         <*> L.newVar D.genesisHash
         <*> L.newVar []
-        <*> L.newVar (fromList wallets)
+        <*> L.newVar wallets
         <*> L.newVar NodeActing
 
 -- | Start of graph node
@@ -213,8 +205,7 @@ graphNodeReceiver = do
     nodeData <- graphNodeInitialization
 
     L.scenario $ graphSynchro nodeData graphNodeTransmitterRpcAddress
-
-    L.serving graphNodeReceiverRpcPort $ do
+    L.serving D.Rpc graphNodeReceiverRpcPort $ 
         L.methodE $ getBalance nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData

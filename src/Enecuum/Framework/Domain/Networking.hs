@@ -12,24 +12,26 @@ import           Control.Concurrent.STM.TChan (TChan)
 import           Network.Socket
 import qualified Network.Socket as S hiding (recv)
 
-data TcpConnection = TcpConnection
+data Udp = Udp
+data Tcp = Tcp
+data Rpc = Rpc
+
+data Protocol a = UDP | TCP
+
+data Connection a = Connection
     { _address :: Address
     }
     deriving (Show, Eq, Ord, Generic)
 
-data UdpConnection = UdpConnection
-    { _address :: Address
-    }
-    deriving (Show, Eq, Ord, Generic)
+data family ConnectionVar a
+data instance ConnectionVar Tcp
+    = TcpConnectionVar (TMVar (TChan Comand))
 
-
-data TcpConnectionVar = TcpConnectionVar (TMVar (TChan Comand))
-
-data UdpConnectionVar
+data instance ConnectionVar Udp
     = ServerUdpConnectionVar S.SockAddr (TChan SendMsg)
     | ClientUdpConnectionVar (TMVar (TChan Comand))
 
-data Protocol     = UDP | TCP
+
 data ServerComand = StopServer
 
 type RawData = LByteString

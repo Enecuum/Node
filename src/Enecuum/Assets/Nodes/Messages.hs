@@ -12,7 +12,7 @@ import           Data.HGraph.StringHashable
 data SuccessMsg = SuccessMsg
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-type WalletId = Integer
+type WalletId = D.PublicKey
 
 data GetLastKBlock = GetLastKBlock
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

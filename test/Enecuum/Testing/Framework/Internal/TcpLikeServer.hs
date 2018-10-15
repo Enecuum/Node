@@ -19,7 +19,7 @@ import           Enecuum.Testing.Framework.Internal.TcpLikeServerWorker (startNo
 import           Enecuum.Testing.Framework.Internal.TcpLikeServerBinding (bindServer)
 
 -- | Node TCP-like accepting server worker.
-startNodeTcpLikeServer :: T.NodeRuntime -> D.Address -> TVar (Map Text (L.TcpHandler L.NodeL)) -> IO ()
+startNodeTcpLikeServer :: T.NodeRuntime -> D.Address -> TVar (Map Text (L.NetworkHandler D.Tcp L.NodeL)) -> IO ()
 startNodeTcpLikeServer nodeRt servingAddress handlersVar = do
 
     handlers <- readTVarIO handlersVar
