@@ -6,6 +6,7 @@ module Enecuum.Tests.Integration.UdpServerSpec where
 
 import           Enecuum.Prelude
 
+import           Control.Concurrent.MVar (isEmptyMVar)
 import           Test.HUnit
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
@@ -29,6 +30,7 @@ spec :: Spec
 spec = describe "UdpServer" $ fromHUnitTest $ TestList
     [ TestLabel "Ping pong"          pingPong
     , TestLabel "client server test" clientServerTest
+    , TestLabel "3 - nodes test"     threeNodesTest
     ]
 
 createNodeRuntime :: IO Rt.NodeRuntime
@@ -106,4 +108,26 @@ clientServerTest = TestCase $ do
         threadDelay 1000000
         putMVar mvar False
     ok <- takeMVar mvar
+    assertBool "" ok
+
+threeNodesTest = TestCase $ do
+    mvar1 <- newEmptyMVar
+    mvar2 <- newEmptyMVar
+    chan <- atomically $ newTChan 
+    void $ forkIO $ runUDPServer chan 8000 (\_ _ _ -> do
+        whenM   (isEmptyMVar mvar1) $ putMVar mvar1 True
+        unlessM (isEmptyMVar mvar1) $ putMVar mvar2 True
+        )
+    threadDelay 10000
+    void $ forkIO $ runClient D.UDP (D.Address "127.0.0.1" 8000) $
+        \sock -> void $ S.send sock "ok" 
+    threadDelay 10000
+    void $ forkIO $ runClient D.UDP (D.Address "127.0.0.1" 8000) $
+        \sock -> void $ S.send sock "ok" 
+
+    void $ forkIO $ do
+        threadDelay 1000000
+        putMVar mvar2 False
+    
+    ok <- takeMVar mvar2
     assertBool "" ok
