@@ -45,14 +45,14 @@ pingHandle :: Ping -> D.Connection D.Udp -> L.NodeL ()
 pingHandle (Ping i) conn = do
     when (i < 10) $ L.send conn (Pong $ i + 1)
     when (i == 10) $ do
-        L.sendUdp succAdr Succes
+        L.notify succAdr Succes
         L.close conn
 
 pongHandle :: Pong -> D.Connection D.Udp -> L.NodeL ()
 pongHandle (Pong i) conn = do
     when (i < 10) $ L.send conn (Ping $ i + 1)
     when (i == 10) $ do
-        L.sendUdp succAdr Succes
+        L.notify succAdr Succes
         L.close conn
 
 pingPong :: Test

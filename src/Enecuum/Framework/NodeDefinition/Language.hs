@@ -108,7 +108,7 @@ instance L.Send a L.NodeL => L.Send a (Free NodeDefinitionF) where
     send conn msg = evalNodeL $ L.send conn msg
 
 instance L.SendUdp (Free NodeDefinitionF) where
-    sendUdp conn msg = evalNodeL $ L.sendUdp conn msg
+    notify conn msg = evalNodeL $ L.notify conn msg
 
 -- | Starts RPC server.
 {-# DEPRECATED servingRpc "Use L.serving" #-}

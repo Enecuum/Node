@@ -49,13 +49,6 @@ instance NetworkConnection D.Tcp where
         closeConn conn
 
     send conn msg = writeComand conn $ D.Send msg
-        
-    {-
-
-    send        :: D.ConnectionVar protocol -> LByteString -> STM ()
-    close       :: D.ConnectionVar protocol -> STM ()
--}
--- | Start new server witch port
 
 
 getAdress :: S.Socket -> IO D.Host

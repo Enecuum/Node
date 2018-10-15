@@ -71,7 +71,7 @@ instance L.Send a (Free L.NetworkingF) => L.Send a NodeL where
     send conn msg = evalNetworking $ L.send conn msg
 
 instance L.SendUdp NodeL where
-    sendUdp conn msg = evalNetworking $ L.sendUdp conn msg
+    notify conn msg = evalNetworking $ L.notify conn msg
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
 evalGraphIO :: (T.StringHashable c, Serialize c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) a -> NodeL a
