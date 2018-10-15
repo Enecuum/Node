@@ -39,27 +39,17 @@ poaNode = do
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    conn <- L.scenario $ L.open D.Udp graphNodeTransmitterUdpAddress $ L.handler acceptSuccess
-
     L.process $ forever $ do
         L.delay $ 100 * 1000
-        eKBlock <- L.makeRpcRequest graphNodeTransmitterRpcAddress GetLastKBlock
-        case eKBlock of
-            Left  _     -> pure ()
-            Right block -> do
-                currentBlock <- L.atomically $ L.readVar (poaData ^. currentLastKeyBlock)
-                when (block /= currentBlock) $ do
-                    L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ "). Generating transactions & MBlock..."
-                    L.atomically $ L.writeVar (poaData ^. currentLastKeyBlock) block
-                    mBlock <- D.genRandMicroblock block
-                    L.logInfo
-                        $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
+        whenRightM (L.makeRpcRequest graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> do
+            currentBlock <- L.atomically $ L.readVar (poaData ^. currentLastKeyBlock)
+            when (block /= currentBlock) $ do
+                L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ "). Generating transactions & MBlock..."
+                L.atomically $ L.writeVar (poaData ^. currentLastKeyBlock) block
+                mBlock <- D.genRandMicroblock block
+                L.logInfo
+                    $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
 
-                    L.send conn mBlock
+                L.send graphNodeTransmitterUdpAddress mBlock
 
     L.awaitNodeFinished poaData
-
-    L.scenario $ L.close conn
-    where
-        acceptSuccess :: SuccessMsg -> D.Connection D.Udp -> L.NodeL ()
-        acceptSuccess _ _ = pure ()

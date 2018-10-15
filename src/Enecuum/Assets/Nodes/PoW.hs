@@ -39,17 +39,10 @@ kBlockProcess nodeData = do
     L.atomically $ L.writeVar (nodeData ^. prevHash) lastHash
     L.atomically $ L.writeVar (nodeData ^. prevNumber) $ prevKBlockNumber + (fromIntegral $ length kBlocks)
 
-    conn <- L.open D.Udp graphNodeTransmitterUdpAddress $ L.handler acceptSuccess
-
     forM_ kBlocks $ \kBlock -> do
         L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-        L.send conn kBlock
+        L.send graphNodeTransmitterUdpAddress kBlock
         when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
-
-    L.close conn
-    where
-        acceptSuccess :: SuccessMsg -> D.Connection D.Udp -> L.NodeL ()
-        acceptSuccess _ _ = pure ()
 
 foreverChainGenerationHandle :: PoWNodeData -> ForeverChainGeneration -> L.NodeL SuccessMsg
 foreverChainGenerationHandle powNodeData _ = do

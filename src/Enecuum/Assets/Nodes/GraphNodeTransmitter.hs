@@ -272,9 +272,9 @@ graphNodeTransmitter = do
         L.handler $ acceptKBlock nodeData
 
     L.serving D.Rpc graphNodeTransmitterRpcPort $ do
-        L.method $ getLastKBlock nodeData
+        L.method  $ getLastKBlock nodeData
         L.methodE $ getBalance nodeData
-        L.method $ acceptChainLength nodeData
+        L.method  $ acceptChainLength nodeData
         L.methodE $ acceptChainFromTo nodeData
         L.methodE $ acceptMBlockForKBlocks nodeData
 
