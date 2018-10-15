@@ -109,8 +109,7 @@ addKBlock nodeData kBlock = do
 
 -- | Add microblock to graph
 addMBlock :: GraphNodeData -> D.Microblock -> L.StateL Bool
-addMBlock nodeData mblock = do
-    let hash = mblock ^. Lens.keyBlock
+addMBlock nodeData mblock@(D.Microblock hash _ _ _) = do
     kblock <- getKBlock nodeData hash
 
     unless (isJust kblock) $ stateLog nodeData $ "Can't add MBlock to the graph: KBlock not found (" +|| hash ||+ ")."
@@ -172,7 +171,6 @@ acceptKBlock nodeData kBlock _ = do
             | kBlock ^. Lens.number > topKBlock ^. Lens.number + 1 -> addBlockToPending nodeData kBlock
             | otherwise -> pure False
     writeLog nodeData
-
 
 
 -- | Accept mBlock
@@ -270,8 +268,8 @@ graphNodeTransmitter = do
     nodeData <- graphNodeInitialization
 
     L.serving D.Udp graphNodeTransmitterUdpPort $ do
-        L.handler $ acceptKBlock nodeData
         L.handler $ acceptMBlock nodeData
+        L.handler $ acceptKBlock nodeData
 
     L.serving D.Rpc graphNodeTransmitterRpcPort $ do
         L.method $ getLastKBlock nodeData

@@ -39,6 +39,8 @@ poaNode = do
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
+    conn <- L.scenario $ L.open D.Udp graphNodeTransmitterUdpAddress $ L.handler acceptSuccess
+
     L.process $ forever $ do
         L.delay $ 100 * 1000
         eKBlock <- L.makeRpcRequest graphNodeTransmitterRpcAddress GetLastKBlock
@@ -53,6 +55,11 @@ poaNode = do
                     L.logInfo
                         $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
 
-                    L.send graphNodeTransmitterUdpAddress mBlock
+                    L.send conn mBlock
 
     L.awaitNodeFinished poaData
+
+    L.scenario $ L.close conn
+    where
+        acceptSuccess :: SuccessMsg -> D.Connection D.Udp -> L.NodeL ()
+        acceptSuccess _ _ = pure ()
