@@ -70,7 +70,6 @@ createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.c
 
 testConnectFromTo prot1 prot2 serverPort succPort = do
     runServingScenarion serverPort succPort $ \serverAddr succAdr nr1 nr2 -> do
-        threadDelay 5000
         runNodeDefinitionL nr1 $ do
             L.serving prot1 serverPort $ pure ()
         
@@ -83,7 +82,6 @@ testConnectFromTo prot1 prot2 serverPort succPort = do
 
 testConnectToNonexistentAddress prot succPort = do
     runServingScenarion succPort succPort $ \_ succAdr nr1 _ -> do
-        threadDelay 5000
         runNodeDefinitionL nr1 $ do
             conn                             <- L.open prot (D.Address "127.0.0.1" 300) $ pure ()
             Left "The connection is closed." <- L.send conn Succes
@@ -91,14 +89,12 @@ testConnectToNonexistentAddress prot succPort = do
 
 testSendingMsgToNonexistentAddress succPort = do
     runServingScenarion succPort succPort $ \_ succAdr nr1 _ -> do
-        threadDelay 5000
         runNodeDefinitionL nr1 $ do
             Left "The address does not exist." <- L.notify (D.Address "127.0.0.1" 300) Succes
             void $ L.notify succAdr Succes
 
 testSendingMsgToClosedConnection prot serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAdr nr1 nr2 -> do
-        threadDelay 5000
         runNodeDefinitionL nr1 $ do
             L.serving prot serverPort $ pure ()
         
@@ -111,7 +107,6 @@ testSendingMsgToClosedConnection prot serverPort succPort =
 
 testSendingBigMsgByConnect prot serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAdr nr1 nr2 -> do
-        threadDelay 5000
         runNodeDefinitionL nr1 $ do
             L.serving prot serverPort $ pure ()
         
@@ -123,7 +118,6 @@ testSendingBigMsgByConnect prot serverPort succPort =
 
 testSendingBigUdpMsgByAddress serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAdr nr1 nr2 -> do
-        threadDelay 5000
         runNodeDefinitionL nr1 $ do
             L.serving D.Tcp serverPort $ pure ()
         
@@ -134,7 +128,6 @@ testSendingBigUdpMsgByAddress serverPort succPort =
 
 pingPongTest prot serverPort succPort = 
     runServingScenarion serverPort succPort $ \serverAddr succAdr nr1 nr2 -> do
-        threadDelay 5000
         runNodeDefinitionL nr1 $ do
             L.serving prot serverPort $ do
                 L.handler (pingHandle succAdr)
