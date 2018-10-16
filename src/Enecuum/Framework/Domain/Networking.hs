@@ -32,7 +32,6 @@ data instance ConnectionVar Udp
     = ServerUdpConnectionVar S.SockAddr (TChan SendUdpMsgTo)
     | ClientUdpConnectionVar (TMVar (TChan Comand))
 
-
 data ServerComand = StopServer
 
 type RawData = LByteString
@@ -48,7 +47,6 @@ newtype ServerHandle = ServerHandle (TChan ServerComand)
 data NetworkMsg = NetworkMsg Text A.Value deriving (Generic, ToJSON, FromJSON)
 
 type Host = String
-
 
 sockAddrToHost :: S.SockAddr -> Host
 sockAddrToHost sockAddr = case sockAddr of

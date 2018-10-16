@@ -53,7 +53,7 @@ interpretNetworkingL nodeRt (L.SendRpcRequest toAddr req next) = next <$> relayR
 
 interpretNetworkingL nodeRt (L.SendTcpMsgByConnection conn msg next) = do
     void $ sendMessageToConnection nodeRt conn msg
-    pure $ next True
+    pure $ next $ Right ()
 
 interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) = next <$> Impl.runNetworkL nodeRt networkAction
 

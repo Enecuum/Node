@@ -21,9 +21,9 @@ data NetworkingF next where
   -- | Send RPC request and wait for the response.
   SendRpcRequest            :: D.Address -> D.RpcRequest -> (Either Text D.RpcResponse -> next) -> NetworkingF next
   -- | Send message to the connection.
-  SendTcpMsgByConnection    :: D.Connection D.Tcp -> D.RawData -> (Bool -> next)-> NetworkingF next
-  SendUdpMsgByConnection    :: D.Connection D.Udp -> D.RawData -> (Bool -> next)-> NetworkingF next
-  SendUdpMsgByAddress       :: D.Address          -> D.RawData -> (Bool -> next)-> NetworkingF next
+  SendTcpMsgByConnection    :: D.Connection D.Tcp -> D.RawData -> (Either Text () -> next)-> NetworkingF next
+  SendUdpMsgByConnection    :: D.Connection D.Udp -> D.RawData -> (Either Text () -> next)-> NetworkingF next
+  SendUdpMsgByAddress       :: D.Address          -> D.RawData -> (Either Text () -> next)-> NetworkingF next
   -- | Eval core effect.
   EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF  next
 
@@ -48,7 +48,7 @@ toNetworkMsg msg = A.encode $ D.NetworkMsg (D.toTag msg) (toJSON msg)
 
 -- | Send message to the connection.
 class Send con m where
-    send :: (Typeable a, ToJSON a) => con -> a -> m Bool
+    send :: (Typeable a, ToJSON a) => con -> a -> m (Either Text ())
 
 instance Send (D.Connection D.Tcp) (Free NetworkingF) where
     send conn msg = liftF $ SendTcpMsgByConnection conn (toNetworkMsg msg) id
@@ -59,7 +59,7 @@ instance SendUdp (Free NetworkingF) where
     notify conn msg = liftF $ SendUdpMsgByAddress conn (toNetworkMsg msg) id
 
 class SendUdp m where
-    notify :: (Typeable a, ToJSON a) => D.Address -> a -> m Bool
+    notify :: (Typeable a, ToJSON a) => D.Address -> a -> m (Either Text ())
 
 -- | Eval core effect.
 evalCoreEffectNetworkingF :: L.CoreEffect a -> NetworkingL a

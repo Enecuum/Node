@@ -42,7 +42,7 @@ instance NetworkConnection D.Tcp where
 
     send (D.TcpConnectionVar conn) msg
         | length msg <= D.packetSize = sendWithTimeOut conn msg
-        | otherwise                  = pure False
+        | otherwise                  = pure $ Left "The message is too big."
 
 getAdress :: S.Socket -> IO D.Host
 getAdress socket = D.sockAddrToHost <$> S.getSocketName socket

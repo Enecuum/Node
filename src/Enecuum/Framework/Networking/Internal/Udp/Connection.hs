@@ -38,7 +38,7 @@ instance NetworkConnection D.Udp where
 
     send (D.ClientUdpConnectionVar conn) msg
         | length msg <= D.packetSize = sendWithTimeOut conn msg
-        | otherwise                  = pure False
+        | otherwise                  = pure $ Left "The message is too big."
     send (D.ServerUdpConnectionVar sockAddr chan) msg
         | length msg <= D.packetSize = do
             var <- atomically $ do
@@ -46,7 +46,7 @@ instance NetworkConnection D.Udp where
                 writeTChan chan $ D.SendUdpMsgTo sockAddr msg var
                 pure var
             readBool 5000 var
-        | otherwise                  = pure False
+        | otherwise                  = pure $ Left "The message is too big."
 
     close (D.ClientUdpConnectionVar conn) = writeComand conn D.Close >> closeConn conn
     close (D.ServerUdpConnectionVar _ _)  = pure ()
@@ -87,10 +87,13 @@ readCommand conn = atomically $ do
             chan <- readTMVar conn
             Just <$> readTChan chan
 
-sendUdpMsg :: D.Address -> LByteString -> IO Bool
+sendUdpMsg :: D.Address -> LByteString -> IO (Either Text ())
 sendUdpMsg addr msg = if length msg > D.packetSize
-    then pure False 
-    else tryM (runClient UDP addr $ \sock -> S.sendAll sock msg) (pure False) (\_ -> pure True)
+    then pure $ Left "The message is too big."
+    else tryM
+        (runClient UDP addr $ \sock -> S.sendAll sock msg)
+        (pure $ Left "The address does not exist.")
+        (\_ -> pure $ Right ())
 
 readMessages :: D.Connection D.Udp -> Handlers D.Udp -> (Text -> IO ()) -> S.Socket -> IO ()
 readMessages conn handlers loger sock = tryMR (S.recv sock $ toEnum D.packetSize) $ \msg -> do 
