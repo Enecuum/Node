@@ -27,11 +27,20 @@ import qualified Enecuum.Framework.Networking.Internal.Connection as Con
 -- Tests disabled
 spec :: Spec
 spec = describe "Network tests" $ fromHUnitTest $ TestList
-    [ TestLabel "udp ping-pong test (successful sending udp msg by connect & addres )"  (pingPongTest D.Udp 4000 5000)
-    , TestLabel "tcp ping-pong test"                                                    (pingPongTest D.Tcp 4001 5001)
-    , TestLabel "fail sending too big msg by udp connect"                               (testSendingBigMsgByConnect D.Udp 4002 5002)
-    , TestLabel "fail sending too big msg by tcp connect"                               (testSendingBigMsgByConnect D.Tcp 4003 5003)
-    , TestLabel "fail sending too big udp msg by Address"                               (testSendingBigUdpMsgByAddress 4004 5004)
+    [ TestLabel "udp ping-pong test (successful sending udp msg by connect & addres )"  (pingPongTest                     D.Udp 4000 5000)
+    , TestLabel "tcp ping-pong test"                                                    (pingPongTest                     D.Tcp 4001 5001)
+    , TestLabel "fail sending too big msg by udp connect"                               (testSendingBigMsgByConnect       D.Udp 4002 5002)
+    , TestLabel "fail sending too big msg by tcp connect"                               (testSendingBigMsgByConnect       D.Tcp 4003 5003)
+    , TestLabel "fail sending too big udp msg by Address"                               (testSendingBigUdpMsgByAddress          4004 5004)
+    , TestLabel "fail sending msg by closed udp connect"                                (testSendingMsgToClosedConnection D.Udp 4005 5005)
+    , TestLabel "fail sending msg by closed tcp connect"                                (testSendingMsgToClosedConnection D.Tcp 4006 5006)
+  --  This functionality is not supported!
+  --, TestLabel "fail sending udp msg to nonexistent address"                           (testSendingMsgToNonexistentAddress         5007)
+  --, TestLabel "fail udp connecting to nonexistent address."                           (testConnectToNonexistentAddress D.Udp      5008)
+    , TestLabel "fail tcp connecting to nonexistent address."                           (testConnectToNonexistentAddress D.Tcp      5009)
+  --  This functionality is not supported!
+  --, TestLabel "fail udp connecting to tcp server."                                    (testConnectFromTo         D.Tcp D.Udp 4010 5010)
+    , TestLabel "fail tcp connecting to udp server."                                    (testConnectFromTo         D.Udp D.Tcp 4011 5011)
     ]
 
 newtype Ping   = Ping Int deriving (Generic, ToJSON, FromJSON)
@@ -42,22 +51,63 @@ data Succes    = Succes   deriving (Generic, ToJSON, FromJSON)
 bigMsg = BigMsg [1..5000]
 
 -- TODO tests:
--- Connecting to nonexistent address.               [ ]
--- Udp connect to Tcp server.                       [ ]
--- Tcp connect to Udp server.                       [ ]
--- Sending udp msg to nonexistent address.          [ ]
--- Sending udp msg to closed connection             [ ]
--- Sending tcp msg to closed connection             [ ]
--- Successful sending by udp connet.                [+]
--- Successful sending by tcp connet.                [+]
--- Successful sending udp msg by addres.            [+]
--- Fail (msg is too big) sending by tcp.            [+]
--- Fail (msg is too big) sending by udp connection. [+]
--- Fail (msg is too big) sending by udp addres.     [+]
+-- Fail. Udp connecting to nonexistent address. [-]
+-- Fail. Tcp connecting to nonexistent address. [+]
+-- Fail. Udp connect to Tcp server.             [+]
+-- Fail. Tcp connect to Udp server.             [-]
+-- Fail. Sending udp msg to nonexistent address.[-]
+-- Fail. Sending udp msg to closed connection.  [+]
+-- Fail. Sending tcp msg to closed connection.  [+]
+-- Fail. Sending too big msg by tcp.            [+]
+-- Fail. Sending too big msg by udp connection. [+]
+-- Fail. Sending too big msg by udp addres.     [+]
+-- Successful. Sending by udp connet.           [+]
+-- Successful. Sending by tcp connet.           [+]
+-- Successful. Sending udp msg by addres.       [+]
 
 createNodeRuntime :: IO Rt.NodeRuntime
 createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.createNodeRuntime
 
+testConnectFromTo prot1 prot2 serverPort succPort = do
+    runServingScenarion serverPort succPort $ \serverAddr succAdr nr1 nr2 -> do
+        threadDelay 5000
+        runNodeDefinitionL nr1 $ do
+            L.serving prot1 serverPort $ pure ()
+        
+        threadDelay 5000
+        runNodeDefinitionL nr2 $ do
+            conn   <- L.open prot2 serverAddr $ pure ()
+            Left _ <- L.send conn $ Succes
+            void $ L.notify succAdr Succes
+
+
+testConnectToNonexistentAddress prot succPort = do
+    runServingScenarion succPort succPort $ \_ succAdr nr1 _ -> do
+        threadDelay 5000
+        runNodeDefinitionL nr1 $ do
+            conn   <- L.open prot (D.Address "127.0.0.1" 300) $ pure ()
+            Left _ <- L.send conn Succes
+            void $ L.notify succAdr Succes
+
+testSendingMsgToNonexistentAddress succPort = do
+    runServingScenarion succPort succPort $ \_ succAdr nr1 _ -> do
+        threadDelay 5000
+        runNodeDefinitionL nr1 $ do
+            Left _ <- L.notify (D.Address "127.0.0.1" 300) Succes
+            void $ L.notify succAdr Succes
+
+testSendingMsgToClosedConnection prot serverPort succPort =
+    runServingScenarion serverPort succPort $ \serverAddr succAdr nr1 nr2 -> do
+        threadDelay 5000
+        runNodeDefinitionL nr1 $ do
+            L.serving prot serverPort $ pure ()
+        
+        threadDelay 5000
+        runNodeDefinitionL nr2 $ do
+            conn   <- L.open prot serverAddr $ pure ()
+            L.close conn
+            Left _ <- L.send conn $ Succes
+            void $ L.notify succAdr Succes
 
 testSendingBigMsgByConnect prot serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAdr nr1 nr2 -> do
