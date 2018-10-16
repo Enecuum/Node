@@ -36,7 +36,7 @@ sign priv msg = ECDSA.sign (Enq.getPrivateKey priv) SHA3_256 (S.encode msg)
 
 
 intToBase64Text :: Integer -> Text
-intToBase64Text i = base64ToText $ toByteString' i
+intToBase64Text i = base64ToText $ show i
 
 base64TextToInt :: (MonadPlus m) => Text -> m Integer
 base64TextToInt b = do
