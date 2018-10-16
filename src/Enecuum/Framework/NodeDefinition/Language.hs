@@ -1,7 +1,8 @@
-{-# LANGUAGE ConstraintKinds      #-}
-{-# LANGUAGE GADTs                #-}
-{-# LANGUAGE TemplateHaskell      #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ConstraintKinds        #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module Enecuum.Framework.NodeDefinition.Language where
 
@@ -88,7 +89,7 @@ initialization = evalNodeL
 scenario :: L.NodeL a -> NodeDefinitionL a
 scenario = evalNodeL
 
-class Serving c a where
+class Serving c a | c -> a where
     serving :: c -> PortNumber -> a -> NodeDefinitionL ()
 
 instance Serving D.Rpc (RpcHandlerL L.NodeL ()) where
