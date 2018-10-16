@@ -40,7 +40,9 @@ instance NetworkConnection D.Tcp where
         writeComand conn D.Close
         closeConn conn
 
-    send (D.TcpConnectionVar conn) = sendWithTimeOut conn
+    send (D.TcpConnectionVar conn) msg
+        | length msg <= D.packetSize = sendWithTimeOut conn msg
+        | otherwise                  = pure False
 
 getAdress :: S.Socket -> IO D.Host
 getAdress socket = D.sockAddrToHost <$> S.getSocketName socket

@@ -36,13 +36,17 @@ instance NetworkConnection D.Udp where
             runHandlers   connection handlers loger msg
         pure chan
 
-    send (D.ClientUdpConnectionVar conn) msg = sendWithTimeOut conn msg
-    send (D.ServerUdpConnectionVar sockAddr chan) msg = do
-        var <- atomically $ do
-            var <- newEmptyTMVar
-            writeTChan chan $ D.SendUdpMsgTo sockAddr msg var
-            pure var
-        readBool 5000 var
+    send (D.ClientUdpConnectionVar conn) msg
+        | length msg <= D.packetSize = sendWithTimeOut conn msg
+        | otherwise                  = pure False
+    send (D.ServerUdpConnectionVar sockAddr chan) msg
+        | length msg <= D.packetSize = do
+            var <- atomically $ do
+                var <- newEmptyTMVar
+                writeTChan chan $ D.SendUdpMsgTo sockAddr msg var
+                pure var
+            readBool 5000 var
+        | otherwise                  = pure False
 
     close (D.ClientUdpConnectionVar conn) = writeComand conn D.Close >> closeConn conn
     close (D.ServerUdpConnectionVar _ _)  = pure ()
