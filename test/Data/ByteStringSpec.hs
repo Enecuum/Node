@@ -21,12 +21,9 @@ instance Arbitrary ByteString where
 
 spec :: Spec
 spec = do
-    describe "Bytestring spec test" $ fromHUnitTest $ TestList
-        [ TestLabel "Verify bytestring json serialization" testRandomByteString]
-    describe "Idempotent serialization Properties" $
-        do
-            it "Verify bytestring json serialization" $ property prop_JsonEncoding
-            it "Verify bytestring Base64 serialization" $ property prop_Base64Encoding
+    describe "Bytestring property test" $ do
+        it "Verify bytestring json serialization" $ property prop_JsonEncoding
+        it "Verify bytestring Base64 serialization" $ property prop_Base64Encoding
 
 testRandomByteString :: Test
 testRandomByteString = TestCase $ do

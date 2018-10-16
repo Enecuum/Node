@@ -30,8 +30,8 @@ import           Enecuum.Prelude
 import           Math.NumberTheory.Moduli
 import           Prelude                                             (show)
 
-newtype PublicKey  = PublicKey256k1 Integer deriving (Generic, Serialize, Eq, Ord, Num, Enum, FromJSON, ToJSON)
-newtype PrivateKey = PrivateKey256k1 Integer deriving (Generic, Serialize, Eq, Ord, FromJSON, ToJSON)
+newtype PublicKey  = PublicKey256k1 Integer deriving (Show, Read, Generic, Serialize, Eq, Ord, Num, Enum, FromJSON, ToJSON)
+newtype PrivateKey = PrivateKey256k1 Integer deriving (Show, Read, Generic, Serialize, Eq, Ord, FromJSON, ToJSON)
 
 deriving instance Ord ECDSA.Signature
 
@@ -43,7 +43,7 @@ compressPublicKey pub | c == y    = publicKey256k1 (x * 2)
     (Point x y) = ECDSA.public_q pub
     (c, d)      = curveK (ECDSA.public_curve pub) x
 
-decompressPublicKey :: PublicKey -> ECDSA.PublicKey 
+decompressPublicKey :: PublicKey -> ECDSA.PublicKey
 decompressPublicKey = getPublicKey . uncompressPublicKey
 
 uncompressPublicKey :: PublicKey -> (Integer, Integer)
@@ -74,20 +74,19 @@ getPublicKey :: (Integer, Integer) -> ECDSA.PublicKey
 getPublicKey (n1, n2) = ECDSA.PublicKey (getCurveByName SEC_p256k1) (Point n1 n2)
 
 data KeyPair    = KeyPair { getPub :: PublicKey, getPriv :: PrivateKey }
-  deriving (Show, Generic, Eq, Ord)
+  deriving (Show, Read, Generic, Eq, Ord)
 
+readPublicKey :: String -> PublicKey
+readPublicKey value = publicKey256k1 $ base58ToInteger value
 
-instance Read PublicKey where
-    readsPrec _ value = [(publicKey256k1 $ base58ToInteger value,[])]
+readPrivateKey :: String -> PrivateKey
+readPrivateKey value = PrivateKey256k1 $ base58ToInteger value
 
-instance Read PrivateKey where
-    readsPrec _ value = [(PrivateKey256k1 $ base58ToInteger value,[])]
+showPublicKey :: PublicKey -> String
+showPublicKey  a = integerToBase58 $ fromPublicKey256k1 a
 
-instance Show PublicKey where
-  show a = integerToBase58 $ fromPublicKey256k1 a
-
-instance Show PrivateKey where
-  show (PrivateKey256k1 a) = integerToBase58 a
+showPrivateKey :: PrivateKey -> String
+showPrivateKey (PrivateKey256k1 a) = integerToBase58 a
 
 integerToBase58 :: Integer -> String
 integerToBase58 = BC.unpack . encodeBase58I bitcoinAlphabet
@@ -99,4 +98,3 @@ generateNewRandomAnonymousKeyPair :: MonadRandom m => m KeyPair
 generateNewRandomAnonymousKeyPair = do
     (pub, priv) <- generate (getCurveByName SEC_p256k1)
     pure $ KeyPair (compressPublicKey pub) (PrivateKey256k1 $ ECDSA.private_d priv)
-

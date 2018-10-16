@@ -77,7 +77,6 @@ instance Serialize CompactInteger where
 --
 -- Fold and unfold an Integer to and from a list of its bytes
 --
-
 unroll :: (Integral a, Bits a) => a -> [Word8]
 unroll = unfoldr step
   where
@@ -98,8 +97,6 @@ nrBits k =
           where mid = (lo + hi) `div` 2
   in  findNr (expMax `div` 2) expMax
 
-
--- tested
 instance Serialize ECDSA.Signature where
   put (ECDSA.Signature a b) = S.put (CompactInteger a) *> S.put (CompactInteger b)
   get = do
