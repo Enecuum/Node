@@ -12,7 +12,7 @@ tryMR operation f = tryM operation (pure ()) f
 tryML :: MonadCatch m => m t -> m () -> m ()
 tryML operation f = tryM operation f (\_ -> pure ())
 
-tryM :: MonadCatch m => m t -> m () -> (t -> m ()) -> m ()
+tryM :: MonadCatch m => m t -> m a -> (t -> m a) -> m a
 tryM operation f g = do
     ok <- try $ operation
     case ok of

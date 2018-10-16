@@ -86,9 +86,7 @@ readCommand conn = atomically $ do
 sendUdpMsg :: D.Address -> LByteString -> IO Bool
 sendUdpMsg addr msg = if length msg > D.packetSize
     then pure False 
-    else do
-        runClient UDP addr $ \sock -> S.sendAll sock msg
-        pure True
+    else tryM (runClient UDP addr $ \sock -> S.sendAll sock msg) (pure False) (\_ -> pure True)
 
 readMessages :: D.Connection D.Udp -> Handlers D.Udp -> (Text -> IO ()) -> S.Socket -> IO ()
 readMessages conn handlers loger sock = tryMR (S.recv sock $ toEnum D.packetSize) $ \msg -> do 
