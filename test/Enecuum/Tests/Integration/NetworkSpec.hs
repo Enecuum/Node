@@ -27,7 +27,7 @@ import qualified Enecuum.Framework.Networking.Internal.Connection as Con
 -- Tests disabled
 spec :: Spec
 spec = describe "Network tests" $ fromHUnitTest $ TestList
-    [ TestLabel "udp ping-pong test (successful sending udp msg by connect & addres )"  (pingPongTest                     D.Udp 4000 5000)
+    [ TestLabel "udp ping-pong test (successful sending udp msg by connect & address )" (pingPongTest                     D.Udp 4000 5000)
     , TestLabel "tcp ping-pong test"                                                    (pingPongTest                     D.Tcp 4001 5001)
     , TestLabel "fail sending too big msg by udp connect"                               (testSendingBigMsgByConnect       D.Udp 4002 5002)
     , TestLabel "fail sending too big msg by tcp connect"                               (testSendingBigMsgByConnect       D.Tcp 4003 5003)
@@ -60,81 +60,81 @@ bigMsg = BigMsg [1..5000]
 -- Fail. Sending tcp msg to closed connection.  [+]
 -- Fail. Sending too big msg by tcp.            [+]
 -- Fail. Sending too big msg by udp connection. [+]
--- Fail. Sending too big msg by udp addres.     [+]
--- Successful. Sending by udp connet.           [+]
--- Successful. Sending by tcp connet.           [+]
--- Successful. Sending udp msg by addres.       [+]
+-- Fail. Sending too big msg by udp address.    [+]
+-- Successful. Sending by udp connect.          [+]
+-- Successful. Sending by tcp connect.          [+]
+-- Successful. Sending udp msg by address.      [+]
 
 createNodeRuntime :: IO Rt.NodeRuntime
 createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.createNodeRuntime
 
 testConnectFromTo prot1 prot2 serverPort succPort = do
-    runServingScenarion serverPort succPort $ \serverAddr succAdr nr1 nr2 -> do
-        runNodeDefinitionL nr1 $ do
+    runServingScenarion serverPort succPort $ \serverAddr succAdr nodeRt1 nodeRt2 -> do
+        runNodeDefinitionL nodeRt1 $ do
             L.serving prot1 serverPort $ pure ()
         
         threadDelay 5000
-        runNodeDefinitionL nr2 $ do
+        runNodeDefinitionL nodeRt2 $ do
             conn                             <- L.open prot2 serverAddr $ pure ()
             Left "The connection is closed." <- L.send conn $ Succes
             void $ L.notify succAdr Succes
 
 
 testConnectToNonexistentAddress prot succPort = do
-    runServingScenarion succPort succPort $ \_ succAdr nr1 _ -> do
-        runNodeDefinitionL nr1 $ do
+    runServingScenarion succPort succPort $ \_ succAdr nodeRt1 _ -> do
+        runNodeDefinitionL nodeRt1 $ do
             conn                             <- L.open prot (D.Address "127.0.0.1" 300) $ pure ()
             Left "The connection is closed." <- L.send conn Succes
             void $ L.notify succAdr Succes
 
 testSendingMsgToNonexistentAddress succPort = do
-    runServingScenarion succPort succPort $ \_ succAdr nr1 _ -> do
-        runNodeDefinitionL nr1 $ do
+    runServingScenarion succPort succPort $ \_ succAdr nodeRt1 _ -> do
+        runNodeDefinitionL nodeRt1 $ do
             Left "The address does not exist." <- L.notify (D.Address "127.0.0.1" 300) Succes
             void $ L.notify succAdr Succes
 
 testSendingMsgToClosedConnection prot serverPort succPort =
-    runServingScenarion serverPort succPort $ \serverAddr succAdr nr1 nr2 -> do
-        runNodeDefinitionL nr1 $ do
+    runServingScenarion serverPort succPort $ \serverAddr succAdr nodeRt1 nodeRt2 -> do
+        runNodeDefinitionL nodeRt1 $ do
             L.serving prot serverPort $ pure ()
         
         threadDelay 5000
-        runNodeDefinitionL nr2 $ do
+        runNodeDefinitionL nodeRt2 $ do
             conn                             <- L.open prot serverAddr $ pure ()
             L.close conn
             Left "The connection is closed." <- L.send conn $ Succes
             void $ L.notify succAdr Succes
 
 testSendingBigMsgByConnect prot serverPort succPort =
-    runServingScenarion serverPort succPort $ \serverAddr succAdr nr1 nr2 -> do
-        runNodeDefinitionL nr1 $ do
+    runServingScenarion serverPort succPort $ \serverAddr succAdr nodeRt1 nodeRt2 -> do
+        runNodeDefinitionL nodeRt1 $ do
             L.serving prot serverPort $ pure ()
         
         threadDelay 5000
-        runNodeDefinitionL nr2 $ do
+        runNodeDefinitionL nodeRt2 $ do
             conn                           <- L.open prot serverAddr $ pure ()
             Left "The message is too big." <- L.send conn $ bigMsg
             void $ L.notify succAdr Succes
 
 testSendingBigUdpMsgByAddress serverPort succPort =
-    runServingScenarion serverPort succPort $ \serverAddr succAdr nr1 nr2 -> do
-        runNodeDefinitionL nr1 $ do
+    runServingScenarion serverPort succPort $ \serverAddr succAdr nodeRt1 nodeRt2 -> do
+        runNodeDefinitionL nodeRt1 $ do
             L.serving D.Tcp serverPort $ pure ()
         
         threadDelay 5000
-        runNodeDefinitionL nr2 $ do
+        runNodeDefinitionL nodeRt2 $ do
             Left _ <- L.notify serverAddr $ bigMsg
             void $ L.notify succAdr Succes
 
 pingPongTest prot serverPort succPort = 
-    runServingScenarion serverPort succPort $ \serverAddr succAdr nr1 nr2 -> do
-        runNodeDefinitionL nr1 $ do
+    runServingScenarion serverPort succPort $ \serverAddr succAdr nodeRt1 nodeRt2 -> do
+        runNodeDefinitionL nodeRt1 $ do
             L.serving prot serverPort $ do
                 L.handler (pingHandle succAdr)
                 L.handler (pongHandle succAdr)
         
         threadDelay 5000
-        runNodeDefinitionL nr2 $ do
+        runNodeDefinitionL nodeRt2 $ do
             conn <- L.open prot serverAddr $ do
                 L.handler (pingHandle succAdr)
                 L.handler (pongHandle succAdr)
@@ -144,11 +144,11 @@ pingPongTest prot serverPort succPort =
 runServingScenarion serverPort succPort f = TestCase $ do
     let serverAddr = D.Address "127.0.0.1" serverPort
         succAdr    = D.Address "127.0.0.1" succPort
-    nr1 <- createNodeRuntime
-    nr2 <- createNodeRuntime
-    void $ forkIO $ f serverAddr succAdr nr1 nr2
+    nodeRt1 <- createNodeRuntime
+    nodeRt2 <- createNodeRuntime
+    void $ forkIO $ f serverAddr succAdr nodeRt1 nodeRt2
     ok <- succesServer succPort
-    runNodeDefinitionL nr1 $ L.stopServing serverPort
+    runNodeDefinitionL nodeRt1 $ L.stopServing serverPort
     assertBool "" ok    
 
 pingHandle succAdr (Ping i) conn = do

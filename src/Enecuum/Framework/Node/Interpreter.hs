@@ -80,7 +80,7 @@ openConnection nodeRt addr initScript = do
     newCon   <- Con.openConnect
         addr
         ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
-        (logEr nodeRt)
+        (logError' nodeRt)
     insertConnect (nodeRt ^. connectsLens) addr newCon
     pure $ (D.Connection addr)
 
@@ -100,4 +100,4 @@ setServerChan servs port chan = do
 runNodeL :: NodeRuntime -> L.NodeL a -> IO a
 runNodeL nodeRt = foldFree (interpretNodeL nodeRt)
 
-logEr nodeRt = runNodeL nodeRt . L.logError
+logError' nodeRt = runNodeL nodeRt . L.logError

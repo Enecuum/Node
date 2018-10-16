@@ -36,11 +36,11 @@ data ServerComand = StopServer
 
 type RawData = LByteString
 
-data SendUdpMsgTo = SendUdpMsgTo SockAddr LByteString (TMVar Bool)
+data SendUdpMsgTo = SendUdpMsgTo SockAddr LByteString (MVar Bool)
 
 data Comand where
     Close :: Comand
-    Send  :: RawData -> TMVar Bool -> Comand
+    Send  :: RawData -> MVar Bool -> Comand
 
 newtype ServerHandle = ServerHandle (TChan ServerComand)
 

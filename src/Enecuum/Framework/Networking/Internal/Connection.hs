@@ -26,22 +26,20 @@ timeoutDelay = 5000
 stopServer :: ServerHandle -> STM ()
 stopServer chan = writeTChan chan D.StopServer
 
-readBool :: Int -> TMVar Bool -> IO (Either Text ())
+readBool :: Int -> MVar Bool -> IO (Either Text ())
 readBool i var = do
-    res <- timeout i False (atomically $ takeTMVar var)
+    res <- timeout i False (takeMVar var)
     case res of
         Right b | b -> pure $ Right ()
         _           -> pure $ Left "The connection is closed."
 
 sendWithTimeOut conn msg = do
-    var <- atomically $ do
-        var    <- newEmptyTMVar
+    var <- newEmptyMVar
+    atomically $ do
         isEmpty <- isEmptyTMVar conn
         unless isEmpty $ do
             chan <- readTMVar conn
             writeTChan chan $ D.Send msg var
-        when isEmpty $ putTMVar var False
-        pure var
     readBool timeoutDelay var
 
 class NetworkConnection protocol where

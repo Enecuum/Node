@@ -16,22 +16,22 @@ import qualified Network.Socket as S hiding (recv)
 import           Control.Monad.Extra
 
 instance NetworkConnection D.Tcp where
-    startServer port handlers ins loger = do
+    startServer port handlers ins logger = do
         chan <- atomically newTChan
         void $ forkIO $ runTCPServer chan port $ \sock -> do
             addr <- getAdress sock
             conn <- D.TcpConnectionVar <$> atomically (newTMVar =<< newTChan)
             let networkConnecion = D.Connection $ D.Address addr port
             ins networkConnecion conn
-            void $ race (runHandlers conn networkConnecion sock handlers loger) (connectManager conn sock)
+            void $ race (runHandlers conn networkConnecion sock handlers logger) (connectManager conn sock)
         pure chan
 
-    openConnect addr handlers loger = do
+    openConnect addr handlers logger = do
         conn <- D.TcpConnectionVar <$> atomically (newTMVar =<< newTChan)
         void $ forkIO $ do
             tryML
                 (runClient TCP addr $ \wsConn -> void $ race
-                    (runHandlers conn (D.Connection addr) wsConn handlers loger)
+                    (runHandlers conn (D.Connection addr) wsConn handlers logger)
                     (connectManager conn wsConn))
                 (atomically $ closeConn conn)
         pure conn
@@ -50,12 +50,12 @@ getAdress socket = D.sockAddrToHost <$> S.getSocketName socket
 --------------------------------------------------------------------------------
 -- * Internal
 runHandlers :: D.ConnectionVar D.Tcp -> D.Connection D.Tcp -> S.Socket -> Handlers D.Tcp -> (Text -> IO ()) -> IO ()
-runHandlers conn netConn wsConn handlers loger = do
+runHandlers conn netConn wsConn handlers logger = do
     tryM (S.recv wsConn $ toEnum D.packetSize) (atomically $ closeConn conn) $ \msg -> do
         case decode msg of
             Just val -> callHandler netConn val handlers
-            Nothing  -> loger $ "Error in decoding en msg: " <> show msg
-        runHandlers conn netConn wsConn handlers loger
+            Nothing  -> logger $ "Error in decoding en msg: " <> show msg
+        runHandlers conn netConn wsConn handlers logger
 
 callHandler :: D.Connection D.Tcp -> D.NetworkMsg -> Handlers D.Tcp -> IO ()
 callHandler conn (D.NetworkMsg tag val) handlers = whenJust (handlers ^. at tag) $ \handler -> handler val conn
@@ -68,7 +68,7 @@ connectManager conn@(D.TcpConnectionVar c) wsConn = readCommand conn >>= \case
     -- send msg to alies node
     Just (D.Send val var) -> do
         tryM (S.sendAll wsConn val) (atomically $ closeConn conn) $ \_ -> do
-            atomically $ putTMVar var True
+            tryPutMVar var True
             connectManager conn wsConn
     -- conect is closed, stop of command reading
     Nothing -> pure ()
