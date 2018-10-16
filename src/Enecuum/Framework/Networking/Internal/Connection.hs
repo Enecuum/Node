@@ -20,13 +20,15 @@ type Handler protocol  = Value -> D.Connection protocol -> IO ()
 type Handlers protocol = Map Text (Handler protocol)
 type ServerHandle      = TChan D.ServerComand
 
+timeoutDelay = 5000
+
 -- | Stop the server
 stopServer :: ServerHandle -> STM ()
 stopServer chan = writeTChan chan D.StopServer
 
-readBool :: Int -> TMVar (Bool) -> IO (Either Text ())
+readBool :: Int -> TMVar Bool -> IO (Either Text ())
 readBool i var = do
-    res <- timeOut 5000 False (atomically $ takeTMVar var)
+    res <- timeout i False (atomically $ takeTMVar var)
     case res of
         Right b | b -> pure $ Right ()
         _           -> pure $ Left "The connection is closed."
@@ -34,13 +36,13 @@ readBool i var = do
 sendWithTimeOut conn msg = do
     var <- atomically $ do
         var    <- newEmptyTMVar
-        isEmty <- isEmptyTMVar conn
-        unless isEmty $ do
+        isEmpty <- isEmptyTMVar conn
+        unless isEmpty $ do
             chan <- readTMVar conn
             writeTChan chan $ D.Send msg var
-        when isEmty $ putTMVar var False
+        when isEmpty $ putTMVar var False
         pure var
-    readBool 5000 var
+    readBool timeoutDelay var
 
 class NetworkConnection protocol where
     startServer :: PortNumber -> Handlers protocol -> (D.Connection protocol -> D.ConnectionVar protocol -> IO ()) -> (Text -> IO ()) -> IO ServerHandle
