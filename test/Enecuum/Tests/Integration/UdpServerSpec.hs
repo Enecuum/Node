@@ -43,16 +43,16 @@ data Succes = Succes    deriving (Generic, ToJSON, FromJSON)
 
 pingHandle :: Ping -> D.Connection D.Udp -> L.NodeL ()
 pingHandle (Ping i) conn = do
-    when (i < 10) $ L.send conn (Pong $ i + 1)
+    when (i < 10) $ void $ L.send conn (Pong $ i + 1)
     when (i == 10) $ do
-        L.notify succAdr Succes
+        void $ L.notify succAdr Succes
         L.close conn
 
 pongHandle :: Pong -> D.Connection D.Udp -> L.NodeL ()
 pongHandle (Pong i) conn = do
-    when (i < 10) $ L.send conn (Ping $ i + 1)
+    when (i < 10) $ void $ L.send conn (Ping $ i + 1)
     when (i == 10) $ do
-        L.notify succAdr Succes
+        void $ L.notify succAdr Succes
         L.close conn
 
 pingPong :: Test
@@ -70,7 +70,7 @@ pingPong = TestCase $ do
             conn <- L.open D.Udp serverAddr $ do
                 L.handler pingHandle
                 L.handler pongHandle
-            L.send conn $ Ping 0
+            void $ L.send conn $ Ping 0
     ok <- succesServer succPort
     runNodeDefinitionL nr1 $ L.stopServing serverPort
     assertBool "" ok

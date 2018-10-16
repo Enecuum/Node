@@ -21,15 +21,15 @@ data NetworkingF next where
   -- | Send RPC request and wait for the response.
   SendRpcRequest            :: D.Address -> D.RpcRequest -> (Either Text D.RpcResponse -> next) -> NetworkingF next
   -- | Send message to the connection.
-  SendMessage               :: D.Connection D.Tcp -> D.RawData -> (() -> next)-> NetworkingF next
-  SendUdpMsgByConnection    :: D.Connection D.Udp -> D.RawData -> (() -> next)-> NetworkingF next
-  SendUdpMsgByAddress       :: D.Address       -> D.RawData -> (() -> next)-> NetworkingF next
+  SendTcpMsgByConnection    :: D.Connection D.Tcp -> D.RawData -> (Bool -> next)-> NetworkingF next
+  SendUdpMsgByConnection    :: D.Connection D.Udp -> D.RawData -> (Bool -> next)-> NetworkingF next
+  SendUdpMsgByAddress       :: D.Address          -> D.RawData -> (Bool -> next)-> NetworkingF next
   -- | Eval core effect.
   EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF  next
 
 makeFunctorInstance ''NetworkingF
 
-type NetworkingL  next = Free NetworkingF next
+type NetworkingL next = Free NetworkingF next
 
 -- | Eval low-level networking script.
 evalNetwork :: L.NetworkL a -> NetworkingL a
@@ -39,36 +39,27 @@ evalNetwork network = liftF $ EvalNetwork network id
 sendRpcRequest :: D.Address -> D.RpcRequest -> NetworkingL (Either Text D.RpcResponse)
 sendRpcRequest address request = liftF $ SendRpcRequest address request id
 
--- | Send message to the connection.
-sendMessage :: D.Connection D.Tcp-> D.RawData -> NetworkingL ()
-sendMessage conn msg = liftF $ SendMessage conn msg id
-
-sendUdpMsgByConnection :: D.Connection D.Udp -> D.RawData -> NetworkingL ()
-sendUdpMsgByConnection conn msg = liftF $ SendUdpMsgByConnection conn msg id
-
-sendUdpMsgByAddress :: D.Address -> D.RawData -> NetworkingL ()
-sendUdpMsgByAddress addr msg = liftF $ SendUdpMsgByAddress addr msg id
-
 -- | Send message to the reliable connection.
 -- TODO: distiguish reliable (TCP-like) connection from unreliable (UDP-like).
 -- TODO: make conversion to and from package.
+
+toNetworkMsg :: (Typeable a, ToJSON a) => a -> D.RawData
+toNetworkMsg msg = A.encode $ D.NetworkMsg (D.toTag msg) (toJSON msg)
+
+-- | Send message to the connection.
 class Send con m where
-    send :: (Typeable a, ToJSON a) => con -> a -> m ()
+    send :: (Typeable a, ToJSON a) => con -> a -> m Bool
 
 instance Send (D.Connection D.Tcp) (Free NetworkingF) where
-    send conn msg = sendMessage conn . A.encode $
-        D.NetworkMsg (D.toTag msg) (toJSON msg)
+    send conn msg = liftF $ SendTcpMsgByConnection conn (toNetworkMsg msg) id
 
 instance Send (D.Connection D.Udp) (Free NetworkingF) where
-    send conn msg = sendUdpMsgByConnection conn . A.encode $
-        D.NetworkMsg (D.toTag msg) (toJSON msg)
-
+    send conn msg = liftF $ SendUdpMsgByConnection conn (toNetworkMsg msg) id
 instance SendUdp (Free NetworkingF) where
-    notify conn msg = sendUdpMsgByAddress conn . A.encode $
-        D.NetworkMsg (D.toTag msg) (toJSON msg)
+    notify conn msg = liftF $ SendUdpMsgByAddress conn (toNetworkMsg msg) id
 
 class SendUdp m where
-    notify :: (Typeable a, ToJSON a) => D.Address -> a -> m ()
+    notify :: (Typeable a, ToJSON a) => D.Address -> a -> m Bool
 
 -- | Eval core effect.
 evalCoreEffectNetworkingF :: L.CoreEffect a -> NetworkingL a

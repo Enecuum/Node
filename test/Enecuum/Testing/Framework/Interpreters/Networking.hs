@@ -51,9 +51,9 @@ interpretNetworkingL :: T.NodeRuntime -> L.NetworkingF a -> IO a
 
 interpretNetworkingL nodeRt (L.SendRpcRequest toAddr req next) = next <$> relayRequest' nodeRt toAddr req
 
-interpretNetworkingL nodeRt (L.SendMessage    conn   msg next) = do
+interpretNetworkingL nodeRt (L.SendTcpMsgByConnection conn msg next) = do
     void $ sendMessageToConnection nodeRt conn msg
-    pure $ next ()
+    pure $ next True
 
 interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) = next <$> Impl.runNetworkL nodeRt networkAction
 
