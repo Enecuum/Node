@@ -7,9 +7,6 @@ import           Data.Aeson
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TMVar
 
-
-import           Enecuum.Legacy.Service.Network.Base
-import           Data.Aeson.Lens
 import           Control.Concurrent.Async
 import qualified Enecuum.Framework.Domain.Networking as D
 import           Enecuum.Framework.Networking.Internal.Client
@@ -17,12 +14,7 @@ import           Enecuum.Framework.Networking.Internal.Tcp.Server
 import qualified Network.Socket.ByteString.Lazy as S
 import qualified Network.Socket as S hiding (recv)
 import           Control.Monad.Extra
-{-
-type Handler    = Value -> D.Connection D.Tcp -> IO ()
-type Handlers   = Map Text Handler
 
-type ServerHandle = TChan D.ServerComand
--}
 instance NetworkConnection D.Tcp where
     startServer port handlers ins loger = do
         chan <- atomically newTChan
@@ -48,23 +40,16 @@ instance NetworkConnection D.Tcp where
         writeComand conn D.Close
         closeConn conn
 
-    send conn msg = writeComand conn $ D.Send msg
-
+    send (D.TcpConnectionVar conn) = sendWithTimeOut conn
 
 getAdress :: S.Socket -> IO D.Host
 getAdress socket = D.sockAddrToHost <$> S.getSocketName socket
-
-
-
-
-
--- | Send msg to node.
 
 --------------------------------------------------------------------------------
 -- * Internal
 runHandlers :: D.ConnectionVar D.Tcp -> D.Connection D.Tcp -> S.Socket -> Handlers D.Tcp -> (Text -> IO ()) -> IO ()
 runHandlers conn netConn wsConn handlers loger = do
-    tryM (S.recv wsConn (1024 * 4)) (atomically $ closeConn conn) $ \msg -> do
+    tryM (S.recv wsConn $ toEnum D.packetSize) (atomically $ closeConn conn) $ \msg -> do
         case decode msg of
             Just val -> callHandler netConn val handlers
             Nothing  -> loger $ "Error in decoding en msg: " <> show msg
@@ -79,8 +64,9 @@ connectManager conn@(D.TcpConnectionVar c) wsConn = readCommand conn >>= \case
     -- close connection
     Just D.Close      -> atomically $ unlessM (isEmptyTMVar c) $ void $ takeTMVar c
     -- send msg to alies node
-    Just (D.Send val) -> do
-        tryM (S.sendAll wsConn val) (atomically $ closeConn conn) $ \_ ->
+    Just (D.Send val var) -> do
+        tryM (S.sendAll wsConn val) (atomically $ closeConn conn) $ \_ -> do
+            atomically $ putTMVar var True
             connectManager conn wsConn
     -- conect is closed, stop of command reading
     Nothing -> pure ()

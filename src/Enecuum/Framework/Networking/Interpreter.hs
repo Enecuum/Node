@@ -30,20 +30,19 @@ interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
     pure $ next res
 
 interpretNetworkingL nr (L.SendTcpMsgByConnection (D.Connection conn) msg next) = do
-    atomically $ do
-        m <- readTVar $ nr ^. RL.tcpConnects
-        whenJust (m ^. at conn) $ \con -> Con.send con msg
-    pure $ next True
+    m <- atomically $ readTVar $ nr ^. RL.tcpConnects
+    case m ^. at conn of
+        Just con -> next <$> Con.send con msg
+        Nothing  -> pure $ next False
 
 interpretNetworkingL nr (L.SendUdpMsgByConnection (D.Connection conn) msg next) = do
-    atomically $ do
-        m <- readTVar $ nr ^. RL.udpConnects
-        whenJust (m ^. at conn) $ \con -> Con.send con msg
-    pure $ next True
+    m <- atomically $ readTVar $ nr ^. RL.udpConnects
+    case m ^. at conn of
+        Just con -> next <$> Con.send con msg
+        Nothing  -> pure $ next False
 
-interpretNetworkingL _ (L.SendUdpMsgByAddress adr msg next) = do
-    Udp.sendUdpMsg adr msg
-    pure $ next True
+interpretNetworkingL _ (L.SendUdpMsgByAddress adr msg next) =
+    next <$> Udp.sendUdpMsg adr msg
 
 interpretNetworkingL _ _ = error "interpretNetworkingL EvalNetwork not implemented."
 

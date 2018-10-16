@@ -29,7 +29,7 @@ data instance ConnectionVar Tcp
     = TcpConnectionVar (TMVar (TChan Comand))
 
 data instance ConnectionVar Udp
-    = ServerUdpConnectionVar S.SockAddr (TChan SendMsg)
+    = ServerUdpConnectionVar S.SockAddr (TChan SendUdpMsgTo)
     | ClientUdpConnectionVar (TMVar (TChan Comand))
 
 
@@ -37,11 +37,11 @@ data ServerComand = StopServer
 
 type RawData = LByteString
 
-data SendMsg = SendMsg SockAddr LByteString
+data SendUdpMsgTo = SendUdpMsgTo SockAddr LByteString (TMVar Bool)
 
 data Comand where
     Close :: Comand
-    Send  :: RawData -> Comand
+    Send  :: RawData -> TMVar Bool -> Comand
 
 newtype ServerHandle = ServerHandle (TChan ServerComand)
 
@@ -65,3 +65,6 @@ data Address = Address
 
 formatAddress :: Address -> Text
 formatAddress (Address addr port) = T.pack addr <> ":" <> show port
+
+packetSize :: Int
+packetSize = 1024*4

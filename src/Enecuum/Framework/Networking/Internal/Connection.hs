@@ -24,9 +24,28 @@ type ServerHandle      = TChan D.ServerComand
 stopServer :: ServerHandle -> STM ()
 stopServer chan = writeTChan chan D.StopServer
 
+readBool :: Int -> TMVar Bool -> IO Bool
+readBool i var = do
+    res <- timeOut 5000 False (atomically $ takeTMVar var)
+    case res of
+        Right b -> pure b
+        Left  b -> pure b
+
+sendWithTimeOut conn msg = do
+    var <- atomically $ do
+        var    <- newEmptyTMVar
+        isEmty <- isEmptyTMVar conn
+        unless isEmty $ do
+            chan <- readTMVar conn
+            writeTChan chan $ D.Send msg var
+        when isEmty $ putTMVar var False
+        pure var
+    readBool 5000 var
+
 class NetworkConnection protocol where
     startServer :: PortNumber -> Handlers protocol -> (D.Connection protocol -> D.ConnectionVar protocol -> IO ()) -> (Text -> IO ()) -> IO ServerHandle
     -- | Send msg to node.
-    send        :: D.ConnectionVar protocol -> LByteString -> STM ()
+    send        :: D.ConnectionVar protocol -> LByteString -> IO Bool
     close       :: D.ConnectionVar protocol -> STM ()
     openConnect :: D.Address -> Handlers protocol -> (Text -> IO ()) -> IO (D.ConnectionVar protocol)
+

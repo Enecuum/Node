@@ -36,8 +36,13 @@ instance NetworkConnection D.Udp where
             runHandlers   connection handlers loger msg
         pure chan
 
-    send (D.ClientUdpConnectionVar conn)          msg = writeComand conn $ D.Send  msg
-    send (D.ServerUdpConnectionVar sockAddr chan) msg = writeTChan  chan $ D.SendMsg sockAddr msg
+    send (D.ClientUdpConnectionVar conn) msg = sendWithTimeOut conn msg
+    send (D.ServerUdpConnectionVar sockAddr chan) msg = do
+        var <- atomically $ do
+            var <- newEmptyTMVar
+            writeTChan chan $ D.SendUdpMsgTo sockAddr msg var
+            pure var
+        readBool 5000 var
 
     close (D.ClientUdpConnectionVar conn) = writeComand conn D.Close >> closeConn conn
     close (D.ServerUdpConnectionVar _ _)  = pure ()
@@ -78,11 +83,15 @@ readCommand conn = atomically $ do
             chan <- readTMVar conn
             Just <$> readTChan chan
 
-sendUdpMsg :: D.Address -> LByteString -> IO ()
-sendUdpMsg addr msg = runClient UDP addr $ \sock -> S.sendAll sock msg
+sendUdpMsg :: D.Address -> LByteString -> IO Bool
+sendUdpMsg addr msg = if length msg > D.packetSize
+    then pure False 
+    else do
+        runClient UDP addr $ \sock -> S.sendAll sock msg
+        pure True
 
 readMessages :: D.Connection D.Udp -> Handlers D.Udp -> (Text -> IO ()) -> S.Socket -> IO ()
-readMessages conn handlers loger sock = tryMR (S.recv sock (1024 * 4)) $ \msg -> do 
+readMessages conn handlers loger sock = tryMR (S.recv sock $ toEnum D.packetSize) $ \msg -> do 
     runHandlers conn handlers loger msg
     readMessages conn handlers loger sock
 
@@ -92,9 +101,10 @@ connectManager conn sock = readCommand conn >>= \case
     -- close connection
     Just D.Close      -> atomically $ unlessM (isEmptyTMVar conn) $ void $ takeTMVar conn
     -- send msg to alies node
-    Just (D.Send val) -> do
+    Just (D.Send val var) -> do
         tryM (S.sendAll sock val) (atomically $ closeConn conn) $
-            \_ -> connectManager conn sock
+            \_ -> do
+                atomically $ putTMVar var True
+                connectManager conn sock
     -- conect is closed, stop of command reading
     Nothing           -> pure ()
-

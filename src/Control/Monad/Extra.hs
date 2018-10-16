@@ -1,8 +1,9 @@
 {-# LANGUAGE PackageImports #-}
-module Control.Monad.Extra (module X, tryMR, tryML, tryM) where
+module Control.Monad.Extra (module X, tryMR, tryML, tryM, timeOut) where
 
 import                   Control.Monad
-import qualified "extra" Control.Monad.Extra as X  
+import qualified "extra" Control.Monad.Extra as X
+import                   Control.Concurrent.Async (race) 
 import                   Enecuum.Prelude
 
 tryMR :: MonadCatch m => m t -> (t -> m ()) -> m ()
@@ -17,3 +18,6 @@ tryM operation f g = do
     case ok of
         Right res                  -> g res
         Left  (_ :: SomeException) -> f
+
+timeOut :: Int -> a -> IO b -> IO (Either a b)
+timeOut i res f = race (threadDelay i *> pure res) f
