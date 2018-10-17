@@ -62,13 +62,13 @@ testNodeNet = TestCase $ do
         , "kBlock1 /= Right D.genesisKBlock: " <> show (kBlock1 /= Right D.genesisKBlock)
         , "kBlock2 /= Right D.genesisKBlock: " <> show (kBlock2 /= Right D.genesisKBlock)
         , "null (rights walletBalance1): " <> show (null (rights walletBalance1))
-        , show (rights walletBalance1) :: Text
+        , "show (rights walletBalance): " <> show (rights walletBalance1) :: Text
         ]
         [ "kBlock1 == kBlock2: True"
         , "kBlock1 /= Right D.genesisKBlock: True"
         , "kBlock2 /= Right D.genesisKBlock: True"
         , "null (rights walletBalance1): False"
-        , show (rights walletBalance2) :: Text
+        , "show (rights walletBalance): " <> show (rights walletBalance2) :: Text
         ]
 
 --rights' ls = [a| Right a <- ls]
