@@ -7,6 +7,7 @@ module Enecuum.Tests.Integration.NodesNetSpec where
 import           Test.HUnit
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit ( fromHUnitTest )
+import           Data.Aeson
 
 import           Enecuum.Prelude
 import           Enecuum.Interpreters (runNodeDefinitionL)
@@ -73,4 +74,3 @@ testNodeNet = TestCase $ do
         ]
 
 toKeys mblocks = (D._owner :: D.Transaction -> D.PublicKey) <$> (D._transactions :: D.Microblock -> [D.Transaction]) mblocks
---rights' ls = [a| Right a <- ls]

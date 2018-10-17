@@ -52,20 +52,6 @@ data Success   = Success   deriving (Generic, ToJSON, FromJSON)
 
 bigMsg = BigMsg [1..5000]
 
--- TODO tests:
--- Fail. Udp connecting to nonexistent address. [-]
--- Fail. Tcp connecting to nonexistent address. [+]
--- Fail. Udp connect to Tcp server.             [+]
--- Fail. Tcp connect to Udp server.             [-]
--- Fail. Sending udp msg to nonexistent address.[-]
--- Fail. Sending udp msg to closed connection.  [+]
--- Fail. Sending tcp msg to closed connection.  [+]
--- Fail. Sending too big msg by tcp.            [+]
--- Fail. Sending too big msg by udp connection. [+]
--- Fail. Sending too big msg by udp address.    [+]
--- Successful. Sending by udp connect.          [+]
--- Successful. Sending by tcp connect.          [+]
--- Successful. Sending udp msg by address.      [+]
 
 createNodeRuntime :: IO Rt.NodeRuntime
 createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.createNodeRuntime
