@@ -34,24 +34,17 @@ data GraphNodeData = GraphNodeData
 makeFieldsNoPrefix ''GraphNodeData
 
 
--- Get Top kBlock
-getTopKeyBlock :: D.StateVar [Text] -> D.BlockchainData -> L.StateL D.KBlock
-getTopKeyBlock logV bData = do
-    topNodeHash    <- L.readVar $ bData ^. Lens.curNode
-    Just topKBlock <- L.getKBlock logV bData topNodeHash
-    pure topKBlock
-
 -- | Move one block from pending to graph if it is possibly and remove it from pending.
 --   Return true if function had effect.
 moveKBlockToGraph :: D.StateVar [Text] -> D.BlockchainData -> L.StateL Bool
 moveKBlockToGraph logV bData = do
-    topKBlock <- getTopKeyBlock logV bData
+    topKBlock <- L.getTopKeyBlock logV bData
     pending   <- L.readVar (bData ^. Lens.kBlockPending)
     case pending of
         kBlock : newPending | kBlockIsNext kBlock topKBlock -> do
             L.writeVar (bData ^. Lens.kBlockPending) newPending
             Log.stateLog logV "Moving KBlock from pending to graph."
-            addKBlock logV bData kBlock
+            L.addKBlock logV bData kBlock
         _ -> pure False
 
 
@@ -67,68 +60,6 @@ addBlockToPending logV bData kBlock = do
     L.modifyVar (bData ^. Lens.kBlockPending) (\pending -> sortOn (^. Lens.number) $ kBlock : pending)
     pure True
 
--- | Add key block to graph
-addKBlock :: D.StateVar [Text] -> D.BlockchainData -> D.KBlock -> L.StateL Bool
-addKBlock logV bData kBlock = do
-    Log.stateLog logV "Adding KBlock to the graph."
-    let kBlock' = D.KBlockContent kBlock
-    ref <- L.readVar (bData ^. Lens.curNode)
-    L.withGraph bData $ do
-        L.newNode kBlock'
-        L.newLink ref kBlock'
-    -- change of curNode.
-    L.writeVar (bData ^. Lens.curNode) $ toHash kBlock'
-    pure True
-
--- | Add microblock to graph
-addMBlock :: D.StateVar [Text] -> D.BlockchainData -> D.Microblock -> L.StateL Bool
-addMBlock logV bData mblock@(D.Microblock hash _ _ _) = do
-    kblock <- L.getKBlock logV bData hash
-
-    unless (isJust kblock) $ Log.stateLog logV $ "Can't add MBlock to the graph: KBlock not found (" +|| hash ||+ ")."
-
-    when (isJust kblock) $ do
-        Log.stateLog logV $ "Adding MBlock to the graph for KBlock (" +|| hash ||+ ")."
-        calculateLedger logV bData mblock
-        L.withGraph bData $ do
-            L.newNode (D.MBlockContent mblock)
-            L.newLink hash (D.MBlockContent mblock)
-    pure $ isJust kblock
-
-calculateLedger :: D.StateVar [Text] -> D.BlockchainData -> D.Microblock -> Free L.StateF ()
-calculateLedger logV bData mblock = do
-    forM_ (mblock ^. Lens.transactions) $ \tx -> do
-        ledgerW <- L.readVar $ bData ^. Lens.ledger
-        -- stateLog nodeData $ "Current Ledger " +|| ledgerW ||+ "."
-        let owner          = tx ^. Lens.owner
-            receiver       = tx ^. Lens.receiver
-            amount         = tx ^. Lens.amount
-            currentBalance = lookup owner ledgerW
-
-        when (owner == receiver) $ Log.stateLog logV $ "Tx rejected (same owner and receiver): " +|| owner ||+ "."
-
-        when (owner /= receiver) $ do
-            ownerBalance <- case currentBalance of
-                    Nothing           -> (Log.stateLog logV $ "Can't find wallet in ledger: " +|| owner ||+ ".") >> pure 100
-                    Just ownerBalance -> pure ownerBalance 
-            if ownerBalance >= amount 
-            then do
--- stateLog nodeData $ "Before tx owner " +|| owner ||+ " has balance: " +|| balance ||+ "."
-                let receiverBalance = fromMaybe 0 $ lookup receiver ledgerW
-                -- stateLog nodeData $ "Before tx receiver " +|| receiver ||+ " has balance: " +|| receiverBalance ||+ "."
-                let
-                    newLedger = insert owner
-                                       (ownerBalance - amount)
-                                       (insert receiver (receiverBalance + amount) ledgerW)
-                L.writeVar (bData ^. Lens.ledger) newLedger
-                Log.stateLog logV
-                    $   "Tx accepted: from [" +|| owner ||+ "] to [" +|| receiver ||+ "], amount: " +|| amount ||+ ". ["
-                    +|| owner ||+ "]: " +|| ownerBalance - amount ||+ ", [" +|| receiver ||+ "]: " +|| receiverBalance + amount ||+ ""
--- stateLog nodeData $ "New Ledger " +|| newLedger ||+ "."
-            else
-                Log.stateLog logV
-                $   "Tx rejected (negative balance): [" +|| owner ||+ "] -> [" +|| receiver ||+ "], amount: " +|| amount ||+ "."
-
 -- | Accept kBlock
 acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Udp -> L.NodeL ()
 acceptKBlock nodeData kBlock _ = do
@@ -136,10 +67,10 @@ acceptKBlock nodeData kBlock _ = do
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
     res <- L.atomically $ do
-        topKBlock <- getTopKeyBlock logV bData
+        topKBlock <- L.getTopKeyBlock logV bData
         if
             | kBlockIsNext kBlock topKBlock -> do
-                void $ addKBlock logV bData kBlock
+                void $ L.addKBlock logV bData kBlock
                 let loop = whenM (moveKBlockToGraph logV bData) loop
                 loop
                 pure True
@@ -154,7 +85,7 @@ acceptMBlock nodeData mBlock _ = do
     L.logInfo "Accepting MBlock."
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
-    void $ L.atomically (addMBlock logV bData mBlock)
+    void $ L.atomically (L.addMBlock logV bData mBlock)
     Log.writeLog logV
 
 getLastKBlock :: GraphNodeData ->  GetLastKBlock -> L.NodeL D.KBlock
@@ -162,7 +93,7 @@ getLastKBlock nodeData _ = do
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
     -- L.logInfo "Top KBlock requested."
-    kBlock <- L.atomically $ getTopKeyBlock logV bData
+    kBlock <- L.atomically $ L.getTopKeyBlock logV bData
     -- L.logInfo $ "Top KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
     pure kBlock
 
@@ -181,7 +112,7 @@ acceptChainLength nodeData GetChainLengthRequest = do
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
     L.logInfo "Answering chain length"
-    topKBlock <- L.atomically $ getTopKeyBlock logV bData        
+    topKBlock <- L.atomically $ L.getTopKeyBlock logV bData        
     Log.writeLog logV
     pure $ GetChainLengthResponse $ topKBlock ^. Lens.number
     
@@ -207,7 +138,7 @@ acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
         then pure $ Left "From is grater than to"
         else do
             kBlockList <- L.atomically $ do
-                topKBlock <- getTopKeyBlock logV bData
+                topKBlock <- L.getTopKeyBlock logV bData
                 chain <- findBlocksByNumber logV bData from topKBlock
                 pure $ drop (fromEnum $ (topKBlock ^. Lens.number) - to) chain
             Log.writeLog logV    
