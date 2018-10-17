@@ -58,3 +58,21 @@ addMBlock logV bData mblock@(D.Microblock hash _ _ _) = do
             L.newNode (D.MBlockContent mblock)
             L.newLink hash (D.MBlockContent mblock)
     pure $ isJust kblock
+
+-- Return all blocks after given number as a list
+findBlocksByNumber :: D.StateVar [Text] -> D.BlockchainData -> Integer -> D.KBlock -> L.StateL [D.KBlock]
+findBlocksByNumber logV bData num prev = 
+    let cNum = (D._number prev) in
+    if 
+        | cNum < num -> pure []
+        | cNum == num -> pure [prev]
+        | cNum > num -> do
+            maybeNext <- getKBlock logV bData (D._prevHash prev)
+            case maybeNext of
+                Nothing -> error "Broken chain"
+                Just next -> (:) prev <$> findBlocksByNumber logV bData num next
+
+kBlockIsNext :: D.KBlock -> D.KBlock -> Bool
+kBlockIsNext kBlock topKBlock =
+    (D._number kBlock) == (D._number topKBlock) + 1 && (D._prevHash kBlock) == D.toHash
+        (D.KBlockContent topKBlock)

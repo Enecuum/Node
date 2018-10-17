@@ -33,33 +33,6 @@ data GraphNodeData = GraphNodeData
 
 makeFieldsNoPrefix ''GraphNodeData
 
-
--- | Move one block from pending to graph if it is possibly and remove it from pending.
---   Return true if function had effect.
-moveKBlockToGraph :: D.StateVar [Text] -> D.BlockchainData -> L.StateL Bool
-moveKBlockToGraph logV bData = do
-    topKBlock <- L.getTopKeyBlock logV bData
-    pending   <- L.readVar (bData ^. Lens.kBlockPending)
-    case pending of
-        kBlock : newPending | kBlockIsNext kBlock topKBlock -> do
-            L.writeVar (bData ^. Lens.kBlockPending) newPending
-            Log.stateLog logV "Moving KBlock from pending to graph."
-            L.addKBlock logV bData kBlock
-        _ -> pure False
-
-
-kBlockIsNext :: D.KBlock -> D.KBlock -> Bool
-kBlockIsNext kBlock topKBlock =
-    kBlock ^. Lens.number == topKBlock ^. Lens.number + 1 && kBlock ^. Lens.prevHash == toHash
-        (D.KBlockContent topKBlock)
-
--- | Add new key block to pending.
-addBlockToPending :: D.StateVar [Text] -> D.BlockchainData -> D.KBlock -> L.StateL Bool
-addBlockToPending logV bData kBlock = do
-    Log.stateLog logV "Adding KBlock to pending"
-    L.modifyVar (bData ^. Lens.kBlockPending) (\pending -> sortOn (^. Lens.number) $ kBlock : pending)
-    pure True
-
 -- | Accept kBlock
 acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Udp -> L.NodeL ()
 acceptKBlock nodeData kBlock _ = do
@@ -69,12 +42,12 @@ acceptKBlock nodeData kBlock _ = do
     res <- L.atomically $ do
         topKBlock <- L.getTopKeyBlock logV bData
         if
-            | kBlockIsNext kBlock topKBlock -> do
+            | L.kBlockIsNext kBlock topKBlock -> do
                 void $ L.addKBlock logV bData kBlock
-                let loop = whenM (moveKBlockToGraph logV bData) loop
+                let loop = whenM (L.moveKBlockToGraph logV bData) loop
                 loop
                 pure True
-            | kBlock ^. Lens.number > topKBlock ^. Lens.number + 1 -> addBlockToPending logV bData kBlock
+            | kBlock ^. Lens.number > topKBlock ^. Lens.number + 1 -> L.addBlockToPending logV bData kBlock
             | otherwise -> pure False
     Log.writeLog logV
 
@@ -115,19 +88,7 @@ acceptChainLength nodeData GetChainLengthRequest = do
     topKBlock <- L.atomically $ L.getTopKeyBlock logV bData        
     Log.writeLog logV
     pure $ GetChainLengthResponse $ topKBlock ^. Lens.number
-    
-findBlocksByNumber :: D.StateVar [Text] -> D.BlockchainData -> Integer -> D.KBlock -> L.StateL [D.KBlock]
-findBlocksByNumber logV bData num prev = 
-    let cNum = prev ^. Lens.number in
-    if 
-        | cNum < num -> pure []
-        | cNum == num -> pure [prev]
-        | cNum > num -> do
-            maybeNext <- L.getKBlock logV bData (prev ^. Lens.prevHash)
-            case maybeNext of
-                Nothing -> error "Broken chain"
-                Just next -> (:) prev <$> findBlocksByNumber logV bData num next
-            
+              
 
 acceptChainFromTo :: GraphNodeData -> GetChainFromToRequest -> L.NodeL (Either Text GetChainFromToResponse)
 acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
@@ -139,7 +100,7 @@ acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
         else do
             kBlockList <- L.atomically $ do
                 topKBlock <- L.getTopKeyBlock logV bData
-                chain <- findBlocksByNumber logV bData from topKBlock
+                chain <- L.findBlocksByNumber logV bData from topKBlock
                 pure $ drop (fromEnum $ (topKBlock ^. Lens.number) - to) chain
             Log.writeLog logV    
             pure $ Right $ GetChainFromToResponse (reverse kBlockList)
