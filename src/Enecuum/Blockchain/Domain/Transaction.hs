@@ -53,7 +53,7 @@ signTransaction owner ownerPriv receiver amount currency = do
         , _amount = amount
         , _currency = currency
         }
-  signature <- L.sign ownerPriv tx
+  signature <- L.evalCoreCrypto $ L.sign ownerPriv tx
   pure $ Transaction
         { _owner = owner
         , _receiver = receiver

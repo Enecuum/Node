@@ -4,14 +4,15 @@ module Enecuum.Core.CoreEffect.Language
   , CoreEffect
   , evalLogger
   , evalRandom
+  -- , evalCrypto
   ) where
 
 import           Enecuum.Prelude
 
-import           Enecuum.Core.Logger.Language (Logger, LoggerL, logMessage)
-import           Enecuum.Core.Random.Language 
---(ERandom, ERandomL, getRandomInt, evalRand, evalMonadRandom, NRandom, NRandomL)
-import           Enecuum.Core.ControlFlow.Language (ControlFlowL, ControlFlow(..))
+import           Enecuum.Core.Logger.Language      (Logger, LoggerL, logMessage)
+import           Enecuum.Core.Random.Language
+-- import           Enecuum.Core.Crypto.Language
+import           Enecuum.Core.ControlFlow.Language (ControlFlow (..), ControlFlowL)
 import           Language.Haskell.TH.MakeFunctor
 
 -- | Core effects container language.
@@ -20,6 +21,8 @@ data CoreEffectF next where
   EvalLogger      :: LoggerL ()     -> (() -> next) -> CoreEffectF next
   -- | Random effect
   EvalRandom      :: ERandomL a     -> (a  -> next) -> CoreEffectF next
+  -- -- | Crypto effect
+  -- EvalCrypto      :: CryptoL a     -> (a  -> next) -> CoreEffectF next
   -- | ControlFlow effect
   EvalControlFlow :: ControlFlowL a -> (a  -> next) -> CoreEffectF next
 
@@ -36,22 +39,19 @@ instance Logger (Free CoreEffectF) where
 evalRandom :: ERandomL a -> CoreEffect a
 evalRandom g = liftF $ EvalRandom g id
 
+-- evalCrypto :: CryptoL a -> CoreEffect a
+-- evalCrypto g = liftF $ EvalCrypto g id
+
 evalControlFlow :: ControlFlowL a -> CoreEffect a
 evalControlFlow a = liftF $ EvalControlFlow a id
 
 instance ERandom (Free CoreEffectF) where
   getRandomInt = evalRandom . getRandomInt
-  evalRand r g = evalRandom $ evalRand r g
-  generateKeyPair = evalRandom $ generateKeyPair
-  sign key msg = evalRandom $ sign key msg  
-  -- evalMonadRandom = evalRandom $ evalMonadRandom
 
--- evalRandomN :: NRandomL a -> CoreEffect a
--- evalRandomN g = undefined -- liftF $ EvalMonadRandom g id
--- -- evalRandomN g = liftF $ EvalMonadRandom g id
 
--- instance NRandom (Free CoreEffectF) where  
---   evalMonadRandom = evalRandomN $ evalMonadRandom
+-- instance Crypto (Free CoreEffectF) where
+--   generateKeyPair = evalCrypto $ generateKeyPair
+--   sign key msg = evalCrypto $ sign key msg
 
 instance ControlFlow (Free CoreEffectF) where
   delay i = evalControlFlow $ delay i
