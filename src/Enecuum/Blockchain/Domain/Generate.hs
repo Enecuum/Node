@@ -4,6 +4,7 @@ module Enecuum.Blockchain.Domain.Generate where
 
 import           Data.HGraph.StringHashable            (StringHash (..), toHash)
 import           Data.List                             (delete)
+import           Enecuum.Assets.Nodes.Wallet
 import           Enecuum.Blockchain.Domain.Crypto
 import           Enecuum.Blockchain.Domain.KBlock
 import           Enecuum.Blockchain.Domain.Microblock
@@ -65,16 +66,16 @@ genRandKeyBlock = do
     r <- L.getRandomInt (1,1000)
     prevHash <- L.getRandomByteString r
     solver <- L.getRandomByteString r
-    pure $ KBlock 
+    pure $ KBlock
         { _prevHash = StringHash prevHash
         , _number = number
         , _nonce = nonce
         , _solver = StringHash solver
         , _time = time
-        } 
+        }
 
 genKBlock :: StringHash -> Integer -> KBlock
-genKBlock prevHash i = KBlock 
+genKBlock prevHash i = KBlock
     { _prevHash = prevHash
     , _number = i
     , _nonce = i
@@ -85,29 +86,7 @@ genKBlock prevHash i = KBlock
 genNTransactions :: (L.ERandom m, Monad m) => Int -> m [Transaction]
 genNTransactions k = replicateM k $ genTransaction On
 
-publicKeys1 :: [PublicKey]
-publicKeys1 = map read
-    [
-    "8fM3up1pPDUgMnYZzKiBpsnrvNopjSoURSnpYbm5aZKz",
-    "4vCovnpyuooGBi7t4LcEGeiQYA2pEKc4hixFGRGADw4X",
-    "GS5xDwfTffg86Wyv8uy3H4vVQYqTXBFKPxGPy1Ksp2NS",
-    "Jh8vrASby8nrVG7N3PLZjqSpbrpXFGmfpMd1nrYifZou",
-    "8LZQhs3Z7WiBZbQvTTeXCcCtXfJYtk6RNxxBExo9PEQm"
-    ]
 
-privateKeys1 :: [PrivateKey]
-privateKeys1 = map read
-    [
-          "FDabUqrGEd1i3rfZpqHJkzhvqP9QEpKveoEwmknfJJFa"
-        , "DKAJTFr1bFWHE7psYX976YZis1Fqwkh3ikFAgKaw6bWj"
-        , "6uU38xA2ucJ2zEqgg1zs5j3U8hx8RL3thVFNmhk3Nbsq"
-        , "3n8QPsZwUJxUK85VrgTEuybyj1zDnUeMeovntB5EdqWP"
-        , "MzwHKfF4vGsQB2hgcK3MFKY9TaFaUe78NJwQehfjZ5s"
-    ]
-
--- | Wallets for demo purpose
-wallets1 :: [KeyPair]
-wallets1 = map (\(pub,priv) -> KeyPair pub priv) $ zip publicKeys1 privateKeys1
 
 -- | Generate signed transaction
 genTransaction :: (Monad m, L.ERandom m) => Boundary -> m Transaction
@@ -122,21 +101,21 @@ genTransaction isFromRange = do
             let receiver = rest !! receiverIndex
             pure (owner, receiver)
         Off -> do
-            owner <- L.generateKeyPair
-            receiver <- L.generateKeyPair
+            owner <- L.evalCoreCrypto $ L.generateKeyPair
+            receiver <- L.evalCoreCrypto $ L.generateKeyPair
             pure (owner, receiver)
 
     amount <- fromIntegral <$> L.getRandomInt (0, 100)
     let owner = getPub ownerKeyPair
         receiver = getPub receiverKeyPair
         currency = ENQ
-    transaction <- signTransaction owner (getPriv ownerKeyPair) receiver amount currency    
+    transaction <- signTransaction owner (getPriv ownerKeyPair) receiver amount currency
     pure transaction
 
 -- | Generate signed microblock
 genMicroblock :: (Monad m, L.ERandom m) => StringHash -> [Transaction] -> m Microblock
 genMicroblock hashofKeyBlock tx = do
-    (KeyPair publisherPubKey publisherPrivKey)<- L.generateKeyPair
+    (KeyPair publisherPubKey publisherPrivKey)<- L.evalCoreCrypto $ L.generateKeyPair
     microblock <- signMicroblock hashofKeyBlock tx publisherPubKey publisherPrivKey
     pure microblock
 
