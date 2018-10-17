@@ -50,11 +50,12 @@ testNodeNet = TestCase $ do
     threadDelay $ 3 * 1000 * 1000
     startNode A.graphNodeReceiver
     threadDelay $ 2 * 1000 * 1000
-    kBlock1 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
-    kBlock2                         <- makeIORpcRequest A.graphNodeReceiverRpcAddress    A.GetLastKBlock
-    walletBalance1 :: [Either Text A.WalletBalanceMsg] <- forM [1..5] $ \i -> do
+    kBlock1 :: Either Text D.KBlock             <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
+    kBlock2@(Right kblock)                      <- makeIORpcRequest A.graphNodeReceiverRpcAddress    A.GetLastKBlock
+    Right (A.GetMBlocksForKBlockResponse mblokcs) <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetMBlocksForKBlockRequest (D.toHash kblock)
+    walletBalance1 :: [Either Text A.WalletBalanceMsg] <- forM (concat $ toKeys <$> mblokcs) $ \i -> do
         makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetWalletBalance i
-    walletBalance2 :: [Either Text A.WalletBalanceMsg] <- forM [1..5] $ \i -> do
+    walletBalance2 :: [Either Text A.WalletBalanceMsg] <- forM (concat $ toKeys <$> mblokcs)  $ \i -> do
         makeIORpcRequest A.graphNodeReceiverRpcAddress    $ A.GetWalletBalance i
 
     shouldBe
@@ -71,4 +72,5 @@ testNodeNet = TestCase $ do
         , "show (rights walletBalance): " <> show (rights walletBalance2) :: Text
         ]
 
+toKeys mblocks = (D._owner :: D.Transaction -> D.PublicKey) <$> (D._transactions :: D.Microblock -> [D.Transaction]) mblocks
 --rights' ls = [a| Right a <- ls]
