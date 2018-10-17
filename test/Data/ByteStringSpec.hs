@@ -33,8 +33,5 @@ testRandomByteString = TestCase $ do
 prop_JsonEncoding :: ByteString -> Bool
 prop_JsonEncoding bs = (A.decode . A.encode) bs == Just bs
 
-prop_Base64Encoding :: ByteString -> Property
-prop_Base64Encoding bs = monadicIO $ do
-    es <- run $ (textToBase64 . base64ToText) bs
-    assert $ es == bs
-
+prop_Base64Encoding :: ByteString -> Bool
+prop_Base64Encoding bs = (textToBase64 . base64ToText) bs == bs

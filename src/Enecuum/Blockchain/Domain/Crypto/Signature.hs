@@ -40,7 +40,7 @@ intToBase64Text i = base64ToText $ show i
 
 base64TextToInt :: (MonadPlus m) => Text -> m Integer
 base64TextToInt b = do
-    bs <- textToBase64 b
+    let bs = textToBase64 b
     case fromByteString bs of
         Just i -> pure i
         _      -> mzero
