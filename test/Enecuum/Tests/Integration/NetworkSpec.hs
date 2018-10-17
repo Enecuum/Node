@@ -46,7 +46,7 @@ spec = describe "Network tests" $ fromHUnitTest $ TestList
 newtype Ping   = Ping Int deriving (Generic, ToJSON, FromJSON)
 newtype Pong   = Pong Int deriving (Generic, ToJSON, FromJSON)
 newtype BigMsg = BigMsg [Int] deriving (Generic, ToJSON, FromJSON)
-data Success    = Success   deriving (Generic, ToJSON, FromJSON)
+data Success   = Success   deriving (Generic, ToJSON, FromJSON)
 
 bigMsg = BigMsg [1..5000]
 

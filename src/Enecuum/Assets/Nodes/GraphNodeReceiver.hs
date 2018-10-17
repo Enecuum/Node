@@ -172,7 +172,13 @@ acceptKBlock nodeData kBlock _ = do
             | otherwise -> pure False
     writeLog nodeData
 
-
+-- | 
+getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
+getLastKBlock nodeData _ = do
+    -- L.logInfo "Top KBlock requested."
+    kBlock <- L.atomically $ getTopKeyBlock nodeData
+    -- L.logInfo $ "Top KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
+    pure kBlock
 
 -- | Accept mBlock
 acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Udp -> L.NodeL ()
@@ -236,8 +242,9 @@ graphNodeReceiver = do
     nodeData <- graphNodeInitialization
 
     L.scenario $ graphSynchro nodeData graphNodeTransmitterRpcAddress
-    L.serving D.Rpc graphNodeReceiverRpcPort $
+    L.serving D.Rpc graphNodeReceiverRpcPort $ do
         L.methodE $ getBalance nodeData
+        L.method  $ getLastKBlock nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.awaitNodeFinished nodeData
