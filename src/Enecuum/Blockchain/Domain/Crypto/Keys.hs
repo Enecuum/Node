@@ -6,39 +6,28 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Enecuum.Blockchain.Domain.Crypto.Keys
-  ( ECDSA.Signature
-  , compressPublicKey
-  , decompressPublicKey
-  , getPublicKey
-  , getPrivateKey
-  , fromPublicKey256k1
-  , publicKey256k1
-  , PublicKey(..)
-  , PrivateKey(..)
-  , KeyPair(..)
-  , generateNewRandomAnonymousKeyPair
-  ) where
+module Enecuum.Blockchain.Domain.Crypto.Keys where  
 
-import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA                as ECDSA
+import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA    as ECDSA
 import           "cryptonite" Crypto.PubKey.ECC.Generate
 import           "cryptonite" Crypto.PubKey.ECC.Types
-import           "cryptonite" Crypto.Random                          (MonadRandom)
+import           "cryptonite" Crypto.Random              (MonadRandom)
 import           Data.ByteString.Base58
-import qualified Data.ByteString.Char8                               as BC
+import qualified Data.ByteString.Char8                   as BC
 import           Enecuum.Prelude
 import           Math.NumberTheory.Moduli
-import           Prelude                                             (show)
+
 
 newtype PublicKey  = PublicKey256k1 Integer deriving (Show, Read, Generic, Serialize, Eq, Ord, Num, Enum, FromJSON, ToJSON)
 newtype PrivateKey = PrivateKey256k1 Integer deriving (Show, Read, Generic, Serialize, Eq, Ord, FromJSON, ToJSON)
 
 deriving instance Ord ECDSA.Signature
 
+-- Point compression on an elliptic curve
 compressPublicKey :: ECDSA.PublicKey -> PublicKey
 compressPublicKey pub | c == y    = publicKey256k1 (x * 2)
                       | d == y    = publicKey256k1 (x * 2 + 1)
-                      | otherwise = error "Can not compress PublicKey"
+                      | otherwise = error $ "The impossible happened. Can not compress PublicKey " +|| show pub
   where
     (Point x y) = ECDSA.public_q pub
     (c, d)      = curveK (ECDSA.public_curve pub) x
@@ -46,6 +35,7 @@ compressPublicKey pub | c == y    = publicKey256k1 (x * 2)
 decompressPublicKey :: PublicKey -> ECDSA.PublicKey
 decompressPublicKey = getPublicKey . uncompressPublicKey
 
+-- Point decompression on an elliptic curve
 uncompressPublicKey :: PublicKey -> (Integer, Integer)
 uncompressPublicKey aKey | aa == 0   = (x, c)
                          | otherwise = (x, d)
@@ -58,7 +48,12 @@ curveK :: Curve -> Integer -> (Integer, Integer)
 curveK aCurve x = (c, d)
   where
     (CurveFP (CurvePrime prime (CurveCommon a b _ _ _))) = aCurve
-    c = fromJust $ ((x ^ (3 :: Int) + x * a + b) `mod` prime) `sqrtModP` prime
+    n = ((x ^ (3 :: Int) + x * a + b) `mod` prime)
+    -- modular square root of @n@ modulo @prime@
+    sr = n `sqrtModP` prime
+    c = case sr of
+      Just j -> j -- n is a quadratic residue modulo prime
+      Nothing -> error $ "The impossible happened. " +|| show n ||+ " is a quadratic nonresidue modulo " +|| show prime
     d = prime - c
 
 publicKey256k1 :: Integer -> PublicKey
