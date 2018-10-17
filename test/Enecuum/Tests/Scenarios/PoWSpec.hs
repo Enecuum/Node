@@ -10,7 +10,7 @@ import qualified Enecuum.Domain as D
 
 import           Enecuum.Assets.Nodes.Messages (SuccessMsg (..))
 import           Enecuum.Assets.Nodes.PoW (powNode')
-import           Enecuum.Assets.Nodes.Address (graphNodeRpcAddress, graphNodeRpcPort)
+import           Enecuum.Assets.Nodes.Address (graphNodeTransmitterRpcAddress, graphNodeTransmitterRpcPort)
 
 import           Enecuum.Testing
 import qualified Enecuum.Testing.RLens as RLens
@@ -35,7 +35,7 @@ acceptKBlock (KBlockCheckData numVar) kBlock = do
 powBlockAcceptorNode :: L.NodeDefinitionL ()
 powBlockAcceptorNode = do
     nodData <- KBlockCheckData <$> (L.scenario $ L.atomically $ L.newVar 1)
-    L.serving graphNodeRpcPort $ L.methodE $ acceptKBlock nodData
+    L.serving D.Rpc graphNodeTransmitterRpcPort $ L.methodE $ acceptKBlock nodData
 
 spec :: Spec
 spec = describe "PoW node test" $ do
@@ -44,7 +44,7 @@ spec = describe "PoW node test" $ do
   it "PoW node test, 1 iteration, in order" $ do
     runtime <- createTestRuntime
 
-    _ :: NodeRuntime <- startNode runtime graphNodeRpcAddress powBlockAcceptorNode
+    _ :: NodeRuntime <- startNode runtime graphNodeTransmitterRpcAddress powBlockAcceptorNode
     powNodeRuntime   :: NodeRuntime <- startNode runtime (D.Address "2" 1) $ powNode' False 1
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
@@ -55,7 +55,7 @@ spec = describe "PoW node test" $ do
   it "PoW node test, 2 iterations, in order" $ do
     runtime <- createTestRuntime
 
-    _ :: NodeRuntime <- startNode runtime graphNodeRpcAddress powBlockAcceptorNode
+    _ :: NodeRuntime <- startNode runtime graphNodeTransmitterRpcAddress powBlockAcceptorNode
     powNodeRuntime   :: NodeRuntime <- startNode runtime (D.Address "2" 1) $ powNode' False 2
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages

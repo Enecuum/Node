@@ -5,6 +5,7 @@ module Enecuum.Assets.Nodes.Client where
 
 import           Enecuum.Prelude
 
+import           Enecuum.Config
 import qualified Enecuum.Domain as D
 import qualified Data.Aeson as A
 import qualified Enecuum.Language as L
@@ -40,14 +41,14 @@ startForeverChainGenerationHandler _ = sendRequestToPoW M.ForeverChainGeneration
 startNBlockPacketGenerationHandler :: StartNBlockPacketGeneration -> L.NodeL Text
 startNBlockPacketGenerationHandler (StartNBlockPacketGeneration i) = sendRequestToPoW $ M.NBlockPacketGeneration i
 
-getLastKBlockHandler :: GetLastKBlock -> L.NodeL Text
-getLastKBlockHandler _ = do
-    res :: Either Text D.KBlock <- L.makeRpcRequest graphNodeRpcAddress M.GetLastKBlock
+getLastKBlockHandler :: D.Address -> GetLastKBlock -> L.NodeL Text
+getLastKBlockHandler address _ = do
+    res :: Either Text D.KBlock <- L.makeRpcRequest address M.GetLastKBlock
     pure . eitherToText $ res
 
-getWalletBalance :: GetWalletBalance -> L.NodeL Text
-getWalletBalance (GetWalletBalance walletId) = do
-    res :: Either Text M.WalletBalanceMsg <- L.makeRpcRequest graphNodeRpcAddress (M.GetWalletBalance walletId)
+getWalletBalance :: D.Address -> GetWalletBalance -> L.NodeL Text
+getWalletBalance address (GetWalletBalance walletId) = do
+    res :: Either Text M.WalletBalanceMsg <- L.makeRpcRequest address (M.GetWalletBalance walletId)
     pure . eitherToText $ res
 
 {-
@@ -60,19 +61,23 @@ Requests:
     {"method":"StopNode"}
 -}
 
-clientNode :: L.NodeDefinitionL ()
-clientNode = do
+clientNode :: Config -> L.NodeDefinitionL ()
+clientNode config = do
     L.logInfo "Client started"
-    stateVar <- L.scenario $ L.atomically $ L.newVar NodeActing
+    case readClientConfig config of
+        Nothing -> pure ()
+        Just address -> do
+            
+            stateVar <- L.scenario $ L.atomically $ L.newVar NodeActing
 
-    L.std $ do
-        L.stdHandler getLastKBlockHandler
-        L.stdHandler getWalletBalance
-        L.stdHandler startForeverChainGenerationHandler
-        L.stdHandler startNBlockPacketGenerationHandler
-        L.stdHandler $ L.stopNodeHandler' stateVar
-
-    L.awaitNodeFinished' stateVar
+            L.std $ do
+                L.stdHandler $ getLastKBlockHandler address
+                L.stdHandler $ getWalletBalance address
+                L.stdHandler startForeverChainGenerationHandler
+                L.stdHandler startNBlockPacketGenerationHandler
+                L.stdHandler $ L.stopNodeHandler' stateVar
+            
+            L.awaitNodeFinished' stateVar
 
 eitherToText :: Show a => Either Text a -> Text
 eitherToText (Left  a) = "Server error: " <> a

@@ -33,13 +33,11 @@ pingPong2 = TestCase $ do
 
     let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
     msgs <- readTVarIO tMsgs
-    msgs
-        `shouldBe` [ "Pong handle received: Pong {pong = 3}. Sending Ping {ping = 4}."
-                   , "Ping handle received: Ping {ping = 3}. Sending Pong {pong = 3}."
-                   , "Pong handle received: Pong {pong = 2}. Sending Ping {ping = 3}."
-                   , "Ping handle received: Ping {ping = 2}. Sending Pong {pong = 2}."
-                   , "Pong handle received: Pong {pong = 1}. Sending Ping {ping = 2}."
-                   , "Ping handle received: Ping {ping = 1}. Sending Pong {pong = 1}."
-                   , "Pong handle received: Pong {pong = 0}. Sending Ping {ping = 1}."
-                   , "Ping handle received: Ping {ping = 0}. Sending Pong {pong = 0}."
-                   ]
+    msgs `shouldContain` ["Pong handle received: Pong {pong = 3}. Sending Ping {ping = 4}."]
+    msgs `shouldContain` ["Ping handle received: Ping {ping = 3}. Sending Pong {pong = 3}."]
+    msgs `shouldContain` ["Pong handle received: Pong {pong = 2}. Sending Ping {ping = 3}."]
+    msgs `shouldContain` ["Ping handle received: Ping {ping = 2}. Sending Pong {pong = 2}."]
+    msgs `shouldContain` ["Pong handle received: Pong {pong = 1}. Sending Ping {ping = 2}."]
+    msgs `shouldContain` ["Ping handle received: Ping {ping = 1}. Sending Pong {pong = 1}."]
+    msgs `shouldContain` ["Pong handle received: Pong {pong = 0}. Sending Ping {ping = 1}."]
+    msgs `shouldContain` ["Ping handle received: Ping {ping = 0}. Sending Pong {pong = 0}."]

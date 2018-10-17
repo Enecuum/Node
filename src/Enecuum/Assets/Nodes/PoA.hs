@@ -7,9 +7,8 @@ module Enecuum.Assets.Nodes.PoA where
 
 import qualified Data.Text as T
 
-import           Enecuum.Assets.Nodes.Address
 import           Data.HGraph.StringHashable   (toHash)
-import           Enecuum.Assets.Nodes.Address (poaNodeAddress)
+import           Enecuum.Assets.Nodes.Address (poaNodeAddress, graphNodeTransmitterRpcAddress, graphNodeTransmitterUdpAddress)
 import qualified Enecuum.Domain               as D
 import qualified Enecuum.Language             as L
 import qualified Enecuum.Blockchain.Lens      as Lens
@@ -40,20 +39,17 @@ poaNode = do
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    L.process $ do
+    L.process $ forever $ do
         L.delay $ 100 * 1000
-        eKBlock <- L.makeRpcRequest graphNodeRpcAddress GetLastKBlock
-        case eKBlock of
-            Left  _     -> pure ()
-            Right block -> do
-                currentBlock <- L.atomically $ L.readVar (poaData ^. currentLastKeyBlock)
-                when (block /= currentBlock) $ do
-                    L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ "). Generating transactions & MBlock..."
-                    L.atomically $ L.writeVar (poaData ^. currentLastKeyBlock) block
-                    mBlock <- D.genRandMicroblock block
-                    L.logInfo
-                        $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
-                    _ :: Either Text SuccessMsg <- L.makeRpcRequest graphNodeRpcAddress mBlock
-                    pure ()
+        whenRightM (L.makeRpcRequest graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> do
+            currentBlock <- L.atomically $ L.readVar (poaData ^. currentLastKeyBlock)
+            when (block /= currentBlock) $ do
+                L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ "). Generating transactions & MBlock..."
+                L.atomically $ L.writeVar (poaData ^. currentLastKeyBlock) block
+                mBlock <- D.genRandMicroblock block
+                L.logInfo
+                    $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
+
+                void $ L.notify graphNodeTransmitterUdpAddress mBlock
 
     L.awaitNodeFinished poaData

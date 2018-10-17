@@ -12,40 +12,43 @@ import           Control.Concurrent.STM.TChan (TChan)
 import           Network.Socket
 import qualified Network.Socket as S hiding (recv)
 
-data TcpConnection = TcpConnection
+
+data Udp = Udp
+data Tcp = Tcp
+data Rpc = Rpc
+
+data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist
+
+data Protocol a = UDP | TCP
+
+data Connection a = Connection
     { _address :: Address
     }
     deriving (Show, Eq, Ord, Generic)
 
-data UdpConnection = UdpConnection
-    { _address :: Address
-    }
-    deriving (Show, Eq, Ord, Generic)
+data family ConnectionVar a
+data instance ConnectionVar Tcp
+    = TcpConnectionVar (TMVar (TChan Command))
 
+data instance ConnectionVar Udp
+    = ServerUdpConnectionVar S.SockAddr (TChan SendUdpMsgTo)
+    | ClientUdpConnectionVar (TMVar (TChan Command))
 
-data TcpConnectionVar = TcpConnectionVar (TMVar (TChan Comand))
-
-data UdpConnectionVar
-    = ServerUdpConnectionVar S.SockAddr (TChan SendMsg)
-    | ClientUdpConnectionVar (TMVar (TChan Comand))
-
-data Protocol     = UDP | TCP
 data ServerComand = StopServer
 
 type RawData = LByteString
 
-data SendMsg = SendMsg SockAddr LByteString
+data SendUdpMsgTo = SendUdpMsgTo SockAddr LByteString (MVar Bool)
 
-data Comand where
-    Close :: Comand
-    Send  :: RawData -> Comand
+data Command where
+    Close :: Command
+    Send  :: RawData -> MVar Bool -> Command
 
 newtype ServerHandle = ServerHandle (TChan ServerComand)
 
 data NetworkMsg = NetworkMsg Text A.Value deriving (Generic, ToJSON, FromJSON)
 
 type Host = String
-
 
 sockAddrToHost :: S.SockAddr -> Host
 sockAddrToHost sockAddr = case sockAddr of
@@ -62,3 +65,6 @@ data Address = Address
 
 formatAddress :: Address -> Text
 formatAddress (Address addr port) = T.pack addr <> ":" <> show port
+
+packetSize :: Int
+packetSize = 1024*4

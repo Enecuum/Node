@@ -11,7 +11,7 @@ import qualified Enecuum.Core.Language                as L
 import qualified Enecuum.Framework.Network.Language   as L
 import qualified Data.Text                            as Text
 import qualified Enecuum.Framework.Domain             as D
-import qualified Enecuum.Framework.Handler.Tcp.Language as L
+import qualified Enecuum.Framework.Handler.Network.Language as L
 import           Language.Haskell.TH.MakeFunctor
 
 -- | Allows to work with network: open and close connections, send requests.
@@ -21,15 +21,15 @@ data NetworkingF next where
   -- | Send RPC request and wait for the response.
   SendRpcRequest            :: D.Address -> D.RpcRequest -> (Either Text D.RpcResponse -> next) -> NetworkingF next
   -- | Send message to the connection.
-  SendMessage               :: D.TcpConnection -> D.RawData -> (() -> next)-> NetworkingF next
-  SendUdpMsgByConnection    :: D.UdpConnection -> D.RawData -> (() -> next)-> NetworkingF next
-  SendUdpMsgByAddress       :: D.Address       -> D.RawData -> (() -> next)-> NetworkingF next
+  SendTcpMsgByConnection    :: D.Connection D.Tcp -> D.RawData -> (Either D.NetworkError () -> next)-> NetworkingF next
+  SendUdpMsgByConnection    :: D.Connection D.Udp -> D.RawData -> (Either D.NetworkError () -> next)-> NetworkingF next
+  SendUdpMsgByAddress       :: D.Address          -> D.RawData -> (Either D.NetworkError () -> next)-> NetworkingF next
   -- | Eval core effect.
   EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF  next
 
 makeFunctorInstance ''NetworkingF
 
-type NetworkingL  next = Free NetworkingF next
+type NetworkingL next = Free NetworkingF next
 
 -- | Eval low-level networking script.
 evalNetwork :: L.NetworkL a -> NetworkingL a
@@ -39,33 +39,27 @@ evalNetwork network = liftF $ EvalNetwork network id
 sendRpcRequest :: D.Address -> D.RpcRequest -> NetworkingL (Either Text D.RpcResponse)
 sendRpcRequest address request = liftF $ SendRpcRequest address request id
 
--- | Send message to the connection.
-sendMessage :: D.TcpConnection -> D.RawData -> NetworkingL ()
-sendMessage conn msg = liftF $ SendMessage conn msg id
-
-sendUdpMsgByConnection :: D.UdpConnection -> D.RawData -> NetworkingL ()
-sendUdpMsgByConnection conn msg = liftF $ SendUdpMsgByConnection conn msg id
-
-sendUdpMsgByAddress :: D.Address -> D.RawData -> NetworkingL ()
-sendUdpMsgByAddress addr msg = liftF $ SendUdpMsgByAddress addr msg id
-
 -- | Send message to the reliable connection.
 -- TODO: distiguish reliable (TCP-like) connection from unreliable (UDP-like).
 -- TODO: make conversion to and from package.
+
+toNetworkMsg :: (Typeable a, ToJSON a) => a -> D.RawData
+toNetworkMsg msg = A.encode $ D.NetworkMsg (D.toTag msg) (toJSON msg)
+
+-- | Send message to the connection.
 class Send con m where
-    send :: (Typeable a, ToJSON a) => con -> a -> m ()
+    send :: (Typeable a, ToJSON a) => con -> a -> m (Either D.NetworkError ())
 
-instance Send D.TcpConnection (Free NetworkingF) where
-    send conn msg = sendMessage conn . A.encode $
-        D.NetworkMsg (D.toTag msg) (toJSON msg)
+instance Send (D.Connection D.Tcp) (Free NetworkingF) where
+    send conn msg = liftF $ SendTcpMsgByConnection conn (toNetworkMsg msg) id
 
-instance Send D.UdpConnection (Free NetworkingF) where
-    send conn msg = sendUdpMsgByConnection conn . A.encode $
-        D.NetworkMsg (D.toTag msg) (toJSON msg)
+instance Send (D.Connection D.Udp) (Free NetworkingF) where
+    send conn msg = liftF $ SendUdpMsgByConnection conn (toNetworkMsg msg) id
+instance SendUdp (Free NetworkingF) where
+    notify conn msg = liftF $ SendUdpMsgByAddress conn (toNetworkMsg msg) id
 
-instance Send D.Address (Free NetworkingF) where
-    send conn msg = sendUdpMsgByAddress conn . A.encode $
-        D.NetworkMsg (D.toTag msg) (toJSON msg)
+class SendUdp m where
+    notify :: (Typeable a, ToJSON a) => D.Address -> a -> m (Either D.NetworkError ())
 
 -- | Eval core effect.
 evalCoreEffectNetworkingF :: L.CoreEffect a -> NetworkingL a

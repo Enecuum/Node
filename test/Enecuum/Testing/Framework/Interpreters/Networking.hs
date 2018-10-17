@@ -28,7 +28,7 @@ relayRequest' nodeRt to req = do
         _                         -> error "Invalid network control result."
 
 -- | Send message to the connection.
-sendMessageToConnection :: T.NodeRuntime -> D.TcpConnection -> D.RawData -> IO (Either Text ())
+sendMessageToConnection :: T.NodeRuntime -> D.Connection D.Tcp  -> D.RawData -> IO (Either Text ())
 sendMessageToConnection nodeRt connection msg = do
     connections <- atomically $ readTMVar $ nodeRt ^. RLens.connections
     -- Checking is connection alive.
@@ -51,9 +51,9 @@ interpretNetworkingL :: T.NodeRuntime -> L.NetworkingF a -> IO a
 
 interpretNetworkingL nodeRt (L.SendRpcRequest toAddr req next) = next <$> relayRequest' nodeRt toAddr req
 
-interpretNetworkingL nodeRt (L.SendMessage    conn   msg next) = do
+interpretNetworkingL nodeRt (L.SendTcpMsgByConnection conn msg next) = do
     void $ sendMessageToConnection nodeRt conn msg
-    pure $ next ()
+    pure $ next $ Right ()
 
 interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) = next <$> Impl.runNetworkL nodeRt networkAction
 
