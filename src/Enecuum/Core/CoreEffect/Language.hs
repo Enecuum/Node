@@ -4,7 +4,6 @@ module Enecuum.Core.CoreEffect.Language
   , CoreEffect
   , evalLogger
   , evalRandom
-  -- , evalCrypto
   ) where
 
 import           Enecuum.Prelude
@@ -21,8 +20,6 @@ data CoreEffectF next where
   EvalLogger      :: LoggerL ()     -> (() -> next) -> CoreEffectF next
   -- | Random effect
   EvalRandom      :: ERandomL a     -> (a  -> next) -> CoreEffectF next
-  -- -- | Crypto effect
-  -- EvalCrypto      :: CryptoL a     -> (a  -> next) -> CoreEffectF next
   -- | ControlFlow effect
   EvalControlFlow :: ControlFlowL a -> (a  -> next) -> CoreEffectF next
 
@@ -39,9 +36,6 @@ instance Logger (Free CoreEffectF) where
 evalRandom :: ERandomL a -> CoreEffect a
 evalRandom g = liftF $ EvalRandom g id
 
--- evalCrypto :: CryptoL a -> CoreEffect a
--- evalCrypto g = liftF $ EvalCrypto g id
-
 evalControlFlow :: ControlFlowL a -> CoreEffect a
 evalControlFlow a = liftF $ EvalControlFlow a id
 
@@ -49,10 +43,6 @@ instance ERandom (Free CoreEffectF) where
   getRandomInt = evalRandom . getRandomInt
   getRandomByteString = evalRandom . getRandomByteString
   evalCoreCrypto = evalRandom . evalCoreCrypto
-
--- instance Crypto (Free CoreEffectF) where
---   generateKeyPair = evalCrypto $ generateKeyPair
---   sign key msg = evalCrypto $ sign key msg
 
 instance ControlFlow (Free CoreEffectF) where
   delay i = evalControlFlow $ delay i
