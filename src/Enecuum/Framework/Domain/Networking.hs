@@ -17,7 +17,7 @@ data Udp = Udp
 data Tcp = Tcp
 data Rpc = Rpc
 
-data NetworkError = ConnectClosed | TooBigMsg | NotExistAddress
+data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist
 
 data Protocol a = UDP | TCP
 
@@ -28,11 +28,11 @@ data Connection a = Connection
 
 data family ConnectionVar a
 data instance ConnectionVar Tcp
-    = TcpConnectionVar (TMVar (TChan Comand))
+    = TcpConnectionVar (TMVar (TChan Command))
 
 data instance ConnectionVar Udp
     = ServerUdpConnectionVar S.SockAddr (TChan SendUdpMsgTo)
-    | ClientUdpConnectionVar (TMVar (TChan Comand))
+    | ClientUdpConnectionVar (TMVar (TChan Command))
 
 data ServerComand = StopServer
 
@@ -40,9 +40,9 @@ type RawData = LByteString
 
 data SendUdpMsgTo = SendUdpMsgTo SockAddr LByteString (MVar Bool)
 
-data Comand where
-    Close :: Comand
-    Send  :: RawData -> MVar Bool -> Comand
+data Command where
+    Close :: Command
+    Send  :: RawData -> MVar Bool -> Command
 
 newtype ServerHandle = ServerHandle (TChan ServerComand)
 

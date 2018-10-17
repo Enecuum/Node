@@ -26,12 +26,12 @@ timeoutDelay = 5000
 stopServer :: ServerHandle -> STM ()
 stopServer chan = writeTChan chan D.StopServer
 
-tryTakeResponce :: Int -> MVar Bool -> IO (Either D.NetworkError ())
-tryTakeResponce time feedback = do
+tryTakeResponse :: Int -> MVar Bool -> IO (Either D.NetworkError ())
+tryTakeResponse time feedback = do
     res <- timeout time False (takeMVar feedback)
     case res of
         Right b | b -> pure $ Right ()
-        _           -> pure $ Left D.ConnectClosed
+        _           -> pure $ Left D.ConnectionClosed
 
 sendWithTimeOut conn msg = do
     feedback <- newEmptyMVar
@@ -40,7 +40,7 @@ sendWithTimeOut conn msg = do
         unless isEmpty $ do
             chan <- readTMVar conn
             writeTChan chan $ D.Send msg feedback
-    tryTakeResponce timeoutDelay feedback
+    tryTakeResponse timeoutDelay feedback
 
 class NetworkConnection protocol where
     startServer :: PortNumber -> Handlers protocol -> (D.Connection protocol -> D.ConnectionVar protocol -> IO ()) -> (Text -> IO ()) -> IO ServerHandle

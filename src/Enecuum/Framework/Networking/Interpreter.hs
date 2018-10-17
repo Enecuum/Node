@@ -33,13 +33,13 @@ interpretNetworkingL nr (L.SendTcpMsgByConnection (D.Connection conn) msg next) 
     m <- atomically $ readTVar $ nr ^. RL.tcpConnects
     case m ^. at conn of
         Just con -> next <$> Con.send con msg
-        Nothing  -> pure $ next $ Left D.ConnectClosed
+        Nothing  -> pure $ next $ Left D.ConnectionClosed
 
 interpretNetworkingL nr (L.SendUdpMsgByConnection (D.Connection conn) msg next) = do
     m <- atomically $ readTVar $ nr ^. RL.udpConnects
     case m ^. at conn of
         Just con -> next <$> Con.send con msg
-        Nothing  -> pure $ next $ Left D.ConnectClosed
+        Nothing  -> pure $ next $ Left D.ConnectionClosed
 
 interpretNetworkingL _ (L.SendUdpMsgByAddress adr msg next) =
     next <$> Udp.sendUdpMsg adr msg

@@ -38,13 +38,13 @@ instance NetworkConnection D.Udp where
 
     send (D.ClientUdpConnectionVar conn) msg
         | length msg <= D.packetSize = sendWithTimeOut conn msg
-        | otherwise                  = pure $ Left D.TooBigMsg
+        | otherwise                  = pure $ Left D.TooBigMessage
     send (D.ServerUdpConnectionVar sockAddr chan) msg
         | length msg <= D.packetSize = do
             feedback <- newEmptyMVar
             atomically $ writeTChan chan $ D.SendUdpMsgTo sockAddr msg feedback
-            tryTakeResponce 5000 feedback
-        | otherwise                  = pure $ Left D.TooBigMsg
+            tryTakeResponse 5000 feedback
+        | otherwise                  = pure $ Left D.TooBigMessage
 
     close (D.ClientUdpConnectionVar conn) = writeComand conn D.Close >> closeConn conn
     close (D.ServerUdpConnectionVar _ _)  = pure ()
@@ -66,17 +66,17 @@ runHandlers netConn handlers logger msg = case decode msg of
         \handler -> handler val netConn
     Nothing                     -> logger $ "Error in decoding en msg: " <> show msg
 
-writeComand :: TMVar (TChan D.Comand) -> D.Comand -> STM ()
+writeComand :: TMVar (TChan D.Command) -> D.Command -> STM ()
 writeComand conn cmd = unlessM (isEmptyTMVar conn) $ do
     chan <- readTMVar conn
     writeTChan chan cmd
 
 -- close connection
-closeConn :: TMVar (TChan D.Comand) -> STM ()
+closeConn :: TMVar (TChan D.Command) -> STM ()
 closeConn conn = unlessM (isEmptyTMVar conn) $ void $ takeTMVar conn
 
 -- | Read comand to connect manager
-readCommand :: TMVar (TChan D.Comand) -> IO (Maybe D.Comand)
+readCommand :: TMVar (TChan D.Command) -> IO (Maybe D.Command)
 readCommand conn = atomically $ do
     ok <- isEmptyTMVar conn
     if ok
@@ -87,10 +87,10 @@ readCommand conn = atomically $ do
 
 sendUdpMsg :: D.Address -> LByteString -> IO (Either D.NetworkError ())
 sendUdpMsg addr msg = if length msg > D.packetSize
-    then pure $ Left D.TooBigMsg
+    then pure $ Left D.TooBigMessage
     else tryM
         (runClient UDP addr $ \sock -> S.sendAll sock msg)
-        (pure $ Left D.NotExistAddress)
+        (pure $ Left D.AddressNotExist)
         (\_ -> pure $ Right ())
 
 readMessages :: D.Connection D.Udp -> Handlers D.Udp -> (Text -> IO ()) -> S.Socket -> IO ()
@@ -99,7 +99,7 @@ readMessages conn handlers logger sock = tryMR (S.recv sock $ toEnum D.packetSiz
     readMessages conn handlers logger sock
 
 -- | Manager for controlling of WS connect.
-connectManager :: TMVar (TChan D.Comand) -> S.Socket -> IO ()
+connectManager :: TMVar (TChan D.Command) -> S.Socket -> IO ()
 connectManager conn sock = readCommand conn >>= \case
     -- close connection
     Just D.Close      -> atomically $ unlessM (isEmptyTMVar conn) $ void $ takeTMVar conn

@@ -42,7 +42,7 @@ instance NetworkConnection D.Tcp where
 
     send (D.TcpConnectionVar conn) msg
         | length msg <= D.packetSize = sendWithTimeOut conn msg
-        | otherwise                  = pure $ Left D.TooBigMsg
+        | otherwise                  = pure $ Left D.TooBigMessage
 
 getAdress :: S.Socket -> IO D.Host
 getAdress socket = D.sockAddrToHost <$> S.getSocketName socket
@@ -74,7 +74,7 @@ connectManager conn@(D.TcpConnectionVar c) wsConn = readCommand conn >>= \case
     Nothing -> pure ()
 
 -- | Read comand to connect manager
-readCommand :: D.ConnectionVar D.Tcp -> IO (Maybe D.Comand)
+readCommand :: D.ConnectionVar D.Tcp -> IO (Maybe D.Command)
 readCommand (D.TcpConnectionVar conn) = atomically $ do
     ok <- isEmptyTMVar conn
     if ok
@@ -87,7 +87,7 @@ readCommand (D.TcpConnectionVar conn) = atomically $ do
 closeConn :: D.ConnectionVar D.Tcp -> STM ()
 closeConn (D.TcpConnectionVar conn) = unlessM (isEmptyTMVar conn) $ void $ takeTMVar conn
 
-writeComand :: D.ConnectionVar D.Tcp -> D.Comand -> STM ()
+writeComand :: D.ConnectionVar D.Tcp -> D.Command -> STM ()
 writeComand (D.TcpConnectionVar conn) cmd = unlessM (isEmptyTMVar conn) $ do
     chan <- readTMVar conn
     writeTChan chan cmd

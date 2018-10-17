@@ -46,7 +46,7 @@ spec = describe "Network tests" $ fromHUnitTest $ TestList
 newtype Ping   = Ping Int deriving (Generic, ToJSON, FromJSON)
 newtype Pong   = Pong Int deriving (Generic, ToJSON, FromJSON)
 newtype BigMsg = BigMsg [Int] deriving (Generic, ToJSON, FromJSON)
-data Succes    = Succes   deriving (Generic, ToJSON, FromJSON)
+data Success    = Success   deriving (Generic, ToJSON, FromJSON)
 
 bigMsg = BigMsg [1..5000]
 
@@ -69,32 +69,32 @@ createNodeRuntime :: IO Rt.NodeRuntime
 createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.createNodeRuntime
 
 testConnectFromTo prot1 prot2 serverPort succPort = do
-    runServingScenarion serverPort succPort $ \serverAddr succAdr nodeRt1 nodeRt2 -> do
+    runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
         runNodeDefinitionL nodeRt1 $ do
             L.serving prot1 serverPort $ pure ()
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
             conn                 <- L.open prot2 serverAddr $ pure ()
-            Left D.ConnectClosed <- L.send conn $ Succes
-            void $ L.notify succAdr Succes
+            Left D.ConnectionClosed <- L.send conn $ Success
+            void $ L.notify succAddr Success
 
 
 testConnectToNonexistentAddress prot succPort = do
-    runServingScenarion succPort succPort $ \_ succAdr nodeRt1 _ -> do
+    runServingScenarion succPort succPort $ \_ succAddr nodeRt1 _ -> do
         runNodeDefinitionL nodeRt1 $ do
             conn                 <- L.open prot (D.Address "127.0.0.1" 300) $ pure ()
-            Left D.ConnectClosed <- L.send conn Succes
-            void $ L.notify succAdr Succes
+            Left D.ConnectionClosed <- L.send conn Success
+            void $ L.notify succAddr Success
 
 testSendingMsgToNonexistentAddress succPort = do
-    runServingScenarion succPort succPort $ \_ succAdr nodeRt1 _ -> do
+    runServingScenarion succPort succPort $ \_ succAddr nodeRt1 _ -> do
         runNodeDefinitionL nodeRt1 $ do
-            Left D.NotExistAddress <- L.notify (D.Address "127.0.0.1" 300) Succes
-            void $ L.notify succAdr Succes
+            Left D.AddressNotExist <- L.notify (D.Address "127.0.0.1" 300) Success
+            void $ L.notify succAddr Success
 
 testSendingMsgToClosedConnection prot serverPort succPort =
-    runServingScenarion serverPort succPort $ \serverAddr succAdr nodeRt1 nodeRt2 -> do
+    runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
         runNodeDefinitionL nodeRt1 $ do
             L.serving prot serverPort $ pure ()
         
@@ -102,65 +102,65 @@ testSendingMsgToClosedConnection prot serverPort succPort =
         runNodeDefinitionL nodeRt2 $ do
             conn                 <- L.open prot serverAddr $ pure ()
             L.close conn
-            Left D.ConnectClosed <- L.send conn $ Succes
-            void $ L.notify succAdr Succes
+            Left D.ConnectionClosed <- L.send conn $ Success
+            void $ L.notify succAddr Success
 
 testSendingBigMsgByConnect prot serverPort succPort =
-    runServingScenarion serverPort succPort $ \serverAddr succAdr nodeRt1 nodeRt2 -> do
+    runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
         runNodeDefinitionL nodeRt1 $ do
             L.serving prot serverPort $ pure ()
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
             conn             <- L.open prot serverAddr $ pure ()
-            Left D.TooBigMsg <- L.send conn $ bigMsg
-            void $ L.notify succAdr Succes
+            Left D.TooBigMessage <- L.send conn $ bigMsg
+            void $ L.notify succAddr Success
 
 testSendingBigUdpMsgByAddress serverPort succPort =
-    runServingScenarion serverPort succPort $ \serverAddr succAdr nodeRt1 nodeRt2 -> do
+    runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
         runNodeDefinitionL nodeRt1 $ do
             L.serving D.Tcp serverPort $ pure ()
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
             Left _ <- L.notify serverAddr $ bigMsg
-            void $ L.notify succAdr Succes
+            void $ L.notify succAddr Success
 
 pingPongTest prot serverPort succPort = 
-    runServingScenarion serverPort succPort $ \serverAddr succAdr nodeRt1 nodeRt2 -> do
+    runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
         runNodeDefinitionL nodeRt1 $ do
             L.serving prot serverPort $ do
-                L.handler (pingHandle succAdr)
-                L.handler (pongHandle succAdr)
+                L.handler (pingHandle succAddr)
+                L.handler (pongHandle succAddr)
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
             conn <- L.open prot serverAddr $ do
-                L.handler (pingHandle succAdr)
-                L.handler (pongHandle succAdr)
+                L.handler (pingHandle succAddr)
+                L.handler (pongHandle succAddr)
             void $ L.send conn $ Ping 0
 
 
 runServingScenarion serverPort succPort f = TestCase $ do
     let serverAddr = D.Address "127.0.0.1" serverPort
-        succAdr    = D.Address "127.0.0.1" succPort
+        succAddr    = D.Address "127.0.0.1" succPort
     nodeRt1 <- createNodeRuntime
     nodeRt2 <- createNodeRuntime
-    void $ forkIO $ f serverAddr succAdr nodeRt1 nodeRt2
+    void $ forkIO $ f serverAddr succAddr nodeRt1 nodeRt2
     ok <- succesServer succPort
     runNodeDefinitionL nodeRt1 $ L.stopServing serverPort
     assertBool "" ok    
 
-pingHandle succAdr (Ping i) conn = do
+pingHandle succAddr (Ping i) conn = do
     when (i < 10) $ void $ L.send conn (Pong $ i + 1)
     when (i == 10) $ do
-        void $ L.notify succAdr Succes
+        void $ L.notify succAddr Success
         L.close conn
 
-pongHandle succAdr (Pong i) conn = do
+pongHandle succAddr (Pong i) conn = do
     when (i < 10) $ void $ L.send conn (Ping $ i + 1)
     when (i == 10) $ do
-        void $ L.notify succAdr Succes
+        void $ L.notify succAddr Success
         L.close conn
 
 emptFunc :: D.Connection D.Udp -> D.ConnectionVar D.Udp -> IO ()
@@ -172,7 +172,7 @@ succesServer port = do
     void $ forkIO $ do
         threadDelay 1000000
         putMVar mvar False
-    ch <- Con.startServer port (M.singleton (D.toTag Succes) (\_ _ -> putMVar mvar True)) emptFunc putTextLn
+    ch <- Con.startServer port (M.singleton (D.toTag Success) (\_ _ -> putMVar mvar True)) emptFunc putTextLn
     ok <- takeMVar mvar
     Enecuum.Prelude.atomically $ Con.stopServer ch
     pure ok
