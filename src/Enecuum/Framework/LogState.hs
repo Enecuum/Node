@@ -3,7 +3,8 @@ module Enecuum.Framework.LogState where
 import Enecuum.Prelude
 
 import qualified Enecuum.Framework.Domain.State as D
-import qualified Enecuum.Language as L
+import qualified Enecuum.Framework.Language as L
+import qualified Enecuum.Core.Language as L
 
 stateLog :: D.StateVar [Text] -> Text -> L.StateL ()
 stateLog logV msg = L.modifyVar logV (msg :)

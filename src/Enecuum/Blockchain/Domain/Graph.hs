@@ -10,8 +10,9 @@ import qualified Data.HGraph.THGraph     as G
 import           Data.HGraph.StringHashable (StringHash, toHash)
 
 import qualified Enecuum.Core.HGraph.Internal.Types as T
-import qualified Enecuum.Language as L
+import qualified Enecuum.Core.Language as L
 import qualified Enecuum.Core.Types as D
+import qualified Enecuum.Framework.Domain as D
 import qualified Enecuum.Blockchain.Domain.Microblock as D
 import qualified Enecuum.Blockchain.Domain.Transaction as D
 import qualified Enecuum.Blockchain.Domain.KBlock as D

@@ -33,22 +33,12 @@ data GraphNodeData = GraphNodeData
 
 makeFieldsNoPrefix ''GraphNodeData
 
--- | Get kBlock by Hash
-getKBlock :: D.StateVar [Text] -> D.BlockchainData -> StringHash -> L.StateL (Maybe D.KBlock)
-getKBlock logV bData hash = do
-    (res, mbMsg) <- L.withGraph bData $ do
-        maybeKBlock <- L.getNode hash
-        case maybeKBlock of
-            Just (D.HNode _ _ (D.fromContent -> D.KBlockContent kBlock) _ _) -> pure $ (Just kBlock, Nothing)
-            _ -> pure (Nothing, Just $ "KBlock not found by hash: " <> show hash)
-    whenJust mbMsg $ Log.stateLog logV
-    pure res
 
 -- Get Top kBlock
 getTopKeyBlock :: D.StateVar [Text] -> D.BlockchainData -> L.StateL D.KBlock
 getTopKeyBlock logV bData = do
     topNodeHash    <- L.readVar $ bData ^. Lens.curNode
-    Just topKBlock <- getKBlock logV bData topNodeHash
+    Just topKBlock <- L.getKBlock logV bData topNodeHash
     pure topKBlock
 
 -- | Move one block from pending to graph if it is possibly and remove it from pending.
@@ -93,7 +83,7 @@ addKBlock logV bData kBlock = do
 -- | Add microblock to graph
 addMBlock :: D.StateVar [Text] -> D.BlockchainData -> D.Microblock -> L.StateL Bool
 addMBlock logV bData mblock@(D.Microblock hash _ _ _) = do
-    kblock <- getKBlock logV bData hash
+    kblock <- L.getKBlock logV bData hash
 
     unless (isJust kblock) $ Log.stateLog logV $ "Can't add MBlock to the graph: KBlock not found (" +|| hash ||+ ")."
 
@@ -202,7 +192,7 @@ findBlocksByNumber logV bData num prev =
         | cNum < num -> pure []
         | cNum == num -> pure [prev]
         | cNum > num -> do
-            maybeNext <- getKBlock logV bData (prev ^. Lens.prevHash)
+            maybeNext <- L.getKBlock logV bData (prev ^. Lens.prevHash)
             case maybeNext of
                 Nothing -> error "Broken chain"
                 Just next -> (:) prev <$> findBlocksByNumber logV bData num next
