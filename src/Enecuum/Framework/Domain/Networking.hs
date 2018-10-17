@@ -17,6 +17,8 @@ data Udp = Udp
 data Tcp = Tcp
 data Rpc = Rpc
 
+data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist
+
 data Protocol a = UDP | TCP
 
 data Connection a = Connection
@@ -26,29 +28,27 @@ data Connection a = Connection
 
 data family ConnectionVar a
 data instance ConnectionVar Tcp
-    = TcpConnectionVar (TMVar (TChan Comand))
+    = TcpConnectionVar (TMVar (TChan Command))
 
 data instance ConnectionVar Udp
-    = ServerUdpConnectionVar S.SockAddr (TChan SendMsg)
-    | ClientUdpConnectionVar (TMVar (TChan Comand))
-
+    = ServerUdpConnectionVar S.SockAddr (TChan SendUdpMsgTo)
+    | ClientUdpConnectionVar (TMVar (TChan Command))
 
 data ServerComand = StopServer
 
 type RawData = LByteString
 
-data SendMsg = SendMsg SockAddr LByteString
+data SendUdpMsgTo = SendUdpMsgTo SockAddr LByteString (MVar Bool)
 
-data Comand where
-    Close :: Comand
-    Send  :: RawData -> Comand
+data Command where
+    Close :: Command
+    Send  :: RawData -> MVar Bool -> Command
 
 newtype ServerHandle = ServerHandle (TChan ServerComand)
 
 data NetworkMsg = NetworkMsg Text A.Value deriving (Generic, ToJSON, FromJSON)
 
 type Host = String
-
 
 sockAddrToHost :: S.SockAddr -> Host
 sockAddrToHost sockAddr = case sockAddr of
@@ -65,3 +65,6 @@ data Address = Address
 
 formatAddress :: Address -> Text
 formatAddress (Address addr port) = T.pack addr <> ":" <> show port
+
+packetSize :: Int
+packetSize = 1024*4

@@ -44,6 +44,7 @@ startServing nodeRt port initScript = do
         port
         ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
         (\(D.Connection addr) -> Impl.insertConnect (nodeRt ^. Impl.connectsLens) addr)
+        (Impl.logError' nodeRt)
     atomically $ setServerChan (nodeRt ^. RLens.servers) port s
     pure $ a
 
