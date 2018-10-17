@@ -22,7 +22,8 @@ import qualified Enecuum.Assets.Nodes.Messages              as A
 import qualified Enecuum.Assets.Nodes.Address               as A
 
 spec :: Spec
-spec = describe "Network tests" $ fromHUnitTest $ TestList []
+spec = describe "Network tests" $ fromHUnitTest $ TestList
+    [TestLabel "test net sync" testNodeNet]
 
 createNodeRuntime :: IO R.NodeRuntime
 createNodeRuntime = R.createVoidLoggerRuntime >>= R.createCoreRuntime >>= R.createNodeRuntime
@@ -33,6 +34,8 @@ startNode nodeDefinition = void $ forkIO $ do
     nodeRt <- createNodeRuntime
     runNodeDefinitionL nodeRt nodeDefinition
 
+makeIORpcRequest ::
+    (FromJSON b, ToJSON a, Typeable a) => D.Address -> a -> IO (Either Text b)
 makeIORpcRequest address msg = do
     nodeRt <- createNodeRuntime
     runNodeDefinitionL nodeRt $ L.evalNodeL $ L.makeRpcRequest address msg
@@ -42,8 +45,30 @@ testNodeNet = TestCase $ do
     startNode A.graphNodeTransmitter
     startNode A.powNode
     startNode A.poaNode
-    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration 2
+    threadDelay $ 1 * 1000 * 1000
+    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration 1
     threadDelay $ 3 * 1000 * 1000
     startNode A.graphNodeReceiver
     threadDelay $ 2 * 1000 * 1000
-    -- checking of sunc between graph nodes.
+    kBlock1 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
+    kBlock2                         <- makeIORpcRequest A.graphNodeReceiverRpcAddress    A.GetLastKBlock
+    walletBalance1 :: [Either Text A.WalletBalanceMsg] <- forM [1..5] $ \i -> do
+        makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetWalletBalance i
+    walletBalance2 :: [Either Text A.WalletBalanceMsg] <- forM [1..5] $ \i -> do
+        makeIORpcRequest A.graphNodeReceiverRpcAddress    $ A.GetWalletBalance i
+
+    shouldBe
+        [ "kBlock1 == kBlock2: " <> show (kBlock1 == kBlock2)
+        , "kBlock1 /= Right D.genesisKBlock: " <> show (kBlock1 /= Right D.genesisKBlock)
+        , "kBlock2 /= Right D.genesisKBlock: " <> show (kBlock2 /= Right D.genesisKBlock)
+        , "null (rights walletBalance1): " <> show (null (rights walletBalance1))
+        , show (rights walletBalance1) :: Text
+        ]
+        [ "kBlock1 == kBlock2: True"
+        , "kBlock1 /= Right D.genesisKBlock: True"
+        , "kBlock2 /= Right D.genesisKBlock: True"
+        , "null (rights walletBalance1): False"
+        , show (rights walletBalance2) :: Text
+        ]
+
+--rights' ls = [a| Right a <- ls]
