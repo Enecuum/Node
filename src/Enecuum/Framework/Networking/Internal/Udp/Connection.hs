@@ -26,49 +26,57 @@ import qualified Network.Socket.ByteString.Lazy as S
 import           Control.Monad.Extra
 
 instance NetworkConnection D.Udp where
-    startServer port handlers insertConnect = do
+    startServer port handlers insertConnect logger = do
         chan <- atomically newTChan
         void $ forkIO $ runUDPServer chan port $ \msg msgChan sockAddr -> do
             let host       = D.sockAddrToHost sockAddr
                 connection = D.Connection $ D.Address host port
     
             insertConnect connection (D.ServerUdpConnectionVar sockAddr msgChan)
-            runHandlers   connection handlers msg
+            runHandlers   connection handlers logger msg
         pure chan
 
-    send (D.ClientUdpConnectionVar conn)          msg = writeComand conn $ D.Send  msg
-    send (D.ServerUdpConnectionVar sockAddr chan) msg = writeTChan  chan $ D.SendMsg sockAddr msg
+    send (D.ClientUdpConnectionVar conn) msg
+        | length msg <= D.packetSize = sendWithTimeOut conn msg
+        | otherwise                  = pure $ Left D.TooBigMessage
+    send (D.ServerUdpConnectionVar sockAddr chan) msg
+        | length msg <= D.packetSize = do
+            feedback <- newEmptyMVar
+            atomically $ writeTChan chan $ D.SendUdpMsgTo sockAddr msg feedback
+            tryTakeResponse 5000 feedback
+        | otherwise                  = pure $ Left D.TooBigMessage
 
     close (D.ClientUdpConnectionVar conn) = writeComand conn D.Close >> closeConn conn
     close (D.ServerUdpConnectionVar _ _)  = pure ()
 
-    openConnect addr handlers = do
+    openConnect addr handlers logger = do
         conn <- atomically (newTMVar =<< newTChan)
         void $ forkIO $ do
             tryML
                 (runClient UDP addr $ \sock -> void $ race
-                    (readMessages (D.Connection addr) handlers sock)
+                    (readMessages (D.Connection addr) handlers logger sock)
                     (connectManager conn sock))
                 (atomically $ closeConn conn)
         pure $ D.ClientUdpConnectionVar conn
 
 
-runHandlers :: D.Connection D.Udp -> Handlers D.Udp -> LByteString -> IO ()
-runHandlers netConn handlers msg =
-    whenJust (decode msg) $ \(D.NetworkMsg tag val) ->
-        whenJust (handlers ^. at tag) $ \handler -> handler val netConn
+runHandlers :: D.Connection D.Udp -> Handlers D.Udp -> (Text -> IO ()) -> LByteString -> IO ()
+runHandlers netConn handlers logger msg = case decode msg of
+    Just (D.NetworkMsg tag val) -> whenJust (handlers ^. at tag) $
+        \handler -> handler val netConn
+    Nothing                     -> logger $ "Error in decoding en msg: " <> show msg
 
-writeComand :: TMVar (TChan D.Comand) -> D.Comand -> STM ()
+writeComand :: TMVar (TChan D.Command) -> D.Command -> STM ()
 writeComand conn cmd = unlessM (isEmptyTMVar conn) $ do
     chan <- readTMVar conn
     writeTChan chan cmd
 
 -- close connection
-closeConn :: TMVar (TChan D.Comand) -> STM ()
+closeConn :: TMVar (TChan D.Command) -> STM ()
 closeConn conn = unlessM (isEmptyTMVar conn) $ void $ takeTMVar conn
 
 -- | Read comand to connect manager
-readCommand :: TMVar (TChan D.Comand) -> IO (Maybe D.Comand)
+readCommand :: TMVar (TChan D.Command) -> IO (Maybe D.Command)
 readCommand conn = atomically $ do
     ok <- isEmptyTMVar conn
     if ok
@@ -77,23 +85,29 @@ readCommand conn = atomically $ do
             chan <- readTMVar conn
             Just <$> readTChan chan
 
-sendUdpMsg :: D.Address -> LByteString -> IO ()
-sendUdpMsg addr msg = runClient UDP addr $ \sock -> S.sendAll sock msg
+sendUdpMsg :: D.Address -> LByteString -> IO (Either D.NetworkError ())
+sendUdpMsg addr msg = if length msg > D.packetSize
+    then pure $ Left D.TooBigMessage
+    else tryM
+        (runClient UDP addr $ \sock -> S.sendAll sock msg)
+        (pure $ Left D.AddressNotExist)
+        (\_ -> pure $ Right ())
 
-readMessages :: D.Connection D.Udp -> Handlers D.Udp -> S.Socket -> IO ()
-readMessages conn handlers sock = tryMR (S.recv sock (1024 * 4)) $ \msg -> do 
-    runHandlers conn handlers msg
-    readMessages conn handlers sock
+readMessages :: D.Connection D.Udp -> Handlers D.Udp -> (Text -> IO ()) -> S.Socket -> IO ()
+readMessages conn handlers logger sock = tryMR (S.recv sock $ toEnum D.packetSize) $ \msg -> do 
+    runHandlers conn handlers logger msg
+    readMessages conn handlers logger sock
 
 -- | Manager for controlling of WS connect.
-connectManager :: TMVar (TChan D.Comand) -> S.Socket -> IO ()
+connectManager :: TMVar (TChan D.Command) -> S.Socket -> IO ()
 connectManager conn sock = readCommand conn >>= \case
     -- close connection
     Just D.Close      -> atomically $ unlessM (isEmptyTMVar conn) $ void $ takeTMVar conn
     -- send msg to alies node
-    Just (D.Send val) -> do
+    Just (D.Send val feedback) -> do
         tryM (S.sendAll sock val) (atomically $ closeConn conn) $
-            \_ -> connectManager conn sock
+            \_ -> do
+                tryPutMVar feedback True
+                connectManager conn sock
     -- conect is closed, stop of command reading
     Nothing           -> pure ()
-

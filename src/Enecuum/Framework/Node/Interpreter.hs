@@ -4,6 +4,7 @@ import Enecuum.Prelude
 
 import qualified Enecuum.Framework.State.Language         as L
 import qualified Enecuum.Framework.Node.Language          as L
+import qualified Enecuum.Core.Logger.Language             as L
 import qualified Enecuum.Framework.Networking.Interpreter as Impl
 import           Enecuum.Framework.Runtime                (NodeRuntime)
 import qualified Enecuum.Core.Interpreters                as Impl
@@ -76,7 +77,10 @@ openConnection nodeRt addr initScript = do
     m <- atomically $ newTVar mempty
     Net.runNetworkHandlerL m initScript
     handlers <- readTVarIO m
-    newCon   <- Con.openConnect addr ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
+    newCon   <- Con.openConnect
+        addr
+        ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
+        (logError' nodeRt)
     insertConnect (nodeRt ^. connectsLens) addr newCon
     pure $ (D.Connection addr)
 
@@ -95,3 +99,5 @@ setServerChan servs port chan = do
 -- | Runs node language. Runs interpreters for the underlying languages.
 runNodeL :: NodeRuntime -> L.NodeL a -> IO a
 runNodeL nodeRt = foldFree (interpretNodeL nodeRt)
+
+logError' nodeRt = runNodeL nodeRt . L.logError

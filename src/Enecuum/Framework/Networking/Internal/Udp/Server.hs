@@ -5,6 +5,7 @@ import           Control.Monad
 import           Enecuum.Prelude
 import           Network.Socket hiding (recvFrom, sendTo)
 import           Network.Socket.ByteString
+import           Control.Concurrent.STM.TMVar hiding (atomically)
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.Chan
 import           Enecuum.Domain as D
@@ -12,17 +13,19 @@ import           Control.Monad.Extra
 import           Data.ByteString.Lazy as B (toStrict, fromStrict)
 
 
-runUDPServer :: TChan ServerComand -> PortNumber -> (LByteString -> (TChan D.SendMsg) -> SockAddr -> IO ()) -> IO ()
+runUDPServer :: TChan ServerComand -> PortNumber -> (LByteString -> (TChan D.SendUdpMsgTo) -> SockAddr -> IO ()) -> IO ()
 runUDPServer chan port handler = bracket (listenUDP port) close $ \sock -> do
     respChan <- atomically $ newTChan
     let 
         sendMsg :: IO ()
         sendMsg = forever $ do
-            SendMsg reciver msg <- atomically $ readTChan respChan
-            tryMR (sendTo sock (B.toStrict msg) reciver) (\_ -> pure ()) 
+            SendUdpMsgTo reciver msg feedback <- atomically $ readTChan respChan
+            tryMR
+                (sendTo sock (B.toStrict msg) reciver)
+                (\_ -> void $ tryPutMVar feedback True) 
 
         talk :: IO ()
-        talk = forever $ tryMR (recvFrom sock (1024*4)) $
+        talk = forever $ tryMR (recvFrom sock D.packetSize) $
             \(msg, addr) -> handler (B.fromStrict msg) respChan addr
 
     finally (serv chan sendMsg talk) (close sock)

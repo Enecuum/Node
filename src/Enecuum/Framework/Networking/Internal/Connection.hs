@@ -20,13 +20,32 @@ type Handler protocol  = Value -> D.Connection protocol -> IO ()
 type Handlers protocol = Map Text (Handler protocol)
 type ServerHandle      = TChan D.ServerComand
 
+timeoutDelay = 5000
+
 -- | Stop the server
 stopServer :: ServerHandle -> STM ()
 stopServer chan = writeTChan chan D.StopServer
 
+tryTakeResponse :: Int -> MVar Bool -> IO (Either D.NetworkError ())
+tryTakeResponse time feedback = do
+    res <- timeout time False (takeMVar feedback)
+    case res of
+        Right b | b -> pure $ Right ()
+        _           -> pure $ Left D.ConnectionClosed
+
+sendWithTimeOut conn msg = do
+    feedback <- newEmptyMVar
+    atomically $ do
+        isEmpty <- isEmptyTMVar conn
+        unless isEmpty $ do
+            chan <- readTMVar conn
+            writeTChan chan $ D.Send msg feedback
+    tryTakeResponse timeoutDelay feedback
+
 class NetworkConnection protocol where
-    startServer :: PortNumber -> Handlers protocol -> (D.Connection protocol -> D.ConnectionVar protocol -> IO ()) -> IO ServerHandle
+    startServer :: PortNumber -> Handlers protocol -> (D.Connection protocol -> D.ConnectionVar protocol -> IO ()) -> (Text -> IO ()) -> IO ServerHandle
     -- | Send msg to node.
-    send        :: D.ConnectionVar protocol -> LByteString -> STM ()
+    send        :: D.ConnectionVar protocol -> LByteString -> IO (Either D.NetworkError ())
     close       :: D.ConnectionVar protocol -> STM ()
-    openConnect :: D.Address -> Handlers protocol -> IO (D.ConnectionVar protocol)
+    openConnect :: D.Address -> Handlers protocol -> (Text -> IO ()) -> IO (D.ConnectionVar protocol)
+
