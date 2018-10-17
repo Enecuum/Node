@@ -75,22 +75,22 @@ testConnectFromTo prot1 prot2 serverPort succPort = do
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            conn                             <- L.open prot2 serverAddr $ pure ()
-            Left "The connection is closed." <- L.send conn $ Succes
+            conn                 <- L.open prot2 serverAddr $ pure ()
+            Left D.ConnectClosed <- L.send conn $ Succes
             void $ L.notify succAdr Succes
 
 
 testConnectToNonexistentAddress prot succPort = do
     runServingScenarion succPort succPort $ \_ succAdr nodeRt1 _ -> do
         runNodeDefinitionL nodeRt1 $ do
-            conn                             <- L.open prot (D.Address "127.0.0.1" 300) $ pure ()
-            Left "The connection is closed." <- L.send conn Succes
+            conn                 <- L.open prot (D.Address "127.0.0.1" 300) $ pure ()
+            Left D.ConnectClosed <- L.send conn Succes
             void $ L.notify succAdr Succes
 
 testSendingMsgToNonexistentAddress succPort = do
     runServingScenarion succPort succPort $ \_ succAdr nodeRt1 _ -> do
         runNodeDefinitionL nodeRt1 $ do
-            Left "The address does not exist." <- L.notify (D.Address "127.0.0.1" 300) Succes
+            Left D.NotExistAddress <- L.notify (D.Address "127.0.0.1" 300) Succes
             void $ L.notify succAdr Succes
 
 testSendingMsgToClosedConnection prot serverPort succPort =
@@ -100,9 +100,9 @@ testSendingMsgToClosedConnection prot serverPort succPort =
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            conn                             <- L.open prot serverAddr $ pure ()
+            conn                 <- L.open prot serverAddr $ pure ()
             L.close conn
-            Left "The connection is closed." <- L.send conn $ Succes
+            Left D.ConnectClosed <- L.send conn $ Succes
             void $ L.notify succAdr Succes
 
 testSendingBigMsgByConnect prot serverPort succPort =
@@ -112,8 +112,8 @@ testSendingBigMsgByConnect prot serverPort succPort =
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            conn                           <- L.open prot serverAddr $ pure ()
-            Left "The message is too big." <- L.send conn $ bigMsg
+            conn             <- L.open prot serverAddr $ pure ()
+            Left D.TooBigMsg <- L.send conn $ bigMsg
             void $ L.notify succAdr Succes
 
 testSendingBigUdpMsgByAddress serverPort succPort =

@@ -38,13 +38,13 @@ instance NetworkConnection D.Udp where
 
     send (D.ClientUdpConnectionVar conn) msg
         | length msg <= D.packetSize = sendWithTimeOut conn msg
-        | otherwise                  = pure $ Left "The message is too big."
+        | otherwise                  = pure $ Left D.TooBigMsg
     send (D.ServerUdpConnectionVar sockAddr chan) msg
         | length msg <= D.packetSize = do
-            var <- newEmptyMVar
-            atomically $ writeTChan chan $ D.SendUdpMsgTo sockAddr msg var
-            readBool 5000 var
-        | otherwise                  = pure $ Left "The message is too big."
+            feedback <- newEmptyMVar
+            atomically $ writeTChan chan $ D.SendUdpMsgTo sockAddr msg feedback
+            tryTakeResponce 5000 feedback
+        | otherwise                  = pure $ Left D.TooBigMsg
 
     close (D.ClientUdpConnectionVar conn) = writeComand conn D.Close >> closeConn conn
     close (D.ServerUdpConnectionVar _ _)  = pure ()
@@ -85,12 +85,12 @@ readCommand conn = atomically $ do
             chan <- readTMVar conn
             Just <$> readTChan chan
 
-sendUdpMsg :: D.Address -> LByteString -> IO (Either Text ())
+sendUdpMsg :: D.Address -> LByteString -> IO (Either D.NetworkError ())
 sendUdpMsg addr msg = if length msg > D.packetSize
-    then pure $ Left "The message is too big."
+    then pure $ Left D.TooBigMsg
     else tryM
         (runClient UDP addr $ \sock -> S.sendAll sock msg)
-        (pure $ Left "The address does not exist.")
+        (pure $ Left D.NotExistAddress)
         (\_ -> pure $ Right ())
 
 readMessages :: D.Connection D.Udp -> Handlers D.Udp -> (Text -> IO ()) -> S.Socket -> IO ()
@@ -104,10 +104,10 @@ connectManager conn sock = readCommand conn >>= \case
     -- close connection
     Just D.Close      -> atomically $ unlessM (isEmptyTMVar conn) $ void $ takeTMVar conn
     -- send msg to alies node
-    Just (D.Send val var) -> do
+    Just (D.Send val feedback) -> do
         tryM (S.sendAll sock val) (atomically $ closeConn conn) $
             \_ -> do
-                tryPutMVar var True
+                tryPutMVar feedback True
                 connectManager conn sock
     -- conect is closed, stop of command reading
     Nothing           -> pure ()

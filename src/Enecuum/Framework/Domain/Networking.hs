@@ -17,6 +17,8 @@ data Udp = Udp
 data Tcp = Tcp
 data Rpc = Rpc
 
+data NetworkError = ConnectClosed | TooBigMsg | NotExistAddress
+
 data Protocol a = UDP | TCP
 
 data Connection a = Connection

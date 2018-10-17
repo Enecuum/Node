@@ -19,10 +19,10 @@ runUDPServer chan port handler = bracket (listenUDP port) close $ \sock -> do
     let 
         sendMsg :: IO ()
         sendMsg = forever $ do
-            SendUdpMsgTo reciver msg var <- atomically $ readTChan respChan
+            SendUdpMsgTo reciver msg feedback <- atomically $ readTChan respChan
             tryMR
                 (sendTo sock (B.toStrict msg) reciver)
-                (\_ -> void $ tryPutMVar var True) 
+                (\_ -> void $ tryPutMVar feedback True) 
 
         talk :: IO ()
         talk = forever $ tryMR (recvFrom sock D.packetSize) $
