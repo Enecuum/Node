@@ -6,19 +6,7 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Enecuum.Blockchain.Domain.Crypto.Keys
-  ( ECDSA.Signature
-  , compressPublicKey
-  , decompressPublicKey
-  , getPublicKey
-  , getPrivateKey
-  , fromPublicKey256k1
-  , publicKey256k1
-  , PublicKey(..)
-  , PrivateKey(..)
-  , KeyPair(..)
-  , generateNewRandomAnonymousKeyPair
-  ) where
+module Enecuum.Blockchain.Domain.Crypto.Keys where  
 
 import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA    as ECDSA
 import           "cryptonite" Crypto.PubKey.ECC.Generate
