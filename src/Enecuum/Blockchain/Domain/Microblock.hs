@@ -12,7 +12,7 @@ import qualified Data.ByteString.Base64                as Base64
 import qualified Data.Serialize                        as S
 import           Enecuum.Blockchain.Domain.Crypto
 import           Enecuum.Blockchain.Domain.Transaction (Transaction)
-import qualified Enecuum.Language                      as L
+import qualified Enecuum.Core.Language                      as L
 
 data Microblock = Microblock
     { _keyBlock     :: StringHash

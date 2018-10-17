@@ -10,7 +10,8 @@ import           Enecuum.Prelude
 -- import           Data.HGraph.StringHashable       (StringHash (..), StringHashable, toHash)
 import           Enecuum.Blockchain.Domain.Crypto
 import           Enecuum.Blockchain.Domain.Types
-import qualified Enecuum.Language                 as L
+--import qualified Enecuum.Blockchain.Language                 as L
+import qualified Enecuum.Core.Language                 as L
 
 
 type OwnerPubKey = PublicKey
