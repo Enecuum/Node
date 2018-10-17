@@ -25,11 +25,6 @@ spec = do
         it "Verify bytestring json serialization" $ property prop_JsonEncoding
         it "Verify bytestring Base64 serialization" $ property prop_Base64Encoding
 
-testRandomByteString :: Test
-testRandomByteString = TestCase $ do
-    bs <- replicateM 1000 $ I.runERandomL $ L.getRandomByteString =<< L.getRandomInt (1,1000)
-    map (A.decode . A.encode) bs `shouldBe` map Just bs
-
 prop_JsonEncoding :: ByteString -> Bool
 prop_JsonEncoding bs = (A.decode . A.encode) bs == Just bs
 

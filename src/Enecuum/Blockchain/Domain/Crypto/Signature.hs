@@ -33,19 +33,6 @@ import           Enecuum.Prelude                       hiding (pack, unpack, (.=
 sign :: (Serialize msg, MonadRandom m) => Enq.PrivateKey -> msg -> m ECDSA.Signature
 sign priv msg = ECDSA.sign (Enq.getPrivateKey priv) SHA3_256 (S.encode msg)
 
-
-
-intToBase64Text :: Integer -> Text
-intToBase64Text i = base64ToText $ show i
-
-base64TextToInt :: (MonadPlus m) => Text -> m Integer
-base64TextToInt b = do
-    let bs = textToBase64 b
-    case fromByteString bs of
-        Just i -> pure i
-        _      -> mzero
-
-
 instance ToJSON ECDSA.Signature where
   toJSON t = A.object [
     "sign_r" .= intToBase64Text  (ECDSA.sign_r t),
@@ -58,7 +45,25 @@ instance FromJSON ECDSA.Signature where
     pure $ ECDSA.Signature s_r s_s
   parseJSON inv        = typeMismatch "Signature" inv
 
+instance Serialize ECDSA.Signature where
+  put (ECDSA.Signature a b) = S.put (CompactInteger a) *> S.put (CompactInteger b)
+  get = do
+      CompactInteger a <- S.get
+      CompactInteger b <- S.get
+      pure $ ECDSA.Signature a b
+
+intToBase64Text :: Integer -> Text
+intToBase64Text i = base64ToText $ show i
+
+base64TextToInt :: (MonadPlus m) => Text -> m Integer
+base64TextToInt b = do
+    let bs = textToBase64 b
+    case fromByteString bs of
+        Just i -> pure i
+        _      -> mzero
+
 newtype CompactInteger = CompactInteger Integer deriving (Eq, Show, Enum, Num, Integral, Real, Ord, Bits, A.ToJSON, A.FromJSON, Hashable)
+
 -- The first number encode length and sign, assuming that we don't have numbers
 -- longer that we can encode to 128 byte
 instance Serialize CompactInteger where
@@ -73,10 +78,7 @@ instance Serialize CompactInteger where
       bytes <- forM [1..abs lenSig] $ \_ -> S.get :: Get Word8
       pure $! roll bytes * (toEnum.fromEnum.signum $ lenSig)
 
-
---
--- Fold and unfold an Integer to and from a list of its bytes
---
+-- | Fold and unfold an Integer to and from a list of its bytes
 unroll :: (Integral a, Bits a) => a -> [Word8]
 unroll = unfoldr step
   where
@@ -97,9 +99,4 @@ nrBits k =
           where mid = (lo + hi) `div` 2
   in  findNr (expMax `div` 2) expMax
 
-instance Serialize ECDSA.Signature where
-  put (ECDSA.Signature a b) = S.put (CompactInteger a) *> S.put (CompactInteger b)
-  get = do
-      CompactInteger a <- S.get
-      CompactInteger b <- S.get
-      pure $ ECDSA.Signature a b
+

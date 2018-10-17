@@ -19,6 +19,7 @@ data ERandomF next where
     EvalCoreCrypto :: CryptoL a -> (a -> next) -> ERandomF next
     -- | Get Int from range
     GetRandomInt :: (Int, Int) -> (Int -> next) -> ERandomF next
+    -- | Get Random ByteString
     GetRandomByteString :: Int -> ( BSI.ByteString -> next) -> ERandomF next
 
 makeFunctorInstance ''ERandomF
