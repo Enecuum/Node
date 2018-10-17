@@ -47,7 +47,8 @@ evalControlFlow a = liftF $ EvalControlFlow a id
 
 instance ERandom (Free CoreEffectF) where
   getRandomInt = evalRandom . getRandomInt
-
+  getRandomByteString = evalRandom . getRandomByteString
+  evalCoreCrypto = evalRandom . evalCoreCrypto
 
 -- instance Crypto (Free CoreEffectF) where
 --   generateKeyPair = evalCrypto $ generateKeyPair
