@@ -12,7 +12,7 @@ import qualified Data.ByteString.Base64                as Base64
 import qualified Data.Serialize                        as S
 import           Enecuum.Blockchain.Domain.Crypto
 import           Enecuum.Blockchain.Domain.Transaction (Transaction)
-import qualified Enecuum.Language                      as L
+import qualified Enecuum.Core.Language                      as L
 
 data Microblock = Microblock
     { _keyBlock     :: StringHash
@@ -48,7 +48,7 @@ signMicroblock hashofKeyBlock tx publisherPubKey publisherPrivKey = do
             , _transactions = tx
             , _publisher = publisherPubKey
             }
-    signature <- L.sign publisherPrivKey mb
+    signature <- L.evalCoreCrypto $ L.sign publisherPrivKey mb
     pure $ Microblock
             { _keyBlock = hashofKeyBlock
             , _transactions = tx

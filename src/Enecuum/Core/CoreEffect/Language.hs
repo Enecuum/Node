@@ -8,10 +8,9 @@ module Enecuum.Core.CoreEffect.Language
 
 import           Enecuum.Prelude
 
-import           Enecuum.Core.Logger.Language (Logger, LoggerL, logMessage)
-import           Enecuum.Core.Random.Language 
---(ERandom, ERandomL, getRandomInt, evalRand, evalMonadRandom, NRandom, NRandomL)
-import           Enecuum.Core.ControlFlow.Language (ControlFlowL, ControlFlow(..))
+import           Enecuum.Core.Logger.Language      (Logger, LoggerL, logMessage)
+import           Enecuum.Core.Random.Language
+import           Enecuum.Core.ControlFlow.Language (ControlFlow (..), ControlFlowL)
 import           Enecuum.Core.Database.Language (DatabaseL, Database(..))
 import           Language.Haskell.TH.MakeFunctor (makeFunctorInstance)
 
@@ -44,17 +43,8 @@ evalControlFlow a = liftF $ EvalControlFlow a id
 
 instance ERandom (Free CoreEffectF) where
   getRandomInt = evalRandom . getRandomInt
-  evalRand r g = evalRandom $ evalRand r g
-  generateKeyPair = evalRandom $ generateKeyPair
-  sign key msg = evalRandom $ sign key msg  
-  -- evalMonadRandom = evalRandom $ evalMonadRandom
-
--- evalRandomN :: NRandomL a -> CoreEffect a
--- evalRandomN g = undefined -- liftF $ EvalMonadRandom g id
--- -- evalRandomN g = liftF $ EvalMonadRandom g id
-
--- instance NRandom (Free CoreEffectF) where  
---   evalMonadRandom = evalRandomN $ evalMonadRandom
+  getRandomByteString = evalRandom . getRandomByteString
+  evalCoreCrypto = evalRandom . evalCoreCrypto
 
 instance ControlFlow (Free CoreEffectF) where
   delay i = evalControlFlow $ delay i

@@ -11,7 +11,6 @@ import qualified Enecuum.Core.Language                 as L
 import qualified Enecuum.Framework.Domain              as D
 import qualified Enecuum.Framework.Node.Language       as L
 import qualified Enecuum.Framework.Networking.Language as L
-import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Framework.Handler.Rpc.Language  (RpcHandlerL)
 import           Enecuum.Framework.Handler.Network.Language
 import           Enecuum.Framework.Handler.Cmd.Language
@@ -30,12 +29,12 @@ data NodeDefinitionF next where
     -- | Eval core effect.
     EvalCoreEffectNodeDefinitionF :: L.CoreEffect a -> (a -> next) -> NodeDefinitionF next
     -- | Start serving of RPC requests.
-    ServingRpc     :: PortNumber -> RpcHandlerL L.NodeL () -> (() -> next) -> NodeDefinitionF next
+    ServingRpc     :: D.PortNumber -> RpcHandlerL L.NodeL () -> (() -> next) -> NodeDefinitionF next
     -- | Stop serving of Rpc server.
-    StopServing    :: PortNumber -> (() -> next) -> NodeDefinitionF next
+    StopServing    :: D.PortNumber -> (() -> next) -> NodeDefinitionF next
     -- | Start serving on reliable-kind connection.
-    ServingTcp     :: PortNumber -> NetworkHandlerL D.Tcp L.NodeL () -> (() -> next)-> NodeDefinitionF  next
-    ServingUdp     :: PortNumber -> NetworkHandlerL D.Udp L.NodeL () -> (() -> next)-> NodeDefinitionF  next
+    ServingTcp     :: D.PortNumber -> NetworkHandlerL D.Tcp L.NodeL () -> (() -> next)-> NodeDefinitionF  next
+    ServingUdp     :: D.PortNumber -> NetworkHandlerL D.Udp L.NodeL () -> (() -> next)-> NodeDefinitionF  next
     Std            :: CmdHandlerL () -> (() -> next) -> NodeDefinitionF  next
     -- Process interface. TODO: It's probably wise to move it to own language.
     -- | Fork a process for node.
@@ -90,7 +89,7 @@ scenario :: L.NodeL a -> NodeDefinitionL a
 scenario = evalNodeL
 
 class Serving c a | c -> a where
-    serving :: c -> PortNumber -> a -> NodeDefinitionL ()
+    serving :: c -> D.PortNumber -> a -> NodeDefinitionL ()
 
 instance Serving D.Rpc (RpcHandlerL L.NodeL ()) where
     serving _ port handlersF = servingRpc port handlersF
@@ -113,16 +112,16 @@ instance L.SendUdp (Free NodeDefinitionF) where
 
 -- | Starts RPC server.
 {-# DEPRECATED servingRpc "Use L.serving" #-}
-servingRpc :: PortNumber -> RpcHandlerL L.NodeL () -> NodeDefinitionL ()
+servingRpc :: D.PortNumber -> RpcHandlerL L.NodeL () -> NodeDefinitionL ()
 servingRpc port handlersF = liftF $ ServingRpc port handlersF id
 
 -- | Stops server on the specified port.
 -- TODO: What is the behavior when server is absent?
-stopServing :: PortNumber -> NodeDefinitionL ()
+stopServing :: D.PortNumber -> NodeDefinitionL ()
 stopServing port = liftF $ StopServing port id
 
 -- | Starts server (TCP / WS - like)
-servingMsg :: PortNumber -> NetworkHandlerL D.Tcp L.NodeL () -> NodeDefinitionL ()
+servingMsg :: D.PortNumber -> NetworkHandlerL D.Tcp L.NodeL () -> NodeDefinitionL ()
 servingMsg port handlersF = liftF $ ServingTcp port handlersF id
 
 
@@ -130,11 +129,9 @@ instance L.Logger (Free NodeDefinitionF) where
     logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg
 
 instance L.ERandom (Free NodeDefinitionF) where
+    evalCoreCrypto = evalCoreEffectNodeDefinitionF . L.evalCoreCrypto
     getRandomInt =  evalCoreEffectNodeDefinitionF . L.getRandomInt
     getRandomByteString = evalCoreEffectNodeDefinitionF . L.getRandomByteString
-    evalRand r g = evalCoreEffectNodeDefinitionF  $ L.evalRand r g
-    generateKeyPair = evalCoreEffectNodeDefinitionF $ L.generateKeyPair
-    sign key msg = evalCoreEffectNodeDefinitionF $ L.sign key msg
 
 instance L.ControlFlow (Free NodeDefinitionF) where
     delay = evalCoreEffectNodeDefinitionF . L.delay

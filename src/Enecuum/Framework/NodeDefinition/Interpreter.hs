@@ -7,7 +7,7 @@ import           Control.Concurrent.STM.TChan
 import           Control.Concurrent                 (killThread)
 import qualified Network.Socket.ByteString.Lazy     as S
 import qualified Network.Socket                     as S hiding (recv)
-import           Enecuum.Legacy.Service.Network.Base
+
 import           Enecuum.Framework.Networking.Internal.Tcp.Server
 import           Enecuum.Framework.Node.Interpreter (runNodeL, setServerChan)
 import           Enecuum.Framework.Runtime                 (NodeRuntime, getNextId)
@@ -25,6 +25,7 @@ import qualified Enecuum.Framework.Networking.Internal.Connection as Con
 import           Enecuum.Framework.Handler.Cmd.Interpreter as Cmd
 import           Data.Aeson.Lens
 import qualified Data.Text as T
+import           System.Console.Haskeline
 
 addProcess :: NodeRuntime -> D.ProcessPtr a -> ThreadId -> IO ()
 addProcess nodeRt pPtr threadId = do
@@ -35,7 +36,7 @@ addProcess nodeRt pPtr threadId = do
 
 startServing
     :: (Impl.ConnectsLens a, Con.NetworkConnection a)
-    => NodeRuntime -> PortNumber -> L.NetworkHandlerL a (Free L.NodeF) b -> IO b
+    => NodeRuntime -> S.PortNumber -> L.NetworkHandlerL a (Free L.NodeF) b -> IO b
 startServing nodeRt port initScript = do
     m        <- atomically $ newTVar mempty
     a        <- Net.runNetworkHandlerL m initScript
@@ -82,10 +83,16 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
     a <- runCmdHandlerL m handlers
     void $ forkIO $ do
         m' <- readTVarIO m
-        forever $ do
-            line <- getLine
-            res  <- callHandler nodeRt m' line
-            putTextLn res
+        let loop = do
+                minput <- getInputLine ""
+                case minput of
+                    Nothing      -> pure ()
+                    Just    line -> do
+                        res <- liftIO $ callHandler nodeRt m' $ T.pack line
+                        outputStrLn $ T.unpack res
+                        loop
+                             
+        runInputT defaultSettings loop
     pure $ next ()
 
 -- TODO: make a separate language and use its interpreter in test runtime too.
@@ -119,7 +126,7 @@ callHandler nodeRt methods msg = do
         Left  (_ :: SomeException) -> pure "Error of request parsing."
 
 -- TODO: treadDelay if server in port exist!!!
-takeServerChan :: TVar (Map PortNumber (TChan D.ServerComand)) -> PortNumber -> STM (TChan D.ServerComand)
+takeServerChan :: TVar (Map S.PortNumber (TChan D.ServerComand)) -> S.PortNumber -> STM (TChan D.ServerComand)
 takeServerChan servs port = do
     chan <- newTChan
     Impl.setServerChan servs port chan
@@ -127,7 +134,7 @@ takeServerChan servs port = do
 
 
 runRpcServer
-    :: TChan D.ServerComand -> PortNumber -> (t -> IO D.RpcResponse) -> TVar (Map Text (A.Value -> Int -> t)) -> IO ()
+    :: TChan D.ServerComand -> S.PortNumber -> (t -> IO D.RpcResponse) -> TVar (Map Text (A.Value -> Int -> t)) -> IO ()
 runRpcServer chan port runner methodVar = do
     methods <- readTVarIO methodVar
     runTCPServer chan port $ \sock -> do

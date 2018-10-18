@@ -56,6 +56,12 @@ evalCoreEffectNodeF :: L.CoreEffect a -> NodeL a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
 
+withConnection protocol address f = do
+    con <- open protocol address $ pure ()
+    a <- f con
+    close con
+    pure a
+
 class Connection a con where
     close :: D.Connection con -> a ()
     open  :: con -> D.Address -> NetworkHandlerL con NodeL () -> a (D.Connection con)
@@ -82,11 +88,9 @@ instance L.Logger (Free NodeF) where
     logMessage level msg = evalCoreEffectNodeF $ L.logMessage level msg
 
 instance L.ERandom (Free NodeF) where
+    evalCoreCrypto = evalCoreEffectNodeF . L.evalCoreCrypto
     getRandomInt = evalCoreEffectNodeF . L.getRandomInt
     getRandomByteString = evalCoreEffectNodeF . L.getRandomByteString
-    evalRand r g = evalCoreEffectNodeF $ L.evalRand r g
-    generateKeyPair = evalCoreEffectNodeF $ L.generateKeyPair
-    sign key msg = evalCoreEffectNodeF $ L.sign key msg
 
 instance L.ControlFlow (Free NodeF) where
     delay =  evalCoreEffectNodeF . L.delay

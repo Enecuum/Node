@@ -9,16 +9,16 @@ networkNode3Addr = D.Address "127.0.0.1" 2003
 networkNode4Addr = D.Address "127.0.0.1" 2004
 nnAddr = D.Address "127.0.0.1" 2007
 
-graphNodeTransmitterRpcPort, graphNodeTransmitterUdpPort :: D.PortNumber
+graphNodeTransmitterRpcPort, graphNodeTransmitterTcpPort :: D.PortNumber
 graphNodeTransmitterRpcPort = 2008
-graphNodeTransmitterUdpPort = 3001
+graphNodeTransmitterTcpPort = 3001
 
 graphNodeReceiverRpcPort :: D.PortNumber
 graphNodeReceiverRpcPort    = 2009
 
-graphNodeTransmitterRpcAddress, graphNodeTransmitterUdpAddress :: D.Address
+graphNodeTransmitterRpcAddress, graphNodeTransmitterTcpAddress :: D.Address
 graphNodeTransmitterRpcAddress = D.Address "127.0.0.1" graphNodeTransmitterRpcPort
-graphNodeTransmitterUdpAddress = D.Address "127.0.0.1" graphNodeTransmitterUdpPort
+graphNodeTransmitterTcpAddress = D.Address "127.0.0.1" graphNodeTransmitterTcpPort
 
 graphNodeReceiverRpcAddress :: D.Address
 graphNodeReceiverRpcAddress = D.Address "127.0.0.1" graphNodeReceiverRpcPort
