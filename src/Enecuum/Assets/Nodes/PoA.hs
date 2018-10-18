@@ -15,6 +15,7 @@ import qualified Enecuum.Blockchain.Lens      as Lens
 import           Enecuum.Prelude
 import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
+import qualified Enecuum.Assets.Nodes.Generation as A
 
 data PoANodeData = PoANodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock
@@ -46,7 +47,7 @@ poaNode = do
             when (block /= currentBlock) $ do
                 L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ "). Generating transactions & MBlock..."
                 L.atomically $ L.writeVar (poaData ^. currentLastKeyBlock) block
-                mBlock <- D.genRandMicroblock block
+                mBlock <- A.genRandMicroblock block
                 L.logInfo
                     $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
 

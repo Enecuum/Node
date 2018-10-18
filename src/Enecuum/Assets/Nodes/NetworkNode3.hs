@@ -1,27 +1,24 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell        #-}
 
 module Enecuum.Assets.Nodes.NetworkNode3 where
 
-import           Enecuum.Prelude
-
-import qualified Data.Aeson                    as A
-import qualified Data.Map                      as Map
-import           Control.Lens                  (makeFieldsNoPrefix)
-
-import           Enecuum.Config                (Config)
-import qualified Enecuum.Domain                as D
-import qualified Enecuum.Language              as L
-import qualified Enecuum.Blockchain.Lens       as Lens
-import qualified Enecuum.Framework.Lens        as Lens
-import qualified Enecuum.Core.Lens             as Lens
-import qualified Data.Text as Text
-
-
-import           Enecuum.Assets.Nodes.RPC
+import           Control.Lens                         (makeFieldsNoPrefix)
+import qualified Data.Aeson                           as A
+import qualified Data.Map                             as Map
+import qualified Data.Text                            as Text
 import           Enecuum.Assets.Nodes.Address
+import qualified Enecuum.Assets.Nodes.Generation      as A
+import           Enecuum.Assets.Nodes.RPC
 import           Enecuum.Assets.Nodes.Types.SyncChain
+import qualified Enecuum.Blockchain.Lens              as Lens
+import           Enecuum.Config                       (Config)
+import qualified Enecuum.Core.Lens                    as Lens
+import qualified Enecuum.Domain                       as D
+import qualified Enecuum.Framework.Lens               as Lens
+import qualified Enecuum.Language                     as L
+import           Enecuum.Prelude
 
 acceptChainLength :: NetworkNodeChainData -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
 acceptChainLength nodeData GetChainLengthRequest =
@@ -34,7 +31,7 @@ acceptChainFrom nodeData (GetChainFromRequest from) =
 
 newtorkNode3Initialization :: L.NodeL NetworkNodeChainData
 newtorkNode3Initialization = do
-    (_, blocks) <- D.generateNKBlocks 15
+    (_, blocks) <- A.generateNKBlocks 15
     log         <- L.atomically $ L.newVar []
     chainVar'   <- L.atomically $ L.newVar blocks
     pure $ NetworkNodeChainData chainVar' log

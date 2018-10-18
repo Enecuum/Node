@@ -1,18 +1,19 @@
 {-# LANGUAGE RecordWildCards #-}
 module Enecuum.Tests.Functional.CryptoSpec where
 
-import qualified Data.Aeson                  as A
-import           Data.HGraph.StringHashable  (fromStringHash)
-import qualified Data.Serialize              as S
-import qualified Enecuum.Assets.Nodes.Wallet as D (wallets1, wallets2)
-import qualified Enecuum.Blockchain.Domain   as D
-import qualified Enecuum.Blockchain.Lens     as Lens
-import qualified Enecuum.Core.Interpreters   as I
-import qualified Enecuum.Language            as L
+import qualified Data.Aeson                      as A
+import           Data.HGraph.StringHashable      (fromStringHash)
+import qualified Data.Serialize                  as S
+import qualified Enecuum.Assets.Nodes.Generation as D
+import qualified Enecuum.Assets.Nodes.Wallet     as D (wallets1, wallets2)
+import qualified Enecuum.Blockchain.Domain       as D
+import qualified Enecuum.Blockchain.Lens         as Lens
+import qualified Enecuum.Core.Interpreters       as I
+import qualified Enecuum.Language                as L
 import           Enecuum.Prelude
-import           Test.Hspec                  (Spec, describe, shouldBe)
-import           Test.Hspec.Contrib.HUnit    (fromHUnitTest)
-import           Test.HUnit                  (Test (..))
+import           Test.Hspec                      (Spec, describe, shouldBe)
+import           Test.Hspec.Contrib.HUnit        (fromHUnitTest)
+import           Test.HUnit                      (Test (..))
 
 spec :: Spec
 spec = do
@@ -32,17 +33,17 @@ spec = do
         [ TestLabel "Private key read/show" testReadShowPrivateKey]
 
 test genFun fun = TestCase $ do
-    s <- replicateM 1000 genFun
+    s <- replicateM 10 genFun
     map fun s `shouldBe` s
 
-testBool :: IO a -> (a -> Bool) -> Test    
+testBool :: IO a -> (a -> Bool) -> Test
 testBool genFun fun = TestCase $ do
-    s <- replicateM 1000 genFun
+    s <- replicateM 10 genFun
     and (map fun s) `shouldBe` True
 
 -- generator functions
 generateTransaction = I.runERandomL $ D.genTransaction D.On
-generateMicroblock = I.runERandomL $ D.genRandMicroblock D.genesisKBlock        
+generateMicroblock = I.runERandomL $ D.genRandMicroblock D.genesisKBlock
 generateSignature = do
     tx <- I.runERandomL $ D.genTransaction D.On
     pure $ tx ^. Lens.signature
@@ -54,7 +55,7 @@ generatePublicKey = generateKeys (\(D.KeyPair pub _) -> pub)
 generatePrivateKey = generateKeys (\(D.KeyPair _ priv) -> priv)
 
 
--- | Signature test functions    
+-- | Signature test functions
 testSignature fun = test generateSignature fun
 
 testSignatureBinarySerialization = testSignature (\s -> fromRight (read "1" :: D.Signature) $ S.decode $ S.encode s)

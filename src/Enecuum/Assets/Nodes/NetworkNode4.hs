@@ -6,10 +6,9 @@ module Enecuum.Assets.Nodes.NetworkNode4 where
 
 import qualified Data.Text                            as Text
 import           Enecuum.Assets.Nodes.Address
+import qualified Enecuum.Assets.Nodes.Generation      as A
 import           Enecuum.Assets.Nodes.RPC
 import           Enecuum.Assets.Nodes.Types.SyncChain
--- import qualified Enecuum.Blockchain.Domain.Graph      as TG
--- import qualified Enecuum.Blockchain.Lens              as Lens
 import           Enecuum.Config                       (Config)
 import qualified Enecuum.Core.Lens                    as Lens
 import qualified Enecuum.Domain                       as D
@@ -57,7 +56,7 @@ networkNode4Scenario nodeData = do
 
 newtorkNode4Initialization :: L.NodeL NetworkNodeChainData
 newtorkNode4Initialization = do
-    (_, blocks)     <- D.generateNKBlocks 5
+    (_, blocks)     <- A.generateNKBlocks 5
     log             <- L.atomically $ L.newVar []
     chainLengthVar' <- L.atomically $ L.newVar blocks
     pure $ NetworkNodeChainData chainLengthVar' log

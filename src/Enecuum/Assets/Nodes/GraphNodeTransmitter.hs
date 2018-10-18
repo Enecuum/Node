@@ -55,11 +55,15 @@ acceptKBlock nodeData kBlock _ = do
 -- | Accept mBlock
 acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Udp -> L.NodeL ()
 acceptMBlock nodeData mBlock _ = do
-    L.logInfo "Accepting MBlock."
-    let logV = nodeData ^. logVar
-        bData = nodeData ^. blockchain
-    void $ L.atomically (L.addMBlock logV bData mBlock)
-    Log.writeLog logV
+    isSignGenuine <- D.verifyMicroblockWithTxEff mBlock
+    case isSignGenuine of
+        False -> L.logInfo $ "MBlock is not accepted" +|| show mBlock
+        True -> do
+            L.logInfo "MBlock is accepted."
+            let logV = nodeData ^. logVar
+                bData = nodeData ^. blockchain
+            void $ L.atomically (L.addMBlock logV bData mBlock)
+            Log.writeLog logV
 
 getLastKBlock :: GraphNodeData ->  GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do

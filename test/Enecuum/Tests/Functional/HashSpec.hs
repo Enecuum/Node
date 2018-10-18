@@ -2,6 +2,7 @@
 module Enecuum.Tests.Functional.HashSpec where
 
 import           Data.HGraph.StringHashable       (fromStringHash)
+import qualified Enecuum.Assets.Nodes.Generation  as D
 import qualified Enecuum.Blockchain.Domain        as D
 import qualified Enecuum.Blockchain.Domain.KBlock as New
 import qualified Enecuum.Core.Interpreters        as I
