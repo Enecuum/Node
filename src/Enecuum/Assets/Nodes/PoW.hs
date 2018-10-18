@@ -9,7 +9,7 @@ import Enecuum.Prelude
 import qualified Enecuum.Language              as L
 import qualified Enecuum.Domain                as D
 
-import           Enecuum.Assets.Nodes.Address (graphNodeTransmitterRpcAddress, powNodeRpcPort, graphNodeTransmitterUdpAddress)
+import           Enecuum.Assets.Nodes.Address (graphNodeTransmitterRpcAddress, powNodeRpcPort, graphNodeTransmitterTcpAddress)
 import           Data.HGraph.StringHashable (StringHash (..), toHash)
 import           Enecuum.Assets.Nodes.Messages (
     SuccessMsg (..), ForeverChainGeneration(..), NBlockPacketGeneration(..))
@@ -38,11 +38,11 @@ kBlockProcess nodeData = do
 
     L.atomically $ L.writeVar (nodeData ^. prevHash) lastHash
     L.atomically $ L.writeVar (nodeData ^. prevNumber) $ prevKBlockNumber + (fromIntegral $ length kBlocks)
-
-    forM_ kBlocks $ \kBlock -> do
-        L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-        L.notify graphNodeTransmitterUdpAddress kBlock
-        when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
+    L.withConnection D.Tcp graphNodeTransmitterTcpAddress $
+        \conn -> forM_ kBlocks $ \kBlock -> do
+            L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
+            L.send conn kBlock
+            when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
 
 foreverChainGenerationHandle :: PoWNodeData -> ForeverChainGeneration -> L.NodeL SuccessMsg
 foreverChainGenerationHandle powNodeData _ = do
@@ -67,7 +67,6 @@ powNode' delaysEnabled = do
         L.method $ nBlockPacketGenerationHandle nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
-
     L.process $ forever $ do
         L.atomically $ do
             i <- L.readVar $ nodeData ^. requiredBlockNumber

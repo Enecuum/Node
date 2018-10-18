@@ -11,7 +11,8 @@ import qualified Enecuum.Core.Interpreters                as Impl
 import qualified Enecuum.Framework.State.Interpreter      as Impl
 import qualified Enecuum.Framework.RLens                  as RLens
 import           Control.Concurrent.STM.TChan
-import           Enecuum.Legacy.Service.Network.Base
+
+import qualified Network.Socket  as S
 import qualified Enecuum.Framework.Networking.Internal.Tcp.Server      as Tcp
 import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection  as Tcp
 
@@ -90,7 +91,7 @@ insertConnect m addr newCon = atomically $ do
     whenJust (conns ^. at addr) Con.close
     modifyTVar m $ M.insert addr newCon
 
-setServerChan :: TVar (Map PortNumber (TChan D.ServerComand)) -> PortNumber -> TChan D.ServerComand -> STM ()
+setServerChan :: TVar (Map S.PortNumber (TChan D.ServerComand)) -> S.PortNumber -> TChan D.ServerComand -> STM ()
 setServerChan servs port chan = do
     serversMap <- readTVar servs
     whenJust (serversMap ^. at port) Con.stopServer
