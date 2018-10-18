@@ -25,6 +25,7 @@ import qualified Enecuum.Framework.Networking.Internal.Connection as Con
 import           Enecuum.Framework.Handler.Cmd.Interpreter as Cmd
 import           Data.Aeson.Lens
 import qualified Data.Text as T
+import           System.Console.Haskeline
 
 addProcess :: NodeRuntime -> D.ProcessPtr a -> ThreadId -> IO ()
 addProcess nodeRt pPtr threadId = do
@@ -82,10 +83,16 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
     a <- runCmdHandlerL m handlers
     void $ forkIO $ do
         m' <- readTVarIO m
-        forever $ do
-            line <- getLine
-            res  <- callHandler nodeRt m' line
-            putTextLn res
+        let loop = do
+                minput <- getInputLine ""
+                case minput of
+                    Nothing      -> pure ()
+                    Just    line -> do
+                        res <- liftIO $ callHandler nodeRt m' $ T.pack line
+                        outputStrLn $ T.unpack res
+                        loop
+                             
+        runInputT defaultSettings loop
     pure $ next ()
 
 -- TODO: make a separate language and use its interpreter in test runtime too.

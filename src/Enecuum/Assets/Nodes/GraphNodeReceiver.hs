@@ -29,6 +29,15 @@ data GraphNodeData = GraphNodeData
     }
 makeFieldsNoPrefix ''GraphNodeData
 
+getLastKBlock :: GraphNodeData ->  GetLastKBlock -> L.NodeL D.KBlock
+getLastKBlock nodeData _ = do
+    let logV = nodeData ^. logVar
+        bData = nodeData ^. blockchain
+    -- L.logInfo "Top KBlock requested."
+    kBlock <- L.atomically $ L.getTopKeyBlock logV bData
+    -- L.logInfo $ "Top KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
+    pure kBlock
+
 getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
 getBalance nodeData (GetWalletBalance wallet) = do
     L.logInfo $ "Requested balance for wallet " +|| wallet ||+ "."
@@ -88,8 +97,9 @@ graphNodeReceiver = do
     nodeData <- graphNodeInitialization
 
     L.scenario $ graphSynchro nodeData graphNodeTransmitterRpcAddress
-    L.serving D.Rpc graphNodeReceiverRpcPort $
+    L.serving D.Rpc graphNodeReceiverRpcPort $ do
         L.methodE $ getBalance nodeData
+        L.method  $ getLastKBlock nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.awaitNodeFinished nodeData

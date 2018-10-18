@@ -113,6 +113,7 @@ dependencies:
 - hashable
 - resource-pool
 - unix-time
+- haskeline
 - cryptohash-sha256
 - derive
 - bytestring-conversion
