@@ -51,11 +51,14 @@ getAdress socket = D.sockAddrToHost <$> S.getSocketName socket
 -- * Internal
 runHandlers :: D.ConnectionVar D.Tcp -> D.Connection D.Tcp -> S.Socket -> Handlers D.Tcp -> (Text -> IO ()) -> IO ()
 runHandlers conn netConn wsConn handlers logger = do
-    tryM (S.recv wsConn $ toEnum D.packetSize) (atomically $ closeConn conn) $ \msg -> do
-        case decode msg of
-            Just val -> callHandler netConn val handlers
-            Nothing  -> logger $ "Error in decoding en msg: " <> show msg
-        runHandlers conn netConn wsConn handlers logger
+    tryM (S.recv wsConn $ toEnum D.packetSize) (atomically $ closeConn conn) $ \msg ->
+        if null msg
+            then atomically $ closeConn conn
+            else do
+                case decode msg of
+                    Just val -> callHandler netConn val handlers
+                    Nothing  -> logger $ "Error in decoding en msg: " <> show msg
+                runHandlers conn netConn wsConn handlers logger
 
 callHandler :: D.Connection D.Tcp -> D.NetworkMsg -> Handlers D.Tcp -> IO ()
 callHandler conn (D.NetworkMsg tag val) handlers = whenJust (handlers ^. at tag) $ \handler -> handler val conn
