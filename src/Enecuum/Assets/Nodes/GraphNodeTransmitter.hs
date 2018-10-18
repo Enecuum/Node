@@ -34,7 +34,7 @@ data GraphNodeData = GraphNodeData
 makeFieldsNoPrefix ''GraphNodeData
 
 -- | Accept kBlock
-acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Udp -> L.NodeL ()
+acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Tcp -> L.NodeL ()
 acceptKBlock nodeData kBlock _ = do
     L.logInfo $ "\nAccepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
     let logV = nodeData ^. logVar
@@ -53,7 +53,7 @@ acceptKBlock nodeData kBlock _ = do
 
 
 -- | Accept mBlock
-acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Udp -> L.NodeL ()
+acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Tcp -> L.NodeL ()
 acceptMBlock nodeData mBlock _ = do
     isSignGenuine <- D.verifyMicroblockWithTxEff mBlock
     case isSignGenuine of
@@ -150,7 +150,7 @@ graphNodeTransmitter = do
     L.nodeTag "graphNodeTransmitter"
     nodeData <- graphNodeInitialization
 
-    L.serving D.Udp graphNodeTransmitterUdpPort $ do
+    L.serving D.Tcp graphNodeTransmitterTcpPort $ do
         L.handler $ acceptMBlock nodeData
         L.handler $ acceptKBlock nodeData
 

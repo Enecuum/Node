@@ -44,6 +44,7 @@ makeIORpcRequest address msg = do
 testNodeNet :: Test
 testNodeNet = TestCase $ do
     startNode A.graphNodeTransmitter
+    threadDelay $ 1 * 1000 * 1000
     startNode A.powNode
     startNode A.poaNode
     threadDelay $ 1 * 1000 * 1000
