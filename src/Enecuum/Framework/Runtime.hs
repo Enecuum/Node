@@ -14,8 +14,6 @@ import qualified Network.Socket as S
 data VarHandle = VarHandle D.VarId (TVar Any)
 type NodeState = TMVar (Map.Map D.VarId VarHandle)
 
-
-
 data NodeRuntime = NodeRuntime
     { _coreRuntime  :: CoreRuntime
     , _graph        :: D.TGraph D.NodeContent

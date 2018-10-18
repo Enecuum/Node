@@ -24,6 +24,8 @@ import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Assets.Nodes.Address
 
 import qualified Enecuum.Framework.LogState as Log
+import           Enecuum.Assets.Nodes.Methodes
+
 
 data GraphNodeData = GraphNodeData
     { _blockchain    :: D.BlockchainData
@@ -149,6 +151,7 @@ graphNodeTransmitter = do
     L.serving D.Tcp graphNodeTransmitterTcpPort $ do
         L.handler $ acceptMBlock nodeData
         L.handler $ acceptKBlock nodeData
+        L.handler $ methodePing
 
     L.serving D.Rpc graphNodeTransmitterRpcPort $ do
         L.method  $ getLastKBlock nodeData
@@ -156,6 +159,7 @@ graphNodeTransmitter = do
         L.method  $ acceptChainLength nodeData
         L.methodE $ acceptChainFromTo nodeData
         L.methodE $ acceptMBlockForKBlocks nodeData
+        L.method  $ rpcPingPong
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.awaitNodeFinished nodeData

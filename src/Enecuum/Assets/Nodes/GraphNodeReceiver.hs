@@ -19,6 +19,7 @@ import qualified Enecuum.Blockchain.Lens          as Lens
 import qualified Enecuum.Domain                   as D
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude
+import           Enecuum.Assets.Nodes.Methodes
 
 import qualified Enecuum.Framework.LogState as Log
 
@@ -100,6 +101,7 @@ graphNodeReceiver = do
     L.serving D.Rpc graphNodeReceiverRpcPort $ do
         L.methodE $ getBalance nodeData
         L.method  $ getLastKBlock nodeData
+        L.method  $ rpcPingPong
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.awaitNodeFinished nodeData
