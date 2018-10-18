@@ -85,44 +85,6 @@ genKBlock prevHash i = KBlock
 genNTransactions :: (L.ERandom m, Monad m) => Int -> m [Transaction]
 genNTransactions k = replicateM k $ genTransaction On
 
--- | Generate bogus signed transaction
--- generateBogusSignedTransaction :: (Monad m, L.ERandom m) => m Transaction
--- generateBogusSignedTransaction = do
---     fakeOwner <- L.evalCoreCrypto $ L.generateKeyPair
---     tx@(Transaction {..}) <- genTransaction Off
---     fakeTransaction <- signTransaction _owner (getPriv fakeOwner) _receiver (_amount + 100)  _currency
---     let fakeSignature = fakeTransaction ^. Lens.signature
---     pure Transaction
---             { _owner     = _owner
---             , _receiver  = _receiver
---             , _amount    = _amount
---             , _currency  = _currency
---             , _signature = fakeSignature
---             }
-
-generateBogusSignedTransaction :: (Monad m, L.ERandom m) => m Transaction
-generateBogusSignedTransaction = do
-    tx@(Transaction {..}) <- genTransaction Off
-    let genTx fakeOwnerPrivateKey = signTransaction _owner fakeOwnerPrivateKey _receiver (_amount + 100)  _currency
-    fakeSignature <- generateBogusSignedSomething genTx
-    pure Transaction
-            { _owner     = _owner
-            , _receiver  = _receiver
-            , _amount    = _amount
-            , _currency  = _currency
-            , _signature = fakeSignature
-            }
-
-generateBogusSignedSomething genFunction = do 
-    fakeOwner <- L.evalCoreCrypto $ L.generateKeyPair
-    let fakeOwnerPrivateKey = getPriv fakeOwner
-    something <- genFunction fakeOwnerPrivateKey
-    pure $ something ^. Lens.signature
-
--- generateBogusSignedMicroblock :: (Monad m, L.ERandom m) => m Transaction
--- generateBogusSignedMicroblock = do
---     undefined
-
 -- | Generate signed transaction
 genTransaction :: (Monad m, L.ERandom m) => Boundary -> m Transaction
 genTransaction isFromRange = do
@@ -184,3 +146,26 @@ loopGenIndices numbers = do
             rest <- loopGenIndices $ delete result numbers
             pure (result : rest)
         else pure []
+
+-- | Generate bogus transaction
+generateBogusSignedTransaction :: (Monad m, L.ERandom m) => m Transaction
+generateBogusSignedTransaction = do
+    Transaction {..} <- genTransaction Off
+    let genTxSign fakeOwnerPrivateKey = signTransaction _owner fakeOwnerPrivateKey _receiver (_amount + 100)  _currency
+    generateBogusSignedSomething genTxSign
+
+-- | Generate bogus signature with function for something
+generateBogusSignedSomething :: (Monad m, L.ERandom m, Lens.HasSignature s b) =>
+     (PrivateKey -> m s) -> m s
+generateBogusSignedSomething genFunction = do 
+    fakeOwner <- L.evalCoreCrypto $ L.generateKeyPair
+    let fakeOwnerPrivateKey = getPriv fakeOwner
+    something <- genFunction fakeOwnerPrivateKey
+    pure $ something 
+
+-- | Generate bogus microblock  
+generateBogusSignedMicroblock :: (Monad m, L.ERandom m) => m Microblock
+generateBogusSignedMicroblock = do
+    Microblock {..} <- genRandMicroblock genesisKBlock
+    let genMbSign fakeOwnerPrivateKey = signMicroblock _keyBlock _transactions _publisher fakeOwnerPrivateKey
+    generateBogusSignedSomething genMbSign  
