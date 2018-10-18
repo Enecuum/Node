@@ -8,7 +8,7 @@ import           Enecuum.Assets.Nodes.Address (nnAddr)
 import qualified Enecuum.Domain               as D
 import qualified Enecuum.Language             as L
 import           Enecuum.Prelude
-import qualified Enecuum.Assets.Nodes.Generation as A
+import qualified Enecuum.Assets.Blockchain.Generation as A
 
 data TransactionRequest  = TransactionRequest { }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

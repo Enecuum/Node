@@ -15,7 +15,7 @@ import qualified Enecuum.Blockchain.Lens      as Lens
 import           Enecuum.Prelude
 import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
-import qualified Enecuum.Assets.Nodes.Generation as A
+import qualified Enecuum.Assets.Blockchain.Generation as A
 
 data PoANodeData = PoANodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock

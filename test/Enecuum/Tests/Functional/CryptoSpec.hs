@@ -4,8 +4,8 @@ module Enecuum.Tests.Functional.CryptoSpec where
 import qualified Data.Aeson                      as A
 import           Data.HGraph.StringHashable      (fromStringHash)
 import qualified Data.Serialize                  as S
-import qualified Enecuum.Assets.Nodes.Generation as D
-import qualified Enecuum.Assets.Nodes.Wallet     as D (wallets1, wallets2)
+import qualified Enecuum.Assets.Blockchain.Generation as D
+import qualified Enecuum.Assets.Blockchain.Wallet     as D (wallets1, wallets2)
 import qualified Enecuum.Blockchain.Domain       as D
 import qualified Enecuum.Blockchain.Lens         as Lens
 import qualified Enecuum.Core.Interpreters       as I

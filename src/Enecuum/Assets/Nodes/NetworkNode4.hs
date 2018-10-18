@@ -6,7 +6,7 @@ module Enecuum.Assets.Nodes.NetworkNode4 where
 
 import qualified Data.Text                            as Text
 import           Enecuum.Assets.Nodes.Address
-import qualified Enecuum.Assets.Nodes.Generation      as A
+import qualified Enecuum.Assets.Blockchain.Generation      as A
 import           Enecuum.Assets.Nodes.RPC
 import           Enecuum.Assets.Nodes.Types.SyncChain
 import           Enecuum.Config                       (Config)

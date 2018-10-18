@@ -2,11 +2,11 @@
 {-# LANGUAGE PackageImports        #-}
 {-# LANGUAGE RecordWildCards       #-}
 
-module Enecuum.Assets.Nodes.Generation where
+module Enecuum.Assets.Blockchain.Generation where
 
 import           Data.HGraph.StringHashable  (StringHash (..), toHash)
 import           Data.List                   (delete)
-import           Enecuum.Assets.Nodes.Wallet
+import           Enecuum.Assets.Blockchain.Wallet
 import           Enecuum.Blockchain.Domain
 import qualified Enecuum.Blockchain.Lens     as Lens
 import qualified Enecuum.Language            as L

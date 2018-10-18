@@ -8,8 +8,8 @@ import           Control.Lens                         (makeFieldsNoPrefix)
 import qualified Data.Aeson                           as A
 import qualified Data.Map                             as Map
 import qualified Data.Text                            as Text
+import qualified Enecuum.Assets.Blockchain.Generation as A
 import           Enecuum.Assets.Nodes.Address
-import qualified Enecuum.Assets.Nodes.Generation      as A
 import           Enecuum.Assets.Nodes.RPC
 import           Enecuum.Assets.Nodes.Types.SyncChain
 import qualified Enecuum.Blockchain.Lens              as Lens
