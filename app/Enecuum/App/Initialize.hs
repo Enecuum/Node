@@ -45,14 +45,9 @@ initialize config = do
     clearLoggerRuntime loggerRt
 
 dispatchScenario :: Config -> ScenarioNode -> L.NodeDefinitionL ()
-dispatchScenario config (ScenarioNode BootNode    _         _           ) = S.bootNode config
-dispatchScenario config (ScenarioNode MasterNode  _         _           ) = S.masterNode config
 dispatchScenario config (ScenarioNode Client      _         _           ) = S.clientNode config
-dispatchScenario _      (ScenarioNode NetworkNode SyncChain Respondent  ) = S.networkNode3
-dispatchScenario _      (ScenarioNode NetworkNode SyncChain Interviewer ) = S.networkNode4
 dispatchScenario _      (ScenarioNode PoW         Full      Soly        ) = S.powNode
 dispatchScenario _      (ScenarioNode PoA         Full      Soly        ) = S.poaNode
-dispatchScenario _      (ScenarioNode NetworkNode Full      Soly        ) = S.nnNode
 dispatchScenario _      (ScenarioNode GraphNodeTransmitter   _         _           ) = S.graphNodeTransmitter
 dispatchScenario _      (ScenarioNode GraphNodeReceiver   _         _           ) = S.graphNodeReceiver
 dispatchScenario _      (ScenarioNode role        scenario  scenarioRole) = error mes
