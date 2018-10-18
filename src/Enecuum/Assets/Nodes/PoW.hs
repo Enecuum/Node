@@ -38,12 +38,11 @@ kBlockProcess nodeData = do
 
     L.atomically $ L.writeVar (nodeData ^. prevHash) lastHash
     L.atomically $ L.writeVar (nodeData ^. prevNumber) $ prevKBlockNumber + (fromIntegral $ length kBlocks)
-    conn <- L.open D.Tcp graphNodeTransmitterTcpAddress $ pure ()
-    forM_ kBlocks $ \kBlock -> do
-        L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-        L.send conn kBlock
-        when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
-    L.close conn
+    L.withConnection D.Tcp graphNodeTransmitterTcpAddress $
+        \conn -> forM_ kBlocks $ \kBlock -> do
+            L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
+            L.send conn kBlock
+            when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
 
 foreverChainGenerationHandle :: PoWNodeData -> ForeverChainGeneration -> L.NodeL SuccessMsg
 foreverChainGenerationHandle powNodeData _ = do

@@ -55,6 +55,12 @@ evalCoreEffectNodeF :: L.CoreEffect a -> NodeL a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
 
+withConnection protocol address f = do
+    con <- open protocol address $ pure ()
+    a <- f con
+    close con
+    pure a
+
 class Connection a con where
     close :: D.Connection con -> a ()
     open  :: con -> D.Address -> NetworkHandlerL con NodeL () -> a (D.Connection con)

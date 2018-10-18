@@ -48,8 +48,9 @@ poaNode = do
                 mBlock <- D.genRandMicroblock block
                 L.logInfo
                     $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
-                conn <- L.open D.Tcp graphNodeTransmitterTcpAddress $ pure ()
-                void $ L.send conn mBlock
-                L.close conn
+
+                void $ L.withConnection D.Tcp graphNodeTransmitterTcpAddress $
+                    \conn -> L.send conn mBlock
+
 
     L.awaitNodeFinished poaData
