@@ -6,7 +6,7 @@ import           Data.Aeson
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TMVar
 
-import           Enecuum.Legacy.Service.Network.Base
+
 import           Data.Aeson.Lens
 import           Control.Concurrent.Async
 import qualified Enecuum.Framework.Domain.Networking as D
@@ -43,7 +43,7 @@ sendWithTimeOut conn msg = do
     tryTakeResponse timeoutDelay feedback
 
 class NetworkConnection protocol where
-    startServer :: PortNumber -> Handlers protocol -> (D.Connection protocol -> D.ConnectionVar protocol -> IO ()) -> (Text -> IO ()) -> IO ServerHandle
+    startServer :: S.PortNumber -> Handlers protocol -> (D.Connection protocol -> D.ConnectionVar protocol -> IO ()) -> (Text -> IO ()) -> IO ServerHandle
     -- | Send msg to node.
     send        :: D.ConnectionVar protocol -> LByteString -> IO (Either D.NetworkError ())
     close       :: D.ConnectionVar protocol -> STM ()

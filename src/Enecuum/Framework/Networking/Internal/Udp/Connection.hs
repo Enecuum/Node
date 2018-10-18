@@ -15,7 +15,6 @@ import           Control.Concurrent.Chan
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TMVar
 
-import           Enecuum.Legacy.Service.Network.Base
 import           Data.Aeson.Lens
 import           Control.Concurrent.Async
 import qualified Enecuum.Framework.Domain.Networking as D

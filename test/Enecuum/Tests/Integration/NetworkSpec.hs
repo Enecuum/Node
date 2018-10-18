@@ -12,7 +12,7 @@ import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
 import qualified Enecuum.Language              as L
 
-import           Enecuum.Legacy.Service.Network.Base
+--import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Interpreters
 import qualified Enecuum.Runtime as Rt
 import qualified Enecuum.Domain                as D
@@ -167,7 +167,7 @@ pongHandle succAddr (Pong i) conn = do
 emptFunc :: D.Connection D.Udp -> D.ConnectionVar D.Udp -> IO ()
 emptFunc _ _ = pure ()
 
-succesServer :: PortNumber -> IO Bool
+succesServer :: D.PortNumber -> IO Bool
 succesServer port = do
     mvar <- newEmptyMVar
     void $ forkIO $ do

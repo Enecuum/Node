@@ -15,7 +15,7 @@ import qualified Enecuum.Language as L
 import qualified Enecuum.Domain as D
 import qualified Enecuum.Runtime as R
 
-import           Enecuum.Legacy.Service.Network.Base
+--import           Enecuum.Legacy.Service.Network.Base
 import           Enecuum.Interpreters
 import           Enecuum.Framework.Networking.Interpreter
 
