@@ -12,7 +12,8 @@ import           Enecuum.Core.Logger.Language (Logger, LoggerL, logMessage)
 import           Enecuum.Core.Random.Language 
 --(ERandom, ERandomL, getRandomInt, evalRand, evalMonadRandom, NRandom, NRandomL)
 import           Enecuum.Core.ControlFlow.Language (ControlFlowL, ControlFlow(..))
-import           Language.Haskell.TH.MakeFunctor
+import           Enecuum.Core.Database.Language (DatabaseL, Database(..))
+import           Language.Haskell.TH.MakeFunctor (makeFunctorInstance)
 
 -- | Core effects container language.
 data CoreEffectF next where
@@ -22,6 +23,8 @@ data CoreEffectF next where
   EvalRandom      :: ERandomL a     -> (a  -> next) -> CoreEffectF next
   -- | ControlFlow effect
   EvalControlFlow :: ControlFlowL a -> (a  -> next) -> CoreEffectF next
+  -- | Database effect
+  EvalDatabase    :: Database
 
 makeFunctorInstance ''CoreEffectF
 

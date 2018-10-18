@@ -1,55 +1,51 @@
-{-# LANGUAGE NoImplicitPrelude      #-}
-{-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE RankNTypes             #-}
-{-# LANGUAGE TypeOperators          #-}
-{-# LANGUAGE DataKinds              #-}
-{-# LANGUAGE TypeFamilies           #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE FunctionalDependencies #-}
-
 module Enecuum.Core.Database.Language where
 
-import           Universum
-import           Control.Monad.Free
-import           Enecuum.Core.Database.Types
+import           Enecuum.Prelude
 
+import qualified Data.Aeson as A
+import           Data.Typeable (typeOf)
+import           Data.Proxy (Proxy)
+
+import qualified Data.HGraph.StringHashable as D
+import qualified Enecuum.Core.Database.Types as D
+
+-- | Interface to Key-Value database.
 data DatabaseF a where
-    NewNode     :: HNodeContent node -> (Bool -> a) -> HGraphF node a
-    DeleteNode  :: HNodeRef node -> (Bool -> a) -> HGraphF node a
-    NewLink     :: HNodeRef node -> HNodeRef node -> (Bool -> a) -> HGraphF node a
-    DeleteLink  :: HNodeRef node -> HNodeRef node -> (Bool -> a) -> HGraphF node a
-    GetNode     :: HNodeRef node -> (Maybe node -> a) -> HGraphF node a
-    ClearGraph  :: (() -> a) -> HGraphF node a
+    Contains :: D.DBKey -> (Bool -> next) -> DatabaseF next
+    -- | Write a single value to the DB.
+    PutValue :: D.DBKey -> D.DBValue -> (() -> next) -> DatabaseF next
+    -- | Lookup a value from the DB.
+    GetValue :: D.DBKey -> (Maybe D.DBValue -> next) -> DatabaseF next
+    -- Iterate :: ??
   deriving (Functor)
 
-class Functor m => HGraph node m | m -> node where
-    newLink', deleteLink'
-        :: (ToNodeRef node b, ToNodeRef node c) => c -> b -> m Bool
+-- | Database language.
+type DatabaseL = Free DatabaseF
 
-    newNode'    :: ToContent node c => c -> m Bool
-    deleteNode' :: ToNodeRef node h => h -> m Bool
-    getNode     :: ToNodeRef node h => h -> m (Maybe node)
-    clearGraph  :: m ()
+class Monad m => Database m where
+    contains   :: D.DBKey -> m Bool
+    putValue :: D.DBKey -> D.DBValue -> m ()
+    getValue :: D.DBKey -> m (Maybe D.DBValue)
 
-instance HGraph node (Free (HGraphF node)) where
-    newLink' a b     = liftF (NewLink (toNodeRef a) (toNodeRef b) id)
-    deleteLink' a b  = liftF (DeleteLink (toNodeRef a) (toNodeRef b) id)
-    newNode' a       = liftF (NewNode (toContent a) id)
-    deleteNode' a    = liftF (DeleteNode (toNodeRef a) id)
-    getNode a        = liftF (GetNode (toNodeRef a) id)
-    clearGraph       = liftF (ClearGraph id)
+instance Database DatabaseL where
+    contains key     = liftF $ Contains key id
+    putValue key val = liftF $ PutValue key val id
+    getValue key     = liftF $ GetValue key id
 
--- | Graph language.
-type HGraphL g next = Free (HGraphF (TNodeL g)) next
+findValue :: forall a m. (Typeable a, FromJSON a, Database m) => D.DBKey -> m (Either D.DBError a)
+findValue key = do
+    mbRaw <- getValue key
+    case mbRaw of
+        Nothing  -> pure $ Left $ D.KeyNotFound key
+        Just raw -> case A.decode raw of
+            Nothing  -> pure $ Left $ D.InvalidType $ show $ typeOf (Proxy :: Proxy a)
+            Just val -> pure $ Right val
 
-newLink, deleteLink :: (HGraph node m, ToNodeRef node b, ToNodeRef node c) => c -> b -> m ()
-newLink a b = void $ newLink' a b
-deleteLink a b = void $ deleteLink' a b
+class ToDBKey a where
+    toDBKey :: a -> D.DBKey
 
-deleteNode :: (HGraph node m, ToNodeRef node h) => h -> m ()
-deleteNode = void . deleteNode'
+instance ToDBKey D.StringHash where
+    toDBKey = D.fromStringHash
 
-newNode :: (HGraph node m, ToContent node c) => c -> m ()
-newNode = void . newNode'
+hasKey :: (ToDBKey a, Database m) => a -> m Bool
+hasKey = contains . toDBKey

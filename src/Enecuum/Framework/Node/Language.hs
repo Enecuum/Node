@@ -25,6 +25,7 @@ data NodeF next where
     EvalCoreEffectNodeF :: L.CoreEffect a -> (a -> next) -> NodeF next
     -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
     EvalGraphIO :: (Serialize c, T.StringHashable c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) x -> (x -> next) -> NodeF next
+    -- | Create new graph instance.
     NewGraph  :: (Serialize c, T.StringHashable c) => (T.TGraph c -> next) -> NodeF next
     -- | Open connection to the node.
     OpenTcpConnection :: D.Address -> NetworkHandlerL D.Tcp NodeL () -> (D.Connection D.Tcp -> next) -> NodeF next

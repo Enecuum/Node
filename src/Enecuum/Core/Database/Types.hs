@@ -1,7 +1,13 @@
-{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
-module Enecuum.Core.Database.Types
+module Enecuum.Core.Database.Types where
 
 import           Enecuum.Prelude
-import           Data.HGraph.StringHashable (StringHashable, StringHash)
-import           Data.HGraph.THGraph as G
+
+type DBValue = LByteString
+type DBKey = LByteString
+
+data DBError
+    = KeyNotFound DBKey
+    | InvalidType Text
+    deriving (Generic, Ord, Eq, Show, Read, ToJSON, FromJSON)
