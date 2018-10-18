@@ -62,7 +62,15 @@ sockAddrToHost sockAddr = case sockAddr of
 data Address = Address
     { _host :: Host
     , _port :: PortNumber
-    } deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
+    } deriving (Show, Eq, Ord, Generic)
+
+instance ToJSON Address where
+    toJSON (Address h p) = A.object ["host" A..= h, "port" A..= p]
+
+instance FromJSON Address where
+    parseJSON = A.withObject "Address" $ \v -> Address
+        <$> v A..: "host"
+        <*> v A..: "port"
 
 instance ToJSON PortNumber where
     toJSON = toJSON.fromEnum
