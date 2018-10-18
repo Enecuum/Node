@@ -84,7 +84,7 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
     void $ forkIO $ do
         m' <- readTVarIO m
         let loop = do
-                minput <- getInputLine "> "
+                minput <- getInputLine ""
                 case minput of
                     Nothing      -> pure ()
                     Just    line -> do
