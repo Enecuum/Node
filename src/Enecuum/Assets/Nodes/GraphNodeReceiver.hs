@@ -54,17 +54,11 @@ graphSynchro nodeData address = do
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
 
-    --L.logInfo $ "Requests chain length."
     GetChainLengthResponse otherLength <- L.makeRpcRequestUnsafe address GetChainLengthRequest
-    --L.logInfo $ "GraphNodeReceiver has Chain length: " +|| otherLength ||+ "."
 
-    --L.logInfo $ "GraphNodeReceiver: update chain if it's bigger."
     curChainLength <- L.atomically $ do
         topKBlock <- L.getTopKeyBlock logV bData
         pure $ topKBlock ^. Lens.number
-    
-    --L.logInfo $ "Current chain length " +|| show curChainLength
-    
 
     when (curChainLength < otherLength) $ do
         GetChainFromToResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromToRequest (curChainLength + 1) otherLength)
@@ -75,7 +69,6 @@ graphSynchro nodeData address = do
             GetMBlocksForKBlockResponse mBlocks <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest hash)
             L.logInfo $ "Mblocks received for kBlock " +|| show hash ||+ " : " +|| show mBlocks
             L.atomically $ forM_ mBlocks (L.addMBlock logV bData)
-    --L.logInfo $ "Graph sychro finished"
 
 -- | Initialization of graph node
 graphNodeInitialization :: L.NodeDefinitionL GraphNodeData
