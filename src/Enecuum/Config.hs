@@ -20,7 +20,7 @@ data NodeRole = PoW | PoA | Client | GraphNodeTransmitter | GraphNodeReceiver
 data Scenario = LedgerBalance | SyncChain | SyncKblock | Full
   deriving (Generic, FromJSON, Show, Read, Eq, Ord)
 
-data ScenarioRole = Respondent | Interviewer | Soly
+data ScenarioRole = Respondent | Interviewer | Soly | Good | Bad
   deriving (Generic, FromJSON, Show, Read, Eq, Ord)
 
 data ScenarioNode = ScenarioNode

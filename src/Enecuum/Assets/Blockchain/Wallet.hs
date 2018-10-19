@@ -1,4 +1,4 @@
-module Enecuum.Assets.Nodes.Wallet where
+module Enecuum.Assets.Blockchain.Wallet where
 
 import Enecuum.Blockchain.Domain.Crypto
 import Enecuum.Prelude

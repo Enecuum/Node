@@ -2,15 +2,15 @@ module App.Initialize where
 
 import           Enecuum.Prelude
 
-import           Enecuum.Config  (Config(..), ScenarioNode(..), NodeRole(..), Scenario(..), ScenarioRole(..))
-import qualified Enecuum.Core.Lens as Lens
-import qualified Enecuum.Assets.Scenarios as S
+import qualified Enecuum.Assets.Scenarios        as S
 import           Enecuum.Assets.System.Directory (appFileName)
-import           Enecuum.Interpreters (runNodeDefinitionL, clearNodeRuntime)
-import           Enecuum.Runtime (NodeRuntime(..), createNodeRuntime, createLoggerRuntime,
-                                  clearLoggerRuntime,
-                                  createCoreRuntime, clearCoreRuntime)
-import qualified Enecuum.Language as L
+import           Enecuum.Config                  (Config (..), NodeRole (..), Scenario (..), ScenarioNode (..),
+                                                  ScenarioRole (..))
+import qualified Enecuum.Core.Lens               as Lens
+import           Enecuum.Interpreters            (clearNodeRuntime, runNodeDefinitionL)
+import qualified Enecuum.Language                as L
+import           Enecuum.Runtime                 (NodeRuntime (..), clearCoreRuntime, clearLoggerRuntime,
+                                                  createCoreRuntime, createLoggerRuntime, createNodeRuntime)
 
 
     -- TODO: make this more correct.
@@ -47,7 +47,7 @@ initialize config = do
 dispatchScenario :: Config -> ScenarioNode -> L.NodeDefinitionL ()
 dispatchScenario _      (ScenarioNode Client      _         _           ) = S.clientNode
 dispatchScenario _      (ScenarioNode PoW         Full      Soly        ) = S.powNode
-dispatchScenario _      (ScenarioNode PoA         Full      Soly        ) = S.poaNode
+dispatchScenario _      (ScenarioNode PoA         Full      role        ) = S.poaNode role
 dispatchScenario _      (ScenarioNode GraphNodeTransmitter   _         _           ) = S.graphNodeTransmitter
 dispatchScenario _      (ScenarioNode GraphNodeReceiver   _         _           ) = S.graphNodeReceiver
 dispatchScenario _      (ScenarioNode role        scenario  scenarioRole) = error mes
