@@ -60,6 +60,9 @@ testNodeNet = TestCase $ do
         makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetWalletBalance i
     walletBalance2 :: [Either Text A.WalletBalanceMsg] <- forM (concat $ toKeys <$> mblocks)  $ \i -> do
         makeIORpcRequest A.graphNodeReceiverRpcAddress    $ A.GetWalletBalance i
+    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.Stop
+    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.graphNodeReceiverRpcAddress    A.Stop
+    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress              A.Stop
 
     shouldBe
         [ "kBlock1 == kBlock2: " <> show (kBlock1 == kBlock2)
