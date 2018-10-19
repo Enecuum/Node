@@ -76,20 +76,22 @@ makeRpcRequestUnsafe connectCfg arg = makeRpcRequest connectCfg arg >>= \case
     Right a   -> pure a
 
 
+stopNode :: HasStatus s (D.StateVar NodeStatus) => s -> L.NodeL ()
+stopNode nodeData   = stopNode' (nodeData ^. status)
+
+stopNode' :: D.StateVar NodeStatus -> L.NodeL ()
+stopNode' statusVar = L.atomically $ L.writeVar statusVar NodeFinished
+
 -- | Forces node to stop (actually just fills the `status` field in the data structure. Use `nodeFinishPending` to await `status`.)
 -- To use it, you need to export HasStatus type class unqualified to the scope of your data type lenses
 -- (made by `makeFieldsNoPrefix`):
 -- import Enecuum.Language (HasStatus)
 stopNodeHandler :: HasStatus s (D.StateVar NodeStatus) => s -> StopNode -> L.NodeL Text
-stopNodeHandler nodeData StopNode = do
-    L.atomically $ L.writeVar (nodeData ^. status) NodeFinished
-    pure "Finished."
+stopNodeHandler nodeData     = stopNodeHandler' (nodeData ^. status)
 
 -- | Forces node to stop (actually just fills the variable)
 stopNodeHandler' :: D.StateVar NodeStatus -> StopNode -> L.NodeL Text
-stopNodeHandler' statusVar StopNode = do
-    L.atomically $ L.writeVar statusVar NodeFinished
-    pure "Finished."
+stopNodeHandler' statusVar _ = stopNode' statusVar >> pure "Finished."
 
 -- | Makes node awaiting for finishing.
 -- To use it, you need to export HasStatus type class unqualified to the scope of your data type lenses

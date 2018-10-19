@@ -24,6 +24,7 @@ getKBlock logV bData hash = do
     whenJust mbMsg $ Log.stateLog logV
     pure res
 
+
 -- Get Top kBlock
 getTopKeyBlock :: D.StateVar [Text] -> D.BlockchainData -> L.StateL D.KBlock
 getTopKeyBlock logV bData = do

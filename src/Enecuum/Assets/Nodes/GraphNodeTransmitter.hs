@@ -58,12 +58,12 @@ acceptKBlock nodeData kBlock _ = do
 acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Tcp -> L.NodeL ()
 acceptMBlock nodeData mBlock _ = do
     L.logInfo "Accepting MBlock."
-    let logV = nodeData ^. logVar
+    let logV  = nodeData ^. logVar
         bData = nodeData ^. blockchain
     void $ L.atomically (L.addMBlock logV bData mBlock)
     Log.writeLog logV
 
-getLastKBlock :: GraphNodeData ->  GetLastKBlock -> L.NodeL D.KBlock
+getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
@@ -160,6 +160,7 @@ graphNodeTransmitter = do
         L.methodE $ acceptChainFromTo nodeData
         L.methodE $ acceptMBlockForKBlocks nodeData
         L.method  $ rpcPingPong
+        L.method  $ methodeStopNode nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.awaitNodeFinished nodeData

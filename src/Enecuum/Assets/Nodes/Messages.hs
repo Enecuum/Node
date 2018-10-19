@@ -16,7 +16,11 @@ type WalletId = D.PublicKey
 
 data Ping = Ping
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 data Pong = Pong
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data Stop = Stop
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data GetLastKBlock = GetLastKBlock
