@@ -54,7 +54,7 @@ bigMsg = BigMsg [1..5000]
 
 
 createNodeRuntime :: IO Rt.NodeRuntime
-createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= Rt.createNodeRuntime
+createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= (\a -> Rt.createNodeRuntime a M.empty)
 
 --
 testReleaseOfResources protocol serverPort succPort =
