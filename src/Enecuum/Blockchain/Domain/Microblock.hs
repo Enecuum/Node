@@ -65,6 +65,8 @@ verifyMicroblockWithTxEff mBlock = do
     let isSignMbGenuine = verifyMicroblock mBlock
         tx = _transactions (mBlock :: Microblock)
         bogusTx = filter (\a -> snd a == False ) $ zip tx (map verifyTransaction tx)
-    when isSignMbGenuine $ L.logInfo "Sign Mb is not genuine "
-    forM_ bogusTx $ \tx -> L.logInfo $ "Sign TX"  +|| fst tx ||+ " is not genuine "
+    case isSignMbGenuine of
+        True -> L.logInfo $ "Signature of microblock is genuine."
+        False -> L.logInfo $ "Signature of microblock is not genuine. Someone is trying to pretend to be publisher " +|| (show $ showPublicKey $ _publisher (mBlock :: Microblock) )
+    forM_ bogusTx $ \tx -> L.logInfo $ "Signature of transaction "  +|| fst tx ||+ " is not genuine "
     pure $ isSignMbGenuine && (null bogusTx)

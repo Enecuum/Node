@@ -164,8 +164,8 @@ generateBogusSignedSomething genFunction = do
     pure $ something 
 
 -- | Generate bogus microblock  
-generateBogusSignedMicroblock :: (Monad m, L.ERandom m) => m Microblock
-generateBogusSignedMicroblock = do
-    Microblock {..} <- genRandMicroblock genesisKBlock
+generateBogusSignedMicroblock :: (Monad m, L.ERandom m) => KBlock -> m Microblock
+generateBogusSignedMicroblock kBlock = do
+    Microblock {..} <- genRandMicroblock kBlock
     let genMbSign fakeOwnerPrivateKey = signMicroblock _keyBlock _transactions _publisher fakeOwnerPrivateKey
     generateBogusSignedSomething genMbSign  
