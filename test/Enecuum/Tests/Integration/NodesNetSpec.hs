@@ -14,6 +14,7 @@ import           Enecuum.Interpreters (runNodeDefinitionL)
 import qualified Enecuum.Language   as L
 import qualified Enecuum.Domain     as D
 import qualified Enecuum.Runtime    as R
+import qualified Data.Map           as M
 
 import qualified Enecuum.Assets.Nodes.GraphNodeTransmitter  as A
 import qualified Enecuum.Assets.Nodes.GraphNodeReceiver     as A
@@ -27,7 +28,7 @@ spec = describe "Network tests" $ fromHUnitTest $ TestList
     [TestLabel "test net sync" testNodeNet]
 
 createNodeRuntime :: IO R.NodeRuntime
-createNodeRuntime = R.createVoidLoggerRuntime >>= R.createCoreRuntime >>= R.createNodeRuntime
+createNodeRuntime = R.createVoidLoggerRuntime >>= R.createCoreRuntime >>= (\a -> R.createNodeRuntime a M.empty)
 
 -- TODO: add runtime clearing
 startNode :: L.NodeDefinitionL () -> IO ()

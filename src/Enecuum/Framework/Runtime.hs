@@ -14,8 +14,6 @@ import qualified Network.Socket as S
 data VarHandle = VarHandle D.VarId (TVar Any)
 type NodeState = TMVar (Map.Map D.VarId VarHandle)
 
-
-
 data NodeRuntime = NodeRuntime
     { _coreRuntime  :: CoreRuntime
     , _graph        :: D.TGraph D.NodeContent
@@ -26,10 +24,11 @@ data NodeRuntime = NodeRuntime
     , _processes    :: TVar (Map D.ProcessId ThreadId)
     , _tcpConnects  :: TVar (Map D.Address (D.ConnectionVar D.Tcp))
     , _udpConnects  :: TVar (Map D.Address (D.ConnectionVar D.Udp))
+    , _storyPaths   :: Map Text String
     }
 
-createNodeRuntime :: CoreRuntime -> IO NodeRuntime
-createNodeRuntime coreRt =
+createNodeRuntime :: CoreRuntime -> Map Text String -> IO NodeRuntime
+createNodeRuntime coreRt paths =
     NodeRuntime
         <$> pure coreRt
         <*> initHGraph
@@ -40,6 +39,7 @@ createNodeRuntime coreRt =
         <*> newTVarIO mempty
         <*> newTVarIO mempty
         <*> newTVarIO mempty
+        <*> pure paths
 
 getNextId :: NodeRuntime -> STM Int
 getNextId nodeRt = do

@@ -14,6 +14,7 @@ import           Data.HGraph.StringHashable (StringHash (..), toHash)
 import           Enecuum.Assets.Nodes.Messages (
     SuccessMsg (..), ForeverChainGeneration(..), NBlockPacketGeneration(..))
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
+import           Enecuum.Assets.Nodes.Methodes
 
 type IterationsCount = Int
 type EnableDelays = Bool
@@ -63,8 +64,10 @@ powNode' delaysEnabled = do
 
     nodeData <- L.initialization $ powNodeInitialization delaysEnabled D.genesisHash
     L.serving D.Rpc powNodeRpcPort $ do
-        L.method $ foreverChainGenerationHandle nodeData
-        L.method $ nBlockPacketGenerationHandle nodeData
+        L.method  $ foreverChainGenerationHandle nodeData
+        L.method  $ nBlockPacketGenerationHandle nodeData
+        L.method  $ rpcPingPong
+        L.method  $ methodeStopNode nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.process $ forever $ do

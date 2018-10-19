@@ -10,6 +10,7 @@ import           Data.Aeson as A
 import           Test.HUnit
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit ( fromHUnitTest )
+import qualified Data.Map           as M
 
 import qualified Enecuum.Language as L
 import qualified Enecuum.Domain as D
@@ -19,7 +20,7 @@ import qualified Enecuum.Runtime as R
 import           Enecuum.Interpreters
 import           Enecuum.Framework.Networking.Interpreter
 
-createNodeRuntime = R.createVoidLoggerRuntime >>= R.createCoreRuntime >>= R.createNodeRuntime
+createNodeRuntime = R.createVoidLoggerRuntime >>= R.createCoreRuntime >>= (\a -> R.createNodeRuntime a M.empty)
 
 data OkRequest = OkRequest deriving (Show, Eq, Generic, ToJSON, FromJSON)
 data OkResponse = OkResponse deriving (Show, Eq, Generic, ToJSON, FromJSON)

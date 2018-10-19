@@ -7,7 +7,6 @@ import           Control.Concurrent.STM.TChan
 import           Control.Concurrent                 (killThread)
 import qualified Network.Socket.ByteString.Lazy     as S
 import qualified Network.Socket                     as S hiding (recv)
-
 import           Enecuum.Framework.Networking.Internal.Tcp.Server
 import           Enecuum.Framework.Node.Interpreter (runNodeL, setServerChan)
 import           Enecuum.Framework.Runtime                 (NodeRuntime, getNextId)
@@ -26,6 +25,7 @@ import           Enecuum.Framework.Handler.Cmd.Interpreter as Cmd
 import           Data.Aeson.Lens
 import qualified Data.Text as T
 import           System.Console.Haskeline
+import           System.Console.Haskeline.History
 
 addProcess :: NodeRuntime -> D.ProcessPtr a -> ThreadId -> IO ()
 addProcess nodeRt pPtr threadId = do
@@ -82,17 +82,24 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
     m <- atomically $ newTVar mempty
     a <- runCmdHandlerL m handlers
     void $ forkIO $ do
-        m' <- readTVarIO m
-        let loop = do
-                minput <- getInputLine ""
+        m'       <- readTVarIO m
+        tag      <- atomically $ readTVar (nodeRt ^. RLens.nodeTag)
+        let 
+            filePath = nodeRt ^. RLens.storyPaths.at tag
+            inpStr = if tag == "Client" then "λ> " else ""
+            loop   = do
+                minput <- getInputLine inpStr
                 case minput of
                     Nothing      -> pure ()
                     Just    line -> do
                         res <- liftIO $ callHandler nodeRt m' $ T.pack line
                         outputStrLn $ T.unpack res
+                        whenJust filePath $ \path -> do
+                            history <- getHistory
+                            liftIO $ writeHistory path history
                         loop
                              
-        runInputT defaultSettings loop
+        runInputT defaultSettings{historyFile = filePath} loop
     pure $ next ()
 
 -- TODO: make a separate language and use its interpreter in test runtime too.

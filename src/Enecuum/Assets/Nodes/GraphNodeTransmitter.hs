@@ -24,6 +24,8 @@ import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Assets.Nodes.Address
 
 import qualified Enecuum.Framework.LogState as Log
+import           Enecuum.Assets.Nodes.Methodes
+
 
 data GraphNodeData = GraphNodeData
     { _blockchain    :: D.BlockchainData
@@ -56,16 +58,17 @@ acceptKBlock nodeData kBlock _ = do
 acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Tcp -> L.NodeL ()
 acceptMBlock nodeData mBlock _ = do
     isSignGenuine <- D.verifyMicroblockWithTxEff mBlock
-    case isSignGenuine of
-        False -> L.logInfo $ "MBlock is not accepted."
-        True -> do
+    if not isSignGenuine
+        then L.logInfo $ "MBlock is not accepted."
+        else do
             L.logInfo "MBlock is accepted."
             let logV = nodeData ^. logVar
                 bData = nodeData ^. blockchain
             void $ L.atomically (L.addMBlock logV bData mBlock)
             Log.writeLog logV
 
-getLastKBlock :: GraphNodeData ->  GetLastKBlock -> L.NodeL D.KBlock
+
+getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
@@ -154,12 +157,16 @@ graphNodeTransmitter = do
     L.serving D.Tcp graphNodeTransmitterTcpPort $ do
         L.handler $ acceptMBlock nodeData
         L.handler $ acceptKBlock nodeData
+        L.handler $ methodePing
+
     L.serving D.Rpc graphNodeTransmitterRpcPort $ do
         L.method  $ getLastKBlock nodeData
         L.methodE $ getBalance nodeData
         L.method  $ acceptChainLength nodeData
         L.methodE $ acceptChainFromTo nodeData
         L.methodE $ acceptMBlockForKBlocks nodeData
+        L.method  $ rpcPingPong
+        L.method  $ methodeStopNode nodeData
         -- L.method  $ acceptTransaction nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
