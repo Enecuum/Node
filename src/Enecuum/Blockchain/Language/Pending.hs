@@ -1,19 +1,17 @@
 module Enecuum.Blockchain.Language.Pending where
 
-import Enecuum.Prelude
-import Data.Map
-import qualified Enecuum.Framework.Language as L
-import qualified Enecuum.Core.Language as L
-import qualified Enecuum.Framework.Domain as D
-import qualified Enecuum.Core.Types as D
-import Enecuum.Blockchain.Domain.BlockchainData (BlockchainData(..))
-import qualified Enecuum.Blockchain.Domain as D
-import qualified Enecuum.Blockchain.Domain.Graph as D
-import qualified Enecuum.Blockchain.Domain.KBlock as D
-import  Enecuum.Blockchain.Domain.Microblock  (Microblock(..))
-import  Enecuum.Blockchain.Domain.Transaction (Transaction(..))
-import qualified Enecuum.Blockchain.Language.Graph as L
-import qualified Enecuum.Framework.LogState as Log
+import           Data.Map
+import qualified Enecuum.Blockchain.Domain                as D
+import           Enecuum.Blockchain.Domain.BlockchainData (BlockchainData (..))
+import           Enecuum.Blockchain.Domain.Microblock     (Microblock (..))
+import           Enecuum.Blockchain.Domain.Transaction    (Transaction (..))
+import qualified Enecuum.Blockchain.Language.Graph        as L
+import qualified Enecuum.Core.Language                    as L
+import qualified Enecuum.Core.Types                       as D
+import qualified Enecuum.Framework.Domain                 as D
+import qualified Enecuum.Framework.Language               as L
+import qualified Enecuum.Framework.LogState               as Log
+import           Enecuum.Prelude
 
 
 -- | Move one block from pending to graph if it is possibly and remove it from pending.

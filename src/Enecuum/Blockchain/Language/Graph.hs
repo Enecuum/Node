@@ -10,7 +10,7 @@ import qualified Enecuum.Blockchain.Domain.Graph as D
 import qualified Enecuum.Blockchain.Domain.KBlock as D
 import qualified Enecuum.Blockchain.Domain.Microblock as D
 import qualified Enecuum.Blockchain.Language.Ledger as L
-
+-- import qualified Enecuum.Blockchain.Lens       as Lens
 import qualified Enecuum.Framework.LogState as Log
 
 -- | Get kBlock by Hash
@@ -24,6 +24,10 @@ getKBlock logV bData hash = do
     whenJust mbMsg $ Log.stateLog logV
     pure res
 
+-- -- -- | Get kBlock pending
+-- getKBlockPending :: D.StateVar [Text] -> D.BlockchainData -> L.StateL [D.KBlock] 
+-- getKBlockPending logV bData = do
+--     pure $ bData ^. Lens.kBlockPending  
 
 -- Get Top kBlock
 getTopKeyBlock :: D.StateVar [Text] -> D.BlockchainData -> L.StateL D.KBlock

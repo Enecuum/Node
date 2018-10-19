@@ -35,6 +35,16 @@ data GraphNodeData = GraphNodeData
 
 makeFieldsNoPrefix ''GraphNodeData
 
+-- | Accept transaction
+acceptTransaction :: GraphNodeData -> AcceptTransaction -> L.NodeL ()
+acceptTransaction nodeData (AcceptTransaction tx) = do
+    L.logInfo $ "\nAccept transaction: " +|| show tx
+    L.logInfo $ "\nAdd transaction to pending "    
+    let bData = nodeData ^. blockchain
+    L.atomically $ do
+        pending <- L.readVar (bData ^. Lens.transactionPending)
+        L.writeVar (bData ^. Lens.transactionPending) ( tx : pending )
+
 -- | Accept kBlock
 acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Tcp -> L.NodeL ()
 acceptKBlock nodeData kBlock _ = do
@@ -67,6 +77,11 @@ acceptMBlock nodeData mBlock _ = do
             void $ L.atomically (L.addMBlock logV bData mBlock)
             Log.writeLog logV
 
+getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL [D.KBlock]
+getKBlockPending nodeData _ = do
+    let bData = nodeData ^. blockchain 
+    kBlocks <- L.atomically $ L.readVar $ bData ^. Lens.kBlockPending 
+    pure kBlocks
 
 getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
@@ -161,13 +176,14 @@ graphNodeTransmitter = do
 
     L.serving D.Rpc graphNodeTransmitterRpcPort $ do
         L.method  $ getLastKBlock nodeData
+        L.method  $ getKBlockPending nodeData
         L.methodE $ getBalance nodeData
         L.method  $ acceptChainLength nodeData
         L.methodE $ acceptChainFromTo nodeData
         L.methodE $ acceptMBlockForKBlocks nodeData
         L.method  $ rpcPingPong
         L.method  $ methodeStopNode nodeData
-        -- L.method  $ acceptTransaction nodeData
+        L.method  $ acceptTransaction nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.awaitNodeFinished nodeData
