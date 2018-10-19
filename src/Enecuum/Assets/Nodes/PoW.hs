@@ -67,6 +67,7 @@ powNode' delaysEnabled = do
         L.method  $ foreverChainGenerationHandle nodeData
         L.method  $ nBlockPacketGenerationHandle nodeData
         L.method  $ rpcPingPong
+        L.method  $ methodeStopNode nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.process $ forever $ do

@@ -103,6 +103,7 @@ graphNodeReceiver = do
         L.methodE $ getBalance nodeData
         L.method  $ getLastKBlock nodeData
         L.method  $ rpcPingPong
+        L.method  $ methodeStopNode nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.awaitNodeFinished nodeData

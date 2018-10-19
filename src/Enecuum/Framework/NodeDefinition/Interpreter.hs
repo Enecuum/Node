@@ -7,7 +7,6 @@ import           Control.Concurrent.STM.TChan
 import           Control.Concurrent                 (killThread)
 import qualified Network.Socket.ByteString.Lazy     as S
 import qualified Network.Socket                     as S hiding (recv)
-import           Enecuum.Assets.System.Directory (clientStory)
 import           Enecuum.Framework.Networking.Internal.Tcp.Server
 import           Enecuum.Framework.Node.Interpreter (runNodeL, setServerChan)
 import           Enecuum.Framework.Runtime                 (NodeRuntime, getNextId)
@@ -85,8 +84,8 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
     void $ forkIO $ do
         m'       <- readTVarIO m
         tag      <- atomically $ readTVar (nodeRt ^. RLens.nodeTag)
-        filePath <- if tag == "Client" then Just <$> clientStory else pure Nothing
         let 
+            filePath = nodeRt ^. RLens.storyPaths.at tag
             inpStr = if tag == "Client" then "λ> " else ""
             loop   = do
                 minput <- getInputLine inpStr
