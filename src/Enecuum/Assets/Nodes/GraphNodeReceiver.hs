@@ -85,6 +85,7 @@ graphNodeInitialization = L.scenario $ do
     L.atomically
         $  GraphNodeData <$> (D.BlockchainData g
         <$> L.newVar []
+        <*> L.newVar []
         <*> L.newVar D.genesisHash
         <*> L.newVar Data.Map.empty)
         <*> L.newVar []

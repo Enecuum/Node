@@ -55,11 +55,15 @@ acceptKBlock nodeData kBlock _ = do
 -- | Accept mBlock
 acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Tcp -> L.NodeL ()
 acceptMBlock nodeData mBlock _ = do
-    L.logInfo "Accepting MBlock."
-    let logV = nodeData ^. logVar
-        bData = nodeData ^. blockchain
-    void $ L.atomically (L.addMBlock logV bData mBlock)
-    Log.writeLog logV
+    isSignGenuine <- D.verifyMicroblockWithTxEff mBlock
+    case isSignGenuine of
+        False -> L.logInfo $ "MBlock is not accepted."
+        True -> do
+            L.logInfo "MBlock is accepted."
+            let logV = nodeData ^. logVar
+                bData = nodeData ^. blockchain
+            void $ L.atomically (L.addMBlock logV bData mBlock)
+            Log.writeLog logV
 
 getLastKBlock :: GraphNodeData ->  GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
@@ -85,10 +89,10 @@ acceptChainLength nodeData GetChainLengthRequest = do
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
     L.logInfo "Answering chain length"
-    topKBlock <- L.atomically $ L.getTopKeyBlock logV bData        
+    topKBlock <- L.atomically $ L.getTopKeyBlock logV bData
     Log.writeLog logV
     pure $ GetChainLengthResponse $ topKBlock ^. Lens.number
-              
+
 
 acceptChainFromTo :: GraphNodeData -> GetChainFromToRequest -> L.NodeL (Either Text GetChainFromToResponse)
 acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
@@ -96,13 +100,13 @@ acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
     if from > to
-        then pure $ Left "From is grater than to"
+        then pure $ Left "From is greater than to"
         else do
             kBlockList <- L.atomically $ do
                 topKBlock <- L.getTopKeyBlock logV bData
                 chain <- L.findBlocksByNumber logV bData from topKBlock
                 pure $ drop (fromEnum $ (topKBlock ^. Lens.number) - to) chain
-            Log.writeLog logV    
+            Log.writeLog logV
             pure $ Right $ GetChainFromToResponse (reverse kBlockList)
 
 acceptMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL (Either Text GetMBlocksForKBlockResponse)
@@ -110,7 +114,7 @@ acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
     L.logInfo $ "Answering microblocks for kBlock " +|| show hash
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
-    mBlockList <- L.atomically $ L.withGraph bData $ do 
+    mBlockList <- L.atomically $ L.withGraph bData $ do
         node <- L.getNode hash
         case node of
             Nothing -> pure Nothing
@@ -123,7 +127,7 @@ acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
                 pure $ Just $ catMaybes aMBlocks
     Log.writeLog logV
     case mBlockList of
-        Nothing -> pure $ Left "KBlock does't exist"  
+        Nothing -> pure $ Left "KBlock doesn't exist"
         Just blockList -> pure $ Right $ GetMBlocksForKBlockResponse blockList
 
 -- | Initialization of graph node
@@ -135,11 +139,12 @@ graphNodeInitialization = L.scenario $ do
     L.atomically
         $  GraphNodeData <$> (D.BlockchainData g
         <$> L.newVar []
+        <*> L.newVar []
         <*> L.newVar D.genesisHash
         <*> L.newVar Data.Map.empty)
         <*> L.newVar []
         <*> L.newVar NodeActing
-        
+
 -- | Start of graph node
 graphNodeTransmitter :: L.NodeDefinitionL ()
 graphNodeTransmitter = do
@@ -149,13 +154,13 @@ graphNodeTransmitter = do
     L.serving D.Tcp graphNodeTransmitterTcpPort $ do
         L.handler $ acceptMBlock nodeData
         L.handler $ acceptKBlock nodeData
-
     L.serving D.Rpc graphNodeTransmitterRpcPort $ do
         L.method  $ getLastKBlock nodeData
         L.methodE $ getBalance nodeData
         L.method  $ acceptChainLength nodeData
         L.methodE $ acceptChainFromTo nodeData
         L.methodE $ acceptMBlockForKBlocks nodeData
+        -- L.method  $ acceptTransaction nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.awaitNodeFinished nodeData

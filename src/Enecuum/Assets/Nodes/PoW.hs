@@ -8,7 +8,7 @@ module Enecuum.Assets.Nodes.PoW where
 import Enecuum.Prelude
 import qualified Enecuum.Language              as L
 import qualified Enecuum.Domain                as D
-
+import qualified Enecuum.Assets.Blockchain.Generation as A
 import           Enecuum.Assets.Nodes.Address (graphNodeTransmitterRpcAddress, powNodeRpcPort, graphNodeTransmitterTcpAddress)
 import           Data.HGraph.StringHashable (StringHash (..), toHash)
 import           Enecuum.Assets.Nodes.Messages (
@@ -33,7 +33,7 @@ kBlockProcess nodeData = do
     prevKBlockHash      <- L.atomically <$> L.readVar $ nodeData ^. prevHash
     prevKBlockNumber    <- L.atomically <$> L.readVar $ nodeData ^. prevNumber
 
-    (lastHash, kBlocks) <- D.generateKBlocks prevKBlockHash prevKBlockNumber
+    (lastHash, kBlocks) <- A.generateKBlocks prevKBlockHash prevKBlockNumber
     L.logInfo $ "Last hash: " +|| lastHash ||+ "."
 
     L.atomically $ L.writeVar (nodeData ^. prevHash) lastHash

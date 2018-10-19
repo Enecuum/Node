@@ -3,7 +3,7 @@
 	"scenarioNode": [{
 		"nodeRole": "PoA",
 		"scenario": "Full",
-		"scenarioRole": "Soly"
+		"scenarioRole": "Good"
 	}],
 	"extPort": 1668,
   "loggerConfig":

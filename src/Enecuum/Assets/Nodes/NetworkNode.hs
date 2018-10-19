@@ -8,6 +8,7 @@ import           Enecuum.Assets.Nodes.Address (nnAddr)
 import qualified Enecuum.Domain               as D
 import qualified Enecuum.Language             as L
 import           Enecuum.Prelude
+import qualified Enecuum.Assets.Blockchain.Generation as A
 
 data TransactionRequest  = TransactionRequest { }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -18,7 +19,7 @@ data TransactionResponse = TransactionResponse { transaction :: [D.Transaction] 
 
 getTx :: TransactionRequest -> L.NodeL TransactionResponse
 getTx TransactionRequest = do
-    tx <- D.genNTransactions 10
+    tx <- A.genNTransactions 10
     pure $ TransactionResponse tx
 
 nnNode :: L.NodeDefinitionL ()

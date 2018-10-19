@@ -8,6 +8,7 @@ import qualified Enecuum.Framework.Language as L
 import qualified Enecuum.Core.Language as L
 import qualified Enecuum.Framework.Domain as D
 import qualified Enecuum.Core.Types as D
+import qualified Enecuum.Blockchain.Domain as D
 import Enecuum.Blockchain.Domain.BlockchainData (BlockchainData(..))
 import qualified Enecuum.Blockchain.Domain.Graph as D
 import qualified Enecuum.Blockchain.Domain.KBlock as D
@@ -27,11 +28,11 @@ calculateLedger logV bData mblock = do
             amount         = _amount tx
             currentBalance = lookup owner ledgerW
 
-        when (owner == receiver) $ Log.stateLog logV $ "Tx rejected (same owner and receiver): " +|| owner ||+ "."
+        when (owner == receiver) $ Log.stateLog logV $ "Tx rejected (same owner and receiver): " +|| (D.showPublicKey owner) ||+ "."
 
         when (owner /= receiver) $ do
             ownerBalance <- case currentBalance of
-                    Nothing           -> (Log.stateLog logV $ "Can't find wallet in ledger: " +|| owner ||+ ".") >> pure 100
+                    Nothing           -> (Log.stateLog logV $ "Can't find wallet in ledger: " +|| (D.showPublicKey owner) ||+ ".") >> pure 100
                     Just ownerBalance -> pure ownerBalance 
             if ownerBalance >= amount 
             then do
@@ -44,9 +45,9 @@ calculateLedger logV bData mblock = do
                                        (insert receiver (receiverBalance + amount) ledgerW)
                 L.writeVar (_ledger bData) newLedger
                 Log.stateLog logV
-                    $   "Tx accepted: from [" +|| owner ||+ "] to [" +|| receiver ||+ "], amount: " +|| amount ||+ ". ["
-                    +|| owner ||+ "]: " +|| ownerBalance - amount ||+ ", [" +|| receiver ||+ "]: " +|| receiverBalance + amount ||+ ""
+                    $   "Tx accepted: from [" +|| (D.showPublicKey owner) ||+ "] to [" +|| (D.showPublicKey receiver) ||+ "], amount: " +|| amount ||+ ". ["
+                    +|| (D.showPublicKey owner) ||+ "]: " +|| ownerBalance - amount ||+ ", [" +|| (D.showPublicKey receiver) ||+ "]: " +|| receiverBalance + amount ||+ ""
 -- stateLog nodeData $ "New Ledger " +|| newLedger ||+ "."
             else
                 Log.stateLog logV
-                $   "Tx rejected (negative balance): [" +|| owner ||+ "] -> [" +|| receiver ||+ "], amount: " +|| amount ||+ "."
+                $   "Tx rejected (negative balance): [" +|| (D.showPublicKey owner) ||+ "] -> [" +|| (D.showPublicKey receiver) ||+ "], amount: " +|| amount ||+ "."

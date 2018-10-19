@@ -3,16 +3,15 @@
 {-# LANGUAGE RecordWildCards       #-}
 module Enecuum.Blockchain.Domain.Microblock where
 
-import           Enecuum.Prelude
-
-import           Data.HGraph.StringHashable            (StringHash (..), StringHashable, toHash)
-
 import qualified Crypto.Hash.SHA256                    as SHA
 import qualified Data.ByteString.Base64                as Base64
+import           Data.HGraph.StringHashable            (StringHash (..), StringHashable, toHash)
 import qualified Data.Serialize                        as S
 import           Enecuum.Blockchain.Domain.Crypto
-import           Enecuum.Blockchain.Domain.Transaction (Transaction)
-import qualified Enecuum.Core.Language                      as L
+import           Enecuum.Blockchain.Domain.Transaction (Transaction, verifyTransaction)
+import qualified Enecuum.Core.Language                 as L
+import           Enecuum.Prelude
+
 
 data Microblock = Microblock
     { _keyBlock     :: StringHash
@@ -55,3 +54,19 @@ signMicroblock hashofKeyBlock tx publisherPubKey publisherPrivKey = do
             , _publisher = publisherPubKey
             , _signature = signature
             }
+
+verifyMicroblockWithTx :: Microblock -> Bool
+verifyMicroblockWithTx mBlock = verifyMicroblock mBlock && isSignTxGenuine
+    where tx = _transactions (mBlock :: Microblock)
+          isSignTxGenuine = and $ map verifyTransaction tx
+
+verifyMicroblockWithTxEff :: (Monad m, L.Logger m) => Microblock -> m Bool
+verifyMicroblockWithTxEff mBlock = do
+    let isSignMbGenuine = verifyMicroblock mBlock
+        tx = _transactions (mBlock :: Microblock)
+        bogusTx = filter (\a -> snd a == False ) $ zip tx (map verifyTransaction tx)
+    case isSignMbGenuine of
+        True -> L.logInfo $ "Signature of microblock is genuine."
+        False -> L.logInfo $ "Signature of microblock is not genuine. Someone is trying to pretend to be publisher " +|| (show $ showPublicKey $ _publisher (mBlock :: Microblock) )
+    forM_ bogusTx $ \tx -> L.logInfo $ "Signature of transaction "  +|| fst tx ||+ " is not genuine "
+    pure $ isSignMbGenuine && (null bogusTx)
