@@ -1,17 +1,16 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE PackageImports        #-}
-module Enecuum.Blockchain.Domain.Generate where
+{-# LANGUAGE RecordWildCards       #-}
 
-import           Data.HGraph.StringHashable            (StringHash (..), toHash)
-import           Data.List                             (delete)
-import           Enecuum.Assets.Nodes.Wallet
-import           Enecuum.Blockchain.Domain.Crypto
-import           Enecuum.Blockchain.Domain.KBlock
-import           Enecuum.Blockchain.Domain.Microblock
-import           Enecuum.Blockchain.Domain.Transaction
-import           Enecuum.Blockchain.Domain.Types
-import qualified Enecuum.Language                      as L
-import           Enecuum.Prelude                       hiding (Ordering)
+module Enecuum.Assets.Blockchain.Generation where
+
+import           Data.HGraph.StringHashable  (StringHash (..), toHash)
+import           Data.List                   (delete)
+import           Enecuum.Assets.Blockchain.Wallet
+import           Enecuum.Blockchain.Domain
+import qualified Enecuum.Blockchain.Lens     as Lens
+import qualified Enecuum.Language            as L
+import           Enecuum.Prelude             hiding (Ordering)
 
 -- | Order for key blocks
 data Ordering = InOrder | RandomOrder
@@ -86,8 +85,6 @@ genKBlock prevHash i = KBlock
 genNTransactions :: (L.ERandom m, Monad m) => Int -> m [Transaction]
 genNTransactions k = replicateM k $ genTransaction On
 
-
-
 -- | Generate signed transaction
 genTransaction :: (Monad m, L.ERandom m) => Boundary -> m Transaction
 genTransaction isFromRange = do
@@ -149,3 +146,26 @@ loopGenIndices numbers = do
             rest <- loopGenIndices $ delete result numbers
             pure (result : rest)
         else pure []
+
+-- | Generate bogus transaction
+generateBogusSignedTransaction :: (Monad m, L.ERandom m) => m Transaction
+generateBogusSignedTransaction = do
+    Transaction {..} <- genTransaction Off
+    let genTxSign fakeOwnerPrivateKey = signTransaction _owner fakeOwnerPrivateKey _receiver (_amount + 100)  _currency
+    generateBogusSignedSomething genTxSign
+
+-- | Generate bogus signature with function for something
+generateBogusSignedSomething :: (Monad m, L.ERandom m, Lens.HasSignature s b) =>
+     (PrivateKey -> m s) -> m s
+generateBogusSignedSomething genFunction = do 
+    fakeOwner <- L.evalCoreCrypto $ L.generateKeyPair
+    let fakeOwnerPrivateKey = getPriv fakeOwner
+    something <- genFunction fakeOwnerPrivateKey
+    pure $ something 
+
+-- | Generate bogus microblock  
+generateBogusSignedMicroblock :: (Monad m, L.ERandom m) => KBlock -> m Microblock
+generateBogusSignedMicroblock kBlock = do
+    Microblock {..} <- genRandMicroblock kBlock
+    let genMbSign fakeOwnerPrivateKey = signMicroblock _keyBlock _transactions _publisher fakeOwnerPrivateKey
+    generateBogusSignedSomething genMbSign  

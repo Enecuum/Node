@@ -7,6 +7,7 @@ import qualified Enecuum.Core.Language as L
 import qualified Enecuum.Framework.Domain as D
 import qualified Enecuum.Core.Types as D
 import Enecuum.Blockchain.Domain.BlockchainData (BlockchainData(..))
+import qualified Enecuum.Blockchain.Domain as D
 import qualified Enecuum.Blockchain.Domain.Graph as D
 import qualified Enecuum.Blockchain.Domain.KBlock as D
 import  Enecuum.Blockchain.Domain.Microblock  (Microblock(..))
@@ -34,4 +35,11 @@ addBlockToPending :: D.StateVar [Text] -> BlockchainData -> D.KBlock -> L.StateL
 addBlockToPending logV bData kBlock = do
     Log.stateLog logV "Adding KBlock to pending"
     L.modifyVar (_kBlockPending bData) (\pending -> sortOn (D._number) $ kBlock : pending)
+    pure True
+
+-- | Add new transaction to pending.
+addTransactionToPending :: D.StateVar [Text] -> BlockchainData -> D.Transaction -> L.StateL Bool
+addTransactionToPending logV bData transaction = do
+    Log.stateLog logV "Add transaction to pending"
+    L.modifyVar (_transactionPending bData) (\pending -> transaction : pending)
     pure True
