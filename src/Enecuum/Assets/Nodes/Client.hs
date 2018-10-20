@@ -1,18 +1,21 @@
-{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell        #-}
 
 module Enecuum.Assets.Nodes.Client where
 
 import           Enecuum.Prelude
 
-import           Enecuum.Config
-import qualified Enecuum.Domain as D
-import qualified Data.Aeson as A
-import qualified Enecuum.Language as L
-import qualified Enecuum.Assets.Nodes.Messages as M
+import qualified Data.Aeson                       as A
 import           Enecuum.Assets.Nodes.Address
+import qualified Enecuum.Assets.Nodes.Messages    as M
+import           Enecuum.Assets.System.Directory  as D (keysFilePath)
+import           Enecuum.Config
+import qualified Enecuum.Domain                   as D
 import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
+import qualified Enecuum.Language                 as L
 
+data AcceptTransaction           = AcceptTransaction D.CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, ToJSON)
 data GetLastKBlock               = GetLastKBlock               D.Address
 data GetWalletBalance            = GetWalletBalance M.WalletId D.Address
 data GetLengthOfChain            = GetLengthOfChain            D.Address
@@ -22,11 +25,10 @@ data Ping                        = Ping (D.Protocol Int) D.Address
 data StopRequest                 = StopRequest                 D.Address
 data GetBlock                    = GetBlock       D.StringHash D.Address
 
-
 data GraphNodeData = GraphNodeData
-    { _blockchain    :: D.BlockchainData
-    , _logVar        :: D.StateVar [Text]
-    , _status        :: D.StateVar NodeStatus
+    { _blockchain :: D.BlockchainData
+    , _logVar     :: D.StateVar [Text]
+    , _status     :: D.StateVar NodeStatus
     }
 
 instance A.FromJSON Ping where
@@ -34,6 +36,9 @@ instance A.FromJSON Ping where
 
 instance A.FromJSON GetWalletBalance where
     parseJSON = A.withObject "GetWalletBalance" $ \o -> GetWalletBalance <$> o A..: "walletID" <*> (o A..: "address")
+
+instance A.FromJSON AcceptTransaction where
+    parseJSON = A.withObject "AcceptTransaction" $ \o -> AcceptTransaction <$> o A..: "tx" <*> (o A..: "address")
 
 instance A.FromJSON GetLastKBlock where
     parseJSON = A.withObject "GetLastKBlock" $ \o -> GetLastKBlock <$> (o A..: "address")
@@ -74,6 +79,18 @@ getWalletBalance (GetWalletBalance walletId address) = do
     res :: Either Text M.WalletBalanceMsg <- L.makeRpcRequest address (M.GetWalletBalance walletId)
     pure . eitherToText $ res
 
+transform :: (L.Logger m, L.FileSystem m, Monad m) => D.CLITransaction -> m D.Transaction
+transform tx = do
+    L.logInfo $ show tx
+    -- keys <- L.readFile =<< keysFilePath
+    undefined
+
+createTransaction :: AcceptTransaction -> L.NodeL Text
+createTransaction (AcceptTransaction tx address) = do
+    transaction <- transform tx
+    res :: Either Text M.AcceptTransaction <- L.makeRpcRequest address (M.AcceptTransaction transaction)
+    pure . eitherToText $ res
+
 getLengthOfChain :: GetLengthOfChain -> L.NodeL Text
 getLengthOfChain (GetLengthOfChain address) = do
     res :: Either Text D.KBlock <- L.makeRpcRequest address M.GetLastKBlock
@@ -100,12 +117,12 @@ getBlock (GetBlock hash address) = do
     res :: Either Text D.NodeContent <- L.makeRpcRequest address (M.GetGraphNode hash)
     case res of
         Right (D.KBlockContent block) -> pure $ "Key block is "   <> show block
-        Right (D.MBlockContent block) -> pure $ "Mickroblock is " <> show block
+        Right (D.MBlockContent block) -> pure $ "Microblock is " <> show block
         Left  text                    -> pure $ "Error: "         <> text
 
     {-
 Requests:
-{"method":"GetLastKBlock", "address":{"host":"127.0.0.1", "port": 2008}}
+{"method":"GetLastKBlock", "address":{"host":"127.0.0.1", "port": 2005}}
 {"method":"StartForeverChainGeneration", "address":{"host":"127.0.0.1", "port": 2005}}
 {"method":"StartNBlockPacketGeneration", "number" : 2, "address":{"host":"127.0.0.1", "port": 2005}}
 {"method":"StartNBlockPacketGeneration", "number" : 1, "address":{"host":"127.0.0.1", "port": 2005}}
@@ -115,6 +132,7 @@ Requests:
 {"method":"Ping", "protocol":"RPC", "address":{"host":"127.0.0.1", "port": 2008}}
 {"method":"GetLengthOfChain", "address":{"host":"127.0.0.1", "port": 2008}}
 {"method":"StopRequest", "address":{"host":"127.0.0.1", "port": 2008}}
+{"method":"AcceptTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2005}}
 -}
 
 clientNode :: L.NodeDefinitionL ()
@@ -132,6 +150,7 @@ clientNode = do
         L.stdHandler ping
         L.stdHandler stopRequest
         L.stdHandler getBlock
+        L.stdHandler $ createTransaction
     L.awaitNodeFinished' stateVar
 
 eitherToText :: Show a => Either Text a -> Text

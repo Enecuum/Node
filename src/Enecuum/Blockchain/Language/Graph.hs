@@ -1,17 +1,13 @@
 module Enecuum.Blockchain.Language.Graph where
 
-import Enecuum.Prelude
-import qualified Enecuum.Framework.Language as L
-import qualified Enecuum.Core.Language as L
-import qualified Enecuum.Framework.Domain as D
-import qualified Enecuum.Core.Types as D
-import qualified Enecuum.Blockchain.Domain.BlockchainData as D
-import qualified Enecuum.Blockchain.Domain.Graph as D
-import qualified Enecuum.Blockchain.Domain.KBlock as D
-import qualified Enecuum.Blockchain.Domain.Microblock as D
+import qualified Enecuum.Blockchain.Domain          as D
 import qualified Enecuum.Blockchain.Language.Ledger as L
--- import qualified Enecuum.Blockchain.Lens       as Lens
-import qualified Enecuum.Framework.LogState as Log
+import qualified Enecuum.Core.Language              as L
+import qualified Enecuum.Core.Types                 as D
+import qualified Enecuum.Framework.Domain           as D
+import qualified Enecuum.Framework.Language         as L
+import qualified Enecuum.Framework.LogState         as Log
+import           Enecuum.Prelude
 
 -- | Get kBlock by Hash
 getKBlock :: D.StateVar [Text] -> D.BlockchainData -> D.StringHash -> L.StateL (Maybe D.KBlock)
@@ -23,11 +19,6 @@ getKBlock logV bData hash = do
             _ -> pure (Nothing, Just $ "KBlock not found by hash: " <> show hash)
     whenJust mbMsg $ Log.stateLog logV
     pure res
-
--- -- -- | Get kBlock pending
--- getKBlockPending :: D.StateVar [Text] -> D.BlockchainData -> L.StateL [D.KBlock] 
--- getKBlockPending logV bData = do
---     pure $ bData ^. Lens.kBlockPending  
 
 -- Get Top kBlock
 getTopKeyBlock :: D.StateVar [Text] -> D.BlockchainData -> L.StateL D.KBlock
@@ -66,15 +57,15 @@ addMBlock logV bData mblock@(D.Microblock hash _ _ _) = do
 
 -- Return all blocks after given number as a list
 findBlocksByNumber :: D.StateVar [Text] -> D.BlockchainData -> Integer -> D.KBlock -> L.StateL [D.KBlock]
-findBlocksByNumber logV bData num prev = 
+findBlocksByNumber logV bData num prev =
     let cNum = (D._number prev) in
-    if 
+    if
         | cNum < num -> pure []
         | cNum == num -> pure [prev]
         | cNum > num -> do
             maybeNext <- getKBlock logV bData (D._prevHash prev)
             case maybeNext of
-                Nothing -> error "Broken chain"
+                Nothing   -> error "Broken chain"
                 Just next -> (:) prev <$> findBlocksByNumber logV bData num next
 
 kBlockIsNext :: D.KBlock -> D.KBlock -> Bool

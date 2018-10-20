@@ -7,7 +7,7 @@ import           Enecuum.Blockchain.Domain.Crypto
 import           Enecuum.Blockchain.Domain.Types
 import qualified Enecuum.Core.Language            as L
 import           Enecuum.Prelude
-
+import           Data.Aeson.Extra (noLensPrefix)
 
 type OwnerPubKey = PublicKey
 type OwnerPrivateKey = PrivateKey
@@ -29,6 +29,16 @@ data TransactionForSign = TransactionForSign
     , _currency :: Currency
     }
   deriving ( Generic, Show, Eq, Ord, Read, ToJSON, FromJSON, Serialize)
+
+data CLITransaction = CLITransaction
+  { _owner     :: String
+  , _receiver  :: String
+  , _amount    :: Amount
+  , _currency  :: Currency
+  } deriving ( Generic, Show, Eq, Ord, Read, Serialize)  
+instance ToJSON CLITransaction where toJSON = genericToJSON noLensPrefix
+instance FromJSON CLITransaction where parseJSON = genericParseJSON noLensPrefix
+cli1 = CLITransaction "me" "Alice" 15 ENQ
 
 -- instance StringHashable Transaction where
 --     toHash = StringHash . Base64.encode . SHA.hash . S.encode

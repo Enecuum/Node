@@ -8,7 +8,7 @@ import           Enecuum.Assets.System.Directory (appFileName, clientStory)
 import           Enecuum.Config                  (Config (..), NodeRole (..), Scenario (..), ScenarioNode (..),
                                                   ScenarioRole (..))
 import qualified Enecuum.Core.Lens               as Lens
-import           Enecuum.Interpreters            (clearNodeRuntime, runNodeDefinitionL)
+import           Enecuum.Interpreters            (clearNodeRuntime, runNodeDefinitionL, runFileSystemL)
 import qualified Enecuum.Language                as L
 import           Enecuum.Runtime                 (NodeRuntime (..), clearCoreRuntime, clearLoggerRuntime,
                                                   createCoreRuntime, createLoggerRuntime, createNodeRuntime)
@@ -29,7 +29,7 @@ initialize config = do
     putStrLn @Text "Creating core runtime..."
     coreRt <- createCoreRuntime loggerRt
     putStrLn @Text "Creating node runtime..."
-    story <- clientStory
+    story <- runFileSystemL $ clientStory
     nodeRt <- createNodeRuntime coreRt (M.singleton "Client" story)
 
     forM_ (scenarioNode config) $ \scenarioCase -> runNodeDefinitionL nodeRt $ do

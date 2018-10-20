@@ -91,6 +91,10 @@ instance L.ERandom (Free NodeF) where
     getRandomInt = evalCoreEffectNodeF . L.getRandomInt
     getRandomByteString = evalCoreEffectNodeF . L.getRandomByteString
 
+instance L.FileSystem (Free NodeF) where
+    readFile = evalCoreEffectNodeF . L.readFile
+    getHomeDirectory = evalCoreEffectNodeF $ L.getHomeDirectory
+
 instance L.ControlFlow (Free NodeF) where
     delay =  evalCoreEffectNodeF . L.delay
 

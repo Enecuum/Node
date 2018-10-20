@@ -1,4 +1,4 @@
--- {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE GADTs           #-}
 {-# LANGUAGE PackageImports  #-}
 {-# LANGUAGE TemplateHaskell #-}
