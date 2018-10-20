@@ -15,6 +15,7 @@ import qualified Enecuum.Language   as L
 import qualified Enecuum.Domain     as D
 import qualified Enecuum.Runtime    as R
 import qualified Data.Map           as M
+import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
 
 import qualified Enecuum.Assets.Nodes.GraphNodeTransmitter  as A
 import qualified Enecuum.Assets.Nodes.GraphNodeReceiver     as A
@@ -35,6 +36,7 @@ startNode :: L.NodeDefinitionL () -> IO ()
 startNode nodeDefinition = void $ forkIO $ do
     nodeRt <- createNodeRuntime
     runNodeDefinitionL nodeRt nodeDefinition
+    R.clearNodeRuntime nodeRt
 
 makeIORpcRequest ::
     (FromJSON b, ToJSON a, Typeable a) => D.Address -> a -> IO (Either Text b)
