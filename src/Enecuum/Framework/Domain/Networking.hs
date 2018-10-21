@@ -18,7 +18,7 @@ data Udp = Udp
 data Tcp = Tcp
 data Rpc = Rpc
 
-data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist
+data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist deriving Eq
 
 data Protocol a = UDP | TCP | RPC deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 

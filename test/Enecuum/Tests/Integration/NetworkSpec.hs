@@ -76,23 +76,26 @@ testConnectFromTo prot1 prot2 serverPort succPort = do
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            conn                 <- L.open prot2 serverAddr $ pure ()
-            Left D.ConnectionClosed <- L.send conn $ Success
-            void $ L.notify succAddr Success
+            conn <- L.open prot2 serverAddr $ pure ()
+            res  <- L.send conn $ Success
+            when (Left D.ConnectionClosed == res) $
+                void $ L.notify succAddr Success
 
 
 testConnectToNonexistentAddress protocol succPort = do
     runServingScenarion succPort succPort $ \_ succAddr nodeRt1 _ -> do
         runNodeDefinitionL nodeRt1 $ do
-            conn                 <- L.open protocol (D.Address "127.0.0.1" 300) $ pure ()
-            Left D.ConnectionClosed <- L.send conn Success
-            void $ L.notify succAddr Success
+            conn <- L.open protocol (D.Address "127.0.0.1" 300) $ pure ()
+            res  <- L.send conn Success
+            when (Left D.ConnectionClosed == res) $
+                void $ L.notify succAddr Success
 
 testSendingMsgToNonexistentAddress succPort = do
     runServingScenarion succPort succPort $ \_ succAddr nodeRt1 _ -> do
         runNodeDefinitionL nodeRt1 $ do
-            Left D.AddressNotExist <- L.notify (D.Address "127.0.0.1" 300) Success
-            void $ L.notify succAddr Success
+            res <- L.notify (D.Address "127.0.0.1" 300) Success
+            when (Left D.AddressNotExist == res) $
+                void $ L.notify succAddr Success
 
 testSendingMsgToClosedConnection protocol serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
@@ -101,10 +104,11 @@ testSendingMsgToClosedConnection protocol serverPort succPort =
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            conn                 <- L.open protocol serverAddr $ pure ()
+            conn <- L.open protocol serverAddr $ pure ()
             L.close conn
-            Left D.ConnectionClosed <- L.send conn $ Success
-            void $ L.notify succAddr Success
+            res  <- L.send conn $ Success
+            when (Left D.ConnectionClosed == res) $
+                void $ L.notify succAddr Success
 
 testSendingBigMsgByConnect protocol serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
@@ -113,9 +117,10 @@ testSendingBigMsgByConnect protocol serverPort succPort =
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            conn             <- L.open protocol serverAddr $ pure ()
-            Left D.TooBigMessage <- L.send conn $ bigMsg
-            void $ L.notify succAddr Success
+            conn <- L.open protocol serverAddr $ pure ()
+            res  <- L.send conn $ bigMsg
+            when (Left D.TooBigMessage == res) $
+                void $ L.notify succAddr Success
 
 testSendingBigUdpMsgByAddress serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
@@ -124,8 +129,9 @@ testSendingBigUdpMsgByAddress serverPort succPort =
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            Left _ <- L.notify serverAddr $ bigMsg
-            void $ L.notify succAddr Success
+            res <- L.notify serverAddr $ bigMsg
+            when (Left D.TooBigMessage == res) $
+                void $ L.notify succAddr Success
 
 pingPongTest protocol serverPort succPort = 
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do

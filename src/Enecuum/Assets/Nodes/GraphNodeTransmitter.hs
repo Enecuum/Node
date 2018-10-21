@@ -123,7 +123,7 @@ acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
             Nothing -> pure Nothing
             Just (D.HNode _ _ _ links _) -> do
                 aMBlocks                       <- forM (Data.Map.keys links) $ \aNRef -> do
-                    Just (D.HNode _ _ (D.fromContent -> block) _ _) <- L.getNode aNRef
+                    (D.HNode _ _ (D.fromContent -> block) _ _) <- fromJust <$> L.getNode aNRef
                     case block of
                         D.MBlockContent mBlock -> pure $ Just mBlock
                         _               -> pure Nothing

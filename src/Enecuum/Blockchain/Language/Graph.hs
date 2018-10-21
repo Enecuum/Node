@@ -28,8 +28,8 @@ getKBlock logV bData hash = do
 -- Get Top kBlock
 getTopKeyBlock :: D.StateVar [Text] -> D.BlockchainData -> L.StateL D.KBlock
 getTopKeyBlock logV bData = do
-    topNodeHash    <- L.readVar $ (D._curNode bData)
-    Just topKBlock <- getKBlock logV bData topNodeHash
+    topNodeHash <- L.readVar $ (D._curNode bData)
+    topKBlock   <- fromJust <$> getKBlock logV bData topNodeHash
     pure topKBlock
 
 -- | Add key block to graph
