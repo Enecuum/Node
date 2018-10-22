@@ -108,17 +108,7 @@ acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
     L.logInfo $ "Answering microblocks for kBlock " +|| show hash
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
-    mBlockList <- L.atomically $ L.withGraph bData $ do
-        node <- L.getNode hash
-        case node of
-            Nothing -> pure Nothing
-            Just (D.HNode _ _ _ links _) -> do
-                aMBlocks                       <- forM (Data.Map.keys links) $ \aNRef -> do
-                    Just (D.HNode _ _ (D.fromContent -> block) _ _) <- L.getNode aNRef
-                    case block of
-                        D.MBlockContent mBlock -> pure $ Just mBlock
-                        _               -> pure Nothing
-                pure $ Just $ catMaybes aMBlocks
+    mBlockList <- L.atomically $ L.getMBlocksForKBlock logV bData hash
     Log.writeLog logV
     case mBlockList of
         Nothing -> pure $ Left "KBlock doesn't exist"

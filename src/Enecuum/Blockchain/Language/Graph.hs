@@ -13,6 +13,8 @@ import qualified Enecuum.Blockchain.Language.Ledger as L
 
 import qualified Enecuum.Framework.LogState as Log
 
+import Data.Map
+
 -- | Get kBlock by Hash
 getKBlock :: D.StateVar [Text] -> D.BlockchainData -> D.StringHash -> L.StateL (Maybe D.KBlock)
 getKBlock logV bData hash = do
@@ -38,6 +40,10 @@ addTopKBlock logV bData kBlock = do
     Log.stateLog logV "Adding KBlock to the graph."
     let kBlock' = D.KBlockContent kBlock
     ref <- L.readVar (D._curNode bData)
+
+    mBlocks <- fromMaybe [] <$> getMBlocksForKBlock logV bData ref
+    forM_ mBlocks $ L.calculateLedger logV bData
+
     L.evalGraph (D._graph bData) $ do
         L.newNode kBlock'
         L.newLink ref kBlock'
@@ -54,11 +60,23 @@ addMBlock logV bData mblock@(D.Microblock hash _ _ _) = do
 
     when (isJust kblock) $ do
         Log.stateLog logV $ "Adding MBlock to the graph for KBlock (" +|| hash ||+ ")."
-        L.calculateLedger logV bData mblock
         L.evalGraph (D._graph bData) $ do
             L.newNode (D.MBlockContent mblock)
             L.newLink hash (D.MBlockContent mblock)
     pure $ isJust kblock
+
+getMBlocksForKBlock :: D.StateVar [Text] -> D.BlockchainData -> D.StringHash -> L.StateL (Maybe [D.Microblock])
+getMBlocksForKBlock logV bData hash =  L.evalGraph (D._graph bData) $ do
+    node <- L.getNode hash
+    case node of
+        Nothing -> pure Nothing
+        Just (D.HNode _ _ _ links _) -> do
+            aMBlocks                       <- forM (Data.Map.keys links) $ \aNRef -> do
+                Just (D.HNode _ _ (D.fromContent -> block) _ _) <- L.getNode aNRef
+                case block of
+                    D.MBlockContent mBlock -> pure $ Just mBlock
+                    _               -> pure Nothing
+            pure $ Just $ catMaybes aMBlocks
 
 -- Return all blocks after given number as a list
 findBlocksByNumber :: D.StateVar [Text] -> D.BlockchainData -> Integer -> D.KBlock -> L.StateL [D.KBlock]
