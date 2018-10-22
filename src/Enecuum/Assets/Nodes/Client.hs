@@ -106,10 +106,9 @@ transform tx = do
         amount1 = tx ^. Lens.amount 
         currency1 = tx ^. Lens.currency
     txSigned <- D.signTransaction owner1 ownerPriv1 receiver1 amount1 currency1
-    L.logInfo $ "Client send transaction " +|| show txSigned    
+    -- L.logInfo $ "Client send transaction " +|| show txSigned    
     pure txSigned
-    -- undefined
-
+    
 createTransaction :: AcceptTransaction -> L.NodeL Text
 createTransaction (AcceptTransaction tx address) = do
     transaction <- transform tx

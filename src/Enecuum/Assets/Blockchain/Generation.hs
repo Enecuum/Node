@@ -110,14 +110,15 @@ genTransaction isFromRange = do
     pure transaction
 
 -- | Generate signed microblock
-genMicroblock :: (Monad m, L.ERandom m) => StringHash -> [Transaction] -> m Microblock
-genMicroblock hashofKeyBlock tx = do
+genMicroblock :: (Monad m, L.ERandom m) => KBlock -> [Transaction] -> m Microblock
+genMicroblock kBlock tx = do
+    let hashofKeyBlock = (toHash kBlock)
     (KeyPair publisherPubKey publisherPrivKey)<- L.evalCoreCrypto $ L.generateKeyPair
     microblock <- signMicroblock hashofKeyBlock tx publisherPubKey publisherPrivKey
     pure microblock
 
 genRandMicroblock :: (Monad m, L.ERandom m) => KBlock -> m Microblock
-genRandMicroblock kBlock = genMicroblock (toHash kBlock) =<< genNTransactions transactionsInMicroblock
+genRandMicroblock kBlock = genMicroblock kBlock =<< genNTransactions transactionsInMicroblock
 
 -- | Generate indices with order
 generateIndices :: (L.ERandom m, Monad m) => Ordering -> m [Int]
@@ -164,8 +165,8 @@ generateBogusSignedSomething genFunction = do
     pure $ something 
 
 -- | Generate bogus microblock  
-generateBogusSignedMicroblock :: (Monad m, L.ERandom m) => KBlock -> m Microblock
-generateBogusSignedMicroblock kBlock = do
-    Microblock {..} <- genRandMicroblock kBlock
+generateBogusSignedMicroblock :: (Monad m, L.ERandom m) => KBlock -> [Transaction] -> m Microblock
+generateBogusSignedMicroblock kBlock tx = do
+    Microblock {..} <- genMicroblock kBlock tx
     let genMbSign fakeOwnerPrivateKey = signMicroblock _keyBlock _transactions _publisher fakeOwnerPrivateKey
     generateBogusSignedSomething genMbSign  

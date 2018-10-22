@@ -29,6 +29,9 @@ data GetLastKBlock = GetLastKBlock
 data AcceptTransaction = AcceptTransaction D.Transaction
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+data GetTransactionPending = GetTransactionPending
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)  
+  
 data GetKBlockPending = GetKBlockPending
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 

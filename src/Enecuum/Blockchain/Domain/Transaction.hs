@@ -102,3 +102,11 @@ signTransaction owner ownerPriv receiver amount currency = do
 
 verifyTransaction :: Transaction -> Bool
 verifyTransaction t@(Transaction {..}) = verifyEncodable _owner _signature (transactionForSign t)
+
+showTransaction :: Transaction -> Text -> Text
+showTransaction tx t =
+    t <> ("\n    Tx: [" +|| ( showPublicKey $ _owner (tx :: Transaction)) ||+ "] -> [" +|| (showPublicKey $ _receiver (tx :: Transaction)) ||+
+          "], amount: " +|| _amount (tx :: Transaction) ||+ ".")
+
+showTx :: Transaction -> Text          
+showTx tx = showTransaction tx ""
