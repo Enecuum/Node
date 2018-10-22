@@ -82,10 +82,11 @@ acceptChainLength :: GraphNodeData -> GetChainLengthRequest -> L.NodeL GetChainL
 acceptChainLength nodeData GetChainLengthRequest = do
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
-    L.logInfo "Answering chain length"
+--    L.logInfo "Answering chain length"
     topKBlock <- L.atomically $ L.getTopKeyBlock logV bData
     Log.writeLog logV
-    pure $ GetChainLengthResponse $ topKBlock ^. Lens.number
+    let res = if topKBlock ^. Lens.number == 0 then 0 else topKBlock ^. Lens.number - 1
+    pure $ GetChainLengthResponse $ res
 
 
 acceptChainFromTo :: GraphNodeData -> GetChainFromToRequest -> L.NodeL (Either Text GetChainFromToResponse)

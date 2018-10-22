@@ -69,6 +69,7 @@ graphSynchro nodeData address = do
             GetMBlocksForKBlockResponse mBlocks <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest hash)
             L.logInfo $ "Mblocks received for kBlock " +|| show hash ||+ " : " +|| show mBlocks
             L.atomically $ forM_ mBlocks (L.addMBlock logV bData)
+    Log.writeLog logV
 
 -- | Initialization of graph node
 graphNodeInitialization :: L.NodeDefinitionL GraphNodeData
