@@ -40,7 +40,10 @@ makeIORpcRequest address msg = do
 
 testPoA :: Test
 testPoA = TestCase $ do
-    undefined
+    startNode A.graphNodeTransmitter
+    threadDelay $ 1 * 1000 * 1000
+    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.Stop
+    True `shouldBe` True    
     -- startNode A.clientNode
     -- threadDelay $ 1 * 1000 * 1000     
     -- startNode A.graphNodeTransmitter
