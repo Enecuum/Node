@@ -113,7 +113,7 @@ transform tx = do
 createTransaction :: AcceptTransaction -> L.NodeL Text
 createTransaction (AcceptTransaction tx address) = do
     transaction <- transform tx
-    res :: Either Text M.AcceptTransaction <- L.makeRpcRequest address (M.AcceptTransaction transaction)
+    res :: Either Text M.SuccessMsg <- L.makeRpcRequest address (M.AcceptTransaction transaction)
     pure . eitherToText $ res
 
 getLengthOfChain :: GetLengthOfChain -> L.NodeL Text
