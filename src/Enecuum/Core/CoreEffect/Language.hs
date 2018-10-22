@@ -23,7 +23,7 @@ data CoreEffectF next where
   -- | ControlFlow effect
   EvalControlFlow :: ControlFlowL a -> (a  -> next) -> CoreEffectF next
   -- | Database effect
-  EvalDatabase    :: Database
+  EvalDatabase    :: DatabaseL a    -> (a  -> next) -> CoreEffectF next
 
 makeFunctorInstance ''CoreEffectF
 

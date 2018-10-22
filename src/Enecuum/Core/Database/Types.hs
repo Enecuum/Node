@@ -9,5 +9,6 @@ type DBKey = LByteString
 
 data DBError
     = KeyNotFound DBKey
+    | NotFound Text
     | InvalidType Text
-    deriving (Generic, Ord, Eq, Show, Read, ToJSON, FromJSON)
+    deriving (Generic, Ord, Eq, Show, Read)

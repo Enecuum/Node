@@ -45,7 +45,7 @@ class ToDBKey a where
     toDBKey :: a -> D.DBKey
 
 instance ToDBKey D.StringHash where
-    toDBKey = D.fromStringHash
+    toDBKey = show . D.fromStringHash
 
 hasKey :: (ToDBKey a, Database m) => a -> m Bool
 hasKey = contains . toDBKey
