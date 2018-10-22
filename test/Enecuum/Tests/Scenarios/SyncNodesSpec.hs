@@ -2,8 +2,8 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DeriveAnyClass #-}
 
-module Enecuum.Tests.Integration.NodesNetSpec where
-
+module Enecuum.Tests.Scenarios.SyncNodesSpec where
+    
 import           Test.HUnit
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit ( fromHUnitTest )

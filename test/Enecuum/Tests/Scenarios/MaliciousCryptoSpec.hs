@@ -43,9 +43,9 @@ testPoA = TestCase $ do
     -- startNode A.clientNode
     -- threadDelay $ 1 * 1000 * 1000
     -- print "Start graphNodeTransmitter"
-    startNode A.graphNodeTransmitter
-    threadDelay $ 1 * 1000 * 1000
-    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.Stop
+    -- startNode A.graphNodeTransmitter
+    -- threadDelay $ 1 * 1000 * 1000
+    -- _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.Stop
     True `shouldBe` True
     -- print "Start powNode"
     -- startNode A.powNode
