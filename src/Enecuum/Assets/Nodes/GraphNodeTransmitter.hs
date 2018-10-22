@@ -69,9 +69,9 @@ acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Tcp -> L.NodeL (
 acceptMBlock nodeData mBlock _ = do
     isSignGenuine <- D.verifyMicroblockWithTxEff mBlock
     if not isSignGenuine
-        then L.logInfo $ "MBlock is not accepted."
+        then L.logInfo $ "Microblock is not accepted."
         else do
-            L.logInfo "MBlock is accepted."
+            L.logInfo "Microblock is accepted."
             let logV = nodeData ^. logVar
                 bData = nodeData ^. blockchain
             void $ L.atomically (L.addMBlock logV bData mBlock)
