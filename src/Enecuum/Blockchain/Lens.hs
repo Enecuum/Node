@@ -12,6 +12,8 @@ import           Enecuum.Blockchain.Domain
 
 makeFieldsNoPrefix ''Transaction
 makeFieldsNoPrefix ''TransactionForSign
+makeFieldsNoPrefix ''CLIWallet
+makeFieldsNoPrefix ''CLITransaction
 makeFieldsNoPrefix ''Microblock
 makeFieldsNoPrefix ''KBlock
 makeFieldsNoPrefix ''MicroblockForSign 

@@ -3,11 +3,13 @@
 {-# LANGUAGE RecordWildCards       #-}
 module Enecuum.Blockchain.Domain.Transaction where
 
+import           Data.Aeson.Extra                 (noLensPrefix)
+import           Data.Text                        (unpack)
 import           Enecuum.Blockchain.Domain.Crypto
 import           Enecuum.Blockchain.Domain.Types
 import qualified Enecuum.Core.Language            as L
-import           Enecuum.Prelude
-import           Data.Aeson.Extra (noLensPrefix)
+import           Enecuum.Prelude                  hiding (show, unpack)
+import           Prelude                          (show)
 
 type OwnerPubKey = PublicKey
 type OwnerPrivateKey = PrivateKey
@@ -30,15 +32,45 @@ data TransactionForSign = TransactionForSign
     }
   deriving ( Generic, Show, Eq, Ord, Read, ToJSON, FromJSON, Serialize)
 
+data CLIPublicKey = CLIPublicKey PublicKey deriving ( Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, Serialize)
+data CLIPrivateKey = CLIPrivateKey PrivateKey deriving ( Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, Serialize)
+
+
+data CLIWallet0 = CLIWallet0
+  {
+    _id         :: Int,
+    _name       :: String,
+    _publicKey  :: String, 
+    _privateKey :: Maybe String 
+  } deriving ( Generic, Show, Eq, Ord, Read, ToJSON, FromJSON, Serialize)
+
+data CLIWallet = CLIWallet
+  {
+    _id         :: Int,
+    _name       :: String,
+    _publicKey  :: CLIPublicKey,
+    _privateKey :: Maybe CLIPrivateKey
+  } deriving ( Generic, Show, Eq, Ord, Read, ToJSON, FromJSON)
+
+transformWallet :: CLIWallet0 -> CLIWallet
+transformWallet CLIWallet0 {..} = CLIWallet
+  { _id         = _id
+  , _name       = _name
+  , _publicKey  = CLIPublicKey (readPublicKey _publicKey)
+  , _privateKey = privKey
+  }
+  where privKey = case _privateKey of
+                    Nothing -> Nothing
+                    Just j -> Just $ CLIPrivateKey (readPrivateKey j) 
+
 data CLITransaction = CLITransaction
-  { _owner     :: String
-  , _receiver  :: String
-  , _amount    :: Amount
-  , _currency  :: Currency
-  } deriving ( Generic, Show, Eq, Ord, Read, Serialize)  
+  { _owner    :: String
+  , _receiver :: String
+  , _amount   :: Amount
+  , _currency :: Currency
+  } deriving ( Generic, Show, Eq, Ord, Read, Serialize)
 instance ToJSON CLITransaction where toJSON = genericToJSON noLensPrefix
 instance FromJSON CLITransaction where parseJSON = genericParseJSON noLensPrefix
-cli1 = CLITransaction "me" "Alice" 15 ENQ
 
 -- instance StringHashable Transaction where
 --     toHash = StringHash . Base64.encode . SHA.hash . S.encode

@@ -4,16 +4,18 @@
 
 module Enecuum.Assets.Nodes.Client where
 
-import           Enecuum.Prelude
-
 import qualified Data.Aeson                       as A
+import qualified Data.Map                         as Map
+import           Data.Text                        hiding (map)
 import           Enecuum.Assets.Nodes.Address
 import qualified Enecuum.Assets.Nodes.Messages    as M
 import           Enecuum.Assets.System.Directory  as D (keysFilePath)
+import qualified Enecuum.Blockchain.Lens          as Lens
 import           Enecuum.Config
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
 import qualified Enecuum.Language                 as L
+import           Enecuum.Prelude                  hiding (map, unpack)
 
 data AcceptTransaction           = AcceptTransaction D.CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, ToJSON)
 data GetLastKBlock               = GetLastKBlock               D.Address
@@ -79,11 +81,34 @@ getWalletBalance (GetWalletBalance walletId address) = do
     res :: Either Text M.WalletBalanceMsg <- L.makeRpcRequest address (M.GetWalletBalance walletId)
     pure . eitherToText $ res
 
-transform :: (L.Logger m, L.FileSystem m, Monad m) => D.CLITransaction -> m D.Transaction
+transform :: (L.ERandom m, L.Logger m, L.FileSystem m, Monad m) => D.CLITransaction -> m D.Transaction
 transform tx = do
-    L.logInfo $ show tx
-    -- keys <- L.readFile =<< keysFilePath
-    undefined
+    -- L.logInfo $ show tx
+    keys <- lines <$> (L.readFile =<< keysFilePath)
+    let wallets = fmap ( D.transformWallet . (\a -> read a :: D.CLIWallet0) . unpack) keys
+    -- L.logInfo $ show $ wallets   
+    let walletsMap = Map.fromList $ fmap (\w -> (w ^. Lens.name, w))  wallets
+    let ownerName  = tx ^. Lens.owner
+        receiverName =  tx ^. Lens.receiver
+        ownerM = Map.lookup ownerName walletsMap
+        receiverM = Map.lookup receiverName walletsMap
+    let (ownerPub, ownerPriv) = case ownerM of
+                    Nothing -> error $ "There is no record for owner: " +|| show ownerName
+                    Just j -> (pub, priv)
+                                where pub = j ^. Lens.publicKey
+                                      priv = fromJust $ j ^. Lens.privateKey
+        receiverPub = case receiverM of
+                        Nothing -> read receiverName :: D.CLIPublicKey
+                        Just j -> j ^. Lens.publicKey            
+    let (D.CLIPublicKey owner1) = ownerPub 
+        (D.CLIPrivateKey ownerPriv1) = ownerPriv
+        (D.CLIPublicKey receiver1) = receiverPub
+        amount1 = tx ^. Lens.amount 
+        currency1 = tx ^. Lens.currency
+    txSigned <- D.signTransaction owner1 ownerPriv1 receiver1 amount1 currency1
+    L.logInfo $ "Client send transaction " +|| show txSigned    
+    pure txSigned
+    -- undefined
 
 createTransaction :: AcceptTransaction -> L.NodeL Text
 createTransaction (AcceptTransaction tx address) = do
