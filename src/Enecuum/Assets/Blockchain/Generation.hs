@@ -19,7 +19,7 @@ data Ordering = InOrder | RandomOrder
 data Boundary = Off | On
 
 kBlockInBunch :: Integer
-kBlockInBunch = 3
+kBlockInBunch = 1
 
 transactionsInMicroblock :: Int
 transactionsInMicroblock = 3

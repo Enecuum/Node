@@ -61,10 +61,15 @@ graphSynchro nodeData address = do
         pure $ topKBlock ^. Lens.number
 
     when (curChainLength < otherLength) $ do
+        topNodeHash <- L.atomically $ L.readVar $ bData ^. Lens.curNode
+        GetMBlocksForKBlockResponse mBlocks <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest topNodeHash)
+        L.logInfo $ "Mblocks received for kBlock " +|| show topNodeHash ||+ " : " +|| show mBlocks
+        L.atomically $ forM_ mBlocks (L.addMBlock logV bData)
+            
         GetChainFromToResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromToRequest (curChainLength + 1) otherLength)
         L.logInfo $ "Chain tail received from " +|| show (curChainLength + 1) ||+ " to " +|| show otherLength ||+ " : " +|| show chainTail
         L.atomically $ forM_ chainTail (L.addKBlock logV bData)
-        for_ chainTail $ \kBlock -> do
+        for_ (init chainTail) $ \kBlock -> do
             let hash = toHash kBlock
             GetMBlocksForKBlockResponse mBlocks <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest hash)
             L.logInfo $ "Mblocks received for kBlock " +|| show hash ||+ " : " +|| show mBlocks

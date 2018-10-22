@@ -4,8 +4,8 @@ module Enecuum.Prelude
   ( module X
   ) where
 
-import           Universum                                as X hiding ( All, Option, Set, Type, head, last, set, tail )
-import           Universum.Unsafe                         as X ( head, last, tail, (!!) )
+import           Universum                                as X hiding ( All, Option, Set, Type, head, last, set, tail, init )
+import           Universum.Unsafe                         as X ( head, last, tail, init, (!!) )
 import           Universum.Functor.Fmap                   as X ( (<<$>>) )
 import           Eff                                      as X ( Eff, Member )
 import           Eff.TH                                   as X ( makeFreer )
