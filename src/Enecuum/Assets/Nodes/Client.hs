@@ -157,7 +157,7 @@ Requests:
 {"method":"Ping", "protocol":"RPC", "address":{"host":"127.0.0.1", "port": 2008}}
 {"method":"GetLengthOfChain", "address":{"host":"127.0.0.1", "port": 2008}}
 {"method":"StopRequest", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"AcceptTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2005}}
+{"method":"AcceptTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2008}}
 -}
 
 clientNode :: L.NodeDefinitionL ()

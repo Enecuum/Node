@@ -36,7 +36,7 @@ data GraphNodeData = GraphNodeData
 makeFieldsNoPrefix ''GraphNodeData
 
 -- | Accept transaction
-acceptTransaction :: GraphNodeData -> AcceptTransaction -> L.NodeL ()
+acceptTransaction :: GraphNodeData -> AcceptTransaction -> L.NodeL SuccessMsg
 acceptTransaction nodeData (AcceptTransaction tx) = do
     L.logInfo $ "\nAccept transaction: " +|| show tx
     L.logInfo $ "\nAdd transaction to pending "    
@@ -44,6 +44,7 @@ acceptTransaction nodeData (AcceptTransaction tx) = do
     L.atomically $ do
         pending <- L.readVar (bData ^. Lens.transactionPending)
         L.writeVar (bData ^. Lens.transactionPending) ( tx : pending )
+    pure SuccessMsg
 
 -- | Accept kBlock
 acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Tcp -> L.NodeL ()
