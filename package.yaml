@@ -60,6 +60,7 @@ default-extensions:
 - TupleSections
 - ViewPatterns
 - MultiWayIf
+- BlockArguments
 
 dependencies:
 - base >= 4.7 && < 5
