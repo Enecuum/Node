@@ -19,7 +19,7 @@ getKBlock logV bData hash = do
     (res, mbMsg) <- L.evalGraph (D._graph bData) $ do
         maybeKBlock <- L.getNode hash
         case maybeKBlock of
-            Just (D.HNode _ _ (D.fromContent -> D.KBlockContent kBlock) _ _) -> pure $ (Just kBlock, Nothing)
+            Just (D.HNode _ _ (D.fromContent -> D.KBlockContent kBlock) _ _) -> pure (Just kBlock, Nothing)
             _ -> pure (Nothing, Just $ "KBlock not found by hash: " <> show hash)
     whenJust mbMsg $ Log.stateLog logV
     pure res
@@ -32,9 +32,9 @@ getTopKeyBlock logV bData = do
     Just topKBlock <- getKBlock logV bData topNodeHash
     pure topKBlock
 
--- | Add key block to graph
-addKBlock :: D.StateVar [Text] -> D.BlockchainData -> D.KBlock -> L.StateL Bool
-addKBlock logV bData kBlock = do
+-- | Add key block to the top of the graph
+addTopKBlock :: D.StateVar [Text] -> D.BlockchainData -> D.KBlock -> L.StateL Bool
+addTopKBlock logV bData kBlock = do
     Log.stateLog logV "Adding KBlock to the graph."
     let kBlock' = D.KBlockContent kBlock
     ref <- L.readVar (D._curNode bData)

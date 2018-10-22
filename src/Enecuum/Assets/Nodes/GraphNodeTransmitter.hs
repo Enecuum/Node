@@ -41,16 +41,7 @@ acceptKBlock nodeData kBlock _ = do
     L.logInfo $ "\nAccepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
-    res <- L.atomically $ do
-        topKBlock <- L.getTopKeyBlock logV bData
-        if
-            | L.kBlockIsNext kBlock topKBlock -> do
-                void $ L.addKBlock logV bData kBlock
-                let loop = whenM (L.moveKBlockToGraph logV bData) loop
-                loop
-                pure True
-            | kBlock ^. Lens.number > topKBlock ^. Lens.number + 1 -> L.addBlockToPending logV bData kBlock
-            | otherwise -> pure False
+    res <- L.atomically $ L.addKBlock logV bData kBlock
     Log.writeLog logV
 
 
