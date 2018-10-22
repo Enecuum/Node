@@ -54,7 +54,9 @@ evalNetworking newtorking = liftF $ EvalNetworking newtorking id
 evalCoreEffectNodeF :: L.CoreEffect a -> NodeL a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
-
+withConnection
+    :: (Monad m, Connection m con)
+    => con -> D.Address -> (D.Connection con -> m b) -> m b
 withConnection protocol address f = do
     con <- open protocol address $ pure ()
     a <- f con

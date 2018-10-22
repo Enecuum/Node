@@ -2,6 +2,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE DeriveAnyClass         #-}
+{-# OPTIONS  -Wno-orphans           #-}
 
 -- | Lenses for Blockchain domain types.
 module Enecuum.Blockchain.Lens where

@@ -4,13 +4,13 @@ import qualified Data.Map                        as M
 import           Enecuum.Prelude
 
 import qualified Enecuum.Assets.Scenarios        as S
-import           Enecuum.Assets.System.Directory (appFileName, clientStory)
+import           Enecuum.Assets.System.Directory (clientStory)
 import           Enecuum.Config                  (Config (..), NodeRole (..), Scenario (..), ScenarioNode (..),
                                                   ScenarioRole (..))
 import qualified Enecuum.Core.Lens               as Lens
 import           Enecuum.Interpreters            (clearNodeRuntime, runNodeDefinitionL)
 import qualified Enecuum.Language                as L
-import           Enecuum.Runtime                 (NodeRuntime (..), clearCoreRuntime, clearLoggerRuntime,
+import           Enecuum.Runtime                 (clearCoreRuntime, clearLoggerRuntime,
                                                   createCoreRuntime, createLoggerRuntime, createNodeRuntime)
 
 
