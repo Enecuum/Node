@@ -107,13 +107,13 @@ getLastKBlock nodeData _ = do
 
 getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
 getBalance nodeData (GetWalletBalance wallet) = do
-    L.logInfo $ "Requested balance for wallet " +|| wallet ||+ "."
+    L.logInfo $ "Requested balance for wallet " +|| D.showPublicKey wallet ||+ "."
     let bData = nodeData ^. blockchain
     curLedger <- L.atomically $ L.readVar $ bData ^. Lens.ledger
     let maybeBalance = lookup wallet curLedger
     case maybeBalance of
         Just balance -> pure $ Right $ WalletBalanceMsg wallet balance
-        _            -> pure $ Left "Wallet does not exist in graph."
+        _            -> pure $ Left $ "Wallet " +|| D.showPublicKey wallet ||+ " does not exist in graph."
 
 acceptChainLength :: GraphNodeData -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
 acceptChainLength nodeData GetChainLengthRequest = do

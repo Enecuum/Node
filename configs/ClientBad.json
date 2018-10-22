@@ -3,7 +3,7 @@
 	"scenarioNode": [{
 		"nodeRole": "Client",
 		"scenario": "LedgerBalance",
-		"scenarioRole": "Good"
+		"scenarioRole": "Bad"
 	}],
 	"extPort": 1668,
   "loggerConfig":
