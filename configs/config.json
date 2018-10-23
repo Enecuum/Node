@@ -1,7 +1,7 @@
 {
     "bootNodeAddress": "[((127,0,0,1), 1554)]",
 		"scenarioNode": [{
-				"nodeRole": "NetworkNode",
+				"nodeRole": "Client",
 				"scenario": "Full",
 				"scenarioRole": "Respondent"
 		}],
