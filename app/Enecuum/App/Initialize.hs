@@ -49,7 +49,7 @@ initialize config = do
 dispatchScenario :: Config -> ScenarioNode -> L.NodeDefinitionL ()
 dispatchScenario config (ScenarioNode BootNode    _         _           ) = S.bootNode config
 dispatchScenario config (ScenarioNode MasterNode  _         _           ) = S.masterNode config
-dispatchScenario _      (ScenarioNode Client      _         _           ) = S.clientNode
+dispatchScenario _      (ScenarioNode Client      _         role        ) = S.clientNode role
 dispatchScenario _      (ScenarioNode NetworkNode SyncChain Respondent  ) = S.networkNode3
 dispatchScenario _      (ScenarioNode NetworkNode SyncChain Interviewer ) = S.networkNode4
 dispatchScenario _      (ScenarioNode PoW         Full      Soly        ) = S.powNode
