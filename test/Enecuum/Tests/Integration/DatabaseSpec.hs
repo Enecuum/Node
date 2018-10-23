@@ -91,44 +91,75 @@ spec = describe "Database support tests" $ do
 
 
 {-
-    kBlocks
-    0000000|0       AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=            <- prev hash
-    0000000|1       {nonce: 0, solver: 0000001}
+    kBlocks (idx|0 -> prev_hash, idx|1 -> kBlock data)
+    ------------------------------------------------------------
+    0000000|0       AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+    0000000|1       {number:0, nonce: 0, solver: 1}
 
-    0000001|0       4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY=            <- prev hash
-    0000001|1       {nonce: 0, solver: 0000002}
+    0000001|0       4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY=
+    0000001|1       {number:1, nonce: 100, solver: 2}
 
-    0000002|0       u2Z/FYLb0IMEAGB2BuuMTaqLqzVDLrwnAwOMU3ZghZY=            <- prev hash
-    0000002|1       {nonce: 0, solver: 0000001}
+    0000002|0       u2Z/FYLb0IMEAGB2BuuMTaqLqzVDLrwnAwOMU3ZghZY=
+    0000002|1       {number:2, nonce: 200, solver: 1}
+    
+    =================================================================
 
-    kBlocks_meta
-
+    kBlocks_meta (hash -> meta)
+    meta: (idx, additional info)
+    -----------------------------------------------------------------
     AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=        (AAAAAAA, "")
-    4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY=        (0000000, "")
-    u2Z/FYLb0IMEAGB2BuuMTaqLqzVDLrwnAwOMU3ZghZY=        (0000001, "")
-    kBJ+EP7GVRRUTTMIajqCstccuEknuP5RuCWtxRoUDw0=        (0000002, "")
+    4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY=        (0, "")
+    u2Z/FYLb0IMEAGB2BuuMTaqLqzVDLrwnAwOMU3ZghZY=        (1, "")
+    kBJ+EP7GVRRUTTMIajqCstccuEknuP5RuCWtxRoUDw0=        (2, "")
+    
+    =================================================================
+
+    mBlocks (idx -> mBlock data)
+    --------------------------------------------------------------------
+    0000000       {kBlockIdx: 0, publisher: 1, signature: <signature>}
+    0000001       {kBlockIdx: 1, publisher: 2, signature: <signature>}
+    0000002       {kBlockIdx: 2, publisher: 1, signature: <signature>}
+
+    ===================================================================
+
+    mBlocks_meta (hash -> meta)
+    --------------------------------------------------------------------
+    <mblock0_hash>         (0, "")
+    <mblock1_hash>         (1, "")
+    <mblock2_hash>         (2, "")
+
+    =============================================================================
+
+    txs (mBlock idx -> transaction data)
+    --------------------------------------------------------------------
+    000000000         {owner: 1, receiver: 2, amount: 100: signature: <signature>}
+    000000001         {owner: 2, receiver: 3, amount: 500: signature: <signature>}
+    000000002         {owner: 1, receiver: 3, amount: 101: signature: <signature>}
+
+    ==============================================================================
+
+    txs_meta (hash -> meta)
+    --------------------------------------------------------------------
+    <trans9_hash>     (0, "")
+    <trans1_hash>     (1, "")
+    <trans2_hash>     (2, "")
+
+    ==============================================================================
+
+    actors (solver/publisher idx -> solver / publisher id)
+    --------------------------------------------------------------------
+    1   <solver 1 id>
+    2   <solver 2 id>
+    3   <publisher 1 id>
+    4   <publisher 2 id>
+    5   <publisher 3 id>
+
+    ===================================================================
+
+    ledger (wallet_id -> amount)
 
 
-    mBlocks
-    0000000|0       AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=            <- prev hash
-    0000000|1       {nonce: 0, solver: 0000001}
-
-    0000001|0       4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY=            <- prev hash
-    0000001|1       {nonce: 0, solver: 0000002}
-
-    0000002|0       u2Z/FYLb0IMEAGB2BuuMTaqLqzVDLrwnAwOMU3ZghZY=            <- prev hash
-    0000002|1       {nonce: 0, solver: 0000001}
+    ===================================================================
 
 
 -}
-
-
-
--- [ "0000000A00000000000000000000000000000000000000000000"
--- , "0000000Bu2Z/FYLb0IMEAGB2BuuMTaqLqzVDLrwnAwOMU3ZghZY="
--- , "0000000C00000000000000000000000000000000000000000000"
--- , "0000001A00000000000000000000000000000000000000000000"
--- , "0000001BkBJ+EP7GVRRUTTMIajqCstccuEknuP5RuCWtxRoUDw0="
--- , "0000002A00000000000000000000000000000000000000000000"
--- , "0000002B6p0OqA4+ypM0byKcZfI97JmnPoufyVn0xYkw1F3Fj7I="
--- ]
