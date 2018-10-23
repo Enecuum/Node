@@ -54,28 +54,27 @@ graphSynchro nodeData address = do
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
 
-    L.logInfo $ "Requests chain length."
     GetChainLengthResponse otherLength <- L.makeRpcRequestUnsafe address GetChainLengthRequest
-    L.logInfo $ "GraphNodeReceiver has Chain length: " +|| otherLength ||+ "."
 
-    L.logInfo $ "GraphNodeReceiver: update chain if it's bigger."
     curChainLength <- L.atomically $ do
         topKBlock <- L.getTopKeyBlock logV bData
         pure $ topKBlock ^. Lens.number
-    
-    L.logInfo $ "Current chain length " +|| show curChainLength
-    
 
     when (curChainLength < otherLength) $ do
+        topNodeHash <- L.atomically $ L.readVar $ bData ^. Lens.curNode
+        GetMBlocksForKBlockResponse mBlocks <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest topNodeHash)
+        L.logInfo $ "Mblocks received for kBlock " +|| show topNodeHash ||+ " : " +|| show mBlocks
+        L.atomically $ forM_ mBlocks (L.addMBlock logV bData)
+            
         GetChainFromToResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromToRequest (curChainLength + 1) otherLength)
         L.logInfo $ "Chain tail received from " +|| show (curChainLength + 1) ||+ " to " +|| show otherLength ||+ " : " +|| show chainTail
         L.atomically $ forM_ chainTail (L.addKBlock logV bData)
-        for_ chainTail $ \kBlock -> do
+        for_ (init chainTail) $ \kBlock -> do
             let hash = toHash kBlock
             GetMBlocksForKBlockResponse mBlocks <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest hash)
             L.logInfo $ "Mblocks received for kBlock " +|| show hash ||+ " : " +|| show mBlocks
             L.atomically $ forM_ mBlocks (L.addMBlock logV bData)
-    L.logInfo $ "Graph sychro finished"
+    Log.writeLog logV
 
 -- | Initialization of graph node
 graphNodeInitialization :: L.NodeDefinitionL GraphNodeData
@@ -98,7 +97,7 @@ graphNodeReceiver = do
     L.nodeTag "graphNodeReceiver"
     nodeData <- graphNodeInitialization
 
-    L.scenario $ graphSynchro nodeData graphNodeTransmitterRpcAddress
+    L.process $ forever $ graphSynchro nodeData graphNodeTransmitterRpcAddress
     L.serving D.Rpc graphNodeReceiverRpcPort $ do
         L.methodE $ getBalance nodeData
         L.method  $ getLastKBlock nodeData

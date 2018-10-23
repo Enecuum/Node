@@ -52,16 +52,7 @@ acceptKBlock nodeData kBlock _ = do
     L.logInfo $ "\nAccepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
-    res <- L.atomically $ do
-        topKBlock <- L.getTopKeyBlock logV bData
-        if
-            | L.kBlockIsNext kBlock topKBlock -> do
-                void $ L.addKBlock logV bData kBlock
-                let loop = whenM (L.moveKBlockToGraph logV bData) loop
-                loop
-                pure True
-            | kBlock ^. Lens.number > topKBlock ^. Lens.number + 1 -> L.addBlockToPending logV bData kBlock
-            | otherwise -> pure False
+    res <- L.atomically $ L.addKBlock logV bData kBlock
     Log.writeLog logV
 
 
@@ -119,7 +110,7 @@ acceptChainLength :: GraphNodeData -> GetChainLengthRequest -> L.NodeL GetChainL
 acceptChainLength nodeData GetChainLengthRequest = do
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
-    L.logInfo "Answering chain length"
+--    L.logInfo "Answering chain length"
     topKBlock <- L.atomically $ L.getTopKeyBlock logV bData
     Log.writeLog logV
     pure $ GetChainLengthResponse $ topKBlock ^. Lens.number
@@ -145,17 +136,7 @@ acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
     L.logInfo $ "Answering microblocks for kBlock " +|| show hash
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
-    mBlockList <- L.atomically $ L.withGraph bData $ do
-        node <- L.getNode hash
-        case node of
-            Nothing -> pure Nothing
-            Just (D.HNode _ _ _ links _) -> do
-                aMBlocks                       <- forM (Data.Map.keys links) $ \aNRef -> do
-                    Just (D.HNode _ _ (D.fromContent -> block) _ _) <- L.getNode aNRef
-                    case block of
-                        D.MBlockContent mBlock -> pure $ Just mBlock
-                        _               -> pure Nothing
-                pure $ Just $ catMaybes aMBlocks
+    mBlockList <- L.atomically $ L.getMBlocksForKBlock logV bData hash
     Log.writeLog logV
     case mBlockList of
         Nothing -> pure $ Left "KBlock doesn't exist"
