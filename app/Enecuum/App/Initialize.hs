@@ -47,7 +47,7 @@ initialize config = do
     clearLoggerRuntime loggerRt
 
 dispatchScenario :: Config -> ScenarioNode -> L.NodeDefinitionL ()
-dispatchScenario _      (ScenarioNode Client      _         _           ) = S.clientNode
+dispatchScenario _      (ScenarioNode Client      _         role        ) = S.clientNode role
 dispatchScenario _      (ScenarioNode PoW         Full      Soly        ) = S.powNode
 dispatchScenario _      (ScenarioNode PoA         Full      role        ) = S.poaNode role
 dispatchScenario _      (ScenarioNode GraphNodeTransmitter   _         _           ) = S.graphNodeTransmitter

@@ -36,15 +36,22 @@ data GraphNodeData = GraphNodeData
 makeFieldsNoPrefix ''GraphNodeData
 
 -- | Accept transaction
-acceptTransaction :: GraphNodeData -> AcceptTransaction -> L.NodeL SuccessMsg
+acceptTransaction :: GraphNodeData -> AcceptTransaction -> L.NodeL (Either Text SuccessMsg)
 acceptTransaction nodeData (AcceptTransaction tx) = do
-    L.logInfo $ "\nAccept transaction: " +| D.showTx tx |+ ""
-    L.logInfo $ "\nAdd transaction to pending "    
-    let bData = nodeData ^. blockchain
-    L.atomically $ do
-        pending <- L.readVar (bData ^. Lens.transactionPending)
-        L.writeVar (bData ^. Lens.transactionPending) ( tx : pending )
-    pure SuccessMsg
+    L.logInfo $ "Got transaction "  +| D.showTx tx |+ ""    
+    if (D.verifyTransaction tx)
+        then do
+            L.logInfo $ "\nTransaction is accepted"
+            L.logInfo $ "\nAdd transaction to pending "    
+            let bData = nodeData ^. blockchain
+            L.atomically $ do
+                pending <- L.readVar (bData ^. Lens.transactionPending)
+                L.writeVar (bData ^. Lens.transactionPending) ( tx : pending )
+            pure $ Right SuccessMsg
+        else do
+            L.logInfo $ "Transaction signature is not genuine"
+            L.logInfo $ "Transaction is not accepted" 
+            pure $ Left "Transaction signature is not genuine. Transaction is not accepted."
 
 -- | Accept kBlock
 acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Tcp -> L.NodeL ()
@@ -178,7 +185,7 @@ graphNodeTransmitter = do
         L.methodE $ acceptMBlockForKBlocks nodeData
         L.method  $ rpcPingPong
         L.method  $ methodeStopNode nodeData
-        L.method  $ acceptTransaction nodeData
+        L.methodE $ acceptTransaction nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.awaitNodeFinished nodeData

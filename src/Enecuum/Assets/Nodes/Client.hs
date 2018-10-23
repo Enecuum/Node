@@ -10,7 +10,7 @@ import           Data.Text                            hiding (map)
 import           Enecuum.Assets.Blockchain.Generation as D
 import           Enecuum.Assets.Nodes.Address
 import qualified Enecuum.Assets.Nodes.Messages        as M
-import           Enecuum.Assets.System.Directory      as D (keysFilePath)
+import           Enecuum.Assets.System.Directory      as D (keysFilePath, wrongKeysFilePath)
 import qualified Enecuum.Blockchain.Lens              as Lens
 import           Enecuum.Config
 import qualified Enecuum.Domain                       as D
@@ -98,10 +98,11 @@ getWalletBalance (GetWalletBalance walletId address) = do
     -- L.logInfo $ "res:" +|| show res
     pure $ eitherToText2 $ fmap fun res
 
-transform :: (L.ERandom m, L.Logger m, L.FileSystem m, Monad m) => D.CLITransaction -> m D.Transaction
-transform tx = do
+transform :: (L.ERandom m, L.Logger m, L.FileSystem m, Monad m) => D.CLITransaction -> ScenarioRole -> m D.Transaction
+transform tx _ = do
     -- L.logInfo $ show tx
-    keys <- lines <$> (L.readFile =<< keysFilePath)
+    filePath <- keysFilePath
+    keys <- lines <$> (L.readFile filePath)
     let wallets = fmap ( D.transformWallet . (\a -> read a :: D.CLIWallet0) . unpack) keys
     -- L.logInfo $ show $ wallets
     let walletsMap = Map.fromList $ fmap (\w -> (w ^. Lens.name, w))  wallets
@@ -126,9 +127,9 @@ transform tx = do
     -- L.logInfo $ "Client send transaction " +|| show txSigned
     pure txSigned
 
-createTransaction :: AcceptTransaction -> L.NodeL Text
-createTransaction (AcceptTransaction tx address) = do
-    transaction <- transform tx
+createTransaction :: ScenarioRole -> AcceptTransaction -> L.NodeL Text
+createTransaction role  (AcceptTransaction tx address) = do
+    transaction <- transform tx role
     res :: Either Text M.SuccessMsg <- L.makeRpcRequest address (M.AcceptTransaction transaction)
     pure . eitherToText $ res
 
@@ -176,8 +177,8 @@ Requests:
 {"method":"AcceptTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2008}}
 -}
 
-clientNode :: L.NodeDefinitionL ()
-clientNode = do
+clientNode :: ScenarioRole -> L.NodeDefinitionL ()
+clientNode role = do
     L.logInfo "Client started"
     L.nodeTag "Client"
     stateVar <- L.scenario $ L.atomically $ L.newVar NodeActing
@@ -191,7 +192,7 @@ clientNode = do
         L.stdHandler ping
         L.stdHandler stopRequest
         L.stdHandler getBlock
-        L.stdHandler $ createTransaction
+        L.stdHandler $ createTransaction role
     L.awaitNodeFinished' stateVar
 
 eitherToText :: Show a => Either Text a -> Text
