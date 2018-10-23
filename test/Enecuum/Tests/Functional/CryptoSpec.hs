@@ -1,21 +1,21 @@
 {-# LANGUAGE RecordWildCards #-}
 module Enecuum.Tests.Functional.CryptoSpec where
 
-import qualified Data.Aeson                      as A
-import           Data.HGraph.StringHashable      (fromStringHash)
-import qualified Data.Serialize                  as S
+import qualified Data.Aeson                           as A
+import           Data.HGraph.StringHashable           (fromStringHash)
+import qualified Data.Serialize                       as S
 import qualified Enecuum.Assets.Blockchain.Generation as D
-import qualified Enecuum.Assets.Blockchain.Wallet     as D (wallets)
-import qualified Enecuum.Blockchain.Domain       as D
+import qualified Enecuum.Assets.Blockchain.Wallet     as D
+import qualified Enecuum.Blockchain.Domain            as D
 import           Enecuum.Blockchain.Domain.Crypto
-import qualified Enecuum.Blockchain.Lens         as Lens
-import qualified Enecuum.Core.Interpreters       as I
-import qualified Enecuum.Language                as L
+import qualified Enecuum.Blockchain.Language          as L
+import qualified Enecuum.Blockchain.Lens              as Lens
+import qualified Enecuum.Core.Interpreters            as I
+import qualified Enecuum.Language                     as L
 import           Enecuum.Prelude
-import           Test.Hspec                      (Spec, describe, shouldBe)
-import           Test.Hspec.Contrib.HUnit        (fromHUnitTest)
-import           Test.HUnit                      (Test (..))
-
+import           Test.Hspec                           (Spec, describe, shouldBe)
+import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
+import           Test.HUnit                           (Test (..))
 
 wallets =
     [ D.KeyPair { getPub = PublicKey256k1 162041393014266997694715179451060754359644353694678397659483656769944713491456, getPriv = PrivateKey256k1 73999854534268080627202311492113505346257058527387365056343245962475387806824}
@@ -52,10 +52,10 @@ testBool genFun fun = TestCase $ do
     and (map fun s) `shouldBe` True
 
 -- generator functions
-generateTransaction = I.runERandomL $ D.genTransaction D.On
+generateTransaction = I.runERandomL $ D.genTransaction D.Hardcoded
 generateMicroblock = I.runERandomL $ D.genRandMicroblock D.genesisKBlock
 generateSignature = do
-    tx <- I.runERandomL $ D.genTransaction D.On
+    tx <- I.runERandomL $ D.genTransaction D.Hardcoded
     pure $ tx ^. Lens.signature
 
 generateKeys fun = do
@@ -71,8 +71,8 @@ testSignature fun = test generateSignature fun
 testSignatureBinarySerialization = testSignature (\s -> fromRight (read "1" :: D.Signature) $ S.decode $ S.encode s)
 testReadShowSignature = testSignature (read . show)
 testSignatureJSONSerialization = testSignature (fromJust . A.decode . A.encode)
-testVerifySignedTransaction = testBool generateTransaction D.verifyTransaction
-testVerifySignedMicroblock = testBool generateMicroblock D.verifyMicroblock
+testVerifySignedTransaction = testBool generateTransaction L.verifyTransaction
+testVerifySignedMicroblock = testBool generateMicroblock L.verifyMicroblock
 
 -- | PublicKey test functions
 testPublicKey fun = test generatePublicKey fun
