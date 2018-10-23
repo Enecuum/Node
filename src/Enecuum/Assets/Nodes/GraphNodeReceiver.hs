@@ -34,20 +34,18 @@ getLastKBlock :: GraphNodeData ->  GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
-    -- L.logInfo "Top KBlock requested."
     kBlock <- L.atomically $ L.getTopKeyBlock logV bData
-    -- L.logInfo $ "Top KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
     pure kBlock
 
 getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
 getBalance nodeData (GetWalletBalance wallet) = do
-    L.logInfo $ "Requested balance for wallet " +|| wallet ||+ "."
+    L.logInfo $ "Requested balance for wallet " +|| D.showPublicKey wallet ||+ "."
     let bData = nodeData ^. blockchain
     curLedger <- L.atomically $ L.readVar $ bData ^. Lens.ledger
     let maybeBalance = lookup wallet curLedger
     case maybeBalance of
         Just balance -> pure $ Right $ WalletBalanceMsg wallet balance
-        _            -> pure $ Left "Wallet does not exist in graph."
+        _            -> pure $ Left $ "Wallet " +|| D.showPublicKey wallet ||+ " does not exist in graph."
 
 graphSynchro :: GraphNodeData -> D.Address -> L.NodeL ()
 graphSynchro nodeData address = do
@@ -63,16 +61,16 @@ graphSynchro nodeData address = do
     when (curChainLength < otherLength) $ do
         topNodeHash <- L.atomically $ L.readVar $ bData ^. Lens.curNode
         GetMBlocksForKBlockResponse mBlocks <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest topNodeHash)
-        L.logInfo $ "Mblocks received for kBlock " +|| show topNodeHash ||+ " : " +|| show mBlocks
+        L.logInfo $ "Mblocks received for kBlock " +|| topNodeHash ||+ " : " +|| show mBlocks
         L.atomically $ forM_ mBlocks (L.addMBlock logV bData)
-            
+
         GetChainFromToResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromToRequest (curChainLength + 1) otherLength)
-        L.logInfo $ "Chain tail received from " +|| show (curChainLength + 1) ||+ " to " +|| show otherLength ||+ " : " +|| show chainTail
+        L.logInfo $ "Chain tail received from " +|| (curChainLength + 1) ||+ " to " +|| otherLength ||+ " : " +|| chainTail ||+ "."
         L.atomically $ forM_ chainTail (L.addKBlock logV bData)
         for_ (init chainTail) $ \kBlock -> do
             let hash = toHash kBlock
             GetMBlocksForKBlockResponse mBlocks <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest hash)
-            L.logInfo $ "Mblocks received for kBlock " +|| show hash ||+ " : " +|| show mBlocks
+            L.logInfo $ "Mblocks received for kBlock " +|| hash ||+ " : " +|| show mBlocks
             L.atomically $ forM_ mBlocks (L.addMBlock logV bData)
     Log.writeLog logV
 

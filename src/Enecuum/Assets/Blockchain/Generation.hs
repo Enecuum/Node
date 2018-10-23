@@ -14,9 +14,11 @@ import           Enecuum.Prelude             hiding (Ordering)
 
 -- | Order for key blocks
 data Ordering = InOrder | RandomOrder
+    deriving (Show)
 
--- | Boundary for transaction generation (On - for demo purpose, Off - for production)
-data Boundary = Off | On
+-- | WalletSource for transaction generation (Hardcoded - for demo purpose, Generated - for production)
+data WalletSource = Generated | Hardcoded
+    deriving (Show)
 
 kBlockInBunch :: Integer
 kBlockInBunch = 1
@@ -83,21 +85,21 @@ genKBlock prevHash i = KBlock
     }
 
 genNTransactions :: (L.ERandom m, Monad m) => Int -> m [Transaction]
-genNTransactions k = replicateM k $ genTransaction On
+genNTransactions k = replicateM k $ genTransaction Hardcoded
 
 -- | Generate signed transaction
-genTransaction :: (Monad m, L.ERandom m) => Boundary -> m Transaction
+genTransaction :: (Monad m, L.ERandom m) => WalletSource -> m Transaction
 genTransaction isFromRange = do
     (ownerKeyPair, receiverKeyPair) <- case isFromRange of
-        On -> do
-            let quantityOfWallets = length wallets1
+        Hardcoded -> do
+            let quantityOfWallets = length hardcodedWallets
             ownerIndex <- L.getRandomInt (0, quantityOfWallets - 1)
-            let owner = wallets1 !! ownerIndex
-            let rest = delete owner wallets1
+            let owner = hardcodedWallets !! ownerIndex
+            let rest = delete owner hardcodedWallets
             receiverIndex <- L.getRandomInt (0, quantityOfWallets - 2)
             let receiver = rest !! receiverIndex
             pure (owner, receiver)
-        Off -> do
+        Generated -> do
             owner <- L.evalCoreCrypto $ L.generateKeyPair
             receiver <- L.evalCoreCrypto $ L.generateKeyPair
             pure (owner, receiver)
@@ -112,8 +114,8 @@ genTransaction isFromRange = do
 -- | Generate signed microblock
 genMicroblock :: (Monad m, L.ERandom m) => KBlock -> [Transaction] -> m Microblock
 genMicroblock kBlock tx = do
-    let hashofKeyBlock = (toHash kBlock)
-    (KeyPair publisherPubKey publisherPrivKey)<- L.evalCoreCrypto $ L.generateKeyPair
+    let hashofKeyBlock = toHash kBlock
+    KeyPair publisherPubKey publisherPrivKey <- L.evalCoreCrypto L.generateKeyPair
     microblock <- signMicroblock hashofKeyBlock tx publisherPubKey publisherPrivKey
     pure microblock
 
@@ -125,7 +127,7 @@ generateIndices :: (L.ERandom m, Monad m) => Ordering -> m [Int]
 generateIndices order = do
     n <- case order of
         RandomOrder -> loopGenIndices [0 .. kBlockInBunch]
-        InOrder     -> pure $ [0 .. kBlockInBunch]
+        InOrder     -> pure [0 .. kBlockInBunch]
     pure $ map fromIntegral n
 
 -- loop: choose randomly one from the rest of list Integers
@@ -137,32 +139,30 @@ generateIndices order = do
 -- [3] - 3
 -- the result: [2,4,5,1,3]
 loopGenIndices :: (Monad m, L.ERandom m, Eq a) => [a] -> m [a]
+loopGenIndices [] = pure []
 loopGenIndices numbers = do
-    if (not $ null numbers)
-        then do
-            let maxIndex = length numbers - 1
-            p <- L.getRandomInt (0, maxIndex)
-            let result = numbers !! p
-            -- choose next number from rest
-            rest <- loopGenIndices $ delete result numbers
-            pure (result : rest)
-        else pure []
+    let maxIndex = length numbers - 1
+    p <- L.getRandomInt (0, maxIndex)
+    let result = numbers !! p
+    -- choose next number from rest
+    rest <- loopGenIndices $ delete result numbers
+    pure (result : rest)
 
 -- | Generate bogus transaction
 generateBogusSignedTransaction :: (Monad m, L.ERandom m) => m Transaction
 generateBogusSignedTransaction = do
-    Transaction {..} <- genTransaction Off
+    Transaction {..} <- genTransaction Generated
     let genTxSign fakeOwnerPrivateKey = signTransaction _owner fakeOwnerPrivateKey _receiver (_amount + 100)  _currency
     generateBogusSignedSomething genTxSign
 
 -- | Generate bogus signature with function for something
 generateBogusSignedSomething :: (Monad m, L.ERandom m, Lens.HasSignature s b) =>
-     (PrivateKey -> m s) -> m s
+    (PrivateKey -> m s) -> m s
 generateBogusSignedSomething genFunction = do 
-    fakeOwner <- L.evalCoreCrypto $ L.generateKeyPair
+    fakeOwner <- L.evalCoreCrypto L.generateKeyPair
     let fakeOwnerPrivateKey = getPriv fakeOwner
     something <- genFunction fakeOwnerPrivateKey
-    pure $ something 
+    pure something 
 
 -- | Generate bogus microblock  
 generateBogusSignedMicroblock :: (Monad m, L.ERandom m) => KBlock -> [Transaction] -> m Microblock

@@ -38,7 +38,7 @@ poaNode role = do
     L.process $ forever $ do
         L.delay $ 100 * 1000
         whenRightM (L.makeRpcRequest graphNodeTransmitterRpcAddress GetTransactionPending) $ \tx -> do
-            forM_ tx (\t -> L.logInfo $ "\nAdd transaction to pending "  +| D.showTx t |+ "")
+            forM_ tx (\t -> L.logInfo $ "\nAdd transaction to pending "  +| D.showTransaction t "" |+ "")
             L.atomically $ L.modifyVar (poaData ^. transactionPending) ( ++ tx )       
         whenRightM (L.makeRpcRequest graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> do
             currentBlock <- L.atomically $ L.readVar (poaData ^. currentLastKeyBlock)        
@@ -48,16 +48,19 @@ poaNode role = do
                 txFromPending <- L.atomically $ do
                     txPending :: [D.Transaction] <- L.readVar (poaData ^. transactionPending)
                     let tx :: [D.Transaction] = take A.transactionsInMicroblock txPending
-                        q = length tx
+                    let q = length tx
                     L.modifyVar (poaData ^. transactionPending) (drop q)
                     pure tx
-                when (length txFromPending > 0) $ L.logInfo $ "\nGet " +| length txFromPending |+ " transaction(s) from pending " 
-                let diff = A.transactionsInMicroblock - (length txFromPending)
-                txGen <- if (diff > 0 ) then do
-                    L.logInfo $ "Generate "  +|| diff ||+ " transaction(s)."
-                    A.genNTransactions diff 
-                    else pure []
-                let tx = txFromPending ++ txGen 
+
+                let pendingTransactionsCount = length txFromPending
+                let transactionsCount = A.transactionsInMicroblock - pendingTransactionsCount
+
+                when (pendingTransactionsCount > 0) $ L.logInfo $ "\nGet " +|| pendingTransactionsCount ||+ " transaction(s) from pending " 
+                when (transactionsCount        > 0) $ L.logInfo $ "Generate "  +|| transactionsCount ||+ " transaction(s)."
+
+                txGenerated <- replicateM transactionsCount $ A.genTransaction A.Hardcoded
+
+                let tx = txFromPending ++ txGenerated 
 
                 L.atomically $ L.writeVar (poaData ^. currentLastKeyBlock) block
                 mBlock <- case role of

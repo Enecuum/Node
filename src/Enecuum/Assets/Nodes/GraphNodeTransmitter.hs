@@ -38,8 +38,8 @@ makeFieldsNoPrefix ''GraphNodeData
 -- | Accept transaction
 acceptTransaction :: GraphNodeData -> AcceptTransaction -> L.NodeL (Either Text SuccessMsg)
 acceptTransaction nodeData (AcceptTransaction tx) = do
-    L.logInfo $ "Got transaction "  +| D.showTx tx |+ ""    
-    if (D.verifyTransaction tx)
+    L.logInfo $ "Got transaction "  +| D.showTransaction tx "" |+ ""    
+    if L.verifyTransaction tx
         then do
             L.logInfo $ "\nTransaction is accepted"
             L.logInfo $ "\nAdd transaction to pending "    
@@ -66,15 +66,20 @@ acceptKBlock nodeData kBlock _ = do
 -- | Accept mBlock
 acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Tcp -> L.NodeL ()
 acceptMBlock nodeData mBlock _ = do
-    isSignGenuine <- D.verifyMicroblockWithTxEff mBlock
-    if not isSignGenuine
-        then L.logInfo $ "Microblock is not accepted."
-        else do
-            L.logInfo "Microblock is accepted."
-            let logV = nodeData ^. logVar
-                bData = nodeData ^. blockchain
-            void $ L.atomically (L.addMBlock logV bData mBlock)
-            Log.writeLog logV
+    let res@(valid, _, _) = L.verifyMicroblockWithTx mBlock
+    when (not valid) $ printInvalidSignatures res
+    when valid $ do
+        L.logInfo $ "Microblock " +|| toHash mBlock ||+ " is accepted."
+        let logV = nodeData ^. logVar
+            bData = nodeData ^. blockchain
+        void $ L.atomically (L.addMBlock logV bData mBlock)
+        Log.writeLog logV
+    where
+        printInvalidSignatures :: (Bool, Bool, [Bool]) -> L.NodeL ()
+        printInvalidSignatures (valid, mBlockValid, txsValid) = do
+            when (not valid)           $ L.logInfo $ "Microblock is rejected: " +|| toHash mBlock ||+ "."
+            when (not mBlockValid)     $ L.logInfo $ "Microblock has " +|| toHash mBlock ||+ " invalid signature."
+            when (elem False txsValid) $ L.logInfo $ "Microblock " +|| toHash mBlock ||+ " transactions have invalid signature."
 
 getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL [D.KBlock]
 getKBlockPending nodeData _ = do

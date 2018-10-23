@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards        #-}
+{-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
@@ -5,6 +7,7 @@
 module Enecuum.Assets.Nodes.Client where
 
 import qualified Data.Aeson                           as A
+import           Data.Aeson.Extra                     (noLensPrefix)
 import qualified Data.Map                             as Map
 import           Data.Text                            hiding (map)
 import           Enecuum.Assets.Blockchain.Generation as D
@@ -18,22 +21,65 @@ import           Enecuum.Framework.Language.Extra     (HasGraph, HasStatus, Node
 import qualified Enecuum.Language                     as L
 import           Enecuum.Prelude                      hiding (map, unpack)
 
-data AcceptTransaction           = AcceptTransaction D.CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, ToJSON)
-data GetLastKBlock               = GetLastKBlock               D.Address
--- data GetWalletBalance            = GetWalletBalance M.WalletId D.Address
-data GetWalletBalance            = GetWalletBalance Int  D.Address
-data GetLengthOfChain            = GetLengthOfChain            D.Address
+type BlocksCount = Int
+
+data AcceptTransaction           = AcceptTransaction CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, ToJSON)
+data GetLastKBlock               = GetLastKBlock D.Address
+data GetWalletBalance            = GetWalletBalance Int D.Address
+data GetLengthOfChain            = GetLengthOfChain D.Address
 data StartForeverChainGeneration = StartForeverChainGeneration D.Address
-data StartNBlockPacketGeneration = StartNBlockPacketGeneration Int D.Address
+data GenerateBlocksPacket        = GenerateBlocksPacket BlocksCount D.Address
 data Ping                        = Ping (D.Protocol Int) D.Address
-data StopRequest                 = StopRequest                 D.Address
-data GetBlock                    = GetBlock       D.StringHash D.Address
+data StopRequest                 = StopRequest D.Address
+data GetBlock                    = GetBlock D.StringHash D.Address
 
 data GraphNodeData = GraphNodeData
     { _blockchain :: D.BlockchainData
     , _logVar     :: D.StateVar [Text]
     , _status     :: D.StateVar NodeStatus
     }
+
+
+data CLITransaction = CLITransaction
+  { _owner    :: String
+  , _receiver :: String
+  , _amount   :: D.Amount
+  , _currency :: D.Currency
+  } deriving ( Generic, Show, Eq, Ord, Read, Serialize)
+
+  
+instance ToJSON CLITransaction where toJSON = genericToJSON noLensPrefix
+instance FromJSON CLITransaction where parseJSON = genericParseJSON noLensPrefix
+
+
+data CLIPublicKey  = CLIPublicKey  D.PublicKey  deriving ( Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, Serialize)
+data CLIPrivateKey = CLIPrivateKey D.PrivateKey deriving ( Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, Serialize)
+
+
+data CLIWallet0 = CLIWallet0
+  { _id         :: Int
+  , _name       :: String
+  , _publicKey  :: String
+  , _privateKey :: Maybe String 
+  } deriving (Generic, Show, Eq, Ord, Read, ToJSON, FromJSON, Serialize)
+
+data CLIWallet = CLIWallet
+  { _id         :: Int
+  , _name       :: String
+  , _publicKey  :: CLIPublicKey
+  , _privateKey :: Maybe CLIPrivateKey
+  } deriving (Generic, Show, Eq, Ord, Read, ToJSON, FromJSON)
+
+transformWallet :: CLIWallet0 -> CLIWallet
+transformWallet CLIWallet0 {..} = CLIWallet
+  { _id         = _id
+  , _name       = _name
+  , _publicKey  = CLIPublicKey (D.readPublicKey _publicKey)
+  , _privateKey = privKey
+  }
+  where privKey = case _privateKey of
+                    Nothing -> Nothing
+                    Just j -> Just $ CLIPrivateKey (D.readPrivateKey j) 
 
 instance A.FromJSON Ping where
     parseJSON = A.withObject "Ping" $ \o -> Ping <$> (o A..: "protocol") <*> (o A..: "address")
@@ -53,8 +99,8 @@ instance A.FromJSON GetLengthOfChain where
 instance A.FromJSON StartForeverChainGeneration where
     parseJSON = A.withObject "StartForeverChainGeneration" $ \o -> StartForeverChainGeneration <$> (o A..: "address")
 
-instance A.FromJSON StartNBlockPacketGeneration where
-    parseJSON = A.withObject "StartNBlockPacketGeneration" $ \o -> StartNBlockPacketGeneration <$> o A..: "number" <*> (o A..: "address")
+instance A.FromJSON GenerateBlocksPacket where
+    parseJSON = A.withObject "GenerateBlocksPacket" $ \o -> GenerateBlocksPacket <$> o A..: "blocks" <*> (o A..: "address")
 
 instance A.FromJSON StopRequest where
     parseJSON = A.withObject "StopRequest" $ \o -> StopRequest <$> (o A..: "address")
@@ -70,8 +116,8 @@ sendSuccessRequest address request = do
 startForeverChainGenerationHandler :: StartForeverChainGeneration -> L.NodeL Text
 startForeverChainGenerationHandler (StartForeverChainGeneration address) = sendSuccessRequest address M.ForeverChainGeneration
 
-startNBlockPacketGenerationHandler :: StartNBlockPacketGeneration -> L.NodeL Text
-startNBlockPacketGenerationHandler (StartNBlockPacketGeneration i address) = sendSuccessRequest address $ M.NBlockPacketGeneration i
+generateBlocksPacketHandler :: GenerateBlocksPacket -> L.NodeL Text
+generateBlocksPacketHandler (GenerateBlocksPacket i address) = sendSuccessRequest address $ M.NBlockPacketGeneration i
 
 getLastKBlockHandler :: GetLastKBlock -> L.NodeL Text
 getLastKBlockHandler (GetLastKBlock address) = do
@@ -81,13 +127,13 @@ getLastKBlockHandler (GetLastKBlock address) = do
 idToKey :: (L.FileSystem m, Monad m) => Int -> m (D.PublicKey, String)
 idToKey n = do
     keys <- lines <$> (L.readFile =<< keysFilePath)
-    let wallets = fmap ( D.transformWallet . (\a -> read a :: D.CLIWallet0) . unpack) keys
-    let walletsMap = Map.fromList $ fmap (\w -> (w ^. Lens.id, w))  wallets
+    let wallets = fmap (transformWallet . (\a -> read a :: CLIWallet0) . unpack) keys
+    let walletsMap = Map.fromList $ fmap (\w -> (_id (w :: CLIWallet), w)) wallets
     case Map.lookup n walletsMap of
         Nothing -> error $ "There is no wallet with id: " +| n |+ ""
         Just j -> do
-            let (D.CLIPublicKey pubKey) = j ^. Lens.publicKey
-            pure (pubKey, j ^. Lens.name)
+            let (CLIPublicKey pubKey) = _publicKey (j :: CLIWallet)
+            pure (pubKey, _name (j :: CLIWallet))
 
 getWalletBalance :: GetWalletBalance -> L.NodeL Text
 getWalletBalance (GetWalletBalance walletId address) = do
@@ -95,36 +141,32 @@ getWalletBalance (GetWalletBalance walletId address) = do
     res :: Either Text M.WalletBalanceMsg <- L.makeRpcRequest address (M.GetWalletBalance pubKey)
     let fun :: M.WalletBalanceMsg -> Text
         fun (M.WalletBalanceMsg _ balance) = "" +|| name ||+ " : " +|| balance ||+ ""
-    -- L.logInfo $ "res:" +|| show res
     pure $ eitherToText2 $ fmap fun res
 
-transform :: (L.ERandom m, L.Logger m, L.FileSystem m, Monad m) => D.CLITransaction -> ScenarioRole -> m D.Transaction
+transform :: (L.ERandom m, L.Logger m, L.FileSystem m, Monad m) => CLITransaction -> ScenarioRole -> m D.Transaction
 transform tx _ = do
-    -- L.logInfo $ show tx
     filePath <- keysFilePath
     keys <- lines <$> (L.readFile filePath)
-    let wallets = fmap ( D.transformWallet . (\a -> read a :: D.CLIWallet0) . unpack) keys
-    -- L.logInfo $ show $ wallets
-    let walletsMap = Map.fromList $ fmap (\w -> (w ^. Lens.name, w))  wallets
-    let ownerName  = tx ^. Lens.owner
-        receiverName =  tx ^. Lens.receiver
-        ownerM = Map.lookup ownerName walletsMap
-        receiverM = Map.lookup receiverName walletsMap
+    let wallets = fmap (transformWallet . (\a -> read a :: CLIWallet0) . unpack) keys
+    let walletsMap = Map.fromList $ fmap (\w -> (_name (w :: CLIWallet), w))  wallets
+    let ownerName  = _owner tx
+    let receiverName = _receiver tx
+    let ownerM = Map.lookup ownerName walletsMap
+    let receiverM = Map.lookup receiverName walletsMap
     let (ownerPub, ownerPriv) = case ownerM of
-                    Nothing -> error $ "There is no record for owner: " +|| show ownerName
-                    Just j -> (pub, priv)
-                                where pub = j ^. Lens.publicKey
-                                      priv = fromJust $ j ^. Lens.privateKey
+                    Nothing -> error $ "There is no record for owner: " +|| ownerName ||+ "."
+                    Just  j -> (pub, priv)
+                                where pub = _publicKey (j :: CLIWallet)
+                                      priv = fromJust $ _privateKey (j :: CLIWallet)
         receiverPub = case receiverM of
-                        Nothing -> read receiverName :: D.CLIPublicKey
-                        Just j  -> j ^. Lens.publicKey
-    let (D.CLIPublicKey owner1) = ownerPub
-        (D.CLIPrivateKey ownerPriv1) = ownerPriv
-        (D.CLIPublicKey receiver1) = receiverPub
-        amount1 = tx ^. Lens.amount
-        currency1 = tx ^. Lens.currency
+                        Nothing -> read receiverName :: CLIPublicKey
+                        Just j  -> _publicKey (j :: CLIWallet)
+    let (CLIPublicKey owner1) = ownerPub
+        (CLIPrivateKey ownerPriv1) = ownerPriv
+        (CLIPublicKey receiver1) = receiverPub
+        amount1 = _amount tx
+        currency1 = _currency tx
     txSigned <- D.signTransaction owner1 ownerPriv1 receiver1 amount1 currency1
-    -- L.logInfo $ "Client send transaction " +|| show txSigned
     pure txSigned
 
 createTransaction :: ScenarioRole -> AcceptTransaction -> L.NodeL Text
@@ -162,12 +204,11 @@ getBlock (GetBlock hash address) = do
         Right (D.MBlockContent block) -> pure $ "Microblock is " <> show block
         Left  text                    -> pure $ "Error: "         <> text
 
-    {-
+{-
 Requests:
 {"method":"GetLastKBlock", "address":{"host":"127.0.0.1", "port": 2005}}
 {"method":"StartForeverChainGeneration", "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"StartNBlockPacketGeneration", "number" : 2, "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"StartNBlockPacketGeneration", "number" : 1, "address":{"host":"127.0.0.1", "port": 2005}}
+{"method":"GenerateBlocksPacket", "blocks" : 2, "address":{"host":"127.0.0.1", "port": 2005}}
 {"method":"GetWalletBalance", "walletID": 2, "address":{"host":"127.0.0.1", "port": 2008}}
 {"method":"GetWalletBalance", "walletID": 2, "address":{"host":"127.0.0.1", "port": 2009}}
 {"method":"StopNode"}
@@ -186,7 +227,7 @@ clientNode role = do
         L.stdHandler $ getLastKBlockHandler
         L.stdHandler $ getWalletBalance
         L.stdHandler startForeverChainGenerationHandler
-        L.stdHandler startNBlockPacketGenerationHandler
+        L.stdHandler generateBlocksPacketHandler
         L.stdHandler $ L.stopNodeHandler' stateVar
         L.stdHandler getLengthOfChain
         L.stdHandler ping
