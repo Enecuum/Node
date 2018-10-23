@@ -6,10 +6,11 @@
 
 module Enecuum.Assets.Nodes.Client where
 
-import qualified Data.Aeson                           as A
+import qualified Data.Aeson                           as J
 import           Data.Aeson.Extra                     (noLensPrefix)
 import qualified Data.Map                             as Map
 import           Data.Text                            hiding (map)
+import qualified Enecuum.Assets.Blockchain.Wallet     as A
 import           Enecuum.Assets.Blockchain.Generation as D
 import           Enecuum.Assets.Nodes.Address
 import qualified Enecuum.Assets.Nodes.Messages        as M
@@ -51,62 +52,32 @@ data CLITransaction = CLITransaction
 instance ToJSON CLITransaction where toJSON = genericToJSON noLensPrefix
 instance FromJSON CLITransaction where parseJSON = genericParseJSON noLensPrefix
 
+instance J.FromJSON Ping where
+    parseJSON = J.withObject "Ping" $ \o -> Ping <$> (o J..: "protocol") <*> (o J..: "address")
 
-data CLIPublicKey  = CLIPublicKey  D.PublicKey  deriving ( Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, Serialize)
-data CLIPrivateKey = CLIPrivateKey D.PrivateKey deriving ( Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, Serialize)
+instance J.FromJSON GetWalletBalance where
+    parseJSON = J.withObject "GetWalletBalance" $ \o -> GetWalletBalance <$> o J..: "walletID" <*> (o J..: "address")
 
+instance J.FromJSON AcceptTransaction where
+    parseJSON = J.withObject "AcceptTransaction" $ \o -> AcceptTransaction <$> o J..: "tx" <*> (o J..: "address")
 
-data CLIWallet0 = CLIWallet0
-  { _id         :: Int
-  , _name       :: String
-  , _publicKey  :: String
-  , _privateKey :: Maybe String 
-  } deriving (Generic, Show, Eq, Ord, Read, ToJSON, FromJSON, Serialize)
+instance J.FromJSON GetLastKBlock where
+    parseJSON = J.withObject "GetLastKBlock" $ \o -> GetLastKBlock <$> (o J..: "address")
 
-data CLIWallet = CLIWallet
-  { _id         :: Int
-  , _name       :: String
-  , _publicKey  :: CLIPublicKey
-  , _privateKey :: Maybe CLIPrivateKey
-  } deriving (Generic, Show, Eq, Ord, Read, ToJSON, FromJSON)
+instance J.FromJSON GetLengthOfChain where
+    parseJSON = J.withObject "GetLengthOfChain" $ \o -> GetLengthOfChain <$> (o J..: "address")
 
-transformWallet :: CLIWallet0 -> CLIWallet
-transformWallet CLIWallet0 {..} = CLIWallet
-  { _id         = _id
-  , _name       = _name
-  , _publicKey  = CLIPublicKey (D.readPublicKey _publicKey)
-  , _privateKey = privKey
-  }
-  where privKey = case _privateKey of
-                    Nothing -> Nothing
-                    Just j -> Just $ CLIPrivateKey (D.readPrivateKey j) 
+instance J.FromJSON StartForeverChainGeneration where
+    parseJSON = J.withObject "StartForeverChainGeneration" $ \o -> StartForeverChainGeneration <$> (o J..: "address")
 
-instance A.FromJSON Ping where
-    parseJSON = A.withObject "Ping" $ \o -> Ping <$> (o A..: "protocol") <*> (o A..: "address")
+instance J.FromJSON GenerateBlocksPacket where
+    parseJSON = J.withObject "GenerateBlocksPacket" $ \o -> GenerateBlocksPacket <$> o J..: "blocks" <*> (o J..: "address")
 
-instance A.FromJSON GetWalletBalance where
-    parseJSON = A.withObject "GetWalletBalance" $ \o -> GetWalletBalance <$> o A..: "walletID" <*> (o A..: "address")
+instance J.FromJSON StopRequest where
+    parseJSON = J.withObject "StopRequest" $ \o -> StopRequest <$> (o J..: "address")
 
-instance A.FromJSON AcceptTransaction where
-    parseJSON = A.withObject "AcceptTransaction" $ \o -> AcceptTransaction <$> o A..: "tx" <*> (o A..: "address")
-
-instance A.FromJSON GetLastKBlock where
-    parseJSON = A.withObject "GetLastKBlock" $ \o -> GetLastKBlock <$> (o A..: "address")
-
-instance A.FromJSON GetLengthOfChain where
-    parseJSON = A.withObject "GetLengthOfChain" $ \o -> GetLengthOfChain <$> (o A..: "address")
-
-instance A.FromJSON StartForeverChainGeneration where
-    parseJSON = A.withObject "StartForeverChainGeneration" $ \o -> StartForeverChainGeneration <$> (o A..: "address")
-
-instance A.FromJSON GenerateBlocksPacket where
-    parseJSON = A.withObject "GenerateBlocksPacket" $ \o -> GenerateBlocksPacket <$> o A..: "blocks" <*> (o A..: "address")
-
-instance A.FromJSON StopRequest where
-    parseJSON = A.withObject "StopRequest" $ \o -> StopRequest <$> (o A..: "address")
-
-instance A.FromJSON GetBlock where
-    parseJSON = A.withObject "GetBlock" $ \o -> GetBlock <$> o A..: "hash" <*> (o A..: "address")
+instance J.FromJSON GetBlock where
+    parseJSON = J.withObject "GetBlock" $ \o -> GetBlock <$> o J..: "hash" <*> (o J..: "address")
 
 sendSuccessRequest :: forall a. (ToJSON a, Typeable a) => D.Address -> a -> L.NodeL Text
 sendSuccessRequest address request = do
@@ -126,14 +97,10 @@ getLastKBlockHandler (GetLastKBlock address) = do
 
 idToKey :: (L.FileSystem m, Monad m) => Int -> m (D.PublicKey, String)
 idToKey n = do
-    keys <- lines <$> (L.readFile =<< keysFilePath)
-    let wallets = fmap (transformWallet . (\a -> read a :: CLIWallet0) . unpack) keys
-    let walletsMap = Map.fromList $ fmap (\w -> (_id (w :: CLIWallet), w)) wallets
+    let walletsMap = Map.fromList $ fmap (\w -> (A._id (w :: A.CLIWallet), w))  A.hardcodedWalletsWithNames
     case Map.lookup n walletsMap of
         Nothing -> error $ "There is no wallet with id: " +| n |+ ""
-        Just j -> do
-            let (CLIPublicKey pubKey) = _publicKey (j :: CLIWallet)
-            pure (pubKey, _name (j :: CLIWallet))
+        Just j -> pure (A._publicKey (j :: A.CLIWallet), A._name (j :: A.CLIWallet))
 
 getWalletBalance :: GetWalletBalance -> L.NodeL Text
 getWalletBalance (GetWalletBalance walletId address) = do
@@ -143,35 +110,27 @@ getWalletBalance (GetWalletBalance walletId address) = do
         fun (M.WalletBalanceMsg _ balance) = "" +|| name ||+ " : " +|| balance ||+ ""
     pure $ eitherToText2 $ fmap fun res
 
-transform :: (L.ERandom m, L.Logger m, L.FileSystem m, Monad m) => CLITransaction -> ScenarioRole -> m D.Transaction
-transform tx _ = do
-    filePath <- keysFilePath
-    keys <- lines <$> (L.readFile filePath)
-    let wallets = fmap (transformWallet . (\a -> read a :: CLIWallet0) . unpack) keys
-    let walletsMap = Map.fromList $ fmap (\w -> (_name (w :: CLIWallet), w))  wallets
+transform :: (L.ERandom m, L.Logger m, L.FileSystem m, Monad m) => CLITransaction -> m D.Transaction
+transform tx = do
+    let walletsMap = Map.fromList $ fmap (\w -> (A._name (w :: A.CLIWallet), w))  A.hardcodedWalletsWithNames
     let ownerName  = _owner tx
     let receiverName = _receiver tx
-    let ownerM = Map.lookup ownerName walletsMap
-    let receiverM = Map.lookup receiverName walletsMap
-    let (ownerPub, ownerPriv) = case ownerM of
+    let mbOwner = Map.lookup ownerName walletsMap
+    let mbReceiver = Map.lookup receiverName walletsMap
+    
+    let (ownerPub, ownerPriv) = case mbOwner of
                     Nothing -> error $ "There is no record for owner: " +|| ownerName ||+ "."
                     Just  j -> (pub, priv)
-                                where pub = _publicKey (j :: CLIWallet)
-                                      priv = fromJust $ _privateKey (j :: CLIWallet)
-        receiverPub = case receiverM of
-                        Nothing -> read receiverName :: CLIPublicKey
-                        Just j  -> _publicKey (j :: CLIWallet)
-    let (CLIPublicKey owner1) = ownerPub
-        (CLIPrivateKey ownerPriv1) = ownerPriv
-        (CLIPublicKey receiver1) = receiverPub
-        amount1 = _amount tx
-        currency1 = _currency tx
-    txSigned <- D.signTransaction owner1 ownerPriv1 receiver1 amount1 currency1
-    pure txSigned
+                                where pub = A._publicKey (j :: A.CLIWallet)
+                                      priv = fromJust $ A._privateKey (j :: A.CLIWallet)
+        receiverPub = case mbReceiver of
+                        Nothing -> read receiverName :: D.PublicKey
+                        Just j  -> A._publicKey (j :: A.CLIWallet)
+    D.signTransaction ownerPub ownerPriv receiverPub (_amount tx) (_currency tx)
 
-createTransaction :: ScenarioRole -> AcceptTransaction -> L.NodeL Text
-createTransaction role  (AcceptTransaction tx address) = do
-    transaction <- transform tx role
+createTransaction :: AcceptTransaction -> L.NodeL Text
+createTransaction (AcceptTransaction tx address) = do
+    transaction <- transform tx 
     res :: Either Text M.SuccessMsg <- L.makeRpcRequest address (M.AcceptTransaction transaction)
     pure . eitherToText $ res
 
@@ -218,8 +177,8 @@ Requests:
 {"method":"AcceptTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2008}}
 -}
 
-clientNode :: ScenarioRole -> L.NodeDefinitionL ()
-clientNode role = do
+clientNode :: L.NodeDefinitionL ()
+clientNode = do
     L.logInfo "Client started"
     L.nodeTag "Client"
     stateVar <- L.scenario $ L.atomically $ L.newVar NodeActing
@@ -233,7 +192,7 @@ clientNode role = do
         L.stdHandler ping
         L.stdHandler stopRequest
         L.stdHandler getBlock
-        L.stdHandler $ createTransaction role
+        L.stdHandler createTransaction 
     L.awaitNodeFinished' stateVar
 
 eitherToText :: Show a => Either Text a -> Text

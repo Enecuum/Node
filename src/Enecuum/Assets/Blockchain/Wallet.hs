@@ -1,13 +1,13 @@
+{-# LANGUAGE DeriveAnyClass         #-}
 module Enecuum.Assets.Blockchain.Wallet where
 
-import Enecuum.Blockchain.Domain.Crypto
+import qualified Enecuum.Blockchain.Domain as D   
 import Enecuum.Prelude
 
 -- | Wallets and keys for demo purpose
 
--- | Keys that are hardcoded in keys.txt.
-publicKeys :: [PublicKey]
-publicKeys = map readPublicKey
+publicKeys :: [D.PublicKey]
+publicKeys = map D.readPublicKey
     [ "8fM3up1pPDUgMnYZzKiBpsnrvNopjSoURSnpYbm5aZKz"
     , "4vCovnpyuooGBi7t4LcEGeiQYA2pEKc4hixFGRGADw4X"
     , "GS5xDwfTffg86Wyv8uy3H4vVQYqTXBFKPxGPy1Ksp2NS"
@@ -15,8 +15,8 @@ publicKeys = map readPublicKey
     , "8LZQhs3Z7WiBZbQvTTeXCcCtXfJYtk6RNxxBExo9PEQm"
     ]
 
-privateKeys :: [PrivateKey]
-privateKeys = map readPrivateKey
+privateKeys :: [D.PrivateKey]
+privateKeys = map D.readPrivateKey
     [ "FDabUqrGEd1i3rfZpqHJkzhvqP9QEpKveoEwmknfJJFa"
     , "DKAJTFr1bFWHE7psYX976YZis1Fqwkh3ikFAgKaw6bWj"
     , "6uU38xA2ucJ2zEqgg1zs5j3U8hx8RL3thVFNmhk3Nbsq"
@@ -24,5 +24,17 @@ privateKeys = map readPrivateKey
     , "MzwHKfF4vGsQB2hgcK3MFKY9TaFaUe78NJwQehfjZ5s"
     ]
 
-hardcodedWallets :: [KeyPair]
-hardcodedWallets = map (\(pub, priv) -> KeyPair pub priv) $ zip publicKeys privateKeys
+hardcodedWallets :: [D.KeyPair]
+hardcodedWallets = map (\(pub, priv) -> D.KeyPair pub priv) $ zip publicKeys privateKeys
+
+names = ["me", "Alice", "Bob", "Carol", "David"]
+
+hardcodedWalletsWithNames = [ CLIWallet {_id  =  id, _name = name, _publicKey = pub, _privateKey = Just priv} | id <- [1..], name <- names, pub <- publicKeys, priv <-  privateKeys]
+
+data CLIWallet = CLIWallet
+  { _id         :: Int
+  , _name       :: String
+  , _publicKey  :: D.PublicKey
+  , _privateKey :: Maybe D.PrivateKey
+  } deriving (Generic, Show, Eq, Ord, Read, ToJSON, FromJSON, Serialize)
+
