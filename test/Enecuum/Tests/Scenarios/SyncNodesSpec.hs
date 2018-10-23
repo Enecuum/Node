@@ -51,7 +51,7 @@ testNodeNet = TestCase $ do
     startNode A.powNode
     startNode $ A.poaNode D.Good
     threadDelay $ 1 * 1000 * 1000
-    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration 1
+    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration 2
     threadDelay $ 3 * 1000 * 1000
     startNode A.graphNodeReceiver
     threadDelay $ 2 * 1000 * 1000
