@@ -8,7 +8,7 @@ module Enecuum.Assets.Nodes.GraphNodeTransmitter (graphNodeTransmitter) where
 
 import           Control.Lens                     (makeFieldsNoPrefix)
 import           Data.HGraph.StringHashable
-import qualified Data.Map                         as Map (Map (..), elems, empty, fromList, insert, keys, lookup)
+import qualified Data.Map                         as Map
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Assets.Nodes.Methodes
@@ -28,6 +28,8 @@ data GraphNodeData = GraphNodeData
     }
 
 makeFieldsNoPrefix ''GraphNodeData
+
+transactionsToTransfer = 20
 
 -- | Accept transaction
 acceptTransaction :: GraphNodeData -> CreateTransaction -> L.NodeL (Either Text SuccessMsg)
@@ -78,18 +80,18 @@ getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL [D.KBlock]
 getKBlockPending nodeData _ = do
     let bData = nodeData ^. blockchain
     kBlocks <- L.atomically $ L.readVar $ bData ^. Lens.kBlockPending
-        -- kblocks <- L.readVar $ bData ^. Lens.kBlockPending
-        -- L.modifyVar (bData ^. Lens.kBlockPending) (\_ -> [])
-        -- pure kblocks
     pure kBlocks
 
-getTransactionPending :: GraphNodeData -> GetTransactionPending -> L.NodeL D.TransactionPending
+getTransactionPending :: GraphNodeData -> GetTransactionPending -> L.NodeL [D.Transaction]
 getTransactionPending nodeData _ = do
     let bData = nodeData ^. blockchain
     tx <- L.atomically $ do
         trans <- L.readVar $ bData ^. Lens.transactionPending
-        L.modifyVar (bData ^. Lens.transactionPending) (\_ -> Map.empty)
-        pure trans
+        let tx = map snd $ take transactionsToTransfer $ Map.toList trans
+        let fun :: D.Transaction -> D.TransactionPending -> D.TransactionPending
+            fun t pending = Map.delete (toHash t) pending
+        forM_ tx (\t -> L.modifyVar (bData ^. Lens.transactionPending) (fun t ))
+        pure tx
     pure tx
 
 getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
