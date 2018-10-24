@@ -2,7 +2,7 @@ module Main where
 
 import           App.Initialize  (initialize)
 import           Enecuum.Config  (withConfig)
---import           System.Environment
+import           System.Environment
 import           Enecuum.Prelude
 
 main :: IO ()

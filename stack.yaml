@@ -1,12 +1,14 @@
-resolver: lts-11.22
+resolver: nightly-2018-10-24
 
 packages:
 - .
 
 extra-deps:
-- base58-bytestring-0.1.0
-- rocksdb-haskell-1.0.1
-- time-units-1.0.0
+- base58-bytestring-0.1.0@sha256:a1da72ee89d5450bac1c792d9fcbe95ed7154ab7246f2172b57bd4fd9b5eab79
+- cryptohash-sha256-0.11.101.0@sha256:2790b29264ebf63dac368dd05ec931254e5c70b0ccbc87d0969903533b32b054
+- fmt-0.6.1@sha256:73cb68707c03ab1a568a5e9bb6d7f796553165b8553e70a528e333622ffcfaa0
+- time-units-1.0.0@sha256:27cf54091c4a0ca73d504fc11d5c31ab4041d17404fe3499945e2055697746c1
+
 
 
 build:
