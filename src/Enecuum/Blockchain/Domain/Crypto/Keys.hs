@@ -48,12 +48,10 @@ curveK :: Curve -> Integer -> (Integer, Integer)
 curveK aCurve x = (c, d)
   where
     (CurveFP (CurvePrime prime (CurveCommon a b _ _ _))) = aCurve
-    n = ((x ^ (3 :: Int) + x * a + b) `mod` prime)
+    n = (x ^ (3 :: Int) + x * a + b) `mod` prime
     -- modular square root of @n@ modulo @prime@
     sr = n `sqrtModP` prime
-    c = case sr of
-      Just j -> j -- n is a quadratic residue modulo prime
-      Nothing -> error $ "The impossible happened. " +|| show n ||+ " is a quadratic nonresidue modulo " +|| show prime
+    c = fromMaybe (error $ "The impossible happened. " +|| show n ||+ " is a quadratic nonresidue modulo " +|| show prime) sr
     d = prime - c
 
 publicKey256k1 :: Integer -> PublicKey

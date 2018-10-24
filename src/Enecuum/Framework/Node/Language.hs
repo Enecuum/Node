@@ -95,7 +95,7 @@ instance L.ERandom (Free NodeF) where
 
 instance L.FileSystem (Free NodeF) where
     readFile = evalCoreEffectNodeF . L.readFile
-    getHomeDirectory = evalCoreEffectNodeF $ L.getHomeDirectory
+    getHomeDirectory = evalCoreEffectNodeF L.getHomeDirectory
     createFilePath filepath = evalCoreEffectNodeF $ L.createFilePath filepath 
 
 instance L.ControlFlow (Free NodeF) where

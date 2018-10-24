@@ -92,7 +92,7 @@ class Serving c a | c -> a where
     serving :: c -> D.PortNumber -> a -> NodeDefinitionL ()
 
 instance Serving D.Rpc (RpcHandlerL L.NodeL ()) where
-    serving _ port handlersF = servingRpc port handlersF
+    serving _ = servingRpc
 
 instance Serving D.Tcp (NetworkHandlerL D.Tcp L.NodeL ()) where
     serving _ port handlersF = liftF $ ServingTcp port handlersF id

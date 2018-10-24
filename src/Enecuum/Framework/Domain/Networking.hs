@@ -22,7 +22,7 @@ data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist deriving 
 
 data Protocol a = UDP | TCP | RPC deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
-data Connection a = Connection
+newtype Connection a = Connection
     { _address :: Address
     }
     deriving (Show, Eq, Ord, Generic)

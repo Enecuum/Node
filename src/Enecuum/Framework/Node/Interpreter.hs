@@ -29,7 +29,7 @@ import           Enecuum.Core.HGraph.Internal.Impl
 -- | Interpret NodeL.
 interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
-    next <$> (atomically $ Impl.runStateL nodeRt statefulAction)
+    next <$> atomically (Impl.runStateL nodeRt statefulAction)
 
 interpretNodeL _      (L.EvalGraphIO gr act next       ) = next <$> runHGraphIO gr act
 
@@ -44,11 +44,11 @@ interpretNodeL nodeRt (L.OpenTcpConnection addr initScript next) =
 interpretNodeL nodeRt (L.OpenUdpConnection addr initScript next) =
     next <$> openConnection nodeRt addr initScript
 
-interpretNodeL nodeRt (L.CloseTcpConnection (D.Connection addr) next) = do
-    next <$> closeConnection nodeRt addr (RLens.tcpConnects)
+interpretNodeL nodeRt (L.CloseTcpConnection (D.Connection addr) next) =
+    next <$> closeConnection nodeRt addr RLens.tcpConnects
 
 interpretNodeL nodeRt (L.CloseUdpConnection (D.Connection addr) next) =
-    next <$> closeConnection nodeRt addr (RLens.udpConnects)
+    next <$> closeConnection nodeRt addr RLens.udpConnects
 
 interpretNodeL _ (L.NewGraph next) = next <$> initHGraph
 
@@ -83,11 +83,11 @@ openConnection nodeRt addr initScript = do
         ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
         (logError' nodeRt)
     insertConnect (nodeRt ^. connectsLens) addr newCon
-    pure $ (D.Connection addr)
+    pure $ D.Connection addr
 
 insertConnect :: Con.NetworkConnection a => TVar (Map D.Address (D.ConnectionVar a)) -> D.Address -> D.ConnectionVar a -> IO ()
 insertConnect m addr newCon = atomically $ do
-    conns <- readTVar $ m
+    conns <- readTVar m
     whenJust (conns ^. at addr) Con.close
     modifyTVar m $ M.insert addr newCon
 

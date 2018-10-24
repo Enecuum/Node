@@ -1,5 +1,4 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE PackageImports        #-}
 {-# LANGUAGE RecordWildCards       #-}
 
 module Enecuum.Assets.Blockchain.Generation where
@@ -53,7 +52,7 @@ loopGenKBlock :: Monad m => StringHash -> Integer -> Integer -> m [KBlock]
 loopGenKBlock prevHash from to = do
     let kblock      = genKBlock prevHash from
         newPrevHash = toHash kblock
-    if (from < to)
+    if from < to
         then do
             rest <- loopGenKBlock newPrevHash (from + 1) to
             pure (kblock : rest)
@@ -100,24 +99,23 @@ genTransaction isFromRange = do
             let receiver = rest !! receiverIndex
             pure (owner, receiver)
         Generated -> do
-            owner <- L.evalCoreCrypto $ L.generateKeyPair
-            receiver <- L.evalCoreCrypto $ L.generateKeyPair
+            owner <- L.evalCoreCrypto L.generateKeyPair
+            receiver <- L.evalCoreCrypto L.generateKeyPair
             pure (owner, receiver)
 
     amount <- fromIntegral <$> L.getRandomInt (0, 100)
     let owner = getPub ownerKeyPair
         receiver = getPub receiverKeyPair
         currency = ENQ
-    transaction <- signTransaction owner (getPriv ownerKeyPair) receiver amount currency
-    pure transaction
+    signTransaction owner (getPriv ownerKeyPair) receiver amount currency
+
 
 -- | Generate signed microblock
 genMicroblock :: (Monad m, L.ERandom m) => KBlock -> [Transaction] -> m Microblock
 genMicroblock kBlock tx = do
     let hashofKeyBlock = toHash kBlock
     KeyPair publisherPubKey publisherPrivKey <- L.evalCoreCrypto L.generateKeyPair
-    microblock <- signMicroblock hashofKeyBlock tx publisherPubKey publisherPrivKey
-    pure microblock
+    signMicroblock hashofKeyBlock tx publisherPubKey publisherPrivKey
 
 genRandMicroblock :: (Monad m, L.ERandom m) => KBlock -> m Microblock
 genRandMicroblock kBlock = genMicroblock kBlock =<< genNTransactions transactionsInMicroblock
@@ -161,12 +159,11 @@ generateBogusSignedSomething :: (Monad m, L.ERandom m, Lens.HasSignature s b) =>
 generateBogusSignedSomething genFunction = do 
     fakeOwner <- L.evalCoreCrypto L.generateKeyPair
     let fakeOwnerPrivateKey = getPriv fakeOwner
-    something <- genFunction fakeOwnerPrivateKey
-    pure something 
+    genFunction fakeOwnerPrivateKey
 
 -- | Generate bogus microblock  
 generateBogusSignedMicroblock :: (Monad m, L.ERandom m) => KBlock -> [Transaction] -> m Microblock
 generateBogusSignedMicroblock kBlock tx = do
     Microblock {..} <- genMicroblock kBlock tx
-    let genMbSign fakeOwnerPrivateKey = signMicroblock _keyBlock _transactions _publisher fakeOwnerPrivateKey
+    let genMbSign = signMicroblock _keyBlock _transactions _publisher
     generateBogusSignedSomething genMbSign  
