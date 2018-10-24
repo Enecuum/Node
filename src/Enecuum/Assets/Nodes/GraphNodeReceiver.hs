@@ -99,8 +99,11 @@ graphNodeReceiver = do
 
     L.process $ forever $ graphSynchro nodeData graphNodeTransmitterRpcAddress
     L.serving D.Rpc graphNodeReceiverRpcPort $ do
+        -- client interaction
         L.methodE $ getBalance nodeData
+        -- graph node interaction
         L.method  $ getLastKBlock nodeData
+        -- network
         L.method  $ rpcPingPong
         L.method  $ methodeStopNode nodeData
 

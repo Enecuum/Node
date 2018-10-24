@@ -38,11 +38,11 @@ makeFieldsNoPrefix ''GraphNodeData
 -- | Accept transaction
 acceptTransaction :: GraphNodeData -> CreateTransaction -> L.NodeL (Either Text SuccessMsg)
 acceptTransaction nodeData (CreateTransaction tx) = do
-    L.logInfo $ "Got transaction "  +| D.showTransaction tx "" |+ ""    
+    L.logInfo $ "Got transaction "  +| D.showTransaction tx "" |+ ""
     if L.verifyTransaction tx
         then do
             L.logInfo $ "\nTransaction is accepted"
-            L.logInfo $ "\nAdd transaction to pending "    
+            L.logInfo $ "\nAdd transaction to pending "
             let bData = nodeData ^. blockchain
             L.atomically $ do
                 pending <- L.readVar (bData ^. Lens.transactionPending)
@@ -50,7 +50,7 @@ acceptTransaction nodeData (CreateTransaction tx) = do
             pure $ Right SuccessMsg
         else do
             L.logInfo $ "Transaction signature is not genuine"
-            L.logInfo $ "Transaction is not accepted" 
+            L.logInfo $ "Transaction is not accepted"
             pure $ Left "Transaction signature is not genuine. Transaction is not accepted."
 
 -- | Accept kBlock
@@ -83,19 +83,19 @@ acceptMBlock nodeData mBlock _ = do
 
 getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL [D.KBlock]
 getKBlockPending nodeData _ = do
-    let bData = nodeData ^. blockchain 
+    let bData = nodeData ^. blockchain
     kBlocks <- L.atomically $ L.readVar $ bData ^. Lens.kBlockPending
         -- kblocks <- L.readVar $ bData ^. Lens.kBlockPending
-        -- L.modifyVar (bData ^. Lens.kBlockPending) (\_ -> [])     
+        -- L.modifyVar (bData ^. Lens.kBlockPending) (\_ -> [])
         -- pure kblocks
     pure kBlocks
 
 getTransactionPending :: GraphNodeData -> GetTransactionPending -> L.NodeL [D.Transaction]
 getTransactionPending nodeData _ = do
-    let bData = nodeData ^. blockchain 
+    let bData = nodeData ^. blockchain
     tx <- L.atomically $ do
         trans <- L.readVar $ bData ^. Lens.transactionPending
-        L.modifyVar (bData ^. Lens.transactionPending) (\_ -> [])     
+        L.modifyVar (bData ^. Lens.transactionPending) (\_ -> [])
         pure trans
     pure tx
 
@@ -176,21 +176,30 @@ graphNodeTransmitter = do
     nodeData <- graphNodeInitialization
 
     L.serving D.Tcp graphNodeTransmitterTcpPort $ do
+        -- PoA interaction
         L.handler $ acceptMBlock nodeData
+        -- PoW interaction
         L.handler $ acceptKBlock nodeData
+        -- network
         L.handler $ methodePing
 
     L.serving D.Rpc graphNodeTransmitterRpcPort $ do
-        L.method  $ getLastKBlock nodeData
-        L.method  $ getKBlockPending nodeData
-        L.method  $ getTransactionPending nodeData        
+        -- client
+        L.methodE $ acceptTransaction nodeData
         L.methodE $ getBalance nodeData
+        -- graph node interaction
+        L.method  $ getLastKBlock nodeData
         L.method  $ acceptChainLength nodeData
         L.methodE $ acceptChainFromTo nodeData
+        -- PoW interaction
+        L.method  $ getKBlockPending nodeData
+        -- PoA interaction
+        L.method  $ getTransactionPending nodeData
         L.methodE $ acceptMBlockForKBlocks nodeData
+        -- network
         L.method  $ rpcPingPong
         L.method  $ methodeStopNode nodeData
-        L.methodE $ acceptTransaction nodeData
+
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.awaitNodeFinished nodeData

@@ -20,7 +20,7 @@ import qualified Enecuum.Assets.Blockchain.Generation as A
 data PoANodeData = PoANodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock
     , _status              :: D.StateVar NodeStatus
-    , _transactionPending  :: D.StateVar [D.Transaction]    
+    , _transactionPending  :: D.StateVar [D.Transaction]
     }
 
 makeFieldsNoPrefix ''PoANodeData
@@ -39,27 +39,12 @@ poaNode role = do
         L.delay $ 100 * 1000
         whenRightM (L.makeRpcRequest graphNodeTransmitterRpcAddress GetTransactionPending) $ \tx -> do
             forM_ tx (\t -> L.logInfo $ "\nAdd transaction to pending "  +| D.showTransaction t "" |+ "")
-            L.atomically $ L.modifyVar (poaData ^. transactionPending) ( ++ tx )       
+            L.atomically $ L.modifyVar (poaData ^. transactionPending) ( ++ tx )
         whenRightM (L.makeRpcRequest graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> do
-            currentBlock <- L.atomically $ L.readVar (poaData ^. currentLastKeyBlock)        
+            currentBlock <- L.atomically $ L.readVar (poaData ^. currentLastKeyBlock)
             when (block /= currentBlock) $ do
                 L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ ")."
-
-                pendingTransactions <- L.atomically $ do
-                    tx <- (take A.transactionsInMicroblock) <$> L.readVar (poaData ^. transactionPending)
-                    L.modifyVar (poaData ^. transactionPending) (drop $ length tx)
-                    pure tx
-
-                let pendingTransactionsCount = length pendingTransactions
-                let transactionsCount = A.transactionsInMicroblock - pendingTransactionsCount
-
-                when (pendingTransactionsCount > 0) $ L.logInfo $ "\nGet " +|| pendingTransactionsCount ||+ " transaction(s) from pending " 
-                when (transactionsCount        > 0) $ L.logInfo $ "Generate "  +|| transactionsCount ||+ " random transaction(s)."
-
-                txGenerated <- replicateM transactionsCount $ A.genTransaction A.Hardcoded
-
-                let tx = pendingTransactions ++ txGenerated 
-
+                tx <- getTransactionsForMb poaData
                 L.atomically $ L.writeVar (poaData ^. currentLastKeyBlock) block
                 mBlock <- case role of
                     D.Good -> A.genMicroblock block tx
@@ -71,3 +56,20 @@ poaNode role = do
 
 
     L.awaitNodeFinished poaData
+
+getTransactionsForMb :: PoANodeData -> Free L.NodeF [D.Transaction]
+getTransactionsForMb poaData = do
+    pendingTransactions <- L.atomically $ do
+        tx <- (take A.transactionsInMicroblock) <$> L.readVar (poaData ^. transactionPending)
+        L.modifyVar (poaData ^. transactionPending) (drop $ length tx)
+        pure tx
+
+    let pendingTransactionsCount = length pendingTransactions
+    let transactionsCount = A.transactionsInMicroblock - pendingTransactionsCount
+
+    when (pendingTransactionsCount > 0) $ L.logInfo $ "\nGet " +|| pendingTransactionsCount ||+ " transaction(s) from pending "
+    when (transactionsCount        > 0) $ L.logInfo $ "Generate "  +|| transactionsCount ||+ " random transaction(s)."
+
+    txGenerated <- replicateM transactionsCount $ A.genTransaction A.Hardcoded
+
+    pure $ pendingTransactions ++ txGenerated
