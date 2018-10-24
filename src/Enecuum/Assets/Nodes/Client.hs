@@ -19,7 +19,7 @@ import           Enecuum.Prelude                  hiding (map, unpack)
 
 type BlocksCount = Int
 
-data AcceptTransaction           = AcceptTransaction CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, ToJSON)
+data CreateTransaction           = CreateTransaction CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, ToJSON)
 data GetLastKBlock               = GetLastKBlock D.Address
 data GetWalletBalance            = GetWalletBalance Int D.Address
 data GetLengthOfChain            = GetLengthOfChain D.Address
@@ -53,8 +53,8 @@ instance J.FromJSON Ping where
 instance J.FromJSON GetWalletBalance where
     parseJSON = J.withObject "GetWalletBalance" $ \o -> GetWalletBalance <$> o J..: "walletID" <*> (o J..: "address")
 
-instance J.FromJSON AcceptTransaction where
-    parseJSON = J.withObject "AcceptTransaction" $ \o -> AcceptTransaction <$> o J..: "tx" <*> (o J..: "address")
+instance J.FromJSON CreateTransaction where
+    parseJSON = J.withObject "CreateTransaction" $ \o -> CreateTransaction <$> o J..: "tx" <*> (o J..: "address")
 
 instance J.FromJSON GetLastKBlock where
     parseJSON = J.withObject "GetLastKBlock" $ \o -> GetLastKBlock <$> (o J..: "address")
@@ -123,10 +123,10 @@ transform tx = do
                         Just j  -> A._publicKey (j :: A.CLIWallet)
     D.signTransaction ownerPub ownerPriv receiverPub (_amount tx) (_currency tx)
 
-createTransaction :: AcceptTransaction -> L.NodeL Text
-createTransaction (AcceptTransaction tx address) = do
+createTransaction :: CreateTransaction -> L.NodeL Text
+createTransaction (CreateTransaction tx address) = do
     transaction <- transform tx
-    res :: Either Text M.SuccessMsg <- L.makeRpcRequest address (M.AcceptTransaction transaction)
+    res :: Either Text M.SuccessMsg <- L.makeRpcRequest address (M.CreateTransaction transaction)
     pure . eitherToText $ res
 
 getLengthOfChain :: GetLengthOfChain -> L.NodeL Text
@@ -169,7 +169,7 @@ Requests:
 {"method":"Ping", "protocol":"RPC", "address":{"host":"127.0.0.1", "port": 2008}}
 {"method":"GetLengthOfChain", "address":{"host":"127.0.0.1", "port": 2008}}
 {"method":"StopRequest", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"AcceptTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2008}}
+{"method":"CreateTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2008}}
 -}
 
 clientNode :: L.NodeDefinitionL ()
