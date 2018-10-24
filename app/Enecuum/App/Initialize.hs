@@ -8,7 +8,7 @@ import           Enecuum.Assets.System.Directory (appFileName, clientStory)
 import           Enecuum.Config                  (Config (..), NodeRole (..), Scenario (..), ScenarioNode (..),
                                                   ScenarioRole (..))
 import qualified Enecuum.Core.Lens               as Lens
-import           Enecuum.Interpreters            (clearNodeRuntime, runNodeDefinitionL, runFileSystemL)
+import           Enecuum.Interpreters            (clearNodeRuntime, runFileSystemL, runNodeDefinitionL)
 import qualified Enecuum.Language                as L
 import           Enecuum.Runtime                 (NodeRuntime (..), clearCoreRuntime, clearLoggerRuntime,
                                                   createCoreRuntime, createLoggerRuntime, createNodeRuntime)
@@ -47,10 +47,10 @@ initialize config = do
     clearLoggerRuntime loggerRt
 
 dispatchScenario :: Config -> ScenarioNode -> L.NodeDefinitionL ()
-dispatchScenario _      (ScenarioNode Client      _         _           ) = S.clientNode 
-dispatchScenario _      (ScenarioNode PoW         Full      Soly        ) = S.powNode
-dispatchScenario _      (ScenarioNode PoA         Full      role        ) = S.poaNode role
-dispatchScenario _      (ScenarioNode GraphNodeTransmitter   _         _           ) = S.graphNodeTransmitter
-dispatchScenario _      (ScenarioNode GraphNodeReceiver   _         _           ) = S.graphNodeReceiver
-dispatchScenario _      (ScenarioNode role        scenario  scenarioRole) = error mes
+dispatchScenario _ (ScenarioNode Client      _         _           ) = S.clientNode
+dispatchScenario _ (ScenarioNode PoW         Full      Soly        ) = S.powNode
+dispatchScenario _ (ScenarioNode PoA         Full      role        ) = S.poaNode role
+dispatchScenario _ (ScenarioNode GraphNode   _         Transmitter ) = S.graphNodeTransmitter
+dispatchScenario _ (ScenarioNode GraphNode   _         Receiver    ) = S.graphNodeReceiver
+dispatchScenario _ (ScenarioNode role        scenario  scenarioRole) = error mes
     where mes = "This scenario: " +|| role ||+ scenario ||+ scenarioRole ||+ " doesn't exist"

@@ -14,13 +14,13 @@ import           System.FilePath.Windows       (dropFileName)
 import           System.Directory (createDirectoryIfMissing)
 import           Enecuum.Framework.Domain.Networking
 
-data NodeRole = PoW | PoA | Client | GraphNodeTransmitter | GraphNodeReceiver
+data NodeRole = PoW | PoA | Client | GraphNode
   deriving (Generic, FromJSON, Show, Read, Eq, Ord )
 
 data Scenario = LedgerBalance | SyncChain | SyncKblock | Full
   deriving (Generic, FromJSON, Show, Read, Eq, Ord)
-
-data ScenarioRole = Respondent | Interviewer | Soly | Good | Bad
+    
+data ScenarioRole = Receiver | Transmitter | Soly | Good | Bad
   deriving (Generic, FromJSON, Show, Read, Eq, Ord)
 
 data ScenarioNode = ScenarioNode
