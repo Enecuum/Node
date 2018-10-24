@@ -8,13 +8,10 @@
 module Enecuum.Assets.Nodes.GraphNodeReceiver (graphNodeReceiver) where
 
 import           Data.HGraph.StringHashable
-import           Data.Map                         (Map, fromList, insert, lookup, empty)
-import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
-import qualified Enecuum.Blockchain.Domain.Graph as TG
-import           Enecuum.Assets.Nodes.Messages
+import           Data.Map                         (lookup)
+import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Assets.Nodes.Messages
-import qualified Enecuum.Blockchain.Domain.Graph  as TG
 import qualified Enecuum.Blockchain.Lens          as Lens
 import qualified Enecuum.Domain                   as D
 import qualified Enecuum.Language                 as L
@@ -33,9 +30,9 @@ makeFieldsNoPrefix ''GraphNodeData
 getLastKBlock :: GraphNodeData ->  GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
     let logV = nodeData ^. logVar
-        bData = nodeData ^. blockchain
-    kBlock <- L.atomically $ L.getTopKeyBlock logV bData
-    pure kBlock
+    let bData = nodeData ^. blockchain
+    L.atomically $ L.getTopKeyBlock logV bData
+
 
 getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
 getBalance nodeData (GetWalletBalance wallet) = do
@@ -87,7 +84,7 @@ graphNodeInitialization = L.scenario $ do
         <$> L.newVar []
         <*> L.newVar []
         <*> L.newVar D.genesisHash
-        <*> L.newVar Data.Map.empty)
+        <*> L.newVar mempty)
         <*> L.newVar []
         <*> L.newVar NodeActing
 
@@ -101,7 +98,7 @@ graphNodeReceiver = do
     L.serving D.Rpc graphNodeReceiverRpcPort $ do
         L.methodE $ getBalance nodeData
         L.method  $ getLastKBlock nodeData
-        L.method  $ rpcPingPong
+        L.method    rpcPingPong
         L.method  $ methodeStopNode nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
