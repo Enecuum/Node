@@ -8,25 +8,25 @@
 module Enecuum.Assets.Nodes.GraphNodeReceiver (graphNodeReceiver) where
 
 import           Data.HGraph.StringHashable
-import           Data.Map                         (Map, fromList, insert, lookup, empty)
-import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
-import qualified Enecuum.Blockchain.Domain.Graph as TG
-import           Enecuum.Assets.Nodes.Messages
+import           Data.Map                         (Map, empty, fromList, insert, lookup)
+import qualified Data.Map                         as Map
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Assets.Nodes.Messages
+import           Enecuum.Assets.Nodes.Messages
+import           Enecuum.Assets.Nodes.Methodes
+import qualified Enecuum.Blockchain.Domain.Graph  as TG
 import qualified Enecuum.Blockchain.Domain.Graph  as TG
 import qualified Enecuum.Blockchain.Lens          as Lens
 import qualified Enecuum.Domain                   as D
+import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
+import qualified Enecuum.Framework.LogState       as Log
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude
-import           Enecuum.Assets.Nodes.Methodes
-
-import qualified Enecuum.Framework.LogState as Log
 
 data GraphNodeData = GraphNodeData
-    { _blockchain    :: D.BlockchainData
-    , _logVar        :: D.StateVar [Text]
-    , _status        :: D.StateVar NodeStatus
+    { _blockchain :: D.BlockchainData
+    , _logVar     :: D.StateVar [Text]
+    , _status     :: D.StateVar NodeStatus
     }
 makeFieldsNoPrefix ''GraphNodeData
 
@@ -85,9 +85,9 @@ graphNodeInitialization = L.scenario $ do
     L.atomically
         $  GraphNodeData <$> (D.BlockchainData g
         <$> L.newVar []
-        <*> L.newVar []
+        <*> L.newVar Map.empty
         <*> L.newVar D.genesisHash
-        <*> L.newVar Data.Map.empty)
+        <*> L.newVar Map.empty)
         <*> L.newVar []
         <*> L.newVar NodeActing
 

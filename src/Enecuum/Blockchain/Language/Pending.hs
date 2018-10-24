@@ -1,6 +1,6 @@
 module Enecuum.Blockchain.Language.Pending where
 
-import           Data.Map
+import qualified Data.Map                                 as Map
 import qualified Enecuum.Blockchain.Domain                as D
 import           Enecuum.Blockchain.Domain.BlockchainData (BlockchainData (..))
 import           Enecuum.Blockchain.Domain.Microblock     (Microblock (..))
@@ -36,7 +36,7 @@ moveKBlockToGraph logV bData = do
     case pending of
         kBlock : newPending | L.kBlockIsNext kBlock topKBlock -> do
             L.writeVar (_kBlockPending bData) newPending
-            Log.stateLog logV "Moving KBlock from pending to graph."
+            Log.stateLog logV "Move KBlock from pending to graph."
             L.addTopKBlock logV bData kBlock
         _ -> pure False
 
@@ -44,7 +44,7 @@ moveKBlockToGraph logV bData = do
 -- | Add new key block to pending.
 addBlockToPending :: D.StateVar [Text] -> BlockchainData -> D.KBlock -> L.StateL Bool
 addBlockToPending logV bData kBlock = do
-    Log.stateLog logV "Adding KBlock to pending"
+    Log.stateLog logV "Add KBlock to pending"
     L.modifyVar (_kBlockPending bData) (\pending -> sortOn (D._number) $ kBlock : pending)
     pure True
 
@@ -52,5 +52,5 @@ addBlockToPending logV bData kBlock = do
 addTransactionToPending :: D.StateVar [Text] -> BlockchainData -> D.Transaction -> L.StateL Bool
 addTransactionToPending logV bData transaction = do
     Log.stateLog logV "Add transaction to pending"
-    L.modifyVar (_transactionPending bData) (\pending -> transaction : pending)
+    L.modifyVar (_transactionPending bData) ( Map.insert (D.toHash transaction) transaction )
     pure True

@@ -1,36 +1,30 @@
 {-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiWayIf             #-}
+{-# LANGUAGE TemplateHaskell        #-}
 
 module Enecuum.Assets.Nodes.GraphNodeTransmitter (graphNodeTransmitter) where
 
-import           Enecuum.Prelude
-import Data.Map (fromList, lookup, insert, Map(..), elems, keys, empty)
-import           Control.Lens                  (makeFieldsNoPrefix)
-
-
-import qualified Enecuum.Domain                as D
-import qualified Enecuum.Language              as L
-import qualified Enecuum.Blockchain.Lens       as Lens
-import qualified Enecuum.Core.Lens             as Lens
+import           Control.Lens                     (makeFieldsNoPrefix)
 import           Data.HGraph.StringHashable
-
-import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
-
-import qualified Enecuum.Blockchain.Domain.Graph as TG
-import           Enecuum.Assets.Nodes.Messages
+import qualified Data.Map                         as Map (Map (..), elems, empty, fromList, insert, keys, lookup)
 import           Enecuum.Assets.Nodes.Address
-
-import qualified Enecuum.Framework.LogState as Log
+import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Assets.Nodes.Methodes
-
+import qualified Enecuum.Blockchain.Domain.Graph  as TG
+import qualified Enecuum.Blockchain.Lens          as Lens
+import qualified Enecuum.Core.Lens                as Lens
+import qualified Enecuum.Domain                   as D
+import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
+import qualified Enecuum.Framework.LogState       as Log
+import qualified Enecuum.Language                 as L
+import           Enecuum.Prelude
 
 data GraphNodeData = GraphNodeData
-    { _blockchain    :: D.BlockchainData
-    , _logVar        :: D.StateVar [Text]
-    , _status        :: D.StateVar NodeStatus
+    { _blockchain :: D.BlockchainData
+    , _logVar     :: D.StateVar [Text]
+    , _status     :: D.StateVar NodeStatus
     }
 
 makeFieldsNoPrefix ''GraphNodeData
@@ -45,8 +39,7 @@ acceptTransaction nodeData (CreateTransaction tx) = do
             L.logInfo $ "\nAdd transaction to pending "
             let bData = nodeData ^. blockchain
             L.atomically $ do
-                pending <- L.readVar (bData ^. Lens.transactionPending)
-                L.writeVar (bData ^. Lens.transactionPending) ( tx : pending )
+                L.modifyVar (bData ^. Lens.transactionPending) ( Map.insert (toHash tx ) tx)
             pure $ Right SuccessMsg
         else do
             L.logInfo $ "Transaction signature is not genuine"
@@ -90,12 +83,12 @@ getKBlockPending nodeData _ = do
         -- pure kblocks
     pure kBlocks
 
-getTransactionPending :: GraphNodeData -> GetTransactionPending -> L.NodeL [D.Transaction]
+getTransactionPending :: GraphNodeData -> GetTransactionPending -> L.NodeL D.TransactionPending
 getTransactionPending nodeData _ = do
     let bData = nodeData ^. blockchain
     tx <- L.atomically $ do
         trans <- L.readVar $ bData ^. Lens.transactionPending
-        L.modifyVar (bData ^. Lens.transactionPending) (\_ -> [])
+        L.modifyVar (bData ^. Lens.transactionPending) (\_ -> Map.empty)
         pure trans
     pure tx
 
@@ -113,7 +106,7 @@ getBalance nodeData (GetWalletBalance wallet) = do
     L.logInfo $ "Requested balance for wallet " +|| D.showPublicKey wallet ||+ "."
     let bData = nodeData ^. blockchain
     curLedger <- L.atomically $ L.readVar $ bData ^. Lens.ledger
-    let maybeBalance = lookup wallet curLedger
+    let maybeBalance = Map.lookup wallet curLedger
     case maybeBalance of
         Just balance -> pure $ Right $ WalletBalanceMsg wallet balance
         _            -> pure $ Left $ "Wallet " +|| D.showPublicKey wallet ||+ " does not exist in graph."
@@ -151,7 +144,7 @@ acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
     mBlockList <- L.atomically $ L.getMBlocksForKBlock logV bData hash
     Log.writeLog logV
     case mBlockList of
-        Nothing -> pure $ Left "KBlock doesn't exist"
+        Nothing        -> pure $ Left "KBlock doesn't exist"
         Just blockList -> pure $ Right $ GetMBlocksForKBlockResponse blockList
 
 -- | Initialization of graph node
@@ -163,9 +156,9 @@ graphNodeInitialization = L.scenario $ do
     L.atomically
         $  GraphNodeData <$> (D.BlockchainData g
         <$> L.newVar []
-        <*> L.newVar []
+        <*> L.newVar Map.empty
         <*> L.newVar D.genesisHash
-        <*> L.newVar Data.Map.empty)
+        <*> L.newVar Map.empty)
         <*> L.newVar []
         <*> L.newVar NodeActing
 
