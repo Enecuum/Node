@@ -26,6 +26,15 @@ data Stop = Stop
 data GetLastKBlock = GetLastKBlock
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+data AcceptTransaction = AcceptTransaction D.Transaction
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data GetTransactionPending = GetTransactionPending
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)  
+  
+data GetKBlockPending = GetKBlockPending
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 data GetWalletBalance = GetWalletBalance { walletId :: WalletId }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 

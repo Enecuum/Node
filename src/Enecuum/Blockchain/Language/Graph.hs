@@ -1,17 +1,15 @@
 module Enecuum.Blockchain.Language.Graph where
 
-import Enecuum.Prelude
-import qualified Enecuum.Framework.Language as L
-import qualified Enecuum.Core.Language as L
-import qualified Enecuum.Framework.Domain as D
-import qualified Enecuum.Core.Types as D
-import qualified Enecuum.Blockchain.Domain.BlockchainData as D
-import qualified Enecuum.Blockchain.Domain.Graph as D
-import qualified Enecuum.Blockchain.Domain.KBlock as D
-import qualified Enecuum.Blockchain.Domain.Microblock as D
+import qualified Enecuum.Blockchain.Domain          as D
 import qualified Enecuum.Blockchain.Language.Ledger as L
+import qualified Enecuum.Core.Language              as L
+import qualified Enecuum.Core.Types                 as D
+import qualified Enecuum.Framework.Domain           as D
+import qualified Enecuum.Framework.Language         as L
+import qualified Enecuum.Framework.LogState         as Log
+import           Enecuum.Prelude
 
-import qualified Enecuum.Framework.LogState as Log
+import Data.Map
 
 -- | Get kBlock by Hash
 getKBlock :: D.StateVar [Text] -> D.BlockchainData -> D.StringHash -> L.StateL (Maybe D.KBlock)
@@ -19,11 +17,10 @@ getKBlock logV bData hash = do
     (res, mbMsg) <- L.evalGraph (D._graph bData) $ do
         maybeKBlock <- L.getNode hash
         case maybeKBlock of
-            Just (D.HNode _ _ (D.fromContent -> D.KBlockContent kBlock) _ _) -> pure $ (Just kBlock, Nothing)
+            Just (D.HNode _ _ (D.fromContent -> D.KBlockContent kBlock) _ _) -> pure (Just kBlock, Nothing)
             _ -> pure (Nothing, Just $ "KBlock not found by hash: " <> show hash)
     whenJust mbMsg $ Log.stateLog logV
     pure res
-
 
 -- Get Top kBlock
 getTopKeyBlock :: D.StateVar [Text] -> D.BlockchainData -> L.StateL D.KBlock
@@ -32,12 +29,16 @@ getTopKeyBlock logV bData = do
     topKBlock   <- fromJust <$> getKBlock logV bData topNodeHash
     pure topKBlock
 
--- | Add key block to graph
-addKBlock :: D.StateVar [Text] -> D.BlockchainData -> D.KBlock -> L.StateL Bool
-addKBlock logV bData kBlock = do
+-- | Add key block to the top of the graph
+addTopKBlock :: D.StateVar [Text] -> D.BlockchainData -> D.KBlock -> L.StateL Bool
+addTopKBlock logV bData kBlock = do
     Log.stateLog logV "Adding KBlock to the graph."
     let kBlock' = D.KBlockContent kBlock
     ref <- L.readVar (D._curNode bData)
+
+    mBlocks <- fromMaybe [] <$> getMBlocksForKBlock logV bData ref
+    forM_ mBlocks $ L.calculateLedger logV bData
+
     L.evalGraph (D._graph bData) $ do
         L.newNode kBlock'
         L.newLink ref kBlock'
@@ -54,23 +55,35 @@ addMBlock logV bData mblock@(D.Microblock hash _ _ _) = do
 
     when (isJust kblock) $ do
         Log.stateLog logV $ "Adding MBlock to the graph for KBlock (" +|| hash ||+ ")."
-        L.calculateLedger logV bData mblock
         L.evalGraph (D._graph bData) $ do
             L.newNode (D.MBlockContent mblock)
             L.newLink hash (D.MBlockContent mblock)
     pure $ isJust kblock
 
+getMBlocksForKBlock :: D.StateVar [Text] -> D.BlockchainData -> D.StringHash -> L.StateL (Maybe [D.Microblock])
+getMBlocksForKBlock logV bData hash =  L.evalGraph (D._graph bData) $ do
+    node <- L.getNode hash
+    case node of
+        Nothing -> pure Nothing
+        Just (D.HNode _ _ _ links _) -> do
+            aMBlocks                       <- forM (Data.Map.keys links) $ \aNRef -> do
+                (D.HNode _ _ (D.fromContent -> block) _ _) <- fromJust <$> L.getNode aNRef
+                case block of
+                    D.MBlockContent mBlock -> pure $ Just mBlock
+                    _               -> pure Nothing
+            pure $ Just $ catMaybes aMBlocks
+
 -- Return all blocks after given number as a list
 findBlocksByNumber :: D.StateVar [Text] -> D.BlockchainData -> Integer -> D.KBlock -> L.StateL [D.KBlock]
-findBlocksByNumber logV bData num prev = 
+findBlocksByNumber logV bData num prev =
     let cNum = (D._number prev) in
-    if 
+    if
         | cNum < num -> pure []
         | cNum == num -> pure [prev]
         | cNum > num -> do
             maybeNext <- getKBlock logV bData (D._prevHash prev)
             case maybeNext of
-                Nothing -> error "Broken chain"
+                Nothing   -> error "Broken chain"
                 Just next -> (:) prev <$> findBlocksByNumber logV bData num next
 
 kBlockIsNext :: D.KBlock -> D.KBlock -> Bool

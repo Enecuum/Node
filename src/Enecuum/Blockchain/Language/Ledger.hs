@@ -4,6 +4,7 @@ module Enecuum.Blockchain.Language.Ledger where
 
 import Enecuum.Prelude
 import Data.Map
+import qualified Data.Map as Map
 import qualified Enecuum.Framework.Language as L
 import qualified Enecuum.Core.Language as L
 import qualified Enecuum.Framework.Domain as D
@@ -18,36 +19,45 @@ import  Enecuum.Blockchain.Domain.Transaction (Transaction(..))
 
 import qualified Enecuum.Framework.LogState as Log
 
-calculateLedger :: D.StateVar [Text] -> BlockchainData -> Microblock -> Free L.StateF ()
-calculateLedger logV bData mblock = do
+newWalletAmount :: D.Amount
+newWalletAmount = 100
+
+initializeWallet :: D.StateVar D.Ledger -> D.WalletID -> L.StateL ()
+initializeWallet ledgerVar wallet = do
+    ledgerW <- L.readVar ledgerVar
+    when (not $ Map.member wallet ledgerW) $ L.modifyVar ledgerVar (Map.insert wallet newWalletAmount)
+
+getBalanceOrCrash :: D.WalletID -> D.Ledger -> D.Amount
+getBalanceOrCrash wallet ledger = case Map.lookup wallet ledger of
+    Nothing      -> error $ "Impossible: wallet " +|| wallet ||+ " is not initialized."
+    Just balance -> balance
+
+calculateLedger :: D.StateVar [Text] -> BlockchainData -> Microblock -> L.StateL ()
+calculateLedger logV bData mblock =
+
     forM_ (_transactions mblock) $ \tx -> do
-        ledgerW <- L.readVar $ (_ledger bData)
-        -- stateLog nodeData $ "Current Ledger " +|| ledgerW ||+ "."
-        let owner          = _owner tx
-            receiver       = _receiver tx
-            amount         = _amount tx
-            currentBalance = lookup owner ledgerW
+        let ledgerVar = _ledger bData
 
-        when (owner == receiver) $ Log.stateLog logV $ "Tx rejected (same owner and receiver): " +|| (D.showPublicKey owner) ||+ "."
+        initializeWallet ledgerVar $ _owner    tx
+        initializeWallet ledgerVar $ _receiver tx
 
-        when (owner /= receiver) $ do
-            ownerBalance <- case currentBalance of
-                    Nothing           -> (Log.stateLog logV $ "Can't find wallet in ledger: " +|| (D.showPublicKey owner) ||+ ".") >> pure 100
-                    Just ownerBalance -> pure ownerBalance 
-            if ownerBalance >= amount 
-            then do
--- stateLog nodeData $ "Before tx owner " +|| owner ||+ " has balance: " +|| balance ||+ "."
-                let receiverBalance = fromMaybe 0 $ lookup receiver ledgerW
-                -- stateLog nodeData $ "Before tx receiver " +|| receiver ||+ " has balance: " +|| receiverBalance ||+ "."
-                let
-                    newLedger = insert owner
-                                       (ownerBalance - amount)
-                                       (insert receiver (receiverBalance + amount) ledgerW)
-                L.writeVar (_ledger bData) newLedger
-                Log.stateLog logV
-                    $   "Tx accepted: from [" +|| (D.showPublicKey owner) ||+ "] to [" +|| (D.showPublicKey receiver) ||+ "], amount: " +|| amount ||+ ". ["
-                    +|| (D.showPublicKey owner) ||+ "]: " +|| ownerBalance - amount ||+ ", [" +|| (D.showPublicKey receiver) ||+ "]: " +|| receiverBalance + amount ||+ ""
--- stateLog nodeData $ "New Ledger " +|| newLedger ||+ "."
-            else
-                Log.stateLog logV
-                $   "Tx rejected (negative balance): [" +|| (D.showPublicKey owner) ||+ "] -> [" +|| (D.showPublicKey receiver) ||+ "], amount: " +|| amount ||+ "."
+        ledgerW <- L.readVar ledgerVar
+
+        let owner              = _owner tx
+        let receiver           = _receiver tx
+        let amount             = _amount tx
+        let ownerBalance       = getBalanceOrCrash owner ledgerW
+        let receiverBalance    = getBalanceOrCrash receiver ledgerW
+        let newOwnerBalance    = ownerBalance - amount
+        let newReceiverBalance = receiverBalance + amount
+
+        let newLedger = insert owner
+                               newOwnerBalance
+                               (insert receiver newReceiverBalance ledgerW)
+        let transactionValid = owner /= receiver && ownerBalance >= amount
+        
+        when transactionValid    $ L.writeVar ledgerVar newLedger
+
+        when transactionValid    $ Log.stateLog logV $ "Tx accepted: " +|| D.showTx tx newOwnerBalance newReceiverBalance ||+ "."
+        when (owner == receiver) $ Log.stateLog logV $ "Tx rejected (same owner and receiver): " +| D.showPublicKey owner |+ "."
+        unless transactionValid  $ Log.stateLog logV $ "Tx rejected (negative balance): " +|| D.showTx tx newOwnerBalance newReceiverBalance ||+ "."

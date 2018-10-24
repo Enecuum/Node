@@ -1,9 +1,9 @@
 {
 	"bootNodeAddress": "[((127,0,0,1), 1554)]",
 	"scenarioNode": [{
-		"nodeRole": "GraphNodeTransmitter",
+		"nodeRole": "GraphNode",
 		"scenario": "Full",
-		"scenarioRole": "Respondent"
+		"scenarioRole": "Transmitter"
 	}],
 	"extPort": 1668,
   "loggerConfig":

@@ -39,8 +39,7 @@ kBlockProcess nodeData = do
 
     L.atomically $ L.writeVar (nodeData ^. prevHash) lastHash
     L.atomically $ L.writeVar (nodeData ^. prevNumber) $ prevKBlockNumber + (fromIntegral $ length kBlocks)
-    L.withConnection D.Tcp graphNodeTransmitterTcpAddress $
-        \conn -> forM_ kBlocks $ \kBlock -> do
+    for_ kBlocks $ \ kBlock -> L.withConnection D.Tcp graphNodeTransmitterTcpAddress $ \conn -> do
             L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
             L.send conn kBlock
             when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
