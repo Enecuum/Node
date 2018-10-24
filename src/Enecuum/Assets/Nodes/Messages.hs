@@ -12,8 +12,7 @@ import           Data.HGraph.StringHashable
 data SuccessMsg = SuccessMsg
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-type WalletId = D.PublicKey
-
+-- | Network messages
 data Ping = Ping
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -23,36 +22,42 @@ data Pong = Pong
 data Stop = Stop
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data GetLastKBlock = GetLastKBlock
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
+-- | client - graph node interaction
 data CreateTransaction = CreateTransaction D.Transaction
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data GetTransactionPending = GetTransactionPending
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)  
-  
-data GetKBlockPending = GetKBlockPending
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data GetWalletBalance = GetWalletBalance { walletId :: WalletId }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data GetGraphNode = GetGraphNode {hash :: StringHash}
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data ForeverChainGeneration = ForeverChainGeneration
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data NBlockPacketGeneration = NBlockPacketGeneration {number :: Int}
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+type WalletId = D.PublicKey
 
 data WalletBalanceMsg = WalletBalanceMsg
   { walletId :: WalletId
   , balance  :: Integer
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
--------------------------------------------------------------------
+
+data GetWalletBalance = GetWalletBalance { walletId :: WalletId }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | client - PoW interaction
+data GetKBlockPending = GetKBlockPending
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data NBlockPacketGeneration = NBlockPacketGeneration {number :: Int}
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data ForeverChainGeneration = ForeverChainGeneration
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | client - PoA interaction
+data GetTransactionPending = GetTransactionPending
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+
+-- | Graph nodes sync interaction
+data GetLastKBlock = GetLastKBlock
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data GetGraphNode = GetGraphNode {hash :: StringHash}
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data GetChainLengthRequest = GetChainLengthRequest
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

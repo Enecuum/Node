@@ -49,7 +49,8 @@ instance ERandom (Free CoreEffectF) where
   getRandomInt = evalRandom . getRandomInt
   getRandomByteString = evalRandom . getRandomByteString
   evalCoreCrypto = evalRandom . evalCoreCrypto
-
+  nextUUID = evalRandom $ nextUUID
+  
 evalControlFlow :: ControlFlowL a -> CoreEffect a
 evalControlFlow a = liftF $ EvalControlFlow a id
 

@@ -131,6 +131,7 @@ dependencies:
 - th-abstraction
 - MonadRandom
 - entropy
+- uuid
 
 library:
   source-dirs: src
