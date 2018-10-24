@@ -45,22 +45,20 @@ poaNode role = do
             when (block /= currentBlock) $ do
                 L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ ")."
 
-                txFromPending <- L.atomically $ do
-                    txPending :: [D.Transaction] <- L.readVar (poaData ^. transactionPending)
-                    let tx :: [D.Transaction] = take A.transactionsInMicroblock txPending
-                    let q = length tx
-                    L.modifyVar (poaData ^. transactionPending) (drop q)
+                pendingTransactions <- L.atomically $ do
+                    tx <- (take A.transactionsInMicroblock) <$> L.readVar (poaData ^. transactionPending)
+                    L.modifyVar (poaData ^. transactionPending) (drop $ length tx)
                     pure tx
 
-                let pendingTransactionsCount = length txFromPending
+                let pendingTransactionsCount = length pendingTransactions
                 let transactionsCount = A.transactionsInMicroblock - pendingTransactionsCount
 
                 when (pendingTransactionsCount > 0) $ L.logInfo $ "\nGet " +|| pendingTransactionsCount ||+ " transaction(s) from pending " 
-                when (transactionsCount        > 0) $ L.logInfo $ "Generate "  +|| transactionsCount ||+ " transaction(s)."
+                when (transactionsCount        > 0) $ L.logInfo $ "Generate "  +|| transactionsCount ||+ " random transaction(s)."
 
                 txGenerated <- replicateM transactionsCount $ A.genTransaction A.Hardcoded
 
-                let tx = txFromPending ++ txGenerated 
+                let tx = pendingTransactions ++ txGenerated 
 
                 L.atomically $ L.writeVar (poaData ^. currentLastKeyBlock) block
                 mBlock <- case role of

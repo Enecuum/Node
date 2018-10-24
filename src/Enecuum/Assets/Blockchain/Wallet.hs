@@ -29,12 +29,13 @@ hardcodedWallets = map (\(pub, priv) -> D.KeyPair pub priv) $ zip publicKeys pri
 
 names = ["me", "Alice", "Bob", "Carol", "David"]
 
-hardcodedWalletsWithNames = [ CLIWallet {_id  =  id, _name = name, _publicKey = pub, _privateKey = Just priv} | id <- [1..], name <- names, pub <- publicKeys, priv <-  privateKeys]
+hardcodedWalletsWithNames = [ CLIWallet {_id  =  id, _name = name, _publicKey = pub, _privateKey = Just priv} | id <- [1..], name <- names, pub <- publicKeys]
+    where priv = privateKeys !! 0
 
 data CLIWallet = CLIWallet
-  { _id         :: Int
-  , _name       :: String
-  , _publicKey  :: D.PublicKey
-  , _privateKey :: Maybe D.PrivateKey
-  } deriving (Generic, Show, Eq, Ord, Read, ToJSON, FromJSON, Serialize)
+    { _id         :: Int
+    , _name       :: String
+    , _publicKey  :: D.PublicKey
+    , _privateKey :: Maybe D.PrivateKey
+    } deriving (Generic, Show, Eq, Ord, Read, ToJSON, FromJSON, Serialize)
 

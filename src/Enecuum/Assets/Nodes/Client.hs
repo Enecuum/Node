@@ -1,26 +1,21 @@
-{-# LANGUAGE RecordWildCards        #-}
-{-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveAnyClass         #-}
+{-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE RecordWildCards        #-}
 {-# LANGUAGE TemplateHaskell        #-}
 
 module Enecuum.Assets.Nodes.Client where
 
-import qualified Data.Aeson                           as J
-import           Data.Aeson.Extra                     (noLensPrefix)
-import qualified Data.Map                             as Map
-import           Data.Text                            hiding (map)
-import qualified Enecuum.Assets.Blockchain.Wallet     as A
-import           Enecuum.Assets.Blockchain.Generation as D
-import           Enecuum.Assets.Nodes.Address
-import qualified Enecuum.Assets.Nodes.Messages        as M
-import           Enecuum.Assets.System.Directory      as D (keysFilePath, wrongKeysFilePath)
-import qualified Enecuum.Blockchain.Lens              as Lens
-import           Enecuum.Config
-import qualified Enecuum.Domain                       as D
-import           Enecuum.Framework.Language.Extra     (HasGraph, HasStatus, NodeStatus (..))
-import qualified Enecuum.Language                     as L
-import           Enecuum.Prelude                      hiding (map, unpack)
+import qualified Data.Aeson                       as J
+import           Data.Aeson.Extra                 (noLensPrefix)
+import qualified Data.Map                         as Map
+import           Data.Text                        hiding (map)
+import qualified Enecuum.Assets.Blockchain.Wallet as A
+import qualified Enecuum.Assets.Nodes.Messages    as M
+import qualified Enecuum.Domain                   as D
+import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
+import qualified Enecuum.Language                 as L
+import           Enecuum.Prelude                  hiding (map, unpack)
 
 type BlocksCount = Int
 
@@ -48,7 +43,7 @@ data CLITransaction = CLITransaction
   , _currency :: D.Currency
   } deriving ( Generic, Show, Eq, Ord, Read, Serialize)
 
-  
+
 instance ToJSON CLITransaction where toJSON = genericToJSON noLensPrefix
 instance FromJSON CLITransaction where parseJSON = genericParseJSON noLensPrefix
 
@@ -100,7 +95,7 @@ idToKey n = do
     let walletsMap = Map.fromList $ fmap (\w -> (A._id (w :: A.CLIWallet), w))  A.hardcodedWalletsWithNames
     case Map.lookup n walletsMap of
         Nothing -> error $ "There is no wallet with id: " +| n |+ ""
-        Just j -> pure (A._publicKey (j :: A.CLIWallet), A._name (j :: A.CLIWallet))
+        Just j  -> pure (A._publicKey (j :: A.CLIWallet), A._name (j :: A.CLIWallet))
 
 getWalletBalance :: GetWalletBalance -> L.NodeL Text
 getWalletBalance (GetWalletBalance walletId address) = do
@@ -117,7 +112,7 @@ transform tx = do
     let receiverName = _receiver tx
     let mbOwner = Map.lookup ownerName walletsMap
     let mbReceiver = Map.lookup receiverName walletsMap
-    
+
     let (ownerPub, ownerPriv) = case mbOwner of
                     Nothing -> error $ "There is no record for owner: " +|| ownerName ||+ "."
                     Just  j -> (pub, priv)
@@ -130,7 +125,7 @@ transform tx = do
 
 createTransaction :: AcceptTransaction -> L.NodeL Text
 createTransaction (AcceptTransaction tx address) = do
-    transaction <- transform tx 
+    transaction <- transform tx
     res :: Either Text M.SuccessMsg <- L.makeRpcRequest address (M.AcceptTransaction transaction)
     pure . eitherToText $ res
 
@@ -192,7 +187,7 @@ clientNode = do
         L.stdHandler ping
         L.stdHandler stopRequest
         L.stdHandler getBlock
-        L.stdHandler createTransaction 
+        L.stdHandler createTransaction
     L.awaitNodeFinished' stateVar
 
 eitherToText :: Show a => Either Text a -> Text
