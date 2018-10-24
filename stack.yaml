@@ -1,15 +1,15 @@
-resolver: nightly-2018-10-20
+resolver: lts-11.22
 
 packages:
 - .
 
 extra-deps:
 - base58-bytestring-0.1.0
-- cryptohash-sha256-0.11.101.0
-- fmt-0.6
+- rocksdb-haskell-1.0.1
 - time-units-1.0.0
+
 
 build:
   haddock-arguments:
     haddock-args:
-    - "--odir=./docs"
+    - "--odir=././docs"

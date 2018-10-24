@@ -60,7 +60,6 @@ default-extensions:
 - TupleSections
 - ViewPatterns
 - MultiWayIf
-- BlockArguments
 
 dependencies:
 - base >= 4.7 && < 5
@@ -108,6 +107,7 @@ dependencies:
 - entropy
 - validation
 - silently
+
 
 library:
   source-dirs: src

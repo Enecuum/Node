@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE NoImplicitPrelude          #-}
-{-# LANGUAGE DerivingVia                #-}
+--{-# LANGUAGE DerivingVia                #-}
 
 module Data.HGraph.StringHashable where
 
@@ -11,8 +11,7 @@ import qualified Data.Aeson.Types as A
 import qualified Data.ByteString as BS
 
 newtype StringHash = StringHash ByteString
-    deriving stock (Eq, Ord, Show, Read, Generic)
-    deriving Serialize
+    deriving (Eq, Ord, Show, Read, Generic, Serialize)
 
 class StringHashable a where
     toHash :: a -> StringHash
@@ -46,8 +45,7 @@ fromStringHash (StringHash sh) = sh
 newtype StringHashSerializable = StringHashSerializable
     { bytes :: [Word8]
     }
-    deriving stock (Generic)
-    deriving (ToJSON, FromJSON)
+    deriving (Generic, ToJSON, FromJSON)
 
 instance ToJSON StringHash where
     toJSON (StringHash bytes) = toJSON $ StringHashSerializable $ BS.unpack bytes
