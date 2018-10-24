@@ -46,7 +46,7 @@ poaNode role = do
                 L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ ")."
 
                 pendingTransactions <- L.atomically $ do
-                    tx <- (take A.transactionsInMicroblock) <$> L.readVar (poaData ^. transactionPending)
+                    tx <- take A.transactionsInMicroblock <$> L.readVar (poaData ^. transactionPending)
                     L.modifyVar (poaData ^. transactionPending) (drop $ length tx)
                     pure tx
 

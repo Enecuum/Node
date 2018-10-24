@@ -38,7 +38,7 @@ kBlockProcess nodeData = do
     L.logInfo $ "Last hash: " +|| lastHash ||+ "."
 
     L.atomically $ L.writeVar (nodeData ^. prevHash) lastHash
-    L.atomically $ L.writeVar (nodeData ^. prevNumber) $ prevKBlockNumber + (fromIntegral $ length kBlocks)
+    L.atomically $ L.writeVar (nodeData ^. prevNumber) $ prevKBlockNumber + fromIntegral (length kBlocks)
     for_ kBlocks $ \ kBlock -> L.withConnection D.Tcp graphNodeTransmitterTcpAddress $ \conn -> do
             L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
             L.send conn kBlock
@@ -65,7 +65,7 @@ powNode' delaysEnabled = do
     L.serving D.Rpc powNodeRpcPort $ do
         L.method  $ foreverChainGenerationHandle nodeData
         L.method  $ nBlockPacketGenerationHandle nodeData
-        L.method  $ rpcPingPong
+        L.method    rpcPingPong
         L.method  $ methodeStopNode nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData

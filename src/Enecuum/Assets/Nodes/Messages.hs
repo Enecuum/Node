@@ -1,7 +1,5 @@
 {-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE FunctionalDependencies #-}
 
 module Enecuum.Assets.Nodes.Messages where
 
@@ -23,7 +21,7 @@ data Stop = Stop
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | client - graph node interaction
-data CreateTransaction = CreateTransaction D.Transaction
+newtype CreateTransaction = CreateTransaction D.Transaction
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 type WalletId = D.PublicKey
@@ -34,14 +32,14 @@ data WalletBalanceMsg = WalletBalanceMsg
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data GetWalletBalance = GetWalletBalance { walletId :: WalletId }
+newtype GetWalletBalance = GetWalletBalance { walletId :: WalletId }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | client - PoW interaction
 data GetKBlockPending = GetKBlockPending
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data NBlockPacketGeneration = NBlockPacketGeneration {number :: Int}
+newtype NBlockPacketGeneration = NBlockPacketGeneration {number :: Int}
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data ForeverChainGeneration = ForeverChainGeneration
@@ -56,7 +54,7 @@ data GetTransactionPending = GetTransactionPending
 data GetLastKBlock = GetLastKBlock
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data GetGraphNode = GetGraphNode {hash :: StringHash}
+newtype GetGraphNode = GetGraphNode {hash :: StringHash}
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data GetChainLengthRequest = GetChainLengthRequest
