@@ -36,8 +36,8 @@ data GraphNodeData = GraphNodeData
 makeFieldsNoPrefix ''GraphNodeData
 
 -- | Accept transaction
-acceptTransaction :: GraphNodeData -> AcceptTransaction -> L.NodeL (Either Text SuccessMsg)
-acceptTransaction nodeData (AcceptTransaction tx) = do
+acceptTransaction :: GraphNodeData -> CreateTransaction -> L.NodeL (Either Text SuccessMsg)
+acceptTransaction nodeData (CreateTransaction tx) = do
     L.logInfo $ "Got transaction "  +| D.showTransaction tx "" |+ ""    
     if L.verifyTransaction tx
         then do
