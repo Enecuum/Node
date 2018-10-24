@@ -121,7 +121,8 @@ transform tx = do
         receiverPub = case mbReceiver of
                         Nothing -> read receiverName :: D.PublicKey
                         Just j  -> A._publicKey (j :: A.CLIWallet)
-    D.signTransaction ownerPub ownerPriv receiverPub (_amount tx) (_currency tx)
+    uuid <- L.nextUUID
+    D.signTransaction ownerPub ownerPriv receiverPub (_amount tx) (_currency tx) uuid
 
 createTransaction :: CreateTransaction -> L.NodeL Text
 createTransaction (CreateTransaction tx address) = do

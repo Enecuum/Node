@@ -107,8 +107,8 @@ genTransaction isFromRange = do
     let owner = getPub ownerKeyPair
         receiver = getPub receiverKeyPair
         currency = ENQ
-    signTransaction owner (getPriv ownerKeyPair) receiver amount currency
-
+    uuid <- L.nextUUID
+    signTransaction owner (getPriv ownerKeyPair) receiver amount currency uuid
 
 -- | Generate signed microblock
 genMicroblock :: (Monad m, L.ERandom m) => KBlock -> [Transaction] -> m Microblock
@@ -150,18 +150,18 @@ loopGenIndices numbers = do
 generateBogusSignedTransaction :: (Monad m, L.ERandom m) => m Transaction
 generateBogusSignedTransaction = do
     Transaction {..} <- genTransaction Generated
-    let genTxSign fakeOwnerPrivateKey = signTransaction _owner fakeOwnerPrivateKey _receiver (_amount + 100)  _currency
+    let genTxSign fakeOwnerPrivateKey = signTransaction _owner fakeOwnerPrivateKey _receiver (_amount + 100)  _currency _uuid
     generateBogusSignedSomething genTxSign
 
 -- | Generate bogus signature with function for something
 generateBogusSignedSomething :: (Monad m, L.ERandom m, Lens.HasSignature s b) =>
     (PrivateKey -> m s) -> m s
-generateBogusSignedSomething genFunction = do 
+generateBogusSignedSomething genFunction = do
     fakeOwner <- L.evalCoreCrypto L.generateKeyPair
     let fakeOwnerPrivateKey = getPriv fakeOwner
     genFunction fakeOwnerPrivateKey
 
--- | Generate bogus microblock  
+-- | Generate bogus microblock
 generateBogusSignedMicroblock :: (Monad m, L.ERandom m) => KBlock -> [Transaction] -> m Microblock
 generateBogusSignedMicroblock kBlock tx = do
     Microblock {..} <- genMicroblock kBlock tx

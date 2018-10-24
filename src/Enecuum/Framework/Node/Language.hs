@@ -92,6 +92,7 @@ instance L.ERandom (Free NodeF) where
     evalCoreCrypto = evalCoreEffectNodeF . L.evalCoreCrypto
     getRandomInt = evalCoreEffectNodeF . L.getRandomInt
     getRandomByteString = evalCoreEffectNodeF . L.getRandomByteString
+    nextUUID = evalCoreEffectNodeF $ L.nextUUID
 
 instance L.FileSystem (Free NodeF) where
     readFile = evalCoreEffectNodeF . L.readFile

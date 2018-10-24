@@ -107,7 +107,7 @@ dependencies:
 - entropy
 - validation
 - silently
-
+- uuid
 
 library:
   source-dirs: src
