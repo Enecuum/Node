@@ -9,11 +9,9 @@ module Enecuum.Assets.Nodes.GraphNode.Logic where
 import           Control.Lens                     (makeFieldsNoPrefix)
 import           Data.HGraph.StringHashable
 import qualified Data.Map                         as Map
-import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Assets.Nodes.Messages
-import           Enecuum.Assets.Nodes.Methods
 import qualified Enecuum.Domain                   as D
-import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
+import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 import qualified Enecuum.Framework.LogState       as Log
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude
@@ -27,6 +25,7 @@ data GraphNodeData = GraphNodeData
 
 makeFieldsNoPrefix ''GraphNodeData
 
+transactionsToTransfer :: Int
 transactionsToTransfer = 20
 
 -- | Accept transaction
@@ -52,7 +51,7 @@ acceptKBlock nodeData kBlock _ = do
     L.logInfo $ "\nAccepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
-    res <- L.atomically $ L.addKBlock logV bData kBlock
+    void $ L.atomically $ L.addKBlock logV bData kBlock
     Log.writeLog logV
 
 
@@ -60,25 +59,24 @@ acceptKBlock nodeData kBlock _ = do
 acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Tcp -> L.NodeL ()
 acceptMBlock nodeData mBlock _ = do
     let res@(valid, _, _) = L.verifyMicroblockWithTx mBlock
-    when (not valid) $ printInvalidSignatures res
+    unless valid $ printInvalidSignatures res
     when valid $ do
         L.logInfo $ "Microblock " +|| toHash mBlock ||+ " is accepted."
         let logV = nodeData ^. logVar
-            bData = nodeData ^. blockchain
+        let bData = nodeData ^. blockchain
         void $ L.atomically $ do
-            L.addMBlock logV bData mBlock
-            let bData = nodeData ^. blockchain
+            void $ L.addMBlock logV bData mBlock
             let tx = mBlock ^. Lens.transactions
             let fun :: D.Transaction -> D.TransactionPending -> D.TransactionPending
-                fun t pending = Map.delete (toHash t) pending
-            forM_ tx (\t -> L.modifyVar (bData ^. Lens.transactionPending) (fun t ))
+                fun t = Map.delete (toHash t)
+            forM_ tx (L.modifyVar (bData ^. Lens.transactionPending) . fun)
         Log.writeLog logV
     where
         printInvalidSignatures :: (Bool, Bool, [Bool]) -> L.NodeL ()
         printInvalidSignatures (valid, mBlockValid, txsValid) = do
-            when (not valid)           $ L.logInfo $ "Microblock is rejected: " +|| toHash mBlock ||+ "."
-            when (not mBlockValid)     $ L.logInfo $ "Microblock has " +|| toHash mBlock ||+ " invalid signature."
-            when (elem False txsValid) $ L.logInfo $ "Microblock " +|| toHash mBlock ||+ " transactions have invalid signature."
+            unless valid           $ L.logInfo $ "Microblock is rejected: " +|| toHash mBlock ||+ "."
+            unless mBlockValid     $ L.logInfo $ "Microblock has " +|| toHash mBlock ||+ " invalid signature."
+            when (False `elem` txsValid) $ L.logInfo $ "Microblock " +|| toHash mBlock ||+ " transactions have invalid signature."
 
 getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL [D.KBlock]
 getKBlockPending nodeData _ = do
@@ -127,7 +125,7 @@ getChainLength nodeData GetChainLengthRequest = do
 
 acceptChainFromTo :: GraphNodeData -> GetChainFromToRequest -> L.NodeL (Either Text GetChainFromToResponse)
 acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
-    L.logInfo $ "Answering chain from " +|| show from ||+ " to " +|| show to
+    L.logInfo $ "Answering chain from " +|| (show from :: Text) ||+ " to " +|| show to
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
     if from > to

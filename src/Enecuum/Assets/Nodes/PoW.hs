@@ -9,7 +9,7 @@ import Enecuum.Prelude
 import qualified Enecuum.Language              as L
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Assets.Blockchain.Generation as A
-import           Enecuum.Assets.Nodes.Address (graphNodeTransmitterRpcAddress, powNodeRpcPort, graphNodeTransmitterTcpAddress)
+import           Enecuum.Assets.Nodes.Address (powNodeRpcPort, graphNodeTransmitterTcpAddress)
 import           Data.HGraph.StringHashable (StringHash (..), toHash)
 import           Enecuum.Assets.Nodes.Messages (
     SuccessMsg (..), ForeverChainGeneration(..), NBlockPacketGeneration(..))
@@ -41,7 +41,7 @@ kBlockProcess nodeData = do
     L.writeVarIO (nodeData ^. prevNumber) $ prevKBlockNumber + fromIntegral (length kBlocks)
     for_ kBlocks $ \ kBlock -> L.withConnection D.Tcp graphNodeTransmitterTcpAddress $ \conn -> do
             L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-            L.send conn kBlock
+            void $ L.send conn kBlock
             when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
 
 foreverChainGenerationHandle :: PoWNodeData -> ForeverChainGeneration -> L.NodeL SuccessMsg

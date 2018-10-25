@@ -5,8 +5,6 @@
 
 module Enecuum.Assets.Nodes.PoA where
 
-import qualified Data.Text as T
-
 import           Enecuum.Prelude
 
 import           Data.HGraph.StringHashable   (toHash)
@@ -71,7 +69,7 @@ poaNode role = do
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    L.serving D.Rpc A.poaNodeRpcPort $ do
+    L.serving D.Rpc A.poaNodeRpcPort $
         L.method rpcPingPong
 
     L.process $ forever $ do

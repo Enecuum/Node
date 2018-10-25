@@ -1,8 +1,4 @@
-{-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE RecordWildCards        #-}
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE DeriveAnyClass         #-}
 
 module Enecuum.Assets.Nodes.Client where
@@ -14,22 +10,22 @@ import           Data.Text                        hiding (map)
 import qualified Enecuum.Assets.Blockchain.Wallet as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
 import qualified Enecuum.Domain                   as D
-import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
+import           Enecuum.Framework.Language.Extra (NodeStatus (..))
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude                  hiding (map, unpack)
 
 type BlocksCount = Int
 
-data CreateTransaction           = CreateTransaction CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, ToJSON)
-data GetLastKBlock               = GetLastKBlock D.Address
-data GetWalletBalance            = GetWalletBalance Int D.Address
-data GetLengthOfChain            = GetLengthOfChain D.Address
-data StartForeverChainGeneration = StartForeverChainGeneration D.Address
-data GenerateBlocksPacket        = GenerateBlocksPacket BlocksCount D.Address
-data Ping                        = Ping Protocol D.Address
-data StopRequest                 = StopRequest D.Address
-data GetBlock                    = GetBlock D.StringHash D.Address
-data Protocol                    = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON)
+data CreateTransaction              = CreateTransaction CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, ToJSON)
+newtype GetLastKBlock               = GetLastKBlock D.Address
+data GetWalletBalance               = GetWalletBalance Int D.Address
+newtype GetLengthOfChain            = GetLengthOfChain D.Address
+newtype StartForeverChainGeneration = StartForeverChainGeneration D.Address
+data GenerateBlocksPacket           = GenerateBlocksPacket BlocksCount D.Address
+data Ping                           = Ping Protocol D.Address
+newtype StopRequest                 = StopRequest D.Address
+data GetBlock                       = GetBlock D.StringHash D.Address
+data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON)
 
 data GraphNodeData = GraphNodeData
     { _blockchain :: D.BlockchainData
@@ -148,7 +144,7 @@ ping (Ping RPC address) = do
     res :: Either Text M.Pong <- L.makeRpcRequest address M.Ping
     pure $ case res of Right _ -> "Rpc port is available."; Left _ -> "Rpc port is not available."
 
-ping (Ping UDP _) = pure $ "This functionality is not supported."
+ping (Ping UDP _) = pure "This functionality is not supported."
 
 stopRequest :: StopRequest -> L.NodeL Text
 stopRequest (StopRequest address) = sendSuccessRequest address M.Stop
@@ -188,9 +184,9 @@ clientNode = do
 
         -- interaction with graph node
         L.stdHandler createTransaction
-        L.stdHandler $ getWalletBalance
+        L.stdHandler getWalletBalance
         -- interaction with graph node sync scenario
-        L.stdHandler $ getLastKBlockHandler
+        L.stdHandler getLastKBlockHandler
         L.stdHandler getLengthOfChain
         L.stdHandler getBlock
 

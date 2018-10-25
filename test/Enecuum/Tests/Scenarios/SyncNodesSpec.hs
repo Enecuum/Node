@@ -1,6 +1,4 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE DeriveAnyClass #-}
 
 module Enecuum.Tests.Scenarios.SyncNodesSpec where
     
@@ -29,10 +27,11 @@ spec :: Spec
 spec = describe "Synchronization tests" $ fromHUnitTest $ TestList
     [TestLabel "test net sync" testNodeNet]
 
+logConfig :: FilePath -> D.LoggerConfig
 logConfig file = D.LoggerConfig "$prio $loggername: $msg" D.Debug file True
 
 createNodeRuntime :: R.LoggerRuntime -> IO R.NodeRuntime
-createNodeRuntime loggerRuntime = R.createCoreRuntime loggerRuntime >>= (\a -> R.createNodeRuntime a M.empty)
+createNodeRuntime loggerRuntime = R.createCoreRuntime loggerRuntime >>= (`R.createNodeRuntime` M.empty)
 
 -- TODO: add runtime clearing
 startNode :: Maybe D.LoggerConfig -> L.NodeDefinitionL () -> IO ()
@@ -52,16 +51,20 @@ makeIORpcRequest address msg = do
     runNodeDefinitionL nodeRt $ L.evalNodeL $ L.makeRpcRequest address msg
 
 
+waitForBlocks :: Integer -> D.Address -> IO ()
 waitForBlocks number address = go 0
     where
+        go :: Integer -> IO ()
         go 50 = error "No valid results from node."
         go n = do
             threadDelay $ 1000 * 100
             A.GetChainLengthResponse count <- D.withSuccess $ makeIORpcRequest address A.GetChainLengthRequest
             when (count < number) $ go (n + 1)
 
+waitForNode :: D.Address -> IO ()
 waitForNode address = go 0
     where
+        go :: Integer -> IO ()
         go 50 = error "Node is not ready."
         go n = do
             threadDelay $ 1000 * 100
@@ -98,10 +101,6 @@ testNodeNet = TestCase $ do
     D.toHash kBlock1 `shouldBe` D.StringHash "LtemDXK0lVSbo90SjIG62jEOi/6CHl8x3ws38xcrpsI="
     kBlock1 `shouldBe` kBlock2
 
-    Right (A.GetMBlocksForKBlockResponse mblocks1) <- makeIORpcRequest A.graphNodeTransmitterRpcAddress
-        $ A.GetMBlocksForKBlockRequest (D.toHash kBlock1)
-    Right (A.GetMBlocksForKBlockResponse mblocks2) <- makeIORpcRequest A.graphNodeReceiverRpcAddress
-        $ A.GetMBlocksForKBlockRequest (D.toHash kBlock2)
 
     Right (A.GetMBlocksForKBlockResponse mblocksPrev1) <- makeIORpcRequest A.graphNodeTransmitterRpcAddress
         $ A.GetMBlocksForKBlockRequest (kBlock1 ^. Lens.prevHash)
