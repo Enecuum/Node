@@ -41,10 +41,6 @@ makeFunctorInstance ''NodeF
 evalStateAtomically :: L.StateL a -> NodeL a
 evalStateAtomically statefulAction = liftF $ EvalStateAtomically statefulAction id
 
--- | Alias for convenience.
-atomically :: L.StateL a -> NodeL a
-atomically = evalStateAtomically
-
 -- TODO: makeLanguage ''NodeF
 -- | Eval networking.
 evalNetworking :: L.NetworkingL a -> NodeL a
@@ -85,6 +81,9 @@ instance L.SendUdp NodeL where
 evalGraphIO :: (T.StringHashable c, Serialize c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) a -> NodeL a
 evalGraphIO g graphAction = liftF $ EvalGraphIO g graphAction id
 
+newGraph :: (Serialize c, T.StringHashable c) => NodeL (T.TGraph c)
+newGraph = liftF $ NewGraph id
+
 instance L.Logger (Free NodeF) where
     logMessage level msg = evalCoreEffectNodeF $ L.logMessage level msg
 
@@ -102,5 +101,8 @@ instance L.FileSystem (Free NodeF) where
 instance L.ControlFlow (Free NodeF) where
     delay =  evalCoreEffectNodeF . L.delay
 
-newGraph :: (Serialize c, T.StringHashable c) => NodeL (T.TGraph c)
-newGraph = liftF $ NewGraph id
+instance L.StateIO (Free NodeF) where
+    atomically = evalStateAtomically
+    newVarIO  = evalStateAtomically . L.newVar
+    readVarIO = evalStateAtomically . L.readVar
+    writeVarIO var a = evalStateAtomically $ L.writeVar var a
