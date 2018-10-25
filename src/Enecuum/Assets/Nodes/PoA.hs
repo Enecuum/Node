@@ -7,14 +7,18 @@ module Enecuum.Assets.Nodes.PoA where
 
 import qualified Data.Text as T
 
+import           Enecuum.Prelude
+
 import           Data.HGraph.StringHashable   (toHash)
-import           Enecuum.Assets.Nodes.Address (poaNodeAddress, graphNodeTransmitterRpcAddress, graphNodeTransmitterTcpAddress)
+
 import qualified Enecuum.Domain               as D
 import qualified Enecuum.Language             as L
 import qualified Enecuum.Blockchain.Lens      as Lens
-import           Enecuum.Prelude
-import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
+
+import qualified Enecuum.Assets.Nodes.Address as A
+import           Enecuum.Assets.Nodes.Messages
+import           Enecuum.Assets.Nodes.Methods (rpcPingPong)
 import qualified Enecuum.Assets.Blockchain.Generation as A
 
 data PoANodeData = PoANodeData
@@ -35,12 +39,16 @@ poaNode role = do
     poaData <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
+    
+    L.serving D.Rpc A.poaNodeRpcPort $ do
+        L.method rpcPingPong
+
     L.process $ forever $ do
         L.delay $ 100 * 1000
-        whenRightM (L.makeRpcRequest graphNodeTransmitterRpcAddress GetTransactionPending) $ \tx -> do
+        whenRightM (L.makeRpcRequest A.graphNodeTransmitterRpcAddress GetTransactionPending) $ \tx -> do
             forM_ tx (\t -> L.logInfo $ "\nAdd transaction to pending "  +| D.showTransaction t "" |+ "")
             L.atomically $ L.modifyVar (poaData ^. transactionPending) ( ++ tx )       
-        whenRightM (L.makeRpcRequest graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> do
+        whenRightM (L.makeRpcRequest A.graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> do
             currentBlock <- L.readVarIO (poaData ^. currentLastKeyBlock)        
             when (block /= currentBlock) $ do
                 L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ ")."
@@ -66,7 +74,7 @@ poaNode role = do
                     D.Bad  -> A.generateBogusSignedMicroblock block tx
                 L.logInfo
                     $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
-                void $ L.withConnection D.Tcp graphNodeTransmitterTcpAddress $
+                void $ L.withConnection D.Tcp A.graphNodeTransmitterTcpAddress $
                     \conn -> L.send conn mBlock
 
 

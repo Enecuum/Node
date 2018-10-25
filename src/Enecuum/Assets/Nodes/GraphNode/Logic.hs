@@ -4,7 +4,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiWayIf             #-}
 
-module Enecuum.Assets.Nodes.GraphNodeTransmitter (graphNodeTransmitter) where
+module Enecuum.Assets.Nodes.GraphNode.Logic where
 
 import           Enecuum.Prelude
 import Data.Map (fromList, lookup, insert, Map(..), elems, keys, empty)
@@ -24,7 +24,7 @@ import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Assets.Nodes.Address
 
 import qualified Enecuum.Framework.LogState as Log
-import           Enecuum.Assets.Nodes.Methodes
+import           Enecuum.Assets.Nodes.Methods
 
 
 data GraphNodeData = GraphNodeData
@@ -118,8 +118,8 @@ getBalance nodeData (GetWalletBalance wallet) = do
         Just balance -> pure $ Right $ WalletBalanceMsg wallet balance
         _            -> pure $ Left $ "Wallet " +|| D.showPublicKey wallet ||+ " does not exist in graph."
 
-acceptChainLength :: GraphNodeData -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
-acceptChainLength nodeData GetChainLengthRequest = do
+getChainLength :: GraphNodeData -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
+getChainLength nodeData GetChainLengthRequest = do
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
 --    L.logInfo "Answering chain length"
@@ -143,8 +143,8 @@ acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
             Log.writeLog logV
             pure $ Right $ GetChainFromToResponse (reverse kBlockList)
 
-acceptMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL (Either Text GetMBlocksForKBlockResponse)
-acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
+getMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL (Either Text GetMBlocksForKBlockResponse)
+getMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
     L.logInfo $ "Answering microblocks for kBlock " +|| show hash
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
@@ -168,29 +168,3 @@ graphNodeInitialization = L.scenario $ do
         <*> L.newVar Data.Map.empty)
         <*> L.newVar []
         <*> L.newVar NodeActing
-
--- | Start of graph node
-graphNodeTransmitter :: L.NodeDefinitionL ()
-graphNodeTransmitter = do
-    L.nodeTag "graphNodeTransmitter"
-    nodeData <- graphNodeInitialization
-
-    L.serving D.Tcp graphNodeTransmitterTcpPort $ do
-        L.handler $ acceptMBlock nodeData
-        L.handler $ acceptKBlock nodeData
-        L.handler $ methodePing
-
-    L.serving D.Rpc graphNodeTransmitterRpcPort $ do
-        L.method  $ getLastKBlock nodeData
-        L.method  $ getKBlockPending nodeData
-        L.method  $ getTransactionPending nodeData        
-        L.methodE $ getBalance nodeData
-        L.method  $ acceptChainLength nodeData
-        L.methodE $ acceptChainFromTo nodeData
-        L.methodE $ acceptMBlockForKBlocks nodeData
-        L.method  $ rpcPingPong
-        L.method  $ methodeStopNode nodeData
-        L.methodE $ acceptTransaction nodeData
-
-    L.std $ L.stdHandler $ L.stopNodeHandler nodeData
-    L.awaitNodeFinished nodeData

@@ -144,7 +144,7 @@ ping (Ping D.TCP address) = do
 
 ping (Ping D.RPC address) = do
     res :: Either Text M.Pong <- L.makeRpcRequest address M.Ping
-    pure $ case res of Right _ -> "Tcp port is available."; Left _ -> "Tcp port is not available."
+    pure $ case res of Right _ -> "Rpc port is available."; Left _ -> "Rpc port is not available."
 
 ping (Ping D.UDP _) = pure $ "This functionality is not supported."
 

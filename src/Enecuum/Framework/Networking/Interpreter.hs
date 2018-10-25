@@ -25,7 +25,7 @@ interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
         putMVar var (transformEither T.pack id $ A.eitherDecode msg)
     case ok of
         Right _                    -> pure ()
-        Left  (_ :: SomeException) -> putMVar var $ Left "Server size does not exist."
+        Left  (_ :: SomeException) -> putMVar var $ Left "Server does not exist."
     res <- takeMVar var
     pure $ next res
 
