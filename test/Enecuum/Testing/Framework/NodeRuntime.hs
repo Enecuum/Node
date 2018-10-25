@@ -9,7 +9,7 @@ import qualified Data.Map               as Map
 
 import qualified Enecuum.Domain         as D
 import qualified Enecuum.Language       as L
-import qualified Enecuum.Framework.Lens as Lens
+--import qualified Enecuum.Framework.Lens as Lens
 
 import qualified Enecuum.Testing.Types as T
 import qualified Enecuum.Testing.RLens as RLens
