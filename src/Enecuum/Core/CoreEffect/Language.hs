@@ -11,7 +11,6 @@ import           Enecuum.Core.FileSystem.Language
 import           Enecuum.Core.Logger.Language      (Logger, LoggerL, logMessage)
 import           Enecuum.Core.Random.Language
 import           Enecuum.Core.ControlFlow.Language (ControlFlow (..), ControlFlowL)
-import           Enecuum.Core.Database.Language (DatabaseL, Database(..))
 import           Language.Haskell.TH.MakeFunctor (makeFunctorInstance)
 import           Enecuum.Prelude hiding (readFile)
 
@@ -25,8 +24,6 @@ data CoreEffectF next where
   EvalFileSystem  :: FileSystemL a  -> (a -> next) -> CoreEffectF next
   -- | ControlFlow effect
   EvalControlFlow :: ControlFlowL a -> (a  -> next) -> CoreEffectF next
-  -- | Database effect
-  EvalDatabase    :: DatabaseL a    -> (a  -> next) -> CoreEffectF next
 
 makeFunctorInstance ''CoreEffectF
 

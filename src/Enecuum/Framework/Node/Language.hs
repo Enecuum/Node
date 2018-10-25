@@ -34,6 +34,9 @@ data NodeF next where
     CloseTcpConnection :: D.Connection D.Tcp -> (() -> next) -> NodeF  next
     CloseUdpConnection :: D.Connection D.Udp -> (() -> next) -> NodeF  next
 
+    -- | Eval database.
+    EvalDatabase :: D.Storage t -> L.DatabaseL t a -> (a -> next) -> NodeF next
+
 type NodeL = Free NodeF
 
 makeFunctorInstance ''NodeF

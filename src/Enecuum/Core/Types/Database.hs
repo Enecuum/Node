@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 
-module Enecuum.Core.Database.Types where
+module Enecuum.Core.Types.Database where
 
 import           Enecuum.Prelude
 
@@ -12,3 +12,5 @@ data DBError
     | NotFound Text
     | InvalidType Text
     deriving (Generic, Ord, Eq, Show, Read)
+
+data Storage a
