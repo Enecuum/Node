@@ -5,8 +5,7 @@ import           Enecuum.Prelude
 
 import qualified Enecuum.Assets.Scenarios        as S
 import           Enecuum.Assets.System.Directory (clientStory)
-import           Enecuum.Config                  (Config (..), NodeRole (..), Scenario (..), ScenarioNode (..),
-                                                  ScenarioRole (..))
+import           Enecuum.Config
 import qualified Enecuum.Core.Lens               as Lens
 import           Enecuum.Interpreters            (clearNodeRuntime, runFileSystemL, runNodeDefinitionL)
 import qualified Enecuum.Language                as L

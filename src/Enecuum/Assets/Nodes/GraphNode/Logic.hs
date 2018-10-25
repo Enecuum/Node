@@ -142,7 +142,7 @@ acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
 
 getMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL (Either Text GetMBlocksForKBlockResponse)
 getMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
-    L.logInfo $ "Answering microblocks for kBlock " +|| show hash
+    L.logInfo $ "Get microblocks for kBlock " +|| show hash
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
     mBlockList <- L.atomically $ L.getMBlocksForKBlock logV bData hash
