@@ -13,9 +13,9 @@ import           Control.Monad.Extra
 import           Data.ByteString.Lazy as B (toStrict, fromStrict)
 
 
-runUDPServer :: TChan ServerComand -> PortNumber -> (LByteString -> (TChan D.SendUdpMsgTo) -> SockAddr -> IO ()) -> IO ()
+runUDPServer :: TChan ServerComand -> PortNumber -> (LByteString -> TChan D.SendUdpMsgTo -> SockAddr -> IO ()) -> IO ()
 runUDPServer chan port handler = bracket (listenUDP port) close $ \sock -> do
-    respChan <- atomically $ newTChan
+    respChan <- atomically newTChan
     let 
         sendMsg :: IO ()
         sendMsg = forever $ do

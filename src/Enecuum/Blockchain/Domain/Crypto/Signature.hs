@@ -1,11 +1,6 @@
-{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE PackageImports             #-}
-{-# LANGUAGE RecordWildCards            #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -22,13 +17,13 @@ import           Data.ByteString.Base64.Extra
 import qualified Data.ByteString.Char8                 as BS
 import           Data.ByteString.Conversion
 import           Data.ByteString.Extra
-import           Data.Serialize                        (Serialize, encode)
-import           Data.Serialize                        (Get, Serialize)
+import           Data.Serialize                        (Serialize, encode, Get, Serialize)
 import qualified Data.Serialize                        as S
-import qualified Data.Serialize                        as S (get, put)
 import qualified Data.Text                             as E (Text, pack, unpack)
 import qualified Enecuum.Blockchain.Domain.Crypto.Keys as Enq
 import           Enecuum.Prelude                       hiding (pack, unpack, (.=))
+import           Data.UUID hiding (fromByteString)
+
 
 sign :: (Serialize msg, MonadRandom m) => Enq.PrivateKey -> msg -> m ECDSA.Signature
 sign priv msg = ECDSA.sign (Enq.getPrivateKey priv) SHA3_256 (S.encode msg)

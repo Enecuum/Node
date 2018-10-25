@@ -7,7 +7,6 @@ module Enecuum.Blockchain.Domain.Graph where
 import Enecuum.Prelude
 
 import qualified Data.HGraph.THGraph     as G
-import           Data.HGraph.StringHashable (StringHash, toHash)
 
 import qualified Enecuum.Core.HGraph.Internal.Types as T
 import qualified Enecuum.Core.Language as L

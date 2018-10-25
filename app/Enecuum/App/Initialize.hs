@@ -4,13 +4,13 @@ import qualified Data.Map                        as M
 import           Enecuum.Prelude
 
 import qualified Enecuum.Assets.Scenarios        as S
-import           Enecuum.Assets.System.Directory (appFileName, clientStory)
+import           Enecuum.Assets.System.Directory (clientStory)
 import           Enecuum.Config                  (Config (..), NodeRole (..), Scenario (..), ScenarioNode (..),
                                                   ScenarioRole (..))
 import qualified Enecuum.Core.Lens               as Lens
-import           Enecuum.Interpreters            (clearNodeRuntime, runNodeDefinitionL)
+import           Enecuum.Interpreters            (clearNodeRuntime, runFileSystemL, runNodeDefinitionL)
 import qualified Enecuum.Language                as L
-import           Enecuum.Runtime                 (NodeRuntime (..), clearCoreRuntime, clearLoggerRuntime,
+import           Enecuum.Runtime                 (clearCoreRuntime, clearLoggerRuntime,
                                                   createCoreRuntime, createLoggerRuntime, createNodeRuntime)
 
 
@@ -29,7 +29,7 @@ initialize config = do
     putStrLn @Text "Creating core runtime..."
     coreRt <- createCoreRuntime loggerRt
     putStrLn @Text "Creating node runtime..."
-    story <- clientStory
+    story <- runFileSystemL $ clientStory
     nodeRt <- createNodeRuntime coreRt (M.singleton "Client" story)
 
     forM_ (scenarioNode config) $ \scenarioCase -> runNodeDefinitionL nodeRt $ do
@@ -47,15 +47,10 @@ initialize config = do
     clearLoggerRuntime loggerRt
 
 dispatchScenario :: Config -> ScenarioNode -> L.NodeDefinitionL ()
-dispatchScenario config (ScenarioNode BootNode    _         _           ) = S.bootNode config
-dispatchScenario config (ScenarioNode MasterNode  _         _           ) = S.masterNode config
-dispatchScenario _      (ScenarioNode Client      _         _           ) = S.clientNode
-dispatchScenario _      (ScenarioNode NetworkNode SyncChain Respondent  ) = S.networkNode3
-dispatchScenario _      (ScenarioNode NetworkNode SyncChain Interviewer ) = S.networkNode4
-dispatchScenario _      (ScenarioNode PoW         Full      Soly        ) = S.powNode
-dispatchScenario _      (ScenarioNode PoA         Full      role        ) = S.poaNode role
-dispatchScenario _      (ScenarioNode NetworkNode Full      Soly        ) = S.nnNode
-dispatchScenario _      (ScenarioNode GraphNodeTransmitter _  _         ) = S.graphNodeTransmitter
-dispatchScenario _      (ScenarioNode GraphNodeReceiver   _    _        ) = S.graphNodeReceiver
-dispatchScenario _      (ScenarioNode role        scenario  scenarioRole) = error mes
+dispatchScenario _ (ScenarioNode Client      _         _           ) = S.clientNode
+dispatchScenario _ (ScenarioNode PoW         Full      Soly        ) = S.powNode
+dispatchScenario _ (ScenarioNode PoA         Full      role        ) = S.poaNode role
+dispatchScenario _ (ScenarioNode GraphNode   _         Transmitter ) = S.graphNodeTransmitter
+dispatchScenario _ (ScenarioNode GraphNode   _         Receiver    ) = S.graphNodeReceiver
+dispatchScenario _ (ScenarioNode role        scenario  scenarioRole) = error mes
     where mes = "This scenario: " +|| role ||+ scenario ||+ scenarioRole ||+ " doesn't exist"

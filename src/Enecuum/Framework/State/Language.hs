@@ -27,6 +27,12 @@ makeFunctorInstance ''StateF
 
 type StateL next = Free StateF next
 
+class StateIO m where
+  atomically :: StateL a -> m a
+  newVarIO :: a -> m (D.StateVar a)
+  readVarIO :: D.StateVar a -> m a
+  writeVarIO :: D.StateVar a -> a -> m ()
+
 -- | Create variable.
 newVar :: a -> StateL (D.StateVar a)
 newVar val = liftF $ NewVar val id

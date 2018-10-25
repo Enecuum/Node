@@ -18,3 +18,4 @@ openConnect connectType (D.Address host port) = do
     sock    <- socket (addrFamily address) connectType defaultProtocol
     connect sock $ addrAddress address
     pure sock
+ 

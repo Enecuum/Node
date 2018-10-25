@@ -18,7 +18,7 @@ data Udp = Udp
 data Tcp = Tcp
 data Rpc = Rpc
 
-data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist
+data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist deriving Eq
 
 data Connection a = Connection
     { _address :: Address
@@ -54,7 +54,7 @@ sockAddrToHost sockAddr = case sockAddr of
     S.SockAddrInet _ hostAddress      -> show $ fromHostAddress hostAddress
     S.SockAddrInet6 _ _ hostAddress _ -> show $ fromHostAddress6 hostAddress
     S.SockAddrUnix string             -> string
-    S.SockAddrCan  i                  -> show i
+    _                                 -> error "Error"
 
 -- | Node address (like IP)
 data Address = Address

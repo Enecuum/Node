@@ -64,11 +64,8 @@ default-extensions:
 dependencies:
 - base >= 4.7 && < 5
 - bytestring
-- fgl
 - time-units
 - network
-- websockets
-- unagi-chan
 - aeson
 - cereal
 - mtl
@@ -90,47 +87,27 @@ dependencies:
 - free
 - iproute
 - memory
-- do-list
 - transformers
 - template-haskell
 - async
-- bimap
-- random-shuffle
-- split
-- hex
-- json-rpc-client
-- json-rpc-server
-- time-out
 - text
-- aeson-pretty
-- unordered-containers
 - rocksdb-haskell
-- data-default
-- hashtables
-- resourcet
-- retry
-- exceptions
-- hashable
-- resource-pool
-- unix-time
 - haskeline
 - cryptohash-sha256
-- derive
 - bytestring-conversion
-- freer
 - newtype-generics
 - lens
-- microlens
 - universum
 - fmt
 - stm
 - hslogger
-- validation
 - lens-aeson
-- silently
 - th-abstraction
 - MonadRandom
 - entropy
+- validation
+- silently
+- uuid
 
 library:
   source-dirs: src
@@ -146,46 +123,6 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
-    - -Wall
-    - -O2
-    dependencies:
-    - Node
-
-  BootNode-exe:
-    main:                Main.hs
-    source-dirs:         app/Legacy/BootNode
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    - -Wall
-    - -O2
-    dependencies:
-    - Node
-
-  SimpleNode-exe:
-    main:                Main.hs
-    source-dirs:         app/Legacy/SimpleNode
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    - -Wall
-    - -O2
-    dependencies:
-    - Node
-  LightClient-exe:
-    main:                Main.hs
-    source-dirs:         app/Legacy/LightClient
-    ghc-options:
-    - -Wall
-    - -O2
-    dependencies:
-    - Node
-  Tester-exe:
-    main:                Main.hs
-    source-dirs:         app/Legacy/Tester
-    ghc-options:
     - -Wall
     - -O2
     dependencies:

@@ -26,18 +26,18 @@ interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
         putMVar var (transformEither T.pack id $ A.eitherDecode msg)
     case ok of
         Right _                    -> pure ()
-        Left  (_ :: SomeException) -> putMVar var $ Left "Server size does not exist."
+        Left  (_ :: SomeException) -> putMVar var $ Left "Server does not exist."
     res <- takeMVar var
     pure $ next res
 
 interpretNetworkingL nr (L.SendTcpMsgByConnection (D.Connection conn) msg next) = do
-    m <- atomically $ readTVar $ nr ^. RL.tcpConnects
+    m <- readTVarIO $ nr ^. RL.tcpConnects
     case m ^. at conn of
         Just con -> next <$> Con.send con msg
         Nothing  -> pure $ next $ Left D.ConnectionClosed
 
 interpretNetworkingL nr (L.SendUdpMsgByConnection (D.Connection conn) msg next) = do
-    m <- atomically $ readTVar $ nr ^. RL.udpConnects
+    m <- readTVarIO $ nr ^. RL.udpConnects
     case m ^. at conn of
         Just con -> next <$> Con.send con msg
         Nothing  -> pure $ next $ Left D.ConnectionClosed

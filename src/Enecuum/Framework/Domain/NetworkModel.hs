@@ -18,10 +18,10 @@ data DNSResponse = DNSResponse
 
 -- These types are just dummy.
 
-data NetworkRequest = MulticastRequest
+newtype NetworkRequest = MulticastRequest
   { dummy :: Text }
 
-data NetworkResponse = NetworkResponse
+newtype NetworkResponse = NetworkResponse
   { dummy :: Text }
 
 -- | Declares how to convert to and from low-level network requests and responses.
