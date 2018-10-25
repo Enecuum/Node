@@ -41,7 +41,7 @@ poaNode role = do
             forM_ tx (\t -> L.logInfo $ "\nAdd transaction to pending "  +| D.showTransaction t "" |+ "")
             L.atomically $ L.modifyVar (poaData ^. transactionPending) ( ++ tx )       
         whenRightM (L.makeRpcRequest graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> do
-            currentBlock <- L.atomically $ L.readVar (poaData ^. currentLastKeyBlock)        
+            currentBlock <- L.readVarIO (poaData ^. currentLastKeyBlock)        
             when (block /= currentBlock) $ do
                 L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ ")."
 
@@ -60,7 +60,7 @@ poaNode role = do
 
                 let tx = pendingTransactions ++ txGenerated 
 
-                L.atomically $ L.writeVar (poaData ^. currentLastKeyBlock) block
+                L.writeVarIO (poaData ^. currentLastKeyBlock) block
                 mBlock <- case role of
                     D.Good -> A.genMicroblock block tx
                     D.Bad  -> A.generateBogusSignedMicroblock block tx

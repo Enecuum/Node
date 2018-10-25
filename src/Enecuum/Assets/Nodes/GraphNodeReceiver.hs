@@ -38,7 +38,7 @@ getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBa
 getBalance nodeData (GetWalletBalance wallet) = do
     L.logInfo $ "Requested balance for wallet " +|| D.showPublicKey wallet ||+ "."
     let bData = nodeData ^. blockchain
-    curLedger <- L.atomically $ L.readVar $ bData ^. Lens.ledger
+    curLedger <- L.readVarIO $ bData ^. Lens.ledger
     let maybeBalance = lookup wallet curLedger
     case maybeBalance of
         Just balance -> pure $ Right $ WalletBalanceMsg wallet balance
@@ -56,7 +56,7 @@ graphSynchro nodeData address = do
         pure $ topKBlock ^. Lens.number
 
     when (curChainLength < otherLength) $ do
-        topNodeHash <- L.atomically $ L.readVar $ bData ^. Lens.curNode
+        topNodeHash <- L.readVarIO $ bData ^. Lens.curNode
         GetMBlocksForKBlockResponse mBlocks <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest topNodeHash)
         L.logInfo $ "Mblocks received for kBlock " +|| topNodeHash ||+ " : " +|| show mBlocks
         L.atomically $ forM_ mBlocks (L.addMBlock logV bData)

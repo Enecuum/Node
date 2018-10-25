@@ -84,7 +84,7 @@ acceptMBlock nodeData mBlock _ = do
 getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL [D.KBlock]
 getKBlockPending nodeData _ = do
     let bData = nodeData ^. blockchain 
-    kBlocks <- L.atomically $ L.readVar $ bData ^. Lens.kBlockPending
+    kBlocks <- L.readVarIO $ bData ^. Lens.kBlockPending
         -- kblocks <- L.readVar $ bData ^. Lens.kBlockPending
         -- L.modifyVar (bData ^. Lens.kBlockPending) (\_ -> [])     
         -- pure kblocks
@@ -112,7 +112,7 @@ getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBa
 getBalance nodeData (GetWalletBalance wallet) = do
     L.logInfo $ "Requested balance for wallet " +|| D.showPublicKey wallet ||+ "."
     let bData = nodeData ^. blockchain
-    curLedger <- L.atomically $ L.readVar $ bData ^. Lens.ledger
+    curLedger <- L.readVarIO $ bData ^. Lens.ledger
     let maybeBalance = lookup wallet curLedger
     case maybeBalance of
         Just balance -> pure $ Right $ WalletBalanceMsg wallet balance

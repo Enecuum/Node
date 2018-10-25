@@ -177,7 +177,7 @@ clientNode :: L.NodeDefinitionL ()
 clientNode = do
     L.logInfo "Client started"
     L.nodeTag "Client"
-    stateVar <- L.scenario $ L.atomically $ L.newVar NodeActing
+    stateVar <- L.newVarIO NodeActing
     L.std $ do
         L.stdHandler $ getLastKBlockHandler
         L.stdHandler $ getWalletBalance

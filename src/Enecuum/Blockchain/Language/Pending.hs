@@ -45,7 +45,7 @@ moveKBlockToGraph logV bData = do
 addBlockToPending :: D.StateVar [Text] -> BlockchainData -> D.KBlock -> L.StateL Bool
 addBlockToPending logV bData kBlock = do
     Log.stateLog logV "Adding KBlock to pending"
-    L.modifyVar (_kBlockPending bData) (\pending -> sortOn (D._number) $ kBlock : pending)
+    L.modifyVar (_kBlockPending bData) (\pending -> sortOn D._number $ kBlock : pending)
     pure True
 
 -- | Add new transaction to pending.
