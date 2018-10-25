@@ -2,7 +2,6 @@ module Enecuum.Assets.System.Directory where
 
 import qualified Enecuum.Core.Language as L
 import           Enecuum.Prelude
--- import           System.Directory      (createDirectoryIfMissing, getHomeDirectory)
 import           System.FilePath       ((</>))
 
 getEnecuumDir :: (L.FileSystem m, Monad m) => m FilePath
@@ -15,4 +14,6 @@ storyFilePath = L.createFilePath =<< (</> "story") <$> getEnecuumDir
 appFileName = L.createFilePath =<< (</> "data" </> "logs" </> "app.log") <$> getEnecuumDir
 clientStory = (</> "client.story") <$> storyFilePath
 defaultLogFileName = (</> "default.log") <$> logFilePath
+
+configFilePath :: String
 configFilePath = "./configs/config.json"

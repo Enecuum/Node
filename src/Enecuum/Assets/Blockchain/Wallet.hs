@@ -33,7 +33,7 @@ names :: [ClientName]
 names = ["me", "Alice", "Bob", "Carol", "David"]
 
 hardcodedWalletsWithNames :: [CLIWallet]
-hardcodedWalletsWithNames = [ CLIWallet {_id  =  id, _name = name, _publicKey = pub, _privateKey = Just priv} | id <- [1..], name <- names, pub <- publicKeys]
+hardcodedWalletsWithNames = [ CLIWallet {_id  =  walletId, _name = name, _publicKey = pub, _privateKey = Just priv} | walletId <- [1..], name <- names, pub <- publicKeys]
     where priv = head privateKeys
 
 data CLIWallet = CLIWallet

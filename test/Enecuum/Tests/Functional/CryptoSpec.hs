@@ -1,8 +1,6 @@
-{-# LANGUAGE RecordWildCards #-}
 module Enecuum.Tests.Functional.CryptoSpec where
 
 import qualified Data.Aeson                           as A
-import           Data.HGraph.StringHashable           (fromStringHash)
 import qualified Data.Serialize                       as S
 import qualified Enecuum.Assets.Blockchain.Generation as D
 import qualified Enecuum.Assets.Blockchain.Wallet     as D
@@ -17,6 +15,7 @@ import           Test.Hspec                           (Spec, describe, shouldBe)
 import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
 import           Test.HUnit                           (Test (..))
 
+wallets :: [KeyPair]
 wallets =
     [ D.KeyPair { getPub = PublicKey256k1 162041393014266997694715179451060754359644353694678397659483656769944713491456, getPriv = PrivateKey256k1 73999854534268080627202311492113505346257058527387365056343245962475387806824}
     , D.KeyPair { getPub = PublicKey256k1 23186060215033531139909219478710866146713960681525059519120352475511495484295, getPriv = PrivateKey256k1 80275203804811449396339565643717793100181946842787928746035268781288915302925}
@@ -42,6 +41,7 @@ spec = do
     describe "Private key" $ fromHUnitTest $ TestList
         [ TestLabel "Private key read/show" testReadShowPrivateKey]
 
+test :: (Eq b, Show b) => IO b -> (b -> b) -> Test
 test genFun fun = TestCase $ do
     s <- replicateM 10 genFun
     map fun s `shouldBe` s
@@ -52,35 +52,62 @@ testBool genFun fun = TestCase $ do
     and (map fun s) `shouldBe` True
 
 -- generator functions
+generateTransaction :: IO D.Transaction
 generateTransaction = I.runERandomL $ D.genTransaction D.Hardcoded
+
+generateMicroblock :: IO D.Microblock
 generateMicroblock = I.runERandomL $ D.genRandMicroblock D.genesisKBlock
+
+generateSignature :: IO Signature
 generateSignature = do
     tx <- I.runERandomL $ D.genTransaction D.Hardcoded
     pure $ tx ^. Lens.signature
 
-generateKeys fun = do
-    keys <- I.runERandomL $ L.evalCoreCrypto $ L.generateKeyPair
-    pure $ fun keys
+generateKeys :: (KeyPair -> b) -> IO b
+generateKeys  = (<$> (I.runERandomL $ L.evalCoreCrypto L.generateKeyPair))
+    
+
+generatePublicKey :: IO PublicKey
 generatePublicKey = generateKeys (\(D.KeyPair pub _) -> pub)
+
+generatePrivateKey :: IO PrivateKey
 generatePrivateKey = generateKeys (\(D.KeyPair _ priv) -> priv)
 
 
 -- | Signature test functions
-testSignature fun = test generateSignature fun
+testSignature :: (Signature -> Signature) -> Test
+testSignature = test generateSignature
 
-testSignatureBinarySerialization = testSignature (\s -> fromRight (read "1" :: D.Signature) $ S.decode $ S.encode s)
+testSignatureBinarySerialization :: Test
+testSignatureBinarySerialization = testSignature (fromRight (read "1" :: D.Signature) . S.decode . S.encode)
+
+testReadShowSignature :: Test
 testReadShowSignature = testSignature (read . show)
+
+testSignatureJSONSerialization :: Test
 testSignatureJSONSerialization = testSignature (fromJust . A.decode . A.encode)
+
+testVerifySignedTransaction :: Test
 testVerifySignedTransaction = testBool generateTransaction L.verifyTransaction
+
+testVerifySignedMicroblock :: Test
 testVerifySignedMicroblock = testBool generateMicroblock L.verifyMicroblock
 
 -- | PublicKey test functions
-testPublicKey fun = test generatePublicKey fun
+testPublicKey :: (PublicKey -> PublicKey) -> Test
+testPublicKey = test generatePublicKey
 
+testReadShowPublicKey :: Test
 testReadShowPublicKey = testPublicKey (read . show)
+
+testCompressPublicKey :: Test
 testCompressPublicKey = testPublicKey (D.compressPublicKey . D.decompressPublicKey)
+
+testPublicKeyJsonSerialization :: Test
 testPublicKeyJsonSerialization = testPublicKey (fromJust . A.decode . A.encode)
-testPublicKeyBinarySerialization = testPublicKey (\s -> fromRight (read "1" :: D.PublicKey) $ S.decode $ S.encode s)
+
+testPublicKeyBinarySerialization :: Test
+testPublicKeyBinarySerialization = testPublicKey (fromRight (read "1" :: D.PublicKey) . S.decode . S.encode)
 
 -- | PrivateKey test function
 testReadShowPrivateKey :: Test

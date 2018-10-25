@@ -1,4 +1,5 @@
-{-# LANGUAGE PackageImports #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.ByteStringSpec where
 
 
@@ -6,14 +7,13 @@ import qualified Data.Aeson                   as A
 import           Data.ByteString.Base64.Extra
 import qualified Data.ByteString.Char8        as BS
 import           Data.ByteString.Extra
-import qualified Enecuum.Core.Interpreters    as I
-import qualified Enecuum.Language             as L
+--import qualified Enecuum.Core.Interpreters    as I
+--import qualified Enecuum.Language             as L
 import           Enecuum.Prelude
-import           Test.Hspec                   (Spec, describe, hspec, it, shouldBe)
-import           Test.Hspec.Contrib.HUnit     (fromHUnitTest)
-import           Test.HUnit                   (Test (..))
+import           Test.Hspec                   (Spec, describe, it)
+--import           Test.Hspec.Contrib.HUnit     (fromHUnitTest)
 import           Test.QuickCheck
-import           Test.QuickCheck.Monadic (monadicIO, assert, run)
+--import           Test.QuickCheck.Monadic (monadicIO, assert, run)
 
 instance Arbitrary ByteString where
     arbitrary = fmap BS.pack $ arbitrary

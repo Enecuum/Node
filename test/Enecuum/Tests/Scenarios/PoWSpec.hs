@@ -9,17 +9,18 @@ import qualified Enecuum.Blockchain.Lens as Lens
 import qualified Enecuum.Domain as D
 
 import           Enecuum.Assets.Nodes.Messages (SuccessMsg (..))
-import           Enecuum.Assets.Nodes.PoW (powNode')
-import           Enecuum.Assets.Nodes.Address (graphNodeTransmitterRpcAddress, graphNodeTransmitterRpcPort)
 
-import           Enecuum.Testing
-import qualified Enecuum.Testing.RLens as RLens
+import           Enecuum.Assets.Nodes.Address (graphNodeTransmitterRpcPort)
 
-data KBlockCheckData = KBlockCheckData
+
+newtype KBlockCheckData = KBlockCheckData
     { kBlockNumber :: D.StateVar Integer
     }
 
+failMsg :: D.Message
 failMsg = "Fail."
+
+successMsg :: D.Message
 successMsg = "Ok."
 
 acceptKBlock :: KBlockCheckData -> D.KBlock -> L.NodeL (Either Text SuccessMsg)

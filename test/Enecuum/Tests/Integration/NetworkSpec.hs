@@ -12,7 +12,7 @@ import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
 import qualified Enecuum.Language              as L
 
---import           Enecuum.Legacy.Service.Network.Base
+
 import           Enecuum.Interpreters
 import qualified Enecuum.Runtime as Rt
 import qualified Enecuum.Domain                as D
@@ -82,16 +82,17 @@ testConnectFromTo prot1 prot2 serverPort succPort = do
                 void $ L.notify succAddr Success
 
 
-testConnectToNonexistentAddress protocol succPort = do
-    runServingScenarion succPort succPort $ \_ succAddr nodeRt1 _ -> do
+testConnectToNonexistentAddress protocol succPort =
+    runServingScenarion succPort succPort $ \_ succAddr nodeRt1 _ ->
         runNodeDefinitionL nodeRt1 $ do
             conn <- L.open protocol (D.Address "127.0.0.1" 300) $ pure ()
             res  <- L.send conn Success
             when (Left D.ConnectionClosed == res) $
                 void $ L.notify succAddr Success
 
-testSendingMsgToNonexistentAddress succPort = do
-    runServingScenarion succPort succPort $ \_ succAddr nodeRt1 _ -> do
+testSendingMsgToNonexistentAddress :: D.PortNumber -> Test
+testSendingMsgToNonexistentAddress succPort =
+    runServingScenarion succPort succPort $ \_ succAddr nodeRt1 _ ->
         runNodeDefinitionL nodeRt1 $ do
             res <- L.notify (D.Address "127.0.0.1" 300) Success
             when (Left D.AddressNotExist == res) $
@@ -109,6 +110,7 @@ testSendingMsgToClosedConnection protocol serverPort succPort =
             res  <- L.send conn $ Success
             when (Left D.ConnectionClosed == res) $
                 void $ L.notify succAddr Success
+
 
 testSendingBigMsgByConnect protocol serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
@@ -133,6 +135,7 @@ testSendingBigUdpMsgByAddress serverPort succPort =
             when (Left D.TooBigMessage == res) $
                 void $ L.notify succAddr Success
 
+
 pingPongTest protocol serverPort succPort = 
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
         runNodeDefinitionL nodeRt1 $ do
@@ -147,7 +150,8 @@ pingPongTest protocol serverPort succPort =
                 L.handler (pongHandle succAddr)
             void $ L.send conn $ Ping 0
 
-
+runServingScenarion
+    :: D.PortNumber -> D.PortNumber -> (D.Address -> D.Address -> Rt.NodeRuntime -> Rt.NodeRuntime -> IO ()) -> Test
 runServingScenarion serverPort succPort f = TestCase $ do
     let serverAddr = D.Address "127.0.0.1" serverPort
         succAddr    = D.Address "127.0.0.1" succPort
@@ -158,12 +162,18 @@ runServingScenarion serverPort succPort f = TestCase $ do
     runNodeDefinitionL nodeRt1 $ L.stopServing serverPort
     assertBool "" ok    
 
+pingHandle
+    :: (L.Connection m con, L.SendUdp m, L.Send (D.Connection con) m, Monad m)
+    => D.Address -> Ping -> D.Connection con -> m ()
 pingHandle succAddr (Ping i) conn = do
     when (i < 10) $ void $ L.send conn (Pong $ i + 1)
     when (i == 10) $ do
         void $ L.notify succAddr Success
         L.close conn
 
+pongHandle
+    :: (L.Connection m con, L.SendUdp m, L.Send (D.Connection con) m, Monad m)
+    => D.Address -> Pong -> D.Connection con -> m ()
 pongHandle succAddr (Pong i) conn = do
     when (i < 10) $ void $ L.send conn (Ping $ i + 1)
     when (i == 10) $ do
