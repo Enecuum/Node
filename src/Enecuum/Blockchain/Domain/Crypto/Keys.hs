@@ -51,7 +51,7 @@ curveK aCurve x = (c, d)
     n = (x ^ (3 :: Int) + x * a + b) `mod` prime
     -- modular square root of @n@ modulo @prime@
     sr = n `sqrtModP` prime
-    c = fromMaybe (error $ "The impossible happened. " +|| show n ||+ " is a quadratic nonresidue modulo " +|| show prime) sr
+    c = fromMaybe (error $ "The impossible happened. " +|| n ||+ " is a quadratic nonresidue modulo " +|| prime ||+ "") sr
     d = prime - c
 
 publicKey256k1 :: Integer -> PublicKey

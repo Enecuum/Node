@@ -1,7 +1,7 @@
 module Language.Haskell.TH.MakeFunctor where
 
 import           Enecuum.Prelude
-import           Control.Monad
+-- import           Control.Monad
 import qualified Data.List as L
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Datatype

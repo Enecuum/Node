@@ -75,7 +75,7 @@ instance ToJSON PortNumber where
 
 instance FromJSON PortNumber where
     parseJSON (A.Number a) = pure.toEnum.fromJust.toBoundedInteger $ a
-
+    parseJSON s = error $ "Can't parse port number, got: " +|| show s
 
 formatAddress :: Address -> Text
 formatAddress (Address addr port) = T.pack addr <> ":" <> show port

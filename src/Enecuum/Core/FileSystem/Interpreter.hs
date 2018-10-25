@@ -3,7 +3,7 @@ module Enecuum.Core.FileSystem.Interpreter where
 import           Enecuum.Prelude
 import qualified Enecuum.Core.Language     as L
 import           System.Directory (createDirectoryIfMissing, getHomeDirectory)
-import           System.FilePath  ((</>))
+-- import           System.FilePath  ((</>))
 
 -- | Interpret CryptoL language.
 interpretFileSystemL :: L.FileSystemF a -> IO a

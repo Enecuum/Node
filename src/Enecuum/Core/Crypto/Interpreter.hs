@@ -3,11 +3,10 @@ module Enecuum.Core.Crypto.Interpreter where
 
 import           Enecuum.Prelude
 import qualified Enecuum.Core.Language     as L
-import qualified Control.Monad.Random.Lazy as R
-import           System.Random hiding (next)
+-- import qualified Control.Monad.Random.Lazy as R
 import           "cryptonite" Crypto.Random (MonadRandom)
 import Enecuum.Blockchain.Domain.Crypto (generateNewRandomAnonymousKeyPair, sign)
-import System.Entropy
+
 
 
 -- | Interpret CryptoL language.

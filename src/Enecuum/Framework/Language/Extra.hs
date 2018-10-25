@@ -15,7 +15,7 @@ import qualified Enecuum.Core.Language                 as L
 import qualified Enecuum.Core.Types                    as D
 import qualified Enecuum.Framework.Domain              as D
 import           Data.HGraph.StringHashable            (StringHashable)
-import           Data.HGraph.THGraph                   (THGraph)
+-- import           Data.HGraph.THGraph                   (THGraph)
 
 -- | Allows to extract graph variable from any structure.
 -- To use it, you need to export it unqualified in scope of your data type lenses

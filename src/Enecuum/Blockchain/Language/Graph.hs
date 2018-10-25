@@ -61,7 +61,7 @@ addMBlock logV bData mblock@(D.Microblock hash _ _ _) = do
     pure $ isJust kblock
 
 getMBlocksForKBlock :: D.StateVar [Text] -> D.BlockchainData -> D.StringHash -> L.StateL (Maybe [D.Microblock])
-getMBlocksForKBlock logV bData hash =  L.evalGraph (D._graph bData) $ do
+getMBlocksForKBlock _ bData hash =  L.evalGraph (D._graph bData) $ do
     node <- L.getNode hash
     case node of
         Nothing -> pure Nothing

@@ -2,22 +2,18 @@
 
 module Enecuum.Blockchain.Language.Ledger where
 
-import Enecuum.Prelude
-import Data.Map
-import qualified Data.Map as Map
-import qualified Enecuum.Framework.Language as L
-import qualified Enecuum.Core.Language as L
-import qualified Enecuum.Framework.Domain as D
-import qualified Enecuum.Core.Types as D
-import qualified Enecuum.Blockchain.Domain as D
-import Enecuum.Blockchain.Domain.BlockchainData (BlockchainData(..))
-import qualified Enecuum.Blockchain.Domain.Graph as D
-import qualified Enecuum.Blockchain.Domain.KBlock as D
-import  Enecuum.Blockchain.Domain.Microblock  (Microblock(..))
-import  Enecuum.Blockchain.Domain.Transaction (Transaction(..))
+import           Data.Map
+import qualified Data.Map                                 as Map
+import qualified Enecuum.Blockchain.Domain                as D
+import           Enecuum.Blockchain.Domain.BlockchainData (BlockchainData (..))
+import           Enecuum.Blockchain.Domain.Microblock     (Microblock (..))
+import           Enecuum.Blockchain.Domain.Transaction    (Transaction (..))
+import qualified Enecuum.Framework.Domain                 as D
+import qualified Enecuum.Framework.Language               as L
+import           Enecuum.Prelude
 
 
-import qualified Enecuum.Framework.LogState as Log
+import qualified Enecuum.Framework.LogState               as Log
 
 newWalletAmount :: D.Amount
 newWalletAmount = 100
@@ -55,7 +51,7 @@ calculateLedger logV bData mblock =
                                newOwnerBalance
                                (insert receiver newReceiverBalance ledgerW)
         let transactionValid = owner /= receiver && ownerBalance >= amount
-        
+
         when transactionValid    $ L.writeVar ledgerVar newLedger
 
         when transactionValid    $ Log.stateLog logV $ "Tx accepted: " +|| D.showTx tx newOwnerBalance newReceiverBalance ||+ "."

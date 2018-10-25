@@ -8,9 +8,9 @@ import           Control.Concurrent.Async (race)
 import           Control.Monad
 import           Enecuum.Prelude
 import           Network.Socket hiding (recvFrom)
-import           Network.Socket.ByteString
+-- import           Network.Socket.ByteString
 import           Control.Concurrent.STM.TChan
-import           Control.Concurrent.Chan
+-- import           Control.Concurrent.Chan
 import           Network (PortID (..), listenOn)
 import           Enecuum.Domain as D
 
