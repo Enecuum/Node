@@ -5,6 +5,7 @@ import           Enecuum.Prelude
 import           System.Directory
 import           Test.Hspec
 
+import           Enecuum.Interpreters            (runFileSystemL)
 import           Enecuum.Assets.System.Directory   (defaultLogFileName, configFilePath)
 import qualified Enecuum.Core.Logger.Impl.HsLogger as Impl
 import qualified Enecuum.Core.Logger.Language      as L
@@ -58,19 +59,19 @@ spec = do
                      \ERROR Node.Main: Error Msg\n"
 
         it "Set level: Debug level" $ do
-            logFile <- defaultLogFileName
+            logFile <- runFileSystemL $ defaultLogFileName
             let config = T.LoggerConfig T.nullFormat T.Debug logFile False
             res <- withLogFile logFile $ Impl.withLogger config $ \h -> Impl.runLoggerL (Just h) scenario
             res `shouldBe` "Debug Msg\nInfo Msg\nWarning Msg\nError Msg\n"
 
         it "Set level: Error level" $ do
-            logFile <- defaultLogFileName
+            logFile <- runFileSystemL $ defaultLogFileName
             let config = T.LoggerConfig T.nullFormat T.Error logFile False
             res <- withLogFile logFile $ Impl.withLogger config $ \h -> Impl.runLoggerL (Just h) scenario
             res `shouldBe` "Error Msg\n"
 
         it "Set format: '$prio $loggername: $msg'" $ do
-            logFile <- defaultLogFileName
+            logFile <- runFileSystemL $ defaultLogFileName
             let config = T.LoggerConfig T.standartFormat T.Debug logFile False
             res <- withLogFile logFile $ Impl.withLogger config $ \h -> Impl.runLoggerL (Just h) scenario
             res

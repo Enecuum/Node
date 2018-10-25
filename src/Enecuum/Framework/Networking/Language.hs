@@ -11,7 +11,6 @@ import qualified Enecuum.Core.Language                as L
 import qualified Enecuum.Framework.Network.Language   as L
 import qualified Data.Text                            as Text
 import qualified Enecuum.Framework.Domain             as D
-import qualified Enecuum.Framework.Handler.Network.Language as L
 import           Language.Haskell.TH.MakeFunctor
 
 -- | Allows to work with network: open and close connections, send requests.

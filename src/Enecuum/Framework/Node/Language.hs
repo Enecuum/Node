@@ -42,10 +42,6 @@ makeFunctorInstance ''NodeF
 evalStateAtomically :: L.StateL a -> NodeL a
 evalStateAtomically statefulAction = liftF $ EvalStateAtomically statefulAction id
 
--- | Alias for convenience.
-atomically :: L.StateL a -> NodeL a
-atomically = evalStateAtomically
-
 -- TODO: makeLanguage ''NodeF
 -- | Eval networking.
 evalNetworking :: L.NetworkingL a -> NodeL a
@@ -55,7 +51,9 @@ evalNetworking newtorking = liftF $ EvalNetworking newtorking id
 evalCoreEffectNodeF :: L.CoreEffect a -> NodeL a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
-
+withConnection
+    :: (Monad m, Connection m con)
+    => con -> D.Address -> (D.Connection con -> m b) -> m b
 withConnection protocol address f = do
     con <- open protocol address $ pure ()
     a <- f con
@@ -84,6 +82,9 @@ instance L.SendUdp NodeL where
 evalGraphIO :: (T.StringHashable c, Serialize c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) a -> NodeL a
 evalGraphIO g graphAction = liftF $ EvalGraphIO g graphAction id
 
+newGraph :: (Serialize c, T.StringHashable c) => NodeL (T.TGraph c)
+newGraph = liftF $ NewGraph id
+
 instance L.Logger (Free NodeF) where
     logMessage level msg = evalCoreEffectNodeF $ L.logMessage level msg
 
@@ -91,9 +92,18 @@ instance L.ERandom (Free NodeF) where
     evalCoreCrypto = evalCoreEffectNodeF . L.evalCoreCrypto
     getRandomInt = evalCoreEffectNodeF . L.getRandomInt
     getRandomByteString = evalCoreEffectNodeF . L.getRandomByteString
+    nextUUID = evalCoreEffectNodeF $ L.nextUUID
+
+instance L.FileSystem (Free NodeF) where
+    readFile = evalCoreEffectNodeF . L.readFile
+    getHomeDirectory = evalCoreEffectNodeF L.getHomeDirectory
+    createFilePath filepath = evalCoreEffectNodeF $ L.createFilePath filepath 
 
 instance L.ControlFlow (Free NodeF) where
     delay =  evalCoreEffectNodeF . L.delay
 
-newGraph :: (Serialize c, T.StringHashable c) => NodeL (T.TGraph c)
-newGraph = liftF $ NewGraph id
+instance L.StateIO (Free NodeF) where
+    atomically = evalStateAtomically
+    newVarIO  = evalStateAtomically . L.newVar
+    readVarIO = evalStateAtomically . L.readVar
+    writeVarIO var a = evalStateAtomically $ L.writeVar var a

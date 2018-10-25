@@ -50,12 +50,11 @@ instance NetworkConnection D.Udp where
 
     openConnect addr handlers logger = do
         conn <- atomically (newTMVar =<< newTChan)
-        void $ forkIO $ do
-            tryML
-                (runClient UDP addr $ \sock -> void $ race
-                    (readMessages (D.Connection addr) handlers logger sock)
-                    (connectManager conn sock))
-                (atomically $ closeConn conn)
+        void $ forkIO $ tryML
+            (runClient UDP addr $ \sock -> void $ race
+                (readMessages (D.Connection addr) handlers logger sock)
+                (connectManager conn sock))
+            (atomically $ closeConn conn)
         pure $ D.ClientUdpConnectionVar conn
 
 
@@ -103,7 +102,7 @@ connectManager conn sock = readCommand conn >>= \case
     -- close connection
     Just D.Close      -> atomically $ unlessM (isEmptyTMVar conn) $ void $ takeTMVar conn
     -- send msg to alies node
-    Just (D.Send val feedback) -> do
+    Just (D.Send val feedback) ->
         tryM (S.sendAll sock val) (atomically $ closeConn conn) $
             \_ -> do
                 tryPutMVar feedback True

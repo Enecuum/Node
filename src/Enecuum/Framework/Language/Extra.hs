@@ -120,6 +120,6 @@ awaitNodeForever = L.scenario $ L.atomically $ do
     -- This is a little trick to make STM thinking that something can change.
     -- So it won't stop with message:
     -- 'thread blocked indefinitely in an STM transaction'
-    xVar <- L.newVar @Int 1
+    xVar <- L.newVar (1 :: Int)
     x <- L.readVar xVar
     when (x == 1) L.retry

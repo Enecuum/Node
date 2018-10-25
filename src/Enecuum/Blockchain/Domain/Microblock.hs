@@ -8,10 +8,9 @@ import qualified Data.ByteString.Base64                as Base64
 import           Data.HGraph.StringHashable            (StringHash (..), StringHashable, toHash)
 import qualified Data.Serialize                        as S
 import           Enecuum.Blockchain.Domain.Crypto
-import           Enecuum.Blockchain.Domain.Transaction (Transaction, verifyTransaction)
+import           Enecuum.Blockchain.Domain.Transaction (Transaction)
 import qualified Enecuum.Core.Language                 as L
 import           Enecuum.Prelude
-
 
 data Microblock = Microblock
     { _keyBlock     :: StringHash
@@ -32,13 +31,11 @@ data MicroblockForSign = MicroblockForSign
     deriving (Eq, Generic, Ord, Read, Show, ToJSON, FromJSON, Serialize)
 
 microblockForSign :: Microblock -> MicroblockForSign
-microblockForSign (Microblock {..}) = MicroblockForSign
+microblockForSign Microblock {..} = MicroblockForSign
     { _keyBlock = _keyBlock
     , _transactions = _transactions
-    , _publisher = _publisher}
-
-verifyMicroblock :: Microblock -> Bool
-verifyMicroblock mb@(Microblock {..}) = verifyEncodable _publisher _signature (microblockForSign mb)
+    , _publisher = _publisher
+    }
 
 signMicroblock :: (Monad m, L.ERandom m) => StringHash -> [Transaction] -> PublicKey -> PrivateKey -> m Microblock
 signMicroblock hashofKeyBlock tx publisherPubKey publisherPrivKey = do
@@ -54,19 +51,3 @@ signMicroblock hashofKeyBlock tx publisherPubKey publisherPrivKey = do
             , _publisher = publisherPubKey
             , _signature = signature
             }
-
-verifyMicroblockWithTx :: Microblock -> Bool
-verifyMicroblockWithTx mBlock = verifyMicroblock mBlock && isSignTxGenuine
-    where tx = _transactions (mBlock :: Microblock)
-          isSignTxGenuine = and $ map verifyTransaction tx
-
-verifyMicroblockWithTxEff :: (Monad m, L.Logger m) => Microblock -> m Bool
-verifyMicroblockWithTxEff mBlock = do
-    let isSignMbGenuine = verifyMicroblock mBlock
-        tx = _transactions (mBlock :: Microblock)
-        bogusTx = filter (\a -> snd a == False ) $ zip tx (map verifyTransaction tx)
-    case isSignMbGenuine of
-        True -> L.logInfo $ "Signature of microblock is genuine."
-        False -> L.logInfo $ "Signature of microblock is not genuine. Someone is trying to pretend to be publisher " +|| (show $ showPublicKey $ _publisher (mBlock :: Microblock) )
-    forM_ bogusTx $ \tx -> L.logInfo $ "Signature of transaction "  +|| fst tx ||+ " is not genuine "
-    pure $ isSignMbGenuine && (null bogusTx)

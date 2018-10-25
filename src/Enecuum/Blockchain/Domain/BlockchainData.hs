@@ -10,10 +10,13 @@ import           Enecuum.Blockchain.Domain.Types       (Amount)
 import           Enecuum.Framework.Domain.State        (StateVar)
 import           Enecuum.Prelude
 
+type WalletID = PublicKey
+type Ledger = Map WalletID Amount
+
 data BlockchainData = BlockchainData
     { _graph              :: GraphVar
     , _kBlockPending      :: StateVar [KBlock]
     , _transactionPending :: StateVar [Transaction]
     , _curNode            :: StateVar StringHash
-    , _ledger             :: StateVar (Map PublicKey Amount)
+    , _ledger             :: StateVar Ledger
     }

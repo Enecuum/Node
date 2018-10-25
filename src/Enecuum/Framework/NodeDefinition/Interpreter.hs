@@ -47,7 +47,7 @@ startServing nodeRt port initScript = do
         (\(D.Connection addr) -> Impl.insertConnect (nodeRt ^. Impl.connectsLens) addr)
         (Impl.logError' nodeRt)
     atomically $ setServerChan (nodeRt ^. RLens.servers) port s
-    pure $ a
+    pure a
 
 interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF a -> IO a
 interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
@@ -62,7 +62,7 @@ interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next
 interpretNodeDefinitionL nodeRt (L.ServingTcp port action next) =
     next <$> startServing nodeRt port action 
 
-interpretNodeDefinitionL nodeRt (L.ServingUdp port action next) = do
+interpretNodeDefinitionL nodeRt (L.ServingUdp port action next) =
     next <$> startServing nodeRt port action 
 
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
@@ -83,7 +83,7 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
     a <- runCmdHandlerL m handlers
     void $ forkIO $ do
         m'       <- readTVarIO m
-        tag      <- atomically $ readTVar (nodeRt ^. RLens.nodeTag)
+        tag      <- readTVarIO (nodeRt ^. RLens.nodeTag)
         let 
             filePath = nodeRt ^. RLens.storyPaths.at tag
             inpStr = if tag == "Client" then "λ> " else ""

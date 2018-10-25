@@ -31,14 +31,14 @@ makeFieldsNoPrefix ''PoWNodeData
 
 kBlockProcess :: PoWNodeData -> L.NodeL ()
 kBlockProcess nodeData = do
-    prevKBlockHash      <- L.atomically <$> L.readVar $ nodeData ^. prevHash
-    prevKBlockNumber    <- L.atomically <$> L.readVar $ nodeData ^. prevNumber
+    prevKBlockHash      <- L.readVarIO $ nodeData ^. prevHash
+    prevKBlockNumber    <- L.readVarIO $ nodeData ^. prevNumber
 
     (lastHash, kBlocks) <- A.generateKBlocks prevKBlockHash prevKBlockNumber
     L.logInfo $ "Last hash: " +|| lastHash ||+ "."
 
-    L.atomically $ L.writeVar (nodeData ^. prevHash) lastHash
-    L.atomically $ L.writeVar (nodeData ^. prevNumber) $ prevKBlockNumber + (fromIntegral $ length kBlocks)
+    L.writeVarIO (nodeData ^. prevHash) lastHash
+    L.writeVarIO (nodeData ^. prevNumber) $ prevKBlockNumber + fromIntegral (length kBlocks)
     for_ kBlocks $ \ kBlock -> L.withConnection D.Tcp graphNodeTransmitterTcpAddress $ \conn -> do
             L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
             L.send conn kBlock
@@ -46,7 +46,7 @@ kBlockProcess nodeData = do
 
 foreverChainGenerationHandle :: PoWNodeData -> ForeverChainGeneration -> L.NodeL SuccessMsg
 foreverChainGenerationHandle powNodeData _ = do
-    L.atomically $ L.writeVar (powNodeData ^. requiredBlockNumber) (10 ^ (6 :: Int))
+    L.writeVarIO (powNodeData ^. requiredBlockNumber) (10 ^ (6 :: Int))
     pure SuccessMsg
 
 nBlockPacketGenerationHandle :: PoWNodeData -> NBlockPacketGeneration -> L.NodeL SuccessMsg
@@ -65,7 +65,7 @@ powNode' delaysEnabled = do
     L.serving D.Rpc powNodeRpcPort $ do
         L.method  $ foreverChainGenerationHandle nodeData
         L.method  $ nBlockPacketGenerationHandle nodeData
-        L.method  $ rpcPingPong
+        L.method    rpcPingPong
         L.method  $ methodeStopNode nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
@@ -80,8 +80,8 @@ powNode' delaysEnabled = do
 
 powNodeInitialization :: EnableDelays -> StringHash -> L.NodeL PoWNodeData
 powNodeInitialization delaysEnabled genesisHash = do
-    h <- L.atomically $ L.newVar genesisHash
-    n <- L.atomically $ L.newVar 1
-    b <- L.atomically $ L.newVar 0
-    f <- L.atomically $ L.newVar NodeActing
+    h <- L.newVarIO genesisHash
+    n <- L.newVarIO 1
+    b <- L.newVarIO 0
+    f <- L.newVarIO NodeActing
     pure $ PoWNodeData delaysEnabled h n b f
