@@ -30,6 +30,37 @@ makeFieldsNoPrefix ''PoANodeData
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
 
+sendMicroblock :: PoANodeData -> D.KBlock -> D.ScenarioRole -> Free L.NodeF ()
+sendMicroblock poaData block role = do
+    currentBlock <- L.readVarIO (poaData ^. currentLastKeyBlock)
+    when (block /= currentBlock) $ do
+        L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ ")."
+
+        pendingTransactions <- L.atomically $ do
+            tx <- take A.transactionsInMicroblock <$> L.readVar (poaData ^. transactionPending)
+            L.modifyVar (poaData ^. transactionPending) (drop $ length tx)
+            pure tx
+
+        let pendingTransactionsCount = length pendingTransactions
+        let transactionsCount = A.transactionsInMicroblock - pendingTransactionsCount
+
+        when (pendingTransactionsCount > 0) $ L.logInfo $ "\nGet " +|| pendingTransactionsCount ||+ " transaction(s) from pending "
+        when (transactionsCount        > 0) $ L.logInfo $ "Generate "  +|| transactionsCount ||+ " random transaction(s)."
+
+        txGenerated <- replicateM transactionsCount $ A.genTransaction A.Hardcoded
+
+        let tx = pendingTransactions ++ txGenerated
+
+        L.writeVarIO (poaData ^. currentLastKeyBlock) block
+
+        mBlock <- case role of
+            D.Good -> A.genMicroblock block tx
+            D.Bad  -> A.generateBogusSignedMicroblock block tx
+        L.logInfo
+            $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
+        void $ L.withConnection D.Tcp A.graphNodeTransmitterTcpAddress $
+            \conn -> L.send conn mBlock
+
 poaNode :: D.ScenarioRole -> L.NodeDefinitionL ()
 poaNode role = do
     L.nodeTag "PoA node"
@@ -38,7 +69,7 @@ poaNode role = do
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    L.serving D.Rpc A.poaNodeRpcPort $ do
+    L.serving D.Rpc A.poaNodeRpcPort $
         L.method rpcPingPong
 
     L.process $ forever $ do
@@ -46,36 +77,6 @@ poaNode role = do
         whenRightM (L.makeRpcRequest A.graphNodeTransmitterRpcAddress GetTransactionPending) $ \tx -> do
             forM_ tx (\t -> L.logInfo $ "\nAdd transaction to pending "  +| D.showTransaction t "" |+ "")
             L.atomically $ L.modifyVar (poaData ^. transactionPending) ( ++ tx )
-        whenRightM (L.makeRpcRequest A.graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> do
-            currentBlock <- L.readVarIO (poaData ^. currentLastKeyBlock)
-            when (block /= currentBlock) $ do
-                L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ ")."
+        whenRightM (L.makeRpcRequest A.graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> sendMicroblock poaData block role
 
-                pendingTransactions <- L.atomically $ do
-                    tx <- take A.transactionsInMicroblock <$> L.readVar (poaData ^. transactionPending)
-                    L.modifyVar (poaData ^. transactionPending) (drop $ length tx)
-                    pure tx
-
-                let pendingTransactionsCount = length pendingTransactions
-                let transactionsCount = A.transactionsInMicroblock - pendingTransactionsCount
-
-                when (pendingTransactionsCount > 0) $ L.logInfo $ "\nGet " +|| pendingTransactionsCount ||+ " transaction(s) from pending "
-                when (transactionsCount        > 0) $ L.logInfo $ "Generate "  +|| transactionsCount ||+ " random transaction(s)."
-
-                txGenerated <- replicateM transactionsCount $ A.genTransaction A.Hardcoded
-
-                let tx = pendingTransactions ++ txGenerated
-
-                L.writeVarIO (poaData ^. currentLastKeyBlock) block
-
-                mBlock <- case role of
-                    D.Good -> A.genMicroblock block tx
-                    D.Bad  -> A.generateBogusSignedMicroblock block tx
-                    _      -> error "Error: Enecuum.Assets.Nodes.PoA 74"
-                L.logInfo
-                    $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
-                void $ L.withConnection D.Tcp A.graphNodeTransmitterTcpAddress $
-                    \conn -> L.send conn mBlock
-
-
-    L.awaitNodeFinished poaData
+    L.awaitNodeFinished poaData            
