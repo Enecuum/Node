@@ -2,7 +2,6 @@ module Enecuum.Assets.System.Directory where
 
 import qualified Enecuum.Core.Language as L
 import           Enecuum.Prelude
--- import           System.Directory      (createDirectoryIfMissing, getHomeDirectory)
 import           System.FilePath       ((</>))
 
 getEnecuumDir :: (L.FileSystem m, Monad m) => m FilePath

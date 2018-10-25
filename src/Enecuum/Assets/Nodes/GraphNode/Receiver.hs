@@ -11,9 +11,7 @@ import qualified Enecuum.Domain                   as D
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude
 import           Enecuum.Assets.Nodes.Methods
-
 import           Enecuum.Assets.Nodes.GraphNode.Logic
-
 import qualified Enecuum.Framework.LogState as Log
 
 graphSynchro :: GraphNodeData -> D.Address -> L.NodeL ()
@@ -52,6 +50,7 @@ graphSynchro nodeData address = do
         L.atomically $ void $ L.addKBlock logV bData (last chainTail)
     Log.writeLog logV
 
+
 -- | Start of graph node
 graphNodeReceiver :: L.NodeDefinitionL ()
 graphNodeReceiver = do
@@ -60,10 +59,15 @@ graphNodeReceiver = do
 
     L.process $ forever $ graphSynchro nodeData graphNodeTransmitterRpcAddress
     L.serving D.Rpc graphNodeReceiverRpcPort $ do
+        -- client interaction
         L.methodE $ getBalance nodeData
+        -- graph node interaction
         L.method  $ getLastKBlock nodeData
+
+        -- network
         L.method    rpcPingPong
         L.method  $ methodStopNode nodeData
+
         L.methodE $ getMBlockForKBlocks nodeData
         L.method  $ getChainLength nodeData
 

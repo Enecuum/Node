@@ -5,7 +5,11 @@
 
 module Enecuum.Blockchain.Domain.Transaction where
 
+import qualified Crypto.Hash.SHA256               as SHA
 import           Data.Aeson.Extra                 (noLensPrefix)
+import qualified Data.ByteString.Base64           as Base64
+import           Data.HGraph.StringHashable       (StringHash (..), StringHashable, toHash)
+import qualified Data.Serialize                   as S
 import           Data.Text                        (unpack)
 import           Data.UUID
 import           Enecuum.Blockchain.Domain.Crypto
@@ -37,8 +41,8 @@ data TransactionForSign = TransactionForSign
     }
   deriving ( Generic, Show, Eq, Ord, Read, ToJSON, FromJSON, Serialize)
 
--- instance StringHashable Transaction where
---     toHash = StringHash . Base64.encode . SHA.hash . S.encode
+instance StringHashable Transaction where
+    toHash = StringHash . Base64.encode . SHA.hash . S.encode
 
 transactionForSign :: Transaction -> TransactionForSign
 transactionForSign (Transaction {..}) = TransactionForSign
