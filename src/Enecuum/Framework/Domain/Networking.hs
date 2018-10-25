@@ -6,6 +6,7 @@ module Enecuum.Framework.Domain.Networking where
 import           Enecuum.Prelude
 import qualified Data.Text as T
 
+import           Data.Scientific
 import           Data.IP
 import qualified Data.Aeson as A
 import           Control.Concurrent.STM.TChan (TChan)
@@ -19,7 +20,7 @@ data Rpc = Rpc
 
 data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist
 
-data Protocol a = UDP | TCP
+data Protocol a = UDP | TCP | RPC deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 data Connection a = Connection
     { _address :: Address
@@ -62,6 +63,21 @@ data Address = Address
     { _host :: Host
     , _port :: PortNumber
     } deriving (Show, Eq, Ord, Generic)
+
+instance ToJSON Address where
+    toJSON (Address h p) = A.object ["host" A..= h, "port" A..= p]
+
+instance FromJSON Address where
+    parseJSON = A.withObject "Address" $ \v -> Address
+        <$> v A..: "host"
+        <*> v A..: "port"
+
+instance ToJSON PortNumber where
+    toJSON = toJSON.fromEnum
+
+instance FromJSON PortNumber where
+    parseJSON (A.Number a) = pure.toEnum.fromJust.toBoundedInteger $ a
+
 
 formatAddress :: Address -> Text
 formatAddress (Address addr port) = T.pack addr <> ":" <> show port

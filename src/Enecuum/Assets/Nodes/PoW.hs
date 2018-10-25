@@ -8,12 +8,13 @@ module Enecuum.Assets.Nodes.PoW where
 import Enecuum.Prelude
 import qualified Enecuum.Language              as L
 import qualified Enecuum.Domain                as D
-
+import qualified Enecuum.Assets.Blockchain.Generation as A
 import           Enecuum.Assets.Nodes.Address (graphNodeTransmitterRpcAddress, powNodeRpcPort, graphNodeTransmitterTcpAddress)
 import           Data.HGraph.StringHashable (StringHash (..), toHash)
 import           Enecuum.Assets.Nodes.Messages (
     SuccessMsg (..), ForeverChainGeneration(..), NBlockPacketGeneration(..))
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
+import           Enecuum.Assets.Nodes.Methodes
 
 type IterationsCount = Int
 type EnableDelays = Bool
@@ -33,13 +34,12 @@ kBlockProcess nodeData = do
     prevKBlockHash      <- L.atomically <$> L.readVar $ nodeData ^. prevHash
     prevKBlockNumber    <- L.atomically <$> L.readVar $ nodeData ^. prevNumber
 
-    (lastHash, kBlocks) <- D.generateKBlocks prevKBlockHash prevKBlockNumber
+    (lastHash, kBlocks) <- A.generateKBlocks prevKBlockHash prevKBlockNumber
     L.logInfo $ "Last hash: " +|| lastHash ||+ "."
 
     L.atomically $ L.writeVar (nodeData ^. prevHash) lastHash
     L.atomically $ L.writeVar (nodeData ^. prevNumber) $ prevKBlockNumber + (fromIntegral $ length kBlocks)
-    L.withConnection D.Tcp graphNodeTransmitterTcpAddress $
-        \conn -> forM_ kBlocks $ \kBlock -> do
+    for_ kBlocks $ \ kBlock -> L.withConnection D.Tcp graphNodeTransmitterTcpAddress $ \conn -> do
             L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
             L.send conn kBlock
             when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
@@ -63,8 +63,10 @@ powNode' delaysEnabled = do
 
     nodeData <- L.initialization $ powNodeInitialization delaysEnabled D.genesisHash
     L.serving D.Rpc powNodeRpcPort $ do
-        L.method $ foreverChainGenerationHandle nodeData
-        L.method $ nBlockPacketGenerationHandle nodeData
+        L.method  $ foreverChainGenerationHandle nodeData
+        L.method  $ nBlockPacketGenerationHandle nodeData
+        L.method  $ rpcPingPong
+        L.method  $ methodeStopNode nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.process $ forever $ do

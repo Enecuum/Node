@@ -3,15 +3,10 @@
 {-# LANGUAGE RecordWildCards       #-}
 module Enecuum.Blockchain.Domain.Transaction where
 
-import           Enecuum.Prelude
-
--- import qualified Crypto.Hash.SHA256               as SHA
--- import qualified Data.ByteString.Base64           as Base64
--- import           Data.HGraph.StringHashable       (StringHash (..), StringHashable, toHash)
 import           Enecuum.Blockchain.Domain.Crypto
 import           Enecuum.Blockchain.Domain.Types
---import qualified Enecuum.Blockchain.Language                 as L
-import qualified Enecuum.Core.Language                 as L
+import qualified Enecuum.Core.Language            as L
+import           Enecuum.Prelude
 
 
 type OwnerPubKey = PublicKey

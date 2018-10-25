@@ -6,7 +6,7 @@ import           System.FilePath  ((</>))
 
 
 getEnecuumDir :: IO FilePath
-getEnecuumDir = createFilePath =<< liftM (</> "enecuum") getHomeDirectory
+getEnecuumDir = createFilePath =<< liftM (</> ".enecuum") getHomeDirectory
 
 createFilePath :: FilePath -> IO FilePath
 createFilePath file = do
@@ -16,8 +16,14 @@ createFilePath file = do
 logFilePath :: IO FilePath
 logFilePath = createFilePath =<< liftM (</> "data" </> "logs") getEnecuumDir
 
+storyFilePath :: IO FilePath
+storyFilePath = createFilePath =<< liftM (</> "story") getEnecuumDir
+
 appFileName :: IO FilePath
 appFileName = liftM (</> "app.log") logFilePath
+
+clientStory :: IO FilePath
+clientStory = liftM (</> "client.story") storyFilePath
 
 defaultLogFileName :: IO FilePath
 defaultLogFileName = liftM (</> "default.log") logFilePath
