@@ -181,16 +181,22 @@ clientNode = do
     L.nodeTag "Client"
     stateVar <- L.newVarIO NodeActing
     L.std $ do
-        L.stdHandler $ getLastKBlockHandler
-        L.stdHandler $ getWalletBalance
-        L.stdHandler startForeverChainGenerationHandler
-        L.stdHandler generateBlocksPacketHandler
-        L.stdHandler $ L.stopNodeHandler' stateVar
-        L.stdHandler getLengthOfChain
+        -- interaction with any node
         L.stdHandler ping
         L.stdHandler stopRequest
-        L.stdHandler getBlock
+        L.stdHandler $ L.stopNodeHandler' stateVar
+
+        -- interaction with graph node
         L.stdHandler createTransaction
+        L.stdHandler $ getWalletBalance
+        -- interaction with graph node sync scenario
+        L.stdHandler $ getLastKBlockHandler
+        L.stdHandler getLengthOfChain
+        L.stdHandler getBlock
+
+        -- interaction with poa node
+        L.stdHandler startForeverChainGenerationHandler
+        L.stdHandler generateBlocksPacketHandler
     L.awaitNodeFinished' stateVar
 
 eitherToText :: Show a => Either Text a -> Text
