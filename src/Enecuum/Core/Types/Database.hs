@@ -4,13 +4,18 @@ module Enecuum.Core.Types.Database where
 
 import           Enecuum.Prelude
 
-type DBValue = LByteString
-type DBKey = LByteString
+type DBValueRaw = LByteString
+type DBKeyRaw = LByteString
 
-data DBError
-    = KeyNotFound DBKey
-    | NotFound Text
-    | InvalidType Text
+type DBIndex = Int
+data DBKey db spec = DBKey LByteString
+
+data DBErrorType
+    = KeyNotFound
+    | NotFound
+    | InvalidType
     deriving (Generic, Ord, Eq, Show, Read)
+
+data DBError = DBError DBErrorType Text
 
 data Storage a
