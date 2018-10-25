@@ -15,4 +15,6 @@ storyFilePath = L.createFilePath =<< (</> "story") <$> getEnecuumDir
 appFileName = L.createFilePath =<< (</> "data" </> "logs" </> "app.log") <$> getEnecuumDir
 clientStory = (</> "client.story") <$> storyFilePath
 defaultLogFileName = (</> "default.log") <$> logFilePath
+
+configFilePath :: String
 configFilePath = "./configs/config.json"

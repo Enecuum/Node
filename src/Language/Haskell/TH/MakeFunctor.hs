@@ -1,4 +1,3 @@
-{-# Language TemplateHaskell #-}
 module Language.Haskell.TH.MakeFunctor where
 
 import           Enecuum.Prelude
@@ -21,9 +20,9 @@ makeFmapBody info = clause
     [varP $ mkName "g", conP consName (varP <$> varNames)]
     (normalB
         (  foldApp
-        $  (ConE consName)
+        $  ConE consName
         :  (VarE <$> L.init varNames)
-        ++ [(UInfixE (VarE $ mkName "g") (VarE $ mkName ".") (VarE lastArg))]
+        ++ [UInfixE (VarE $ mkName "g") (VarE $ mkName ".") (VarE lastArg)]
         )
     )
     []
@@ -34,4 +33,4 @@ makeFmapBody info = clause
     argNum   = length $ constructorFields info
 
 foldApp :: [Exp] -> Q Exp
-foldApp = pure . foldl1 (\a b -> AppE a b)
+foldApp = pure . foldl1 AppE

@@ -1,15 +1,9 @@
-{-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiWayIf             #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE TypeApplications       #-}
 
 module Enecuum.Assets.Nodes.GraphNode.Receiver where
 
 import           Data.HGraph.StringHashable
-import           Data.Map                         (lookup)
-import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Assets.Nodes.Messages
 import qualified Enecuum.Blockchain.Lens          as Lens
@@ -37,9 +31,9 @@ graphSynchro nodeData address = do
 
         topNodeHash <- L.readVarIO $ bData ^. Lens.curNode
 
-        GetMBlocksForKBlockResponse mBlocks <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest topNodeHash)
-        L.logInfo $ "Mblocks received for kBlock " +|| topNodeHash ||+ " : " +|| mBlocks ||+ "."
-        L.atomically $ forM_ mBlocks (L.addMBlock logV bData)
+        GetMBlocksForKBlockResponse mBlocks1 <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest topNodeHash)
+        L.logInfo $ "Mblocks received for kBlock " +|| topNodeHash ||+ " : " +|| mBlocks1 ||+ "."
+        L.atomically $ forM_ mBlocks1 (L.addMBlock logV bData)
 
         GetChainFromToResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromToRequest (curChainLength + 1) otherLength)
         L.logInfo $ "Chain tail received from " +|| (curChainLength + 1) ||+ " to " +|| otherLength ||+ " : " +|| chainTail ||+ "."
@@ -50,10 +44,10 @@ graphSynchro nodeData address = do
             L.atomically $ void $ L.addKBlock logV bData kBlock
 
             let hash = toHash kBlock
-            GetMBlocksForKBlockResponse mBlocks <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest hash)
+            GetMBlocksForKBlockResponse mBlocks2 <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest hash)
 
-            L.logInfo $ "Mblocks received for kBlock " +|| hash ||+ " : " +|| mBlocks ||+ "."
-            L.atomically $ forM_ mBlocks (L.addMBlock logV bData)
+            L.logInfo $ "Mblocks received for kBlock " +|| hash ||+ " : " +|| mBlocks2 ||+ "."
+            L.atomically $ forM_ mBlocks2 (L.addMBlock logV bData)
 
         L.atomically $ void $ L.addKBlock logV bData (last chainTail)
     Log.writeLog logV

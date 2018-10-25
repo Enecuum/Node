@@ -17,14 +17,14 @@ import qualified Enecuum.Blockchain.Lens       as Lens
 import qualified Enecuum.Core.Lens             as Lens
 import           Data.HGraph.StringHashable
 
-import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
+import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 
 import qualified Enecuum.Blockchain.Domain.Graph as TG
 import           Enecuum.Assets.Nodes.Messages
-import           Enecuum.Assets.Nodes.Address
+
 
 import qualified Enecuum.Framework.LogState as Log
-import           Enecuum.Assets.Nodes.Methods
+
 
 
 data GraphNodeData = GraphNodeData
