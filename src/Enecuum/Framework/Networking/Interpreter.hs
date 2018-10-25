@@ -14,12 +14,13 @@ import           Enecuum.Framework.Runtime
 import qualified Enecuum.Framework.RLens as RL
 import qualified Network.Socket.ByteString.Lazy     as S
 import           Enecuum.Framework.Networking.Internal.Client
+import qualified Network.Socket as S hiding (recv, send, sendAll)
 
 -- | Interpret NetworkingL language.
 interpretNetworkingL :: NodeRuntime -> L.NetworkingF a -> IO a
 interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
     var <- newEmptyMVar
-    ok  <- try $ runClient D.TCP addr $ \connect -> do
+    ok  <- try $ runClient S.Stream addr $ \connect -> do
         S.sendAll connect $ A.encode request
         msg <- S.recv connect (1024 * 4)
         putMVar var (transformEither T.pack id $ A.eitherDecode msg)

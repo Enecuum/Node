@@ -30,7 +30,7 @@ instance NetworkConnection D.Tcp where
         conn <- D.TcpConnectionVar <$> atomically (newTMVar =<< newTChan)
         void $ forkIO $ do
             tryML
-                (runClient TCP addr $ \wsConn -> void $ race
+                (runClient S.Stream addr $ \wsConn -> void $ race
                     (runHandlers conn (D.Connection addr) wsConn handlers logger)
                     (connectManager conn wsConn))
                 (atomically $ closeConn conn)

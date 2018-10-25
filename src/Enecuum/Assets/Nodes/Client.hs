@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE DeriveAnyClass         #-}
 
 module Enecuum.Assets.Nodes.Client where
 
@@ -18,7 +19,7 @@ data GetWalletBalance            = GetWalletBalance M.WalletId D.Address
 data GetLengthOfChain            = GetLengthOfChain            D.Address
 data StartForeverChainGeneration = StartForeverChainGeneration D.Address
 data StartNBlockPacketGeneration = StartNBlockPacketGeneration Int D.Address
-data Ping                        = Ping (D.Protocol Int) D.Address
+data Ping                        = Ping Protocol D.Address
 data StopRequest                 = StopRequest                 D.Address
 data GetBlock                    = GetBlock       D.StringHash D.Address
 
@@ -28,6 +29,8 @@ data GraphNodeData = GraphNodeData
     , _logVar        :: D.StateVar [Text]
     , _status        :: D.StateVar NodeStatus
     }
+
+data Protocol = UDP | TCP | RPC deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance A.FromJSON Ping where
     parseJSON = A.withObject "Ping" $ \o -> Ping <$> (o A..: "protocol") <*> (o A..: "address")
@@ -82,15 +85,15 @@ getLengthOfChain (GetLengthOfChain address) = do
         Left t       -> pure t
 
 ping :: Ping -> L.NodeL Text
-ping (Ping D.TCP address) = do
+ping (Ping TCP address) = do
     res <- L.withConnection D.Tcp address $ \conn -> L.send conn M.Ping
     pure $ case res of Right _ -> "Tcp port is available."; Left _ -> "Tcp port is not available."
 
-ping (Ping D.RPC address) = do
+ping (Ping RPC address) = do
     res :: Either Text M.Pong <- L.makeRpcRequest address M.Ping
     pure $ case res of Right _ -> "Tcp port is available."; Left _ -> "Tcp port is not available."
 
-ping (Ping D.UDP _) = pure $ "This functionality is not supported."
+ping (Ping UDP _) = pure $ "This functionality is not supported."
 
 stopRequest :: StopRequest -> L.NodeL Text
 stopRequest (StopRequest address) = sendSuccessRequest address M.Stop
