@@ -7,14 +7,14 @@ import qualified Data.Text as T
 
 import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
-import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection as Tcp
+import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection as Tcp ()
 import qualified Enecuum.Framework.Networking.Internal.Udp.Connection as Udp
 import qualified Enecuum.Framework.Networking.Internal.Connection     as Con
 import           Enecuum.Framework.Runtime
 import qualified Enecuum.Framework.RLens as RL
 import qualified Network.Socket.ByteString.Lazy     as S
 import           Enecuum.Framework.Networking.Internal.Client
-import qualified Network.Socket as S hiding (recv, send, sendAll)
+import qualified Network.Socket as S hiding (recv, send) --, sendAll)
 
 -- | Interpret NetworkingL language.
 interpretNetworkingL :: NodeRuntime -> L.NetworkingF a -> IO a

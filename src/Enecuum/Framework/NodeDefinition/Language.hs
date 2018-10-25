@@ -133,6 +133,7 @@ instance L.ERandom (Free NodeDefinitionF) where
     evalCoreCrypto = evalCoreEffectNodeDefinitionF . L.evalCoreCrypto
     getRandomInt =  evalCoreEffectNodeDefinitionF . L.getRandomInt
     getRandomByteString = evalCoreEffectNodeDefinitionF . L.getRandomByteString
+    nextUUID = evalCoreEffectNodeDefinitionF $ L.nextUUID
 
 instance L.ControlFlow (Free NodeDefinitionF) where
     delay = evalCoreEffectNodeDefinitionF . L.delay

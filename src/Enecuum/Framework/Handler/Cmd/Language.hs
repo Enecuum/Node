@@ -1,5 +1,5 @@
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE GADTs           #-}
 
 module Enecuum.Framework.Handler.Cmd.Language
   ( CmdHandlerF (..)
@@ -8,12 +8,11 @@ module Enecuum.Framework.Handler.Cmd.Language
   , CmdHandlerL
   ) where
 
+import           Data.Aeson                      as A
+-- import           Data.Typeable
+import           Enecuum.Framework.Domain.Tags   as D
+import qualified Enecuum.Framework.Node.Language as L
 import           Enecuum.Prelude
-import           Data.Aeson as A
-
-import           Enecuum.Framework.Domain.Tags as D
-import           Data.Typeable
-import qualified Enecuum.Framework.Node.Language      as L
 
 data CmdHandlerF a where
     CmdHandler :: Text -> CmdHandler -> (() -> a)  -> CmdHandlerF a

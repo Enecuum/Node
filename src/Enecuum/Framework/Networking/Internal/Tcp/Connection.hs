@@ -70,7 +70,7 @@ connectManager conn@(D.TcpConnectionVar c) wsConn = readCommand conn >>= \case
     -- send msg to alies node
     Just (D.Send val var) ->
         tryM (S.sendAll wsConn val) (atomically $ closeConn conn) $ \_ -> do
-            tryPutMVar var True
+            _ <- tryPutMVar var True
             connectManager conn wsConn
     -- conect is closed, stop of command reading
     Nothing -> pure ()

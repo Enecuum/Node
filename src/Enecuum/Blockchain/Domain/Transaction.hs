@@ -6,18 +6,15 @@
 module Enecuum.Blockchain.Domain.Transaction where
 
 import qualified Crypto.Hash.SHA256               as SHA
-import           Data.Aeson.Extra                 (noLensPrefix)
 import qualified Data.ByteString.Base64           as Base64
 import           Data.HGraph.StringHashable       (StringHash (..), StringHashable, toHash)
 import qualified Data.Serialize                   as S
-import           Data.Text                        (unpack)
 import           Data.UUID
 import           Enecuum.Blockchain.Domain.Crypto
 import           Enecuum.Blockchain.Domain.Types
-import           Enecuum.Blockchain.Domain.UUID
+import           Enecuum.Blockchain.Domain.UUID   ()
 import qualified Enecuum.Core.Language            as L
 import           Enecuum.Prelude                  hiding (show, unpack)
-import           Prelude                          (show)
 
 type OwnerPubKey = PublicKey
 type OwnerPrivateKey = PrivateKey

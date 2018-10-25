@@ -1,14 +1,12 @@
-{-# LANGUAGE GADTs           #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE GADTs           #-}
 {-# LANGUAGE TypeInType      #-}
 
 module Enecuum.Framework.Handler.Network.Language where
 
+import           Data.Aeson                    as A
+import qualified Enecuum.Framework.Domain      as D
 import           Enecuum.Prelude
-import           Data.Aeson as A
-import           Enecuum.Framework.Domain.Tags as D
-import           Data.Typeable
-import qualified Enecuum.Framework.Domain             as D
 
 -- | Rpc server description language.
 data NetworkHandlerF p m a where
