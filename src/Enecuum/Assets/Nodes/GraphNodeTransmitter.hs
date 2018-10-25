@@ -67,7 +67,13 @@ acceptMBlock nodeData mBlock _ = do
         L.logInfo $ "Microblock " +|| toHash mBlock ||+ " is accepted."
         let logV = nodeData ^. logVar
             bData = nodeData ^. blockchain
-        void $ L.atomically (L.addMBlock logV bData mBlock)
+        void $ L.atomically $ do
+            L.addMBlock logV bData mBlock
+            let bData = nodeData ^. blockchain
+            let tx = mBlock ^. Lens.transactions
+            let fun :: D.Transaction -> D.TransactionPending -> D.TransactionPending
+                fun t pending = Map.delete (toHash t) pending
+            forM_ tx (\t -> L.modifyVar (bData ^. Lens.transactionPending) (fun t ))
         Log.writeLog logV
     where
         printInvalidSignatures :: (Bool, Bool, [Bool]) -> L.NodeL ()
@@ -85,14 +91,9 @@ getKBlockPending nodeData _ = do
 getTransactionPending :: GraphNodeData -> GetTransactionPending -> L.NodeL [D.Transaction]
 getTransactionPending nodeData _ = do
     let bData = nodeData ^. blockchain
-    tx <- L.atomically $ do
+    L.atomically $ do
         trans <- L.readVar $ bData ^. Lens.transactionPending
-        let tx = map snd $ take transactionsToTransfer $ Map.toList trans
-        let fun :: D.Transaction -> D.TransactionPending -> D.TransactionPending
-            fun t pending = Map.delete (toHash t) pending
-        forM_ tx (\t -> L.modifyVar (bData ^. Lens.transactionPending) (fun t ))
-        pure tx
-    pure tx
+        pure $ map snd $ take transactionsToTransfer $ Map.toList trans
 
 getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
