@@ -1,20 +1,15 @@
 module Enecuum.Tests.Scenarios.PoASpec where
 
-import qualified Data.Map                                  as M
-import qualified Enecuum.Assets.Nodes.Address              as A
-import qualified Enecuum.Assets.Nodes.Client               as A hiding (GetLastKBlock)
-import qualified Enecuum.Assets.Nodes.GraphNodeReceiver    as A
-import qualified Enecuum.Assets.Nodes.GraphNodeTransmitter as A
-import qualified Enecuum.Assets.Nodes.Messages             as A
-import qualified Enecuum.Assets.Nodes.PoA                  as A
-import qualified Enecuum.Assets.Nodes.PoW                  as A
-import qualified Enecuum.Domain                            as D
-import           Enecuum.Interpreters                      (runNodeDefinitionL)
-import qualified Enecuum.Language                          as L
+import qualified Data.Map                                   as M
+
+import qualified Enecuum.Domain                             as D
+import           Enecuum.Interpreters                       (runNodeDefinitionL)
+import qualified Enecuum.Language                           as L
 import           Enecuum.Prelude
-import qualified Enecuum.Runtime                           as R
+import qualified Enecuum.Runtime                            as R
+
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit                  (fromHUnitTest)
+import           Test.Hspec.Contrib.HUnit                   (fromHUnitTest)
 import           Test.HUnit
 
 
@@ -23,7 +18,7 @@ spec = describe "PoA" $ fromHUnitTest $ TestList
     [TestLabel "transaction test" testPoA]
     
 createNodeRuntime :: IO R.NodeRuntime
-createNodeRuntime = R.createVoidLoggerRuntime >>= R.createCoreRuntime >>= (\a -> R.createNodeRuntime a M.empty)
+createNodeRuntime = R.createVoidLoggerRuntime >>= R.createCoreRuntime >>= (`R.createNodeRuntime` M.empty)
 
 -- TODO: add runtime clearing
 startNode :: L.NodeDefinitionL () -> IO ()

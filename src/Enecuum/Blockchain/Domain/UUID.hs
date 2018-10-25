@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Enecuum.Blockchain.Domain.UUID where
 
 import Data.Semigroup

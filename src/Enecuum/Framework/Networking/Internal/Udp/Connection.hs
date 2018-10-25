@@ -51,7 +51,7 @@ instance NetworkConnection D.Udp where
     openConnect addr handlers logger = do
         conn <- atomically (newTMVar =<< newTChan)
         void $ forkIO $ tryML
-            (runClient UDP addr $ \sock -> void $ race
+            (runClient S.Datagram addr $ \sock -> void $ race
                 (readMessages (D.Connection addr) handlers logger sock)
                 (connectManager conn sock))
             (atomically $ closeConn conn)
@@ -87,7 +87,7 @@ sendUdpMsg :: D.Address -> LByteString -> IO (Either D.NetworkError ())
 sendUdpMsg addr msg = if length msg > D.packetSize
     then pure $ Left D.TooBigMessage
     else tryM
-        (runClient UDP addr $ \sock -> S.sendAll sock msg)
+        (runClient S.Datagram addr $ \sock -> S.sendAll sock msg)
         (pure $ Left D.AddressNotExist)
         (\_ -> pure $ Right ())
 

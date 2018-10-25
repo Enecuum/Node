@@ -20,9 +20,7 @@ data Rpc = Rpc
 
 data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist deriving Eq
 
-data Protocol a = UDP | TCP | RPC deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
-
-newtype Connection a = Connection
+data Connection a = Connection
     { _address :: Address
     }
     deriving (Show, Eq, Ord, Generic)
