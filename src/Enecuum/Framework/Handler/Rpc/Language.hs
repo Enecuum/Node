@@ -5,10 +5,9 @@ module Enecuum.Framework.Handler.Rpc.Language where
 
 import           Enecuum.Prelude
 import           Data.Aeson as A
-
+import           Control.Monad.Free
 import           Enecuum.Framework.Domain.Tags as D
 import           Enecuum.Framework.Domain.RPC
-import           Data.Typeable
 
 -- | Rpc server description language.
 data RpcHandlerF m a where
@@ -29,6 +28,7 @@ whenSucces a i f = case A.fromJSON a of
     A.Error    _  -> 
         pure $ RpcResponseError (A.toJSON $ A.String "Error in parsing of args") i
 
+makeRpc :: MonadFree (RpcHandlerF m1) m2 => Text -> RpcHandler m1 -> m2 ()
 makeRpc t f = liftF $ RpcHandler t f id
 
 makeMethod :: (FromJSON a, ToJSON b, Monad m) => (a -> m b) -> RpcHandler m

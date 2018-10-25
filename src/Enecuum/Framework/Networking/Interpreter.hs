@@ -14,29 +14,30 @@ import           Enecuum.Framework.Runtime
 import qualified Enecuum.Framework.RLens as RL
 import qualified Network.Socket.ByteString.Lazy     as S
 import           Enecuum.Framework.Networking.Internal.Client
+import qualified Network.Socket as S hiding (recv, send, sendAll)
 
 -- | Interpret NetworkingL language.
 interpretNetworkingL :: NodeRuntime -> L.NetworkingF a -> IO a
 interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
     var <- newEmptyMVar
-    ok  <- try $ runClient D.TCP addr $ \connect -> do
+    ok  <- try $ runClient S.Stream addr $ \connect -> do
         S.sendAll connect $ A.encode request
         msg <- S.recv connect (1024 * 4)
         putMVar var (transformEither T.pack id $ A.eitherDecode msg)
     case ok of
         Right _                    -> pure ()
-        Left  (_ :: SomeException) -> putMVar var $ Left "Server size does not exist."
+        Left  (_ :: SomeException) -> putMVar var $ Left "Server does not exist."
     res <- takeMVar var
     pure $ next res
 
 interpretNetworkingL nr (L.SendTcpMsgByConnection (D.Connection conn) msg next) = do
-    m <- atomically $ readTVar $ nr ^. RL.tcpConnects
+    m <- readTVarIO $ nr ^. RL.tcpConnects
     case m ^. at conn of
         Just con -> next <$> Con.send con msg
         Nothing  -> pure $ next $ Left D.ConnectionClosed
 
 interpretNetworkingL nr (L.SendUdpMsgByConnection (D.Connection conn) msg next) = do
-    m <- atomically $ readTVar $ nr ^. RL.udpConnects
+    m <- readTVarIO $ nr ^. RL.udpConnects
     case m ^. at conn of
         Just con -> next <$> Con.send con msg
         Nothing  -> pure $ next $ Left D.ConnectionClosed

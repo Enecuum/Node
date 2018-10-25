@@ -5,47 +5,22 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE TypeApplications       #-}
 
-module Enecuum.Assets.Nodes.GraphNodeReceiver (graphNodeReceiver) where
+module Enecuum.Assets.Nodes.GraphNode.Receiver where
 
 import           Data.HGraph.StringHashable
-import           Data.Map                         (Map, empty, fromList, insert, lookup)
 import qualified Data.Map                         as Map
+import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Assets.Nodes.Messages
-import           Enecuum.Assets.Nodes.Messages
-import           Enecuum.Assets.Nodes.Methodes
-import qualified Enecuum.Blockchain.Domain.Graph  as TG
-import qualified Enecuum.Blockchain.Domain.Graph  as TG
 import qualified Enecuum.Blockchain.Lens          as Lens
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
 import qualified Enecuum.Framework.LogState       as Log
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude
-
-data GraphNodeData = GraphNodeData
-    { _blockchain :: D.BlockchainData
-    , _logVar     :: D.StateVar [Text]
-    , _status     :: D.StateVar NodeStatus
-    }
-makeFieldsNoPrefix ''GraphNodeData
-
-getLastKBlock :: GraphNodeData ->  GetLastKBlock -> L.NodeL D.KBlock
-getLastKBlock nodeData _ = do
-    let logV = nodeData ^. logVar
-        bData = nodeData ^. blockchain
-    kBlock <- L.atomically $ L.getTopKeyBlock logV bData
-    pure kBlock
-
-getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
-getBalance nodeData (GetWalletBalance wallet) = do
-    L.logInfo $ "Requested balance for wallet " +|| D.showPublicKey wallet ||+ "."
-    let bData = nodeData ^. blockchain
-    curLedger <- L.atomically $ L.readVar $ bData ^. Lens.ledger
-    let maybeBalance = lookup wallet curLedger
-    case maybeBalance of
-        Just balance -> pure $ Right $ WalletBalanceMsg wallet balance
-        _            -> pure $ Left $ "Wallet " +|| D.showPublicKey wallet ||+ " does not exist in graph."
+import           Enecuum.Assets.Nodes.Methods
+import           Enecuum.Assets.Nodes.GraphNode.Logic
+import qualified Enecuum.Framework.LogState as Log
 
 graphSynchro :: GraphNodeData -> D.Address -> L.NodeL ()
 graphSynchro nodeData address = do
@@ -59,37 +34,30 @@ graphSynchro nodeData address = do
         pure $ topKBlock ^. Lens.number
 
     when (curChainLength < otherLength) $ do
-        topNodeHash <- L.atomically $ L.readVar $ bData ^. Lens.curNode
+
+        topNodeHash <- L.readVarIO $ bData ^. Lens.curNode
+
         GetMBlocksForKBlockResponse mBlocks <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest topNodeHash)
-        L.logInfo $ "Mblocks received for kBlock " +|| topNodeHash ||+ " : " +|| show mBlocks
+        L.logInfo $ "Mblocks received for kBlock " +|| topNodeHash ||+ " : " +|| mBlocks ||+ "."
         L.atomically $ forM_ mBlocks (L.addMBlock logV bData)
 
         GetChainFromToResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromToRequest (curChainLength + 1) otherLength)
         L.logInfo $ "Chain tail received from " +|| (curChainLength + 1) ||+ " to " +|| otherLength ||+ " : " +|| chainTail ||+ "."
         L.atomically $ forM_ chainTail (L.addKBlock logV bData)
+
         for_ (init chainTail) $ \kBlock -> do
+
             L.atomically $ void $ L.addKBlock logV bData kBlock
+
             let hash = toHash kBlock
             GetMBlocksForKBlockResponse mBlocks <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest hash)
-            L.logInfo $ "Mblocks received for kBlock " +|| hash ||+ " : " +|| show mBlocks
+
+            L.logInfo $ "Mblocks received for kBlock " +|| hash ||+ " : " +|| mBlocks ||+ "."
             L.atomically $ forM_ mBlocks (L.addMBlock logV bData)
+
         L.atomically $ void $ L.addKBlock logV bData (last chainTail)
     Log.writeLog logV
 
--- | Initialization of graph node
-graphNodeInitialization :: L.NodeDefinitionL GraphNodeData
-graphNodeInitialization = L.scenario $ do
-    g <- L.newGraph
-    L.evalGraphIO g $ L.newNode $ D.KBlockContent D.genesisKBlock
-    L.logInfo $ "Genesis block (" +|| D.genesisHash ||+ "): " +|| D.genesisKBlock ||+ "."
-    L.atomically
-        $  GraphNodeData <$> (D.BlockchainData g
-        <$> L.newVar []
-        <*> L.newVar Map.empty
-        <*> L.newVar D.genesisHash
-        <*> L.newVar Map.empty)
-        <*> L.newVar []
-        <*> L.newVar NodeActing
 
 -- | Start of graph node
 graphNodeReceiver :: L.NodeDefinitionL ()
@@ -103,9 +71,13 @@ graphNodeReceiver = do
         L.methodE $ getBalance nodeData
         -- graph node interaction
         L.method  $ getLastKBlock nodeData
+
         -- network
-        L.method  $ rpcPingPong
-        L.method  $ methodeStopNode nodeData
+        L.method    rpcPingPong
+        L.method  $ methodStopNode nodeData
+
+        L.methodE $ getMBlockForKBlocks nodeData
+        L.method  $ getChainLength nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.awaitNodeFinished nodeData

@@ -28,12 +28,11 @@ instance NetworkConnection D.Tcp where
 
     openConnect addr handlers logger = do
         conn <- D.TcpConnectionVar <$> atomically (newTMVar =<< newTChan)
-        void $ forkIO $ do
-            tryML
-                (runClient TCP addr $ \wsConn -> void $ race
-                    (runHandlers conn (D.Connection addr) wsConn handlers logger)
-                    (connectManager conn wsConn))
-                (atomically $ closeConn conn)
+        void $ forkIO $ tryML
+            (runClient S.Stream addr $ \wsConn -> void $ race
+                (runHandlers conn (D.Connection addr) wsConn handlers logger)
+                (connectManager conn wsConn))
+            (atomically $ closeConn conn)
         pure conn
 
     close conn = do
@@ -50,7 +49,7 @@ getAdress socket = D.sockAddrToHost <$> S.getSocketName socket
 --------------------------------------------------------------------------------
 -- * Internal
 runHandlers :: D.ConnectionVar D.Tcp -> D.Connection D.Tcp -> S.Socket -> Handlers D.Tcp -> (Text -> IO ()) -> IO ()
-runHandlers conn netConn wsConn handlers logger = do
+runHandlers conn netConn wsConn handlers logger =
     tryM (S.recv wsConn $ toEnum D.packetSize) (atomically $ closeConn conn) $ \msg ->
         if null msg
             then atomically $ closeConn conn
@@ -69,7 +68,7 @@ connectManager conn@(D.TcpConnectionVar c) wsConn = readCommand conn >>= \case
     -- close connection
     Just D.Close      -> atomically $ unlessM (isEmptyTMVar c) $ void $ takeTMVar c
     -- send msg to alies node
-    Just (D.Send val var) -> do
+    Just (D.Send val var) ->
         tryM (S.sendAll wsConn val) (atomically $ closeConn conn) $ \_ -> do
             tryPutMVar var True
             connectManager conn wsConn

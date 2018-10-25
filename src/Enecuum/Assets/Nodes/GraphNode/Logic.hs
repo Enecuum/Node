@@ -4,22 +4,20 @@
 {-# LANGUAGE MultiWayIf             #-}
 {-# LANGUAGE TemplateHaskell        #-}
 
-module Enecuum.Assets.Nodes.GraphNodeTransmitter (graphNodeTransmitter) where
+module Enecuum.Assets.Nodes.GraphNode.Logic where
 
 import           Control.Lens                     (makeFieldsNoPrefix)
 import           Data.HGraph.StringHashable
 import qualified Data.Map                         as Map
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Assets.Nodes.Messages
-import           Enecuum.Assets.Nodes.Methodes
-import qualified Enecuum.Blockchain.Domain.Graph  as TG
-import qualified Enecuum.Blockchain.Lens          as Lens
-import qualified Enecuum.Core.Lens                as Lens
+import           Enecuum.Assets.Nodes.Methods
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Framework.Language.Extra (HasGraph, HasStatus, NodeStatus (..))
 import qualified Enecuum.Framework.LogState       as Log
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude
+import qualified Enecuum.Blockchain.Lens          as Lens
 
 data GraphNodeData = GraphNodeData
     { _blockchain :: D.BlockchainData
@@ -85,7 +83,10 @@ acceptMBlock nodeData mBlock _ = do
 getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL [D.KBlock]
 getKBlockPending nodeData _ = do
     let bData = nodeData ^. blockchain
-    kBlocks <- L.atomically $ L.readVar $ bData ^. Lens.kBlockPending
+    kBlocks <- L.readVarIO $ bData ^. Lens.kBlockPending
+        -- kblocks <- L.readVar $ bData ^. Lens.kBlockPending
+        -- L.modifyVar (bData ^. Lens.kBlockPending) (\_ -> [])
+        -- pure kblocks
     pure kBlocks
 
 getTransactionPending :: GraphNodeData -> GetTransactionPending -> L.NodeL [D.Transaction]
@@ -108,14 +109,14 @@ getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBa
 getBalance nodeData (GetWalletBalance wallet) = do
     L.logInfo $ "Requested balance for wallet " +|| D.showPublicKey wallet ||+ "."
     let bData = nodeData ^. blockchain
-    curLedger <- L.atomically $ L.readVar $ bData ^. Lens.ledger
+    curLedger <- L.readVarIO $ bData ^. Lens.ledger
     let maybeBalance = Map.lookup wallet curLedger
     case maybeBalance of
         Just balance -> pure $ Right $ WalletBalanceMsg wallet balance
         _            -> pure $ Left $ "Wallet " +|| D.showPublicKey wallet ||+ " does not exist in graph."
 
-acceptChainLength :: GraphNodeData -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
-acceptChainLength nodeData GetChainLengthRequest = do
+getChainLength :: GraphNodeData -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
+getChainLength nodeData GetChainLengthRequest = do
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
 --    L.logInfo "Answering chain length"
@@ -139,8 +140,8 @@ acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
             Log.writeLog logV
             pure $ Right $ GetChainFromToResponse (reverse kBlockList)
 
-acceptMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL (Either Text GetMBlocksForKBlockResponse)
-acceptMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
+getMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL (Either Text GetMBlocksForKBlockResponse)
+getMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
     L.logInfo $ "Answering microblocks for kBlock " +|| show hash
     let logV = nodeData ^. logVar
         bData = nodeData ^. blockchain
@@ -164,38 +165,3 @@ graphNodeInitialization = L.scenario $ do
         <*> L.newVar Map.empty)
         <*> L.newVar []
         <*> L.newVar NodeActing
-
--- | Start of graph node
-graphNodeTransmitter :: L.NodeDefinitionL ()
-graphNodeTransmitter = do
-    L.nodeTag "graphNodeTransmitter"
-    nodeData <- graphNodeInitialization
-
-    L.serving D.Tcp graphNodeTransmitterTcpPort $ do
-        -- PoA interaction
-        L.handler $ acceptMBlock nodeData
-        -- PoW interaction
-        L.handler $ acceptKBlock nodeData
-        -- network
-        L.handler $ methodePing
-
-    L.serving D.Rpc graphNodeTransmitterRpcPort $ do
-        -- client
-        L.methodE $ acceptTransaction nodeData
-        L.methodE $ getBalance nodeData
-        -- graph node interaction
-        L.method  $ getLastKBlock nodeData
-        L.method  $ acceptChainLength nodeData
-        L.methodE $ acceptChainFromTo nodeData
-        -- PoW interaction
-        L.method  $ getKBlockPending nodeData
-        -- PoA interaction
-        L.method  $ getTransactionPending nodeData
-        L.methodE $ acceptMBlockForKBlocks nodeData
-        -- network
-        L.method  $ rpcPingPong
-        L.method  $ methodeStopNode nodeData
-
-
-    L.std $ L.stdHandler $ L.stopNodeHandler nodeData
-    L.awaitNodeFinished nodeData

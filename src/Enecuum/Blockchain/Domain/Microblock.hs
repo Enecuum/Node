@@ -31,7 +31,7 @@ data MicroblockForSign = MicroblockForSign
     deriving (Eq, Generic, Ord, Read, Show, ToJSON, FromJSON, Serialize)
 
 microblockForSign :: Microblock -> MicroblockForSign
-microblockForSign (Microblock {..}) = MicroblockForSign
+microblockForSign Microblock {..} = MicroblockForSign
     { _keyBlock = _keyBlock
     , _transactions = _transactions
     , _publisher = _publisher

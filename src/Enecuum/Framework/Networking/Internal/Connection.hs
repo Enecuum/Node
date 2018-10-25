@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase#-}
 module Enecuum.Framework.Networking.Internal.Connection where
 
 import           Enecuum.Prelude

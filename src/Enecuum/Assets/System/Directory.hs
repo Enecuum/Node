@@ -6,13 +6,13 @@ import           Enecuum.Prelude
 import           System.FilePath       ((</>))
 
 getEnecuumDir :: (L.FileSystem m, Monad m) => m FilePath
-getEnecuumDir = L.createFilePath =<< liftM (</> ".enecuum") L.getHomeDirectory
+getEnecuumDir = L.createFilePath =<< (</> ".enecuum") <$> L.getHomeDirectory
 keysFilePath, logFilePath, storyFilePath, appFileName, clientStory, defaultLogFileName, wrongKeysFilePath :: (L.FileSystem m, Monad m) => m FilePath
-keysFilePath = liftM (</> "keys.txt") getEnecuumDir
-wrongKeysFilePath = liftM (</> "wrongKeys.txt") getEnecuumDir
-logFilePath = L.createFilePath =<< liftM (</> "data" </> "logs") getEnecuumDir
-storyFilePath = L.createFilePath =<< liftM (</> "story") getEnecuumDir
-appFileName = L.createFilePath =<< liftM (</> "data" </> "logs" </> "app.log") getEnecuumDir
-clientStory = liftM (</> "client.story") storyFilePath
-defaultLogFileName = liftM (</> "default.log") logFilePath
+keysFilePath = (</> "keys.txt") <$> getEnecuumDir
+wrongKeysFilePath = (</> "wrongKeys.txt") <$> getEnecuumDir
+logFilePath = L.createFilePath =<< (</> "data" </> "logs") <$> getEnecuumDir
+storyFilePath = L.createFilePath =<< (</> "story") <$> getEnecuumDir
+appFileName = L.createFilePath =<< (</> "data" </> "logs" </> "app.log") <$> getEnecuumDir
+clientStory = (</> "client.story") <$> storyFilePath
+defaultLogFileName = (</> "default.log") <$> logFilePath
 configFilePath = "./configs/config.json"

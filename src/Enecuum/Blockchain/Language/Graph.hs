@@ -25,8 +25,8 @@ getKBlock logV bData hash = do
 -- Get Top kBlock
 getTopKeyBlock :: D.StateVar [Text] -> D.BlockchainData -> L.StateL D.KBlock
 getTopKeyBlock logV bData = do
-    topNodeHash    <- L.readVar $ (D._curNode bData)
-    Just topKBlock <- getKBlock logV bData topNodeHash
+    topNodeHash <- L.readVar $ (D._curNode bData)
+    topKBlock   <- fromJust <$> getKBlock logV bData topNodeHash
     pure topKBlock
 
 -- | Add key block to the top of the graph
@@ -67,7 +67,7 @@ getMBlocksForKBlock logV bData hash =  L.evalGraph (D._graph bData) $ do
         Nothing -> pure Nothing
         Just (D.HNode _ _ _ links _) -> do
             aMBlocks                       <- forM (Data.Map.keys links) $ \aNRef -> do
-                Just (D.HNode _ _ (D.fromContent -> block) _ _) <- L.getNode aNRef
+                (D.HNode _ _ (D.fromContent -> block) _ _) <- fromJust <$> L.getNode aNRef
                 case block of
                     D.MBlockContent mBlock -> pure $ Just mBlock
                     _               -> pure Nothing

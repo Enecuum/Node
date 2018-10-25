@@ -9,6 +9,7 @@ module Enecuum.Framework.NodeDefinition.Language where
 import           Enecuum.Prelude
 import qualified Enecuum.Core.Language                 as L
 import qualified Enecuum.Framework.Domain              as D
+import qualified Enecuum.Framework.State.Language      as L
 import qualified Enecuum.Framework.Node.Language       as L
 import qualified Enecuum.Framework.Networking.Language as L
 import           Enecuum.Framework.Handler.Rpc.Language  (RpcHandlerL)
@@ -92,7 +93,7 @@ class Serving c a | c -> a where
     serving :: c -> D.PortNumber -> a -> NodeDefinitionL ()
 
 instance Serving D.Rpc (RpcHandlerL L.NodeL ()) where
-    serving _ port handlersF = servingRpc port handlersF
+    serving _ = servingRpc
 
 instance Serving D.Tcp (NetworkHandlerL D.Tcp L.NodeL ()) where
     serving _ port handlersF = liftF $ ServingTcp port handlersF id
@@ -135,3 +136,9 @@ instance L.ERandom (Free NodeDefinitionF) where
 
 instance L.ControlFlow (Free NodeDefinitionF) where
     delay = evalCoreEffectNodeDefinitionF . L.delay
+
+instance L.StateIO (Free NodeDefinitionF) where
+    atomically = scenario . L.atomically
+    newVarIO  = scenario . L.newVarIO
+    readVarIO = scenario . L.readVarIO
+    writeVarIO var a = scenario $ L.writeVarIO var a

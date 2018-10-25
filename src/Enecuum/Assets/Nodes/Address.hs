@@ -30,3 +30,8 @@ poaNodePort = 2006
 poaNodeAddress :: D.Address
 poaNodeAddress = D.Address "127.0.0.1" poaNodePort
 
+poaNodeRpcPort :: D.PortNumber
+poaNodeRpcPort = 2007
+
+poaNodeRpcAddress :: D.Address
+poaNodeRpcAddress = D.Address "127.0.0.1" poaNodeRpcPort
