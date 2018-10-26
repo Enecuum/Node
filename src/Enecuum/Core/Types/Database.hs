@@ -18,4 +18,20 @@ data DBErrorType
 
 data DBError = DBError DBErrorType Text
 
-data Storage a
+data Storage db = Storage FilePath
+
+data DBOptions = DBOptions
+    { _createIfMissing :: Bool
+    , _errorIfExists   :: Bool
+    }
+
+data DBConfig db = DBConfig
+    { _path    :: FilePath
+    , _options :: DBOptions
+    }
+
+defaultDbOptions :: DBOptions
+defaultDbOptions = DBOptions
+    { _createIfMissing = False
+    , _errorIfExists   = False
+    }

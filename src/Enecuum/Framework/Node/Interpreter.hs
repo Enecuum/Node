@@ -1,11 +1,13 @@
+{-# LANGUAGE PackageImports #-}
+
 module Enecuum.Framework.Node.Interpreter where
 
-import Enecuum.Prelude
+import           Enecuum.Prelude
 import           Control.Concurrent.STM.TChan
 import qualified Control.Monad.Trans.Resource             as Res
+import qualified "rocksdb-haskell" Database.RocksDB       as Rocks
 import qualified Data.Map                                 as M
 import qualified Network.Socket  as S
-import qualified "rocksdb-haskell" Database.RocksDB       as Rocks
 
 import qualified Enecuum.Framework.State.Language         as L
 import qualified Enecuum.Framework.Node.Language          as L
@@ -23,24 +25,25 @@ import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection  as Tcp
 import qualified Enecuum.Framework.Networking.Internal.Udp.Server      as Udp
 import qualified Enecuum.Framework.Networking.Internal.Udp.Connection  as Udp
 import qualified Enecuum.Framework.Handler.Network.Interpreter         as Net
-import qualified Enecuum.Framework.Networking.Internal.Connection     as Con
+import qualified Enecuum.Framework.Networking.Internal.Connection      as Con
 
+import qualified Enecuum.Core.Types                  as D
 import qualified Enecuum.Framework.Domain.Networking as D
 import           Enecuum.Core.HGraph.Interpreters.IO
 import           Enecuum.Core.HGraph.Internal.Impl
 
 
 -- | Interpret NodeL.
-interpretNodeL :: NodeRuntime -> L.NodeF a -> ResIO.ResIO a
+interpretNodeL :: NodeRuntime -> L.NodeF a -> Res.ResIO a
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
     next <$> atomically (Impl.runStateL nodeRt statefulAction)
 
-interpretNodeL _      (L.EvalGraphIO gr act next       ) = next <$> runHGraphIO gr act
+interpretNodeL _      (L.EvalGraphIO gr act next       ) = next <$> liftIO (runHGraphIO gr act)
 
-interpretNodeL nodeRt (L.EvalNetworking networking next) = next <$> Impl.runNetworkingL nodeRt networking
+interpretNodeL nodeRt (L.EvalNetworking networking next) = next <$> liftIO (Impl.runNetworkingL nodeRt networking)
 
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
-    next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects
+    next <$> liftIO (Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects)
 
 interpretNodeL nodeRt (L.OpenTcpConnection addr initScript next) = 
     next <$> openConnection nodeRt addr initScript
@@ -49,16 +52,23 @@ interpretNodeL nodeRt (L.OpenUdpConnection addr initScript next) =
     next <$> openConnection nodeRt addr initScript
 
 interpretNodeL nodeRt (L.CloseTcpConnection (D.Connection addr) next) =
-    next <$> closeConnection nodeRt addr RLens.tcpConnects
+    next <$> liftIO (closeConnection nodeRt addr RLens.tcpConnects)
 
 interpretNodeL nodeRt (L.CloseUdpConnection (D.Connection addr) next) =
-    next <$> closeConnection nodeRt addr RLens.udpConnects
+    next <$> liftIO (closeConnection nodeRt addr RLens.udpConnects)
 
 interpretNodeL nodeRt (L.InitDatabase cfg next) = do
-    r <- Rocks.openBracket ()
-    next <$> initHGraph
+    let path = cfg ^. Lens.path
+    let opts = Rocks.defaultOptions
+            { Rocks.createIfMissing = cfg ^. Lens.options . Lens.createIfMissing
+            , Rocks.errorIfExists   = cfg ^. Lens.options . Lens.errorIfExists
+            }
+    -- TODO: FIXME: check what exceptions may be thrown here and handle it correctly.
+    dbHandle <- Rocks.openBracket path opts
+    liftIO $ atomically $ modifyTVar (nodeRt ^. RLens.databases) (M.insert path dbHandle)
+    pure $ next $ Right $ D.Storage path
 
-interpretNodeL _ (L.NewGraph next) = next <$> initHGraph
+interpretNodeL _ (L.NewGraph next) = next <$> liftIO initHGraph
 
 type F f a = a -> f a
 
@@ -81,16 +91,15 @@ closeConnection nodeRt addr lens = atomically $ do
         Con.close con
         modifyTVar (nodeRt ^. lens) $ M.delete addr
     
-
 openConnection nodeRt addr initScript = do
-    m <- atomically $ newTVar mempty
-    Net.runNetworkHandlerL m initScript
-    handlers <- readTVarIO m
+    m <- liftIO $ atomically $ newTVar mempty
+    liftIO $ Net.runNetworkHandlerL m initScript
+    handlers <- liftIO $ readTVarIO m
     newCon   <- Con.openConnect
         addr
         ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
         (logError' nodeRt)
-    insertConnect (nodeRt ^. connectsLens) addr newCon
+    liftIO $ insertConnect (nodeRt ^. connectsLens) addr newCon
     pure $ D.Connection addr
 
 insertConnect :: Con.NetworkConnection a => TVar (Map D.Address (D.ConnectionVar a)) -> D.Address -> D.ConnectionVar a -> IO ()
@@ -106,7 +115,7 @@ setServerChan servs port chan = do
     modifyTVar servs (M.insert port chan)
 
 -- | Runs node language. Runs interpreters for the underlying languages.
-runNodeL :: NodeRuntime -> L.NodeL a -> ResIO.ResIO a
+runNodeL :: NodeRuntime -> L.NodeL a -> Res.ResIO a
 runNodeL nodeRt = foldFree (interpretNodeL nodeRt)
 
 logError' nodeRt = runNodeL nodeRt . L.logError

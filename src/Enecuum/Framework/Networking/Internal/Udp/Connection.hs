@@ -14,6 +14,7 @@ import           Data.Aeson
 import           Control.Concurrent.Chan
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TMVar
+import qualified Control.Monad.Trans.Resource as Res
 
 import           Data.Aeson.Lens
 import           Control.Concurrent.Async
@@ -27,7 +28,7 @@ import           Control.Monad.Extra
 instance NetworkConnection D.Udp where
     startServer port handlers insertConnect logger = do
         chan <- atomically newTChan
-        void $ forkIO $ runUDPServer chan port $ \msg msgChan sockAddr -> do
+        void $ liftIO $ forkIO $ runUDPServer chan port $ \msg msgChan sockAddr -> do
             let host       = D.sockAddrToHost sockAddr
                 connection = D.Connection $ D.Address host port
     

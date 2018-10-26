@@ -9,16 +9,21 @@
 
 module Enecuum.Tests.Integration.DatabaseSpec where
 
-import qualified Data.Aeson as A
-import qualified Data.Map as M
-import qualified Data.List as List
-import           Control.Lens             ( makeFieldsNoPrefix )
+import qualified Data.Aeson   as A
+import qualified Data.Map     as M
+import qualified Data.List    as List
+import           Control.Lens ( makeFieldsNoPrefix )
 
 import           Enecuum.Prelude
-import qualified Enecuum.Domain as D
-import qualified Enecuum.Language as L
+
+import           Enecuum.Interpreters                         (runNodeDefinitionL)
+import qualified Enecuum.Runtime                              as R
+import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
+import qualified Enecuum.Domain                               as D
+import qualified Enecuum.Language                             as L
 
 import           Test.Hspec
+import           Enecuum.Testing.Integrational
 
 
 data KBlocksMetaDB
@@ -116,14 +121,25 @@ kBlock3 = D.KBlock
     , _solver    = D.genesisHash
     }
 
+dbNode :: D.DBConfig db -> L.NodeDefinitionL ()
+dbNode cfg = do
+    eDB <- L.scenario $ L.initDatabase cfg
+    case eDB of
+        Left err -> L.logError err
+        Right _  -> pure ()
+    L.delay $ 1000 * 1000 * 2
 
 spec :: Spec
 spec = describe "Database support tests" $ do
-    it "Test 1" $ "failed" `shouldBe` "1"
+    it "Init DB when not exist" $ do
+        let cfg = D.DBConfig "~/.enecuum/test.db" D.defaultDbOptions
+        
+        startNode Nothing $ dbNode cfg
+
     it "Test 2" $ do
         print $ D.genesisHash
         print $ D.toHash kBlock1
         print $ D.toHash kBlock2
         print $ D.toHash kBlock3
 
-        "failed" `shouldBe` "1"
+        1 `shouldBe` 1
