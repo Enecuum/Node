@@ -1,6 +1,11 @@
 module Enecuum.Framework.Node.Interpreter where
 
 import Enecuum.Prelude
+import           Control.Concurrent.STM.TChan
+import qualified Control.Monad.Trans.Resource             as Res
+import qualified Data.Map                                 as M
+import qualified Network.Socket  as S
+import qualified "rocksdb-haskell" Database.RocksDB       as Rocks
 
 import qualified Enecuum.Framework.State.Language         as L
 import qualified Enecuum.Framework.Node.Language          as L
@@ -10,9 +15,8 @@ import           Enecuum.Framework.Runtime                (NodeRuntime)
 import qualified Enecuum.Core.Interpreters                as Impl
 import qualified Enecuum.Framework.State.Interpreter      as Impl
 import qualified Enecuum.Framework.RLens                  as RLens
-import           Control.Concurrent.STM.TChan
+import qualified Enecuum.Core.Lens                        as Lens
 
-import qualified Network.Socket  as S
 import qualified Enecuum.Framework.Networking.Internal.Tcp.Server      as Tcp
 import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection  as Tcp
 
@@ -21,13 +25,13 @@ import qualified Enecuum.Framework.Networking.Internal.Udp.Connection  as Udp
 import qualified Enecuum.Framework.Handler.Network.Interpreter         as Net
 import qualified Enecuum.Framework.Networking.Internal.Connection     as Con
 
-import qualified Data.Map                                 as M
 import qualified Enecuum.Framework.Domain.Networking as D
 import           Enecuum.Core.HGraph.Interpreters.IO
 import           Enecuum.Core.HGraph.Internal.Impl
 
+
 -- | Interpret NodeL.
-interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
+interpretNodeL :: NodeRuntime -> L.NodeF a -> ResIO.ResIO a
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
     next <$> atomically (Impl.runStateL nodeRt statefulAction)
 
@@ -49,6 +53,10 @@ interpretNodeL nodeRt (L.CloseTcpConnection (D.Connection addr) next) =
 
 interpretNodeL nodeRt (L.CloseUdpConnection (D.Connection addr) next) =
     next <$> closeConnection nodeRt addr RLens.udpConnects
+
+interpretNodeL nodeRt (L.InitDatabase cfg next) = do
+    r <- Rocks.openBracket ()
+    next <$> initHGraph
 
 interpretNodeL _ (L.NewGraph next) = next <$> initHGraph
 
@@ -98,7 +106,7 @@ setServerChan servs port chan = do
     modifyTVar servs (M.insert port chan)
 
 -- | Runs node language. Runs interpreters for the underlying languages.
-runNodeL :: NodeRuntime -> L.NodeL a -> IO a
+runNodeL :: NodeRuntime -> L.NodeL a -> ResIO.ResIO a
 runNodeL nodeRt = foldFree (interpretNodeL nodeRt)
 
 logError' nodeRt = runNodeL nodeRt . L.logError

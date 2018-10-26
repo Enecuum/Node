@@ -108,6 +108,7 @@ dependencies:
 - validation
 - silently
 - uuid
+- resourcet
 
 library:
   source-dirs: src
