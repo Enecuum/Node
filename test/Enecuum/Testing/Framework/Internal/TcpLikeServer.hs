@@ -3,9 +3,6 @@ module Enecuum.Testing.Framework.Internal.TcpLikeServer where
 import           Enecuum.Prelude
 
 import qualified Data.Map as Map
-import qualified Data.Aeson as A
-import           Data.Aeson
-import qualified Data.Aeson.Lens as ALens
 import           Control.Concurrent (killThread)
 
 import qualified Enecuum.Domain         as D

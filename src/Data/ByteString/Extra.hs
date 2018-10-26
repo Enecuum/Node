@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.ByteString.Extra where
 
 import           Data.Aeson

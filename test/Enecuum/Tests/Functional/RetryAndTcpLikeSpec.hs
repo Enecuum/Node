@@ -3,19 +3,14 @@ module Enecuum.Tests.Functional.RetryAndTcpLikeSpec where
 
 import Enecuum.Prelude
 
-import           Data.Aeson as A
 import           Test.Hspec
 import           Test.HUnit
 import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
 
-import           Enecuum.TestData.RPC
 import           Enecuum.TestData.Nodes.Scenarios
 import           Enecuum.Testing
-import qualified Enecuum.Testing as T
 import qualified Enecuum.Testing.RLens as RLens
 
-import qualified Enecuum.Domain as D
-import qualified Enecuum.Language as L
 
 -- Tests disabled
 spec :: Spec

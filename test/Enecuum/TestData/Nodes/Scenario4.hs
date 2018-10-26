@@ -6,19 +6,12 @@ module Enecuum.TestData.Nodes.Scenario4 where
 
 import Enecuum.Prelude
 
-import qualified Data.Aeson                    as A
-import qualified Data.Map                      as Map
-import qualified Data.Text                     as Text
 import           Control.Lens                  (makeFieldsNoPrefix)
 
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
-import qualified Enecuum.Blockchain.Lens       as Lens
-import qualified Enecuum.Framework.Lens        as Lens
 import qualified Enecuum.Core.Lens             as Lens
 import           Enecuum.Language              (HasGraph)
-
-import qualified Enecuum.Core.HGraph.Internal.Types as T
 
 import           Enecuum.TestData.RPC
 import qualified Enecuum.TestData.TestGraph as TG
@@ -58,9 +51,9 @@ newtorkNode3Initialization g = do
     baseNode <- L.evalGraphIO g $ L.getNode TG.nilTransactionHash >>= \case
         Nothing       -> error "Graph is not ready: no genesis node found."
         Just baseNode -> pure baseNode
-    balanceVar   <- L.atomically $ L.newVar 0
-    graphHeadVar <- L.atomically $ L.newVar $ baseNode ^. Lens.hash
-    pure $ NetworkNode3Data g graphHeadVar balanceVar
+    balance   <- L.atomically $ L.newVar 0
+    graphHead <- L.atomically $ L.newVar $ baseNode ^. Lens.hash
+    pure $ NetworkNode3Data g graphHead balance
 
 networkNode3 :: TG.TestGraphVar -> L.NodeDefinitionL ()
 networkNode3 g = do

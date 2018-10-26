@@ -60,6 +60,11 @@ interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) = next <$> Impl.r
 interpretNetworkingL nodeRt (L.EvalCoreEffectNetworkingF coreEffect next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
 
+--
+interpretNetworkingL _ L.SendUdpMsgByConnection{} = error "SendUdpMsgByConnection not implemented"
+interpretNetworkingL _ L.SendUdpMsgByAddress{}    = error "SendUdpMsgByAddress not implemented"
+
+
 -- | Runs networking language.
 runNetworkingL :: T.NodeRuntime -> L.NetworkingL a -> IO a
 runNetworkingL nodeRt = foldFree (interpretNetworkingL nodeRt)

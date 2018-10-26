@@ -16,7 +16,6 @@ import qualified Enecuum.Framework.Node.Language                  as L
 import qualified Enecuum.Framework.RLens                          as RLens
 import           Enecuum.Framework.Runtime                        (NodeRuntime)
 import qualified Enecuum.Framework.State.Interpreter              as Impl
--- import qualified Enecuum.Framework.State.Language                 as L
 import qualified Enecuum.Core.Types.Logger as Log
 import qualified Network.Socket                                   as S
 

@@ -1,4 +1,5 @@
-{-# LANGUAGE LambdaCase#-}
+{-# LANGUAGE    LambdaCase        #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Enecuum.Framework.Networking.Internal.Udp.Connection
     ( close
     , send

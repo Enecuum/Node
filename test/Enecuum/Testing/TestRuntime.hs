@@ -104,6 +104,7 @@ sendRequest' registry toAddr req = findNode registry toAddr >>= \case
         case controlResp of
             T.AsRpcResp   rpcResp -> pure $ Right rpcResp
             T.AsErrorResp err     -> pure $ Left $ "Control error got: " +| err |+ "."
+            _                     -> error "not implemented"
 
 -- | Sends some RPC request to the node.
 sendRequest :: T.TestRuntime -> D.Address -> D.RpcRequest -> IO (Either Text D.RpcResponse)

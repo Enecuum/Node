@@ -6,20 +6,18 @@ module Enecuum.Tests.Integration.RpcServerSpec where
 
 import           Enecuum.Prelude
 
-import           Data.Aeson as A
+
 import           Test.HUnit
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit ( fromHUnitTest )
-import qualified Data.Map           as M
+import qualified Data.Map             as M
 
-import qualified Enecuum.Language as L
-import qualified Enecuum.Domain as D
-import qualified Enecuum.Runtime as R
-
---import           Enecuum.Legacy.Service.Network.Base
+import qualified Enecuum.Language     as L
+import qualified Enecuum.Domain       as D
+import qualified Enecuum.Runtime      as R
 import           Enecuum.Interpreters
-import           Enecuum.Framework.Networking.Interpreter
 
+createNodeRuntime :: IO R.NodeRuntime
 createNodeRuntime = R.createVoidLoggerRuntime >>= R.createCoreRuntime >>= (`R.createNodeRuntime` M.empty)
 
 data OkRequest = OkRequest deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -64,5 +62,8 @@ rpcServerTestErr = TestCase $ do
     runNodeDefinitionL nr $ L.stopServing serverPort
     assertBool "" (res == Right ErrResponse)
 
+serverPort :: D.PortNumber
 serverPort = 2001
+
+localServer :: D.Address
 localServer = D.Address "127.0.0.1" serverPort
