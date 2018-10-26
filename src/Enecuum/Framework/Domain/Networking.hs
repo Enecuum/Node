@@ -1,5 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveAnyClass         #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Enecuum.Framework.Domain.Networking where
 
@@ -20,7 +21,7 @@ data Rpc = Rpc
 
 data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist deriving Eq
 
-data Connection a = Connection
+newtype Connection a = Connection
     { _address :: Address
     }
     deriving (Show, Eq, Ord, Generic)
@@ -75,7 +76,7 @@ instance ToJSON PortNumber where
 
 instance FromJSON PortNumber where
     parseJSON (A.Number a) = pure.toEnum.fromJust.toBoundedInteger $ a
-    parseJSON s = error $ "Can't parse port number, got: " +|| show s
+    parseJSON _            = mzero
 
 formatAddress :: Address -> Text
 formatAddress (Address addr port) = T.pack addr <> ":" <> show port

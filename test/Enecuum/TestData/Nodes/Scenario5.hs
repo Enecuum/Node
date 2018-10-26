@@ -1,37 +1,20 @@
 {-# LANGUAGE DuplicateRecordFields      #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Enecuum.TestData.Nodes.Scenario5 where
 
 import Enecuum.Prelude
 
-import qualified Data.Aeson                    as A
-import qualified Data.Map                      as Map
-import qualified Data.Text                     as Text
-import           Control.Lens                  (makeFieldsNoPrefix)
-
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
-import qualified Enecuum.Blockchain.Lens       as Lens
-import qualified Enecuum.Framework.Lens        as Lens
-import qualified Enecuum.Core.Lens             as Lens
-import           Enecuum.Language              (HasGraph)
 
-import qualified Enecuum.Core.HGraph.Internal.Types as T
-
-import           Enecuum.TestData.RPC
-import qualified Enecuum.TestData.TestGraph as TG
-import           Enecuum.TestData.Nodes.Address
 
 -- Scenario 5: Permanent connection Ping-Pong
 
-data Ping = Ping { ping :: Int }
+newtype Ping = Ping { ping :: Int }
   deriving (Show, Generic, ToJSON, FromJSON)
 
-data Pong = Pong { pong :: Int }
+newtype Pong = Pong { pong :: Int }
   deriving (Show, Generic, ToJSON, FromJSON)
 
 pongServerPort, pingClientPort :: D.PortNumber
@@ -48,14 +31,14 @@ pingPongThreshold = 3
 pingHandle :: D.StateVar Int -> Ping -> D.Connection D.Tcp -> L.NodeL ()
 pingHandle countVar (Ping i) conn = do
     L.logInfo $ "Ping handle received: " +|| Ping i ||+ ". Sending " +|| Pong i ||+ "."
-    L.send conn $ Pong i
+    void $ L.send conn $ Pong i
     when (i >= pingPongThreshold) $ L.close conn
     L.atomically $ L.writeVar countVar i
 
 pongHandle :: D.StateVar Int -> Pong -> D.Connection D.Tcp -> L.NodeL ()
 pongHandle countVar (Pong i) conn = do
     L.logInfo $ "Pong handle received: " +|| Pong i ||+ ". Sending " +|| Ping (i + 1) ||+ "."
-    L.send conn $ Ping $ i + 1
+    void $ L.send conn $ Ping $ i + 1
     when (i + 1 >= pingPongThreshold) $ L.close conn
     L.atomically $ L.writeVar countVar $ i + 1
 
@@ -77,7 +60,7 @@ pingSendingClientNode = L.scenario $ do
     countVar <- L.atomically $ L.newVar 0
 
     conn <- L.open D.Tcp pongServerAddress $ L.handler $ pongHandle countVar
-    L.send conn $ Ping 0
+    void $ L.send conn $ Ping 0
 
     L.atomically $ do
         pongs <- L.readVar countVar

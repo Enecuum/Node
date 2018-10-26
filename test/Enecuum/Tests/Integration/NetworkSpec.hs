@@ -6,7 +6,6 @@ module Enecuum.Tests.Integration.NetworkSpec where
 
 import           Enecuum.Prelude
 
-import           Control.Concurrent.MVar (isEmptyMVar)
 import           Test.HUnit
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
@@ -16,12 +15,7 @@ import qualified Enecuum.Language              as L
 import           Enecuum.Interpreters
 import qualified Enecuum.Runtime as Rt
 import qualified Enecuum.Domain                as D
-import           Enecuum.Framework.Networking.Internal.Udp.Connection
-import           Enecuum.Framework.Networking.Internal.Udp.Server
-import           Enecuum.Framework.Networking.Internal.Client
 import qualified Data.Map as M
-import qualified Network.Socket.ByteString.Lazy as S
-import           Control.Concurrent.STM.TChan
 import qualified Enecuum.Framework.Networking.Internal.Connection as Con
 
 -- Tests disabled
@@ -50,6 +44,7 @@ newtype Pong   = Pong Int deriving (Generic, ToJSON, FromJSON)
 newtype BigMsg = BigMsg [Int] deriving (Generic, ToJSON, FromJSON)
 data Success   = Success   deriving (Generic, ToJSON, FromJSON)
 
+bigMsg :: BigMsg
 bigMsg = BigMsg [1..5000]
 
 
@@ -57,8 +52,10 @@ createNodeRuntime :: IO Rt.NodeRuntime
 createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= (\a -> Rt.createNodeRuntime a M.empty)
 
 --
+testReleaseOfResources :: (Applicative f, L.Serving c (f ())) =>
+                                c -> D.PortNumber -> D.PortNumber -> Test
 testReleaseOfResources protocol serverPort succPort =
-    runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
+    runServingScenarion serverPort succPort $ \_ succAddr nodeRt1 _ ->
         runNodeDefinitionL nodeRt1 $ do
             L.serving protocol serverPort $ pure ()
             L.stopServing serverPort
@@ -69,18 +66,28 @@ testReleaseOfResources protocol serverPort succPort =
             L.serving protocol serverPort $ pure ()
             void $ L.notify succAddr Success
 
-testConnectFromTo prot1 prot2 serverPort succPort = do
+testConnectFromTo :: (L.Send
+            (D.Connection con) (Free L.NetworkingF),
+          L.Connection (Free L.NodeF) con, Applicative f,
+          L.Serving c (f ())) =>
+         c -> con -> D.PortNumber -> D.PortNumber -> Test
+
+testConnectFromTo prot1 prot2 serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
-        runNodeDefinitionL nodeRt1 $ do
+        runNodeDefinitionL nodeRt1 $
             L.serving prot1 serverPort $ pure ()
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
             conn <- L.open prot2 serverAddr $ pure ()
-            res  <- L.send conn $ Success
+            res  <- L.send conn Success
             when (Left D.ConnectionClosed == res) $
                 void $ L.notify succAddr Success
 
+testConnectToNonexistentAddress :: (L.Send
+    (D.Connection con) (Free L.NetworkingF),
+              L.Connection (Free L.NodeF) con) =>
+             con -> D.PortNumber -> Test
 
 testConnectToNonexistentAddress protocol succPort =
     runServingScenarion succPort succPort $ \_ succAddr nodeRt1 _ ->
@@ -98,47 +105,64 @@ testSendingMsgToNonexistentAddress succPort =
             when (Left D.AddressNotExist == res) $
                 void $ L.notify succAddr Success
 
+testSendingMsgToClosedConnection :: (L.Send
+                (D.Connection con) (Free L.NetworkingF),
+              L.Connection (Free L.NodeF) con, Applicative f,
+              L.Serving con (f ())) =>
+             con -> D.PortNumber -> D.PortNumber -> Test
+
 testSendingMsgToClosedConnection protocol serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
-        runNodeDefinitionL nodeRt1 $ do
+        runNodeDefinitionL nodeRt1 $
             L.serving protocol serverPort $ pure ()
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
             conn <- L.open protocol serverAddr $ pure ()
             L.close conn
-            res  <- L.send conn $ Success
+            res  <- L.send conn Success
             when (Left D.ConnectionClosed == res) $
                 void $ L.notify succAddr Success
 
-
+testSendingBigMsgByConnect :: (L.Send
+                (D.Connection con) (Free L.NetworkingF),
+              L.Connection (Free L.NodeF) con, Applicative f,
+              L.Serving con (f ())) =>
+             con -> D.PortNumber -> D.PortNumber -> Test
 testSendingBigMsgByConnect protocol serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
-        runNodeDefinitionL nodeRt1 $ do
+        runNodeDefinitionL nodeRt1 $
             L.serving protocol serverPort $ pure ()
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
             conn <- L.open protocol serverAddr $ pure ()
-            res  <- L.send conn $ bigMsg
+            res  <- L.send conn bigMsg
             when (Left D.TooBigMessage == res) $
                 void $ L.notify succAddr Success
 
+testSendingBigUdpMsgByAddress :: D.PortNumber -> D.PortNumber -> Test
 testSendingBigUdpMsgByAddress serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
-        runNodeDefinitionL nodeRt1 $ do
+        runNodeDefinitionL nodeRt1 $
             L.serving D.Tcp serverPort $ pure ()
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            res <- L.notify serverAddr $ bigMsg
+            res <- L.notify serverAddr bigMsg
             when (Left D.TooBigMessage == res) $
                 void $ L.notify succAddr Success
 
+pingPongTest :: (L.Send (D.Connection con1) (Free L.NetworkingF),
+                L.Send (D.Connection con2) m, Typeable con1, Typeable con2,
+                Typeable m, L.Connection (Free L.NodeF) con1, L.Connection m con2,
+                L.SendUdp m, Monad m,
+                L.Serving con1 (Free (L.NetworkHandlerF con2 m) ())) =>
+               con1 -> D.PortNumber -> D.PortNumber -> Test
 
 pingPongTest protocol serverPort succPort = 
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
-        runNodeDefinitionL nodeRt1 $ do
+        runNodeDefinitionL nodeRt1 $
             L.serving protocol serverPort $ do
                 L.handler (pingHandle succAddr)
                 L.handler (pongHandle succAddr)

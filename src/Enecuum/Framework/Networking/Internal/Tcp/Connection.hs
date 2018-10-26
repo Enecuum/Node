@@ -1,4 +1,5 @@
-{-# LANGUAGE LambdaCase#-}
+{-# LANGUAGE     LambdaCase       #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Enecuum.Framework.Networking.Internal.Tcp.Connection where
 
 import           Enecuum.Prelude

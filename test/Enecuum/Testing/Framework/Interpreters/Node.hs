@@ -2,7 +2,6 @@ module Enecuum.Testing.Framework.Interpreters.Node where
 
 import Enecuum.Prelude
 
-import qualified Data.Map as Map
 
 import qualified Enecuum.Domain                                    as D
 import qualified Enecuum.Language                                  as L

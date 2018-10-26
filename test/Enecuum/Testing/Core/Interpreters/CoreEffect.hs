@@ -17,6 +17,7 @@ interpretCoreEffectL loggerRt (L.EvalLogger      logger next) = next <$> Impl.ru
 interpretCoreEffectL _        (L.EvalRandom      eRnd   next) = next <$> runERandomL eRnd
 
 interpretCoreEffectL _        (L.EvalControlFlow flow   next) = next <$> runControlFlow flow
+interpretCoreEffectL _        L.EvalFileSystem{}              = error "EvalFileSystem not implemented"
 
 -- | Runs core effect container language.
 runCoreEffect :: T.LoggerRuntime -> L.CoreEffect a -> IO a

@@ -8,7 +8,7 @@ import           Language.Haskell.TH.Datatype
 
 makeFunctorInstance :: Name -> Q [Dec]
 makeFunctorInstance name =
-    forM [1] $ \_ -> instanceD (cxt []) (appT (conT $ mkName "Functor") (conT name)) [makeFmap name]
+    forM [1 :: Int] $ \_ -> instanceD (cxt []) (appT (conT $ mkName "Functor") (conT name)) [makeFmap name]
 
 makeFmap :: Name -> Q Dec
 makeFmap name = do

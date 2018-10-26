@@ -2,20 +2,14 @@ module Enecuum.Testing.Framework.Interpreters.Network where
 
 import Enecuum.Prelude
 
-import qualified Data.Aeson                         as A
-import qualified Data.ByteString.Lazy               as BS
-
-import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
-
-import qualified Enecuum.Framework.Lens             as Lens
 import qualified Enecuum.Testing.RLens              as RLens
 import qualified Enecuum.Testing.Types              as T
 import qualified Enecuum.Testing.Core.Interpreters  as Impl
 
 -- | Interpret NetworkSendingL. Does nothing ATM.
 interpretNetworkSendingL :: T.NodeRuntime -> L.NetworkSendingF a -> IO a
-interpretNetworkSendingL nodeRt (L.Multicast cfg req next) = pure $ next ()
+interpretNetworkSendingL _ (L.Multicast _ _ next) = pure $ next ()
 
 -- | Runs NetworkSendingL language.
 runNetworkSendingL :: T.NodeRuntime -> L.NetworkSendingL a -> IO a
@@ -23,7 +17,7 @@ runNetworkSendingL nodeRt = foldFree (interpretNetworkSendingL nodeRt)
 
 -- | Interpret NetworkListeningL (with NetworkSendingL in stack). Does nothing ATM.
 interpretNetworkListeningL :: T.NodeRuntime -> L.NetworkListeningF a -> IO a
-interpretNetworkListeningL nodeRt (L.WaitForSingleResponse cfg timeout next) = pure $ next Nothing
+interpretNetworkListeningL _ (L.WaitForSingleResponse _ _ next) = pure $ next Nothing
 
 -- | Runs NetworkListeningL language.
 runNetworkListeningL :: T.NodeRuntime -> L.NetworkListeningL a -> IO a

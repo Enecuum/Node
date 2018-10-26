@@ -4,16 +4,11 @@ module Enecuum.Tests.Functional.NodeSpec where
 import Enecuum.Prelude
 
 import           Test.Hspec
-import           Data.Aeson as A
-
-import           Enecuum.TestData.RPC
 import           Enecuum.TestData.Nodes.Scenarios
 import           Enecuum.Testing
-import qualified Enecuum.Testing as T
+
 import qualified Enecuum.Testing.RLens as RLens
 
-import qualified Enecuum.Domain as D
-import qualified Enecuum.Language as L
 
 spec :: Spec
 spec = describe "Nodes test" $ do
@@ -21,8 +16,8 @@ spec = describe "Nodes test" $ do
 
         runtime                          <- createTestRuntime
 
-        bootNodeRuntime :: NodeRuntime   <- startNode runtime bootNodeAddr bootNode
-        masterNodeRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNode
+        _ :: NodeRuntime   <- startNode runtime bootNodeAddr bootNode
+        _ :: NodeRuntime <- startNode runtime masterNode1Addr masterNode
 
         -- TODO: restore control requests
         -- Right (D.RpcResponseResult eResponse _) <- T.sendRequest runtime bootNodeAddr
@@ -54,8 +49,8 @@ spec = describe "Nodes test" $ do
 
         runtime <- createTestRuntime
 
-        bootNodeValidationRuntime :: NodeRuntime <- startNode runtime bootNodeAddr bootNodeValidation
-        masterNodeValidationRuntime :: NodeRuntime <- startNode runtime masterNode1Addr masterNodeValidation
+        _ :: NodeRuntime <- startNode runtime bootNodeAddr bootNodeValidation
+        _ :: NodeRuntime <- startNode runtime masterNode1Addr masterNodeValidation
 
         let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
         msgs <- readTVarIO tMsgs
