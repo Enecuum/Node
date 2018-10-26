@@ -58,9 +58,12 @@ interpretNodeL nodeRt (L.InitDatabase cfg next) = do
             }
     -- TODO: FIXME: check what exceptions may be thrown here and handle it correctly.
     -- TODO: ResourceT usage.
-    dbHandle <- Rocks.open path opts
-    atomically $ modifyTVar (nodeRt ^. RLens.databases) (M.insert path dbHandle)
-    pure $ next $ Right $ D.Storage path
+    eDbHandle <- try $ Rocks.open path opts
+    case eDbHandle of
+        Left (err :: SomeException) -> pure $ next $ Left $ show err
+        Right db -> do
+            atomically $ modifyTVar (nodeRt ^. RLens.databases) (M.insert path db)
+            pure $ next $ Right $ D.Storage path
 
 interpretNodeL nodeRt (L.EvalDatabase db action next) = do
     error "DB not implemented."
@@ -78,6 +81,8 @@ class ConnectsLens a where
 
 instance ConnectsLens D.Udp where
     connectsLens = RLens.udpConnects
+
+    
 
 instance ConnectsLens D.Tcp where
     connectsLens = RLens.tcpConnects

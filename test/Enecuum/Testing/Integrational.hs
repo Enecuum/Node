@@ -19,6 +19,13 @@ logConfig file = D.LoggerConfig "$prio $loggername: $msg" D.Debug file True
 createNodeRuntime :: R.LoggerRuntime -> IO R.NodeRuntime
 createNodeRuntime loggerRuntime = R.createCoreRuntime loggerRuntime >>= (`R.createNodeRuntime` M.empty)
 
+evalNode :: L.NodeDefinitionL a -> IO a
+evalNode nodeDefinition = do
+    nodeRt <- R.createVoidLoggerRuntime >>= createNodeRuntime
+    res <- runNodeDefinitionL nodeRt nodeDefinition
+    R.clearNodeRuntime nodeRt
+    pure res
+
 -- TODO: add runtime clearing
 startNode :: Maybe D.LoggerConfig -> L.NodeDefinitionL () -> IO ()
 startNode Nothing nodeDefinition = void $ forkIO $ do

@@ -5,16 +5,20 @@
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE PackageImports        #-}
 
 module Enecuum.Tests.Integration.DatabaseSpec where
 
 import qualified Data.Aeson   as A
 import qualified Data.Map     as M
 import qualified Data.List    as List
-import           Control.Lens ( makeFieldsNoPrefix )
+import           Control.Lens (makeFieldsNoPrefix)
+import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 
 import           Enecuum.Prelude
+import qualified System.Directory as Dir
+import           System.FilePath as FP ((</>))
 
 import           Enecuum.Interpreters                         (runNodeDefinitionL)
 import qualified Enecuum.Runtime                              as R
@@ -82,7 +86,7 @@ toKBlock (KBlockPrevHashEntity prevHash) (KBlockEntity t n nc s) = D.KBlock
     }
 
 getKBlock :: NodeData -> Maybe KBlockMetaEntity -> L.NodeL (Maybe D.KBlock)
-getKBlock nodeData Nothing = pure Nothing
+getKBlock _         Nothing = pure Nothing
 getKBlock nodeData (Just e) = do
     let key1 :: KBlockPrevHashEntityKey = toDBKey e
     let key2 :: KBlockEntityKey         = toDBKey e
@@ -121,25 +125,73 @@ kBlock3 = D.KBlock
     , _solver    = D.genesisHash
     }
 
-dbNode :: D.DBConfig db -> L.NodeDefinitionL ()
+dbNode :: D.DBConfig db -> L.NodeDefinitionL (Either Text ())
 dbNode cfg = do
     eDB <- L.scenario $ L.initDatabase cfg
+    L.delay $ 1000 * 500
     case eDB of
-        Left err -> L.logError err
-        Right _  -> pure ()
-    L.delay $ 1000 * 1000 * 2
+        Left err -> pure $ Left err
+        Right _  -> pure $ Right ()
+
+mkDbPath :: FilePath -> IO FilePath
+mkDbPath dbName = do
+    hd <- Dir.getHomeDirectory
+    pure $ hd </> ".enecuum" </> dbName
+
+rmDb :: FilePath -> IO ()
+rmDb dbPath = whenM (Dir.doesDirectoryExist dbPath) $ Dir.removeDirectoryRecursive dbPath
+
+mkDb :: FilePath -> IO ()
+mkDb dbPath = do
+    rmDb dbPath
+    Dir.createDirectoryIfMissing True dbPath
+    -- This creates an empty DB to get correct files in the directory.
+    db <- Rocks.open dbPath $ Rocks.defaultOptions {Rocks.createIfMissing = True, Rocks.errorIfExists = False}
+    Rocks.close db
+
+withDbAbsence :: FilePath -> IO a -> IO ()
+withDbAbsence dbPath act = do
+    rmDb dbPath
+    void act
+    rmDb dbPath
+
+withDbPresence :: FilePath -> IO a -> IO ()
+withDbPresence dbPath act = do
+    mkDb dbPath
+    void act
+    rmDb dbPath
 
 spec :: Spec
 spec = describe "Database support tests" $ do
-    it "Init DB when not exist" $ do
-        let cfg = D.DBConfig "~/.enecuum/test.db" D.defaultDbOptions
-        
-        startNode Nothing $ dbNode cfg
+    dbPath <- runIO $ mkDbPath "test.db"
+    it "DB is missing, create, errorIfExists False, no errors expected" $ withDbAbsence dbPath $ do
+        let cfg = D.DBConfig dbPath $ D.DBOptions
+                { D._createIfMissing = True
+                , D._errorIfExists   = False
+                }
+        eRes <- evalNode $ dbNode cfg
+        eRes `shouldBe` Right ()
 
-    it "Test 2" $ do
-        print $ D.genesisHash
-        print $ D.toHash kBlock1
-        print $ D.toHash kBlock2
-        print $ D.toHash kBlock3
+    it "DB is missing, create, errorIfExists True, no errors expected" $ withDbAbsence dbPath $ do
+        let cfg = D.DBConfig dbPath $ D.DBOptions
+                { D._createIfMissing = True
+                , D._errorIfExists   = True
+                }
+        eRes <- evalNode $ dbNode cfg
+        eRes `shouldBe` Right ()
 
-        1 `shouldBe` 1
+    it "DB is present, create, errorIfExists False, no errors expected" $ withDbPresence dbPath $ do
+        let cfg = D.DBConfig dbPath $ D.DBOptions
+                { D._createIfMissing = True
+                , D._errorIfExists   = False
+                }
+        eRes <- evalNode $ dbNode cfg
+        eRes `shouldBe` Right ()
+
+    it "DB is present, create, errorIfExists False, errors expected" $ withDbPresence dbPath $ do
+        let cfg = D.DBConfig dbPath $ D.DBOptions
+                { D._createIfMissing = True
+                , D._errorIfExists   = True
+                }
+        eRes <- evalNode $ dbNode cfg
+        eRes `shouldBe` (Left $ "user error (open: Invalid argument: " +| dbPath |+ ": exists (error_if_exists is true))")
