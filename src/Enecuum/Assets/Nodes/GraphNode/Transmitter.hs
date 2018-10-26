@@ -28,7 +28,7 @@ graphNodeTransmitter = do
     L.serving D.Rpc graphNodeTransmitterRpcPort $ do
         -- network        
         L.method    rpcPingPong
-        L.method  $ methodStopNode nodeData
+        L.method  $ handleStopNode nodeData
 
         -- client interaction
         L.methodE $ getBalance nodeData

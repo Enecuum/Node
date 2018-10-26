@@ -16,7 +16,7 @@ import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 
 import qualified Enecuum.Assets.Nodes.Address as A
 import           Enecuum.Assets.Nodes.Messages
-import           Enecuum.Assets.Nodes.Methods (rpcPingPong)
+import           Enecuum.Assets.Nodes.Methods (rpcPingPong, handleStopNode)
 import qualified Enecuum.Assets.Blockchain.Generation as A
 
 data PoANodeData = PoANodeData
@@ -69,8 +69,9 @@ poaNode role = do
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    L.serving D.Rpc A.poaNodeRpcPort $
-        L.method rpcPingPong
+    L.serving D.Rpc A.poaNodeRpcPort $ do
+        L.method   rpcPingPong
+        L.method $ handleStopNode poaData
 
     L.process $ forever $ do
         L.delay $ 100 * 1000

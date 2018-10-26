@@ -11,8 +11,8 @@ methodPing  M.Ping conn = void $ L.send conn M.Pong
 rpcPingPong :: Applicative f => M.Ping -> f M.Pong
 rpcPingPong M.Ping = pure M.Pong
 
-methodStopNode
+handleStopNode
     :: L.HasStatus s (D.StateVar L.NodeStatus)
     => s -> M.Stop -> Free L.NodeF M.SuccessMsg
-methodStopNode nodeData M.Stop = L.stopNode nodeData >> pure M.SuccessMsg
+handleStopNode nodeData M.Stop = L.stopNode nodeData >> pure M.SuccessMsg
 
