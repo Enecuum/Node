@@ -21,7 +21,7 @@ newWalletAmount = 100
 initializeWallet :: D.StateVar D.Ledger -> D.WalletID -> L.StateL ()
 initializeWallet ledgerVar wallet = do
     ledgerW <- L.readVar ledgerVar
-    when (not $ Map.member wallet ledgerW) $ L.modifyVar ledgerVar (Map.insert wallet newWalletAmount)
+    unless (Map.member wallet ledgerW) $ L.modifyVar ledgerVar (Map.insert wallet newWalletAmount)
 
 getBalanceOrCrash :: D.WalletID -> D.Ledger -> D.Amount
 getBalanceOrCrash wallet ledger = case Map.lookup wallet ledger of

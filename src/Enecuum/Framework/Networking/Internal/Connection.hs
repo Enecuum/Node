@@ -29,7 +29,7 @@ tryTakeResponse time feedback = do
     res <- timeout time False (takeMVar feedback)
     case res of
         Right b | b -> pure $ Right ()
-        _       -> pure $ Left D.ConnectionClosed
+        _           -> pure $ Left D.ConnectionClosed
 
 sendWithTimeOut :: TMVar (TChan D.Command)
                          -> D.RawData -> IO (Either D.NetworkError ())

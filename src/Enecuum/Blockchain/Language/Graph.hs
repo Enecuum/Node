@@ -25,9 +25,9 @@ getKBlock logV bData hash = do
 -- Get Top kBlock
 getTopKeyBlock :: D.StateVar [Text] -> D.BlockchainData -> L.StateL D.KBlock
 getTopKeyBlock logV bData = do
-    topNodeHash <- L.readVar $ (D._curNode bData)
-    topKBlock   <- fromJust <$> getKBlock logV bData topNodeHash
-    pure topKBlock
+    topNodeHash <- L.readVar (D._curNode bData)
+    fromJust <$> getKBlock logV bData topNodeHash
+
 
 -- | Add key block to the top of the graph
 addTopKBlock :: D.StateVar [Text] -> D.BlockchainData -> D.KBlock -> L.StateL Bool
@@ -75,10 +75,9 @@ getMBlocksForKBlock _ bData hash =  L.evalGraph (D._graph bData) $ do
 
 -- Return all blocks after given number as a list
 findBlocksByNumber :: D.StateVar [Text] -> D.BlockchainData -> Integer -> D.KBlock -> L.StateL [D.KBlock]
-findBlocksByNumber logV bData num prev =
-    let cNum = (D._number prev) in
-    if
-        | cNum < num -> pure []
+findBlocksByNumber logV bData num prev = do
+    let cNum = D._number prev
+    if  | cNum < num -> pure []
         | cNum == num -> pure [prev]
         | cNum > num -> do
             maybeNext <- getKBlock logV bData (D._prevHash prev)
@@ -88,5 +87,5 @@ findBlocksByNumber logV bData num prev =
 
 kBlockIsNext :: D.KBlock -> D.KBlock -> Bool
 kBlockIsNext kBlock topKBlock =
-    (D._number kBlock) == (D._number topKBlock) + 1 && (D._prevHash kBlock) == D.toHash
+    D._number kBlock == D._number topKBlock + 1 && D._prevHash kBlock == D.toHash
         (D.KBlockContent topKBlock)

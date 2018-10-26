@@ -12,4 +12,4 @@ instance ToJSON ByteString where
 
 instance FromJSON ByteString where
   parseJSON (String s) = pure $ BS.pack $ E.unpack s
-  parseJSON s       = typeMismatch "ByteString: Wrong object format" s
+  parseJSON s          = typeMismatch "ByteString: Wrong object format" s
