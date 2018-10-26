@@ -5,7 +5,6 @@ module Enecuum.TestData.TestGraph where
 
 import Enecuum.Prelude
 
-import qualified Data.HGraph.THGraph     as G
 import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
 import           Control.Lens.TH (makeLenses)
 
@@ -55,11 +54,11 @@ initTestGraph = do
 -- | Checks if new balance is valid and adds new transaction node.
 -- Returns new node hash and new balance.
 tryAddTransaction' :: D.StringHash -> Balance -> BalanceChange -> TestGraphL (Maybe (D.StringHash, Balance))
-tryAddTransaction' lastNodeHash lastBalance change
-    | lastBalance + change < 0 = pure Nothing
+tryAddTransaction' lastNodeHash lastBalance change'
+    | lastBalance + change' < 0 = pure Nothing
     | otherwise = do
-        let newTrans     = Transaction lastNodeHash change
+        let newTrans     = Transaction lastNodeHash change'
         let newTransHash = D.toHash newTrans
         L.newNode newTrans
         L.newLink lastNodeHash newTransHash
-        pure $ Just (newTransHash, lastBalance + change)
+        pure $ Just (newTransHash, lastBalance + change')

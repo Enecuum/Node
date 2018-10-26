@@ -4,9 +4,9 @@ packages:
 - .
 
 extra-deps:
-  - base58-bytestring-0.1.0@sha256:a1da72ee89d5450bac1c792d9fcbe95ed7154ab7246f2172b57bd4fd9b5eab79
-  - rocksdb-haskell-1.0.1@sha256:3a437ec1cedea56e02ae85a8e37539151c5295cb228117e46aa90767f1072d61
-  - time-units-1.0.0@sha256:27cf54091c4a0ca73d504fc11d5c31ab4041d17404fe3499945e2055697746c1
+  - base58-bytestring-0.1.0
+  - rocksdb-haskell-1.0.1
+  - time-units-1.0.0
 
 
 

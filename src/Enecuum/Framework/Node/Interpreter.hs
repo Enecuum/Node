@@ -1,36 +1,29 @@
+{-# LANGUAGE TypeInType #-}
 {-# LANGUAGE PackageImports #-}
 
 module Enecuum.Framework.Node.Interpreter where
 
 import           Enecuum.Prelude
-import           Control.Concurrent.STM.TChan
 import qualified Control.Monad.Trans.Resource             as Res
 import qualified "rocksdb-haskell" Database.RocksDB       as Rocks
-import qualified Data.Map                                 as M
-import qualified Network.Socket  as S
 
-import qualified Enecuum.Framework.State.Language         as L
-import qualified Enecuum.Framework.Node.Language          as L
-import qualified Enecuum.Core.Logger.Language             as L
-import qualified Enecuum.Framework.Networking.Interpreter as Impl
-import           Enecuum.Framework.Runtime                (NodeRuntime)
-import qualified Enecuum.Core.Interpreters                as Impl
-import qualified Enecuum.Framework.State.Interpreter      as Impl
-import qualified Enecuum.Framework.RLens                  as RLens
-import qualified Enecuum.Core.Lens                        as Lens
-
-import qualified Enecuum.Framework.Networking.Internal.Tcp.Server      as Tcp
-import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection  as Tcp
-
-import qualified Enecuum.Framework.Networking.Internal.Udp.Server      as Udp
-import qualified Enecuum.Framework.Networking.Internal.Udp.Connection  as Udp
-import qualified Enecuum.Framework.Handler.Network.Interpreter         as Net
-import qualified Enecuum.Framework.Networking.Internal.Connection      as Con
-
-import qualified Enecuum.Core.Types                  as D
-import qualified Enecuum.Framework.Domain.Networking as D
-import           Enecuum.Core.HGraph.Interpreters.IO
+import           Control.Concurrent.STM.TChan
+import qualified Data.Map                                         as M
 import           Enecuum.Core.HGraph.Internal.Impl
+import qualified Enecuum.Core.Types                  as D
+import           Enecuum.Core.HGraph.Interpreters.IO
+import qualified Enecuum.Core.Interpreters                        as Impl
+import qualified Enecuum.Core.Logger.Language                     as L
+import qualified Enecuum.Framework.Domain.Networking              as D
+import qualified Enecuum.Framework.Handler.Network.Interpreter    as Net
+import qualified Enecuum.Framework.Networking.Internal.Connection as Con
+import qualified Enecuum.Framework.Networking.Interpreter         as Impl
+import qualified Enecuum.Framework.Language                       as L
+import qualified Enecuum.Framework.RLens                          as RLens
+import           Enecuum.Framework.Runtime                        (NodeRuntime)
+import qualified Enecuum.Framework.State.Interpreter              as Impl
+import qualified Enecuum.Core.Types.Logger as Log
+import qualified Network.Socket                                   as S
 
 
 -- | Interpret NodeL.
@@ -45,17 +38,17 @@ interpretNodeL nodeRt (L.EvalNetworking networking next) = next <$> liftIO (Impl
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
     next <$> liftIO (Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects)
 
-interpretNodeL nodeRt (L.OpenTcpConnection addr initScript next) = 
+interpretNodeL nodeRt (L.OpenTcpConnection addr initScript next) =
     next <$> openConnection nodeRt addr initScript
 
 interpretNodeL nodeRt (L.OpenUdpConnection addr initScript next) =
     next <$> openConnection nodeRt addr initScript
 
 interpretNodeL nodeRt (L.CloseTcpConnection (D.Connection addr) next) =
-    next <$> liftIO (closeConnection nodeRt addr RLens.tcpConnects)
+    next <$> closeConnection (nodeRt ^. RLens.tcpConnects) addr 
 
 interpretNodeL nodeRt (L.CloseUdpConnection (D.Connection addr) next) =
-    next <$> liftIO (closeConnection nodeRt addr RLens.udpConnects)
+    next <$> closeConnection (nodeRt ^. RLens.udpConnects) addr
 
 interpretNodeL nodeRt (L.InitDatabase cfg next) = do
     let path = cfg ^. Lens.path
@@ -74,7 +67,7 @@ type F f a = a -> f a
 
 class ConnectsLens a where
     connectsLens
-        :: Functor f 
+        :: Functor f
         => F f (TVar (Map D.Address (D.ConnectionVar a)))
         -> NodeRuntime
         -> f NodeRuntime
@@ -85,16 +78,23 @@ instance ConnectsLens D.Udp where
 instance ConnectsLens D.Tcp where
     connectsLens = RLens.tcpConnects
 
-closeConnection nodeRt addr lens = atomically $ do
-    m <- readTVar (nodeRt ^. lens)
+
+closeConnection
+    :: (Con.NetworkConnection protocol, Ord k)
+    => TVar (Map k (D.ConnectionVar protocol)) -> k -> IO ()
+closeConnection var addr = atomically $ do
+    m <- readTVar var
     whenJust (m ^. at addr) $ \con -> do
         Con.close con
-        modifyTVar (nodeRt ^. lens) $ M.delete addr
-    
+        modifyTVar var $ M.delete addr
+
+openConnection
+    :: forall k a1 a2 (a3 :: k).(ConnectsLens a1, Con.NetworkConnection a1)
+    => NodeRuntime -> D.Address -> L.NetworkHandlerL a1 L.NodeL a2 -> IO (D.Connection a3)
 openConnection nodeRt addr initScript = do
-    m <- liftIO $ atomically $ newTVar mempty
-    liftIO $ Net.runNetworkHandlerL m initScript
-    handlers <- liftIO $ readTVarIO m
+    m <- atomically $ newTVar mempty
+    _ <- Net.runNetworkHandlerL m initScript
+    handlers <- readTVarIO m
     newCon   <- Con.openConnect
         addr
         ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
@@ -118,4 +118,5 @@ setServerChan servs port chan = do
 runNodeL :: NodeRuntime -> L.NodeL a -> Res.ResIO a
 runNodeL nodeRt = foldFree (interpretNodeL nodeRt)
 
+logError' :: NodeRuntime -> Log.Message -> IO ()
 logError' nodeRt = runNodeL nodeRt . L.logError

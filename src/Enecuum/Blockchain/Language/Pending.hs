@@ -3,10 +3,7 @@ module Enecuum.Blockchain.Language.Pending where
 import qualified Data.Map                                 as Map
 import qualified Enecuum.Blockchain.Domain                as D
 import           Enecuum.Blockchain.Domain.BlockchainData (BlockchainData (..))
-import           Enecuum.Blockchain.Domain.Microblock     (Microblock (..))
-import           Enecuum.Blockchain.Domain.Transaction    (Transaction (..))
 import qualified Enecuum.Blockchain.Language.Graph        as L
-import qualified Enecuum.Core.Language                    as L
 import qualified Enecuum.Core.Types                       as D
 import qualified Enecuum.Framework.Domain                 as D
 import qualified Enecuum.Framework.Language               as L

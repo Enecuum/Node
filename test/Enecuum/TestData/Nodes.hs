@@ -6,15 +6,11 @@ module Enecuum.TestData.Nodes where
 
 import Enecuum.Prelude
 
-import qualified Data.Aeson                    as A
 import qualified Data.Map                      as Map
-import qualified Data.Text                     as Text
 import           Control.Lens                  (makeFieldsNoPrefix)
 
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
-import qualified Enecuum.Blockchain.Lens       as Lens
-import qualified Enecuum.Framework.Lens        as Lens
 import qualified Enecuum.Core.Lens             as Lens
 import           Enecuum.Language              (HasGraph)
 
@@ -50,8 +46,8 @@ simpleBootNodeDiscovery = pure bootNodeAddr
 bootNode :: L.NodeDefinitionL ()
 bootNode = do
     L.nodeTag bootNodeTag
-    L.initialization $ pure $ D.NodeID "abc"
-    L.servingRpc 2000 $ do
+    void $ L.initialization $ pure $ D.NodeID "abc"
+    L.serving D.Rpc 2000 $ do
         L.method acceptHello1
         L.method acceptGetHashId
 
@@ -66,7 +62,7 @@ masterNode = do
     L.nodeTag masterNodeTag
     nodeId <- D.withSuccess $ L.initialization masterNodeInitialization
     L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
-    L.servingRpc 2000 $ do
+    L.serving D.Rpc 2000 $ do
         L.method acceptHello1
         L.method acceptHello2
 
@@ -117,16 +113,16 @@ acceptBalanceChangeTraversing nodeData (BalanceChangeRequest change) = do
 
 newtorkNode1Initialization :: TG.TestGraphVar -> L.NodeL NetworkNode1Data
 newtorkNode1Initialization g = L.evalGraphIO g $ L.getNode TG.nilTransactionHash >>= \case
-    Nothing       -> error "Graph is not ready: no genesis node found."
-    Just baseNode -> pure $ NetworkNode1Data g baseNode
+    Nothing   -> error "Graph is not ready: no genesis node found."
+    Just node -> pure $ NetworkNode1Data g node
 
 networkNode1 :: TG.TestGraphVar -> L.NodeDefinitionL ()
 networkNode1 g = do
     L.nodeTag "networkNode1"
     nodeData <- L.initialization $ newtorkNode1Initialization g
-    L.servingRpc 2000 $ do
-        L.method (acceptGetBalanceTraversing nodeData)
-        L.method (acceptBalanceChangeTraversing nodeData)
+    L.serving D.Rpc 2000 $ do
+        L.method $ acceptGetBalanceTraversing nodeData
+        L.method $ acceptBalanceChangeTraversing nodeData
 
 networkNode2Scenario :: L.NodeL ()
 networkNode2Scenario = do
@@ -156,8 +152,8 @@ networkNode2 = do
 bootNodeValidation :: L.NodeDefinitionL ()
 bootNodeValidation = do
     L.nodeTag bootNodeTag
-    L.initialization $ pure $ D.NodeID "abc"
-    L.servingRpc 2000 $ do
+    void $ L.initialization $ pure $ D.NodeID "abc"
+    L.serving D.Rpc 2000 $ do
         L.method acceptGetHashId
         L.method acceptValidationRequest
 
@@ -208,18 +204,18 @@ acceptBalanceChange nodeData (BalanceChangeRequest change) = L.atomically $ do
 
 newtorkNode3Initialization :: TG.TestGraphVar -> L.NodeL NetworkNode3Data
 newtorkNode3Initialization g = do
-    baseNode <- L.evalGraphIO g $ L.getNode TG.nilTransactionHash >>= \case
+    node <- L.evalGraphIO g $ L.getNode TG.nilTransactionHash >>= \case
         Nothing       -> error "Graph is not ready: no genesis node found."
-        Just baseNode -> pure baseNode
-    balanceVar   <- L.atomically $ L.newVar 0
-    graphHeadVar <- L.atomically $ L.newVar $ baseNode ^. Lens.hash
-    pure $ NetworkNode3Data g graphHeadVar balanceVar
+        Just node -> pure node
+    balance   <- L.atomically $ L.newVar 0
+    graphHead <- L.atomically $ L.newVar $ node ^. Lens.hash
+    pure $ NetworkNode3Data g graphHead balance
 
 networkNode3 :: TG.TestGraphVar -> L.NodeDefinitionL ()
 networkNode3 g = do
     L.nodeTag "networkNode3"
     nodeData <- L.initialization $ newtorkNode3Initialization g
-    L.servingRpc 2000 $ do
+    L.serving D.Rpc 2000 $ do
         L.method (acceptGetBalance nodeData)
         L.method (acceptBalanceChange nodeData)
 

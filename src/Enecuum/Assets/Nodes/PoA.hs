@@ -56,6 +56,7 @@ sendMicroblock poaData block role = do
         mBlock <- case role of
             D.Good -> A.genMicroblock block tx
             D.Bad  -> A.generateBogusSignedMicroblock block tx
+            _      -> error "Error of config"
         L.logInfo
             $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
         void $ L.withConnection D.Tcp A.graphNodeTransmitterTcpAddress $

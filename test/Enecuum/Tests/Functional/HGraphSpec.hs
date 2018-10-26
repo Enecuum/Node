@@ -5,7 +5,6 @@
 
 module Enecuum.Tests.Functional.HGraphSpec where
 
-import           Control.Concurrent.STM
 import qualified Data.Map as M
 import           Data.Maybe
 import           Test.HUnit
@@ -14,12 +13,10 @@ import qualified Data.Aeson as A
 import           Enecuum.Prelude
 import           Enecuum.Domain as D
 
-import           Data.HGraph.StringHashable
-import qualified Data.HGraph.THGraph as G
 import           Enecuum.Core.HGraph.Interpreters.IO ( runHGraphIO )
 import           Enecuum.Core.HGraph.Internal.Impl ( initHGraph )
 import           Enecuum.Core.HGraph.Language
-import           Enecuum.Core.HGraph.Types
+
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit (fromHUnitTest)
 import           Test.QuickCheck (property)

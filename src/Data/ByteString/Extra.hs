@@ -1,9 +1,10 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Data.ByteString.Extra where
 
 import           Data.Aeson
 import           Data.Aeson.Types                      (typeMismatch)
 import qualified Data.ByteString.Char8      as BS
-import qualified Data.Text                  as E (Text, pack, unpack)
+import qualified Data.Text                  as E (pack, unpack)
 import           Enecuum.Prelude
 
 instance ToJSON ByteString where

@@ -9,20 +9,16 @@ module Enecuum.Blockchain.Domain.Crypto.Signature where
 import           "cryptonite" Crypto.Hash.Algorithms   (SHA3_256 (..))
 import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA  as ECDSA
 import           "cryptonite" Crypto.Random            (MonadRandom)
-import           Data.Aeson                            ((.:), (.=) )
+import           Data.Aeson                            ((.:), (.=))
 import qualified Data.Aeson                            as A
 import           Data.Aeson.Types                      (typeMismatch)
 import           Data.Bits
 import           Data.ByteString.Base64.Extra
-import qualified Data.ByteString.Char8                 as BS
 import           Data.ByteString.Conversion
-import           Data.ByteString.Extra
-import           Data.Serialize                        (Serialize, encode, Get, Serialize)
+import           Data.Serialize                        (Get, Serialize) 
 import qualified Data.Serialize                        as S
-import qualified Data.Text                             as E (Text, pack, unpack)
 import qualified Enecuum.Blockchain.Domain.Crypto.Keys as Enq
 import           Enecuum.Prelude                       hiding (pack, unpack, (.=))
-import           Data.UUID hiding (fromByteString)
 
 
 sign :: (Serialize msg, MonadRandom m) => Enq.PrivateKey -> msg -> m ECDSA.Signature

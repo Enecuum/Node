@@ -3,7 +3,7 @@ module Enecuum.Framework.Interpreters
   ) where
 
 import Enecuum.Framework.NodeDefinition.Interpreter as X
-import Enecuum.Framework.Network.Interpreter as X
+-- import Enecuum.Framework.Network.Interpreter as X
 import Enecuum.Framework.Networking.Interpreter as X
 import Enecuum.Framework.Node.Interpreter as X
 import Enecuum.Framework.Handler.Rpc.Interpreter as X

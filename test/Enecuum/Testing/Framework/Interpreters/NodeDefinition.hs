@@ -11,7 +11,7 @@ import qualified Enecuum.Testing.RLens                        as RLens
 import qualified Enecuum.Testing.Types                        as T
 import qualified Enecuum.Testing.Core.Interpreters            as Impl
 import qualified Enecuum.Testing.Framework.Interpreters.Node  as Impl
---import qualified Enecuum.Testing.Framework.Interpreters.State as Impl
+
 import qualified Enecuum.Testing.Framework.Internal.RpcServer as Impl (startNodeRpcServer)
 import qualified Enecuum.Testing.Framework.Internal.TcpLikeServer as Impl (startNodeTcpLikeServer, stopNodeTcpLikeServer)
 
@@ -73,6 +73,8 @@ interpretNodeDefinitionL _ (L.AwaitResult pPtr next) = do
     pVar <- D.getProcessVar pPtr
     result <- atomically $ takeTMVar pVar
     pure $ next result
+
+interpretNodeDefinitionL _ L.ServingUdp{} = error "interpretNodeDefinitionL: ServingUdp not implemented"
 
 interpretNodeDefinitionL _ (L.Std _ _) = error "STD not implemented in test runtime."
 

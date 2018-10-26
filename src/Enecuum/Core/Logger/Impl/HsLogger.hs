@@ -10,7 +10,7 @@ import           System.Log.Handler.Simple   (GenericHandler, fileHandler, strea
 import           System.Log.Logger
 
 import qualified Enecuum.Core.Language       as L
-import qualified Enecuum.Core.Types          as T (Format, LogLevel (..), LoggerConfig(..))
+import qualified Enecuum.Core.Types          as T (LogLevel (..), LoggerConfig(..))
 
 -- | Opaque type covering all information needed to teardown the logger.
 data HsLoggerHandle = HsLoggerHandle

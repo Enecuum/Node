@@ -1,4 +1,5 @@
-{-# LANGUAGE LambdaCase#-}
+{-# LANGUAGE    LambdaCase        #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Enecuum.Framework.Networking.Internal.Udp.Connection
     ( close
     , send
@@ -11,17 +12,17 @@ module Enecuum.Framework.Networking.Internal.Udp.Connection
 import           Enecuum.Prelude
 import           Enecuum.Framework.Networking.Internal.Connection
 import           Data.Aeson
-import           Control.Concurrent.Chan
+-- import           Control.Concurrent.Chan
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TMVar
 import qualified Control.Monad.Trans.Resource as Res
 
-import           Data.Aeson.Lens
+-- import           Data.Aeson.Lens
 import           Control.Concurrent.Async
 import qualified Enecuum.Framework.Domain.Networking as D
 import           Enecuum.Framework.Networking.Internal.Client
 import           Enecuum.Framework.Networking.Internal.Udp.Server 
-import qualified Network.Socket as S hiding (recv, send, sendAll)
+import qualified Network.Socket as S hiding (recv, send)
 import qualified Network.Socket.ByteString.Lazy as S
 import           Control.Monad.Extra
 
@@ -106,7 +107,7 @@ connectManager conn sock = readCommand conn >>= \case
     Just (D.Send val feedback) ->
         tryM (S.sendAll sock val) (atomically $ closeConn conn) $
             \_ -> do
-                tryPutMVar feedback True
+                _ <- tryPutMVar feedback True
                 connectManager conn sock
     -- conect is closed, stop of command reading
     Nothing           -> pure ()

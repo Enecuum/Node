@@ -17,7 +17,7 @@ import qualified Enecuum.Framework.Node.Interpreter        as Impl
 import qualified Enecuum.Framework.Domain.RPC              as D
 import qualified Enecuum.Framework.Domain.Networking       as D
 import qualified Enecuum.Framework.Domain.Process          as D
-import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection as Tcp
+-- import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection as Tcp
 import           Enecuum.Framework.Handler.Rpc.Interpreter
 import qualified Enecuum.Framework.Handler.Network.Interpreter         as Net
 import qualified Enecuum.Framework.Networking.Internal.Connection as Con
@@ -43,7 +43,7 @@ startServing nodeRt port initScript = do
     handlers <- readTVarIO m
     s        <- Con.startServer
         port
-        ((\f a b -> Impl.runNodeL nodeRt $ f a b) <$> handlers)
+        ((\f a' b -> Impl.runNodeL nodeRt $ f a' b) <$> handlers)
         (\(D.Connection addr) -> Impl.insertConnect (nodeRt ^. Impl.connectsLens) addr)
         (Impl.logError' nodeRt)
     atomically $ setServerChan (nodeRt ^. RLens.servers) port s
@@ -80,7 +80,7 @@ interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
 
 interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
     m <- atomically $ newTVar mempty
-    a <- runCmdHandlerL m handlers
+    _ <- runCmdHandlerL m handlers
     void $ forkIO $ do
         m'       <- readTVarIO m
         tag      <- readTVarIO (nodeRt ^. RLens.nodeTag)
