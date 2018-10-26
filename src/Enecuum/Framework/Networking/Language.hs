@@ -15,20 +15,20 @@ import           Language.Haskell.TH.MakeFunctor
 
 -- | Allows to work with network: open and close connections, send requests.
 data NetworkingF next where
-  -- | Eval low-level networking script.
-  EvalNetwork               :: L.NetworkL a -> (a -> next) -> NetworkingF  next
-  -- | Send RPC request and wait for the response.
-  SendRpcRequest            :: D.Address -> D.RpcRequest -> (Either Text D.RpcResponse -> next) -> NetworkingF next
-  -- | Send message to the connection.
-  SendTcpMsgByConnection    :: D.Connection D.Tcp -> D.RawData -> (Either D.NetworkError () -> next)-> NetworkingF next
-  SendUdpMsgByConnection    :: D.Connection D.Udp -> D.RawData -> (Either D.NetworkError () -> next)-> NetworkingF next
-  SendUdpMsgByAddress       :: D.Address          -> D.RawData -> (Either D.NetworkError () -> next)-> NetworkingF next
-  -- | Eval core effect.
-  EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF  next
+    -- | Eval low-level networking script.
+    EvalNetwork               :: L.NetworkL a -> (a -> next) -> NetworkingF  next
+    -- | Send RPC request and wait for the response.
+    SendRpcRequest            :: D.Address -> D.RpcRequest -> (Either Text D.RpcResponse -> next) -> NetworkingF next
+    -- | Send message to the connection.
+    SendTcpMsgByConnection    :: D.Connection D.Tcp -> D.RawData -> (Either D.NetworkError () -> next)-> NetworkingF next
+    SendUdpMsgByConnection    :: D.Connection D.Udp -> D.RawData -> (Either D.NetworkError () -> next)-> NetworkingF next
+    SendUdpMsgByAddress       :: D.Address          -> D.RawData -> (Either D.NetworkError () -> next)-> NetworkingF next
+    -- | Eval core effect.
+    EvalCoreEffectNetworkingF :: L.CoreEffect a -> (a -> next) -> NetworkingF  next
 
 makeFunctorInstance ''NetworkingF
 
-type NetworkingL next = Free NetworkingF next
+type NetworkingL = Free NetworkingF
 
 -- | Eval low-level networking script.
 evalNetwork :: L.NetworkL a -> NetworkingL a
@@ -49,12 +49,12 @@ toNetworkMsg msg = A.encode $ D.NetworkMsg (D.toTag msg) (toJSON msg)
 class Send con m where
     send :: (Typeable a, ToJSON a) => con -> a -> m (Either D.NetworkError ())
 
-instance Send (D.Connection D.Tcp) (Free NetworkingF) where
+instance Send (D.Connection D.Tcp) NetworkingL where
     send conn msg = liftF $ SendTcpMsgByConnection conn (toNetworkMsg msg) id
 
-instance Send (D.Connection D.Udp) (Free NetworkingF) where
+instance Send (D.Connection D.Udp) NetworkingL where
     send conn msg = liftF $ SendUdpMsgByConnection conn (toNetworkMsg msg) id
-instance SendUdp (Free NetworkingF) where
+instance SendUdp NetworkingL where
     notify conn msg = liftF $ SendUdpMsgByAddress conn (toNetworkMsg msg) id
 
 class SendUdp m where
@@ -64,13 +64,13 @@ class SendUdp m where
 evalCoreEffectNetworkingF :: L.CoreEffect a -> NetworkingL a
 evalCoreEffectNetworkingF coreEffect = liftF $ EvalCoreEffectNetworkingF coreEffect id
 
-instance L.Logger (Free NetworkingF) where
+instance L.Logger NetworkingL where
   logMessage level msg = evalCoreEffectNetworkingF $ L.logMessage level msg
 
 makeRpcRequest' :: (Typeable a, ToJSON a, FromJSON b) => D.Address -> a -> NetworkingL (Either Text b)
 makeRpcRequest' address arg = responseValidation =<< sendRpcRequest address (D.toRpcRequest arg)
 
-instance L.ControlFlow (Free NetworkingF) where
+instance L.ControlFlow NetworkingL where
     delay = evalCoreEffectNetworkingF . L.delay
 
 responseValidation :: (FromJSON b, Applicative f) => Either Text D.RpcResponse -> f (Either Text b)
