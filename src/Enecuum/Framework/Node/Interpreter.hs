@@ -4,13 +4,13 @@
 module Enecuum.Framework.Node.Interpreter where
 
 import           Enecuum.Prelude
-import qualified Control.Monad.Trans.Resource             as Res
 import qualified "rocksdb-haskell" Database.RocksDB       as Rocks
 
 import           Control.Concurrent.STM.TChan
 import qualified Data.Map                                         as M
 import           Enecuum.Core.HGraph.Internal.Impl
-import qualified Enecuum.Core.Types                  as D
+import qualified Enecuum.Core.Types                               as D
+import qualified Enecuum.Core.Lens                                as Lens
 import           Enecuum.Core.HGraph.Interpreters.IO
 import qualified Enecuum.Core.Interpreters                        as Impl
 import qualified Enecuum.Core.Logger.Language                     as L
@@ -27,16 +27,16 @@ import qualified Network.Socket                                   as S
 
 
 -- | Interpret NodeL.
-interpretNodeL :: NodeRuntime -> L.NodeF a -> Res.ResIO a
+interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
     next <$> atomically (Impl.runStateL nodeRt statefulAction)
 
-interpretNodeL _      (L.EvalGraphIO gr act next       ) = next <$> liftIO (runHGraphIO gr act)
+interpretNodeL _      (L.EvalGraphIO gr act next       ) = next <$>  (runHGraphIO gr act)
 
-interpretNodeL nodeRt (L.EvalNetworking networking next) = next <$> liftIO (Impl.runNetworkingL nodeRt networking)
+interpretNodeL nodeRt (L.EvalNetworking networking next) = next <$>  (Impl.runNetworkingL nodeRt networking)
 
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
-    next <$> liftIO (Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects)
+    next <$>  (Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects)
 
 interpretNodeL nodeRt (L.OpenTcpConnection addr initScript next) =
     next <$> openConnection nodeRt addr initScript
@@ -57,11 +57,15 @@ interpretNodeL nodeRt (L.InitDatabase cfg next) = do
             , Rocks.errorIfExists   = cfg ^. Lens.options . Lens.errorIfExists
             }
     -- TODO: FIXME: check what exceptions may be thrown here and handle it correctly.
-    dbHandle <- Rocks.openBracket path opts
-    liftIO $ atomically $ modifyTVar (nodeRt ^. RLens.databases) (M.insert path dbHandle)
+    -- TODO: ResourceT usage.
+    dbHandle <- Rocks.open path opts
+    atomically $ modifyTVar (nodeRt ^. RLens.databases) (M.insert path dbHandle)
     pure $ next $ Right $ D.Storage path
 
-interpretNodeL _ (L.NewGraph next) = next <$> liftIO initHGraph
+interpretNodeL nodeRt (L.EvalDatabase db action next) = do
+    error "DB not implemented."
+
+interpretNodeL _ (L.NewGraph next) = next <$>  initHGraph
 
 type F f a = a -> f a
 
@@ -99,7 +103,7 @@ openConnection nodeRt addr initScript = do
         addr
         ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
         (logError' nodeRt)
-    liftIO $ insertConnect (nodeRt ^. connectsLens) addr newCon
+    insertConnect (nodeRt ^. connectsLens) addr newCon
     pure $ D.Connection addr
 
 insertConnect :: Con.NetworkConnection a => TVar (Map D.Address (D.ConnectionVar a)) -> D.Address -> D.ConnectionVar a -> IO ()
@@ -115,7 +119,7 @@ setServerChan servs port chan = do
     modifyTVar servs (M.insert port chan)
 
 -- | Runs node language. Runs interpreters for the underlying languages.
-runNodeL :: NodeRuntime -> L.NodeL a -> Res.ResIO a
+runNodeL :: NodeRuntime -> L.NodeL a -> IO a
 runNodeL nodeRt = foldFree (interpretNodeL nodeRt)
 
 logError' :: NodeRuntime -> Log.Message -> IO ()

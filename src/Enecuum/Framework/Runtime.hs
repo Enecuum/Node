@@ -3,8 +3,7 @@
 module Enecuum.Framework.Runtime where
 
 import           Control.Concurrent.STM.TChan
-import           Control.Monad.Trans.Resource (ReleaseKey)
-import qualified Data.Map                          as Map
+import qualified Data.Map                           as Map
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 import           Enecuum.Core.Runtime              (CoreRuntime)
@@ -14,7 +13,7 @@ import           Enecuum.Prelude
 -- TODO: the same types as in test runtime. Unify it.
 data VarHandle = VarHandle D.VarId (TVar Any)
 type NodeState = TMVar (Map.Map D.VarId VarHandle)
-type DBHandle  = (ReleaseKey, Rocks.DB)
+type DBHandle  = Rocks.DB
 
 data NodeRuntime = NodeRuntime
     { _coreRuntime :: CoreRuntime

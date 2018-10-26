@@ -3,8 +3,9 @@ module Enecuum.Framework.Networking.Internal.Connection where
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TMVar
 import           Data.Aeson
+-- import           Data.Aeson.Lens
 import           Enecuum.Prelude
-import qualified Control.Monad.Trans.Resource as Res
+-- import           Control.Concurrent.Async
 import qualified Enecuum.Framework.Domain.Networking as D
 -- import           Enecuum.Framework.Networking.Internal.Client
 -- import           Enecuum.Framework.Networking.Internal.Tcp.Server
@@ -42,13 +43,8 @@ sendWithTimeOut conn msg = do
     tryTakeResponse timeoutDelay feedback
 
 class NetworkConnection protocol where
-    startServer :: S.PortNumber 
-                -> Handlers protocol 
-                -> (D.Connection protocol -> D.ConnectionVar protocol -> Res.ResIO ()) 
-                -> (Text -> Res.ResIO ()) 
-                -> Res.ResIO ServerHandle
+    startServer :: S.PortNumber -> Handlers protocol -> (D.Connection protocol -> D.ConnectionVar protocol -> IO ()) -> (Text -> IO ()) -> IO ServerHandle
     -- | Send msg to node.
-    send        :: D.ConnectionVar protocol -> LByteString -> Res.ResIO (Either D.NetworkError ())
+    send        :: D.ConnectionVar protocol -> LByteString -> IO (Either D.NetworkError ())
     close       :: D.ConnectionVar protocol -> STM ()
-    openConnect :: D.Address -> Handlers protocol -> (Text -> Res.ResIO ()) -> Res.ResIO (D.ConnectionVar protocol)
-
+    openConnect :: D.Address -> Handlers protocol -> (Text -> IO ()) -> IO (D.ConnectionVar protocol)
