@@ -58,11 +58,13 @@ type KBlockEntityKey = D.DBKey KBlocksDB KBlockEntity
 
 
 findValue :: D.DBKey db spec -> L.DatabaseL db (Maybe a)
-findValue key = undefined
+findValue key = error "findValue not implemented."
 
 toDBKey :: a -> D.DBKey db spec
-toDBKey = undefined
+toDBKey = error "toDBKey not implemented."
 
+writeValue :: D.DBKey db spec -> L.DatabaseL db ()
+writeValue = error "writeValue not implemented."
 
 data NodeData = NodeData
     { _kBlocksDB     :: D.Storage KBlocksDB
@@ -94,12 +96,32 @@ getKBlock nodeData (Just e) = do
     mbKBlockEntity   <- L.withDatabase (nodeData ^. kBlocksDB) $ findValue key2
     pure $ toKBlock <$> mbPrevHashEntity <*> mbKBlockEntity
 
-
 getNextKBlock :: NodeData -> D.KBlock -> L.NodeL (Maybe D.KBlock)
 getNextKBlock nodeData kBlock = do
     mbMeta   <- getKBlockMeta nodeData kBlock
     mbKBlock <- getKBlock nodeData mbMeta
     pure Nothing
+
+
+writeKBlockMeta :: L.DatabaseL KBlocksMetaDB ()
+writeKBlockMeta = pure ()
+
+readKBlockMeta :: L.DatabaseL KBlocksMetaDB (Maybe KBlockMetaEntity)
+readKBlockMeta = pure Nothing
+
+dbKBlockMetaNode :: FilePath -> L.NodeDefinitionL (Either Text ())
+dbKBlockMetaNode dbPath = do
+    let cfg :: D.DBConfig KBlocksMetaDB = D.DBConfig dbPath $ D.DBOptions
+            { D._createIfMissing = True
+            , D._errorIfExists   = True
+            }
+    eDB <- L.scenario $ L.initDatabase cfg
+    case eDB of
+        Left err -> pure $ Left err
+        Right db -> L.scenario $ L.withDatabase db $ do
+            writeKBlockMeta
+            readKBlockMeta
+            pure (Right ())
 
 kBlock1 = D.KBlock
     { _time      = 0
@@ -125,10 +147,9 @@ kBlock3 = D.KBlock
     , _solver    = D.genesisHash
     }
 
-dbNode :: D.DBConfig db -> L.NodeDefinitionL (Either Text ())
-dbNode cfg = do
+dbInitNode :: D.DBConfig db -> L.NodeDefinitionL (Either Text ())
+dbInitNode cfg = do
     eDB <- L.scenario $ L.initDatabase cfg
-    L.delay $ 1000 * 500
     case eDB of
         Left err -> pure $ Left err
         Right _  -> pure $ Right ()
@@ -162,36 +183,42 @@ withDbPresence dbPath act = do
     rmDb dbPath
 
 spec :: Spec
-spec = describe "Database support tests" $ do
+spec = do
     dbPath <- runIO $ mkDbPath "test.db"
-    it "DB is missing, create, errorIfExists False, no errors expected" $ withDbAbsence dbPath $ do
-        let cfg = D.DBConfig dbPath $ D.DBOptions
-                { D._createIfMissing = True
-                , D._errorIfExists   = False
-                }
-        eRes <- evalNode $ dbNode cfg
-        eRes `shouldBe` Right ()
+    describe "Database creation tests" $ do
+        it "DB is missing, create, errorIfExists False, no errors expected" $ withDbAbsence dbPath $ do
+            let cfg = D.DBConfig dbPath $ D.DBOptions
+                    { D._createIfMissing = True
+                    , D._errorIfExists   = False
+                    }
+            eRes <- evalNode $ dbInitNode cfg
+            eRes `shouldBe` Right ()
+    
+        it "DB is missing, create, errorIfExists True, no errors expected" $ withDbAbsence dbPath $ do
+            let cfg = D.DBConfig dbPath $ D.DBOptions
+                    { D._createIfMissing = True
+                    , D._errorIfExists   = True
+                    }
+            eRes <- evalNode $ dbInitNode cfg
+            eRes `shouldBe` Right ()
+    
+        it "DB is present, create, errorIfExists False, no errors expected" $ withDbPresence dbPath $ do
+            let cfg = D.DBConfig dbPath $ D.DBOptions
+                    { D._createIfMissing = True
+                    , D._errorIfExists   = False
+                    }
+            eRes <- evalNode $ dbInitNode cfg
+            eRes `shouldBe` Right ()
+    
+        it "DB is present, create, errorIfExists False, errors expected" $ withDbPresence dbPath $ do
+            let cfg = D.DBConfig dbPath $ D.DBOptions
+                    { D._createIfMissing = True
+                    , D._errorIfExists   = True
+                    }
+            eRes <- evalNode $ dbInitNode cfg
+            eRes `shouldBe` (Left $ "user error (open: Invalid argument: " +| dbPath |+ ": exists (error_if_exists is true))")
 
-    it "DB is missing, create, errorIfExists True, no errors expected" $ withDbAbsence dbPath $ do
-        let cfg = D.DBConfig dbPath $ D.DBOptions
-                { D._createIfMissing = True
-                , D._errorIfExists   = True
-                }
-        eRes <- evalNode $ dbNode cfg
-        eRes `shouldBe` Right ()
-
-    it "DB is present, create, errorIfExists False, no errors expected" $ withDbPresence dbPath $ do
-        let cfg = D.DBConfig dbPath $ D.DBOptions
-                { D._createIfMissing = True
-                , D._errorIfExists   = False
-                }
-        eRes <- evalNode $ dbNode cfg
-        eRes `shouldBe` Right ()
-
-    it "DB is present, create, errorIfExists False, errors expected" $ withDbPresence dbPath $ do
-        let cfg = D.DBConfig dbPath $ D.DBOptions
-                { D._createIfMissing = True
-                , D._errorIfExists   = True
-                }
-        eRes <- evalNode $ dbNode cfg
-        eRes `shouldBe` (Left $ "user error (open: Invalid argument: " +| dbPath |+ ": exists (error_if_exists is true))")
+    describe "Database usage tests" $ do
+        it "Test1" $ do
+            eRes <- evalNode $ dbKBlockMetaNode dbPath
+            eRes `shouldBe` Right ()
