@@ -10,42 +10,28 @@
 
 module Enecuum.Tests.Integration.DatabaseSpec where
 
+import           Enecuum.Prelude
+
 import qualified Data.Aeson   as A
 import qualified Data.Map     as M
 import qualified Data.List    as List
+import           Data.Kind
+import qualified Data.ByteString.Lazy as LBS
 import           Control.Lens (makeFieldsNoPrefix)
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
-
-import           Enecuum.Prelude
 import qualified System.Directory as Dir
 import           System.FilePath as FP ((</>))
+import           Text.Printf (printf)
 
 import           Enecuum.Interpreters                         (runNodeDefinitionL)
 import qualified Enecuum.Runtime                              as R
 import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
 import qualified Enecuum.Domain                               as D
 import qualified Enecuum.Language                             as L
+import qualified Enecuum.Blockchain.Lens                      as Lens
 
 import           Test.Hspec
 import           Enecuum.Testing.Integrational
-
-
-data KBlocksMetaDB
-data KBlockMetaEntity    = KBlockMetaEntity D.DBIndex
-type KBlockMetaEntityKey = D.DBKey KBlocksMetaDB KBlockMetaEntity
-
-data KBlocksDB
-data KBlockPrevHashEntity    = KBlockPrevHashEntity D.StringHash
-type KBlockPrevHashEntityKey = D.DBKey KBlocksDB KBlockPrevHashEntity
-
-data KBlockEntity = KBlockEntity
-    { _time      :: Integer
-    , _number    :: Integer
-    , _nonce     :: Integer
-    , _solver    :: D.StringHash
-    }
-type KBlockEntityKey = D.DBKey KBlocksDB KBlockEntity
-
 
 -- findValue :: forall a m. (Typeable a, FromJSON a, Database m) => D.DBKey -> m (Either D.DBError a)
 -- findValue key = do
@@ -56,21 +42,71 @@ type KBlockEntityKey = D.DBKey KBlocksDB KBlockEntity
 --             Nothing  -> pure $ Left $ D.InvalidType $ show $ typeOf (Proxy :: Proxy a)
 --             Just val -> pure $ Right val
 
+dbOpts =  D.DBOptions
+    { D._createIfMissing = True
+    , D._errorIfExists   = True
+    }
 
-findValue :: D.DBKey db spec -> L.DatabaseL db (Maybe a)
+findValue :: DBKey spec -> L.DatabaseL db (Maybe a)
 findValue key = error "findValue not implemented."
-
--- toDBKey   :: srcType  -> D.DBKey   db spec
--- toDBValue :: srcType  -> D.DBValue db spec
-
-toDBKey :: a -> D.DBKey db spec
-toDBKey = error "toDBKey not implemented."
 
 toDBValue :: a -> D.DBValue db spec
 toDBValue = error "toDBValue not implemented."
 
-putValue :: D.DBKey db spec -> D.DBValue db spec -> L.DatabaseL db ()
-putValue (D.DBKey key) (D.DBValue val) = L.putValue key val
+-- kBlocks_meta (kBlock_hash -> kBlock_meta)
+-- -----------------------------------------------------------------
+-- AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= (AAAAAAA, "")
+
+-- kBlocks (kBlock_idx|0 -> prev_hash, kBlock_idx|1 -> kBlock_data)
+-- ------------------------------------------------------------
+-- 0000000|0 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+-- 0000000|1 {number:0, nonce: 0, solver: 1}
+
+data KBlocksMetaDB
+data KBlockMetaValue = KBlockMetaValue Integer
+data KBlockMetaKey
+
+data KBlocksDB
+data KBlockPrevHashValue    = KBlockPrevHashValue D.StringHash
+data KBlockValue = KBlockValue Integer Integer Integer D.StringHash
+data KBlockPrevHashKey
+data KBlockKey
+
+class ToDBKey entity src where
+    data DBKey entity :: *
+    toDBKey :: src -> DBKey entity
+
+class GetDBKey entity where
+    getRawDBKey :: DBKey entity -> D.DBKeyRaw
+
+instance ToDBKey KBlockMetaKey D.KBlock where
+    data DBKey KBlockMetaKey = KBlockMetaKey D.DBKeyRaw
+    toDBKey = KBlockMetaKey . LBS.fromStrict . D.fromStringHash . D.toHash
+
+instance GetDBKey KBlockMetaKey where
+    getRawDBKey (KBlockMetaKey k) = k
+
+instance ToDBKey KBlockPrevHashKey KBlockMetaValue where
+    data DBKey KBlockPrevHashKey = KBlockPrevHashKey D.StringHash
+    toDBKey (KBlockMetaValue blockIdx) = KBlockPrevHashKey $ D.StringHash $ encodeUtf8 @String k
+        where
+            k = printf "%07d0" blockIdx
+
+instance ToDBKey KBlockKey KBlockMetaValue where
+    data DBKey KBlockKey = KBlockKey D.StringHash
+    toDBKey (KBlockMetaValue blockIdx) = KBlockKey $ D.StringHash $ encodeUtf8 @String k
+        where
+            k = printf "%07d1" blockIdx
+
+instance GetDBKey KBlockPrevHashKey where
+    getRawDBKey (KBlockPrevHashKey k) = LBS.fromStrict $ D.fromStringHash k
+
+instance GetDBKey KBlockKey where
+    getRawDBKey (KBlockKey k) = LBS.fromStrict $ D.fromStringHash k
+
+
+putValue :: GetDBKey spec => DBKey spec -> D.DBValue db spec -> L.DatabaseL db ()
+putValue dbKey (D.DBValue val) = L.putValue (getRawDBKey dbKey) val
 
 data NodeData = NodeData
     { _kBlocksDB     :: D.Storage KBlocksDB
@@ -79,52 +115,23 @@ data NodeData = NodeData
 
 makeFieldsNoPrefix ''NodeData
 
-getKBlockMeta :: NodeData -> D.KBlock -> L.NodeL (Maybe KBlockMetaEntity)
+getKBlockMeta :: NodeData -> D.KBlock -> L.NodeL (Maybe KBlockMetaValue)
 getKBlockMeta nodeData kBlock = do
-    let key :: KBlockMetaEntityKey = toDBKey kBlock
+    let key = toDBKey @KBlockMetaKey kBlock
     L.withDatabase (nodeData ^. kBlocksMetaDB) $ findValue key
 
-toKBlock :: KBlockPrevHashEntity -> KBlockEntity -> D.KBlock
-toKBlock (KBlockPrevHashEntity prevHash) (KBlockEntity t n nc s) = D.KBlock
-    { D._time     = t
-    , D._prevHash = prevHash
-    , D._number   = n
-    , D._nonce    = nc
-    , D._solver   = s
-    }
-
-getKBlock :: NodeData -> Maybe KBlockMetaEntity -> L.NodeL (Maybe D.KBlock)
-getKBlock _         Nothing = pure Nothing
-getKBlock nodeData (Just e) = do
-    let key1 :: KBlockPrevHashEntityKey = toDBKey e
-    let key2 :: KBlockEntityKey         = toDBKey e
-    mbPrevHashEntity <- L.withDatabase (nodeData ^. kBlocksDB) $ findValue key1
-    mbKBlockEntity   <- L.withDatabase (nodeData ^. kBlocksDB) $ findValue key2
-    pure $ toKBlock <$> mbPrevHashEntity <*> mbKBlockEntity
-
-getNextKBlock :: NodeData -> D.KBlock -> L.NodeL (Maybe D.KBlock)
-getNextKBlock nodeData kBlock = do
-    mbMeta   <- getKBlockMeta nodeData kBlock
-    mbKBlock <- getKBlock nodeData mbMeta
-    pure Nothing
-
--- toDBKey   :: D.KBlock -> D.DBKey KBlocksMetaDB KBlockMetaEntityKey
--- toDBValue :: D.KBlock -> D.DBValue KBlocksMetaDB KBlockMetaEntity
 writeKBlockMeta :: L.DatabaseL KBlocksMetaDB ()
 writeKBlockMeta = do
-    let key = toDBKey   kBlock1
+    let key = toDBKey @KBlockMetaKey kBlock1
     let val = toDBValue kBlock1
     putValue key val
 
-readKBlockMeta :: L.DatabaseL KBlocksMetaDB (Maybe KBlockMetaEntity)
+readKBlockMeta :: L.DatabaseL KBlocksMetaDB (Maybe KBlockMetaValue)
 readKBlockMeta = pure Nothing
 
 dbKBlockMetaNode :: FilePath -> L.NodeDefinitionL (Either Text ())
 dbKBlockMetaNode dbPath = do
-    let cfg :: D.DBConfig KBlocksMetaDB = D.DBConfig dbPath $ D.DBOptions
-            { D._createIfMissing = True
-            , D._errorIfExists   = True
-            }
+    let cfg :: D.DBConfig KBlocksMetaDB = D.DBConfig dbPath dbOpts
     eDB <- L.scenario $ L.initDatabase cfg
     case eDB of
         Left err -> pure $ Left err
@@ -132,6 +139,30 @@ dbKBlockMetaNode dbPath = do
             writeKBlockMeta
             readKBlockMeta
             pure (Right ())
+
+toKBlock :: KBlockPrevHashValue -> KBlockValue -> D.KBlock
+toKBlock (KBlockPrevHashValue prevHash) (KBlockValue t n nc s) = D.KBlock
+    { D._time     = t
+    , D._prevHash = prevHash
+    , D._number   = n
+    , D._nonce    = nc
+    , D._solver   = s
+    }
+
+getKBlock :: NodeData -> Maybe KBlockMetaValue -> L.NodeL (Maybe D.KBlock)
+getKBlock _         Nothing = pure Nothing
+getKBlock nodeData (Just e) = do
+    let key1 = toDBKey @KBlockPrevHashKey e
+    let key2 = toDBKey @KBlockKey e
+    mbPrevHashValue <- L.withDatabase (nodeData ^. kBlocksDB) $ findValue key1
+    mbKBlockValue   <- L.withDatabase (nodeData ^. kBlocksDB) $ findValue key2
+    pure $ toKBlock <$> mbPrevHashValue <*> mbKBlockValue
+
+getNextKBlock :: NodeData -> D.KBlock -> L.NodeL (Maybe D.KBlock)
+getNextKBlock nodeData kBlock = do
+    mbMeta   <- getKBlockMeta nodeData kBlock
+    mbKBlock <- getKBlock nodeData mbMeta
+    pure Nothing
 
 kBlock1 = D.KBlock
     { _time      = 0
