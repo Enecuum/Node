@@ -11,7 +11,8 @@ import qualified Enecuum.Core.Types.Database as D
 
 -- | Interface to Key-Value database.
 data DatabaseF db a where
-    Contains :: D.DBKeyRaw -> (Bool -> next) -> DatabaseF db next
+    -- | Check whether the key exists.
+    HasKey   :: D.DBKeyRaw -> (Bool -> next) -> DatabaseF db next
     -- | Write a single value to the DB.
     PutValue :: D.DBKeyRaw -> D.DBValueRaw -> (() -> next) -> DatabaseF db next
     -- | Lookup a value from the DB.
@@ -23,12 +24,12 @@ data DatabaseF db a where
 type DatabaseL db = Free (DatabaseF db)
 
 class Monad m => Database m where
-    contains :: D.DBKeyRaw -> m Bool
+    hasKey   :: D.DBKeyRaw -> m Bool
     putValue :: D.DBKeyRaw -> D.DBValueRaw -> m ()
     getValue :: D.DBKeyRaw -> m (Maybe D.DBValueRaw)
 
 instance Database (DatabaseL db) where
-    contains key     = liftF $ Contains key id
+    hasKey   key     = liftF $ HasKey   key id
     putValue key val = liftF $ PutValue key val id
     getValue key     = liftF $ GetValue key id
 

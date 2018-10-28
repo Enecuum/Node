@@ -31,11 +31,11 @@ import           Enecuum.Testing.Integrational
 
 
 data KBlocksMetaDB
-data KBlockMetaEntity = KBlockMetaEntity D.DBIndex
+data KBlockMetaEntity    = KBlockMetaEntity D.DBIndex
 type KBlockMetaEntityKey = D.DBKey KBlocksMetaDB KBlockMetaEntity
 
 data KBlocksDB
-data KBlockPrevHashEntity = KBlockPrevHashEntity D.StringHash
+data KBlockPrevHashEntity    = KBlockPrevHashEntity D.StringHash
 type KBlockPrevHashEntityKey = D.DBKey KBlocksDB KBlockPrevHashEntity
 
 data KBlockEntity = KBlockEntity
@@ -60,11 +60,17 @@ type KBlockEntityKey = D.DBKey KBlocksDB KBlockEntity
 findValue :: D.DBKey db spec -> L.DatabaseL db (Maybe a)
 findValue key = error "findValue not implemented."
 
+-- toDBKey   :: srcType  -> D.DBKey   db spec
+-- toDBValue :: srcType  -> D.DBValue db spec
+
 toDBKey :: a -> D.DBKey db spec
 toDBKey = error "toDBKey not implemented."
 
-writeValue :: D.DBKey db spec -> L.DatabaseL db ()
-writeValue = error "writeValue not implemented."
+toDBValue :: a -> D.DBValue db spec
+toDBValue = error "toDBValue not implemented."
+
+putValue :: D.DBKey db spec -> D.DBValue db spec -> L.DatabaseL db ()
+putValue (D.DBKey key) (D.DBValue val) = L.putValue key val
 
 data NodeData = NodeData
     { _kBlocksDB     :: D.Storage KBlocksDB
@@ -102,9 +108,13 @@ getNextKBlock nodeData kBlock = do
     mbKBlock <- getKBlock nodeData mbMeta
     pure Nothing
 
-
+-- toDBKey   :: D.KBlock -> D.DBKey KBlocksMetaDB KBlockMetaEntityKey
+-- toDBValue :: D.KBlock -> D.DBValue KBlocksMetaDB KBlockMetaEntity
 writeKBlockMeta :: L.DatabaseL KBlocksMetaDB ()
-writeKBlockMeta = pure ()
+writeKBlockMeta = do
+    let key = toDBKey   kBlock1
+    let val = toDBValue kBlock1
+    putValue key val
 
 readKBlockMeta :: L.DatabaseL KBlocksMetaDB (Maybe KBlockMetaEntity)
 readKBlockMeta = pure Nothing
@@ -167,7 +177,9 @@ mkDb dbPath = do
     rmDb dbPath
     Dir.createDirectoryIfMissing True dbPath
     -- This creates an empty DB to get correct files in the directory.
-    db <- Rocks.open dbPath $ Rocks.defaultOptions {Rocks.createIfMissing = True, Rocks.errorIfExists = False}
+    db <- Rocks.open dbPath $ Rocks.defaultOptions { Rocks.createIfMissing = True
+                                                   , Rocks.errorIfExists = False
+                                                   }
     Rocks.close db
 
 withDbAbsence :: FilePath -> IO a -> IO ()
@@ -193,7 +205,7 @@ spec = do
                     }
             eRes <- evalNode $ dbInitNode cfg
             eRes `shouldBe` Right ()
-    
+
         it "DB is missing, create, errorIfExists True, no errors expected" $ withDbAbsence dbPath $ do
             let cfg = D.DBConfig dbPath $ D.DBOptions
                     { D._createIfMissing = True
@@ -201,7 +213,7 @@ spec = do
                     }
             eRes <- evalNode $ dbInitNode cfg
             eRes `shouldBe` Right ()
-    
+
         it "DB is present, create, errorIfExists False, no errors expected" $ withDbPresence dbPath $ do
             let cfg = D.DBConfig dbPath $ D.DBOptions
                     { D._createIfMissing = True
@@ -209,7 +221,7 @@ spec = do
                     }
             eRes <- evalNode $ dbInitNode cfg
             eRes `shouldBe` Right ()
-    
+
         it "DB is present, create, errorIfExists False, errors expected" $ withDbPresence dbPath $ do
             let cfg = D.DBConfig dbPath $ D.DBOptions
                     { D._createIfMissing = True

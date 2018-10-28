@@ -5,10 +5,12 @@ module Enecuum.Core.Types.Database where
 import           Enecuum.Prelude
 
 type DBValueRaw = LByteString
-type DBKeyRaw = LByteString
+type DBKeyRaw   = LByteString
 
 type DBIndex = Int
-data DBKey db spec = DBKey LByteString
+
+data DBKey   db spec = DBKey   DBKeyRaw
+data DBValue db spec = DBValue DBValueRaw
 
 data DBErrorType
     = KeyNotFound
