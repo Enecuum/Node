@@ -48,7 +48,7 @@ data NodeDefinitionF next where
 
 makeFunctorInstance ''NodeDefinitionF
 
-type NodeDefinitionL next = Free NodeDefinitionF next
+type NodeDefinitionL = Free NodeDefinitionF
 
 std :: CmdHandlerL () -> NodeDefinitionL ()
 std handlers = liftF $ Std handlers id
@@ -101,14 +101,14 @@ instance Serving D.Tcp (NetworkHandlerL D.Tcp L.NodeL ()) where
 instance Serving D.Udp (NetworkHandlerL D.Udp L.NodeL ()) where
     serving _ port handlersF = liftF $ ServingUdp port handlersF id
 
-instance L.Connection (Free L.NodeF) a => L.Connection (Free NodeDefinitionF) a where
+instance L.Connection L.NodeL a => L.Connection NodeDefinitionL a where
     close   conn       = evalNodeL $ L.close conn
     open  t addr handl = evalNodeL $ L.open t addr handl
 
-instance L.Send a L.NodeL => L.Send a (Free NodeDefinitionF) where
+instance L.Send a L.NodeL => L.Send a NodeDefinitionL where
     send conn msg = evalNodeL $ L.send conn msg
 
-instance L.SendUdp (Free NodeDefinitionF) where
+instance L.SendUdp NodeDefinitionL where
     notify conn msg = evalNodeL $ L.notify conn msg
 
 -- | Starts RPC server.
@@ -126,20 +126,20 @@ servingMsg :: D.PortNumber -> NetworkHandlerL D.Tcp L.NodeL () -> NodeDefinition
 servingMsg port handlersF = liftF $ ServingTcp port handlersF id
 
 
-instance L.Logger (Free NodeDefinitionF) where
-    logMessage level msg = evalCoreEffectNodeDefinitionF $ L.logMessage level msg
+instance L.Logger NodeDefinitionL where
+    logMessage level = evalCoreEffectNodeDefinitionF . L.logMessage level
 
-instance L.ERandom (Free NodeDefinitionF) where
-    evalCoreCrypto = evalCoreEffectNodeDefinitionF . L.evalCoreCrypto
-    getRandomInt =  evalCoreEffectNodeDefinitionF . L.getRandomInt
+instance L.ERandom NodeDefinitionL where
+    evalCoreCrypto      = evalCoreEffectNodeDefinitionF . L.evalCoreCrypto
+    getRandomInt        = evalCoreEffectNodeDefinitionF . L.getRandomInt
     getRandomByteString = evalCoreEffectNodeDefinitionF . L.getRandomByteString
-    nextUUID = evalCoreEffectNodeDefinitionF $ L.nextUUID
+    nextUUID            = evalCoreEffectNodeDefinitionF   L.nextUUID
 
-instance L.ControlFlow (Free NodeDefinitionF) where
+instance L.ControlFlow NodeDefinitionL where
     delay = evalCoreEffectNodeDefinitionF . L.delay
 
-instance L.StateIO (Free NodeDefinitionF) where
-    atomically = scenario . L.atomically
-    newVarIO  = scenario . L.newVarIO
-    readVarIO = scenario . L.readVarIO
-    writeVarIO var a = scenario $ L.writeVarIO var a
+instance L.StateIO NodeDefinitionL where
+    atomically     = scenario . L.atomically
+    newVarIO       = scenario . L.newVarIO
+    readVarIO      = scenario . L.readVarIO
+    writeVarIO var = scenario . L.writeVarIO var

@@ -72,10 +72,10 @@ instance Connection (Free NodeF) D.Udp where
     open  _ addr handl = liftF $ OpenUdpConnection  addr handl id
 
 instance L.Send a (Free L.NetworkingF) => L.Send a NodeL where
-    send conn msg = evalNetworking $ L.send conn msg
+    send conn   = evalNetworking . L.send conn
 
 instance L.SendUdp NodeL where
-    notify conn msg = evalNetworking $ L.notify conn msg
+    notify conn = evalNetworking . L.notify conn
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
 evalGraphIO :: (T.StringHashable c, Serialize c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) a -> NodeL a
@@ -84,25 +84,25 @@ evalGraphIO g graphAction = liftF $ EvalGraphIO g graphAction id
 newGraph :: (Serialize c, T.StringHashable c) => NodeL (T.TGraph c)
 newGraph = liftF $ NewGraph id
 
-instance L.Logger (Free NodeF) where
-    logMessage level msg = evalCoreEffectNodeF $ L.logMessage level msg
+instance L.Logger NodeL where
+    logMessage level = evalCoreEffectNodeF . L.logMessage level
 
-instance L.ERandom (Free NodeF) where
-    evalCoreCrypto = evalCoreEffectNodeF . L.evalCoreCrypto
-    getRandomInt = evalCoreEffectNodeF . L.getRandomInt
+instance L.ERandom NodeL where
+    evalCoreCrypto      = evalCoreEffectNodeF . L.evalCoreCrypto
+    getRandomInt        = evalCoreEffectNodeF . L.getRandomInt
     getRandomByteString = evalCoreEffectNodeF . L.getRandomByteString
-    nextUUID = evalCoreEffectNodeF $ L.nextUUID
+    nextUUID            = evalCoreEffectNodeF   L.nextUUID
 
-instance L.FileSystem (Free NodeF) where
-    readFile = evalCoreEffectNodeF . L.readFile
-    getHomeDirectory = evalCoreEffectNodeF L.getHomeDirectory
-    createFilePath filepath = evalCoreEffectNodeF $ L.createFilePath filepath 
+instance L.FileSystem NodeL where
+    readFile         = evalCoreEffectNodeF . L.readFile
+    getHomeDirectory = evalCoreEffectNodeF   L.getHomeDirectory
+    createFilePath   = evalCoreEffectNodeF . L.createFilePath 
 
-instance L.ControlFlow (Free NodeF) where
-    delay =  evalCoreEffectNodeF . L.delay
+instance L.ControlFlow NodeL where
+    delay = evalCoreEffectNodeF . L.delay
 
-instance L.StateIO (Free NodeF) where
-    atomically = evalStateAtomically
-    newVarIO  = evalStateAtomically . L.newVar
-    readVarIO = evalStateAtomically . L.readVar
-    writeVarIO var a = evalStateAtomically $ L.writeVar var a
+instance L.StateIO NodeL where
+    atomically     = evalStateAtomically
+    newVarIO       = evalStateAtomically . L.newVar
+    readVarIO      = evalStateAtomically . L.readVar
+    writeVarIO var = evalStateAtomically . L.writeVar var

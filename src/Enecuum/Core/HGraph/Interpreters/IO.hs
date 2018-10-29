@@ -1,6 +1,5 @@
 {-# LANGUAGE NoImplicitPrelude      #-}
 {-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE DeriveGeneric          #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE TypeOperators          #-}
@@ -31,7 +30,7 @@ import           Enecuum.Core.HGraph.Types
 interpretHGraphLIO :: (Serialize c, StringHashable c) => TGraph c -> HGraphF (TNodeL c) a -> IO a
 
 -- create a new node
-interpretHGraphLIO graph (NewNode x next) = next <$> (atomically $ Impl.newNode graph x)
+interpretHGraphLIO graph (NewNode x next) = next <$> atomically (Impl.newNode graph x)
 
 -- get nodeby hash, content or ref
 interpretHGraphLIO graph (GetNode x next) = do

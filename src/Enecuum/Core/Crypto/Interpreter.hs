@@ -11,9 +11,8 @@ import Enecuum.Blockchain.Domain.Crypto (generateNewRandomAnonymousKeyPair, sign
 
 -- | Interpret CryptoL language.
 interpretCryptoL :: MonadRandom m => L.CryptoF a -> m a
-interpretCryptoL (L.GenerateKeyPair next) = do
-    kp <- generateNewRandomAnonymousKeyPair
-    pure $ next kp
+interpretCryptoL (L.GenerateKeyPair next) =
+    next <$> generateNewRandomAnonymousKeyPair
 interpretCryptoL (L.Sign key msg next) = do
     signature <- sign key msg
     pure $ next signature

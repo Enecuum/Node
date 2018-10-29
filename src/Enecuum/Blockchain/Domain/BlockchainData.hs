@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
 module Enecuum.Blockchain.Domain.BlockchainData where
 
 import           Data.HGraph.StringHashable            (StringHash)

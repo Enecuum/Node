@@ -49,7 +49,7 @@ test genFun fun = TestCase $ do
 testBool :: IO a -> (a -> Bool) -> Test
 testBool genFun fun = TestCase $ do
     s <- replicateM 10 genFun
-    and (map fun s) `shouldBe` True
+    all fun s `shouldBe` True
 
 -- generator functions
 generateTransaction :: IO D.Transaction

@@ -5,10 +5,10 @@
 module Enecuum.Blockchain.Domain.Graph where
 
 import           Data.HGraph.StringHashable            ( StringHashable, toHash)
--- import qualified Data.HGraph.THGraph                   as G
+
 import qualified Enecuum.Blockchain.Domain.KBlock      as D
 import qualified Enecuum.Blockchain.Domain.Microblock  as D
--- import qualified Enecuum.Blockchain.Domain.Transaction as D
+
 import           Enecuum.Core.HGraph.Internal.Impl     (initHGraph)
 import qualified Enecuum.Core.HGraph.Internal.Types    as T
 import           Enecuum.Core.HGraph.Interpreters.IO   (runHGraphIO)

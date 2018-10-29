@@ -1,4 +1,3 @@
-{-# LANGUAGE PackageImports #-}
 module Enecuum.Core.Random.Interpreter where
 
 import qualified Enecuum.Core.Language            as L

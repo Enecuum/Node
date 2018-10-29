@@ -38,7 +38,7 @@ masterNodeTag = "masterNode"
 
 -- | Boot node discovery sample scenario.
 -- Currently, does nothing but returns the default boot node address.
-simpleBootNodeDiscovery :: L.NetworkL D.Address
+simpleBootNodeDiscovery :: L.NodeL D.Address
 simpleBootNodeDiscovery = pure bootNodeAddr
 
 -- Scenario 1: master node can interact with boot node.
@@ -53,7 +53,7 @@ bootNode = do
 
 masterNodeInitialization :: L.NodeL (Either Text D.NodeID)
 masterNodeInitialization = do
-    addr                      <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
+    addr                      <- simpleBootNodeDiscovery
     GetHashIDResponse eHashID <- L.makeRpcRequestUnsafe addr GetHashIDRequest
     pure $ Right (D.NodeID eHashID)
 
@@ -81,7 +81,7 @@ calculateBalanceTraversing :: D.StringHash -> TG.Balance -> TG.TestGraphL TG.Bal
 calculateBalanceTraversing curNodeHash curBalance = L.getNode curNodeHash >>= \case
     Nothing      -> error "Invalid reference found."
     Just curNode -> do
-        let balanceChange = (D.fromContent $ curNode ^. Lens.content) ^. TG.change
+        let balanceChange = D.fromContent (curNode ^. Lens.content) ^. TG.change
         case Map.toList (curNode ^. Lens.links) of
             []                  -> pure $ curBalance + balanceChange
             [(nextNodeHash, _)] -> calculateBalanceTraversing nextNodeHash $ curBalance + balanceChange
@@ -92,7 +92,7 @@ tryAddTransactionTraversing
 tryAddTransactionTraversing curNodeHash prevBalance change = L.getNode curNodeHash >>= \case
     Nothing      -> error "Invalid reference found."
     Just curNode -> do
-        let curBalanceChange = (D.fromContent $ curNode ^. Lens.content) ^. TG.change
+        let curBalanceChange = D.fromContent (curNode ^. Lens.content) ^. TG.change
         let curBalance       = prevBalance + curBalanceChange
         case Map.toList (curNode ^. Lens.links) of
             []                  -> TG.tryAddTransaction' (curNode ^. Lens.hash) curBalance change
@@ -159,7 +159,7 @@ bootNodeValidation = do
 
 masterNodeInitializeWithValidation :: L.NodeL (Either Text D.NodeID)
 masterNodeInitializeWithValidation = do
-    addr                           <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
+    addr                           <- simpleBootNodeDiscovery
     GetHashIDResponse eHashID      <- L.makeRpcRequestUnsafe addr GetHashIDRequest
     validRes :: ValidationResponse <- L.makeRpcRequestUnsafe addr ValidRequest
     L.logInfo $ "For the valid request recieved " +|| validRes ||+ "."
@@ -188,7 +188,7 @@ makeFieldsNoPrefix ''NetworkNode3Data
 
 acceptGetBalance :: NetworkNode3Data -> GetBalanceRequest -> L.NodeL GetBalanceResponse
 acceptGetBalance nodeData GetBalanceRequest =
-    GetBalanceResponse <$> (L.atomically $ L.readVar (nodeData ^. balanceVar))
+    GetBalanceResponse <$> L.atomically (L.readVar (nodeData ^. balanceVar))
 
 acceptBalanceChange :: NetworkNode3Data -> BalanceChangeRequest -> L.NodeL BalanceChangeResponse
 acceptBalanceChange nodeData (BalanceChangeRequest change) = L.atomically $ do
@@ -205,7 +205,7 @@ acceptBalanceChange nodeData (BalanceChangeRequest change) = L.atomically $ do
 newtorkNode3Initialization :: TG.TestGraphVar -> L.NodeL NetworkNode3Data
 newtorkNode3Initialization g = do
     node <- L.evalGraphIO g $ L.getNode TG.nilTransactionHash >>= \case
-        Nothing       -> error "Graph is not ready: no genesis node found."
+        Nothing   -> error "Graph is not ready: no genesis node found."
         Just node -> pure node
     balance   <- L.atomically $ L.newVar 0
     graphHead <- L.atomically $ L.newVar $ node ^. Lens.hash

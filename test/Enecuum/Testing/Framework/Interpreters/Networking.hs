@@ -11,7 +11,6 @@ import qualified Enecuum.Framework.Lens as Lens
 import qualified Enecuum.Testing.RLens                          as RLens
 import qualified Enecuum.Testing.Types                          as T
 import qualified Enecuum.Testing.Core.Interpreters              as Impl
-import qualified Enecuum.Testing.Framework.Interpreters.Network as Impl
 import           Enecuum.Testing.TestRuntime                    (controlRequest)
 import           Enecuum.Testing.Framework.Internal.TcpLikeServerBinding (closeConnection)
 
@@ -54,8 +53,6 @@ interpretNetworkingL nodeRt (L.SendRpcRequest toAddr req next) = next <$> relayR
 interpretNetworkingL nodeRt (L.SendTcpMsgByConnection conn msg next) = do
     void $ sendMessageToConnection nodeRt conn msg
     pure $ next $ Right ()
-
-interpretNetworkingL nodeRt (L.EvalNetwork networkAction next) = next <$> Impl.runNetworkL nodeRt networkAction
 
 interpretNetworkingL nodeRt (L.EvalCoreEffectNetworkingF coreEffect next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
