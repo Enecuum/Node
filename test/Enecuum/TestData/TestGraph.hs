@@ -37,7 +37,7 @@ type TestGraphL a = L.HGraphL Transaction a
 
 
 nilHash :: StringHash
-nilHash = toHash (Transaction (toHash @Int 0) 0)
+nilHash = toHash (Transaction (toHash (0 :: Int)) 0)
 
 nilTransaction :: Transaction
 nilTransaction = Transaction nilHash 0

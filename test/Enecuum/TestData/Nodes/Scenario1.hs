@@ -1,6 +1,4 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE FunctionalDependencies #-}
 
 module Enecuum.TestData.Nodes.Scenario1 where
 

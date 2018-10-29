@@ -81,7 +81,7 @@ calculateBalanceTraversing :: D.StringHash -> TG.Balance -> TG.TestGraphL TG.Bal
 calculateBalanceTraversing curNodeHash curBalance = L.getNode curNodeHash >>= \case
     Nothing      -> error "Invalid reference found."
     Just curNode -> do
-        let balanceChange = (D.fromContent $ curNode ^. Lens.content) ^. TG.change
+        let balanceChange = D.fromContent (curNode ^. Lens.content) ^. TG.change
         case Map.toList (curNode ^. Lens.links) of
             []                  -> pure $ curBalance + balanceChange
             [(nextNodeHash, _)] -> calculateBalanceTraversing nextNodeHash $ curBalance + balanceChange
@@ -92,7 +92,7 @@ tryAddTransactionTraversing
 tryAddTransactionTraversing curNodeHash prevBalance change = L.getNode curNodeHash >>= \case
     Nothing      -> error "Invalid reference found."
     Just curNode -> do
-        let curBalanceChange = (D.fromContent $ curNode ^. Lens.content) ^. TG.change
+        let curBalanceChange = D.fromContent (curNode ^. Lens.content) ^. TG.change
         let curBalance       = prevBalance + curBalanceChange
         case Map.toList (curNode ^. Lens.links) of
             []                  -> TG.tryAddTransaction' (curNode ^. Lens.hash) curBalance change
@@ -188,7 +188,7 @@ makeFieldsNoPrefix ''NetworkNode3Data
 
 acceptGetBalance :: NetworkNode3Data -> GetBalanceRequest -> L.NodeL GetBalanceResponse
 acceptGetBalance nodeData GetBalanceRequest =
-    GetBalanceResponse <$> (L.atomically $ L.readVar (nodeData ^. balanceVar))
+    GetBalanceResponse <$> L.atomically (L.readVar (nodeData ^. balanceVar))
 
 acceptBalanceChange :: NetworkNode3Data -> BalanceChangeRequest -> L.NodeL BalanceChangeResponse
 acceptBalanceChange nodeData (BalanceChangeRequest change) = L.atomically $ do
@@ -205,7 +205,7 @@ acceptBalanceChange nodeData (BalanceChangeRequest change) = L.atomically $ do
 newtorkNode3Initialization :: TG.TestGraphVar -> L.NodeL NetworkNode3Data
 newtorkNode3Initialization g = do
     node <- L.evalGraphIO g $ L.getNode TG.nilTransactionHash >>= \case
-        Nothing       -> error "Graph is not ready: no genesis node found."
+        Nothing   -> error "Graph is not ready: no genesis node found."
         Just node -> pure node
     balance   <- L.atomically $ L.newVar 0
     graphHead <- L.atomically $ L.newVar $ node ^. Lens.hash
