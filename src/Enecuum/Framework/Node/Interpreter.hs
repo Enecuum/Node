@@ -14,17 +14,25 @@ import qualified Enecuum.Core.Lens                                as Lens
 import           Enecuum.Core.HGraph.Interpreters.IO
 import qualified Enecuum.Core.Interpreters                        as Impl
 import qualified Enecuum.Core.Logger.Language                     as L
+import qualified Enecuum.Core.Database.Runtime                    as R
 import qualified Enecuum.Framework.Domain.Networking              as D
 import qualified Enecuum.Framework.Handler.Network.Interpreter    as Net
 import qualified Enecuum.Framework.Networking.Internal.Connection as Con
 import qualified Enecuum.Framework.Networking.Interpreter         as Impl
 import qualified Enecuum.Framework.Language                       as L
 import qualified Enecuum.Framework.RLens                          as RLens
+import qualified Enecuum.Framework.Runtime                        as R
 import           Enecuum.Framework.Runtime                        (NodeRuntime)
 import qualified Enecuum.Framework.State.Interpreter              as Impl
 import qualified Enecuum.Core.Types.Logger as Log
 import qualified Network.Socket                                   as S
 
+
+runDatabase _ _ _ = error "runDatabase not implemented."
+
+dbWorker = error "dbWorker not implemented."
+
+startDBWorker nodeRt control = forkIO (dbWorker nodeRt control)
 
 -- | Interpret NodeL.
 interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
@@ -58,17 +66,29 @@ interpretNodeL nodeRt (L.InitDatabase cfg next) = do
             }
     -- TODO: FIXME: check what exceptions may be thrown here and handle it correctly.
     -- TODO: ResourceT usage.
-    eDbHandle <- try $ Rocks.open path opts
-    case eDbHandle of
+    eDb <- try $ Rocks.open path opts
+    case eDb of
         Left (err :: SomeException) -> pure $ next $ Left $ show err
         Right db -> do
-            atomically $ modifyTVar (nodeRt ^. RLens.databases) (M.insert path db)
+            control <- D.Control <$> newEmptyMVar <*> newEmptyMVar
+
+            threadId <- startDBWorker nodeRt control 
+
+            let dbControl = R.DBControl control threadId
+            let dbHandle = R.DBHandle db dbControl
+            atomically $ modifyTVar (nodeRt ^. RLens.databases) (M.insert path dbHandle)
             pure $ next $ Right $ D.Storage path
 
-interpretNodeL nodeRt (L.EvalDatabase db action next) = do
-    error "DB not implemented."
+interpretNodeL nodeRt (L.EvalDatabase storage action next) = do
+    dbs <- readTVarIO $ nodeRt ^. RLens.databases
+    case M.lookup (storage ^. Lens.path) dbs of
+        Nothing       -> error $ "Impossible: DB is not registered: " +|| db ^. Lens.path ||+ "."
+        Just dbHandle -> do
+            r <- runDatabase nodeRt dbHandle action
+            pure $ next r
 
-interpretNodeL _ (L.NewGraph next) = next <$>  initHGraph
+
+interpretNodeL _ (L.NewGraph next) = next <$> initHGraph
 
 type F f a = a -> f a
 
@@ -81,8 +101,6 @@ class ConnectsLens a where
 
 instance ConnectsLens D.Udp where
     connectsLens = RLens.udpConnects
-
-    
 
 instance ConnectsLens D.Tcp where
     connectsLens = RLens.tcpConnects

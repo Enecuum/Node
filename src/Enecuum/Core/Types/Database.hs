@@ -1,4 +1,5 @@
-{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE DeriveAnyClass        #-}
 
 module Enecuum.Core.Types.Database where
 
@@ -20,7 +21,9 @@ data DBErrorType
 
 data DBError = DBError DBErrorType Text
 
-data Storage db = Storage FilePath
+data Storage db = Storage
+    { _path :: FilePath
+    }
 
 data DBOptions = DBOptions
     { _createIfMissing :: Bool
