@@ -5,16 +5,18 @@
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE PackageImports        #-}
+{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE PackageImports         #-}
 
 module Enecuum.Tests.Integration.DatabaseSpec where
 
 import           Enecuum.Prelude
 
-import qualified Data.Aeson   as A
-import qualified Data.Map     as M
-import qualified Data.List    as List
+import qualified Data.Aeson    as A
+import           Data.Typeable (typeOf)
+import           Data.Proxy    (Proxy)
+import qualified Data.Map      as M
+import qualified Data.List     as List
 import           Data.Kind
 import qualified Data.ByteString.Lazy as LBS
 import           Control.Lens (makeFieldsNoPrefix)
@@ -33,16 +35,14 @@ import qualified Enecuum.Blockchain.Lens                      as Lens
 import           Test.Hspec
 import           Enecuum.Testing.Integrational
 
--- findValue :: forall a m. (Typeable a, FromJSON a, Database m) => D.DBKey -> m (Either D.DBError a)
--- findValue key = do
---     mbRaw <- getValue key
---     case mbRaw of
---         Nothing  -> pure $ Left $ D.KeyNotFound key
---         Just raw -> case A.decode raw of
---             Nothing  -> pure $ Left $ D.InvalidType $ show $ typeOf (Proxy :: Proxy a)
---             Just val -> pure $ Right val
+-- TODO: type of a
+parseValue :: (Typeable a, FromJSON a) => D.DBValueRaw -> D.DBResult a
+parseValue raw = case A.decode $ LBS.fromStrict raw of
+    Nothing  -> Left $ D.DBError D.InvalidType ""
+    Just val -> Right val
 
-dbOpts =  D.DBOptions
+dbOpts :: D.DBOptions
+dbOpts = D.DBOptions
     { D._createIfMissing = True
     , D._errorIfExists   = True
     }
@@ -50,12 +50,9 @@ dbOpts =  D.DBOptions
 findValue :: DBKey spec -> L.DatabaseL db (Maybe a)
 findValue key = error "findValue not implemented."
 
-toDBValue :: a -> D.DBValue db spec
-toDBValue = error "toDBValue not implemented."
-
 -- kBlocks_meta (kBlock_hash -> kBlock_meta)
 -- -----------------------------------------------------------------
--- AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= (AAAAAAA, "")
+-- 4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY= (0, "")
 
 -- kBlocks (kBlock_idx|0 -> prev_hash, kBlock_idx|1 -> kBlock_data)
 -- ------------------------------------------------------------
@@ -63,50 +60,83 @@ toDBValue = error "toDBValue not implemented."
 -- 0000000|1 {number:0, nonce: 0, solver: 1}
 
 data KBlocksMetaDB
-data KBlockMetaValue = KBlockMetaValue Integer
-data KBlockMetaKey
+data KBlockMetaEntity
 
 data KBlocksDB
-data KBlockPrevHashValue = KBlockPrevHashValue D.StringHash
-data KBlockValue = KBlockValue Integer Integer Integer D.StringHash
-data KBlockPrevHashKey
-data KBlockKey
+data KBlockPrevHashEntity
+data KBlockEntity
 
-class ToDBKey entity src where
-    data DBKey entity :: *
-    toDBKey :: src -> DBKey entity
+class DBEntity entity src where
+    data DBKey   entity :: *
+    data DBValue entity :: *
+    toDBKey   :: src -> DBKey entity
+    toDBValue :: DBKey entity -> src -> DBValue entity
 
-class GetDBKey entity where
-    getRawDBKey :: DBKey entity -> D.DBKeyRaw
+class GetRawDBEntity entity where
+    getRawDBKey    :: DBKey   entity -> D.DBKeyRaw
+    getRawDBValue  :: DBValue entity -> D.DBValueRaw
 
-instance ToDBKey KBlockMetaKey D.KBlock where
-    data DBKey KBlockMetaKey = KBlockMetaKey D.DBKeyRaw
-    toDBKey = KBlockMetaKey . LBS.fromStrict . D.fromStringHash . D.toHash
+getRawDBEntity :: GetRawDBEntity entity => DBKey entity -> DBValue entity -> (D.DBKeyRaw, D.DBValueRaw)
+getRawDBEntity dbKey dbVal = (getRawDBKey dbKey, getRawDBValue dbVal)
 
-instance GetDBKey KBlockMetaKey where
-    getRawDBKey (KBlockMetaKey k) = k
+instance DBEntity KBlockMetaEntity D.KBlock where
+    data DBKey   KBlockMetaEntity = KBlockMetaKey D.DBKeyRaw
+        deriving (Show, Eq, Ord)
+    data DBValue KBlockMetaEntity = KBlockMetaValue Integer
+        deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
+    toDBKey   = KBlockMetaKey . D.fromStringHash . D.toHash
+    toDBValue _ kBlock = KBlockMetaValue $ kBlock ^. Lens.number
 
-instance ToDBKey KBlockPrevHashKey KBlockMetaValue where
-    data DBKey KBlockPrevHashKey = KBlockPrevHashKey D.StringHash
-    toDBKey (KBlockMetaValue blockIdx) = KBlockPrevHashKey $ D.StringHash $ encodeUtf8 @String k
-        where
-            k = printf "%07d0" blockIdx
+instance GetRawDBEntity KBlockMetaEntity where
+    getRawDBKey   (KBlockMetaKey k)   = k
+    getRawDBValue (KBlockMetaValue v) = show v
 
-instance ToDBKey KBlockKey KBlockMetaValue where
-    data DBKey KBlockKey = KBlockKey D.StringHash
-    toDBKey (KBlockMetaValue blockIdx) = KBlockKey $ D.StringHash $ encodeUtf8 @String k
-        where
-            k = printf "%07d1" blockIdx
+instance DBEntity KBlockPrevHashEntity Integer where
+    data DBKey   KBlockPrevHashEntity = KBlockPrevHashKey D.StringHash
+        deriving (Show, Eq, Ord)
+    data DBValue KBlockPrevHashEntity = KBlockPrevHashValue D.StringHash
+        deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
+    toDBKey idx = KBlockPrevHashKey $ D.StringHash $ encodeUtf8 @String $ printf "%07d0" idx
+    toDBValue _ idx = error "2222222222222"
 
-instance GetDBKey KBlockPrevHashKey where
-    getRawDBKey (KBlockPrevHashKey k) = LBS.fromStrict $ D.fromStringHash k
+instance DBEntity KBlockEntity Integer where
+    data DBKey   KBlockEntity = KBlockKey D.StringHash
+        deriving (Show, Eq, Ord)
+    data DBValue KBlockEntity = KBlockValue Integer Integer Integer D.StringHash
+        deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
+    toDBKey idx = KBlockKey $ D.StringHash $ encodeUtf8 @String $ printf "%07d1" idx
+    toDBValue _ idx = error "333333333333333"
 
-instance GetDBKey KBlockKey where
-    getRawDBKey (KBlockKey k) = LBS.fromStrict $ D.fromStringHash k
+instance GetRawDBEntity KBlockPrevHashEntity where
+    getRawDBKey   (KBlockPrevHashKey k)   = D.fromStringHash k
+    getRawDBValue (KBlockPrevHashValue k) = error "4444444444"
 
+instance GetRawDBEntity KBlockEntity where
+    getRawDBKey   (KBlockKey k)         = D.fromStringHash k
+    getRawDBValue (KBlockValue _ _ _ _) = error "55555555"
 
-putValue :: GetDBKey spec => DBKey spec -> D.DBValue db spec -> L.DatabaseL db ()
-putValue dbKey (D.DBValue val) = L.putValue (getRawDBKey dbKey) val
+putValue :: GetRawDBEntity spec => DBKey spec -> DBValue spec -> L.DatabaseL db ()
+putValue dbKey dbVal = let
+    (rawK, rawV) = getRawDBEntity dbKey dbVal
+    in L.putValue rawK rawV
+
+type DBE spec = (DBKey spec, DBValue spec)
+
+getEntity
+    :: (FromJSON (DBValue spec), GetRawDBEntity spec, Typeable (DBValue spec))
+    => DBKey spec
+    -> L.DatabaseL db (D.DBResult (DBE spec))
+getEntity dbKey = do
+    eRawVal <- L.getValue $ getRawDBKey dbKey
+    pure $ eRawVal >>= parseValue >>= (\dbVal -> Right (dbKey, dbVal))
+
+getValue
+    :: (FromJSON (DBValue spec), GetRawDBEntity spec, Typeable (DBValue spec))
+    => DBKey spec
+    -> L.DatabaseL db (D.DBResult (DBValue spec))
+getValue dbKey = do
+    eEntity <- getEntity dbKey
+    pure $ eEntity >>= Right . snd
 
 data NodeData = NodeData
     { _kBlocksDB     :: D.Storage KBlocksDB
@@ -115,32 +145,25 @@ data NodeData = NodeData
 
 makeFieldsNoPrefix ''NodeData
 
-getKBlockMeta :: NodeData -> D.KBlock -> L.NodeL (Maybe KBlockMetaValue)
-getKBlockMeta nodeData kBlock = do
-    let key = toDBKey @KBlockMetaKey kBlock
+getKBlockMetaEntity :: NodeData -> D.KBlock -> L.NodeL (Maybe (DBE KBlockMetaEntity))
+getKBlockMetaEntity nodeData kBlock = do
+    let key = toDBKey @KBlockMetaEntity kBlock
     L.withDatabase (nodeData ^. kBlocksMetaDB) $ findValue key
 
-writeKBlockMeta :: L.DatabaseL KBlocksMetaDB ()
-writeKBlockMeta = do
-    let key = toDBKey @KBlockMetaKey kBlock1
-    let val = toDBValue kBlock1
-    putValue key val
-
-readKBlockMeta :: L.DatabaseL KBlocksMetaDB (Maybe KBlockMetaValue)
-readKBlockMeta = pure Nothing
-
-dbKBlockMetaNode :: FilePath -> L.NodeDefinitionL (Either Text ())
+dbKBlockMetaNode :: FilePath -> L.NodeDefinitionL (Either D.DBError Bool)
 dbKBlockMetaNode dbPath = do
     let cfg :: D.DBConfig KBlocksMetaDB = D.DBConfig dbPath dbOpts
     eDB <- L.scenario $ L.initDatabase cfg
     case eDB of
         Left err -> pure $ Left err
         Right db -> L.scenario $ L.withDatabase db $ do
-            writeKBlockMeta
-            readKBlockMeta
-            pure (Right ())
+            let key = toDBKey @KBlockMetaEntity kBlock1
+            let val = toDBValue key kBlock1
+            putValue key val
+            eVal <- getValue key
+            pure $ eVal >>= (\val2 -> Right (val == val2))
 
-toKBlock :: KBlockPrevHashValue -> KBlockValue -> D.KBlock
+toKBlock :: DBValue KBlockPrevHashEntity -> DBValue KBlockEntity -> D.KBlock
 toKBlock (KBlockPrevHashValue prevHash) (KBlockValue t n nc s) = D.KBlock
     { D._time     = t
     , D._prevHash = prevHash
@@ -149,20 +172,15 @@ toKBlock (KBlockPrevHashValue prevHash) (KBlockValue t n nc s) = D.KBlock
     , D._solver   = s
     }
 
-getKBlock :: NodeData -> Maybe KBlockMetaValue -> L.NodeL (Maybe D.KBlock)
+getKBlock :: NodeData -> Maybe (DBValue KBlockMetaEntity) -> L.NodeL (Maybe D.KBlock)
 getKBlock _         Nothing = pure Nothing
-getKBlock nodeData (Just e) = do
-    let key1 = toDBKey @KBlockPrevHashKey e
-    let key2 = toDBKey @KBlockKey e
+getKBlock nodeData (Just (KBlockMetaValue kBlockIdx)) = do
+    let key1 = toDBKey @KBlockPrevHashEntity kBlockIdx
+    let key2 = toDBKey @KBlockEntity kBlockIdx
     mbPrevHashValue <- L.withDatabase (nodeData ^. kBlocksDB) $ findValue key1
     mbKBlockValue   <- L.withDatabase (nodeData ^. kBlocksDB) $ findValue key2
     pure $ toKBlock <$> mbPrevHashValue <*> mbKBlockValue
 
-buildGraph :: NodeData -> D.StringHash -> L.NodeL (Maybe )
-buildGraph nodeData kBlockHash = do
-    mbMeta   <- getKBlockMeta nodeData kBlock
-
-    pure Nothing
 
 kBlock1 = D.KBlock
     { _time      = 0
@@ -188,12 +206,10 @@ kBlock3 = D.KBlock
     , _solver    = D.genesisHash
     }
 
-dbInitNode :: D.DBConfig db -> L.NodeDefinitionL (Either Text ())
+dbInitNode :: D.DBConfig db -> L.NodeDefinitionL (D.DBResult ())
 dbInitNode cfg = do
-    eDB <- L.scenario $ L.initDatabase cfg
-    case eDB of
-        Left err -> pure $ Left err
-        Right _  -> pure $ Right ()
+    eDb <- L.scenario $ L.initDatabase cfg
+    pure $ eDb >> Right ()
 
 mkDbPath :: FilePath -> IO FilePath
 mkDbPath dbName = do
@@ -259,9 +275,9 @@ spec = do
                     , D._errorIfExists   = True
                     }
             eRes <- evalNode $ dbInitNode cfg
-            eRes `shouldBe` (Left $ "user error (open: Invalid argument: " +| dbPath |+ ": exists (error_if_exists is true))")
+            eRes `shouldBe` (Left (D.DBError D.DBSystemError ("user error (open: Invalid argument: " +| dbPath |+ ": exists (error_if_exists is true))")))
 
     describe "Database usage tests" $ do
-        it "Test1" $ do
+        it "Write and Read KBlock Meta" $ withDbAbsence dbPath $ do
             eRes <- evalNode $ dbKBlockMetaNode dbPath
-            eRes `shouldBe` Right ()
+            eRes `shouldBe` Right True

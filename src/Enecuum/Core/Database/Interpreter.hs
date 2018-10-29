@@ -1,22 +1,34 @@
+{-# LANGUAGE PackageImports #-}
+
 module Enecuum.Core.Database.Interpreter where
 
 import           Enecuum.Prelude
 import qualified Enecuum.Core.Language as L
+import qualified Enecuum.Core.Types as D
+import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 
 
--- | Interpret CryptoL language.
-interpretDatabaseL :: L.FileSystemF a -> IO a
-interpretDatabaseL (L.ReadFile filename next) = do
-    text <- readFile filename
-    pure $ next text
-interpretDatabaseL (L.GetHomeDirectory next) = do
-    filename <- getHomeDirectory 
-    pure $ next filename 
-interpretDatabaseL (L.CreateFilePath file next) = do
-    createDirectoryIfMissing True file
-    pure $ next file
+-- TODO: think about read / write options.
+-- https://task.enecuum.com/issues/2859
 
-runDatabaseL :: L.FileSystemL a -> IO a
-runDatabaseL = foldFree interpretDatabaseL
+-- | Interpret DatabaseL language.
+interpretDatabaseL :: Rocks.DB -> L.DatabaseF db a -> IO a
 
-    
+-- TODO: Perhaps, this method can be implemented more effectively with using Bloom filter.
+-- For now, it's just the same as
+interpretDatabaseL db (L.HasKey key next) = do
+    mbVal <- Rocks.get db Rocks.defaultReadOptions key
+    pure $ next $ isJust mbVal
+
+interpretDatabaseL db (L.GetValue key next) = do
+    mbVal <- Rocks.get db Rocks.defaultReadOptions key
+    pure $ next $ case mbVal of
+        Nothing  -> Left $ D.DBError D.KeyNotFound (show key)
+        Just val -> Right val
+
+interpretDatabaseL db (L.PutValue key val next) = do
+    Rocks.put db Rocks.defaultWriteOptions key val
+    pure $ next ()
+
+runDatabaseL ::  Rocks.DB -> L.DatabaseL db a -> IO a
+runDatabaseL db = foldFree (interpretDatabaseL db)

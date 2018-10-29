@@ -7,7 +7,7 @@ import qualified Data.Map                           as M
 import           Data.Aeson                         as A
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent                 (killThread)
-import qualified "rocksdb-haskell" Database.RocksDB       as Rocks
+import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import qualified Network.Socket.ByteString.Lazy     as S
 import qualified Network.Socket                     as S hiding (recv)
 import           Enecuum.Framework.Networking.Internal.Tcp.Server
@@ -162,6 +162,7 @@ runNodeDefinitionL :: NodeRuntime -> Free L.NodeDefinitionF a -> IO a
 runNodeDefinitionL nodeRt = foldFree (interpretNodeDefinitionL nodeRt)
 
 -- TODO: move it somewhere.
+-- TODO: FIXME: stop network workers
 clearNodeRuntime :: NodeRuntime -> IO ()
 clearNodeRuntime nodeRt = do
     serverPorts <- M.keys  <$> readTVarIO (nodeRt ^. RLens.servers  )
@@ -173,4 +174,4 @@ clearNodeRuntime nodeRt = do
 
 -- TODO: move it somewhere.
 releaseDB :: DBHandle -> IO ()
-releaseDB = Rocks.close
+releaseDB dbHandle = Rocks.close $ dbHandle ^. RLens.db

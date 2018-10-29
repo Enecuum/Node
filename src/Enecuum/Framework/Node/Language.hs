@@ -35,7 +35,7 @@ data NodeF next where
     CloseUdpConnection :: D.Connection D.Udp -> (() -> next) -> NodeF  next
 
     -- | Create database with config.
-    InitDatabase :: D.DBConfig db -> (Either Text (D.Storage db) -> next) -> NodeF next
+    InitDatabase :: D.DBConfig db -> (D.DBResult (D.Storage db) -> next) -> NodeF next
     -- | Eval database.
     EvalDatabase :: D.Storage db -> L.DatabaseL db a -> (a -> next) -> NodeF next
 
@@ -57,7 +57,7 @@ evalCoreEffectNodeF :: L.CoreEffect a -> NodeL a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
 
 -- | Init database with the options passed for the specific storage type.
-initDatabase :: D.DBConfig db -> NodeL (Either Text (D.Storage db))
+initDatabase :: D.DBConfig db -> NodeL (D.DBResult (D.Storage db))
 initDatabase config = liftF $ InitDatabase config id
 
 -- | Eval database.

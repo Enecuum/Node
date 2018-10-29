@@ -13,8 +13,7 @@ import qualified Enecuum.Core.Types                               as D
 import qualified Enecuum.Core.Lens                                as Lens
 import           Enecuum.Core.HGraph.Interpreters.IO
 import qualified Enecuum.Core.Interpreters                        as Impl
-import qualified Enecuum.Core.Logger.Language                     as L
-import qualified Enecuum.Core.Database.Runtime                    as R
+import qualified Enecuum.Core.Language                            as L
 import qualified Enecuum.Framework.Domain.Networking              as D
 import qualified Enecuum.Framework.Handler.Network.Interpreter    as Net
 import qualified Enecuum.Framework.Networking.Internal.Connection as Con
@@ -27,20 +26,12 @@ import qualified Enecuum.Framework.State.Interpreter              as Impl
 import qualified Enecuum.Core.Types.Logger as Log
 import qualified Network.Socket                                   as S
 
-runDatabase dbHandle action =
-    resp <- controlDBRequest (dbHandle ^. RLens.control)
-            $ R.EvalDatabaseLReq
-            $ Impl.runDatabaseL (dbHandle ^. RLens.db) action
-    case resp of
-      R.DBResponse -> error "DBResponse not implemented."
-
-processRequest (R.EvalDatabaseLReq req) = req
-
-dbWorker control = do
-    req <- takeMVar $ control ^. Lens.request
-    result <- processRequest req
-    let resp = error "response not implemented."
-    putMVar (control ^. Lens.response) resp
+runDatabase :: R.DBHandle -> L.DatabaseL db a -> IO a
+runDatabase dbHandle action = do
+    void $ takeMVar $ dbHandle ^. RLens.mutex
+    res <- Impl.runDatabaseL (dbHandle ^. RLens.db) action
+    putMVar (dbHandle ^. RLens.mutex) ()
+    pure res
 
 -- | Interpret NodeL.
 interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
@@ -76,12 +67,11 @@ interpretNodeL nodeRt (L.InitDatabase cfg next) = do
     -- TODO: ResourceT usage.
     eDb <- try $ Rocks.open path opts
     case eDb of
-        Left (err :: SomeException) -> pure $ next $ Left $ show err
+        Left (err :: SomeException) -> pure $ next $ Left $ D.DBError D.DBSystemError (show err)
         Right db -> do
             -- DB single entry point: worker.
-            control <- D.Control <$> newEmptyMVar <*> newEmptyMVar
-            threadId <- forkIO $ dbWorker control
-            let dbHandle = R.DBHandle db $ R.DBControl control threadId
+            mutex <- newMVar ()
+            let dbHandle = R.DBHandle db mutex
             -- Registering DB
             atomically $ modifyTVar (nodeRt ^. RLens.databases) (M.insert path dbHandle)
             pure $ next $ Right $ D.Storage path
@@ -89,11 +79,10 @@ interpretNodeL nodeRt (L.InitDatabase cfg next) = do
 interpretNodeL nodeRt (L.EvalDatabase storage action next) = do
     dbs <- readTVarIO $ nodeRt ^. RLens.databases
     case M.lookup (storage ^. Lens.path) dbs of
-        Nothing       -> error $ "Impossible: DB is not registered: " +|| db ^. Lens.path ||+ "."
+        Nothing       -> error $ "Impossible: DB is not registered: " +|| storage ^. Lens.path ||+ "."
         Just dbHandle -> do
-            r <- runDatabase nodeRt dbHandle action
+            r <- runDatabase dbHandle action
             pure $ next r
-
 
 interpretNodeL _ (L.NewGraph next) = next <$> initHGraph
 
