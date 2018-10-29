@@ -67,7 +67,7 @@ data KBlockMetaValue = KBlockMetaValue Integer
 data KBlockMetaKey
 
 data KBlocksDB
-data KBlockPrevHashValue    = KBlockPrevHashValue D.StringHash
+data KBlockPrevHashValue = KBlockPrevHashValue D.StringHash
 data KBlockValue = KBlockValue Integer Integer Integer D.StringHash
 data KBlockPrevHashKey
 data KBlockKey
@@ -158,10 +158,10 @@ getKBlock nodeData (Just e) = do
     mbKBlockValue   <- L.withDatabase (nodeData ^. kBlocksDB) $ findValue key2
     pure $ toKBlock <$> mbPrevHashValue <*> mbKBlockValue
 
-getNextKBlock :: NodeData -> D.KBlock -> L.NodeL (Maybe D.KBlock)
-getNextKBlock nodeData kBlock = do
+buildGraph :: NodeData -> D.StringHash -> L.NodeL (Maybe )
+buildGraph nodeData kBlockHash = do
     mbMeta   <- getKBlockMeta nodeData kBlock
-    mbKBlock <- getKBlock nodeData mbMeta
+
     pure Nothing
 
 kBlock1 = D.KBlock
@@ -209,7 +209,7 @@ mkDb dbPath = do
     Dir.createDirectoryIfMissing True dbPath
     -- This creates an empty DB to get correct files in the directory.
     db <- Rocks.open dbPath $ Rocks.defaultOptions { Rocks.createIfMissing = True
-                                                   , Rocks.errorIfExists = False
+                                                   , Rocks.errorIfExists   = False
                                                    }
     Rocks.close db
 

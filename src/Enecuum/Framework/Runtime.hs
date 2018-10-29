@@ -7,10 +7,12 @@ import qualified Data.Map                           as Map
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 import           Enecuum.Core.Runtime              (CoreRuntime)
+import qualified Enecuum.Core.Lens                 as Lens
 import qualified Enecuum.Domain                    as D
+import qualified Enecuum.Framework.Language        as L
 import           Enecuum.Prelude
 
-data DBRequest  = DBRequest
+data DBRequest  = EvalDatabaseLReq (forall db a. db -> L.DatabaseL db a)
 data DBResponse = DBResponse
 
 data DBControl = DBControl
@@ -18,10 +20,12 @@ data DBControl = DBControl
     , _treadId :: ThreadId
     }
 
--- TODO: the same types as in test runtime. Unify it.
 data VarHandle = VarHandle D.VarId (TVar Any)
 type NodeState = TMVar (Map.Map D.VarId VarHandle)
-data DBHandle  = DBHandle Rocks.DB DBControl
+data DBHandle  = DBHandle
+    { _db        :: Rocks.DB
+    , _dbControl :: DBControl
+    }
 
 data NodeRuntime = NodeRuntime
     { _coreRuntime :: CoreRuntime
@@ -57,3 +61,10 @@ getNextId nodeRt = do
     number <- takeTMVar $ _idCounter nodeRt
     putTMVar (_idCounter nodeRt) $ number + 1
     pure number
+
+
+-- | Sends control request and waits for control response.
+controlDBRequest :: D.Control -> DBRequest -> IO DBResponse
+controlDBRequest control dbReq = do
+    putMVar  (control ^. Lens.request) dbReq
+    takeMVar (control ^. Lens.response)

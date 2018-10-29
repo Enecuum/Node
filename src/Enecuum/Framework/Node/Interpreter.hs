@@ -27,12 +27,20 @@ import qualified Enecuum.Framework.State.Interpreter              as Impl
 import qualified Enecuum.Core.Types.Logger as Log
 import qualified Network.Socket                                   as S
 
+runDatabase dbHandle action =
+    resp <- controlDBRequest (dbHandle ^. RLens.control)
+            $ R.EvalDatabaseLReq
+            $ Impl.runDatabaseL (dbHandle ^. RLens.db) action
+    case resp of
+      R.DBResponse -> error "DBResponse not implemented."
 
-runDatabase _ _ _ = error "runDatabase not implemented."
+processRequest (R.EvalDatabaseLReq req) = req
 
-dbWorker = error "dbWorker not implemented."
-
-startDBWorker nodeRt control = forkIO (dbWorker nodeRt control)
+dbWorker control = do
+    req <- takeMVar $ control ^. Lens.request
+    result <- processRequest req
+    let resp = error "response not implemented."
+    putMVar (control ^. Lens.response) resp
 
 -- | Interpret NodeL.
 interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
@@ -53,7 +61,7 @@ interpretNodeL nodeRt (L.OpenUdpConnection addr initScript next) =
     next <$> openConnection nodeRt addr initScript
 
 interpretNodeL nodeRt (L.CloseTcpConnection (D.Connection addr) next) =
-    next <$> closeConnection (nodeRt ^. RLens.tcpConnects) addr 
+    next <$> closeConnection (nodeRt ^. RLens.tcpConnects) addr
 
 interpretNodeL nodeRt (L.CloseUdpConnection (D.Connection addr) next) =
     next <$> closeConnection (nodeRt ^. RLens.udpConnects) addr
@@ -70,12 +78,11 @@ interpretNodeL nodeRt (L.InitDatabase cfg next) = do
     case eDb of
         Left (err :: SomeException) -> pure $ next $ Left $ show err
         Right db -> do
+            -- DB single entry point: worker.
             control <- D.Control <$> newEmptyMVar <*> newEmptyMVar
-
-            threadId <- startDBWorker nodeRt control 
-
-            let dbControl = R.DBControl control threadId
-            let dbHandle = R.DBHandle db dbControl
+            threadId <- forkIO $ dbWorker control
+            let dbHandle = R.DBHandle db $ R.DBControl control threadId
+            -- Registering DB
             atomically $ modifyTVar (nodeRt ^. RLens.databases) (M.insert path dbHandle)
             pure $ next $ Right $ D.Storage path
 
