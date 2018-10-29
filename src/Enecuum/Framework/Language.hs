@@ -3,7 +3,6 @@ module Enecuum.Framework.Language
   )
 where
 
-import           Enecuum.Framework.Network.Language as X
 import           Enecuum.Framework.NodeDefinition.Language as X
 import           Enecuum.Framework.Networking.Language as X
 import           Enecuum.Framework.State.Language as X

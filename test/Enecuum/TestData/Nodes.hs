@@ -38,7 +38,7 @@ masterNodeTag = "masterNode"
 
 -- | Boot node discovery sample scenario.
 -- Currently, does nothing but returns the default boot node address.
-simpleBootNodeDiscovery :: L.NetworkL D.Address
+simpleBootNodeDiscovery :: L.NodeL D.Address
 simpleBootNodeDiscovery = pure bootNodeAddr
 
 -- Scenario 1: master node can interact with boot node.
@@ -53,7 +53,7 @@ bootNode = do
 
 masterNodeInitialization :: L.NodeL (Either Text D.NodeID)
 masterNodeInitialization = do
-    addr                      <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
+    addr                      <- simpleBootNodeDiscovery
     GetHashIDResponse eHashID <- L.makeRpcRequestUnsafe addr GetHashIDRequest
     pure $ Right (D.NodeID eHashID)
 
@@ -159,7 +159,7 @@ bootNodeValidation = do
 
 masterNodeInitializeWithValidation :: L.NodeL (Either Text D.NodeID)
 masterNodeInitializeWithValidation = do
-    addr                           <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
+    addr                           <- simpleBootNodeDiscovery
     GetHashIDResponse eHashID      <- L.makeRpcRequestUnsafe addr GetHashIDRequest
     validRes :: ValidationResponse <- L.makeRpcRequestUnsafe addr ValidRequest
     L.logInfo $ "For the valid request recieved " +|| validRes ||+ "."

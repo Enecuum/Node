@@ -8,15 +8,12 @@ import           Enecuum.Prelude
 
 import qualified Data.Aeson                           as A
 import qualified Enecuum.Core.Language                as L
-import qualified Enecuum.Framework.Network.Language   as L
 import qualified Data.Text                            as Text
 import qualified Enecuum.Framework.Domain             as D
 import           Language.Haskell.TH.MakeFunctor
 
 -- | Allows to work with network: open and close connections, send requests.
 data NetworkingF next where
-    -- | Eval low-level networking script.
-    EvalNetwork               :: L.NetworkL a -> (a -> next) -> NetworkingF  next
     -- | Send RPC request and wait for the response.
     SendRpcRequest            :: D.Address -> D.RpcRequest -> (Either Text D.RpcResponse -> next) -> NetworkingF next
     -- | Send message to the connection.
@@ -29,10 +26,6 @@ data NetworkingF next where
 makeFunctorInstance ''NetworkingF
 
 type NetworkingL = Free NetworkingF
-
--- | Eval low-level networking script.
-evalNetwork :: L.NetworkL a -> NetworkingL a
-evalNetwork network = liftF $ EvalNetwork network id
 
 -- | Send RPC request and wait for the response.
 sendRpcRequest :: D.Address -> D.RpcRequest -> NetworkingL (Either Text D.RpcResponse)
