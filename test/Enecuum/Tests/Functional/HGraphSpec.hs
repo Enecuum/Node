@@ -200,8 +200,7 @@ testListLikeGraph = TestCase $ do
         newLink (toHash @Int64 125) (toHash @Int64 127)
         (HNode _ _ _ l1 _) <- fromJust <$> getNode (toHash @Int64 123)
         (HNode _ _ _ l2 _) <- fromJust <$> getNode (toHash @Int64 125)
-        pure $ all
-            id
+        pure $ and
             [ M.member (toHash @Int64 125) l1
             , M.member (toHash @Int64 127) l2
             , not (M.member (toHash @Int64 125) l2)
