@@ -11,6 +11,7 @@ import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 -- TODO: think about read / write options.
 -- https://task.enecuum.com/issues/2859
 
+writeOpts :: Rocks.WriteOptions
 writeOpts = Rocks.defaultWriteOptions { Rocks.sync = True }
 
 -- | Interpret DatabaseL language.

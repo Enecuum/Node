@@ -39,8 +39,8 @@ makeFieldsNoPrefix ''NodeData
 
 putKBlockMetaNode :: D.KBlock -> D.DBConfig KBlocksMetaDB -> L.NodeDefinitionL (Either D.DBError ())
 putKBlockMetaNode kBlock cfg = do
-    let k = D.toDBKey   @KBlockMetaEntity kBlock1
-    let v = D.toDBValue @KBlockMetaEntity kBlock1
+    let k = D.toDBKey   @KBlockMetaEntity kBlock
+    let v = D.toDBValue @KBlockMetaEntity kBlock
     eDB <- L.scenario $ L.initDatabase cfg
     case eDB of
         Left err -> pure $ Left err
@@ -72,24 +72,6 @@ putGetKBlockMetaNode dbPath = do
                 Right _  -> do
                     eVal <- L.getValue kBlock1MetaKey
                     pure $ eVal >>= (\val2 -> Right (kBlock1MetaValue == val2))
-
--- toKBlock :: D.DBValue KBlockPrevHashEntity -> D.DBValue KBlockEntity -> D.KBlock
--- toKBlock (KBlockPrevHashValue prevHash) (KBlockValue t n nc s) = D.KBlock
---     { D._time     = t
---     , D._prevHash = prevHash
---     , D._number   = n
---     , D._nonce    = nc
---     , D._solver   = s
---     }
-
--- getKBlock :: NodeData -> Maybe (D.DBValue KBlockMetaEntity) -> L.NodeL (Maybe D.KBlock)
--- getKBlock _         Nothing = pure Nothing
--- getKBlock nodeData (Just (KBlockMetaValue kBlockIdx)) = do
---     let key1 = toDBKey @KBlockPrevHashEntity kBlockIdx
---     let key2 = toDBKey @KBlockEntity         kBlockIdx
---     mbPrevHashValue <- L.withDatabase (nodeData ^. kBlocksDB) $ findValue key1
---     mbKBlockValue   <- L.withDatabase (nodeData ^. kBlocksDB) $ findValue key2
---     pure $ toKBlock <$> mbPrevHashValue <*> mbKBlockValue
 
 kBlock1 :: D.KBlock
 kBlock1 = D.KBlock
