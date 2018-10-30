@@ -16,17 +16,17 @@ interpretDatabaseL :: Rocks.DB -> L.DatabaseF db a -> IO a
 
 -- TODO: Perhaps, this method can be implemented more effectively with using Bloom filter.
 -- For now, it's just the same as
-interpretDatabaseL db (L.HasKey key next) = do
+interpretDatabaseL db (L.HasKeyRaw key next) = do
     mbVal <- Rocks.get db Rocks.defaultReadOptions key
     pure $ next $ isJust mbVal
 
-interpretDatabaseL db (L.GetValue key next) = do
+interpretDatabaseL db (L.GetValueRaw key next) = do
     mbVal <- Rocks.get db Rocks.defaultReadOptions key
     pure $ next $ case mbVal of
         Nothing  -> Left $ D.DBError D.KeyNotFound (show key)
         Just val -> Right val
 
-interpretDatabaseL db (L.PutValue key val next) = do
+interpretDatabaseL db (L.PutValueRaw key val next) = do
     -- TODO: catch exceptions, if any
     Rocks.put db Rocks.defaultWriteOptions key val
     pure $ next $ Right ()

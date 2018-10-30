@@ -7,17 +7,24 @@ import           Enecuum.Prelude
 type DBValueRaw = ByteString
 type DBKeyRaw   = ByteString
 
-type DBIndex = Int
+class DBEntity entity src where
+    data DBKey   entity :: *
+    data DBValue entity :: *
+    toDBKey   :: src -> DBKey   entity
+    toDBValue :: src -> DBValue entity
 
-data DBKey   db spec = DBKey   DBKeyRaw
-data DBValue db spec = DBValue DBValueRaw
+class GetRawDBEntity entity where
+    getRawDBKey   :: DBKey   entity -> DBKeyRaw
+    getRawDBValue :: DBValue entity -> DBValueRaw
+
+type DBE spec = (DBKey spec, DBValue spec)
 
 data DBErrorType
     = DBSystemError
     | KeyNotFound
     | NotFound
     | InvalidType
-    deriving (Generic, Ord, Eq, Show, Read)
+    deriving (Generic, Ord, Eq, Enum, Bounded, Show, Read)
 
 data DBError = DBError DBErrorType Text
     deriving (Generic, Ord, Eq, Show, Read)

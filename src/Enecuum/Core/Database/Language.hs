@@ -2,28 +2,70 @@ module Enecuum.Core.Database.Language where
 
 import           Enecuum.Prelude
 
+import qualified Data.Aeson           as A
+import qualified Data.ByteString.Lazy as LBS
+
 import qualified Enecuum.Core.Types.Database as D
 
 -- | Interface to Key-Value database.
 data DatabaseF db a where
     -- | Check whether the key exists.
-    HasKey   :: D.DBKeyRaw -> (Bool -> next) -> DatabaseF db next
+    HasKeyRaw   :: D.DBKeyRaw -> (Bool -> next) -> DatabaseF db next
     -- | Lookup a value from the DB.
-    GetValue :: D.DBKeyRaw -> (D.DBResult D.DBValueRaw -> next) -> DatabaseF db next
+    GetValueRaw :: D.DBKeyRaw -> (D.DBResult D.DBValueRaw -> next) -> DatabaseF db next
     -- | Write a single value to the DB.
-    PutValue :: D.DBKeyRaw -> D.DBValueRaw -> (D.DBResult () -> next) -> DatabaseF db next
+    PutValueRaw :: D.DBKeyRaw -> D.DBValueRaw -> (D.DBResult () -> next) -> DatabaseF db next
     -- TODO: Iterate :: ??
   deriving (Functor)
 
 -- | Database language.
 type DatabaseL db = Free (DatabaseF db)
 
-class Monad m => Database m where
-    hasKey   :: D.DBKeyRaw -> m Bool
-    getValue :: D.DBKeyRaw -> m (D.DBResult D.DBValueRaw)
-    putValue :: D.DBKeyRaw -> D.DBValueRaw -> m (D.DBResult ())
+hasKeyRaw :: D.DBKeyRaw -> DatabaseL db Bool
+hasKeyRaw key = liftF $ HasKeyRaw key id
 
-instance Database (DatabaseL db) where
-    hasKey   key     = liftF $ HasKey   key id
-    getValue key     = liftF $ GetValue key id
-    putValue key val = liftF $ PutValue key val id
+getValueRaw :: D.DBKeyRaw -> DatabaseL db (D.DBResult D.DBValueRaw)
+getValueRaw key = liftF $ GetValueRaw key id
+
+putValueRaw :: D.DBKeyRaw -> D.DBValueRaw -> DatabaseL db (D.DBResult ())
+putValueRaw key val = liftF $ PutValueRaw key val id
+
+putValue :: D.GetRawDBEntity spec => D.DBKey spec -> D.DBValue spec -> DatabaseL db (D.DBResult ())
+putValue dbKey dbVal = let
+    (rawK, rawV) = getRawDBEntity dbKey dbVal
+    in putValueRaw rawK rawV
+
+getEntity
+    :: (FromJSON (D.DBValue spec), D.GetRawDBEntity spec, Typeable (D.DBValue spec))
+    => D.DBKey spec
+    -> DatabaseL db (D.DBResult (D.DBE spec))
+getEntity dbKey = do
+    eRawVal <- getValueRaw $ D.getRawDBKey dbKey
+    pure $ eRawVal >>= parseDBValue >>= (\dbVal -> Right (dbKey, dbVal))
+
+getValue
+    :: (FromJSON (D.DBValue spec), D.GetRawDBEntity spec, Typeable (D.DBValue spec))
+    => D.DBKey spec
+    -> DatabaseL db (D.DBResult (D.DBValue spec))
+getValue dbKey = do
+    eEntity <- getEntity dbKey
+    pure $ eEntity >>= Right . snd
+
+findValue
+    :: (FromJSON (D.DBValue spec), D.GetRawDBEntity spec, Typeable (D.DBValue spec))
+    => D.DBKey spec
+    -> DatabaseL db (Maybe (D.DBValue spec))
+findValue key = do
+    eVal <- getValue key
+    pure $ either (const Nothing) Just eVal
+
+getRawDBEntity :: D.GetRawDBEntity entity => D.DBKey entity -> D.DBValue entity -> (D.DBKeyRaw, D.DBValueRaw)
+getRawDBEntity dbKey dbVal = (D.getRawDBKey dbKey, D.getRawDBValue dbVal)
+
+-- TODO: type of a
+parseDBValue :: (Typeable a, FromJSON a) => D.DBValueRaw -> D.DBResult a
+parseDBValue raw = case A.decode $ LBS.fromStrict raw of
+    Nothing  -> Left $ D.DBError D.InvalidType ""           -- TODO: type of a
+    Just val -> Right val
+
+
