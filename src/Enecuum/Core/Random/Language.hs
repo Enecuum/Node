@@ -27,13 +27,13 @@ makeFunctorInstance ''ERandomF
 type ERandomL next = Free ERandomF next
 
 class ERandom m where
-  evalCoreCrypto :: CryptoL a -> m a
-  getRandomInt :: (Int,Int) -> m Int
-  getRandomByteString :: Int -> m BSI.ByteString
-  nextUUID :: m UUID
+    evalCoreCrypto      :: CryptoL a -> m a
+    getRandomInt        :: (Int,Int) -> m Int
+    getRandomByteString :: Int -> m BSI.ByteString
+    nextUUID            :: m UUID
 
 instance ERandom (Free ERandomF) where
-  evalCoreCrypto s = liftF $ EvalCoreCrypto s id
-  getRandomInt range = liftF $ GetRandomInt range id
-  getRandomByteString k = liftF $ GetRandomByteString k id
-  nextUUID = liftF $ NextUUID id
+    evalCoreCrypto s      = liftF $ EvalCoreCrypto s id
+    getRandomInt range    = liftF $ GetRandomInt range id
+    getRandomByteString k = liftF $ GetRandomByteString k id
+    nextUUID              = liftF $ NextUUID id

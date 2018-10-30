@@ -34,23 +34,22 @@ acceptTransaction nodeData (CreateTransaction tx) = do
     L.logInfo $ "Got transaction "  +| D.showTransaction tx "" |+ ""
     if L.verifyTransaction tx
         then do
-            L.logInfo $ "\nTransaction is accepted"
-            L.logInfo $ "\nAdd transaction to pending "
+            L.logInfo "\nTransaction is accepted"
+            L.logInfo "\nAdd transaction to pending "
             let bData = nodeData ^. blockchain
-            L.atomically $ do
-                L.modifyVar (bData ^. Lens.transactionPending) ( Map.insert (toHash tx ) tx)
+            L.atomically $ L.modifyVar (bData ^. Lens.transactionPending) ( Map.insert (toHash tx ) tx)
             pure $ Right SuccessMsg
         else do
-            L.logInfo $ "Transaction signature is not genuine"
-            L.logInfo $ "Transaction is not accepted"
+            L.logInfo "Transaction signature is not genuine"
+            L.logInfo "Transaction is not accepted"
             pure $ Left "Transaction signature is not genuine. Transaction is not accepted."
 
 -- | Accept kBlock
 acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Tcp -> L.NodeL ()
 acceptKBlock nodeData kBlock _ = do
     L.logInfo $ "\nAccepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-    let logV = nodeData ^. logVar
-        bData = nodeData ^. blockchain
+    let logV  = nodeData ^. logVar
+    let bData = nodeData ^. blockchain
     void $ L.atomically $ L.addKBlock logV bData kBlock
     Log.writeLog logV
 
@@ -62,7 +61,7 @@ acceptMBlock nodeData mBlock _ = do
     unless valid $ printInvalidSignatures res
     when valid $ do
         L.logInfo $ "Microblock " +|| toHash mBlock ||+ " is accepted."
-        let logV = nodeData ^. logVar
+        let logV  = nodeData ^. logVar
         let bData = nodeData ^. blockchain
         void $ L.atomically $ do
             void $ L.addMBlock logV bData mBlock
@@ -81,11 +80,11 @@ acceptMBlock nodeData mBlock _ = do
 getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL [D.KBlock]
 getKBlockPending nodeData _ = do
     let bData = nodeData ^. blockchain
-    kBlocks <- L.readVarIO $ bData ^. Lens.kBlockPending
-        -- kblocks <- L.readVar $ bData ^. Lens.kBlockPending
-        -- L.modifyVar (bData ^. Lens.kBlockPending) (\_ -> [])
-        -- pure kblocks
-    pure kBlocks
+    L.readVarIO $ bData ^. Lens.kBlockPending
+    -- kblocks <- L.readVar $ bData ^. Lens.kBlockPending
+    -- L.modifyVar (bData ^. Lens.kBlockPending) (\_ -> [])
+    -- pure kblocks
+
 
 getTransactionPending :: GraphNodeData -> GetTransactionPending -> L.NodeL [D.Transaction]
 getTransactionPending nodeData _ = do
@@ -96,20 +95,19 @@ getTransactionPending nodeData _ = do
 
 getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
-    let logV = nodeData ^. logVar
-        bData = nodeData ^. blockchain
+    let logV  = nodeData ^. logVar
+    let bData = nodeData ^. blockchain
     -- L.logInfo "Top KBlock requested."
-    kBlock <- L.atomically $ L.getTopKeyBlock logV bData
+    L.atomically $ L.getTopKeyBlock logV bData
     -- L.logInfo $ "Top KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-    pure kBlock
+
 
 getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
 getBalance nodeData (GetWalletBalance wallet) = do
     L.logInfo $ "Requested balance for wallet " +|| D.showPublicKey wallet ||+ "."
     let bData = nodeData ^. blockchain
     curLedger <- L.readVarIO $ bData ^. Lens.ledger
-    let maybeBalance = Map.lookup wallet curLedger
-    case maybeBalance of
+    case curLedger ^. at wallet of
         Just balance -> pure $ Right $ WalletBalanceMsg wallet balance
         _            -> pure $ Left $ "Wallet " +|| D.showPublicKey wallet ||+ " does not exist in graph."
 

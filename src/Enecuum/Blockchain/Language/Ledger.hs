@@ -21,12 +21,12 @@ newWalletAmount = 100
 initializeWallet :: D.StateVar D.Ledger -> D.WalletID -> L.StateL ()
 initializeWallet ledgerVar wallet = do
     ledgerW <- L.readVar ledgerVar
-    when (not $ Map.member wallet ledgerW) $ L.modifyVar ledgerVar (Map.insert wallet newWalletAmount)
+    unless (Map.member wallet ledgerW) $ L.modifyVar ledgerVar (Map.insert wallet newWalletAmount)
 
 getBalanceOrCrash :: D.WalletID -> D.Ledger -> D.Amount
-getBalanceOrCrash wallet ledger = case Map.lookup wallet ledger of
-    Nothing      -> error $ "Impossible: wallet " +|| wallet ||+ " is not initialized."
-    Just balance -> balance
+getBalanceOrCrash wallet ledger = fromMaybe
+    (error $ "Impossible: wallet " +|| wallet ||+ " is not initialized.")
+    (ledger ^. at wallet)
 
 calculateLedger :: D.StateVar [Text] -> BlockchainData -> Microblock -> L.StateL ()
 calculateLedger logV bData mblock =

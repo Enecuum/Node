@@ -44,7 +44,7 @@ sendClientConnection bindedServer bindedClientsideServer = do
 interpretNodeL :: T.NodeRuntime -> L.NodeF a -> IO a
 
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
-    next <$> (atomically $ Impl.runStateL nodeRt statefulAction)
+    next <$> atomically (Impl.runStateL nodeRt statefulAction)
 
 interpretNodeL _      (L.EvalGraphIO gr act next             ) = next <$> runHGraphIO gr act
 

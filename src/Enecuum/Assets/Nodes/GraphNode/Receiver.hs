@@ -16,8 +16,8 @@ import           Enecuum.Prelude
 
 graphSynchro :: GraphNodeData -> D.Address -> L.NodeL ()
 graphSynchro nodeData address = do
-    let logV = nodeData ^. logVar
-        bData = nodeData ^. blockchain
+    let logV  = nodeData ^. logVar
+    let bData = nodeData ^. blockchain
 
     GetChainLengthResponse otherLength <- L.makeRpcRequestUnsafe address GetChainLengthRequest
 

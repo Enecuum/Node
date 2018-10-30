@@ -21,7 +21,7 @@ addKBlock logV bData kBlock = do
             let loop = whenM (moveKBlockToGraph logV bData) loop
             loop
             pure True
-        | D._number kBlock > (D._number topKBlock) + 1 -> addBlockToPending logV bData kBlock
+        | D._number kBlock > D._number topKBlock + 1 -> addBlockToPending logV bData kBlock
         | otherwise -> pure False
 
 -- | Move one block from pending to graph if it is possibly and remove it from pending.

@@ -1,6 +1,4 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE FunctionalDependencies #-}
 
 module Enecuum.TestData.Nodes.Scenario1 where
 
@@ -21,12 +19,12 @@ bootNode = do
         L.method acceptGetHashId
 
 
-simpleBootNodeDiscovery :: L.NetworkL D.Address
+simpleBootNodeDiscovery :: L.NodeL D.Address
 simpleBootNodeDiscovery = pure bootNodeAddr
 
 masterNodeInitialization :: L.NodeL (Either Text D.NodeID)
 masterNodeInitialization = do
-    addr                      <- L.evalNetworking $ L.evalNetwork simpleBootNodeDiscovery
+    addr                      <- simpleBootNodeDiscovery
     GetHashIDResponse eHashID <- L.makeRpcRequestUnsafe addr GetHashIDRequest
     pure $ Right (D.NodeID eHashID)
 

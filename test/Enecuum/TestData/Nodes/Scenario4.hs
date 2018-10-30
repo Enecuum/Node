@@ -32,7 +32,7 @@ makeFieldsNoPrefix ''NetworkNode3Data
 
 acceptGetBalance :: NetworkNode3Data -> GetBalanceRequest -> L.NodeL GetBalanceResponse
 acceptGetBalance nodeData GetBalanceRequest =
-    GetBalanceResponse <$> (L.atomically $ L.readVar (nodeData ^. balanceVar))
+    GetBalanceResponse <$> L.atomically (L.readVar (nodeData ^. balanceVar))
 
 acceptBalanceChange :: NetworkNode3Data -> BalanceChangeRequest -> L.NodeL BalanceChangeResponse
 acceptBalanceChange nodeData (BalanceChangeRequest change) = L.atomically $ do

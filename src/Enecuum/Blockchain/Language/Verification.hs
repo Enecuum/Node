@@ -15,10 +15,10 @@ type TransactionValid = Bool
 
 
 verifyMicroblock :: D.Microblock -> Bool
-verifyMicroblock mb@(D.Microblock {..}) = verifyEncodable _publisher _signature (D.microblockForSign mb)
+verifyMicroblock mb@D.Microblock {..} = verifyEncodable _publisher _signature (D.microblockForSign mb)
 
 verifyTransaction :: D.Transaction -> Bool
-verifyTransaction t@(D.Transaction {..}) = verifyEncodable _owner _signature (D.transactionForSign t)
+verifyTransaction t@D.Transaction {..} = verifyEncodable _owner _signature (D.transactionForSign t)
 
 verifyMicroblockWithTx :: D.Microblock -> (Valid, BlockValid, [TransactionValid])
 verifyMicroblockWithTx mBlock = (valid, blockValid, txsValid)
