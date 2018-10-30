@@ -44,11 +44,11 @@ findInMapR hash rm = S.fromList $ mapMaybe (\i -> findInMapRN i hash rm) [0..has
 findInMapRN :: Ord a => Integer -> StringHash -> ChordRoutMap a -> Maybe (StringHash, a)
 findInMapRN i hash rm = 
     (\(x, y) -> (integerToHash x, y)) <$>
-    (if isJust topElem then topElem else bottomElem)
+    (if isJust bottomElem then bottomElem else topElem)
     where
-        topElem    = M.lookupGE elemKey rm
-        bottomElem = M.lookupGE 0 rm
-        elemKey    = (elemNumber + hashToInteger hash - 2 ^ i) `mod` elemNumber
+        bottomElem  = M.lookupLE elemKey rm
+        topElem     = M.lookupLE elemNumber rm
+        elemKey     = (elemNumber + hashToInteger hash - 2 ^ i) `mod` elemNumber
 
 findNext :: Ord a => StringHash -> ChordRoutMap a -> Maybe a
 findNext hash rm = if isJust bottomElem then bottomElem else topElem
