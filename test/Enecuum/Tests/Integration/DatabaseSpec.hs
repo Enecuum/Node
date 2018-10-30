@@ -1,9 +1,5 @@
-{-# LANGUAGE TypeInType             #-}
-{-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE PackageImports         #-}
 
 module Enecuum.Tests.Integration.DatabaseSpec where
@@ -34,12 +30,6 @@ import           Enecuum.Blockchain.DB
 import           Test.Hspec
 import           Enecuum.Testing.Integrational
 
-dbOpts :: D.DBOptions
-dbOpts = D.DBOptions
-    { D._createIfMissing = True
-    , D._errorIfExists   = True
-    }
-
 data NodeData = NodeData
     { _kBlocksDB     :: D.Storage KBlocksDB
     , _kBlocksMetaDB :: D.Storage KBlocksMetaDB
@@ -47,24 +37,30 @@ data NodeData = NodeData
 
 makeFieldsNoPrefix ''NodeData
 
-putKBlockMetaNode :: D.DBConfig KBlocksMetaDB -> L.NodeDefinitionL (Either D.DBError ())
-putKBlockMetaNode cfg = do
+putKBlockMetaNode :: D.KBlock -> D.DBConfig KBlocksMetaDB -> L.NodeDefinitionL (Either D.DBError ())
+putKBlockMetaNode kBlock cfg = do
+    let k = D.toDBKey   @KBlockMetaEntity kBlock1
+    let v = D.toDBValue @KBlockMetaEntity kBlock1
     eDB <- L.scenario $ L.initDatabase cfg
     case eDB of
         Left err -> pure $ Left err
         Right db -> L.scenario
             $ L.withDatabase db
-            $ L.putValue kBlock1MetaKey kBlock1MetaValue
+            $ L.putValue k v
 
-getKBlockMetaNode :: D.DBConfig KBlocksMetaDB -> L.NodeDefinitionL (Either D.DBError (D.DBValue KBlockMetaEntity))
-getKBlockMetaNode cfg = do
+getKBlockMetaNode :: D.DBKey KBlockMetaEntity -> D.DBConfig KBlocksMetaDB -> L.NodeDefinitionL (Either D.DBError (D.DBValue KBlockMetaEntity))
+getKBlockMetaNode k cfg = do
     eDB <- L.scenario $ L.initDatabase cfg
     case eDB of
         Left err -> pure $ Left err
-        Right db -> L.scenario $ L.withDatabase db $ L.getValue kBlock1MetaKey
+        Right db -> L.scenario $ L.withDatabase db $ L.getValue k
 
 putGetKBlockMetaNode :: FilePath -> L.NodeDefinitionL (Either D.DBError Bool)
 putGetKBlockMetaNode dbPath = do
+    let dbOpts = D.DBOptions
+            { D._createIfMissing = True
+            , D._errorIfExists   = True
+            }
     let cfg :: D.DBConfig KBlocksMetaDB = D.DBConfig dbPath dbOpts
     eDB <- L.scenario $ L.initDatabase cfg
     case eDB of
@@ -104,11 +100,41 @@ kBlock1 = D.KBlock
     , D._solver    = D.genesisHash
     }
 
+kBlock2 :: D.KBlock
+kBlock2 = D.KBlock
+    { D._time      = 1
+    , D._prevHash  = D.toHash kBlock1
+    , D._number    = 2
+    , D._nonce     = 2
+    , D._solver    = D.genesisHash
+    }
+
+kBlock3 :: D.KBlock
+kBlock3 = D.KBlock
+    { D._time      = 3
+    , D._prevHash  = D.toHash kBlock2
+    , D._number    = 3
+    , D._nonce     = 3
+    , D._solver    = D.genesisHash
+    }
+
 kBlock1MetaKey :: D.DBKey KBlockMetaEntity
 kBlock1MetaKey = D.toDBKey kBlock1
 
 kBlock1MetaValue :: D.DBValue KBlockMetaEntity
 kBlock1MetaValue = D.toDBValue kBlock1
+
+kBlock2MetaKey :: D.DBKey KBlockMetaEntity
+kBlock2MetaKey = D.toDBKey kBlock2
+
+kBlock2MetaValue :: D.DBValue KBlockMetaEntity
+kBlock2MetaValue = D.toDBValue kBlock2
+
+kBlock3MetaKey :: D.DBKey KBlockMetaEntity
+kBlock3MetaKey = D.toDBKey kBlock3
+
+kBlock3MetaValue :: D.DBValue KBlockMetaEntity
+kBlock3MetaValue = D.toDBValue kBlock3
 
 dbInitNode :: D.DBConfig db -> L.NodeDefinitionL (D.DBResult ())
 dbInitNode cfg = do
@@ -121,29 +147,29 @@ mkDbPath dbName = do
     pure $ hd </> ".enecuum" </> dbName
 
 rmDb :: FilePath -> IO ()
-rmDb dbPath = whenM (Dir.doesDirectoryExist dbPath) $ Dir.removeDirectoryRecursive dbPath
+rmDb dbPath = do
+    whenM (Dir.doesDirectoryExist dbPath) $ Dir.removePathForcibly dbPath
+    whenM (Dir.doesDirectoryExist dbPath) $ error "Can't delete db."
 
 mkDb :: FilePath -> IO ()
 mkDb dbPath = do
     rmDb dbPath
     Dir.createDirectoryIfMissing True dbPath
     -- This creates an empty DB to get correct files in the directory.
-    db <- Rocks.open dbPath $ Rocks.defaultOptions { Rocks.createIfMissing = True
-                                                   , Rocks.errorIfExists   = False
-                                                   }
-    Rocks.close db
+    let opening = Rocks.open dbPath $ Rocks.defaultOptions { Rocks.createIfMissing = True
+                                                           , Rocks.errorIfExists   = False
+                                                           }
+    bracket opening Rocks.close (const (pure ()))
 
 withDbAbsence :: FilePath -> IO a -> IO ()
 withDbAbsence dbPath act = do
     rmDb dbPath
-    void act
-    rmDb dbPath
+    void act `finally` rmDb dbPath
 
 withDbPresence :: FilePath -> IO a -> IO ()
 withDbPresence dbPath act = do
     mkDb dbPath
-    void act
-    rmDb dbPath
+    void act `finally` rmDb dbPath
 
 spec :: Spec
 spec = do
@@ -158,12 +184,16 @@ spec = do
                 }
 
     describe "DB Entities tests" $ do
-        it "ToDBKey test"          $ kBlock1MetaKey `shouldBe` KBlockMetaKey (D.fromStringHash $ D.toHash kBlock1)
-        it "ToDBValue test"        $ kBlock1MetaValue `shouldBe` KBlockMetaValue 1
+        it "ToDBKey test"          $ kBlock1MetaKey               `shouldBe` KBlockMetaKey (D.fromStringHash $ D.toHash kBlock1)
+        it "ToDBValue test"        $ kBlock1MetaValue             `shouldBe` KBlockMetaValue 1
         it "GetRawDBEntity test"   $ D.getRawDBKey kBlock1MetaKey `shouldBe` D.fromStringHash (D.toHash kBlock1)
         it "Parse RawDBValue test" $ do
             let dbValueRaw = D.getRawDBValue kBlock1MetaValue
             L.parseDBValue dbValueRaw `shouldBe` Right kBlock1MetaValue
+        it "Different objects => different keys and values" $ do
+            kBlock1MetaKey   `shouldNotBe` kBlock2MetaKey
+            kBlock1MetaValue `shouldNotBe` kBlock2MetaValue
+            L.getRawDBEntity kBlock1MetaKey kBlock1MetaValue `shouldNotBe` L.getRawDBEntity kBlock2MetaKey kBlock2MetaValue 
 
     describe "Database creation tests" $ do
         it "DB is missing, create, errorIfExists False, no errors expected" $ withDbAbsence dbPath $ do
@@ -187,20 +217,67 @@ spec = do
             eRes <- evalNode $ putGetKBlockMetaNode dbPath
             eRes `shouldBe` Right True
 
-        it "Write and Read KBlock Meta in separate runs" $ withDbAbsence dbPath $ do
+        it "Write and Read KBlock1 Meta in separate runs" $ withDbAbsence dbPath $ do
             eInitialized <- evalNode $ dbInitNode cfg1
             eInitialized `shouldBe` Right ()
 
-            eStoreResult <- evalNode $ putKBlockMetaNode cfg1
+            eStoreResult <- evalNode $ putKBlockMetaNode kBlock1 cfg1
             eStoreResult `shouldBe` Right ()
 
-            eValue <- evalNode $ getKBlockMetaNode cfg1
+            eValue <- evalNode $ getKBlockMetaNode kBlock1MetaKey cfg1
             eValue `shouldBe` Right kBlock1MetaValue
+
+        it "Write and Read KBlock2 Meta in separate runs" $ withDbAbsence dbPath $ do
+            eInitialized <- evalNode $ dbInitNode cfg1
+            eInitialized `shouldBe` Right ()
+
+            eStoreResult <- evalNode $ putKBlockMetaNode kBlock2 cfg1
+            eStoreResult `shouldBe` Right ()
+
+            eValue <- evalNode $ getKBlockMetaNode kBlock2MetaKey cfg1
+            eValue `shouldBe` Right kBlock2MetaValue
+
+        it "Write and Read KBlock3 Meta in separate runs" $ withDbAbsence dbPath $ do
+            eInitialized <- evalNode $ dbInitNode cfg1
+            eInitialized `shouldBe` Right ()
+
+            eStoreResult <- evalNode $ putKBlockMetaNode kBlock3 cfg1
+            eStoreResult `shouldBe` Right ()
+
+            eValue <- evalNode $ getKBlockMetaNode kBlock3MetaKey cfg1
+            eValue `shouldBe` Right kBlock3MetaValue
 
         it "Read unexisting KBlock Meta" $ withDbPresence dbPath $ do
             eInitialized <- evalNode $ dbInitNode cfg1
             eInitialized `shouldBe` Right ()
 
-            eValue <- evalNode $ getKBlockMetaNode cfg1
+            eValue <- evalNode $ getKBlockMetaNode kBlock1MetaKey cfg1
             eValue `shouldBe` Left (D.DBError D.KeyNotFound (show $ D.fromStringHash $ D.toHash kBlock1))
+
+        it "Write one, read another (unexisting) KBlock Meta" $ withDbPresence dbPath $ do
+            eInitialized <- evalNode $ dbInitNode cfg1
+            eInitialized `shouldBe` Right ()
+
+            eStoreResult <- evalNode $ putKBlockMetaNode kBlock1 cfg1
+            eStoreResult `shouldBe` Right ()
+
+            eValue <- evalNode $ getKBlockMetaNode kBlock2MetaKey cfg1
+            eValue `shouldBe` Left (D.DBError D.KeyNotFound (show $ D.fromStringHash $ D.toHash kBlock2))
+
+        it "Write two entities, read both" $ withDbPresence dbPath $ do
+            eInitialized <- evalNode $ dbInitNode cfg1
+            eInitialized `shouldBe` Right ()
+
+            eStoreResult1 <- evalNode $ putKBlockMetaNode kBlock1 cfg1
+            eStoreResult1 `shouldBe` Right ()
+
+            eStoreResult2 <- evalNode $ putKBlockMetaNode kBlock2 cfg1
+            eStoreResult2 `shouldBe` Right ()
+
+            eValue1 <- evalNode $ getKBlockMetaNode kBlock1MetaKey cfg1
+            eValue1 `shouldBe` Right kBlock1MetaValue
+
+            eValue2 <- evalNode $ getKBlockMetaNode kBlock2MetaKey cfg1
+            eValue2 `shouldBe` Right kBlock2MetaValue
+
 

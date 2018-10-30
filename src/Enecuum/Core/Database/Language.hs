@@ -30,31 +30,31 @@ getValueRaw key = liftF $ GetValueRaw key id
 putValueRaw :: D.DBKeyRaw -> D.DBValueRaw -> DatabaseL db (D.DBResult ())
 putValueRaw key val = liftF $ PutValueRaw key val id
 
-putValue :: D.GetRawDBEntity spec => D.DBKey spec -> D.DBValue spec -> DatabaseL db (D.DBResult ())
+putValue :: D.GetRawDBEntity entity => D.DBKey entity -> D.DBValue entity -> DatabaseL db (D.DBResult ())
 putValue dbKey dbVal = let
     (rawK, rawV) = getRawDBEntity dbKey dbVal
     in putValueRaw rawK rawV
 
 getEntity
-    :: (FromJSON (D.DBValue spec), D.GetRawDBEntity spec, Typeable (D.DBValue spec))
-    => D.DBKey spec
-    -> DatabaseL db (D.DBResult (D.DBE spec))
+    :: (FromJSON (D.DBValue entity), D.GetRawDBEntity entity, Typeable (D.DBValue entity))
+    => D.DBKey entity
+    -> DatabaseL db (D.DBResult (D.DBE entity))
 getEntity dbKey = do
     eRawVal <- getValueRaw $ D.getRawDBKey dbKey
     pure $ eRawVal >>= parseDBValue >>= (\dbVal -> Right (dbKey, dbVal))
 
 getValue
-    :: (FromJSON (D.DBValue spec), D.GetRawDBEntity spec, Typeable (D.DBValue spec))
-    => D.DBKey spec
-    -> DatabaseL db (D.DBResult (D.DBValue spec))
+    :: (FromJSON (D.DBValue entity), D.GetRawDBEntity entity, Typeable (D.DBValue entity))
+    => D.DBKey entity
+    -> DatabaseL db (D.DBResult (D.DBValue entity))
 getValue dbKey = do
     eEntity <- getEntity dbKey
     pure $ eEntity >>= Right . snd
 
 findValue
-    :: (FromJSON (D.DBValue spec), D.GetRawDBEntity spec, Typeable (D.DBValue spec))
-    => D.DBKey spec
-    -> DatabaseL db (Maybe (D.DBValue spec))
+    :: (FromJSON (D.DBValue entity), D.GetRawDBEntity entity, Typeable (D.DBValue entity))
+    => D.DBKey entity
+    -> DatabaseL db (Maybe (D.DBValue entity))
 findValue key = do
     eVal <- getValue key
     pure $ either (const Nothing) Just eVal

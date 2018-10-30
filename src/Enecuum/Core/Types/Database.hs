@@ -4,8 +4,8 @@ module Enecuum.Core.Types.Database where
 
 import           Enecuum.Prelude
 
-type DBValueRaw = ByteString
 type DBKeyRaw   = ByteString
+type DBValueRaw = ByteString
 
 class DBEntity entity src where
     data DBKey   entity :: *
@@ -17,12 +17,11 @@ class GetRawDBEntity entity where
     getRawDBKey   :: DBKey   entity -> DBKeyRaw
     getRawDBValue :: DBValue entity -> DBValueRaw
 
-type DBE spec = (DBKey spec, DBValue spec)
+type DBE entity = (DBKey entity, DBValue entity)
 
 data DBErrorType
     = DBSystemError
     | KeyNotFound
-    | NotFound
     | InvalidType
     deriving (Generic, Ord, Eq, Enum, Bounded, Show, Read)
 
