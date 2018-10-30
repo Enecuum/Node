@@ -47,7 +47,7 @@ findInMapRN i hash rm = if isJust topElem then topElem else bottomElem
         elemKey    = (elemNumber + hashToInteger hash - 2 ^ i) `mod` elemNumber
 
 findNext :: Ord a => StringHash -> ChordRoutMap a -> Maybe a
-findNext hash = if isJust bottomElem then bottomElem else topElem
+findNext hash rm = if isJust bottomElem then bottomElem else topElem
     where
         bottomElem = snd <$> M.lookupLE elemKey rm
         topElem    = snd <$> M.lookupLE elemNumber rm
