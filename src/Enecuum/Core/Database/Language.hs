@@ -11,7 +11,7 @@ data DatabaseF db a where
     -- | Lookup a value from the DB.
     GetValue :: D.DBKeyRaw -> (D.DBResult D.DBValueRaw -> next) -> DatabaseF db next
     -- | Write a single value to the DB.
-    PutValue :: D.DBKeyRaw -> D.DBValueRaw -> (() -> next) -> DatabaseF db next
+    PutValue :: D.DBKeyRaw -> D.DBValueRaw -> (D.DBResult () -> next) -> DatabaseF db next
     -- TODO: Iterate :: ??
   deriving (Functor)
 
@@ -21,7 +21,7 @@ type DatabaseL db = Free (DatabaseF db)
 class Monad m => Database m where
     hasKey   :: D.DBKeyRaw -> m Bool
     getValue :: D.DBKeyRaw -> m (D.DBResult D.DBValueRaw)
-    putValue :: D.DBKeyRaw -> D.DBValueRaw -> m ()
+    putValue :: D.DBKeyRaw -> D.DBValueRaw -> m (D.DBResult ())
 
 instance Database (DatabaseL db) where
     hasKey   key     = liftF $ HasKey   key id

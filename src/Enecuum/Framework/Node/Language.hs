@@ -33,7 +33,6 @@ data NodeF next where
     -- | Close existing connection.
     CloseTcpConnection :: D.Connection D.Tcp -> (() -> next) -> NodeF  next
     CloseUdpConnection :: D.Connection D.Udp -> (() -> next) -> NodeF  next
-
     -- | Create database with config.
     InitDatabase :: D.DBConfig db -> (D.DBResult (D.Storage db) -> next) -> NodeF next
     -- | Eval database.

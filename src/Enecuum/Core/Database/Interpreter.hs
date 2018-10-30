@@ -27,8 +27,9 @@ interpretDatabaseL db (L.GetValue key next) = do
         Just val -> Right val
 
 interpretDatabaseL db (L.PutValue key val next) = do
+    -- TODO: catch exceptions, if any
     Rocks.put db Rocks.defaultWriteOptions key val
-    pure $ next ()
+    pure $ next $ Right ()
 
 runDatabaseL ::  Rocks.DB -> L.DatabaseL db a -> IO a
 runDatabaseL db = foldFree (interpretDatabaseL db)
