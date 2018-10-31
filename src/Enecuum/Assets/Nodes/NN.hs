@@ -99,6 +99,17 @@ stabilizationOfConnections myAddress nodeData = do
     forM_ (zip connectMap [255, 254..]) $ \(addr, i) -> void $
         L.notify addr $ M.ConnectRequest hash i
 
+acceptSendTo
+    :: NNNodeData -> D.StringHash -> M.SendTo -> D.Connection D.Udp -> L.NodeL ()
+acceptSendTo nodeData myHash (M.SendTo hash i msg) conn = do
+    L.close conn
+    L.logInfo $ "Recived msg: \"" <>  msg <> "\" for " <> show hash
+    when (myHash == hash) $ L.logInfo "I'm reciver."
+    when (i > 0) $ do
+        rm <- L.readVarIO (nodeData ^. netNodes)
+        whenJust (findNext hash rm) $ \address ->
+            void $ L.notify address (M.SendTo hash (i-1) msg)
+
 nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
 nnNode maybePort = do
     L.nodeTag "NN node"
@@ -116,6 +127,7 @@ nnNode maybePort = do
         L.handler $ acceptHello           nodeData
         L.handler $ acceptConnectResponse nodeData myAddress
         L.handler $ acceptConnectRequest  nodeData
+        L.handler $ acceptSendTo          nodeData  (D.toHashGeneric myAddress)
 
     L.process $ forever $ do
         L.delay $ 1000 * 1000
