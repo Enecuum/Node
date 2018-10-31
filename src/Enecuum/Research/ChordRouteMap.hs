@@ -75,9 +75,9 @@ findInMapNByKey elemKey i hash rm =
         bottomElem = M.lookupLE (elemKey hash i) rm
 
 -- | Find the closest elem to hash from route map.
-findNext :: Ord a => StringHash -> ChordRouteMap a -> Maybe a
+findNext :: Ord a => StringHash -> ChordRouteMap a -> Maybe (StringHash, a)
 findNext hash rm = if isJust bottomElem then bottomElem else topElem
     where
-        bottomElem = snd <$> M.lookupLE elemKey rm
-        topElem    = snd <$> M.lookupLE quantityOfHashes rm
+        bottomElem = (\(k, v) -> (integerToHash k, v)) <$> M.lookupLE elemKey rm
+        topElem    = (\(k, v) -> (integerToHash k, v)) <$> M.lookupLE quantityOfHashes rm
         elemKey    = hashToInteger hash

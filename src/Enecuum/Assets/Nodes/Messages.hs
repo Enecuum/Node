@@ -7,6 +7,9 @@ import           Enecuum.Prelude
 import qualified Enecuum.Domain                as D
 import           Data.HGraph.StringHashable
 
+data SendTo = SendTo StringHash Int Text
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 data SuccessMsg = SuccessMsg
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
