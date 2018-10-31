@@ -16,6 +16,8 @@ data Hello = Hello StringHash D.Address
 data ConnectRequest = ConnectRequest StringHash Integer
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+newtype ConnectRequestPrevious = ConnectRequestPrevious StringHash
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 -- | Network messages
 data Ping = Ping
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

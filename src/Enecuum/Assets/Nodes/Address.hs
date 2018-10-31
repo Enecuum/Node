@@ -39,3 +39,6 @@ poaNodeRpcAddress = D.Address "127.0.0.1" poaNodeRpcPort
 
 bnNodePort :: D.PortNumber
 bnNodePort = 5000
+
+bnAddress :: D.Address
+bnAddress = D.Address "127.0.0.1" bnNodePort

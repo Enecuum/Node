@@ -1,6 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveAnyClass         #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE StandaloneDeriving     #-}
+{-# OPTIONS_GHC -fno-warn-orphans   #-}
 
 module Enecuum.Framework.Domain.Networking where
 
@@ -61,7 +62,10 @@ sockAddrToHost sockAddr = case sockAddr of
 data Address = Address
     { _host :: Host
     , _port :: PortNumber
-    } deriving (Show, Eq, Ord, Generic)
+    } deriving (Show, Eq, Ord, Generic, Serialize)
+
+deriving instance Generic PortNumber
+instance Serialize PortNumber
 
 instance ToJSON Address where
     toJSON (Address h p) = A.object ["host" A..= h, "port" A..= p]
