@@ -8,6 +8,7 @@ module Enecuum.Research.ChordRouteMap
     , findNext
     , hashSize
     , quantityOfHashes
+    , inverseFormula
     ) where
 
 import           Universum
@@ -34,17 +35,20 @@ addToMap hash = M.insert (hashToInteger hash)
 removeFromMap :: Ord a => StringHash -> ChordRouteMap a -> ChordRouteMap a
 removeFromMap hash = M.delete (hashToInteger hash)
 
--- | Find all fingers in rout map by straight formulas.
+-- | Find all fingers in route map by straight formula.
 findInMap :: Ord a => StringHash -> ChordRouteMap a -> Set (StringHash, a)
 findInMap = findInMapByKey
     (\hash i -> (hashToInteger hash + 2 ^ i) `mod` quantityOfHashes)
 
--- | Find all fingers in rout map by inverse formulas.
+-- | Find all fingers in route map by inverse formula.
 findInMapR :: Ord a => StringHash -> ChordRouteMap a -> Set (StringHash, a)
-findInMapR = findInMapByKey
-    (\hash i -> (quantityOfHashes + hashToInteger hash - 2 ^ i) `mod` quantityOfHashes)
+findInMapR = findInMapByKey inverseFormula
 
--- | Find all fingers in rout map by formulas.
+inverseFormula :: Integral b => StringHash -> b -> Integer
+inverseFormula hash i = (quantityOfHashes + hashToInteger hash - 2 ^ i) `mod` quantityOfHashes
+
+
+-- | Find all fingers in route map by formulas.
 findInMapByKey
     :: Ord a
     => (StringHash -> Integer -> Integer)
@@ -54,7 +58,7 @@ findInMapByKey
 findInMapByKey elemKey hash rm = S.fromList $ mapMaybe
     (\i -> findInMapNByKey elemKey i hash rm) [0..hashSize-1]
 
--- | Find N finger in rout map by formulas.
+-- | Find N finger in route map by formulas.
 findInMapNByKey
     :: (StringHash -> Integer -> Integer)
     -> Integer
@@ -68,7 +72,7 @@ findInMapNByKey elemKey i hash rm =
         topElem    = M.lookupLE quantityOfHashes rm
         bottomElem = M.lookupLE (elemKey hash i) rm
 
--- | Find the closest elem to hash from rout map.
+-- | Find the closest elem to hash from route map.
 findNext :: Ord a => StringHash -> ChordRouteMap a -> Maybe a
 findNext hash rm = if isJust bottomElem then bottomElem else topElem
     where

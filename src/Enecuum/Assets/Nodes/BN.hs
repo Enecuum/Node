@@ -32,7 +32,7 @@ findPreviousConnect nodeData (M.ConnectRequestPrevious hash) = do
     address <- L.atomically $ do
         connectMap <- L.readVar (nodeData ^. netNodes)
         pure $ findInMapNByKey
-            (\h num -> (quantityOfHashes + D.hashToInteger h - 2 ^ num) `mod` quantityOfHashes)
+            inverseFormula
             0
             hash
             connectMap

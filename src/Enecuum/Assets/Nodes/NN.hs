@@ -30,7 +30,7 @@ startNode nodeData (Start port) = L.atomically $ do
         L.writeVar (nodeData^.nodePort) $ Just port
     pure $ if isJust currentPort
         then "Node is already running."
-        else "The port is accepted, the start of the node is started."
+        else "The port is accepted, the node is started."
 
 initNN :: Maybe D.PortNumber -> L.NodeDefinitionL NNNodeData
 initNN maybePort = L.atomically
