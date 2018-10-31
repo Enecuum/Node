@@ -36,7 +36,7 @@ findPreviousConnect nodeData (M.ConnectRequestPrevious hash) = do
             0
             hash
             connectMap
-    pure $ maybe (Left "Connect map is empty.") Right address
+    pure $ maybe (Left "Connection map is empty.") Right address
 
 findConnect :: BNNodeData -> M.ConnectRequest -> L.NodeL (Either Text (D.StringHash, D.Address))
 findConnect nodeData (M.ConnectRequest hash i) = do
@@ -47,7 +47,7 @@ findConnect nodeData (M.ConnectRequest hash i) = do
             i
             hash
             connectMap
-    pure $ maybe (Left "Connect map is empty.") Right address
+    pure $ maybe (Left "Connection map is empty.") Right address
 
 bnNode :: L.NodeDefinitionL ()
 bnNode = do
