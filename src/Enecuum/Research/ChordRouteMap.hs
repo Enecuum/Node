@@ -8,15 +8,18 @@ module Enecuum.Research.ChordRouteMap
     , findNext
     , hashSize
     , quantityOfHashes
+    , toChordRouteMap
     ) where
 
 import           Universum
 import qualified Data.Map                      as M
-import qualified Data.Set                      as S
 import           Data.HGraph.StringHashable
 
 -- | Route map for chord algorithm.
 type ChordRouteMap a = M.Map Integer a
+
+toChordRouteMap :: Ord a => [(StringHash, a)] -> ChordRouteMap a
+toChordRouteMap s = M.fromList [(hashToInteger k, v)|(k, v) <- s]
 
 -- | Size of hashes.
 hashSize :: Integer
@@ -35,12 +38,12 @@ removeFromMap :: Ord a => StringHash -> ChordRouteMap a -> ChordRouteMap a
 removeFromMap hash = M.delete (hashToInteger hash)
 
 -- | Find all fingers in rout map by straight formulas.
-findInMap :: Ord a => StringHash -> ChordRouteMap a -> Set (StringHash, a)
+findInMap :: Ord a => StringHash -> ChordRouteMap a -> [(StringHash, a)]
 findInMap = findInMapByKey
     (\hash i -> (hashToInteger hash + 2 ^ i) `mod` quantityOfHashes)
 
 -- | Find all fingers in rout map by inverse formulas.
-findInMapR :: Ord a => StringHash -> ChordRouteMap a -> Set (StringHash, a)
+findInMapR :: Ord a => StringHash -> ChordRouteMap a -> [(StringHash, a)]
 findInMapR = findInMapByKey
     (\hash i -> (quantityOfHashes + hashToInteger hash - 2 ^ i) `mod` quantityOfHashes)
 
@@ -50,8 +53,8 @@ findInMapByKey
     => (StringHash -> Integer -> Integer)
     -> StringHash
     -> ChordRouteMap a
-    -> Set (StringHash, a)
-findInMapByKey elemKey hash rm = S.fromList $ mapMaybe
+    -> [(StringHash, a)]
+findInMapByKey elemKey hash rm = mapMaybe
     (\i -> findInMapNByKey elemKey i hash rm) [0..hashSize-1]
 
 -- | Find N finger in rout map by formulas.
