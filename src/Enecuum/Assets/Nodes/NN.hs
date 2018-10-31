@@ -107,7 +107,8 @@ acceptSendTo nodeData myHash (M.SendTo hash i msg) conn = do
     when (myHash == hash) $ L.logInfo "I'm reciver."
     when (i > 0) $ do
         rm <- L.readVarIO (nodeData ^. netNodes)
-        whenJust (findNext hash rm) $ \address ->
+        whenJust (findNext hash rm) $ \(h, address) -> do
+            L.logInfo $ "Resending to: " <> show h
             void $ L.notify address (M.SendTo hash (i-1) msg)
 
 nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
