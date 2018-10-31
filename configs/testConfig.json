@@ -1,18 +1,20 @@
 {  
-   "node":"PoANode",
-   "nodeScenario":"Bad",
+   "node":"ClientNode",
+   "nodeScenario":"CLI",
    "nodeConfig":
-   {  
-      "tag":"PoANodeConfig",
-      "dummyOption": 1
+   {
+      "tag":"ClientNodeConfig",
+      "host":"127.0.0.1",
+      "port":2009
    },
    "bootNodeAddress":"[((127,0,0,1), 1554)]",
    "extPort":1668,
    "loggerConfig":
    {
-      "logFilePath": "/tmp/log/PoABad.log",
+      "logFilePath":"/tmp/log/app.log",
       "format":"$prio $loggername: $msg",
       "logToConsole":true,
       "level":"Debug"
    }
 }
+

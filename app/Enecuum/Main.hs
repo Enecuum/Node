@@ -4,7 +4,7 @@ import           App.Initialize  (initialize)
 import           Enecuum.Config  (withConfig)
 import           Enecuum.Prelude
 
-defaultConfig :: AsString a => a
+defaultConfig :: IsString a => a
 defaultConfig = "configs/config.json"
 
 main :: IO ()

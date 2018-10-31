@@ -1,31 +1,20 @@
-{-# LANGUAGE DeriveAnyClass #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Enecuum.Assets.Nodes.GraphNode.Definition where
 
-import Enecuum.Prelude
-import Enecuum.Config
-import Enecuum.Assets.Nodes.GraphNode.Transmitter (graphNodeTransmitter)
-import Enecuum.Assets.Nodes.GraphNode.Receiver (graphNodeReceiver)
-import Enecuum.Assets.Nodes.GraphNode.Config
+import           Enecuum.Prelude
+import qualified Data.Aeson as A
+
+import           Enecuum.Config
+import           Enecuum.Assets.Nodes.GraphNode.Transmitter (graphNodeTransmitter)
+import           Enecuum.Assets.Nodes.GraphNode.Receiver (graphNodeReceiver)
+import           Enecuum.Assets.Nodes.GraphNode.Config
 
 instance Node GraphNode where
     data NodeScenario GraphNode = Transmitter | Receiver
-            deriving (Generic, FromJSON)
-    parseConfig = tryParseConfig
-    getScenario = scenario
-    getNode Transmitter = S.graphNodeTransmitter
-    getNode Receiver    = S.graphNodeReceiver
+        deriving (Show, Generic)
+    getNodeScript Transmitter = graphNodeTransmitter
+    getNodeScript Receiver    = graphNodeReceiver
 
--- instance Node GraphNode where
---     data NodeScenario GraphNode = Transmitter | Receiver
---             deriving (Generic, FromJSON)
---     data NodeConfig   GraphNode = GraphNodeConfig
---             { node     :: GraphNode
---             , scenario :: NodeScenario GraphNode
---             , database :: FilePath
---             }
---             deriving (Generic, FromJSON)
---     parseConfig = tryParseConfig
---     getScenario = scenario
---     getNode Transmitter = S.graphNodeTransmitter
---     getNode Receiver    = S.graphNodeReceiver
+instance ToJSON   (NodeScenario GraphNode) where toJSON    = A.genericToJSON nodeConfigJsonOptions
+instance FromJSON (NodeScenario GraphNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions

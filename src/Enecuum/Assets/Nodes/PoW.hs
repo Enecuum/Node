@@ -5,9 +5,12 @@
 
 module Enecuum.Assets.Nodes.PoW where
 
-import Enecuum.Prelude
+import           Enecuum.Prelude
+import qualified Data.Aeson as A
+
 import qualified Enecuum.Language              as L
 import qualified Enecuum.Domain                as D
+import           Enecuum.Config
 import qualified Enecuum.Assets.Blockchain.Generation as A
 import           Enecuum.Assets.Nodes.Address (powNodeRpcPort, graphNodeTransmitterTcpAddress)
 import           Data.HGraph.StringHashable (StringHash (..), toHash)
@@ -28,6 +31,27 @@ data PoWNodeData = PoWNodeData
     }
 
 makeFieldsNoPrefix ''PoWNodeData
+
+data PoWNode = PoWNode
+    deriving (Show, Generic)
+
+instance NodeCfg PoWNode where
+    data NodeConfig PoWNode = PoWNodeConfig
+            { delaysEnabled :: Bool
+            }
+        deriving (Show, Generic)
+
+instance Node PoWNode where
+    data NodeScenario PoWNode = PoW
+        deriving (Show, Generic)
+    getNodeScript _ = powNode'
+
+instance ToJSON   PoWNode                where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON PoWNode                where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig PoWNode)   where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig PoWNode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario PoWNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario PoWNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
 kBlockProcess :: PoWNodeData -> L.NodeL ()
 kBlockProcess nodeData = do
@@ -55,13 +79,13 @@ nBlockPacketGenerationHandle powNodeData (NBlockPacketGeneration i) = do
     pure SuccessMsg
 
 powNode :: L.NodeDefinitionL ()
-powNode = powNode' True
+powNode = powNode' (PoWNodeConfig True)
 
-powNode' :: EnableDelays -> L.NodeDefinitionL ()
-powNode' delaysEnabled = do
+powNode' :: NodeConfig PoWNode -> L.NodeDefinitionL ()
+powNode' cfg = do
     L.nodeTag "PoW node"
 
-    nodeData <- L.initialization $ powNodeInitialization delaysEnabled D.genesisHash
+    nodeData <- L.initialization $ powNodeInitialization cfg D.genesisHash
     L.serving D.Rpc powNodeRpcPort $ do
         L.method  $ foreverChainGenerationHandle nodeData
         L.method  $ nBlockPacketGenerationHandle nodeData
@@ -78,10 +102,10 @@ powNode' delaysEnabled = do
 
     L.awaitNodeFinished nodeData
 
-powNodeInitialization :: EnableDelays -> StringHash -> L.NodeL PoWNodeData
-powNodeInitialization delaysEnabled genesisHash = do
+powNodeInitialization ::  NodeConfig PoWNode -> StringHash -> L.NodeL PoWNodeData
+powNodeInitialization cfg genesisHash = do
     h <- L.newVarIO genesisHash
     n <- L.newVarIO 1
     b <- L.newVarIO 0
     f <- L.newVarIO NodeActing
-    pure $ PoWNodeData delaysEnabled h n b f
+    pure $ PoWNodeData (delaysEnabled cfg) h n b f

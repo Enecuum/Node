@@ -11,7 +11,7 @@ import           Enecuum.Assets.Nodes.GraphNode.Config
 
 -- | Start of graph node
 graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()
-graphNodeTransmitter cfg = do
+graphNodeTransmitter _ = do
     L.nodeTag "graphNodeTransmitter"
     nodeData <- graphNodeInitialization
 

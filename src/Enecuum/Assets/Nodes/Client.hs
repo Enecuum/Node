@@ -10,9 +10,32 @@ import           Data.Text                        hiding (map)
 import qualified Enecuum.Assets.Blockchain.Wallet as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
 import qualified Enecuum.Domain                   as D
+import           Enecuum.Config
 import           Enecuum.Framework.Language.Extra (NodeStatus (..))
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude                  hiding (map, unpack)
+
+data ClientNode = ClientNode
+    deriving (Show, Generic)
+
+instance NodeCfg ClientNode where
+    data NodeConfig ClientNode = ClientNodeConfig
+        { host :: String
+        , port :: Int
+        }
+        deriving (Show, Generic)
+
+instance Node ClientNode where
+    data NodeScenario ClientNode = CLI
+        deriving (Show, Generic)
+    getNodeScript CLI = clientNode
+
+instance ToJSON   ClientNode                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON ClientNode                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig ClientNode)   where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig ClientNode)   where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario ClientNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario ClientNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
 type BlocksCount = Int
 
@@ -26,12 +49,6 @@ data Ping                           = Ping Protocol D.Address
 newtype StopRequest                 = StopRequest D.Address
 data GetBlock                       = GetBlock D.StringHash D.Address
 data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON)
-
-data GraphNodeData = GraphNodeData
-    { _blockchain :: D.BlockchainData
-    , _logVar     :: D.StateVar [Text]
-    , _status     :: D.StateVar NodeStatus
-    }
 
 
 data CLITransaction = CLITransaction
@@ -171,8 +188,8 @@ Requests:
 {"method":"CreateTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2008}}
 -}
 
-clientNode :: L.NodeDefinitionL ()
-clientNode = do
+clientNode :: NodeConfig ClientNode -> L.NodeDefinitionL ()
+clientNode _ = do
     L.logInfo "Client started"
     L.nodeTag "Client"
     stateVar <- L.newVarIO NodeActing

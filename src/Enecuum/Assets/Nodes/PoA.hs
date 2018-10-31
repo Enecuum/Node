@@ -6,10 +6,12 @@
 module Enecuum.Assets.Nodes.PoA where
 
 import           Enecuum.Prelude
+import qualified Data.Aeson as A
 
 import           Data.HGraph.StringHashable   (toHash)
 
 import qualified Enecuum.Domain               as D
+import           Enecuum.Config
 import qualified Enecuum.Language             as L
 import qualified Enecuum.Blockchain.Lens      as Lens
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
@@ -27,10 +29,31 @@ data PoANodeData = PoANodeData
 
 makeFieldsNoPrefix ''PoANodeData
 
+data PoANode = PoANode
+    deriving (Show, Generic)
+
+instance NodeCfg PoANode where
+    data NodeConfig PoANode = PoANodeConfig
+        { dummyOption :: Int
+        }
+        deriving (Show, Generic)
+
+instance Node PoANode where
+    data NodeScenario PoANode = Good | Bad
+        deriving (Show, Generic)
+    getNodeScript = poaNode
+
+instance ToJSON   PoANode                where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON PoANode                where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig PoANode)   where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig PoANode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario PoANode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario PoANode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
 
-sendMicroblock :: PoANodeData -> D.KBlock -> D.ScenarioRole -> Free L.NodeF ()
+sendMicroblock :: PoANodeData -> D.KBlock -> NodeScenario PoANode -> L.NodeL ()
 sendMicroblock poaData block role = do
     currentBlock <- L.readVarIO (poaData ^. currentLastKeyBlock)
     when (block /= currentBlock) $ do
@@ -54,16 +77,15 @@ sendMicroblock poaData block role = do
         L.writeVarIO (poaData ^. currentLastKeyBlock) block
 
         mBlock <- case role of
-            D.Good -> A.genMicroblock block tx
-            D.Bad  -> A.generateBogusSignedMicroblock block tx
-            _      -> error "Error of config"
+            Good -> A.genMicroblock block tx
+            Bad  -> A.generateBogusSignedMicroblock block tx
         L.logInfo
             $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
         void $ L.withConnection D.Tcp A.graphNodeTransmitterTcpAddress $
             \conn -> L.send conn mBlock
 
-poaNode :: D.ScenarioRole -> L.NodeDefinitionL ()
-poaNode role = do
+poaNode :: NodeScenario PoANode -> NodeConfig PoANode -> L.NodeDefinitionL ()
+poaNode role _ = do
     L.nodeTag "PoA node"
     L.logInfo "Starting of PoA node"
     poaData <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
@@ -80,4 +102,4 @@ poaNode role = do
             L.atomically $ L.modifyVar (poaData ^. transactionPending) ( ++ tx )
         whenRightM (L.makeRpcRequest A.graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> sendMicroblock poaData block role
 
-    L.awaitNodeFinished poaData            
+    L.awaitNodeFinished poaData
