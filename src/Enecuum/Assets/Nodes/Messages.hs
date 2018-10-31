@@ -10,6 +10,12 @@ import           Data.HGraph.StringHashable
 data SuccessMsg = SuccessMsg
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+data Hello = Hello StringHash D.Address
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data ConnectRequest = ConnectRequest StringHash Integer
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 -- | Network messages
 data Ping = Ping
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

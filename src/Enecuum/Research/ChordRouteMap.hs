@@ -4,7 +4,10 @@ module Enecuum.Research.ChordRouteMap
     , removeFromMap
     , findInMap
     , findInMapR
+    , findInMapNByKey
     , findNext
+    , hashSize
+    , quantityOfHashes
     ) where
 
 import           Universum

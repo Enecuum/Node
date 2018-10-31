@@ -35,3 +35,7 @@ poaNodeRpcPort = 2007
 
 poaNodeRpcAddress :: D.Address
 poaNodeRpcAddress = D.Address "127.0.0.1" poaNodeRpcPort
+
+
+bnNodePort :: D.PortNumber
+bnNodePort = 5000

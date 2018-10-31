@@ -80,4 +80,4 @@ poaNode role = do
             L.atomically $ L.modifyVar (poaData ^. transactionPending) ( ++ tx )
         whenRightM (L.makeRpcRequest A.graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> sendMicroblock poaData block role
 
-    L.awaitNodeFinished poaData            
+    L.awaitNodeFinished poaData
