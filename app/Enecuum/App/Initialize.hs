@@ -9,28 +9,12 @@ import           Enecuum.Config
 import qualified Enecuum.Core.Lens               as Lens
 import           Enecuum.Interpreters            (clearNodeRuntime, runFileSystemL, runNodeDefinitionL)
 import qualified Enecuum.Language                as L
+import qualified Enecuum.Runtime                 as R
 import           Enecuum.Runtime                 (clearCoreRuntime, clearLoggerRuntime,
                                                   createCoreRuntime, createLoggerRuntime, createNodeRuntime)
 
-
-    -- TODO: make this more correct.
-    -- TODO: use bracket idiom here
-
-initialize :: Config -> IO ()
-initialize config = do
-    putStrLn @Text "Getting log file..."
-    let loggerConfig' = loggerConfig config
-    let logFile       = loggerConfig' ^. Lens.logFilePath
-    putStrLn @Text $ "Log file: " +| logFile |+ "."
-
-    putStrLn @Text "Creating logger runtime..."
-    loggerRt <- createLoggerRuntime loggerConfig'
-    putStrLn @Text "Creating core runtime..."
-    coreRt <- createCoreRuntime loggerRt
-    putStrLn @Text "Creating node runtime..."
-    story <- runFileSystemL $ clientStory
-    nodeRt <- createNodeRuntime coreRt (M.singleton "Client" story)
-
+runNode :: Config -> R.NodeRuntime -> IO ()
+runNode config nodeRt =
     forM_ (scenarioNode config) $ \scenarioCase -> runNodeDefinitionL nodeRt $ do
         L.logInfo
             $   "Starting node.\n  Role: " +|| nodeRole scenarioCase
@@ -38,12 +22,46 @@ initialize config = do
             ||+ "\n  Case: " +|| scenarioRole scenarioCase ||+ "..."
         dispatchScenario config scenarioCase
 
-    putStrLn @Text "Clearing node runtime..."
-    clearNodeRuntime nodeRt
-    putStrLn @Text "Clearing core runtime..."
-    clearCoreRuntime coreRt
+createLoggerRuntime' :: Config -> IO R.LoggerRuntime
+createLoggerRuntime' config = do
+    let loggerConfig' = loggerConfig config
+    let logFile       = loggerConfig' ^. Lens.logFilePath
+    putStrLn @Text $ "Log file: " +| logFile |+ "."
+    putStrLn @Text "Creating logger runtime..."
+    createLoggerRuntime loggerConfig'
+
+clearLoggerRuntime' :: R.LoggerRuntime -> IO ()
+clearLoggerRuntime' loggerRt = do
     putStrLn @Text "Clearing logger runtime..."
     clearLoggerRuntime loggerRt
+
+createCoreRuntime' :: R.LoggerRuntime -> IO R.CoreRuntime
+createCoreRuntime' loggerRt = do
+    putStrLn @Text "Creating core runtime..."
+    createCoreRuntime loggerRt
+
+clearCoreRuntime' :: R.CoreRuntime -> IO ()
+clearCoreRuntime' coreRt = do
+    putStrLn @Text "Clearing core runtime..."
+    clearCoreRuntime coreRt
+
+createNodeRuntime' :: R.CoreRuntime -> IO R.NodeRuntime
+createNodeRuntime' coreRt = do
+    story <- runFileSystemL clientStory
+    putStrLn @Text "Creating node runtime..."
+    createNodeRuntime coreRt (M.singleton "Client" story)
+
+clearNodeRuntime' :: R.NodeRuntime -> IO ()
+clearNodeRuntime' nodeRt = do
+    putStrLn @Text "Clearing node runtime..."
+    clearNodeRuntime nodeRt
+
+initialize :: Config -> IO ()
+initialize config =
+    bracket (createLoggerRuntime' config) clearLoggerRuntime' $ \loggerRt ->
+    bracket (createCoreRuntime' loggerRt) clearCoreRuntime'   $ \coreRt   ->
+    bracket (createNodeRuntime' coreRt)   clearNodeRuntime'   $ \nodeRt   ->
+    runNode config nodeRt
 
 dispatchScenario :: Config -> ScenarioNode -> L.NodeDefinitionL ()
 dispatchScenario _ (ScenarioNode Client      _         _           ) = S.clientNode
