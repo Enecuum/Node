@@ -11,6 +11,7 @@
           "format": "$prio $loggername: $msg",
           "level": "Debug",
           "logFilePath": "/tmp/log/GraphNode.log",
-          "logToConsole": true
+          "logToConsole": true,
+          "logToFile": true
       }
 }

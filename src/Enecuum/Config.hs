@@ -13,6 +13,7 @@ import           Enecuum.Core.Types.Logger     (LoggerConfig(..))
 import           System.FilePath.Windows       (dropFileName)
 import           System.Directory (createDirectoryIfMissing)
 import           Enecuum.Framework.Domain.Networking
+import qualified Enecuum.Core.Lens              as Lens
 
 data NodeRole = PoW | PoA | Client | GraphNode
   deriving (Generic, FromJSON, Show, Read, Eq, Ord )
@@ -61,7 +62,7 @@ readClientConfig _ = Nothing
 logConfig :: FilePath -> IO LoggerConfig
 logConfig configName = do
     config <- getConfigBase configName
-    let logConf@(LoggerConfig _ _ logFile _) = loggerConfig config
-        dir = dropFileName logFile
+    let logConf = loggerConfig config
+        dir = dropFileName $ logConf ^. Lens.logFilePath
     createDirectoryIfMissing True dir
     pure logConf

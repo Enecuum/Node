@@ -14,8 +14,7 @@ import qualified Enecuum.Core.Types          as T (LogLevel (..), LoggerConfig(.
 
 -- | Opaque type covering all information needed to teardown the logger.
 data HsLoggerHandle = HsLoggerHandle
-  { rootLogHandler :: GenericHandler Handle
-  , serverLogHandler :: GenericHandler Handle
+  { handlers :: [GenericHandler Handle]
   }
 
 component :: String
@@ -25,7 +24,8 @@ component = "Node.Main"
 -- the application are needed to installed. Sets them up before running the action
 -- and tears them down afterwards. Even in case of an exception.
 withLogger :: T.LoggerConfig -> (HsLoggerHandle -> IO c) -> IO c
-withLogger config = bracket setupLogger' teardownLogger where setupLogger' = setupLogger config
+withLogger config = bracket setupLogger' teardownLogger 
+    where setupLogger' = setupLogger config
 
 -- | Dispatch log level from the LoggerL language
 -- to the relevant log level of hslogger package
@@ -47,25 +47,27 @@ runLoggerL Nothing  _ = pure ()
 
 -- | Setup logger required by the application.
 setupLogger :: T.LoggerConfig -> IO HsLoggerHandle
-setupLogger (T.LoggerConfig format level logFileName isConsoleLog) = do
-    logHandler <- fileHandler logFileName (dispatchLogLevel level)
-        >>= \lh -> pure $ setFormatter lh (simpleLogFormatter format)
+setupLogger (T.LoggerConfig format level logFileName isConsoleLog isFileLog ) = do
+    let mainFileLog = "/tmp/log/main.log"
+    let logLevel = dispatchLogLevel level
+    let setFormat = \lh -> pure $ setFormatter lh (simpleLogFormatter format)
 
-    stdoutLog <- streamHandler stdout (dispatchLogLevel level)
-        >>= \lh -> pure $ setFormatter lh (simpleLogFormatter format)
+    rootHandler <- fileHandler mainFileLog logLevel >>= setFormat
+    fileHandler <- fileHandler logFileName logLevel >>= setFormat
+    stdoutHandler <- streamHandler stdout logLevel >>= setFormat
 
     -- root Log
-    updateGlobalLogger rootLoggerName (setLevel DEBUG . setHandlers [logHandler])
+    updateGlobalLogger rootLoggerName (setLevel DEBUG . setHandlers [rootHandler])
 
-    let handlers = [stdoutLog | isConsoleLog]
+    let file   = [fileHandler   | isFileLog   ]
+    let stdout = [stdoutHandler | isConsoleLog]
+    let handlers = stdout ++ file              
 
     updateGlobalLogger component (setLevel DEBUG . setHandlers handlers)
 
-    -- return opaque HsLoggerHandle handle
-    pure $ HsLoggerHandle logHandler stdoutLog
+    pure $ HsLoggerHandle $ rootHandler : handlers 
 
 -- | Tear down the application logger; i.e. close all associated log handlers.
 teardownLogger :: HsLoggerHandle -> IO ()
-teardownLogger handle = do
-    close $ serverLogHandler handle
-    close $ rootLogHandler handle
+teardownLogger (HsLoggerHandle handlers) = do
+    mapM_ close handlers

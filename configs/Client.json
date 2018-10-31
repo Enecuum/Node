@@ -11,7 +11,8 @@
           "format": "$prio $loggername: $msg",
           "level": "Debug",
           "logFilePath": "/tmp/log/app.log",
-          "logToConsole": true
+          "logToConsole": true,
+          "logToFile": true
       },
    "clientConfig":
       {

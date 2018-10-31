@@ -28,7 +28,7 @@ spec = describe "Synchronization tests" $ fromHUnitTest $ TestList
     [TestLabel "test net sync" testNodeNet]
 
 logConfig :: FilePath -> D.LoggerConfig
-logConfig file = D.LoggerConfig "$prio $loggername: $msg" D.Debug file True
+logConfig file = D.LoggerConfig "$prio $loggername: $msg" D.Debug file True True
 
 createNodeRuntime :: R.LoggerRuntime -> IO R.NodeRuntime
 createNodeRuntime loggerRuntime = R.createCoreRuntime loggerRuntime >>= (`R.createNodeRuntime` M.empty)
