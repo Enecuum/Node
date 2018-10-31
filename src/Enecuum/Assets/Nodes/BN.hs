@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module Enecuum.Assets.Nodes.BN where
+module Enecuum.Assets.Nodes.BN (bnNode) where
 
 import           Enecuum.Prelude
 import qualified Enecuum.Domain                 as D

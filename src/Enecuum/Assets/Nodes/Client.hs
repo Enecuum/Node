@@ -26,6 +26,8 @@ data Ping                           = Ping Protocol D.Address
 newtype StopRequest                 = StopRequest D.Address
 data GetBlock                       = GetBlock D.StringHash D.Address
 data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON)
+data SendTo                         = SendTo D.StringHash D.Address
+
 
 data GraphNodeData = GraphNodeData
     { _blockchain :: D.BlockchainData
@@ -68,6 +70,9 @@ instance J.FromJSON GenerateBlocksPacket where
 
 instance J.FromJSON StopRequest where
     parseJSON = J.withObject "StopRequest" $ \o -> StopRequest <$> (o J..: "address")
+
+instance J.FromJSON SendTo where
+    parseJSON = J.withObject "SendTo" $ \o -> SendTo <$> o J..: "hash" <*> (o J..: "address")
 
 instance J.FromJSON GetBlock where
     parseJSON = J.withObject "GetBlock" $ \o -> GetBlock <$> o J..: "hash" <*> (o J..: "address")
@@ -157,6 +162,11 @@ getBlock (GetBlock hash address) = do
         Right (D.MBlockContent block) -> pure $ "Microblock is " <> show block
         Left  text                    -> pure $ "Error: "         <> text
 
+
+sendTo :: SendTo -> L.NodeL Text
+sendTo (SendTo hash addr) = do
+    void $ L.notify addr $ M.SendTo hash 10 "!! msg !!"
+    pure "Sended."
 {-
 Requests:
 {"method":"GetLastKBlock", "address":{"host":"127.0.0.1", "port": 2005}}
@@ -193,6 +203,9 @@ clientNode = do
         -- interaction with poa node
         L.stdHandler startForeverChainGenerationHandler
         L.stdHandler generateBlocksPacketHandler
+
+        -- routing sending
+        L.stdHandler sendTo
     L.awaitNodeFinished' stateVar
 
 eitherToText :: Show a => Either Text a -> Text

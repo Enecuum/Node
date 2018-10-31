@@ -14,7 +14,7 @@ import           System.FilePath.Windows       (dropFileName)
 import           System.Directory (createDirectoryIfMissing)
 import           Enecuum.Framework.Domain.Networking
 
-data NodeRole = PoW | PoA | Client | GraphNode
+data NodeRole = PoW | PoA | Client | GraphNode | NN | BN 
   deriving (Generic, FromJSON, Show, Read, Eq, Ord )
 
 data Scenario = LedgerBalance | SyncChain | SyncKblock | Full

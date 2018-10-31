@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module Enecuum.Assets.Nodes.NN where
+module Enecuum.Assets.Nodes.NN (nnNode) where
 
 import           Enecuum.Prelude
 import qualified Data.Aeson                     as J
@@ -103,9 +103,9 @@ acceptSendTo
     :: NNNodeData -> D.StringHash -> M.SendTo -> D.Connection D.Udp -> L.NodeL ()
 acceptSendTo nodeData myHash (M.SendTo hash i msg) conn = do
     L.close conn
-    L.logInfo $ "Recived msg: \"" <>  msg <> "\" for " <> show hash
+    L.logInfo $ "Recived msg: \"" <>  msg <> "\" for " <> show hash <> " time to live " <> show i 
     when (myHash == hash) $ L.logInfo "I'm reciver."
-    when (i > 0) $ do
+    when (i >= 0) $ do
         rm <- L.readVarIO (nodeData ^. netNodes)
         whenJust (findNext hash rm) $ \(h, address) -> do
             L.logInfo $ "Resending to: " <> show h
@@ -122,13 +122,15 @@ nnNode maybePort = do
 
     port        <- awaitPort nodeData
     let myAddress = D.Address "127.0.0.1" port
+    let myHash    = D.toHashGeneric myAddress
+    L.logInfo $ show $ J.encode myHash
     connectToBN myAddress A.bnAddress nodeData
 
     L.serving D.Udp port $ do
         L.handler $ acceptHello           nodeData
         L.handler $ acceptConnectResponse nodeData myAddress
         L.handler $ acceptConnectRequest  nodeData
-        L.handler $ acceptSendTo          nodeData  (D.toHashGeneric myAddress)
+        L.handler $ acceptSendTo          nodeData myHash
 
     L.process $ forever $ do
         L.delay $ 1000 * 1000
