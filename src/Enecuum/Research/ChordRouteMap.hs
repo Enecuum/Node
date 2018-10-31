@@ -9,15 +9,18 @@ module Enecuum.Research.ChordRouteMap
     , hashSize
     , quantityOfHashes
     , inverseFormula
+    , toChordRouteMap
     ) where
 
 import           Universum
 import qualified Data.Map                      as M
-import qualified Data.Set                      as S
 import           Data.HGraph.StringHashable
 
 -- | Route map for chord algorithm.
 type ChordRouteMap a = M.Map Integer a
+
+toChordRouteMap :: Ord a => [(StringHash, a)] -> ChordRouteMap a
+toChordRouteMap s = M.fromList [(hashToInteger k, v)|(k, v) <- s]
 
 -- | Size of hashes.
 hashSize :: Integer
@@ -31,22 +34,21 @@ quantityOfHashes = 2 ^ hashSize
 addToMap :: Ord a => StringHash -> a -> ChordRouteMap a -> ChordRouteMap a
 addToMap hash = M.insert (hashToInteger hash)
 
--- | Remove elem from route map. 
+-- | Remove elem from route map.
 removeFromMap :: Ord a => StringHash -> ChordRouteMap a -> ChordRouteMap a
 removeFromMap hash = M.delete (hashToInteger hash)
 
--- | Find all fingers in route map by straight formula.
-findInMap :: Ord a => StringHash -> ChordRouteMap a -> Set (StringHash, a)
+-- | Find all fingers in rout map by straight formulas.
+findInMap :: Ord a => StringHash -> ChordRouteMap a -> [(StringHash, a)]
 findInMap = findInMapByKey
     (\hash i -> (hashToInteger hash + 2 ^ i) `mod` quantityOfHashes)
 
--- | Find all fingers in route map by inverse formula.
-findInMapR :: Ord a => StringHash -> ChordRouteMap a -> Set (StringHash, a)
+-- | Find all fingers in rout map by inverse formulas.
+findInMapR :: Ord a => StringHash -> ChordRouteMap a -> [(StringHash, a)]
 findInMapR = findInMapByKey inverseFormula
 
 inverseFormula :: Integral b => StringHash -> b -> Integer
 inverseFormula hash i = (quantityOfHashes + hashToInteger hash - 2 ^ i) `mod` quantityOfHashes
-
 
 -- | Find all fingers in route map by formulas.
 findInMapByKey
@@ -54,8 +56,8 @@ findInMapByKey
     => (StringHash -> Integer -> Integer)
     -> StringHash
     -> ChordRouteMap a
-    -> Set (StringHash, a)
-findInMapByKey elemKey hash rm = S.fromList $ mapMaybe
+    -> [(StringHash, a)]
+findInMapByKey elemKey hash rm = mapMaybe
     (\i -> findInMapNByKey elemKey i hash rm) [0..hashSize-1]
 
 -- | Find N finger in route map by formulas.
@@ -65,7 +67,7 @@ findInMapNByKey
     -> StringHash
     -> Map Integer b
     -> Maybe (StringHash, b)
-findInMapNByKey elemKey i hash rm = 
+findInMapNByKey elemKey i hash rm =
     (\(x, y) -> (integerToHash x, y)) <$>
     (if isJust bottomElem then bottomElem else topElem)
     where

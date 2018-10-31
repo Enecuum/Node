@@ -67,10 +67,37 @@ acceptHello nodeData (M.Hello hash address) con = do
     L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap hash address)
     L.close con
 
+acceptConnectResponse :: NNNodeData -> D.Address -> M.ConnectResponse -> D.Connection D.Udp -> L.NodeL ()
+acceptConnectResponse nodeData myAddress (M.ConnectResponse hash address) con = do
+    when (myAddress /= address) $
+        L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap hash address)
+    L.close con
+
+acceptConnectRequest :: NNNodeData -> M.ConnectRequest -> D.Connection D.Udp -> L.NodeL ()
+acceptConnectRequest nodeData (M.ConnectRequest hash i) conn = do
+    maybeAddress <- L.atomically $ do
+        connectMap <- L.readVar (nodeData ^. netNodes)
+        pure $ findInMapNByKey
+            (\h num -> (D.hashToInteger h + 2 ^ num) `mod` quantityOfHashes)
+            i
+            hash
+            connectMap
+    whenJust maybeAddress $ \(h, address) ->
+        void $ L.send conn $ M.ConnectResponse h address
+    L.close conn
 
 stabilizationOfConnections :: D.Address -> NNNodeData -> L.NodeL ()
-stabilizationOfConnections myAddress nodeData = undefined
+stabilizationOfConnections myAddress nodeData = do
+    let hash = D.toHashGeneric myAddress
+    connectMap <- L.atomically $ do
+        nodes <- L.readVar (nodeData ^. netNodes)
+        let filteredNodes   = findInMap hash nodes
+        let filteredNodeMap = toChordRouteMap filteredNodes
+        L.writeVar (nodeData ^. netNodes) filteredNodeMap
+        pure $ snd <$> filteredNodes
 
+    forM_ (zip connectMap [255, 254..]) $ \(addr, i) -> void $
+        L.notify addr $ M.ConnectRequest hash i
 
 nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
 nnNode maybePort = do
@@ -85,9 +112,13 @@ nnNode maybePort = do
     let myAddress = D.Address "127.0.0.1" port
     connectToBN myAddress A.bnAddress nodeData
 
-    L.serving D.Udp port $
-        L.handler $ acceptHello nodeData
+    L.serving D.Udp port $ do
+        L.handler $ acceptHello           nodeData
+        L.handler $ acceptConnectResponse nodeData myAddress
+        L.handler $ acceptConnectRequest  nodeData
 
-    L.process $ forever $ stabilizationOfConnections myAddress nodeData
+    L.process $ forever $ do
+        L.delay $ 1000 * 1000
+        stabilizationOfConnections myAddress nodeData
 
     L.awaitNodeFinished nodeData
