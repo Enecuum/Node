@@ -30,8 +30,10 @@ data Config node = Config
 
 instance (FromJSON node, FromJSON (NodeScenario node), FromJSON (NodeConfig node)) => FromJSON (Config node)
 
+class NodeCfg node where
+    data NodeConfig node :: *
+
 class Node node where
-    type NodeConfig   node :: *
     data NodeScenario node :: *
     parseConfig :: LByteString -> Maybe (Config (NodeConfig node))
     getScenario :: NodeConfig node -> NodeScenario node

@@ -8,13 +8,9 @@ import Enecuum.Assets.Nodes.GraphNode.Transmitter (graphNodeTransmitter)
 import Enecuum.Assets.Nodes.GraphNode.Receiver (graphNodeReceiver)
 import Enecuum.Assets.Nodes.GraphNode.Config
 
-data GraphNode = GraphNode
-    deriving (Show, Generic, FromJSON)
-
 instance Node GraphNode where
     data NodeScenario GraphNode = Transmitter | Receiver
             deriving (Generic, FromJSON)
-    type NodeConfig GraphNode = GraphNodeConfig
     parseConfig = tryParseConfig
     getScenario = scenario
     getNode Transmitter = S.graphNodeTransmitter

@@ -3,13 +3,14 @@ module Enecuum.Assets.Nodes.GraphNode.Transmitter where
 import           Enecuum.Prelude
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
+import           Enecuum.Config
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.GraphNode.Logic
 import           Enecuum.Assets.Nodes.GraphNode.Config
 
 -- | Start of graph node
-graphNodeTransmitter :: GraphNodeConfig -> L.NodeDefinitionL ()
+graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()
 graphNodeTransmitter cfg = do
     L.nodeTag "graphNodeTransmitter"
     nodeData <- graphNodeInitialization
@@ -44,5 +45,5 @@ graphNodeTransmitter cfg = do
         L.method  $ getTransactionPending nodeData 
         L.method  $ getLastKBlock nodeData
 
-        L.std $ L.stdHandler $ L.stopNodeHandler nodeData
-        L.awaitNodeFinished nodeData
+    L.std $ L.stdHandler $ L.stopNodeHandler nodeData
+    L.awaitNodeFinished nodeData

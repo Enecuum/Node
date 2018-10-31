@@ -3,8 +3,14 @@
 module Enecuum.Assets.Nodes.GraphNode.Config where
 
 import Enecuum.Prelude
+import Enecuum.Config
 
-data GraphNodeConfig = GraphNodeConfig
-    { database :: FilePath
-    }
+data GraphNode = GraphNode
     deriving (Show, Generic, FromJSON)
+
+instance NodeCfg GraphNode where
+    data NodeConfig GraphNode = GraphNodeConfig
+        { database :: FilePath
+        }
+        deriving (Show, Generic, FromJSON)
+
