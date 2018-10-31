@@ -73,6 +73,19 @@ acceptConnectResponse nodeData myAddress (M.ConnectResponse hash address) con = 
         L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap hash address)
     L.close con
 
+acceptConnectRequest :: NNNodeData -> M.ConnectRequest -> D.Connection D.Udp -> L.NodeL ()
+acceptConnectRequest nodeData (M.ConnectRequest hash i) conn = do
+    maybeAddress <- L.atomically $ do
+        connectMap <- L.readVar (nodeData ^. netNodes)
+        pure $ findInMapNByKey
+            (\h num -> (D.hashToInteger h + 2 ^ num) `mod` quantityOfHashes)
+            i
+            hash
+            connectMap
+    whenJust maybeAddress $ \(h, address) ->
+        void $ L.send conn $ M.ConnectResponse h address
+    L.close conn
+
 stabilizationOfConnections :: D.Address -> NNNodeData -> L.NodeL ()
 stabilizationOfConnections myAddress nodeData = do
     let hash = D.toHashGeneric myAddress
@@ -102,6 +115,7 @@ nnNode maybePort = do
     L.serving D.Udp port $ do
         L.handler $ acceptHello           nodeData
         L.handler $ acceptConnectResponse nodeData myAddress
+        L.handler $ acceptConnectRequest  nodeData
 
     L.process $ forever $ do
         L.delay $ 1000 * 1000
