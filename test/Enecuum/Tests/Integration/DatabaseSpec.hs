@@ -192,7 +192,7 @@ spec = do
 
         it "DB is present, create, errorIfExists False, errors expected" $ withDbPresence dbPath $ do
             eRes <- evalNode $ dbInitNode cfg2
-            eRes `shouldBe` Left (D.DBError D.DBSystemError ("user error (open: Invalid argument: " +| dbPath |+ ": exists (error_if_exists is true))"))
+            eRes `shouldBe` Left (D.DBError D.SystemError ("user error (open: Invalid argument: " +| dbPath |+ ": exists (error_if_exists is true))"))
 
     describe "Database usage tests" $ do
         it "Write and Read KBlock Meta" $ withDbAbsence dbPath $ do

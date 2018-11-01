@@ -8,6 +8,7 @@ import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.GraphNode.Logic
 import           Enecuum.Assets.Nodes.GraphNode.Config
+import           Enecuum.Assets.Nodes.GraphNode.Database
 
 -- | Start of graph node
 graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()
@@ -18,6 +19,8 @@ graphNodeTransmitter nodeCfg = do
 
 graphNodeTransmitter' :: GraphNodeData -> L.NodeDefinitionL ()
 graphNodeTransmitter' nodeData = do
+
+    L.scenario $ restoreFromDB nodeData
 
     L.serving D.Tcp graphNodeTransmitterTcpPort $ do
         -- network

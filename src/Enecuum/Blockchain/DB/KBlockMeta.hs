@@ -13,7 +13,8 @@ import qualified Enecuum.Blockchain.Lens   as Lens
 
 -- kBlocks_meta (kBlock_hash -> kBlock_meta)
 -- -----------------------------------------------------------------
--- 4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY= (0, "")
+-- AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= (0, "")
+-- 4z9ADFAWehl6XGW2/N+2keOgNR921st3oPSVxv08hTY= (1, "")
 
 data KBlocksMetaDB
 data KBlockMetaEntity

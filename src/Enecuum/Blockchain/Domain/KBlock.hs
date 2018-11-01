@@ -27,11 +27,17 @@ instance StringHashable KBlock where
 genesisHash :: StringHash
 genesisHash = toHash genesisKBlock
 
-genesisIndicationHash :: IsString a => a
-genesisIndicationHash = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+genesisIndicationHashStr :: IsString a => a
+genesisIndicationHashStr = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
-genesisSolver :: IsString a => a
-genesisSolver = "EMde81cgGToGrGWSNCqm6Y498qBpjEzRczBbvC5MV2Q="
+genesisIndicationHash :: StringHash
+genesisIndicationHash = StringHash genesisIndicationHashStr
+
+genesisSolverStr :: IsString a => a
+genesisSolverStr = "EMde81cgGToGrGWSNCqm6Y498qBpjEzRczBbvC5MV2Q="
+
+genesisSolverHash :: StringHash
+genesisSolverHash = StringHash genesisSolverStr
 
 kBlockType :: Int
 kBlockType = 0
@@ -39,10 +45,10 @@ kBlockType = 0
 genesisKBlock :: KBlock
 genesisKBlock = KBlock
     { _time      = 0
-    , _prevHash  = StringHash genesisIndicationHash
+    , _prevHash  = genesisIndicationHash
     , _number    = 0
     , _nonce     = 0
-    , _solver    = StringHash genesisSolver
+    , _solver    = genesisSolverHash
     }
 
 calculateKeyBlockHash :: KBlock -> BSI.ByteString

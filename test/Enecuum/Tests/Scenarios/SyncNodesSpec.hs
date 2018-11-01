@@ -19,7 +19,8 @@ import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
 import qualified Enecuum.Assets.Nodes.GraphNode.Config       as A
 import qualified Enecuum.Assets.Nodes.GraphNode.Transmitter  as A
 import qualified Enecuum.Assets.Nodes.GraphNode.Receiver     as A
-import qualified Enecuum.Assets.Nodes.PoW                    as A
+import qualified Enecuum.Assets.Nodes.PoW.Config             as A
+import qualified Enecuum.Assets.Nodes.PoW.PoW                as A
 import qualified Enecuum.Assets.Nodes.PoA                    as A
 import qualified Enecuum.Assets.Nodes.Messages               as A
 import qualified Enecuum.Assets.Nodes.Address                as A
@@ -32,7 +33,7 @@ spec = describe "Synchronization tests" $ fromHUnitTest $ TestList
 
 testNodeNet :: Test
 testNodeNet = TestCase $ do
-    let graphNodeConfig = A.GraphNodeConfig ""
+    let graphNodeConfig = A.GraphNodeConfig "" (D.DBOptions True True) False
     let poaNodeConfig   = A.PoANodeConfig 0
 
     startNode Nothing $ A.graphNodeTransmitter graphNodeConfig
