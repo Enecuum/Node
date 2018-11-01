@@ -1,16 +1,17 @@
 {  
-   "node":"PoANode",
-   "nodeScenario":"Bad",
+   "node":"ClientNode",
+   "nodeScenario":"CLI",
    "nodeConfig":
-   {  
-      "tag":"PoANodeConfig",
-      "dummyOption": 1
+   {
+      "tag":"ClientNodeConfig",
+      "dummyOption":0
    },
    "loggerConfig":
    {
-      "logFilePath": "/tmp/log/PoABad.log",
+      "logFilePath":"/tmp/log/app.log",
       "format":"$prio $loggername: $msg",
       "logToConsole":true,
       "level":"Debug"
    }
 }
+

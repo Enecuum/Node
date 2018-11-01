@@ -1,5 +1,6 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Enecuum.Config where
 
@@ -8,60 +9,46 @@ import           Enecuum.Prelude
 import qualified Data.ByteString.Lazy          as L
 import qualified Data.Aeson                    as A
 
-
 import           Enecuum.Core.Types.Logger     (LoggerConfig(..))
-import           System.FilePath.Windows       (dropFileName)
-import           System.Directory (createDirectoryIfMissing)
-import           Enecuum.Framework.Domain.Networking
+import           Enecuum.Language              (NodeDefinitionL)
 
-data NodeRole = PoW | PoA | Client | GraphNode | NN | BN 
-  deriving (Generic, FromJSON, Show, Read, Eq, Ord )
+-- | General config for node.
+-- Separate config types for a node can be specified.
+-- N.B., ToJSON and FromJSON instances should be declared using 'nodeConfigJsonOptions'.
+data Config node = Config
+    { node            :: node                 -- ^ Node tag.
+    , nodeScenario    :: NodeScenario node    -- ^ Node scenario. It's possible to have several scenarios for node.
+    , nodeConfig      :: NodeConfig node      -- ^ Node config. Different scenarios have the same config.
+    , loggerConfig    :: LoggerConfig         -- ^ Logger config.
+    }
+    deriving (Generic)
 
-data Scenario = LedgerBalance | SyncChain | SyncKblock | Full
-  deriving (Generic, FromJSON, Show, Read, Eq, Ord)
-    
-data ScenarioRole = Receiver | Transmitter | Soly | Good | Bad
-  deriving (Generic, FromJSON, Show, Read, Eq, Ord)
+instance (FromJSON node, FromJSON (NodeScenario node), FromJSON (NodeConfig node)) => FromJSON (Config node)
+instance (ToJSON   node, ToJSON   (NodeScenario node), ToJSON   (NodeConfig node)) => ToJSON   (Config node)
 
-data ScenarioNode = ScenarioNode
-  { nodeRole     :: NodeRole
-  , scenario     :: Scenario
-  , scenarioRole :: ScenarioRole
-  } deriving (Generic, FromJSON, Show, Read, Eq, Ord)
+-- | Represents a config type for a particular node.
+data family NodeConfig node :: *
 
-data ClientConfig = ClientConfig 
-  {  host :: String
-  ,  port :: Int
-  } deriving (Generic, FromJSON, Show, Read, Eq, Ord)
+-- | Represents a definition of node scenarios available.
+class Node node where
+    data NodeScenario node :: *
+    getNodeScript :: NodeScenario node -> NodeConfig node -> NodeDefinitionL ()
 
-data Config = Config
-  { bootNodeAddress :: Text
-  , scenarioNode :: [ScenarioNode]
-  , extPort :: Int
-  , loggerConfig :: LoggerConfig
-  , clientConfig :: Maybe ClientConfig
-  }
-  deriving (Generic, FromJSON)
+-- | Options for ToJSON / FromJSON instances for configs.
+-- These options take care about correct parsing of enum and data types.
+nodeConfigJsonOptions :: A.Options
+nodeConfigJsonOptions = A.defaultOptions
+    { A.unwrapUnaryRecords    = False
+    , A.tagSingleConstructors = True
+    }
 
-withConfig :: FilePath -> (Config -> IO ()) -> IO ()
-withConfig configName act = act =<< getConfigBase configName
+-- | Reads a config file and evals some action with the contents.
+withConfig :: FilePath -> (LByteString -> IO ()) -> IO ()
+withConfig configName act = act =<< L.readFile configName
 
-getConfigBase :: FilePath -> IO Config
-getConfigBase configName = do
-    configContents <- L.readFile configName
-    case A.decode configContents of
-        Nothing     -> error "Please, specify config file correctly"
-        Just config -> pure config
-
-readClientConfig :: Config -> Maybe Address
-readClientConfig (Config _ _ _ _ (Just config)) = Just $ Address (host config) (toEnum $ port config)
-readClientConfig _ = Nothing
-
-
-logConfig :: FilePath -> IO LoggerConfig
-logConfig configName = do
-    config <- getConfigBase configName
-    let logConf@(LoggerConfig _ _ logFile _) = loggerConfig config
-        dir = dropFileName logFile
-    createDirectoryIfMissing True dir
-    pure logConf
+-- | Tries to parse config according to the type @node@ passed.
+tryParseConfig
+    :: (FromJSON node, FromJSON (NodeScenario node), FromJSON (NodeConfig node))
+    => LByteString
+    -> Maybe (Config node)
+tryParseConfig = A.decode

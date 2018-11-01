@@ -10,9 +10,30 @@ import           Data.Text                        hiding (map)
 import qualified Enecuum.Assets.Blockchain.Wallet as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
 import qualified Enecuum.Domain                   as D
+import           Enecuum.Config
 import           Enecuum.Framework.Language.Extra (NodeStatus (..))
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude                  hiding (map, unpack)
+
+data ClientNode = ClientNode
+    deriving (Show, Generic)
+
+data instance NodeConfig ClientNode = ClientNodeConfig
+    { dummyOption :: Int
+    }
+    deriving (Show, Generic)
+
+instance Node ClientNode where
+    data NodeScenario ClientNode = CLI
+        deriving (Show, Generic)
+    getNodeScript CLI = clientNode
+
+instance ToJSON   ClientNode                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON ClientNode                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig ClientNode)   where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig ClientNode)   where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario ClientNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario ClientNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
 type BlocksCount = Int
 
@@ -28,12 +49,6 @@ data GetBlock                       = GetBlock D.StringHash D.Address deriving R
 data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON, Read)
 data SendTo                         = SendTo Address D.PortNumber deriving Read
 data Address                        = Address D.Host D.PortNumber deriving Read
-
-data GraphNodeData = GraphNodeData
-    { _blockchain :: D.BlockchainData
-    , _logVar     :: D.StateVar [Text]
-    , _status     :: D.StateVar NodeStatus
-    }
 
 
 data CLITransaction = CLITransaction
@@ -140,8 +155,8 @@ sendTo (SendTo (Address host port) rPort) = do
     void $ L.notify (D.Address host port) $ M.SendTo (D.toHashGeneric $ D.Address "127.0.0.1" rPort) 10 "!! msg !!"
     pure "Sended."
 
-clientNode :: L.NodeDefinitionL ()
-clientNode = do
+clientNode :: NodeConfig ClientNode -> L.NodeDefinitionL ()
+clientNode _ = do
     L.logInfo "Client started"
     L.nodeTag "Client"
     stateVar <- L.newVarIO NodeActing
