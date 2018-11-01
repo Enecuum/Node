@@ -12,6 +12,7 @@ module Enecuum.Research.ChordRouteMap
     , straightFormula
     , toChordRouteMap
     , findNextForHash
+    , fromChordRouteMap
     ) where
 
 import           Universum
@@ -23,6 +24,9 @@ type ChordRouteMap a = M.Map Integer a
 
 toChordRouteMap :: Ord a => [(StringHash, a)] -> ChordRouteMap a
 toChordRouteMap s = M.fromList [(hashToInteger k, v)|(k, v) <- s]
+
+fromChordRouteMap :: ChordRouteMap a -> [(StringHash, a)]
+fromChordRouteMap s = [(integerToHash k, v)| (k, v) <- M.toList s]
 
 -- | Size of hashes.
 hashSize :: Integer

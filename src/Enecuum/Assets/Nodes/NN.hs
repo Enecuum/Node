@@ -2,6 +2,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 module Enecuum.Assets.Nodes.NN (nnNode) where
 
+import qualified Data.Map                       as Map
 import           Enecuum.Prelude
 import qualified Enecuum.Domain                 as D
 import qualified Enecuum.Language               as L
@@ -86,18 +87,18 @@ acceptNextForYou nodeData hash (M.NextForYou senderAddress) conn = do
         pure $ findNextForHash hash connectMap
     whenJust maybeAddress $ \(h, address) ->
         void $ L.notify senderAddress $ M.ConnectResponse h address
-    
 
-stabilizationOfConnections :: D.Address -> D.StringHash -> NNNodeData -> L.NodeL ()
-stabilizationOfConnections myAddress myHash nodeData = do
-    connectMap <- L.atomically $ do
-        nodes <- L.readVar (nodeData ^. netNodes)
-        let filteredNodes   = maybeToList (findNext myHash nodes) <> findInMap myHash nodes
-        let filteredNodeMap = toChordRouteMap filteredNodes
-        L.writeVar (nodeData ^. netNodes) filteredNodeMap
-        pure $ snd <$> filteredNodes
+clearingOfConnects :: D.Address -> D.StringHash -> NNNodeData -> L.NodeL ()
+clearingOfConnects myAddress myHash nodeData = L.atomically $ do
+    nodes <- L.readVar (nodeData ^. netNodes)
+    let filteredNodes   = maybeToList (findNext myHash nodes) <> findInMap myHash nodes
+    let filteredNodeMap = toChordRouteMap filteredNodes
+    L.writeVar (nodeData ^. netNodes) filteredNodeMap
 
-    forM_ connectMap $ \addr -> void $
+requestingOfConnects :: D.Address -> D.StringHash -> NNNodeData -> L.NodeL ()
+requestingOfConnects myAddress myHash nodeData = do
+    nodes <- L.readVarIO (nodeData ^. netNodes)
+    forM_ nodes $ \addr -> void $
         L.notify addr $ M.NextForYou myAddress
 
 acceptSendTo
@@ -113,6 +114,12 @@ acceptSendTo nodeData myHash (M.SendTo hash i msg) conn = do
         whenJust (findNext hash rm) $ \(h, address) -> do
             L.logInfo $ "Resending to: " <> show h
             void $ L.notify address (M.SendTo hash (i-1) msg)
+
+--
+connectMapRequest :: NNNodeData -> M.ConnectMapRequest -> L.NodeL [(D.StringHash, D.Address)]
+connectMapRequest nodeData _ = do
+    nodes <- L.readVarIO (nodeData ^. netNodes)
+    pure $ fromChordRouteMap nodes
 
 nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
 nnNode maybePort = do
@@ -130,6 +137,9 @@ nnNode maybePort = do
     L.logInfo $ show myHash
     connectToBN myAddress A.bnAddress nodeData
 
+    L.serving D.Rpc (port - 1000) $
+        L.method  $  connectMapRequest     nodeData
+
     L.serving D.Udp port $ do
         L.handler $ acceptHello           nodeData
         L.handler $ acceptConnectResponse nodeData myAddress
@@ -137,7 +147,11 @@ nnNode maybePort = do
         L.handler $ acceptSendTo          nodeData myHash
 
     L.process $ forever $ do
+        L.delay $ 1000 * 10
+        clearingOfConnects myAddress myHash nodeData
+
+    L.process $ forever $ do
         L.delay $ 1000 * 1000
-        stabilizationOfConnections myAddress myHash nodeData
+        requestingOfConnects myAddress myHash nodeData
 
     L.awaitNodeFinished nodeData

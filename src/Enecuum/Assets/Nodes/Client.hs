@@ -49,7 +49,7 @@ data GetBlock'                       = GetBlock' D.StringHash D.Address deriving
 data Protocol'                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON, Read)
 data SendTo'                         = SendTo' Address' D.PortNumber deriving Read
 data Address'                        = Address' D.Host D.PortNumber deriving Read
-
+newtype DrawMap                      = DrawMap Address' deriving Read
 
 data CLITransaction = CLITransaction
   { _owner    :: String
@@ -154,6 +154,8 @@ sendTo :: SendTo' -> L.NodeL Text
 sendTo (SendTo' (Address' host port) rPort) = do
     void $ L.notify (D.Address host port) $ M.SendTo (D.toHashGeneric $ D.Address "127.0.0.1" rPort) 10 "!! msg !!"
     pure "Sended."
+
+--drawRouteMap :: 
 
 clientNode :: NodeConfig ClientNode -> L.NodeDefinitionL ()
 clientNode _ = do
