@@ -6,8 +6,6 @@
       "tag":"PoANodeConfig",
       "dummyOption": 1
    },
-   "bootNodeAddress":"[((127,0,0,1), 1554)]",
-   "extPort":1668,
    "loggerConfig":
    {
       "logFilePath": "/tmp/log/PoABad.log",

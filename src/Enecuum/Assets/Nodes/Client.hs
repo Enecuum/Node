@@ -19,8 +19,7 @@ data ClientNode = ClientNode
     deriving (Show, Generic)
 
 data instance NodeConfig ClientNode = ClientNodeConfig
-    { host :: String
-    , port :: Int
+    { dummyOption :: Int
     }
     deriving (Show, Generic)
 

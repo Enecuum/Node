@@ -13,11 +13,9 @@ import           Enecuum.Core.Types.Logger     (LoggerConfig(..))
 import           Enecuum.Language              (NodeDefinitionL)
 
 data Config node = Config
-    { bootNodeAddress :: Text
-    , node            :: node
+    { node            :: node
     , nodeScenario    :: NodeScenario node
     , nodeConfig      :: NodeConfig node
-    , extPort         :: Int
     , loggerConfig    :: LoggerConfig
     }
     deriving (Generic)
