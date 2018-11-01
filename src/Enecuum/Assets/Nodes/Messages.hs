@@ -16,6 +16,9 @@ data SuccessMsg = SuccessMsg
 data Hello = Hello StringHash D.Address
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+newtype NextForYou = NextForYou D.Address
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 data ConnectResponse = ConnectResponse StringHash D.Address
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
