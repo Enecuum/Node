@@ -122,7 +122,8 @@ nnNode maybePort = do
     L.std $ do
         L.stdHandler $ startNode nodeData
         L.stdHandler $ L.stopNodeHandler nodeData
-
+    
+    -- routing
     port        <- awaitPort nodeData
     let myAddress = D.Address "127.0.0.1" port
     let myHash    = D.toHashGeneric myAddress

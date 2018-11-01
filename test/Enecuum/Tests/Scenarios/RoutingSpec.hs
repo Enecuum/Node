@@ -1,6 +1,5 @@
 module Enecuum.Tests.Scenarios.RoutingSpec where
-
-import qualified Enecuum.Assets.Nodes.Address                 as A    
+  
 import qualified Enecuum.Assets.Scenarios      as A
 import qualified Enecuum.Domain                as D
 import           Enecuum.Prelude
@@ -24,7 +23,7 @@ testRouting = TestCase $ do
         startNode Nothing $ A.nnNode $ Just port
         -- waitForNode $ D.Address A.localhost port
         )
-    -- Right msg :: Either Text Msg <- makeIORpcRequest
+    -- Right msg :: Either Text Msg <- makeIORpcRequest A.bnNodePort A.Hello
     -- stopNode A.bnAddress
     -- forM ports (\port -> stopNode $ D.Address A.localhost port)
     True `shouldBe` True 
