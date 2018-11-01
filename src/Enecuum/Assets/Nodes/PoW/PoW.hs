@@ -1,9 +1,10 @@
+{-# OPTIONS_GHC -fno-warn-orphans   #-}
 {-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
-module Enecuum.Assets.Nodes.PoW where
+module Enecuum.Assets.Nodes.PoW.PoW where
 
 import           Enecuum.Prelude
 import qualified Data.Aeson as A
@@ -18,6 +19,8 @@ import           Enecuum.Assets.Nodes.Messages (
     SuccessMsg (..), ForeverChainGeneration(..), NBlockPacketGeneration(..))
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 import           Enecuum.Assets.Nodes.Methods
+import           Enecuum.Assets.Nodes.PoW.Config
+import qualified Enecuum.Assets.Nodes.CLens as CLens
 
 type IterationsCount = Int
 type EnableDelays = Bool
@@ -32,23 +35,11 @@ data PoWNodeData = PoWNodeData
 
 makeFieldsNoPrefix ''PoWNodeData
 
-data PoWNode = PoWNode
-    deriving (Show, Generic)
-
-data instance NodeConfig PoWNode = PoWNodeConfig
-        { delaysEnabled :: Bool
-        }
-    deriving (Show, Generic)
-
 instance Node PoWNode where
     data NodeScenario PoWNode = PoW
         deriving (Show, Generic)
     getNodeScript _ = powNode'
 
-instance ToJSON   PoWNode                where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON PoWNode                where parseJSON = A.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeConfig PoWNode)   where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeConfig PoWNode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 instance ToJSON   (NodeScenario PoWNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario PoWNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
@@ -107,4 +98,4 @@ powNodeInitialization cfg genesisHash = do
     n <- L.newVarIO 1
     b <- L.newVarIO 0
     f <- L.newVarIO NodeActing
-    pure $ PoWNodeData (delaysEnabled cfg) h n b f
+    pure $ PoWNodeData (cfg ^. CLens.delaysEnabled) h n b f

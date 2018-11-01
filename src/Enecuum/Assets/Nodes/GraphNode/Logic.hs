@@ -6,21 +6,27 @@
 
 module Enecuum.Assets.Nodes.GraphNode.Logic where
 
+import           Enecuum.Prelude
 import           Control.Lens                     (makeFieldsNoPrefix)
 import           Data.HGraph.StringHashable
 import qualified Data.Map                         as Map
-import           Enecuum.Assets.Nodes.Messages
+
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 import qualified Enecuum.Framework.LogState       as Log
 import qualified Enecuum.Language                 as L
-import           Enecuum.Prelude
 import qualified Enecuum.Blockchain.Lens          as Lens
+import qualified Enecuum.Blockchain.DB            as DB
+import           Enecuum.Assets.Nodes.Messages
+import           Enecuum.Assets.Nodes.GraphNode.Config
+import qualified Enecuum.Assets.Nodes.CLens       as CLens
 
 data GraphNodeData = GraphNodeData
     { _blockchain :: D.BlockchainData
     , _logVar     :: D.StateVar [Text]
     , _status     :: D.StateVar NodeStatus
+    , _config     :: NodeConfig GraphNode
+    , _db         :: DB.DBModel
     }
 
 makeFieldsNoPrefix ''GraphNodeData
@@ -148,16 +154,27 @@ getMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
         Just blockList -> pure $ Right $ GetMBlocksForKBlockResponse blockList
 
 -- | Initialization of graph node
-graphNodeInitialization :: L.NodeDefinitionL GraphNodeData
-graphNodeInitialization = L.scenario $ do
-    g <- L.newGraph
-    L.evalGraphIO g $ L.newNode $ D.KBlockContent D.genesisKBlock
-    L.logInfo $ "Genesis block (" +|| D.genesisHash ||+ "): " +|| D.genesisKBlock ||+ "."
-    L.atomically
-        $  GraphNodeData <$> (D.BlockchainData g
-        <$> L.newVar []
-        <*> L.newVar Map.empty
-        <*> L.newVar D.genesisHash
-        <*> L.newVar Map.empty)
-        <*> L.newVar []
-        <*> L.newVar NodeActing
+graphNodeInitialization :: NodeConfig GraphNode -> L.NodeDefinitionL (Either Text GraphNodeData)
+graphNodeInitialization nodeConfig = L.scenario $ do
+    eDBModel <- DB.initDBModel (nodeConfig ^. CLens.dbOptions) (nodeConfig ^. CLens.dbModel)
+    when (isRight eDBModel) $ L.logInfo $ "DB model initialized: " +| nodeConfig ^. CLens.dbModel |+ "."
+
+    case eDBModel of
+        Left err  -> pure $ Left err
+        Right dbModel -> do
+            g <- L.newGraph
+            L.evalGraphIO g $ L.newNode $ D.KBlockContent D.genesisKBlock
+            L.logInfo $ "Genesis block (" +|| D.genesisHash ||+ "): " +|| D.genesisKBlock ||+ "."
+            nodeData <- L.atomically
+                $  GraphNodeData <$>
+                    ( D.BlockchainData g
+                        <$> L.newVar []
+                        <*> L.newVar Map.empty
+                        <*> L.newVar D.genesisHash
+                        <*> L.newVar Map.empty
+                    )
+                <*> L.newVar []
+                <*> L.newVar NodeActing
+                <*> pure nodeConfig
+                <*> pure dbModel
+            pure $ Right nodeData

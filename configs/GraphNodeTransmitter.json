@@ -4,7 +4,13 @@
    "nodeConfig":
    {  
       "tag":"GraphNodeConfig",
-      "database":"path/to/database"
+      "dbModel":"graph_node_transmitter.dbm",
+      "dbOptions":
+      {
+          "createIfMissing":true,
+          "errorIfExists":false
+      },
+      "useDatabase":true
    },
    "loggerConfig":
    {

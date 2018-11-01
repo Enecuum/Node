@@ -19,7 +19,7 @@ data ClientNode = ClientNode
     deriving (Show, Generic)
 
 data instance NodeConfig ClientNode = ClientNodeConfig
-    { dummyOption :: Int
+    { _dummyOption :: Int
     }
     deriving (Show, Generic)
 

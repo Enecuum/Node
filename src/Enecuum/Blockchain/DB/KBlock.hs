@@ -4,9 +4,9 @@
 module Enecuum.Blockchain.DB.KBlock where
 
 import           Enecuum.Prelude
-import           Text.Printf          (printf)
+import           Text.Printf        (printf)
 
-import qualified Enecuum.Core.Types        as D
+import qualified Enecuum.Core.Types as D
 
 
 -- kBlocks (kBlock_idx|0 -> prev_hash, kBlock_idx|1 -> kBlock_data)
@@ -17,6 +17,9 @@ import qualified Enecuum.Core.Types        as D
 data KBlocksDB
 data KBlockPrevHashEntity
 data KBlockEntity
+
+instance D.DB KBlocksDB where
+    getDbName = "kblocks"
 
 instance D.DBEntity KBlockPrevHashEntity Integer where
     data DBKey   KBlockPrevHashEntity = KBlockPrevHashKey D.StringHash

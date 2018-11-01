@@ -11,9 +11,13 @@ import           Enecuum.Assets.Nodes.GraphNode.Config
 
 -- | Start of graph node
 graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()
-graphNodeTransmitter _ = do
+graphNodeTransmitter nodeCfg = do
     L.nodeTag "graphNodeTransmitter"
-    nodeData <- graphNodeInitialization
+    eNodeData <- graphNodeInitialization nodeCfg
+    either L.logError graphNodeTransmitter' eNodeData
+
+graphNodeTransmitter' :: GraphNodeData -> L.NodeDefinitionL ()
+graphNodeTransmitter' nodeData = do
 
     L.serving D.Tcp graphNodeTransmitterTcpPort $ do
         -- network

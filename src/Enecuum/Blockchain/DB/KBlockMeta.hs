@@ -4,8 +4,8 @@
 module Enecuum.Blockchain.DB.KBlockMeta where
 
 import           Enecuum.Prelude
-import qualified Data.Aeson           as A
-import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Aeson                as A
+import qualified Data.ByteString.Lazy      as LBS
 
 import qualified Enecuum.Core.Types        as D
 import qualified Enecuum.Blockchain.Domain as D
@@ -17,6 +17,9 @@ import qualified Enecuum.Blockchain.Lens   as Lens
 
 data KBlocksMetaDB
 data KBlockMetaEntity
+
+instance D.DB KBlocksMetaDB where
+    getDbName = "kblocks_meta"
 
 instance D.DBEntity KBlockMetaEntity D.KBlock where
     data DBKey   KBlockMetaEntity = KBlockMetaKey D.DBKeyRaw

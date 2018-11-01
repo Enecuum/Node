@@ -4,3 +4,4 @@ module Enecuum.Blockchain.DB
 
 import Enecuum.Blockchain.DB.KBlock     as X
 import Enecuum.Blockchain.DB.KBlockMeta as X
+import Enecuum.Blockchain.DB.Model      as X

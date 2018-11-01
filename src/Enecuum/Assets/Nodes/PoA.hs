@@ -33,7 +33,7 @@ data PoANode = PoANode
     deriving (Show, Generic)
 
 data instance NodeConfig PoANode = PoANodeConfig
-    { dummyOption :: Int
+    { _dummyOption :: Int
     }
     deriving (Show, Generic)
 
@@ -91,7 +91,9 @@ poaNode role _ = do
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
+    L.serving D.Rpc A.poaNodeRpcPort $ do
         L.method   rpcPingPong
+        L.method $ handleStopNode poaData
 
     L.process $ forever $ do
         L.delay $ 100 * 1000

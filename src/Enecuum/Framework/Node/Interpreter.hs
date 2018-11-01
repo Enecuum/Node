@@ -67,7 +67,7 @@ interpretNodeL nodeRt (L.InitDatabase cfg next) = do
     -- TODO: ResourceT usage.
     eDb <- try $ Rocks.open path opts
     case eDb of
-        Left (err :: SomeException) -> pure $ next $ Left $ D.DBError D.DBSystemError (show err)
+        Left (err :: SomeException) -> pure $ next $ Left $ D.DBError D.SystemError (show err)
         Right db -> do
             -- DB single entry point: worker.
             mutex <- newMVar ()

@@ -54,10 +54,13 @@ graphSynchro nodeData address = do
 
 -- | Start of graph node
 graphNodeReceiver :: NodeConfig GraphNode -> L.NodeDefinitionL ()
-graphNodeReceiver _ = do
+graphNodeReceiver nodeCfg = do
     L.nodeTag "graphNodeReceiver"
-    nodeData <- graphNodeInitialization
+    eNodeData <- graphNodeInitialization nodeCfg
+    either L.logError graphNodeReceiver' eNodeData
 
+graphNodeReceiver' :: GraphNodeData -> L.NodeDefinitionL ()
+graphNodeReceiver' nodeData = do
     L.process $ forever $ graphSynchro nodeData graphNodeTransmitterRpcAddress
     L.serving D.Rpc graphNodeReceiverRpcPort $ do
         -- network
