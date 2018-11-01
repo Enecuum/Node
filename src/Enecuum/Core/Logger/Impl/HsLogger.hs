@@ -65,7 +65,7 @@ setupLogger (T.LoggerConfig format level logFileName isConsoleLog isFileLog ) = 
 
     updateGlobalLogger component (setLevel DEBUG . setHandlers handlers)
 
-    pure $ HsLoggerHandle $ rootHandler : handlers 
+    pure $ HsLoggerHandle $ handlers ++ [rootHandler]
 
 -- | Tear down the application logger; i.e. close all associated log handlers.
 teardownLogger :: HsLoggerHandle -> IO ()
