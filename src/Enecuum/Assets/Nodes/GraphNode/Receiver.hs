@@ -13,6 +13,7 @@ import qualified Enecuum.Domain                       as D
 import qualified Enecuum.Framework.LogState           as Log
 import qualified Enecuum.Language                     as L
 import           Enecuum.Prelude
+import           Enecuum.Assets.Nodes.GraphNode.Config
 
 graphSynchro :: GraphNodeData -> D.Address -> L.NodeL ()
 graphSynchro nodeData address = do
@@ -52,8 +53,8 @@ graphSynchro nodeData address = do
 
 
 -- | Start of graph node
-graphNodeReceiver :: L.NodeDefinitionL ()
-graphNodeReceiver = do
+graphNodeReceiver :: NodeConfig GraphNode -> L.NodeDefinitionL ()
+graphNodeReceiver _ = do
     L.nodeTag "graphNodeReceiver"
     nodeData <- graphNodeInitialization
 

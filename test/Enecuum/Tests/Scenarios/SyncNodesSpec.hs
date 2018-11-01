@@ -16,6 +16,7 @@ import qualified Enecuum.Runtime    as R
 import qualified Data.Map           as M
 import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
 
+import qualified Enecuum.Assets.Nodes.GraphNode.Config       as A
 import qualified Enecuum.Assets.Nodes.GraphNode.Transmitter  as A
 import qualified Enecuum.Assets.Nodes.GraphNode.Receiver     as A
 import qualified Enecuum.Assets.Nodes.PoW                    as A
@@ -31,16 +32,19 @@ spec = describe "Synchronization tests" $ fromHUnitTest $ TestList
 
 testNodeNet :: Test
 testNodeNet = TestCase $ do
-    startNode Nothing A.graphNodeTransmitter
+    let graphNodeConfig = A.GraphNodeConfig ""
+    let poaNodeConfig   = A.PoANodeConfig 0
+
+    startNode Nothing $ A.graphNodeTransmitter graphNodeConfig
     waitForNode A.graphNodeTransmitterRpcAddress
 
     startNode Nothing A.powNode
     waitForNode A.powNodeRpcAddress
 
-    startNode Nothing $ A.poaNode D.Good
+    startNode Nothing $ A.poaNode A.Good poaNodeConfig
     waitForNode A.poaNodeRpcAddress
 
-    startNode Nothing A.graphNodeReceiver
+    startNode Nothing $ A.graphNodeReceiver graphNodeConfig
     waitForNode A.graphNodeReceiverRpcAddress
 
     threadDelay $ 1000 * 1000

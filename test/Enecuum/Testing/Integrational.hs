@@ -3,18 +3,37 @@
 module Enecuum.Testing.Integrational where
     
 import           Data.Aeson
-import qualified Data.Map           as M
+import qualified Data.Map             as M
+import qualified Data.ByteString.Lazy as LBS
+import qualified System.Directory     as Dir
+import qualified System.FilePath      as Dir
 
 import           Enecuum.Prelude
 import           Enecuum.Interpreters                         (runNodeDefinitionL)
 import qualified Enecuum.Language                             as L
+import qualified Enecuum.Config                               as Cfg
 import qualified Enecuum.Domain                               as D
 import qualified Enecuum.Runtime                              as R
 import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
 import qualified Enecuum.Assets.Nodes.Messages                as A
+import           Enecuum.Assets.Nodes.Client                  (ClientNode)
 
 logConfig :: FilePath -> D.LoggerConfig
 logConfig file = D.LoggerConfig "$prio $loggername: $msg" D.Debug file True
+
+testConfigFilePath :: IsString a => a
+testConfigFilePath = "./configs/testConfig.json"
+
+loadLoggerConfig :: FilePath -> IO D.LoggerConfig
+loadLoggerConfig configFile = do
+    configSrc <- LBS.readFile configFile
+    case Cfg.tryParseConfig @ClientNode configSrc of
+        Nothing  -> error $ "Invalid test config file: " <> show configFile
+        Just cfg -> do
+            let logConf@(D.LoggerConfig _ _ logFile _) = Cfg.loggerConfig cfg
+            let dir = Dir.dropFileName logFile
+            Dir.createDirectoryIfMissing True dir
+            pure logConf
 
 createNodeRuntime :: R.LoggerRuntime -> IO R.NodeRuntime
 createNodeRuntime loggerRuntime = R.createCoreRuntime loggerRuntime >>= (`R.createNodeRuntime` M.empty)
@@ -69,4 +88,3 @@ waitForNode address = go 0
             threadDelay $ 1000 * 100
             ePong :: Either Text A.Pong <- makeIORpcRequest address A.Ping
             when (isLeft ePong) $ go (n + 1)
-
