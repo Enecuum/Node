@@ -5,7 +5,6 @@
 module Enecuum.Framework.Language.Extra where
 
 import Enecuum.Prelude
-import qualified Data.Aeson as A
 
 import qualified Enecuum.Framework.State.Language      as L
 import qualified Enecuum.Framework.Node.Language       as L
@@ -34,10 +33,7 @@ class HasStatus s a | s -> a where
 data NodeStatus = NodeActing | NodeFinished
     deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data StopNode = StopNode
-
-instance A.FromJSON StopNode where
-    parseJSON _ = pure StopNode
+data StopNode = StopNode deriving Read
 
 
 -- | Evals some graph action (atomically) having a structure that contains a graph variable.

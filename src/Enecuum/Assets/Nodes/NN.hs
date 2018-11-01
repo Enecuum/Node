@@ -3,7 +3,6 @@
 module Enecuum.Assets.Nodes.NN (nnNode) where
 
 import           Enecuum.Prelude
-import qualified Data.Aeson                     as J
 import qualified Enecuum.Domain                 as D
 import qualified Enecuum.Language               as L
 import qualified Enecuum.Assets.Nodes.Address   as A
@@ -18,10 +17,7 @@ data NNNodeData = NNNodeData
     }
 makeFieldsNoPrefix ''NNNodeData
 
-newtype Start = Start D.PortNumber
-
-instance J.FromJSON Start where
-    parseJSON = J.withObject "Start" $ \o -> Start <$> o J..: "port"
+newtype Start = Start D.PortNumber deriving (Read)
 
 startNode :: NNNodeData -> Start -> L.NodeL Text
 startNode nodeData (Start port) = L.atomically $ do
@@ -104,8 +100,10 @@ acceptSendTo
 acceptSendTo nodeData myHash (M.SendTo hash i msg) conn = do
     L.close conn
     L.logInfo $ "Recived msg: \"" <>  msg <> "\" for " <> show hash <> " time to live " <> show i 
+    
     when (myHash == hash) $ L.logInfo "I'm reciver."
-    when (i >= 0) $ do
+    
+    when (i >= 0 && myHash /= hash) $ do
         rm <- L.readVarIO (nodeData ^. netNodes)
         whenJust (findNext hash rm) $ \(h, address) -> do
             L.logInfo $ "Resending to: " <> show h
@@ -123,7 +121,7 @@ nnNode maybePort = do
     port        <- awaitPort nodeData
     let myAddress = D.Address "127.0.0.1" port
     let myHash    = D.toHashGeneric myAddress
-    L.logInfo $ show $ J.encode myHash
+    L.logInfo $ show $ myHash
     connectToBN myAddress A.bnAddress nodeData
 
     L.serving D.Udp port $ do

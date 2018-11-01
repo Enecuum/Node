@@ -16,18 +16,18 @@ import           Enecuum.Prelude                  hiding (map, unpack)
 
 type BlocksCount = Int
 
-data CreateTransaction              = CreateTransaction CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, ToJSON)
-newtype GetLastKBlock               = GetLastKBlock D.Address
-data GetWalletBalance               = GetWalletBalance Int D.Address
-newtype GetLengthOfChain            = GetLengthOfChain D.Address
-newtype StartForeverChainGeneration = StartForeverChainGeneration D.Address
-data GenerateBlocksPacket           = GenerateBlocksPacket BlocksCount D.Address
-data Ping                           = Ping Protocol D.Address
-newtype StopRequest                 = StopRequest D.Address
-data GetBlock                       = GetBlock D.StringHash D.Address
-data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON)
-data SendTo                         = SendTo D.StringHash D.Address
-
+data CreateTransaction              = CreateTransaction CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, Read, ToJSON)
+newtype GetLastKBlock               = GetLastKBlock D.Address deriving Read
+data GetWalletBalance               = GetWalletBalance Int D.Address deriving Read
+newtype GetLengthOfChain            = GetLengthOfChain D.Address deriving Read
+newtype StartForeverChainGeneration = StartForeverChainGeneration D.Address deriving Read
+data GenerateBlocksPacket           = GenerateBlocksPacket BlocksCount D.Address deriving Read
+data Ping                           = Ping Protocol D.Address deriving Read
+newtype StopRequest                 = StopRequest D.Address deriving Read
+data GetBlock                       = GetBlock D.StringHash D.Address deriving Read
+data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON, Read)
+data SendTo                         = SendTo D.StringHash Address deriving Read
+data Address                        = Address D.Host D.PortNumber deriving Read
 
 data GraphNodeData = GraphNodeData
     { _blockchain :: D.BlockchainData
@@ -47,35 +47,7 @@ data CLITransaction = CLITransaction
 instance ToJSON CLITransaction where toJSON = genericToJSON noLensPrefix
 instance FromJSON CLITransaction where parseJSON = genericParseJSON noLensPrefix
 
-instance J.FromJSON Ping where
-    parseJSON = J.withObject "Ping" $ \o -> Ping <$> (o J..: "protocol") <*> (o J..: "address")
 
-instance J.FromJSON GetWalletBalance where
-    parseJSON = J.withObject "GetWalletBalance" $ \o -> GetWalletBalance <$> o J..: "walletID" <*> (o J..: "address")
-
-instance J.FromJSON CreateTransaction where
-    parseJSON = J.withObject "CreateTransaction" $ \o -> CreateTransaction <$> o J..: "tx" <*> (o J..: "address")
-
-instance J.FromJSON GetLastKBlock where
-    parseJSON = J.withObject "GetLastKBlock" $ \o -> GetLastKBlock <$> (o J..: "address")
-
-instance J.FromJSON GetLengthOfChain where
-    parseJSON = J.withObject "GetLengthOfChain" $ \o -> GetLengthOfChain <$> (o J..: "address")
-
-instance J.FromJSON StartForeverChainGeneration where
-    parseJSON = J.withObject "StartForeverChainGeneration" $ \o -> StartForeverChainGeneration <$> (o J..: "address")
-
-instance J.FromJSON GenerateBlocksPacket where
-    parseJSON = J.withObject "GenerateBlocksPacket" $ \o -> GenerateBlocksPacket <$> o J..: "blocks" <*> (o J..: "address")
-
-instance J.FromJSON StopRequest where
-    parseJSON = J.withObject "StopRequest" $ \o -> StopRequest <$> (o J..: "address")
-
-instance J.FromJSON SendTo where
-    parseJSON = J.withObject "SendTo" $ \o -> SendTo <$> o J..: "hash" <*> (o J..: "address")
-
-instance J.FromJSON GetBlock where
-    parseJSON = J.withObject "GetBlock" $ \o -> GetBlock <$> o J..: "hash" <*> (o J..: "address")
 
 sendSuccessRequest :: forall a. (ToJSON a, Typeable a) => D.Address -> a -> L.NodeL Text
 sendSuccessRequest address request = do
@@ -164,22 +136,9 @@ getBlock (GetBlock hash address) = do
 
 
 sendTo :: SendTo -> L.NodeL Text
-sendTo (SendTo hash addr) = do
-    void $ L.notify addr $ M.SendTo hash 10 "!! msg !!"
+sendTo (SendTo hash (Address host port)) = do
+    void $ L.notify (D.Address host port) $ M.SendTo hash 10 "!! msg !!"
     pure "Sended."
-{-
-Requests:
-{"method":"GetLastKBlock", "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"StartForeverChainGeneration", "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"GenerateBlocksPacket", "blocks" : 2, "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"GetWalletBalance", "walletID": 2, "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"GetWalletBalance", "walletID": 2, "address":{"host":"127.0.0.1", "port": 2009}}
-{"method":"StopNode"}
-{"method":"Ping", "protocol":"RPC", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"GetLengthOfChain", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"StopRequest", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"CreateTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2008}}
--}
 
 clientNode :: L.NodeDefinitionL ()
 clientNode = do
