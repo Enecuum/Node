@@ -5,6 +5,8 @@ module Enecuum.Tests.Scenarios.SyncNodesSpec where
 import           Data.Aeson
 import qualified Data.Map                                     as M
 import qualified Enecuum.Assets.Nodes.Address                 as A
+import qualified Enecuum.Assets.Nodes.Address                 as A
+import qualified Enecuum.Assets.Nodes.GraphNode.Config        as A
 import qualified Enecuum.Assets.Nodes.GraphNode.Receiver      as A
 import qualified Enecuum.Assets.Nodes.GraphNode.Transmitter   as A
 import qualified Enecuum.Assets.Nodes.Messages                as A
@@ -13,37 +15,15 @@ import qualified Enecuum.Assets.Nodes.PoW                     as A
 import qualified Enecuum.Blockchain.Lens                      as Lens
 import qualified Enecuum.Domain                               as D
 import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
--- import           Enecuum.Interpreters                         (runNodeDefinitionL)
--- import qualified Enecuum.Language                             as L
 import           Enecuum.Prelude
--- import qualified Enecuum.Runtime                              as R
--- import           Enecuum.Tests.Scenarios.Common
+import           Enecuum.Testing.Integrational
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit                     (fromHUnitTest)
 import           Test.HUnit
-import qualified Enecuum.Assets.Nodes.GraphNode.Config       as A
-import qualified Enecuum.Assets.Nodes.GraphNode.Transmitter  as A
-import qualified Enecuum.Assets.Nodes.GraphNode.Receiver     as A
-import qualified Enecuum.Assets.Nodes.PoW                    as A
-import qualified Enecuum.Assets.Nodes.PoA                    as A
-import qualified Enecuum.Assets.Nodes.Messages               as A
-import qualified Enecuum.Assets.Nodes.Address                as A
-
-import           Enecuum.Testing.Integrational
 
 spec :: Spec
 spec = describe "Synchronization tests" $ fromHUnitTest $ TestList
     [TestLabel "test net sync" testNodeNet]
-
--- waitForBlocks :: Integer -> D.Address -> IO ()
--- waitForBlocks number address = go 0
---     where
---         go :: Integer -> IO ()
---         go 50 = error "No valid results from node."
---         go n = do
---             threadDelay $ 1000 * 100
---             A.GetChainLengthResponse count <- D.withSuccess $ makeIORpcRequest address A.GetChainLengthRequest
---             when (count < number) $ go (n + 1)
 
 testNodeNet :: Test
 testNodeNet = TestCase $ do

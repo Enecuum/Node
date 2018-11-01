@@ -1,12 +1,12 @@
 module Enecuum.Tests.Scenarios.RoutingSpec where
 
-import qualified Enecuum.Assets.Scenarios as A
-import qualified Enecuum.Domain           as D
+import qualified Enecuum.Assets.Scenarios      as A
+import qualified Enecuum.Domain                as D
 import           Enecuum.Prelude
+import           Enecuum.Testing.Integrational
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit (fromHUnitTest)
+import           Test.Hspec.Contrib.HUnit      (fromHUnitTest)
 import           Test.HUnit
-import           Enecuum.Tests.Scenarios.Common
 
 spec :: Spec
 spec = describe "Routing tests" $ fromHUnitTest $ TestList
