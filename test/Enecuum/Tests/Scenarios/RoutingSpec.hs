@@ -15,6 +15,7 @@ spec = describe "Routing tests" $ fromHUnitTest $ TestList
 
 testRouting :: Test
 testRouting = TestCase $ do
+    startNode Nothing A.clientNode
     startNode Nothing A.bnNode
     -- waitForNode A.bnAddress
     -- threadDelay $ 1000 * 1000
@@ -23,7 +24,12 @@ testRouting = TestCase $ do
         startNode Nothing $ A.nnNode $ Just port
         -- waitForNode $ D.Address A.localhost port
         )
+    let transmitter = D.Address A.localhost $ head ports
+    let receivers = tail ports
+    -- Right msg :: Either Text Text 
+    msg :: [Either Text Text] <- forM receivers (\receiver -> makeIORpcRequest A.clientAddress $ A.SendTo' transmitter receiver)
     -- Right msg :: Either Text Msg <- makeIORpcRequest A.bnNodePort A.Hello
     -- stopNode A.bnAddress
     -- forM ports (\port -> stopNode $ D.Address A.localhost port)
+    stopNode A.clientAddress
     True `shouldBe` True 
