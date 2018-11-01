@@ -2,6 +2,7 @@ module Enecuum.Assets.Nodes.Address where
 
 import qualified Enecuum.Domain                as D
 
+localhost = "127.0.0.1"
 
 graphNodeTransmitterRpcPort, graphNodeTransmitterTcpPort :: D.PortNumber
 graphNodeTransmitterRpcPort = 2008

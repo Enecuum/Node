@@ -12,3 +12,6 @@ import Enecuum.Assets.Nodes.GraphNode.Receiver as X
 
 import Enecuum.Assets.Nodes.GraphNode.Config as X
 import Enecuum.Assets.Nodes.GraphNode.Definition as X
+
+import Enecuum.Assets.Nodes.Address                 as X
+import Enecuum.Assets.Nodes.Messages                as X

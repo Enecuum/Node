@@ -11,30 +11,33 @@ import           Data.HGraph.StringHashable
 data SuccessMsg = SuccessMsg
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+
 -- | Routing messages
 -- | To client
 data SendTo = SendTo StringHash Int Text
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | BN, NN nodes
+data Hello = Hello StringHash D.Address
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  
+-- | BN node
+data ConnectRequest = ConnectRequest StringHash Integer
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+newtype ConnectRequestPrevious = ConnectRequestPrevious StringHash
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 newtype NextForMe = NextForMe StringHash
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | NN node  
-data Hello = Hello StringHash D.Address
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data ConnectResponse = ConnectResponse StringHash D.Address
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-  
--- | BN node    
 newtype NextForYou = NextForYou D.Address
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data ConnectRequest = ConnectRequest StringHash Integer
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+data ConnectResponse = ConnectResponse StringHash D.Address
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)  
 
-newtype ConnectRequestPrevious = ConnectRequestPrevious StringHash
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | Network messages
 data Ping = Ping
@@ -46,6 +49,7 @@ data Pong = Pong
 data Stop = Stop
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+  
 -- | client - graph node interaction
 newtype CreateTransaction = CreateTransaction D.Transaction
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -61,6 +65,7 @@ data WalletBalanceMsg = WalletBalanceMsg
 newtype GetWalletBalance = GetWalletBalance { walletId :: WalletId }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+
 -- | client - PoW interaction
 data GetKBlockPending = GetKBlockPending
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -70,6 +75,7 @@ newtype NBlockPacketGeneration = NBlockPacketGeneration {number :: Int}
 
 data ForeverChainGeneration = ForeverChainGeneration
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 
 -- | client - PoA interaction
 data GetTransactionPending = GetTransactionPending
