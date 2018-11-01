@@ -84,6 +84,9 @@ evalGraphIO g graphAction = liftF $ EvalGraphIO g graphAction id
 newGraph :: (Serialize c, T.StringHashable c) => NodeL (T.TGraph c)
 newGraph = liftF $ NewGraph id
 
+instance L.IOL NodeL where
+    evalIO = evalCoreEffectNodeF . L.evalIO 
+
 instance L.Logger NodeL where
     logMessage level = evalCoreEffectNodeF . L.logMessage level
 
