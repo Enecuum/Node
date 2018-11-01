@@ -17,6 +17,7 @@ interpretCoreEffectF coreRt (L.EvalLogger msg next) =
 interpretCoreEffectF _      (L.EvalFileSystem s next) = next <$> runFileSystemL s
 interpretCoreEffectF _      (L.EvalRandom  s next) = next <$> runERandomL s
 interpretCoreEffectF coreRt (L.EvalControlFlow f    next) = next <$> runControlFlow coreRt f
+interpretCoreEffectF _      (L.EvalIO f next) = next <$> f 
 
 -- | Runs core effect language.
 runCoreEffect :: Rt.CoreRuntime -> L.CoreEffect a -> IO a

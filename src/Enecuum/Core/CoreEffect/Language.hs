@@ -4,6 +4,7 @@ module Enecuum.Core.CoreEffect.Language
   , CoreEffect
   , evalLogger
   , evalRandom
+  , IOL(..)
   ) where
 
 import           Enecuum.Core.ControlFlow.Language (ControlFlow (..), ControlFlowL)
@@ -23,10 +24,17 @@ data CoreEffectF next where
   EvalFileSystem  :: FileSystemL a  -> (a -> next) -> CoreEffectF next
   -- | ControlFlow effect
   EvalControlFlow :: ControlFlowL a -> (a  -> next) -> CoreEffectF next
+  EvalIO          :: IO a -> (a -> next) -> CoreEffectF next
 
 makeFunctorInstance ''CoreEffectF
 
-type CoreEffect next = Free CoreEffectF next
+class IOL m where
+  evalIO :: IO a -> m a
+
+instance IOL CoreEffect where
+  evalIO io = liftF $ EvalIO io id
+
+type CoreEffect = Free CoreEffectF
 
 evalLogger :: LoggerL () -> CoreEffect ()
 evalLogger logger = liftF $ EvalLogger logger id
