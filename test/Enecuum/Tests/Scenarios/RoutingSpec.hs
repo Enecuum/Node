@@ -1,5 +1,6 @@
 module Enecuum.Tests.Scenarios.RoutingSpec where
 
+import qualified Enecuum.Assets.Nodes.Address                 as A    
 import qualified Enecuum.Assets.Scenarios      as A
 import qualified Enecuum.Domain                as D
 import           Enecuum.Prelude
@@ -12,12 +13,18 @@ spec :: Spec
 spec = describe "Routing tests" $ fromHUnitTest $ TestList
     [TestLabel "Routing" testRouting]
 
+
 testRouting :: Test
-testRouting = TestCase $ --undefined --do
-  True `shouldBe` True
---     -- startNode Nothing A.bnNode
---     -- waitForNode A.bnAddress
---     -- forM [5001..5010] (\port ->
---     --     startNode Nothing nnNode Just port
---     --     waitForNode $ D.Address "127.0.0.1" port)
---     -- Right msg :: Either Text Msg <- makeIORpcRequest
+testRouting = TestCase $ do
+    startNode Nothing A.bnNode
+    -- waitForNode A.bnAddress
+    -- threadDelay $ 1000 * 1000
+    let ports = [5001..5010]
+    forM ports (\port -> do
+        startNode Nothing $ A.nnNode $ Just port
+        -- waitForNode $ D.Address A.localhost port
+        )
+    -- Right msg :: Either Text Msg <- makeIORpcRequest
+    -- stopNode A.bnAddress
+    -- forM ports (\port -> stopNode $ D.Address A.localhost port)
+    True `shouldBe` True 

@@ -5,7 +5,6 @@ module Enecuum.Tests.Scenarios.SyncNodesSpec where
 import           Data.Aeson
 import qualified Data.Map                                     as M
 import qualified Enecuum.Assets.Nodes.Address                 as A
-import qualified Enecuum.Assets.Nodes.Address                 as A
 import qualified Enecuum.Assets.Nodes.GraphNode.Config        as A
 import qualified Enecuum.Assets.Nodes.GraphNode.Receiver      as A
 import qualified Enecuum.Assets.Nodes.GraphNode.Transmitter   as A

@@ -65,11 +65,13 @@ bnNode = do
     nodeData <- initBN
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.serving D.Rpc A.bnNodePort $ do
+
+        -- routing
         L.method  $ acceptNewNode       nodeData
         L.methodE $ findConnect         nodeData
-        --  counterclockwise direction        
+        --  counterclockwise direction
         L.methodE $ findPreviousConnectForMe nodeData
-        -- clockwise direction 
+        -- clockwise direction
         L.methodE $ findNextConnectForMe       nodeData
 
     L.awaitNodeFinished nodeData
