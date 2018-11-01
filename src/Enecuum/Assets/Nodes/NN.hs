@@ -52,7 +52,16 @@ connectToBN myAddress bnAddress nodeData = do
                     loop (i - 1)
                 _ -> pure ()
     loop (hashSize - 1)
-    maybeAddress :: Either Text (D.StringHash, D.Address) <- L.scenario $ L.makeRpcRequest bnAddress $ M.ConnectRequestPrevious hash
+
+    maybeAddress :: Either Text (D.StringHash, D.Address) <- L.scenario $
+        L.makeRpcRequest bnAddress $ M.NextForMe hash
+    case maybeAddress of
+        Right (recivedHash, address) | myAddress /= address ->
+            L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap recivedHash address)
+        _ -> pure ()
+
+    maybeAddress :: Either Text (D.StringHash, D.Address) <- L.scenario $
+        L.makeRpcRequest bnAddress $ M.ConnectRequestPrevious hash
     case maybeAddress of
         Right (_, address) | myAddress /= address ->
             void $ L.notify address $ M.Hello hash myAddress
@@ -74,11 +83,7 @@ acceptNextForYou nodeData hash (M.NextForYou senderAddress) conn = do
     L.close conn
     maybeAddress <- L.atomically $ do
         connectMap <- L.readVar (nodeData ^. netNodes)
-        pure $ findInMapNByKey
-            (\h num -> (D.hashToInteger h + 2 ^ num) `mod` quantityOfHashes)
-            0
-            hash
-            connectMap
+        pure $ findNextForHash hash connectMap
     whenJust maybeAddress $ \(h, address) ->
         void $ L.notify senderAddress $ M.ConnectResponse h address
     
@@ -87,7 +92,7 @@ stabilizationOfConnections :: D.Address -> D.StringHash -> NNNodeData -> L.NodeL
 stabilizationOfConnections myAddress myHash nodeData = do
     connectMap <- L.atomically $ do
         nodes <- L.readVar (nodeData ^. netNodes)
-        let filteredNodes   = findInMap myHash nodes
+        let filteredNodes   = maybeToList (findNext myHash nodes) <> findInMap myHash nodes
         let filteredNodeMap = toChordRouteMap filteredNodes
         L.writeVar (nodeData ^. netNodes) filteredNodeMap
         pure $ snd <$> filteredNodes
@@ -99,9 +104,9 @@ acceptSendTo
     :: NNNodeData -> D.StringHash -> M.SendTo -> D.Connection D.Udp -> L.NodeL ()
 acceptSendTo nodeData myHash (M.SendTo hash i msg) conn = do
     L.close conn
-    L.logInfo $ "Recived msg: \"" <>  msg <> "\" for " <> show hash <> " time to live " <> show i 
+    L.logInfo $ "Received msg: \"" <>  msg <> "\" for " <> show hash <> " time to live " <> show i 
     
-    when (myHash == hash) $ L.logInfo "I'm reciver."
+    when (myHash == hash) $ L.logInfo "I'm receiver."
     
     when (i >= 0 && myHash /= hash) $ do
         rm <- L.readVarIO (nodeData ^. netNodes)

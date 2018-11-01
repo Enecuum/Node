@@ -26,7 +26,7 @@ data Ping                           = Ping Protocol D.Address deriving Read
 newtype StopRequest                 = StopRequest D.Address deriving Read
 data GetBlock                       = GetBlock D.StringHash D.Address deriving Read
 data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON, Read)
-data SendTo                         = SendTo D.StringHash Address deriving Read
+data SendTo                         = SendTo Address D.PortNumber deriving Read
 data Address                        = Address D.Host D.PortNumber deriving Read
 
 data GraphNodeData = GraphNodeData
@@ -136,8 +136,8 @@ getBlock (GetBlock hash address) = do
 
 
 sendTo :: SendTo -> L.NodeL Text
-sendTo (SendTo hash (Address host port)) = do
-    void $ L.notify (D.Address host port) $ M.SendTo hash 10 "!! msg !!"
+sendTo (SendTo (Address host port) rPort) = do
+    void $ L.notify (D.Address host port) $ M.SendTo (D.toHashGeneric $ D.Address "127.0.0.1" rPort) 10 "!! msg !!"
     pure "Sended."
 
 clientNode :: L.NodeDefinitionL ()

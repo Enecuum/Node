@@ -11,6 +11,7 @@ module Enecuum.Research.ChordRouteMap
     , inverseFormula
     , straightFormula
     , toChordRouteMap
+    , findNextForHash
     ) where
 
 import           Universum
@@ -51,9 +52,11 @@ straightFormula :: Integral b => StringHash -> b -> Integer
 straightFormula hash i = (hashToInteger hash + 2 ^ i) `mod` quantityOfHashes
 
 inverseFormula :: Integral b => StringHash -> b -> Integer
+--  counterclockwise direction
 inverseFormula hash i = (quantityOfHashes + hashToInteger hash - 2 ^ i) `mod` quantityOfHashes
 
--- | Find all fingers in route map by formulas.
+-- | Find all fingers in route map by formula.
+--  counterclockwise direction
 findInMapByKey
     :: Ord a
     => (StringHash -> Integer -> Integer)
@@ -61,9 +64,11 @@ findInMapByKey
     -> ChordRouteMap a
     -> [(StringHash, a)]
 findInMapByKey elemKey hash rm = mapMaybe
+
     (\i -> findInMapNByKey elemKey i hash rm) [0..hashSize-1]
 
--- | Find N finger in route map by formulas.
+-- | Find N finger in route map by formula.
+--  counterclockwise direction
 findInMapNByKey
     :: (StringHash -> Integer -> Integer)
     -> Integer
@@ -76,6 +81,15 @@ findInMapNByKey elemKey i hash rm =
     where
         topElem    = M.lookupLE quantityOfHashes rm
         bottomElem = M.lookupLE (elemKey hash i) rm
+
+--  clockwise direction        
+findNextForHash :: StringHash -> Map Integer b -> Maybe (StringHash, b)
+findNextForHash hash rm =
+    (\(x, y) -> (integerToHash x, y)) <$>
+    (if isJust topElem then topElem else bottomElem) 
+    where
+        bottomElem = M.lookupGE 0 rm
+        topElem    = M.lookupGE ((hashToInteger hash + 1) `mod` quantityOfHashes) rm
 
 -- | Find the closest elem to hash from route map.
 findNext :: Ord a => StringHash -> ChordRouteMap a -> Maybe (StringHash, a)

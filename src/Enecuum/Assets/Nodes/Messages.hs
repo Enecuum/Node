@@ -7,19 +7,27 @@ import           Enecuum.Prelude
 import qualified Enecuum.Domain                as D
 import           Data.HGraph.StringHashable
 
-data SendTo = SendTo StringHash Int Text
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
+-- | Common
 data SuccessMsg = SuccessMsg
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+-- | Routing messages
+-- | To client
+data SendTo = SendTo StringHash Int Text
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+newtype NextForMe = NextForMe StringHash
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | NN node  
 data Hello = Hello StringHash D.Address
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-newtype NextForYou = NextForYou D.Address
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
 data ConnectResponse = ConnectResponse StringHash D.Address
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  
+-- | BN node    
+newtype NextForYou = NextForYou D.Address
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data ConnectRequest = ConnectRequest StringHash Integer
@@ -27,6 +35,7 @@ data ConnectRequest = ConnectRequest StringHash Integer
 
 newtype ConnectRequestPrevious = ConnectRequestPrevious StringHash
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 -- | Network messages
 data Ping = Ping
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
