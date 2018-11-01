@@ -64,7 +64,6 @@ findInMapByKey
     -> ChordRouteMap a
     -> [(StringHash, a)]
 findInMapByKey elemKey hash rm = mapMaybe
-
     (\i -> findInMapNByKey elemKey i hash rm) [0..hashSize-1]
 
 -- | Find N finger in route map by formula.
