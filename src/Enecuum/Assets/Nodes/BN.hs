@@ -43,7 +43,7 @@ findConnect nodeData (M.ConnectRequest hash i) = do
     address <- L.atomically $ do
         connectMap <- L.readVar (nodeData ^. netNodes)
         pure $ findInMapNByKey
-            (\h num -> (D.hashToInteger h + 2 ^ num) `mod` quantityOfHashes)
+            straightFormula
             i
             hash
             connectMap

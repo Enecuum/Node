@@ -9,6 +9,7 @@ module Enecuum.Research.ChordRouteMap
     , hashSize
     , quantityOfHashes
     , inverseFormula
+    , straightFormula
     , toChordRouteMap
     ) where
 
@@ -38,14 +39,16 @@ addToMap hash = M.insert (hashToInteger hash)
 removeFromMap :: Ord a => StringHash -> ChordRouteMap a -> ChordRouteMap a
 removeFromMap hash = M.delete (hashToInteger hash)
 
--- | Find all fingers in rout map by straight formulas.
+-- | Find all fingers in rout map by straight formula.
 findInMap :: Ord a => StringHash -> ChordRouteMap a -> [(StringHash, a)]
-findInMap = findInMapByKey
-    (\hash i -> (hashToInteger hash + 2 ^ i) `mod` quantityOfHashes)
+findInMap = findInMapByKey straightFormula
 
--- | Find all fingers in rout map by inverse formulas.
+-- | Find all fingers in rout map by inverse formula.
 findInMapR :: Ord a => StringHash -> ChordRouteMap a -> [(StringHash, a)]
 findInMapR = findInMapByKey inverseFormula
+
+straightFormula :: Integral b => StringHash -> b -> Integer
+straightFormula hash i = (hashToInteger hash + 2 ^ i) `mod` quantityOfHashes
 
 inverseFormula :: Integral b => StringHash -> b -> Integer
 inverseFormula hash i = (quantityOfHashes + hashToInteger hash - 2 ^ i) `mod` quantityOfHashes
