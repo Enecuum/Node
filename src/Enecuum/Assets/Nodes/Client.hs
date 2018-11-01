@@ -18,12 +18,11 @@ import           Enecuum.Prelude                  hiding (map, unpack)
 data ClientNode = ClientNode
     deriving (Show, Generic)
 
-instance NodeCfg ClientNode where
-    data NodeConfig ClientNode = ClientNodeConfig
-        { host :: String
-        , port :: Int
-        }
-        deriving (Show, Generic)
+data instance NodeConfig ClientNode = ClientNodeConfig
+    { host :: String
+    , port :: Int
+    }
+    deriving (Show, Generic)
 
 instance Node ClientNode where
     data NodeScenario ClientNode = CLI

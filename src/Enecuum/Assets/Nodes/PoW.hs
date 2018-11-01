@@ -35,11 +35,10 @@ makeFieldsNoPrefix ''PoWNodeData
 data PoWNode = PoWNode
     deriving (Show, Generic)
 
-instance NodeCfg PoWNode where
-    data NodeConfig PoWNode = PoWNodeConfig
-            { delaysEnabled :: Bool
-            }
-        deriving (Show, Generic)
+data instance NodeConfig PoWNode = PoWNodeConfig
+        { delaysEnabled :: Bool
+        }
+    deriving (Show, Generic)
 
 instance Node PoWNode where
     data NodeScenario PoWNode = PoW

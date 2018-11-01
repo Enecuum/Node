@@ -32,11 +32,10 @@ makeFieldsNoPrefix ''PoANodeData
 data PoANode = PoANode
     deriving (Show, Generic)
 
-instance NodeCfg PoANode where
-    data NodeConfig PoANode = PoANodeConfig
-        { dummyOption :: Int
-        }
-        deriving (Show, Generic)
+data instance NodeConfig PoANode = PoANodeConfig
+    { dummyOption :: Int
+    }
+    deriving (Show, Generic)
 
 instance Node PoANode where
     data NodeScenario PoANode = Good | Bad

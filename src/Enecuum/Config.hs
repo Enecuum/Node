@@ -25,8 +25,7 @@ data Config node = Config
 instance (FromJSON node, FromJSON (NodeScenario node), FromJSON (NodeConfig node)) => FromJSON (Config node)
 instance (ToJSON   node, ToJSON   (NodeScenario node), ToJSON   (NodeConfig node)) => ToJSON   (Config node)
 
-class NodeCfg node where
-    data NodeConfig node :: *
+data family NodeConfig node :: *
 
 class Node node where
     data NodeScenario node :: *
