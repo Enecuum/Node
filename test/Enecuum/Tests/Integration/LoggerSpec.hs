@@ -5,13 +5,13 @@ import           Enecuum.Prelude
 import           System.Directory
 import           Test.Hspec
 
-import           Enecuum.Interpreters            (runFileSystemL)
-import           Enecuum.Assets.System.Directory   (defaultLogFileName, configFilePath)
+import           Enecuum.Interpreters              (runFileSystemL)
+import           Enecuum.Assets.System.Directory   (defaultLogFileName)
 import qualified Enecuum.Core.Logger.Impl.HsLogger as Impl
 import qualified Enecuum.Core.Logger.Language      as L
 import qualified Enecuum.Core.Types                as T
-import Enecuum.Config (logConfig)
-import System.IO.Silently
+import           Enecuum.Testing.Integrational     (testConfigFilePath, loadLoggerConfig)
+import           System.IO.Silently
 
 scenario :: L.LoggerL ()
 scenario = do
@@ -37,7 +37,7 @@ spec :: Spec
 spec = do
     describe "Logger tests" $ do
         it "Test output to console with capture" $ do
-            config      <- logConfig configFilePath
+            config      <- loadLoggerConfig testConfigFilePath
             (output, _) <- capture $ Impl.withLogger config { T._logToConsole = True } $ \h ->
                 Impl.runLoggerL (Just h) scenario
             output
@@ -47,7 +47,7 @@ spec = do
                         \ERROR Node.Main: Error Msg\n"
 
         it "Set level, filepath, format via config" $ do
-            config@(T.LoggerConfig _ _ logFile _) <- logConfig configFilePath
+            config@(T.LoggerConfig _ _ logFile _) <- loadLoggerConfig testConfigFilePath
             res <- withLogFile logFile $ Impl.withLogger config { T._logToConsole = False } $ \h ->
                 Impl.runLoggerL (Just h) scenario
             res

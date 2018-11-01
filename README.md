@@ -14,7 +14,7 @@ P2P node for the main network protocol.
 
 `sudo nano ~/.profile` and append `export PATH=$PATH:$HOME/.local/bin` at the end.
 
-### Install RockDB for the Legder
+### Install RocksDB
 
 `sudo apt install librocksdb-dev`
 
@@ -30,8 +30,14 @@ P2P node for the main network protocol.
 
 2. Build & install
 
-`stack install`
+`stack build --fast`
+3. Run tests (optional) 
+`stack build --fast --test`
 
 ### Initialize
 
+If you added path to your profile:
 `enq-node-haskell initialize ./configs/Client.json`
+
+Or you need to use that instead:
+`stack exec enq-node-haskell initialize ./configs/Client.json`
