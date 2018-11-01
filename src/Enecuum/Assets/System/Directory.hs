@@ -29,4 +29,4 @@ defaultLogFileName :: (L.FileSystem m, Monad m) => m FilePath
 defaultLogFileName = (</> "default.log") <$> logFilePath
 
 configFilePath :: String
-configFilePath = "./configs/config.json"
+configFilePath = "./configs/testConfig.json"

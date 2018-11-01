@@ -1,5 +1,6 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE UndecidableInstances  #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Enecuum.Config where
 
@@ -8,61 +9,37 @@ import           Enecuum.Prelude
 import qualified Data.ByteString.Lazy          as L
 import qualified Data.Aeson                    as A
 
-
 import           Enecuum.Core.Types.Logger     (LoggerConfig(..))
-import           System.FilePath.Windows       (dropFileName)
-import           System.Directory (createDirectoryIfMissing)
-import           Enecuum.Framework.Domain.Networking
-import qualified Enecuum.Core.Lens              as Lens
+import           Enecuum.Language              (NodeDefinitionL)
 
-data NodeRole = PoW | PoA | Client | GraphNode
-  deriving (Generic, FromJSON, Show, Read, Eq, Ord )
+data Config node = Config
+    { node            :: node
+    , nodeScenario    :: NodeScenario node
+    , nodeConfig      :: NodeConfig node
+    , loggerConfig    :: LoggerConfig
+    }
+    deriving (Generic)
 
-data Scenario = LedgerBalance | SyncChain | SyncKblock | Full
-  deriving (Generic, FromJSON, Show, Read, Eq, Ord)
-    
-data ScenarioRole = Receiver | Transmitter | Soly | Good | Bad
-  deriving (Generic, FromJSON, Show, Read, Eq, Ord)
+instance (FromJSON node, FromJSON (NodeScenario node), FromJSON (NodeConfig node)) => FromJSON (Config node)
+instance (ToJSON   node, ToJSON   (NodeScenario node), ToJSON   (NodeConfig node)) => ToJSON   (Config node)
 
-data ScenarioNode = ScenarioNode
-  { nodeRole     :: NodeRole
-  , scenario     :: Scenario
-  , scenarioRole :: ScenarioRole
-  } deriving (Generic, FromJSON, Show, Read, Eq, Ord)
+data family NodeConfig node :: *
 
-data ClientConfig = ClientConfig 
-  {  host :: String
-  ,  port :: Int
-  } deriving (Generic, FromJSON, Show, Read, Eq, Ord)
+class Node node where
+    data NodeScenario node :: *
+    getNodeScript :: NodeScenario node -> NodeConfig node -> NodeDefinitionL ()
 
-data Config = Config
-  { bootNodeAddress :: Text
-  , scenarioNode :: [ScenarioNode]
-  , extPort :: Int
-  , loggerConfig :: LoggerConfig
-  , clientConfig :: Maybe ClientConfig
-  }
-  deriving (Generic, FromJSON)
+nodeConfigJsonOptions :: A.Options
+nodeConfigJsonOptions = A.defaultOptions
+    { A.unwrapUnaryRecords    = False
+    , A.tagSingleConstructors = True
+    }
 
-withConfig :: FilePath -> (Config -> IO ()) -> IO ()
-withConfig configName act = act =<< getConfigBase configName
+withConfig :: FilePath -> (LByteString -> IO ()) -> IO ()
+withConfig configName act = act =<< L.readFile configName
 
-getConfigBase :: FilePath -> IO Config
-getConfigBase configName = do
-    configContents <- L.readFile configName
-    case A.decode configContents of
-        Nothing     -> error "Please, specify config file correctly"
-        Just config -> pure config
-
-readClientConfig :: Config -> Maybe Address
-readClientConfig (Config _ _ _ _ (Just config)) = Just $ Address (host config) (toEnum $ port config)
-readClientConfig _ = Nothing
-
-
-logConfig :: FilePath -> IO LoggerConfig
-logConfig configName = do
-    config <- getConfigBase configName
-    let logConf = loggerConfig config
-        dir = dropFileName $ logConf ^. Lens.logFilePath
-    createDirectoryIfMissing True dir
-    pure logConf
+tryParseConfig
+    :: (FromJSON node, FromJSON (NodeScenario node), FromJSON (NodeConfig node))
+    => LByteString
+    -> Maybe (Config node)
+tryParseConfig = A.decode

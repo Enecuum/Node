@@ -1,17 +1,17 @@
 {
-	"bootNodeAddress": "[((127,0,0,1), 1554)]",
-	"scenarioNode": [{
-		"nodeRole": "PoW",
-		"scenario": "Full",
-		"scenarioRole": "Soly"
-	}],
-	"extPort": 1668,
-  "loggerConfig":
-      {
-          "format": "$prio $loggername: $msg",
-          "level": "Debug",
-          "logFilePath": "/tmp/log/PoW.log",
-          "logToConsole": true,
-          "logToFile": true
-      }
+   "node":"PoWNode",
+   "nodeScenario":"PoW",
+   "nodeConfig":
+   {
+      "tag":"PoWNodeConfig",
+      "delaysEnabled":true
+   },
+   "loggerConfig":
+   {
+      "logFilePath": "/tmp/log/PoW.log",
+      "format":"$prio $loggername: $msg",
+      "logToConsole":true,
+			"logToFile": true,
+      "level":"Debug"
+   }
 }

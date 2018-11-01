@@ -1,4 +1,4 @@
-{
+{  
    "node":"ClientNode",
    "nodeScenario":"CLI",
    "nodeConfig":
@@ -11,7 +11,8 @@
       "logFilePath":"/tmp/log/app.log",
       "format":"$prio $loggername: $msg",
       "logToConsole":true,
-      "logToFile": true
+      "logToFile": true,
       "level":"Debug"
    }
 }
+

@@ -1,17 +1,17 @@
 {
-	"bootNodeAddress": "[((127,0,0,1), 1554)]",
-	"scenarioNode": [{
-		"nodeRole": "GraphNode",
-		"scenario": "Full",
-		"scenarioRole": "Transmitter"
-	}],
-	"extPort": 1668,
-  "loggerConfig":
-      {
-          "format": "$prio $loggername: $msg",
-          "level": "Debug",
-          "logFilePath": "/tmp/log/GraphNode.log",
-          "logToConsole": true,
-          "logToFile": true
-      }
+   "node":"GraphNode",
+   "nodeScenario":"Transmitter",
+   "nodeConfig":
+   {
+      "tag":"GraphNodeConfig",
+      "database":"path/to/database"
+   },
+   "loggerConfig":
+   {
+      "logFilePath": "/tmp/log/GraphNodeTransmitter.log",
+      "format":"$prio $loggername: $msg",
+      "logToConsole":true,
+			"logToFile": true,
+      "level":"Debug"
+   }
 }
