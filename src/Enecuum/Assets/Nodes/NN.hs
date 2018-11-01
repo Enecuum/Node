@@ -1,9 +1,8 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module Enecuum.Assets.Nodes.NN where
+module Enecuum.Assets.Nodes.NN (nnNode) where
 
 import           Enecuum.Prelude
-import qualified Data.Aeson                     as J
 import qualified Enecuum.Domain                 as D
 import qualified Enecuum.Language               as L
 import qualified Enecuum.Assets.Nodes.Address   as A
@@ -18,10 +17,7 @@ data NNNodeData = NNNodeData
     }
 makeFieldsNoPrefix ''NNNodeData
 
-newtype Start = Start D.PortNumber
-
-instance J.FromJSON Start where
-    parseJSON = J.withObject "Start" $ \o -> Start <$> o J..: "port"
+newtype Start = Start D.PortNumber deriving (Read)
 
 startNode :: NNNodeData -> Start -> L.NodeL Text
 startNode nodeData (Start port) = L.atomically $ do
@@ -73,39 +69,41 @@ acceptConnectResponse nodeData myAddress (M.ConnectResponse hash address) con = 
         L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap hash address)
     L.close con
 
-acceptConnectRequest :: NNNodeData -> M.ConnectRequest -> D.Connection D.Udp -> L.NodeL ()
-acceptConnectRequest nodeData (M.ConnectRequest hash i) conn = do
+acceptNextForYou :: NNNodeData -> D.StringHash -> M.NextForYou -> D.Connection D.Udp -> L.NodeL ()
+acceptNextForYou nodeData hash (M.NextForYou senderAddress) conn = do
+    L.close conn
     maybeAddress <- L.atomically $ do
         connectMap <- L.readVar (nodeData ^. netNodes)
         pure $ findInMapNByKey
             (\h num -> (D.hashToInteger h + 2 ^ num) `mod` quantityOfHashes)
-            i
+            0
             hash
             connectMap
     whenJust maybeAddress $ \(h, address) ->
-        void $ L.send conn $ M.ConnectResponse h address
-    L.close conn
+        void $ L.notify senderAddress $ M.ConnectResponse h address
+    
 
-stabilizationOfConnections :: D.Address -> NNNodeData -> L.NodeL ()
-stabilizationOfConnections myAddress nodeData = do
-    let hash = D.toHashGeneric myAddress
+stabilizationOfConnections :: D.Address -> D.StringHash -> NNNodeData -> L.NodeL ()
+stabilizationOfConnections myAddress myHash nodeData = do
     connectMap <- L.atomically $ do
         nodes <- L.readVar (nodeData ^. netNodes)
-        let filteredNodes   = findInMap hash nodes
+        let filteredNodes   = findInMap myHash nodes
         let filteredNodeMap = toChordRouteMap filteredNodes
         L.writeVar (nodeData ^. netNodes) filteredNodeMap
         pure $ snd <$> filteredNodes
 
-    forM_ (zip connectMap [255, 254..]) $ \(addr, i) -> void $
-        L.notify addr $ M.ConnectRequest hash i
+    forM_ connectMap $ \addr -> void $
+        L.notify addr $ M.NextForYou myAddress
 
 acceptSendTo
     :: NNNodeData -> D.StringHash -> M.SendTo -> D.Connection D.Udp -> L.NodeL ()
 acceptSendTo nodeData myHash (M.SendTo hash i msg) conn = do
     L.close conn
-    L.logInfo $ "Recived msg: \"" <>  msg <> "\" for " <> show hash
+    L.logInfo $ "Recived msg: \"" <>  msg <> "\" for " <> show hash <> " time to live " <> show i 
+    
     when (myHash == hash) $ L.logInfo "I'm reciver."
-    when (i > 0) $ do
+    
+    when (i >= 0 && myHash /= hash) $ do
         rm <- L.readVarIO (nodeData ^. netNodes)
         whenJust (findNext hash rm) $ \(h, address) -> do
             L.logInfo $ "Resending to: " <> show h
@@ -122,16 +120,18 @@ nnNode maybePort = do
 
     port        <- awaitPort nodeData
     let myAddress = D.Address "127.0.0.1" port
+    let myHash    = D.toHashGeneric myAddress
+    L.logInfo $ show myHash
     connectToBN myAddress A.bnAddress nodeData
 
     L.serving D.Udp port $ do
         L.handler $ acceptHello           nodeData
         L.handler $ acceptConnectResponse nodeData myAddress
-        L.handler $ acceptConnectRequest  nodeData
-        L.handler $ acceptSendTo          nodeData  (D.toHashGeneric myAddress)
+        L.handler $ acceptNextForYou      nodeData myHash
+        L.handler $ acceptSendTo          nodeData myHash
 
     L.process $ forever $ do
         L.delay $ 1000 * 1000
-        stabilizationOfConnections myAddress nodeData
+        stabilizationOfConnections myAddress myHash nodeData
 
     L.awaitNodeFinished nodeData

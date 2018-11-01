@@ -47,6 +47,8 @@ initialize config = do
 
 dispatchScenario :: Config -> ScenarioNode -> L.NodeDefinitionL ()
 dispatchScenario _ (ScenarioNode Client      _         _           ) = S.clientNode
+dispatchScenario _ (ScenarioNode NN          _         _           ) = S.nnNode Nothing
+dispatchScenario _ (ScenarioNode BN          _         _           ) = S.bnNode
 dispatchScenario _ (ScenarioNode PoW         Full      Soly        ) = S.powNode
 dispatchScenario _ (ScenarioNode PoA         Full      role        ) = S.poaNode role
 dispatchScenario _ (ScenarioNode GraphNode   _         Transmitter ) = S.graphNodeTransmitter

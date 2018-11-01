@@ -17,12 +17,10 @@ import qualified Enecuum.Framework.Node.Interpreter        as Impl
 import qualified Enecuum.Framework.Domain.RPC              as D
 import qualified Enecuum.Framework.Domain.Networking       as D
 import qualified Enecuum.Framework.Domain.Process          as D
--- import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection as Tcp
 import           Enecuum.Framework.Handler.Rpc.Interpreter
 import qualified Enecuum.Framework.Handler.Network.Interpreter         as Net
 import qualified Enecuum.Framework.Networking.Internal.Connection as Con
 import           Enecuum.Framework.Handler.Cmd.Interpreter as Cmd
-import           Data.Aeson.Lens
 import qualified Data.Text as T
 import           System.Console.Haskeline
 import           System.Console.Haskeline.History
@@ -92,7 +90,7 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
                 case minput of
                     Nothing      -> pure ()
                     Just    line -> do
-                        res <- liftIO $ callHandler nodeRt m' $ T.pack line
+                        res <- liftIO $ callHandler nodeRt m' line
                         outputStrLn $ T.unpack res
                         whenJust filePath $ \path -> do
                             history <- getHistory
@@ -121,16 +119,12 @@ interpretNodeDefinitionL _ (L.AwaitResult pPtr next) = do
     result <- atomically $ takeTMVar pVar
     pure $ next result
 
-callHandler :: NodeRuntime -> Map Text (Value -> L.NodeL Text) -> Text -> IO Text
+callHandler :: NodeRuntime -> Map Text (String -> L.NodeL Text) -> String -> IO Text
 callHandler nodeRt methods msg = do
-    val <- try $ pure $ A.decode $ fromString $ T.unpack msg
-    case val of
-        Right (Just jval@((^? key "method" . _String) -> Just method)) -> 
-            case methods ^. at method of
-                Just justMethod -> Impl.runNodeL nodeRt $ justMethod jval
-                Nothing         -> pure $ "The method " <> method <> " isn't supported."
-        Right _                    -> pure "Error of request parsing."
-        Left  (_ :: SomeException) -> pure "Error of request parsing."
+    let tag = T.pack $ takeWhile (/= ' ') msg
+    case methods ^. at tag of
+        Just justMethod -> Impl.runNodeL nodeRt $ justMethod msg
+        Nothing         -> pure $ "The method " <> tag <> " isn't supported."
 
 -- TODO: treadDelay if server in port exist!!!
 takeServerChan :: TVar (Map S.PortNumber (TChan D.ServerComand)) -> S.PortNumber -> STM (TChan D.ServerComand)

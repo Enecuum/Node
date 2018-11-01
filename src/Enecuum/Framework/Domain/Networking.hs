@@ -62,7 +62,7 @@ sockAddrToHost sockAddr = case sockAddr of
 data Address = Address
     { _host :: Host
     , _port :: PortNumber
-    } deriving (Show, Eq, Ord, Generic, Serialize)
+    } deriving (Show, Eq, Ord, Generic, Serialize, Read)
 
 deriving instance Generic PortNumber
 instance Serialize PortNumber
