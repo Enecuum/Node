@@ -6,6 +6,7 @@ module Enecuum.Assets.Nodes.Client where
 import qualified Data.Aeson                       as J
 import           Data.Aeson.Extra                 (noLensPrefix)
 import qualified Data.Map                         as Map
+import qualified Data.Set                         as Set
 import           Data.Text                        hiding (map)
 import qualified Enecuum.Assets.Blockchain.Wallet as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
@@ -14,6 +15,9 @@ import           Enecuum.Config
 import           Enecuum.Framework.Language.Extra (NodeStatus (..))
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude                  hiding (map, unpack)
+import           Graphics.GD.Extra
+import           Enecuum.Research.RouteDrawing
+import           Data.Complex
 
 data ClientNode = ClientNode
     deriving (Show, Generic)
@@ -49,7 +53,7 @@ data GetBlock'                       = GetBlock' D.StringHash D.Address deriving
 data Protocol'                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON, Read)
 data SendTo'                         = SendTo' Address' D.PortNumber deriving Read
 data Address'                        = Address' D.Host D.PortNumber deriving Read
-newtype DrawMap                      = DrawMap Address' deriving Read
+newtype DrawMap'                     = DrawMap' Address' deriving Read
 
 data CLITransaction = CLITransaction
   { _owner    :: String
@@ -155,7 +159,35 @@ sendTo (SendTo' (Address' host port) rPort) = do
     void $ L.notify (D.Address host port) $ M.SendTo (D.toHashGeneric $ D.Address "127.0.0.1" rPort) 10 "!! msg !!"
     pure "Sended."
 
---drawRouteMap :: 
+drawRouteMap :: DrawMap' -> L.NodeL Text
+drawRouteMap (DrawMap' (Address' host port)) = do
+    routMap <- cardAssembly mempty mempty (Set.fromList [D.Address host port])
+    L.evalIO $ makeImage (1000, 1000) "image.png" $ \image -> 
+        forM_ (Map.toList routMap) $ \(hs, hf) -> do
+            let startPointPhase = hashToPhase hs
+            let startPoint      = (500 :+ 500) + mkPolar 1 startPointPhase * 400
+            forM_ (hashToPhase <$> hf) $ \ph -> do
+                let endPoint = (500 :+ 500) + mkPolar 1 ph * 400
+                drawCirkle endPoint 10 black image
+                drawArrow startPoint endPoint black image
+    pure "Drawed."
+
+cardAssembly
+    :: Map D.StringHash [D.StringHash]
+    -> Set.Set D.Address
+    -> Set.Set D.Address
+    -> L.NodeL (Map D.StringHash [D.StringHash])
+cardAssembly accum passed nexts
+    | Set.null nexts = pure accum
+    | otherwise      = do
+        let D.Address host port = Set.elemAt 0 nexts
+        res :: Either Text [(D.StringHash, D.Address)] <- 
+            L.makeRpcRequest (D.Address host (port - 1000)) M.ConnectMapRequest
+        let r = case res of Right a -> a; Left _ -> []
+        let newPassed = Set.insert (D.Address host port) passed
+        let newNexts  = Set.difference (Set.union nexts (Set.fromList $ snd <$> r)) newPassed
+        let newAccum  = Map.insert (D.toHashGeneric (D.Address host port)) (fst <$> r) accum
+        cardAssembly newAccum newPassed newNexts
 
 clientNode :: NodeConfig ClientNode -> L.NodeDefinitionL ()
 clientNode _ = do
@@ -182,6 +214,7 @@ clientNode _ = do
 
         -- routing
         L.stdHandler sendTo
+        L.stdHandler drawRouteMap
     L.awaitNodeFinished' stateVar
 
 eitherToText :: Show a => Either Text a -> Text

@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module Enecuum.Assets.Nodes.NN (nnNode) where
+module Enecuum.Assets.Nodes.NN (nnNode, NN) where
 
 import qualified Data.Map                       as Map
 import           Enecuum.Prelude
@@ -10,6 +10,8 @@ import qualified Enecuum.Assets.Nodes.Address   as A
 import qualified Enecuum.Assets.Nodes.Messages  as M
 import           Enecuum.Research.ChordRouteMap
 import           Enecuum.Framework.Language.Extra (HasStatus)
+import           Enecuum.Config
+import qualified Data.Aeson                       as J
 
 data NNNodeData = NNNodeData
     { _status   :: D.StateVar L.NodeStatus
@@ -17,6 +19,29 @@ data NNNodeData = NNNodeData
     , _nodePort :: D.StateVar (Maybe D.PortNumber)
     }
 makeFieldsNoPrefix ''NNNodeData
+
+--
+data NN = NN
+    deriving (Show, Generic)
+
+data instance NodeConfig NN = NNConfig
+    { dummyOption :: Int
+    }
+    deriving (Show, Generic)
+
+instance Node NN where
+    data NodeScenario NN = NNS
+        deriving (Show, Generic)
+    getNodeScript NNS = nnNode Nothing
+
+
+instance ToJSON   NN                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON NN                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig NN)   where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig NN)   where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario NN) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario NN) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+
 
 newtype Start = Start D.PortNumber deriving (Read)
 
@@ -121,8 +146,8 @@ connectMapRequest nodeData _ = do
     nodes <- L.readVarIO (nodeData ^. netNodes)
     pure $ fromChordRouteMap nodes
 
-nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
-nnNode maybePort = do
+nnNode :: Maybe D.PortNumber -> NodeConfig NN -> L.NodeDefinitionL ()
+nnNode maybePort _ = do
     L.nodeTag "NN node"
     L.logInfo "Starting of NN node"
     nodeData    <- initNN maybePort
@@ -147,11 +172,11 @@ nnNode maybePort = do
         L.handler $ acceptSendTo          nodeData myHash
 
     L.process $ forever $ do
-        L.delay $ 1000 * 10
+        L.delay $ 1000 * 1000
         clearingOfConnects myAddress myHash nodeData
 
     L.process $ forever $ do
-        L.delay $ 1000 * 1000
+        L.delay $ 1000 * 10000
         requestingOfConnects myAddress myHash nodeData
 
     L.awaitNodeFinished nodeData

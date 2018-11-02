@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module Enecuum.Assets.Nodes.BN (bnNode) where
+module Enecuum.Assets.Nodes.BN (bnNode, BN) where
 
 import           Enecuum.Prelude
 import qualified Enecuum.Domain                 as D
@@ -9,13 +9,35 @@ import qualified Enecuum.Assets.Nodes.Address   as A
 import qualified Enecuum.Assets.Nodes.Messages  as M
 import           Enecuum.Research.ChordRouteMap
 import           Enecuum.Framework.Language.Extra (HasStatus)
+import           Enecuum.Config
+import qualified Data.Aeson                       as J
+
 
 data BNNodeData = BNNodeData
     { _status   :: D.StateVar L.NodeStatus
     , _netNodes :: D.StateVar (ChordRouteMap D.Address)
     }
-
 makeFieldsNoPrefix ''BNNodeData
+
+data BN = BN
+    deriving (Show, Generic)
+
+data instance NodeConfig BN = BNConfig
+    { dummyOption :: Int
+    }
+    deriving (Show, Generic)
+
+instance Node BN where
+    data NodeScenario BN = BNS
+        deriving (Show, Generic)
+    getNodeScript BNS = bnNode
+
+instance ToJSON   BN                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON BN                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig BN)   where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig BN)   where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario BN) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario BN) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
 initBN :: L.NodeDefinitionL BNNodeData
 initBN = L.atomically (BNNodeData <$> L.newVar L.NodeActing <*> L.newVar mempty)
@@ -58,8 +80,8 @@ findNextConnectForMe nodeData (M.NextForMe hash) = do
     pure $ maybe (Left "Connection map is empty.") Right address
 
 
-bnNode :: L.NodeDefinitionL ()
-bnNode = do
+bnNode :: NodeConfig BN -> L.NodeDefinitionL ()
+bnNode _ = do
     L.nodeTag "BN node"
     L.logInfo "Starting of BN node"
     nodeData <- initBN
