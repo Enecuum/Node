@@ -2,11 +2,13 @@ module Enecuum.Tests.Scenarios.RoutingSpec where
 
 import qualified Enecuum.Assets.Scenarios      as A
 import qualified Enecuum.Domain                as D
+import qualified Enecuum.Language              as L
 import           Enecuum.Prelude
 import           Enecuum.Testing.Integrational
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit      (fromHUnitTest)
 import           Test.HUnit
+import qualified Enecuum.Framework.Node.Interpreter as I
 
 spec :: Spec
 spec = describe "Routing tests" $ fromHUnitTest $ TestList
@@ -28,10 +30,10 @@ testRouting = TestCase $ do
     let receivers = tail ports
 
     threadDelay $ 1000 * 1000
-    msgSend :: [Either Text Text] <- forM receivers (\receiver -> makeIORpcRequest transmitter $ A.SendTo (D.toHashGeneric receiver) 10 "!! msg !!")
+    I.runNodeL undefined $ forM receivers (\receiver -> L.notify transmitter $ A.SendTo (D.toHashGeneric receiver) 10 "!! msg !!")
     threadDelay $ 1000 * 1000
     msg :: [Either Text [Text]] <- forM receivers (\port -> makeIORpcRequest (D.Address A.localhost port) $ A.GetRoutingMessages )
-    print $ msgSend
+    -- print $ msgSend
     print $ msg
     stopNode A.clientAddress
     -- stopNode A.bnAddress
