@@ -87,7 +87,7 @@ connectToBN myAddress bnAddress nodeData = do
         _ -> pure ()
 
     maybeAddress :: Either Text (D.StringHash, D.Address) <- L.scenario $
-        L.makeRpcRequest bnAddress $ M.ConnectRequestPrevious hash
+        L.makeRpcRequest bnAddress $ M.PreviousForMe hash
     case maybeAddress of
         Right (_, address) | myAddress /= address ->
             void $ L.notify address $ M.Hello hash myAddress
@@ -136,7 +136,7 @@ acceptSendTo nodeData myHash (M.SendTo hash i msg) conn = do
     
     when (i >= 0 && myHash /= hash) $ do
         rm <- L.readVarIO (nodeData ^. netNodes)
-        whenJust (findNext hash rm) $ \(h, address) -> do
+        whenJust (findNextResender hash rm) $ \(h, address) -> do
             L.logInfo $ "Resending to: " <> show h
             void $ L.notify address (M.SendTo hash (i-1) msg)
 

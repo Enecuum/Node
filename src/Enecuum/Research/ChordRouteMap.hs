@@ -4,11 +4,12 @@ module Enecuum.Research.ChordRouteMap
     , removeFromMap
     , findInMap
     , findInMapNByKey
-    , findNext
+    , findNextResender
     , hashSize
     , quantityOfHashes
     , toChordRouteMap
     , findNextForHash
+    , findPreviusForHash
     , fromChordRouteMap
     ) where
 
@@ -71,6 +72,9 @@ findInMapNByKey elemKey i hash rm = snd <$>
         topElem    = M.lookupLE maxBound rm
         bottomElem = M.lookupLE (elemKey hash i) rm
 
+findPreviusForHash :: StringHash -> ChordRouteMap b -> Maybe (StringHash, b)
+findPreviusForHash = findInMapNByKey (\hash i -> D.hashToWord64 hash - 2 ^ i) 0
+
 --  clockwise direction        
 findNextForHash :: StringHash -> ChordRouteMap b -> Maybe (StringHash, b)
 findNextForHash hash rm = snd <$> (if isJust topElem then topElem else bottomElem)
@@ -79,8 +83,8 @@ findNextForHash hash rm = snd <$> (if isJust topElem then topElem else bottomEle
         topElem    = M.lookupGE (hashToWord64 hash + 1) rm
 
 -- | Find the closest elem to hash from route map.
-findNext :: Ord a => StringHash -> ChordRouteMap a -> Maybe (StringHash, a)
-findNext hash rm = if isJust bottomElem then bottomElem else topElem
+findNextResender :: Ord a => StringHash -> ChordRouteMap a -> Maybe (StringHash, a)
+findNextResender hash rm = if isJust bottomElem then bottomElem else topElem
     where
         bottomElem = snd <$> M.lookupLE elemKey  rm
         topElem    = snd <$> M.lookupLE maxBound rm

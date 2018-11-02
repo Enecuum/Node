@@ -28,7 +28,7 @@ data ConnectMapRequest = ConnectMapRequest
 data ConnectRequest = ConnectRequest StringHash Word64
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-newtype ConnectRequestPrevious = ConnectRequestPrevious StringHash
+newtype PreviousForMe = PreviousForMe StringHash
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 newtype NextForMe = NextForMe StringHash

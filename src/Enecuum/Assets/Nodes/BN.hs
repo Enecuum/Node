@@ -49,15 +49,11 @@ acceptNewNode nodeData (M.Hello hash address) = do
         L.modifyVar (nodeData ^. netNodes) $ addToMap hash address
     pure M.SuccessMsg
 
-findPreviousConnectForMe :: BNNodeData -> M.ConnectRequestPrevious -> L.NodeL (Either Text (D.StringHash, D.Address))
-findPreviousConnectForMe nodeData (M.ConnectRequestPrevious hash) = do
+findPreviousConnectForMe :: BNNodeData -> M.PreviousForMe -> L.NodeL (Either Text (D.StringHash, D.Address))
+findPreviousConnectForMe nodeData (M.PreviousForMe hash) = do
     address <- L.atomically $ do
         connectMap <- L.readVar (nodeData ^. netNodes)
-        pure $ findInMapNByKey
-            (\hash i -> D.hashToWord64 hash - 2 ^ i)
-            0
-            hash
-            connectMap
+        pure $ findPreviusForHash hash connectMap
     pure $ maybe (Left "Connection map is empty.") Right address
 
 findConnect :: BNNodeData -> M.ConnectRequest -> L.NodeL (Either Text (D.StringHash, D.Address))
@@ -78,7 +74,6 @@ findNextConnectForMe nodeData (M.NextForMe hash) = do
         connectMap <- L.readVar (nodeData ^. netNodes)
         pure $ findNextForHash hash connectMap
     pure $ maybe (Left "Connection map is empty.") Right address
-
 
 bnNode :: NodeConfig BN -> L.NodeDefinitionL ()
 bnNode _ = do
