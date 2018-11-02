@@ -9,6 +9,7 @@ import qualified Enecuum.Assets.Nodes.Address   as A
 import qualified Enecuum.Assets.Nodes.Messages  as M
 import           Enecuum.Research.ChordRouteMap
 import           Enecuum.Framework.Language.Extra (HasStatus)
+import           Enecuum.Assets.Nodes.Methods (methodStopNode)
 import           Enecuum.Config
 import qualified Data.Aeson                       as J
 
@@ -30,7 +31,7 @@ data instance NodeConfig BN = BNConfig
 instance Node BN where
     data NodeScenario BN = BNS
         deriving (Show, Generic)
-    getNodeScript BNS = bnNode
+    getNodeScript BNS = bnNode'
 
 instance ToJSON   BN                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON BN                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
@@ -75,13 +76,17 @@ findNextConnectForMe nodeData (M.NextForMe hash) = do
         pure $ findNextForHash hash connectMap
     pure $ maybe (Left "Connection map is empty.") Right address
 
-bnNode :: NodeConfig BN -> L.NodeDefinitionL ()
-bnNode _ = do
+bnNode :: L.NodeDefinitionL ()
+bnNode = bnNode' $ BNConfig 42
+
+bnNode' :: NodeConfig BN -> L.NodeDefinitionL ()
+bnNode' _ = do
     L.nodeTag "BN node"
     L.logInfo "Starting of BN node"
     nodeData <- initBN
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.serving D.Rpc A.bnNodePort $ do
+        L.method  $ methodStopNode nodeData
 
         -- routing
         L.method  $ acceptNewNode       nodeData

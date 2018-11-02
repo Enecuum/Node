@@ -30,7 +30,7 @@ data instance NodeConfig ClientNode = ClientNodeConfig
 instance Node ClientNode where
     data NodeScenario ClientNode = CLI
         deriving (Show, Generic)
-    getNodeScript CLI = clientNode
+    getNodeScript CLI = clientNode'
 
 instance ToJSON   ClientNode                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON ClientNode                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
@@ -162,7 +162,7 @@ sendTo (SendTo (Address host port) rPort) = do
 drawRouteMap :: DrawMap -> L.NodeL Text
 drawRouteMap (DrawMap (Address host port)) = do
     routMap <- cardAssembly mempty mempty (Set.fromList [D.Address host port])
-    L.evalIO $ makeImage (1000, 1000) "image.png" $ \image -> 
+    L.evalIO $ makeImage (1000, 1000) "image.png" $ \image ->
         forM_ (Map.toList routMap) $ \(hs, hf) -> do
             let startPointPhase = hashToPhase hs
             let startPoint      = (500 :+ 500) + mkPolar 1 startPointPhase * 400
@@ -181,7 +181,7 @@ cardAssembly accum passed nexts
     | Set.null nexts = pure accum
     | otherwise      = do
         let D.Address host port = Set.elemAt 0 nexts
-        res :: Either Text [(D.StringHash, D.Address)] <- 
+        res :: Either Text [(D.StringHash, D.Address)] <-
             L.makeRpcRequest (D.Address host (port - 1000)) M.ConnectMapRequest
         let r = case res of Right a -> a; Left _ -> []
         let newPassed = Set.insert (D.Address host port) passed
@@ -189,8 +189,11 @@ cardAssembly accum passed nexts
         let newAccum  = Map.insert (D.toHashGeneric (D.Address host port)) (fst <$> r) accum
         cardAssembly newAccum newPassed newNexts
 
-clientNode :: NodeConfig ClientNode -> L.NodeDefinitionL ()
-clientNode _ = do
+clientNode :: L.NodeDefinitionL ()
+clientNode = clientNode' (ClientNodeConfig 42)
+
+clientNode' :: NodeConfig ClientNode -> L.NodeDefinitionL ()
+clientNode' _ = do
     L.logInfo "Client started"
     L.nodeTag "Client"
     stateVar <- L.newVarIO NodeActing

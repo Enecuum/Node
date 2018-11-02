@@ -41,6 +41,8 @@ newtype NextForYou = NextForYou D.Address
 data ConnectResponse = ConnectResponse StringHash D.Address
   deriving (Show, Eq, Generic, ToJSON, FromJSON)  
 
+data GetRoutingMessages = GetRoutingMessages
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)  
 
 -- | Network messages
 data Ping = Ping

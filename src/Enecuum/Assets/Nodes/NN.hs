@@ -16,6 +16,7 @@ data NNNodeData = NNNodeData
     { _status   :: D.StateVar L.NodeStatus
     , _netNodes :: D.StateVar (ChordRouteMap D.Address)
     , _nodePort :: D.StateVar (Maybe D.PortNumber)
+    , _routingMessages :: D.StateVar [Text]
     }
 makeFieldsNoPrefix ''NNNodeData
 
@@ -31,7 +32,7 @@ data instance NodeConfig NN = NNConfig
 instance Node NN where
     data NodeScenario NN = NNS
         deriving (Show, Generic)
-    getNodeScript NNS = nnNode Nothing
+    getNodeScript NNS = nnNode' Nothing
 
 
 instance ToJSON   NN                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
@@ -55,7 +56,7 @@ startNode nodeData (Start port) = L.atomically $ do
 
 initNN :: Maybe D.PortNumber -> L.NodeDefinitionL NNNodeData
 initNN maybePort = L.atomically
-    (NNNodeData <$> L.newVar L.NodeActing <*> L.newVar mempty <*> L.newVar maybePort)
+    (NNNodeData <$> L.newVar L.NodeActing <*> L.newVar mempty <*> L.newVar maybePort <*> L.newVar [])
 
 awaitPort :: NNNodeData -> L.NodeDefinitionL D.PortNumber
 awaitPort nodeData = L.atomically $ do
@@ -129,31 +130,41 @@ acceptSendTo
     :: NNNodeData -> D.StringHash -> M.SendTo -> D.Connection D.Udp -> L.NodeL ()
 acceptSendTo nodeData myHash (M.SendTo hash i msg) conn = do
     L.close conn
-    L.logInfo $ "Received msg: \"" <>  msg <> "\" for " <> show hash <> " time to live " <> show i 
-    
+    let mes = "Received msg: \"" <>  msg <> "\" for " <> show hash <> " time to live " <> show i
+    L.logInfo mes
+    L.atomically $ L.modifyVar (nodeData ^. routingMessages) (mes :)
     when (myHash == hash) $ L.logInfo "I'm receiver."
-    
+
     when (i >= 0 && myHash /= hash) $ do
         rm <- L.readVarIO (nodeData ^. netNodes)
         whenJust (findNextResender hash rm) $ \(h, address) -> do
             L.logInfo $ "Resending to: " <> show h
             void $ L.notify address (M.SendTo hash (i-1) msg)
 
---
 connectMapRequest :: NNNodeData -> M.ConnectMapRequest -> L.NodeL [(D.StringHash, D.Address)]
 connectMapRequest nodeData _ = do
     nodes <- L.readVarIO (nodeData ^. netNodes)
     pure $ fromChordRouteMap nodes
 
-nnNode :: Maybe D.PortNumber -> NodeConfig NN -> L.NodeDefinitionL ()
-nnNode maybePort _ = do
+getRoutingMessages :: NNNodeData -> M.GetRoutingMessages -> L.NodeL [Text]
+getRoutingMessages nodeData _ = do
+    mes <- L.readVarIO (nodeData ^. routingMessages)
+    pure $ mes
+
+
+
+nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
+nnNode port = nnNode' port (NNConfig 42)
+
+nnNode' :: Maybe D.PortNumber -> NodeConfig NN -> L.NodeDefinitionL ()
+nnNode' maybePort _ = do
     L.nodeTag "NN node"
     L.logInfo "Starting of NN node"
     nodeData    <- initNN maybePort
     L.std $ do
         L.stdHandler $ startNode nodeData
         L.stdHandler $ L.stopNodeHandler nodeData
-    
+
     -- routing
     port        <- awaitPort nodeData
     let myAddress = D.Address "127.0.0.1" port
@@ -161,8 +172,11 @@ nnNode maybePort _ = do
     L.logInfo $ show myHash
     connectToBN myAddress A.bnAddress nodeData
 
+    L.serving D.Rpc port $
+        L.method  $  getRoutingMessages   nodeData
     L.serving D.Rpc (port - 1000) $
-        L.method  $  connectMapRequest     nodeData
+        L.method  $  connectMapRequest    nodeData
+
 
     L.serving D.Udp port $ do
         L.handler $ acceptHello           nodeData
