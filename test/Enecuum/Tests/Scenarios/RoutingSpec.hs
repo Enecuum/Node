@@ -10,9 +10,10 @@ import           Test.HUnit
 
 spec :: Spec
 spec = describe "Routing tests" $ fromHUnitTest $ TestList
-    []
+    -- []
+    [TestLabel "Routing" testRouting]
 
-{-
+
 testRouting :: Test
 testRouting = TestCase $ do
     startNode Nothing A.clientNode
@@ -31,9 +32,7 @@ testRouting = TestCase $ do
     msg :: [Either Text [Text]] <- forM receivers (\port -> makeIORpcRequest (D.Address A.localhost port) $ A.GetRoutingMessages )
     print $ msgSend
     print $ msg
-    
     stopNode A.clientAddress
     -- stopNode A.bnAddress
     -- forM ports (\port -> stopNode $ D.Address A.localhost port)    
     True `shouldBe` True 
--}

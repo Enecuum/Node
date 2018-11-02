@@ -33,7 +33,7 @@ data instance NodeConfig NN = NNConfig
 instance Node NN where
     data NodeScenario NN = NNS
         deriving (Show, Generic)
-    getNodeScript NNS = nnNode Nothing
+    getNodeScript NNS = nnNode' Nothing
 
 
 instance ToJSON   NN                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
@@ -152,8 +152,13 @@ getRoutingMessages nodeData _ = do
     mes <- L.readVarIO (nodeData ^. routingMessages)
     pure $ mes
 
-nnNode :: Maybe D.PortNumber -> NodeConfig NN -> L.NodeDefinitionL ()
-nnNode maybePort _ = do
+
+
+nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
+nnNode port = nnNode' port (NNConfig 42)
+
+nnNode' :: Maybe D.PortNumber -> NodeConfig NN -> L.NodeDefinitionL ()
+nnNode' maybePort _ = do
     L.nodeTag "NN node"
     L.logInfo "Starting of NN node"
     nodeData    <- initNN maybePort

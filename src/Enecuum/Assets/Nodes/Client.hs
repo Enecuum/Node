@@ -32,7 +32,7 @@ data instance NodeConfig ClientNode = ClientNodeConfig
 instance Node ClientNode where
     data NodeScenario ClientNode = CLI
         deriving (Show, Generic)
-    getNodeScript CLI = clientNode
+    getNodeScript CLI = clientNode'
 
 instance ToJSON   ClientNode                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON ClientNode                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
@@ -54,9 +54,8 @@ data Ping'                           = Ping' Protocol' D.Address deriving Read
 newtype StopRequest'                 = StopRequest' D.Address deriving Read
 data GetBlock'                       = GetBlock' D.StringHash D.Address deriving Read
 data Protocol'                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON, Read)
-data SendTo'                         = SendTo' Address' D.PortNumber deriving Read
-data Address'                        = Address' D.Host D.PortNumber deriving Read
-newtype DrawMap'                     = DrawMap' Address' deriving Read
+data SendTo'                         = SendTo' Transmitter Receiver deriving ( Generic, Show, Eq, Ord, Read, ToJSON)
+newtype DrawMap'                     = DrawMap' D.Address deriving Read
 type Transmitter                     = D.Address
 type Receiver                        = D.PortNumber
 
@@ -186,13 +185,13 @@ getBlock (GetBlock' hash address) = do
 
 
 sendTo :: SendTo' -> L.NodeL Text
-sendTo (SendTo' (Address' host port) rPort) = do
+sendTo (SendTo' (D.Address host port) rPort) = do
     let receiver = D.Address "127.0.0.1" rPort
     void $ L.notify (D.Address host port) $ M.SendTo (D.toHashGeneric receiver) 10 "!! msg !!"
     pure "Sended."
 
 drawRouteMap :: DrawMap' -> L.NodeL Text
-drawRouteMap (DrawMap' (Address' host port)) = do
+drawRouteMap (DrawMap' (D.Address host port)) = do
     routMap <- cardAssembly mempty mempty (Set.fromList [D.Address host port])
     L.evalIO $ makeImage (1000, 1000) "image.png" $ \image ->
         forM_ (Map.toList routMap) $ \(hs, hf) -> do
@@ -221,8 +220,11 @@ cardAssembly accum passed nexts
         let newAccum  = Map.insert (D.toHashGeneric (D.Address host port)) (fst <$> r) accum
         cardAssembly newAccum newPassed newNexts
 
-clientNode :: NodeConfig ClientNode -> L.NodeDefinitionL ()
-clientNode _ = do
+clientNode :: L.NodeDefinitionL ()
+clientNode = clientNode' (ClientNodeConfig 42)
+
+clientNode' :: NodeConfig ClientNode -> L.NodeDefinitionL ()
+clientNode' _ = do
     L.logInfo "Client started"
     L.nodeTag "Client"
     stateVar <- L.newVarIO NodeActing

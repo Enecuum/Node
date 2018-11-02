@@ -31,7 +31,7 @@ data instance NodeConfig BN = BNConfig
 instance Node BN where
     data NodeScenario BN = BNS
         deriving (Show, Generic)
-    getNodeScript BNS = bnNode
+    getNodeScript BNS = bnNode'
 
 instance ToJSON   BN                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON BN                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
@@ -80,9 +80,11 @@ findNextConnectForMe nodeData (M.NextForMe hash) = do
         pure $ findNextForHash hash connectMap
     pure $ maybe (Left "Connection map is empty.") Right address
 
+bnNode :: L.NodeDefinitionL ()
+bnNode = bnNode' $ BNConfig 42 
 
-bnNode :: NodeConfig BN -> L.NodeDefinitionL ()
-bnNode _ = do
+bnNode' :: NodeConfig BN -> L.NodeDefinitionL ()
+bnNode' _ = do
     L.nodeTag "BN node"
     L.logInfo "Starting of BN node"
     nodeData <- initBN
