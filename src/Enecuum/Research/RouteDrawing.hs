@@ -6,6 +6,4 @@ import           Enecuum.Research.ChordRouteMap
 import           Graphics.GD.Extra
 
 hashToPhase :: StringHash -> Double
-hashToPhase hash = (fromIntegral (hashToInteger hash) - qoh / 2) / qoh * pi
-    where
-        qoh = fromIntegral quantityOfHashes
+hashToPhase hash = (fromIntegral (hashToWord64 hash) - fromIntegral (maxBound :: Word64) / 2) / (2^63) * pi

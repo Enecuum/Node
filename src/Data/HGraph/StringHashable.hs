@@ -67,6 +67,9 @@ hashToInteger x = rollInteger . BS.unpack $ fromRight "" (Base64.decode $ fromSt
 integerToHash :: Integer -> StringHash
 integerToHash = StringHash . Base64.encode . BS.pack . unrollInteger
 
+hashToWord64 :: StringHash -> Word64
+hashToWord64 x = fromIntegral $ hashToInteger x `div` 2^64
+
 unrollInteger :: Integer -> [Word8]
 unrollInteger = unfoldr step
   where
