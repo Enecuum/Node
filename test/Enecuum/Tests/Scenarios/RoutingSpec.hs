@@ -10,8 +10,8 @@ import           Test.HUnit
 
 spec :: Spec
 spec = describe "Routing tests" $ fromHUnitTest $ TestList
-    []
-    -- [TestLabel "Routing" testRouting]
+    -- []
+    [TestLabel "Routing" testRouting]
 
 
 testRouting :: Test
@@ -27,10 +27,10 @@ testRouting = TestCase $ do
         )
     let transmitter = D.Address A.localhost $ head ports
     let receivers = tail ports
-    -- msgSend :: [Either Text Text] <- forM receivers (\receiver -> makeIORpcRequest A.clientAddress $ A.SendTo' transmitter receiver)
+    msgSend :: [Either Text Text] <- forM receivers (\receiver -> makeIORpcRequest transmitter $ A.SendTo (D.toHashGeneric receiver) 10 "!! msg !!")
     threadDelay $ 1000 * 1000
     msg :: [Either Text [Text]] <- forM receivers (\port -> makeIORpcRequest (D.Address A.localhost port) $ A.GetRoutingMessages )
-    -- print $ msgSend
+    print $ msgSend
     print $ msg
     stopNode A.clientAddress
     -- stopNode A.bnAddress
