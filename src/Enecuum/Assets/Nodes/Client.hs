@@ -1,5 +1,7 @@
-{-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveAnyClass         #-}
+{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module Enecuum.Assets.Nodes.Client where
 
@@ -12,7 +14,7 @@ import qualified Enecuum.Assets.Blockchain.Wallet as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Config
-import           Enecuum.Framework.Language.Extra (NodeStatus (..))
+import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude                  hiding (map, unpack)
 import           Graphics.GD.Extra
@@ -41,6 +43,7 @@ instance FromJSON (NodeScenario ClientNode) where parseJSON = J.genericParseJSON
 
 type BlocksCount = Int
 
+
 data CreateTransaction'              = CreateTransaction' CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, Read, ToJSON)
 newtype GetLastKBlock'               = GetLastKBlock' D.Address deriving Read
 data GetWalletBalance'               = GetWalletBalance' Int D.Address deriving Read
@@ -54,6 +57,9 @@ data Protocol'                       = UDP | TCP | RPC deriving (Generic, Show, 
 data SendTo'                         = SendTo' Address' D.PortNumber deriving Read
 data Address'                        = Address' D.Host D.PortNumber deriving Read
 newtype DrawMap'                     = DrawMap' Address' deriving Read
+type Transmitter                     = D.Address
+type Receiver                        = D.PortNumber
+
 
 data CLITransaction = CLITransaction
   { _owner    :: String
@@ -66,7 +72,32 @@ data CLITransaction = CLITransaction
 instance ToJSON CLITransaction where toJSON = genericToJSON noLensPrefix
 instance FromJSON CLITransaction where parseJSON = genericParseJSON noLensPrefix
 
+instance J.FromJSON Ping' where
+    parseJSON = J.withObject "Ping" $ \o -> Ping' <$> (o J..: "protocol") <*> (o J..: "address")
 
+instance J.FromJSON GetWalletBalance' where
+    parseJSON = J.withObject "GetWalletBalance" $ \o -> GetWalletBalance' <$> o J..: "walletID" <*> (o J..: "address")
+
+instance J.FromJSON CreateTransaction' where
+    parseJSON = J.withObject "CreateTransaction" $ \o -> CreateTransaction' <$> o J..: "tx" <*> (o J..: "address")
+
+instance J.FromJSON GetLastKBlock' where
+    parseJSON = J.withObject "GetLastKBlock" $ \o -> GetLastKBlock' <$> (o J..: "address")
+
+instance J.FromJSON GetLengthOfChain' where
+    parseJSON = J.withObject "GetLengthOfChain" $ \o -> GetLengthOfChain' <$> (o J..: "address")
+
+instance J.FromJSON StartForeverChainGeneration' where
+    parseJSON = J.withObject "StartForeverChainGeneration" $ \o -> StartForeverChainGeneration' <$> (o J..: "address")
+
+instance J.FromJSON GenerateBlocksPacket' where
+    parseJSON = J.withObject "GenerateBlocksPacket" $ \o -> GenerateBlocksPacket' <$> o J..: "blocks" <*> (o J..: "address")
+
+instance J.FromJSON StopRequest' where
+    parseJSON = J.withObject "StopRequest" $ \o -> StopRequest' <$> (o J..: "address")
+
+instance J.FromJSON GetBlock' where
+    parseJSON = J.withObject "GetBlock" $ \o -> GetBlock' <$> o J..: "hash" <*> (o J..: "address")
 
 sendSuccessRequest :: forall a. (ToJSON a, Typeable a) => D.Address -> a -> L.NodeL Text
 sendSuccessRequest address request = do
@@ -156,7 +187,8 @@ getBlock (GetBlock' hash address) = do
 
 sendTo :: SendTo' -> L.NodeL Text
 sendTo (SendTo' (Address' host port) rPort) = do
-    void $ L.notify (D.Address host port) $ M.SendTo (D.toHashGeneric $ D.Address "127.0.0.1" rPort) 10 "!! msg !!"
+    let receiver = D.Address "127.0.0.1" rPort
+    void $ L.notify (D.Address host port) $ M.SendTo (D.toHashGeneric receiver) 10 "!! msg !!"
     pure "Sended."
 
 drawRouteMap :: DrawMap' -> L.NodeL Text
@@ -194,6 +226,10 @@ clientNode _ = do
     L.logInfo "Client started"
     L.nodeTag "Client"
     stateVar <- L.newVarIO NodeActing
+     -- -- status <- L.newVarIO NodeActing
+     -- -- let nodeData = ClientNodeData status
+     -- -- nodeData <- L.scenario $ L.atomically (ClientData1 <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
+
     L.std $ do
         -- network
         L.stdHandler ping

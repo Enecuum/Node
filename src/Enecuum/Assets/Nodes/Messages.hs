@@ -13,7 +13,7 @@ data SuccessMsg = SuccessMsg
 
 
 -- | Routing messages
--- | To client
+-- | Client
 data SendTo = SendTo StringHash Int Text
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
