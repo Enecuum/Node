@@ -30,7 +30,7 @@ testRouting = TestCase $ do
     let receivers = tail ports
 
     threadDelay $ 1000 * 1000
-    I.runNodeL undefined $ forM receivers (\receiver -> L.notify transmitter $ A.SendTo (D.toHashGeneric receiver) 10 "!! msg !!")
+    I.runNodeL undefined $ forM receivers (\receiver -> L.notify transmitter $ A.SendMsgTo (D.toHashGeneric receiver) 10 "!! msg !!")
     threadDelay $ 1000 * 1000
     msg :: [Either Text [Text]] <- forM receivers (\port -> makeIORpcRequest (D.Address A.localhost port) $ A.GetRoutingMessages )
     -- print $ msgSend
