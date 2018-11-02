@@ -16,7 +16,6 @@ module Enecuum.Research.ChordRouteMap
 import           Universum
 import qualified Data.Map                      as M
 import           Data.HGraph.StringHashable
-import qualified Data.HGraph.StringHashable as D
 
 -- | Route map for chord algorithm.
 type ChordRouteMap a = M.Map Word64 (StringHash, a)
@@ -73,8 +72,9 @@ findInMapNByKey elemKey i hash rm = snd <$>
         topElem    = M.lookupLE maxBound rm
         bottomElem = M.lookupLE (elemKey hash i) rm
 
+--  clockwise direction
 findPreviusForHash :: StringHash -> ChordRouteMap b -> Maybe (StringHash, b)
-findPreviusForHash = findInMapNByKey (\hash i -> D.hashToWord64 hash - 2 ^ i) 0
+findPreviusForHash = findInMapNByKey (\hash i -> hashToWord64 hash - 2 ^ i) 0
 
 --  clockwise direction
 findNextForHash :: StringHash -> ChordRouteMap b -> Maybe (StringHash, b)
