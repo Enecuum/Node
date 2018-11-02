@@ -73,7 +73,7 @@ findInMapNByKey elemKey i hash rm = snd <$>
         bottomElem = M.lookupLE (elemKey hash i) rm
 
 findPreviusForHash :: StringHash -> ChordRouteMap b -> Maybe (StringHash, b)
-findPreviusForHash = findInMapNByKey (\hash i -> D.hashToWord64 hash - 2 ^ i) 0
+findPreviusForHash = findInMapNByKey (\hash i -> hashToWord64 hash - 2 ^ i) 0
 
 --  clockwise direction        
 findNextForHash :: StringHash -> ChordRouteMap b -> Maybe (StringHash, b)
