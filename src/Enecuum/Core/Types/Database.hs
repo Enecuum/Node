@@ -17,10 +17,10 @@ class DBEntity entity where
     data DBKey   entity :: *
     data DBValue entity :: *
 
-class DBEntity entity => GetDBKey entity src where
+class DBEntity entity => ToDBKey entity src where
     toDBKey :: src -> DBKey entity
 
-class DBEntity entity => GetDBValue entity src where
+class DBEntity entity => ToDBValue entity src where
     toDBValue :: src -> DBValue entity
 
 class (DB db, DBEntity entity) => DBModelEntity db entity

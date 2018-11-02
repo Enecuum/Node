@@ -26,13 +26,13 @@ instance D.DBEntity KBlockMetaEntity where
     data DBValue KBlockMetaEntity = KBlockMetaValue Integer
         deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
-instance D.GetDBKey KBlockMetaEntity D.KBlock where
-    toDBKey          = KBlockMetaKey . D.fromStringHash . D.toHash
+instance D.ToDBKey KBlockMetaEntity D.KBlock where
+    toDBKey = KBlockMetaKey . D.fromStringHash . D.toHash
 
-instance D.GetDBValue KBlockMetaEntity D.KBlock where
+instance D.ToDBValue KBlockMetaEntity D.KBlock where
     toDBValue kBlock = KBlockMetaValue $ D._number kBlock
 
-instance D.GetDBKey KBlockMetaEntity D.StringHash where
+instance D.ToDBKey KBlockMetaEntity D.StringHash where
     toDBKey = KBlockMetaKey . D.fromStringHash
 
 instance D.GetRawDBEntity KBlocksMetaDB KBlockMetaEntity where

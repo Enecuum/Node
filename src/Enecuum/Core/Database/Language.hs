@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 module Enecuum.Core.Database.Language where
 
 import           Enecuum.Prelude
@@ -30,15 +32,27 @@ getValueRaw key = liftF $ GetValueRaw key id
 putValueRaw :: D.DBKeyRaw -> D.DBValueRaw -> DatabaseL db (D.DBResult ())
 putValueRaw key val = liftF $ PutValueRaw key val id
 
-putValue 
+putEntity 
     :: forall entity db
-    .  D.GetRawDBEntity db entity 
-    => D.DBKey entity 
-    -> D.DBValue entity 
+    .  D.GetRawDBEntity db entity
+    => D.DBKey entity
+    -> D.DBValue entity
     -> DatabaseL db (D.DBResult ())
-putValue dbKey dbVal = let
+putEntity dbKey dbVal = let
     rawK = D.getRawDBKey   @db dbKey
     rawV = D.getRawDBValue @db dbVal
+    in putValueRaw rawK rawV
+
+putEntity' 
+    :: forall entity db src
+    .  D.GetRawDBEntity db entity
+    => D.ToDBKey   entity src
+    => D.ToDBValue entity src
+    => src
+    -> DatabaseL db (D.DBResult ())
+putEntity' src = let
+    rawK = D.getRawDBKey   @db @entity $ D.toDBKey   src
+    rawV = D.getRawDBValue @db @entity $ D.toDBValue src
     in putValueRaw rawK rawV
 
 getEntity
@@ -59,12 +73,30 @@ getValue dbKey = do
     eEntity <- getEntity dbKey
     pure $ eEntity >>= Right . snd
 
+getValue'
+    :: (FromJSON (D.DBValue entity), D.GetRawDBEntity db entity, Typeable (D.DBValue entity))
+    => D.ToDBKey entity src
+    => src
+    -> DatabaseL db (D.DBResult (D.DBValue entity))
+getValue' src = do
+    eEntity <- getEntity $ D.toDBKey src
+    pure $ eEntity >>= Right . snd
+
 findValue
     :: (FromJSON (D.DBValue entity), D.GetRawDBEntity db entity, Typeable (D.DBValue entity))
     => D.DBKey entity
     -> DatabaseL db (Maybe (D.DBValue entity))
 findValue key = do
     eVal <- getValue key
+    pure $ either (const Nothing) Just eVal
+
+findValue'
+    :: (FromJSON (D.DBValue entity), D.GetRawDBEntity db entity, Typeable (D.DBValue entity))
+    => D.ToDBKey entity src
+    => src
+    -> DatabaseL db (Maybe (D.DBValue entity))
+findValue' src = do
+    eVal <- getValue' src
     pure $ either (const Nothing) Just eVal
 
 -- TODO: type of a

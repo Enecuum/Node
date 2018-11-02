@@ -4,11 +4,14 @@
 module Enecuum.Blockchain.DB.Entities.KBlock where
 
 import           Enecuum.Prelude
-import           Text.Printf        (printf)
+import qualified Data.Aeson           as A
+import qualified Data.ByteString.Lazy as LBS
+import           Text.Printf          (printf)
 
 import qualified Enecuum.Core.Types as D
 import qualified Enecuum.Blockchain.Domain.KBlock as D
-import           Enecuum.Blockchain.DB.Model      (KBlocksDB)
+import qualified Enecuum.Blockchain.Lens          as Lens
+import           Enecuum.Blockchain.DB.Model (KBlocksDB)
 
 
 -- kBlocks (kBlock_idx|0 -> prev_hash, kBlock_idx|1 -> kBlock_data)
@@ -25,37 +28,43 @@ instance D.DBModelEntity KBlocksDB KBlockEntity
 -- KBlockPrevHash entity
 
 instance D.DBEntity KBlockPrevHashEntity where
-    data DBKey   KBlockPrevHashEntity = KBlockPrevHashKey D.StringHash
+    data DBKey   KBlockPrevHashEntity = KBlockPrevHashKey ByteString
         deriving (Show, Eq, Ord)
     data DBValue KBlockPrevHashEntity = KBlockPrevHashValue D.StringHash
         deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
-instance D.GetDBKey KBlockPrevHashEntity D.Number where
-    toDBKey idx = KBlockPrevHashKey $ D.StringHash $ encodeUtf8 @String $ printf "%07d0" idx
+instance D.ToDBKey KBlockPrevHashEntity D.Number where
+    toDBKey = KBlockPrevHashKey . encodeUtf8 @String . printf "%07d0"
 
--- instance D.GetDBValue KBlockPrevHashEntity D.KBlock where
---     toDBValue _ = error "toDBValue not implemented for KBlockPrevHashEntity"
+instance D.ToDBKey KBlockPrevHashEntity D.KBlock where
+    toDBKey = KBlockPrevHashKey . encodeUtf8 @String . printf "%07d0" . D._number
+
+instance D.ToDBValue KBlockPrevHashEntity D.KBlock where
+    toDBValue kBlock = KBlockPrevHashValue $ kBlock ^. Lens.prevHash
 
 -- TODO: this can be made by default
 instance D.GetRawDBEntity KBlocksDB KBlockPrevHashEntity where
-    getRawDBKey   (KBlockPrevHashKey k)   = D.fromStringHash k
-    getRawDBValue (KBlockPrevHashValue _) = error "getRawDBValue not implemented for KBlockPrevHashEntity"
+    getRawDBKey   (KBlockPrevHashKey k)   = k
+    getRawDBValue (KBlockPrevHashValue k) = D.fromStringHash k
 
 -- KBlock entity
 
 instance D.DBEntity KBlockEntity where
-    data DBKey   KBlockEntity = KBlockKey D.StringHash
+    data DBKey   KBlockEntity = KBlockKey ByteString
         deriving (Show, Eq, Ord)
     data DBValue KBlockEntity = KBlockValue D.Time' D.Number D.Nonce D.Solver
         deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
-instance D.GetDBKey KBlockEntity D.Number where
-    toDBKey   idx = KBlockKey $ D.StringHash $ encodeUtf8 @String $ printf "%07d1" idx
+instance D.ToDBKey KBlockEntity D.Number where
+    toDBKey = KBlockKey . encodeUtf8 @String . printf "%07d1"
 
--- instance D.GetDBValue KBlockEntity D.KBlock where
---     toDBValue _   = error "toDBValue not implemented for KBlockEntity"
+instance D.ToDBKey KBlockEntity D.KBlock where
+    toDBKey = KBlockKey . encodeUtf8 @String . printf "%07d1" . D._number
+
+instance D.ToDBValue KBlockEntity D.KBlock where
+    toDBValue (D.KBlock time _ number nonce solver) = KBlockValue time number nonce solver
 
 -- TODO: this can be made by default
 instance D.GetRawDBEntity KBlocksDB KBlockEntity where
-    getRawDBKey   (KBlockKey k)         = D.fromStringHash k
-    getRawDBValue (KBlockValue _ _ _ _) = error "getRawDBValue not implemented for KBlockEntity"
+    getRawDBKey (KBlockKey k) = k
+    getRawDBValue = LBS.toStrict . A.encode

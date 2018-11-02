@@ -39,6 +39,7 @@ graphNodeTransmitter' nodeData = do
         -- client interaction
         L.methodE $ getBalance nodeData
         L.methodE $ acceptTransaction nodeData
+        L.method  $ handleDumpToDB nodeData
 
         -- graph node interaction
         L.method  $ getChainLength nodeData
@@ -53,4 +54,12 @@ graphNodeTransmitter' nodeData = do
         L.method  $ getLastKBlock nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
+
+    L.process $ forever $ do
+        L.atomically $ do
+            need <- L.readVar $ nodeData ^. needDumpToDB
+            unless need L.retry
+        L.writeVarIO (nodeData ^. needDumpToDB) False
+        dumpToDB nodeData
+
     L.awaitNodeFinished nodeData
