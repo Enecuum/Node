@@ -4,7 +4,7 @@
    "nodeConfig":
    {
       "tag":"BNConfig",
-      "dummyOption":0
+      "dummyOptionBN":0
    },
    "loggerConfig":
    {

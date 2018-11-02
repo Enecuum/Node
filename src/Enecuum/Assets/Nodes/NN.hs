@@ -1,8 +1,7 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module Enecuum.Assets.Nodes.NN (nnNode, NN) where
+module Enecuum.Assets.Nodes.NN (nnNode, NN, NodeConfig (..)) where
 
-import qualified Data.Map                       as Map
 import           Enecuum.Prelude
 import qualified Enecuum.Domain                 as D
 import qualified Enecuum.Language               as L
@@ -79,16 +78,16 @@ connectToBN myAddress bnAddress nodeData = do
                 _ -> pure ()
     loop 63
 
-    maybeAddress :: Either Text (D.StringHash, D.Address) <- L.scenario $
+    nextForMe :: Either Text (D.StringHash, D.Address) <- L.scenario $
         L.makeRpcRequest bnAddress $ M.NextForMe hash
-    case maybeAddress of
+    case nextForMe of
         Right (recivedHash, address) | myAddress /= address ->
             L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap recivedHash address)
         _ -> pure ()
 
-    maybeAddress :: Either Text (D.StringHash, D.Address) <- L.scenario $
+    previousForMe :: Either Text (D.StringHash, D.Address) <- L.scenario $
         L.makeRpcRequest bnAddress $ M.PreviousForMe hash
-    case maybeAddress of
+    case previousForMe of
         Right (_, address) | myAddress /= address ->
             void $ L.notify address $ M.Hello hash myAddress
         _ -> pure ()
@@ -113,15 +112,15 @@ acceptNextForYou nodeData hash (M.NextForYou senderAddress) conn = do
     whenJust maybeAddress $ \(h, address) ->
         void $ L.notify senderAddress $ M.ConnectResponse h address
 
-clearingOfConnects :: D.Address -> D.StringHash -> NNNodeData -> L.NodeL ()
-clearingOfConnects myAddress myHash nodeData = L.atomically $ do
+clearingOfConnects :: D.StringHash -> NNNodeData -> L.NodeL ()
+clearingOfConnects myHash nodeData = L.atomically $ do
     nodes <- L.readVar (nodeData ^. netNodes)
     let filteredNodes   = maybeToList (findNextForHash myHash nodes) <> findInMap myHash nodes
     let filteredNodeMap = toChordRouteMap filteredNodes
     L.writeVar (nodeData ^. netNodes) filteredNodeMap
 
-requestingOfConnects :: D.Address -> D.StringHash -> NNNodeData -> L.NodeL ()
-requestingOfConnects myAddress myHash nodeData = do
+successorsRequest :: D.Address -> NNNodeData -> L.NodeL ()
+successorsRequest myAddress nodeData = do
     nodes <- L.readVarIO (nodeData ^. netNodes)
     forM_ nodes $ \(_, addr) -> void $
         L.notify addr $ M.NextForYou myAddress
@@ -173,10 +172,10 @@ nnNode maybePort _ = do
 
     L.process $ forever $ do
         L.delay $ 1000 * 1000
-        clearingOfConnects myAddress myHash nodeData
+        clearingOfConnects myHash nodeData
 
     L.process $ forever $ do
         L.delay $ 1000 * 10000
-        requestingOfConnects myAddress myHash nodeData
+        successorsRequest myAddress nodeData
 
     L.awaitNodeFinished nodeData
