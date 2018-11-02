@@ -9,6 +9,7 @@ import qualified Enecuum.Assets.Nodes.Address   as A
 import qualified Enecuum.Assets.Nodes.Messages  as M
 import           Enecuum.Research.ChordRouteMap
 import           Enecuum.Framework.Language.Extra (HasStatus)
+import           Enecuum.Assets.Nodes.Methods (methodStopNode)
 
 data BNNodeData = BNNodeData
     { _status   :: D.StateVar L.NodeStatus
@@ -65,6 +66,7 @@ bnNode = do
     nodeData <- initBN
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.serving D.Rpc A.bnNodePort $ do
+        L.method  $ methodStopNode nodeData
 
         -- routing
         L.method  $ acceptNewNode       nodeData
