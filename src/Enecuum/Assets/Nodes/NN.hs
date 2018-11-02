@@ -78,7 +78,7 @@ connectToBN myAddress bnAddress nodeData = do
                     L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap recivedHash address)
                     loop (i - 1)
                 _ -> pure ()
-    loop (hashSize - 1)
+    loop 63
 
     maybeAddress :: Either Text (D.StringHash, D.Address) <- L.scenario $
         L.makeRpcRequest bnAddress $ M.NextForMe hash
@@ -88,7 +88,7 @@ connectToBN myAddress bnAddress nodeData = do
         _ -> pure ()
 
     maybeAddress :: Either Text (D.StringHash, D.Address) <- L.scenario $
-        L.makeRpcRequest bnAddress $ M.ConnectRequestPrevious hash
+        L.makeRpcRequest bnAddress $ M.PreviousForMe hash
     case maybeAddress of
         Right (_, address) | myAddress /= address ->
             void $ L.notify address $ M.Hello hash myAddress
@@ -117,14 +117,14 @@ acceptNextForYou nodeData hash (M.NextForYou senderAddress) conn = do
 clearingOfConnects :: D.Address -> D.StringHash -> NNNodeData -> L.NodeL ()
 clearingOfConnects myAddress myHash nodeData = L.atomically $ do
     nodes <- L.readVar (nodeData ^. netNodes)
-    let filteredNodes   = maybeToList (findNext myHash nodes) <> findInMap myHash nodes
+    let filteredNodes   = maybeToList (findNextForHash myHash nodes) <> findInMap myHash nodes
     let filteredNodeMap = toChordRouteMap filteredNodes
     L.writeVar (nodeData ^. netNodes) filteredNodeMap
 
 requestingOfConnects :: D.Address -> D.StringHash -> NNNodeData -> L.NodeL ()
 requestingOfConnects myAddress myHash nodeData = do
     nodes <- L.readVarIO (nodeData ^. netNodes)
-    forM_ nodes $ \addr -> void $
+    forM_ nodes $ \(_, addr) -> void $
         L.notify addr $ M.NextForYou myAddress
 
 acceptSendTo
@@ -138,7 +138,7 @@ acceptSendTo nodeData myHash (M.SendTo hash i msg) conn = do
 
     when (i >= 0 && myHash /= hash) $ do
         rm <- L.readVarIO (nodeData ^. netNodes)
-        whenJust (findNext hash rm) $ \(h, address) -> do
+        whenJust (findNextResender hash rm) $ \(h, address) -> do
             L.logInfo $ "Resending to: " <> show h
             void $ L.notify address (M.SendTo hash (i-1) msg)
 

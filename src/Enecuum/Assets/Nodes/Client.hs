@@ -1,9 +1,7 @@
 {-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE FunctionalDependencies #-}
 
-module Enecuum.Assets.Nodes.Client where
+module Enecuum.Assets.Nodes.Client (clientNode, ClientNode(..)) where
 
 import qualified Data.Aeson                       as J
 import           Data.Aeson.Extra                 (noLensPrefix)
@@ -43,19 +41,19 @@ instance FromJSON (NodeScenario ClientNode) where parseJSON = J.genericParseJSON
 
 type BlocksCount = Int
 
-
-data CreateTransaction'              = CreateTransaction' CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, Read, ToJSON)
-newtype GetLastKBlock'               = GetLastKBlock' D.Address deriving Read
-data GetWalletBalance'               = GetWalletBalance' Int D.Address deriving Read
-newtype GetLengthOfChain'            = GetLengthOfChain' D.Address deriving Read
-newtype StartForeverChainGeneration' = StartForeverChainGeneration' D.Address deriving Read
-data GenerateBlocksPacket'           = GenerateBlocksPacket' BlocksCount D.Address deriving Read
-data Ping'                           = Ping' Protocol' D.Address deriving Read
-newtype StopRequest'                 = StopRequest' D.Address deriving Read
-data GetBlock'                       = GetBlock' D.StringHash D.Address deriving Read
-data Protocol'                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON, Read)
-data SendTo'                         = SendTo' Transmitter Receiver deriving ( Generic, Show, Eq, Ord, Read, ToJSON)
-newtype DrawMap'                     = DrawMap' D.Address deriving Read
+data CreateTransaction              = CreateTransaction CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, Read, ToJSON)
+newtype GetLastKBlock               = GetLastKBlock D.Address deriving Read
+data GetWalletBalance               = GetWalletBalance Int D.Address deriving Read
+newtype GetLengthOfChain            = GetLengthOfChain D.Address deriving Read
+newtype StartForeverChainGeneration = StartForeverChainGeneration D.Address deriving Read
+data GenerateBlocksPacket           = GenerateBlocksPacket BlocksCount D.Address deriving Read
+data Ping                           = Ping Protocol D.Address deriving Read
+newtype StopRequest                 = StopRequest D.Address deriving Read
+data GetBlock                       = GetBlock D.StringHash D.Address deriving Read
+data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON, Read)
+data SendTo                         = SendTo Address D.PortNumber deriving Read
+data Address                        = Address D.Host D.PortNumber deriving Read
+newtype DrawMap                     = DrawMap Address deriving Read
 type Transmitter                     = D.Address
 type Receiver                        = D.PortNumber
 
@@ -71,46 +69,20 @@ data CLITransaction = CLITransaction
 instance ToJSON CLITransaction where toJSON = genericToJSON noLensPrefix
 instance FromJSON CLITransaction where parseJSON = genericParseJSON noLensPrefix
 
-instance J.FromJSON Ping' where
-    parseJSON = J.withObject "Ping" $ \o -> Ping' <$> (o J..: "protocol") <*> (o J..: "address")
-
-instance J.FromJSON GetWalletBalance' where
-    parseJSON = J.withObject "GetWalletBalance" $ \o -> GetWalletBalance' <$> o J..: "walletID" <*> (o J..: "address")
-
-instance J.FromJSON CreateTransaction' where
-    parseJSON = J.withObject "CreateTransaction" $ \o -> CreateTransaction' <$> o J..: "tx" <*> (o J..: "address")
-
-instance J.FromJSON GetLastKBlock' where
-    parseJSON = J.withObject "GetLastKBlock" $ \o -> GetLastKBlock' <$> (o J..: "address")
-
-instance J.FromJSON GetLengthOfChain' where
-    parseJSON = J.withObject "GetLengthOfChain" $ \o -> GetLengthOfChain' <$> (o J..: "address")
-
-instance J.FromJSON StartForeverChainGeneration' where
-    parseJSON = J.withObject "StartForeverChainGeneration" $ \o -> StartForeverChainGeneration' <$> (o J..: "address")
-
-instance J.FromJSON GenerateBlocksPacket' where
-    parseJSON = J.withObject "GenerateBlocksPacket" $ \o -> GenerateBlocksPacket' <$> o J..: "blocks" <*> (o J..: "address")
-
-instance J.FromJSON StopRequest' where
-    parseJSON = J.withObject "StopRequest" $ \o -> StopRequest' <$> (o J..: "address")
-
-instance J.FromJSON GetBlock' where
-    parseJSON = J.withObject "GetBlock" $ \o -> GetBlock' <$> o J..: "hash" <*> (o J..: "address")
 
 sendSuccessRequest :: forall a. (ToJSON a, Typeable a) => D.Address -> a -> L.NodeL Text
 sendSuccessRequest address request = do
     res :: Either Text M.SuccessMsg <- L.makeRpcRequest address request
     pure . eitherToText $ res
 
-startForeverChainGenerationHandler :: StartForeverChainGeneration' -> L.NodeL Text
-startForeverChainGenerationHandler (StartForeverChainGeneration' address) = sendSuccessRequest address M.ForeverChainGeneration
+startForeverChainGenerationHandler :: StartForeverChainGeneration -> L.NodeL Text
+startForeverChainGenerationHandler (StartForeverChainGeneration address) = sendSuccessRequest address M.ForeverChainGeneration
 
-generateBlocksPacketHandler :: GenerateBlocksPacket' -> L.NodeL Text
-generateBlocksPacketHandler (GenerateBlocksPacket' i address) = sendSuccessRequest address $ M.NBlockPacketGeneration i
+generateBlocksPacketHandler :: GenerateBlocksPacket -> L.NodeL Text
+generateBlocksPacketHandler (GenerateBlocksPacket i address) = sendSuccessRequest address $ M.NBlockPacketGeneration i
 
-getLastKBlockHandler :: GetLastKBlock' -> L.NodeL Text
-getLastKBlockHandler (GetLastKBlock' address) = do
+getLastKBlockHandler :: GetLastKBlock -> L.NodeL Text
+getLastKBlockHandler (GetLastKBlock address) = do
     res :: Either Text D.KBlock <- L.makeRpcRequest address M.GetLastKBlock
     pure . eitherToText $ res
 
@@ -121,8 +93,8 @@ idToKey n = do
         Nothing -> error $ "There is no wallet with id: " +| n |+ ""
         Just j  -> pure (A._publicKey (j :: A.CLIWallet), A._name (j :: A.CLIWallet))
 
-getWalletBalance :: GetWalletBalance' -> L.NodeL Text
-getWalletBalance (GetWalletBalance' walletId address) = do
+getWalletBalance :: GetWalletBalance -> L.NodeL Text
+getWalletBalance (GetWalletBalance walletId address) = do
     (pubKey, name) <- idToKey walletId
     res :: Either Text M.WalletBalanceMsg <- L.makeRpcRequest address (M.GetWalletBalance pubKey)
     let fun :: M.WalletBalanceMsg -> Text
@@ -148,35 +120,35 @@ transform tx = do
     uuid <- L.nextUUID
     D.signTransaction ownerPub ownerPriv receiverPub (_amount tx) (_currency tx) uuid
 
-createTransaction :: CreateTransaction' -> L.NodeL Text
-createTransaction (CreateTransaction' tx address) = do
+createTransaction :: CreateTransaction -> L.NodeL Text
+createTransaction (CreateTransaction tx address) = do
     transaction <- transform tx
     res :: Either Text M.SuccessMsg <- L.makeRpcRequest address (M.CreateTransaction transaction)
     pure . eitherToText $ res
 
-getLengthOfChain :: GetLengthOfChain' -> L.NodeL Text
-getLengthOfChain (GetLengthOfChain' address) = do
+getLengthOfChain :: GetLengthOfChain -> L.NodeL Text
+getLengthOfChain (GetLengthOfChain address) = do
     res :: Either Text D.KBlock <- L.makeRpcRequest address M.GetLastKBlock
     case res of
         Right kBlock -> pure $ "Length of chain is " <> show (D._number kBlock)
         Left t       -> pure t
 
-ping :: Ping' -> L.NodeL Text
-ping (Ping' TCP address) = do
+ping :: Ping -> L.NodeL Text
+ping (Ping TCP address) = do
     res <- L.withConnection D.Tcp address $ \conn -> L.send conn M.Ping
     pure $ case res of Right _ -> "Tcp port is available."; Left _ -> "Tcp port is not available."
 
-ping (Ping' RPC address) = do
+ping (Ping RPC address) = do
     res :: Either Text M.Pong <- L.makeRpcRequest address M.Ping
     pure $ case res of Right _ -> "Rpc port is available."; Left _ -> "Rpc port is not available."
 
-ping (Ping' UDP _) = pure "This functionality is not supported."
+ping (Ping UDP _) = pure "This functionality is not supported."
 
-stopRequest :: StopRequest' -> L.NodeL Text
-stopRequest (StopRequest' address) = sendSuccessRequest address M.Stop
+stopRequest :: StopRequest -> L.NodeL Text
+stopRequest (StopRequest address) = sendSuccessRequest address M.Stop
 
-getBlock :: GetBlock' -> L.NodeL Text
-getBlock (GetBlock' hash address) = do
+getBlock :: GetBlock -> L.NodeL Text
+getBlock (GetBlock hash address) = do
     res :: Either Text D.NodeContent <- L.makeRpcRequest address (M.GetGraphNode hash)
     case res of
         Right (D.KBlockContent block) -> pure $ "Key block is "   <> show block
@@ -184,14 +156,14 @@ getBlock (GetBlock' hash address) = do
         Left  text                    -> pure $ "Error: "         <> text
 
 
-sendTo :: SendTo' -> L.NodeL Text
-sendTo (SendTo' (D.Address host port) rPort) = do
+sendTo :: SendTo -> L.NodeL Text
+sendTo (SendTo (Address host port) rPort) = do
     let receiver = D.Address "127.0.0.1" rPort
     void $ L.notify (D.Address host port) $ M.SendTo (D.toHashGeneric receiver) 10 "!! msg !!"
     pure "Sended."
 
-drawRouteMap :: DrawMap' -> L.NodeL Text
-drawRouteMap (DrawMap' (D.Address host port)) = do
+drawRouteMap :: DrawMap -> L.NodeL Text
+drawRouteMap (DrawMap (Address host port)) = do
     routMap <- cardAssembly mempty mempty (Set.fromList [D.Address host port])
     L.evalIO $ makeImage (1000, 1000) "image.png" $ \image ->
         forM_ (Map.toList routMap) $ \(hs, hf) -> do
@@ -228,9 +200,6 @@ clientNode' _ = do
     L.logInfo "Client started"
     L.nodeTag "Client"
     stateVar <- L.newVarIO NodeActing
-     -- -- status <- L.newVarIO NodeActing
-     -- -- let nodeData = ClientNodeData status
-     -- -- nodeData <- L.scenario $ L.atomically (ClientData1 <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
 
     L.std $ do
         -- network
