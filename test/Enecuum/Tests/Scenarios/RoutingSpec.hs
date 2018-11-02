@@ -26,10 +26,10 @@ testRouting = TestCase $ do
         )
     let transmitter = D.Address A.localhost $ head ports
     let receivers = tail ports
-    -- Right msg :: Either Text Text 
     msg :: [Either Text Text] <- forM receivers (\receiver -> makeIORpcRequest A.clientAddress $ A.SendTo' transmitter receiver)
-    -- Right msg :: Either Text Msg <- makeIORpcRequest A.bnNodePort A.Hello
+
+    print $ msg
+    stopNode A.clientAddress
     -- stopNode A.bnAddress
-    -- forM ports (\port -> stopNode $ D.Address A.localhost port)
-    -- stopNode A.clientAddress
+    -- forM ports (\port -> stopNode $ D.Address A.localhost port)    
     True `shouldBe` True 

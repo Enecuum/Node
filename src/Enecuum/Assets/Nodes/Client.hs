@@ -1,5 +1,7 @@
-{-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveAnyClass         #-}
+{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 module Enecuum.Assets.Nodes.Client where
 
@@ -11,9 +13,16 @@ import qualified Enecuum.Assets.Blockchain.Wallet as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Config
-import           Enecuum.Framework.Language.Extra (NodeStatus (..))
+import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude                  hiding (map, unpack)
+import qualified Enecuum.Assets.Nodes.Address as A
+import           Enecuum.Assets.Nodes.Methods (methodStopNode)
+
+data ClientNodeData = ClientNodeData
+    { _status              :: D.StateVar NodeStatus
+    }
+makeFieldsNoPrefix ''ClientNodeData
 
 data ClientNode = ClientNode
     deriving (Show, Generic)
@@ -207,11 +216,11 @@ clientNode' _ = do
     stateVar <- L.newVarIO NodeActing
      -- -- status <- L.newVarIO NodeActing
      -- -- let nodeData = ClientNodeData status
-     -- -- nodeData <- L.scenario $ L.atomically (ClientNodeData <$> L.newVar NodeActing)
+    nodeData <- L.scenario $ L.atomically (ClientNodeData <$> L.newVar NodeActing)
      -- -- nodeData <- L.scenario $ L.atomically (ClientData1 <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
-     -- L.serving D.Rpc A.clientRpcPort $ do
-     --     L.method  $ sendTo
-     --     -- L.method  $ methodStopNode nodeData
+    L.serving D.Rpc A.clientRpcPort $ do
+        L.method  $ sendTo
+        L.method  $ methodStopNode nodeData
 
     L.std $ do
         -- network
