@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
 
-module Enecuum.Assets.Nodes.Client (clientNode, ClientNode(..)) where
+module Enecuum.Assets.Nodes.Client (clientNode, ClientNode(..), NodeConfig (..), SendTo(..), sendTo) where
 
 import qualified Data.Aeson                       as J
 import           Data.Aeson.Extra                 (noLensPrefix)
@@ -12,7 +12,7 @@ import qualified Enecuum.Assets.Blockchain.Wallet as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Config
-import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
+import           Enecuum.Framework.Language.Extra (NodeStatus (..))
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude                  hiding (map, unpack)
 import           Graphics.GD.Extra
@@ -54,9 +54,6 @@ data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, E
 data SendTo                         = SendTo Address D.PortNumber deriving Read
 data Address                        = Address D.Host D.PortNumber deriving Read
 newtype DrawMap                     = DrawMap Address deriving Read
-type Transmitter                     = D.Address
-type Receiver                        = D.PortNumber
-
 
 data CLITransaction = CLITransaction
   { _owner    :: String
@@ -159,7 +156,7 @@ getBlock (GetBlock hash address) = do
 sendTo :: SendTo -> L.NodeL Text
 sendTo (SendTo (Address host port) rPort) = do
     let receiver = D.Address "127.0.0.1" rPort
-    void $ L.notify (D.Address host port) $ M.SendTo (D.toHashGeneric receiver) 10 "!! msg !!"
+    void $ L.notify (D.Address host port) $ M.SendMsgTo (D.toHashGeneric receiver) 10 "!! msg !!"
     pure "Sended."
 
 drawRouteMap :: DrawMap -> L.NodeL Text

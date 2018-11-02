@@ -2,12 +2,12 @@
 
 module Enecuum.Tests.Scenarios.SyncNodesSpec where
 
-import           Data.Aeson
-import qualified Data.Map                                     as M
+
+
 import qualified Enecuum.Assets.Scenarios                     as A
 import qualified Enecuum.Blockchain.Lens                      as Lens
 import qualified Enecuum.Domain                               as D
-import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
+
 import           Enecuum.Prelude
 import           Enecuum.Testing.Integrational
 import           Test.Hspec

@@ -14,7 +14,7 @@ data SuccessMsg = SuccessMsg
 
 -- | Routing messages
 -- | Client
-data SendTo = SendTo StringHash Int Text
+data SendMsgTo = SendMsgTo StringHash Int Text
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | BN, NN nodes

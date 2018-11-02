@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module Enecuum.Assets.Nodes.BN (bnNode, BN) where
+module Enecuum.Assets.Nodes.BN (bnNode, BN, NodeConfig(..)) where
 
 import           Enecuum.Prelude
 import qualified Enecuum.Domain                 as D
@@ -24,7 +24,7 @@ data BN = BN
     deriving (Show, Generic)
 
 data instance NodeConfig BN = BNConfig
-    { dummyOption :: Int
+    { dummyOptionBN :: Int
     }
     deriving (Show, Generic)
 
@@ -62,7 +62,7 @@ findConnect nodeData (M.ConnectRequest hash i) = do
     address <- L.atomically $ do
         connectMap <- L.readVar (nodeData ^. netNodes)
         pure $ findInMapNByKey
-            (\hash i -> D.hashToWord64 hash + 2 ^ i)
+            (\h j -> D.hashToWord64 h + 2 ^ j)
             i
             hash
             connectMap
