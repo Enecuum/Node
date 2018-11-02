@@ -1,7 +1,6 @@
-{-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE DeriveAnyClass         #-}
+
 module Enecuum.Assets.Nodes.Client where
 
 import qualified Data.Aeson                       as J
@@ -9,15 +8,12 @@ import           Data.Aeson.Extra                 (noLensPrefix)
 import qualified Data.Map                         as Map
 import           Data.Text                        hiding (map)
 import qualified Enecuum.Assets.Blockchain.Wallet as A
-import qualified Enecuum.Assets.Nodes.Address     as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
-import           Enecuum.Config
 import qualified Enecuum.Domain                   as D
+import           Enecuum.Config
 import           Enecuum.Framework.Language.Extra (NodeStatus (..))
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude                  hiding (map, unpack)
-import           Enecuum.Assets.Nodes.Methods
--- import Enecuum.Assets.Nodes.ClientExtra
 
 data ClientNode = ClientNode
     deriving (Show, Generic)
@@ -41,6 +37,7 @@ instance FromJSON (NodeScenario ClientNode) where parseJSON = J.genericParseJSON
 
 type BlocksCount = Int
 
+
 data CreateTransaction'              = CreateTransaction' CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, Read, ToJSON)
 newtype GetLastKBlock'               = GetLastKBlock' D.Address deriving Read
 data GetWalletBalance'               = GetWalletBalance' Int D.Address deriving Read
@@ -54,6 +51,7 @@ data Protocol'                       = UDP | TCP | RPC deriving (Generic, Show, 
 type Transmitter                     = D.Address
 type Receiver                        = D.PortNumber
 data SendTo'                         = SendTo' Transmitter Receiver deriving (Read, Generic, FromJSON, ToJSON)
+newtype DrawMap                      = DrawMap D.Address deriving Read
 
 data CLITransaction = CLITransaction
   { _owner    :: String
@@ -66,7 +64,32 @@ data CLITransaction = CLITransaction
 instance ToJSON CLITransaction where toJSON = genericToJSON noLensPrefix
 instance FromJSON CLITransaction where parseJSON = genericParseJSON noLensPrefix
 
+instance J.FromJSON Ping' where
+    parseJSON = J.withObject "Ping" $ \o -> Ping' <$> (o J..: "protocol") <*> (o J..: "address")
 
+instance J.FromJSON GetWalletBalance' where
+    parseJSON = J.withObject "GetWalletBalance" $ \o -> GetWalletBalance' <$> o J..: "walletID" <*> (o J..: "address")
+
+instance J.FromJSON CreateTransaction' where
+    parseJSON = J.withObject "CreateTransaction" $ \o -> CreateTransaction' <$> o J..: "tx" <*> (o J..: "address")
+
+instance J.FromJSON GetLastKBlock' where
+    parseJSON = J.withObject "GetLastKBlock" $ \o -> GetLastKBlock' <$> (o J..: "address")
+
+instance J.FromJSON GetLengthOfChain' where
+    parseJSON = J.withObject "GetLengthOfChain" $ \o -> GetLengthOfChain' <$> (o J..: "address")
+
+instance J.FromJSON StartForeverChainGeneration' where
+    parseJSON = J.withObject "StartForeverChainGeneration" $ \o -> StartForeverChainGeneration' <$> (o J..: "address")
+
+instance J.FromJSON GenerateBlocksPacket' where
+    parseJSON = J.withObject "GenerateBlocksPacket" $ \o -> GenerateBlocksPacket' <$> o J..: "blocks" <*> (o J..: "address")
+
+instance J.FromJSON StopRequest' where
+    parseJSON = J.withObject "StopRequest" $ \o -> StopRequest' <$> (o J..: "address")
+
+instance J.FromJSON GetBlock' where
+    parseJSON = J.withObject "GetBlock" $ \o -> GetBlock' <$> o J..: "hash" <*> (o J..: "address")
 
 sendSuccessRequest :: forall a. (ToJSON a, Typeable a) => D.Address -> a -> L.NodeL Text
 sendSuccessRequest address request = do
@@ -160,50 +183,41 @@ sendTo (SendTo' transmitter rPort) = do
     void $ L.notify transmitter $ M.SendTo (D.toHashGeneric receiver) 10 "!! msg !!"
     pure "Sended."
 
-
-
-eitherToText :: Show a => Either Text a -> Text
-eitherToText (Left  a) = "Server error: " <> a
-eitherToText (Right a) = show a
-
-eitherToText2 :: Either Text Text -> Text
-eitherToText2 (Left  a) = "Server error: " <> a
-eitherToText2 (Right a) = a
-
--- data ClientData1 = ClientData1
---     { _currentLastKeyBlock1 :: D.StateVar D.KBlock
---     , _status               :: D.StateVar NodeStatus
---     , _transactionPending1  :: D.StateVar [D.Transaction]
---     }
--- makeFieldsNoPrefix ''ClientData1
-
--- data ClientNodeData = ClientNodeData
---     { _status              :: D.StateVar NodeStatus
---     }    
--- makeFieldsNoPrefix ''ClientNodeData
-
+{-
+Requests:
+{"method":"GetLastKBlock", "address":{"host":"127.0.0.1", "port": 2005}}
+{"method":"StartForeverChainGeneration", "address":{"host":"127.0.0.1", "port": 2005}}
+{"method":"GenerateBlocksPacket", "blocks" : 2, "address":{"host":"127.0.0.1", "port": 2005}}
+{"method":"GetWalletBalance", "walletID": 2, "address":{"host":"127.0.0.1", "port": 2008}}
+{"method":"GetWalletBalance", "walletID": 2, "address":{"host":"127.0.0.1", "port": 2009}}
+{"method":"StopNode"}
+{"method":"Ping", "protocol":"RPC", "address":{"host":"127.0.0.1", "port": 2008}}
+{"method":"GetLengthOfChain", "address":{"host":"127.0.0.1", "port": 2008}}
+{"method":"StopRequest", "address":{"host":"127.0.0.1", "port": 2008}}
+{"method":"CreateTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2008}}
+-}
 
 clientNode :: L.NodeDefinitionL ()
-clientNode = clientNode' (ClientNodeConfig 42) 
+clientNode = clientNode' (ClientNodeConfig 42)
 
 clientNode' :: NodeConfig ClientNode -> L.NodeDefinitionL ()
 clientNode' _ = do
     L.logInfo "Client started"
     L.nodeTag "Client"
     stateVar <- L.newVarIO NodeActing
-    -- status <- L.newVarIO NodeActing
-    -- let nodeData = ClientNodeData status
-    -- nodeData <- L.scenario $ L.atomically (ClientNodeData <$> L.newVar NodeActing)
-    -- nodeData <- L.scenario $ L.atomically (ClientData1 <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
-    L.serving D.Rpc A.clientRpcPort $ do
-        L.method  $ sendTo
-        -- L.method  $ methodStopNode nodeData
+     -- -- status <- L.newVarIO NodeActing
+     -- -- let nodeData = ClientNodeData status
+     -- -- nodeData <- L.scenario $ L.atomically (ClientNodeData <$> L.newVar NodeActing)
+     -- -- nodeData <- L.scenario $ L.atomically (ClientData1 <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
+     -- L.serving D.Rpc A.clientRpcPort $ do
+     --     L.method  $ sendTo
+     --     -- L.method  $ methodStopNode nodeData
 
     L.std $ do
         -- network
         L.stdHandler ping
         L.stdHandler stopRequest
-        -- L.stdHandler $ L.stopNodeHandler' stateVar
+        L.stdHandler $ L.stopNodeHandler' stateVar
 
         -- interaction with graph node
         L.stdHandler createTransaction
@@ -221,5 +235,10 @@ clientNode' _ = do
         L.stdHandler sendTo
     L.awaitNodeFinished' stateVar
 
+eitherToText :: Show a => Either Text a -> Text
+eitherToText (Left  a) = "Server error: " <> a
+eitherToText (Right a) = show a
 
-   
+eitherToText2 :: Either Text Text -> Text
+eitherToText2 (Left  a) = "Server error: " <> a
+eitherToText2 (Right a) = a

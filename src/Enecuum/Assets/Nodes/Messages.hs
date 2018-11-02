@@ -20,7 +20,10 @@ data SendTo = SendTo StringHash Int Text
 -- | BN, NN nodes
 data Hello = Hello StringHash D.Address
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
-  
+
+data ConnectMapRequest = ConnectMapRequest
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 -- | BN node
 data ConnectRequest = ConnectRequest StringHash Integer
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

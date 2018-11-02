@@ -31,5 +31,5 @@ testRouting = TestCase $ do
     -- Right msg :: Either Text Msg <- makeIORpcRequest A.bnNodePort A.Hello
     -- stopNode A.bnAddress
     -- forM ports (\port -> stopNode $ D.Address A.localhost port)
-    stopNode A.clientAddress
+    -- stopNode A.clientAddress
     True `shouldBe` True 
