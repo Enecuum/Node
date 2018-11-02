@@ -27,11 +27,11 @@ testRouting = TestCase $ do
         )
     let transmitter = D.Address A.localhost $ head ports
     let receivers = tail ports
-    msgSend :: [Either Text Text] <- forM receivers (\receiver -> makeIORpcRequest A.clientAddress $ A.SendTo' transmitter receiver)
+    --msgSend :: [Either Text Text] <- forM receivers (\receiver -> makeIORpcRequest A.clientAddress $ A.SendMsgTo transmitter receiver)
     threadDelay $ 1000 * 1000
-    msg :: [Either Text [Text]] <- forM receivers (\port -> makeIORpcRequest (D.Address A.localhost port) $ A.GetRoutingMessages )
-    print $ msgSend
-    print $ msg
+    --msg :: [Either Text [Text]] <- forM receivers (\port -> makeIORpcRequest (D.Address A.localhost port) $ A.GetRoutingMessages )
+    --print $ msgSend
+    --print $ msg
     stopNode A.clientAddress
     -- stopNode A.bnAddress
     -- forM ports (\port -> stopNode $ D.Address A.localhost port)    

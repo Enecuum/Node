@@ -127,8 +127,8 @@ successorsRequest myAddress nodeData = do
         L.notify addr $ M.NextForYou myAddress
 
 acceptSendTo
-    :: NNNodeData -> D.StringHash -> M.SendTo -> D.Connection D.Udp -> L.NodeL ()
-acceptSendTo nodeData myHash (M.SendTo hash i msg) conn = do
+    :: NNNodeData -> D.StringHash -> M.SendMsgTo -> D.Connection D.Udp -> L.NodeL ()
+acceptSendTo nodeData myHash (M.SendMsgTo hash i msg) conn = do
     L.close conn
     let mes = "Received msg: \"" <>  msg <> "\" for " <> show hash <> " time to live " <> show i
     L.logInfo mes
@@ -139,7 +139,7 @@ acceptSendTo nodeData myHash (M.SendTo hash i msg) conn = do
         rm <- L.readVarIO (nodeData ^. netNodes)
         whenJust (findNextResender hash rm) $ \(h, address) -> do
             L.logInfo $ "Resending to: " <> show h
-            void $ L.notify address (M.SendTo hash (i-1) msg)
+            void $ L.notify address (M.SendMsgTo hash (i-1) msg)
 
 connectMapRequest :: NNNodeData -> M.ConnectMapRequest -> L.NodeL [(D.StringHash, D.Address)]
 connectMapRequest nodeData _ = do
