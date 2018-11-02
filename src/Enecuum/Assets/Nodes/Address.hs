@@ -42,7 +42,7 @@ clientAddress :: D.Address
 clientAddress = D.Address localhost clientRpcPort
 
 clientRpcPort :: D.PortNumber
-clientRpcPort = 2008
+clientRpcPort = 2010
 
 bnNodePort :: D.PortNumber
 bnNodePort = 5000
