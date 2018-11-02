@@ -80,6 +80,8 @@ initialize configSrc = do
             , runNode' $ dispatchScenario @S.PoANode    configSrc
             , runNode' $ dispatchScenario @S.PoWNode    configSrc
             , runNode' $ dispatchScenario @S.ClientNode configSrc
+            , runNode' $ dispatchScenario @S.NN         configSrc
+            , runNode' $ dispatchScenario @S.BN         configSrc
             ]
     results <- sequence runners
     case catMaybes results of

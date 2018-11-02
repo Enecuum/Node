@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module Enecuum.Assets.Nodes.NN (nnNode) where
+module Enecuum.Assets.Nodes.NN (nnNode, NN) where
 
 import qualified Data.Map                       as Map
 import           Enecuum.Prelude
@@ -10,6 +10,8 @@ import qualified Enecuum.Assets.Nodes.Address   as A
 import qualified Enecuum.Assets.Nodes.Messages  as M
 import           Enecuum.Research.ChordRouteMap
 import           Enecuum.Framework.Language.Extra (HasStatus)
+import           Enecuum.Config
+import qualified Data.Aeson                       as J
 
 data NNNodeData = NNNodeData
     { _status   :: D.StateVar L.NodeStatus
@@ -18,6 +20,29 @@ data NNNodeData = NNNodeData
     , _routingMessages :: D.StateVar [Text]
     }
 makeFieldsNoPrefix ''NNNodeData
+
+--
+data NN = NN
+    deriving (Show, Generic)
+
+data instance NodeConfig NN = NNConfig
+    { dummyOption :: Int
+    }
+    deriving (Show, Generic)
+
+instance Node NN where
+    data NodeScenario NN = NNS
+        deriving (Show, Generic)
+    getNodeScript NNS = nnNode Nothing
+
+
+instance ToJSON   NN                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON NN                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig NN)   where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig NN)   where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario NN) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario NN) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+
 
 newtype Start = Start D.PortNumber deriving (Read)
 
@@ -107,10 +132,10 @@ acceptSendTo
 acceptSendTo nodeData myHash (M.SendTo hash i msg) conn = do
     L.close conn
     let mes = "Received msg: \"" <>  msg <> "\" for " <> show hash <> " time to live " <> show i
-    L.logInfo mes 
+    L.logInfo mes
     L.atomically $ L.modifyVar (nodeData ^. routingMessages) (mes :)
     when (myHash == hash) $ L.logInfo "I'm receiver."
-    
+
     when (i >= 0 && myHash /= hash) $ do
         rm <- L.readVarIO (nodeData ^. netNodes)
         whenJust (findNext hash rm) $ \(h, address) -> do
@@ -122,21 +147,20 @@ connectMapRequest nodeData _ = do
     nodes <- L.readVarIO (nodeData ^. netNodes)
     pure $ fromChordRouteMap nodes
 
-getRoutingMessages :: NNNodeData -> M.GetRoutingMessages -> L.NodeL [Text]   
+getRoutingMessages :: NNNodeData -> M.GetRoutingMessages -> L.NodeL [Text]
 getRoutingMessages nodeData _ = do
     mes <- L.readVarIO (nodeData ^. routingMessages)
     pure $ mes
 
-
-nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
-nnNode maybePort = do
+nnNode :: Maybe D.PortNumber -> NodeConfig NN -> L.NodeDefinitionL ()
+nnNode maybePort _ = do
     L.nodeTag "NN node"
     L.logInfo "Starting of NN node"
     nodeData    <- initNN maybePort
     L.std $ do
         L.stdHandler $ startNode nodeData
         L.stdHandler $ L.stopNodeHandler nodeData
-    
+
     -- routing
     port        <- awaitPort nodeData
     let myAddress = D.Address "127.0.0.1" port
@@ -145,7 +169,7 @@ nnNode maybePort = do
     connectToBN myAddress A.bnAddress nodeData
 
     L.serving D.Rpc port $
-        L.method  $  getRoutingMessages   nodeData        
+        L.method  $  getRoutingMessages   nodeData
     L.serving D.Rpc (port - 1000) $
         L.method  $  connectMapRequest    nodeData
 
@@ -157,11 +181,11 @@ nnNode maybePort = do
         L.handler $ acceptSendTo          nodeData myHash
 
     L.process $ forever $ do
-        L.delay $ 1000 * 10
+        L.delay $ 1000 * 1000
         clearingOfConnects myAddress myHash nodeData
 
     L.process $ forever $ do
-        L.delay $ 1000 * 1000
+        L.delay $ 1000 * 10000
         requestingOfConnects myAddress myHash nodeData
 
     L.awaitNodeFinished nodeData

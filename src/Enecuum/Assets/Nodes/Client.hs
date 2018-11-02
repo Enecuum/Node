@@ -8,6 +8,7 @@ module Enecuum.Assets.Nodes.Client where
 import qualified Data.Aeson                       as J
 import           Data.Aeson.Extra                 (noLensPrefix)
 import qualified Data.Map                         as Map
+import qualified Data.Set                         as Set
 import           Data.Text                        hiding (map)
 import qualified Enecuum.Assets.Blockchain.Wallet as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
@@ -16,13 +17,9 @@ import           Enecuum.Config
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude                  hiding (map, unpack)
-import qualified Enecuum.Assets.Nodes.Address as A
-import           Enecuum.Assets.Nodes.Methods (methodStopNode)
-
-data ClientNodeData = ClientNodeData
-    { _status              :: D.StateVar NodeStatus
-    }
-makeFieldsNoPrefix ''ClientNodeData
+import           Graphics.GD.Extra
+import           Enecuum.Research.RouteDrawing
+import           Data.Complex
 
 data ClientNode = ClientNode
     deriving (Show, Generic)
@@ -35,7 +32,7 @@ data instance NodeConfig ClientNode = ClientNodeConfig
 instance Node ClientNode where
     data NodeScenario ClientNode = CLI
         deriving (Show, Generic)
-    getNodeScript CLI = clientNode'
+    getNodeScript CLI = clientNode
 
 instance ToJSON   ClientNode                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON ClientNode                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
@@ -57,10 +54,12 @@ data Ping'                           = Ping' Protocol' D.Address deriving Read
 newtype StopRequest'                 = StopRequest' D.Address deriving Read
 data GetBlock'                       = GetBlock' D.StringHash D.Address deriving Read
 data Protocol'                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON, Read)
+data SendTo'                         = SendTo' Address' D.PortNumber deriving Read
+data Address'                        = Address' D.Host D.PortNumber deriving Read
+newtype DrawMap'                     = DrawMap' Address' deriving Read
 type Transmitter                     = D.Address
 type Receiver                        = D.PortNumber
-data SendTo'                         = SendTo' Transmitter Receiver deriving (Read, Generic, FromJSON, ToJSON)
-newtype DrawMap                      = DrawMap D.Address deriving Read
+
 
 data CLITransaction = CLITransaction
   { _owner    :: String
@@ -187,40 +186,49 @@ getBlock (GetBlock' hash address) = do
 
 
 sendTo :: SendTo' -> L.NodeL Text
-sendTo (SendTo' transmitter rPort) = do
+sendTo (SendTo' (Address' host port) rPort) = do
     let receiver = D.Address "127.0.0.1" rPort
-    void $ L.notify transmitter $ M.SendTo (D.toHashGeneric receiver) 10 "!! msg !!"
+    void $ L.notify (D.Address host port) $ M.SendTo (D.toHashGeneric receiver) 10 "!! msg !!"
     pure "Sended."
 
-{-
-Requests:
-{"method":"GetLastKBlock", "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"StartForeverChainGeneration", "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"GenerateBlocksPacket", "blocks" : 2, "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"GetWalletBalance", "walletID": 2, "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"GetWalletBalance", "walletID": 2, "address":{"host":"127.0.0.1", "port": 2009}}
-{"method":"StopNode"}
-{"method":"Ping", "protocol":"RPC", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"GetLengthOfChain", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"StopRequest", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"CreateTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2008}}
--}
+drawRouteMap :: DrawMap' -> L.NodeL Text
+drawRouteMap (DrawMap' (Address' host port)) = do
+    routMap <- cardAssembly mempty mempty (Set.fromList [D.Address host port])
+    L.evalIO $ makeImage (1000, 1000) "image.png" $ \image ->
+        forM_ (Map.toList routMap) $ \(hs, hf) -> do
+            let startPointPhase = hashToPhase hs
+            let startPoint      = (500 :+ 500) + mkPolar 1 startPointPhase * 400
+            forM_ (hashToPhase <$> hf) $ \ph -> do
+                let endPoint = (500 :+ 500) + mkPolar 1 ph * 400
+                drawCirkle endPoint 10 black image
+                drawArrow startPoint endPoint black image
+    pure "Drawed."
 
-clientNode :: L.NodeDefinitionL ()
-clientNode = clientNode' (ClientNodeConfig 42)
+cardAssembly
+    :: Map D.StringHash [D.StringHash]
+    -> Set.Set D.Address
+    -> Set.Set D.Address
+    -> L.NodeL (Map D.StringHash [D.StringHash])
+cardAssembly accum passed nexts
+    | Set.null nexts = pure accum
+    | otherwise      = do
+        let D.Address host port = Set.elemAt 0 nexts
+        res :: Either Text [(D.StringHash, D.Address)] <-
+            L.makeRpcRequest (D.Address host (port - 1000)) M.ConnectMapRequest
+        let r = case res of Right a -> a; Left _ -> []
+        let newPassed = Set.insert (D.Address host port) passed
+        let newNexts  = Set.difference (Set.union nexts (Set.fromList $ snd <$> r)) newPassed
+        let newAccum  = Map.insert (D.toHashGeneric (D.Address host port)) (fst <$> r) accum
+        cardAssembly newAccum newPassed newNexts
 
-clientNode' :: NodeConfig ClientNode -> L.NodeDefinitionL ()
-clientNode' _ = do
+clientNode :: NodeConfig ClientNode -> L.NodeDefinitionL ()
+clientNode _ = do
     L.logInfo "Client started"
     L.nodeTag "Client"
     stateVar <- L.newVarIO NodeActing
      -- -- status <- L.newVarIO NodeActing
      -- -- let nodeData = ClientNodeData status
-    nodeData <- L.scenario $ L.atomically (ClientNodeData <$> L.newVar NodeActing)
      -- -- nodeData <- L.scenario $ L.atomically (ClientData1 <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
-    L.serving D.Rpc A.clientRpcPort $ do
-        L.method  $ sendTo
-        L.method  $ methodStopNode nodeData
 
     L.std $ do
         -- network
@@ -242,6 +250,7 @@ clientNode' _ = do
 
         -- routing
         L.stdHandler sendTo
+        L.stdHandler drawRouteMap
     L.awaitNodeFinished' stateVar
 
 eitherToText :: Show a => Either Text a -> Text
