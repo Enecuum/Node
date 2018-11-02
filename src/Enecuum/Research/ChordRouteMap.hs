@@ -3,13 +3,10 @@ module Enecuum.Research.ChordRouteMap
     , addToMap
     , removeFromMap
     , findInMap
-    , findInMapR
     , findInMapNByKey
     , findNext
     , hashSize
     , quantityOfHashes
-    , inverseFormula
-    , straightFormula
     , toChordRouteMap
     , findNextForHash
     , fromChordRouteMap
@@ -20,13 +17,13 @@ import qualified Data.Map                      as M
 import           Data.HGraph.StringHashable
 
 -- | Route map for chord algorithm.
-type ChordRouteMap a = M.Map Integer a
+type ChordRouteMap a = M.Map Word64 (StringHash, a)
 
 toChordRouteMap :: Ord a => [(StringHash, a)] -> ChordRouteMap a
-toChordRouteMap s = M.fromList [(hashToInteger k, v)|(k, v) <- s]
+toChordRouteMap s = M.fromList [(hashToWord64 k, (k, v))|(k, v) <- s]
 
 fromChordRouteMap :: ChordRouteMap a -> [(StringHash, a)]
-fromChordRouteMap s = [(integerToHash k, v)| (k, v) <- M.toList s]
+fromChordRouteMap = M.elems
 
 -- | Size of hashes.
 hashSize :: Integer
@@ -38,66 +35,53 @@ quantityOfHashes = 2 ^ hashSize
 
 -- | Add elem to route map.
 addToMap :: Ord a => StringHash -> a -> ChordRouteMap a -> ChordRouteMap a
-addToMap hash = M.insert (hashToInteger hash)
+addToMap hash e = M.insert (hashToWord64 hash) (hash, e)
 
 -- | Remove elem from route map.
 removeFromMap :: Ord a => StringHash -> ChordRouteMap a -> ChordRouteMap a
-removeFromMap hash = M.delete (hashToInteger hash)
+removeFromMap hash = M.delete (hashToWord64 hash)
 
 -- | Find all fingers in rout map by straight formula.
 findInMap :: Ord a => StringHash -> ChordRouteMap a -> [(StringHash, a)]
-findInMap = findInMapByKey straightFormula
+findInMap = findInMapByKey (\hash i -> hashToWord64 hash + 2 ^ i)
 
--- | Find all fingers in rout map by inverse formula.
-findInMapR :: Ord a => StringHash -> ChordRouteMap a -> [(StringHash, a)]
-findInMapR = findInMapByKey inverseFormula
-
-straightFormula :: Integral b => StringHash -> b -> Integer
-straightFormula hash i = (hashToInteger hash + 2 ^ i) `mod` quantityOfHashes
-
-inverseFormula :: Integral b => StringHash -> b -> Integer
---  counterclockwise direction
-inverseFormula hash i = (quantityOfHashes + hashToInteger hash - 2 ^ i) `mod` quantityOfHashes
 
 -- | Find all fingers in route map by formula.
 --  counterclockwise direction
 findInMapByKey
     :: Ord a
-    => (StringHash -> Integer -> Integer)
+    => (StringHash -> Word64 -> Word64)
     -> StringHash
     -> ChordRouteMap a
     -> [(StringHash, a)]
 findInMapByKey elemKey hash rm = mapMaybe
-    (\i -> findInMapNByKey elemKey i hash rm) [0..hashSize-1]
+    (\i -> findInMapNByKey elemKey i hash rm) [0..63]
 
 -- | Find N finger in route map by formula.
 --  counterclockwise direction
 findInMapNByKey
-    :: (StringHash -> Integer -> Integer)
-    -> Integer
+    :: (StringHash -> Word64 -> Word64)
+    -> Word64
     -> StringHash
-    -> Map Integer b
+    -> ChordRouteMap b
     -> Maybe (StringHash, b)
-findInMapNByKey elemKey i hash rm =
-    (\(x, y) -> (integerToHash x, y)) <$>
+findInMapNByKey elemKey i hash rm = snd <$> 
     (if isJust bottomElem then bottomElem else topElem)
     where
-        topElem    = M.lookupLE quantityOfHashes rm
+        topElem    = M.lookupLE maxBound rm
         bottomElem = M.lookupLE (elemKey hash i) rm
 
 --  clockwise direction        
-findNextForHash :: StringHash -> Map Integer b -> Maybe (StringHash, b)
-findNextForHash hash rm =
-    (\(x, y) -> (integerToHash x, y)) <$>
-    (if isJust topElem then topElem else bottomElem) 
+findNextForHash :: StringHash -> ChordRouteMap b -> Maybe (StringHash, b)
+findNextForHash hash rm = snd <$> (if isJust topElem then topElem else bottomElem)
     where
         bottomElem = M.lookupGE 0 rm
-        topElem    = M.lookupGE ((hashToInteger hash + 1) `mod` quantityOfHashes) rm
+        topElem    = M.lookupGE (hashToWord64 hash + 1) rm
 
 -- | Find the closest elem to hash from route map.
 findNext :: Ord a => StringHash -> ChordRouteMap a -> Maybe (StringHash, a)
 findNext hash rm = if isJust bottomElem then bottomElem else topElem
     where
-        bottomElem = (\(k, v) -> (integerToHash k, v)) <$> M.lookupLE elemKey rm
-        topElem    = (\(k, v) -> (integerToHash k, v)) <$> M.lookupLE quantityOfHashes rm
-        elemKey    = hashToInteger hash
+        bottomElem = snd <$> M.lookupLE elemKey  rm
+        topElem    = snd <$> M.lookupLE maxBound rm
+        elemKey    = hashToWord64 hash

@@ -77,7 +77,7 @@ connectToBN myAddress bnAddress nodeData = do
                     L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap recivedHash address)
                     loop (i - 1)
                 _ -> pure ()
-    loop (hashSize - 1)
+    loop 63
 
     maybeAddress :: Either Text (D.StringHash, D.Address) <- L.scenario $
         L.makeRpcRequest bnAddress $ M.NextForMe hash
@@ -116,14 +116,14 @@ acceptNextForYou nodeData hash (M.NextForYou senderAddress) conn = do
 clearingOfConnects :: D.Address -> D.StringHash -> NNNodeData -> L.NodeL ()
 clearingOfConnects myAddress myHash nodeData = L.atomically $ do
     nodes <- L.readVar (nodeData ^. netNodes)
-    let filteredNodes   = maybeToList (findNext myHash nodes) <> findInMap myHash nodes
+    let filteredNodes   = maybeToList (findNextForHash myHash nodes) <> findInMap myHash nodes
     let filteredNodeMap = toChordRouteMap filteredNodes
     L.writeVar (nodeData ^. netNodes) filteredNodeMap
 
 requestingOfConnects :: D.Address -> D.StringHash -> NNNodeData -> L.NodeL ()
 requestingOfConnects myAddress myHash nodeData = do
     nodes <- L.readVarIO (nodeData ^. netNodes)
-    forM_ nodes $ \addr -> void $
+    forM_ nodes $ \(_, addr) -> void $
         L.notify addr $ M.NextForYou myAddress
 
 acceptSendTo

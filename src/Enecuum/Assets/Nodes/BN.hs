@@ -54,7 +54,7 @@ findPreviousConnectForMe nodeData (M.ConnectRequestPrevious hash) = do
     address <- L.atomically $ do
         connectMap <- L.readVar (nodeData ^. netNodes)
         pure $ findInMapNByKey
-            inverseFormula
+            (\hash i -> D.hashToWord64 hash - 2 ^ i)
             0
             hash
             connectMap
@@ -65,7 +65,7 @@ findConnect nodeData (M.ConnectRequest hash i) = do
     address <- L.atomically $ do
         connectMap <- L.readVar (nodeData ^. netNodes)
         pure $ findInMapNByKey
-            straightFormula
+            (\hash i -> D.hashToWord64 hash + 2 ^ i)
             i
             hash
             connectMap
