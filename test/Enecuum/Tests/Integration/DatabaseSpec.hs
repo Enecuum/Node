@@ -168,14 +168,15 @@ spec = do
     describe "DB Entities tests" $ do
         it "ToDBKey test"          $ kBlock1MetaKey               `shouldBe` KBlockMetaKey (D.fromStringHash $ D.toHash kBlock1)
         it "ToDBValue test"        $ kBlock1MetaValue             `shouldBe` KBlockMetaValue 1
-        it "GetRawDBEntity test"   $ D.getRawDBKey kBlock1MetaKey `shouldBe` D.fromStringHash (D.toHash kBlock1)
+        it "GetRawDBEntity test"   $ D.getRawDBKey @D.KBlocksMetaDB kBlock1MetaKey `shouldBe` D.fromStringHash (D.toHash kBlock1)
         it "Parse RawDBValue test" $ do
-            let dbValueRaw = D.getRawDBValue kBlock1MetaValue
+            let dbValueRaw = D.getRawDBValue @D.KBlocksMetaDB kBlock1MetaValue
             L.parseDBValue dbValueRaw `shouldBe` Right kBlock1MetaValue
         it "Different objects => different keys and values" $ do
             kBlock1MetaKey   `shouldNotBe` kBlock2MetaKey
             kBlock1MetaValue `shouldNotBe` kBlock2MetaValue
-            L.getRawDBEntity kBlock1MetaKey kBlock1MetaValue `shouldNotBe` L.getRawDBEntity kBlock2MetaKey kBlock2MetaValue 
+            D.getRawDBKey   @D.KBlocksMetaDB kBlock1MetaKey   `shouldNotBe` D.getRawDBKey   @D.KBlocksMetaDB kBlock2MetaKey   
+            D.getRawDBValue @D.KBlocksMetaDB kBlock1MetaValue `shouldNotBe` D.getRawDBValue @D.KBlocksMetaDB kBlock2MetaValue 
 
     describe "Database creation tests" $ do
         it "DB is missing, create, errorIfExists False, no errors expected" $ withDbAbsence dbPath $ do

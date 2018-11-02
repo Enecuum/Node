@@ -9,3 +9,5 @@ import Enecuum.Blockchain.Domain.Microblock as X
 import Enecuum.Blockchain.Domain.Crypto as X
 import Enecuum.Blockchain.Domain.Types as X
 import Enecuum.Blockchain.Domain.BlockchainData as X
+
+import Enecuum.Blockchain.DB                    as X

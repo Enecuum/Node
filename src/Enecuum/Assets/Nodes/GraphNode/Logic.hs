@@ -10,6 +10,7 @@ import           Enecuum.Prelude
 import           Control.Lens                     (makeFieldsNoPrefix)
 import           Data.HGraph.StringHashable
 import qualified Data.Map                         as Map
+import           System.FilePath                  ((</>))
 
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
@@ -20,6 +21,7 @@ import qualified Enecuum.Blockchain.DB            as DB
 import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Assets.Nodes.GraphNode.Config
 import qualified Enecuum.Assets.Nodes.CLens       as CLens
+import qualified Enecuum.Assets.System.Directory  as L
 
 data GraphNodeData = GraphNodeData
     { _blockchain :: D.BlockchainData
@@ -51,14 +53,17 @@ acceptTransaction nodeData (CreateTransaction tx) = do
             pure $ Left "Transaction signature is not genuine. Transaction is not accepted."
 
 -- | Accept kBlock
-acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Tcp -> L.NodeL ()
-acceptKBlock nodeData kBlock _ = do
+acceptKBlock' :: GraphNodeData -> D.KBlock -> L.NodeL ()
+acceptKBlock' nodeData kBlock = do
     L.logInfo $ "\nAccepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
     let logV  = nodeData ^. logVar
     let bData = nodeData ^. blockchain
     void $ L.atomically $ L.addKBlock logV bData kBlock
     Log.writeLog logV
 
+-- | Accept kBlock
+acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Tcp -> L.NodeL ()
+acceptKBlock nodeData kBlock _ = acceptKBlock' nodeData kBlock
 
 -- | Accept mBlock
 acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Tcp -> L.NodeL ()
@@ -156,7 +161,10 @@ getMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
 -- | Initialization of graph node
 graphNodeInitialization :: NodeConfig GraphNode -> L.NodeDefinitionL (Either Text GraphNodeData)
 graphNodeInitialization nodeConfig = L.scenario $ do
-    eDBModel <- DB.initDBModel (nodeConfig ^. CLens.dbOptions) (nodeConfig ^. CLens.dbModel)
+    enqDir <- L.getEnecuumDir
+    let dbModelPath = enqDir </> (nodeConfig ^. CLens.dbModel)
+
+    eDBModel <- L.initDBModel dbModelPath (nodeConfig ^. CLens.dbOptions)
     when (isRight eDBModel) $ L.logInfo $ "DB model initialized: " +| nodeConfig ^. CLens.dbModel |+ "."
 
     case eDBModel of

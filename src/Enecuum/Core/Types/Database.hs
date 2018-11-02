@@ -1,5 +1,6 @@
-{-# LANGUAGE AllowAmbiguousTypes   #-}
-{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE AllowAmbiguousTypes    #-}
+{-# LANGUAGE DuplicateRecordFields  #-}
 
 module Enecuum.Core.Types.Database where
 
@@ -12,13 +13,19 @@ type DBValueRaw = ByteString
 class DB db where
     getDbName :: FilePath
 
-class DBEntity entity src where
+class DBEntity entity where
     data DBKey   entity :: *
     data DBValue entity :: *
-    toDBKey   :: src -> DBKey   entity
+
+class DBEntity entity => GetDBKey entity src where
+    toDBKey :: src -> DBKey entity
+
+class DBEntity entity => GetDBValue entity src where
     toDBValue :: src -> DBValue entity
 
-class GetRawDBEntity entity where
+class (DB db, DBEntity entity) => DBModelEntity db entity
+
+class DBModelEntity db entity => GetRawDBEntity db entity where
     getRawDBKey   :: DBKey   entity -> DBKeyRaw
     getRawDBValue :: DBValue entity -> DBValueRaw
 

@@ -12,12 +12,18 @@ import           Data.HGraph.StringHashable (StringHash (..), StringHashable, to
 import           Data.Serialize.Put         (putWord32le, putWord8, runPut)
 import           Enecuum.Prelude
 
+type Time'    = Integer
+type Number   = Integer
+type Nonce    = Integer
+type Solver   = StringHash
+type PrevHash = StringHash
+
 data KBlock = KBlock
-    { _time      :: Integer
-    , _prevHash  :: StringHash
-    , _number    :: Integer
-    , _nonce     :: Integer
-    , _solver    :: StringHash
+    { _time      :: Time'
+    , _prevHash  :: PrevHash
+    , _number    :: Number
+    , _nonce     :: Nonce
+    , _solver    :: Solver
     -- , _type      :: Int
     } deriving (Eq, Generic, Ord, Read, Show, ToJSON, FromJSON, Serialize)
 
