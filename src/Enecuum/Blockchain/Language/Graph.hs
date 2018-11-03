@@ -74,7 +74,7 @@ getMBlocksForKBlock _ bData hash =  L.evalGraph (D._graph bData) $ do
             pure $ Just $ catMaybes aMBlocks
 
 -- Return all blocks after given number as a list
-findBlocksByNumber :: D.StateVar [Text] -> D.BlockchainData -> Integer -> D.KBlock -> L.StateL [D.KBlock]
+findBlocksByNumber :: D.StateVar [Text] -> D.BlockchainData -> D.BlockNumber -> D.KBlock -> L.StateL [D.KBlock]
 findBlocksByNumber logV bData num prev = do
     let cNum = D._number prev
     if  | cNum < num -> pure []

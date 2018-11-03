@@ -15,8 +15,7 @@ import           Enecuum.Config
 import qualified Enecuum.Assets.Blockchain.Generation as A
 import           Enecuum.Assets.Nodes.Address (powNodeRpcPort, graphNodeTransmitterTcpAddress)
 import           Data.HGraph.StringHashable (StringHash (..), toHash)
-import           Enecuum.Assets.Nodes.Messages (
-    SuccessMsg (..), ForeverChainGeneration(..), NBlockPacketGeneration(..))
+import qualified Enecuum.Assets.Nodes.Messages as Msgs
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.PoW.Config
@@ -26,10 +25,10 @@ type IterationsCount = Int
 type EnableDelays = Bool
 
 data PoWNodeData = PoWNodeData
-    { _enableDelays        :: EnableDelays
-    , _prevHash            :: D.StateVar StringHash
-    , _prevNumber          :: D.StateVar Integer
-    , _requiredBlockNumber :: D.StateVar Int
+    { _prevHash            :: D.StateVar StringHash
+    , _prevNumber          :: D.StateVar D.BlockNumber
+    , _requiredBlockNumber :: D.StateVar D.BlockNumber
+    , _blocksDelay         :: D.StateVar Int        -- ^ delay between blocks, microseconds
     , _status              :: D.StateVar NodeStatus
     }
 
@@ -53,23 +52,30 @@ kBlockProcess nodeData = do
 
     L.writeVarIO (nodeData ^. prevHash) lastHash
     L.writeVarIO (nodeData ^. prevNumber) $ prevKBlockNumber + fromIntegral (length kBlocks)
+
+    gap <- L.readVarIO $ nodeData ^. blocksDelay
     for_ kBlocks $ \ kBlock -> L.withConnection D.Tcp graphNodeTransmitterTcpAddress $ \conn -> do
             L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
             void $ L.send conn kBlock
-            when (nodeData ^. enableDelays) $ L.delay $ 1000 * 1000
+            when (gap > 0) $ L.delay gap
 
-foreverChainGenerationHandle :: PoWNodeData -> ForeverChainGeneration -> L.NodeL SuccessMsg
+foreverChainGenerationHandle :: PoWNodeData -> Msgs.ForeverChainGeneration -> L.NodeL Msgs.SuccessMsg
 foreverChainGenerationHandle powNodeData _ = do
     L.writeVarIO (powNodeData ^. requiredBlockNumber) (10 ^ (6 :: Int))
-    pure SuccessMsg
+    pure Msgs.SuccessMsg
 
-nBlockPacketGenerationHandle :: PoWNodeData -> NBlockPacketGeneration -> L.NodeL SuccessMsg
-nBlockPacketGenerationHandle powNodeData (NBlockPacketGeneration i) = do
-    L.atomically $ L.modifyVar (powNodeData ^. requiredBlockNumber) (+ i)
-    pure SuccessMsg
+nBlockPacketGenerationHandle :: PoWNodeData -> Msgs.NBlockPacketGeneration -> L.NodeL Msgs.SuccessMsg
+nBlockPacketGenerationHandle powNodeData (Msgs.NBlockPacketGeneration i gap) = do
+    L.atomically $ do
+        L.modifyVar (powNodeData ^. requiredBlockNumber) (+ i)
+        L.writeVar  (powNodeData ^. blocksDelay) gap
+    pure Msgs.SuccessMsg
+
+defaultBlocksDelay :: BlocksDelay
+defaultBlocksDelay = 1000 * 1000
 
 powNode :: L.NodeDefinitionL ()
-powNode = powNode' (PoWNodeConfig True)
+powNode = powNode' $ PoWNodeConfig defaultBlocksDelay
 
 powNode' :: NodeConfig PoWNode -> L.NodeDefinitionL ()
 powNode' cfg = do
@@ -97,5 +103,12 @@ powNodeInitialization cfg genesisHash = do
     h <- L.newVarIO genesisHash
     n <- L.newVarIO 1
     b <- L.newVarIO 0
+    g <- L.newVarIO $ cfg ^. CLens.defaultBlocksDelay
     f <- L.newVarIO NodeActing
-    pure $ PoWNodeData (cfg ^. CLens.delaysEnabled) h n b f
+    pure $ PoWNodeData
+        { _prevHash = h
+        , _prevNumber= n
+        , _requiredBlockNumber = b
+        , _blocksDelay = g
+        , _status = f
+        }

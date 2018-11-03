@@ -23,7 +23,7 @@ instance D.DBModelEntity KBlocksMetaDB KBlockMetaEntity
 instance D.DBEntity KBlockMetaEntity where
     data DBKey   KBlockMetaEntity = KBlockMetaKey D.DBKeyRaw
         deriving (Show, Eq, Ord)
-    data DBValue KBlockMetaEntity = KBlockMetaValue Integer
+    data DBValue KBlockMetaEntity = KBlockMetaValue D.BlockNumber
         deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance D.ToDBKey KBlockMetaEntity D.KBlock where

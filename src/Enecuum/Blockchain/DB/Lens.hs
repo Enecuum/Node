@@ -14,10 +14,10 @@ import qualified Enecuum.Blockchain.Domain as D
 makeFieldsNoPrefix ''DBModel
 
 
-time' :: Getter (D.DBResult (D.DBValue KBlockEntity)) (D.DBResult D.Time')
+time' :: Getter (D.DBResult (D.DBValue KBlockEntity)) (D.DBResult D.BlockTime)
 time' = to (\eVal -> eVal >>= (\(KBlockValue t _ _ _) -> Right t))
 
-number' :: Getter (D.DBResult (D.DBValue KBlockEntity)) (D.DBResult D.Number)
+number' :: Getter (D.DBResult (D.DBValue KBlockEntity)) (D.DBResult D.BlockNumber)
 number' = to (\eVal -> eVal >>= (\(KBlockValue _ n _ _) -> Right n))
 
 nonce' :: Getter (D.DBResult (D.DBValue KBlockEntity)) (D.DBResult D.Nonce)

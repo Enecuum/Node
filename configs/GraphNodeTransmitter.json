@@ -4,13 +4,14 @@
    "nodeConfig":
    {  
       "tag":"GraphNodeConfig",
-      "dbModel":"graph_node_transmitter.dbm",
+      "useDatabase":true,
+      "dbModelName":"graph_node_transmitter.dbm",
+      "useEnqHomeDir":true,
       "dbOptions":
       {
           "createIfMissing":true,
           "errorIfExists":false
-      },
-      "useDatabase":true
+      }
    },
    "loggerConfig":
    {

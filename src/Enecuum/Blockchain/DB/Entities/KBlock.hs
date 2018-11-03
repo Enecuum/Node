@@ -33,7 +33,7 @@ instance D.DBEntity KBlockPrevHashEntity where
     data DBValue KBlockPrevHashEntity = KBlockPrevHashValue D.StringHash
         deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
-instance D.ToDBKey KBlockPrevHashEntity D.Number where
+instance D.ToDBKey KBlockPrevHashEntity D.BlockNumber where
     toDBKey = KBlockPrevHashKey . encodeUtf8 @String . printf "%07d0"
 
 instance D.ToDBKey KBlockPrevHashEntity D.KBlock where
@@ -52,10 +52,10 @@ instance D.GetRawDBEntity KBlocksDB KBlockPrevHashEntity where
 instance D.DBEntity KBlockEntity where
     data DBKey   KBlockEntity = KBlockKey ByteString
         deriving (Show, Eq, Ord)
-    data DBValue KBlockEntity = KBlockValue D.Time' D.Number D.Nonce D.Solver
+    data DBValue KBlockEntity = KBlockValue D.BlockTime D.BlockNumber D.Nonce D.Solver
         deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
-instance D.ToDBKey KBlockEntity D.Number where
+instance D.ToDBKey KBlockEntity D.BlockNumber where
     toDBKey = KBlockKey . encodeUtf8 @String . printf "%07d1"
 
 instance D.ToDBKey KBlockEntity D.KBlock where

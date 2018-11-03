@@ -28,7 +28,7 @@ data GraphNodeData = GraphNodeData
     , _logVar       :: D.StateVar [Text]
     , _status       :: D.StateVar NodeStatus
     , _config       :: NodeConfig GraphNode
-    , _db           :: DB.DBModel
+    , _db           :: Maybe DB.DBModel
     , _needDumpToDB :: D.StateVar Bool
     }
 
@@ -166,32 +166,48 @@ getMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
         Nothing        -> pure $ Left "KBlock doesn't exist"
         Just blockList -> pure $ Right $ GetMBlocksForKBlockResponse blockList
 
+
+initializeDBModel :: NodeConfig GraphNode -> L.NodeL (Maybe DB.DBModel)
+initializeDBModel nodeConfig = do
+
+    parentDir <- if nodeConfig ^. CLens.useEnqHomeDir
+        then L.getEnecuumDir
+        else pure ""
+
+    let dbModelPath = parentDir </> (nodeConfig ^. CLens.dbModelName)
+
+    L.initDBModel dbModelPath $ nodeConfig ^. CLens.dbOptions
+
 -- | Initialization of graph node
 graphNodeInitialization :: NodeConfig GraphNode -> L.NodeDefinitionL (Either Text GraphNodeData)
 graphNodeInitialization nodeConfig = L.scenario $ do
-    enqDir <- L.getEnecuumDir
-    let dbModelPath = enqDir </> (nodeConfig ^. CLens.dbModel)
+    
+    let useDb       = nodeConfig ^. CLens.useDatabase
+    let stopOnDbErr = nodeConfig ^. CLens.stopOnDatabaseError
 
-    eDBModel <- L.initDBModel dbModelPath (nodeConfig ^. CLens.dbOptions)
-    when (isRight eDBModel) $ L.logInfo $ "DB model initialized: " +| nodeConfig ^. CLens.dbModel |+ "."
+    mbDBModel <- if useDb
+        then initializeDBModel nodeConfig
+        else pure Nothing
 
-    case eDBModel of
-        Left err  -> pure $ Left err
-        Right dbModel -> do
-            g <- L.newGraph
-            L.evalGraphIO g $ L.newNode $ D.KBlockContent D.genesisKBlock
+    g <- L.newGraph
+    L.evalGraphIO g $ L.newNode $ D.KBlockContent D.genesisKBlock
+
+    nodeData <- L.atomically
+        $  GraphNodeData <$>
+            ( D.BlockchainData g
+                <$> L.newVar []
+                <*> L.newVar Map.empty
+                <*> L.newVar D.genesisHash
+                <*> L.newVar Map.empty
+            )
+        <*> L.newVar []
+        <*> L.newVar NodeActing
+        <*> pure nodeConfig
+        <*> pure mbDBModel
+        <*> L.newVar False
+
+    case () of
+        _ | useDb && stopOnDbErr && isNothing mbDBModel -> pure $ Left "Database error."
+        _ -> do
             L.logInfo $ "Genesis block (" +|| D.genesisHash ||+ "): " +|| D.genesisKBlock ||+ "."
-            nodeData <- L.atomically
-                $  GraphNodeData <$>
-                    ( D.BlockchainData g
-                        <$> L.newVar []
-                        <*> L.newVar Map.empty
-                        <*> L.newVar D.genesisHash
-                        <*> L.newVar Map.empty
-                    )
-                <*> L.newVar []
-                <*> L.newVar NodeActing
-                <*> pure nodeConfig
-                <*> pure dbModel
-                <*> L.newVar False
             pure $ Right nodeData

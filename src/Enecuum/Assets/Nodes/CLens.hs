@@ -9,15 +9,20 @@ import qualified Enecuum.Domain as D
 import           Enecuum.Assets.Nodes.GraphNode.Config
 import           Enecuum.Assets.Nodes.PoW.Config
 
+useDatabase :: Getter (NodeConfig GraphNode) Bool
+useDatabase = to _useDatabase
 
-dbModel :: Getter (NodeConfig GraphNode) FilePath
-dbModel = to _dbModel
+dbModelName :: Getter (NodeConfig GraphNode) FilePath
+dbModelName = to _dbModelName
+
+useEnqHomeDir :: Getter (NodeConfig GraphNode) Bool
+useEnqHomeDir = to _useEnqHomeDir
 
 dbOptions :: Getter (NodeConfig GraphNode) D.DBOptions
 dbOptions = to _dbOptions
 
-useDatabase :: Getter (NodeConfig GraphNode) Bool
-useDatabase = to _useDatabase
+stopOnDatabaseError :: Getter (NodeConfig GraphNode) Bool
+stopOnDatabaseError = to _stopOnDatabaseError
 
-delaysEnabled:: Getter (NodeConfig PoWNode) Bool
-delaysEnabled = to _delaysEnabled
+defaultBlocksDelay :: Getter (NodeConfig PoWNode) BlocksDelay
+defaultBlocksDelay = to _defaultBlocksDelay

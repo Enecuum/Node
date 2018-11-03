@@ -28,24 +28,24 @@ import qualified Enecuum.Assets.Nodes.CLens as CLens
 
 -- DB access
 
-withKBlocksDB
-    :: forall s a1 db a2
-    . (Lens.HasKBlocksDB a1 (D.Storage db), G.HasDb s a1)
-    => s -> L.DatabaseL db a2 -> L.NodeL a2
-withKBlocksDB nodeData = L.withDatabase (nodeData ^. G.db . Lens.kBlocksDB)
+-- withKBlocksDB
+--     :: forall s a1 db a2
+--     . (Lens.HasKBlocksDB a1 (D.Storage db), G.HasDb s a1)
+--     => s -> L.DatabaseL db a2 -> L.NodeL a2
+withKBlocksDB dbModel = L.withDatabase (dbModel ^. Lens.kBlocksDB)
 
-withKBlocksMetaDB
-    :: forall s a1 db a2
-    . (Lens.HasKBlocksMetaDB a1 (D.Storage db), G.HasDb s a1)
-    => s -> L.DatabaseL db a2 -> L.NodeL a2
-withKBlocksMetaDB nodeData = L.withDatabase (nodeData ^. G.db . Lens.kBlocksMetaDB)
+-- withKBlocksMetaDB
+--     :: forall s a1 db a2
+--     . (Lens.HasKBlocksMetaDB a1 (D.Storage db), G.HasDb s a1)
+--     => s -> L.DatabaseL db a2 -> L.NodeL a2
+withKBlocksMetaDB dbModel = L.withDatabase (dbModel ^. Lens.kBlocksMetaDB)
 
 -- Loading
 
-loadKBlock :: G.GraphNodeData -> D.DBValue D.KBlockMetaEntity -> L.NodeL (D.DBResult D.KBlock)
-loadKBlock nodeData (D.KBlockMetaValue i) = do
-    ePrevHash     <- withKBlocksDB nodeData $ L.getValue' i
-    eKBlockEntity <- withKBlocksDB nodeData $ L.getValue' i
+loadKBlock :: D.DBModel -> D.DBValue D.KBlockMetaEntity -> L.NodeL (D.DBResult D.KBlock)
+loadKBlock dbModel (D.KBlockMetaValue i) = do
+    ePrevHash     <- withKBlocksDB dbModel $ L.getValue' i
+    eKBlockEntity <- withKBlocksDB dbModel $ L.getValue' i
 
     -- Returns Left if any.
     -- TODO: use Data.Validation
@@ -56,18 +56,18 @@ loadKBlock nodeData (D.KBlockMetaValue i) = do
         <*> (eKBlockEntity ^. Lens.nonce')
         <*> (eKBlockEntity ^. Lens.solver')
 
-loadHashMeta :: G.GraphNodeData -> D.StringHash -> L.NodeL (D.DBResult (D.DBValue D.KBlockMetaEntity))
-loadHashMeta nodeData hash = withKBlocksMetaDB nodeData $ L.getValue' hash
+loadHashMeta :: D.DBModel -> D.StringHash -> L.NodeL (D.DBResult (D.DBValue D.KBlockMetaEntity))
+loadHashMeta dbModel hash = withKBlocksMetaDB dbModel $ L.getValue' hash
 
-loadNextKBlock :: G.GraphNodeData -> D.StringHash -> L.NodeL (D.DBResult D.KBlock)
-loadNextKBlock nodeData prevHash = do
-    eHashMeta <- loadHashMeta nodeData prevHash
-    either (pure . Left) (loadKBlock nodeData) eHashMeta
+loadNextKBlock :: D.DBModel -> D.StringHash -> L.NodeL (D.DBResult D.KBlock)
+loadNextKBlock dbModel prevHash = do
+    eHashMeta <- loadHashMeta dbModel prevHash
+    either (pure . Left) (loadKBlock dbModel) eHashMeta
 
 -- Saving
 
-saveKBlock :: G.GraphNodeData -> D.KBlock -> L.NodeL (D.DBResult ())
-saveKBlock nodeData kBlock = do
+saveKBlock :: D.DBModel -> D.KBlock -> L.NodeL (D.DBResult ())
+saveKBlock dbModel kBlock = do
     let k1 = D.toDBKey   @D.KBlockPrevHashEntity kBlock
     let v1 = D.toDBValue @D.KBlockPrevHashEntity kBlock
     let k2 = D.toDBKey   @D.KBlockEntity kBlock
@@ -77,7 +77,7 @@ saveKBlock nodeData kBlock = do
     L.logInfo $ "    <" +|| k1 ||+ "> <" +|| v1 ||+ ">"
     L.logInfo $ "    <" +|| k2 ||+ "> <" +|| v2 ||+ ">"
 
-    eResults <- withKBlocksDB nodeData $ sequence
+    eResults <- withKBlocksDB dbModel $ sequence
         [ L.putEntity' @D.KBlockPrevHashEntity kBlock
         , L.putEntity' @D.KBlockEntity         kBlock
         ]
@@ -86,32 +86,37 @@ saveKBlock nodeData kBlock = do
     -- TODO: use Data.Validation
     pure $ foldr (\a b -> a >>= const b) (Right ()) eResults
 
-saveKBlockMeta :: G.GraphNodeData -> D.KBlock -> L.NodeL (D.DBResult ())
-saveKBlockMeta nodeData kBlock = do
+saveKBlockMeta :: D.DBModel -> D.KBlock -> L.NodeL (D.DBResult ())
+saveKBlockMeta dbModel kBlock = do
     let k1 = D.toDBKey   @D.KBlockMetaEntity kBlock
     let v1 = D.toDBValue @D.KBlockMetaEntity kBlock
 
     L.logInfo $ "[" +|| kBlock ^. Lens.number ||+ "] Saving KBlock meta:"
     L.logInfo $ "    <" +|| k1 ||+ "> <" +|| v1 ||+ ">"
     
-    withKBlocksMetaDB nodeData $ L.putEntity' @D.KBlockMetaEntity kBlock
+    withKBlocksMetaDB dbModel $ L.putEntity' @D.KBlockMetaEntity kBlock
 
 -- Interface
 
+withDBModel :: G.GraphNodeData -> (D.DBModel -> L.NodeL ()) -> L.NodeL ()
+withDBModel nodeData act = case nodeData ^. G.db of
+    Nothing      -> pure ()
+    Just dbModel -> act dbModel
+
 restoreFromDB :: G.GraphNodeData -> L.NodeL ()
-restoreFromDB nodeData = do
+restoreFromDB nodeData = withDBModel nodeData $ \dbModel -> do
     L.logInfo "Trying to restore from DB..."
-    eKBlock <- loadNextKBlock nodeData D.genesisHash
+    eKBlock <- loadNextKBlock dbModel D.genesisHash
     case eKBlock of
         Left err     -> L.logError $ show err
         Right kBlock -> G.acceptKBlock' nodeData kBlock
 
 dumpToDB' :: G.GraphNodeData -> D.KBlock -> L.NodeL ()
-dumpToDB' nodeData kBlock = do
+dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
 
     eResults <- sequence 
-        [ saveKBlock     nodeData kBlock
-        , saveKBlockMeta nodeData kBlock
+        [ saveKBlock     dbModel kBlock
+        , saveKBlockMeta dbModel kBlock
         ]
     
     -- Returns Left if any.

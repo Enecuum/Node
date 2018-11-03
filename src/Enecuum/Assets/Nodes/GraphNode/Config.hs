@@ -11,9 +11,11 @@ data GraphNode = GraphNode
     deriving (Show, Generic)
 
 data instance NodeConfig GraphNode = GraphNodeConfig
-    { _dbModel     :: FilePath
-    , _dbOptions   :: D.DBOptions
-    , _useDatabase :: Bool
+    { _useDatabase   :: Bool        -- ^ If True, DB will be used to restore the state on the start and dump the state during work.
+    , _dbModelName   :: String      -- ^ DB model name. Can be a full path if useEnqHomeDir == False.
+    , _useEnqHomeDir :: Bool        -- ^ When True, ~/home/.enecuum/<dbModelName> path will be used.
+    , _dbOptions     :: D.DBOptions -- ^ DB options.
+    , _stopOnDatabaseError :: Bool  -- ^ The node will stop if something wrong with DB model.
     }
     deriving (Show, Generic)
 
@@ -22,3 +24,11 @@ instance FromJSON GraphNode              where parseJSON = A.genericParseJSON no
 instance ToJSON   (NodeConfig GraphNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeConfig GraphNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
+noDBConfig :: NodeConfig GraphNode
+noDBConfig = GraphNodeConfig
+    { _useDatabase         = False
+    , _dbModelName         = ""
+    , _useEnqHomeDir       = False
+    , _dbOptions           = D.DBOptions True True
+    , _stopOnDatabaseError = True
+    }

@@ -35,14 +35,20 @@ instance FromJSON (NodeConfig ClientNode)   where parseJSON = J.genericParseJSON
 instance ToJSON   (NodeScenario ClientNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario ClientNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
-type BlocksCount = Int
+type TimeGap = Int
 
 data CreateTransaction              = CreateTransaction CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, ToJSON)
 newtype GetLastKBlock               = GetLastKBlock D.Address
 data GetWalletBalance               = GetWalletBalance Int D.Address
 newtype GetLengthOfChain            = GetLengthOfChain D.Address
 newtype StartForeverChainGeneration = StartForeverChainGeneration D.Address
-data GenerateBlocksPacket           = GenerateBlocksPacket BlocksCount D.Address
+data GenerateBlocksPacket           = GenerateBlocksPacket
+    { blocks  :: D.BlockNumber
+    , timeGap :: TimeGap
+    , address :: D.Address
+    }
+    deriving (Generic)
+
 data Ping                           = Ping Protocol D.Address
 newtype StopRequest                 = StopRequest D.Address
 data GetBlock                       = GetBlock D.StringHash D.Address
@@ -81,8 +87,14 @@ instance J.FromJSON GetLengthOfChain where
 instance J.FromJSON StartForeverChainGeneration where
     parseJSON = J.withObject "StartForeverChainGeneration" $ \o -> StartForeverChainGeneration <$> (o J..: "address")
 
-instance J.FromJSON GenerateBlocksPacket where
-    parseJSON = J.withObject "GenerateBlocksPacket" $ \o -> GenerateBlocksPacket <$> o J..: "blocks" <*> (o J..: "address")
+-- instance J.FromJSON GenerateBlocksPacket where
+--     parseJSON = J.withObject "GenerateBlocksPacket" 
+--         $ \o -> GenerateBlocksPacket 
+--             <$> (o J..: "blocks" )
+--             <*> (o J..: "timeGap" )
+--             <*> (o J..: "address")
+
+instance J.FromJSON GenerateBlocksPacket
 
 instance J.FromJSON StopRequest where
     parseJSON = J.withObject "StopRequest" $ \o -> StopRequest <$> (o J..: "address")
@@ -99,7 +111,7 @@ startForeverChainGenerationHandler :: StartForeverChainGeneration -> L.NodeL Tex
 startForeverChainGenerationHandler (StartForeverChainGeneration address) = sendSuccessRequest address M.ForeverChainGeneration
 
 generateBlocksPacketHandler :: GenerateBlocksPacket -> L.NodeL Text
-generateBlocksPacketHandler (GenerateBlocksPacket i address) = sendSuccessRequest address $ M.NBlockPacketGeneration i
+generateBlocksPacketHandler (GenerateBlocksPacket i timeGap address) = sendSuccessRequest address $ M.NBlockPacketGeneration i timeGap
 
 getLastKBlockHandler :: GetLastKBlock -> L.NodeL Text
 getLastKBlockHandler (GetLastKBlock address) = do

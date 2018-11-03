@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE PackageImports        #-}
 
 module Enecuum.Testing.Integrational where
     
@@ -7,6 +8,8 @@ import qualified Data.Map             as M
 import qualified Data.ByteString.Lazy as LBS
 import qualified System.Directory     as Dir
 import qualified System.FilePath      as Dir
+import           System.FilePath      as FP ((</>))
+import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 
 import           Enecuum.Prelude
 import           Enecuum.Interpreters                         (runNodeDefinitionL)
@@ -69,10 +72,10 @@ makeIORpcRequest address msg = do
     nodeRt <- R.createVoidLoggerRuntime >>= createNodeRuntime
     runNodeDefinitionL nodeRt $ L.evalNodeL $ L.makeRpcRequest address msg
 
-waitForBlocks :: Integer -> D.Address -> IO ()
+waitForBlocks :: D.BlockNumber -> D.Address -> IO ()
 waitForBlocks number address = go 0
     where
-        go :: Integer -> IO ()
+        go :: D.BlockNumber -> IO ()
         go 50 = error "No valid results from node."
         go n = do
             threadDelay $ 1000 * 100
@@ -82,9 +85,40 @@ waitForBlocks number address = go 0
 waitForNode :: D.Address -> IO ()
 waitForNode address = go 0
     where
-        go :: Integer -> IO ()
+        go :: D.BlockNumber -> IO ()
         go 50 = error "Node is not ready."
         go n = do
             threadDelay $ 1000 * 100
             ePong :: Either Text A.Pong <- makeIORpcRequest address A.Ping
             when (isLeft ePong) $ go (n + 1)
+
+
+mkDbPath :: FilePath -> IO FilePath
+mkDbPath dbName = do
+    hd <- Dir.getHomeDirectory
+    pure $ hd </> ".enecuum" </> dbName
+
+rmDb :: FilePath -> IO ()
+rmDb dbPath = do
+    whenM (Dir.doesDirectoryExist dbPath) $ Dir.removePathForcibly dbPath
+    whenM (Dir.doesDirectoryExist dbPath) $ error "Can't delete db."
+
+mkDb :: FilePath -> IO ()
+mkDb dbPath = do
+    rmDb dbPath
+    Dir.createDirectoryIfMissing True dbPath
+    -- This creates an empty DB to get correct files in the directory.
+    let opening = Rocks.open dbPath $ Rocks.defaultOptions { Rocks.createIfMissing = True
+                                                           , Rocks.errorIfExists   = False
+                                                           }
+    bracket opening Rocks.close (const (pure ()))
+
+withDbAbsence :: FilePath -> IO a -> IO ()
+withDbAbsence dbPath act = do
+    rmDb dbPath
+    void act `finally` rmDb dbPath
+
+withDbPresence :: FilePath -> IO a -> IO ()
+withDbPresence dbPath act = do
+    mkDb dbPath
+    void act `finally` rmDb dbPath

@@ -9,12 +9,13 @@ import           Enecuum.Prelude
 import           Enecuum.Config
 import qualified Data.Aeson as A
 
+type BlocksDelay = Int
 
 data PoWNode = PoWNode
     deriving (Show, Generic)
 
 data instance NodeConfig PoWNode = PoWNodeConfig
-        { _delaysEnabled :: Bool
+        { _defaultBlocksDelay :: BlocksDelay
         }
     deriving (Show, Generic)
 

@@ -46,7 +46,7 @@ putKBlockMetaNode kBlock cfg = do
         Left err -> pure $ Left err
         Right db -> L.scenario
             $ L.withDatabase db
-            $ L.putValue k v
+            $ L.putEntity k v
 
 getKBlockMetaNode :: D.DBKey KBlockMetaEntity -> D.DBConfig KBlocksMetaDB -> L.NodeDefinitionL (Either D.DBError (D.DBValue KBlockMetaEntity))
 getKBlockMetaNode k cfg = do
@@ -66,7 +66,7 @@ putGetKBlockMetaNode dbPath = do
     case eDB of
         Left err -> pure $ Left err
         Right db -> L.scenario $ L.withDatabase db $ do
-            eRes <- L.putValue kBlock1MetaKey kBlock1MetaValue
+            eRes <- L.putEntity kBlock1MetaKey kBlock1MetaValue
             case eRes of
                 Left err -> pure $ Left err
                 Right _  -> do
@@ -122,36 +122,6 @@ dbInitNode :: D.DBConfig db -> L.NodeDefinitionL (D.DBResult ())
 dbInitNode cfg = do
     eDb <- L.scenario $ L.initDatabase cfg
     pure $ eDb >> Right ()
-
-mkDbPath :: FilePath -> IO FilePath
-mkDbPath dbName = do
-    hd <- Dir.getHomeDirectory
-    pure $ hd </> ".enecuum" </> dbName
-
-rmDb :: FilePath -> IO ()
-rmDb dbPath = do
-    whenM (Dir.doesDirectoryExist dbPath) $ Dir.removePathForcibly dbPath
-    whenM (Dir.doesDirectoryExist dbPath) $ error "Can't delete db."
-
-mkDb :: FilePath -> IO ()
-mkDb dbPath = do
-    rmDb dbPath
-    Dir.createDirectoryIfMissing True dbPath
-    -- This creates an empty DB to get correct files in the directory.
-    let opening = Rocks.open dbPath $ Rocks.defaultOptions { Rocks.createIfMissing = True
-                                                           , Rocks.errorIfExists   = False
-                                                           }
-    bracket opening Rocks.close (const (pure ()))
-
-withDbAbsence :: FilePath -> IO a -> IO ()
-withDbAbsence dbPath act = do
-    rmDb dbPath
-    void act `finally` rmDb dbPath
-
-withDbPresence :: FilePath -> IO a -> IO ()
-withDbPresence dbPath act = do
-    mkDb dbPath
-    void act `finally` rmDb dbPath
 
 spec :: Spec
 spec = do

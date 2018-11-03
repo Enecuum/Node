@@ -22,7 +22,7 @@ initDb options dbModelPath = do
         "\n    Error: " +|| err ||+ ""
     pure eDb
 
-initDBModel :: FilePath -> D.DBOptions -> L.NodeL (Either Text DBModel)
+initDBModel :: FilePath -> D.DBOptions -> L.NodeL (Maybe DBModel)
 initDBModel dbModelPath options = do
     void $ L.createFilePath dbModelPath
 
@@ -33,6 +33,6 @@ initDBModel dbModelPath options = do
             <$> eKBlocksDb
             <*> eKBlocksMetaDb
 
-    case eModel of
-        Left _        -> pure $ Left "Failed to initialize DB model."
-        Right dbModel -> pure $ Right dbModel
+    when (isLeft eModel)  $ L.logError $ "Failed to initialize DB model: " +| dbModelPath |+ "."
+    when (isRight eModel) $ L.logInfo  $ "DB model initialized: " +| dbModelPath |+ "."
+    pure $ rightToMaybe eModel

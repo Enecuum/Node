@@ -33,7 +33,7 @@ spec = describe "Synchronization tests" $ fromHUnitTest $ TestList
 
 testNodeNet :: Test
 testNodeNet = TestCase $ do
-    let graphNodeConfig = A.GraphNodeConfig "" (D.DBOptions True True) False
+    let graphNodeConfig = A.noDBConfig
     let poaNodeConfig   = A.PoANodeConfig 0
 
     startNode Nothing $ A.graphNodeTransmitter graphNodeConfig
@@ -50,7 +50,7 @@ testNodeNet = TestCase $ do
 
     threadDelay $ 1000 * 1000
 
-    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration 2
+    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration 2 (1000 * 500)
 
     waitForBlocks 2 A.graphNodeTransmitterRpcAddress
     waitForBlocks 2 A.graphNodeReceiverRpcAddress

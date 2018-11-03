@@ -12,16 +12,17 @@ import           Data.HGraph.StringHashable (StringHash (..), StringHashable, to
 import           Data.Serialize.Put         (putWord32le, putWord8, runPut)
 import           Enecuum.Prelude
 
-type Time'    = Integer
-type Number   = Integer
-type Nonce    = Integer
-type Solver   = StringHash
-type PrevHash = StringHash
+-- TODO: this should be exact time type.
+type BlockTime   = Word32
+type BlockNumber = Word32
+type Nonce       = Word32
+type Solver      = StringHash
+type PrevHash    = StringHash
 
 data KBlock = KBlock
-    { _time      :: Time'
+    { _time      :: BlockTime
     , _prevHash  :: PrevHash
-    , _number    :: Number
+    , _number    :: BlockNumber
     , _nonce     :: Nonce
     , _solver    :: Solver
     -- , _type      :: Int
@@ -62,9 +63,9 @@ calculateKeyBlockHash KBlock {..} = Base64.encode . SHA.hash . B.concat $ bstr
   where
     bstr = map runPut
             [ putWord8 (toEnum kBlockType)
-            , putWord32le (fromInteger _number)
-            , putWord32le (fromInteger _time)
-            , putWord32le (fromInteger _nonce)
+            , putWord32le _number
+            , putWord32le _time
+            , putWord32le _nonce
             ]
             ++
             [ fromRight "" $ Base64.decode $ fromStringHash _prevHash
