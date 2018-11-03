@@ -3,9 +3,7 @@
 module Enecuum.Core.Database.Language where
 
 import           Enecuum.Prelude
-
-import qualified Data.Aeson           as A
-import qualified Data.ByteString.Lazy as LBS
+import           Data.Typeable (typeOf)
 
 import qualified Enecuum.Core.Types.Database as D
 
@@ -32,41 +30,46 @@ getValueRaw key = liftF $ GetValueRaw key id
 putValueRaw :: D.DBKeyRaw -> D.DBValueRaw -> DatabaseL db (D.DBResult ())
 putValueRaw key val = liftF $ PutValueRaw key val id
 
-putEntity 
+putEntity
     :: forall entity db
-    .  D.GetRawDBEntity db entity
+    .  D.RawDBEntity db entity
     => D.DBKey entity
     -> D.DBValue entity
     -> DatabaseL db (D.DBResult ())
 putEntity dbKey dbVal = let
-    rawK = D.getRawDBKey   @db dbKey
-    rawV = D.getRawDBValue @db dbVal
+    rawK = D.toRawDBKey   @db dbKey
+    rawV = D.toRawDBValue @db dbVal
     in putValueRaw rawK rawV
 
-putEntity' 
+putEntity'
     :: forall entity db src
-    .  D.GetRawDBEntity db entity
+    .  D.RawDBEntity db entity
     => D.ToDBKey   entity src
     => D.ToDBValue entity src
     => src
     -> DatabaseL db (D.DBResult ())
 putEntity' src = let
-    rawK = D.getRawDBKey   @db @entity $ D.toDBKey   src
-    rawV = D.getRawDBValue @db @entity $ D.toDBValue src
+    rawK = D.toRawDBKey   @db @entity $ D.toDBKey   src
+    rawV = D.toRawDBValue @db @entity $ D.toDBValue src
     in putValueRaw rawK rawV
 
 getEntity
     :: forall entity db
-    . (FromJSON (D.DBValue entity), D.GetRawDBEntity db entity, Typeable (D.DBValue entity))
+    . (FromJSON (D.DBValue entity), D.RawDBEntity db entity, Typeable (D.DBValue entity))
     => D.DBKey entity
     -> DatabaseL db (D.DBResult (D.DBE entity))
 getEntity dbKey = do
-    let rawK = D.getRawDBKey @db dbKey
+    let rawK = D.toRawDBKey @db dbKey
+    let proxyVal = Proxy :: Proxy (D.DBValue entity)
     eRawVal <- getValueRaw rawK
-    pure $ eRawVal >>= parseDBValue >>= (\dbVal -> Right (dbKey, dbVal))
+    case eRawVal of
+        Left err       -> pure $ Left err
+        Right rawVal   -> case D.fromRawDBValue @db rawVal of
+            Nothing    -> pure $ Left $ D.DBError D.InvalidType $ show $ typeOf proxyVal
+            Just dbVal -> pure $ Right (dbKey, dbVal)
 
 getValue
-    :: (FromJSON (D.DBValue entity), D.GetRawDBEntity db entity, Typeable (D.DBValue entity))
+    :: (FromJSON (D.DBValue entity), D.RawDBEntity db entity, Typeable (D.DBValue entity))
     => D.DBKey entity
     -> DatabaseL db (D.DBResult (D.DBValue entity))
 getValue dbKey = do
@@ -74,7 +77,7 @@ getValue dbKey = do
     pure $ eEntity >>= Right . snd
 
 getValue'
-    :: (FromJSON (D.DBValue entity), D.GetRawDBEntity db entity, Typeable (D.DBValue entity))
+    :: (FromJSON (D.DBValue entity), D.RawDBEntity db entity, Typeable (D.DBValue entity))
     => D.ToDBKey entity src
     => src
     -> DatabaseL db (D.DBResult (D.DBValue entity))
@@ -83,7 +86,7 @@ getValue' src = do
     pure $ eEntity >>= Right . snd
 
 findValue
-    :: (FromJSON (D.DBValue entity), D.GetRawDBEntity db entity, Typeable (D.DBValue entity))
+    :: (FromJSON (D.DBValue entity), D.RawDBEntity db entity, Typeable (D.DBValue entity))
     => D.DBKey entity
     -> DatabaseL db (Maybe (D.DBValue entity))
 findValue key = do
@@ -91,18 +94,10 @@ findValue key = do
     pure $ either (const Nothing) Just eVal
 
 findValue'
-    :: (FromJSON (D.DBValue entity), D.GetRawDBEntity db entity, Typeable (D.DBValue entity))
+    :: (FromJSON (D.DBValue entity), D.RawDBEntity db entity, Typeable (D.DBValue entity))
     => D.ToDBKey entity src
     => src
     -> DatabaseL db (Maybe (D.DBValue entity))
 findValue' src = do
     eVal <- getValue' src
     pure $ either (const Nothing) Just eVal
-
--- TODO: type of a
-parseDBValue :: (Typeable a, FromJSON a) => D.DBValueRaw -> D.DBResult a
-parseDBValue raw = case A.decode $ LBS.fromStrict raw of
-    Nothing  -> Left $ D.DBError D.InvalidType ""           -- TODO: type of a
-    Just val -> Right val
-
-

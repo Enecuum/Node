@@ -39,7 +39,7 @@ graphNodeTransmitter' nodeData = do
         -- client interaction
         L.methodE $ getBalance nodeData
         L.methodE $ acceptTransaction nodeData
-        L.method  $ handleDumpToDB nodeData
+        L.methodE $ handleDumpToDB nodeData
 
         -- graph node interaction
         L.method  $ getChainLength nodeData
@@ -50,7 +50,7 @@ graphNodeTransmitter' nodeData = do
         L.method  $ getKBlockPending nodeData
 
         -- PoA interaction
-        L.method  $ getTransactionPending nodeData 
+        L.method  $ getTransactionPending nodeData
         L.method  $ getLastKBlock nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData

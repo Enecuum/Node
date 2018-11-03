@@ -138,15 +138,15 @@ spec = do
     describe "DB Entities tests" $ do
         it "ToDBKey test"          $ kBlock1MetaKey               `shouldBe` KBlockMetaKey (D.fromStringHash $ D.toHash kBlock1)
         it "ToDBValue test"        $ kBlock1MetaValue             `shouldBe` KBlockMetaValue 1
-        it "GetRawDBEntity test"   $ D.getRawDBKey @KBlocksMetaDB kBlock1MetaKey `shouldBe` D.fromStringHash (D.toHash kBlock1)
+        it "RawDBEntity test"   $ D.toRawDBKey @KBlocksMetaDB kBlock1MetaKey `shouldBe` D.fromStringHash (D.toHash kBlock1)
         it "Parse RawDBValue test" $ do
-            let dbValueRaw = D.getRawDBValue @KBlocksMetaDB kBlock1MetaValue
-            L.parseDBValue dbValueRaw `shouldBe` Right kBlock1MetaValue
+            let dbValueRaw = D.toRawDBValue @KBlocksMetaDB kBlock1MetaValue
+            D.fromRawDBValue @KBlocksMetaDB dbValueRaw `shouldBe` Just kBlock1MetaValue
         it "Different objects => different keys and values" $ do
             kBlock1MetaKey   `shouldNotBe` kBlock2MetaKey
             kBlock1MetaValue `shouldNotBe` kBlock2MetaValue
-            D.getRawDBKey   @KBlocksMetaDB kBlock1MetaKey   `shouldNotBe` D.getRawDBKey   @KBlocksMetaDB kBlock2MetaKey   
-            D.getRawDBValue @KBlocksMetaDB kBlock1MetaValue `shouldNotBe` D.getRawDBValue @KBlocksMetaDB kBlock2MetaValue 
+            D.toRawDBKey   @KBlocksMetaDB kBlock1MetaKey   `shouldNotBe` D.toRawDBKey   @KBlocksMetaDB kBlock2MetaKey
+            D.toRawDBValue @KBlocksMetaDB kBlock1MetaValue `shouldNotBe` D.toRawDBValue @KBlocksMetaDB kBlock2MetaValue
 
     describe "Database creation tests" $ do
         it "DB is missing, create, errorIfExists False, no errors expected" $ withDbAbsence dbPath $ do
@@ -232,5 +232,3 @@ spec = do
 
             eValue2 <- evalNode $ getKBlockMetaNode kBlock2MetaKey cfg1
             eValue2 `shouldBe` Right kBlock2MetaValue
-
-

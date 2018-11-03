@@ -35,6 +35,7 @@ instance D.ToDBValue KBlockMetaEntity D.KBlock where
 instance D.ToDBKey KBlockMetaEntity D.StringHash where
     toDBKey = KBlockMetaKey . D.fromStringHash
 
-instance D.GetRawDBEntity KBlocksMetaDB KBlockMetaEntity where
-    getRawDBKey (KBlockMetaKey k) = k
-    getRawDBValue v = LBS.toStrict $ A.encode v
+instance D.RawDBEntity KBlocksMetaDB KBlockMetaEntity where
+    toRawDBKey (KBlockMetaKey k) = k
+    toRawDBValue = LBS.toStrict . A.encode
+    fromRawDBValue = A.decode . LBS.fromStrict

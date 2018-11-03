@@ -15,7 +15,7 @@ import qualified Enecuum.Assets.Nodes.GraphNode.Logic as G
 -- kBlocks (kBlock_idx|0 -> prev_hash, kBlock_idx|1 -> kBlock_data)
 -- ------------------------------------------------------------
 -- 0000000|0 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
--- 0000000|1 {number:0, nonce: 0, solver: 1}
+-- 0000000|1 {time:0, number:0, nonce: 0, solver: 1}
 
 -- kBlocks_meta (kBlock_hash -> kBlock_meta)
 -- -----------------------------------------------------------------
@@ -25,7 +25,7 @@ import qualified Enecuum.Assets.Nodes.GraphNode.Logic as G
 
 withKBlocksDB
     :: forall s db a
-    .  Lens.HasKBlocksDB s (D.Storage db) 
+    .  Lens.HasKBlocksDB s (D.Storage db)
     => s
     -> L.DatabaseL db a
     -> L.NodeL a
@@ -33,7 +33,7 @@ withKBlocksDB dbModel = L.withDatabase (dbModel ^. Lens.kBlocksDB)
 
 withKBlocksMetaDB
     :: forall s db a
-    .  Lens.HasKBlocksMetaDB s (D.Storage db) 
+    .  Lens.HasKBlocksMetaDB s (D.Storage db)
     => s
     -> L.DatabaseL db a
     -> L.NodeL a
@@ -44,9 +44,11 @@ withKBlocksMetaDB dbModel = L.withDatabase (dbModel ^. Lens.kBlocksMetaDB)
 loadKBlock :: D.DBModel -> D.DBValue D.KBlockMetaEntity -> L.NodeL (D.DBResult D.KBlock)
 loadKBlock dbModel (D.KBlockMetaValue i) = do
     L.logInfo "Loading KBlock prev hash..."
-    ePrevHash     <- withKBlocksDB dbModel $ L.getValue' i
+    ePrevHash     <- withKBlocksDB dbModel $ L.getValue' @D.KBlockPrevHashEntity i
+    L.logDebug $ show ePrevHash
     L.logInfo "Loading KBlock entity..."
-    eKBlockEntity <- withKBlocksDB dbModel $ L.getValue' i
+    eKBlockEntity <- withKBlocksDB dbModel $ L.getValue' @D.KBlockEntity i
+    L.logDebug $ show eKBlockEntity
 
     -- Returns Left if any.
     -- TODO: use Data.Validation
@@ -96,7 +98,7 @@ saveKBlockMeta dbModel kBlock = do
 
     L.logInfo $ "[" +|| kBlock ^. Lens.number ||+ "] Saving KBlock meta:"
     L.logInfo $ "    <" +|| k1 ||+ "> <" +|| v1 ||+ ">"
-    
+
     withKBlocksMetaDB dbModel $ L.putEntity' @D.KBlockMetaEntity kBlock
 
 -- Interface
@@ -117,11 +119,11 @@ restoreFromDB nodeData = withDBModel nodeData $ \dbModel -> do
 dumpToDB' :: G.GraphNodeData -> D.KBlock -> L.NodeL ()
 dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
 
-    eResults <- sequence 
+    eResults <- sequence
         [ saveKBlock     dbModel kBlock
         , saveKBlockMeta dbModel kBlock
         ]
-    
+
     -- Returns Left if any.
     -- TODO: use Data.Validation
     let eResult = foldr (\a b -> a >>= const b) (Right ()) eResults

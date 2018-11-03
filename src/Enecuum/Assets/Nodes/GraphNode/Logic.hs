@@ -38,7 +38,6 @@ transactionsToTransfer :: Int
 transactionsToTransfer = 20
 
 -- | DumpToDB command.
--- Temporarily made using STM
 handleDumpToDB :: GraphNodeData -> DumpToDB -> L.NodeL (Either Text SuccessMsg)
 handleDumpToDB nodeData _ = do
     L.writeVarIO (nodeData ^. needDumpToDB) True
@@ -181,7 +180,7 @@ initializeDBModel nodeConfig = do
 -- | Initialization of graph node
 graphNodeInitialization :: NodeConfig GraphNode -> L.NodeDefinitionL (Either Text GraphNodeData)
 graphNodeInitialization nodeConfig = L.scenario $ do
-    
+
     let useDb       = nodeConfig ^. CLens.useDatabase
     let stopOnDbErr = nodeConfig ^. CLens.stopOnDatabaseError
 

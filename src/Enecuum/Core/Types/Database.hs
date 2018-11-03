@@ -5,7 +5,9 @@
 module Enecuum.Core.Types.Database where
 
 import           Enecuum.Prelude
-import           Data.Aeson.Extra (noLensPrefix)
+import           Data.Aeson.Extra     (noLensPrefix)
+import qualified Data.Aeson           as A
+import qualified Data.ByteString.Lazy as LBS
 
 type DBKeyRaw   = ByteString
 type DBValueRaw = ByteString
@@ -25,9 +27,16 @@ class DBEntity entity => ToDBValue entity src where
 
 class (DB db, DBEntity entity) => DBModelEntity db entity
 
-class DBModelEntity db entity => GetRawDBEntity db entity where
-    getRawDBKey   :: DBKey   entity -> DBKeyRaw
-    getRawDBValue :: DBValue entity -> DBValueRaw
+class DBModelEntity db entity => RawDBEntity db entity where
+    toRawDBKey     :: DBKey   entity -> DBKeyRaw
+    toRawDBValue   :: DBValue entity -> DBValueRaw
+    fromRawDBValue :: DBValueRaw -> Maybe (DBValue entity)
+
+    -- TODO: this doesn't work by some strange reason.
+    default toRawDBValue :: ToJSON (DBValue entity) => DBValue entity -> DBValueRaw
+    toRawDBValue = LBS.toStrict . A.encode
+    default fromRawDBValue :: FromJSON (DBValue entity) => DBValueRaw -> Maybe (DBValue entity)
+    fromRawDBValue = A.decode . LBS.fromStrict
 
 type DBE entity = (DBKey entity, DBValue entity)
 

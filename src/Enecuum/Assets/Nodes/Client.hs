@@ -88,8 +88,8 @@ instance J.FromJSON StartForeverChainGeneration where
     parseJSON = J.withObject "StartForeverChainGeneration" $ \o -> StartForeverChainGeneration <$> (o J..: "address")
 
 -- instance J.FromJSON GenerateBlocksPacket where
---     parseJSON = J.withObject "GenerateBlocksPacket" 
---         $ \o -> GenerateBlocksPacket 
+--     parseJSON = J.withObject "GenerateBlocksPacket"
+--         $ \o -> GenerateBlocksPacket
 --             <$> (o J..: "blocks" )
 --             <*> (o J..: "timeGap" )
 --             <*> (o J..: "address")
@@ -196,7 +196,7 @@ getBlock (GetBlock hash address) = do
 Requests:
 {"method":"GetLastKBlock", "address":{"host":"127.0.0.1", "port": 2005}}
 {"method":"StartForeverChainGeneration", "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"GenerateBlocksPacket", "blocks" : 2, "address":{"host":"127.0.0.1", "port": 2005}}
+{"method":"GenerateBlocksPacket", "blocks" : 2, "timeGap":0, "address":{"host":"127.0.0.1", "port": 2005}}
 {"method":"GetWalletBalance", "walletID": 2, "address":{"host":"127.0.0.1", "port": 2008}}
 {"method":"GetWalletBalance", "walletID": 2, "address":{"host":"127.0.0.1", "port": 2009}}
 {"method":"StopNode"}
@@ -204,7 +204,7 @@ Requests:
 {"method":"GetLengthOfChain", "address":{"host":"127.0.0.1", "port": 2008}}
 {"method":"StopRequest", "address":{"host":"127.0.0.1", "port": 2008}}
 {"method":"CreateTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"DumpToDB", "address":{"host":"127.0.0.1", "port": 2009}}
+{"method":"DumpToDB", "address":{"host":"127.0.0.1", "port": 2008}}
 -}
 
 clientNode :: NodeConfig ClientNode -> L.NodeDefinitionL ()

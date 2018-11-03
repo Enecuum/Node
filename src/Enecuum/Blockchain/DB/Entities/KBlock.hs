@@ -43,9 +43,10 @@ instance D.ToDBValue KBlockPrevHashEntity D.KBlock where
     toDBValue kBlock = KBlockPrevHashValue $ kBlock ^. Lens.prevHash
 
 -- TODO: this can be made by default
-instance D.GetRawDBEntity KBlocksDB KBlockPrevHashEntity where
-    getRawDBKey   (KBlockPrevHashKey k)   = k
-    getRawDBValue (KBlockPrevHashValue k) = D.fromStringHash k
+instance D.RawDBEntity KBlocksDB KBlockPrevHashEntity where
+    toRawDBKey (KBlockPrevHashKey k) = k
+    toRawDBValue = LBS.toStrict . A.encode
+    fromRawDBValue = A.decode . LBS.fromStrict
 
 -- KBlock entity
 
@@ -64,7 +65,7 @@ instance D.ToDBKey KBlockEntity D.KBlock where
 instance D.ToDBValue KBlockEntity D.KBlock where
     toDBValue (D.KBlock time _ number nonce solver) = KBlockValue time number nonce solver
 
--- TODO: this can be made by default
-instance D.GetRawDBEntity KBlocksDB KBlockEntity where
-    getRawDBKey (KBlockKey k) = k
-    getRawDBValue = LBS.toStrict . A.encode
+instance D.RawDBEntity KBlocksDB KBlockEntity where
+    toRawDBKey (KBlockKey k) = k
+    toRawDBValue = LBS.toStrict . A.encode
+    fromRawDBValue = A.decode . LBS.fromStrict
