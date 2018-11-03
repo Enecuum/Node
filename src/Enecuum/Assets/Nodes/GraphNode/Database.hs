@@ -9,12 +9,7 @@ import qualified Enecuum.Blockchain.Lens    as Lens
 import qualified Enecuum.Blockchain.DB      as D
 import qualified Enecuum.Blockchain.DB.Lens as Lens
 
-import           Enecuum.Config
-import           Enecuum.Assets.Nodes.Address
-import           Enecuum.Assets.Nodes.Methods
 import qualified Enecuum.Assets.Nodes.GraphNode.Logic as G
-import           Enecuum.Assets.Nodes.GraphNode.Config
-import qualified Enecuum.Assets.Nodes.CLens as CLens
 
 
 -- kBlocks (kBlock_idx|0 -> prev_hash, kBlock_idx|1 -> kBlock_data)
@@ -28,23 +23,29 @@ import qualified Enecuum.Assets.Nodes.CLens as CLens
 
 -- DB access
 
--- withKBlocksDB
---     :: forall s a1 db a2
---     . (Lens.HasKBlocksDB a1 (D.Storage db), G.HasDb s a1)
---     => s -> L.DatabaseL db a2 -> L.NodeL a2
+withKBlocksDB
+    :: forall s db a
+    .  Lens.HasKBlocksDB s (D.Storage db) 
+    => s
+    -> L.DatabaseL db a
+    -> L.NodeL a
 withKBlocksDB dbModel = L.withDatabase (dbModel ^. Lens.kBlocksDB)
 
--- withKBlocksMetaDB
---     :: forall s a1 db a2
---     . (Lens.HasKBlocksMetaDB a1 (D.Storage db), G.HasDb s a1)
---     => s -> L.DatabaseL db a2 -> L.NodeL a2
+withKBlocksMetaDB
+    :: forall s db a
+    .  Lens.HasKBlocksMetaDB s (D.Storage db) 
+    => s
+    -> L.DatabaseL db a
+    -> L.NodeL a
 withKBlocksMetaDB dbModel = L.withDatabase (dbModel ^. Lens.kBlocksMetaDB)
 
 -- Loading
 
 loadKBlock :: D.DBModel -> D.DBValue D.KBlockMetaEntity -> L.NodeL (D.DBResult D.KBlock)
 loadKBlock dbModel (D.KBlockMetaValue i) = do
+    L.logInfo "Loading KBlock prev hash..."
     ePrevHash     <- withKBlocksDB dbModel $ L.getValue' i
+    L.logInfo "Loading KBlock entity..."
     eKBlockEntity <- withKBlocksDB dbModel $ L.getValue' i
 
     -- Returns Left if any.
@@ -57,7 +58,9 @@ loadKBlock dbModel (D.KBlockMetaValue i) = do
         <*> (eKBlockEntity ^. Lens.solver')
 
 loadHashMeta :: D.DBModel -> D.StringHash -> L.NodeL (D.DBResult (D.DBValue D.KBlockMetaEntity))
-loadHashMeta dbModel hash = withKBlocksMetaDB dbModel $ L.getValue' hash
+loadHashMeta dbModel hash = do
+    L.logInfo "Loading hash meta..."
+    withKBlocksMetaDB dbModel $ L.getValue' hash
 
 loadNextKBlock :: D.DBModel -> D.StringHash -> L.NodeL (D.DBResult D.KBlock)
 loadNextKBlock dbModel prevHash = do

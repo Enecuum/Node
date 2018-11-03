@@ -45,14 +45,21 @@ spec = do
                 { D._createIfMissing = True
                 , D._errorIfExists   = False
                 }
+    let dbPath = "/tmp/enecuum/dumped_graph.dbm"
+    let cfg = A.GraphNodeConfig
+            { A._useDatabase         = True
+            , A._dbModelName         = dbPath
+            , A._useEnqHomeDir       = False
+            , A._dbOptions           = dbOpts 
+            , A._stopOnDatabaseError = True
+            }
+
     let blocksCount = 10
     let blocksDelay = 0
-
     describe "Dump and restore graph test" $ do
         it "Write and Read KBlock Meta" $ withDbAbsence dbPath $ do
-            let graphNodeConfig = A.GraphNodeConfig "dumped_graph.dbm" dbOpts True
 
-            startNode Nothing $ A.graphNodeTransmitter graphNodeConfig
+            startNode Nothing $ A.graphNodeTransmitter cfg
             waitForNode A.graphNodeTransmitterRpcAddress
 
             startNode Nothing A.powNode
@@ -62,9 +69,28 @@ spec = do
 
             waitForBlocks blocksCount A.graphNodeTransmitterRpcAddress
             
-            void $ makeIORpcRequest A.graphNodeReceiverRpcAddress A.DumpToDB
+            Right topKBlock1 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
+
+            topKBlock1 ^. Lens.number `shouldBe` blocksCount
+
+            _ :: Either Text A.SuccessMsg <-  makeIORpcRequest A.graphNodeReceiverRpcAddress A.DumpToDB
 
             threadDelay $ 1000 * 1000
+
+            stopNode A.graphNodeTransmitterRpcAddress
+            stopNode A.powNodeRpcAddress
+
+            startNode Nothing $ A.graphNodeTransmitter cfg
+            waitForNode A.graphNodeTransmitterRpcAddress
+
+            Right genesisKBlock :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
+            genesisKBlock `shouldBe` D.genesisKBlock
+
+            
+
+
+
+
 
 
 
