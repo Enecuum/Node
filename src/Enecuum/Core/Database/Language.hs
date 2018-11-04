@@ -15,21 +15,24 @@ data DatabaseF db a where
     GetValueRaw :: D.DBKeyRaw -> (D.DBResult D.DBValueRaw -> next) -> DatabaseF db next
     -- | Write a single value to the DB.
     PutValueRaw :: D.DBKeyRaw -> D.DBValueRaw -> (D.DBResult () -> next) -> DatabaseF db next
-    -- TODO: Iterate :: ??
   deriving (Functor)
 
 -- | Database language.
 type DatabaseL db = Free (DatabaseF db)
 
+-- | Checks whether the key exists.
 hasKeyRaw :: D.DBKeyRaw -> DatabaseL db Bool
 hasKeyRaw key = liftF $ HasKeyRaw key id
 
+-- | Gets a raw value from DB by specified raw key.
 getValueRaw :: D.DBKeyRaw -> DatabaseL db (D.DBResult D.DBValueRaw)
 getValueRaw key = liftF $ GetValueRaw key id
 
+-- | Writes a raw value to DB by specified raw key.
 putValueRaw :: D.DBKeyRaw -> D.DBValueRaw -> DatabaseL db (D.DBResult ())
 putValueRaw key val = liftF $ PutValueRaw key val id
 
+-- | Puts a typed entity to the corresponding DB.
 putEntity
     :: forall entity db
     .  D.RawDBEntity db entity
@@ -41,6 +44,7 @@ putEntity dbKey dbVal = let
     rawV = D.toRawDBValue @db dbVal
     in putValueRaw rawK rawV
 
+-- | Puts a typed entity to the corresponding DB.
 putEntity'
     :: forall entity db src
     .  D.RawDBEntity db entity
@@ -53,6 +57,7 @@ putEntity' src = let
     rawV = D.toRawDBValue @db @entity $ D.toDBValue src
     in putValueRaw rawK rawV
 
+-- | Gets a typed entity from the corresponding DB.
 getEntity
     :: forall entity db
     . (FromJSON (D.DBValue entity), D.RawDBEntity db entity, Typeable (D.DBValue entity))
@@ -60,7 +65,7 @@ getEntity
     -> DatabaseL db (D.DBResult (D.DBE entity))
 getEntity dbKey = do
     let rawK = D.toRawDBKey @db dbKey
-    let proxyVal = undefined :: D.DBValue entity
+    let proxyVal = error "Don't call me" :: D.DBValue entity
     eRawVal <- getValueRaw rawK
     case eRawVal of
         Left err       -> pure $ Left err
@@ -68,6 +73,7 @@ getEntity dbKey = do
             Nothing    -> pure $ Left $ D.DBError D.InvalidType $ show $ typeOf proxyVal
             Just dbVal -> pure $ Right (dbKey, dbVal)
 
+-- | Gets a typed value from the corresponding DB.
 getValue
     :: (FromJSON (D.DBValue entity), D.RawDBEntity db entity, Typeable (D.DBValue entity))
     => D.DBKey entity
@@ -76,6 +82,7 @@ getValue dbKey = do
     eEntity <- getEntity dbKey
     pure $ eEntity >>= Right . snd
 
+-- | Gets a typed value from the corresponding DB.
 getValue'
     :: (FromJSON (D.DBValue entity), D.RawDBEntity db entity, Typeable (D.DBValue entity))
     => D.ToDBKey entity src
@@ -85,6 +92,8 @@ getValue' src = do
     eEntity <- getEntity $ D.toDBKey src
     pure $ eEntity >>= Right . snd
 
+-- | Gets a typed value from the corresponding DB.
+-- The difference from @getValue@ is that it forgets about DB errors.
 findValue
     :: (FromJSON (D.DBValue entity), D.RawDBEntity db entity, Typeable (D.DBValue entity))
     => D.DBKey entity
@@ -93,6 +102,8 @@ findValue key = do
     eVal <- getValue key
     pure $ either (const Nothing) Just eVal
 
+-- | Gets a typed value from the corresponding DB.
+-- The difference from @getValue'@ is that it forgets about DB errors.
 findValue'
     :: (FromJSON (D.DBValue entity), D.RawDBEntity db entity, Typeable (D.DBValue entity))
     => D.ToDBKey entity src
