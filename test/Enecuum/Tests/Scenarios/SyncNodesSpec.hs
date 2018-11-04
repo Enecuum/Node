@@ -33,20 +33,20 @@ spec = describe "Synchronization tests" $ fromHUnitTest $ TestList
 
 
 testNodeNet :: Test
-testNodeNet = TestCase $ do
+testNodeNet = TestCase $ withNodesManager $ \mgr -> do
     let graphNodeConfig = A.noDBConfig
     let poaNodeConfig   = A.PoANodeConfig 0
 
-    startNode Nothing $ A.graphNodeTransmitter graphNodeConfig
+    void $ startNode Nothing mgr $ A.graphNodeTransmitter graphNodeConfig
     waitForNode A.graphNodeTransmitterRpcAddress
 
-    startNode Nothing A.powNode
+    void $ startNode Nothing mgr A.powNode
     waitForNode A.powNodeRpcAddress
 
-    startNode Nothing $ A.poaNode A.Good poaNodeConfig
+    void $ startNode Nothing mgr $ A.poaNode A.Good poaNodeConfig
     waitForNode A.poaNodeRpcAddress
 
-    startNode Nothing $ A.graphNodeReceiver graphNodeConfig
+    void $ startNode Nothing mgr $ A.graphNodeReceiver graphNodeConfig
     waitForNode A.graphNodeReceiverRpcAddress
 
     threadDelay $ 1000 * 1000
@@ -81,11 +81,6 @@ testNodeNet = TestCase $ do
     -- Mblocks for the underlying kblock should be synchronized.
     length mblocksPrev1 `shouldBe` 1
     mblocksPrev1 `shouldBe` mblocksPrev2
-
-    stopNode A.graphNodeTransmitterRpcAddress
-    stopNode A.powNodeRpcAddress
-    stopNode A.poaNodeRpcAddress
-    stopNode A.graphNodeReceiverRpcAddress
 
     where
         toKeys mblocks = (D._owner :: D.Transaction -> D.PublicKey) <$> (D._transactions :: D.Microblock -> [D.Transaction]) mblocks

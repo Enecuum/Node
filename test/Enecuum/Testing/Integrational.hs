@@ -6,6 +6,7 @@ module Enecuum.Testing.Integrational where
 import           Data.Aeson
 import qualified Data.ByteString.Lazy                         as LBS
 import qualified Data.Map                                     as M
+import           Control.Concurrent                           (killThread)
 import qualified System.Directory                             as Dir
 import qualified System.FilePath                              as Dir
 import           System.FilePath                              as FP ((</>))
@@ -15,6 +16,8 @@ import           Enecuum.Assets.Nodes.Client                  (ClientNode)
 import qualified Enecuum.Assets.Nodes.Messages                as A
 import qualified Enecuum.Config                               as Cfg
 import qualified Enecuum.Core.Lens                            as Lens
+import qualified Enecuum.Core.RLens                           as RLens
+import qualified Enecuum.Framework.RLens                      as RLens
 import qualified Enecuum.Domain                               as D
 import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
 import           Enecuum.Interpreters                         (runNodeDefinitionL)
@@ -22,8 +25,17 @@ import qualified Enecuum.Language                             as L
 import           Enecuum.Prelude
 import qualified Enecuum.Runtime                              as R
 
-logConfig :: FilePath -> D.LoggerConfig
-logConfig file = D.LoggerConfig "$prio $loggername: $msg" D.Debug file True True
+testLogFilePath :: IsString a => a
+testLogFilePath = "/tmp/log/test.log"
+
+consoleLoggerConfig :: D.LoggerConfig
+consoleLoggerConfig = D.LoggerConfig
+    { D._format       = "$prio $loggername: $msg"
+    , D._level        = D.Debug
+    , D._logFilePath  = testLogFilePath
+    , D._logToConsole = True
+    , D._logToFile    = False
+    }
 
 testConfigFilePath :: IsString a => a
 testConfigFilePath = "./configs/testConfig.json"
@@ -49,23 +61,37 @@ evalNode nodeDefinition = do
     R.clearNodeRuntime nodeRt
     pure res
 
--- TODO: add runtime clearing
-startNode :: Maybe D.LoggerConfig -> L.NodeDefinitionL () -> IO ()
-startNode Nothing nodeDefinition = void $ forkIO $ do
-    nodeRt <- R.createVoidLoggerRuntime >>= createNodeRuntime
-    runNodeDefinitionL nodeRt nodeDefinition
-    R.clearNodeRuntime nodeRt
-startNode (Just loggerCfg) nodeDefinition = void $ forkIO $ do
-    nodeRt <- R.createLoggerRuntime loggerCfg >>= createNodeRuntime
-    runNodeDefinitionL nodeRt nodeDefinition
-    R.clearNodeRuntime nodeRt
+type NodeManager = IORef (M.Map ThreadId R.NodeRuntime)
 
-stopNode :: D.Address -> IO ()
-stopNode address = do
-    eResult <- makeIORpcRequest address A.Stop
-    case eResult of
-        Left err           -> error $ "Stopping node " +|| address ||+ " failed: " +| err |+ "."
-        Right A.SuccessMsg -> pure ()
+startNode' :: IO R.LoggerRuntime -> NodeManager -> L.NodeDefinitionL () -> IO (ThreadId, R.NodeRuntime)
+startNode' loggerRtAct mgr nodeDefinition = do
+    loggerRt <- loggerRtAct
+    nodeRt <- createNodeRuntime loggerRt
+    thId <- forkIO $ runNodeDefinitionL nodeRt nodeDefinition
+    modifyIORef mgr (M.insert thId nodeRt)
+    pure (thId, nodeRt)
+
+startNode :: Maybe D.LoggerConfig -> NodeManager -> L.NodeDefinitionL () -> IO (ThreadId, R.NodeRuntime)
+startNode Nothing          = startNode' R.createVoidLoggerRuntime
+startNode (Just loggerCfg) = startNode' (R.createLoggerRuntime loggerCfg)
+
+stopNode :: NodeManager -> (ThreadId, R.NodeRuntime) -> IO ()
+stopNode mgr (thId, nodeRt) =
+    killThread thId
+    `finally` R.clearNodeRuntime   nodeRt
+    `finally` R.clearCoreRuntime   (nodeRt ^. RLens.coreRuntime)
+    `finally` R.clearLoggerRuntime (nodeRt ^. RLens.coreRuntime . RLens.loggerRuntime)
+    `finally` modifyIORef mgr (M.delete thId)
+
+stopNodes :: NodeManager -> IO ()
+stopNodes mgr = do
+    nodeRts <- readIORef mgr
+    mapM_ (stopNode mgr) $ M.toList nodeRts
+
+withNodesManager :: (NodeManager -> IO ()) -> IO ()
+withNodesManager act = do
+    mgr <- newIORef M.empty
+    act mgr `finally` stopNodes mgr
 
 makeIORpcRequest ::
     (FromJSON b, ToJSON a, Typeable a) => D.Address -> a -> IO (Either Text b)
@@ -92,7 +118,6 @@ waitForNode address = go 0
             threadDelay $ 1000 * 100
             ePong :: Either Text A.Pong <- makeIORpcRequest address A.Ping
             when (isLeft ePong) $ go (n + 1)
-
 
 mkDbPath :: FilePath -> IO FilePath
 mkDbPath dbName = do

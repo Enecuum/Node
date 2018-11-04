@@ -17,7 +17,7 @@ import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 import qualified Enecuum.Framework.LogState       as Log
 import qualified Enecuum.Language                 as L
 import qualified Enecuum.Blockchain.Lens          as Lens
-import qualified Enecuum.Blockchain.DB            as DB
+import qualified Enecuum.Blockchain.DB            as D
 import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Assets.Nodes.GraphNode.Config
 import qualified Enecuum.Assets.Nodes.CLens       as CLens
@@ -28,7 +28,7 @@ data GraphNodeData = GraphNodeData
     , _logVar              :: D.StateVar [Text]
     , _status              :: D.StateVar NodeStatus
     , _config              :: NodeConfig GraphNode
-    , _db                  :: Maybe DB.DBModel
+    , _db                  :: Maybe D.DBModel
     , _dumpToDBSignal      :: D.StateVar Bool
     , _restoreFromDBSignal :: D.StateVar Bool
     , _checkPendingSignal  :: D.StateVar Bool
@@ -175,16 +175,41 @@ getMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
         Just blockList -> pure $ Right $ GetMBlocksForKBlockResponse blockList
 
 
-initializeDBModel :: NodeConfig GraphNode -> L.NodeL (Maybe DB.DBModel)
-initializeDBModel nodeConfig = do
+initDb :: forall db. D.DB db => D.DBOptions -> FilePath -> L.NodeL (D.DBResult (D.Storage db))
+initDb options dbModelPath = do
+    let dbPath   = dbModelPath </> D.getDbName @db <> ".db"
+    let dbConfig = D.DBConfig dbPath options
+    eDb <- L.initDatabase dbConfig
+    whenRight eDb $ const $ L.logInfo  $ "Database initialized: " +| dbPath |+ ""
+    whenLeft  eDb $ \err -> L.logError $ "Database initialization failed." <>
+        "\n    Path: " +| dbPath |+ 
+        "\n    Error: " +|| err ||+ ""
+    pure eDb
+
+initDBModel' :: FilePath -> D.DBOptions -> L.NodeL (Maybe D.DBModel)
+initDBModel' dbModelPath options = do
+    void $ L.createFilePath dbModelPath
+
+    eKBlocksDb     <- initDb options dbModelPath
+    eKBlocksMetaDb <- initDb options dbModelPath
+
+    let eModel = D.DBModel
+            <$> eKBlocksDb
+            <*> eKBlocksMetaDb
+
+    when (isLeft eModel)  $ L.logError $ "Failed to initialize DB model: " +| dbModelPath |+ "."
+    when (isRight eModel) $ L.logInfo  $ "DB model initialized: " +| dbModelPath |+ "."
+    pure $ rightToMaybe eModel
+
+initDBModel :: NodeConfig GraphNode -> L.NodeL (Maybe D.DBModel)
+initDBModel nodeConfig = do
 
     parentDir <- if nodeConfig ^. CLens.useEnqHomeDir
         then L.getEnecuumDir
         else pure ""
 
     let dbModelPath = parentDir </> (nodeConfig ^. CLens.dbModelName)
-
-    L.initDBModel dbModelPath $ nodeConfig ^. CLens.dbOptions
+    initDBModel' dbModelPath $ nodeConfig ^. CLens.dbOptions
 
 -- | Initialization of graph node
 graphNodeInitialization :: NodeConfig GraphNode -> L.NodeDefinitionL (Either Text GraphNodeData)
@@ -194,7 +219,7 @@ graphNodeInitialization nodeConfig = L.scenario $ do
     let stopOnDbErr = nodeConfig ^. CLens.stopOnDatabaseError
 
     mbDBModel <- if useDb
-        then initializeDBModel nodeConfig
+        then initDBModel nodeConfig
         else pure Nothing
 
     g <- L.newGraph

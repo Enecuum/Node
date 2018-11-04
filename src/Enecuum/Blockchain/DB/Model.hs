@@ -16,6 +16,3 @@ data DBModel = DBModel
     { _kBlocksDB     :: D.Storage KBlocksDB
     , _kBlocksMetaDB :: D.Storage KBlocksMetaDB
     }
-
-dbExt :: FilePath
-dbExt = ".db"

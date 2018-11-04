@@ -1,49 +1,31 @@
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE PackageImports         #-}
-
 module Enecuum.Tests.Scenarios.GraphNodeDBSpec where
 
 import           Enecuum.Prelude
+import           Test.HUnit
+import           Test.Hspec
+import           Test.Hspec.Contrib.HUnit ( fromHUnitTest )
 
-import qualified Data.Aeson    as A
-import           Data.Typeable (typeOf)
-import           Data.Proxy    (Proxy)
-import qualified Data.Map      as M
-import qualified Data.List     as List
-import           Data.Kind
-import qualified Data.ByteString.Lazy as LBS
-import           Control.Lens (makeFieldsNoPrefix)
-import qualified "rocksdb-haskell" Database.RocksDB as Rocks
-import qualified System.Directory as Dir
-import           System.FilePath as FP ((</>))
-import           Text.Printf (printf)
-
-import           Enecuum.Interpreters                         (runNodeDefinitionL)
-import qualified Enecuum.Runtime                              as R
 import qualified Enecuum.Domain                               as D
-import qualified Enecuum.Language                             as L
 import qualified Enecuum.Blockchain.Lens                      as Lens
-import           Enecuum.Blockchain.DB
-
-import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
 
 import qualified Enecuum.Assets.Nodes.GraphNode.Config       as A
 import qualified Enecuum.Assets.Nodes.GraphNode.Transmitter  as A
-import qualified Enecuum.Assets.Nodes.PoW.Config             as A
 import qualified Enecuum.Assets.Nodes.PoW.PoW                as A
 import qualified Enecuum.Assets.Nodes.Messages               as A
 import qualified Enecuum.Assets.Nodes.Address                as A
 
-import           Test.Hspec
 import           Enecuum.Testing.Integrational
 
 spec :: Spec
-spec = do
+spec = describe "Dump and restore graph test" $ fromHUnitTest $ TestList
+    [TestLabel "Dump and restore graph test" dumpAndRestoreGraphTest]
+
+dumpAndRestoreGraphTest :: Test
+dumpAndRestoreGraphTest = do
     let dbOpts = D.defaultDbOptions
-                { D._createIfMissing = True
-                , D._errorIfExists   = False
-                }
+            { D._createIfMissing = True
+            , D._errorIfExists   = False
+            }
     let dbPath = "/tmp/enecuum/dumped_graph.dbm"
     let cfg = A.GraphNodeConfig
             { A._useDatabase         = True
@@ -55,46 +37,47 @@ spec = do
 
     let blocksCount = 10
     let blocksDelay = 0
-    describe "Dump and restore graph test" $
-        it "Write and Read KBlock Meta" $ withDbAbsence dbPath $ do
+    let loggerCfg = Nothing
 
-            startNode Nothing $ A.graphNodeTransmitter cfg
-            waitForNode A.graphNodeTransmitterRpcAddress
+    TestCase $ withDbAbsence dbPath $ withNodesManager $ \mgr -> do
+        -- Starting nodes.
+        transmitterNode1 <- startNode loggerCfg mgr $ A.graphNodeTransmitter cfg
+        waitForNode A.graphNodeTransmitterRpcAddress
 
-            startNode Nothing A.powNode
-            waitForNode A.powNodeRpcAddress
+        powNode <- startNode loggerCfg mgr A.powNode
+        waitForNode A.powNodeRpcAddress
 
-            _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration blocksCount blocksDelay
+        -- Checking there are none blocks.
+        Right topKBlock0 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
+        topKBlock0 ^. Lens.number `shouldBe` 0
 
-            waitForBlocks blocksCount A.graphNodeTransmitterRpcAddress
-            
-            Right topKBlock1 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
+        -- Generating some blocks and checking they are generated.
+        _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration blocksCount blocksDelay
+        waitForBlocks blocksCount A.graphNodeTransmitterRpcAddress
+        
+        Right topKBlock1 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
+        topKBlock1 ^. Lens.number `shouldBe` blocksCount
 
-            topKBlock1 ^. Lens.number `shouldBe` blocksCount
+        -- Requesting to dump blocks.
+        _ :: Either Text A.SuccessMsg <-  makeIORpcRequest A.graphNodeTransmitterRpcAddress A.DumpToDB
 
-            _ :: Either Text A.SuccessMsg <-  makeIORpcRequest A.graphNodeReceiverRpcAddress A.DumpToDB
+        threadDelay $ 1000 * 1000
 
-            threadDelay $ 1000 * 1000
+        -- Stopping nodes, clearing graph.
+        stopNode mgr transmitterNode1
+        stopNode mgr powNode
 
-            stopNode A.graphNodeTransmitterRpcAddress
-            stopNode A.powNodeRpcAddress
+        -- Starting node, checking there are no blocks.
+        void $ startNode loggerCfg mgr $ A.graphNodeTransmitter cfg
+        waitForNode A.graphNodeTransmitterRpcAddress
 
-            threadDelay 1000
+        Right genesisKBlock :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
+        genesisKBlock `shouldBe` D.genesisKBlock
 
-            startNode Nothing $ A.graphNodeTransmitter cfg
-            waitForNode A.graphNodeTransmitterRpcAddress
+        -- Requesting to restore blocks from DB and checking they are restored.
+        _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.RestoreFromDB
+        waitForBlocks blocksCount A.graphNodeTransmitterRpcAddress
 
-            Right genesisKBlock :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
-            genesisKBlock `shouldBe` D.genesisKBlock
-
-            _ :: Either Text A.SuccessMsg <-  makeIORpcRequest A.graphNodeReceiverRpcAddress A.RestoreFromDB
-
-            Right topKBlock2 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
-            genesisKBlock `shouldBe` D.genesisKBlock
-
-
-
-
-
-
+        Right topKBlock2 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
+        topKBlock1 `shouldBe` topKBlock2
 
