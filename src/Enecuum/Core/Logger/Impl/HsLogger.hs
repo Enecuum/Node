@@ -48,24 +48,22 @@ runLoggerL Nothing  _ = pure ()
 -- | Setup logger required by the application.
 setupLogger :: T.LoggerConfig -> IO HsLoggerHandle
 setupLogger (T.LoggerConfig format level logFileName isConsoleLog isFileLog ) = do
-    let mainFileLog = "/tmp/log/main.log"
     let logLevel = dispatchLogLevel level
     let setFormat = \lh -> pure $ setFormatter lh (simpleLogFormatter format)
 
-    rootHandler <- fileHandler mainFileLog logLevel >>= setFormat
-    fileHandler <- fileHandler logFileName logLevel >>= setFormat
+    appHandler <- fileHandler logFileName logLevel >>= setFormat
     stdoutHandler <- streamHandler stdout logLevel >>= setFormat
 
-    -- root Log
-    updateGlobalLogger rootLoggerName (setLevel DEBUG . setHandlers [rootHandler])
 
-    let file   = [fileHandler   | isFileLog   ]
-    let stdout = [stdoutHandler | isConsoleLog]
-    let handlers = stdout ++ file              
 
-    updateGlobalLogger component (setLevel DEBUG . setHandlers handlers)
+    let file   = [appHandler    | isFileLog   ]
+    let console = [stdoutHandler | isConsoleLog]
+    let handlers = console ++ file              
 
-    pure $ HsLoggerHandle $ handlers ++ [rootHandler]
+
+    when (not $ null handlers) $ updateGlobalLogger rootLoggerName (setLevel DEBUG . setHandlers handlers)        
+    pure $ HsLoggerHandle $ [appHandler, stdoutHandler] 
+
 
 -- | Tear down the application logger; i.e. close all associated log handlers.
 teardownLogger :: HsLoggerHandle -> IO ()
