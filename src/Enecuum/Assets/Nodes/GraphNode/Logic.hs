@@ -24,12 +24,13 @@ import qualified Enecuum.Assets.Nodes.CLens       as CLens
 import qualified Enecuum.Assets.System.Directory  as L
 
 data GraphNodeData = GraphNodeData
-    { _blockchain   :: D.BlockchainData
-    , _logVar       :: D.StateVar [Text]
-    , _status       :: D.StateVar NodeStatus
-    , _config       :: NodeConfig GraphNode
-    , _db           :: Maybe DB.DBModel
-    , _needDumpToDB :: D.StateVar Bool
+    { _blockchain         :: D.BlockchainData
+    , _logVar             :: D.StateVar [Text]
+    , _status             :: D.StateVar NodeStatus
+    , _config             :: NodeConfig GraphNode
+    , _db                 :: Maybe DB.DBModel
+    , _dumpToDBSignal     :: D.StateVar Bool
+    , _checkPendingSignal :: D.StateVar Bool
     }
 
 makeFieldsNoPrefix ''GraphNodeData
@@ -40,13 +41,13 @@ transactionsToTransfer = 20
 -- | DumpToDB command.
 handleDumpToDB :: GraphNodeData -> DumpToDB -> L.NodeL (Either Text SuccessMsg)
 handleDumpToDB nodeData _ = do
-    L.writeVarIO (nodeData ^. needDumpToDB) True
+    L.writeVarIO (nodeData ^. dumpToDBSignal) True
     pure $ Right SuccessMsg
 
 -- | Accept transaction
 acceptTransaction :: GraphNodeData -> CreateTransaction -> L.NodeL (Either Text SuccessMsg)
 acceptTransaction nodeData (CreateTransaction tx) = do
-    L.logInfo $ "Got transaction "  +| D.showTransaction tx "" |+ ""
+    L.logInfo $ "Got transaction " +| D.showTransaction tx "" |+ ""
     if L.verifyTransaction tx
         then do
             L.logInfo "\nTransaction is accepted"
@@ -62,11 +63,12 @@ acceptTransaction nodeData (CreateTransaction tx) = do
 -- | Accept kBlock
 acceptKBlock' :: GraphNodeData -> D.KBlock -> L.NodeL ()
 acceptKBlock' nodeData kBlock = do
-    L.logInfo $ "\nAccepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
+    L.logInfo $ "Accepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
     let logV  = nodeData ^. logVar
     let bData = nodeData ^. blockchain
-    void $ L.atomically $ L.addKBlock logV bData kBlock
+    kBlockAdded <- L.atomically $ L.addKBlock logV bData kBlock
     Log.writeLog logV
+    L.writeVarIO (nodeData ^. checkPendingSignal) kBlockAdded
 
 -- | Accept kBlock
 acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Tcp -> L.NodeL ()
@@ -91,8 +93,8 @@ acceptMBlock nodeData mBlock _ = do
     where
         printInvalidSignatures :: (Bool, Bool, [Bool]) -> L.NodeL ()
         printInvalidSignatures (valid, mBlockValid, txsValid) = do
-            unless valid           $ L.logInfo $ "Microblock is rejected: " +|| toHash mBlock ||+ "."
-            unless mBlockValid     $ L.logInfo $ "Microblock has " +|| toHash mBlock ||+ " invalid signature."
+            unless valid                 $ L.logInfo $ "Microblock is rejected: " +|| toHash mBlock ||+ "."
+            unless mBlockValid           $ L.logInfo $ "Microblock has " +|| toHash mBlock ||+ " invalid signature."
             when (False `elem` txsValid) $ L.logInfo $ "Microblock " +|| toHash mBlock ||+ " transactions have invalid signature."
 
 getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL [D.KBlock]
@@ -204,9 +206,13 @@ graphNodeInitialization nodeConfig = L.scenario $ do
         <*> pure nodeConfig
         <*> pure mbDBModel
         <*> L.newVar False
+        <*> L.newVar False
 
-    case () of
-        _ | useDb && stopOnDbErr && isNothing mbDBModel -> pure $ Left "Database error."
-        _ -> do
-            L.logInfo $ "Genesis block (" +|| D.genesisHash ||+ "): " +|| D.genesisKBlock ||+ "."
-            pure $ Right nodeData
+    let dbUsageFailed = useDb && stopOnDbErr && isNothing mbDBModel
+
+    unless dbUsageFailed
+        $ L.logInfo $ "Genesis block (" +|| D.genesisHash ||+ "): " +|| D.genesisKBlock ||+ "."
+    
+    if dbUsageFailed
+        then pure $ Left "Database error."
+        else pure $ Right nodeData

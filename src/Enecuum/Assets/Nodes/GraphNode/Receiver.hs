@@ -36,10 +36,13 @@ graphSynchro nodeData address = do
 
         GetChainFromToResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromToRequest (curChainLength + 1) otherLength)
         L.logInfo $ "Chain tail received from " +|| (curChainLength + 1) ||+ " to " +|| otherLength ||+ " : " +|| chainTail ||+ "."
+
+        -- TODO: check pending
         L.atomically $ forM_ chainTail (L.addKBlock logV bData)
 
         for_ (init chainTail) $ \kBlock -> do
 
+            -- TODO: check pending
             L.atomically $ void $ L.addKBlock logV bData kBlock
 
             let hash = toHash kBlock
@@ -48,6 +51,7 @@ graphSynchro nodeData address = do
             L.logInfo $ "Mblocks received for kBlock " +|| hash ||+ " : " +|| mBlocks2 ||+ "."
             L.atomically $ forM_ mBlocks2 (L.addMBlock logV bData)
 
+        -- TODO: check pending
         L.atomically $ void $ L.addKBlock logV bData (last chainTail)
     Log.writeLog logV
 

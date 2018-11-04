@@ -97,7 +97,10 @@ findValue'
     :: (FromJSON (D.DBValue entity), D.RawDBEntity db entity, Typeable (D.DBValue entity))
     => D.ToDBKey entity src
     => src
-    -> DatabaseL db (Maybe (D.DBValue entity))
+    -> DatabaseL db (D.DBResult (Maybe (D.DBValue entity)))
 findValue' src = do
     eVal <- getValue' src
-    pure $ either (const Nothing) Just eVal
+    case eVal of
+        Left (D.DBError D.KeyNotFound _) -> pure $ Right Nothing
+        Left err                         -> pure $ Left err
+        Right val                        -> pure $ Right $ Just val

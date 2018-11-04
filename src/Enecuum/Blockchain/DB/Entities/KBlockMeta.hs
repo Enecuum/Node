@@ -27,7 +27,7 @@ instance D.DBEntity KBlockMetaEntity where
         deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance D.ToDBKey KBlockMetaEntity D.KBlock where
-    toDBKey = KBlockMetaKey . D.fromStringHash . D.toHash
+    toDBKey = KBlockMetaKey . D.fromStringHash . D._prevHash
 
 instance D.ToDBValue KBlockMetaEntity D.KBlock where
     toDBValue kBlock = KBlockMetaValue $ D._number kBlock
