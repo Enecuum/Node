@@ -79,3 +79,6 @@ newtype GetMBlocksForKBlockResponse = GetMBlocksForKBlockResponse { mblocks :: [
 
 data DumpToDB = DumpToDB
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data RestoreFromDB = RestoreFromDB
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)

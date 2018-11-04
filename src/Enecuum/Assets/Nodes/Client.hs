@@ -53,7 +53,15 @@ data Ping                           = Ping Protocol D.Address
 newtype StopRequest                 = StopRequest D.Address
 data GetBlock                       = GetBlock D.StringHash D.Address
 data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON)
-data DumpToDB                       = DumpToDB D.Address
+
+data DumpToDB = DumpToDB
+    { address :: D.Address
+    }
+    deriving (Generic, Show, FromJSON)
+data RestoreFromDB = RestoreFromDB
+    { address :: D.Address
+    }
+    deriving (Generic, Show, FromJSON)
 
 data CLITransaction = CLITransaction
   { _owner    :: String
@@ -75,9 +83,6 @@ instance J.FromJSON GetWalletBalance where
 instance J.FromJSON CreateTransaction where
     parseJSON = J.withObject "CreateTransaction" $ \o -> CreateTransaction <$> o J..: "tx" <*> (o J..: "address")
 
-instance J.FromJSON DumpToDB where
-    parseJSON = J.withObject "DumpToDB" $ \o -> DumpToDB <$> o J..: "address"
-
 instance J.FromJSON GetLastKBlock where
     parseJSON = J.withObject "GetLastKBlock" $ \o -> GetLastKBlock <$> (o J..: "address")
 
@@ -86,13 +91,6 @@ instance J.FromJSON GetLengthOfChain where
 
 instance J.FromJSON StartForeverChainGeneration where
     parseJSON = J.withObject "StartForeverChainGeneration" $ \o -> StartForeverChainGeneration <$> (o J..: "address")
-
--- instance J.FromJSON GenerateBlocksPacket where
---     parseJSON = J.withObject "GenerateBlocksPacket"
---         $ \o -> GenerateBlocksPacket
---             <$> (o J..: "blocks" )
---             <*> (o J..: "timeGap" )
---             <*> (o J..: "address")
 
 instance J.FromJSON GenerateBlocksPacket
 
@@ -163,6 +161,11 @@ dumpToDB (DumpToDB address) = do
     res :: Either Text M.SuccessMsg <- L.makeRpcRequest address M.DumpToDB
     pure . eitherToText $ res
 
+restoreFromDB :: RestoreFromDB -> L.NodeL Text
+restoreFromDB (RestoreFromDB address) = do
+    res :: Either Text M.SuccessMsg <- L.makeRpcRequest address M.RestoreFromDB
+    pure . eitherToText $ res
+
 getLengthOfChain :: GetLengthOfChain -> L.NodeL Text
 getLengthOfChain (GetLengthOfChain address) = do
     res :: Either Text D.KBlock <- L.makeRpcRequest address M.GetLastKBlock
@@ -205,6 +208,7 @@ Requests:
 {"method":"StopRequest", "address":{"host":"127.0.0.1", "port": 2008}}
 {"method":"CreateTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2008}}
 {"method":"DumpToDB", "address":{"host":"127.0.0.1", "port": 2008}}
+{"method":"RestoreFromDB", "address":{"host":"127.0.0.1", "port": 2008}}
 -}
 
 clientNode :: NodeConfig ClientNode -> L.NodeDefinitionL ()
@@ -222,6 +226,7 @@ clientNode _ = do
         L.stdHandler createTransaction
         L.stdHandler getWalletBalance
         L.stdHandler dumpToDB
+        L.stdHandler restoreFromDB
         -- interaction with graph node sync scenario
         L.stdHandler getLastKBlockHandler
         L.stdHandler getLengthOfChain

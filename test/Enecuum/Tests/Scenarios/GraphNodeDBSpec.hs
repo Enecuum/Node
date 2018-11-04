@@ -79,13 +79,18 @@ spec = do
             stopNode A.graphNodeTransmitterRpcAddress
             stopNode A.powNodeRpcAddress
 
+            threadDelay 1000
+
             startNode Nothing $ A.graphNodeTransmitter cfg
             waitForNode A.graphNodeTransmitterRpcAddress
 
             Right genesisKBlock :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
             genesisKBlock `shouldBe` D.genesisKBlock
 
-            
+            _ :: Either Text A.SuccessMsg <-  makeIORpcRequest A.graphNodeReceiverRpcAddress A.RestoreFromDB
+
+            Right topKBlock2 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
+            genesisKBlock `shouldBe` D.genesisKBlock
 
 
 

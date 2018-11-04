@@ -24,13 +24,14 @@ import qualified Enecuum.Assets.Nodes.CLens       as CLens
 import qualified Enecuum.Assets.System.Directory  as L
 
 data GraphNodeData = GraphNodeData
-    { _blockchain         :: D.BlockchainData
-    , _logVar             :: D.StateVar [Text]
-    , _status             :: D.StateVar NodeStatus
-    , _config             :: NodeConfig GraphNode
-    , _db                 :: Maybe DB.DBModel
-    , _dumpToDBSignal     :: D.StateVar Bool
-    , _checkPendingSignal :: D.StateVar Bool
+    { _blockchain          :: D.BlockchainData
+    , _logVar              :: D.StateVar [Text]
+    , _status              :: D.StateVar NodeStatus
+    , _config              :: NodeConfig GraphNode
+    , _db                  :: Maybe DB.DBModel
+    , _dumpToDBSignal      :: D.StateVar Bool
+    , _restoreFromDBSignal :: D.StateVar Bool
+    , _checkPendingSignal  :: D.StateVar Bool
     }
 
 makeFieldsNoPrefix ''GraphNodeData
@@ -42,6 +43,12 @@ transactionsToTransfer = 20
 handleDumpToDB :: GraphNodeData -> DumpToDB -> L.NodeL (Either Text SuccessMsg)
 handleDumpToDB nodeData _ = do
     L.writeVarIO (nodeData ^. dumpToDBSignal) True
+    pure $ Right SuccessMsg
+
+-- | DumpToDB command.
+handleRestoreFromDB :: GraphNodeData -> RestoreFromDB -> L.NodeL (Either Text SuccessMsg)
+handleRestoreFromDB nodeData _ = do
+    L.writeVarIO (nodeData ^. restoreFromDBSignal) True
     pure $ Right SuccessMsg
 
 -- | Accept transaction
@@ -205,6 +212,7 @@ graphNodeInitialization nodeConfig = L.scenario $ do
         <*> L.newVar NodeActing
         <*> pure nodeConfig
         <*> pure mbDBModel
+        <*> L.newVar False
         <*> L.newVar False
         <*> L.newVar False
 

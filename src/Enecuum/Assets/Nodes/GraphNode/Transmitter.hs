@@ -20,8 +20,6 @@ graphNodeTransmitter nodeCfg = do
 graphNodeTransmitter' :: GraphNodeData -> L.NodeDefinitionL ()
 graphNodeTransmitter' nodeData = do
 
-    L.scenario $ restoreFromDB nodeData
-
     L.serving D.Tcp graphNodeTransmitterTcpPort $ do
         -- network
         L.handler   methodPing
@@ -40,6 +38,7 @@ graphNodeTransmitter' nodeData = do
         L.methodE $ getBalance nodeData
         L.methodE $ acceptTransaction nodeData
         L.methodE $ handleDumpToDB nodeData
+        L.methodE $ handleRestoreFromDB nodeData
 
         -- graph node interaction
         L.method  $ getChainLength nodeData
@@ -58,6 +57,10 @@ graphNodeTransmitter' nodeData = do
     L.process $ forever $ do
         L.awaitSignal $ nodeData ^. dumpToDBSignal
         dumpToDB nodeData
+
+    L.process $ forever $ do
+        L.awaitSignal $ nodeData ^. restoreFromDBSignal
+        restoreFromDB nodeData
 
     L.process $ forever $ do
         L.awaitSignal $ nodeData ^. checkPendingSignal
