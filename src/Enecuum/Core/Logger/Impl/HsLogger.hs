@@ -47,25 +47,23 @@ runLoggerL Nothing  _ = pure ()
 
 -- | Setup logger required by the application.
 setupLogger :: T.LoggerConfig -> IO HsLoggerHandle
-setupLogger (T.LoggerConfig format level logFileName isConsoleLog isFileLog ) = do
-    let logLevel = dispatchLogLevel level
-    let setFormat = \lh -> pure $ setFormatter lh (simpleLogFormatter format)
+setupLogger (T.LoggerConfig format level logFileName isConsoleLog isFileLog) = do
+    let logLevel     = dispatchLogLevel level
+    let setFormat lh = pure $ setFormatter lh (simpleLogFormatter format)
 
-    appHandler <- fileHandler logFileName logLevel >>= setFormat
-    stdoutHandler <- streamHandler stdout logLevel >>= setFormat
+    let fileH        = [fileHandler logFileName logLevel >>= setFormat | isFileLog   ]
+    let consoleH     = [streamHandler stdout logLevel    >>= setFormat | isConsoleLog]
 
+    handlers <- sequence $ fileH ++ consoleH
 
+    when (length handlers > 0) $ updateGlobalLogger rootLoggerName (setLevel DEBUG . setHandlers handlers)
+    pure $ HsLoggerHandle handlers
 
-    let file   = [appHandler    | isFileLog   ]
-    let console = [stdoutHandler | isConsoleLog]
-    let handlers = console ++ file              
-
-
-    when (not $ null handlers) $ updateGlobalLogger rootLoggerName (setLevel DEBUG . setHandlers handlers)        
-    pure $ HsLoggerHandle $ [appHandler, stdoutHandler] 
-
-
+-- TODO: FIXME: these clearings don't work for console logger.
 -- | Tear down the application logger; i.e. close all associated log handlers.
 teardownLogger :: HsLoggerHandle -> IO ()
 teardownLogger (HsLoggerHandle handlers) = do
+    let x = setHandlers @(GenericHandler Handle) []
+    updateGlobalLogger rootLoggerName (setLevel EMERGENCY . x)
     mapM_ close handlers
+
