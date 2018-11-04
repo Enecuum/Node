@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module Enecuum.Assets.Nodes.BN (bnNode, BN, NodeConfig(..)) where
+module Enecuum.Assets.Nodes.Routing.BN (bnNode, BN, NodeConfig(..)) where
 
 import           Enecuum.Prelude
 import qualified Enecuum.Domain                 as D
@@ -9,10 +9,9 @@ import qualified Enecuum.Assets.Nodes.Address   as A
 import qualified Enecuum.Assets.Nodes.Messages  as M
 import           Enecuum.Research.ChordRouteMap
 import           Enecuum.Framework.Language.Extra (HasStatus)
-import           Enecuum.Assets.Nodes.Methods (methodStopNode)
 import           Enecuum.Config
 import qualified Data.Aeson                       as J
-
+import           Enecuum.Assets.Nodes.Methods
 
 data BNNodeData = BNNodeData
     { _status   :: D.StateVar L.NodeStatus
@@ -96,4 +95,10 @@ bnNode' _ = do
         -- clockwise direction
         L.methodE $ findNextConnectForMe       nodeData
 
+    L.process $ forever $ do
+        L.delay $ 1000 * 1000
+        deadNodes <- pingConnects =<< L.readVarIO (nodeData ^. netNodes)
+        L.atomically $ forM_ deadNodes $ \hash ->
+            L.modifyVar (nodeData ^. netNodes) $ removeFromMap hash
+    
     L.awaitNodeFinished nodeData

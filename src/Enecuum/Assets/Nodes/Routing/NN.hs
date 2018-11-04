@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module Enecuum.Assets.Nodes.NN (nnNode, NN, NodeConfig (..)) where
+module Enecuum.Assets.Nodes.Routing.NN (nnNode, NN, NodeConfig (..)) where
 
 import           Enecuum.Prelude
 import qualified Enecuum.Domain                 as D
@@ -11,6 +11,7 @@ import           Enecuum.Research.ChordRouteMap
 import           Enecuum.Framework.Language.Extra (HasStatus)
 import           Enecuum.Config
 import qualified Data.Aeson                       as J
+import           Enecuum.Assets.Nodes.Methods
 
 data NNNodeData = NNNodeData
     { _status   :: D.StateVar L.NodeStatus
@@ -132,8 +133,9 @@ acceptSendTo nodeData myHash (M.SendMsgTo hash i msg) conn = do
     L.close conn
     let mes = "Received msg: \"" <>  msg <> "\" for " <> show hash <> " time to live " <> show i
     L.logInfo mes
-    L.atomically $ L.modifyVar (nodeData ^. routingMessages) (mes :)
-    when (myHash == hash) $ L.logInfo "I'm receiver."
+    when (myHash == hash) $ do
+        --L.atomically $ L.modifyVar (nodeData ^. routingMessages) (mes :)
+        L.logInfo "I'm receiver."
 
     when (i >= 0 && myHash /= hash) $ do
         rm <- L.readVarIO (nodeData ^. netNodes)
@@ -147,11 +149,8 @@ connectMapRequest nodeData _ = do
     pure $ fromChordRouteMap nodes
 
 getRoutingMessages :: NNNodeData -> M.GetRoutingMessages -> L.NodeL [Text]
-getRoutingMessages nodeData _ = do
-    mes <- L.readVarIO (nodeData ^. routingMessages)
-    pure $ mes
-
-
+getRoutingMessages nodeData _ = undefined
+   -- pure <$> L.readVarIO (nodeData ^. routingMessages)
 
 nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
 nnNode port = nnNode' port (NNConfig 42)
@@ -172,11 +171,10 @@ nnNode' maybePort _ = do
     L.logInfo $ show myHash
     connectToBN myAddress A.bnAddress nodeData
 
-    L.serving D.Rpc port $
-        L.method  $  getRoutingMessages   nodeData
-    L.serving D.Rpc (port - 1000) $
+    L.serving D.Rpc (port - 1000) $ do
         L.method  $  connectMapRequest    nodeData
-
+        L.method  $  getRoutingMessages   nodeData
+        L.method     rpcPingPong
 
     L.serving D.Udp port $ do
         L.handler $ acceptHello           nodeData
@@ -191,5 +189,11 @@ nnNode' maybePort _ = do
     L.process $ forever $ do
         L.delay $ 1000 * 10000
         successorsRequest myAddress nodeData
+    
+    L.process $ forever $ do
+        L.delay $ 1000 * 1000
+        deadNodes <- pingConnects =<< L.readVarIO (nodeData ^. netNodes)
+        L.atomically $ forM_ deadNodes $ \hash ->
+            L.modifyVar (nodeData ^. netNodes) $ removeFromMap hash
 
     L.awaitNodeFinished nodeData
