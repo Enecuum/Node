@@ -1,8 +1,8 @@
-{  
+{
    "node":"PoWNode",
    "nodeScenario":"PoW",
    "nodeConfig":
-   {  
+   {
       "tag":"PoWNodeConfig",
       "defaultBlocksDelay":1000000
    },
@@ -11,6 +11,7 @@
       "logFilePath": "/tmp/log/PoW.log",
       "format":"$prio $loggername: $msg",
       "logToConsole":true,
+			"logToFile": true,
       "level":"Debug"
    }
 }

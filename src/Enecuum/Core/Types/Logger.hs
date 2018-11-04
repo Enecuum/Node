@@ -17,6 +17,7 @@ data LoggerConfig = LoggerConfig
   , _level        :: LogLevel
   , _logFilePath  :: FilePath
   , _logToConsole :: Bool
+  , _logToFile    :: Bool
   } deriving (Generic, Show, Read)
 
 instance ToJSON LoggerConfig where toJSON = genericToJSON noLensPrefix

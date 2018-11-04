@@ -2,27 +2,28 @@
 {-# LANGUAGE PackageImports        #-}
 
 module Enecuum.Testing.Integrational where
-    
-import           Data.Aeson
-import qualified Data.Map             as M
-import qualified Data.ByteString.Lazy as LBS
-import qualified System.Directory     as Dir
-import qualified System.FilePath      as Dir
-import           System.FilePath      as FP ((</>))
-import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 
-import           Enecuum.Prelude
+import           Data.Aeson
+import qualified Data.ByteString.Lazy                         as LBS
+import qualified Data.Map                                     as M
+import qualified System.Directory                             as Dir
+import qualified System.FilePath                              as Dir
+import           System.FilePath                              as FP ((</>))
+import qualified "rocksdb-haskell" Database.RocksDB           as Rocks
+
+import           Enecuum.Assets.Nodes.Client                  (ClientNode)
+import qualified Enecuum.Assets.Nodes.Messages                as A
+import qualified Enecuum.Config                               as Cfg
+import qualified Enecuum.Core.Lens                            as Lens
+import qualified Enecuum.Domain                               as D
+import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
 import           Enecuum.Interpreters                         (runNodeDefinitionL)
 import qualified Enecuum.Language                             as L
-import qualified Enecuum.Config                               as Cfg
-import qualified Enecuum.Domain                               as D
+import           Enecuum.Prelude
 import qualified Enecuum.Runtime                              as R
-import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
-import qualified Enecuum.Assets.Nodes.Messages                as A
-import           Enecuum.Assets.Nodes.Client                  (ClientNode)
 
 logConfig :: FilePath -> D.LoggerConfig
-logConfig file = D.LoggerConfig "$prio $loggername: $msg" D.Debug file True
+logConfig file = D.LoggerConfig "$prio $loggername: $msg" D.Debug file True True
 
 testConfigFilePath :: IsString a => a
 testConfigFilePath = "./configs/testConfig.json"
@@ -33,8 +34,8 @@ loadLoggerConfig configFile = do
     case Cfg.tryParseConfig @ClientNode configSrc of
         Nothing  -> error $ "Invalid test config file: " <> show configFile
         Just cfg -> do
-            let logConf@(D.LoggerConfig _ _ logFile _) = Cfg.loggerConfig cfg
-            let dir = Dir.dropFileName logFile
+            let logConf = Cfg.loggerConfig cfg
+            let dir = Dir.dropFileName $ logConf ^. Lens.logFilePath
             Dir.createDirectoryIfMissing True dir
             pure logConf
 
@@ -51,11 +52,11 @@ evalNode nodeDefinition = do
 -- TODO: add runtime clearing
 startNode :: Maybe D.LoggerConfig -> L.NodeDefinitionL () -> IO ()
 startNode Nothing nodeDefinition = void $ forkIO $ do
-    nodeRt <- R.createVoidLoggerRuntime >>= createNodeRuntime 
+    nodeRt <- R.createVoidLoggerRuntime >>= createNodeRuntime
     runNodeDefinitionL nodeRt nodeDefinition
     R.clearNodeRuntime nodeRt
 startNode (Just loggerCfg) nodeDefinition = void $ forkIO $ do
-    nodeRt <- R.createLoggerRuntime loggerCfg >>= createNodeRuntime 
+    nodeRt <- R.createLoggerRuntime loggerCfg >>= createNodeRuntime
     runNodeDefinitionL nodeRt nodeDefinition
     R.clearNodeRuntime nodeRt
 

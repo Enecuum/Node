@@ -1,8 +1,8 @@
-{  
+{
    "node":"GraphNode",
    "nodeScenario":"Receiver",
    "nodeConfig":
-   {  
+   {
       "tag":"GraphNodeConfig",
       "useDatabase":false,
       "dbModelName":"graph_node_transmitter.dbm",
@@ -19,6 +19,7 @@
       "logFilePath": "/tmp/log/GraphNodeReceiver.log",
       "format":"$prio $loggername: $msg",
       "logToConsole":true,
+			"logToFile": true,
       "level":"Debug"
    }
 }

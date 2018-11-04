@@ -1,7 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
 module Enecuum.Tests.Scenarios.SyncNodesSpec where
-    
+
 import           Test.HUnit
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit ( fromHUnitTest )
@@ -30,6 +30,7 @@ import           Enecuum.Testing.Integrational
 spec :: Spec
 spec = describe "Synchronization tests" $ fromHUnitTest $ TestList
     [TestLabel "test net sync" testNodeNet]
+
 
 testNodeNet :: Test
 testNodeNet = TestCase $ do
@@ -85,6 +86,6 @@ testNodeNet = TestCase $ do
     stopNode A.powNodeRpcAddress
     stopNode A.poaNodeRpcAddress
     stopNode A.graphNodeReceiverRpcAddress
-   
+
     where
         toKeys mblocks = (D._owner :: D.Transaction -> D.PublicKey) <$> (D._transactions :: D.Microblock -> [D.Transaction]) mblocks

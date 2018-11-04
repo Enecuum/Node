@@ -31,7 +31,9 @@ P2P node for the main network protocol.
 2. Build & install
 
 `stack build --fast`
+
 3. Run tests (optional) 
+
 `stack build --fast --test`
 
 ### Initialize
