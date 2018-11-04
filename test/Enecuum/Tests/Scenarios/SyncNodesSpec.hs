@@ -2,8 +2,7 @@
 
 module Enecuum.Tests.Scenarios.SyncNodesSpec where
 
-
-
+import           Data.Aeson
 import qualified Enecuum.Assets.Scenarios                     as A
 import qualified Enecuum.Blockchain.Lens                      as Lens
 import qualified Enecuum.Domain                               as D
@@ -17,6 +16,7 @@ import           Test.HUnit
 spec :: Spec
 spec = describe "Synchronization tests" $ fromHUnitTest $ TestList
     [TestLabel "test net sync" testNodeNet]
+
 
 testNodeNet :: Test
 testNodeNet = TestCase $ do
