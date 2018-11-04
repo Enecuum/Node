@@ -1,4 +1,3 @@
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE AllowAmbiguousTypes    #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
 
@@ -82,3 +81,9 @@ defaultDbOptions = DBOptions
     { _createIfMissing = False
     , _errorIfExists   = False
     }
+
+toDBEntity
+    :: (ToDBKey entity src, ToDBValue entity src)
+    => src
+    -> DBE entity
+toDBEntity src = (toDBKey src, toDBValue src)

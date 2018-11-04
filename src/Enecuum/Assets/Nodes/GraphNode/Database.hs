@@ -73,10 +73,8 @@ loadNextKBlock dbModel prevHash = do
 
 saveKBlock :: D.DBModel -> D.KBlock -> L.NodeL (D.DBResult ())
 saveKBlock dbModel kBlock = do
-    let k1 = D.toDBKey   @D.KBlockPrevHashEntity kBlock
-    let v1 = D.toDBValue @D.KBlockPrevHashEntity kBlock
-    let k2 = D.toDBKey   @D.KBlockEntity kBlock
-    let v2 = D.toDBValue @D.KBlockEntity kBlock
+    let (k1, v1) = D.toDBEntity @D.KBlockPrevHashEntity kBlock
+    let (k2, v2) = D.toDBEntity @D.KBlockEntity         kBlock
 
     L.logInfo $ "[" +|| kBlock ^. Lens.number ||+ "] Saving KBlock (" +|| D.toHash kBlock ||+ "):"
     L.logInfo $ "    <" +|| k1 ||+ "> <" +|| v1 ||+ ">"
@@ -93,8 +91,7 @@ saveKBlock dbModel kBlock = do
 
 saveKBlockMeta :: D.DBModel -> D.KBlock -> L.NodeL (D.DBResult ())
 saveKBlockMeta dbModel kBlock = do
-    let k1 = D.toDBKey   @D.KBlockMetaEntity kBlock
-    let v1 = D.toDBValue @D.KBlockMetaEntity kBlock
+    let (k1, v1) = D.toDBEntity @D.KBlockMetaEntity kBlock
 
     L.logInfo $ "[" +|| kBlock ^. Lens.number ||+ "] Saving KBlock meta:"
     L.logInfo $ "    <" +|| k1 ||+ "> <" +|| v1 ||+ ">"

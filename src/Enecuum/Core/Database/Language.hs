@@ -60,7 +60,7 @@ getEntity
     -> DatabaseL db (D.DBResult (D.DBE entity))
 getEntity dbKey = do
     let rawK = D.toRawDBKey @db dbKey
-    let proxyVal = Proxy :: Proxy (D.DBValue entity)
+    let proxyVal = undefined :: D.DBValue entity
     eRawVal <- getValueRaw rawK
     case eRawVal of
         Left err       -> pure $ Left err
