@@ -56,10 +56,11 @@ graphNodeTransmitter' nodeData = do
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
 
     L.process $ forever $ do
-        L.atomically $ do
-            need <- L.readVar $ nodeData ^. needDumpToDB
-            unless need L.retry
-        L.writeVarIO (nodeData ^. needDumpToDB) False
+        L.awaitSignal $ nodeData ^. dumpToDBSignal
         dumpToDB nodeData
+
+    L.process $ forever $ do
+        L.awaitSignal $ nodeData ^. checkPendingSignal
+        L.processPending (nodeData ^. logVar) (nodeData ^. blockchain)
 
     L.awaitNodeFinished nodeData

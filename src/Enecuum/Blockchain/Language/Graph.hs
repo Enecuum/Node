@@ -87,5 +87,8 @@ findBlocksByNumber logV bData num prev = do
 
 kBlockIsNext :: D.KBlock -> D.KBlock -> Bool
 kBlockIsNext kBlock topKBlock =
-    D._number kBlock == D._number topKBlock + 1 && D._prevHash kBlock == D.toHash
-        (D.KBlockContent topKBlock)
+       D._number   kBlock == D._number topKBlock + 1
+    && D._prevHash kBlock == D.toHash  topKBlock
+
+kBlockExists :: D.KBlock -> D.KBlock -> Bool
+kBlockExists kBlock topKBlock = D._number kBlock <= D._number topKBlock
