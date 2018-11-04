@@ -136,12 +136,19 @@ spec = do
                 }
 
     describe "DB Entities tests" $ do
-        it "ToDBKey test"          $ kBlock1MetaKey               `shouldBe` KBlockMetaKey (D.fromStringHash $ D.toHash kBlock1)
-        it "ToDBValue test"        $ kBlock1MetaValue             `shouldBe` KBlockMetaValue 1
-        it "RawDBEntity test"   $ D.toRawDBKey @KBlocksMetaDB kBlock1MetaKey `shouldBe` D.fromStringHash (D.toHash kBlock1)
+        it "ToDBKey test" $
+            kBlock1MetaKey   `shouldBe` KBlockMetaKey (D.fromStringHash $ kBlock1 ^. Lens.prevHash)
+        
+        it "ToDBValue test" $
+            kBlock1MetaValue `shouldBe` KBlockMetaValue 1
+        
+        it "RawDBEntity test" $
+            D.toRawDBKey @KBlocksMetaDB kBlock1MetaKey `shouldBe` D.fromStringHash (kBlock1 ^. Lens.prevHash)
+
         it "Parse RawDBValue test" $ do
             let dbValueRaw = D.toRawDBValue @KBlocksMetaDB kBlock1MetaValue
             D.fromRawDBValue @KBlocksMetaDB dbValueRaw `shouldBe` Just kBlock1MetaValue
+
         it "Different objects => different keys and values" $ do
             kBlock1MetaKey   `shouldNotBe` kBlock2MetaKey
             kBlock1MetaValue `shouldNotBe` kBlock2MetaValue
@@ -205,7 +212,7 @@ spec = do
             eInitialized `shouldBe` Right ()
 
             eValue <- evalNode $ getKBlockMetaNode kBlock1MetaKey cfg1
-            eValue `shouldBe` Left (D.DBError D.KeyNotFound (show $ D.fromStringHash $ D.toHash kBlock1))
+            eValue `shouldBe` Left (D.DBError D.KeyNotFound (show $ D.fromStringHash $ kBlock1 ^. Lens.prevHash))
 
         it "Write one, read another (unexisting) KBlock Meta" $ withDbPresence dbPath $ do
             eInitialized <- evalNode $ dbInitNode cfg1
@@ -215,7 +222,7 @@ spec = do
             eStoreResult `shouldBe` Right ()
 
             eValue <- evalNode $ getKBlockMetaNode kBlock2MetaKey cfg1
-            eValue `shouldBe` Left (D.DBError D.KeyNotFound (show $ D.fromStringHash $ D.toHash kBlock2))
+            eValue `shouldBe` Left (D.DBError D.KeyNotFound (show $ D.fromStringHash $ kBlock2 ^. Lens.prevHash))
 
         it "Write two entities, read both" $ withDbPresence dbPath $ do
             eInitialized <- evalNode $ dbInitNode cfg1

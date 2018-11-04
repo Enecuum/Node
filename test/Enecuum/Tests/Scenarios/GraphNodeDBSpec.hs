@@ -21,7 +21,6 @@ import           Text.Printf (printf)
 
 import           Enecuum.Interpreters                         (runNodeDefinitionL)
 import qualified Enecuum.Runtime                              as R
-import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
 import qualified Enecuum.Domain                               as D
 import qualified Enecuum.Language                             as L
 import qualified Enecuum.Blockchain.Lens                      as Lens
@@ -56,7 +55,7 @@ spec = do
 
     let blocksCount = 10
     let blocksDelay = 0
-    describe "Dump and restore graph test" $ do
+    describe "Dump and restore graph test" $
         it "Write and Read KBlock Meta" $ withDbAbsence dbPath $ do
 
             startNode Nothing $ A.graphNodeTransmitter cfg
