@@ -9,6 +9,7 @@ import           Enecuum.Assets.Blockchain.Wallet
 import           Enecuum.Blockchain.Domain
 import qualified Enecuum.Blockchain.Lens     as Lens
 import qualified Enecuum.Language            as L
+import qualified Enecuum.Domain              as D
 import           Enecuum.Prelude             hiding (Ordering)
 
 -- | Order for key blocks
@@ -19,20 +20,20 @@ data Ordering = InOrder | RandomOrder
 data WalletSource = Generated | Hardcoded
     deriving (Show)
 
-kBlockInBunch :: Integer
+kBlockInBunch :: D.BlockNumber
 kBlockInBunch = 1
 
 transactionsInMicroblock :: Int
 transactionsInMicroblock = 3
 
-generateNKBlocks :: (L.ERandom m, Monad m) => Integer -> m (StringHash, [KBlock])
+generateNKBlocks :: (L.ERandom m, Monad m) => D.BlockNumber -> m (StringHash, [KBlock])
 generateNKBlocks = generateKBlocks genesisHash
 
-generateNKBlocksWithOrder :: Integer -> Ordering -> L.ERandomL (StringHash, [KBlock])
+generateNKBlocksWithOrder :: D.BlockNumber -> Ordering -> L.ERandomL (StringHash, [KBlock])
 generateNKBlocksWithOrder = createKBlocks genesisHash
 
 -- Generate bunch of key blocks (randomly or in order)
-createKBlocks :: (Monad m, L.ERandom m) => StringHash -> Integer -> Ordering -> m (StringHash, [KBlock])
+createKBlocks :: (Monad m, L.ERandom m) => StringHash -> D.BlockNumber -> Ordering -> m (StringHash, [KBlock])
 createKBlocks prevKBlockHash from order = do
     (lastHash, kBlockBunch) <- generateKBlocks prevKBlockHash from
     kBlockIndices           <- generateIndices order
@@ -40,7 +41,7 @@ createKBlocks prevKBlockHash from order = do
     pure (lastHash, kBlocks)
 
 -- Generate bunch of key blocks (in order)
-generateKBlocks :: Monad m => StringHash -> Integer -> m (StringHash, [KBlock])
+generateKBlocks :: Monad m => StringHash -> D.BlockNumber -> m (StringHash, [KBlock])
 generateKBlocks prevHash from = do
     blocks <- loopGenKBlock prevHash from (from + kBlockInBunch)
     case blocks of
@@ -48,7 +49,7 @@ generateKBlocks prevHash from = do
         _  -> pure (toHash $ last blocks, blocks)
 
 -- loop - state substitute : create new Kblock using hash of previous
-loopGenKBlock :: Monad m => StringHash -> Integer -> Integer -> m [KBlock]
+loopGenKBlock :: Monad m => StringHash -> D.BlockNumber -> D.BlockNumber -> m [KBlock]
 loopGenKBlock prevHash from to = do
     let kblock      = genKBlock prevHash from
         newPrevHash = toHash kblock
@@ -74,13 +75,13 @@ genRandKeyBlock = do
         , _time = time
         }
 
-genKBlock :: StringHash -> Integer -> KBlock
+genKBlock :: StringHash -> D.BlockNumber -> KBlock
 genKBlock prevHash i = KBlock
     { _prevHash = prevHash
-    , _number = i
-    , _nonce = i
-    , _solver = toHash (i + 3)
-    , _time = i
+    , _number   = i
+    , _nonce    = i
+    , _solver   = toHash (i + 3)
+    , _time     = i
     }
 
 genNTransactions :: (L.ERandom m, Monad m) => Int -> m [Transaction]

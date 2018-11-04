@@ -39,7 +39,7 @@ newtype GetWalletBalance = GetWalletBalance { walletId :: WalletId }
 data GetKBlockPending = GetKBlockPending
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-newtype NBlockPacketGeneration = NBlockPacketGeneration {number :: Int}
+data NBlockPacketGeneration = NBlockPacketGeneration {number :: D.BlockNumber, timeGap :: Int}
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data ForeverChainGeneration = ForeverChainGeneration
@@ -60,10 +60,10 @@ newtype GetGraphNode = GetGraphNode {hash :: StringHash}
 data GetChainLengthRequest = GetChainLengthRequest
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-newtype GetChainLengthResponse = GetChainLengthResponse { chainLength :: Integer }
+newtype GetChainLengthResponse = GetChainLengthResponse { chainLength :: D.BlockNumber }
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
 
-data GetChainFromToRequest = GetChainFromToRequest { fromBlock :: Integer, toBlock :: Integer }
+data GetChainFromToRequest = GetChainFromToRequest { fromBlock :: D.BlockNumber, toBlock :: D.BlockNumber }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 newtype GetChainFromToResponse = GetChainFromToResponse { blocks :: [D.KBlock] }
@@ -74,3 +74,11 @@ newtype GetMBlocksForKBlockRequest = GetMBlocksForKBlockRequest { kblock :: Stri
 
 newtype GetMBlocksForKBlockResponse = GetMBlocksForKBlockResponse { mblocks :: [D.Microblock] }
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
+
+-- | Other graph node messages
+
+data DumpToDB = DumpToDB
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data RestoreFromDB = RestoreFromDB
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)

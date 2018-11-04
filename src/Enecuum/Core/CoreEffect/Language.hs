@@ -10,8 +10,9 @@ import           Enecuum.Core.ControlFlow.Language (ControlFlow (..), ControlFlo
 import           Enecuum.Core.FileSystem.Language
 import           Enecuum.Core.Logger.Language      (Logger, LoggerL, logMessage)
 import           Enecuum.Core.Random.Language
+import           Enecuum.Core.ControlFlow.Language (ControlFlow (..), ControlFlowL)
+import           Language.Haskell.TH.MakeFunctor (makeFunctorInstance)
 import           Enecuum.Prelude hiding (readFile)
-import           Language.Haskell.TH.MakeFunctor
 
 -- | Core effects container language.
 data CoreEffectF next where

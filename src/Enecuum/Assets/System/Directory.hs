@@ -24,9 +24,3 @@ appFileName = L.createFilePath =<< (</> "data" </> "logs" </> "app.log") <$> get
 
 clientStory :: (L.FileSystem m, Monad m) => m FilePath
 clientStory = (</> "client.story") <$> storyFilePath
-
-defaultLogFileName :: (L.FileSystem m, Monad m) => m FilePath
-defaultLogFileName = (</> "default.log") <$> logFilePath
-
-configFilePath :: String
-configFilePath = "./configs/testConfig.json"

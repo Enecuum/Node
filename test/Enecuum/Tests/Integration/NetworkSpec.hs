@@ -21,7 +21,7 @@ import qualified Enecuum.Framework.Networking.Internal.Connection as Con
 -- Tests disabled
 spec :: Spec
 spec = describe "Network tests" $ fromHUnitTest $ TestList
-    [ TestLabel "udp ping-pong test (successful sending udp msg by connect & address )" (pingPongTest                     D.Udp 4000 5000)
+    [ TestLabel "udp ping-pong test (successful sending udp msg by connect & address)"  (pingPongTest                     D.Udp 4000 5000)
     , TestLabel "tcp ping-pong test"                                                    (pingPongTest                     D.Tcp 4001 5001)
     , TestLabel "fail sending too big msg by udp connect"                               (testSendingBigMsgByConnect       D.Udp 4002 5002)
     , TestLabel "fail sending too big msg by tcp connect"                               (testSendingBigMsgByConnect       D.Tcp 4003 5003)

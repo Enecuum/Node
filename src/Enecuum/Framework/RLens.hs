@@ -10,4 +10,5 @@ import           Control.Lens             ( makeFieldsNoPrefix )
 
 import           Enecuum.Framework.Runtime
 
+makeFieldsNoPrefix ''DBHandle
 makeFieldsNoPrefix ''NodeRuntime
