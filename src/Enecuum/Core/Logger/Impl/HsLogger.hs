@@ -24,8 +24,7 @@ component = "Node.Main"
 -- the application are needed to installed. Sets them up before running the action
 -- and tears them down afterwards. Even in case of an exception.
 withLogger :: T.LoggerConfig -> (HsLoggerHandle -> IO c) -> IO c
-withLogger config = bracket setupLogger' teardownLogger 
-    where setupLogger' = setupLogger config
+withLogger config = bracket (setupLogger config) teardownLogger 
 
 -- | Dispatch log level from the LoggerL language
 -- to the relevant log level of hslogger package
