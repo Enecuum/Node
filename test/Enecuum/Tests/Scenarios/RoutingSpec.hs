@@ -18,19 +18,21 @@ spec = describe "Routing tests" $ fromHUnitTest $ TestList
 
 testRouting :: Test
 testRouting = TestCase $ withNodesManager $ \mgr -> do
-    startNode Nothing mgr A.bnNode
-    let ports = [5001..5010]
+    void $ startNode Nothing mgr A.bnNode
+    let ports = [5001..5010] -- A.testPorts 
     let nnNodes = map (D.Address A.localhost) ports
-    forM ports (\port -> do
-        startNode Nothing mgr $ A.nnNode $ Just port
-        )
+    forM_ ports (startNode Nothing mgr . A.nnNode . Just)
+
     let transmitter = head nnNodes
     let receivers = tail nnNodes
 
     threadDelay $ 1000 * 1000
-    I.runNodeL undefined $ forM receivers (\receiver -> L.notify transmitter $ A.SendMsgTo (D.toHashGeneric receiver) 10 "!! msg !!")
+    I.runNodeL undefined $ forM receivers $
+        (\receiver -> L.notify transmitter $ A.SendMsgTo (D.toHashGeneric receiver) 10 "!! msg !!")
     threadDelay $ 1000 * 1000
-    msg :: [Either Text [Text]] <- forM receivers (\receiver -> makeIORpcRequest receiver $ A.GetRoutingMessages )
-    -- print $ msgSend
-    print $ msg
-    True `shouldBe` True
+    res <- forM receivers $ \(D.Address host rPort) -> do
+        msg :: Either Text [Text] <- makeIORpcRequest ((D.Address host (rPort - 1000))) A.GetRoutingMessages
+        let Right mess = msg
+        length mess `shouldSatisfy` ( >= 1)
+        pure (msg, rPort)
+    forM_ res print       

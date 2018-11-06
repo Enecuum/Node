@@ -1,27 +1,27 @@
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell        #-}
 module Enecuum.Assets.Nodes.Routing.NN (nnNode, NN, NodeConfig (..)) where
 
-import           Enecuum.Prelude
-import qualified Enecuum.Domain                 as D
-import qualified Enecuum.Language               as L
-import qualified Enecuum.Assets.Nodes.Address   as A
-import qualified Enecuum.Assets.Nodes.Messages  as M
-import           Enecuum.Research.ChordRouteMap
-import           Enecuum.Framework.Language.Extra (HasStatus)
-import           Enecuum.Config
 import qualified Data.Aeson                       as J
+import qualified Data.Map                         as Map
+import qualified Enecuum.Assets.Nodes.Address     as A
+import qualified Enecuum.Assets.Nodes.Messages    as M
 import           Enecuum.Assets.Nodes.Methods
+import           Enecuum.Config
+import qualified Enecuum.Domain                   as D
+import           Enecuum.Framework.Language.Extra (HasStatus)
+import qualified Enecuum.Language                 as L
+import           Enecuum.Prelude
+import           Enecuum.Research.ChordRouteMap
 
 data NNNodeData = NNNodeData
-    { _status   :: D.StateVar L.NodeStatus
-    , _netNodes :: D.StateVar (ChordRouteMap D.Address)
-    , _nodePort :: D.StateVar (Maybe D.PortNumber)
+    { _status          :: D.StateVar L.NodeStatus
+    , _netNodes        :: D.StateVar (ChordRouteMap D.Address)
+    , _nodePort        :: D.StateVar (Maybe D.PortNumber)
     , _routingMessages :: D.StateVar [Text]
     }
 makeFieldsNoPrefix ''NNNodeData
 
---
 data NN = NN
     deriving (Show, Generic)
 
@@ -127,12 +127,23 @@ successorsRequest myAddress nodeData = do
     forM_ nodes $ \(_, addr) -> void $
         L.notify addr $ M.NextForYou myAddress
 
+testPorts :: [D.PortNumber]
+testPorts = [5001..5010]
+
+nodesMap :: Map D.StringHash D.Address
+nodesMap = Map.fromList $ map (\node -> (D.toHashGeneric node, node)) nnNodes
+    where nnNodes = map (D.Address A.localhost) testPorts
+
 acceptSendTo
     :: NNNodeData -> D.StringHash -> M.SendMsgTo -> D.Connection D.Udp -> L.NodeL ()
 acceptSendTo nodeData myHash (M.SendMsgTo hash i msg) conn = do
     L.close conn
-    let mes = "Received msg: \"" <>  msg <> "\" for " <> show hash <> " time to live " <> show i
+    let hashInfo = case Map.lookup hash nodesMap of
+            Nothing -> show hash
+            Just address -> show address
+    let mes = "Received msg: \"" <>  msg <> "\" for " <> hashInfo <> " time to live " <> show i
     L.logInfo mes
+
     when (myHash == hash) $ do
         L.atomically $ L.modifyVar (nodeData ^. routingMessages) (mes :)
         L.logInfo "I'm receiver."
@@ -160,6 +171,7 @@ nnNode' maybePort _ = do
     L.logInfo "Starting of NN node"
     nodeData    <- initNN maybePort
     L.std $ do
+    -- network
         L.stdHandler $ startNode nodeData
         L.stdHandler $ L.stopNodeHandler nodeData
 
@@ -169,12 +181,11 @@ nnNode' maybePort _ = do
     let myHash    = D.toHashGeneric myAddress
     L.logInfo $ show myHash
     connectToBN myAddress A.bnAddress nodeData
-    L.serving D.Rpc port $ do
-        L.method  $  getRoutingMessages   nodeData
 
+    -- make rpc port different from udp via (port - 1000)
     L.serving D.Rpc (port - 1000) $ do
         L.method  $  connectMapRequest    nodeData
-        -- L.method  $  getRoutingMessages   nodeData
+        L.method  $  getRoutingMessages   nodeData
         L.method     rpcPingPong
 
     L.serving D.Udp port $ do
@@ -190,7 +201,7 @@ nnNode' maybePort _ = do
     L.process $ forever $ do
         L.delay $ 1000 * 10000
         successorsRequest myAddress nodeData
-    
+
     L.process $ forever $ do
         L.delay $ 1000 * 1000
         deadNodes <- pingConnects =<< L.readVarIO (nodeData ^. netNodes)
