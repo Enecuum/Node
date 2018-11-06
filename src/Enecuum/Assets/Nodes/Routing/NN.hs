@@ -71,23 +71,32 @@ connectToBN myAddress bnAddress nodeData = do
     let hash = D.toHashGeneric myAddress
     -- TODO add proccesing of error
     _ :: Either Text M.SuccessMsg <- L.scenario $ L.makeRpcRequest bnAddress $ M.Hello hash myAddress
-    let loop i = when (i > 0) $ do
-            maybeAddress :: Either Text (D.StringHash, D.Address) <- L.scenario $ L.makeRpcRequest bnAddress $ M.ConnectRequest hash i
-            case maybeAddress of
-                Right (recivedHash, address) | myAddress /= address -> do
-                    L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap recivedHash address)
-                    loop (i - 1)
-                _ -> pure ()
-    loop 63
+    L.scenario $ do
+        connecRequests 63 nodeData bnAddress hash myAddress
+        nextRequest nodeData bnAddress hash myAddress
+        previusRequest bnAddress hash myAddress
 
-    nextForMe :: Either Text (D.StringHash, D.Address) <- L.scenario $
+connecRequests :: Word64 -> NNNodeData -> D.Address -> D.StringHash -> D.Address -> L.NodeL ()
+connecRequests i nodeData bnAddress hash myAddress = when (i > 0) $ do
+    maybeAddress :: Either Text (D.StringHash, D.Address) <- L.makeRpcRequest bnAddress $ M.ConnectRequest hash i
+    case maybeAddress of
+        Right (recivedHash, address) | myAddress /= address -> do
+            L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap recivedHash address)
+            connecRequests (i - 1) nodeData bnAddress hash myAddress
+        _ -> pure ()
+
+nextRequest :: NNNodeData -> D.Address -> D.StringHash -> D.Address -> L.NodeL ()
+nextRequest nodeData bnAddress hash myAddress = do
+    nextForMe :: Either Text (D.StringHash, D.Address) <-
         L.makeRpcRequest bnAddress $ M.NextForMe hash
     case nextForMe of
         Right (recivedHash, address) | myAddress /= address ->
             L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap recivedHash address)
         _ -> pure ()
 
-    previousForMe :: Either Text (D.StringHash, D.Address) <- L.scenario $
+previusRequest :: D.Address -> D.StringHash -> D.Address -> L.NodeL () 
+previusRequest bnAddress hash myAddress = do
+    previousForMe :: Either Text (D.StringHash, D.Address) <-
         L.makeRpcRequest bnAddress $ M.PreviousForMe hash
     case previousForMe of
         Right (_, address) | myAddress /= address ->
@@ -207,5 +216,9 @@ nnNode' maybePort _ = do
         deadNodes <- pingConnects =<< L.readVarIO (nodeData ^. netNodes)
         L.atomically $ forM_ deadNodes $ \hash ->
             L.modifyVar (nodeData ^. netNodes) $ removeFromMap hash
+
+    L.process $ forever $ do
+        L.delay $ 1000 * 1000
+        previusRequest A.bnAddress myHash myAddress
 
     L.awaitNodeFinished nodeData
