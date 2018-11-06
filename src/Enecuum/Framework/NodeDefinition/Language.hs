@@ -9,7 +9,6 @@ module Enecuum.Framework.NodeDefinition.Language where
 import           Enecuum.Prelude
 import qualified Enecuum.Core.Language                 as L
 import qualified Enecuum.Framework.Domain              as D
-import qualified Enecuum.Framework.State.Language      as L
 import qualified Enecuum.Framework.Node.Language       as L
 import qualified Enecuum.Framework.Networking.Language as L
 import           Enecuum.Framework.Handler.Rpc.Language  (RpcHandlerL)

@@ -8,7 +8,7 @@ import           Enecuum.Blockchain.Domain.Graph       (GraphVar)
 import           Enecuum.Blockchain.Domain.KBlock      (KBlock, BlockNumber)
 import           Enecuum.Blockchain.Domain.Transaction (Transaction)
 import           Enecuum.Blockchain.Domain.Types       (Amount)
-import           Enecuum.Framework.Domain.State        (StateVar)
+import           Enecuum.Core.Types                    (StateVar)
 import           Enecuum.Prelude
 
 type WalletID = PublicKey

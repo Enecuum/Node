@@ -13,4 +13,3 @@ makeFieldsNoPrefix ''Address
 makeFieldsNoPrefix ''Connection
 makeFieldsNoPrefix ''NetworkRequest
 makeFieldsNoPrefix ''NetworkResponse
-makeFieldsNoPrefix ''StateVar

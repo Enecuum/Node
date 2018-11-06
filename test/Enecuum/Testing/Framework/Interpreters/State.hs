@@ -38,14 +38,14 @@ newVar' nodeRt a = do
     pure varId
 
 readVar' :: T.NodeRuntime -> D.StateVar a -> STM a
-readVar' nodeRt (view Lens.varId -> varId) = do
+readVar' nodeRt (D._varId -> varId) = do
     nodeState <- readTMVar $ nodeRt ^. RLens.state
     case Map.lookup varId nodeState of
         Nothing                   -> error $ "Var not found: " +|| varId ||+ "."
         Just (T.VarHandle _ tvar) -> unsafeCoerce <$> readTVar tvar
 
 writeVar' :: T.NodeRuntime -> D.StateVar a -> a -> STM ()
-writeVar' nodeRt (view Lens.varId -> varId) val = do
+writeVar' nodeRt (D._varId -> varId) val = do
     nodeState <- readTMVar $ nodeRt ^. RLens.state
     case Map.lookup varId nodeState of
         Nothing                   -> error $ "Var not found: " +|| varId ||+ "."
@@ -65,6 +65,8 @@ interpretStateL _      (L.Retry _              ) = retry
 
 interpretStateL _      (L.EvalGraph gr act next) =
     next <$> runHGraphSTM gr act
+
+interpretStateL _      (L.EvalDelayedLogger _ next) = pure $ next ()
 
 -- | Runs state model as STM.
 runStateL :: T.NodeRuntime -> L.StateL a -> STM a

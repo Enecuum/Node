@@ -8,12 +8,11 @@ import qualified Enecuum.Blockchain.Domain                as D
 import           Enecuum.Blockchain.Domain.BlockchainData (BlockchainData (..))
 import           Enecuum.Blockchain.Domain.Microblock     (Microblock (..))
 import           Enecuum.Blockchain.Domain.Transaction    (Transaction (..))
+import qualified Enecuum.Core.Types                       as D
+import qualified Enecuum.Core.Language                    as L
 import qualified Enecuum.Framework.Domain                 as D
 import qualified Enecuum.Framework.Language               as L
 import           Enecuum.Prelude
-
-
-import qualified Enecuum.Framework.LogState               as Log
 
 newWalletAmount :: D.Amount
 newWalletAmount = 100
@@ -28,8 +27,8 @@ getBalanceOrCrash wallet ledger = fromMaybe
     (error $ "Impossible: wallet " +|| wallet ||+ " is not initialized.")
     (ledger ^. at wallet)
 
-calculateLedger :: D.StateVar [Text] -> BlockchainData -> Microblock -> L.StateL ()
-calculateLedger logV bData mblock =
+calculateLedger :: BlockchainData -> Microblock -> L.StateL ()
+calculateLedger bData mblock =
 
     forM_ (_transactions mblock) $ \tx -> do
         let ledgerVar = _ledger bData
@@ -54,6 +53,6 @@ calculateLedger logV bData mblock =
 
         when transactionValid    $ L.writeVar ledgerVar newLedger
 
-        when transactionValid    $ Log.stateLog logV $ "Tx accepted: " +|| D.showTx tx newOwnerBalance newReceiverBalance ||+ "."
-        when (owner == receiver) $ Log.stateLog logV $ "Tx rejected (same owner and receiver): " +| D.showPublicKey owner |+ "."
-        unless transactionValid  $ Log.stateLog logV $ "Tx rejected (negative balance): " +|| D.showTx tx newOwnerBalance newReceiverBalance ||+ "."
+        when transactionValid    $ L.logInfo $ "Tx accepted: " +|| D.showTx tx newOwnerBalance newReceiverBalance ||+ "."
+        when (owner == receiver) $ L.logInfo $ "Tx rejected (same owner and receiver): " +| D.showPublicKey owner |+ "."
+        unless transactionValid  $ L.logInfo $ "Tx rejected (negative balance): " +|| D.showTx tx newOwnerBalance newReceiverBalance ||+ "."
