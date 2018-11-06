@@ -73,16 +73,16 @@ acceptKBlock' nodeData kBlock = do
     L.logInfo $ "Accepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
     let logV  = nodeData ^. logVar
     let bData = nodeData ^. blockchain
-    kBlockAdded <- L.atomically $ L.addKBlock logV bData kBlock
+    kBlockAdded <- L.addKBlock logV bData kBlock
     Log.writeLog logV
     L.writeVarIO (nodeData ^. checkPendingSignal) kBlockAdded
 
 -- | Accept kBlock
-acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Tcp -> L.NodeL ()
+acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Udp -> L.NodeL ()
 acceptKBlock nodeData kBlock _ = acceptKBlock' nodeData kBlock
 
 -- | Accept mBlock
-acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Tcp -> L.NodeL ()
+acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Udp -> L.NodeL ()
 acceptMBlock nodeData mBlock _ = do
     let res@(valid, _, _) = L.verifyMicroblockWithTx mBlock
     unless valid $ printInvalidSignatures res
@@ -104,14 +104,14 @@ acceptMBlock nodeData mBlock _ = do
             unless mBlockValid           $ L.logInfo $ "Microblock has " +|| toHash mBlock ||+ " invalid signature."
             when (False `elem` txsValid) $ L.logInfo $ "Microblock " +|| toHash mBlock ||+ " transactions have invalid signature."
 
-getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL [D.KBlock]
-getKBlockPending nodeData _ = do
-    let bData = nodeData ^. blockchain
-    L.readVarIO $ bData ^. Lens.kBlockPending
-    -- kblocks <- L.readVar $ bData ^. Lens.kBlockPending
-    -- L.modifyVar (bData ^. Lens.kBlockPending) (\_ -> [])
-    -- pure kblocks
+getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL D.KBlockPending
+getKBlockPending nodeData _ = L.readVarIO $ nodeData ^. blockchain . Lens.kBlockPending
 
+processKBlockPending' :: GraphNodeData -> L.NodeL Bool
+processKBlockPending' nodeData = do
+    res <- L.processKBlockPending (nodeData ^. logVar) (nodeData ^. blockchain)
+    Log.writeLog $ nodeData ^. logVar
+    pure res
 
 getTransactionPending :: GraphNodeData -> GetTransactionPending -> L.NodeL [D.Transaction]
 getTransactionPending nodeData _ = do
@@ -197,8 +197,8 @@ initDBModel' dbModelPath options = do
             <$> eKBlocksDb
             <*> eKBlocksMetaDb
 
-    when (isLeft eModel)  $ L.logError $ "Failed to initialize DB model: " +| dbModelPath |+ "."
-    when (isRight eModel) $ L.logInfo  $ "DB model initialized: " +| dbModelPath |+ "."
+    when (isLeft  eModel) $ L.logError $ "Failed to initialize DB model: " +| dbModelPath |+ "."
+    when (isRight eModel) $ L.logInfo  $ "DB model initialized: "          +| dbModelPath |+ "."
     pure $ rightToMaybe eModel
 
 initDBModel :: NodeConfig GraphNode -> L.NodeL (Maybe D.DBModel)
@@ -228,7 +228,7 @@ graphNodeInitialization nodeConfig = L.scenario $ do
     nodeData <- L.atomically
         $  GraphNodeData <$>
             ( D.BlockchainData g
-                <$> L.newVar []
+                <$> L.newVar Map.empty
                 <*> L.newVar Map.empty
                 <*> L.newVar D.genesisHash
                 <*> L.newVar Map.empty
