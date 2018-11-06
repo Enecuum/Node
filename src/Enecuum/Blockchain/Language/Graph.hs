@@ -30,9 +30,9 @@ getTopKeyBlock logV bData = do
 
 
 -- | Add key block to the top of the graph
-addTopKBlock :: D.StateVar [Text] -> D.BlockchainData -> D.KBlock -> L.StateL Bool
-addTopKBlock logV bData kBlock = do
-    Log.stateLog logV "Adding KBlock to the graph."
+addTopKBlock :: Text -> D.StateVar [Text] -> D.BlockchainData -> D.KBlock -> L.StateL Bool
+addTopKBlock kBlockSrc logV bData kBlock = do
+    Log.stateLog logV $ "Adding " +| kBlockSrc |+ " KBlock to the graph: " +|| kBlock ||+ "."
     let kBlock' = D.KBlockContent kBlock
     ref <- L.readVar (D._curNode bData)
 
@@ -42,6 +42,7 @@ addTopKBlock logV bData kBlock = do
     L.evalGraph (D._graph bData) $ do
         L.newNode kBlock'
         L.newLink ref kBlock'
+
     -- change of curNode.
     L.writeVar (D._curNode bData) $ D.toHash kBlock'
     pure True
@@ -90,5 +91,6 @@ kBlockIsNext kBlock topKBlock =
        D._number   kBlock == D._number topKBlock + 1
     && D._prevHash kBlock == D.toHash  topKBlock
 
+-- TODO: this should check whether the KBlock is new or it's duplicated.
 kBlockExists :: D.KBlock -> D.KBlock -> Bool
 kBlockExists kBlock topKBlock = D._number kBlock <= D._number topKBlock

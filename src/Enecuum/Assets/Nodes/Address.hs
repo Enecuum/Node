@@ -7,12 +7,18 @@ graphNodeTransmitterRpcPort, graphNodeTransmitterTcpPort :: D.PortNumber
 graphNodeTransmitterRpcPort = 2008
 graphNodeTransmitterTcpPort = 3001
 
+graphNodeTransmitterUdpPort :: D.PortNumber
+graphNodeTransmitterUdpPort = 3002
+
 graphNodeReceiverRpcPort :: D.PortNumber
 graphNodeReceiverRpcPort    = 2009
 
 graphNodeTransmitterRpcAddress, graphNodeTransmitterTcpAddress :: D.Address
 graphNodeTransmitterRpcAddress = D.Address "127.0.0.1" graphNodeTransmitterRpcPort
 graphNodeTransmitterTcpAddress = D.Address "127.0.0.1" graphNodeTransmitterTcpPort
+
+graphNodeTransmitterUdpAddress :: D.Address
+graphNodeTransmitterUdpAddress = D.Address "127.0.0.1" graphNodeTransmitterUdpPort
 
 graphNodeReceiverRpcAddress :: D.Address
 graphNodeReceiverRpcAddress = D.Address "127.0.0.1" graphNodeReceiverRpcPort
