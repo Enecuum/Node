@@ -9,6 +9,7 @@ import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.GraphNode.Logic
 import           Enecuum.Assets.Nodes.GraphNode.Config
 import           Enecuum.Assets.Nodes.GraphNode.Database
+import qualified Enecuum.Framework.LogState as Log
 
 -- | Start of graph node
 graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()
@@ -20,7 +21,7 @@ graphNodeTransmitter nodeCfg = do
 graphNodeTransmitter' :: GraphNodeData -> L.NodeDefinitionL ()
 graphNodeTransmitter' nodeData = do
 
-    L.serving D.Tcp graphNodeTransmitterTcpPort $ do
+    L.serving D.Udp graphNodeTransmitterUdpPort $ do
         -- network
         L.handler   methodPing
         -- PoA interaction
@@ -28,6 +29,9 @@ graphNodeTransmitter' nodeData = do
         -- PoW interaction
         L.handler $ acceptKBlock nodeData
 
+    L.serving D.Tcp graphNodeTransmitterTcpPort $
+        -- network
+        L.handler   methodPing
 
     L.serving D.Rpc graphNodeTransmitterRpcPort $ do
         -- network
@@ -64,6 +68,7 @@ graphNodeTransmitter' nodeData = do
 
     L.process $ forever $ do
         L.awaitSignal $ nodeData ^. checkPendingSignal
-        L.processPending (nodeData ^. logVar) (nodeData ^. blockchain)
+        blockFound <- processKBlockPending' nodeData
+        when blockFound $ L.writeVarIO (nodeData ^. checkPendingSignal) True
 
     L.awaitNodeFinished nodeData

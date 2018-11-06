@@ -99,15 +99,18 @@ makeIORpcRequest address msg = do
     nodeRt <- R.createVoidLoggerRuntime >>= createNodeRuntime
     runNodeDefinitionL nodeRt $ L.evalNodeL $ L.makeRpcRequest address msg
 
-waitForBlocks :: D.BlockNumber -> D.Address -> IO ()
-waitForBlocks number address = go 0
+waitForBlocks' :: Word32 -> D.BlockNumber -> D.Address -> IO ()
+waitForBlocks' attempts number address = go 0
     where
         go :: D.BlockNumber -> IO ()
-        go 50 = error "No valid results from node."
+        go n | n == attempts = error "No valid results from node."
         go n = do
             threadDelay $ 1000 * 100
             A.GetChainLengthResponse count <- D.withSuccess $ makeIORpcRequest address A.GetChainLengthRequest
             when (count < number) $ go (n + 1)
+
+waitForBlocks :: D.BlockNumber -> D.Address -> IO ()
+waitForBlocks = waitForBlocks' 50
 
 waitForNode :: D.Address -> IO ()
 waitForNode address = go 0
