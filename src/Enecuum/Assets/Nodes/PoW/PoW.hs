@@ -83,10 +83,13 @@ powNode' cfg = do
 
     nodeData <- L.initialization $ powNodeInitialization cfg D.genesisHash
     L.serving D.Rpc powNodeRpcPort $ do
-        L.method  $ foreverChainGenerationHandle nodeData
-        L.method  $ nBlockPacketGenerationHandle nodeData
+        -- network
         L.method    rpcPingPong
         L.method  $ handleStopNode nodeData
+
+        -- client
+        L.method  $ foreverChainGenerationHandle nodeData
+        L.method  $ nBlockPacketGenerationHandle nodeData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.process $ forever $ do
