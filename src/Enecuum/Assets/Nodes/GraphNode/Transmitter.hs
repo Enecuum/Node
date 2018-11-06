@@ -41,6 +41,8 @@ graphNodeTransmitter' nodeData = do
         -- client interaction
         L.methodE $ getBalance nodeData
         L.methodE $ acceptTransaction nodeData
+
+        -- db
         L.methodE $ handleDumpToDB nodeData
         L.methodE $ handleRestoreFromDB nodeData
 

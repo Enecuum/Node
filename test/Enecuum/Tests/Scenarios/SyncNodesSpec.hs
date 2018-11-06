@@ -46,7 +46,6 @@ testNodeNet = TestCase $ withNodesManager $ \mgr -> do
     Right kBlock1 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
     Right kBlock2 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeReceiverRpcAddress    A.GetLastKBlock
 
-    print kBlock1
     kBlock1 `shouldBe` kBlock2
 
     Right (A.GetMBlocksForKBlockResponse mblocksPrev1) <- makeIORpcRequest A.graphNodeTransmitterRpcAddress
