@@ -32,7 +32,8 @@ testRouting = TestCase $ withNodesManager $ \mgr -> do
     threadDelay $ 1000 * 1000
     res <- forM receivers $ \(D.Address host rPort) -> do
         msg :: Either Text [Text] <- makeIORpcRequest ((D.Address host (rPort - 1000))) A.GetRoutingMessages
-        let Right mess = msg
-        length mess `shouldSatisfy` ( >= 1)
         pure (msg, rPort)
     forM_ res print       
+    forM_ res (\(msg, rPort) -> do
+        let Right mess = msg
+        length mess `shouldSatisfy` ( >= 1))
