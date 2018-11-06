@@ -13,7 +13,7 @@ import qualified Enecuum.Framework.Node.Interpreter as I
 spec :: Spec
 spec = describe "Routing tests" $ fromHUnitTest $ TestList
     -- []
-    [TestLabel "Routing" testRouting]
+    [TestLabel "All nodes received message" testRouting]
 
 
 testRouting :: Test
@@ -29,7 +29,7 @@ testRouting = TestCase $ withNodesManager $ \mgr -> do
     threadDelay $ 1000 * 1000
     I.runNodeL undefined $ forM receivers $
         (\receiver -> L.notify transmitter $ A.SendMsgTo (D.toHashGeneric receiver) 10 "!! msg !!")
-    threadDelay $ 1000 * 1000
+    threadDelay $ 1000 * 5000
     res <- forM receivers $ \(D.Address host rPort) -> do
         msg :: Either Text [Text] <- makeIORpcRequest ((D.Address host (rPort - 1000))) A.GetRoutingMessages
         pure (msg, rPort)
