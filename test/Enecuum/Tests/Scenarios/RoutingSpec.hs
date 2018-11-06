@@ -12,19 +12,20 @@ import qualified Enecuum.Framework.Node.Interpreter as I
 
 spec :: Spec
 spec = describe "Routing tests" $ fromHUnitTest $ TestList
-    -- []
-    [TestLabel "Routing" testRouting]
+    []
+    -- [TestLabel "Routing" testRouting]
 
 
 testRouting :: Test
 testRouting = TestCase $ withNodesManager $ \mgr -> do
     startNode Nothing mgr A.clientNode
+    waitForNode A.clientAddress
     startNode Nothing mgr A.bnNode
-    -- waitForNode A.bnAddress
+    waitForNode A.bnAddress
     let ports = [5001..5010]
     forM ports (\port -> do
         startNode Nothing mgr $ A.nnNode $ Just port
-        -- waitForNode $ D.Address A.localhost port
+        waitForNode $ D.Address A.localhost port
         )
     let transmitter = D.Address A.localhost $ head ports
     let receivers = tail ports

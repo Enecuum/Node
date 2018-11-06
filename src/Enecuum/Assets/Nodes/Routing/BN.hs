@@ -90,9 +90,9 @@ bnNode' _ = do
         -- routing
         L.method  $ acceptNewNode       nodeData
         L.methodE $ findConnect         nodeData
-        --  counterclockwise direction
+          -- counterclockwise direction
         L.methodE $ findPreviousConnectForMe nodeData
-        -- clockwise direction
+          -- clockwise direction
         L.methodE $ findNextConnectForMe       nodeData
 
     L.process $ forever $ do

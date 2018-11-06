@@ -134,7 +134,7 @@ acceptSendTo nodeData myHash (M.SendMsgTo hash i msg) conn = do
     let mes = "Received msg: \"" <>  msg <> "\" for " <> show hash <> " time to live " <> show i
     L.logInfo mes
     when (myHash == hash) $ do
-        --L.atomically $ L.modifyVar (nodeData ^. routingMessages) (mes :)
+        L.atomically $ L.modifyVar (nodeData ^. routingMessages) (mes :)
         L.logInfo "I'm receiver."
 
     when (i >= 0 && myHash /= hash) $ do
@@ -149,8 +149,7 @@ connectMapRequest nodeData _ = do
     pure $ fromChordRouteMap nodes
 
 getRoutingMessages :: NNNodeData -> M.GetRoutingMessages -> L.NodeL [Text]
-getRoutingMessages nodeData _ = undefined
-   -- pure <$> L.readVarIO (nodeData ^. routingMessages)
+getRoutingMessages nodeData _ = L.readVarIO (nodeData ^. routingMessages)
 
 nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
 nnNode port = nnNode' port (NNConfig 42)
@@ -170,10 +169,12 @@ nnNode' maybePort _ = do
     let myHash    = D.toHashGeneric myAddress
     L.logInfo $ show myHash
     connectToBN myAddress A.bnAddress nodeData
+    L.serving D.Rpc port $ do
+        L.method  $  getRoutingMessages   nodeData
 
     L.serving D.Rpc (port - 1000) $ do
         L.method  $  connectMapRequest    nodeData
-        L.method  $  getRoutingMessages   nodeData
+        -- L.method  $  getRoutingMessages   nodeData
         L.method     rpcPingPong
 
     L.serving D.Udp port $ do

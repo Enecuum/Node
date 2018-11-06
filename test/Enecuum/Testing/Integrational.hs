@@ -113,7 +113,7 @@ waitForNode :: D.Address -> IO ()
 waitForNode address = go 0
     where
         go :: D.BlockNumber -> IO ()
-        go 50 = error "Node is not ready."
+        go 50 = error $ "Node " +|| address ||+ "is not ready."
         go n = do
             threadDelay $ 1000 * 100
             ePong :: Either Text A.Pong <- makeIORpcRequest address A.Ping
