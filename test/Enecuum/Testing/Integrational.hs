@@ -3,23 +3,23 @@
 
 module Enecuum.Testing.Integrational where
 
+import           Control.Concurrent                           (killThread)
 import           Data.Aeson
 import qualified Data.ByteString.Lazy                         as LBS
 import qualified Data.Map                                     as M
-import           Control.Concurrent                           (killThread)
-import qualified System.Directory                             as Dir
-import qualified System.FilePath                              as Dir
-import           System.FilePath                              as FP ((</>))
 import qualified "rocksdb-haskell" Database.RocksDB           as Rocks
+import qualified System.Directory                             as Dir
+import           System.FilePath                              as FP ((</>))
+import qualified System.FilePath                              as Dir
 
 import           Enecuum.Assets.Nodes.Client                  (ClientNode)
-import qualified Enecuum.Assets.Nodes.Messages                as A
+import qualified Enecuum.Assets.Scenarios                     as A
 import qualified Enecuum.Config                               as Cfg
 import qualified Enecuum.Core.Lens                            as Lens
 import qualified Enecuum.Core.RLens                           as RLens
-import qualified Enecuum.Framework.RLens                      as RLens
 import qualified Enecuum.Domain                               as D
 import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
+import qualified Enecuum.Framework.RLens                      as RLens
 import           Enecuum.Interpreters                         (runNodeDefinitionL)
 import qualified Enecuum.Language                             as L
 import           Enecuum.Prelude
