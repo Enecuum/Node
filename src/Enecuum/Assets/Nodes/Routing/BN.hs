@@ -85,7 +85,7 @@ bnNode' _ = do
     nodeData <- initBN
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.serving D.Rpc A.bnNodePort $ do
-        L.method  $ methodStopNode nodeData
+        L.method  $ handleStopNode nodeData
 
         -- routing
         L.method  $ acceptNewNode       nodeData
@@ -100,5 +100,5 @@ bnNode' _ = do
         deadNodes <- pingConnects =<< L.readVarIO (nodeData ^. netNodes)
         L.atomically $ forM_ deadNodes $ \hash ->
             L.modifyVar (nodeData ^. netNodes) $ removeFromMap hash
-    
+
     L.awaitNodeFinished nodeData

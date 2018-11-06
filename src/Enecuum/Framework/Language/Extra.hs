@@ -119,3 +119,10 @@ awaitNodeForever = L.scenario $ L.atomically $ do
     xVar <- L.newVar (1 :: Int)
     x <- L.readVar xVar
     when (x == 1) L.retry
+
+-- | Resumes when some external process changes signalVar to True.
+-- Returns this var to False immediately.
+awaitSignal :: (Monad m, L.StateIO m) => D.StateVar Bool -> m ()
+awaitSignal signalVar = do
+    L.atomically $ unlessM (L.readVar signalVar) L.retry
+    L.writeVarIO signalVar False

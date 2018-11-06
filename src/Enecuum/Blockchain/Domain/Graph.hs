@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DuplicateRecordFields #-}
--- TODO: this is copy-paste from tests with little changes.
 
 module Enecuum.Blockchain.Domain.Graph where
 
@@ -34,4 +33,3 @@ initGraph = do
     graph <- initHGraph
     runHGraphIO graph $ L.newNode $ KBlockContent D.genesisKBlock
     pure graph
-

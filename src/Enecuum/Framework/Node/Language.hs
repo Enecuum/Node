@@ -11,7 +11,7 @@ import qualified Enecuum.Core.Language                    as L
 import qualified Enecuum.Framework.State.Language         as L
 import qualified Enecuum.Framework.Networking.Language    as L
 import qualified Enecuum.Framework.Domain.Networking      as D
-import qualified Enecuum.Core.Types                       as T
+import qualified Enecuum.Core.Types                       as D
 import           Enecuum.Framework.Handler.Network.Language
 import           Language.Haskell.TH.MakeFunctor
 
@@ -24,14 +24,19 @@ data NodeF next where
     -- | Eval core effect.
     EvalCoreEffectNodeF :: L.CoreEffect a -> (a -> next) -> NodeF next
     -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
-    EvalGraphIO :: (Serialize c, T.StringHashable c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) x -> (x -> next) -> NodeF next
-    NewGraph  :: (Serialize c, T.StringHashable c) => (T.TGraph c -> next) -> NodeF next
+    EvalGraphIO :: (Serialize c, D.StringHashable c) => D.TGraph c -> Free (L.HGraphF (D.TNodeL c)) x -> (x -> next) -> NodeF next
+    -- | Create new graph instance.
+    NewGraph  :: (Serialize c, D.StringHashable c) => (D.TGraph c -> next) -> NodeF next
     -- | Open connection to the node.
     OpenTcpConnection :: D.Address -> NetworkHandlerL D.Tcp NodeL () -> (D.Connection D.Tcp -> next) -> NodeF next
     OpenUdpConnection :: D.Address -> NetworkHandlerL D.Udp NodeL () -> (D.Connection D.Udp -> next) -> NodeF next
     -- | Close existing connection.
     CloseTcpConnection :: D.Connection D.Tcp -> (() -> next) -> NodeF  next
     CloseUdpConnection :: D.Connection D.Udp -> (() -> next) -> NodeF  next
+    -- | Create database with config.
+    InitDatabase :: D.DBConfig db -> (D.DBResult (D.Storage db) -> next) -> NodeF next
+    -- | Eval database.
+    EvalDatabase :: D.Storage db -> L.DatabaseL db a -> (a -> next) -> NodeF next
 
 type NodeL = Free NodeF
 
@@ -49,6 +54,18 @@ evalNetworking newtorking = liftF $ EvalNetworking newtorking id
 -- | Eval core effect.
 evalCoreEffectNodeF :: L.CoreEffect a -> NodeL a
 evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
+
+-- | Init database with the options passed for the specific storage type.
+initDatabase :: D.DBConfig db -> NodeL (D.DBResult (D.Storage db))
+initDatabase config = liftF $ InitDatabase config id
+
+-- | Eval database.
+evalDatabase :: D.Storage db -> L.DatabaseL db a -> NodeL a
+evalDatabase db script = liftF $ EvalDatabase db script id
+
+-- | Eval database.
+withDatabase :: D.Storage db -> L.DatabaseL db a -> NodeL a
+withDatabase = evalDatabase
 
 withConnection
     :: (Monad m, Connection m con)
@@ -78,10 +95,10 @@ instance L.SendUdp NodeL where
     notify conn = evalNetworking . L.notify conn
 
 -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
-evalGraphIO :: (T.StringHashable c, Serialize c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) a -> NodeL a
+evalGraphIO :: (D.StringHashable c, Serialize c) => D.TGraph c -> Free (L.HGraphF (D.TNodeL c)) a -> NodeL a
 evalGraphIO g graphAction = liftF $ EvalGraphIO g graphAction id
 
-newGraph :: (Serialize c, T.StringHashable c) => NodeL (T.TGraph c)
+newGraph :: (Serialize c, D.StringHashable c) => NodeL (D.TGraph c)
 newGraph = liftF $ NewGraph id
 
 instance L.IOL NodeL where

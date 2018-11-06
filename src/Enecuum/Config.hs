@@ -8,6 +8,7 @@ import           Enecuum.Prelude
 
 import qualified Data.ByteString.Lazy          as L
 import qualified Data.Aeson                    as A
+import           Data.Aeson.Extra              (noLensPrefix)
 
 import           Enecuum.Core.Types.Logger     (LoggerConfig(..))
 import           Enecuum.Language              (NodeDefinitionL)
@@ -37,7 +38,7 @@ class Node node where
 -- | Options for ToJSON / FromJSON instances for configs.
 -- These options take care about correct parsing of enum and data types.
 nodeConfigJsonOptions :: A.Options
-nodeConfigJsonOptions = A.defaultOptions
+nodeConfigJsonOptions = noLensPrefix
     { A.unwrapUnaryRecords    = False
     , A.tagSingleConstructors = True
     }

@@ -1,3 +1,5 @@
+{-# LANGUAGE PackageImports #-}
+
 module Enecuum.Framework.NodeDefinition.Interpreter where
 
 import Enecuum.Prelude hiding (fromJust)
@@ -5,11 +7,12 @@ import qualified Data.Map                           as M
 import           Data.Aeson                         as A
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent                 (killThread)
+import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import qualified Network.Socket.ByteString.Lazy     as S
 import qualified Network.Socket                     as S hiding (recv)
 import           Enecuum.Framework.Networking.Internal.Tcp.Server
-import           Enecuum.Framework.Node.Interpreter (runNodeL, setServerChan)
-import           Enecuum.Framework.Runtime                 (NodeRuntime, getNextId)
+import           Enecuum.Framework.Node.Interpreter        (runNodeL, setServerChan)
+import           Enecuum.Framework.Runtime                 (NodeRuntime, DBHandle, getNextId)
 import qualified Enecuum.Framework.Language                as L
 import qualified Enecuum.Framework.RLens                   as RLens
 import qualified Enecuum.Core.Interpreters                 as Impl
@@ -18,7 +21,7 @@ import qualified Enecuum.Framework.Domain.RPC              as D
 import qualified Enecuum.Framework.Domain.Networking       as D
 import qualified Enecuum.Framework.Domain.Process          as D
 import           Enecuum.Framework.Handler.Rpc.Interpreter
-import qualified Enecuum.Framework.Handler.Network.Interpreter         as Net
+import qualified Enecuum.Framework.Handler.Network.Interpreter    as Net
 import qualified Enecuum.Framework.Networking.Internal.Connection as Con
 import           Enecuum.Framework.Handler.Cmd.Interpreter as Cmd
 import qualified Data.Text as T
@@ -154,9 +157,16 @@ runNodeDefinitionL :: NodeRuntime -> Free L.NodeDefinitionF a -> IO a
 runNodeDefinitionL nodeRt = foldFree (interpretNodeDefinitionL nodeRt)
 
 -- TODO: move it somewhere.
+-- TODO: FIXME: stop network workers
 clearNodeRuntime :: NodeRuntime -> IO ()
 clearNodeRuntime nodeRt = do
-    serverPorts <- M.keys <$> readTVarIO (nodeRt ^. RLens.servers)
-    threadIds <- M.elems <$> readTVarIO (nodeRt ^. RLens.processes)
+    serverPorts <- M.keys  <$> readTVarIO (nodeRt ^. RLens.servers  )
+    threadIds   <- M.elems <$> readTVarIO (nodeRt ^. RLens.processes)
+    databases   <- M.elems <$> readTVarIO (nodeRt ^. RLens.databases)
     mapM_ (runNodeDefinitionL nodeRt . L.stopServing) serverPorts
     mapM_ killThread threadIds
+    mapM_ releaseDB databases
+
+-- TODO: move it somewhere.
+releaseDB :: DBHandle -> IO ()
+releaseDB dbHandle = Rocks.close $ dbHandle ^. RLens.db

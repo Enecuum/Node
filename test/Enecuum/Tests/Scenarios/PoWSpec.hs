@@ -14,7 +14,7 @@ import           Enecuum.Assets.Nodes.Address (graphNodeTransmitterRpcPort)
 
 
 newtype KBlockCheckData = KBlockCheckData
-    { kBlockNumber :: D.StateVar Integer
+    { kBlockNumber :: D.StateVar D.BlockNumber
     }
 
 failMsg :: D.Message

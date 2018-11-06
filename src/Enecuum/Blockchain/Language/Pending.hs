@@ -11,20 +11,26 @@ import qualified Enecuum.Framework.LogState               as Log
 import           Enecuum.Prelude
 
 
--- Check if kblock should be added to graph or pending
+-- | If KBlock is valid, adds it to the graph or to the pending.
+-- If it's not valid (for example, exists already), drops it.
+-- Returns True if KBlock is added somewehere.
 addKBlock :: D.StateVar [Text] -> BlockchainData -> D.KBlock -> L.StateL Bool
 addKBlock logV bData kBlock = do
     topKBlock <- L.getTopKeyBlock logV bData
-    if
-        | L.kBlockIsNext kBlock topKBlock -> do
-            void $ L.addTopKBlock logV bData kBlock
-            let loop = whenM (moveKBlockToGraph logV bData) loop
-            loop
-            pure True
-        | D._number kBlock > D._number topKBlock + 1 -> addBlockToPending logV bData kBlock
-        | otherwise -> pure False
 
--- | Move one block from pending to graph if it is possibly and remove it from pending.
+    let nextBlock    = L.kBlockIsNext kBlock topKBlock
+    let prevBlock    = L.kBlockExists kBlock topKBlock
+    let futureKBlock = not nextBlock && not prevBlock
+
+    case (nextBlock, futureKBlock) of
+        (True, _) -> L.addTopKBlock    logV bData kBlock >> pure True
+        (_, True) -> addBlockToPending logV bData kBlock >> pure True
+        _         -> pure False
+
+processPending :: D.StateVar [Text] -> BlockchainData -> L.NodeL ()
+processPending logV _ = L.atomically $ Log.stateLog logV "Pending is temporarily disabled."
+
+-- | Move one block from pending to graph if possible and remove it from pending.
 --   Return true if function had effect.
 moveKBlockToGraph :: D.StateVar [Text] -> BlockchainData -> L.StateL Bool
 moveKBlockToGraph logV bData = do

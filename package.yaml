@@ -109,6 +109,7 @@ dependencies:
 - silently
 - uuid
 - gd
+- resourcet
 
 library:
   source-dirs: src

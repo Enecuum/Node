@@ -7,7 +7,7 @@
 -- | Lenses for Blockchain domain types.
 module Enecuum.Blockchain.Lens where
 
-import           Control.Lens             ( makeFieldsNoPrefix )
+import           Control.Lens                     (makeFieldsNoPrefix)
 import           Enecuum.Framework.Language.Extra (HasGraph(..))
 import           Enecuum.Blockchain.Domain
 

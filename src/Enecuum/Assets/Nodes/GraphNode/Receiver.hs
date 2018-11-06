@@ -36,10 +36,13 @@ graphSynchro nodeData address = do
 
         GetChainFromToResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromToRequest (curChainLength + 1) otherLength)
         L.logInfo $ "Chain tail received from " +|| (curChainLength + 1) ||+ " to " +|| otherLength ||+ " : " +|| chainTail ||+ "."
+
+        -- TODO: check pending
         L.atomically $ forM_ chainTail (L.addKBlock logV bData)
 
         for_ (init chainTail) $ \kBlock -> do
 
+            -- TODO: check pending
             L.atomically $ void $ L.addKBlock logV bData kBlock
 
             let hash = toHash kBlock
@@ -48,21 +51,25 @@ graphSynchro nodeData address = do
             L.logInfo $ "Mblocks received for kBlock " +|| hash ||+ " : " +|| mBlocks2 ||+ "."
             L.atomically $ forM_ mBlocks2 (L.addMBlock logV bData)
 
+        -- TODO: check pending
         L.atomically $ void $ L.addKBlock logV bData (last chainTail)
     Log.writeLog logV
 
 
 -- | Start of graph node
 graphNodeReceiver :: NodeConfig GraphNode -> L.NodeDefinitionL ()
-graphNodeReceiver _ = do
+graphNodeReceiver nodeCfg = do
     L.nodeTag "graphNodeReceiver"
-    nodeData <- graphNodeInitialization
+    eNodeData <- graphNodeInitialization nodeCfg
+    either L.logError graphNodeReceiver' eNodeData
 
+graphNodeReceiver' :: GraphNodeData -> L.NodeDefinitionL ()
+graphNodeReceiver' nodeData = do
     L.process $ forever $ graphSynchro nodeData graphNodeTransmitterRpcAddress
     L.serving D.Rpc graphNodeReceiverRpcPort $ do
         -- network
         L.method    rpcPingPong
-        L.method  $ methodStopNode nodeData
+        L.method  $ handleStopNode nodeData
 
         -- client interaction
         L.methodE $ getBalance nodeData

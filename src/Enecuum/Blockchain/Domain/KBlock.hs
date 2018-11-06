@@ -12,12 +12,19 @@ import           Data.HGraph.StringHashable (StringHash (..), StringHashable, to
 import           Data.Serialize.Put         (putWord32le, putWord8, runPut)
 import           Enecuum.Prelude
 
+-- TODO: this should be exact time type.
+type BlockTime   = Word32
+type BlockNumber = Word32
+type Nonce       = Word32
+type Solver      = StringHash
+type PrevHash    = StringHash
+
 data KBlock = KBlock
-    { _time      :: Integer
-    , _prevHash  :: StringHash
-    , _number    :: Integer
-    , _nonce     :: Integer
-    , _solver    :: StringHash
+    { _time      :: BlockTime
+    , _prevHash  :: PrevHash
+    , _number    :: BlockNumber
+    , _nonce     :: Nonce
+    , _solver    :: Solver
     -- , _type      :: Int
     } deriving (Eq, Generic, Ord, Read, Show, ToJSON, FromJSON, Serialize)
 
@@ -27,11 +34,17 @@ instance StringHashable KBlock where
 genesisHash :: StringHash
 genesisHash = toHash genesisKBlock
 
-genesisIndicationHash :: IsString a => a
-genesisIndicationHash = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+genesisIndicationHashStr :: IsString a => a
+genesisIndicationHashStr = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 
-genesisSolver :: IsString a => a
-genesisSolver = "EMde81cgGToGrGWSNCqm6Y498qBpjEzRczBbvC5MV2Q="
+genesisIndicationHash :: StringHash
+genesisIndicationHash = StringHash genesisIndicationHashStr
+
+genesisSolverStr :: IsString a => a
+genesisSolverStr = "EMde81cgGToGrGWSNCqm6Y498qBpjEzRczBbvC5MV2Q="
+
+genesisSolverHash :: StringHash
+genesisSolverHash = StringHash genesisSolverStr
 
 kBlockType :: Int
 kBlockType = 0
@@ -39,10 +52,10 @@ kBlockType = 0
 genesisKBlock :: KBlock
 genesisKBlock = KBlock
     { _time      = 0
-    , _prevHash  = StringHash genesisIndicationHash
+    , _prevHash  = genesisIndicationHash
     , _number    = 0
     , _nonce     = 0
-    , _solver    = StringHash genesisSolver
+    , _solver    = genesisSolverHash
     }
 
 calculateKeyBlockHash :: KBlock -> BSI.ByteString
@@ -50,9 +63,9 @@ calculateKeyBlockHash KBlock {..} = Base64.encode . SHA.hash . B.concat $ bstr
   where
     bstr = map runPut
             [ putWord8 (toEnum kBlockType)
-            , putWord32le (fromInteger _number)
-            , putWord32le (fromInteger _time)
-            , putWord32le (fromInteger _nonce)
+            , putWord32le _number
+            , putWord32le _time
+            , putWord32le _nonce
             ]
             ++
             [ fromRight "" $ Base64.decode $ fromStringHash _prevHash

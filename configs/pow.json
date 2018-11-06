@@ -4,7 +4,7 @@
    "nodeConfig":
    {
       "tag":"PoWNodeConfig",
-      "delaysEnabled":true
+      "defaultBlocksDelay":1000000
    },
    "loggerConfig":
    {

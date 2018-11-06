@@ -1,5 +1,7 @@
 ## Node
 
+[![buddy pipeline](https://buddy.enecuum.com/enecuum/node/pipelines/pipeline/19/badge.svg?token=c35be458f2d393a30001acf59f086401a00713eb057ab070050e9855280788bf "buddy pipeline")](https://buddy.enecuum.com/enecuum/node/pipelines/pipeline/19)
+
 P2P node for the main network protocol.
 
 ## Build and Install
@@ -32,14 +34,16 @@ P2P node for the main network protocol.
 
 `stack build --fast`
 
-3. Run tests (optional) 
+3. Run tests (optional)
 
 `stack build --fast --test`
 
 ### Initialize
 
 If you added path to your profile:
+
 `enq-node-haskell initialize ./configs/Client.json`
 
 Or you need to use that instead:
+
 `stack exec enq-node-haskell initialize ./configs/Client.json`

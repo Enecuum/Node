@@ -17,13 +17,13 @@ spec = describe "Routing tests" $ fromHUnitTest $ TestList
 
 
 testRouting :: Test
-testRouting = TestCase $ do
-    startNode Nothing A.clientNode
-    startNode Nothing A.bnNode
+testRouting = TestCase $ withNodesManager $ \mgr -> do
+    startNode Nothing mgr A.clientNode
+    startNode Nothing mgr A.bnNode
     -- waitForNode A.bnAddress
     let ports = [5001..5010]
     forM ports (\port -> do
-        startNode Nothing $ A.nnNode $ Just port
+        startNode Nothing mgr $ A.nnNode $ Just port
         -- waitForNode $ D.Address A.localhost port
         )
     let transmitter = D.Address A.localhost $ head ports
@@ -35,7 +35,4 @@ testRouting = TestCase $ do
     msg :: [Either Text [Text]] <- forM receivers (\port -> makeIORpcRequest (D.Address A.localhost port) $ A.GetRoutingMessages )
     -- print $ msgSend
     print $ msg
-    stopNode A.clientAddress
-    -- stopNode A.bnAddress
-    -- forM ports (\port -> stopNode $ D.Address A.localhost port)
     True `shouldBe` True
