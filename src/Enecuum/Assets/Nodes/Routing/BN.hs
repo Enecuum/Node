@@ -85,6 +85,7 @@ bnNode' _ = do
     nodeData <- initBN
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.serving D.Rpc A.bnNodePort $ do
+        -- network
         L.method  $ handleStopNode nodeData
 
         -- routing
