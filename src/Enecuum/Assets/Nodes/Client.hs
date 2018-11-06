@@ -1,7 +1,8 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveAnyClass         #-}
 
-module Enecuum.Assets.Nodes.Client where
+-- module Enecuum.Assets.Nodes.Client where
+module Enecuum.Assets.Nodes.Client (clientNode, ClientNode(..), NodeConfig (..), Protocol(..)) where
 
 import qualified Data.Aeson                       as J
 import           Data.Aeson.Extra                 (noLensPrefix)
