@@ -8,7 +8,6 @@ module Enecuum.Framework.Node.Language where
 
 import           Enecuum.Prelude
 import qualified Enecuum.Core.Language                    as L
-import qualified Enecuum.Framework.State.Language         as L
 import qualified Enecuum.Framework.Networking.Language    as L
 import qualified Enecuum.Framework.Domain.Networking      as D
 import qualified Enecuum.Core.Types                       as D

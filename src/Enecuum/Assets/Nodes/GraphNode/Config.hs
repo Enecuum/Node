@@ -13,7 +13,7 @@ data GraphNode = GraphNode
 data instance NodeConfig GraphNode = GraphNodeConfig
     { _useDatabase   :: Bool        -- ^ If True, DB will be used to restore the state on the start and dump the state during work.
     , _dbModelName   :: String      -- ^ DB model name. Can be a full path if useEnqHomeDir == False.
-    , _useEnqHomeDir :: Bool        -- ^ When True, ~/home/.enecuum/<dbModelName> path will be used.
+    , _useEnqHomeDir :: Bool        -- ^ When True, ~/.enecuum/<dbModelName> path will be used.
     , _dbOptions     :: D.DBOptions -- ^ DB options.
     , _stopOnDatabaseError :: Bool  -- ^ The node will stop if something wrong with DB model.
     }

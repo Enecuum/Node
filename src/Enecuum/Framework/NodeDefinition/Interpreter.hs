@@ -12,10 +12,12 @@ import qualified Network.Socket.ByteString.Lazy     as S
 import qualified Network.Socket                     as S hiding (recv)
 import           Enecuum.Framework.Networking.Internal.Tcp.Server
 import           Enecuum.Framework.Node.Interpreter        (runNodeL, setServerChan)
-import           Enecuum.Framework.Runtime                 (NodeRuntime, DBHandle, getNextId)
+import           Enecuum.Framework.Runtime                 (NodeRuntime, DBHandle)
 import qualified Enecuum.Framework.Language                as L
 import qualified Enecuum.Framework.RLens                   as RLens
 import qualified Enecuum.Core.Interpreters                 as Impl
+import qualified Enecuum.Core.Runtime                      as Impl (getNextId)
+import qualified Enecuum.Core.RLens                        as RLens
 import qualified Enecuum.Framework.Node.Interpreter        as Impl
 import qualified Enecuum.Framework.Domain.RPC              as D
 import qualified Enecuum.Framework.Domain.Networking       as D
@@ -27,6 +29,10 @@ import           Enecuum.Framework.Handler.Cmd.Interpreter as Cmd
 import qualified Data.Text as T
 import           System.Console.Haskeline
 import           System.Console.Haskeline.History
+
+
+getNextId :: NodeRuntime -> IO Int
+getNextId nodeRt = atomically $ Impl.getNextId $ nodeRt ^. RLens.coreRuntime . RLens.stateRuntime
 
 addProcess :: NodeRuntime -> D.ProcessPtr a -> ThreadId -> IO ()
 addProcess nodeRt pPtr threadId = do
@@ -105,7 +111,7 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
 
 -- TODO: make a separate language and use its interpreter in test runtime too.
 interpretNodeDefinitionL nodeRt (L.ForkProcess action next) = do
-    (pPtr, pVar) <- atomically (getNextId nodeRt) >>= D.createProcessPtr
+    (pPtr, pVar) <- getNextId nodeRt >>= D.createProcessPtr
     threadId <- forkIO $ do
         res <- runNodeL nodeRt action
         atomically $ putTMVar pVar res
