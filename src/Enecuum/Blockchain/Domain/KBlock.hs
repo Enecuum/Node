@@ -72,3 +72,9 @@ calculateKeyBlockHash KBlock {..} = Base64.encode . SHA.hash . B.concat $ bstr
             , fromRight "" $ Base64.decode $ fromStringHash _solver
             ]
 
+data KBlockValidity
+    = NextKBlock      -- ^ KBlock is good, and it's next to the current top
+    | FutureKBlock    -- ^ KBlock is good, and it's from the future (number > curNumber + 1)
+    | PreviousKBlock  -- ^ KBlock is duplicated
+    | ForkedKBlock    -- ^ KBlock number <= curNumber, but we don't have this KBlock in the graph
+    | InvalidKBlock   -- ^ KBlock is bad
