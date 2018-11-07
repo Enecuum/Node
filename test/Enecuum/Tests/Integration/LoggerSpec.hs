@@ -10,7 +10,7 @@ import           Enecuum.Interpreters              (runFileSystemL)
 import           Enecuum.Prelude                   hiding (unpack)
 import           Enecuum.Testing.Integrational     (loadLoggerConfig, testConfigFilePath, testLogFilePath)
 import           System.Directory
-import           System.IO.Silently
+import           System.IO.Silently                (capture)
 import           Test.Hspec
 
 
