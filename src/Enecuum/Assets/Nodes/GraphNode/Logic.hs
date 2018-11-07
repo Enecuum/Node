@@ -78,11 +78,11 @@ acceptKBlock' nodeData kBlock = do
     L.writeVarIO (nodeData ^. checkPendingSignal) kBlockAdded
 
 -- | Accept kBlock
-acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Udp -> L.NodeL ()
+acceptKBlock :: GraphNodeData -> D.KBlock -> connection -> L.NodeL ()
 acceptKBlock nodeData kBlock _ = acceptKBlock' nodeData kBlock
 
 -- | Accept mBlock
-acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Udp -> L.NodeL ()
+acceptMBlock :: GraphNodeData -> D.Microblock -> connection -> L.NodeL ()
 acceptMBlock nodeData mBlock _ = do
     let res@(valid, _, _) = L.verifyMicroblockWithTx mBlock
     unless valid $ printInvalidSignatures res

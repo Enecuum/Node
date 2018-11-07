@@ -13,7 +13,7 @@ import qualified Enecuum.Language              as L
 import qualified Enecuum.Domain                as D
 import           Enecuum.Config
 import qualified Enecuum.Assets.Blockchain.Generation as A
-import           Enecuum.Assets.Nodes.Address (powNodeRpcPort, graphNodeTransmitterUdpAddress)
+import           Enecuum.Assets.Nodes.Address
 import           Data.HGraph.StringHashable (StringHash (..), toHash)
 import qualified Enecuum.Assets.Nodes.Messages as Msgs
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
@@ -54,7 +54,7 @@ kBlockProcess nodeData = do
     L.writeVarIO (nodeData ^. prevNumber) $ prevKBlockNumber + fromIntegral (length kBlocks)
 
     gap <- L.readVarIO $ nodeData ^. blocksDelay
-    for_ kBlocks $ \ kBlock -> L.withConnection D.Udp graphNodeTransmitterUdpAddress $ \conn -> do
+    L.withConnection D.Tcp graphNodeTransmitterTcpAddress $ \conn -> for_ kBlocks $ \ kBlock -> do
             L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
             void $ L.send conn kBlock
             when (gap > 0) $ L.delay gap

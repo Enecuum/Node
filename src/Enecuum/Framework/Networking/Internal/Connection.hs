@@ -31,16 +31,13 @@ tryTakeResponse time feedback = do
         Right b | b -> pure $ Right ()
         _           -> pure $ Left D.ConnectionClosed
 
-sendWithTimeOut :: TMVar (TChan D.Command)
-                         -> D.RawData -> IO (Either D.NetworkError ())
-sendWithTimeOut conn msg = do
+sendWithTimeOut
+    :: TChan D.Command
+    -> D.RawData -> IO (Either D.NetworkError ())
+sendWithTimeOut chan msg = do
     feedback <- newEmptyMVar
-    atomically $ do
-        isEmpty <- isEmptyTMVar conn
-        unless isEmpty $ do
-            chan <- readTMVar conn
-            writeTChan chan $ D.Send msg feedback
-    tryTakeResponse timeoutDelay feedback
+    atomically $ writeTChan chan $ D.Send msg feedback
+    takeTMVar timeoutDelay feedback
 
 class NetworkConnection protocol where
     startServer :: S.PortNumber -> Handlers protocol -> (D.Connection protocol -> D.ConnectionVar protocol -> IO ()) -> (Text -> IO ()) -> IO ServerHandle

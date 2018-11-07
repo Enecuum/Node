@@ -104,32 +104,38 @@ instance ConnectsLens D.Tcp where
 
 closeConnection
     :: (Con.NetworkConnection protocol, Ord k)
-    => TVar (Map k (D.ConnectionVar protocol)) -> k -> IO ()
-closeConnection var addr = atomically $ do
-    m <- readTVar var
-    whenJust (m ^. at addr) $ \con -> do
-        Con.close con
-        modifyTVar var $ M.delete addr
+    => TMVar (Map k (D.ConnectionVar protocol)) -> k -> IO ()
+closeConnection connsVar addr = do
+    conns <- atomically $ takeTMVar connsVar
+    case M.lookup addr conns of
+        Nothing -> atomically $ putTMVar connsVar conns
+        Just conn -> do
+            Con.close conn
+            atomically $ putTMVar connsVar $ M.delete addr conns
 
 openConnection
     :: forall k a1 a2 (a3 :: k).(ConnectsLens a1, Con.NetworkConnection a1)
     => NodeRuntime -> D.Address -> L.NetworkHandlerL a1 L.NodeL a2 -> IO (D.Connection a3)
 openConnection nodeRt addr initScript = do
-    m <- atomically $ newTVar mempty
-    _ <- Net.runNetworkHandlerL m initScript
-    handlers <- readTVarIO m
-    newCon   <- Con.openConnect
-        addr
-        ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
-        (logError' nodeRt)
-    insertConnect (nodeRt ^. connectsLens) addr newCon
-    pure $ D.Connection addr
+    conns <- atomically $ takeTMVar $ nodeRt ^. connectsLens
+    if M.member addr conns
+        then do
+            atomically $ putTMVar (nodeRt ^. connectsLens) conns
+            pure Nothing
+        else do
+            m <- newTVarIO mempty
+            _ <- Net.runNetworkHandlerL m initScript
 
-insertConnect :: Con.NetworkConnection a => TVar (Map D.Address (D.ConnectionVar a)) -> D.Address -> D.ConnectionVar a -> IO ()
-insertConnect m addr newCon = atomically $ do
-    conns <- readTVar m
-    whenJust (conns ^. at addr) Con.close
-    modifyTVar m $ M.insert addr newCon
+            handlers <- readTVarIO m
+
+            newCon   <- Con.openConnect
+                addr
+                ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
+                (logError' nodeRt)
+
+            let newConns = M.insert addr newCon conns
+            atomically $ putTMVar (nodeRt ^. connectsLens) newConns
+            pure $ D.Connection addr
 
 setServerChan :: TVar (Map S.PortNumber (TChan D.ServerComand)) -> S.PortNumber -> TChan D.ServerComand -> STM ()
 setServerChan servs port chan = do

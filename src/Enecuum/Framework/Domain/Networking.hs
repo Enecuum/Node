@@ -26,9 +26,11 @@ newtype Connection a = Connection
     }
     deriving (Show, Eq, Ord, Generic)
 
+type CloseSignal = TVar Bool
+
 data family ConnectionVar a
 data instance ConnectionVar Tcp
-    = TcpConnectionVar (TMVar (TChan Command))
+    = TcpConnectionVar ThreadId CloseSignal (TMVar S.Socket)
 
 data instance ConnectionVar Udp
     = ServerUdpConnectionVar S.SockAddr (TChan SendUdpMsgTo)
