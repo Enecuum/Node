@@ -48,6 +48,6 @@ testPoA = TestCase $ withNodesManager $ \mgr -> do
     _ :: Either Text [D.Microblock] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetMBlocksForKBlockRequest kblockHash
 
     threadDelay $ 1000 * 1000
-    -- Check transaction pending on graph node
+    -- Check transaction pending on graph node, it must to be empty now
     Right txPending :: Either Text [D.Transaction] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
     txPending `shouldBe` []

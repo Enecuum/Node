@@ -19,7 +19,6 @@ spec :: Spec
 spec = describe "Synchronization tests" $ fromHUnitTest $ TestList
     [TestLabel "test net sync" testNodeNet]
 
-
 testNodeNet :: Test
 testNodeNet = TestCase $ withNodesManager $ \mgr -> do
     let graphNodeConfig = A.noDBConfig
