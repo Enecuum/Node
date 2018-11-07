@@ -11,6 +11,8 @@ import           Data.HGraph.StringHashable
 data SuccessMsg = SuccessMsg
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+newtype IsDead = IsDead StringHash
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | Routing messages
 -- | Client

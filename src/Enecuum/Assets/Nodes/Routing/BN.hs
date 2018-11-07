@@ -78,12 +78,25 @@ findNextConnectForMe nodeData (M.NextForMe hash) = do
 bnNode :: L.NodeDefinitionL ()
 bnNode = bnNode' $ BNConfig 42
 
+
+isDeadAccept :: BNNodeData -> M.IsDead -> D.Connection D.Udp -> L.NodeL ()
+isDeadAccept nodeData (M.IsDead hash) connect = do
+    connectMap <- L.readVarIO (nodeData ^. netNodes)
+    let mDeadNodeAddress = findConnectByHash hash connectMap
+    whenJust mDeadNodeAddress $ \(D.Address host port) -> do
+        res :: Either Text M.Pong <- L.makeRpcRequest (D.Address host (port - 1000)) M.Ping
+        when (isLeft res) $ L.atomically $ L.modifyVar (nodeData ^. netNodes) $ removeFromMap hash
+
+
 bnNode' :: NodeConfig BN -> L.NodeDefinitionL ()
 bnNode' _ = do
     L.nodeTag "BN node"
     L.logInfo "Starting of BN node"
     nodeData <- initBN
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
+    L.serving D.Udp (A.bnNodePort - 1000) $
+        L.handler $ isDeadAccept nodeData
+
     L.serving D.Rpc A.bnNodePort $ do
         -- network
         L.method  $ handleStopNode nodeData
@@ -95,11 +108,5 @@ bnNode' _ = do
         L.methodE $ findPreviousConnectForMe nodeData
           -- clockwise direction
         L.methodE $ findNextConnectForMe       nodeData
-
-    L.process $ forever $ do
-        L.delay $ 1000 * 1000
-        deadNodes <- pingConnects =<< L.readVarIO (nodeData ^. netNodes)
-        L.atomically $ forM_ deadNodes $ \hash ->
-            L.modifyVar (nodeData ^. netNodes) $ removeFromMap hash
 
     L.awaitNodeFinished nodeData

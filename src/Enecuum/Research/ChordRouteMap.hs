@@ -11,10 +11,13 @@ module Enecuum.Research.ChordRouteMap
     , findNextForHash
     , findPreviusForHash
     , fromChordRouteMap
+    , nextForHello
+    , findConnectByHash
     ) where
 
 import           Universum
 import qualified Data.Map                      as M
+import qualified Data.List                     as List
 import           Data.HGraph.StringHashable
 
 -- | Route map for chord algorithm.
@@ -41,6 +44,9 @@ addToMap hash e = M.insert (hashToWord64 hash) (hash, e)
 -- | Remove elem from route map.
 removeFromMap :: Ord a => StringHash -> ChordRouteMap a -> ChordRouteMap a
 removeFromMap hash = M.delete (hashToWord64 hash)
+
+findConnectByHash :: Ord a => StringHash -> ChordRouteMap a -> Maybe a
+findConnectByHash hash rm = snd <$> M.lookup (hashToWord64 hash) rm
 
 -- | Find all fingers in rout map by straight formula.
 findInMap :: Ord a => StringHash -> ChordRouteMap a -> [(StringHash, a)]
@@ -90,3 +96,17 @@ findNextResender hash rm = if isJust bottomElem then bottomElem else topElem
         bottomElem = snd <$> M.lookupLE elemKey  rm
         topElem    = snd <$> M.lookupLE maxBound rm
         elemKey    = hashToWord64 hash
+
+nextForHello :: Ord a => StringHash -> StringHash -> ChordRouteMap a -> Maybe a
+nextForHello myHash senderHash rm = case findNextResender senderHash rm of
+    Just (nextHash, address)
+        | hashCompare [myHash, nextHash, senderHash] -> pure address
+        | hashCompare [nextHash, senderHash, myHash] -> pure address
+        | hashCompare [senderHash, myHash, nextHash] -> pure address
+    _ -> Nothing
+    where
+        (.>.) :: StringHash -> StringHash -> Bool
+        h1 .>. h2 = hashToWord64 h1 > hashToWord64 h2
+
+        hashCompare :: [StringHash] -> Bool
+        hashCompare = (== 1) . List.length . List.groupBy (.>.)

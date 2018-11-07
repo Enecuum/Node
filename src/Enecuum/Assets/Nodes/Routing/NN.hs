@@ -14,6 +14,9 @@ import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude
 import           Enecuum.Research.ChordRouteMap
 
+type MyNodeHash      = D.StringHash
+type SenderNodeHash  = D.StringHash
+
 data NNNodeData = NNNodeData
     { _status          :: D.StateVar L.NodeStatus
     , _netNodes        :: D.StateVar (ChordRouteMap D.Address)
@@ -66,17 +69,17 @@ awaitPort nodeData = L.atomically $ do
         Just port -> pure port
         Nothing   -> L.retry
 
-connectToBN :: D.Address -> D.Address -> NNNodeData -> L.NodeDefinitionL ()
+connectToBN :: D.MyAddress -> D.Address -> NNNodeData -> L.NodeDefinitionL ()
 connectToBN myAddress bnAddress nodeData = do
-    let hash = D.toHashGeneric myAddress
+    let myHash = D.toHashGeneric myAddress
     -- TODO add proccesing of error
-    _ :: Either Text M.SuccessMsg <- L.scenario $ L.makeRpcRequest bnAddress $ M.Hello hash myAddress
+    _ :: Either Text M.SuccessMsg <- L.scenario $ L.makeRpcRequest bnAddress $ M.Hello myHash myAddress
     L.scenario $ do
-        connecRequests 63 nodeData bnAddress hash myAddress
-        nextRequest nodeData bnAddress hash myAddress
-        previusRequest bnAddress hash myAddress
+        connecRequests 63 nodeData bnAddress myHash myAddress
+        nextRequest nodeData bnAddress myHash myAddress
+        sendHelloToPrevius nodeData myHash myAddress
 
-connecRequests :: Word64 -> NNNodeData -> D.Address -> D.StringHash -> D.Address -> L.NodeL ()
+connecRequests :: Word64 -> NNNodeData -> D.Address -> MyNodeHash -> D.MyAddress -> L.NodeL ()
 connecRequests i nodeData bnAddress hash myAddress = when (i > 0) $ do
     maybeAddress :: Either Text (D.StringHash, D.Address) <- L.makeRpcRequest bnAddress $ M.ConnectRequest hash i
     case maybeAddress of
@@ -86,27 +89,34 @@ connecRequests i nodeData bnAddress hash myAddress = when (i > 0) $ do
         _ -> pure ()
 
 nextRequest :: NNNodeData -> D.Address -> D.StringHash -> D.Address -> L.NodeL ()
-nextRequest nodeData bnAddress hash myAddress = do
+nextRequest nodeData bnAddress myHash myAddress = do
     nextForMe :: Either Text (D.StringHash, D.Address) <-
-        L.makeRpcRequest bnAddress $ M.NextForMe hash
+        L.makeRpcRequest bnAddress $ M.NextForMe myHash
     case nextForMe of
         Right (recivedHash, address) | myAddress /= address ->
             L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap recivedHash address)
         _ -> pure ()
 
-previusRequest :: D.Address -> D.StringHash -> D.Address -> L.NodeL () 
-previusRequest bnAddress hash myAddress = do
-    previousForMe :: Either Text (D.StringHash, D.Address) <-
-        L.makeRpcRequest bnAddress $ M.PreviousForMe hash
-    case previousForMe of
-        Right (_, address) | myAddress /= address ->
-            void $ L.notify address $ M.Hello hash myAddress
-        _ -> pure ()
+sendHelloToPrevius :: NNNodeData -> D.StringHash -> D.Address -> L.NodeL () 
+sendHelloToPrevius nodeData myHash myAddress = do
+    connectMap <- L.readVarIO (nodeData ^. netNodes)
+    let mAddress = findNextForHash myHash connectMap
+    whenJust mAddress $ \(_, address) ->
+        void $ L.notify address $ M.Hello myHash myAddress
 
-acceptHello :: NNNodeData -> M.Hello -> D.Connection D.Udp -> L.NodeL ()
-acceptHello nodeData (M.Hello hash address) con = do
-    L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap hash address)
+acceptHello :: NNNodeData -> MyNodeHash -> M.Hello -> D.Connection D.Udp -> L.NodeL ()
+acceptHello nodeData myHash (M.Hello senderHash senderAddress) con = do
     L.close con
+    connectMap <- L.readVarIO (nodeData ^. netNodes)
+    let nextAddres = nextForHello myHash senderHash connectMap
+    
+    whenJust nextAddres $ \reciverAddress ->
+        void $ L.notify reciverAddress $ M.Hello senderHash senderAddress
+    
+    unless (isJust nextAddres) $
+        L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap senderHash senderAddress)
+    
+
 
 acceptConnectResponse :: NNNodeData -> D.Address -> M.ConnectResponse -> D.Connection D.Udp -> L.NodeL ()
 acceptConnectResponse nodeData myAddress (M.ConnectResponse hash address) con = do
@@ -198,7 +208,7 @@ nnNode' maybePort _ = do
         L.method     rpcPingPong
 
     L.serving D.Udp port $ do
-        L.handler $ acceptHello           nodeData
+        L.handler $ acceptHello           nodeData myHash
         L.handler $ acceptConnectResponse nodeData myAddress
         L.handler $ acceptNextForYou      nodeData myHash
         L.handler $ acceptSendTo          nodeData myHash
@@ -214,11 +224,14 @@ nnNode' maybePort _ = do
     L.process $ forever $ do
         L.delay $ 1000 * 1000
         deadNodes <- pingConnects =<< L.readVarIO (nodeData ^. netNodes)
-        L.atomically $ forM_ deadNodes $ \hash ->
-            L.modifyVar (nodeData ^. netNodes) $ removeFromMap hash
+        forM_ deadNodes $ \hash -> do
+            L.atomically $ L.modifyVar (nodeData ^. netNodes) $ removeFromMap hash
+            let D.Address bnHost bnPort = A.bnAddress
+            L.notify (D.Address bnHost (bnPort - 1000)) $ M.IsDead hash
+
 
     L.process $ forever $ do
         L.delay $ 1000 * 1000
-        previusRequest A.bnAddress myHash myAddress
+        sendHelloToPrevius nodeData myHash myAddress
 
     L.awaitNodeFinished nodeData

@@ -15,6 +15,9 @@ import           Control.Concurrent.STM.TChan (TChan)
 import           Network.Socket
 import qualified Network.Socket as S hiding (recv)
 
+type MyAddress       = Address
+type SennderAddress  = Address
+type ReceiverAddress = Address
 
 data Udp = Udp
 data Tcp = Tcp
