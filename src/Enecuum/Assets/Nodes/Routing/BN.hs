@@ -23,7 +23,7 @@ data BN = BN
     deriving (Show, Generic)
 
 data instance NodeConfig BN = BNConfig
-    { dummyOptionBN :: Int
+    { _dummyOptionBN :: Int
     }
     deriving (Show, Generic)
 

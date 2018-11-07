@@ -26,7 +26,7 @@ data NN = NN
     deriving (Show, Generic)
 
 data instance NodeConfig NN = NNConfig
-    { dummyOption :: Int
+    { _dummyOption :: Int
     }
     deriving (Show, Generic)
 
