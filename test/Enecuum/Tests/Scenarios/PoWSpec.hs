@@ -1,66 +1,41 @@
 module Enecuum.Tests.Scenarios.PoWSpec where
 
-import Enecuum.Prelude
-
+import qualified Data.Map                             as M
+import qualified Enecuum.Assets.Blockchain.Generation as A
+import qualified Enecuum.Assets.Scenarios             as A
+import qualified Enecuum.Domain                       as D
+import qualified Enecuum.Interpreters                 as I
+import qualified Enecuum.Language                     as L
+import           Enecuum.Prelude
+import qualified Enecuum.Runtime                      as R
+import           Enecuum.Testing.Integrational
 import           Test.Hspec
-
-import qualified Enecuum.Language as L
-import qualified Enecuum.Blockchain.Lens as Lens
-import qualified Enecuum.Domain as D
-
-import           Enecuum.Assets.Nodes.Messages (SuccessMsg (..))
-
-import           Enecuum.Assets.Nodes.Address (graphNodeTransmitterRpcPort)
-
-
-newtype KBlockCheckData = KBlockCheckData
-    { kBlockNumber :: D.StateVar D.BlockNumber
-    }
-
-failMsg :: D.Message
-failMsg = "Fail."
-
-successMsg :: D.Message
-successMsg = "Ok."
-
-acceptKBlock :: KBlockCheckData -> D.KBlock -> L.NodeL (Either Text SuccessMsg)
-acceptKBlock (KBlockCheckData numVar) kBlock = do
-    n <- L.atomically $ do
-        n <- L.readVar numVar
-        L.writeVar numVar $ n + 1
-        pure n
-    when (n /= kBlock ^. Lens.number) $ L.logInfo failMsg
-    when (n == kBlock ^. Lens.number) $ L.logInfo successMsg
-    pure $ Right SuccessMsg
-
-powBlockAcceptorNode :: L.NodeDefinitionL ()
-powBlockAcceptorNode = do
-    nodData <- KBlockCheckData <$> (L.scenario $ L.atomically $ L.newVar 1)
-    L.serving D.Rpc graphNodeTransmitterRpcPort $ L.methodE $ acceptKBlock nodData
+import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
+import           Test.HUnit
 
 spec :: Spec
-spec = describe "PoW node test" $ do
-    it "fake test for PoW" $ True `shouldBe` True
-{-
-  it "PoW node test, 1 iteration, in order" $ do
-    runtime <- createTestRuntime
+spec = describe "PoW and graph node interaction" $ fromHUnitTest $ TestList
+    [ TestLabel "Accept kblocks produced in order"        $ testAcceptKblock A.InOrder
+    , TestLabel "Accept kblocks produced in random order" $ testAcceptKblock A.RandomOrder]
 
-    _ :: NodeRuntime <- startNode runtime graphNodeTransmitterRpcAddress powBlockAcceptorNode
-    powNodeRuntime   :: NodeRuntime <- startNode runtime (D.Address "2" 1) $ powNode' False 1
+testAcceptKblock order = TestCase $ withNodesManager $ \mgr -> do
+    void $ startNode Nothing mgr $ A.graphNodeTransmitter A.noDBConfig
+    waitForNode A.graphNodeTransmitterRpcAddress
+    void $ startNode Nothing mgr $ A.powNode' $ A.PoWNodeConfig A.defaultBlocksDelay order
+    waitForNode A.powNodeRpcAddress
 
-    let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
-    msgs <- readTVarIO tMsgs
-    length (filter (== failMsg) msgs) `shouldBe` 0
-    length (filter (== successMsg) msgs) `shouldBe` 5
+    -- Ask pow node to generate n kblocks
+    let timeGap = 0
+    let kblockCount = 1
+    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
+    -- waitForBlocks 1 A.graphNodeTransmitterRpcAddress
 
-  it "PoW node test, 2 iterations, in order" $ do
-    runtime <- createTestRuntime
+    threadDelay $ 1000 * 5000
+    -- Check that last kblock exists
+    Right kBlock1 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
+    print kBlock1
 
-    _ :: NodeRuntime <- startNode runtime graphNodeTransmitterRpcAddress powBlockAcceptorNode
-    powNodeRuntime   :: NodeRuntime <- startNode runtime (D.Address "2" 1) $ powNode' False 2
-
-    let tMsgs = runtime ^. RLens.loggerRuntime . RLens.messages
-    msgs <- readTVarIO tMsgs
-    length (filter (== failMsg) msgs) `shouldBe` 0
-    length (filter (== successMsg) msgs) `shouldBe` 10
--}
+    -- Check kblock pending
+    Right kblocks :: Either Text D.KBlockPending <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetKBlockPending
+    print kblocks
+    (length $ M.toList kblocks) `shouldBe` (fromIntegral kblockCount)

@@ -4,7 +4,6 @@ import qualified Data.Map                             as M
 import qualified Enecuum.Assets.Blockchain.Generation as A
 import qualified Enecuum.Assets.Scenarios             as A
 import qualified Enecuum.Domain                       as D
-import           Enecuum.Interpreters                 (runNodeDefinitionL)
 import qualified Enecuum.Interpreters                 as I
 import qualified Enecuum.Language                     as L
 import           Enecuum.Prelude
@@ -34,7 +33,7 @@ testPoA = TestCase $ withNodesManager $ \mgr -> do
     Right txPending :: Either Text [D.Transaction] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
     (sort txPending) `shouldBe` (sort transactions)
 
-    -- Ask pow node generate n kblock
+    -- Ask pow node to generate n kblocks
     let timeGap = 0
     let kblockCount = 1
     _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
@@ -42,6 +41,7 @@ testPoA = TestCase $ withNodesManager $ \mgr -> do
     threadDelay $ 1000 * 1000
     -- Check kblock pending
     Right kblocks :: Either Text D.KBlockPending <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetKBlockPending
+    print kblocks
     let kblockHash = D.toHash $ (map snd $ M.toList kblocks) !! 0
 
     -- Microblock on graph node received from poa

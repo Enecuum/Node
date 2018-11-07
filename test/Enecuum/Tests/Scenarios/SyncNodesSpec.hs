@@ -23,7 +23,7 @@ testNodeNet :: Test
 testNodeNet = TestCase $ withNodesManager $ \mgr -> do
     let graphNodeConfig = A.noDBConfig
     let poaNodeConfig   = A.PoANodeConfig 0
-
+    -- Start nodes
     void $ startNode Nothing mgr $ A.graphNodeTransmitter graphNodeConfig
     waitForNode A.graphNodeTransmitterRpcAddress
 
@@ -37,19 +37,22 @@ testNodeNet = TestCase $ withNodesManager $ \mgr -> do
     waitForNode A.graphNodeReceiverRpcAddress
 
     threadDelay $ 1000 * 1000
-
-    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration 2 (1000 * 500)
+    -- Ask pow node to generate n kblocks
+    let timeGap = (1000 * 500)
+    let kblockCount = 2
+    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
 
     waitForBlocks 2 A.graphNodeTransmitterRpcAddress
     waitForBlocks 2 A.graphNodeReceiverRpcAddress
 
     threadDelay $ 1000 * 1000
-
+    -- Check kblock synchronization
     Right kBlock1 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
     Right kBlock2 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeReceiverRpcAddress    A.GetLastKBlock
 
     kBlock1 `shouldBe` kBlock2
 
+    -- Check ledger synchronization
     Right (A.GetMBlocksForKBlockResponse mblocksPrev1) <- makeIORpcRequest A.graphNodeTransmitterRpcAddress
         $ A.GetMBlocksForKBlockRequest (kBlock1 ^. Lens.prevHash)
     Right (A.GetMBlocksForKBlockResponse mblocksPrev2) <- makeIORpcRequest A.graphNodeReceiverRpcAddress

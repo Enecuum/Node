@@ -1,20 +1,22 @@
+{-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE RecordWildCards       #-}
 
 module Enecuum.Assets.Blockchain.Generation where
 
-import           Data.HGraph.StringHashable  (StringHash (..), toHash)
-import           Data.List                   (delete)
+import           Data.HGraph.StringHashable       (StringHash (..), toHash)
+import           Data.List                        (delete)
 import           Enecuum.Assets.Blockchain.Wallet
 import           Enecuum.Blockchain.Domain
-import qualified Enecuum.Blockchain.Lens     as Lens
-import qualified Enecuum.Language            as L
-import qualified Enecuum.Domain              as D
-import           Enecuum.Prelude             hiding (Ordering)
+import qualified Enecuum.Blockchain.Lens          as Lens
+import qualified Enecuum.Domain                   as D
+import qualified Enecuum.Language                 as L
+import           Enecuum.Prelude                  hiding (Ordering)
 
 -- | Order for key blocks
 data Ordering = InOrder | RandomOrder
-    deriving (Show)
+    deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 
 -- | WalletSource for transaction generation (Hardcoded - for demo purpose, Generated - for production)
 data WalletSource = Generated | Hardcoded
@@ -167,4 +169,4 @@ generateBogusSignedMicroblock :: (Monad m, L.ERandom m) => KBlock -> [Transactio
 generateBogusSignedMicroblock kBlock tx = do
     Microblock {..} <- genMicroblock kBlock tx
     let genMbSign = signMicroblock _keyBlock _transactions _publisher
-    generateBogusSignedSomething genMbSign  
+    generateBogusSignedSomething genMbSign

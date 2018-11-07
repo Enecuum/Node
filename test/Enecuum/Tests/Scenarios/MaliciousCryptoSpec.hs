@@ -15,10 +15,9 @@ import           Test.HUnit
 
 spec :: Spec
 spec = describe "Test invalid signature" $ fromHUnitTest $ TestList
-    [
-        TestLabel "Reject invalid microblock"  testInvalidMicroblock
-      , TestLabel "Reject invalid transaction" testInvalidTransaction
-      ]
+    [ TestLabel "Reject invalid microblock"  testInvalidMicroblock
+    , TestLabel "Reject invalid transaction" testInvalidTransaction
+    ]
 
 testInvalidTransaction :: Test
 testInvalidTransaction = TestCase $ withNodesManager $ \mgr -> do
@@ -54,7 +53,7 @@ testInvalidMicroblock = TestCase $ withNodesManager $ \mgr -> do
     Right txPending :: Either Text [D.Transaction] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
     (sort txPending) `shouldBe` (sort transactions)
 
-    -- Ask pow node generate n kblock
+    -- Ask pow node to generate n kblocks
     let timeGap = 0
     let kblockCount = 1
     _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
@@ -64,7 +63,7 @@ testInvalidMicroblock = TestCase $ withNodesManager $ \mgr -> do
     Right kblocks :: Either Text D.KBlockPending <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetKBlockPending
     let kblockHash = D.toHash $ (map snd $ M.toList kblocks) !! 0
 
-    -- Microblock on graph node received from poa
+    -- Microblock was rejected on graph node (received from poa)
     Left _ :: Either Text [D.Microblock] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetMBlocksForKBlockRequest kblockHash
 
     threadDelay $ 1000 * 1000

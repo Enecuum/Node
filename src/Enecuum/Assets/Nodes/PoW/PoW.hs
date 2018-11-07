@@ -7,7 +7,7 @@
 module Enecuum.Assets.Nodes.PoW.PoW where
 
 import           Enecuum.Prelude
-import qualified Data.Aeson as A
+import qualified Data.Aeson as J
 
 import qualified Enecuum.Language              as L
 import qualified Enecuum.Domain                as D
@@ -39,8 +39,8 @@ instance Node PoWNode where
         deriving (Show, Generic)
     getNodeScript _ = powNode'
 
-instance ToJSON   (NodeScenario PoWNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeScenario PoWNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario PoWNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario PoWNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
 kBlockProcess :: PoWNodeData -> L.NodeL ()
 kBlockProcess nodeData = do
@@ -75,7 +75,7 @@ defaultBlocksDelay :: BlocksDelay
 defaultBlocksDelay = 1000 * 1000
 
 powNode :: L.NodeDefinitionL ()
-powNode = powNode' $ PoWNodeConfig defaultBlocksDelay
+powNode = powNode' $ PoWNodeConfig defaultBlocksDelay A.InOrder 
 
 powNode' :: NodeConfig PoWNode -> L.NodeDefinitionL ()
 powNode' cfg = do

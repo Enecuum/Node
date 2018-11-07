@@ -4,7 +4,8 @@
    "nodeConfig":
    {
       "tag":"PoWNodeConfig",
-      "defaultBlocksDelay":1000000
+      "defaultBlocksDelay":1000000,
+      "kblocksOrder": "InOrder"
    },
    "loggerConfig":
    {
