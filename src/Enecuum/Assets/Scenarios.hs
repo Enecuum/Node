@@ -17,3 +17,6 @@ import Enecuum.Assets.Nodes.GraphNode.Definition as X
 
 import Enecuum.Assets.Nodes.Address                 as X
 import Enecuum.Assets.Nodes.Messages                as X
+
+import Enecuum.Assets.Nodes.TestClient as X
+import Enecuum.Assets.Nodes.TestServer as X

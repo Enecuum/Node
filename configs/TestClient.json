@@ -1,0 +1,17 @@
+{  
+   "node":"TestClient",
+   "nodeScenario":"TestClientS",
+   "nodeConfig":
+   {
+      "tag":"TestClientConfig",
+      "dummyOptionTestClient":0
+   },
+   "loggerConfig":
+   {
+      "logFilePath":"/tmp/log/app.log",
+      "format":"$prio $loggername: $msg",
+      "logToConsole":true,
+      "logToFile": true,
+      "level":"Debug"
+   }
+}
