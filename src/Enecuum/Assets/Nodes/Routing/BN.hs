@@ -49,13 +49,6 @@ acceptNewNode nodeData (M.Hello hash address) = do
         L.modifyVar (nodeData ^. netNodes) $ addToMap hash address
     pure M.SuccessMsg
 
-findPreviousConnectForMe :: BNNodeData -> M.PreviousForMe -> L.NodeL (Either Text (D.StringHash, D.Address))
-findPreviousConnectForMe nodeData (M.PreviousForMe hash) = do
-    address <- L.atomically $ do
-        connectMap <- L.readVar (nodeData ^. netNodes)
-        pure $ findPreviusForHash hash connectMap
-    pure $ maybe (Left "Connection map is empty.") Right address
-
 findConnect :: BNNodeData -> M.ConnectRequest -> L.NodeL (Either Text (D.StringHash, D.Address))
 findConnect nodeData (M.ConnectRequest hash i) = do
     address <- L.atomically $ do
@@ -67,7 +60,6 @@ findConnect nodeData (M.ConnectRequest hash i) = do
             connectMap
     pure $ maybe (Left "Connection map is empty.") Right address
 
-
 findNextConnectForMe :: BNNodeData -> M.NextForMe -> L.NodeL (Either Text (D.StringHash, D.Address))
 findNextConnectForMe nodeData (M.NextForMe hash) = do
     address <- L.atomically $ do
@@ -78,7 +70,6 @@ findNextConnectForMe nodeData (M.NextForMe hash) = do
 bnNode :: L.NodeDefinitionL ()
 bnNode = bnNode' $ BNConfig 42
 
-
 isDeadAccept :: BNNodeData -> M.IsDead -> D.Connection D.Udp -> L.NodeL ()
 isDeadAccept nodeData (M.IsDead hash) connect = do
     connectMap <- L.readVarIO (nodeData ^. netNodes)
@@ -86,7 +77,6 @@ isDeadAccept nodeData (M.IsDead hash) connect = do
     whenJust mDeadNodeAddress $ \(D.Address host port) -> do
         res :: Either Text M.Pong <- L.makeRpcRequest (D.Address host (port - 1000)) M.Ping
         when (isLeft res) $ L.atomically $ L.modifyVar (nodeData ^. netNodes) $ removeFromMap hash
-
 
 bnNode' :: NodeConfig BN -> L.NodeDefinitionL ()
 bnNode' _ = do
@@ -104,8 +94,7 @@ bnNode' _ = do
         -- routing
         L.method  $ acceptNewNode       nodeData
         L.methodE $ findConnect         nodeData
-          -- counterclockwise direction
-        L.methodE $ findPreviousConnectForMe nodeData
+
           -- clockwise direction
         L.methodE $ findNextConnectForMe       nodeData
 

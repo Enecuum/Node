@@ -113,10 +113,8 @@ acceptHello nodeData myHash (M.Hello senderHash senderAddress) con = do
     whenJust nextAddres $ \reciverAddress ->
         void $ L.notify reciverAddress $ M.Hello senderHash senderAddress
     
-    unless (isJust nextAddres) $
-        L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap senderHash senderAddress)
+    L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap senderHash senderAddress)
     
-
 
 acceptConnectResponse :: NNNodeData -> D.Address -> M.ConnectResponse -> D.Connection D.Udp -> L.NodeL ()
 acceptConnectResponse nodeData myAddress (M.ConnectResponse hash address) con = do
