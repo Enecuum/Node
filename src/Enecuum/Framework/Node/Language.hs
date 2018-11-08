@@ -3,6 +3,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE TypeInType             #-}
+{-# LANGUAGE BangPatterns           #-}
 
 
 module Enecuum.Framework.Node.Language where
@@ -75,13 +76,13 @@ withConnection protocol address f = do
     mCon <- open protocol address $ pure ()
     case mCon of
         Just con -> do 
-            a <- f con
+            !a <- f con
             close con
             pure $ Just a
         Nothing -> pure Nothing
 
 
-listener f = handler (\a conn -> void (close conn) >> f a)
+listener !f = handler (\a conn -> void (close conn) >> f a)
 
 class Connection a con where
     close :: D.Connection con -> a ()

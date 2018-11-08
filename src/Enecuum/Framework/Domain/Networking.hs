@@ -1,5 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveAnyClass         #-}
+{-# LANGUAGE BangPatterns           #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Enecuum.Framework.Domain.Networking where
@@ -27,6 +28,7 @@ newtype Connection a = Connection
     deriving (Show, Eq, Ord, Generic)
 
 type CloseSignal = TVar Bool
+type ClosedSignal = TMVar ()
 
 class ConnectVarData a where
     data family ConnectionVar a
@@ -40,15 +42,15 @@ sockVarIsClosed sockVar = do
 
 instance ConnectVarData Tcp where
     data ConnectionVar Tcp
-        = TcpConnectionVar CloseSignal (TMVar S.Socket)
+        = TcpConnectionVar !CloseSignal !ClosedSignal !(TMVar S.Socket)
 
-    isClosed (TcpConnectionVar _ sockVar) = sockVarIsClosed sockVar
+    isClosed (TcpConnectionVar _ _ sockVar) = sockVarIsClosed sockVar
 
 
 instance ConnectVarData Udp where
     data ConnectionVar Udp
-        = ServerUdpConnectionVar S.SockAddr  (TMVar S.Socket)
-        | ClientUdpConnectionVar CloseSignal (TMVar S.Socket)
+        = ServerUdpConnectionVar !S.SockAddr  !(TMVar S.Socket)
+        | ClientUdpConnectionVar !CloseSignal !(TMVar S.Socket)
 
     isClosed (ServerUdpConnectionVar _ sockVar) = sockVarIsClosed sockVar
     isClosed (ClientUdpConnectionVar _ sockVar) = sockVarIsClosed sockVar

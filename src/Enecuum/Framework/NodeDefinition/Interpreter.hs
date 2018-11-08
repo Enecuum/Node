@@ -45,19 +45,14 @@ startServing nodeRt port initScript = do
     handlers <- readTVarIO m
     let registerConnection (D.Connection addr) connection = do
             connects <- atomically $ takeTMVar (nodeRt ^. Impl.connectsLens)
-            case addr `M.lookup` connects of
-                Just conn -> do
-                    ok <- D.isClosed conn
-                    if ok then do
-                        let newConnectsVar = M.insert addr connection connects
-                        atomically $ putTMVar (nodeRt ^. Impl.connectsLens) newConnectsVar
-                    else atomically $ putTMVar (nodeRt ^. Impl.connectsLens) connects
-                    pure ok
-                Nothing -> do
-                    atomically $ putTMVar (nodeRt ^. Impl.connectsLens) connects
-                    pure True
-
-    s        <- Con.startServer
+            let newConnects = M.insert addr connection connects
+            oldIsDead <- case addr `M.lookup` connects of
+                Just conn -> D.isClosed conn
+                Nothing   -> pure True
+            atomically $ putTMVar (nodeRt ^. Impl.connectsLens) $
+                if oldIsDead then newConnects else connects
+            pure oldIsDead
+    s <- Con.startServer
         port
         ((\f a' b -> Impl.runNodeL nodeRt $ f a' b) <$> handlers)
         registerConnection
