@@ -7,7 +7,7 @@ module Enecuum.Core.Crypto.Language where
 
 import           Control.Monad.Random                hiding (Random, next)
 -- import qualified Data.ByteString.Internal                          as BSI
-import           Enecuum.Blockchain.Domain.Crypto
+import           Enecuum.Core.Crypto.Crypto
 import           Enecuum.Prelude
 import           Language.Haskell.TH.MakeFunctor
 

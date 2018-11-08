@@ -14,7 +14,6 @@ import           System.FilePath                  ((</>))
 
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
-import qualified Enecuum.Framework.LogState       as Log
 import qualified Enecuum.Language                 as L
 import qualified Enecuum.Blockchain.Lens          as Lens
 import qualified Enecuum.Blockchain.DB            as D
@@ -25,7 +24,6 @@ import qualified Enecuum.Assets.System.Directory  as L
 
 data GraphNodeData = GraphNodeData
     { _blockchain          :: D.BlockchainData
-    , _logVar              :: D.StateVar [Text]
     , _status              :: D.StateVar NodeStatus
     , _config              :: NodeConfig GraphNode
     , _db                  :: Maybe D.DBModel
@@ -60,7 +58,7 @@ acceptTransaction nodeData (CreateTransaction tx) = do
             L.logInfo "\nTransaction is accepted"
             L.logInfo "\nAdd transaction to pending "
             let bData = nodeData ^. blockchain
-            L.atomically $ L.modifyVar (bData ^. Lens.transactionPending) ( Map.insert (toHash tx ) tx)
+            L.atomically $ L.modifyVar (bData ^. Lens.transactionPending) (Map.insert (toHash tx ) tx)
             pure $ Right SuccessMsg
         else do
             L.logInfo "Transaction signature is not genuine"
@@ -71,10 +69,8 @@ acceptTransaction nodeData (CreateTransaction tx) = do
 acceptKBlock' :: GraphNodeData -> D.KBlock -> L.NodeL ()
 acceptKBlock' nodeData kBlock = do
     L.logInfo $ "Accepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-    let logV  = nodeData ^. logVar
     let bData = nodeData ^. blockchain
-    kBlockAdded <- L.addKBlock logV bData kBlock
-    Log.writeLog logV
+    kBlockAdded <- L.addKBlock bData kBlock
     L.writeVarIO (nodeData ^. checkPendingSignal) kBlockAdded
 
 -- | Accept kBlock
@@ -88,15 +84,13 @@ acceptMBlock nodeData mBlock _ = do
     unless valid $ printInvalidSignatures res
     when valid $ do
         L.logInfo $ "Microblock " +|| toHash mBlock ||+ " is accepted."
-        let logV  = nodeData ^. logVar
         let bData = nodeData ^. blockchain
         void $ L.atomically $ do
-            void $ L.addMBlock logV bData mBlock
+            void $ L.addMBlock bData mBlock
             let tx = mBlock ^. Lens.transactions
             let fun :: D.Transaction -> D.TransactionPending -> D.TransactionPending
                 fun t = Map.delete (toHash t)
             forM_ tx (L.modifyVar (bData ^. Lens.transactionPending) . fun)
-        Log.writeLog logV
     where
         printInvalidSignatures :: (Bool, Bool, [Bool]) -> L.NodeL ()
         printInvalidSignatures (valid, mBlockValid, txsValid) = do
@@ -108,10 +102,7 @@ getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL D.KBlockPending
 getKBlockPending nodeData _ = L.readVarIO $ nodeData ^. blockchain . Lens.kBlockPending
 
 processKBlockPending' :: GraphNodeData -> L.NodeL Bool
-processKBlockPending' nodeData = do
-    res <- L.processKBlockPending (nodeData ^. logVar) (nodeData ^. blockchain)
-    Log.writeLog $ nodeData ^. logVar
-    pure res
+processKBlockPending' nodeData = L.processKBlockPending $ nodeData ^. blockchain
 
 getTransactionPending :: GraphNodeData -> GetTransactionPending -> L.NodeL [D.Transaction]
 getTransactionPending nodeData _ = do
@@ -122,10 +113,9 @@ getTransactionPending nodeData _ = do
 
 getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
-    let logV  = nodeData ^. logVar
     let bData = nodeData ^. blockchain
     -- L.logInfo "Top KBlock requested."
-    L.atomically $ L.getTopKeyBlock logV bData
+    L.atomically $ L.getTopKeyBlock bData
     -- L.logInfo $ "Top KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
 
 
@@ -140,36 +130,30 @@ getBalance nodeData (GetWalletBalance wallet) = do
 
 getChainLength :: GraphNodeData -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
 getChainLength nodeData GetChainLengthRequest = do
-    let logV = nodeData ^. logVar
-        bData = nodeData ^. blockchain
+    let bData = nodeData ^. blockchain
 --    L.logInfo "Answering chain length"
-    topKBlock <- L.atomically $ L.getTopKeyBlock logV bData
-    Log.writeLog logV
+    topKBlock <- L.atomically $ L.getTopKeyBlock bData
     pure $ GetChainLengthResponse $ topKBlock ^. Lens.number
 
 
 acceptChainFromTo :: GraphNodeData -> GetChainFromToRequest -> L.NodeL (Either Text GetChainFromToResponse)
 acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
     L.logInfo $ "Answering chain from " +|| (show from :: Text) ||+ " to " +|| show to
-    let logV = nodeData ^. logVar
-        bData = nodeData ^. blockchain
+    let bData = nodeData ^. blockchain
     if from > to
         then pure $ Left "From is greater than to"
         else do
             kBlockList <- L.atomically $ do
-                topKBlock <- L.getTopKeyBlock logV bData
-                chain <- L.findBlocksByNumber logV bData from topKBlock
+                topKBlock <- L.getTopKeyBlock bData
+                chain <- L.findBlocksByNumber bData from topKBlock
                 pure $ drop (fromEnum $ (topKBlock ^. Lens.number) - to) chain
-            Log.writeLog logV
             pure $ Right $ GetChainFromToResponse (reverse kBlockList)
 
 getMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL (Either Text GetMBlocksForKBlockResponse)
 getMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
     L.logInfo $ "Get microblocks for kBlock " +|| show hash
-    let logV = nodeData ^. logVar
-        bData = nodeData ^. blockchain
-    mBlockList <- L.atomically $ L.getMBlocksForKBlock logV bData hash
-    Log.writeLog logV
+    let bData = nodeData ^. blockchain
+    mBlockList <- L.atomically $ L.getMBlocksForKBlock bData hash
     case mBlockList of
         Nothing        -> pure $ Left "KBlock doesn't exist"
         Just blockList -> pure $ Right $ GetMBlocksForKBlockResponse blockList
@@ -233,7 +217,6 @@ graphNodeInitialization nodeConfig = L.scenario $ do
                 <*> L.newVar D.genesisHash
                 <*> L.newVar Map.empty
             )
-        <*> L.newVar []
         <*> L.newVar NodeActing
         <*> pure nodeConfig
         <*> pure mbDBModel

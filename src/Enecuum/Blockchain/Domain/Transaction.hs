@@ -10,7 +10,7 @@ import qualified Data.ByteString.Base64           as Base64
 import           Data.HGraph.StringHashable       (StringHash (..), StringHashable, toHash)
 import qualified Data.Serialize                   as S
 import           Data.UUID
-import           Enecuum.Blockchain.Domain.Crypto
+import           Enecuum.Core.Crypto.Crypto
 import           Enecuum.Blockchain.Domain.Types
 import           Enecuum.Blockchain.Domain.UUID   ()
 import qualified Enecuum.Core.Language            as L

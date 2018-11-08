@@ -9,7 +9,6 @@ import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.GraphNode.Logic
 import           Enecuum.Assets.Nodes.GraphNode.Config
 import           Enecuum.Assets.Nodes.GraphNode.Database
-import qualified Enecuum.Framework.LogState as Log
 
 -- | Start of graph node
 graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()

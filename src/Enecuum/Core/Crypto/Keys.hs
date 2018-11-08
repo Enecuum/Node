@@ -6,17 +6,20 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Enecuum.Blockchain.Domain.Crypto.Keys where  
+module Enecuum.Core.Crypto.Keys (generateNewRandomAnonymousKeyPair, getPrivateKey, showPublicKey,
+                                        readPublicKey, readPrivateKey, compressPublicKey, decompressPublicKey,
+                                        PublicKey(..), PrivateKey(..), KeyPair (..)) where
 
+import           "cryptonite" Crypto.Hash                (SHA3_256 (..))
 import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA    as ECDSA
 import           "cryptonite" Crypto.PubKey.ECC.Generate
 import           "cryptonite" Crypto.PubKey.ECC.Types
 import           "cryptonite" Crypto.Random              (MonadRandom)
 import           Data.ByteString.Base58
 import qualified Data.ByteString.Char8                   as BC
+import           Data.Serialize                          (encode)
 import           Enecuum.Prelude
 import           Math.NumberTheory.Moduli
-
 
 newtype PublicKey  = PublicKey256k1 Integer deriving (Show, Read, Generic, Serialize, Eq, Ord, Num, Enum, FromJSON, ToJSON)
 newtype PrivateKey = PrivateKey256k1 Integer deriving (Show, Read, Generic, Serialize, Eq, Ord, FromJSON, ToJSON)
