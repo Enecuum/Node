@@ -4,7 +4,7 @@ module Enecuum.Core.Crypto.Crypto
     ECDSA.Signature
     ) where
 
-import Enecuum.Core.Crypto.Domain.Keys as X
-import Enecuum.Core.Crypto.Domain.Signature as X
-import Enecuum.Core.Crypto.Domain.Verification as X
+import Enecuum.Core.Crypto.Keys as X
+import Enecuum.Core.Crypto.Signature as X
+import Enecuum.Core.Crypto.Verification as X
 import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA    as ECDSA

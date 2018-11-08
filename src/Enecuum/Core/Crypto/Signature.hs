@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Enecuum.Core.Crypto.Domain.Signature where
+module Enecuum.Core.Crypto.Signature (sign) where
 
 import           "cryptonite" Crypto.Hash.Algorithms   (SHA3_256 (..))
 import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA  as ECDSA
@@ -15,9 +15,9 @@ import           Data.Aeson.Types                      (typeMismatch)
 import           Data.Bits
 import           Data.ByteString.Base64.Extra
 import           Data.ByteString.Conversion
-import           Data.Serialize                        (Get, Serialize) 
+import           Data.Serialize                        (Get, Serialize)
 import qualified Data.Serialize                        as S
-import qualified Enecuum.Core.Crypto.Domain.Keys as Enq
+import qualified Enecuum.Core.Crypto.Keys as Enq
 import           Enecuum.Prelude                       hiding (pack, unpack, (.=))
 
 
@@ -89,5 +89,3 @@ nrBits k =
                    | otherwise    = error "Service.Types.SerializeInstances: nrBits"
           where mid = (lo + hi) `div` 2
   in  findNr (expMax `div` 2) expMax
-
-
