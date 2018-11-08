@@ -28,13 +28,30 @@ newtype Connection a = Connection
 
 type CloseSignal = TVar Bool
 
-data family ConnectionVar a
-data instance ConnectionVar Tcp
-    = TcpConnectionVar CloseSignal (TMVar S.Socket)
+class ConnectVarData a where
+    data family ConnectionVar a
 
-data instance ConnectionVar Udp
-    = ServerUdpConnectionVar S.SockAddr  (TMVar S.Socket)
-    | ClientUdpConnectionVar CloseSignal (TMVar S.Socket)
+    isClosed :: ConnectionVar a -> IO Bool
+
+sockVarIsClosed sockVar = do
+    S.MkSocket _ _ _ _ mStat <- atomically $ readTMVar sockVar
+    status <- readMVar mStat
+    pure $ status == S.Closed
+
+instance ConnectVarData Tcp where
+    data ConnectionVar Tcp
+        = TcpConnectionVar CloseSignal (TMVar S.Socket)
+
+    isClosed (TcpConnectionVar _ sockVar) = sockVarIsClosed sockVar
+
+
+instance ConnectVarData Udp where
+    data ConnectionVar Udp
+        = ServerUdpConnectionVar S.SockAddr  (TMVar S.Socket)
+        | ClientUdpConnectionVar CloseSignal (TMVar S.Socket)
+
+    isClosed (ServerUdpConnectionVar _ sockVar) = sockVarIsClosed sockVar
+    isClosed (ClientUdpConnectionVar _ sockVar) = sockVarIsClosed sockVar
 
 data ServerComand = StopServer
 

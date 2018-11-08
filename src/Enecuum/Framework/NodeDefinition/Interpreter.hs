@@ -37,7 +37,7 @@ addProcess nodeRt pPtr threadId = do
     atomically $ writeTVar (nodeRt ^. RLens.processes) newPs
 
 startServing
-    :: (Impl.ConnectsLens a, Con.NetworkConnection a)
+    :: (D.ConnectVarData a, Impl.ConnectsLens a, Con.NetworkConnection a)
     => NodeRuntime -> S.PortNumber -> L.NetworkHandlerL a (Free L.NodeF) b -> IO b
 startServing nodeRt port initScript = do
     m        <- atomically $ newTVar mempty
@@ -45,12 +45,17 @@ startServing nodeRt port initScript = do
     handlers <- readTVarIO m
     let registerConnection (D.Connection addr) connection = do
             connects <- atomically $ takeTMVar (nodeRt ^. Impl.connectsLens)
-            let ok = not $ M.member addr connects
-            if ok then do
-                let newConnectsVar = M.insert addr connection connects
-                atomically $ putTMVar (nodeRt ^. Impl.connectsLens) newConnectsVar
-            else atomically $ putTMVar (nodeRt ^. Impl.connectsLens) connects
-            pure ok 
+            case addr `M.lookup` connects of
+                Just conn -> do
+                    ok <- D.isClosed conn
+                    if ok then do
+                        let newConnectsVar = M.insert addr connection connects
+                        atomically $ putTMVar (nodeRt ^. Impl.connectsLens) newConnectsVar
+                    else atomically $ putTMVar (nodeRt ^. Impl.connectsLens) connects
+                    pure ok
+                Nothing -> do
+                    atomically $ putTMVar (nodeRt ^. Impl.connectsLens) connects
+                    pure True
 
     s        <- Con.startServer
         port
