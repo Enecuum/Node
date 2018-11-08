@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Enecuum.Blockchain.Domain.Crypto.Signature where
+module Enecuum.Core.Crypto.Domain.Signature where
 
 import           "cryptonite" Crypto.Hash.Algorithms   (SHA3_256 (..))
 import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA  as ECDSA
@@ -17,7 +17,7 @@ import           Data.ByteString.Base64.Extra
 import           Data.ByteString.Conversion
 import           Data.Serialize                        (Get, Serialize) 
 import qualified Data.Serialize                        as S
-import qualified Enecuum.Blockchain.Domain.Crypto.Keys as Enq
+import qualified Enecuum.Core.Crypto.Domain.Keys as Enq
 import           Enecuum.Prelude                       hiding (pack, unpack, (.=))
 
 

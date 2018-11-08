@@ -6,7 +6,7 @@ import           Enecuum.Prelude
 
 import qualified Enecuum.Blockchain.Domain as D
 import qualified Enecuum.Blockchain.Lens as Lens
-import           Enecuum.Blockchain.Domain.Crypto
+import           Enecuum.Core.Crypto.Crypto
 
 
 type Valid = Bool

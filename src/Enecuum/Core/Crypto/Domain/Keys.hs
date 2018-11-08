@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Enecuum.Blockchain.Domain.Crypto.Keys where  
+module Enecuum.Core.Crypto.Domain.Keys where  
 
 import qualified "cryptonite" Crypto.PubKey.ECC.ECDSA    as ECDSA
 import           "cryptonite" Crypto.PubKey.ECC.Generate
