@@ -15,21 +15,24 @@ import qualified Network.Socket                      as S hiding (recv)
 
 type Handler protocol  = Value -> D.Connection protocol -> IO ()
 type Handlers protocol = Map Text (Handler protocol)
-type ServerHandle      = TChan D.ServerComand
+data ServerHandle
+      = ServerHandle (TVar Bool) (TMVar ())
+      | OldServerHandle (TChan D.ServerComand)
 
 -- | Stop the server
-stopServer :: ServerHandle -> STM ()
-stopServer chan = writeTChan chan D.StopServer
-
+stopServer :: ServerHandle -> IO ()
+stopServer (OldServerHandle chan) = atomically $ writeTChan chan D.StopServer
+stopServer (ServerHandle closeSignal closedSignal) = do
+    atomically $ writeTVar closeSignal True
+    atomically $ takeTMVar closedSignal
 
 class NetworkConnection protocol where
     startServer
         :: S.PortNumber
         -> Handlers protocol
         -> (D.Connection protocol -> D.ConnectionVar protocol -> IO Bool)
-        -> (Text -> IO ())
         -> IO ServerHandle
     -- | Send msg to node.
     send        :: D.ConnectionVar protocol -> LByteString -> IO (Either D.NetworkError ())
-    close       :: D.ConnectionVar protocol -> STM ()
-    openConnect :: D.Address -> Handlers protocol -> (Text -> IO ()) -> IO (Maybe (D.ConnectionVar protocol))
+    close       :: D.ConnectionVar protocol -> IO ()
+    openConnect :: D.Address -> Handlers protocol -> IO (Maybe (D.ConnectionVar protocol))

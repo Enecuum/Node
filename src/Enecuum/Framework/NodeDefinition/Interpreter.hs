@@ -28,6 +28,7 @@ import           Data.Aeson.Lens
 import qualified Data.Text as T
 import           System.Console.Haskeline
 import           System.Console.Haskeline.History
+import           Enecuum.Framework.Networking.Internal.Connection (ServerHandle (..))
 
 addProcess :: NodeRuntime -> D.ProcessPtr a -> ThreadId -> IO ()
 addProcess nodeRt pPtr threadId = do
@@ -56,8 +57,7 @@ startServing nodeRt port initScript = do
         port
         ((\f a' b -> Impl.runNodeL nodeRt $ f a' b) <$> handlers)
         registerConnection
-        (Impl.logError' nodeRt)
-    atomically $ setServerChan (nodeRt ^. RLens.servers) port s
+    -- setServerChan (nodeRt ^. RLens.servers) port s
     pure a
 
 
@@ -72,21 +72,21 @@ interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffect
 
 interpretNodeDefinitionL nodeRt (L.ServingTcp port action next) =
-    next <$> startServing nodeRt port action 
+    next <$> startServing nodeRt port action
 
 interpretNodeDefinitionL nodeRt (L.ServingUdp port action next) =
-    next <$> startServing nodeRt port action 
+    next <$> startServing nodeRt port action
 
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
-    atomically $ do
-        serversMap <- readTVar (nodeRt ^. RLens.servers)
-        whenJust (serversMap ^. at port) Con.stopServer
+    -- Why server is not deleted from the map?
+    serversMap <- atomically $ readTVar (nodeRt ^. RLens.servers)
+    whenJust (serversMap ^. at port) $ Con.stopServer
     pure $ next ()
 
 interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
     m <- atomically $ newTVar mempty
     a <- runRpcHandlerL m action
-    s <- atomically $ takeServerChan (nodeRt ^. RLens.servers) port
+    s <- takeServerChan (nodeRt ^. RLens.servers) port
     void $ forkIO $ runRpcServer s port (runNodeL nodeRt) m
     pure $ next a
 
@@ -96,7 +96,7 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
     void $ forkIO $ do
         m'       <- readTVarIO m
         tag      <- readTVarIO (nodeRt ^. RLens.nodeTag)
-        let 
+        let
             filePath = nodeRt ^. RLens.storyPaths.at tag
             inpStr = if tag == "Client" then "λ> " else ""
             loop   = do
@@ -110,7 +110,7 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
                             history <- getHistory
                             liftIO $ writeHistory path history
                         loop
-                             
+
         runInputT defaultSettings{historyFile = filePath} loop
     pure $ next ()
 
@@ -137,7 +137,7 @@ callHandler :: NodeRuntime -> Map Text (Value -> L.NodeL Text) -> Text -> IO Tex
 callHandler nodeRt methods msg = do
     val <- try $ pure $ A.decode $ fromString $ T.unpack msg
     case val of
-        Right (Just jval@((^? key "method" . _String) -> Just method)) -> 
+        Right (Just jval@((^? key "method" . _String) -> Just method)) ->
             case methods ^. at method of
                 Just justMethod -> Impl.runNodeL nodeRt $ justMethod jval
                 Nothing         -> pure $ "The method " <> method <> " isn't supported."
@@ -145,16 +145,16 @@ callHandler nodeRt methods msg = do
         Left  (_ :: SomeException) -> pure "Error of request parsing."
 
 -- TODO: treadDelay if server in port exist!!!
-takeServerChan :: TVar (Map S.PortNumber (TChan D.ServerComand)) -> S.PortNumber -> STM (TChan D.ServerComand)
+takeServerChan :: TVar (Map S.PortNumber ServerHandle) -> S.PortNumber -> IO ServerHandle
 takeServerChan servs port = do
-    chan <- newTChan
+    chan <- atomically $ newTChan
     Impl.setServerChan servs port chan
-    pure chan
+    pure $ OldServerHandle chan
 
 
 runRpcServer
-    :: TChan D.ServerComand -> S.PortNumber -> (t -> IO D.RpcResponse) -> TVar (Map Text (A.Value -> Int -> t)) -> IO ()
-runRpcServer chan port runner methodVar = do
+    :: ServerHandle -> S.PortNumber -> (t -> IO D.RpcResponse) -> TVar (Map Text (A.Value -> Int -> t)) -> IO ()
+runRpcServer (OldServerHandle chan) port runner methodVar = do
     methods <- readTVarIO methodVar
     runTCPServer chan port $ \sock -> do
         msg      <- S.recv sock (1024 * 4)

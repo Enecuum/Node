@@ -9,6 +9,7 @@ import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 import           Enecuum.Core.Runtime              (CoreRuntime)
 import qualified Enecuum.Domain                    as D
 import           Enecuum.Prelude
+import           Enecuum.Framework.Networking.Internal.Connection (ServerHandle)
 
 data VarHandle = VarHandle D.VarId (TVar Any)
 type NodeState = TMVar (Map.Map D.VarId VarHandle)
@@ -21,7 +22,7 @@ data DBHandle  = DBHandle
 data NodeRuntime = NodeRuntime
     { _coreRuntime :: CoreRuntime
     , _graph       :: D.TGraph D.NodeContent
-    , _servers     :: TVar (Map D.PortNumber (TChan D.ServerComand))
+    , _servers     :: TVar (Map D.PortNumber ServerHandle)
     , _idCounter   :: TMVar Int              -- ^ ID counter. Used to generate VarIds, ProcessIds.
     , _state       :: NodeState              -- ^ State of node.
     , _nodeTag     :: TVar Text

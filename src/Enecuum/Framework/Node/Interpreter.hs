@@ -25,6 +25,7 @@ import           Enecuum.Framework.Runtime                        (NodeRuntime)
 import qualified Enecuum.Framework.State.Interpreter              as Impl
 import qualified Enecuum.Core.Types.Logger as Log
 import qualified Network.Socket                                   as S
+import           Enecuum.Framework.Networking.Internal.Connection (ServerHandle (..))
 
 runDatabase :: R.DBHandle -> L.DatabaseL db a -> IO a
 runDatabase dbHandle action = do
@@ -108,9 +109,9 @@ closeConnection connectsRef addr = do
     conns <- atomically $ takeTMVar connectsRef
     case M.lookup addr conns of
         Nothing -> atomically $ putTMVar connectsRef conns
-        Just conn -> atomically $ do
+        Just conn -> do
             Con.close conn
-            putTMVar connectsRef $ M.delete addr conns
+            atomically $ putTMVar connectsRef $ M.delete addr conns
 
 
 openConnection nodeRt connectsRef addr initScript = do
@@ -128,7 +129,6 @@ openConnection nodeRt connectsRef addr initScript = do
             newCon   <- Con.openConnect
                 addr
                 ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
-                (logError' nodeRt)
             case newCon of
                 Just justCon -> do
                     let newConns = M.insert addr justCon conns
@@ -138,11 +138,14 @@ openConnection nodeRt connectsRef addr initScript = do
                     atomically $ putTMVar connectsRef conns
                     pure Nothing
 
-setServerChan :: TVar (Map S.PortNumber (TChan D.ServerComand)) -> S.PortNumber -> TChan D.ServerComand -> STM ()
+
+-- This is all wrong, including invalid usage of TChan and other issues.
+-- making it IO temp (which is even more wrong), but it needs to be deleted.
+setServerChan :: TVar (Map S.PortNumber ServerHandle) -> S.PortNumber -> TChan D.ServerComand -> IO ()
 setServerChan servs port chan = do
-    serversMap <- readTVar servs
+    serversMap <- atomically $ readTVar servs
     whenJust (serversMap ^. at port) Con.stopServer
-    modifyTVar servs (M.insert port chan)
+    atomically $ modifyTVar servs (M.insert port (OldServerHandle chan))
 
 -- | Runs node language. Runs interpreters for the underlying languages.
 runNodeL :: NodeRuntime -> L.NodeL a -> IO a

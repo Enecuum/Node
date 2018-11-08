@@ -59,7 +59,7 @@ data ServerComand = StopServer
 
 type RawData = LByteString
 
-newtype ServerHandle = ServerHandle (TChan ServerComand)
+-- newtype ServerHandle = ServerHandle (TChan ServerComand)
 
 data NetworkMsg = NetworkMsg Text A.Value deriving (Generic, ToJSON, FromJSON)
 
