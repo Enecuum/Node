@@ -75,7 +75,7 @@ defaultBlocksDelay :: BlocksDelay
 defaultBlocksDelay = 1000 * 1000
 
 powNode :: L.NodeDefinitionL ()
-powNode = powNode' $ PoWNodeConfig defaultBlocksDelay A.InOrder 
+powNode = powNode' $ PoWNodeConfig defaultBlocksDelay A.InOrder
 
 powNode' :: NodeConfig PoWNode -> L.NodeDefinitionL ()
 powNode' cfg = do

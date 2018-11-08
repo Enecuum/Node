@@ -12,6 +12,7 @@ import           Enecuum.Testing.Integrational
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
 import           Test.HUnit
+import Data.Typeable
 
 spec :: Spec
 spec = describe "PoA" $ fromHUnitTest $ TestList
@@ -39,13 +40,13 @@ testPoA = TestCase $ withNodesManager $ \mgr -> do
     _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
 
     threadDelay $ 1000 * 1000
-    -- Check kblock pending
-    Right kblocks :: Either Text D.KBlockPending <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetKBlockPending
-    print kblocks
-    let kblockHash = D.toHash $ (map snd $ M.toList kblocks) !! 0
+    -- Get last kblock from graph node
+    Right kBlock :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetLastKBlock
+    let kblockHash = D.toHash kBlock
 
     -- Microblock on graph node received from poa
-    _ :: Either Text [D.Microblock] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetMBlocksForKBlockRequest kblockHash
+    Right (A.GetMBlocksForKBlockResponse  mblock) <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetMBlocksForKBlockRequest kblockHash
+    (length mblock) `shouldBe` 1    
 
     threadDelay $ 1000 * 1000
     -- Check transaction pending on graph node, it must to be empty now
