@@ -45,7 +45,7 @@ startServing nodeRt port initScript = do
     handlers <- readTVarIO m
     let registerConnection (D.Connection addr) connection = do
             connects <- atomically $ takeTMVar (nodeRt ^. Impl.connectsLens)
-            let ok = M.member addr connects
+            let ok = not $ M.member addr connects
             if ok then do
                 let newConnectsVar = M.insert addr connection connects
                 atomically $ putTMVar (nodeRt ^. Impl.connectsLens) newConnectsVar

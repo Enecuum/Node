@@ -32,4 +32,4 @@ class NetworkConnection protocol where
     -- | Send msg to node.
     send        :: D.ConnectionVar protocol -> LByteString -> IO (Either D.NetworkError ())
     close       :: D.ConnectionVar protocol -> STM ()
-    openConnect :: D.Address -> Handlers protocol -> (Text -> IO ()) -> IO (D.ConnectionVar protocol)
+    openConnect :: D.Address -> Handlers protocol -> (Text -> IO ()) -> IO (Maybe (D.ConnectionVar protocol))

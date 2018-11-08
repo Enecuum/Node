@@ -19,7 +19,7 @@ data Udp = Udp
 data Tcp = Tcp
 data Rpc = Rpc
 
-data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist deriving Eq
+data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist deriving (Eq, Show)
 
 newtype Connection a = Connection
     { _address :: Address

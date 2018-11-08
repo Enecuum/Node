@@ -84,8 +84,8 @@ instance NetworkConnection D.Udp where
                 connection = D.Connection $ D.Address host port
 
             sockVar     <- newTMVarIO socket
-            ok <- insertConnect connection (D.ServerUdpConnectionVar sockAddr sockVar)
-            when ok $ runHandler connection handlers logger msg
+            void $ insertConnect connection (D.ServerUdpConnectionVar sockAddr sockVar)
+            runHandler connection handlers logger msg
         pure chan
 
     send _ msg | length msg > D.packetSize = pure $ Left D.TooBigMessage
@@ -106,4 +106,4 @@ instance NetworkConnection D.Udp where
         let worker = readingWorker logger closeSignal handlers (D.Connection addr) sock `finally` S.close sock
 
         void $ forkIO worker
-        pure udpConVar
+        pure $ Just udpConVar

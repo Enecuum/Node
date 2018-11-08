@@ -129,10 +129,14 @@ openConnection nodeRt connectsRef addr initScript = do
                 addr
                 ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
                 (logError' nodeRt)
-
-            let newConns = M.insert addr newCon conns
-            atomically $ putTMVar connectsRef newConns
-            pure $ Just $ D.Connection addr
+            case newCon of
+                Just justCon -> do
+                    let newConns = M.insert addr justCon conns
+                    atomically $ putTMVar connectsRef newConns
+                    pure $ Just $ D.Connection addr
+                _ -> do
+                    atomically $ putTMVar connectsRef conns
+                    pure Nothing
 
 setServerChan :: TVar (Map S.PortNumber (TChan D.ServerComand)) -> S.PortNumber -> TChan D.ServerComand -> STM ()
 setServerChan servs port chan = do

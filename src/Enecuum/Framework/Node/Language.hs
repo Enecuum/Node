@@ -2,6 +2,7 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE TypeInType             #-}
 
 
 module Enecuum.Framework.Node.Language where
@@ -78,6 +79,9 @@ withConnection protocol address f = do
             close con
             pure $ Just a
         Nothing -> pure Nothing
+
+
+listener f = handler (\a conn -> void (close conn) >> f a)
 
 class Connection a con where
     close :: D.Connection con -> a ()
