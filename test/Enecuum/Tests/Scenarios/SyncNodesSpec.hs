@@ -14,9 +14,10 @@ import           Enecuum.Testing.Integrational
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit      (fromHUnitTest)
 import           Test.HUnit
+import           Enecuum.Tests.Wrappers
 
 spec :: Spec
-spec = describe "Synchronization tests" $ fromHUnitTest $ TestList
+spec = slowTest $ describe "Synchronization tests" $ fromHUnitTest $ TestList
     [TestLabel "test net sync" testNodeNet]
 
 testNodeNet :: Test

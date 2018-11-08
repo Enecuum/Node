@@ -12,10 +12,11 @@ import           Enecuum.Testing.Integrational
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
 import           Test.HUnit
-import Data.Typeable
+import           Data.Typeable
+import           Enecuum.Tests.Wrappers
 
 spec :: Spec
-spec = describe "PoA" $ fromHUnitTest $ TestList
+spec = slowTest $ describe "PoA" $ fromHUnitTest $ TestList
     [TestLabel "Check microblock generation" testPoA]
 
 testPoA :: Test

@@ -13,9 +13,10 @@ import           Enecuum.Testing.Integrational
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
 import           Test.HUnit
+import           Enecuum.Tests.Wrappers
 
 spec :: Spec
-spec = describe "PoW and graph node interaction" $ fromHUnitTest $ TestList
+spec = slowTest $ describe "PoW and graph node interaction" $ fromHUnitTest $ TestList
     [ TestLabel "Accept kblocks produced in order"        $ testAcceptKblock A.InOrder
     , TestLabel "Accept kblocks produced in random order" $ testAcceptKblock A.RandomOrder
     , TestLabel "Test kblock pending on graph node"         testKblockPending

@@ -36,7 +36,14 @@ P2P node for the main network protocol.
 
 3. Run tests (optional) 
 
+Run all tests:
 `stack build --fast --test`
+
+Run fast tests:
+`stack build --fast --test --test-arguments "-m Fast"`
+
+Run slow and unreliable tests:
+`stack build --fast --test --test-arguments "-m Slow"`
 
 ### Initialize
 

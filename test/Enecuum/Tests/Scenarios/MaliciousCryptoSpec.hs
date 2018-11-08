@@ -12,9 +12,10 @@ import           Enecuum.Testing.Integrational
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
 import           Test.HUnit
+import           Enecuum.Tests.Wrappers
 
 spec :: Spec
-spec = describe "Test invalid signature" $ fromHUnitTest $ TestList
+spec = slowTest $ describe "Test invalid signature" $ fromHUnitTest $ TestList
     [ TestLabel "Reject invalid microblock"  testInvalidMicroblock
     , TestLabel "Reject invalid transaction" testInvalidTransaction
     ]

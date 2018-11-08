@@ -13,6 +13,7 @@ import           Enecuum.Blockchain.DB
 
 import           Test.Hspec
 import           Enecuum.Testing.Integrational
+import           Enecuum.Tests.Wrappers
 
 data NodeData = NodeData
     { _kBlocksDB     :: D.Storage KBlocksDB
@@ -108,7 +109,7 @@ dbInitNode cfg = do
     pure $ eDb >> Right ()
 
 spec :: Spec
-spec = do
+spec = fastTest $ describe "Database functional tests" $ do
     dbPath <- runIO $ mkDbPath "test.db"
     let cfg1 = D.DBConfig dbPath $ D.defaultDbOptions
                 { D._createIfMissing = True

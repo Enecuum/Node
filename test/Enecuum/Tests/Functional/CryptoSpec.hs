@@ -14,6 +14,7 @@ import           Enecuum.Prelude
 import           Test.Hspec                           (Spec, describe, shouldBe)
 import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
 import           Test.HUnit                           (Test (..))
+import           Enecuum.Tests.Wrappers
 
 wallets :: [KeyPair]
 wallets =
@@ -25,7 +26,7 @@ wallets =
     ]
 
 spec :: Spec
-spec = do
+spec = fastTest $ do
     describe "Signature" $ fromHUnitTest $ TestList
         [ TestLabel "Verify transaction signature" testVerifySignedTransaction
         , TestLabel "Verify microblock signature" testVerifySignedMicroblock
