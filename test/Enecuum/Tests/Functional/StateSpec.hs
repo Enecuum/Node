@@ -9,12 +9,13 @@ import qualified Enecuum.Language as L
 import qualified Enecuum.Domain as D
 
 import           Enecuum.Testing
+import           Enecuum.Tests.Wrappers
 
 nodeAddress :: D.Address
 nodeAddress = D.Address "0.0.0.4" 1000
 
 spec :: Spec
-spec = describe "State spec" $ do
+spec = fastTest $ describe "State spec" $ do
 
     it "Create & read var non-atomically" $ do
         loggerRuntime <- createLoggerRuntime

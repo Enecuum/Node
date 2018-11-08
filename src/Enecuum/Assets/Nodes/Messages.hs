@@ -45,6 +45,9 @@ data NBlockPacketGeneration = NBlockPacketGeneration {number :: D.BlockNumber, t
 data ForeverChainGeneration = ForeverChainGeneration
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+data GetPrevHash = GetPrevHash
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 -- | client - PoA interaction
 data GetTransactionPending = GetTransactionPending
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

@@ -1,7 +1,6 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Data.ByteStringSpec where
-
+module Enecuum.Tests.Functional.Data.ByteStringSpec where
 
 import qualified Data.Aeson                   as A
 import           Data.ByteString.Base64.Extra
@@ -10,13 +9,14 @@ import           Data.ByteString.Extra()
 import           Enecuum.Prelude
 import           Test.Hspec                   (Spec, describe, it)
 import           Test.QuickCheck
+import           Enecuum.Tests.Wrappers
 
 instance Arbitrary ByteString where
     arbitrary = fmap BS.pack $ arbitrary
     shrink = map BS.pack . shrink . BS.unpack
 
 spec :: Spec
-spec = 
+spec = fastTest $
     describe "Bytestring property test" $ do
         it "Verify bytestring json serialization" $ property prop_JsonEncoding
         it "Verify bytestring Base64 serialization" $ property prop_Base64Encoding

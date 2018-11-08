@@ -15,9 +15,10 @@ import qualified Enecuum.Assets.Nodes.Messages               as A
 import qualified Enecuum.Assets.Nodes.Address                as A
 
 import           Enecuum.Testing.Integrational
+import           Enecuum.Tests.Wrappers
 
 spec :: Spec
-spec = describe "Dump and restore graph test" $ fromHUnitTest $ TestList
+spec = fastTest $ describe "Dump and restore graph test" $ fromHUnitTest $ TestList
     [TestLabel "Dump and restore graph test" dumpAndRestoreGraphTest]
 
 dumpAndRestoreGraphTest :: Test

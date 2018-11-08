@@ -1,7 +1,8 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveAnyClass         #-}
 
-module Enecuum.Assets.Nodes.Client where
+-- module Enecuum.Assets.Nodes.Client where
+module Enecuum.Assets.Nodes.Client (clientNode, ClientNode(..), NodeConfig (..), Protocol(..)) where
 
 import qualified Data.Aeson                       as J
 import           Data.Aeson.Extra                 (noLensPrefix)
@@ -26,7 +27,7 @@ data instance NodeConfig ClientNode = ClientNodeConfig
 instance Node ClientNode where
     data NodeScenario ClientNode = CLI
         deriving (Show, Generic)
-    getNodeScript CLI = clientNode
+    getNodeScript CLI = clientNode'
 
 instance ToJSON   ClientNode                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON ClientNode                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
@@ -47,7 +48,7 @@ data GenerateBlocksPacket           = GenerateBlocksPacket
     , timeGap :: TimeGap
     , address :: D.Address
     }
-    deriving (Generic)
+    deriving (Generic, Show)
 
 data Ping                           = Ping Protocol D.Address
 newtype StopRequest                 = StopRequest D.Address
@@ -196,7 +197,7 @@ getBlock (GetBlock hash address) = do
         Left  text                    -> pure $ "Error: "         <> text
 
 {-
-Requests:
+Requests JSON:
 {"method":"GetLastKBlock", "address":{"host":"127.0.0.1", "port": 2005}}
 {"method":"StartForeverChainGeneration", "address":{"host":"127.0.0.1", "port": 2005}}
 {"method":"GenerateBlocksPacket", "blocks" : 2, "timeGap":0, "address":{"host":"127.0.0.1", "port": 2005}}
@@ -211,8 +212,18 @@ Requests:
 {"method":"RestoreFromDB", "address":{"host":"127.0.0.1", "port": 2008}}
 -}
 
-clientNode :: NodeConfig ClientNode -> L.NodeDefinitionL ()
-clientNode _ = do
+
+{-
+Requests:
+GenerateBlocksPacket {blocks = 1, timeGap = 0, address = Address {_host= "127.0.0.1", _port = 2005}}
+SendTo (Address "127.0.0.1" 5001) 5002
+-}
+
+clientNode :: L.NodeDefinitionL ()
+clientNode = clientNode' (ClientNodeConfig 42)
+
+clientNode' :: NodeConfig ClientNode -> L.NodeDefinitionL ()
+clientNode' _ = do
     L.logInfo "Client started"
     L.nodeTag "Client"
     stateVar <- L.newVarIO NodeActing

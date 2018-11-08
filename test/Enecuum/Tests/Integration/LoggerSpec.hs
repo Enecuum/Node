@@ -10,9 +10,9 @@ import           Enecuum.Interpreters              (runFileSystemL)
 import           Enecuum.Prelude                   hiding (unpack)
 import           Enecuum.Testing.Integrational     (loadLoggerConfig, testConfigFilePath, testLogFilePath)
 import           System.Directory
-import           System.IO.Silently
+import           System.IO.Silently                (capture)
 import           Test.Hspec
-
+import           Enecuum.Tests.Wrappers
 
 scenario :: L.LoggerL ()
 scenario = do
@@ -36,7 +36,7 @@ withLogFile logFile action = do
 
 spec :: Spec
 spec =
-    describe "Logger tests" $ do
+    fastTest $ describe "Logger tests" $ do
         it "Test output to console with capture" $ do
             config      <- loadLoggerConfig testConfigFilePath
             (output, _) <- capture $ Impl.withLogger config { T._logToConsole = True, T._logToFile = False } $ \h ->
