@@ -5,7 +5,7 @@ import qualified Data.Serialize                       as S
 import qualified Enecuum.Assets.Blockchain.Generation as D
 import qualified Enecuum.Assets.Blockchain.Wallet     as D
 import qualified Enecuum.Blockchain.Domain            as D
-import           Enecuum.Blockchain.Domain.Crypto
+import           Enecuum.Core.Crypto.Crypto
 import qualified Enecuum.Blockchain.Language          as L
 import qualified Enecuum.Blockchain.Lens              as Lens
 import qualified Enecuum.Core.Interpreters            as I
