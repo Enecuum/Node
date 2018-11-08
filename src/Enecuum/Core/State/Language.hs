@@ -1,13 +1,13 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Enecuum.Framework.State.Language where
+module Enecuum.Core.State.Language where
 
 import           Enecuum.Prelude
 
-import qualified Enecuum.Core.Types                       as T
-import qualified Enecuum.Core.Language                    as L
-import qualified Enecuum.Framework.Domain                 as D
+import qualified Enecuum.Core.Types                       as D
+import qualified Enecuum.Core.HGraph.Language             as L
+import qualified Enecuum.Core.Logger.Language             as L
 import           Language.Haskell.TH.MakeFunctor
 
 -- | State language. It reflects STM and its behavior.
@@ -21,11 +21,13 @@ data StateF next where
   -- | Retry until some variable is changed in this atomic block.
   Retry :: (a -> next) -> StateF next
   -- | Eval graph atomically.
-  EvalGraph :: (Serialize c, T.StringHashable c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) x -> (x -> next) -> StateF next
+  EvalGraph :: (Serialize c, D.StringHashable c) => D.TGraph c -> Free (L.HGraphF (D.TNodeL c)) x -> (x -> next) -> StateF next
+  -- | Eval "delayed" logger: it will be written after successfull state operation.
+  EvalDelayedLogger :: L.LoggerL () -> (() -> next) -> StateF next
 
 makeFunctorInstance ''StateF
 
-type StateL next = Free StateF next
+type StateL = Free StateF
 
 class StateIO m where
   atomically :: StateL a -> m a
@@ -54,6 +56,12 @@ retry :: StateL a
 retry = liftF $ Retry id
 
 -- | Eval graph atomically.
-evalGraph :: (T.StringHashable c, Serialize c) => T.TGraph c -> Free (L.HGraphF (T.TNodeL c)) a -> StateL a
+evalGraph :: (D.StringHashable c, Serialize c) => D.TGraph c -> Free (L.HGraphF (D.TNodeL c)) a -> StateL a
 evalGraph g act = liftF $ EvalGraph g act id
 
+-- | Eval "delayed" logger: it will be written after successfull state operation.
+evalDelayedLogger :: L.LoggerL () -> StateL ()
+evalDelayedLogger action = liftF $ EvalDelayedLogger action id
+
+instance L.Logger StateL where
+    logMessage level = evalDelayedLogger . L.logMessage level

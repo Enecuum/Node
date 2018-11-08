@@ -13,6 +13,7 @@ import qualified Enecuum.Core.Types                               as D
 import qualified Enecuum.Core.Lens                                as Lens
 import           Enecuum.Core.HGraph.Interpreters.IO
 import qualified Enecuum.Core.Interpreters                        as Impl
+import qualified Enecuum.Core.RLens                               as RLens
 import qualified Enecuum.Core.Language                            as L
 import qualified Enecuum.Framework.Domain.Networking              as D
 import qualified Enecuum.Framework.Handler.Network.Interpreter    as Net
@@ -22,7 +23,6 @@ import qualified Enecuum.Framework.Language                       as L
 import qualified Enecuum.Framework.RLens                          as RLens
 import qualified Enecuum.Framework.Runtime                        as R
 import           Enecuum.Framework.Runtime                        (NodeRuntime)
-import qualified Enecuum.Framework.State.Interpreter              as Impl
 import qualified Enecuum.Core.Types.Logger as Log
 import qualified Network.Socket                                   as S
 
@@ -35,8 +35,12 @@ runDatabase dbHandle action = do
 
 -- | Interpret NodeL.
 interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
-interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
-    next <$> atomically (Impl.runStateL nodeRt statefulAction)
+interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) = do
+    let stateRt  = nodeRt ^. RLens.coreRuntime . RLens.stateRuntime
+    let loggerRt = nodeRt ^. RLens.coreRuntime . RLens.loggerRuntime
+    res <- atomically $ Impl.runStateL stateRt statefulAction
+    Impl.flushDelayedLogger stateRt loggerRt
+    pure $ next res
 
 interpretNodeL _      (L.EvalGraphIO gr act next       ) = next <$>  (runHGraphIO gr act)
 

@@ -4,7 +4,6 @@ import           Enecuum.Prelude
 
 import qualified Enecuum.Domain             as D
 import qualified Enecuum.Language           as L
-import qualified Enecuum.Framework.LogState as Log
 import qualified Enecuum.Blockchain.Lens    as Lens
 import qualified Enecuum.Blockchain.DB      as D
 import qualified Enecuum.Blockchain.DB.Lens as Lens
@@ -144,7 +143,7 @@ dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
         Right _ | kBlock ^. Lens.prevHash == D.genesisIndicationHash -> L.logInfo "Dumping done: Genesis reached."
         Left err -> L.logError $ show err
         _ -> do
-            mbPrevKBlock <- L.atomically $ L.getKBlock (nodeData ^. G.logVar) (nodeData ^. G.blockchain) (kBlock ^. Lens.prevHash)
+            mbPrevKBlock <- L.atomically $ L.getKBlock (nodeData ^. G.blockchain) (kBlock ^. Lens.prevHash)
             case mbPrevKBlock of
                 Nothing         -> L.logError $ "Prev KBlock not found in graph: " +|| kBlock ^. Lens.prevHash ||+ "."
                 Just prevKBlock -> dumpToDB' nodeData prevKBlock
@@ -152,6 +151,5 @@ dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
 dumpToDB :: G.GraphNodeData -> L.NodeL ()
 dumpToDB nodeData = do
     L.logInfo "Dumping to DB..."
-    topKBlock <- L.atomically $ L.getTopKeyBlock (nodeData ^. G.logVar) (nodeData ^. G.blockchain)
+    topKBlock <- L.atomically $ L.getTopKeyBlock (nodeData ^. G.blockchain)
     dumpToDB' nodeData topKBlock
-    Log.writeLog $ nodeData ^. G.logVar
