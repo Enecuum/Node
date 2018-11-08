@@ -33,18 +33,12 @@ data instance ConnectionVar Tcp
     = TcpConnectionVar CloseSignal (TMVar S.Socket)
 
 data instance ConnectionVar Udp
-    = ServerUdpConnectionVar S.SockAddr (TChan SendUdpMsgTo)
-    | ClientUdpConnectionVar (TMVar (TChan Command))
+    = ServerUdpConnectionVar S.SockAddr  (TMVar S.Socket)
+    | ClientUdpConnectionVar CloseSignal (TMVar S.Socket)
 
 data ServerComand = StopServer
 
 type RawData = LByteString
-
-data SendUdpMsgTo = SendUdpMsgTo SockAddr LByteString (MVar Bool)
-
-data Command where
-    Close :: Command
-    Send  :: RawData -> MVar Bool -> Command
 
 newtype ServerHandle = ServerHandle (TChan ServerComand)
 

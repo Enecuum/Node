@@ -10,6 +10,7 @@ module Enecuum.Framework.Networking.Internal.Udp.Connection
     ) where
 
 import           Enecuum.Prelude
+import qualified Data.Map as M
 import           Enecuum.Framework.Networking.Internal.Connection
 import           Data.Aeson
 -- import           Control.Concurrent.Chan
@@ -21,92 +22,88 @@ import           Control.Concurrent.Async
 import qualified Enecuum.Framework.Domain.Networking as D
 import           Enecuum.Framework.Networking.Internal.Client
 import           Enecuum.Framework.Networking.Internal.Udp.Server 
-import qualified Network.Socket as S hiding (recv, send)
-import qualified Network.Socket.ByteString.Lazy as S
+import qualified Network.Socket as S hiding (recv, send, sendTo, sendAll)
+import qualified Network.Socket.ByteString as S
 import           Control.Monad.Extra
+import           Data.ByteString.Lazy         as B (fromStrict, toStrict)
 
-instance NetworkConnection D.Udp where
-    startServer port handlers insertConnect logger = do
-        chan <- atomically newTChan
-        void $ forkIO $ runUDPServer chan port $ \msg msgChan sockAddr -> do
-            let host       = D.sockAddrToHost sockAddr
-                connection = D.Connection $ D.Address host port
-    
-            ok <- insertConnect connection (D.ServerUdpConnectionVar sockAddr msgChan)
-            when ok $ runHandlers connection handlers logger msg
-        pure chan
+sendMsg sendFunc sockVar = do
+    sock <- atomically $ takeTMVar sockVar
+    err <- try $ sendFunc sock
+    atomically (putTMVar sockVar sock)
+    pure $ case err of
+        Right _                     -> Right ()
+        Left  (_ :: SomeException)  -> Left D.ConnectionClosed
 
-    send (D.ClientUdpConnectionVar conn) msg
-        | length msg <= D.packetSize = sendWithTimeOut undefined msg
-        | otherwise                  = pure $ Left D.TooBigMessage
-    send (D.ServerUdpConnectionVar sockAddr chan) msg
-        | length msg <= D.packetSize = do
-            feedback <- newEmptyMVar
-            atomically $ writeTChan chan $ D.SendUdpMsgTo sockAddr msg feedback
-            tryTakeResponse 5000 feedback
-        | otherwise                  = pure $ Left D.TooBigMessage
+--
+-- TODO: what is the behavior when the message > packetSize? What's happening with its rest?
+-- Will it garbage the next message?
+readingWorker :: (Text -> IO ()) -> TVar Bool -> Handlers D.Udp -> D.Connection D.Udp -> S.Socket -> IO () 
+readingWorker logger closeSignal handlers tcpCon sock = do
+    needClose <- readTVarIO closeSignal
+    unless needClose $ do
+        eMsg <- try $ S.recv sock $ toEnum D.packetSize
+        case eMsg of
+            Left (err :: SomeException) -> logger $ "Error in reading socket: " <> show err
+            Right msg -> do
+                case decode $ B.fromStrict msg of
+                    Just (D.NetworkMsg tag val) ->
+                        whenJust (tag `M.lookup` handlers) $ \handler -> handler val tcpCon
+                    Nothing  -> logger $ "Error in decoding en msg: " <> show msg
+                readingWorker logger closeSignal handlers tcpCon sock
 
-    close (D.ClientUdpConnectionVar conn) = writeComand conn D.Close >> closeConn conn
-    close (D.ServerUdpConnectionVar _ _)  = pure ()
-
-    openConnect addr handlers logger = do
-        conn <- atomically (newTMVar =<< newTChan)
-        void $ forkIO $ tryML
-            (runClient S.Datagram addr $ \sock -> void $ race
-                (readMessages (D.Connection addr) handlers logger sock)
-                (connectManager conn sock))
-            (atomically $ closeConn conn)
-        pure $ D.ClientUdpConnectionVar conn
-
-
-runHandlers :: D.Connection D.Udp -> Handlers D.Udp -> (Text -> IO ()) -> LByteString -> IO ()
-runHandlers netConn handlers logger msg = case decode msg of
-    Just (D.NetworkMsg tag val) -> whenJust (handlers ^. at tag) $
-        \handler -> handler val netConn
-    Nothing                     -> logger $ "Error in decoding en msg: " <> show msg
-
-writeComand :: TMVar (TChan D.Command) -> D.Command -> STM ()
-writeComand conn cmd = unlessM (isEmptyTMVar conn) $ do
-    chan <- readTMVar conn
-    writeTChan chan cmd
-
--- close connection
-closeConn :: TMVar (TChan D.Command) -> STM ()
-closeConn conn = unlessM (isEmptyTMVar conn) $ void $ takeTMVar conn
-
--- | Read comand to connect manager
-readCommand :: TMVar (TChan D.Command) -> IO (Maybe D.Command)
-readCommand conn = atomically $ do
-    ok <- isEmptyTMVar conn
-    if ok
-        then pure Nothing
-        else do
-            chan <- readTMVar conn
-            Just <$> readTChan chan
 
 sendUdpMsg :: D.Address -> LByteString -> IO (Either D.NetworkError ())
 sendUdpMsg addr msg = if length msg > D.packetSize
     then pure $ Left D.TooBigMessage
     else tryM
-        (runClient S.Datagram addr $ \sock -> S.sendAll sock msg)
+        (runClient S.Datagram addr $ \sock -> S.sendAll sock $ B.toStrict msg)
         (pure $ Left D.AddressNotExist)
         (\_ -> pure $ Right ())
 
-readMessages :: D.Connection D.Udp -> Handlers D.Udp -> (Text -> IO ()) -> S.Socket -> IO ()
-readMessages conn handlers logger sock = tryMR (S.recv sock $ toEnum D.packetSize) $ \msg -> do 
-    runHandlers conn handlers logger msg
-    readMessages conn handlers logger sock
 
--- | Manager for controlling of WS connect.
-connectManager :: TMVar (TChan D.Command) -> S.Socket -> IO ()
-connectManager conn sock = readCommand conn >>= \case
-    -- close connection
-    Just D.Close      -> atomically $ unlessM (isEmptyTMVar conn) $ void $ takeTMVar conn
-    -- send msg to alies node
-    Just (D.Send val feedback) ->
-        tryM (S.sendAll sock val) (atomically $ closeConn conn) $
-            \_ -> do
-                _ <- tryPutMVar feedback True
-                connectManager conn sock
-    -- conect is closed, stop of command reading
-    Nothing           -> pure ()
+runHandler :: D.Connection D.Udp -> Handlers D.Udp -> (Text -> IO ()) -> LByteString -> IO ()
+runHandler netConn handlers logger msg = case decode msg of
+    Just (D.NetworkMsg tag val) -> whenJust (handlers ^. at tag) $
+        \handler -> handler val netConn
+    Nothing                     -> logger $ "Error in decoding en msg: " <> show msg
+
+
+makeUdpCon :: S.Socket -> IO (D.ConnectionVar D.Udp)
+makeUdpCon sock = do
+    closeSignal <- newTVarIO False
+    sockVar     <- newTMVarIO sock
+    pure $ D.ClientUdpConnectionVar closeSignal sockVar
+
+instance NetworkConnection D.Udp where
+    startServer port handlers insertConnect logger = do
+        chan <- atomically newTChan
+
+        void $ forkIO $ runUDPServer chan port $ \socket sockAddr msg -> do
+            let host       = D.sockAddrToHost sockAddr
+                connection = D.Connection $ D.Address host port
+
+            sockVar     <- newTMVarIO socket
+            ok <- insertConnect connection (D.ServerUdpConnectionVar sockAddr sockVar)
+            when ok $ runHandler connection handlers logger msg
+        pure chan
+
+    send _ msg | length msg > D.packetSize = pure $ Left D.TooBigMessage
+    send (D.ClientUdpConnectionVar _ sockVar) msg =
+        sendMsg (\sock -> S.sendAll sock (B.toStrict msg)) sockVar
+    send (D.ServerUdpConnectionVar sockAddr    sockVar) msg =
+        sendMsg (\sock -> S.sendTo sock (B.toStrict msg) sockAddr) sockVar
+
+    close (D.ClientUdpConnectionVar closeSignal _) = writeTVar closeSignal True
+    close _  = pure ()
+
+    openConnect addr@(D.Address host port) handlers logger = do
+        address <- head <$> S.getAddrInfo Nothing (Just host) (Just $ show port)
+        sock    <- S.socket (S.addrFamily address) S.Datagram S.defaultProtocol
+        S.connect sock $ S.addrAddress address
+
+        udpConVar@(D.ClientUdpConnectionVar closeSignal _) <- makeUdpCon sock
+        let worker = readingWorker logger closeSignal handlers (D.Connection addr) sock `finally` S.close sock
+
+        void $ forkIO worker
+        pure udpConVar

@@ -11,22 +11,12 @@ import           Network.Socket               hiding (recvFrom, sendTo)
 import           Network.Socket.ByteString
 
 
-runUDPServer :: TChan ServerComand -> PortNumber -> (LByteString -> TChan D.SendUdpMsgTo -> SockAddr -> IO ()) -> IO ()
+runUDPServer :: TChan ServerComand -> PortNumber -> (Socket -> SockAddr -> LByteString ->  IO ()) -> IO ()
 runUDPServer chan port handler = bracket (listenUDP port) close $ \sock -> do
-    respChan <- atomically newTChan
-    let
-        sendMsg :: IO ()
-        sendMsg = forever $ do
-            SendUdpMsgTo reciver msg feedback <- atomically $ readTChan respChan
-            tryMR
-                (sendTo sock (B.toStrict msg) reciver)
-                (\_ -> void $ tryPutMVar feedback True)
-
-        talk :: IO ()
+    let talk :: IO ()
         talk = forever $ tryMR (recvFrom sock D.packetSize) $
-            \(msg, addr) -> handler (B.fromStrict msg) respChan addr
-
-    finally (serv chan sendMsg talk) (close sock)
+            \(msg, addr) -> handler sock addr (B.fromStrict msg) 
+    finally (void $ race (void $ atomically $ readTChan chan) talk) (close sock)
 
 serv :: TChan a -> IO b -> IO c -> IO ()
 serv chan f g = void $ race (void $ atomically $ readTChan chan) (race f g)

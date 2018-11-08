@@ -17,9 +17,8 @@ import qualified Network.Socket.ByteString.Lazy as S
 import qualified Network.Socket as S hiding (recv)
 import           Control.Monad.Extra
 
-    -- TODO: what is the behavior when the message > packetSize? What's happening with its rest?
-    -- Will it garbage the next message?
-
+-- TODO: what is the behavior when the message > packetSize? What's happening with its rest?
+-- Will it garbage the next message?
 readingWorker :: (Text -> IO ()) -> TVar Bool -> Handlers D.Tcp -> D.Connection D.Tcp -> S.Socket -> IO () 
 readingWorker logger closeSignal handlers tcpCon sock = do
     needClose <- readTVarIO closeSignal
@@ -34,6 +33,7 @@ readingWorker logger closeSignal handlers tcpCon sock = do
                     Nothing  -> logger $ "Error in decoding en msg: " <> show msg
                 readingWorker logger closeSignal handlers tcpCon sock
 
+makeTcpCon :: S.Socket -> IO (D.ConnectionVar D.Tcp)
 makeTcpCon sock = do
     closeSignal <- newTVarIO False
     sockVar     <- newTMVarIO sock
@@ -43,9 +43,10 @@ instance NetworkConnection D.Tcp where
     startServer port handlers registerConnection logger = do
         chan <- atomically newTChan
         void $ forkIO $ runTCPServer chan port $ \sock -> do
-            addr   <- getAdress sock
+            addr     <- getAdress sock
+            sockPort <- S.socketPort sock
             tcpConVar@(D.TcpConnectionVar closeSignal _) <- makeTcpCon sock
-            let tcpCon = D.Connection $ D.Address addr port
+            let tcpCon = D.Connection $ D.Address addr sockPort
             ok <- registerConnection tcpCon tcpConVar
             when ok $ readingWorker logger closeSignal handlers tcpCon sock `finally` S.close sock
 
@@ -67,7 +68,7 @@ instance NetworkConnection D.Tcp where
 
     close (D.TcpConnectionVar closeSignal sock) = writeTVar closeSignal True
 
-    send conn@(D.TcpConnectionVar closeSignal sockVar) msg
+    send (D.TcpConnectionVar closeSignal sockVar) msg
         | length msg > D.packetSize = pure $ Left D.TooBigMessage
         | otherwise                 = do
             sock <- atomically $ takeTMVar sockVar

@@ -17,29 +17,11 @@ type Handler protocol  = Value -> D.Connection protocol -> IO ()
 type Handlers protocol = Map Text (Handler protocol)
 type ServerHandle      = TChan D.ServerComand
 
-timeoutDelay :: Int
-timeoutDelay = 5000
-
 -- | Stop the server
 stopServer :: ServerHandle -> STM ()
 stopServer chan = writeTChan chan D.StopServer
 
-tryTakeResponse :: Int -> MVar Bool -> IO (Either D.NetworkError ())
-tryTakeResponse time feedback = do
-    res <- timeout time False (takeMVar feedback)
-    case res of
-        Right b | b -> pure $ Right ()
-        _           -> pure $ Left D.ConnectionClosed
 
-sendWithTimeOut
-    :: TChan D.Command
-    -> D.RawData -> IO (Either D.NetworkError ())
-sendWithTimeOut chan msg = undefined 
-{-do
-    feedback <- newEmptyMVar
-    atomically $ writeTChan chan $ D.Send msg feedback
-    takeTMVar timeoutDelay feedback
--}
 class NetworkConnection protocol where
     startServer
         :: S.PortNumber
