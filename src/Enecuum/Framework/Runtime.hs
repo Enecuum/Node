@@ -26,8 +26,8 @@ data NodeRuntime = NodeRuntime
     , _state       :: NodeState              -- ^ State of node.
     , _nodeTag     :: TVar Text
     , _processes   :: TVar (Map D.ProcessId ThreadId)
-    , _tcpConnects :: TVar (Map D.Address (D.ConnectionVar D.Tcp))
-    , _udpConnects :: TVar (Map D.Address (D.ConnectionVar D.Udp))
+    , _tcpConnects :: TMVar (Map D.Address (D.ConnectionVar D.Tcp))
+    , _udpConnects :: TMVar (Map D.Address (D.ConnectionVar D.Udp))
     , _storyPaths  :: Map Text String
     , _databases   :: TVar (Map FilePath DBHandle)
     }
@@ -42,8 +42,8 @@ createNodeRuntime coreRt paths =
         <*> newTMVarIO mempty
         <*> newTVarIO ""
         <*> newTVarIO mempty
-        <*> newTVarIO mempty
-        <*> newTVarIO mempty
+        <*> newTMVarIO mempty
+        <*> newTMVarIO mempty
         <*> pure paths
         <*> newTVarIO mempty
 

@@ -34,13 +34,19 @@ tryTakeResponse time feedback = do
 sendWithTimeOut
     :: TChan D.Command
     -> D.RawData -> IO (Either D.NetworkError ())
-sendWithTimeOut chan msg = do
+sendWithTimeOut chan msg = undefined 
+{-do
     feedback <- newEmptyMVar
     atomically $ writeTChan chan $ D.Send msg feedback
     takeTMVar timeoutDelay feedback
-
+-}
 class NetworkConnection protocol where
-    startServer :: S.PortNumber -> Handlers protocol -> (D.Connection protocol -> D.ConnectionVar protocol -> IO ()) -> (Text -> IO ()) -> IO ServerHandle
+    startServer
+        :: S.PortNumber
+        -> Handlers protocol
+        -> (D.Connection protocol -> D.ConnectionVar protocol -> IO Bool)
+        -> (Text -> IO ())
+        -> IO ServerHandle
     -- | Send msg to node.
     send        :: D.ConnectionVar protocol -> LByteString -> IO (Either D.NetworkError ())
     close       :: D.ConnectionVar protocol -> STM ()

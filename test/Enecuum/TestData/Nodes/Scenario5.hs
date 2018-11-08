@@ -59,12 +59,13 @@ pingSendingClientNode :: L.NodeDefinitionL ()
 pingSendingClientNode = L.scenario $ do
     countVar <- L.atomically $ L.newVar 0
 
-    conn <- L.open D.Tcp pongServerAddress $ L.handler $ pongHandle countVar
-    void $ L.send conn $ Ping 0
+    mCon <- L.open D.Tcp pongServerAddress $ L.handler $ pongHandle countVar
+    whenJust mCon $ \conn -> do
+        void $ L.send conn $ Ping 0
 
-    L.atomically $ do
-        pongs <- L.readVar countVar
-        when (pongs < pingPongThreshold) L.retry
+        L.atomically $ do
+            pongs <- L.readVar countVar
+            when (pongs < pingPongThreshold) L.retry
 
-    L.close conn
+        L.close conn
 

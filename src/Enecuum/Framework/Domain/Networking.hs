@@ -30,7 +30,7 @@ type CloseSignal = TVar Bool
 
 data family ConnectionVar a
 data instance ConnectionVar Tcp
-    = TcpConnectionVar ThreadId CloseSignal (TMVar S.Socket)
+    = TcpConnectionVar CloseSignal (TMVar S.Socket)
 
 data instance ConnectionVar Udp
     = ServerUdpConnectionVar S.SockAddr (TChan SendUdpMsgTo)

@@ -79,7 +79,7 @@ testConnectFromTo prot1 prot2 serverPort succPort =
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            conn <- L.open prot2 serverAddr $ pure ()
+            Just conn <- L.open prot2 serverAddr $ pure ()
             res  <- L.send conn Success
             when (Left D.ConnectionClosed == res) $
                 void $ L.notify succAddr Success
@@ -92,7 +92,7 @@ testConnectToNonexistentAddress :: (L.Send
 testConnectToNonexistentAddress protocol succPort =
     runServingScenarion succPort succPort $ \_ succAddr nodeRt1 _ ->
         runNodeDefinitionL nodeRt1 $ do
-            conn <- L.open protocol (D.Address "127.0.0.1" 300) $ pure ()
+            Just conn <- L.open protocol (D.Address "127.0.0.1" 300) $ pure ()
             res  <- L.send conn Success
             when (Left D.ConnectionClosed == res) $
                 void $ L.notify succAddr Success
@@ -118,7 +118,7 @@ testSendingMsgToClosedConnection protocol serverPort succPort =
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            conn <- L.open protocol serverAddr $ pure ()
+            Just conn <- L.open protocol serverAddr $ pure ()
             L.close conn
             res  <- L.send conn Success
             when (Left D.ConnectionClosed == res) $
@@ -136,7 +136,7 @@ testSendingBigMsgByConnect protocol serverPort succPort =
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            conn <- L.open protocol serverAddr $ pure ()
+            Just conn <- L.open protocol serverAddr $ pure ()
             res  <- L.send conn bigMsg
             when (Left D.TooBigMessage == res) $
                 void $ L.notify succAddr Success
@@ -169,7 +169,7 @@ pingPongTest protocol serverPort succPort =
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            conn <- L.open protocol serverAddr $ do
+            Just conn <- L.open protocol serverAddr $ do
                 L.handler (pingHandle succAddr)
                 L.handler (pongHandle succAddr)
             void $ L.send conn $ Ping 0
@@ -204,8 +204,8 @@ pongHandle succAddr (Pong i) conn = do
         void $ L.notify succAddr Success
         L.close conn
 
-emptFunc :: D.Connection D.Udp -> D.ConnectionVar D.Udp -> IO ()
-emptFunc _ _ = pure ()
+emptFunc :: D.Connection D.Udp -> D.ConnectionVar D.Udp -> IO Bool
+emptFunc _ _ = pure True
 
 succesServer :: D.PortNumber -> IO Bool
 succesServer port = do

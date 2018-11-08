@@ -54,10 +54,10 @@ kBlockProcess nodeData = do
     L.writeVarIO (nodeData ^. prevNumber) $ prevKBlockNumber + fromIntegral (length kBlocks)
 
     gap <- L.readVarIO $ nodeData ^. blocksDelay
-    L.withConnection D.Tcp graphNodeTransmitterTcpAddress $ \conn -> for_ kBlocks $ \ kBlock -> do
-            L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-            void $ L.send conn kBlock
-            when (gap > 0) $ L.delay gap
+    void $ L.withConnection D.Tcp graphNodeTransmitterTcpAddress $ \conn -> for_ kBlocks $ \ kBlock -> do
+        L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
+        void $ L.send conn kBlock
+        when (gap > 0) $ L.delay gap
 
 foreverChainGenerationHandle :: PoWNodeData -> Msgs.ForeverChainGeneration -> L.NodeL Msgs.SuccessMsg
 foreverChainGenerationHandle powNodeData _ = do

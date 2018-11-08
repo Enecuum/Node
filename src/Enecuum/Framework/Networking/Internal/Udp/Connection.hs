@@ -32,12 +32,12 @@ instance NetworkConnection D.Udp where
             let host       = D.sockAddrToHost sockAddr
                 connection = D.Connection $ D.Address host port
     
-            insertConnect connection (D.ServerUdpConnectionVar sockAddr msgChan)
-            runHandlers   connection handlers logger msg
+            ok <- insertConnect connection (D.ServerUdpConnectionVar sockAddr msgChan)
+            when ok $ runHandlers connection handlers logger msg
         pure chan
 
     send (D.ClientUdpConnectionVar conn) msg
-        | length msg <= D.packetSize = sendWithTimeOut conn msg
+        | length msg <= D.packetSize = sendWithTimeOut undefined msg
         | otherwise                  = pure $ Left D.TooBigMessage
     send (D.ServerUdpConnectionVar sockAddr chan) msg
         | length msg <= D.packetSize = do

@@ -43,13 +43,23 @@ startServing nodeRt port initScript = do
     m        <- atomically $ newTVar mempty
     a        <- Net.runNetworkHandlerL m initScript
     handlers <- readTVarIO m
+    let registerConnection (D.Connection addr) connection = do
+            connects <- atomically $ takeTMVar (nodeRt ^. Impl.connectsLens)
+            let ok = M.member addr connects
+            if ok then do
+                let newConnectsVar = M.insert addr connection connects
+                atomically $ putTMVar (nodeRt ^. Impl.connectsLens) newConnectsVar
+            else atomically $ putTMVar (nodeRt ^. Impl.connectsLens) connects
+            pure ok 
+
     s        <- Con.startServer
         port
         ((\f a' b -> Impl.runNodeL nodeRt $ f a' b) <$> handlers)
-        (\(D.Connection addr) -> Impl.insertConnect (nodeRt ^. Impl.connectsLens) addr)
+        registerConnection
         (Impl.logError' nodeRt)
     atomically $ setServerChan (nodeRt ^. RLens.servers) port s
     pure a
+
 
 interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF a -> IO a
 interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do

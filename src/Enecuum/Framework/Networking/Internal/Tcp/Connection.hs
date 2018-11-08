@@ -7,6 +7,7 @@ import           Enecuum.Framework.Networking.Internal.Connection
 import           Data.Aeson
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TMVar
+import qualified Data.Map as M
 
 import           Control.Concurrent.Async
 import qualified Enecuum.Framework.Domain.Networking as D
@@ -19,31 +20,38 @@ import           Control.Monad.Extra
     -- TODO: what is the behavior when the message > packetSize? What's happening with its rest?
     -- Will it garbage the next message?
 
-readingWorker logger closeSignal handlers sock = do
+readingWorker :: (Text -> IO ()) -> TVar Bool -> Handlers D.Tcp -> D.Connection D.Tcp -> S.Socket -> IO () 
+readingWorker logger closeSignal handlers tcpCon sock = do
     needClose <- readTVarIO closeSignal
     unless needClose $ do
         eMsg <- try $ S.recv sock $ toEnum D.packetSize
         case eMsg of
-            Left (err :: SomeException) -> logger $ "Error in reading socket: " <> show msg
+            Left (err :: SomeException) -> logger $ "Error in reading socket: " <> show err
             Right msg -> do
                 case decode msg of
-                    Just val -> callHandler netConn val handlers
+                    Just (D.NetworkMsg tag val) ->
+                        whenJust (tag `M.lookup` handlers) $ \handler -> handler val tcpCon
                     Nothing  -> logger $ "Error in decoding en msg: " <> show msg
-                readingWorker logger closeSignal handlers sock
+                readingWorker logger closeSignal handlers tcpCon sock
+
+makeTcpCon sock = do
+    closeSignal <- newTVarIO False
+    sockVar     <- newTMVarIO sock
+    pure $ D.TcpConnectionVar closeSignal sockVar
 
 instance NetworkConnection D.Tcp where
     startServer port handlers registerConnection logger = do
         chan <- atomically newTChan
         void $ forkIO $ runTCPServer chan port $ \sock -> do
-            addr <- getAdress sock
-            
-            conn <- D.TcpConnectionVar <$> atomically ()
-            let networkConnecion = D.Connection $ D.Address addr port
-            registerConnection networkConnecion conn
-            void $ race (runHandlers conn networkConnecion sock handlers logger) (connectManager conn sock)
+            addr   <- getAdress sock
+            tcpConVar@(D.TcpConnectionVar closeSignal _) <- makeTcpCon sock
+            let tcpCon = D.Connection $ D.Address addr port
+            ok <- registerConnection tcpCon tcpConVar
+            when ok $ readingWorker logger closeSignal handlers tcpCon sock `finally` S.close sock
+
         pure chan
 
-    openConnect addr handlers logger = do
+    openConnect addr@(D.Address host port) handlers logger = do
         -- TODO: exceptions
 
         -- Always returns non-empty list
@@ -51,58 +59,28 @@ instance NetworkConnection D.Tcp where
         sock    <- S.socket (S.addrFamily address) S.Stream S.defaultProtocol
         S.connect sock $ S.addrAddress address
 
-        closeSignal <- newTVarIO False
-        let worker = readingWorker logger closeSignal handlers sock `finally` S.close sock
+        tcpConVar@(D.TcpConnectionVar closeSignal _) <- makeTcpCon sock
+        let worker = readingWorker logger closeSignal handlers (D.Connection addr) sock `finally` S.close sock
 
-        readingWorkerId <- forkIO worker
+        void $ forkIO worker
+        pure tcpConVar
 
-        D.TcpConnectionVar readingWorkerId closeSignal
-            <$> newTMVarIO sock
+    close (D.TcpConnectionVar closeSignal sock) = writeTVar closeSignal True
 
-    close (D.TcpConnectionVar rWorkerId closeSignal sock) =
-        atomically $ writeTVar closeSignal True
-
-    send (D.TcpConnectionVar conn) msg
-        | length msg <= D.packetSize = sendWithTimeOut conn msg
-        | otherwise                  = pure $ Left D.TooBigMessage
+    send conn@(D.TcpConnectionVar closeSignal sockVar) msg
+        | length msg > D.packetSize = pure $ Left D.TooBigMessage
+        | otherwise                 = do
+            sock <- atomically $ takeTMVar sockVar
+            err <- try $ S.sendAll sock msg
+            res <- case err of
+                Right _                     -> pure $ Right ()
+                Left  (_ :: SomeException)  -> do
+                    atomically $ writeTVar closeSignal True
+                    pure $ Left D.ConnectionClosed
+            atomically (putTMVar sockVar sock)
+            pure res
+        
 
 getAdress :: S.Socket -> IO D.Host
 getAdress socket = D.sockAddrToHost <$> S.getSocketName socket
 
---------------------------------------------------------------------------------
--- * Internal
--- runHandlers :: D.ConnectionVar D.Tcp -> D.Connection D.Tcp -> S.Socket -> Handlers D.Tcp -> (Text -> IO ()) -> IO ()
--- runHandlers conn netConn wsConn handlers logger =
---     tryM (S.recv wsConn $ toEnum D.packetSize) (atomically $ closeConn conn) $ \msg ->
---         if null msg
---             then atomically $ closeConn conn
---             else do
---                 case decode msg of
---                     Just val -> callHandler netConn val handlers
---                     Nothing  -> logger $ "Error in decoding en msg: " <> show msg
---                 runHandlers conn netConn wsConn handlers logger
-
-callHandler :: D.Connection D.Tcp -> D.NetworkMsg -> Handlers D.Tcp -> IO ()
-callHandler conn (D.NetworkMsg tag val) handlers = whenJust (handlers ^. at tag) $ \handler -> handler val conn
-
--- | Manager for controlling of WS connect.
-connectManager :: D.ConnectionVar D.Tcp -> S.Socket -> IO ()
-connectManager conn@(D.TcpConnectionVar chan) wsConn = do
-    cmd <- atomically $ readTChan chan
-    case cmd of
-        -- close connection
-        D.Close        -> atomically $ unlessM (isEmptyTMVar c) $ void $ takeTMVar c
-        -- send msg to alies node
-        D.Send val var ->
-            tryM (S.sendAll wsConn val) (atomically $ closeConn conn) $ \_ -> do
-                _ <- tryPutMVar var True
-                connectManager conn wsConn
-
--- close connection 
--- closeConn :: D.ConnectionVar D.Tcp -> STM ()
--- closeConn (D.TcpConnectionVar conn) = unlessM (isEmptyTMVar conn) $ void $ takeTMVar conn
-
-writeComand :: D.ConnectionVar D.Tcp -> D.Command -> STM ()
-writeComand (D.TcpConnectionVar conn) cmd = unlessM (isEmptyTMVar conn) $ do
-    chan <- readTMVar conn
-    writeTChan chan cmd

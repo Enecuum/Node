@@ -4,6 +4,8 @@ import Enecuum.Prelude
 
 import           Data.Aeson as A
 import qualified Data.Text as T
+import qualified Data.Map as M
+
 
 import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
@@ -31,16 +33,24 @@ interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
     pure $ next res
 
 interpretNetworkingL nr (L.SendTcpMsgByConnection (D.Connection conn) msg next) = do
-    m <- readTVarIO $ nr ^. RL.tcpConnects
-    case m ^. at conn of
+    m <- atomically $ readTMVar $ nr ^. RL.tcpConnects
+    case conn `M.lookup` m of
         Just con -> next <$> Con.send con msg
-        Nothing  -> pure $ next $ Left D.ConnectionClosed
+        Nothing  -> do
+            connects <- atomically $ takeTMVar $ nr ^. RL.tcpConnects
+            let newConnects = M.delete conn connects 
+            atomically $ putTMVar (nr ^. RL.tcpConnects) newConnects
+            pure $ next $ Left D.ConnectionClosed
 
 interpretNetworkingL nr (L.SendUdpMsgByConnection (D.Connection conn) msg next) = do
-    m <- readTVarIO $ nr ^. RL.udpConnects
-    case m ^. at conn of
+    m <- atomically $ readTMVar $ nr ^. RL.udpConnects
+    case conn `M.lookup` m of
         Just con -> next <$> Con.send con msg
-        Nothing  -> pure $ next $ Left D.ConnectionClosed
+        Nothing  -> do
+            connects <- atomically $ takeTMVar $ nr ^. RL.udpConnects
+            let newConnects = M.delete conn connects 
+            atomically $ putTMVar (nr ^. RL.udpConnects) newConnects
+            pure $ next $ Left D.ConnectionClosed
 
 interpretNetworkingL _ (L.SendUdpMsgByAddress adr msg next) =
     next <$> Udp.sendUdpMsg adr msg

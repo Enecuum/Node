@@ -46,10 +46,10 @@ interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
     next <$>  (Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects)
 
 interpretNodeL nodeRt (L.OpenTcpConnection addr initScript next) =
-    next <$> openConnection nodeRt addr initScript
+    next <$> openConnection nodeRt (nodeRt ^. RLens.tcpConnects) addr initScript
 
 interpretNodeL nodeRt (L.OpenUdpConnection addr initScript next) =
-    next <$> openConnection nodeRt addr initScript
+    next <$> openConnection nodeRt (nodeRt ^. RLens.udpConnects) addr initScript
 
 interpretNodeL nodeRt (L.CloseTcpConnection (D.Connection addr) next) =
     next <$> closeConnection (nodeRt ^. RLens.tcpConnects) addr
@@ -91,7 +91,7 @@ type F f a = a -> f a
 class ConnectsLens a where
     connectsLens
         :: Functor f
-        => F f (TVar (Map D.Address (D.ConnectionVar a)))
+        => F f (TMVar (Map D.Address (D.ConnectionVar a)))
         -> NodeRuntime
         -> f NodeRuntime
 
@@ -101,26 +101,23 @@ instance ConnectsLens D.Udp where
 instance ConnectsLens D.Tcp where
     connectsLens = RLens.tcpConnects
 
-
 closeConnection
-    :: (Con.NetworkConnection protocol, Ord k)
-    => TMVar (Map k (D.ConnectionVar protocol)) -> k -> IO ()
-closeConnection connsVar addr = do
-    conns <- atomically $ takeTMVar connsVar
+    :: Con.NetworkConnection protocol
+    => TMVar (Map D.Address (D.ConnectionVar protocol)) -> D.Address -> IO ()
+closeConnection connectsRef addr = do
+    conns <- atomically $ takeTMVar connectsRef
     case M.lookup addr conns of
-        Nothing -> atomically $ putTMVar connsVar conns
-        Just conn -> do
+        Nothing -> atomically $ putTMVar connectsRef conns
+        Just conn -> atomically $ do
             Con.close conn
-            atomically $ putTMVar connsVar $ M.delete addr conns
+            putTMVar connectsRef $ M.delete addr conns
 
-openConnection
-    :: forall k a1 a2 (a3 :: k).(ConnectsLens a1, Con.NetworkConnection a1)
-    => NodeRuntime -> D.Address -> L.NetworkHandlerL a1 L.NodeL a2 -> IO (D.Connection a3)
-openConnection nodeRt addr initScript = do
-    conns <- atomically $ takeTMVar $ nodeRt ^. connectsLens
+
+openConnection nodeRt connectsRef addr initScript = do
+    conns <- atomically $ takeTMVar connectsRef
     if M.member addr conns
         then do
-            atomically $ putTMVar (nodeRt ^. connectsLens) conns
+            atomically $ putTMVar connectsRef conns
             pure Nothing
         else do
             m <- newTVarIO mempty
@@ -134,8 +131,8 @@ openConnection nodeRt addr initScript = do
                 (logError' nodeRt)
 
             let newConns = M.insert addr newCon conns
-            atomically $ putTMVar (nodeRt ^. connectsLens) newConns
-            pure $ D.Connection addr
+            atomically $ putTMVar connectsRef newConns
+            pure $ Just $ D.Connection addr
 
 setServerChan :: TVar (Map S.PortNumber (TChan D.ServerComand)) -> S.PortNumber -> TChan D.ServerComand -> STM ()
 setServerChan servs port chan = do

@@ -81,7 +81,7 @@ interpretNodeL nodeRt (L.OpenTcpConnection serverAddress handlersF next) = do
                 Right _   -> do
                     -- registering bindedServer.
                     registerConnection nodeRt bindedServer
-                    pure $ next bindedServerConnection
+                    pure $ next $ Just bindedServerConnection
 
 interpretNodeL nodeRt (L.CloseTcpConnection conn next) = next <$> closeConnection nodeRt conn
 
