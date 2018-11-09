@@ -52,5 +52,7 @@ testPoA = TestCase $ withNodesManager $ \mgr -> do
     (length mblock) `shouldBe` 1
 
     -- Check transaction pending on graph node, it must to be empty now
-    txPending :: [D.Transaction] <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
-    txPending `shouldBe` []
+    void $ do
+        let predicate :: [D.Transaction] -> Bool
+            predicate txPending = txPending == []
+        makeRpcRequestWithPredicate predicate A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending

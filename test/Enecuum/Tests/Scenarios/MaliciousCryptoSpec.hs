@@ -25,6 +25,7 @@ testInvalidTransaction = TestCase $ withNodesManager $ \mgr -> do
     void $ startNode Nothing mgr $ A.graphNodeTransmitter A.noDBConfig
     void $ startNode Nothing mgr A.powNode
     void $ startNode Nothing mgr $ A.poaNode A.Good $ A.PoANodeConfig 42
+    waitForNode A.graphNodeTransmitterRpcAddress
 
     -- Generate and send transactions with invalid signature to graph node
     invalidTransactions <- I.runERandomL $ replicateM A.transactionsInMicroblock $ A.generateBogusSignedTransaction
