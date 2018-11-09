@@ -62,7 +62,6 @@ readingWorker handlers !tcpCon !sock = do
             RFinish   ->
                 trace_ "[readingWorker] finishing"
 
-data AcceptingResult = LLooping | LAccepting (Either SomeException ())
 data AcceptorAction  = LContinue | LFinish
 
 acceptingTimeout = 1000 * 1000
@@ -73,40 +72,22 @@ acceptConnects listenSock handler = do
     trace_ $ "[acceptingWorker] accepted some connect, forking handler: " <> show addr
     void $ forkIO $ handler connSock
 
-analyzeAcceptingResult
-    :: AcceptingResult
-    -> IO AcceptorAction
-analyzeAcceptingResult LLooping =
-    -- trace_ "[acceptingWorker] looping got after timeout"
-    pure LContinue
-
-analyzeAcceptingResult (LAccepting (Left err)) = do
+analyzeAcceptingResult :: Either SomeException () -> IO AcceptorAction
+analyzeAcceptingResult (Left err) = do
     trace_ $ "[acceptingWorker] exc while accepting connections: " <> show err
     pure LFinish
-
-analyzeAcceptingResult (LAccepting (Right ())) = do
-    trace_ "[acceptingWorker] succesfully accepted some connection."
+analyzeAcceptingResult (Right ()) = do
+    trace_ $ "[acceptingWorker] succesfully accepted some connection."
     pure LContinue
 
-acceptingWorker listenSock handler closeSignal = do
-    -- trace_ "[acceptingWorker] checking close signal"
-    needClose <- readTVarIO closeSignal
-    when needClose $ trace_ "[acceptingWorker] need close"
-    unless needClose $ do
-        let loopDelay = threadDelay acceptingTimeout >> pure LLooping
-        let tryAccepting = try $ acceptConnects listenSock handler
-        let accepting = LAccepting <$> tryAccepting
-
-        -- trace_ "[acceptingWorker] accepting connections"
-        acceptOrLoop <- race loopDelay accepting
-        let acceptOrLoopResult = either id id acceptOrLoop
-
-        -- trace_ "[acceptingWorker] analyzing of accepting result"
-        loopAct <- analyzeAcceptingResult acceptOrLoopResult
+acceptingWorker listenSock handler = do
+        trace_ "[acceptingWorker] accepting connections"
+        eRes <- try $ acceptConnects listenSock handler
+        loopAct <- analyzeAcceptingResult eRes
         case loopAct of
             LContinue -> do
-                -- trace_ "[acceptingWorker] continue accepting"
-                acceptingWorker listenSock handler closeSignal
+                trace_ "[acceptingWorker] continue accepting"
+                acceptingWorker listenSock handler
             LFinish   -> trace_ "[acceptingWorker] finishing"
 
 acceptingHandler registerConnection handlers connSock = do
@@ -118,7 +99,7 @@ acceptingHandler registerConnection handlers connSock = do
     
     trace_ "[acceptingHandler] starting reading worker"
     let worker = readingWorker handlers tcpCon connSock
-                `finally` (trace "[openConnect] readerWorker finished, closing sock" $ manualCloseSock connSock)
+                `finally` (trace "[openConnect] readerWorker finished, closing sock" $ Conn.manualCloseSock connSock)
 
     readerId <- forkIO worker
 
@@ -129,37 +110,32 @@ acceptingHandler registerConnection handlers connSock = do
     when registered $
         trace_ "[acceptingHandler] connection registered."
 
-    unless registered (do
+    unless registered $ do
         trace_ "[acceptingHandler] closing connSock: connection not registered"
-        manualCloseConnection' connSock readerId
-        )
+        Conn.manualCloseConnection' connSock readerId
 
 instance Conn.NetworkConnection D.Tcp where
     startServer port handlers registerConnection = do
         trace_ "[startServer] start"
-
-        awCloseSignal <- newTVarIO False
-        awClosedSignal <- newTMVarIO ()
 
         let listenF = trace ("[startServer] listenOn " <> show port)
                 $ listenOn (PortNumber port)
 
         eListenSock <- try listenF
         case eListenSock of
-            Left (err :: SomeException) -> trace_ $ "[startServer] listenOn failed: " <> show err
+            Left (err :: SomeException) -> trace ("[startServer] listenOn failed: " <> show err) $ pure Nothing
             Right listenSock -> do
-              trace_ "[startServer] forking accepting worker"
-              let handler = acceptingHandler registerConnection handlers
-              let worker = acceptingWorker listenSock handler awCloseSignal
-                    `finally` (do
-                              trace "[startServer] closing listenSock: accepting worker finished" $ S.close listenSock
-                              atomically $ putTMVar awClosedSignal ()
-                        )
-              void $ forkIO worker
+                trace_ "[startServer] forking accepting worker"
+                let handler = acceptingHandler registerConnection handlers
+                let worker = acceptingWorker listenSock handler
+                                `finally` (trace "[startServer] closing listenSock: accepting worker finished" 
+                                                $ Conn.manualCloseSock listenSock)
+              
+                acceptWorkerId <- forkIO worker
+                listenSockVar <- newTMVarIO listenSock
+                trace_ "[startServer] successfully started."
+                pure $ Just $ Conn.ServerHandle listenSockVar acceptWorkerId
 
-        -- Why the openServer function returns valid result when listening failed?
-        trace_ "[startServer] done"
-        pure $ Conn.ServerHandle awCloseSignal awClosedSignal
 
     openConnect addr@(D.Address host port) handlers = do
         trace_ "[openConnect] start"
@@ -172,19 +148,17 @@ instance Conn.NetworkConnection D.Tcp where
                 trace ("[openConnect] exc in connect, closing sock: " <> show err) $ S.close sock
                 pure Nothing
             Right _ -> do
-
                 sockVar      <- newTMVarIO sock
-
                 let worker = trace "[openConnect] starting read worker" $
                         readingWorker handlers (D.Connection addr) sock
-                            `finally` (trace "[openConnect] readerWorker finished, closing sock" $ manualCloseSock sock)
+                            `finally` (trace  "[openConnect] readerWorker finished, closing sock" $ Conn.manualCloseSock sock)
                 readerId <- forkIO worker
 
                 pure $ Just $ D.TcpConnectionVar sockVar readerId
         trace_ "[openConnect] done"
         pure r
 
-    close = manualCloseConnection
+    close = Conn.manualCloseConnection
 
     send connVar@(D.TcpConnectionVar sockVar readerId) msg
         | length msg > D.packetSize = trace "[send] Too big message" $ pure $ Left D.TooBigMessage
@@ -194,25 +168,10 @@ instance Conn.NetworkConnection D.Tcp where
             res <- case err of
                 Right _                     -> pure $ Right ()
                 Left  (err :: SomeException)  -> do
-                    trace ("[send] exc got, closing " <> show err) $ manualCloseConnection' sock readerId
+                    trace ("[send] exc got, closing " <> show err) $ Conn.manualCloseConnection' sock readerId
                     pure $ Left D.ConnectionClosed
             trace "[send] Releasing sock" $ atomically (putTMVar sockVar sock)
             pure res
-
-manualCloseConnection connVar@(D.TcpConnectionVar sockVar readerId) = do
-    sock <- trace "[manualCloseConnection] Taking sock" $ atomically $ takeTMVar sockVar
-    manualCloseConnection' sock readerId
-    trace "[manualCloseConnection] Releasing sock" $ atomically (putTMVar sockVar sock)
-
-manualCloseConnection' sock readerId = do
-    trace "[manualCloseConnection] killing reader thread" $ killThread readerId
-    manualCloseSock sock
-    trace_ "[manualCloseConnection] done"
-
-manualCloseSock sock = do
-    trace_ "[manualCloseSock] closing sock"
-    eRes <- try $ S.close sock
-    whenLeft eRes $ \(err :: SomeException) -> trace_ $ "[manualCloseSock] exc got in closing sock: " <> show err
 
 getAdress :: S.Socket -> IO D.Host
 getAdress socket = D.sockAddrToHost <$> S.getSocketName socket

@@ -86,7 +86,7 @@ instance NetworkConnection D.Udp where
             sockVar     <- newTMVarIO socket
             void $ insertConnect connection (D.ServerUdpConnectionVar sockAddr sockVar)
             runHandler connection handlers msg
-        pure $ OldServerHandle chan
+        pure $ Just $ OldServerHandle chan
 
     send _ msg | length msg > D.packetSize = pure $ Left D.TooBigMessage
     send (D.ClientUdpConnectionVar _ sockVar) msg =
