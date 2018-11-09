@@ -42,9 +42,9 @@ sockVarIsClosed sockVar = do
 
 instance ConnectVarData Tcp where
     data ConnectionVar Tcp
-        = TcpConnectionVar !CloseSignal !ClosedSignal !(TMVar S.Socket)
+        = TcpConnectionVar !(TMVar S.Socket) ThreadId
 
-    isClosed (TcpConnectionVar _ _ sockVar) = sockVarIsClosed sockVar
+    isClosed (TcpConnectionVar sockVar _) = sockVarIsClosed sockVar
 
 
 instance ConnectVarData Udp where

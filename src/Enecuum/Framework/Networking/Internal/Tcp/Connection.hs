@@ -6,7 +6,7 @@ module Enecuum.Framework.Networking.Internal.Tcp.Connection where
 import           Enecuum.Prelude
 import qualified Enecuum.Framework.Networking.Internal.Connection as Conn
 import           Data.Aeson
-import           Control.Concurrent (forkFinally)
+import           Control.Concurrent (forkFinally, killThread)
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.Async (race)
 import qualified Data.Map as M
@@ -21,46 +21,24 @@ import           Enecuum.Framework.Networking.Internal.Tcp.Server
 import qualified Network.Socket.ByteString.Lazy as S
 import qualified Network.Socket as S hiding (recv)
 
-data ReadingResult = RLooping | RReading (Either SomeException LByteString)
 data ReaderAction  = RContinue | RFinish
 
 readingTimeout = 1000 * 1000
 
-
--- runTCPServer :: TChan D.ServerComand -> PortNumber -> (Socket -> IO ()) -> IO ()
--- runTCPServer chan port handler =
---     bracket ((listenOn . PortNumber) port) close $ \listenSock ->
---         finally 
---              (void $ race (void $ atomically $ readTChan chan) 
---                           (acceptConnects listenSock handler)) 
---              (close listenSock)
---
--- serv :: TChan a -> IO b -> IO ()
--- serv chan f = void $ race (void $ atomically $ readTChan chan) f
-
--- acceptConnects :: forall a b . Socket -> (Socket -> IO a) -> IO b
--- acceptConnects listenSock handler = forever $ do
---     (connSock, _) <- accept listenSock
---     void $ forkFinally (handler connSock) (\_ -> close c
-
 analyzeReadingResult
     :: Conn.Handlers D.Tcp
     -> D.Connection D.Tcp
-    -> ReadingResult
+    -> Either SomeException LByteString
     -> IO ReaderAction
-analyzeReadingResult handlers tcpCon RLooping = do
-    -- trace @String "[readingWorker] looping got after timeout" $ pure ""
-    pure RContinue
-
-analyzeReadingResult handlers tcpCon (RReading (Left err)) = do
+analyzeReadingResult handlers tcpCon  (Left err) = do
     trace @String ("[readingWorker] exc in receiving data" <> show err) $ pure ""
     pure RFinish
 
-analyzeReadingResult handlers tcpCon (RReading (Right msg)) | null msg  = do
+analyzeReadingResult handlers tcpCon (Right msg) | null msg  = do
     trace @String "[readingWorker] empty data got" $ pure ""
     pure RFinish
 
-analyzeReadingResult handlers tcpCon (RReading (Right msg)) | otherwise = do
+analyzeReadingResult handlers tcpCon (Right msg) | otherwise = do
     trace @String "[readingWorker] message read" $ pure ()
     case decode msg of
         Just (D.NetworkMsg tag val) -> do
@@ -73,33 +51,16 @@ analyzeReadingResult handlers tcpCon (RReading (Right msg)) | otherwise = do
 
 -- TODO: what is the behavior when the message > packetSize? What's happening with its rest?
 -- Will it garbage the next message?
-readingWorker :: TVar Bool -> Conn.Handlers D.Tcp -> D.Connection D.Tcp -> S.Socket -> IO ()
-readingWorker closeSignal handlers !tcpCon !sock = do
-    -- trace @String "[readingWorker] checking close signal" $ pure ()
-    needClose <- readTVarIO closeSignal
-    when needClose $ trace @String "[readingWorker] need close" $ pure ()
-    unless needClose $ do
-        let loopDelay  = threadDelay readingTimeout >> pure RLooping
-        let tryReading :: IO (Either SomeException LByteString) = try $ S.recv sock $ toEnum D.packetSize
-        let reading :: IO ReadingResult = RReading <$> tryReading
-
-        readOrLoopResult :: (Either ReadingResult ReadingResult) <- trace @String "[readingWorker] receiving data" $ race loopDelay reading
-        let readingResult = either id id readOrLoopResult
-
-        -- trace @String "[readingWorker] analyzing reading result" $ pure ()
-        readerAct <- analyzeReadingResult handlers tcpCon readingResult
+readingWorker :: Conn.Handlers D.Tcp -> D.Connection D.Tcp -> S.Socket -> IO ()
+readingWorker handlers !tcpCon !sock = do
+        eRead <- try $ S.recv sock $ toEnum D.packetSize
+        readerAct <- analyzeReadingResult handlers tcpCon eRead
         case readerAct of
             RContinue -> do
-                -- trace @String "[readingWorker] continue reading"
-                readingWorker closeSignal handlers tcpCon sock
-            RFinish   -> trace @String "[readingWorker] finishing" $ pure ()
-
-makeTcpCon :: S.Socket -> IO (D.ConnectionVar D.Tcp)
-makeTcpCon sock = do
-    closeSignal  <- newTVarIO False
-    closedSignal <- newTMVarIO ()
-    sockVar      <- newTMVarIO sock
-    pure $ D.TcpConnectionVar closeSignal closedSignal sockVar
+                trace @String "[readingWorker] continue reading" $ pure ()
+                readingWorker handlers tcpCon sock
+            RFinish   -> do
+                trace @String "[readingWorker] finishing" $ pure ()
 
 data AcceptingResult = LLooping | LAccepting (Either SomeException ())
 data AcceptorAction  = LContinue | LFinish
@@ -152,22 +113,25 @@ acceptingHandler registerConnection handlers connSock = do
     trace @String "[acceptingHandler] start, getting network things" $ pure ()
     addr     <- getAdress connSock
     sockPort <- S.socketPort connSock
-    tcpConVar@(D.TcpConnectionVar closeSignal closedSignal _) <- makeTcpCon connSock
+
     let tcpCon = D.Connection $ D.Address addr sockPort
+    
+    trace @String "[acceptingHandler] starting reading worker" $ pure ()
+    let worker = readingWorker handlers tcpCon connSock
+                `finally` (trace @String "[openConnect] readerWorker finished, closing sock" $ manualCloseSock connSock)
+
+    readerId <- forkIO worker
+
     trace @String ("[acceptingHandler] registering conn: " <> show addr) $ pure ()
-    ok <- registerConnection tcpCon tcpConVar
-    when ok $ do
-        trace @String "[acceptingHandler] starting reading worker" $ pure ()
-        let worker = readingWorker closeSignal handlers tcpCon connSock
-              `finally` (do
-                  trace @String "[acceptingHandler] closing connSock: worker finished"
-                      $ S.close connSock
-                  atomically $ putTMVar closedSignal ()
-                  )
-        void $ forkIO worker
-    unless ok $ (do
+    sockVar  <- newTMVarIO connSock
+    registered <- registerConnection tcpCon $ D.TcpConnectionVar sockVar readerId
+
+    when registered $
+        trace @String "[acceptingHandler] connection registered." $ pure ()
+
+    unless registered $ (do
         trace @String "[acceptingHandler] closing connSock: connection not registered" $ pure ()
-        S.close connSock
+        manualCloseConnection' connSock readerId
         )
 
 instance Conn.NetworkConnection D.Tcp where
@@ -204,48 +168,51 @@ instance Conn.NetworkConnection D.Tcp where
         sock    <- trace @String "[openConnect] creating sock" $ S.socket (S.addrFamily address) S.Stream S.defaultProtocol
         ok <- trace @String "[openConnect] connecting to sock" $ try $ S.connect sock $ S.addrAddress address
         r <- case ok of
-            Left (_ :: SomeException) -> do
-                trace @String "[openConnect] exc in connect. Closing sock" $ S.close sock
+            Left (err :: SomeException) -> do
+                trace @String ("[openConnect] exc in connect, closing sock: " <> show err) $ S.close sock
                 pure Nothing
             Right _ -> do
-                tcpConVar@(D.TcpConnectionVar closeSignal closedSignal _) <- makeTcpCon sock
-                let worker = trace @String "[openConnect] starting read worker" $
-                        readingWorker closeSignal handlers (D.Connection addr) sock
-                        `finally` (do
-                            trace @String "[openConnect] closing sock: worker finished" $ S.close sock
-                            atomically $ putTMVar closedSignal ()
-                            )
 
-                void $ forkIO worker
-                pure $ Just tcpConVar
+                sockVar      <- newTMVarIO sock
+
+                let worker = trace @String "[openConnect] starting read worker" $
+                        readingWorker handlers (D.Connection addr) sock
+                            `finally` (trace @String "[openConnect] readerWorker finished, closing sock" $ manualCloseSock sock)
+                readerId <- forkIO worker
+
+                pure $ Just $ D.TcpConnectionVar sockVar readerId
         trace @String "[openConnect] done" $ pure ()
         pure r
 
     close = manualCloseConnection
 
-    send connVar@(D.TcpConnectionVar closeSignal closedSignal sockVar) msg
+    send connVar@(D.TcpConnectionVar sockVar readerId) msg
         | length msg > D.packetSize = trace @String "[send] Too big message" $ pure $ Left D.TooBigMessage
         | otherwise                 = do
             sock <- trace @String "[send] Taking sock" $ atomically $ takeTMVar sockVar
-            err <- trace @String "[send] Sending data" $ try $ S.sendAll sock msg
+            err  <- trace @String "[send] Sending data" $ try $ S.sendAll sock msg
             res <- case err of
                 Right _                     -> pure $ Right ()
                 Left  (err :: SomeException)  -> do
-                    trace @String ("[send] exc got, closing " <> show err) $ manualCloseConnection' connVar
+                    trace @String ("[send] exc got, closing " <> show err) $ manualCloseConnection' sock readerId
                     pure $ Left D.ConnectionClosed
             trace @String "[send] Releasing sock" $ atomically (putTMVar sockVar sock)
             pure res
 
-manualCloseConnection connVar@(D.TcpConnectionVar closeSignal closedSignal sockVar) = do
+manualCloseConnection connVar@(D.TcpConnectionVar sockVar readerId) = do
     sock <- trace @String "[manualCloseConnection] Taking sock" $ atomically $ takeTMVar sockVar
-    manualCloseConnection' connVar
+    manualCloseConnection' sock readerId
     trace @String "[manualCloseConnection] Releasing sock" $ atomically (putTMVar sockVar sock)
 
-manualCloseConnection' (D.TcpConnectionVar closeSignal closedSignal _) = do
-    trace @String "[manualCloseConnection] start" $ pure ()
-    trace @String "[manualCloseConnection] writing CloseSignal" $ atomically $ writeTVar closeSignal True
-    trace @String "[manualCloseConnection] waiting for ClosedSignal" $ atomically $ takeTMVar closedSignal
+manualCloseConnection' sock readerId = do
+    trace @String "[manualCloseConnection] killing reader thread" $ killThread readerId
+    manualCloseSock sock
+    trace @String "[manualCloseConnection] done" $ pure ()
 
+manualCloseSock sock = do
+    trace @String "[manualCloseSock] closing sock" $ pure ()
+    eRes <- try $ S.close sock
+    whenLeft eRes $ \(err :: SomeException) -> trace @String ("[manualCloseSock] exc got in closing sock: " <> show err) $ pure ()
 
 getAdress :: S.Socket -> IO D.Host
 getAdress socket = D.sockAddrToHost <$> S.getSocketName socket
