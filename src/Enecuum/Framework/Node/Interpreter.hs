@@ -106,35 +106,49 @@ closeConnection
     :: Con.NetworkConnection protocol
     => TMVar (Map D.Address (D.ConnectionVar protocol)) -> D.Address -> IO ()
 closeConnection connectsRef addr = do
+    trace @String "[closeConnection-high-level] closing high-level conn. Taking connections" $ pure ()
     conns <- atomically $ takeTMVar connectsRef
     case M.lookup addr conns of
-        Nothing -> atomically $ putTMVar connectsRef conns
+        Nothing -> do
+            trace @String "[closeConnection-high-level] high-level conn not registered. Releasing connections" $ pure ()
+            atomically $ putTMVar connectsRef conns
         Just conn -> do
+            trace @String "[closeConnection-high-level] closing low-level conn" $ pure ()
             Con.close conn
+            trace @String "[closeConnection-high-level] deleting conn, releasing connections" $ pure ()
             atomically $ putTMVar connectsRef $ M.delete addr conns
 
 
+
+-- TODO: need to delete old connection if it's dead.
 openConnection nodeRt connectsRef addr initScript = do
+    trace @String "[openConnection-high-level] opening high-level conn. Taking connections" $ pure ()
     conns <- atomically $ takeTMVar connectsRef
     if M.member addr conns
         then do
+            trace @String "[openConnection-high-level] old conn found, releasing connections" $ pure ()
             atomically $ putTMVar connectsRef conns
             pure Nothing
         else do
+            trace @String "[openConnection-high-level] none old conn. Creating new" $ pure ()
             m <- newTVarIO mempty
             _ <- Net.runNetworkHandlerL m initScript
 
             handlers <- readTVarIO m
 
+            trace @String "[openConnection-high-level] opening low-level conn" $ pure ()
             newCon   <- Con.openConnect
                 addr
                 ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
             case newCon of
                 Just justCon -> do
+                    trace @String "[openConnection-high-level] low-level conn opened. Registering." $ pure ()
                     let newConns = M.insert addr justCon conns
+                    trace @String "[openConnection-high-level] releasing connections" $ pure ()
                     atomically $ putTMVar connectsRef newConns
                     pure $ Just $ D.Connection addr
                 _ -> do
+                    trace @String "[openConnection-high-level] low-level conn failed to open. Releasing connections" $ pure ()
                     atomically $ putTMVar connectsRef conns
                     pure Nothing
 
