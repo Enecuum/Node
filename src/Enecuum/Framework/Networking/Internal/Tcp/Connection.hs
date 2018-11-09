@@ -24,7 +24,24 @@ import qualified Network.Socket as S hiding (recv)
 data ReadingResult = RLooping | RReading (Either SomeException LByteString)
 data ReaderAction  = RContinue | RFinish
 
-readingTimeout = 1000 * 100
+readingTimeout = 1000 * 1000
+
+
+-- runTCPServer :: TChan D.ServerComand -> PortNumber -> (Socket -> IO ()) -> IO ()
+-- runTCPServer chan port handler =
+--     bracket ((listenOn . PortNumber) port) close $ \listenSock ->
+--         finally 
+--              (void $ race (void $ atomically $ readTChan chan) 
+--                           (acceptConnects listenSock handler)) 
+--              (close listenSock)
+--
+-- serv :: TChan a -> IO b -> IO ()
+-- serv chan f = void $ race (void $ atomically $ readTChan chan) f
+
+-- acceptConnects :: forall a b . Socket -> (Socket -> IO a) -> IO b
+-- acceptConnects listenSock handler = forever $ do
+--     (connSock, _) <- accept listenSock
+--     void $ forkFinally (handler connSock) (\_ -> close c
 
 analyzeReadingResult
     :: Conn.Handlers D.Tcp
@@ -87,12 +104,13 @@ makeTcpCon sock = do
 data AcceptingResult = LLooping | LAccepting (Either SomeException ())
 data AcceptorAction  = LContinue | LFinish
 
-acceptingTimeout = 1000 * 100
+acceptingTimeout = 1000 * 1000
 
-acceptConnects :: Socket -> (Socket -> IO a) -> IO ()
+acceptConnects :: Socket -> (Socket -> IO ()) -> IO ()
 acceptConnects listenSock handler = do
-    (connSock, _) <- accept listenSock
-    void $ forkFinally (handler connSock) (\_ -> S.close connSock)
+    (connSock, addr) <- accept listenSock
+    trace @String ("[acceptingWorker] accepted some connect, forking handler: " <> show addr) $ pure ()
+    void $ forkIO $ handler connSock
 
 analyzeAcceptingResult
     :: AcceptingResult
@@ -136,7 +154,7 @@ acceptingHandler registerConnection handlers connSock = do
     sockPort <- S.socketPort connSock
     tcpConVar@(D.TcpConnectionVar closeSignal closedSignal _) <- makeTcpCon connSock
     let tcpCon = D.Connection $ D.Address addr sockPort
-    trace @String "[acceptingHandler] registering conn" $ pure ()
+    trace @String ("[acceptingHandler] registering conn: " <> show addr) $ pure ()
     ok <- registerConnection tcpCon tcpConVar
     when ok $ do
         trace @String "[acceptingHandler] starting reading worker" $ pure ()
@@ -170,7 +188,7 @@ instance Conn.NetworkConnection D.Tcp where
               let handler = acceptingHandler registerConnection handlers
               let worker = acceptingWorker listenSock handler awCloseSignal
                     `finally` (do
-                              trace @String "[startServer] closing listenSock: worker finished" $ S.close listenSock
+                              trace @String "[startServer] closing listenSock: accepting worker finished" $ S.close listenSock
                               atomically $ putTMVar awClosedSignal ()
                         )
               void $ forkIO worker
@@ -203,7 +221,7 @@ instance Conn.NetworkConnection D.Tcp where
         trace @String "[openConnect] done" $ pure ()
         pure r
 
-    close = closeTcpConnection
+    close = manualCloseConnection
 
     send connVar@(D.TcpConnectionVar closeSignal closedSignal sockVar) msg
         | length msg > D.packetSize = trace @String "[send] Too big message" $ pure $ Left D.TooBigMessage
@@ -213,16 +231,20 @@ instance Conn.NetworkConnection D.Tcp where
             res <- case err of
                 Right _                     -> pure $ Right ()
                 Left  (err :: SomeException)  -> do
-                    trace @String ("[send] exc got, closing " <> show err) $ closeTcpConnection connVar
+                    trace @String ("[send] exc got, closing " <> show err) $ manualCloseConnection' connVar
                     pure $ Left D.ConnectionClosed
             trace @String "[send] Releasing sock" $ atomically (putTMVar sockVar sock)
             pure res
 
-closeTcpConnection (D.TcpConnectionVar closeSignal closedSignal _) = do
-    trace @String "[closeTcpConnection] start" $ pure ()
-    trace @String "[closeTcpConnection] writing CloseSignal" $ atomically $ writeTVar closeSignal True
-    trace @String "[closeTcpConnection] waiting for ClosedSignal" $ atomically $ takeTMVar closedSignal
-    trace @String "[closeTcpConnection] done" $ pure ()
+manualCloseConnection connVar@(D.TcpConnectionVar closeSignal closedSignal sockVar) = do
+    sock <- trace @String "[manualCloseConnection] Taking sock" $ atomically $ takeTMVar sockVar
+    manualCloseConnection' connVar
+    trace @String "[manualCloseConnection] Releasing sock" $ atomically (putTMVar sockVar sock)
+
+manualCloseConnection' (D.TcpConnectionVar closeSignal closedSignal _) = do
+    trace @String "[manualCloseConnection] start" $ pure ()
+    trace @String "[manualCloseConnection] writing CloseSignal" $ atomically $ writeTVar closeSignal True
+    trace @String "[manualCloseConnection] waiting for ClosedSignal" $ atomically $ takeTMVar closedSignal
 
 
 getAdress :: S.Socket -> IO D.Host

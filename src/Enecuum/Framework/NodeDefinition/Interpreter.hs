@@ -45,11 +45,18 @@ startServing nodeRt port initScript = do
     a        <- Net.runNetworkHandlerL m initScript
     handlers <- readTVarIO m
     let registerConnection (D.Connection addr) connection = do
+            trace @String ("[registerConnection] checking prev connection") $ pure ()
             connects <- atomically $ takeTMVar (nodeRt ^. Impl.connectsLens)
             let newConnects = M.insert addr connection connects
             oldIsDead <- case addr `M.lookup` connects of
-                Just conn -> D.isClosed conn
-                Nothing   -> pure True
+                Just conn -> do
+                    isDead <- D.isClosed conn
+                    when isDead $ trace @String ("[registerConnection] prev connection is dead, replacing by new") $ pure ()
+                    unless isDead $ trace @String ("[registerConnection] prev connection is alive") $ pure ()
+                    pure isDead
+                Nothing   -> do
+                    trace @String ("[registerConnection] no prev connections found, inserting new") $ pure ()
+                    pure True
             atomically $ putTMVar (nodeRt ^. Impl.connectsLens) $
                 if oldIsDead then newConnects else connects
             pure oldIsDead

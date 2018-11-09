@@ -18,6 +18,12 @@ import qualified Network.Socket.ByteString.Lazy     as S
 import           Enecuum.Framework.Networking.Internal.Client
 import qualified Network.Socket as S hiding (recv, send) --, sendAll)
 
+
+deleteConnection nodeRt conn = do
+    connects <- atomically $ takeTMVar $ nodeRt ^. RL.tcpConnects
+    let newConnects = M.delete conn connects 
+    atomically $ putTMVar (nodeRt ^. RL.tcpConnects) newConnects
+
 -- | Interpret NetworkingL language.
 interpretNetworkingL :: NodeRuntime -> L.NetworkingF a -> IO a
 interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
@@ -34,12 +40,14 @@ interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
 
 interpretNetworkingL nr (L.SendTcpMsgByConnection (D.Connection conn) msg next) = do
     m <- atomically $ readTMVar $ nr ^. RL.tcpConnects
+
     case conn `M.lookup` m of
-        Just con -> next <$> Con.send con msg
+        Just con -> do
+            res <- Con.send con msg
+            when (isLeft res) $ deleteConnection nr conn
+            pure $ next res
         Nothing  -> do
-            connects <- atomically $ takeTMVar $ nr ^. RL.tcpConnects
-            let newConnects = M.delete conn connects 
-            atomically $ putTMVar (nr ^. RL.tcpConnects) newConnects
+            deleteConnection nr conn
             pure $ next $ Left D.ConnectionClosed
 
 interpretNetworkingL nr (L.SendUdpMsgByConnection (D.Connection conn) msg next) = do
