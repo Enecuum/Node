@@ -30,9 +30,8 @@ testPoA = TestCase $ withNodesManager $ \mgr -> do
     _ :: [Either Text A.SuccessMsg] <- forM transactions $ \tx ->
         makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.CreateTransaction tx
 
-    threadDelay $ 1000 * 5000
     -- Check transaction pending on graph node
-    Right txPending :: Either Text [D.Transaction] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
+    txPending :: [D.Transaction] <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
     (sort txPending) `shouldBe` (sort transactions)
 
     -- Ask pow node to generate n kblocks
@@ -40,16 +39,18 @@ testPoA = TestCase $ withNodesManager $ \mgr -> do
     let kblockCount = 1
     _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
 
-    threadDelay $ 1000 * 1000
     -- Get last kblock from graph node
-    Right kBlock :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetLastKBlock
+    kBlock :: D.KBlock <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetLastKBlock
     let kblockHash = D.toHash kBlock
 
     -- Microblock on graph node received from poa
-    Right (A.GetMBlocksForKBlockResponse  mblock) <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetMBlocksForKBlockRequest kblockHash
-    (length mblock) `shouldBe` 1    
+    (A.GetMBlocksForKBlockResponse mblock) <- do
+        let request = A.GetMBlocksForKBlockRequest kblockHash
+        let address = A.graphNodeTransmitterRpcAddress
+        let predicate (A.GetMBlocksForKBlockResponse mblock) = length mblock == 1
+        makeRpcRequestWithPredicate predicate address request
+    (length mblock) `shouldBe` 1
 
-    threadDelay $ 1000 * 1000
     -- Check transaction pending on graph node, it must to be empty now
-    Right txPending :: Either Text [D.Transaction] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
+    txPending :: [D.Transaction] <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
     txPending `shouldBe` []
