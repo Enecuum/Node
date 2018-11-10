@@ -5,7 +5,7 @@ module Enecuum.Framework.Networking.Internal.Udp.Connection
     , send
     , startServer
     , stopServer
-    , openConnect
+    , open
     , sendUdpMsg
     ) where
 
@@ -69,11 +69,11 @@ runHandler netConn handlers msg = case decode msg of
     Nothing                     -> pure ()
 
 
-makeUdpCon :: S.Socket -> IO (D.ConnectionVar D.Udp)
+makeUdpCon :: S.Socket -> IO (D.NativeConnection D.Udp)
 makeUdpCon sock = do
     closeSignal <- newTVarIO False
     sockVar     <- newTMVarIO sock
-    pure $ D.ClientUdpConnectionVar closeSignal sockVar
+    pure $ D.ClientUdpConnection closeSignal sockVar
 
 instance NetworkConnection D.Udp where
     startServer port handlers insertConnect = do
@@ -84,26 +84,26 @@ instance NetworkConnection D.Udp where
                 connection = D.Connection $ D.Address host port
 
             sockVar     <- newTMVarIO socket
-            void $ insertConnect connection (D.ServerUdpConnectionVar sockAddr sockVar)
+            void $ insertConnect connection (D.ServerUdpConnection sockAddr sockVar)
             runHandler connection handlers msg
         pure $ Just $ OldServerHandle chan
 
     send _ msg | length msg > D.packetSize = pure $ Left D.TooBigMessage
-    send (D.ClientUdpConnectionVar _ sockVar) msg =
+    send (D.ClientUdpConnection _ sockVar) msg =
         sendMsg (\sock -> S.sendAll sock (B.toStrict msg)) sockVar
-    send (D.ServerUdpConnectionVar sockAddr    sockVar) msg =
+    send (D.ServerUdpConnection sockAddr    sockVar) msg =
         sendMsg (\sock -> S.sendTo sock (B.toStrict msg) sockAddr) sockVar
 
-    close (D.ClientUdpConnectionVar closeSignal _) = atomically $ writeTVar closeSignal True
+    close (D.ClientUdpConnection closeSignal _) = atomically $ writeTVar closeSignal True
     close _  = pure ()
 
-    openConnect addr@(D.Address host port) handlers = do
+    open addr@(D.Address host port) handlers = do
         address <- head <$> S.getAddrInfo Nothing (Just host) (Just $ show port)
         sock    <- S.socket (S.addrFamily address) S.Datagram S.defaultProtocol
         S.connect sock $ S.addrAddress address
 
-        udpConVar@(D.ClientUdpConnectionVar closeSignal _) <- makeUdpCon sock
+        udpConVar@(D.ClientUdpConnection closeSignal _) <- makeUdpCon sock
         let worker = readingWorker closeSignal handlers (D.Connection addr) sock `finally` S.close sock
 
         void $ forkIO worker
-        pure $ Just udpConVar
+        pure $ Just (D.Connection addr, udpConVar)

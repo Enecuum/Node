@@ -19,6 +19,8 @@ data DBHandle  = DBHandle
     , _mutex :: MVar ()
     }
 
+type BoundAddress = D.Address
+
 data NodeRuntime = NodeRuntime
     { _coreRuntime :: CoreRuntime
     , _graph       :: D.TGraph D.NodeContent
@@ -27,8 +29,8 @@ data NodeRuntime = NodeRuntime
     , _state       :: NodeState              -- ^ State of node.
     , _nodeTag     :: TVar Text
     , _processes   :: TVar (Map D.ProcessId ThreadId)
-    , _tcpConnects :: TMVar (Map D.Address (D.ConnectionVar D.Tcp))
-    , _udpConnects :: TMVar (Map D.Address (D.ConnectionVar D.Udp))
+    , _tcpConnects :: TMVar (Map BoundAddress (D.NativeConnection D.Tcp))
+    , _udpConnects :: TMVar (Map BoundAddress (D.NativeConnection D.Udp))
     , _storyPaths  :: Map Text String
     , _databases   :: TVar (Map FilePath DBHandle)
     }

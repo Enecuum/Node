@@ -221,7 +221,7 @@ pongHandle succAddr (Pong i) conn = do
         void $ L.notify succAddr Success
         L.close conn
 
-emptFunc :: D.Connection D.Udp -> D.ConnectionVar D.Udp -> IO Bool
+emptFunc :: D.Connection D.Udp -> D.NativeConnection D.Udp -> IO Bool
 emptFunc _ _ = pure True
 
 succesServer :: D.PortNumber -> IO Bool

@@ -37,8 +37,10 @@ addProcess nodeRt pPtr threadId = do
     let newPs = M.insert pId threadId ps
     atomically $ writeTVar (nodeRt ^. RLens.processes) newPs
 
+
+-- TODO: rework this
 startServing
-    :: (D.ConnectVarData a, Impl.ConnectsLens a, Con.NetworkConnection a)
+    :: (D.AsNativeConnection a, Impl.ConnectsLens a, Con.NetworkConnection a)
     => NodeRuntime -> S.PortNumber -> L.NetworkHandlerL a (Free L.NodeF) b -> IO b
 startServing nodeRt port initScript = do
     m        <- atomically $ newTVar mempty

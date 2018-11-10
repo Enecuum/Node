@@ -4,15 +4,11 @@ import           Control.Concurrent (killThread)
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TMVar
 import           Data.Aeson
--- import           Data.Aeson.Lens
 import           Enecuum.Prelude
--- import           Control.Concurrent.Async
 import qualified Enecuum.Framework.Domain.Networking as D
--- import           Enecuum.Framework.Networking.Internal.Client
--- import           Enecuum.Framework.Networking.Internal.Tcp.Server
 import           Control.Monad.Extra
 import qualified Network.Socket                      as S hiding (recv)
--- import qualified Network.Socket.ByteString.Lazy      as S
+import qualified Data.IP as IP
 
 type Handler protocol  = Value -> D.Connection protocol -> IO ()
 type Handlers protocol = Map Text (Handler protocol)
@@ -28,22 +24,24 @@ stopServer (ServerHandle sockVar acceptWorkerId) = do
     manualCloseConnection' sock acceptWorkerId
     trace "[stopServer] Releasing listener sock" $ atomically (putTMVar sockVar sock)
 
+type Connections protocol = (D.Connection protocol, D.NativeConnection protocol)
+
 class NetworkConnection protocol where
     startServer
         :: S.PortNumber
         -> Handlers protocol
-        -> (D.Connection protocol -> D.ConnectionVar protocol -> IO Bool)
+        -> (D.Connection protocol -> D.NativeConnection protocol -> IO Bool)
         -> IO (Maybe ServerHandle)
     -- | Send msg to node.
-    send        :: D.ConnectionVar protocol -> LByteString -> IO (Either D.NetworkError ())
-    close       :: D.ConnectionVar protocol -> IO ()
-    openConnect :: D.Address -> Handlers protocol -> IO (Maybe (D.ConnectionVar protocol))
+    send  :: D.NativeConnection protocol -> LByteString -> IO (Either D.NetworkError ())
+    open  :: D.Address -> Handlers protocol -> IO (Maybe (Connections protocol))
+    close :: D.NativeConnection protocol -> IO ()
 
 
-manualCloseConnection connVar@(D.TcpConnectionVar sockVar readerId) = do
-    sock <- trace "[manualCloseConnection] Taking sock" $ atomically $ takeTMVar sockVar
+manualCloseConnection connVar@(D.TcpConnection sockVar readerId boundAddr) = do
+    sock <- trace ("[manualCloseConnection] " <> show boundAddr <> " Taking sock") $ atomically $ takeTMVar sockVar
     manualCloseConnection' sock readerId
-    trace "[manualCloseConnection] Releasing sock" $ atomically (putTMVar sockVar sock)
+    trace ("[manualCloseConnection] " <> show boundAddr <> " Releasing sock") $ atomically (putTMVar sockVar sock)
 
 manualCloseConnection' sock readerId = do
     trace "[manualCloseConnection] killing thread" $ killThread readerId
@@ -54,3 +52,10 @@ manualCloseSock sock = do
     trace_ "[manualCloseSock] closing sock"
     eRes <- try $ S.close sock
     whenLeft eRes $ \(err :: SomeException) -> trace_ $ "[manualCloseSock] exc got in closing sock: " <> show err
+
+
+fromSockAddr :: S.SockAddr -> D.Address
+fromSockAddr (S.SockAddrInet port host)       = D.Address (show $ IP.fromHostAddress host)   port
+fromSockAddr (S.SockAddrInet6 port _ host6 _) = D.Address (show $ IP.fromHostAddress6 host6) port
+fromSockAddr (S.SockAddrUnix str)             = D.unsafeParseAddress str
+fromSockAddr sa                               = error $ "fromSockAddr not supported for: " <> show sa

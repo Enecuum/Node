@@ -28,32 +28,33 @@ newtype Connection a = Connection
     deriving (Show, Eq, Ord, Generic)
 
 type CloseSignal = TVar Bool
-type ClosedSignal = TMVar ()
 
-class ConnectVarData a where
-    data family ConnectionVar a
-
-    isClosed :: ConnectionVar a -> IO Bool
+class AsNativeConnection a where
+    data family NativeConnection a
+    isClosed :: NativeConnection a -> IO Bool
+    getBindingAddress :: NativeConnection a -> Address
 
 sockVarIsClosed sockVar = do
     S.MkSocket _ _ _ _ mStat <- atomically $ readTMVar sockVar
     status <- readMVar mStat
     pure $ status == S.Closed
 
-instance ConnectVarData Tcp where
-    data ConnectionVar Tcp
-        = TcpConnectionVar !(TMVar S.Socket) ThreadId
+instance AsNativeConnection Tcp where
+    data NativeConnection Tcp
+        = TcpConnection !(TMVar S.Socket) ThreadId Address
+    isClosed (TcpConnection sockVar _ _) = sockVarIsClosed sockVar
+    getBindingAddress (TcpConnection _ _ boundAddr) = boundAddr
 
-    isClosed (TcpConnectionVar sockVar _) = sockVarIsClosed sockVar
 
+instance AsNativeConnection Udp where
+    data NativeConnection Udp
+        = ServerUdpConnection !S.SockAddr  !(TMVar S.Socket)
+        | ClientUdpConnection !CloseSignal !(TMVar S.Socket)
 
-instance ConnectVarData Udp where
-    data ConnectionVar Udp
-        = ServerUdpConnectionVar !S.SockAddr  !(TMVar S.Socket)
-        | ClientUdpConnectionVar !CloseSignal !(TMVar S.Socket)
+    isClosed (ServerUdpConnection _ sockVar) = sockVarIsClosed sockVar
+    isClosed (ClientUdpConnection _ sockVar) = sockVarIsClosed sockVar
 
-    isClosed (ServerUdpConnectionVar _ sockVar) = sockVarIsClosed sockVar
-    isClosed (ClientUdpConnectionVar _ sockVar) = sockVarIsClosed sockVar
+    getBindingAddress _ = error "getBindingAddress not implemented for Udp"
 
 data ServerComand = StopServer
 
@@ -98,3 +99,13 @@ formatAddress (Address addr port) = T.pack addr <> ":" <> show port
 
 packetSize :: Int
 packetSize = 1024*4
+
+
+unsafeParseAddress :: String -> Address
+unsafeParseAddress strAddr | length strAddr < 3 || ':' `notElem` strAddr = error "Address parse error: malformed string."
+unsafeParseAddress strAddr = let
+    hostStr = takeWhile (/= ':') strAddr
+    portStr = drop 1 $ dropWhile (/= ':') strAddr
+    mbPort  = readMaybe portStr
+    port    = fromMaybe (error "Address parse error: port is not a number") mbPort
+    in Address hostStr port

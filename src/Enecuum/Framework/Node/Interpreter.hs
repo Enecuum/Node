@@ -92,7 +92,7 @@ type F f a = a -> f a
 class ConnectsLens a where
     connectsLens
         :: Functor f
-        => F f (TMVar (Map D.Address (D.ConnectionVar a)))
+        => F f (TMVar (Map D.Address (D.NativeConnection a)))
         -> NodeRuntime
         -> f NodeRuntime
 
@@ -104,7 +104,7 @@ instance ConnectsLens D.Tcp where
 
 closeConnection
     :: Con.NetworkConnection protocol
-    => TMVar (Map D.Address (D.ConnectionVar protocol)) -> D.Address -> IO ()
+    => TMVar (Map D.Address (D.NativeConnection protocol)) -> D.Address -> IO ()
 closeConnection connectsRef addr = do
     trace_ "[closeConnection-high-level] closing high-level conn. Taking connections"
     conns <- atomically $ takeTMVar connectsRef
@@ -118,39 +118,32 @@ closeConnection connectsRef addr = do
             trace_ "[closeConnection-high-level] deleting conn, releasing connections"
             atomically $ putTMVar connectsRef $ M.delete addr conns
 
-
-
 -- TODO: need to delete old connection if it's dead.
-openConnection nodeRt connectsRef addr initScript = do
+openConnection nodeRt connectsVar serverAddr handlersScript = do
     trace_ "[openConnection-high-level] opening high-level conn. Taking connections"
-    conns <- atomically $ takeTMVar connectsRef
-    if M.member addr conns
-        then do
-            trace_ "[openConnection-high-level] old conn found, releasing connections"
-            atomically $ putTMVar connectsRef conns
+    conns <- atomically $ takeTMVar connectsVar
+
+    m <- newTVarIO mempty
+    _ <- Net.runNetworkHandlerL m handlersScript
+    handlers <- readTVarIO m
+
+    trace_ "[openConnection-high-level] opening low-level conn"
+    mbConnections <- Con.open serverAddr ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
+
+    case mbConnections of
+        Nothing -> do
+            trace_ "[openConnection-high-level] failed opening low-level conn. Releasing connections"
+            atomically $ putTMVar connectsVar conns
             pure Nothing
-        else do
-            trace_ "[openConnection-high-level] none old conn. Creating new"
-            m <- newTVarIO mempty
-            _ <- Net.runNetworkHandlerL m initScript
+        Just (conn@(D.Connection boundAddr), nativeConn) -> do
+            when (boundAddr `M.member` conns) $ trace_ $ "[openConnection-high-level] ERROR: connection exists: " <> show boundAddr
 
-            handlers <- readTVarIO m
+            trace_ $ "[openConnection-high-level] low-level conn opened. Bound addr: " <> show boundAddr
 
-            trace_ "[openConnection-high-level] opening low-level conn"
-            newCon   <- Con.openConnect
-                addr
-                ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
-            case newCon of
-                Just justCon -> do
-                    trace_ "[openConnection-high-level] low-level conn opened. Registering."
-                    let newConns = M.insert addr justCon conns
-                    trace_ "[openConnection-high-level] releasing connections"
-                    atomically $ putTMVar connectsRef newConns
-                    pure $ Just $ D.Connection addr
-                _ -> do
-                    trace_ "[openConnection-high-level] low-level conn failed to open. Releasing connections"
-                    atomically $ putTMVar connectsRef conns
-                    pure Nothing
+            trace_ $ "Registering. Releasing connections"
+            let newConns = M.insert boundAddr nativeConn conns
+            atomically $ putTMVar connectsVar newConns
+            pure $ Just conn
 
 
 -- This is all wrong, including invalid usage of TChan and other issues.

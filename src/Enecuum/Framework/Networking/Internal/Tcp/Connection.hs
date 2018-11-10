@@ -23,8 +23,6 @@ import qualified Network.Socket as S hiding (recv)
 
 data ReaderAction  = RContinue | RFinish
 
-readingTimeout = 1000 * 1000
-
 analyzeReadingResult
     :: Conn.Handlers D.Tcp
     -> D.Connection D.Tcp
@@ -38,12 +36,12 @@ analyzeReadingResult _ _ (Right msg) | null msg  = do
     trace_ "[readingWorker] empty data got"
     pure RFinish
 
-analyzeReadingResult handlers tcpCon (Right msg) | otherwise = do
+analyzeReadingResult handlers conn (Right msg) | otherwise = do
     trace_ "[readingWorker] message read"
     case decode msg of
         Just (D.NetworkMsg tag val) -> do
             trace_ "[readingWorker] calling handler"
-            whenJust (tag `M.lookup` handlers) $ \handler -> handler val tcpCon
+            whenJust (tag `M.lookup` handlers) $ \handler -> handler val conn
             trace_ "[readingWorker] done calling handler"
         Nothing  ->
             trace_ "[readingWorker] decode failed"
@@ -52,25 +50,23 @@ analyzeReadingResult handlers tcpCon (Right msg) | otherwise = do
 -- TODO: what is the behavior when the message > packetSize? What's happening with its rest?
 -- Will it garbage the next message?
 readingWorker :: Conn.Handlers D.Tcp -> D.Connection D.Tcp -> S.Socket -> IO ()
-readingWorker handlers !tcpCon !sock = do
+readingWorker handlers !conn !sock = do
         eRead <- try $ S.recv sock $ toEnum D.packetSize
-        readerAct <- analyzeReadingResult handlers tcpCon eRead
+        readerAct <- analyzeReadingResult handlers conn eRead
         case readerAct of
             RContinue -> do
                 trace_ "[readingWorker] continue reading"
-                readingWorker handlers tcpCon sock
+                readingWorker handlers conn sock
             RFinish   ->
                 trace_ "[readingWorker] finishing"
 
 data AcceptorAction  = LContinue | LFinish
 
-acceptingTimeout = 1000 * 1000
-
-acceptConnects :: Socket -> (Socket -> IO ()) -> IO ()
+acceptConnects :: Socket -> ((Socket, SockAddr) -> IO ()) -> IO ()
 acceptConnects listenSock handler = do
-    (connSock, addr) <- accept listenSock
-    trace_ $ "[acceptingWorker] accepted some connect, forking handler: " <> show addr
-    void $ forkIO $ handler connSock
+    connInfo@(_, boundAddr) <- accept listenSock
+    trace_ $ "[acceptingWorker] accepted some connect. bound addr: " <> show boundAddr <> ". Forking accepting handler."
+    void $ forkIO $ handler connInfo
 
 analyzeAcceptingResult :: Either SomeException () -> IO AcceptorAction
 analyzeAcceptingResult (Left err) = do
@@ -90,22 +86,25 @@ acceptingWorker listenSock handler = do
                 acceptingWorker listenSock handler
             LFinish   -> trace_ "[acceptingWorker] finishing"
 
-acceptingHandler registerConnection handlers connSock = do
-    trace_ "[acceptingHandler] start, getting network things"
-    addr     <- getAdress connSock
-    sockPort <- S.socketPort connSock
+acceptingHandler registerConnection handlers (connSock, boundAddr') = do
+    trace_ $ "[acceptingHandler] preparing connection: " <> show boundAddr'
+    let boundAddr = Conn.fromSockAddr boundAddr'
 
-    let tcpCon = D.Connection $ D.Address addr sockPort
+    addr'    <- getAddress connSock
+    sockPort <- S.socketPort connSock
+    trace_ $ "[acceptingHandler] connection socket data: " <> show addr' <> ", " <> show sockPort
+
+    let conn = D.Connection $ D.Address addr' sockPort
     
     trace_ "[acceptingHandler] starting reading worker"
-    let worker = readingWorker handlers tcpCon connSock
+    let worker = readingWorker handlers conn connSock
                 `finally` (trace "[openConnect] readerWorker finished, closing sock" $ Conn.manualCloseSock connSock)
 
     readerId <- forkIO worker
 
-    trace_ $ "[acceptingHandler] registering conn: " <> show addr
-    sockVar  <- newTMVarIO connSock
-    registered <- registerConnection tcpCon $ D.TcpConnectionVar sockVar readerId
+    trace_ $ "[acceptingHandler] registering conn: " <> show addr'
+    sockVar    <- newTMVarIO connSock
+    registered <- registerConnection conn $ D.TcpConnection sockVar readerId boundAddr
 
     when registered $
         trace_ "[acceptingHandler] connection registered."
@@ -136,42 +135,47 @@ instance Conn.NetworkConnection D.Tcp where
                 trace_ "[startServer] successfully started."
                 pure $ Just $ Conn.ServerHandle listenSockVar acceptWorkerId
 
+    open serverAddr@(D.Address host port) handlers = do
+        trace_ $ "[openConnect] connecting to server: " <> show serverAddr
 
-    openConnect addr@(D.Address host port) handlers = do
-        trace_ "[openConnect] start"
+        address    <- head <$> S.getAddrInfo Nothing (Just host) (Just $ show port)
+        sock       <- trace "[openConnect] creating sock" $ S.socket (S.addrFamily address) S.Stream S.defaultProtocol
+        eConnected <- trace "[openConnect] connecting to sock" $ try $ S.connect sock $ S.addrAddress address
 
-        address <- head <$> S.getAddrInfo Nothing (Just host) (Just $ show port)
-        sock    <- trace "[openConnect] creating sock" $ S.socket (S.addrFamily address) S.Stream S.defaultProtocol
-        ok <- trace "[openConnect] connecting to sock" $ try $ S.connect sock $ S.addrAddress address
-        r <- case ok of
+        -- TODO: this is temporarily a server addr (should not work). Need boundAddr
+        let conn = D.Connection serverAddr
+
+        mbConnections <- case eConnected of
             Left (err :: SomeException) -> do
                 trace ("[openConnect] exc in connect, closing sock: " <> show err) $ S.close sock
                 pure Nothing
-            Right _ -> do
-                sockVar      <- newTMVarIO sock
+            Right () -> do
+                sockVar <- newTMVarIO sock
                 let worker = trace "[openConnect] starting read worker" $
-                        readingWorker handlers (D.Connection addr) sock
+                        readingWorker handlers conn sock
                             `finally` (trace  "[openConnect] readerWorker finished, closing sock" $ Conn.manualCloseSock sock)
                 readerId <- forkIO worker
 
-                pure $ Just $ D.TcpConnectionVar sockVar readerId
+                -- TODO: this is temporarily a server addr (should not work). Need boundAddr
+                pure $ Just $ (conn, D.TcpConnection sockVar readerId serverAddr)
         trace_ "[openConnect] done"
-        pure r
+
+        pure mbConnections
 
     close = Conn.manualCloseConnection
 
-    send connVar@(D.TcpConnectionVar sockVar readerId) msg
-        | length msg > D.packetSize = trace "[send] Too big message" $ pure $ Left D.TooBigMessage
+    send (D.TcpConnection sockVar readerId boundAddr) msg
+        | length msg > D.packetSize = trace ("[send] " <> show boundAddr <> " Too big message") $ pure $ Left D.TooBigMessage
         | otherwise                 = do
-            sock <- trace "[send] Taking sock" $ atomically $ takeTMVar sockVar
-            err  <- trace "[send] Sending data" $ try $ S.sendAll sock msg
-            res <- case err of
+            sock <- trace ("[send] " <> show boundAddr <> " Taking sock") $ atomically $ takeTMVar sockVar
+            eRes  <- trace ("[send] " <> show boundAddr <> " Sending data") $ try $ S.sendAll sock msg
+            res <- case eRes of
                 Right _                     -> pure $ Right ()
                 Left  (err :: SomeException)  -> do
-                    trace ("[send] exc got, closing " <> show err) $ Conn.manualCloseConnection' sock readerId
+                    trace ("[send] " <> show boundAddr <> " exc got, closing " <> show err) $ Conn.manualCloseConnection' sock readerId
                     pure $ Left D.ConnectionClosed
-            trace "[send] Releasing sock" $ atomically (putTMVar sockVar sock)
+            trace ("[send] " <> show boundAddr <> " Releasing sock") $ atomically (putTMVar sockVar sock)
             pure res
 
-getAdress :: S.Socket -> IO D.Host
-getAdress socket = D.sockAddrToHost <$> S.getSocketName socket
+getAddress :: S.Socket -> IO D.Host
+getAddress socket = D.sockAddrToHost <$> S.getSocketName socket
