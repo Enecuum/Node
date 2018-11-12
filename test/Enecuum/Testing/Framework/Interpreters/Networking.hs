@@ -28,10 +28,10 @@ relayRequest' nodeRt to req = do
 
 -- | Send message to the connection.
 sendMessageToConnection :: T.NodeRuntime -> D.Connection D.Tcp  -> D.RawData -> IO (Either Text ())
-sendMessageToConnection nodeRt connection msg = do
+sendMessageToConnection nodeRt connection@(D.Connection (D.BoundAddress address)) msg = do
     connections <- atomically $ readTMVar $ nodeRt ^. RLens.connections
     -- Checking is connection alive.
-    case Map.lookup (connection ^. Lens.address) connections of
+    case Map.lookup address connections of
         Nothing -> do
             -- Dead connection, should remove it
             closeConnection nodeRt connection
