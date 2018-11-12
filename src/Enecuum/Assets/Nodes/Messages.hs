@@ -14,10 +14,7 @@ data SuccessMsg = SuccessMsg
 newtype IsDead = IsDead StringHash
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
--- | Routing messages
--- | Client
-data SendMsgTo = SendMsgTo StringHash Int Text
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 
 -- | BN, NN nodes
 data Hello = Hello StringHash D.Address

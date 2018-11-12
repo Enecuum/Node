@@ -17,7 +17,7 @@ data NodePorts = NodePorts
     { _udpPort :: D.PortNumber
     , _tcpPort :: D.PortNumber
     , _rpcPort :: D.PortNumber
-    } deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
+    } deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, Serialize)
 makeFieldsNoPrefix ''NodePorts
 
 makeNodePorts1000 :: D.PortNumber -> NodePorts
@@ -81,3 +81,11 @@ verifyRoutingHello _ = True
 
 newtype NextForYou = NextForYou D.Address
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data SendMsgTo = SendMsgTo
+    { _nodeId     :: NodeId
+    , _timeToLive :: Int
+    , _msg        :: Text
+    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+makeFieldsNoPrefix ''SendMsgTo

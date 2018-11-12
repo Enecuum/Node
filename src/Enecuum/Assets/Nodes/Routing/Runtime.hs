@@ -148,7 +148,6 @@ udpRoutingHandlers routingRuntime = do
     L.handler $ acceptHello             routingRuntime
     L.handler $ acceptConnectResponse   routingRuntime
     L.handler $ acceptNextForYou        routingRuntime
-    L.handler $ acceptSendTo            routingRuntime
 
 rpcRotingHandlers routingRuntime = L.method rpcPingPong
 
@@ -191,3 +190,12 @@ acceptConnectResponse routingRuntime address con = do
             L.modifyVarIO (routingRuntime ^. connectMap) (addToMap nId address)
     L.close con
 
+forwardIfNeeded routingRuntime msg f = do
+    let reciverId = msg^.nodeId
+    let myId      = routingRuntime^.nodeId
+    let time      = msg^.timeToLive
+    when (time > 0 && myId /= reciverId) $ do
+        connects <- L.readVarIO (routingRuntime ^. connectMap)
+        whenJust (findNextResender reciverId connects) $ \(h, address) ->
+            void $ L.notify (getUdpAddress address) (msg & timeToLive .~ time - 1)
+    when (myId == reciverId) $ f msg

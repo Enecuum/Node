@@ -18,6 +18,7 @@ import           Enecuum.Prelude                  hiding (map, unpack)
 import           Graphics.GD.Extra
 import           Enecuum.Research.RouteDrawing
 import           Data.Complex
+import           Enecuum.Assets.Nodes.Routing.Messages
 
 data ClientNode = ClientNode
     deriving (Show, Generic)
@@ -205,7 +206,7 @@ getBlock (GetBlock hash address) = do
 sendTo :: SendTo -> L.NodeL Text
 sendTo (SendTo (Address host port) rPort) = do
     let receiver = D.Address "127.0.0.1" rPort
-    void $ L.notify (D.Address host port) $ M.SendMsgTo (D.toHashGeneric receiver) 10 "!! msg !!"
+    void $ L.notify (D.Address host port) $ SendMsgTo (D.toHashGeneric receiver) 10 "!! msg !!"
     pure "Sended."
 
 drawRouteMap :: DrawMap -> L.NodeL Text

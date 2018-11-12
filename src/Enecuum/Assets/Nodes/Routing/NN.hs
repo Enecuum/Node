@@ -26,6 +26,17 @@ data NNNodeData = NNNodeData
     }
 makeFieldsNoPrefix ''NNNodeData
 
+initNN :: RoutingRuntime -> D.StateVar L.NodeStatus -> L.NodeDefinitionL NNNodeData
+initNN routingRuntime nodeStatus = do
+    messages            <- L.newVarIO []
+    routingRuntimeData  <- L.newVarIO routingRuntime
+    pure $ NNNodeData
+        { _status          = nodeStatus
+        , _routingRuntime  = routingRuntimeData
+        , _routingMessages = messages
+        }
+
+
 data NN = NN
     deriving (Show, Generic)
 
@@ -58,11 +69,6 @@ acceptPort portVar (Start port) = L.atomically $ do
         then "Node is already running."
         else "The port is accepted, the node is started."
 
-initNN :: RoutingRuntime -> D.StateVar L.NodeStatus -> L.NodeDefinitionL NNNodeData
-initNN routingRuntime nodeStatus = L.atomically
-    (NNNodeData routingRuntime nodeStatus <$> L.newVar [])
-
-
 testPorts :: [D.PortNumber]
 testPorts = [5001..5010]
 
@@ -70,30 +76,10 @@ nodesMap :: Map D.StringHash D.Address
 nodesMap = Map.fromList $ map (\node -> (D.toHashGeneric node, node)) nnNodes
     where nnNodes = map (D.Address A.localhost) testPorts
 
-acceptSendTo
-    :: NNNodeData -> D.StringHash -> M.SendMsgTo -> D.Connection D.Udp -> L.NodeL ()
-acceptSendTo nodeData myHash (M.SendMsgTo hash i msg) conn = do
-    L.close conn
-    let hashInfo = case Map.lookup hash nodesMap of
-            Nothing -> show hash
-            Just address -> show address
-    let mes = "Received msg: \"" <>  msg <> "\" for " <> hashInfo <> " time to live " <> show i
-    L.logInfo mes
 
-    when (myHash == hash) $ do
-        L.atomically $ L.modifyVar (nodeData ^. routingMessages) (mes :)
-        L.logInfo "I'm receiver."
-
-    when (i >= 0 && myHash /= hash) $ do
-        rm <- L.readVarIO (nodeData ^. netNodes)
-        whenJust (findNextResender hash rm) $ \(h, address) -> do
-            L.logInfo $ "Resending to: " <> show h
-            void $ L.notify address (M.SendMsgTo hash (i-1) msg)
-
-connectMapRequest :: NNNodeData -> M.ConnectMapRequest -> L.NodeL [(D.StringHash, D.Address)]
-connectMapRequest nodeData _ = do
-    nodes <- L.readVarIO (nodeData ^. netNodes)
-    pure $ fromChordRouteMap nodes
+connectMapRequest :: RoutingRuntime -> M.ConnectMapRequest -> L.NodeL [(D.StringHash, NodeAddress)]
+connectMapRequest nodeRuntime _ = 
+    fromChordRouteMap <$> L.readVarIO (nodeRuntime ^. connectMap)
 
 getRoutingMessages :: NNNodeData -> M.GetRoutingMessages -> L.NodeL [Text]
 getRoutingMessages nodeData _ = L.readVarIO (nodeData ^. routingMessages)
@@ -101,6 +87,14 @@ getRoutingMessages nodeData _ = L.readVarIO (nodeData ^. routingMessages)
 nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
 nnNode port = nnNode' port (NNConfig 42) 
 
+
+acceptSendTo :: NNNodeData -> SendMsgTo -> D.Connection D.Udp -> L.NodeL ()
+acceptSendTo nodeData message conn = do
+    L.close conn
+    routingData <- L.readVarIO (nodeData^.routingRuntime)
+    forwardIfNeeded routingData message $ \(SendMsgTo _ _ mes) -> do
+        L.atomically $ L.modifyVar (nodeData ^. routingMessages) (mes :)
+        L.logInfo "I'm receiver."
 
 nnNode' :: Maybe D.PortNumber -> NodeConfig NN -> L.NodeDefinitionL ()
 nnNode' maybePort _ = do
@@ -115,21 +109,23 @@ nnNode' maybePort _ = do
     --nodeData    <- initNN maybePort
 
     -- routing
-    port        <- L.await (nodeData^.portVar)
+    port        <- L.await portVar
     let myNodePorts = makeNodePorts1000 port
     let myHash      = D.toHashGeneric myNodePorts
     let bnPorts     = makeNodePorts1000 5000
     let bnId        = D.toHashGeneric bnPorts
     let bnAddress   = NodeAddress "127.0.0.1" bnPorts bnId
 
-    routingRuntime <- makeRoutingRuntimeData myNodePorts myHash bnAddress
+    routingRuntime <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash bnAddress
     nodeData       <- initNN routingRuntime nodeStatus
 
-    L.serving D.Udp (routingRuntime^.nodePorts.udpPort) $
+    L.serving D.Udp (routingRuntime^.nodePorts.udpPort) $ do
         udpRoutingHandlers routingRuntime
-    L.serving D.Rpc (routingRuntime^.nodePorts.rpcPort) $
+        L.handler $ acceptSendTo          nodeData
+
+    L.serving D.Rpc (routingRuntime^.nodePorts.rpcPort) $ do
         rpcRotingHandlers routingRuntime
-        L.method  $  connectMapRequest    nodeData
+        L.method  $  connectMapRequest    routingRuntime
         L.method  $  getRoutingMessages   nodeData
 
     routingWorker routingRuntime
