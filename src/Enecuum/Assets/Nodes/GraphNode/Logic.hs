@@ -43,7 +43,7 @@ handleDumpToDB nodeData _ = do
     L.writeVarIO (nodeData ^. dumpToDBSignal) True
     pure $ Right SuccessMsg
 
--- | DumpToDB command.
+-- | RestoreFromDB command.
 handleRestoreFromDB :: GraphNodeData -> RestoreFromDB -> L.NodeL (Either Text SuccessMsg)
 handleRestoreFromDB nodeData _ = do
     L.writeVarIO (nodeData ^. restoreFromDBSignal) True
@@ -80,9 +80,11 @@ acceptKBlock nodeData kBlock _ = acceptKBlock' nodeData kBlock
 -- | Accept mBlock
 acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Udp -> L.NodeL ()
 acceptMBlock nodeData mBlock _ = do
-    let res@(valid, _, _) = L.verifyMicroblockWithTx mBlock
-    unless valid $ printInvalidSignatures res
-    when valid $ do
+    let microblockValid  = L.verifyMicroblock mBlock
+    unless microblockValid $ do
+        L.logInfo $ "Microblock is rejected: " +|| toHash mBlock ||+ "."
+        L.logInfo $ "Microblock has " +|| toHash mBlock ||+ " invalid signature."
+    when microblockValid $ do
         L.logInfo $ "Microblock " +|| toHash mBlock ||+ " is accepted."
         let bData = nodeData ^. blockchain
         void $ L.atomically $ do
@@ -91,12 +93,8 @@ acceptMBlock nodeData mBlock _ = do
             let fun :: D.Transaction -> D.TransactionPending -> D.TransactionPending
                 fun t = Map.delete (toHash t)
             forM_ tx (L.modifyVar (bData ^. Lens.transactionPending) . fun)
-    where
-        printInvalidSignatures :: (Bool, Bool, [Bool]) -> L.NodeL ()
-        printInvalidSignatures (valid, mBlockValid, txsValid) = do
-            unless valid                 $ L.logInfo $ "Microblock is rejected: " +|| toHash mBlock ||+ "."
-            unless mBlockValid           $ L.logInfo $ "Microblock has " +|| toHash mBlock ||+ " invalid signature."
-            when (False `elem` txsValid) $ L.logInfo $ "Microblock " +|| toHash mBlock ||+ " transactions have invalid signature."
+    forM_ (mBlock ^. Lens.transactions) (\tx -> unless (L.verifyTransaction tx) $ do
+        L.logInfo $ "Transaction "  +|| D.showTx tx ||+ "of microblock " +|| toHash mBlock ||+ "has invalid signature.")
 
 getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL D.KBlockPending
 getKBlockPending nodeData _ = L.readVarIO $ nodeData ^. blockchain . Lens.kBlockPending
@@ -166,7 +164,7 @@ initDb options dbModelPath = do
     eDb <- L.initDatabase dbConfig
     whenRight eDb $ const $ L.logInfo  $ "Database initialized: " +| dbPath |+ ""
     whenLeft  eDb $ \err -> L.logError $ "Database initialization failed." <>
-        "\n    Path: " +| dbPath |+ 
+        "\n    Path: " +| dbPath |+
         "\n    Error: " +|| err ||+ ""
     pure eDb
 
@@ -228,7 +226,7 @@ graphNodeInitialization nodeConfig = L.scenario $ do
 
     unless dbUsageFailed
         $ L.logInfo $ "Genesis block (" +|| D.genesisHash ||+ "): " +|| D.genesisKBlock ||+ "."
-    
+
     if dbUsageFailed
         then pure $ Left "Database error."
         else pure $ Right nodeData

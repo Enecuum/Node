@@ -72,9 +72,12 @@ showTransaction tx t =
     t <> ("\n    Tx: [" +|| ( showPublicKey $ _owner (tx :: Transaction)) ||+ "] -> [" +|| (showPublicKey $ _receiver (tx :: Transaction)) ||+
           "], amount: " +|| _amount (tx :: Transaction) ||+ ".")
 
-showTx :: Transaction -> Amount -> Amount -> Text
-showTx tx ownerBalance receiverBalance =
-    "    [" +|| ( showPublicKey $ _owner tx) ||+ "] -> [" +|| (showPublicKey $ _receiver (tx :: Transaction)) ||+
-    "], amount: " +|| _amount (tx :: Transaction) ||+
+showTxWithNewBalance :: Transaction -> Amount -> Amount -> Text
+showTxWithNewBalance tx ownerBalance receiverBalance = showTx tx ||+
     ", owner balance: " +|| ownerBalance ||+
     ", receiver balance: " +|| receiverBalance ||+ "."
+
+showTx :: Transaction -> Text
+showTx tx =
+  "    [" +|| ( showPublicKey $ _owner tx) ||+ "] -> [" +|| (showPublicKey $ _receiver (tx :: Transaction)) ||+
+  "], amount: " +|| _amount (tx :: Transaction) ||+ ""
