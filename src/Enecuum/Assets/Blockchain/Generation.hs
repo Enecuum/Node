@@ -43,7 +43,7 @@ createKBlocks prevKBlockHash from order = do
     pure (lastHash, kBlocks)
 
 -- Generate bunch of key blocks (in order)
-generateKBlocks :: Monad m => StringHash -> D.BlockNumber -> m (StringHash, [KBlock])
+generateKBlocks :: (L.ERandom m, Monad m) => StringHash -> D.BlockNumber -> m (StringHash, [KBlock])
 generateKBlocks prevHash from = do
     blocks <- loopGenKBlock prevHash from (from + kBlockInBunch)
     case blocks of
@@ -51,14 +51,14 @@ generateKBlocks prevHash from = do
         _  -> pure (toHash $ last blocks, blocks)
 
 -- loop - state substitute : create new Kblock using hash of previous
-loopGenKBlock :: Monad m => StringHash -> D.BlockNumber -> D.BlockNumber -> m [KBlock]
+loopGenKBlock :: (L.ERandom m, Monad m) => StringHash -> D.BlockNumber -> D.BlockNumber -> m [KBlock]
 loopGenKBlock prevHash from to = do
-    let kblock      = genKBlock prevHash from
-        newPrevHash = toHash kblock
+    kblock <- genKBlock prevHash from
+    let newPrevHash = toHash kblock
     if from < to
         then do
             rest <- loopGenKBlock newPrevHash (from + 1) to
-            pure (kblock : rest)
+            pure $ (kblock : rest)
         else pure []
 
 genRandKeyBlock :: (Monad m, L.ERandom m) => m KBlock
@@ -77,14 +77,15 @@ genRandKeyBlock = do
         , _time = time
         }
 
-genKBlock :: StringHash -> D.BlockNumber -> KBlock
-genKBlock prevHash i = KBlock
-    { _prevHash = prevHash
-    , _number   = i
-    , _nonce    = i
-    , _solver   = toHash (i + 3)
-    , _time     = i
-    }
+genKBlock :: (L.ERandom m, Monad m) => StringHash -> D.BlockNumber -> m KBlock
+genKBlock prevHash i = do
+    nonce <- fromIntegral <$> L.getRandomInt (0, 1000)
+    pure $ KBlock { _prevHash = prevHash
+                  , _number   = i
+                  , _nonce    = nonce
+                  , _solver   = toHash (i + 3)
+                  , _time     = i
+                  }
 
 genNTransactions :: (L.ERandom m, Monad m) => Int -> m [Transaction]
 genNTransactions k = replicateM k $ genTransaction Hardcoded
