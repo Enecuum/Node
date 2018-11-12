@@ -5,6 +5,7 @@ module Enecuum.Blockchain.Language.Ledger where
 import           Data.Map
 import qualified Data.Map                                 as Map
 import qualified Enecuum.Blockchain.Domain                as D
+import           Enecuum.Blockchain.Language.Verification as L
 import           Enecuum.Blockchain.Domain.BlockchainData (BlockchainData (..))
 import           Enecuum.Blockchain.Domain.Microblock     (Microblock (..))
 import           Enecuum.Blockchain.Domain.Transaction    (Transaction (..))
@@ -49,10 +50,11 @@ calculateLedger bData mblock =
         let newLedger = insert owner
                                newOwnerBalance
                                (insert receiver newReceiverBalance ledgerW)
-        let transactionValid = owner /= receiver && ownerBalance >= amount
+        let transactionValid = owner /= receiver && ownerBalance >= amount && L.verifyTransaction tx
 
         when transactionValid    $ L.writeVar ledgerVar newLedger
 
-        when transactionValid    $ L.logInfo $ "Tx accepted: " +|| D.showTx tx newOwnerBalance newReceiverBalance ||+ "."
-        when (owner == receiver) $ L.logInfo $ "Tx rejected (same owner and receiver): " +| D.showPublicKey owner |+ "."
-        unless transactionValid  $ L.logInfo $ "Tx rejected (negative balance): " +|| D.showTx tx newOwnerBalance newReceiverBalance ||+ "."
+        when transactionValid           $ L.logInfo $ "Tx accepted: " +|| D.showTxWithNewBalance tx newOwnerBalance newReceiverBalance ||+ "."
+        when (owner == receiver)        $ L.logInfo $ "Tx rejected (same owner and receiver): " +| D.showPublicKey owner |+ "."
+        unless (L.verifyTransaction tx) $ L.logInfo $ "Tx rejected (signature is not genuine for key): " +| D.showPublicKey owner |+ "."
+        unless transactionValid         $ L.logInfo $ "Tx rejected (negative balance): " +|| D.showTxWithNewBalance tx newOwnerBalance newReceiverBalance ||+ "."
