@@ -124,3 +124,10 @@ awaitSignal :: (Monad m, L.StateIO m) => D.StateVar Bool -> m ()
 awaitSignal signalVar = do
     L.atomically $ unlessM (L.readVar signalVar) L.retry
     L.writeVarIO signalVar False
+
+--
+await ref = L.atomically $ do
+    mValue <- L.readVar ref
+    case mValue of
+        Just value -> pure value
+        Nothing    -> L.retry
