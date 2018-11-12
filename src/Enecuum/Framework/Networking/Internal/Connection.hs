@@ -16,6 +16,8 @@ type Handler protocol  = Value -> D.Connection protocol -> IO ()
 type Handlers protocol = Map Text (Handler protocol)
 data ServerHandle
       = ServerHandle (TMVar S.Socket) ThreadId
+
+      -- TODO: get rid of this
       | OldServerHandle (TChan ServerComand)
 
 -- TODO: this is no longer needed, remove
