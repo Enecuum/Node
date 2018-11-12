@@ -37,7 +37,6 @@ testNodeNet = TestCase $ withNodesManager $ \mgr -> do
     void $ startNode Nothing mgr $ A.graphNodeReceiver graphNodeConfig
     waitForNode A.graphNodeReceiverRpcAddress
 
-    threadDelay $ 1000 * 1000
     -- Ask pow node to generate n kblocks
     let timeGap = (1000 * 500)
     let kblockCount = 2
@@ -48,8 +47,8 @@ testNodeNet = TestCase $ withNodesManager $ \mgr -> do
 
     threadDelay $ 1000 * 1000
     -- Check kblock synchronization
-    Right kBlock1 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
-    Right kBlock2 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeReceiverRpcAddress    A.GetLastKBlock
+    kBlock1 :: D.KBlock <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress A.GetLastKBlock
+    kBlock2 :: D.KBlock <- makeRpcRequestUntilSuccess A.graphNodeReceiverRpcAddress    A.GetLastKBlock
 
     kBlock1 `shouldBe` kBlock2
 

@@ -25,17 +25,23 @@ testInvalidTransaction = TestCase $ withNodesManager $ \mgr -> do
     void $ startNode Nothing mgr $ A.graphNodeTransmitter A.noDBConfig
     void $ startNode Nothing mgr A.powNode
     void $ startNode Nothing mgr $ A.poaNode A.Good $ A.PoANodeConfig 42
+    waitForNode A.graphNodeTransmitterRpcAddress
 
     -- Generate and send transactions with invalid signature to graph node
-    transactions <- I.runERandomL $ replicateM A.transactionsInMicroblock $ A.generateBogusSignedTransaction
-    forM transactions $ \tx -> do
+    invalidTransactions <- I.runERandomL $ replicateM A.transactionsInMicroblock $ A.generateBogusSignedTransaction
+    forM invalidTransactions $ \tx -> do
         answer :: Either Text A.SuccessMsg <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.CreateTransaction tx
         answer `shouldSatisfy` isLeft
 
-    threadDelay $ 1000 * 5000
-    -- Check transaction pending on graph node, it must to be empty
-    Right txPending :: Either Text [D.Transaction] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
-    txPending `shouldBe` []
+    -- Generate and send transactions with valid signature to graph node
+    validTransactions <- I.runERandomL $ replicateM A.transactionsInMicroblock $ A.genTransaction A.Generated
+    forM validTransactions $ \tx -> do
+        answer :: Either Text A.SuccessMsg <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.CreateTransaction tx
+        answer `shouldSatisfy` isRight
+
+    -- Check transaction pending on graph node, it must contain only valid transactions
+    txPending :: [D.Transaction] <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
+    (sort txPending) `shouldBe` (sort validTransactions)
 
 
 testInvalidMicroblock :: Test
@@ -49,9 +55,8 @@ testInvalidMicroblock = TestCase $ withNodesManager $ \mgr -> do
     _ :: [Either Text A.SuccessMsg] <- forM transactions $ \tx ->
         makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.CreateTransaction tx
 
-    threadDelay $ 1000 * 5000
     -- Check transaction pending on graph node
-    Right txPending :: Either Text [D.Transaction] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
+    txPending :: [D.Transaction] <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
     (sort txPending) `shouldBe` (sort transactions)
 
     -- Ask pow node to generate n kblocks
@@ -59,16 +64,13 @@ testInvalidMicroblock = TestCase $ withNodesManager $ \mgr -> do
     let kblockCount = 1
     _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
 
-    threadDelay $ 1000 * 1000
     -- Check kblock pending
-    Right kblocks :: Either Text D.KBlockPending <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetKBlockPending
+    kblocks :: D.KBlockPending <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetKBlockPending
     let kblockHash = D.toHash $ (map snd $ M.toList kblocks) !! 0
 
     -- Microblock was rejected on graph node (received from poa)
     Left _ :: Either Text [D.Microblock] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetMBlocksForKBlockRequest kblockHash
 
-    threadDelay $ 1000 * 1000
     -- Check transaction pending on graph node, it must to be the same as it was
-    Right txPending :: Either Text [D.Transaction] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
+    txPending :: [D.Transaction] <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
     (sort txPending) `shouldBe` (sort transactions)
-
