@@ -131,3 +131,6 @@ await ref = L.atomically $ do
     case mValue of
         Just value -> pure value
         Nothing    -> L.retry
+
+--
+modifyVarIO var f = L.atomically $ L.modifyVar var f

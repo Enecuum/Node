@@ -17,10 +17,3 @@ handleStopNode
     => s -> M.Stop -> Free L.NodeF M.SuccessMsg
 handleStopNode nodeData M.Stop = L.stopNode nodeData >> pure M.SuccessMsg
 
-
-pingConnects :: ChordRouteMap D.Address -> L.NodeL [D.StringHash]
-pingConnects nodes = do
-    deadNodes <- forM (elems nodes) $ \(hash, D.Address host port) -> do
-        res :: Either Text M.Pong <- L.makeRpcRequest (D.Address host (port - 1000)) M.Ping
-        pure $ case res of Right _ -> Nothing ; Left _ -> Just hash
-    pure $ catMaybes deadNodes

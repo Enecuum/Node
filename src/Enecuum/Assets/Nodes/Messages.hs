@@ -36,12 +36,7 @@ newtype PreviousForMe = PreviousForMe StringHash
 newtype NextForMe = NextForMe StringHash
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
--- | NN node  
-newtype NextForYou = NextForYou D.Address
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data ConnectResponse = ConnectResponse StringHash D.Address
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)  
 
 data GetRoutingMessages = GetRoutingMessages
   deriving (Show, Eq, Generic, ToJSON, FromJSON)  

@@ -63,33 +63,13 @@ initNN routingRuntime nodeStatus = L.atomically
     (NNNodeData routingRuntime nodeStatus <$> L.newVar [])
 
 
-acceptHello :: NNNodeData -> MyNodeHash -> M.Hello -> D.Connection D.Udp -> L.NodeL ()
-acceptHello nodeData myHash (M.Hello senderHash senderAddress) con = do
-    L.close con
-    connectMap <- L.readVarIO (nodeData ^. netNodes)
-    let nextAddres = nextForHello myHash senderHash connectMap
-    
-    whenJust nextAddres $ \reciverAddress ->
-        void $ L.notify reciverAddress $ M.Hello senderHash senderAddress
-    
-    L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap senderHash senderAddress)
-    
+
 
 acceptConnectResponse :: NNNodeData -> D.Address -> M.ConnectResponse -> D.Connection D.Udp -> L.NodeL ()
 acceptConnectResponse nodeData myAddress (M.ConnectResponse hash address) con = do
     when (myAddress /= address) $
         L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap hash address)
     L.close con
-
-acceptNextForYou :: NNNodeData -> D.StringHash -> M.NextForYou -> D.Connection D.Udp -> L.NodeL ()
-acceptNextForYou nodeData hash (M.NextForYou senderAddress) conn = do
-    L.close conn
-    maybeAddress <- L.atomically $ do
-        connectMap <- L.readVar (nodeData ^. netNodes)
-        pure $ findNextForHash hash connectMap
-    whenJust maybeAddress $ \(h, address) ->
-        void $ L.notify senderAddress $ M.ConnectResponse h address
-
 
 testPorts :: [D.PortNumber]
 testPorts = [5001..5010]
@@ -128,15 +108,6 @@ getRoutingMessages nodeData _ = L.readVarIO (nodeData ^. routingMessages)
 
 nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
 nnNode port = nnNode' port (NNConfig 42) 
-
-
---
-udpRoutingHandlers routingRuntime =
-    forM_ [acceptHello, acceptConnectResponse, acceptNextForYou, acceptSendTo]
-        $ \handl -> L.handler $ handl routingRuntime
-
-rpcRotingHandlers routingRuntime =
-    L.method     rpcPingPong
 
 
 nnNode' :: Maybe D.PortNumber -> NodeConfig NN -> L.NodeDefinitionL ()

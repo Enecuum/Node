@@ -22,7 +22,7 @@ data RoutingRuntime = RoutingRuntime
     , _nodePorts   :: NodePorts
     , _nodeId      :: NodeId
     , _bnAddress   :: NodeAddress
-    , _connectMap  :: D.StateVar (ChordRouteMap D.Address)
+    , _connectMap  :: D.StateVar (ChordRouteMap NodeAddress)
     }
 makeFieldsNoPrefix ''RoutingRuntime
 
@@ -44,35 +44,50 @@ periodic time action = L.process $ forever $ do
     L.delay time
     action
 
---
+getConnects :: RoutingRuntime -> L.NodeL (ChordRouteMap NodeAddress)
+getConnects routingRuntime = L.readVarIO (routingRuntime ^. connectMap)
 
 clearingOfConnects :: RoutingRuntime -> L.NodeL ()
-clearingOfConnects myHash nodeData = L.atomically $ do
-    nodes <- L.readVar (nodeData ^. netNodes)
-    let filteredNodes   = maybeToList (findNextForHash myHash nodes) <> findInMap myHash nodes
-    let filteredNodeMap = toChordRouteMap filteredNodes
-    L.writeVar (nodeData ^. netNodes) filteredNodeMap
+clearingOfConnects routingRuntime = do
+    connectMap <- getConnects routingRuntime
+    L.atomically $ do
+        let myNodeId        = routingRuntime ^. nodeId
+        let filteredNodes   = maybeToList (findNextForHash myNodeId connectMap) <> findInMap myNodeId connectMap
+        let filteredNodeMap = toChordRouteMap filteredNodes
+        L.writeVar (routingRuntime ^. connectMap) filteredNodeMap
 
 successorsRequest :: RoutingRuntime -> L.NodeL ()
-successorsRequest myAddress nodeData = do
-    nodes <- L.readVarIO (nodeData ^. netNodes)
-    forM_ nodes $ \(_, addr) -> void $
-        L.notify addr $ M.NextForYou myAddress
+successorsRequest routingRuntime = do
+    myAddress <- getMyNodeAddress routingRuntime
+    whenJust myAddress $ \myNodeAddress -> do
+        connectMap <- getConnects routingRuntime
+        forM_ connectMap $ \(_, addr) ->
+            void $ L.notify (getUdpAddress addr) $ NextForYou $ getUdpAddress myNodeAddress
+
+
+pingConnects :: ChordRouteMap NodeAddress -> L.NodeL [NodeId]
+pingConnects nodes = do
+    deadNodes <- forM (elems nodes) $ \(nodeId, address) -> do
+        res <- L.makeRpcRequest (getRpcAddress address) M.Ping
+        pure $ case res of
+            Right M.Pong -> Nothing
+            Left  _      -> Just nodeId
+    pure $ catMaybes deadNodes
 
 routingWorker :: RoutingRuntime -> L.NodeDefinitionL ()
 routingWorker routingRuntime = do
-    builtIntoTheNetwork routingRuntime
+    let bnUdpAddress = getUdpAddress (routingRuntime^.bnAddress)
 
+    builtIntoTheNetwork routingRuntime
     periodic (1000 * 1000)  $ clearingOfConnects routingRuntime
     periodic (1000 * 10000) $ successorsRequest  routingRuntime
     periodic (1000 * 1000)  $ sendHelloToPrevius routingRuntime
     periodic (1000 * 1000)  $ do
-        deadNodes <- pingConnects =<< L.readVarIO (nodeData ^. netNodes)
+        deadNodes <- pingConnects =<< getConnects routingRuntime
         forM_ deadNodes $ \hash -> do
-            L.atomically $ L.modifyVar (nodeData ^. netNodes) $ removeFromMap hash
-            let D.Address bnHost bnPort = A.bnAddress
-            L.notify (D.Address bnHost (bnPort - 1000)) $ M.IsDead hash
---
+            L.modifyVarIO (routingRuntime ^. connectMap) $ removeFromMap hash
+            L.notify bnUdpAddress $ M.IsDead hash
+
 builtIntoTheNetwork :: RoutingRuntime -> L.NodeDefinitionL ()
 builtIntoTheNetwork routingRuntime = L.scenario $ 
     forM_ [registerWithBn, connecRequests 63, nextRequest, sendHelloToPrevius]
@@ -80,22 +95,22 @@ builtIntoTheNetwork routingRuntime = L.scenario $
 
 registerWithBn :: RoutingRuntime -> L.NodeL ()
 registerWithBn routingRuntime = do
-    let bnUdpAddress = getUdpAddress (routingRuntime^.bnAddress)
-    let privateKey   = True
-    helloToBn <- makeHelloToBn privateKey (routingRuntime^.nodePorts) (routingRuntime^.nodeId)
-    let takeAddress  = do
+    let bnUdpAddress =  getUdpAddress (routingRuntime^.bnAddress)
+    let privateKey   =  True
+    helloToBn        <- makeHelloToBn privateKey (routingRuntime^.nodePorts) (routingRuntime^.nodeId)
+    let takeAddress  =  do
             L.notify bnUdpAddress helloToBn
             L.delay 1000000
-            unlesM (isJust <$> readVarIO (routingRuntime ^. hostAddress)) takeAddress
+            unlessM (isJust <$> L.readVarIO (routingRuntime ^. hostAddress)) takeAddress
     L.process takeAddress
     void $ L.await (routingRuntime^.hostAddress)
 
 connecRequests :: Word64 -> RoutingRuntime -> L.NodeL ()
 connecRequests i routingRuntime = when (i > 0) $ do
-    let bnRpcAddress = getRpcAddress (routingRuntime^.bnAddress)
-    let myNodeId     = routingRuntime ^. nodeId
-    maybeAddress <- L.makeRpcRequest bnRpcAddress $ M.ConnectRequest myNodeId i
-    myAddress    <- await (routingRuntime^.hostAddress)
+    let bnRpcAddress =  getRpcAddress (routingRuntime^.bnAddress)
+    let myNodeId     =  routingRuntime ^. nodeId
+    maybeAddress     <- L.makeRpcRequest bnRpcAddress $ M.ConnectRequest myNodeId i
+    myAddress        <- L.await (routingRuntime^.hostAddress)
     case maybeAddress of
         Right (recivedNodeId, address) | myAddress /= address -> do
             L.modifyVarIO (routingRuntime ^. connectMap) $ addToMap recivedNodeId address
@@ -104,24 +119,64 @@ connecRequests i routingRuntime = when (i > 0) $ do
 
 nextRequest :: RoutingRuntime -> L.NodeL ()
 nextRequest routingRuntime = do
-    let bnRpcAddress = getRpcAddress (routingRuntime^.bnAddress)
-    let myNodeId     = routingRuntime ^. nodeId
-    myAddress <- await (routingRuntime^.hostAddress)
-    nextForMe <- L.makeRpcRequest bnRpcAddress $ M.NextForMe myNodeId
+    let bnRpcAddress =  getRpcAddress (routingRuntime^.bnAddress)
+    let myNodeId     =  routingRuntime ^. nodeId
+    myAddress        <- L.await (routingRuntime^.hostAddress)
+    nextForMe        <- L.makeRpcRequest bnRpcAddress $ M.NextForMe myNodeId
     case nextForMe of
         Right (recivedNodeId, address) | myAddress /= address ->
-            L.modifyVarIO (nodeData ^. connectMap) (addToMap recivedNodeId address)
+            L.modifyVarIO (routingRuntime ^. connectMap) (addToMap recivedNodeId address)
         _ -> pure ()
 
 sendHelloToPrevius :: RoutingRuntime -> L.NodeL () 
 sendHelloToPrevius routingRuntime = do
-    connectMap <- L.readVarIO (routingRuntime ^. connectMap)
-    let myNodeId    = routingRuntime ^. nodeId
-    myNodeAddress <- getMyNodeAddress routingRuntime
-    let mAddress    = findNextForHash myNodeId connectMap
+    connectMap      <- getConnects      routingRuntime
+    myNodeAddress   <- getMyNodeAddress routingRuntime
+    let myNodeId    =  routingRuntime ^. nodeId
+    let mAddress    =  findNextForHash myNodeId connectMap
     case (myNodeAddress, mAddress) of
-        (Just myAddress, Just reciverAddress) -> do  
+        (Just myAddress, Just (_, reciverAddress)) -> do  
             let privateKey  = True
-            hello <- makeRoutingHello privateKey myNodeAddress
-            void $ L.notify address hello
+            hello <- makeRoutingHello privateKey myAddress
+            void $ L.notify (getUdpAddress reciverAddress) hello
         _ -> pure ()
+
+--
+
+udpRoutingHandlers routingRuntime = do
+    L.handler $ acceptHello             routingRuntime
+    L.handler $ acceptConnectResponse   routingRuntime
+    L.handler $ acceptNextForYou        routingRuntime
+    L.handler $ acceptSendTo            routingRuntime
+
+rpcRotingHandlers routingRuntime = L.method rpcPingPong
+
+
+acceptHello :: RoutingRuntime -> RoutingHello -> D.Connection D.Udp -> L.NodeL ()
+acceptHello routingRuntime routingHello con = do
+    L.close con
+    let senderAddress  = routingHello ^. nodeAddress
+    let senderId       = senderAddress ^. nodeId
+    let myId           = routingRuntime ^. nodeId
+    when (verifyRoutingHello routingHello) $ do
+        connectMap <- getConnects routingRuntime
+        let nextAddres = nextForHello myId senderId connectMap
+        
+        whenJust nextAddres $ \reciverAddress ->
+            void $ L.notify (getUdpAddress reciverAddress) routingHello
+        
+        L.modifyVarIO
+            (routingRuntime ^. connectMap)
+            (addToMap senderId senderAddress)
+    
+
+acceptNextForYou :: RoutingRuntime -> NextForYou -> D.Connection D.Udp -> L.NodeL ()
+acceptNextForYou routingRuntime (NextForYou senderAddress) conn = do
+    L.close conn
+    connectMap <- getConnects routingRuntime
+    maybeAddress <- L.atomically $ do
+        let myId   =  routingRuntime ^. nodeId
+        pure $ findNextForHash myId connectMap
+    whenJust maybeAddress $ \(nodeId, address) ->
+        void $ L.notify senderAddress address
+

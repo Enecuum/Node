@@ -1,4 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE UndecidableInstances   #-}
@@ -16,7 +17,7 @@ data NodePorts = NodePorts
     { _udpPort :: D.PortNumber
     , _tcpPort :: D.PortNumber
     , _rpcPort :: D.PortNumber
-    }
+    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 makeFieldsNoPrefix ''NodePorts
 
 makeNodePorts1000 :: D.PortNumber -> NodePorts
@@ -26,7 +27,7 @@ data NodeAddress = NodeAddress
     { _hostAddress  :: D.Host
     , _nodePorts    :: NodePorts
     , _nodeId       :: NodeId
-    }
+    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 makeFieldsNoPrefix ''NodeAddress
 
 getUdpAddress :: NodeAddress -> D.Address
@@ -45,7 +46,7 @@ data HelloToBn = HelloToBn
     { _nodePorts :: NodePorts
     , _nodeId    :: NodeId
     , _signature :: Bool 
-    }
+    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 makeFieldsNoPrefix ''HelloToBn
 
 makeHelloToBn :: Applicative m => PrivateKay -> NodePorts -> NodeId -> m HelloToBn
@@ -57,7 +58,7 @@ verifyHelloToBn _ = True
 data HelloToBnResponce = HelloToBnResponce
     { _hostAddress :: D.Host
     , _signature   :: Bool
-    }
+    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 makeFieldsNoPrefix ''HelloToBnResponce
 
 makeHelloToBnResponce :: Applicative m => PrivateKay -> D.Host ->  m HelloToBnResponce
@@ -69,7 +70,7 @@ verifyHelloToBnResponce _ = True
 data RoutingHello = RoutingHello
     { _nodeAddress  :: NodeAddress
     , _signature    :: Bool 
-    }
+    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 makeFieldsNoPrefix ''RoutingHello
 
 makeRoutingHello :: Applicative m => PrivateKay -> NodeAddress -> m RoutingHello
@@ -78,4 +79,5 @@ makeRoutingHello _ nodeAddress' = pure $ RoutingHello nodeAddress' True
 verifyRoutingHello :: RoutingHello -> Bool
 verifyRoutingHello _ = True
 
-
+newtype NextForYou = NextForYou D.Address
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
