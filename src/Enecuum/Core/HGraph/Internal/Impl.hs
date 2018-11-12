@@ -29,7 +29,7 @@ initHGraph = TGraph <$> atomically G.newTHGraph
 newNode :: (StringHashable c, ToContent config c) => TGraph c -> HNodeContent config -> STM Bool
 newNode (TGraph graph) x = G.newNode graph (fromContent x)
 
--- get nodeby hash, content or ref
+-- get node by hash, content or ref
 getNode
     :: StringHashable content
     => TGraph content
@@ -71,7 +71,7 @@ newLink (TGraph graph) x y = case (x, y) of
         Just tNode -> G.newTLink tNode r2
         Nothing    -> pure False
 
--- delete link inter a nodes by contents, hashes or refs of the node
+-- delete link between nodes by content, hash or ref of the node
 deleteLink
     :: StringHashable c
     => TGraph c

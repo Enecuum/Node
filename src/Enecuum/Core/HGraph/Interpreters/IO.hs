@@ -32,7 +32,7 @@ interpretHGraphLIO :: (Serialize c, StringHashable c) => TGraph c -> HGraphF (TN
 -- create a new node
 interpretHGraphLIO graph (NewNode x next) = next <$> atomically (Impl.newNode graph x)
 
--- get nodeby hash, content or ref
+-- get node by hash, content or ref
 interpretHGraphLIO graph (GetNode x next) = do
     node <- atomically $ Impl.getNode graph x
     pure $ next node

@@ -4,7 +4,7 @@ module Enecuum.Core.HGraph.Types
     ( HNodeContent
     , HNodeRef
     , HNode (..)
-    -- * Clases
+    -- * Type Classes
     , ToContent (..)
     , ToNodeRef (..)
     , TGraph (..)
