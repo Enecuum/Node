@@ -63,14 +63,6 @@ initNN routingRuntime nodeStatus = L.atomically
     (NNNodeData routingRuntime nodeStatus <$> L.newVar [])
 
 
-
-
-acceptConnectResponse :: NNNodeData -> D.Address -> M.ConnectResponse -> D.Connection D.Udp -> L.NodeL ()
-acceptConnectResponse nodeData myAddress (M.ConnectResponse hash address) con = do
-    when (myAddress /= address) $
-        L.atomically $ L.modifyVar (nodeData ^. netNodes) (addToMap hash address)
-    L.close con
-
 testPorts :: [D.PortNumber]
 testPorts = [5001..5010]
 

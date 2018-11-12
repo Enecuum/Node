@@ -17,7 +17,7 @@ data NodePorts = NodePorts
     { _udpPort :: D.PortNumber
     , _tcpPort :: D.PortNumber
     , _rpcPort :: D.PortNumber
-    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
+    } deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 makeFieldsNoPrefix ''NodePorts
 
 makeNodePorts1000 :: D.PortNumber -> NodePorts
@@ -27,7 +27,7 @@ data NodeAddress = NodeAddress
     { _hostAddress  :: D.Host
     , _nodePorts    :: NodePorts
     , _nodeId       :: NodeId
-    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
+    } deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 makeFieldsNoPrefix ''NodeAddress
 
 getUdpAddress :: NodeAddress -> D.Address

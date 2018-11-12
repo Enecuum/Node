@@ -126,6 +126,7 @@ awaitSignal signalVar = do
     L.writeVarIO signalVar False
 
 --
+await :: L.StateIO m => D.StateVar (Maybe a) -> m a
 await ref = L.atomically $ do
     mValue <- L.readVar ref
     case mValue of
