@@ -34,6 +34,7 @@ data PoANode = PoANode
 
 data instance NodeConfig PoANode = PoANodeConfig
     { _dummyOption :: Int
+    , _rpcPort     :: D.PortNumber
     }
     deriving (Show, Generic)
 
@@ -48,6 +49,8 @@ instance ToJSON   (NodeConfig PoANode)   where toJSON    = A.genericToJSON    no
 instance FromJSON (NodeConfig PoANode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 instance ToJSON   (NodeScenario PoANode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario PoANode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+
+defaultPoANodeConfig = PoANodeConfig 42 A.poaNodeRpcPort
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions

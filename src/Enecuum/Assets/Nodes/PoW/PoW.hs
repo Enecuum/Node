@@ -1,25 +1,23 @@
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
 {-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell        #-}
 
 module Enecuum.Assets.Nodes.PoW.PoW where
 
-import           Enecuum.Prelude
-import qualified Data.Aeson as J
-
-import qualified Enecuum.Language              as L
-import qualified Enecuum.Domain                as D
-import           Enecuum.Config
+import qualified Data.Aeson                           as J
+import           Data.HGraph.StringHashable           (StringHash (..), toHash)
 import qualified Enecuum.Assets.Blockchain.Generation as A
-import           Enecuum.Assets.Nodes.Address (powNodeRpcPort, graphNodeTransmitterUdpAddress)
-import           Data.HGraph.StringHashable (StringHash (..), toHash)
-import qualified Enecuum.Assets.Nodes.Messages as Msgs
-import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
+import qualified Enecuum.Assets.Nodes.CLens           as CLens
+import qualified Enecuum.Assets.Nodes.Messages        as Msgs
 import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.PoW.Config
-import qualified Enecuum.Assets.Nodes.CLens as CLens
+import           Enecuum.Config
+import qualified Enecuum.Domain                       as D
+import           Enecuum.Framework.Language.Extra     (HasStatus, NodeStatus (..))
+import qualified Enecuum.Language                     as L
+import           Enecuum.Prelude
 
 type IterationsCount = Int
 type EnableDelays = Bool
@@ -42,8 +40,8 @@ instance Node PoWNode where
 instance ToJSON   (NodeScenario PoWNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario PoWNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
-kBlockProcess :: PoWNodeData -> L.NodeL ()
-kBlockProcess nodeData = do
+kBlockProcess :: D.Address -> PoWNodeData -> L.NodeL ()
+kBlockProcess graphNodeUdpAddress nodeData = do
     prevKBlockHash      <- L.readVarIO $ nodeData ^. prevHash
     prevKBlockNumber    <- L.readVarIO $ nodeData ^. prevNumber
 
@@ -54,7 +52,7 @@ kBlockProcess nodeData = do
     L.writeVarIO (nodeData ^. prevNumber) $ prevKBlockNumber + fromIntegral (length kBlocks)
 
     gap <- L.readVarIO $ nodeData ^. blocksDelay
-    for_ kBlocks $ \ kBlock -> L.withConnection D.Udp graphNodeTransmitterUdpAddress $ \conn -> do
+    for_ kBlocks $ \ kBlock -> L.withConnection D.Udp graphNodeUdpAddress $ \conn -> do
             L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
             void $ L.send conn kBlock
             when (gap > 0) $ L.delay gap
@@ -71,18 +69,16 @@ nBlockPacketGenerationHandle powNodeData (Msgs.NBlockPacketGeneration i gap) = d
         L.writeVar  (powNodeData ^. blocksDelay) gap
     pure Msgs.SuccessMsg
 
-defaultBlocksDelay :: BlocksDelay
-defaultBlocksDelay = 1000 * 1000
 
 powNode :: L.NodeDefinitionL ()
-powNode = powNode' $ PoWNodeConfig defaultBlocksDelay A.InOrder
+powNode = powNode' $ defaultPoWNodeConfig
 
 powNode' :: NodeConfig PoWNode -> L.NodeDefinitionL ()
 powNode' cfg = do
     L.nodeTag "PoW node"
 
     nodeData <- L.initialization $ powNodeInitialization cfg D.genesisHash
-    L.serving D.Rpc powNodeRpcPort $ do
+    L.serving D.Rpc (_powNodeRpcPort cfg) $ do
         -- network
         L.method    rpcPingPong
         L.method  $ handleStopNode nodeData
@@ -97,7 +93,7 @@ powNode' cfg = do
             i <- L.readVar $ nodeData ^. requiredBlockNumber
             when (i == 0) L.retry
             L.writeVar (nodeData ^. requiredBlockNumber) (i - 1)
-        kBlockProcess nodeData
+        kBlockProcess (_graphNodeUDPAddress cfg ) nodeData
 
     L.awaitNodeFinished nodeData
 

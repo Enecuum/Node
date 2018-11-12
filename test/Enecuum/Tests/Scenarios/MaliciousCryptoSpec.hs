@@ -18,13 +18,14 @@ spec :: Spec
 spec = slowTest $ describe "Test invalid signature" $ fromHUnitTest $ TestList
     [ TestLabel "Reject invalid microblock"  testInvalidMicroblock
     , TestLabel "Reject invalid transaction" testInvalidTransaction
+    -- , TestLabel "Accept valid microblock with invalid transactions. Reject invalid transactions to ledger", testMicroblockWithInvalidTransactions
     ]
 
 testInvalidTransaction :: Test
 testInvalidTransaction = TestCase $ withNodesManager $ \mgr -> do
-    void $ startNode Nothing mgr $ A.graphNodeTransmitter A.noDBConfig
+    void $ startNode Nothing mgr $ A.graphNodeTransmitter A.defaultNodeConfig
     void $ startNode Nothing mgr A.powNode
-    void $ startNode Nothing mgr $ A.poaNode A.Good $ A.PoANodeConfig 42
+    void $ startNode Nothing mgr $ A.poaNode A.Good A.defaultPoANodeConfig
     waitForNode A.graphNodeTransmitterRpcAddress
 
     -- Generate and send transactions with invalid signature to graph node
@@ -46,9 +47,9 @@ testInvalidTransaction = TestCase $ withNodesManager $ \mgr -> do
 
 testInvalidMicroblock :: Test
 testInvalidMicroblock = TestCase $ withNodesManager $ \mgr -> do
-    void $ startNode Nothing mgr $ A.graphNodeTransmitter A.noDBConfig
+    void $ startNode Nothing mgr $ A.graphNodeTransmitter A.defaultNodeConfig
     void $ startNode Nothing mgr A.powNode
-    void $ startNode Nothing mgr $ A.poaNode A.Bad $ A.PoANodeConfig 42
+    void $ startNode Nothing mgr $ A.poaNode A.Bad A.defaultPoANodeConfig
 
     -- Generate and send transactions to graph node
     transactions <- I.runERandomL $ replicateM A.transactionsInMicroblock $ A.genTransaction A.Generated
@@ -74,3 +75,6 @@ testInvalidMicroblock = TestCase $ withNodesManager $ \mgr -> do
     -- Check transaction pending on graph node, it must to be the same as it was
     txPending :: [D.Transaction] <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
     (sort txPending) `shouldBe` (sort transactions)
+
+-- testMicroblockWithInvalidTransactions :: Test
+-- testMicroblockWithInvalidTransactions = TestCase $ withNodesManager $ \mgr -> do

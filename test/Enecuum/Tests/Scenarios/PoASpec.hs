@@ -21,9 +21,9 @@ spec = slowTest $ describe "PoA" $ fromHUnitTest $ TestList
 
 testPoA :: Test
 testPoA = TestCase $ withNodesManager $ \mgr -> do
-    void $ startNode Nothing mgr $ A.graphNodeTransmitter A.noDBConfig
+    void $ startNode Nothing mgr $ A.graphNodeTransmitter A.defaultNodeConfig
     void $ startNode Nothing mgr A.powNode
-    void $ startNode Nothing mgr $ A.poaNode A.Good $ A.PoANodeConfig 42
+    void $ startNode Nothing mgr $ A.poaNode A.Good A.defaultPoANodeConfig
 
     -- Generate and send transactions to graph node
     transactions <- I.runERandomL $ replicateM A.transactionsInMicroblock $ A.genTransaction A.Generated

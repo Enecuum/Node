@@ -28,14 +28,14 @@ dumpAndRestoreGraphTest = do
             , D._errorIfExists   = False
             }
     let dbPath = "/tmp/enecuum/dumped_graph.dbm"
-    let cfg = A.GraphNodeConfig
+    let dbConfig = A.DBConfig
             { A._useDatabase         = True
             , A._dbModelName         = dbPath
             , A._useEnqHomeDir       = False
             , A._dbOptions           = dbOpts 
             , A._stopOnDatabaseError = True
             }
-
+    let cfg = A.defaultNodeConfig { A._dbConfig = dbConfig }
     let blocksCount = 5
     let blocksDelay = 1000
     let loggerCfg = Nothing

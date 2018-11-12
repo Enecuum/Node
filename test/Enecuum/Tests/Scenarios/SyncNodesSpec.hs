@@ -22,8 +22,7 @@ spec = slowTest $ describe "Synchronization tests" $ fromHUnitTest $ TestList
 
 testNodeNet :: Test
 testNodeNet = TestCase $ withNodesManager $ \mgr -> do
-    let graphNodeConfig = A.noDBConfig
-    let poaNodeConfig   = A.PoANodeConfig 0
+    let graphNodeConfig = A.defaultNodeConfig
     -- Start nodes
     void $ startNode Nothing mgr $ A.graphNodeTransmitter graphNodeConfig
     waitForNode A.graphNodeTransmitterRpcAddress
@@ -31,7 +30,7 @@ testNodeNet = TestCase $ withNodesManager $ \mgr -> do
     void $ startNode Nothing mgr A.powNode
     waitForNode A.powNodeRpcAddress
 
-    void $ startNode Nothing mgr $ A.poaNode A.Good poaNodeConfig
+    void $ startNode Nothing mgr $ A.poaNode A.Good A.defaultPoANodeConfig
     waitForNode A.poaNodeRpcAddress
 
     void $ startNode Nothing mgr $ A.graphNodeReceiver graphNodeConfig
