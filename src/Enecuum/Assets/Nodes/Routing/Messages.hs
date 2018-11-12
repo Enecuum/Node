@@ -30,6 +30,9 @@ data NodeAddress = NodeAddress
     } deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 makeFieldsNoPrefix ''NodeAddress
 
+makeNodeAddress :: D.Host -> NodePorts -> NodeId -> NodeAddress
+makeNodeAddress = NodeAddress
+
 getUdpAddress :: NodeAddress -> D.Address
 getUdpAddress nodeAddress' =
     D.Address (nodeAddress'^.hostAddress) (nodeAddress'^.nodePorts.udpPort)

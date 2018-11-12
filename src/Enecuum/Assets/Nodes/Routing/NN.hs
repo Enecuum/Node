@@ -87,7 +87,6 @@ getRoutingMessages nodeData _ = L.readVarIO (nodeData ^. routingMessages)
 nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
 nnNode port = nnNode' port (NNConfig 42) 
 
-
 acceptSendTo :: NNNodeData -> SendMsgTo -> D.Connection D.Udp -> L.NodeL ()
 acceptSendTo nodeData message conn = do
     L.close conn
@@ -119,11 +118,11 @@ nnNode' maybePort _ = do
     routingRuntime <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash bnAddress
     nodeData       <- initNN routingRuntime nodeStatus
 
-    L.serving D.Udp (routingRuntime^.nodePorts.udpPort) $ do
+    L.serving D.Udp (routingRuntime ^. nodePorts . udpPort) $ do
         udpRoutingHandlers routingRuntime
         L.handler $ acceptSendTo          nodeData
 
-    L.serving D.Rpc (routingRuntime^.nodePorts.rpcPort) $ do
+    L.serving D.Rpc (routingRuntime ^. nodePorts . rpcPort) $ do
         rpcRotingHandlers routingRuntime
         L.method  $  connectMapRequest    routingRuntime
         L.method  $  getRoutingMessages   nodeData

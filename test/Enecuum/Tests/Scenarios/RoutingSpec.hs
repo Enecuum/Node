@@ -11,6 +11,7 @@ import           Enecuum.Testing.Integrational
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit           (fromHUnitTest)
 import           Test.HUnit
+import           Enecuum.Assets.Nodes.Routing.Messages
 
 spec :: Spec
 spec = describe "Routing tests" $ fromHUnitTest $ TestList
@@ -28,30 +29,24 @@ testRouting :: Test
 testRouting = TestCase $ withNodesManager $ \mgr -> do
     -- connMgr <- newIORef M.empty
     void $ startNode Nothing mgr A.bnNode
-    let ports = [5001..5010]
-    let nnNodes = map (D.Address A.localhost) ports
+    let ports                 = [5001..5010]
+    let receiverIds           = [D.toHashGeneric $ makeNodePorts1000 x| x <- [5002..5010]]
+    let receiverRpcAddresses  = [D.Address A.localhost ((makeNodePorts1000 x) ^. rpcPort)| x <- [5002..5010]]
+    let transmitterUdpAddress = D.Address A.localhost ((makeNodePorts1000 5001) ^. udpPort)
     forM_ ports (startNode Nothing mgr . A.nnNode . Just)
-
-    let transmitter = head nnNodes
-    let receivers = tail nnNodes
 
     threadDelay $ 1000 * 1000
     -- forM receivers $ \receiver -> modifyIORef connMgr $ checkFree receiver A.UDPs
-    I.runNodeL undefined $ forM receivers $
-        (\receiver -> do
-            L.notify transmitter $ A.SendMsgTo (D.toHashGeneric receiver) 10 "!! msg !!")
+    I.runNodeL undefined $ forM receiverIds
+        (\receiver ->
+            L.notify transmitterUdpAddress $ SendMsgTo receiver 10 "!! msg !!")
 
     threadDelay $ 1000 * 5000
     -- forM receivers $ \receiver -> modifyIORef connMgr $ checkFree receiver A.RPC
-    res <- forM receivers $ \(D.Address host rPort) -> do
-        msg :: Either Text [Text] <- do
-            let address = D.Address host (rPort - 1000)
-            -- let address = D.Address host rPort
-            makeIORpcRequest address A.GetRoutingMessages
-        pure (msg, rPort)
-    forM_ res (\(msg, rPort) -> do
-        let Right mess = msg
-        length mess `shouldSatisfy` ( >= 1))
+    res <- forM receiverRpcAddresses $ \address ->
+        makeIORpcRequest address A.GetRoutingMessages
+
+    forM_ res (\(Right (msg :: [Text])) -> length msg `shouldSatisfy` (== 1))
 
     -- forM_ res print
     True `shouldBe` True

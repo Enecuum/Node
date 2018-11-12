@@ -30,6 +30,9 @@ newtype Connection a = Connection
     }
     deriving (Show, Eq, Ord, Generic)
 
+getHostAddress :: Connection a -> Host
+getHostAddress (Connection (Address host _)) = host
+
 data family ConnectionVar a
 data instance ConnectionVar Tcp
     = TcpConnectionVar (TMVar (TChan Command))
