@@ -2,7 +2,6 @@
 
 module Enecuum.Framework.Runtime where
 
-import           Control.Concurrent.STM.TChan
 import qualified Data.Map                           as Map
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
@@ -19,7 +18,10 @@ data DBHandle  = DBHandle
     , _mutex :: MVar ()
     }
 
-type BoundAddress = D.Address
+type Connections protocol = Map (D.Connection protocol) (D.NativeConnection protocol)
+type ConnectionsVar protocol = TMVar (Connections protocol)
+type TcpConnections = Connections D.Tcp
+type UdpConnections = Connections D.Udp
 
 data NodeRuntime = NodeRuntime
     { _coreRuntime :: CoreRuntime
@@ -29,8 +31,8 @@ data NodeRuntime = NodeRuntime
     , _state       :: NodeState              -- ^ State of node.
     , _nodeTag     :: TVar Text
     , _processes   :: TVar (Map D.ProcessId ThreadId)
-    , _tcpConnects :: TMVar (Map BoundAddress (D.NativeConnection D.Tcp))
-    , _udpConnects :: TMVar (Map BoundAddress (D.NativeConnection D.Udp))
+    , _tcpConnects :: ConnectionsVar D.Tcp
+    , _udpConnects :: ConnectionsVar D.Udp
     , _storyPaths  :: Map Text String
     , _databases   :: TVar (Map FilePath DBHandle)
     }

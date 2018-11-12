@@ -54,8 +54,14 @@ manualCloseSock sock = do
     whenLeft eRes $ \(err :: SomeException) -> trace_ $ "[manualCloseSock] exc got in closing sock: " <> show err
 
 
-fromSockAddr :: S.SockAddr -> D.Address
-fromSockAddr (S.SockAddrInet port host)       = D.Address (show $ IP.fromHostAddress host)   port
-fromSockAddr (S.SockAddrInet6 port _ host6 _) = D.Address (show $ IP.fromHostAddress6 host6) port
-fromSockAddr (S.SockAddrUnix str)             = D.unsafeParseAddress str
-fromSockAddr sa                               = error $ "fromSockAddr not supported for: " <> show sa
+showSockAddr :: (Semigroup s, IsString s) => S.SockAddr -> s
+showSockAddr (S.SockAddrInet port host)       = show (IP.fromHostAddress  host ) <> ":" <> show port
+showSockAddr (S.SockAddrInet6 port _ host6 _) = show (IP.fromHostAddress6 host6) <> ":" <> show port
+showSockAddr (S.SockAddrUnix str)             = show str
+showSockAddr (S.SockAddrCan sa)               = show $ "SockAddrCan: " <> show sa
+
+unsafeFromSockAddr :: S.SockAddr -> D.Address
+unsafeFromSockAddr (S.SockAddrInet port host)       = D.Address (show $ IP.fromHostAddress host)   port
+unsafeFromSockAddr (S.SockAddrInet6 port _ host6 _) = D.Address (show $ IP.fromHostAddress6 host6) port
+unsafeFromSockAddr (S.SockAddrUnix str)             = D.unsafeParseAddress str
+unsafeFromSockAddr sa                               = error $ "fromSockAddr not supported for: " <> show sa

@@ -81,7 +81,9 @@ instance NetworkConnection D.Udp where
 
         void $ forkIO $ runUDPServer chan port $ \socket sockAddr msg -> do
             let host       = D.sockAddrToHost sockAddr
-                connection = D.Connection $ D.Address host port
+
+            -- TODO: this is probably not a bound address.
+            let connection = D.Connection $ D.BoundAddress $ D.Address host port
 
             sockVar     <- newTMVarIO socket
             void $ insertConnect connection (D.ServerUdpConnection sockAddr sockVar)
@@ -103,7 +105,9 @@ instance NetworkConnection D.Udp where
         S.connect sock $ S.addrAddress address
 
         udpConVar@(D.ClientUdpConnection closeSignal _) <- makeUdpCon sock
-        let worker = readingWorker closeSignal handlers (D.Connection addr) sock `finally` S.close sock
+
+        -- TODO: this is probably not a bound address.
+        let worker = readingWorker closeSignal handlers (D.Connection (D.BoundAddress addr)) sock `finally` S.close sock
 
         void $ forkIO worker
-        pure $ Just (D.Connection addr, udpConVar)
+        pure $ Just (D.Connection (D.BoundAddress addr), udpConVar)

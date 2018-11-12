@@ -12,7 +12,7 @@ import qualified Network.Socket.ByteString.Lazy     as S
 import qualified Network.Socket                     as S hiding (recv)
 import           Enecuum.Framework.Networking.Internal.Tcp.Server
 import           Enecuum.Framework.Node.Interpreter        (runNodeL, setServerChan)
-import           Enecuum.Framework.Runtime                 (NodeRuntime, DBHandle, getNextId)
+import           Enecuum.Framework.Runtime                 (NodeRuntime, DBHandle, Connections, getNextId)
 import qualified Enecuum.Framework.Language                as L
 import qualified Enecuum.Framework.RLens                   as RLens
 import qualified Enecuum.Core.Interpreters                 as Impl
@@ -20,6 +20,7 @@ import qualified Enecuum.Framework.Node.Interpreter        as Impl
 import qualified Enecuum.Framework.Domain.RPC              as D
 import qualified Enecuum.Framework.Domain.Networking       as D
 import qualified Enecuum.Framework.Domain.Process          as D
+import qualified Enecuum.Framework.Runtime                        as R
 import           Enecuum.Framework.Handler.Rpc.Interpreter
 import qualified Enecuum.Framework.Handler.Network.Interpreter    as Net
 import qualified Enecuum.Framework.Networking.Internal.Connection as Con
@@ -38,35 +39,54 @@ addProcess nodeRt pPtr threadId = do
     atomically $ writeTVar (nodeRt ^. RLens.processes) newPs
 
 
+registerConnection
+    :: D.AsNativeConnection protocol
+    => Con.NetworkConnection protocol
+    => R.ConnectionsVar protocol
+    -> D.Connection protocol
+    -> D.NativeConnection protocol
+    -> IO Bool
+registerConnection connectionsVar conn nativeConn = do
+    trace_ "[registerConnection] taking connections"
+    connections <- atomically $ takeTMVar connectionsVar
+
+    trace_ "[registerConnection] checking prev connection"
+    oldIsDead <- case conn `M.lookup` connections of
+        Just nativeConn' -> do
+            -- This probably should not happen because bound address won't be repeating.
+            -- But when it is, it means we haven't closed prev connection and haven't unregistered it.
+            -- TODO: check isClosed in the appropriate places.
+            isDead <- D.isClosed nativeConn'
+            when   isDead $ trace_ "[registerConnection] prev connection is dead, replacing by new"
+            unless isDead $ trace_ "[registerConnection] prev connection is alive"
+            pure isDead
+        Nothing   -> do
+            trace_ "[registerConnection] no prev connections found, inserting new"
+            pure True
+
+    let newConnections = M.insert conn nativeConn connections
+    atomically
+        $ putTMVar connectionsVar
+        $ if oldIsDead then newConnections else connections
+    pure oldIsDead
+
 -- TODO: rework this
 startServing
-    :: (D.AsNativeConnection a, Impl.ConnectsLens a, Con.NetworkConnection a)
-    => NodeRuntime -> S.PortNumber -> L.NetworkHandlerL a (Free L.NodeF) b -> IO b
-startServing nodeRt port initScript = do
+    :: (D.AsNativeConnection protocol, Con.NetworkConnection protocol)
+    => NodeRuntime
+    -> R.ConnectionsVar protocol
+    -> S.PortNumber
+    -> L.NetworkHandlerL protocol L.NodeL a
+    -> IO a
+startServing nodeRt connectionsVar port handlersScript = do
     m        <- atomically $ newTVar mempty
-    a        <- Net.runNetworkHandlerL m initScript
+    a        <- Net.runNetworkHandlerL m handlersScript
     handlers <- readTVarIO m
-    let registerConnection (D.Connection addr) connection = do
-            trace_ "[registerConnection] checking prev connection"
-            connects <- atomically $ takeTMVar (nodeRt ^. Impl.connectsLens)
-            let newConnects = M.insert addr connection connects
-            oldIsDead <- case addr `M.lookup` connects of
-                Just conn -> do
-                    isDead <- D.isClosed conn
-                    when isDead $ trace_ "[registerConnection] prev connection is dead, replacing by new"
-                    unless isDead $ trace_ "[registerConnection] prev connection is alive"
-                    pure isDead
-                Nothing   -> do
-                    trace_ "[registerConnection] no prev connections found, inserting new"
-                    pure True
-            atomically $ putTMVar (nodeRt ^. Impl.connectsLens) $
-                if oldIsDead then newConnects else connects
-            pure oldIsDead
+
     s <- Con.startServer
         port
         ((\f a' b -> Impl.runNodeL nodeRt $ f a' b) <$> handlers)
-        registerConnection
-    -- setServerChan (nodeRt ^. RLens.servers) port s
+        (registerConnection connectionsVar)
     pure a
 
 
@@ -80,15 +100,17 @@ interpretNodeDefinitionL nodeRt (L.EvalNodeL action next) = next <$> Impl.runNod
 interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
     next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffect
 
-interpretNodeDefinitionL nodeRt (L.ServingTcp port action next) =
-    next <$> startServing nodeRt port action
+interpretNodeDefinitionL nodeRt (L.ServingTcp port action next) = do
+    let tcpConnectionsVar = nodeRt ^. RLens.tcpConnects
+    next <$> startServing nodeRt tcpConnectionsVar port action
 
-interpretNodeDefinitionL nodeRt (L.ServingUdp port action next) =
-    next <$> startServing nodeRt port action
+interpretNodeDefinitionL nodeRt (L.ServingUdp port action next) = do
+    let udpConnectionsVar = nodeRt ^. RLens.udpConnects
+    next <$> startServing nodeRt udpConnectionsVar port action
 
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
     -- Why server is not deleted from the map?
-    serversMap <- atomically $ readTVar (nodeRt ^. RLens.servers)
+    serversMap <- readTVarIO (nodeRt ^. RLens.servers)
     whenJust (serversMap ^. at port) $ Con.stopServer
     pure $ next ()
 

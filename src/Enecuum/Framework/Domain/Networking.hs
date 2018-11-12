@@ -22,8 +22,11 @@ data Rpc = Rpc
 
 data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist deriving (Eq, Show)
 
+newtype BoundAddress = BoundAddress Address
+    deriving (Show, Eq, Ord, Generic)
+
 newtype Connection a = Connection
-    { _address :: Address
+    { _address :: BoundAddress
     }
     deriving (Show, Eq, Ord, Generic)
 
@@ -32,7 +35,6 @@ type CloseSignal = TVar Bool
 class AsNativeConnection a where
     data family NativeConnection a
     isClosed :: NativeConnection a -> IO Bool
-    getBindingAddress :: NativeConnection a -> Address
 
 sockVarIsClosed sockVar = do
     S.MkSocket _ _ _ _ mStat <- atomically $ readTMVar sockVar
@@ -41,9 +43,8 @@ sockVarIsClosed sockVar = do
 
 instance AsNativeConnection Tcp where
     data NativeConnection Tcp
-        = TcpConnection !(TMVar S.Socket) ThreadId Address
+        = TcpConnection !(TMVar S.Socket) ThreadId BoundAddress
     isClosed (TcpConnection sockVar _ _) = sockVarIsClosed sockVar
-    getBindingAddress (TcpConnection _ _ boundAddr) = boundAddr
 
 
 instance AsNativeConnection Udp where
@@ -53,8 +54,6 @@ instance AsNativeConnection Udp where
 
     isClosed (ServerUdpConnection _ sockVar) = sockVarIsClosed sockVar
     isClosed (ClientUdpConnection _ sockVar) = sockVarIsClosed sockVar
-
-    getBindingAddress _ = error "getBindingAddress not implemented for Udp"
 
 data ServerComand = StopServer
 
@@ -101,6 +100,8 @@ packetSize :: Int
 packetSize = 1024*4
 
 
+-- | Tries to parse address of the form "0.0.0.0:0000."
+-- It may throw exception or may parse the address incorectly.
 unsafeParseAddress :: String -> Address
 unsafeParseAddress strAddr | length strAddr < 3 || ':' `notElem` strAddr = error "Address parse error: malformed string."
 unsafeParseAddress strAddr = let

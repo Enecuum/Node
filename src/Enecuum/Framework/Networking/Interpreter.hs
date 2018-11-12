@@ -38,22 +38,21 @@ interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
     res <- takeMVar var
     pure $ next res
 
-interpretNetworkingL nr (L.SendTcpMsgByConnection (D.Connection conn) msg next) = do
+interpretNetworkingL nr (L.SendTcpMsgByConnection conn msg next) = do
     m <- atomically $ readTMVar $ nr ^. RL.tcpConnects
-
     case conn `M.lookup` m of
-        Just con -> do
-            res <- Con.send con msg
+        Just nativeConn -> do
+            res <- Con.send nativeConn msg
             when (isLeft res) $ deleteConnection nr conn
             pure $ next res
         Nothing  -> do
             deleteConnection nr conn
             pure $ next $ Left D.ConnectionClosed
 
-interpretNetworkingL nr (L.SendUdpMsgByConnection (D.Connection conn) msg next) = do
+interpretNetworkingL nr (L.SendUdpMsgByConnection conn msg next) = do
     m <- atomically $ readTMVar $ nr ^. RL.udpConnects
     case conn `M.lookup` m of
-        Just con -> next <$> Con.send con msg
+        Just nativeConn -> next <$> Con.send nativeConn msg
         Nothing  -> do
             connects <- atomically $ takeTMVar $ nr ^. RL.udpConnects
             let newConnects = M.delete conn connects 

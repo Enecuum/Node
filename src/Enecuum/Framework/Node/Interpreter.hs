@@ -46,17 +46,17 @@ interpretNodeL nodeRt (L.EvalNetworking networking next) = next <$>  (Impl.runNe
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
     next <$>  (Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects)
 
-interpretNodeL nodeRt (L.OpenTcpConnection addr initScript next) =
-    next <$> openConnection nodeRt (nodeRt ^. RLens.tcpConnects) addr initScript
+interpretNodeL nodeRt (L.OpenTcpConnection serverAddr handlersScript next) =
+    next <$> openConnection nodeRt (nodeRt ^. RLens.tcpConnects) serverAddr handlersScript
 
-interpretNodeL nodeRt (L.OpenUdpConnection addr initScript next) =
-    next <$> openConnection nodeRt (nodeRt ^. RLens.udpConnects) addr initScript
+interpretNodeL nodeRt (L.OpenUdpConnection serverAddr handlersScript next) =
+    next <$> openConnection nodeRt (nodeRt ^. RLens.udpConnects) serverAddr handlersScript
 
-interpretNodeL nodeRt (L.CloseTcpConnection (D.Connection addr) next) =
-    next <$> closeConnection (nodeRt ^. RLens.tcpConnects) addr
+interpretNodeL nodeRt (L.CloseTcpConnection conn next) =
+    next <$> closeConnection (nodeRt ^. RLens.tcpConnects) conn
 
-interpretNodeL nodeRt (L.CloseUdpConnection (D.Connection addr) next) =
-    next <$> closeConnection (nodeRt ^. RLens.udpConnects) addr
+interpretNodeL nodeRt (L.CloseUdpConnection conn next) =
+    next <$> closeConnection (nodeRt ^. RLens.udpConnects) conn
 
 interpretNodeL nodeRt (L.InitDatabase cfg next) = do
     let path = cfg ^. Lens.path
@@ -87,41 +87,36 @@ interpretNodeL nodeRt (L.EvalDatabase storage action next) = do
 
 interpretNodeL _ (L.NewGraph next) = next <$> initHGraph
 
-type F f a = a -> f a
-
-class ConnectsLens a where
-    connectsLens
-        :: Functor f
-        => F f (TMVar (Map D.Address (D.NativeConnection a)))
-        -> NodeRuntime
-        -> f NodeRuntime
-
-instance ConnectsLens D.Udp where
-    connectsLens = RLens.udpConnects
-
-instance ConnectsLens D.Tcp where
-    connectsLens = RLens.tcpConnects
-
 closeConnection
     :: Con.NetworkConnection protocol
-    => TMVar (Map D.Address (D.NativeConnection protocol)) -> D.Address -> IO ()
-closeConnection connectsRef addr = do
+    => R.ConnectionsVar protocol
+    -> D.Connection protocol
+    -> IO ()
+closeConnection connectionsVar conn = do
     trace_ "[closeConnection-high-level] closing high-level conn. Taking connections"
-    conns <- atomically $ takeTMVar connectsRef
-    case M.lookup addr conns of
+    connections <- atomically $ takeTMVar connectionsVar
+    case M.lookup conn connections of
         Nothing -> do
             trace_ "[closeConnection-high-level] high-level conn not registered. Releasing connections"
-            atomically $ putTMVar connectsRef conns
-        Just conn -> do
+            atomically $ putTMVar connectionsVar connections
+        Just nativeConn -> do
             trace_ "[closeConnection-high-level] closing low-level conn"
-            Con.close conn
+            Con.close nativeConn
             trace_ "[closeConnection-high-level] deleting conn, releasing connections"
-            atomically $ putTMVar connectsRef $ M.delete addr conns
+            let newConnections = M.delete conn connections
+            atomically $ putTMVar connectionsVar newConnections
 
--- TODO: need to delete old connection if it's dead.
-openConnection nodeRt connectsVar serverAddr handlersScript = do
+-- TODO: need to delete old connection if it's dead?
+openConnection
+    :: Con.NetworkConnection protocol
+    => R.NodeRuntime
+    -> R.ConnectionsVar protocol
+    -> D.Address
+    -> L.NetworkHandlerL protocol L.NodeL ()
+    -> IO (Maybe (D.Connection protocol))
+openConnection nodeRt connectionsVar serverAddr handlersScript = do
     trace_ "[openConnection-high-level] opening high-level conn. Taking connections"
-    conns <- atomically $ takeTMVar connectsVar
+    connections <- atomically $ takeTMVar connectionsVar
 
     m <- newTVarIO mempty
     _ <- Net.runNetworkHandlerL m handlersScript
@@ -133,16 +128,18 @@ openConnection nodeRt connectsVar serverAddr handlersScript = do
     case mbConnections of
         Nothing -> do
             trace_ "[openConnection-high-level] failed opening low-level conn. Releasing connections"
-            atomically $ putTMVar connectsVar conns
+            atomically $ putTMVar connectionsVar connections
             pure Nothing
-        Just (conn@(D.Connection boundAddr), nativeConn) -> do
-            when (boundAddr `M.member` conns) $ trace_ $ "[openConnection-high-level] ERROR: connection exists: " <> show boundAddr
+        Just (conn, nativeConn) -> do
+            -- This probably should not happen because bound address won't be repeating.
+            -- But when it is, it means we haven't closed prev connection and haven't unregistered it.
+            -- TODO: check isClosed in the appropriate places.
+            when (conn `M.member` connections) $ trace_ $ "[openConnection-high-level] ERROR: connection exists: " <> show conn
 
-            trace_ $ "[openConnection-high-level] low-level conn opened. Bound addr: " <> show boundAddr
-
+            trace_ $ "[openConnection-high-level] low-level conn opened. Bound addr: " <> show conn
             trace_ $ "Registering. Releasing connections"
-            let newConns = M.insert boundAddr nativeConn conns
-            atomically $ putTMVar connectsVar newConns
+            let newConns = M.insert conn nativeConn connections
+            atomically $ putTMVar connectionsVar newConns
             pure $ Just conn
 
 
@@ -150,7 +147,7 @@ openConnection nodeRt connectsVar serverAddr handlersScript = do
 -- making it IO temp (which is even more wrong), but it needs to be deleted.
 setServerChan :: TVar (Map S.PortNumber ServerHandle) -> S.PortNumber -> TChan D.ServerComand -> IO ()
 setServerChan servs port chan = do
-    serversMap <- atomically $ readTVar servs
+    serversMap <- readTVarIO servs
     whenJust (serversMap ^. at port) Con.stopServer
     atomically $ modifyTVar servs (M.insert port (OldServerHandle chan))
 
