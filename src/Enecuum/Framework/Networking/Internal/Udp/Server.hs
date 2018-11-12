@@ -9,9 +9,10 @@ import           Enecuum.Domain               as D
 import           Enecuum.Prelude
 import           Network.Socket               hiding (recvFrom, sendTo)
 import           Network.Socket.ByteString
+import qualified Enecuum.Framework.Networking.Internal.Connection as Conn
 
 
-runUDPServer :: TChan ServerComand -> PortNumber -> (Socket -> SockAddr -> LByteString ->  IO ()) -> IO ()
+runUDPServer :: TChan Conn.ServerComand -> PortNumber -> (Socket -> SockAddr -> LByteString ->  IO ()) -> IO ()
 runUDPServer chan port handler = bracket (listenUDP port) close $ \sock -> do
     let talk :: IO ()
         talk = forever $ tryMR (recvFrom sock D.packetSize) $

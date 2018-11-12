@@ -11,7 +11,7 @@ import qualified "rocksdb-haskell" Database.RocksDB as Rocks
 import qualified Network.Socket.ByteString.Lazy     as S
 import qualified Network.Socket                     as S hiding (recv)
 import           Enecuum.Framework.Networking.Internal.Tcp.Server
-import           Enecuum.Framework.Node.Interpreter        (runNodeL, setServerChan)
+import           Enecuum.Framework.Node.Interpreter        (runNodeL)
 import           Enecuum.Framework.Runtime                 (NodeRuntime, DBHandle, Connections, getNextId)
 import qualified Enecuum.Framework.Language                as L
 import qualified Enecuum.Framework.RLens                   as RLens
@@ -23,7 +23,7 @@ import qualified Enecuum.Framework.Domain.Process          as D
 import qualified Enecuum.Framework.Runtime                        as R
 import           Enecuum.Framework.Handler.Rpc.Interpreter
 import qualified Enecuum.Framework.Handler.Network.Interpreter    as Net
-import qualified Enecuum.Framework.Networking.Internal.Connection as Con
+import qualified Enecuum.Framework.Networking.Internal.Connection as Conn
 import           Enecuum.Framework.Handler.Cmd.Interpreter as Cmd
 import           Data.Aeson.Lens
 import qualified Data.Text as T
@@ -40,55 +40,60 @@ addProcess nodeRt pPtr threadId = do
 
 
 registerConnection
-    :: D.AsNativeConnection protocol
-    => Con.NetworkConnection protocol
+    :: Conn.AsNativeConnection protocol
     => R.ConnectionsVar protocol
-    -> D.Connection protocol
-    -> D.NativeConnection protocol
-    -> IO Bool
-registerConnection connectionsVar conn nativeConn = do
+    -> Conn.NativeConnection protocol
+    -> IO ()
+registerConnection connectionsVar nativeConn = do
+    let conn = Conn.getConnection nativeConn
     trace_ "[registerConnection] taking connections"
     connections <- atomically $ takeTMVar connectionsVar
+    atomically $ putTMVar connectionsVar $ M.insert conn nativeConn connections
+    trace_ "[registerConnection] releasing connections"
 
-    trace_ "[registerConnection] checking prev connection"
-    oldIsDead <- case conn `M.lookup` connections of
-        Just nativeConn' -> do
-            -- This probably should not happen because bound address won't be repeating.
-            -- But when it is, it means we haven't closed prev connection and haven't unregistered it.
-            -- TODO: check isClosed in the appropriate places.
-            isDead <- D.isClosed nativeConn'
-            when   isDead $ trace_ "[registerConnection] prev connection is dead, replacing by new"
-            unless isDead $ trace_ "[registerConnection] prev connection is alive"
-            pure isDead
-        Nothing   -> do
-            trace_ "[registerConnection] no prev connections found, inserting new"
-            pure True
+unregisterConnection
+    :: R.ConnectionsVar protocol
+    -> D.Connection protocol
+    -> IO ()
+unregisterConnection connectionsVar conn = do
+    trace_ "[unregisterConnection] taking connections"
+    connections <- atomically $ takeTMVar connectionsVar
+    atomically $ putTMVar connectionsVar $ M.delete conn connections
+    trace_ "[unregisterConnection] releasing connections"
 
-    let newConnections = M.insert conn nativeConn connections
-    atomically
-        $ putTMVar connectionsVar
-        $ if oldIsDead then newConnections else connections
-    pure oldIsDead
+mkRegister :: R.ConnectionsVar protocol -> Conn.ConnectionRegister protocol
+mkRegister connectionsVar = Conn.ConnectionRegister
+    { Conn.addConnection    = registerConnection connectionsVar
+    , Conn.removeConnection = unregisterConnection connectionsVar
+    }
 
--- TODO: rework this
-startServing
-    :: (D.AsNativeConnection protocol, Con.NetworkConnection protocol)
+startServer
+    :: Conn.NetworkConnection protocol
     => NodeRuntime
     -> R.ConnectionsVar protocol
     -> S.PortNumber
     -> L.NetworkHandlerL protocol L.NodeL a
     -> IO a
-startServing nodeRt connectionsVar port handlersScript = do
+startServer nodeRt connectionsVar port handlersScript = do
     m        <- atomically $ newTVar mempty
     a        <- Net.runNetworkHandlerL m handlersScript
     handlers <- readTVarIO m
 
-    s <- Con.startServer
+    -- TODO: register server handle
+    mbServerHandle <- Conn.startServer
         port
         ((\f a' b -> Impl.runNodeL nodeRt $ f a' b) <$> handlers)
-        (registerConnection connectionsVar)
+        (mkRegister connectionsVar)
     pure a
 
+-- | Stop the server
+-- TODO: unregister server handle
+stopServer :: ServerHandle -> IO ()
+stopServer (Conn.OldServerHandle chan) = atomically $ writeTChan chan Conn.StopServer
+stopServer (Conn.ServerHandle sockVar acceptWorkerId) = do
+    sock <- trace "[stopServer] Taking listener sock" $ atomically $ takeTMVar sockVar
+    Conn.manualCloseConnection' sock acceptWorkerId
+    trace "[stopServer] Releasing listener sock" $ atomically (putTMVar sockVar sock)
 
 interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF a -> IO a
 interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
@@ -102,16 +107,16 @@ interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next
 
 interpretNodeDefinitionL nodeRt (L.ServingTcp port action next) = do
     let tcpConnectionsVar = nodeRt ^. RLens.tcpConnects
-    next <$> startServing nodeRt tcpConnectionsVar port action
+    next <$> startServer nodeRt tcpConnectionsVar port action
 
 interpretNodeDefinitionL nodeRt (L.ServingUdp port action next) = do
     let udpConnectionsVar = nodeRt ^. RLens.udpConnects
-    next <$> startServing nodeRt udpConnectionsVar port action
+    next <$> startServer nodeRt udpConnectionsVar port action
 
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
-    -- Why server is not deleted from the map?
+    -- TODO: unregister server handle
     serversMap <- readTVarIO (nodeRt ^. RLens.servers)
-    whenJust (serversMap ^. at port) $ Con.stopServer
+    whenJust (serversMap ^. at port) stopServer
     pure $ next ()
 
 interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
@@ -175,13 +180,21 @@ callHandler nodeRt methods msg = do
         Right _                    -> pure "Error of request parsing."
         Left  (_ :: SomeException) -> pure "Error of request parsing."
 
--- TODO: treadDelay if server in port exist!!!
+
+-- TODO: This function is wrongly designed. Get rid of it (and TChan too)
 takeServerChan :: TVar (Map S.PortNumber ServerHandle) -> S.PortNumber -> IO ServerHandle
 takeServerChan servs port = do
     chan <- atomically $ newTChan
-    Impl.setServerChan servs port chan
+    setServerChan servs port chan
     pure $ OldServerHandle chan
 
+-- This is all wrong, including invalid usage of TChan and other issues.
+-- making it IO temp (which is even more wrong), but it needs to be deleted.
+setServerChan :: TVar (Map S.PortNumber Conn.ServerHandle) -> S.PortNumber -> TChan Conn.ServerComand -> IO ()
+setServerChan servs port chan = do
+    serversMap <- readTVarIO servs
+    whenJust (serversMap ^. at port) stopServer
+    atomically $ modifyTVar servs (M.insert port (OldServerHandle chan))
 
 runRpcServer
     :: ServerHandle -> S.PortNumber -> (t -> IO D.RpcResponse) -> TVar (Map Text (A.Value -> Int -> t)) -> IO ()
@@ -207,10 +220,10 @@ runNodeDefinitionL nodeRt = foldFree (interpretNodeDefinitionL nodeRt)
 clearNodeRuntime :: NodeRuntime -> IO ()
 clearNodeRuntime nodeRt = do
     serverPorts <- M.keys  <$> readTVarIO (nodeRt ^. RLens.servers  )
-    threadIds   <- M.elems <$> readTVarIO (nodeRt ^. RLens.processes)
+    processIds  <- M.elems <$> readTVarIO (nodeRt ^. RLens.processes)
     databases   <- M.elems <$> readTVarIO (nodeRt ^. RLens.databases)
     mapM_ (runNodeDefinitionL nodeRt . L.stopServing) serverPorts
-    mapM_ killThread threadIds
+    mapM_ killThread processIds
     mapM_ releaseDB databases
 
 -- TODO: move it somewhere.

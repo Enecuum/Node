@@ -1,6 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE BangPatterns           #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Enecuum.Framework.Domain.Networking where
@@ -11,8 +10,6 @@ import qualified Data.Text as T
 import           Data.Scientific
 import           Data.IP
 import qualified Data.Aeson as A
-import           Control.Concurrent.STM.TChan (TChan)
-import           Network.Socket
 import qualified Network.Socket as S hiding (recv)
 
 
@@ -30,36 +27,7 @@ newtype Connection a = Connection
     }
     deriving (Show, Eq, Ord, Generic)
 
-type CloseSignal = TVar Bool
-
-class AsNativeConnection a where
-    data family NativeConnection a
-    isClosed :: NativeConnection a -> IO Bool
-
-sockVarIsClosed sockVar = do
-    S.MkSocket _ _ _ _ mStat <- atomically $ readTMVar sockVar
-    status <- readMVar mStat
-    pure $ status == S.Closed
-
-instance AsNativeConnection Tcp where
-    data NativeConnection Tcp
-        = TcpConnection !(TMVar S.Socket) ThreadId BoundAddress
-    isClosed (TcpConnection sockVar _ _) = sockVarIsClosed sockVar
-
-
-instance AsNativeConnection Udp where
-    data NativeConnection Udp
-        = ServerUdpConnection !S.SockAddr  !(TMVar S.Socket)
-        | ClientUdpConnection !CloseSignal !(TMVar S.Socket)
-
-    isClosed (ServerUdpConnection _ sockVar) = sockVarIsClosed sockVar
-    isClosed (ClientUdpConnection _ sockVar) = sockVarIsClosed sockVar
-
-data ServerComand = StopServer
-
 type RawData = LByteString
-
--- newtype ServerHandle = ServerHandle (TChan ServerComand)
 
 data NetworkMsg = NetworkMsg Text A.Value deriving (Generic, ToJSON, FromJSON)
 
@@ -75,7 +43,7 @@ sockAddrToHost sockAddr = case sockAddr of
 -- | Node address (like IP)
 data Address = Address
     { _host :: Host
-    , _port :: PortNumber
+    , _port :: S.PortNumber
     } deriving (Show, Eq, Ord, Generic)
 
 instance ToJSON Address where
@@ -86,10 +54,10 @@ instance FromJSON Address where
         <$> v A..: "host"
         <*> v A..: "port"
 
-instance ToJSON PortNumber where
+instance ToJSON S.PortNumber where
     toJSON = toJSON.fromEnum
 
-instance FromJSON PortNumber where
+instance FromJSON S.PortNumber where
     parseJSON (A.Number a) = pure.toEnum.fromJust.toBoundedInteger $ a
     parseJSON _            = mzero
 

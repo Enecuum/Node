@@ -8,7 +8,7 @@ import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 import           Enecuum.Core.Runtime              (CoreRuntime)
 import qualified Enecuum.Domain                    as D
 import           Enecuum.Prelude
-import           Enecuum.Framework.Networking.Internal.Connection (ServerHandle)
+import           Enecuum.Framework.Networking.Internal.Connection (ServerHandle, NativeConnection)
 
 data VarHandle = VarHandle D.VarId (TVar Any)
 type NodeState = TMVar (Map.Map D.VarId VarHandle)
@@ -18,7 +18,7 @@ data DBHandle  = DBHandle
     , _mutex :: MVar ()
     }
 
-type Connections protocol = Map (D.Connection protocol) (D.NativeConnection protocol)
+type Connections protocol = Map (D.Connection protocol) (NativeConnection protocol)
 type ConnectionsVar protocol = TMVar (Connections protocol)
 type TcpConnections = Connections D.Tcp
 type UdpConnections = Connections D.Udp

@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE BangPatterns #-}
 
 module Enecuum.Framework.Networking.Internal.Tcp.Connection where
 
@@ -7,7 +6,6 @@ import           Enecuum.Prelude
 import qualified Enecuum.Framework.Networking.Internal.Connection as Conn
 import           Data.Aeson
 import           Control.Concurrent (forkFinally, killThread)
-import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.Async (race)
 import qualified Data.Map as M
 
@@ -50,17 +48,18 @@ analyzeReadingResult handlers conn (Right msg) | otherwise = do
 -- TODO: what is the behavior when the message > packetSize? What's happening with its rest?
 -- Will it garbage the next message?
 readingWorker :: Conn.Handlers D.Tcp -> D.Connection D.Tcp -> S.Socket -> IO ()
-readingWorker handlers !conn !sock = do
-    -- TODO: check if closed:
-    -- isDead <- D.isClosed conn
-    eRead <- try $ S.recv sock $ toEnum D.packetSize
-    readerAct <- analyzeReadingResult handlers conn eRead
-    case readerAct of
-        RContinue -> do
-            trace_ "[readingWorker] continue reading"
-            readingWorker handlers conn sock
-        RFinish   ->
-            trace_ "[readingWorker] finishing"
+readingWorker handlers conn sock = do
+    isDead <- Conn.isSocketClosed sock
+    when isDead $ trace_ "[readingWorker] socket is dead, finishing"
+    unless isDead $ do
+        eRead <- try $ S.recv sock $ toEnum D.packetSize
+        readerAct <- analyzeReadingResult handlers conn eRead
+        case readerAct of
+            RContinue -> do
+                trace_ "[readingWorker] continue reading"
+                readingWorker handlers conn sock
+            RFinish   ->
+                trace_ "[readingWorker] finishing"
 
 data AcceptorAction  = LContinue | LFinish
 
@@ -89,30 +88,27 @@ acceptingWorker listenSock handler = do
                 acceptingWorker listenSock handler
             LFinish   -> trace_ "[acceptingWorker] finishing"
 
-acceptingHandler registerConnection handlers (connSock, boundAddr) = do
+acceptingHandler (Conn.ConnectionRegister addConn removeConn) handlers (connSock, boundAddr) = do
     trace_ $ "[acceptingHandler] preparing connection: " <> show boundAddr
-
     let conn = D.Connection boundAddr
-    
+
     trace_ "[acceptingHandler] starting reading worker"
     let worker = readingWorker handlers conn connSock
-                `finally` (trace "[openConnect] readingWorker finished, closing sock" $ Conn.manualCloseSock connSock)
-
+                `finally` (trace "[openConnect] readingWorker finished, unregistering conn, closing sock" $ do
+                    removeConn conn
+                    Conn.manualCloseSock connSock
+                    )
     readerId <- forkIO worker
 
+    sockVar <- newTMVarIO connSock
+    let nativeConn = Conn.TcpConnection sockVar readerId conn
+
     trace_ $ "[acceptingHandler] registering conn: " <> show boundAddr
-    sockVar    <- newTMVarIO connSock
-    registered <- registerConnection conn $ D.TcpConnection sockVar readerId boundAddr
+    addConn nativeConn
 
-    when registered $
-        trace_ "[acceptingHandler] connection registered."
-
-    unless registered $ do
-        trace_ "[acceptingHandler] closing connSock: connection not registered"
-        Conn.manualCloseConnection' connSock readerId
-
+-- TODO: register / unregister listener?
 instance Conn.NetworkConnection D.Tcp where
-    startServer port handlers registerConnection = do
+    startServer port handlers register = do
         trace_ "[startServer] start"
 
         let listenF = trace ("[startServer] listenOn " <> show port)
@@ -123,11 +119,11 @@ instance Conn.NetworkConnection D.Tcp where
             Left (err :: SomeException) -> trace ("[startServer] listenOn failed: " <> show err) $ pure Nothing
             Right listenSock -> do
                 trace_ "[startServer] forking accepting worker"
-                let handler = acceptingHandler registerConnection handlers
+                let handler = acceptingHandler register handlers
                 let worker = acceptingWorker listenSock handler
                                 `finally` (trace "[startServer] closing listenSock: accepting worker finished" 
                                                 $ Conn.manualCloseSock listenSock)
-              
+
                 acceptWorkerId <- forkIO worker
                 listenSockVar <- newTMVarIO listenSock
                 trace_ "[startServer] successfully started."
@@ -142,7 +138,7 @@ instance Conn.NetworkConnection D.Tcp where
         trace_ "[open] connecting to sock..."
         eConnected <- try $ S.connect sock $ S.addrAddress address
 
-        mbConnections <- case eConnected of
+        mbNativeConn <- case eConnected of
             Left (err :: SomeException) -> do
                 trace ("[open] exc in connect, closing sock: " <> show err) $ S.close sock
                 pure Nothing
@@ -155,17 +151,17 @@ instance Conn.NetworkConnection D.Tcp where
                         readingWorker handlers conn sock
                             `finally` (trace  "[open] readingWorker finished, closing sock" $ Conn.manualCloseSock sock)
                 readerId <- forkIO worker
-                pure $ Just (conn, D.TcpConnection sockVar readerId boundAddr)
+                pure $ Just $ Conn.TcpConnection sockVar readerId conn
         trace_ "[open] done"
 
-        pure mbConnections
+        pure mbNativeConn
 
     close conn = do
         trace_ "[close] start"
         Conn.manualCloseConnection conn
         trace_ "[close] done"
 
-    send (D.TcpConnection sockVar readerId boundAddr) msg
+    send (Conn.TcpConnection sockVar readerId boundAddr) msg
         | length msg > D.packetSize = trace ("[send] " <> show boundAddr <> " Too big message") $ pure $ Left D.TooBigMessage
         | otherwise                 = do
             sock <- trace ("[send] " <> show boundAddr <> " Taking sock") $ atomically $ takeTMVar sockVar
@@ -177,6 +173,3 @@ instance Conn.NetworkConnection D.Tcp where
                     pure $ Left D.ConnectionClosed
             trace ("[send] " <> show boundAddr <> " Releasing sock") $ atomically (putTMVar sockVar sock)
             pure res
-
-getAddress :: S.Socket -> IO D.Host
-getAddress socket = D.sockAddrToHost <$> S.getSocketName socket
