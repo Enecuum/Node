@@ -8,7 +8,7 @@ import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
 import           Enecuum.Core.Runtime              (CoreRuntime)
 import qualified Enecuum.Domain                    as D
 import           Enecuum.Prelude
-import           Enecuum.Framework.Networking.Internal.Connection (ServerHandle, NativeConnection)
+import           Enecuum.Framework.Networking.Internal.Connection (ServerHandle, NativeConnection, ConnectCounter)
 
 data VarHandle = VarHandle D.VarId (TVar Any)
 type NodeState = TMVar (Map.Map D.VarId VarHandle)
@@ -24,17 +24,18 @@ type TcpConnections = Connections D.Tcp
 type UdpConnections = Connections D.Udp
 
 data NodeRuntime = NodeRuntime
-    { _coreRuntime :: CoreRuntime
-    , _graph       :: D.TGraph D.NodeContent
-    , _servers     :: TMVar (Map D.PortNumber ServerHandle)
-    , _idCounter   :: TMVar Int              -- ^ ID counter. Used to generate VarIds, ProcessIds.
-    , _state       :: NodeState              -- ^ State of node.
-    , _nodeTag     :: TVar Text
-    , _processes   :: TVar (Map D.ProcessId ThreadId)
-    , _tcpConnects :: ConnectionsVar D.Tcp
-    , _udpConnects :: ConnectionsVar D.Udp
-    , _storyPaths  :: Map Text String
-    , _databases   :: TVar (Map FilePath DBHandle)
+    { _coreRuntime      :: CoreRuntime
+    , _graph            :: D.TGraph D.NodeContent
+    , _servers          :: TMVar (Map D.PortNumber ServerHandle)
+    , _idCounter        :: TMVar Int              -- ^ ID counter. Used to generate VarIds, ProcessIds.
+    , _connectCounter   :: ConnectCounter
+    , _state            :: NodeState              -- ^ State of node.
+    , _nodeTag          :: TVar Text
+    , _processes        :: TVar (Map D.ProcessId ThreadId)
+    , _tcpConnects      :: ConnectionsVar D.Tcp
+    , _udpConnects      :: ConnectionsVar D.Udp
+    , _storyPaths       :: Map Text String
+    , _databases        :: TVar (Map FilePath DBHandle)
     }
 
 createNodeRuntime :: CoreRuntime -> Map Text String -> IO NodeRuntime
@@ -44,6 +45,7 @@ createNodeRuntime coreRt paths =
         <*> initHGraph
         <*> newTMVarIO mempty
         <*> newTMVarIO 0
+        <*> newIORef   0
         <*> newTMVarIO mempty
         <*> newTVarIO ""
         <*> newTVarIO mempty

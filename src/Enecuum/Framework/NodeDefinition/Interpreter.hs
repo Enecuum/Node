@@ -80,6 +80,7 @@ startServer nodeRt connectionsVar port handlersScript = do
     res <- if M.member port servers
         then pure Nothing
         else Conn.startServer
+            (nodeRt ^. RLens.connectCounter)
             port
             ((\f a' b -> Impl.runNodeL nodeRt $ f a' b) <$> handlers)
             (mkRegister connectionsVar)

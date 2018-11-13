@@ -228,7 +228,8 @@ succesServer port = do
     void $ forkIO $ do
         threadDelay 1000000
         putMVar mvar False
-    Just ch <- Con.startServer port (M.singleton (D.toTag Success) (\_ (_ :: D.Connection D.Udp) -> putMVar mvar True)) emptFunc
+    counter <- newIORef 0
+    Just ch <- Con.startServer counter port (M.singleton (D.toTag Success) (\_ (_ :: D.Connection D.Udp) -> putMVar mvar True)) emptFunc
     ok <- takeMVar mvar
     Con.stopServer ch
     pure ok

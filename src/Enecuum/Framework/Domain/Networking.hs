@@ -22,8 +22,11 @@ data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist deriving 
 newtype BoundAddress = BoundAddress Address
     deriving (Show, Eq, Ord, Generic)
 
-newtype Connection a = Connection
-    { _address :: BoundAddress
+type ConnectId      = Int
+
+data Connection a = Connection
+    { _address      :: BoundAddress
+    , _connectId    :: ConnectId
     }
     deriving (Show, Eq, Ord, Generic)
 

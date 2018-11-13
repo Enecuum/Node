@@ -24,7 +24,7 @@ registerConnection nodeRt bindedServer = atomically $ do
 
 -- | Remove connection
 removeConnection :: T.NodeRuntime -> D.Connection D.Tcp -> IO (Maybe T.BindedServer)
-removeConnection nodeRt (D.Connection (D.BoundAddress address)) = atomically $ do
+removeConnection nodeRt (D.Connection (D.BoundAddress address) _) = atomically $ do
     connections                  <- takeTMVar (nodeRt ^. RLens.connections)
     (mbNodeConn, newConnections) <- case Map.lookup address connections of
         Nothing             -> pure (Nothing, connections)

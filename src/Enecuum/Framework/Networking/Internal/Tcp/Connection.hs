@@ -61,8 +61,9 @@ acceptingWorker listenSock handler = do
     loopAct <- analyzeAcceptingResult eRes
     when (loopAct == LContinue) $ acceptingWorker listenSock handler
 
-acceptingHandler (Conn.ConnectionRegister addConn removeConn) handlers (connSock, boundAddr) = do
-    let conn = D.Connection boundAddr
+acceptingHandler connectCounter (Conn.ConnectionRegister addConn removeConn) handlers (connSock, boundAddr) = do
+    connectId <- Conn.getNewConnectId connectCounter
+    let conn = D.Connection boundAddr connectId
     let worker = readingWorker handlers conn connSock
             `finally` (removeConn conn >> Conn.manualCloseSock connSock)
     readerId <- forkIO worker
@@ -72,12 +73,12 @@ acceptingHandler (Conn.ConnectionRegister addConn removeConn) handlers (connSock
 
 -- TODO: register / unregister listener?
 instance Conn.NetworkConnection D.Tcp where
-    startServer port handlers register = do
+    startServer connectCounter port handlers register = do
         eListenSock <- try $ listenOn (PortNumber port)
         case eListenSock of
             Left (err :: SomeException) -> pure Nothing
             Right listenSock -> do
-                let handler = acceptingHandler register handlers
+                let handler = acceptingHandler connectCounter register handlers
                 let worker = acceptingWorker listenSock handler
                                 `finally` Conn.manualCloseSock listenSock
 
@@ -85,7 +86,7 @@ instance Conn.NetworkConnection D.Tcp where
                 listenSockVar <- newTMVarIO listenSock
                 pure $ Just $ Conn.ServerHandle listenSockVar acceptWorkerId
 
-    open serverAddr@(D.Address host port) handlers = do
+    open counter serverAddr@(D.Address host port) handlers = do
         address    <- head <$> S.getAddrInfo Nothing (Just host) (Just $ show port)
         sock       <- S.socket (S.addrFamily address) S.Stream S.defaultProtocol
         eConnected <- try $ S.connect sock $ S.addrAddress address
@@ -95,8 +96,9 @@ instance Conn.NetworkConnection D.Tcp where
                 S.close sock
                 pure Nothing
             Right () -> do
+                connectId <- Conn.getNewConnectId counter
                 boundAddr <- D.BoundAddress . Conn.unsafeFromSockAddr <$> S.getSocketName sock
-                let conn = D.Connection boundAddr
+                let conn = D.Connection boundAddr connectId
                 sockVar <- newTMVarIO sock
                 let worker = readingWorker handlers conn sock
                         `finally` Conn.manualCloseSock sock

@@ -112,7 +112,10 @@ openConnection nodeRt connectionsVar serverAddr handlersScript = do
     _ <- Net.runNetworkHandlerL m handlersScript
     handlers <- readTVarIO m
 
-    mbNativeConn <- Conn.open serverAddr ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
+    mbNativeConn <- Conn.open
+        (nodeRt ^. RLens.connectCounter)
+        serverAddr
+        ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
 
     case mbNativeConn of
         Nothing -> do

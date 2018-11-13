@@ -28,7 +28,7 @@ relayRequest' nodeRt to req = do
 
 -- | Send message to the connection.
 sendMessageToConnection :: T.NodeRuntime -> D.Connection D.Tcp  -> D.RawData -> IO (Either Text ())
-sendMessageToConnection nodeRt connection@(D.Connection (D.BoundAddress address)) msg = do
+sendMessageToConnection nodeRt connection@(D.Connection (D.BoundAddress address) _) msg = do
     connections <- atomically $ readTMVar $ nodeRt ^. RLens.connections
     -- Checking is connection alive.
     case Map.lookup address connections of

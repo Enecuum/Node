@@ -59,7 +59,7 @@ interpretNodeL nodeRt (L.OpenTcpConnection serverAddress handlersF next) = do
     case eBindedServer of
         Left  err          -> error err
         Right bindedServer -> do
-            let bindedServerConnection = D.Connection $ D.BoundAddress $ bindedServer ^. RLens.address
+            let bindedServerConnection = D.Connection (D.BoundAddress $ bindedServer ^. RLens.address) 0
 
             -- Collecting hanlders for this connection
             tHandlers <- atomically $ newTVar mempty

@@ -62,11 +62,12 @@ sendUdpMsg addr msg = tryM
     (\_ -> pure $ Right ())
 
 
-serverWorker (Conn.ConnectionRegister addConn _) handlers sockVar = do
+serverWorker connectCounter (Conn.ConnectionRegister addConn _) handlers sockVar = do
     sock <- atomically $ readTMVar sockVar
     forever $ tryMR (S.recvFrom sock D.packetSize) $ \(rawMsg, sockAddr) -> do
+        connectId <- Conn.getNewConnectId connectCounter
         let message = B.fromStrict rawMsg
-        let conn    = D.Connection $ D.BoundAddress $ Conn.unsafeFromSockAddr sockAddr
+        let conn    = D.Connection (D.BoundAddress $ Conn.unsafeFromSockAddr sockAddr) connectId
         addConn (Conn.ServerUdpConnection sockAddr sockVar conn)
         runHandler conn handlers message
 
@@ -89,13 +90,13 @@ listenUDP port = do
 
 
 instance Conn.NetworkConnection D.Udp where
-    startServer port handlers register = do
+    startServer connectCounter port handlers register = do
         eListenSock <- try $ listenUDP port
         case eListenSock of
             Left (err :: SomeException) -> pure Nothing
             Right listenSock -> do
                 listenSockVar  <- newTMVarIO listenSock
-                let worker = serverWorker register handlers listenSockVar
+                let worker = serverWorker connectCounter register handlers listenSockVar
                         `finally` Conn.manualCloseSock listenSock
                 serverWorkerId <- forkIO worker 
                 pure $ Just $ Conn.ServerHandle listenSockVar serverWorkerId
@@ -109,7 +110,7 @@ instance Conn.NetworkConnection D.Udp where
     close conn@Conn.ClientUdpConnection{} = Conn.manualCloseConnection conn
     close _  = pure ()
 
-    open addr@(D.Address host port) handlers = do
+    open counter addr@(D.Address host port) handlers = do
         address    <- head <$> S.getAddrInfo Nothing (Just host) (Just $ show port)
         sock       <- S.socket (S.addrFamily address) S.Datagram S.defaultProtocol
         eConnected <- try $ S.connect sock $ S.addrAddress address
@@ -119,8 +120,9 @@ instance Conn.NetworkConnection D.Udp where
                 S.close sock
                 pure Nothing
             Right () -> do
+                connectId <- Conn.getNewConnectId counter
                 boundAddr <- D.BoundAddress . Conn.unsafeFromSockAddr <$> S.getSocketName sock
-                let conn = D.Connection boundAddr
+                let conn = D.Connection boundAddr connectId
                 sockVar <- newTMVarIO sock
                 let worker = readingWorker handlers conn sock `finally` S.close sock
                 readerId <- forkIO worker
