@@ -36,6 +36,7 @@ data NodeDefinitionF next where
     -- | Start serving on reliable-kind connection.
     ServingTcp     :: D.PortNumber -> NetworkHandlerL D.Tcp L.NodeL () -> (Maybe () -> next)-> NodeDefinitionF  next
     ServingUdp     :: D.PortNumber -> NetworkHandlerL D.Udp L.NodeL () -> (Maybe () -> next)-> NodeDefinitionF  next
+    GetBoundedPorts :: ([D.PortNumber] -> next) -> NodeDefinitionF  next
     Std            :: CmdHandlerL () -> (() -> next) -> NodeDefinitionF  next
     -- Process interface. TODO: It's probably wise to move it to own language.
     -- | Fork a process for node.
@@ -52,6 +53,9 @@ type NodeDefinitionL = Free NodeDefinitionF
 
 std :: CmdHandlerL () -> NodeDefinitionL ()
 std handlers = liftF $ Std handlers id
+
+getBoundedPorts :: NodeDefinitionL [D.PortNumber]
+getBoundedPorts = liftF $ GetBoundedPorts id
 
 -- | Sets tag for node.
 nodeTag :: D.NodeTag -> NodeDefinitionL ()

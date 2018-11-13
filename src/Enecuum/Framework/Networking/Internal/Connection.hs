@@ -15,14 +15,7 @@ data ServerComand = StopServer
 
 type Handler protocol  = Value -> D.Connection protocol -> IO ()
 type Handlers protocol = Map Text (Handler protocol)
-data ServerHandle
-      = ServerHandle (TMVar S.Socket) ThreadId
-
-      -- TODO: get rid of this
-      | OldServerHandle (TChan ServerComand)
-
-stopServer (OldServerHandle chan) =
-    atomically $ writeTChan chan StopServer
+data ServerHandle = ServerHandle (TMVar S.Socket) ThreadId
 
 stopServer (ServerHandle var threadId) = do
     sock <- atomically $ readTMVar var
@@ -87,21 +80,19 @@ manualCloseConnection nativeConn = do
     let conn     = getConnection nativeConn
     let sockVar  = getSocketVar nativeConn
     let readerId = getReaderId nativeConn
-    sock <- trace ("[manualCloseConnection] " <> show conn <> " Taking sock") $ atomically $ takeTMVar sockVar
+    sock <- atomically $ takeTMVar sockVar
     manualCloseConnection' sock readerId
-    trace ("[manualCloseConnection] " <> show conn <> " Releasing sock") $ atomically (putTMVar sockVar sock)
+    atomically (putTMVar sockVar sock)
 
 manualCloseConnection' :: S.Socket -> ThreadId -> IO ()
 manualCloseConnection' sock readerId = do
-    trace "[manualCloseConnection] killing thread" $ killThread readerId
+    killThread readerId
     manualCloseSock sock
-    trace_ "[manualCloseConnection] done"
 
 manualCloseSock :: S.Socket -> IO ()
 manualCloseSock sock = do
-    trace_ "[manualCloseSock] closing sock"
     eRes <- try $ S.close sock
-    whenLeft eRes $ \(err :: SomeException) -> trace_ $ "[manualCloseSock] exc got in closing sock: " <> show err
+    whenLeft eRes $ \(err :: SomeException) -> pure ()
 
 
 showSockAddr :: (Semigroup s, IsString s) => S.SockAddr -> s

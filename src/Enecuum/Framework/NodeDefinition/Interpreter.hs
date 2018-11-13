@@ -46,20 +46,16 @@ registerConnection
     -> IO ()
 registerConnection connectionsVar nativeConn = do
     let conn = Conn.getConnection nativeConn
-    trace_ "[registerConnection] taking connections"
     connections <- atomically $ takeTMVar connectionsVar
     atomically $ putTMVar connectionsVar $ M.insert conn nativeConn connections
-    trace_ "[registerConnection] releasing connections"
 
 unregisterConnection
     :: R.ConnectionsVar protocol
     -> D.Connection protocol
     -> IO ()
 unregisterConnection connectionsVar conn = do
-    trace_ "[unregisterConnection] taking connections"
     connections <- atomically $ takeTMVar connectionsVar
     atomically $ putTMVar connectionsVar $ M.delete conn connections
-    trace_ "[unregisterConnection] releasing connections"
 
 mkRegister :: R.ConnectionsVar protocol -> Conn.ConnectionRegister protocol
 mkRegister connectionsVar = Conn.ConnectionRegister
@@ -95,13 +91,11 @@ startServer nodeRt connectionsVar port handlersScript = do
     pure $ if isJust res then Just () else Nothing
 
 -- | Stop the server
--- TODO: unregister server handle
 stopServer :: ServerHandle -> IO ()
-stopServer (Conn.OldServerHandle chan) = atomically $ writeTChan chan Conn.StopServer
 stopServer (Conn.ServerHandle sockVar acceptWorkerId) = do
-    sock <- trace "[stopServer] Taking listener sock" $ atomically $ takeTMVar sockVar
+    sock <- atomically $ takeTMVar sockVar
     Conn.manualCloseConnection' sock acceptWorkerId
-    trace "[stopServer] Releasing listener sock" $ atomically (putTMVar sockVar sock)
+    atomically (putTMVar sockVar sock)
 
 interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF a -> IO a
 interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
@@ -122,10 +116,14 @@ interpretNodeDefinitionL nodeRt (L.ServingUdp port action next) = do
     next <$> startServer nodeRt udpConnectionsVar port action
 
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
-    -- TODO: unregister server handle
-    serversMap <- atomically $ readTMVar (nodeRt ^. RLens.servers)
+    serversMap <- atomically $ takeTMVar (nodeRt ^. RLens.servers)
     whenJust (serversMap ^. at port) stopServer
+    atomically $ putTMVar (nodeRt ^. RLens.servers) $ M.delete port serversMap
     pure $ next ()
+
+interpretNodeDefinitionL nodeRt (L.GetBoundedPorts next) = do
+    serversMap <- atomically $ readTMVar (nodeRt ^. RLens.servers)
+    pure $ next $ M.keys serversMap
 
 interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
     m <- atomically $ newTVar mempty

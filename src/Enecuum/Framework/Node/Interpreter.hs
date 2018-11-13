@@ -90,16 +90,11 @@ closeConnection
     -> D.Connection protocol
     -> IO ()
 closeConnection connectionsVar conn = do
-    trace_ "[closeConnection-high-level] closing high-level conn. Taking connections"
     connections <- atomically $ takeTMVar connectionsVar
     case M.lookup conn connections of
-        Nothing -> do
-            trace_ "[closeConnection-high-level] high-level conn not registered. Releasing connections"
-            atomically $ putTMVar connectionsVar connections
+        Nothing -> atomically $ putTMVar connectionsVar connections
         Just nativeConn -> do
-            trace_ "[closeConnection-high-level] closing low-level conn"
             Conn.close nativeConn
-            trace_ "[closeConnection-high-level] deleting conn, releasing connections"
             let newConnections = M.delete conn connections
             atomically $ putTMVar connectionsVar newConnections
 
@@ -111,19 +106,16 @@ openConnection
     -> L.NetworkHandlerL protocol L.NodeL ()
     -> IO (Maybe (D.Connection protocol))
 openConnection nodeRt connectionsVar serverAddr handlersScript = do
-    trace_ "[openConnection-high-level] opening high-level conn. Taking connections"
     connections <- atomically $ takeTMVar connectionsVar
 
     m <- newTVarIO mempty
     _ <- Net.runNetworkHandlerL m handlersScript
     handlers <- readTVarIO m
 
-    trace_ "[openConnection-high-level] opening low-level conn"
     mbNativeConn <- Conn.open serverAddr ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
 
     case mbNativeConn of
         Nothing -> do
-            trace_ "[openConnection-high-level] failed opening low-level conn. Releasing connections"
             atomically $ putTMVar connectionsVar connections
             pure Nothing
         Just nativeConn -> do
@@ -133,8 +125,6 @@ openConnection nodeRt connectionsVar serverAddr handlersScript = do
             -- But when it is, it means we haven't closed prev connection and haven't unregistered it.
             when (conn `M.member` connections) $ error $ "[openConnection-high-level] ERROR: connection exists: " <> show conn
 
-            trace_ $ "[openConnection-high-level] low-level conn opened. Bound addr: " <> show conn
-            trace_ $ "Registering. Releasing connections"
             let newConns = M.insert conn nativeConn connections
             atomically $ putTMVar connectionsVar newConns
             pure $ Just conn
