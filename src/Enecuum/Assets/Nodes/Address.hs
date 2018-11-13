@@ -23,6 +23,8 @@ graphNodeTransmitterUdpAddress = D.Address "127.0.0.1" graphNodeTransmitterUdpPo
 graphNodeReceiverRpcAddress :: D.Address
 graphNodeReceiverRpcAddress = D.Address "127.0.0.1" graphNodeReceiverRpcPort
 
+localhost :: D.Host
+localhost = "127.0.0.1"
 
 powNodeRpcPort :: D.PortNumber
 powNodeRpcPort = 2005
