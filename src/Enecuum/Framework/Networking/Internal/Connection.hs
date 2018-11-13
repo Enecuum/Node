@@ -33,20 +33,25 @@ instance AsNativeConnection D.Tcp where
     data NativeConnection D.Tcp
         = TcpConnection (TMVar S.Socket) ThreadId (D.Connection D.Tcp)
     
-    getConnection (TcpConnection _ _ conn)   = conn
-    getSocketVar (TcpConnection sockVar _ _) = sockVar
-    getReaderId (TcpConnection _ readerId _) = readerId
+    getConnection (TcpConnection _       _        conn) = conn
+    getSocketVar  (TcpConnection sockVar _        _   ) = sockVar
+    getReaderId   (TcpConnection _       readerId _   ) = readerId
 
 -- TODO: Why Client and Server connection are different types?
 instance AsNativeConnection D.Udp where
     data NativeConnection D.Udp
         = ServerUdpConnection S.SockAddr  (TMVar S.Socket) (D.Connection D.Udp)
-        | ClientUdpConnection CloseSignal (TMVar S.Socket)
+        | ClientUdpConnection ThreadId    (TMVar S.Socket) (D.Connection D.Udp)
 
     -- TODO: implement
-    getConnection _ = error "getConnection for Udp native connection not implemented."
-    getSocketVar    = error "getSocketVar for Udp native connection not implemented."
-    getReaderId     = error "getReaderId for Udp native connection not implemented."
+    getConnection (ClientUdpConnection _ _ conn) = conn
+    getConnection (ServerUdpConnection _ _ conn) = conn
+    
+    getSocketVar (ClientUdpConnection _ sockVar _) = sockVar
+    getSocketVar (ServerUdpConnection _ sockVar _) = sockVar
+    
+    getReaderId (ClientUdpConnection readerId _ _) = readerId
+    getReaderId _ = error "getReaderId for Udp server native connection not implemented."
 
 data ConnectionRegister protocol = ConnectionRegister
     { addConnection
