@@ -2,6 +2,7 @@ module Enecuum.Framework.Networking.Internal.Connection where
 
 import           Control.Concurrent (killThread)
 import           Control.Concurrent.STM.TMVar
+import           Control.Concurrent.STM.TChan
 import           Data.Aeson
 import           Enecuum.Prelude
 import qualified Enecuum.Framework.Domain.Networking as D
@@ -19,6 +20,13 @@ data ServerHandle
 
       -- TODO: get rid of this
       | OldServerHandle (TChan ServerComand)
+
+stopServer (OldServerHandle chan) =
+    atomically $ writeTChan chan StopServer
+
+stopServer (ServerHandle var threadId) = do
+    sock <- atomically $ readTMVar var
+    manualCloseConnection' sock threadId
 
 -- TODO: this is no longer needed, remove
 type CloseSignal = TVar Bool
