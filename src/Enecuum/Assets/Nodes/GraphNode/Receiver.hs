@@ -19,12 +19,12 @@ graphNodeReceiver :: NodeConfig GraphNode -> L.NodeDefinitionL ()
 graphNodeReceiver nodeCfg = do
     L.nodeTag "graphNodeReceiver"
     eNodeData <- graphNodeInitialization nodeCfg
-    either L.logError graphNodeReceiver' eNodeData
+    either L.logError (graphNodeReceiver' nodeCfg) eNodeData
 
-graphNodeReceiver' :: GraphNodeData -> L.NodeDefinitionL ()
-graphNodeReceiver' nodeData = do
-    L.process $ forever $ graphSynchro nodeData graphNodeTransmitterRpcAddress
-    L.serving D.Rpc graphNodeReceiverRpcPort $ do
+graphNodeReceiver' :: NodeConfig GraphNode -> GraphNodeData -> L.NodeDefinitionL ()
+graphNodeReceiver' cfg nodeData = do
+    L.process $ forever $ graphSynchro nodeData (fromJust $ _rpcSynco cfg)
+    L.serving D.Rpc ((\(D.Address _ port) -> port) $ _rpc cfg) $ do
         -- network
         L.method    rpcPingPong
         L.method  $ handleStopNode nodeData

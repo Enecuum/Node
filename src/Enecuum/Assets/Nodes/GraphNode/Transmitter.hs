@@ -33,7 +33,7 @@ graphNodeTransmitter' cfg nodeData = do
         -- network
         L.handler   methodPing
 
-    L.serving D.Rpc (_rpcPort cfg) $ do
+    L.serving D.Rpc ((\(D.Address _ port) -> port) $ _rpc cfg) $ do
         -- network
         L.method    rpcPingPong
         L.method  $ handleStopNode nodeData
