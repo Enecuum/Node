@@ -73,18 +73,26 @@ startServer
     -> R.ConnectionsVar protocol
     -> S.PortNumber
     -> L.NetworkHandlerL protocol L.NodeL a
-    -> IO a
+    -> IO (Maybe ())
 startServer nodeRt connectionsVar port handlersScript = do
     m        <- atomically $ newTVar mempty
     a        <- Net.runNetworkHandlerL m handlersScript
     handlers <- readTVarIO m
 
-    -- TODO: register server handle
-    mbServerHandle <- Conn.startServer
-        port
-        ((\f a' b -> Impl.runNodeL nodeRt $ f a' b) <$> handlers)
-        (mkRegister connectionsVar)
-    pure a
+    let serversVar = nodeRt ^. RLens.servers
+    servers <- atomically $ takeTMVar serversVar
+    res <- if M.member port servers
+        then pure Nothing
+        else Conn.startServer
+            port
+            ((\f a' b -> Impl.runNodeL nodeRt $ f a' b) <$> handlers)
+            (mkRegister connectionsVar)
+    atomically $ do 
+        whenJust res $ \servHandl ->
+            putTMVar serversVar $ M.insert port servHandl servers
+        unless (isJust res) $
+            putTMVar serversVar servers
+    pure $ if isJust res then Just () else Nothing
 
 -- | Stop the server
 -- TODO: unregister server handle
@@ -115,16 +123,28 @@ interpretNodeDefinitionL nodeRt (L.ServingUdp port action next) = do
 
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
     -- TODO: unregister server handle
-    serversMap <- readTVarIO (nodeRt ^. RLens.servers)
+    serversMap <- atomically $ readTMVar (nodeRt ^. RLens.servers)
     whenJust (serversMap ^. at port) stopServer
     pure $ next ()
 
 interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
     m <- atomically $ newTVar mempty
     a <- runRpcHandlerL m action
-    s <- takeServerChan (nodeRt ^. RLens.servers) port
-    void $ forkIO $ runRpcServer s port (runNodeL nodeRt) m
-    pure $ next a
+    handlerMap <- readTVarIO m
+
+    let serversVar = nodeRt ^. RLens.servers
+    servers <- atomically $ takeTMVar serversVar
+    res <- if M.member port servers
+        then pure Nothing
+        else runRpcServer port (runNodeL nodeRt) handlerMap
+    
+    atomically $ do 
+        whenJust res $ \servHandl ->
+            putTMVar serversVar $ M.insert port servHandl servers
+        unless (isJust res) $
+            putTMVar serversVar servers
+
+    pure $ if isJust res then next $ Just () else next Nothing
 
 interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
     m <- atomically $ newTVar mempty
@@ -180,32 +200,16 @@ callHandler nodeRt methods msg = do
         Right _                    -> pure "Error of request parsing."
         Left  (_ :: SomeException) -> pure "Error of request parsing."
 
-
--- TODO: This function is wrongly designed. Get rid of it (and TChan too)
-takeServerChan :: TVar (Map S.PortNumber ServerHandle) -> S.PortNumber -> IO ServerHandle
-takeServerChan servs port = do
-    chan <- atomically $ newTChan
-    setServerChan servs port chan
-    pure $ OldServerHandle chan
-
--- This is all wrong, including invalid usage of TChan and other issues.
--- making it IO temp (which is even more wrong), but it needs to be deleted.
-setServerChan :: TVar (Map S.PortNumber Conn.ServerHandle) -> S.PortNumber -> TChan Conn.ServerComand -> IO ()
-setServerChan servs port chan = do
-    serversMap <- readTVarIO servs
-    whenJust (serversMap ^. at port) stopServer
-    atomically $ modifyTVar servs (M.insert port (OldServerHandle chan))
+type RpcMethodes t = Map Text (A.Value -> Int -> t)
 
 runRpcServer
-    :: ServerHandle -> S.PortNumber -> (t -> IO D.RpcResponse) -> TVar (Map Text (A.Value -> Int -> t)) -> IO ()
-runRpcServer (OldServerHandle chan) port runner methodVar = do
-    methods <- readTVarIO methodVar
-    runTCPServer chan port $ \sock -> do
-        msg      <- S.recv sock (1024 * 4)
-        response <- callRpc runner methods msg
-        S.sendAll sock $ A.encode response
+    :: S.PortNumber -> (t -> IO D.RpcResponse) -> RpcMethodes t -> IO (Maybe ServerHandle)
+runRpcServer port runner methods = runTCPServer port $ \sock -> do
+    msg      <- S.recv sock (1024 * 4)
+    response <- callRpc runner methods msg
+    S.sendAll sock $ A.encode response
 
-callRpc :: Monad m => (t -> m D.RpcResponse) -> Map Text (A.Value -> Int -> t) -> LByteString -> m D.RpcResponse
+callRpc :: Monad m => (t -> m D.RpcResponse) -> RpcMethodes t -> LByteString -> m D.RpcResponse
 callRpc runner methods msg = case A.decode msg of
     Just (D.RpcRequest method params reqId) -> case method `M.lookup` methods of
         Just justMethod -> runner $ justMethod params reqId
@@ -219,7 +223,7 @@ runNodeDefinitionL nodeRt = foldFree (interpretNodeDefinitionL nodeRt)
 -- TODO: FIXME: stop network workers
 clearNodeRuntime :: NodeRuntime -> IO ()
 clearNodeRuntime nodeRt = do
-    serverPorts <- M.keys  <$> readTVarIO (nodeRt ^. RLens.servers  )
+    serverPorts <- M.keys  <$> atomically (readTMVar (nodeRt ^. RLens.servers))
     processIds  <- M.elems <$> readTVarIO (nodeRt ^. RLens.processes)
     databases   <- M.elems <$> readTVarIO (nodeRt ^. RLens.databases)
     mapM_ (runNodeDefinitionL nodeRt . L.stopServing) serverPorts

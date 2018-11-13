@@ -11,7 +11,6 @@ import           Control.Concurrent.STM.TChan
 
 import qualified Enecuum.Framework.Domain.Networking as D
 import           Enecuum.Framework.Networking.Internal.Client
-import           Enecuum.Framework.Networking.Internal.Udp.Server
 import qualified Network.Socket as S hiding (recv, send, sendTo, sendAll, recvFrom)
 import qualified Network.Socket.ByteString as S
 import           Control.Monad.Extra
@@ -77,6 +76,17 @@ runHandler netConn handlers msg =
     whenJust (decode msg) $ \(D.NetworkMsg tag val) ->
         whenJust (handlers ^. at tag) $ \handler ->
             handler val netConn
+
+listenUDP :: S.PortNumber -> IO S.Socket
+listenUDP port = do
+    serveraddr:_ <- S.getAddrInfo
+        (Just (S.defaultHints {S.addrFlags = [S.AI_PASSIVE]}))
+        Nothing
+        (Just $ show port)
+    sock <- S.socket (S.addrFamily serveraddr) S.Datagram S.defaultProtocol
+    S.bind sock (S.addrAddress serveraddr)
+    pure sock
+
 
 instance Conn.NetworkConnection D.Udp where
     startServer port handlers register = do

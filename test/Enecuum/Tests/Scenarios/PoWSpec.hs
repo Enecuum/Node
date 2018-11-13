@@ -36,7 +36,7 @@ acceptKBlock (KBlockCheckData numVar) kBlock = do
 powBlockAcceptorNode :: L.NodeDefinitionL ()
 powBlockAcceptorNode = do
     nodData <- KBlockCheckData <$> (L.scenario $ L.atomically $ L.newVar 1)
-    L.serving D.Rpc graphNodeTransmitterRpcPort $ L.methodE $ acceptKBlock nodData
+    void $ L.serving D.Rpc graphNodeTransmitterRpcPort $ L.methodE $ acceptKBlock nodData
 
 spec :: Spec
 spec = describe "PoW node test" $ do

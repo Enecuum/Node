@@ -26,7 +26,7 @@ type UdpConnections = Connections D.Udp
 data NodeRuntime = NodeRuntime
     { _coreRuntime :: CoreRuntime
     , _graph       :: D.TGraph D.NodeContent
-    , _servers     :: TVar (Map D.PortNumber ServerHandle)
+    , _servers     :: TMVar (Map D.PortNumber ServerHandle)
     , _idCounter   :: TMVar Int              -- ^ ID counter. Used to generate VarIds, ProcessIds.
     , _state       :: NodeState              -- ^ State of node.
     , _nodeTag     :: TVar Text
@@ -42,7 +42,7 @@ createNodeRuntime coreRt paths =
     NodeRuntime
         <$> pure coreRt
         <*> initHGraph
-        <*> newTVarIO mempty
+        <*> newTMVarIO mempty
         <*> newTMVarIO 0
         <*> newTMVarIO mempty
         <*> newTVarIO ""
