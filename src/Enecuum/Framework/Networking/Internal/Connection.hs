@@ -22,7 +22,7 @@ type ConnectCounter = IORef D.ConnectId
 
 getNewConnectId :: ConnectCounter -> IO D.ConnectId
 getNewConnectId counterVar =
-    atomicModifyIORef counterVar (\counter -> (counter + 1, counter + 1))
+    atomicModifyIORef' counterVar (\counter -> (counter + 1, counter + 1))
 
 
 stopServer (ServerHandle var threadId) = do
