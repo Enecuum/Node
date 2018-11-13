@@ -38,8 +38,8 @@ testNodeNet = TestCase $ withNodesManager $ \mgr -> do
     void $ startNode Nothing mgr $ A.poaNode A.Good A.defaultPoANodeConfig
     waitForNode A.poaNodeRpcAddress
 
-    void $ startNode Nothing mgr $ A.graphNodeReceiver graphNodeReceiverConfig 
-    -- void $ startNode Nothing mgr $ A.graphNodeTransmitter graphNodeReceiverConfig     
+    -- void $ startNode Nothing mgr $ A.graphNodeReceiver graphNodeReceiverConfig
+    void $ startNode Nothing mgr $ A.graphNodeTransmitter graphNodeReceiverConfig
     waitForNode graphNodeReceiverRpcAddress
 
     -- Ask pow node to generate n kblocks
