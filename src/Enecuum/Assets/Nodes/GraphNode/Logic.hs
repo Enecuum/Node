@@ -230,3 +230,42 @@ graphNodeInitialization nodeConfig = L.scenario $ do
     if dbUsageFailed
         then pure $ Left "Database error."
         else pure $ Right nodeData
+
+
+graphSynchro :: GraphNodeData -> D.Address -> L.NodeL ()
+graphSynchro nodeData address = do
+    let bData = nodeData ^. blockchain
+
+    GetChainLengthResponse otherLength <- L.makeRpcRequestUnsafe address GetChainLengthRequest
+
+    curChainLength <- L.atomically $ do
+        topKBlock <- L.getTopKeyBlock bData
+        pure $ topKBlock ^. Lens.number
+
+    when (curChainLength < otherLength) $ do
+
+        topNodeHash <- L.readVarIO $ bData ^. Lens.curNode
+
+        GetMBlocksForKBlockResponse mBlocks1 <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest topNodeHash)
+        L.logInfo $ "Mblocks received for kBlock " +|| topNodeHash ||+ " : " +|| mBlocks1 ||+ "."
+        L.atomically $ forM_ mBlocks1 (L.addMBlock bData)
+
+        GetChainFromToResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromToRequest (curChainLength + 1) otherLength)
+        L.logInfo $ "Chain tail received from " +|| (curChainLength + 1) ||+ " to " +|| otherLength ||+ " : " +|| chainTail ||+ "."
+
+        -- TODO: check pending
+        forM_ chainTail (L.addKBlock bData)
+
+        for_ (init chainTail) $ \kBlock -> do
+
+            -- TODO: check pending
+            void $ L.addKBlock bData kBlock
+
+            let hash = toHash kBlock
+            GetMBlocksForKBlockResponse mBlocks2 <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest hash)
+
+            L.logInfo $ "Mblocks received for kBlock " +|| hash ||+ " : " +|| mBlocks2 ||+ "."
+            L.atomically $ forM_ mBlocks2 (L.addMBlock bData)
+
+        -- TODO: check pending
+        void $ L.addKBlock bData (last chainTail)        

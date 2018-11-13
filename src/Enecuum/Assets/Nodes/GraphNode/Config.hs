@@ -14,6 +14,7 @@ data instance NodeConfig GraphNode = GraphNodeConfig
     , _udpPort :: D.PortNumber
     , _tcpPort :: D.PortNumber
     , _rpcPort :: D.PortNumber
+    , _rpcSynco :: Maybe D.Address
     }
     deriving (Show, Generic)
 
@@ -48,4 +49,5 @@ defaultNodeConfig = GraphNodeConfig
     , _udpPort = graphNodeTransmitterUdpPort
     , _tcpPort = graphNodeTransmitterTcpPort
     , _rpcPort = graphNodeTransmitterRpcPort
+    , _rpcSynco = Nothing
     }
