@@ -12,6 +12,7 @@ import qualified Enecuum.Core.Types                               as D
 import qualified Enecuum.Core.Lens                                as Lens
 import           Enecuum.Core.HGraph.Interpreters.IO
 import qualified Enecuum.Core.Interpreters                        as Impl
+import qualified Enecuum.Core.Runtime                             as R
 import qualified Enecuum.Core.Language                            as L
 import qualified Enecuum.Framework.Domain.Networking              as D
 import qualified Enecuum.Framework.Handler.Network.Interpreter    as Net
@@ -19,10 +20,10 @@ import qualified Enecuum.Framework.Networking.Internal.Connection as Conn
 import qualified Enecuum.Framework.Networking.Interpreter         as Impl
 import qualified Enecuum.Framework.Language                       as L
 import qualified Enecuum.Framework.RLens                          as RLens
+import qualified Enecuum.Core.RLens                               as RLens
 import qualified Enecuum.Framework.Runtime                        as R
 import           Enecuum.Framework.Runtime                        (NodeRuntime)
 import qualified Enecuum.Framework.State.Interpreter              as Impl
-import qualified Enecuum.Core.Types.Logger as Log
 
 runDatabase :: R.DBHandle -> L.DatabaseL db a -> IO a
 runDatabase dbHandle action = do
@@ -36,12 +37,12 @@ interpretNodeL :: NodeRuntime -> L.NodeF a -> IO a
 interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
     next <$> atomically (Impl.runStateL nodeRt statefulAction)
 
-interpretNodeL _      (L.EvalGraphIO gr act next       ) = next <$>  (runHGraphIO gr act)
+interpretNodeL _      (L.EvalGraphIO gr act next       ) = next <$> runHGraphIO gr act
 
-interpretNodeL nodeRt (L.EvalNetworking networking next) = next <$>  (Impl.runNetworkingL nodeRt networking)
+interpretNodeL nodeRt (L.EvalNetworking networking next) = next <$> Impl.runNetworkingL nodeRt networking
 
 interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
-    next <$>  (Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects)
+    next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects
 
 interpretNodeL nodeRt (L.OpenTcpConnection serverAddr handlersScript next) =
     next <$> openConnection nodeRt (nodeRt ^. RLens.tcpConnects) serverAddr handlersScript
@@ -50,10 +51,10 @@ interpretNodeL nodeRt (L.OpenUdpConnection serverAddr handlersScript next) =
     next <$> openConnection nodeRt (nodeRt ^. RLens.udpConnects) serverAddr handlersScript
 
 interpretNodeL nodeRt (L.CloseTcpConnection conn next) =
-    next <$> closeConnection (nodeRt ^. RLens.tcpConnects) conn
+    next <$> closeConnection nodeRt (nodeRt ^. RLens.tcpConnects) conn
 
 interpretNodeL nodeRt (L.CloseUdpConnection conn next) =
-    next <$> closeConnection (nodeRt ^. RLens.udpConnects) conn
+    next <$> closeConnection nodeRt (nodeRt ^. RLens.udpConnects) conn
 
 interpretNodeL nodeRt (L.InitDatabase cfg next) = do
     let path = cfg ^. Lens.path
@@ -85,16 +86,19 @@ interpretNodeL nodeRt (L.EvalDatabase storage action next) = do
 interpretNodeL _ (L.NewGraph next) = next <$> initHGraph
 
 closeConnection
-    :: Conn.NetworkConnection protocol
+    :: R.NodeRuntime
+    -> Conn.NetworkConnection protocol
     => R.ConnectionsVar protocol
     -> D.Connection protocol
     -> IO ()
-closeConnection connectionsVar conn = do
+closeConnection nodeRt connectionsVar conn = do
+    let logger = R.mkRuntimeLogger $ nodeRt ^. RLens.coreRuntime . RLens.loggerRuntime
+
     connections <- atomically $ takeTMVar connectionsVar
     case M.lookup conn connections of
         Nothing -> atomically $ putTMVar connectionsVar connections
         Just nativeConn -> do
-            Conn.close nativeConn
+            Conn.close logger nativeConn
             let newConnections = M.delete conn connections
             atomically $ putTMVar connectionsVar newConnections
 
@@ -106,6 +110,8 @@ openConnection
     -> L.NetworkHandlerL protocol L.NodeL ()
     -> IO (Maybe (D.Connection protocol))
 openConnection nodeRt connectionsVar serverAddr handlersScript = do
+    let logger = R.mkRuntimeLogger $ nodeRt ^. RLens.coreRuntime . RLens.loggerRuntime
+
     connections <- atomically $ takeTMVar connectionsVar
 
     m <- newTVarIO mempty
@@ -113,6 +119,7 @@ openConnection nodeRt connectionsVar serverAddr handlersScript = do
     handlers <- readTVarIO m
 
     mbNativeConn <- Conn.open
+        logger
         (nodeRt ^. RLens.connectCounter)
         serverAddr
         ((\f a b -> runNodeL nodeRt $ f a b) <$> handlers)
@@ -122,11 +129,11 @@ openConnection nodeRt connectionsVar serverAddr handlersScript = do
             atomically $ putTMVar connectionsVar connections
             pure Nothing
         Just nativeConn -> do
-            let conn = Conn.getConnection nativeConn
+            let conn = R.getConnection nativeConn
 
             -- This probably should not happen because bound address won't be repeating.
-            -- But when it is, it means we haven't closed prev connection and haven't unregistered it.
-            when (conn `M.member` connections) $ error $ "[openConnection-high-level] ERROR: connection exists: " <> show conn
+            -- But when it is, it means we haven't closed prev connection and haven't unregistered it (bug).
+            when (conn `M.member` connections) $ error $ "Impossible: connection exists: " <> show conn
 
             let newConns = M.insert conn nativeConn connections
             atomically $ putTMVar connectionsVar newConns
@@ -135,6 +142,3 @@ openConnection nodeRt connectionsVar serverAddr handlersScript = do
 -- | Runs node language. Runs interpreters for the underlying languages.
 runNodeL :: NodeRuntime -> L.NodeL a -> IO a
 runNodeL nodeRt = foldFree (interpretNodeL nodeRt)
-
-logError' :: NodeRuntime -> Log.Message -> IO ()
-logError' nodeRt = runNodeL nodeRt . L.logError

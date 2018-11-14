@@ -15,12 +15,14 @@ import           Enecuum.Framework.Node.Interpreter        (runNodeL)
 import           Enecuum.Framework.Runtime                 (NodeRuntime, DBHandle, Connections, getNextId)
 import qualified Enecuum.Framework.Language                as L
 import qualified Enecuum.Framework.RLens                   as RLens
+import qualified Enecuum.Core.RLens                        as RLens
 import qualified Enecuum.Core.Interpreters                 as Impl
 import qualified Enecuum.Framework.Node.Interpreter        as Impl
 import qualified Enecuum.Framework.Domain.RPC              as D
 import qualified Enecuum.Framework.Domain.Networking       as D
 import qualified Enecuum.Framework.Domain.Process          as D
-import qualified Enecuum.Framework.Runtime                        as R
+import qualified Enecuum.Core.Runtime                      as R
+import qualified Enecuum.Framework.Runtime                 as R
 import           Enecuum.Framework.Handler.Rpc.Interpreter
 import qualified Enecuum.Framework.Handler.Network.Interpreter    as Net
 import qualified Enecuum.Framework.Networking.Internal.Connection as Conn
@@ -29,7 +31,7 @@ import           Data.Aeson.Lens
 import qualified Data.Text as T
 import           System.Console.Haskeline
 import           System.Console.Haskeline.History
-import           Enecuum.Framework.Networking.Internal.Connection (ServerHandle (..))
+
 
 addProcess :: NodeRuntime -> D.ProcessPtr a -> ThreadId -> IO ()
 addProcess nodeRt pPtr threadId = do
@@ -38,14 +40,13 @@ addProcess nodeRt pPtr threadId = do
     let newPs = M.insert pId threadId ps
     atomically $ writeTVar (nodeRt ^. RLens.processes) newPs
 
-
 registerConnection
-    :: Conn.AsNativeConnection protocol
+    :: R.AsNativeConnection protocol
     => R.ConnectionsVar protocol
     -> Conn.NativeConnection protocol
     -> IO ()
 registerConnection connectionsVar nativeConn = do
-    let conn = Conn.getConnection nativeConn
+    let conn = R.getConnection nativeConn
     connections <- atomically $ takeTMVar connectionsVar
     atomically $ putTMVar connectionsVar $ M.insert conn nativeConn connections
 
@@ -71,6 +72,8 @@ startServer
     -> L.NetworkHandlerL protocol L.NodeL a
     -> IO (Maybe ())
 startServer nodeRt connectionsVar port handlersScript = do
+    let logger = R.mkRuntimeLogger $ nodeRt ^. RLens.coreRuntime . RLens.loggerRuntime
+
     m        <- atomically $ newTVar mempty
     a        <- Net.runNetworkHandlerL m handlersScript
     handlers <- readTVarIO m
@@ -80,6 +83,7 @@ startServer nodeRt connectionsVar port handlersScript = do
     res <- if M.member port servers
         then pure Nothing
         else Conn.startServer
+            logger
             (nodeRt ^. RLens.connectCounter)
             port
             ((\f a' b -> Impl.runNodeL nodeRt $ f a' b) <$> handlers)
@@ -92,10 +96,10 @@ startServer nodeRt connectionsVar port handlersScript = do
     pure $ if isJust res then Just () else Nothing
 
 -- | Stop the server
-stopServer :: ServerHandle -> IO ()
-stopServer (Conn.ServerHandle sockVar acceptWorkerId) = do
+stopServer :: R.ServerHandle -> IO ()
+stopServer (R.ServerHandle sockVar acceptWorkerId) = do
     sock <- atomically $ takeTMVar sockVar
-    Conn.manualCloseConnection' sock acceptWorkerId
+    Conn.closeConnection' sock acceptWorkerId
     atomically (putTMVar sockVar sock)
 
 interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF a -> IO a
@@ -127,6 +131,8 @@ interpretNodeDefinitionL nodeRt (L.GetBoundedPorts next) = do
     pure $ next $ M.keys serversMap
 
 interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
+    let logger = R.mkRuntimeLogger $ nodeRt ^. RLens.coreRuntime . RLens.loggerRuntime
+
     m <- atomically $ newTVar mempty
     a <- runRpcHandlerL m action
     handlerMap <- readTVarIO m
@@ -135,7 +141,7 @@ interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
     servers <- atomically $ takeTMVar serversVar
     res <- if M.member port servers
         then pure Nothing
-        else runRpcServer port (runNodeL nodeRt) handlerMap
+        else runRpcServer logger port (runNodeL nodeRt) handlerMap
     
     atomically $ do 
         whenJust res $ \servHandl ->
@@ -199,16 +205,20 @@ callHandler nodeRt methods msg = do
         Right _                    -> pure "Error of request parsing."
         Left  (_ :: SomeException) -> pure "Error of request parsing."
 
-type RpcMethodes t = Map Text (A.Value -> Int -> t)
+type RpcMethods t = Map Text (A.Value -> Int -> t)
 
 runRpcServer
-    :: S.PortNumber -> (t -> IO D.RpcResponse) -> RpcMethodes t -> IO (Maybe ServerHandle)
-runRpcServer port runner methods = runTCPServer port $ \sock -> do
+    :: R.RuntimeLogger
+    -> S.PortNumber
+    -> (t -> IO D.RpcResponse)
+    -> RpcMethods t
+    -> IO (Maybe R.ServerHandle)
+runRpcServer logger port runner methods = runTCPServer logger port $ \sock -> do
     msg      <- S.recv sock (1024 * 4)
     response <- callRpc runner methods msg
     S.sendAll sock $ A.encode response
 
-callRpc :: Monad m => (t -> m D.RpcResponse) -> RpcMethodes t -> LByteString -> m D.RpcResponse
+callRpc :: Monad m => (t -> m D.RpcResponse) -> RpcMethods t -> LByteString -> m D.RpcResponse
 callRpc runner methods msg = case A.decode msg of
     Just (D.RpcRequest method params reqId) -> case method `M.lookup` methods of
         Just justMethod -> runner $ justMethod params reqId

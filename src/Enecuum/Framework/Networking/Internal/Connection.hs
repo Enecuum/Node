@@ -1,42 +1,25 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Enecuum.Framework.Networking.Internal.Connection where
 
-import           Control.Concurrent (killThread)
-import           Control.Concurrent.STM.TMVar
-import           Control.Concurrent.STM.TChan
-import           Data.Aeson
 import           Enecuum.Prelude
+
+import qualified Network.Socket                      as S
+import qualified Data.IP                             as IP
+
 import qualified Enecuum.Framework.Domain.Networking as D
-import qualified Network.Socket                      as S hiding (recv)
-import qualified Data.IP as IP
-import           Control.Concurrent.STM.TChan (TChan)
-
--- TODO: get rid of it
-data ServerComand = StopServer
-
-type Handler protocol  = Value -> D.Connection protocol -> IO ()
-type Handlers protocol = Map Text (Handler protocol)
-data ServerHandle = ServerHandle (TMVar S.Socket) ThreadId
-
-type ConnectCounter = IORef D.ConnectId
+import           Enecuum.Framework.Runtime 
+import qualified Enecuum.Core.Runtime                as R
 
 
 getNewConnectId :: ConnectCounter -> IO D.ConnectId
 getNewConnectId counterVar =
     atomicModifyIORef' counterVar (\counter -> (counter + 1, counter + 1))
 
-
+stopServer :: ServerHandle -> IO ()
 stopServer (ServerHandle var threadId) = do
     sock <- atomically $ readTMVar var
-    manualCloseConnection' sock threadId
-
--- TODO: this is no longer needed, remove
-type CloseSignal = TVar Bool
-
-class AsNativeConnection a where
-    data family NativeConnection a
-    getConnection :: NativeConnection a -> D.Connection a
-    getSocketVar  :: NativeConnection a -> TMVar S.Socket
-    getReaderId   :: NativeConnection a -> ThreadId
+    closeConnection' sock threadId
 
 instance AsNativeConnection D.Tcp where
     data NativeConnection D.Tcp
@@ -46,13 +29,11 @@ instance AsNativeConnection D.Tcp where
     getSocketVar  (TcpConnection sockVar _        _   ) = sockVar
     getReaderId   (TcpConnection _       readerId _   ) = readerId
 
--- TODO: Why Client and Server connection are different types?
 instance AsNativeConnection D.Udp where
     data NativeConnection D.Udp
-        = ServerUdpConnection S.SockAddr  (TMVar S.Socket) (D.Connection D.Udp)
-        | ClientUdpConnection ThreadId    (TMVar S.Socket) (D.Connection D.Udp)
+        = ServerUdpConnection S.SockAddr (TMVar S.Socket) (D.Connection D.Udp)
+        | ClientUdpConnection ThreadId   (TMVar S.Socket) (D.Connection D.Udp)
 
-    -- TODO: implement
     getConnection (ClientUdpConnection _ _ conn) = conn
     getConnection (ServerUdpConnection _ _ conn) = conn
     
@@ -60,7 +41,7 @@ instance AsNativeConnection D.Udp where
     getSocketVar (ServerUdpConnection _ sockVar _) = sockVar
     
     getReaderId (ClientUdpConnection readerId _ _) = readerId
-    getReaderId _ = error "getReaderId for Udp server native connection not implemented."
+    getReaderId _ = error "getReaderId for Udp server native connection not supported."
 
 data ConnectionRegister protocol = ConnectionRegister
     { addConnection
@@ -74,40 +55,39 @@ data ConnectionRegister protocol = ConnectionRegister
     }
 
 class AsNativeConnection protocol => NetworkConnection protocol where
-    startServer :: ConnectCounter -> S.PortNumber -> Handlers protocol -> ConnectionRegister protocol -> IO (Maybe ServerHandle)
-    open  :: ConnectCounter -> D.Address -> Handlers protocol -> IO (Maybe (NativeConnection protocol))
-    close :: NativeConnection protocol -> IO ()
-    send  :: NativeConnection protocol -> LByteString -> IO (Either D.NetworkError ())
+    startServer :: R.RuntimeLogger -> ConnectCounter -> S.PortNumber -> Handlers protocol -> ConnectionRegister protocol -> IO (Maybe ServerHandle)
+    open        :: R.RuntimeLogger -> ConnectCounter -> D.Address -> Handlers protocol -> IO (Maybe (NativeConnection protocol))
+    close       :: R.RuntimeLogger -> NativeConnection protocol -> IO ()
+    send        :: R.RuntimeLogger -> NativeConnection protocol -> LByteString -> IO (Either D.NetworkError ())
 
 
-manualCloseConnection
+closeConnection
     :: AsNativeConnection protocol
     => NativeConnection protocol
     -> IO ()
-manualCloseConnection nativeConn = do
-    let conn     = getConnection nativeConn
+closeConnection nativeConn = do
     let sockVar  = getSocketVar nativeConn
     let readerId = getReaderId nativeConn
     sock <- atomically $ takeTMVar sockVar
-    manualCloseConnection' sock readerId
+    closeConnection' sock readerId
     atomically (putTMVar sockVar sock)
 
-manualCloseConnection' :: S.Socket -> ThreadId -> IO ()
-manualCloseConnection' sock readerId = do
+closeConnection' :: S.Socket -> ThreadId -> IO ()
+closeConnection' sock readerId = do
     killThread readerId
-    manualCloseSock sock
+    closeSocket sock
 
-manualCloseSock :: S.Socket -> IO ()
-manualCloseSock sock = do
+closeSocket :: S.Socket -> IO ()
+closeSocket sock = do
     eRes <- try $ S.close sock
-    whenLeft eRes $ \(err :: SomeException) -> pure ()
+    whenLeft eRes $ \(_ :: SomeException) -> pure ()
 
 
 showSockAddr :: (Semigroup s, IsString s) => S.SockAddr -> s
 showSockAddr (S.SockAddrInet port host)       = show (IP.fromHostAddress  host ) <> ":" <> show port
 showSockAddr (S.SockAddrInet6 port _ host6 _) = show (IP.fromHostAddress6 host6) <> ":" <> show port
 showSockAddr (S.SockAddrUnix str)             = show str
-showSockAddr (S.SockAddrCan sa)               = show $ "SockAddrCan: " <> show sa
+showSockAddr sa                               = "Unsupported sockAddr" <> show sa
 
 unsafeFromSockAddr :: S.SockAddr -> D.Address
 unsafeFromSockAddr (S.SockAddrInet port host)       = D.Address (show $ IP.fromHostAddress host)   port

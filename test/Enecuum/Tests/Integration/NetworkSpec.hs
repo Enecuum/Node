@@ -224,12 +224,15 @@ emptFunc = Con.ConnectionRegister (\_ -> pure ()) (\_ -> pure ())
 
 succesServer :: D.PortNumber -> IO Bool
 succesServer port = do
+    let logger = Rt.RuntimeLogger
+            { Rt.logMessage' = \lvl msg -> putStrLn $ "[" <> show lvl <> "] " <> msg
+            }
     mvar <- newEmptyMVar
     void $ forkIO $ do
         threadDelay 1000000
         putMVar mvar False
     counter <- newIORef 0
-    Just ch <- Con.startServer counter port (M.singleton (D.toTag Success) (\_ (_ :: D.Connection D.Udp) -> putMVar mvar True)) emptFunc
+    Just ch <- Con.startServer logger counter port (M.singleton (D.toTag Success) (\_ (_ :: D.Connection D.Udp) -> putMVar mvar True)) emptFunc
     ok <- takeMVar mvar
     Con.stopServer ch
     pure ok

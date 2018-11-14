@@ -7,18 +7,18 @@ import           Control.Monad
 import           Enecuum.Prelude
 import           Network.Socket hiding (recvFrom)
 import           Network (PortID (..), listenOn)
-import qualified Enecuum.Framework.Networking.Internal.Connection as Conn
+import qualified Enecuum.Core.Runtime      as R
+import qualified Enecuum.Framework.Runtime as R
 
--- TODO: this is wrong design, get rid of it
-runTCPServer :: PortNumber -> (Socket -> IO ()) -> IO (Maybe Conn.ServerHandle)
-runTCPServer port handler = do
+runTCPServer :: R.RuntimeLogger -> PortNumber -> (Socket -> IO ()) -> IO (Maybe R.ServerHandle)
+runTCPServer logger port handler = do
     eListenSock <- try $ listenOn (PortNumber port)
     case eListenSock of
-        Left (err :: SomeException) -> pure Nothing
+        Left (err :: SomeException) -> R.logError' logger (show err) >> pure Nothing
         Right listenSock -> do
             acceptWorkerId <- forkIO $ acceptConnects listenSock handler
             listenSockVar  <- newTMVarIO listenSock
-            pure $ Just $ Conn.ServerHandle listenSockVar acceptWorkerId
+            pure $ Just $ R.ServerHandle listenSockVar acceptWorkerId
 
 acceptConnects :: forall a b . Socket -> (Socket -> IO a) -> IO b
 acceptConnects listenSock handler = forever $ do

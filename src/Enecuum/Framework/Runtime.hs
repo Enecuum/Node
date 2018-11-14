@@ -3,12 +3,27 @@
 module Enecuum.Framework.Runtime where
 
 import qualified Data.Map                           as Map
+import           Data.Aeson                         (Value)
 import qualified "rocksdb-haskell" Database.RocksDB as Rocks
-import           Enecuum.Core.HGraph.Internal.Impl (initHGraph)
-import           Enecuum.Core.Runtime              (CoreRuntime)
-import qualified Enecuum.Domain                    as D
+import           Enecuum.Core.HGraph.Internal.Impl  (initHGraph)
+import           Enecuum.Core.Runtime               (CoreRuntime)
+import qualified Network.Socket                     as S
+import qualified Enecuum.Domain                     as D
 import           Enecuum.Prelude
-import           Enecuum.Framework.Networking.Internal.Connection (ServerHandle, NativeConnection, ConnectCounter)
+import qualified Enecuum.Core.Runtime               as R
+
+
+class AsNativeConnection a where
+    data family NativeConnection a
+    getConnection :: NativeConnection a -> D.Connection a
+    getSocketVar  :: NativeConnection a -> TMVar S.Socket
+    getReaderId   :: NativeConnection a -> ThreadId
+
+type Handler protocol  = Value -> D.Connection protocol -> IO ()
+type Handlers protocol = Map Text (Handler protocol)
+data ServerHandle = ServerHandle (TMVar S.Socket) ThreadId
+
+type ConnectCounter = IORef D.ConnectId
 
 data VarHandle = VarHandle D.VarId (TVar Any)
 type NodeState = TMVar (Map.Map D.VarId VarHandle)
@@ -17,6 +32,17 @@ data DBHandle  = DBHandle
     { _db    :: Rocks.DB
     , _mutex :: MVar ()
     }
+
+data WorkerFlow
+    = WContinue
+    | WFinish 
+
+data WorkerState
+    = WOk
+    | WWarning Text
+    | WError Text
+
+type WorkerAction = (WorkerFlow, WorkerState)
 
 type Connections protocol = Map (D.Connection protocol) (NativeConnection protocol)
 type ConnectionsVar protocol = TMVar (Connections protocol)
@@ -59,3 +85,13 @@ getNextId nodeRt = do
     number <- takeTMVar $ _idCounter nodeRt
     putTMVar (_idCounter nodeRt) $ number + 1
     pure number
+
+showWorkerState :: R.RuntimeLogger -> WorkerState -> IO ()
+showWorkerState _       WOk           = pure ()
+showWorkerState logger (WWarning msg) = R.logWarning' logger msg
+showWorkerState logger (WError   msg) = R.logError'   logger msg
+
+withWorkerAction :: R.RuntimeLogger -> WorkerAction -> IO () -> IO ()
+withWorkerAction logger (WContinue, st) cont = showWorkerState logger st >> cont
+withWorkerAction logger (WFinish,   st) _    = showWorkerState logger st
+

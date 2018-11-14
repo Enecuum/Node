@@ -19,7 +19,7 @@ import           Control.Monad                            as X ( void, when, unl
 import           Control.Exception                        as X ( SomeException (..) )
 import           GHC.Generics                             as X ( Generic )
 import           Control.Newtype.Generics                 as X ( Newtype, O, pack, unpack )
-import           Control.Concurrent                       as X ( ThreadId, threadDelay, forkIO )
+import           Control.Concurrent                       as X ( ThreadId, threadDelay, forkIO, killThread )
 import           Control.Concurrent.STM                   as X ( retry )
 import           Control.Concurrent.STM.TVar              as X ( modifyTVar )
 import           Control.Concurrent.STM.TMVar             as X ( TMVar, readTMVar, newTMVar, newTMVarIO, newEmptyTMVar, newEmptyTMVarIO, takeTMVar, putTMVar, tryReadTMVar )
