@@ -213,8 +213,9 @@ getBlock (GetBlock hash address) = do
 
 sendTo :: SendTo -> L.NodeL Text
 sendTo (SendTo (Address host port) rPort) = do
-    let receiver = D.Address "127.0.0.1" rPort
-    void $ L.notify (D.Address host port) $ SendMsgTo (D.toHashGeneric receiver) 10 "!! msg !!"
+    let receiverHash    = D.toHashGeneric $ makeNodePorts1000 rPort
+    let receiverUdpPort = makeNodePorts1000 port ^. udpPort
+    void $ L.notify (D.Address host receiverUdpPort) $ SendMsgTo receiverHash 10 "!! msg !!"
     pure "Sended."
 
 drawRouteMap :: DrawMap -> L.NodeL Text
@@ -246,29 +247,6 @@ cardAssembly accum passed nexts
         let newNexts  = Set.difference (Set.union nexts (Set.fromList $ snd <$> r)) newPassed
         let newAccum  = Map.insert (D.toHashGeneric (D.Address host port)) (fst <$> r) accum
         cardAssembly newAccum newPassed newNexts
-
-{-
-Requests JSON:
-{"method":"GetLastKBlock", "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"StartForeverChainGeneration", "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"GenerateBlocksPacket", "blocks" : 2, "timeGap":0, "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"GetWalletBalance", "walletID": 2, "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"GetWalletBalance", "walletID": 2, "address":{"host":"127.0.0.1", "port": 2009}}
-{"method":"StopNode"}
-{"method":"Ping", "protocol":"RPC", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"GetLengthOfChain", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"StopRequest", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"CreateTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"DumpToDB", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"RestoreFromDB", "address":{"host":"127.0.0.1", "port": 2008}}
--}
-
-
-{-
-Requests:
-GenerateBlocksPacket {blocks = 1, timeGap = 0, address = Address {_host= "127.0.0.1", _port = 2005}}
-SendTo (Address "127.0.0.1" 5001) 5002
--}
 
 clientNode :: L.NodeDefinitionL ()
 clientNode = clientNode' (ClientNodeConfig 42)

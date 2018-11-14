@@ -148,9 +148,15 @@ udpRoutingHandlers routingRuntime = do
     L.handler $ acceptHello             routingRuntime
     L.handler $ acceptConnectResponse   routingRuntime
     L.handler $ acceptNextForYou        routingRuntime
+    L.handler $ acceptHelloFromBn       routingRuntime
 
 rpcRotingHandlers routingRuntime = L.method rpcPingPong
 
+acceptHelloFromBn :: RoutingRuntime -> HelloToBnResponce -> D.Connection D.Udp -> L.NodeL ()
+acceptHelloFromBn routingRuntime bnHello con = do
+    L.close con
+    when (verifyHelloToBnResponce bnHello) $
+        L.writeVarIO (routingRuntime^.hostAddress) $ Just (bnHello^.hostAddress)
 
 acceptHello :: RoutingRuntime -> RoutingHello -> D.Connection D.Udp -> L.NodeL ()
 acceptHello routingRuntime routingHello con = do
@@ -195,7 +201,10 @@ forwardIfNeeded routingRuntime msg f = do
     let myId      = routingRuntime^.nodeId
     let time      = msg^.timeToLive
     when (time > 0 && myId /= reciverId) $ do
+        L.logInfo $ "Resending to " <> show reciverId
         connects <- L.readVarIO (routingRuntime ^. connectMap)
-        whenJust (findNextResender reciverId connects) $ \(h, address) ->
+        let nextReciver = findNextResender reciverId connects
+        whenJust nextReciver $ \(_, address) ->
             void $ L.notify (getUdpAddress address) (msg & timeToLive .~ time - 1)
+        unless (isJust nextReciver) $ L.logError "Connection map is empty. Fail of resending."
     when (myId == reciverId) $ f msg

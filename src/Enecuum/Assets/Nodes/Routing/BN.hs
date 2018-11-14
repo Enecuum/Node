@@ -50,9 +50,12 @@ acceptNewNode nodeData helloToBn conn = L.close conn >> do
     let nId     = helloToBn ^. nodeId
     let ports   = helloToBn ^. nodePorts 
     when (verifyHelloToBn helloToBn) $ do
+        let address = makeNodeAddress host ports nId
+        L.logInfo $ "New node is accepted. " <> show address
         helloToBnResponce <- makeHelloToBnResponce True host
-        L.notify      (D.Address host (ports ^. udpPort)) helloToBnResponce
-        L.modifyVarIO (nodeData ^. netNodes) $ addToMap nId (makeNodeAddress host ports nId)
+        L.modifyVarIO (nodeData ^. netNodes) $ addToMap nId address
+        void $ L.notify (D.Address host (ports ^. udpPort)) helloToBnResponce
+
 
 findConnect :: BNNodeData -> M.ConnectRequest -> L.NodeL (Either Text (D.StringHash, NodeAddress))
 findConnect nodeData (M.ConnectRequest hash i) = do
