@@ -10,6 +10,8 @@ import           Enecuum.Assets.Nodes.GraphNode.Config
 import           Enecuum.Assets.Nodes.GraphNode.Database
 import           Enecuum.Assets.Nodes.Routing.Messages
 import           Enecuum.Assets.Nodes.Routing.Runtime
+import           Enecuum.Research.ChordRouteMap
+import qualified Enecuum.Assets.Nodes.Messages as M
 
 -- | Start of graph node
 graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()
@@ -33,9 +35,14 @@ graphNodeTransmitter' cfg nodeData = do
     
     routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash (NodeAddress bnHost bnPorts bnId)
 
-    case _rpcSynco cfg of
-        Nothing -> pure ()
-        Just rpcSyncoAddress -> L.process $ forever $ graphSynchro nodeData rpcSyncoAddress
+    periodic (1000 * 1000) $ do
+        connects <- fromChordRouteMap <$> L.readVarIO (routingData ^. connectMap)
+        forM_ connects $ \(_, nodeAddress) -> do
+            let rpcAddress = getRpcAddress nodeAddress
+            eNodeType <- L.makeRpcRequest rpcAddress M.GetNodeType
+            whenRight eNodeType $ \nodeType ->
+                when (nodeType == M.TypeGraphNode) $ graphSynchro nodeData rpcAddress
+
     L.serving D.Udp (myNodePorts ^. udpPort) $ do
         udpRoutingHandlers routingData
         -- network
@@ -53,6 +60,7 @@ graphNodeTransmitter' cfg nodeData = do
         rpcRoutingHandlers routingData
         -- network
         L.method  $ handleStopNode nodeData
+        L.method  $ \M.GetNodeType -> pure M.TypeGraphNode
 
         -- client interaction
         L.methodE $ getBalance nodeData

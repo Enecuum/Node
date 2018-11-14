@@ -61,8 +61,8 @@ defaultPoANodeConfig = PoANodeConfig 42 A.poaNodeRpcPort A.poaNodeUdpPort A.poaN
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
 
-sendMicroblock :: PoANodeData -> D.KBlock -> NodeScenario PoANode -> L.NodeL ()
-sendMicroblock poaData block role = do
+sendMicroblock :: RoutingRuntime -> PoANodeData -> NodeScenario PoANode -> D.KBlock -> L.NodeL ()
+sendMicroblock routingData poaData role block = do
     currentBlock <- L.readVarIO (poaData ^. currentLastKeyBlock)
     when (block /= currentBlock) $ do
         L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ ")."
@@ -89,8 +89,11 @@ sendMicroblock poaData block role = do
             Bad  -> A.generateBogusSignedMicroblock block tx
         L.logInfo
             $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
-        void $ L.withConnection D.Udp A.graphNodeTransmitterUdpAddress $
-            \conn -> L.send conn mBlock
+        
+        void $ sendUdpBroadcast routingData mBlock
+
+
+
 
 poaNode :: NodeScenario PoANode -> NodeConfig PoANode -> L.NodeDefinitionL ()
 poaNode role cfg = do
@@ -107,7 +110,6 @@ poaNode role cfg = do
     routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash (NodeAddress bnHost bnPorts bnId)
     poaData     <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
 
-
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
     L.serving D.Rpc (_poaRpcPort cfg) $ do
@@ -115,12 +117,10 @@ poaNode role cfg = do
         L.method   rpcPingPong
         L.method $ handleStopNode poaData
 
-    L.process $ forever $ do
-        L.delay $ 100 * 1000
-        whenRightM (L.makeRpcRequest A.graphNodeTransmitterRpcAddress GetTransactionPending) $ \tx -> do
-            forM_ tx (\t -> L.logInfo $ "\nAdd transaction to pending "  +| D.showTransaction t "" |+ "")
-            L.atomically $ L.modifyVar (poaData ^. transactionPending) ( ++ tx )
-        whenRightM (L.makeRpcRequest A.graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> sendMicroblock poaData block role
+    L.serving D.Udp  (_poaUdpPort cfg) $ do
+        udpRoutingHandlers routingData
+        L.handler $ udpBroadcastRecivedMessage routingData $
+            sendMicroblock routingData poaData role
 
     routingWorker routingData
     L.awaitNodeFinished poaData

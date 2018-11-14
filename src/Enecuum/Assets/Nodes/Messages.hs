@@ -15,6 +15,11 @@ newtype IsDead = IsDead StringHash
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 
+data GetNodeType = GetNodeType
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data NodeType = TypeGraphNode | TypeBN | TypePoA | TypePoW 
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | BN, NN nodes
 data Hello = Hello StringHash D.Address
