@@ -10,8 +10,6 @@ import qualified Data.Text as T
 import           Data.Scientific
 import           Data.IP
 import qualified Data.Aeson as A
-import           Control.Concurrent.STM.TChan (TChan)
-import           Network.Socket
 import qualified Network.Socket as S hiding (recv)
 
 
@@ -19,32 +17,20 @@ data Udp = Udp
 data Tcp = Tcp
 data Rpc = Rpc
 
-data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist deriving Eq
+data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist deriving (Eq, Show)
 
-newtype Connection a = Connection
-    { _address :: Address
+newtype BoundAddress = BoundAddress Address
+    deriving (Show, Eq, Ord, Generic)
+
+type ConnectId      = Int
+
+data Connection a = Connection
+    { _address      :: BoundAddress
+    , _connectId    :: ConnectId
     }
     deriving (Show, Eq, Ord, Generic)
 
-data family ConnectionVar a
-data instance ConnectionVar Tcp
-    = TcpConnectionVar (TMVar (TChan Command))
-
-data instance ConnectionVar Udp
-    = ServerUdpConnectionVar S.SockAddr (TChan SendUdpMsgTo)
-    | ClientUdpConnectionVar (TMVar (TChan Command))
-
-data ServerComand = StopServer
-
 type RawData = LByteString
-
-data SendUdpMsgTo = SendUdpMsgTo SockAddr LByteString (MVar Bool)
-
-data Command where
-    Close :: Command
-    Send  :: RawData -> MVar Bool -> Command
-
-newtype ServerHandle = ServerHandle (TChan ServerComand)
 
 data NetworkMsg = NetworkMsg Text A.Value deriving (Generic, ToJSON, FromJSON)
 
@@ -60,7 +46,7 @@ sockAddrToHost sockAddr = case sockAddr of
 -- | Node address (like IP)
 data Address = Address
     { _host :: Host
-    , _port :: PortNumber
+    , _port :: S.PortNumber
     } deriving (Show, Eq, Ord, Generic)
 
 instance ToJSON Address where
@@ -71,10 +57,10 @@ instance FromJSON Address where
         <$> v A..: "host"
         <*> v A..: "port"
 
-instance ToJSON PortNumber where
+instance ToJSON S.PortNumber where
     toJSON = toJSON.fromEnum
 
-instance FromJSON PortNumber where
+instance FromJSON S.PortNumber where
     parseJSON (A.Number a) = pure.toEnum.fromJust.toBoundedInteger $ a
     parseJSON _            = mzero
 
@@ -83,3 +69,15 @@ formatAddress (Address addr port) = T.pack addr <> ":" <> show port
 
 packetSize :: Int
 packetSize = 1024*4
+
+
+-- | Tries to parse address of the form "0.0.0.0:0000."
+-- It may throw exception or may parse the address incorectly.
+unsafeParseAddress :: String -> Address
+unsafeParseAddress strAddr | length strAddr < 3 || ':' `notElem` strAddr = error "Address parse error: malformed string."
+unsafeParseAddress strAddr = let
+    hostStr = takeWhile (/= ':') strAddr
+    portStr = drop 1 $ dropWhile (/= ':') strAddr
+    mbPort  = readMaybe portStr
+    port    = fromMaybe (error "Address parse error: port is not a number") mbPort
+    in Address hostStr port

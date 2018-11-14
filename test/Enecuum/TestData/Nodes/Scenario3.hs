@@ -17,7 +17,7 @@ bootNodeValidation :: L.NodeDefinitionL ()
 bootNodeValidation = do
     L.nodeTag bootNodeTag
     void $ L.initialization $ pure $ D.NodeID "abc"
-    L.serving D.Rpc 2000 $ do
+    void $ L.serving D.Rpc 2000 $ do
         L.method acceptGetHashId
         L.method acceptValidationRequest
 

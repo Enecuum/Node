@@ -2,9 +2,11 @@
 
 module Enecuum.Prelude
   ( module X
+  , trace
+  , trace_
   ) where
 
-import           Universum                                as X hiding ( All, Option, Set, Type, head, last, set, tail, init )
+import           Universum                                as X hiding ( All, Option, Set, Type, head, last, set, tail, init, trace)
 import           Universum.Unsafe                         as X ( head, last, tail, init, (!!) )
 import           Universum.Functor.Fmap                   as X ( (<<$>>) )
 import           Data.TypeLevel                           as X ( type (++) )
@@ -17,7 +19,7 @@ import           Control.Monad                            as X ( void, when, unl
 import           Control.Exception                        as X ( SomeException (..) )
 import           GHC.Generics                             as X ( Generic )
 import           Control.Newtype.Generics                 as X ( Newtype, O, pack, unpack )
-import           Control.Concurrent                       as X ( ThreadId, threadDelay, forkIO )
+import           Control.Concurrent                       as X ( ThreadId, threadDelay, forkIO, killThread )
 import           Control.Concurrent.STM                   as X ( retry )
 import           Control.Concurrent.STM.TVar              as X ( modifyTVar )
 import           Control.Concurrent.STM.TMVar             as X ( TMVar, readTMVar, newTMVar, newTMVarIO, newEmptyTMVar, newEmptyTMVarIO, takeTMVar, putTMVar, tryReadTMVar )
@@ -25,3 +27,11 @@ import           Text.Read                                as X ( read, readsPrec
 import           GHC.Base                                 as X ( until )
 import           Fmt                                      as X ( (+|), (+||), (|+), (||+) )
 import           Control.Monad.Free                       as X ( Free (..), liftF, foldFree )
+import qualified Universum                                as U
+
+
+trace :: Text -> m a -> m a
+trace = U.trace
+
+trace_ :: Applicative m => Text -> m ()
+trace_ txt = trace txt (pure ())

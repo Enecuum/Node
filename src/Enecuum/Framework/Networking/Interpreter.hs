@@ -4,17 +4,26 @@ import Enecuum.Prelude
 
 import           Data.Aeson as A
 import qualified Data.Text as T
+import qualified Data.Map as M
 
 import qualified Enecuum.Domain                     as D
 import qualified Enecuum.Language                   as L
 import qualified Enecuum.Framework.Networking.Internal.Tcp.Connection as Tcp ()
 import qualified Enecuum.Framework.Networking.Internal.Udp.Connection as Udp
-import qualified Enecuum.Framework.Networking.Internal.Connection     as Con
+import qualified Enecuum.Framework.Networking.Internal.Connection     as Conn
 import           Enecuum.Framework.Runtime
-import qualified Enecuum.Framework.RLens as RL
+import qualified Enecuum.Framework.RLens            as RLens
+import qualified Enecuum.Core.RLens                 as RLens
+import qualified Enecuum.Core.Runtime               as R
 import qualified Network.Socket.ByteString.Lazy     as S
 import           Enecuum.Framework.Networking.Internal.Client
-import qualified Network.Socket as S hiding (recv, send) --, sendAll)
+import qualified Network.Socket as S hiding (recv, send)
+
+
+deleteConnection nodeRt conn = do
+    connects <- atomically $ takeTMVar $ nodeRt ^. RLens.tcpConnects
+    let newConnects = M.delete conn connects 
+    atomically $ putTMVar (nodeRt ^. RLens.tcpConnects) newConnects
 
 -- | Interpret NetworkingL language.
 interpretNetworkingL :: NodeRuntime -> L.NetworkingF a -> IO a
@@ -30,17 +39,30 @@ interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
     res <- takeMVar var
     pure $ next res
 
-interpretNetworkingL nr (L.SendTcpMsgByConnection (D.Connection conn) msg next) = do
-    m <- readTVarIO $ nr ^. RL.tcpConnects
-    case m ^. at conn of
-        Just con -> next <$> Con.send con msg
-        Nothing  -> pure $ next $ Left D.ConnectionClosed
+interpretNetworkingL nodeRt (L.SendTcpMsgByConnection conn msg next) = do
+    let logger = R.mkRuntimeLogger $ nodeRt ^. RLens.coreRuntime . RLens.loggerRuntime
 
-interpretNetworkingL nr (L.SendUdpMsgByConnection (D.Connection conn) msg next) = do
-    m <- readTVarIO $ nr ^. RL.udpConnects
-    case m ^. at conn of
-        Just con -> next <$> Con.send con msg
-        Nothing  -> pure $ next $ Left D.ConnectionClosed
+    m <- atomically $ readTMVar $ nodeRt ^. RLens.tcpConnects
+    case conn `M.lookup` m of
+        Just nativeConn -> do
+            res <- Conn.send logger nativeConn msg
+            when (isLeft res) $ deleteConnection nodeRt conn
+            pure $ next res
+        Nothing  -> do
+            deleteConnection nodeRt conn
+            pure $ next $ Left D.ConnectionClosed
+
+interpretNetworkingL nodeRt (L.SendUdpMsgByConnection conn msg next) = do
+    let logger = R.mkRuntimeLogger $ nodeRt ^. RLens.coreRuntime . RLens.loggerRuntime
+
+    m <- atomically $ readTMVar $ nodeRt ^. RLens.udpConnects
+    case conn `M.lookup` m of
+        Just nativeConn -> next <$> Conn.send logger nativeConn msg
+        Nothing  -> do
+            connects <- atomically $ takeTMVar $ nodeRt ^. RLens.udpConnects
+            let newConnects = M.delete conn connects 
+            atomically $ putTMVar (nodeRt ^. RLens.udpConnects) newConnects
+            pure $ next $ Left D.ConnectionClosed
 
 interpretNetworkingL _ (L.SendUdpMsgByAddress adr msg next) =
     next <$> Udp.sendUdpMsg adr msg
@@ -53,4 +75,4 @@ transformEither _ f (Right a) = Right (f a)
 
 -- | Run Networking language.
 runNetworkingL :: NodeRuntime -> L.NetworkingL a -> IO a
-runNetworkingL nr = foldFree (interpretNetworkingL nr)
+runNetworkingL nodeRt = foldFree (interpretNetworkingL nodeRt)

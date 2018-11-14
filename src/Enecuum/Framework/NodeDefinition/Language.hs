@@ -29,12 +29,13 @@ data NodeDefinitionF next where
     -- | Eval core effect.
     EvalCoreEffectNodeDefinitionF :: L.CoreEffect a -> (a -> next) -> NodeDefinitionF next
     -- | Start serving of RPC requests.
-    ServingRpc     :: D.PortNumber -> RpcHandlerL L.NodeL () -> (() -> next) -> NodeDefinitionF next
+    ServingRpc     :: D.PortNumber -> RpcHandlerL L.NodeL () -> (Maybe () -> next) -> NodeDefinitionF next
     -- | Stop serving of Rpc server.
     StopServing    :: D.PortNumber -> (() -> next) -> NodeDefinitionF next
     -- | Start serving on reliable-kind connection.
-    ServingTcp     :: D.PortNumber -> NetworkHandlerL D.Tcp L.NodeL () -> (() -> next)-> NodeDefinitionF  next
-    ServingUdp     :: D.PortNumber -> NetworkHandlerL D.Udp L.NodeL () -> (() -> next)-> NodeDefinitionF  next
+    ServingTcp     :: D.PortNumber -> NetworkHandlerL D.Tcp L.NodeL () -> (Maybe () -> next)-> NodeDefinitionF  next
+    ServingUdp     :: D.PortNumber -> NetworkHandlerL D.Udp L.NodeL () -> (Maybe () -> next)-> NodeDefinitionF  next
+    GetBoundedPorts :: ([D.PortNumber] -> next) -> NodeDefinitionF  next
     Std            :: CmdHandlerL () -> (() -> next) -> NodeDefinitionF  next
     -- Process interface. TODO: It's probably wise to move it to own language.
     -- | Fork a process for node.
@@ -51,6 +52,9 @@ type NodeDefinitionL = Free NodeDefinitionF
 
 std :: CmdHandlerL () -> NodeDefinitionL ()
 std handlers = liftF $ Std handlers id
+
+getBoundedPorts :: NodeDefinitionL [D.PortNumber]
+getBoundedPorts = liftF $ GetBoundedPorts id
 
 -- | Sets tag for node.
 nodeTag :: D.NodeTag -> NodeDefinitionL ()
@@ -89,7 +93,7 @@ scenario :: L.NodeL a -> NodeDefinitionL a
 scenario = evalNodeL
 
 class Serving c a | c -> a where
-    serving :: c -> D.PortNumber -> a -> NodeDefinitionL ()
+    serving :: c -> D.PortNumber -> a -> NodeDefinitionL (Maybe ())
 
 instance Serving D.Rpc (RpcHandlerL L.NodeL ()) where
     serving _ = servingRpc
@@ -112,7 +116,7 @@ instance L.SendUdp NodeDefinitionL where
 
 -- | Starts RPC server.
 {-# DEPRECATED servingRpc "Use L.serving" #-}
-servingRpc :: D.PortNumber -> RpcHandlerL L.NodeL () -> NodeDefinitionL ()
+servingRpc :: D.PortNumber -> RpcHandlerL L.NodeL () -> NodeDefinitionL (Maybe ())
 servingRpc port handlersF = liftF $ ServingRpc port handlersF id
 
 -- | Stops server on the specified port.
@@ -121,7 +125,7 @@ stopServing :: D.PortNumber -> NodeDefinitionL ()
 stopServing port = liftF $ StopServing port id
 
 -- | Starts server (TCP / WS - like)
-servingMsg :: D.PortNumber -> NetworkHandlerL D.Tcp L.NodeL () -> NodeDefinitionL ()
+servingMsg :: D.PortNumber -> NetworkHandlerL D.Tcp L.NodeL () -> NodeDefinitionL (Maybe ())
 servingMsg port handlersF = liftF $ ServingTcp port handlersF id
 
 

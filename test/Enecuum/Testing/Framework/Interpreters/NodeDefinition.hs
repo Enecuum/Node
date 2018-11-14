@@ -41,13 +41,13 @@ interpretNodeDefinitionL nodeRt (L.ServingRpc port handlersF next) = do
     methodsMap <- atomically $ newTVar mempty
     Impl.runRpcHandlerL methodsMap handlersF
     Impl.startNodeRpcServer nodeRt port methodsMap
-    pure $ next ()
+    pure $ next $ Just ()
 
 interpretNodeDefinitionL nodeRt (L.ServingTcp port handlersF next) = do
     handlersMap <- atomically $ newTVar mempty
     Impl.runNetworkHandlerL handlersMap handlersF
     Impl.startNodeTcpLikeServer nodeRt (mkAddress nodeRt port) handlersMap
-    pure $ next ()
+    pure $ next $ Just ()
 
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
     Impl.stopNodeTcpLikeServer nodeRt port

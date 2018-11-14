@@ -36,8 +36,8 @@ dumpAndRestoreGraphTest = do
             , A._stopOnDatabaseError = True
             }
 
-    let blocksCount = 5
-    let blocksDelay = 1000
+    let blocksCount = 10
+    let blocksDelay = 0
     let loggerCfg = Nothing
 
     TestCase $ withDbAbsence dbPath $ withNodesManager $ \mgr -> do

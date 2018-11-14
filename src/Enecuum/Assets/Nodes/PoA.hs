@@ -80,7 +80,7 @@ sendMicroblock poaData block role = do
             Bad  -> A.generateBogusSignedMicroblock block tx
         L.logInfo
             $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
-        void $ L.withConnection D.Udp A.graphNodeTransmitterUdpAddress $
+        void $ L.withConnection D.Tcp A.graphNodeTransmitterTcpAddress $
             \conn -> L.send conn mBlock
 
 poaNode :: NodeScenario PoANode -> NodeConfig PoANode -> L.NodeDefinitionL ()

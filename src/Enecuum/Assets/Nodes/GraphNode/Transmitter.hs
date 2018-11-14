@@ -20,7 +20,7 @@ graphNodeTransmitter nodeCfg = do
 graphNodeTransmitter' :: GraphNodeData -> L.NodeDefinitionL ()
 graphNodeTransmitter' nodeData = do
 
-    L.serving D.Udp graphNodeTransmitterUdpPort $ do
+    L.serving D.Tcp graphNodeTransmitterTcpPort $ do
         -- network
         L.handler   methodPing
         -- PoA interaction
@@ -28,9 +28,9 @@ graphNodeTransmitter' nodeData = do
         -- PoW interaction
         L.handler $ acceptKBlock nodeData
 
-    L.serving D.Tcp graphNodeTransmitterTcpPort $
-        -- network
-        L.handler   methodPing
+    -- L.serving D.Udp graphNodeTransmitterUdpPort $
+    --     -- network
+    --     L.handler   methodPing
 
     L.serving D.Rpc graphNodeTransmitterRpcPort $ do
         -- network

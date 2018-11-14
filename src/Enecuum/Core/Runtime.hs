@@ -2,20 +2,27 @@ module Enecuum.Core.Runtime where
 
 import Enecuum.Prelude
 
+import qualified Enecuum.Core.Types                as D
+import qualified Enecuum.Core.Language             as L
 import qualified Data.Map                          as Map
 import qualified Data.ByteString.Base64            as Base64
 import qualified Crypto.Hash.SHA256                as SHA
-
-import qualified Enecuum.Core.Types                as D
 import qualified Enecuum.Core.Logger.Impl.HsLogger as Impl
 
+-- | Runtime data for the concrete logger impl.
 newtype LoggerRuntime = LoggerRuntime
     { _hsLoggerHandle :: Maybe Impl.HsLoggerHandle
     }
 
+-- | Runtime data for core subsystems.
 data CoreRuntime = CoreRuntime
     { _loggerRuntime :: LoggerRuntime
     , _stateRuntime  :: StateRuntime
+    }
+
+-- | Logger that can be used in runtime via the logging subsystem.
+newtype RuntimeLogger = RuntimeLogger
+    { logMessage' :: D.LogLevel -> D.Message -> IO ()
     }
 
 newtype VarNumber = VarNumber Int
@@ -57,6 +64,24 @@ createCoreRuntime loggerRt = CoreRuntime loggerRt
 
 clearCoreRuntime :: CoreRuntime -> IO ()
 clearCoreRuntime _ = pure ()
+
+mkRuntimeLogger :: LoggerRuntime -> RuntimeLogger
+mkRuntimeLogger (LoggerRuntime hsLog) = RuntimeLogger
+    { logMessage' = \lvl msg -> Impl.runLoggerL hsLog $ L.logMessage lvl msg
+    }
+
+-- Runtime log functions
+logInfo' :: RuntimeLogger -> D.Message -> IO ()
+logInfo' (RuntimeLogger l) = l D.Info
+
+logError' :: RuntimeLogger -> D.Message -> IO ()
+logError' (RuntimeLogger l) = l D.Error
+
+logDebug' :: RuntimeLogger -> D.Message -> IO ()
+logDebug' (RuntimeLogger l) = l D.Debug
+
+logWarning' :: RuntimeLogger -> D.Message -> IO ()
+logWarning' (RuntimeLogger l) = l D.Warning
 
 getNextId :: StateRuntime -> STM Int
 getNextId stateRt = do
