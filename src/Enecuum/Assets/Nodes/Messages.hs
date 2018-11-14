@@ -78,6 +78,8 @@ newtype GetMBlocksForKBlockRequest = GetMBlocksForKBlockRequest { kblock :: Stri
 newtype GetMBlocksForKBlockResponse = GetMBlocksForKBlockResponse { mblocks :: [D.Microblock] }
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
 
+data Synchronize  = Synchronize D.Address
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)  
 -- | Other graph node messages
 
 data DumpToDB = DumpToDB

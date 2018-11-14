@@ -50,7 +50,8 @@ graphNodeTransmitter' cfg nodeData = do
         L.method  $ getChainLength nodeData
         L.methodE $ acceptChainFromTo nodeData
         L.methodE $ getMBlockForKBlocks nodeData
-
+        L.method  $ synchronize nodeData
+        
         -- PoW interaction
         L.method  $ getKBlockPending nodeData
 

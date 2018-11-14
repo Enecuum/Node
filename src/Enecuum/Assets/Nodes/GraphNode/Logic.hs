@@ -231,6 +231,8 @@ graphNodeInitialization nodeConfig = L.scenario $ do
         then pure $ Left "Database error."
         else pure $ Right nodeData
 
+synchronize :: GraphNodeData -> Synchronize -> L.NodeL ()
+synchronize nodeData (Synchronize addressSync) = graphSynchro nodeData addressSync
 
 graphSynchro :: GraphNodeData -> D.Address -> L.NodeL ()
 graphSynchro nodeData address = do
