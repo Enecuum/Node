@@ -60,6 +60,14 @@ data GenerateBlocksPacket           = GenerateBlocksPacket
     , address :: D.Address
     }
     deriving (Generic, Read)
+-- =======
+--     deriving (Generic, Show)
+
+-- data Ping                           = Ping Protocol D.Address
+-- newtype StopRequest                 = StopRequest D.Address
+-- data GetBlock                       = GetBlock D.StringHash D.Address
+-- data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON)
+-- >>>>>>> feature/go
 
 data DumpToDB = DumpToDB
     { address :: D.Address
@@ -240,7 +248,7 @@ cardAssembly accum passed nexts
         cardAssembly newAccum newPassed newNexts
 
 {-
-Requests:
+Requests JSON:
 {"method":"GetLastKBlock", "address":{"host":"127.0.0.1", "port": 2005}}
 {"method":"StartForeverChainGeneration", "address":{"host":"127.0.0.1", "port": 2005}}
 {"method":"GenerateBlocksPacket", "blocks" : 2, "timeGap":0, "address":{"host":"127.0.0.1", "port": 2005}}
@@ -253,6 +261,13 @@ Requests:
 {"method":"CreateTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2008}}
 {"method":"DumpToDB", "address":{"host":"127.0.0.1", "port": 2008}}
 {"method":"RestoreFromDB", "address":{"host":"127.0.0.1", "port": 2008}}
+-}
+
+
+{-
+Requests:
+GenerateBlocksPacket {blocks = 1, timeGap = 0, address = Address {_host= "127.0.0.1", _port = 2005}}
+SendTo (Address "127.0.0.1" 5001) 5002
 -}
 
 clientNode :: L.NodeDefinitionL ()

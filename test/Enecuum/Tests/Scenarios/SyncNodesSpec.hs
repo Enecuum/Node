@@ -11,53 +11,60 @@ import           Enecuum.Testing.Integrational
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit      (fromHUnitTest)
 import           Test.HUnit
+import           Enecuum.Tests.Wrappers
 
 spec :: Spec
-spec = describe "Synchronization tests" $ fromHUnitTest $ TestList
+spec = slowTest $ describe "Synchronization tests" $ fromHUnitTest $ TestList
     [TestLabel "test net sync" testNodeNet]
-
 
 testNodeNet :: Test
 testNodeNet = TestCase $ withNodesManager $ \mgr -> do
-    let graphNodeConfig = A.noDBConfig
-    let poaNodeConfig   = A.PoANodeConfig 0
+    -- assign config
+    let graphNodeTransmitterConfig = A.defaultNodeConfig {A._rpc = A.graphNodeTransmitterRpcAddress}
+    let graphNodeReceiverConfig = A.defaultNodeConfig { A._rpc = A.graphNodeReceiverRpcAddress, A._rpcSynco = Just A.graphNodeTransmitterRpcAddress}
+    let graphNodeTransmitterRpcAddress = A.graphNodeTransmitterRpcAddress
+    let graphNodeReceiverRpcAddress = A.graphNodeReceiverRpcAddress
 
-    void $ startNode Nothing mgr $ A.graphNodeTransmitter graphNodeConfig
-    waitForNode A.graphNodeTransmitterRpcAddress
+    -- Start nodes
+    void $ startNode Nothing mgr $ A.graphNodeTransmitter graphNodeTransmitterConfig
+    waitForNode graphNodeTransmitterRpcAddress
 
     void $ startNode Nothing mgr A.powNode
     waitForNode A.powNodeRpcAddress
 
-    void $ startNode Nothing mgr $ A.poaNode A.Good poaNodeConfig
+    void $ startNode Nothing mgr $ A.poaNode A.Good A.defaultPoANodeConfig
     waitForNode A.poaNodeRpcAddress
 
-    void $ startNode Nothing mgr $ A.graphNodeReceiver graphNodeConfig
-    waitForNode A.graphNodeReceiverRpcAddress
+    -- void $ startNode Nothing mgr $ A.graphNodeReceiver graphNodeReceiverConfig
+    void $ startNode Nothing mgr $ A.graphNodeTransmitter graphNodeReceiverConfig
+    waitForNode graphNodeReceiverRpcAddress
+
+    -- Ask pow node to generate n kblocks
+    let timeGap = (1000 * 500)
+    let kblockCount = 2
+    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
+
+    waitForBlocks 2 graphNodeTransmitterRpcAddress
+    waitForBlocks 2 graphNodeReceiverRpcAddress
 
     threadDelay $ 1000 * 1000
-
-    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration 2 (1000 * 500)
-
-    waitForBlocks 2 A.graphNodeTransmitterRpcAddress
-    waitForBlocks 2 A.graphNodeReceiverRpcAddress
-
-    threadDelay $ 1000 * 1000
-
-    Right kBlock1 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
-    Right kBlock2 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeReceiverRpcAddress    A.GetLastKBlock
+    -- Check kblock synchronization
+    kBlock1 :: D.KBlock <- makeRpcRequestUntilSuccess graphNodeTransmitterRpcAddress A.GetLastKBlock
+    kBlock2 :: D.KBlock <- makeRpcRequestUntilSuccess graphNodeReceiverRpcAddress    A.GetLastKBlock
 
     kBlock1 `shouldBe` kBlock2
 
-    Right (A.GetMBlocksForKBlockResponse mblocksPrev1) <- makeIORpcRequest A.graphNodeTransmitterRpcAddress
+    -- Check ledger synchronization
+    Right (A.GetMBlocksForKBlockResponse mblocksPrev1) <- makeIORpcRequest graphNodeTransmitterRpcAddress
         $ A.GetMBlocksForKBlockRequest (kBlock1 ^. Lens.prevHash)
-    Right (A.GetMBlocksForKBlockResponse mblocksPrev2) <- makeIORpcRequest A.graphNodeReceiverRpcAddress
+    Right (A.GetMBlocksForKBlockResponse mblocksPrev2) <- makeIORpcRequest graphNodeReceiverRpcAddress
         $ A.GetMBlocksForKBlockRequest (kBlock2 ^. Lens.prevHash)
 
     eWalletBalances1 :: [Either Text A.WalletBalanceMsg] <- forM (concat $ toKeys <$> mblocksPrev1) $ \i ->
-        makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetWalletBalance i
+        makeIORpcRequest graphNodeTransmitterRpcAddress $ A.GetWalletBalance i
 
     eWalletBalances2 :: [Either Text A.WalletBalanceMsg] <- forM (concat $ toKeys <$> mblocksPrev2) $ \i ->
-        makeIORpcRequest A.graphNodeReceiverRpcAddress    $ A.GetWalletBalance i
+        makeIORpcRequest graphNodeReceiverRpcAddress    $ A.GetWalletBalance i
 
     (rights eWalletBalances1) `shouldBe` (rights eWalletBalances2)
     length (rights eWalletBalances1) `shouldSatisfy` (> 0)

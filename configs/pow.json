@@ -4,14 +4,15 @@
    "nodeConfig":
    {
       "tag":"PoWNodeConfig",
-      "defaultBlocksDelay":1000000
+      "defaultBlocksDelay":1000000,
+      "kblocksOrder": "InOrder"
    },
    "loggerConfig":
    {
       "logFilePath": "/tmp/log/PoW.log",
       "format":"$prio $loggername: $msg",
       "logToConsole":true,
-			"logToFile": true,
+      "logToFile": true,
       "level":"Debug"
    }
 }

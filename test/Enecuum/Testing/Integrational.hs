@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE PackageImports        #-}
-
+{-# LANGUAGE ScopedTypeVariables   #-}
 module Enecuum.Testing.Integrational where
 
 import           Control.Concurrent                           (killThread)
@@ -20,7 +20,7 @@ import qualified Enecuum.Core.RLens                           as RLens
 import qualified Enecuum.Domain                               as D
 import qualified Enecuum.Framework.NodeDefinition.Interpreter as R
 import qualified Enecuum.Framework.RLens                      as RLens
-import           Enecuum.Interpreters                         (runNodeDefinitionL)
+import qualified Enecuum.Interpreters                         as I
 import qualified Enecuum.Language                             as L
 import           Enecuum.Prelude
 import qualified Enecuum.Runtime                              as R
@@ -57,7 +57,7 @@ createNodeRuntime loggerRuntime = R.createCoreRuntime loggerRuntime >>= (`R.crea
 evalNode :: L.NodeDefinitionL a -> IO a
 evalNode nodeDefinition = do
     nodeRt <- R.createVoidLoggerRuntime >>= createNodeRuntime
-    res <- runNodeDefinitionL nodeRt nodeDefinition
+    res <- I.runNodeDefinitionL nodeRt nodeDefinition
     R.clearNodeRuntime nodeRt
     pure res
 
@@ -67,7 +67,7 @@ startNode' :: IO R.LoggerRuntime -> NodeManager -> L.NodeDefinitionL () -> IO (T
 startNode' loggerRtAct mgr nodeDefinition = do
     loggerRt <- loggerRtAct
     nodeRt <- createNodeRuntime loggerRt
-    thId <- forkIO $ runNodeDefinitionL nodeRt nodeDefinition
+    thId <- forkIO $ I.runNodeDefinitionL nodeRt nodeDefinition
     modifyIORef mgr (M.insert thId nodeRt)
     pure (thId, nodeRt)
 
@@ -97,7 +97,48 @@ makeIORpcRequest ::
     (FromJSON b, ToJSON a, Typeable a) => D.Address -> a -> IO (Either Text b)
 makeIORpcRequest address msg = do
     nodeRt <- R.createVoidLoggerRuntime >>= createNodeRuntime
-    runNodeDefinitionL nodeRt $ L.evalNodeL $ L.makeRpcRequest address msg
+    I.runNodeDefinitionL nodeRt $ L.evalNodeL $ L.makeRpcRequest address msg
+
+-- Make rpc requests to address until:
+-- 1) attempts burn out or
+-- 2) get valid result and predicate for result is true
+makeRpcRequestUntilSuccess' :: forall a b. (Show a, Typeable a, ToJSON a, Show b, FromJSON b) => Int -> Text -> (b -> Bool) -> D.Address -> a  -> IO b
+makeRpcRequestUntilSuccess' attempts errorMsg predicate address request  = go 0
+    where
+        mes = "" +|| errorMsg ||+ " address: " +|| address ||+ " request: " +|| request ||+ ""
+        go :: (FromJSON b) => Int -> IO b
+        go n | n == attempts = error mes
+        go n = do
+            threadDelay $ 1000 * 100
+            res :: Either Text b <- makeIORpcRequest address request
+            if ( isRight res )
+                then do
+                    let rightRes = (rights [res] ) !! 0
+                    if (predicate rightRes)
+                        then (D.withSuccess $ pure res)
+                        else do
+                            let mes = "Predicate for result: " +|| rightRes ||+ "is  false" +|| ""
+                            I.runLoggerL Nothing $ L.logInfo mes
+                            go (n + 1)
+                else go (n + 1)
+
+makeRpcRequestWithPredicate :: (Show a, Typeable a, ToJSON a, Show b, FromJSON b) => (b -> Bool) -> D.Address -> a  -> IO b
+makeRpcRequestWithPredicate = makeRpcRequestUntilSuccess' 50 "No valid results from node."
+
+makeRpcRequestUntilSuccess :: (Show a, Typeable a, ToJSON a, Show b, FromJSON b) => D.Address -> a -> IO b
+makeRpcRequestUntilSuccess = makeRpcRequestWithPredicate ( \_ -> True )
+
+-- It tries to reach node with n attempts via ping message
+waitForNode :: D.Address -> IO ()
+waitForNode address = void $ makeRpcRequestUntilSuccess' 50 "Node is not ready." predicate address request
+    where request = A.Ping
+          predicate = ( \(A.Pong) -> True )
+
+waitForBlocks2 :: D.BlockNumber -> D.Address -> IO ()
+waitForBlocks2 number address = do
+    void $ makeRpcRequestWithPredicate predicate address request
+    where request = A.GetChainLengthRequest
+          predicate = \(A.GetChainLengthResponse count) -> count < (fromIntegral number)
 
 waitForBlocks' :: Word32 -> D.BlockNumber -> D.Address -> IO ()
 waitForBlocks' attempts number address = go 0
@@ -111,16 +152,6 @@ waitForBlocks' attempts number address = go 0
 
 waitForBlocks :: D.BlockNumber -> D.Address -> IO ()
 waitForBlocks = waitForBlocks' 50
-
-waitForNode :: D.Address -> IO ()
-waitForNode address = go 0
-    where
-        go :: D.BlockNumber -> IO ()
-        go 50 = error $ "Node " +|| address ||+ "is not ready."
-        go n = do
-            threadDelay $ 1000 * 100
-            ePong :: Either Text A.Pong <- makeIORpcRequest address A.Ping
-            when (isLeft ePong) $ go (n + 1)
 
 mkDbPath :: FilePath -> IO FilePath
 mkDbPath dbName = do

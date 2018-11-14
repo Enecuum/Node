@@ -34,6 +34,7 @@ data PoANode = PoANode
 
 data instance NodeConfig PoANode = PoANodeConfig
     { _dummyOption :: Int
+    , _poaRPCPort     :: D.PortNumber
     }
     deriving (Show, Generic)
 
@@ -48,6 +49,8 @@ instance ToJSON   (NodeConfig PoANode)   where toJSON    = A.genericToJSON    no
 instance FromJSON (NodeConfig PoANode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 instance ToJSON   (NodeScenario PoANode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario PoANode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+
+defaultPoANodeConfig = PoANodeConfig 42 A.poaNodeRpcPort
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
@@ -84,14 +87,14 @@ sendMicroblock poaData block role = do
             \conn -> L.send conn mBlock
 
 poaNode :: NodeScenario PoANode -> NodeConfig PoANode -> L.NodeDefinitionL ()
-poaNode role _ = do
+poaNode role cfg = do
     L.nodeTag "PoA node"
     L.logInfo "Starting of PoA node"
     poaData <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    L.serving D.Rpc A.poaNodeRpcPort $ do
+    L.serving D.Rpc (_poaRPCPort cfg) $ do
         L.method   rpcPingPong
         L.method $ handleStopNode poaData
 

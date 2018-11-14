@@ -17,10 +17,11 @@ import qualified Enecuum.Runtime as Rt
 import qualified Enecuum.Domain                as D
 import qualified Data.Map as M
 import qualified Enecuum.Framework.Networking.Internal.Connection as Con
+import           Enecuum.Tests.Wrappers
 
 -- Tests disabled
 spec :: Spec
-spec = describe "Network tests" $ fromHUnitTest $ TestList
+spec = fastTest $ describe "Network tests" $ fromHUnitTest $ TestList
     [ TestLabel "udp ping-pong test (successful sending udp msg by connect & address)"  (pingPongTest                     D.Udp 4000 5000)
     , TestLabel "tcp ping-pong test"                                                    (pingPongTest                     D.Tcp 4001 5001)
     , TestLabel "fail sending too big msg by udp connect"                               (testSendingBigMsgByConnect       D.Udp 4002 5002)

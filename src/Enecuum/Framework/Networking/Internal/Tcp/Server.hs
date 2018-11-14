@@ -17,7 +17,9 @@ import           Enecuum.Domain as D
 runTCPServer :: TChan D.ServerComand -> PortNumber -> (Socket -> IO ()) -> IO ()
 runTCPServer chan port handler =
     bracket ((listenOn . PortNumber) port) close $ \sock ->
-        finally (serv chan (acceptConnects sock handler)) (close sock)
+        finally (serv chan (acceptConnects sock handler)) (do
+            -- print $ "port" ++ show port
+            close sock)
 
 serv :: TChan a -> IO b -> IO ()
 serv chan f = void $ race (void $ atomically $ readTChan chan) f

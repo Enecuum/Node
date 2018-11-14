@@ -1,71 +1,80 @@
 module Enecuum.Tests.Scenarios.MaliciousCryptoSpec where
 
-import qualified Data.Map                                   as M
-
-import qualified Enecuum.Domain                             as D
-import           Enecuum.Interpreters                       (runNodeDefinitionL)
-import qualified Enecuum.Language                           as L
+import qualified Data.Map                             as M
+import qualified Enecuum.Assets.Blockchain.Generation as A
+import qualified Enecuum.Assets.Scenarios             as A
+import qualified Enecuum.Domain                       as D
+import qualified Enecuum.Interpreters                 as I
+import qualified Enecuum.Language                     as L
 import           Enecuum.Prelude
-import qualified Enecuum.Runtime                            as R
-
+import qualified Enecuum.Runtime                      as R
+import           Enecuum.Testing.Integrational
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit                   (fromHUnitTest)
+import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
 import           Test.HUnit
+import           Enecuum.Tests.Wrappers
 
 spec :: Spec
-spec = describe "Malicious crypto test" $ fromHUnitTest $ TestList
-    [TestLabel "Malicious PoA" testPoA]
+spec = slowTest $ describe "Test invalid signature" $ fromHUnitTest $ TestList
+    [ TestLabel "Reject invalid microblock"  testInvalidMicroblock
+    , TestLabel "Reject invalid transaction" testInvalidTransaction
+    -- , TestLabel "Accept valid microblock with invalid transactions. Reject invalid transactions to ledger", testMicroblockWithInvalidTransactions
+    ]
 
-createNodeRuntime :: IO R.NodeRuntime
-createNodeRuntime = R.createVoidLoggerRuntime >>= R.createCoreRuntime >>= (`R.createNodeRuntime` M.empty)
+testInvalidTransaction :: Test
+testInvalidTransaction = TestCase $ withNodesManager $ \mgr -> do
+    void $ startNode Nothing mgr $ A.graphNodeTransmitter A.defaultNodeConfig
+    void $ startNode Nothing mgr A.powNode
+    void $ startNode Nothing mgr $ A.poaNode A.Good A.defaultPoANodeConfig
+    waitForNode A.graphNodeTransmitterRpcAddress
 
--- TODO: add runtime clearing
-startNode :: L.NodeDefinitionL () -> IO ()
-startNode nodeDefinition = void $ forkIO $ do
-    nodeRt <- createNodeRuntime
-    runNodeDefinitionL nodeRt nodeDefinition
+    -- Generate and send transactions with invalid signature to graph node
+    invalidTransactions <- I.runERandomL $ replicateM A.transactionsInMicroblock $ A.generateBogusSignedTransaction
+    forM invalidTransactions $ \tx -> do
+        answer :: Either Text A.SuccessMsg <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.CreateTransaction tx
+        answer `shouldSatisfy` isLeft
 
-makeIORpcRequest ::
-    (FromJSON b, ToJSON a, Typeable a) => D.Address -> a -> IO (Either Text b)
-makeIORpcRequest address msg = do
-    nodeRt <- createNodeRuntime
-    runNodeDefinitionL nodeRt $ L.evalNodeL $ L.makeRpcRequest address msg
+    -- Generate and send transactions with valid signature to graph node
+    validTransactions <- I.runERandomL $ replicateM A.transactionsInMicroblock $ A.genTransaction A.Generated
+    forM validTransactions $ \tx -> do
+        answer :: Either Text A.SuccessMsg <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.CreateTransaction tx
+        answer `shouldSatisfy` isRight
+
+    -- Check transaction pending on graph node, it must contain only valid transactions
+    txPending :: [D.Transaction] <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
+    (sort txPending) `shouldBe` (sort validTransactions)
 
 
-testPoA :: Test
-testPoA = TestCase $ do
-    -- print "Start client"
-    -- startNode A.clientNode
-    -- threadDelay $ 1 * 1000 * 1000
-    -- print "Start graphNodeTransmitter"
-    -- startNode A.graphNodeTransmitter
-    -- threadDelay $ 1 * 1000 * 1000
-    -- _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.Stop
-    True `shouldBe` True
-    -- print "Start powNode"
-    -- startNode A.powNode
-    -- threadDelay $ 1 * 1000 * 1000
-    -- _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration 1
-    -- threadDelay $ 3 * 1000 * 1000
-    -- kBlocks1 :: Either Text [D.KBlock] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetKBlockPending
-    -- print "Start Malicious poaNode"
-    -- startNode $ A.poaNode D.Bad
-    -- threadDelay $ 5 * 1000 * 1000
-    -- kBlocks2 :: Either Text [D.KBlock] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetKBlockPending
-    -- print "Start Good poaNode"
-    -- startNode $ A.poaNode D.Good
-    -- threadDelay $ 5 * 1000 * 1000
-    -- kBlocks3 :: Either Text [D.KBlock] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetKBlockPending
-    -- -- _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.clientNode    A.Stop
-    -- _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.Stop
-    -- _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress              A.Stop
-    -- _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.poaNodeAddress  A.Stop
-    -- shouldBe
-    --     [ "kBlocks pending is not empty: " <> show (not $ null $ rights [kBlocks1])
-    --     , "kBlocks pending is still the same: " <> show (kBlocks1 == kBlocks2)
-    --     , "kBlocks pending is not the same anymore: " <> show (kBlocks1 /= kBlocks3)
-    --     ]
-    --     [ "kBlocks pending is not empty: True"
-    --     , "kBlocks pending is still the same: True"
-    --     , "kBlocks pending is not the same anymore: True"
-    --     ]
+testInvalidMicroblock :: Test
+testInvalidMicroblock = TestCase $ withNodesManager $ \mgr -> do
+    void $ startNode Nothing mgr $ A.graphNodeTransmitter A.defaultNodeConfig
+    void $ startNode Nothing mgr A.powNode
+    void $ startNode Nothing mgr $ A.poaNode A.Bad A.defaultPoANodeConfig
+
+    -- Generate and send transactions to graph node
+    transactions <- I.runERandomL $ replicateM A.transactionsInMicroblock $ A.genTransaction A.Generated
+    _ :: [Either Text A.SuccessMsg] <- forM transactions $ \tx ->
+        makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.CreateTransaction tx
+
+    -- Check transaction pending on graph node
+    txPending :: [D.Transaction] <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
+    (sort txPending) `shouldBe` (sort transactions)
+
+    -- Ask pow node to generate n kblocks
+    let timeGap = 0
+    let kblockCount = 1
+    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
+
+    -- Check kblock pending
+    kblocks :: D.KBlockPending <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetKBlockPending
+    let kblockHash = D.toHash $ (map snd $ M.toList kblocks) !! 0
+
+    -- Microblock was rejected on graph node (received from poa)
+    Left _ :: Either Text [D.Microblock] <- makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.GetMBlocksForKBlockRequest kblockHash
+
+    -- Check transaction pending on graph node, it must to be the same as it was
+    txPending :: [D.Transaction] <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
+    (sort txPending) `shouldBe` (sort transactions)
+
+-- testMicroblockWithInvalidTransactions :: Test
+-- testMicroblockWithInvalidTransactions = TestCase $ withNodesManager $ \mgr -> do

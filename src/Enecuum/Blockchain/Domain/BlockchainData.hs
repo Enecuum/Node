@@ -1,13 +1,12 @@
 module Enecuum.Blockchain.Domain.BlockchainData where
 
-import qualified Data.Map                              as Map
 import           Data.HGraph.StringHashable            (StringHash)
-
-import           Enecuum.Blockchain.Domain.Crypto      (PublicKey)
+import qualified Data.Map                              as Map
 import           Enecuum.Blockchain.Domain.Graph       (GraphVar)
-import           Enecuum.Blockchain.Domain.KBlock      (KBlock, BlockNumber)
+import           Enecuum.Blockchain.Domain.KBlock      (BlockNumber, KBlock)
 import           Enecuum.Blockchain.Domain.Transaction (Transaction)
 import           Enecuum.Blockchain.Domain.Types       (Amount)
+import           Enecuum.Core.Crypto.Crypto            (PublicKey)
 import           Enecuum.Core.Types                    (StateVar)
 import           Enecuum.Prelude
 

@@ -5,7 +5,7 @@ import qualified Data.Serialize                       as S
 import qualified Enecuum.Assets.Blockchain.Generation as D
 import qualified Enecuum.Assets.Blockchain.Wallet     as D
 import qualified Enecuum.Blockchain.Domain            as D
-import           Enecuum.Blockchain.Domain.Crypto
+import           Enecuum.Core.Crypto.Crypto
 import qualified Enecuum.Blockchain.Language          as L
 import qualified Enecuum.Blockchain.Lens              as Lens
 import qualified Enecuum.Core.Interpreters            as I
@@ -14,6 +14,7 @@ import           Enecuum.Prelude
 import           Test.Hspec                           (Spec, describe, shouldBe)
 import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
 import           Test.HUnit                           (Test (..))
+import           Enecuum.Tests.Wrappers
 
 wallets :: [KeyPair]
 wallets =
@@ -25,7 +26,7 @@ wallets =
     ]
 
 spec :: Spec
-spec = do
+spec = fastTest $ do
     describe "Signature" $ fromHUnitTest $ TestList
         [ TestLabel "Verify transaction signature" testVerifySignedTransaction
         , TestLabel "Verify microblock signature" testVerifySignedMicroblock

@@ -10,11 +10,11 @@ import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
 import           Enecuum.TestData.Nodes.Scenarios
 import           Enecuum.Testing
 import qualified Enecuum.Testing.RLens as RLens
-
+import           Enecuum.Tests.Wrappers
 
 -- Tests disabled
 spec :: Spec
-spec = describe "Retry & TCP-like connections test" $ fromHUnitTest $ TestList
+spec = fastTest $ describe "Retry & TCP-like connections test" $ fromHUnitTest $ TestList
     [TestLabel "Retry & TCP-like connections test (Ping-Pong 2)" pingPong2]
 
 pingPong2 :: Test

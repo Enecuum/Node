@@ -36,7 +36,7 @@ newtype NextForMe = NextForMe StringHash
 
 
 data GetRoutingMessages = GetRoutingMessages
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)  
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | Network messages
 data Ping = Ping
@@ -48,7 +48,7 @@ data Pong = Pong
 data Stop = Stop
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-  
+
 -- | client - graph node interaction
 newtype CreateTransaction = CreateTransaction D.Transaction
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -75,6 +75,8 @@ data NBlockPacketGeneration = NBlockPacketGeneration {number :: D.BlockNumber, t
 data ForeverChainGeneration = ForeverChainGeneration
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
+data GetPrevHash = GetPrevHash
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | client - PoA interaction
 data GetTransactionPending = GetTransactionPending

@@ -20,6 +20,7 @@ import           Enecuum.Core.HGraph.Language
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit (fromHUnitTest)
 import           Test.QuickCheck (property)
+import           Enecuum.Tests.Wrappers
 
 data SomeStructure = SomeStructure
     { someData :: String
@@ -31,7 +32,7 @@ instance StringHashable SomeStructure where
     toHash = toHashGeneric
 
 spec :: Spec
-spec = do
+spec = fastTest $ do
     describe "HGraph eDSL tests" $ fromHUnitTest $ TestList
         [ TestLabel "Addition of new node / getting node by content" testNewNode
         , TestLabel "Getting node by hash"                           testGetNodeByHash

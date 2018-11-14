@@ -16,6 +16,7 @@ import qualified Enecuum.Language     as L
 import qualified Enecuum.Domain       as D
 import qualified Enecuum.Runtime      as R
 import           Enecuum.Interpreters
+import           Enecuum.Tests.Wrappers
 
 createNodeRuntime :: IO R.NodeRuntime
 createNodeRuntime = R.createVoidLoggerRuntime >>= R.createCoreRuntime >>= (`R.createNodeRuntime` M.empty)
@@ -28,7 +29,7 @@ data ErrResponse = ErrResponse deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- Tests disabled
 spec :: Spec
-spec = describe "RpcServer" $ fromHUnitTest $ TestList
+spec = fastTest $ describe "RpcServer" $ fromHUnitTest $ TestList
     [TestLabel "Test of rpc server/ok" rpcServerTestOk, TestLabel "Test of rpc server/err" rpcServerTestErr]
 
 okHandler :: OkRequest -> L.NodeL OkResponse

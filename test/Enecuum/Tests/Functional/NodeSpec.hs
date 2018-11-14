@@ -6,12 +6,11 @@ import Enecuum.Prelude
 import           Test.Hspec
 import           Enecuum.TestData.Nodes.Scenarios
 import           Enecuum.Testing
-
 import qualified Enecuum.Testing.RLens as RLens
-
+import           Enecuum.Tests.Wrappers
 
 spec :: Spec
-spec = describe "Nodes test" $ do
+spec = fastTest $ describe "Nodes test" $ do
     it "Master node interacts with boot node" $ do
 
         runtime                          <- createTestRuntime

@@ -4,7 +4,6 @@ import           Enecuum.Prelude
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
 import           Enecuum.Config
-import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.GraphNode.Logic
 import           Enecuum.Assets.Nodes.GraphNode.Config
@@ -15,12 +14,14 @@ graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()
 graphNodeTransmitter nodeCfg = do
     L.nodeTag "graphNodeTransmitter"
     eNodeData <- graphNodeInitialization nodeCfg
-    either L.logError graphNodeTransmitter' eNodeData
+    either L.logError (graphNodeTransmitter' nodeCfg) eNodeData
 
-graphNodeTransmitter' :: GraphNodeData -> L.NodeDefinitionL ()
-graphNodeTransmitter' nodeData = do
-
-    L.serving D.Udp graphNodeTransmitterUdpPort $ do
+graphNodeTransmitter' :: NodeConfig GraphNode -> GraphNodeData -> L.NodeDefinitionL ()
+graphNodeTransmitter' cfg nodeData = do
+    case (_rpcSynco cfg) of
+        Nothing -> pure ()
+        Just rpcSyncoAddress -> L.process $ forever $ graphSynchro nodeData rpcSyncoAddress
+    L.serving D.Udp (_udpPort cfg) $ do
         -- network
         L.handler   methodPing
         -- PoA interaction
@@ -28,11 +29,11 @@ graphNodeTransmitter' nodeData = do
         -- PoW interaction
         L.handler $ acceptKBlock nodeData
 
-    L.serving D.Tcp graphNodeTransmitterTcpPort $
+    L.serving D.Tcp (_tcpPort cfg) $
         -- network
         L.handler   methodPing
 
-    L.serving D.Rpc graphNodeTransmitterRpcPort $ do
+    L.serving D.Rpc ((\(D.Address _ port) -> port) $ _rpc cfg) $ do
         -- network
         L.method    rpcPingPong
         L.method  $ handleStopNode nodeData
