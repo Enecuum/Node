@@ -79,7 +79,10 @@ acceptKBlock nodeData kBlock _ = acceptKBlock' nodeData kBlock
 
 -- | Accept mBlock
 acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Udp -> L.NodeL ()
-acceptMBlock nodeData mBlock _ = do
+acceptMBlock nodeData mBlock _ = acceptMBlock' nodeData mBlock
+
+acceptMBlock' :: GraphNodeData -> D.Microblock -> L.NodeL ()
+acceptMBlock' nodeData mBlock = do
     let microblockValid  = L.verifyMicroblock mBlock
     unless microblockValid $ do
         L.logInfo $ "Microblock is rejected: " +|| toHash mBlock ||+ "."

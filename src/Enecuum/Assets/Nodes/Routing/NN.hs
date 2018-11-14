@@ -91,7 +91,7 @@ acceptSendTo :: NNNodeData -> SendMsgTo -> D.Connection D.Udp -> L.NodeL ()
 acceptSendTo nodeData message conn = do
     L.close conn
     routingData <- L.readVarIO (nodeData^.routingRuntime)
-    forwardIfNeeded routingData message $ \(SendMsgTo _ _ mes) -> do
+    udpForwardIfNeeded routingData message $ \(SendMsgTo _ _ mes) -> do
         L.atomically $ L.modifyVar (nodeData ^. routingMessages) (mes :)
         L.logInfo "I'm receiver."
 

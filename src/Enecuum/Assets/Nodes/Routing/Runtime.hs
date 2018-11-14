@@ -14,6 +14,8 @@ import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude
 import           Enecuum.Research.ChordRouteMap
 import           Enecuum.Assets.Nodes.Routing.Messages
+import qualified Data.Sequence as Seq
+import qualified Data.Set      as Set
 
 type BnAddress = NodeAddress
 
@@ -23,6 +25,7 @@ data RoutingRuntime = RoutingRuntime
     , _nodeId      :: NodeId
     , _bnAddress   :: NodeAddress
     , _connectMap  :: D.StateVar (ChordRouteMap NodeAddress)
+    , _msgFilter   :: D.StateVar (Seq.Seq (Set.Set D.StringHash))
     }
 makeFieldsNoPrefix ''RoutingRuntime
 
@@ -30,7 +33,16 @@ makeRoutingRuntimeData :: NodePorts -> NodeId -> BnAddress -> L.NodeL RoutingRun
 makeRoutingRuntimeData nodePorts' nodeId' bnAdress' = do
     myHostAddress <- L.newVarIO Nothing
     myConnectMap  <- L.newVarIO mempty
-    pure $ RoutingRuntime myHostAddress nodePorts' nodeId' bnAdress' myConnectMap
+    msgFilter     <- L.newVarIO $ Seq.fromList [Set.empty, Set.empty, Set.empty]
+    pure $ RoutingRuntime myHostAddress nodePorts' nodeId' bnAdress' myConnectMap msgFilter
+
+isInFilter routingRuntime messageHash = do
+    sets <- L.readVar $ routingRuntime ^. msgFilter
+    pure $ any (\i -> messageHash `Set.member` Seq.index sets i) [0..2]
+
+registerMsg routingRuntime messageHash =
+    L.modifyVar (routingRuntime ^. msgFilter) (Seq.adjust (Set.insert messageHash) 0)
+
 
 getMyNodeAddress :: RoutingRuntime -> L.NodeL (Maybe NodeAddress)
 getMyNodeAddress routingRuntime = do
@@ -82,6 +94,10 @@ routingWorker routingRuntime = do
     periodic (1000 * 1000)  $ clearingOfConnects routingRuntime
     periodic (1000 * 10000) $ successorsRequest  routingRuntime
     periodic (1000 * 1000)  $ sendHelloToPrevius routingRuntime
+    periodic (1000 * 1000)  $
+        L.modifyVarIO (routingRuntime ^. msgFilter) $ 
+            \seq -> Set.empty Seq.<| Seq.deleteAt 2 seq
+    
     periodic (1000 * 1000)  $ do
         deadNodes <- pingConnects =<< getConnects routingRuntime
         forM_ deadNodes $ \hash -> do
@@ -196,7 +212,28 @@ acceptConnectResponse routingRuntime address con = do
             L.modifyVarIO (routingRuntime ^. connectMap) (addToMap nId address)
     L.close con
 
-forwardIfNeeded routingRuntime msg f = do
+udpBroadcastRecivedMessage
+    :: (ToJSON msg, Typeable msg, Serialize msg)
+    => RoutingRuntime -> (msg -> L.NodeL ()) -> msg ->  D.Connection D.Udp -> L.NodeL ()
+udpBroadcastRecivedMessage routingRuntime handler message conn = do
+    L.close conn
+    needToProcessing <- L.atomically $ do
+        let messageHash = D.toHashGeneric message
+        familiarMessage <- isInFilter routingRuntime messageHash
+        unless familiarMessage $ registerMsg routingRuntime messageHash
+        pure $ not familiarMessage
+    
+    when needToProcessing $ do
+        -- resending of message
+        connectsToResending <- fromChordRouteMap <$> L.readVarIO (routingRuntime ^. connectMap)
+        
+        forM_ connectsToResending $ \nodeAddress ->
+            void $ L.notify (getUdpAddress . snd $ nodeAddress) message
+
+        -- processing of message
+        handler message
+
+udpForwardIfNeeded routingRuntime msg f = do
     let reciverId = msg^.nodeId
     let myId      = routingRuntime^.nodeId
     let time      = msg^.timeToLive

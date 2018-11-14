@@ -9,6 +9,7 @@ import           Enecuum.Assets.Nodes.GraphNode.Logic
 import           Enecuum.Assets.Nodes.GraphNode.Config
 import           Enecuum.Assets.Nodes.GraphNode.Database
 import           Enecuum.Assets.Nodes.Routing.Messages
+import           Enecuum.Assets.Nodes.Routing.Runtime
 
 -- | Start of graph node
 graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()
@@ -23,6 +24,13 @@ graphNodeTransmitter' cfg nodeData = do
             (Enecuum.Assets.Nodes.GraphNode.Config._udpPort cfg)
             (Enecuum.Assets.Nodes.GraphNode.Config._tcpPort cfg )
             ((\(D.Address _ port) -> port) $ _rpc cfg)
+    -- TODO: read from config
+    let myHash      = D.toHashGeneric myNodePorts
+    let bnPorts     = makeNodePorts1000 5000
+    let bnId        = D.toHashGeneric bnPorts
+    let bnAddress   = NodeAddress "127.0.0.1" bnPorts bnId
+    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash bnAddress
+
     case _rpcSynco cfg of
         Nothing -> pure ()
         Just rpcSyncoAddress -> L.process $ forever $ graphSynchro nodeData rpcSyncoAddress
@@ -30,9 +38,9 @@ graphNodeTransmitter' cfg nodeData = do
         -- network
         L.handler   methodPing
         -- PoA interaction
-        L.handler $ acceptMBlock nodeData
+        L.handler $ udpBroadcastRecivedMessage routingData (acceptMBlock' nodeData)
         -- PoW interaction
-        L.handler $ acceptKBlock nodeData
+        L.handler $ udpBroadcastRecivedMessage routingData (acceptKBlock' nodeData)
 
     L.serving D.Tcp (myNodePorts ^. tcpPort) $
         -- network
@@ -77,5 +85,6 @@ graphNodeTransmitter' cfg nodeData = do
         L.awaitSignal $ nodeData ^. checkPendingSignal
         blockFound <- processKBlockPending' nodeData
         when blockFound $ L.writeVarIO (nodeData ^. checkPendingSignal) True
-
+    
+    routingWorker routingData
     L.awaitNodeFinished nodeData
