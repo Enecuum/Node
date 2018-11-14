@@ -31,9 +31,11 @@ testRouting = TestCase $ withNodesManager $ \mgr -> do
     void $ startNode Nothing mgr A.bnNode
     let ports                 = [5001..5010]
     let receiverIds           = [D.toHashGeneric $ makeNodePorts1000 x| x <- [5002..5010]]
-    let receiverRpcAddresses  = [D.Address A.localhost ((makeNodePorts1000 x) ^. rpcPort)| x <- [5002..5010]]
-    let transmitterUdpAddress = D.Address A.localhost ((makeNodePorts1000 5001) ^. udpPort)
-    forM_ ports (startNode Nothing mgr . A.nnNode . Just)
+    let receiverRpcAddresses  = [D.Address A.localhost (makeNodePorts1000 x ^. rpcPort)| x <- [5002..5010]]
+    let transmitterUdpAddress = D.Address A.localhost (makeNodePorts1000 5001 ^. udpPort)
+    forM_ ports $ \port -> do
+        threadDelay $ 1000 * 10
+        startNode Nothing mgr . A.nnNode . Just $ port
 
     threadDelay $ 1000 * 1000
     -- forM receivers $ \receiver -> modifyIORef connMgr $ checkFree receiver A.UDPs
