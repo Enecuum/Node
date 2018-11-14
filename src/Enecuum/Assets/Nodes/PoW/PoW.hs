@@ -10,7 +10,10 @@ import qualified Data.Aeson                           as J
 import           Data.HGraph.StringHashable           (StringHash (..), toHash)
 import qualified Enecuum.Assets.Blockchain.Generation as A
 import qualified Enecuum.Assets.Nodes.CLens           as CLens
-import qualified Enecuum.Assets.Nodes.Messages        as Msgs
+import           Enecuum.Assets.Nodes.Address
+import           Data.HGraph.StringHashable (StringHash (..), toHash)
+import qualified Enecuum.Assets.Nodes.Messages as Msgs
+import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.PoW.Config
 import           Enecuum.Config
@@ -46,16 +49,16 @@ kBlockProcess graphNodeUdpAddress nodeData = do
     prevKBlockNumber    <- L.readVarIO $ nodeData ^. prevNumber
 
     (lastHash, kBlocks) <- A.generateKBlocks prevKBlockHash prevKBlockNumber
-    L.logInfo $ "Last hash: " +|| lastHash ||+ "."
+    L.logInfo $ "Last hash: " +|| lastHash ||+ ", blocks count: " +|| length kBlocks ||+ "."
 
     L.writeVarIO (nodeData ^. prevHash) lastHash
     L.writeVarIO (nodeData ^. prevNumber) $ prevKBlockNumber + fromIntegral (length kBlocks)
 
     gap <- L.readVarIO $ nodeData ^. blocksDelay
-    for_ kBlocks $ \ kBlock -> L.withConnection D.Udp graphNodeUdpAddress $ \conn -> do
-            L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-            void $ L.send conn kBlock
-            when (gap > 0) $ L.delay gap
+    void $ L.withConnection D.Tcp graphNodeTransmitterTcpAddress $ \conn -> for_ kBlocks $ \ kBlock -> do
+        L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
+        void $ L.send conn kBlock
+        when (gap > 0) $ L.delay gap
 
 foreverChainGenerationHandle :: PoWNodeData -> Msgs.ForeverChainGeneration -> L.NodeL Msgs.SuccessMsg
 foreverChainGenerationHandle powNodeData _ = do

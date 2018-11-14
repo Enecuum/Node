@@ -21,7 +21,7 @@ graphNodeTransmitter' cfg nodeData = do
     case (_rpcSynco cfg) of
         Nothing -> pure ()
         Just rpcSyncoAddress -> L.process $ forever $ graphSynchro nodeData rpcSyncoAddress
-    L.serving D.Udp (_udpPort cfg) $ do
+    L.serving D.Tcp (_tcpPort cfg) $ do
         -- network
         L.handler   methodPing
         -- PoA interaction
@@ -29,9 +29,9 @@ graphNodeTransmitter' cfg nodeData = do
         -- PoW interaction
         L.handler $ acceptKBlock nodeData
 
-    L.serving D.Tcp (_tcpPort cfg) $
-        -- network
-        L.handler   methodPing
+    -- L.serving D.Udp graphNodeTransmitterUdpPort $
+    --     -- network
+    --     L.handler   methodPing
 
     L.serving D.Rpc ((\(D.Address _ port) -> port) $ _rpc cfg) $ do
         -- network
@@ -51,7 +51,7 @@ graphNodeTransmitter' cfg nodeData = do
         L.methodE $ acceptChainFromTo nodeData
         L.methodE $ getMBlockForKBlocks nodeData
         L.method  $ synchronize nodeData
-        
+
         -- PoW interaction
         L.method  $ getKBlockPending nodeData
 

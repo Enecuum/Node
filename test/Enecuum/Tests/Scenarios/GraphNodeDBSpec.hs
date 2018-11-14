@@ -32,12 +32,12 @@ dumpAndRestoreGraphTest = do
             { A._useDatabase         = True
             , A._dbModelName         = dbPath
             , A._useEnqHomeDir       = False
-            , A._dbOptions           = dbOpts 
+            , A._dbOptions           = dbOpts
             , A._stopOnDatabaseError = True
             }
     let cfg = A.defaultNodeConfig { A._dbConfig = dbConfig }
-    let blocksCount = 5
-    let blocksDelay = 1000
+    let blocksCount = 10
+    let blocksDelay = 0
     let loggerCfg = Nothing
 
     TestCase $ withDbAbsence dbPath $ withNodesManager $ \mgr -> do
@@ -55,7 +55,7 @@ dumpAndRestoreGraphTest = do
         -- Generating some blocks and checking they are generated.
         _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration blocksCount blocksDelay
         waitForBlocks blocksCount A.graphNodeTransmitterRpcAddress
-        
+
         Right topKBlock1 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
         topKBlock1 ^. Lens.number `shouldBe` blocksCount
 
@@ -81,4 +81,3 @@ dumpAndRestoreGraphTest = do
 
         Right topKBlock2 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
         topKBlock1 `shouldBe` topKBlock2
-

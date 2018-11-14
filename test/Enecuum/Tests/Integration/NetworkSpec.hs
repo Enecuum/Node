@@ -11,7 +11,7 @@ import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
 import qualified Enecuum.Language              as L
 
-
+import qualified Enecuum.Testing.Integrational as I
 import           Enecuum.Interpreters
 import qualified Enecuum.Runtime as Rt
 import qualified Enecuum.Domain                as D
@@ -22,19 +22,21 @@ import           Enecuum.Tests.Wrappers
 -- Tests disabled
 spec :: Spec
 spec = fastTest $ describe "Network tests" $ fromHUnitTest $ TestList
-    [ TestLabel "udp ping-pong test (successful sending udp msg by connect & address)"  (pingPongTest                     D.Udp 4000 5000)
+    [ TestLabel "tcp one message test"                                                  (oneMessageTest                   D.Tcp 3998 4998)
+    , TestLabel "udp one message test"                                                  (oneMessageTest                   D.Udp 3999 4999)
+    , TestLabel "udp ping-pong test"                                                    (pingPongTest                     D.Udp 4000 5000)
     , TestLabel "tcp ping-pong test"                                                    (pingPongTest                     D.Tcp 4001 5001)
     , TestLabel "fail sending too big msg by udp connect"                               (testSendingBigMsgByConnect       D.Udp 4002 5002)
     , TestLabel "fail sending too big msg by tcp connect"                               (testSendingBigMsgByConnect       D.Tcp 4003 5003)
     , TestLabel "fail sending too big udp msg by Address"                               (testSendingBigUdpMsgByAddress          4004 5004)
     , TestLabel "fail sending msg by closed udp connect"                                (testSendingMsgToClosedConnection D.Udp 4005 5005)
     , TestLabel "fail sending msg by closed tcp connect"                                (testSendingMsgToClosedConnection D.Tcp 4006 5006)
-  --  This functionality is not supported!
-  --, TestLabel "fail sending udp msg to nonexistent address"                           (testSendingMsgToNonexistentAddress         5007)
-  --, TestLabel "fail udp connecting to nonexistent address."                           (testConnectToNonexistentAddress D.Udp      5008)
+--  This functionality is not supported!
+--, TestLabel "fail sending udp msg to nonexistent address"                           (testSendingMsgToNonexistentAddress         5007)
+--, TestLabel "fail udp connecting to nonexistent address."                           (testConnectToNonexistentAddress D.Udp      5008)
     , TestLabel "fail tcp connecting to nonexistent address."                           (testConnectToNonexistentAddress D.Tcp      5009)
-  --  This functionality is not supported!
-  --, TestLabel "fail udp connecting to tcp server."                                    (testConnectFromTo         D.Tcp D.Udp 4010 5010)
+--  This functionality is not supported!
+--, TestLabel "fail udp connecting to tcp server."                                    (testConnectFromTo         D.Tcp D.Udp 4010 5010)
     , TestLabel "fail tcp connecting to udp server."                                    (testConnectFromTo         D.Udp D.Tcp 4011 5011)
     , TestLabel "release of udp serving resources"                                      (testReleaseOfResources          D.Udp 4012 5012)
     , TestLabel "release of tcp serving resources"                                      (testReleaseOfResources          D.Tcp 4013 5013)
@@ -52,9 +54,9 @@ bigMsg = BigMsg [1..5000]
 createNodeRuntime :: IO Rt.NodeRuntime
 createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= (\a -> Rt.createNodeRuntime a M.empty)
 
---
+ --
 testReleaseOfResources :: (Applicative f, L.Serving c (f ())) =>
-                                c -> D.PortNumber -> D.PortNumber -> Test
+                                 c -> D.PortNumber -> D.PortNumber -> Test
 testReleaseOfResources protocol serverPort succPort =
     runServingScenarion serverPort succPort $ \_ succAddr nodeRt1 _ ->
         runNodeDefinitionL nodeRt1 $ do
@@ -81,9 +83,7 @@ testConnectFromTo prot1 prot2 serverPort succPort =
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
             conn <- L.open prot2 serverAddr $ pure ()
-            res  <- L.send conn Success
-            when (Left D.ConnectionClosed == res) $
-                void $ L.notify succAddr Success
+            unless (isJust conn) $ void $ L.notify succAddr Success
 
 testConnectToNonexistentAddress :: (L.Send
     (D.Connection con) (Free L.NetworkingF),
@@ -94,9 +94,7 @@ testConnectToNonexistentAddress protocol succPort =
     runServingScenarion succPort succPort $ \_ succAddr nodeRt1 _ ->
         runNodeDefinitionL nodeRt1 $ do
             conn <- L.open protocol (D.Address "127.0.0.1" 300) $ pure ()
-            res  <- L.send conn Success
-            when (Left D.ConnectionClosed == res) $
-                void $ L.notify succAddr Success
+            unless (isJust conn) $ void $ L.notify succAddr Success
 
 testSendingMsgToNonexistentAddress :: D.PortNumber -> Test
 testSendingMsgToNonexistentAddress succPort =
@@ -119,7 +117,7 @@ testSendingMsgToClosedConnection protocol serverPort succPort =
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            conn <- L.open protocol serverAddr $ pure ()
+            Just conn <- L.open protocol serverAddr $ pure ()
             L.close conn
             res  <- L.send conn Success
             when (Left D.ConnectionClosed == res) $
@@ -137,7 +135,7 @@ testSendingBigMsgByConnect protocol serverPort succPort =
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            conn <- L.open protocol serverAddr $ pure ()
+            Just conn <- L.open protocol serverAddr $ pure ()
             res  <- L.send conn bigMsg
             when (Left D.TooBigMessage == res) $
                 void $ L.notify succAddr Success
@@ -170,18 +168,36 @@ pingPongTest protocol serverPort succPort =
         
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
-            conn <- L.open protocol serverAddr $ do
+            Just conn <- L.open protocol serverAddr $ do
                 L.handler (pingHandle succAddr)
                 L.handler (pongHandle succAddr)
             void $ L.send conn $ Ping 0
+
+oneMessageTest protocol serverPort succPort =
+    runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
+        runNodeDefinitionL nodeRt1 $
+            L.serving protocol serverPort $ L.handler (accessSuccess succAddr)
+        threadDelay 5000
+        runNodeDefinitionL nodeRt2 $ do
+            Just conn <- L.open protocol serverAddr $ pure ()
+            res <- L.send conn Success
+            case res of 
+                Left err -> L.logInfo $ "Error: " <> show err
+                Right _  -> L.logInfo   "Sending ok."
+accessSuccess succAddr Success conn = do
+    void $ L.notify succAddr Success
+    L.close conn
 
 runServingScenarion
     :: D.PortNumber -> D.PortNumber -> (D.Address -> D.Address -> Rt.NodeRuntime -> Rt.NodeRuntime -> IO ()) -> Test
 runServingScenarion serverPort succPort f = TestCase $ do
     let serverAddr = D.Address "127.0.0.1" serverPort
         succAddr    = D.Address "127.0.0.1" succPort
-    nodeRt1 <- createNodeRuntime
-    nodeRt2 <- createNodeRuntime
+    --loger1  <- Rt.createLoggerRuntime I.consoleLoggerConfig
+    nodeRt1 <- createNodeRuntime --loger1
+
+    --loger2 <- Rt.createLoggerRuntime I.consoleLoggerConfig
+    nodeRt2 <- createNodeRuntime --loger2
     void $ forkIO $ f serverAddr succAddr nodeRt1 nodeRt2
     ok <- succesServer succPort
     runNodeDefinitionL nodeRt1 $ L.stopServing serverPort
@@ -205,16 +221,19 @@ pongHandle succAddr (Pong i) conn = do
         void $ L.notify succAddr Success
         L.close conn
 
-emptFunc :: D.Connection D.Udp -> D.ConnectionVar D.Udp -> IO ()
-emptFunc _ _ = pure ()
+emptFunc = Con.ConnectionRegister (\_ -> pure ()) (\_ -> pure ())
 
 succesServer :: D.PortNumber -> IO Bool
 succesServer port = do
+    let logger = Rt.RuntimeLogger
+            { Rt.logMessage' = \lvl msg -> putStrLn $ "[" <> show lvl <> "] " <> msg
+            }
     mvar <- newEmptyMVar
     void $ forkIO $ do
         threadDelay 1000000
         putMVar mvar False
-    ch <- Con.startServer port (M.singleton (D.toTag Success) (\_ _ -> putMVar mvar True)) emptFunc putTextLn
+    counter <- newIORef 0
+    Just ch <- Con.startServer logger counter port (M.singleton (D.toTag Success) (\_ (_ :: D.Connection D.Udp) -> putMVar mvar True)) emptFunc
     ok <- takeMVar mvar
-    Enecuum.Prelude.atomically $ Con.stopServer ch
+    Con.stopServer ch
     pure ok

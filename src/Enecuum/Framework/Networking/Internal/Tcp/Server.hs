@@ -1,30 +1,26 @@
 module Enecuum.Framework.Networking.Internal.Tcp.Server (
       runTCPServer
-    , ServerComand(..)
     )  where
 
 import           Control.Concurrent (forkFinally)
-import           Control.Concurrent.Async (race)
 import           Control.Monad
 import           Enecuum.Prelude
 import           Network.Socket hiding (recvFrom)
--- import           Network.Socket.ByteString
-import           Control.Concurrent.STM.TChan
--- import           Control.Concurrent.Chan
 import           Network (PortID (..), listenOn)
-import           Enecuum.Domain as D
+import qualified Enecuum.Core.Runtime      as R
+import qualified Enecuum.Framework.Runtime as R
 
-runTCPServer :: TChan D.ServerComand -> PortNumber -> (Socket -> IO ()) -> IO ()
-runTCPServer chan port handler =
-    bracket ((listenOn . PortNumber) port) close $ \sock ->
-        finally (serv chan (acceptConnects sock handler)) (do
-            -- print $ "port" ++ show port
-            close sock)
-
-serv :: TChan a -> IO b -> IO ()
-serv chan f = void $ race (void $ atomically $ readTChan chan) f
+runTCPServer :: R.RuntimeLogger -> PortNumber -> (Socket -> IO ()) -> IO (Maybe R.ServerHandle)
+runTCPServer logger port handler = do
+    eListenSock <- try $ listenOn (PortNumber port)
+    case eListenSock of
+        Left (err :: SomeException) -> R.logError' logger (show err) >> pure Nothing
+        Right listenSock -> do
+            acceptWorkerId <- forkIO $ acceptConnects listenSock handler
+            listenSockVar  <- newTMVarIO listenSock
+            pure $ Just $ R.ServerHandle listenSockVar acceptWorkerId
 
 acceptConnects :: forall a b . Socket -> (Socket -> IO a) -> IO b
-acceptConnects sock handler = forever $ do
-    (conn, _) <- accept sock
-    void $ forkFinally (handler conn) (\_ -> close conn)
+acceptConnects listenSock handler = forever $ do
+    (connSock, _) <- accept listenSock
+    void $ forkFinally (handler connSock) (\_ -> close connSock)
