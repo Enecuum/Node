@@ -18,6 +18,9 @@ import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 
 import qualified Enecuum.Assets.Nodes.Address as A
 import           Enecuum.Assets.Nodes.Messages
+import           Enecuum.Assets.Nodes.Routing.Messages
+import           Enecuum.Assets.Nodes.Routing.Runtime
+
 import           Enecuum.Assets.Nodes.Methods (rpcPingPong, handleStopNode)
 import qualified Enecuum.Assets.Blockchain.Generation as A
 
@@ -34,7 +37,10 @@ data PoANode = PoANode
 
 data instance NodeConfig PoANode = PoANodeConfig
     { _dummyOption :: Int
-    , _poaRPCPort     :: D.PortNumber
+    , _poaRpcPort  :: D.PortNumber
+    , _poaUdpPort  :: D.PortNumber
+    , _poaTcpPort  :: D.PortNumber
+    , _poaBnAddress :: D.Address
     }
     deriving (Show, Generic)
 
@@ -50,7 +56,7 @@ instance FromJSON (NodeConfig PoANode)   where parseJSON = A.genericParseJSON no
 instance ToJSON   (NodeScenario PoANode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario PoANode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
-defaultPoANodeConfig = PoANodeConfig 42 A.poaNodeRpcPort
+defaultPoANodeConfig = PoANodeConfig 42 A.poaNodeRpcPort A.poaNodeUdpPort A.poaNodeTcpPort A.bnAddress
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
@@ -90,11 +96,22 @@ poaNode :: NodeScenario PoANode -> NodeConfig PoANode -> L.NodeDefinitionL ()
 poaNode role cfg = do
     L.nodeTag "PoA node"
     L.logInfo "Starting of PoA node"
-    poaData <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
+    let myNodePorts = NodePorts (_poaUdpPort cfg) (_poaTcpPort cfg) (_poaRpcPort cfg)
+    let D.Address bnHost bnPort = _poaBnAddress cfg
+    let bnPorts     = makeNodePorts1000 bnPort
+    let bnId        = D.toHashGeneric bnPorts
+
+    -- TODO: read from config
+    let myHash      = D.toHashGeneric myNodePorts
+
+    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash (NodeAddress bnHost bnPorts bnId)
+    poaData     <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
+
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    L.serving D.Rpc (_poaRPCPort cfg) $ do
+    L.serving D.Rpc (_poaRpcPort cfg) $ do
+        rpcRoutingHandlers routingData
         L.method   rpcPingPong
         L.method $ handleStopNode poaData
 
@@ -105,4 +122,5 @@ poaNode role cfg = do
             L.atomically $ L.modifyVar (poaData ^. transactionPending) ( ++ tx )
         whenRightM (L.makeRpcRequest A.graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> sendMicroblock poaData block role
 
+    routingWorker routingData
     L.awaitNodeFinished poaData

@@ -20,8 +20,8 @@ spec = slowTest $ describe "Synchronization tests" $ fromHUnitTest $ TestList
 testNodeNet :: Test
 testNodeNet = TestCase $ withNodesManager $ \mgr -> do
     -- assign config
-    let graphNodeTransmitterConfig = A.defaultNodeConfig {A._rpc = A.graphNodeTransmitterRpcAddress}
-    let graphNodeReceiverConfig = A.defaultNodeConfig { A._rpc = A.graphNodeReceiverRpcAddress, A._rpcSynco = Just A.graphNodeTransmitterRpcAddress}
+    let graphNodeTransmitterConfig = A.defaultNodeConfig {A._rpcPort = A.graphNodeTransmitterRpcPort}
+    let graphNodeReceiverConfig = A.defaultNodeConfig { A._rpcPort = A.graphNodeReceiverRpcPort, A._rpcSynco = Just A.graphNodeTransmitterRpcAddress}
     let graphNodeTransmitterRpcAddress = A.graphNodeTransmitterRpcAddress
     let graphNodeReceiverRpcAddress = A.graphNodeReceiverRpcAddress
 

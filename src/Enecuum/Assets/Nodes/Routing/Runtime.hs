@@ -166,7 +166,7 @@ udpRoutingHandlers routingRuntime = do
     L.handler $ acceptNextForYou        routingRuntime
     L.handler $ acceptHelloFromBn       routingRuntime
 
-rpcRotingHandlers routingRuntime = L.method rpcPingPong
+rpcRoutingHandlers routingRuntime = L.method rpcPingPong
 
 acceptHelloFromBn :: RoutingRuntime -> HelloToBnResponce -> D.Connection D.Udp -> L.NodeL ()
 acceptHelloFromBn routingRuntime bnHello con = do
@@ -217,6 +217,9 @@ udpBroadcastRecivedMessage
     => RoutingRuntime -> (msg -> L.NodeL ()) -> msg ->  D.Connection D.Udp -> L.NodeL ()
 udpBroadcastRecivedMessage routingRuntime handler message conn = do
     L.close conn
+    whenM (sendUdpBroadcast routingRuntime message) $ handler message
+
+sendUdpBroadcast routingRuntime message = do
     needToProcessing <- L.atomically $ do
         let messageHash = D.toHashGeneric message
         familiarMessage <- isInFilter routingRuntime messageHash
@@ -229,9 +232,7 @@ udpBroadcastRecivedMessage routingRuntime handler message conn = do
         
         forM_ connectsToResending $ \nodeAddress ->
             void $ L.notify (getUdpAddress . snd $ nodeAddress) message
-
-        -- processing of message
-        handler message
+    pure needToProcessing 
 
 udpForwardIfNeeded routingRuntime msg f = do
     let reciverId = msg^.nodeId

@@ -22,19 +22,22 @@ graphNodeTransmitter' :: NodeConfig GraphNode -> GraphNodeData -> L.NodeDefiniti
 graphNodeTransmitter' cfg nodeData = do
     let myNodePorts = NodePorts
             (Enecuum.Assets.Nodes.GraphNode.Config._udpPort cfg)
-            (Enecuum.Assets.Nodes.GraphNode.Config._tcpPort cfg )
-            ((\(D.Address _ port) -> port) $ _rpc cfg)
+            (Enecuum.Assets.Nodes.GraphNode.Config._tcpPort cfg)
+            (Enecuum.Assets.Nodes.GraphNode.Config._rpcPort cfg)
+    let D.Address bnHost bnPort = Enecuum.Assets.Nodes.GraphNode.Config._bnAddress cfg
+    let bnPorts     = makeNodePorts1000 bnPort
+    let bnId        = D.toHashGeneric bnPorts
+
     -- TODO: read from config
     let myHash      = D.toHashGeneric myNodePorts
-    let bnPorts     = makeNodePorts1000 5000
-    let bnId        = D.toHashGeneric bnPorts
-    let bnAddress   = NodeAddress "127.0.0.1" bnPorts bnId
-    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash bnAddress
+    
+    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash (NodeAddress bnHost bnPorts bnId)
 
     case _rpcSynco cfg of
         Nothing -> pure ()
         Just rpcSyncoAddress -> L.process $ forever $ graphSynchro nodeData rpcSyncoAddress
     L.serving D.Udp (myNodePorts ^. udpPort) $ do
+        udpRoutingHandlers routingData
         -- network
         L.handler   methodPing
         -- PoA interaction
@@ -47,8 +50,8 @@ graphNodeTransmitter' cfg nodeData = do
         L.handler   methodPing
 
     L.serving D.Rpc (myNodePorts ^. rpcPort) $ do
+        rpcRoutingHandlers routingData
         -- network
-        L.method    rpcPingPong
         L.method  $ handleStopNode nodeData
 
         -- client interaction

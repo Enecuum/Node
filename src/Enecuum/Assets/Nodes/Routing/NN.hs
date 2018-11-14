@@ -123,7 +123,7 @@ nnNode' maybePort _ = do
         L.handler $ acceptSendTo          nodeData
 
     L.serving D.Rpc (routingRuntime ^. nodePorts . rpcPort) $ do
-        rpcRotingHandlers routingRuntime
+        rpcRoutingHandlers routingRuntime
         L.method  $  connectMapRequest    routingRuntime
         L.method  $  getRoutingMessages   nodeData
 
