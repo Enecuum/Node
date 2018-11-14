@@ -8,6 +8,7 @@ import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.GraphNode.Logic
 import           Enecuum.Assets.Nodes.GraphNode.Config
 import           Enecuum.Assets.Nodes.GraphNode.Database
+import           Enecuum.Assets.Nodes.Routing.Messages
 
 -- | Start of graph node
 graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()
@@ -18,10 +19,14 @@ graphNodeTransmitter nodeCfg = do
 
 graphNodeTransmitter' :: NodeConfig GraphNode -> GraphNodeData -> L.NodeDefinitionL ()
 graphNodeTransmitter' cfg nodeData = do
-    case (_rpcSynco cfg) of
+    let myNodePorts = NodePorts
+            (Enecuum.Assets.Nodes.GraphNode.Config._udpPort cfg)
+            (Enecuum.Assets.Nodes.GraphNode.Config._tcpPort cfg )
+            ((\(D.Address _ port) -> port) $ _rpc cfg)
+    case _rpcSynco cfg of
         Nothing -> pure ()
         Just rpcSyncoAddress -> L.process $ forever $ graphSynchro nodeData rpcSyncoAddress
-    L.serving D.Udp (_udpPort cfg) $ do
+    L.serving D.Udp (myNodePorts ^. udpPort) $ do
         -- network
         L.handler   methodPing
         -- PoA interaction
@@ -29,11 +34,11 @@ graphNodeTransmitter' cfg nodeData = do
         -- PoW interaction
         L.handler $ acceptKBlock nodeData
 
-    L.serving D.Tcp (_tcpPort cfg) $
+    L.serving D.Tcp (myNodePorts ^. tcpPort) $
         -- network
         L.handler   methodPing
 
-    L.serving D.Rpc ((\(D.Address _ port) -> port) $ _rpc cfg) $ do
+    L.serving D.Rpc (myNodePorts ^. rpcPort) $ do
         -- network
         L.method    rpcPingPong
         L.method  $ handleStopNode nodeData
