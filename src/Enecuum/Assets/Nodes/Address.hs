@@ -52,9 +52,9 @@ makeAddressByPorts :: NodePorts -> NodeAddress
 makeAddressByPorts ports = NodeAddress localhost ports (D.toHashGeneric ports)
 
 -- List of test and default port.
--- udp = 4000 + nodePort
--- tcp = 5000 + nodePort
--- rpc = 6000 + nodePort
+-- udp = nodePort - 1000
+-- tcp = nodePort
+-- rpc = nodePort + 1000
 
 -- bn = [0 .. 9]
 defaultBnNodePorts :: NodePorts
@@ -85,7 +85,7 @@ defaultGnNodePorts = makeNodePorts1000 5050
 defaultGnNodeAddress :: NodeAddress
 defaultGnNodeAddress = makeAddressByPorts defaultGnNodePorts
 
--- test reciwer node
+-- test receiver node
 defaultGnReceiverNodePorts :: NodePorts
 defaultGnReceiverNodePorts = makeNodePorts1000 5051
 
