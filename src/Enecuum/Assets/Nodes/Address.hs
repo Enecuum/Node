@@ -26,7 +26,7 @@ graphNodeReceiverRpcAddress :: D.Address
 graphNodeReceiverRpcAddress = D.Address "127.0.0.1" graphNodeReceiverRpcPort
 
 powNodeRpcPort :: D.PortNumber
-powNodeRpcPort = 2005
+powNodeRpcPort = 3005
 
 powNodeRpcAddress :: D.Address
 powNodeRpcAddress = D.Address "127.0.0.1" powNodeRpcPort

@@ -72,7 +72,7 @@ nBlockPacketGenerationHandle powNodeData (Msgs.NBlockPacketGeneration i gap) = d
 
 
 powNode :: L.NodeDefinitionL ()
-powNode = powNode' $ defaultPoWNodeConfig
+powNode = powNode' defaultPoWNodeConfig
 
 powNode' :: NodeConfig OldPoWNode -> L.NodeDefinitionL ()
 powNode' cfg = do

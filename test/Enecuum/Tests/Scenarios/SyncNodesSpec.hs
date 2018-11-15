@@ -5,6 +5,9 @@ module Enecuum.Tests.Scenarios.SyncNodesSpec where
 import           Data.Aeson
 import qualified Enecuum.Assets.Scenarios      as A
 import qualified Enecuum.Blockchain.Lens       as Lens
+import qualified Enecuum.Assets.Nodes.OldNodes.PoA      as Old
+import qualified Enecuum.Assets.Nodes.OldNodes.GN       as Old
+import qualified Enecuum.Assets.Nodes.OldNodes.PoW.PoW  as Old
 import qualified Enecuum.Domain                as D
 import           Enecuum.Prelude
 import           Enecuum.Testing.Integrational
@@ -26,17 +29,17 @@ testNodeNet = TestCase $ withNodesManager $ \mgr -> do
     let graphNodeReceiverRpcAddress = A.graphNodeReceiverRpcAddress
 
     -- Start nodes
-    void $ startNode Nothing mgr $ A.graphNodeTransmitter graphNodeTransmitterConfig
+    void $ startNode Nothing mgr $ Old.graphNodeTransmitter graphNodeTransmitterConfig
     waitForNode graphNodeTransmitterRpcAddress
 
-    void $ startNode Nothing mgr A.powNode
+    void $ startNode Nothing mgr Old.powNode
     waitForNode A.powNodeRpcAddress
 
-    void $ startNode Nothing mgr $ A.poaNode A.Good A.defaultPoANodeConfig
+    void $ startNode Nothing mgr $ Old.poaNode Old.Good Old.defaultPoANodeConfig
     waitForNode A.poaNodeRpcAddress
 
     -- void $ startNode Nothing mgr $ A.graphNodeReceiver graphNodeReceiverConfig
-    void $ startNode Nothing mgr $ A.graphNodeTransmitter graphNodeReceiverConfig
+    void $ startNode Nothing mgr $ Old.graphNodeTransmitter graphNodeReceiverConfig
     waitForNode graphNodeReceiverRpcAddress
 
     -- Ask pow node to generate n kblocks

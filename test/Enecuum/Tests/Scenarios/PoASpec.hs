@@ -3,9 +3,12 @@ module Enecuum.Tests.Scenarios.PoASpec where
 import qualified Data.Map                             as M
 import qualified Enecuum.Assets.Blockchain.Generation as A
 import qualified Enecuum.Assets.Scenarios             as A
-import qualified Enecuum.Domain                       as D
-import qualified Enecuum.Interpreters                 as I
-import qualified Enecuum.Language                     as L
+import qualified Enecuum.Assets.Nodes.OldNodes.PoA      as Old
+import qualified Enecuum.Assets.Nodes.OldNodes.GN       as Old
+import qualified Enecuum.Assets.Nodes.OldNodes.PoW.PoW  as Old
+import qualified Enecuum.Domain                         as D
+import qualified Enecuum.Interpreters                   as I
+import qualified Enecuum.Language                       as L
 import           Enecuum.Prelude
 import qualified Enecuum.Runtime                      as R
 import           Enecuum.Testing.Integrational
@@ -22,9 +25,9 @@ spec = slowTest $ describe "PoA" $ fromHUnitTest $ TestList
 
 testPoA :: Test
 testPoA = TestCase $ withNodesManager $ \mgr -> do
-    void $ startNode Nothing mgr $ A.graphNodeTransmitter A.defaultNodeConfig
-    void $ startNode Nothing mgr A.powNode
-    void $ startNode Nothing mgr $ A.poaNode A.Good A.defaultPoANodeConfig
+    void $ startNode Nothing mgr $ Old.graphNodeTransmitter A.defaultNodeConfig
+    void $ startNode Nothing mgr Old.powNode
+    void $ startNode Nothing mgr $ Old.poaNode Old.Good Old.defaultPoANodeConfig
 
     -- Generate and send transactions to graph node
     transactions <- I.runERandomL $ replicateM A.transactionsInMicroblock $ A.genTransaction A.Generated

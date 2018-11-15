@@ -9,8 +9,8 @@ import qualified Enecuum.Domain                               as D
 import qualified Enecuum.Blockchain.Lens                      as Lens
 
 import qualified Enecuum.Assets.Nodes.GraphNode.Config       as A
-import qualified Enecuum.Assets.Nodes.GraphNode.Transmitter  as A
-import qualified Enecuum.Assets.Nodes.PoW.PoW                as A
+import qualified Enecuum.Assets.Nodes.OldNodes.GN  as A
+import qualified Enecuum.Assets.Nodes.OldNodes.PoW.PoW                as A
 import qualified Enecuum.Assets.Nodes.Messages               as A
 import qualified Enecuum.Assets.Nodes.Address                as A
 
