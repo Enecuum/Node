@@ -2,7 +2,27 @@
 
 [![buddy pipeline](https://buddy.enecuum.com/enecuum/node/pipelines/pipeline/19/badge.svg?token=c35be458f2d393a30001acf59f086401a00713eb057ab070050e9855280788bf "buddy pipeline")](https://buddy.enecuum.com/enecuum/node/pipelines/pipeline/19)
 
-P2P node for the main network protocol.
+Node is the project that allows to build network actors and blockchain protocols. It contains:
+
+  - Enecuum.Framework;
+  - main enecuum blockchain protocol and nodes;
+  - sample nodes;
+  - testing environment for nodes.
+
+The goal of the Enecuum.Framework is to make writing of blockchain algorithms and behavior simple.
+The framework provides such possibilities:
+
+  - TCP, UDP, JSON-RPC for client and server side;
+  - parallel network requests processing;
+  - safe and robust concurrent state;
+  - parallel computations;
+  - concurrent in-memory data graph of arbitrary structure;
+  - KV-database support;
+  - embeddable console client;
+  - arbitrary configs for nodes;
+  - basic cryptography;
+  - logging;
+  - and other features.
 
 ## Build and Install
 
