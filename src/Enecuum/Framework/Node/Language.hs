@@ -2,6 +2,8 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE TypeInType             #-}
+{-# LANGUAGE BangPatterns           #-}
 
 
 module Enecuum.Framework.Node.Language where
@@ -27,8 +29,8 @@ data NodeF next where
     -- | Create new graph instance.
     NewGraph  :: (Serialize c, D.StringHashable c) => (D.TGraph c -> next) -> NodeF next
     -- | Open connection to the node.
-    OpenTcpConnection :: D.Address -> NetworkHandlerL D.Tcp NodeL () -> (D.Connection D.Tcp -> next) -> NodeF next
-    OpenUdpConnection :: D.Address -> NetworkHandlerL D.Udp NodeL () -> (D.Connection D.Udp -> next) -> NodeF next
+    OpenTcpConnection :: D.Address -> NetworkHandlerL D.Tcp NodeL () -> (Maybe (D.Connection D.Tcp) -> next) -> NodeF next
+    OpenUdpConnection :: D.Address -> NetworkHandlerL D.Udp NodeL () -> (Maybe (D.Connection D.Udp) -> next) -> NodeF next
     -- | Close existing connection.
     CloseTcpConnection :: D.Connection D.Tcp -> (() -> next) -> NodeF  next
     CloseUdpConnection :: D.Connection D.Udp -> (() -> next) -> NodeF  next
@@ -68,16 +70,22 @@ withDatabase = evalDatabase
 
 withConnection
     :: (Monad m, Connection m con)
-    => con -> D.Address -> (D.Connection con -> m b) -> m b
+    => con -> D.Address -> (D.Connection con -> m b) -> m (Maybe b)
 withConnection protocol address f = do
-    con <- open protocol address $ pure ()
-    a <- f con
-    close con
-    pure a
+    mCon <- open protocol address $ pure ()
+    case mCon of
+        Just con -> do 
+            !a <- f con
+            close con
+            pure $ Just a
+        Nothing -> pure Nothing
+
+
+listener !f = handler (\a conn -> void (close conn) >> f a)
 
 class Connection a con where
     close :: D.Connection con -> a ()
-    open  :: con -> D.Address -> NetworkHandlerL con NodeL () -> a (D.Connection con)
+    open  :: con -> D.Address -> NetworkHandlerL con NodeL () -> a (Maybe (D.Connection con))
 
 instance Connection (Free NodeF) D.Tcp where
     close   conn       = liftF $ CloseTcpConnection conn id

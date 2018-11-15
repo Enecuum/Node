@@ -47,7 +47,7 @@ kBlockProcess graphNodeUdpAddress nodeData = do
     prevKBlockNumber    <- L.readVarIO $ nodeData ^. prevNumber
 
     (lastHash, kBlocks) <- A.generateKBlocks prevKBlockHash prevKBlockNumber
-    L.logInfo $ "Last hash: " +|| lastHash ||+ "."
+    L.logInfo $ "Last hash: " +|| lastHash ||+ ", blocks count: " +|| length kBlocks ||+ "."
 
     L.writeVarIO (nodeData ^. prevHash) lastHash
     L.writeVarIO (nodeData ^. prevNumber) $ prevKBlockNumber + fromIntegral (length kBlocks)

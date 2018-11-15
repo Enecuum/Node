@@ -45,10 +45,9 @@ testClient _ = do
     nodeData <- L.scenario $ L.atomically (TestClientData <$> L.newVar L.NodeActing)
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     conn <- L.open D.Tcp serverAddress $ pure ()
-    tester conn 0
-    
+    whenJust conn $ \jConn -> tester jConn 0
     L.logInfo "Connect closed."
-tester :: (L.Logger m, L.Send t m, L.ControlFlow m, Monad m) => t -> Int -> m ()
+
 tester conn i = do
     L.delay i
     res <- L.send conn M.Ping

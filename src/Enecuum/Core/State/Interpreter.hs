@@ -13,9 +13,7 @@ import qualified Enecuum.Core.Runtime    as Rt
 import qualified Enecuum.Core.RLens      as RLens
 import qualified Enecuum.Core.Logger.Impl.HsLogger as Impl
 
-import qualified Data.ByteString.Base64  as Base64
-import qualified Crypto.Hash.SHA256      as SHA
-import           Data.HGraph.StringHashable (StringHash (..), StringHashable, toHash)
+import           Data.HGraph.StringHashable (StringHash (..), toHash)
 import           Enecuum.Core.HGraph.Interpreters.STM
 import           Enecuum.Core.State.DelayedLogger (runDelayedLoggerL)
 

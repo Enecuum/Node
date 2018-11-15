@@ -192,7 +192,10 @@ getLengthOfChain (GetLengthOfChain address) = do
 ping :: Ping -> L.NodeL Text
 ping (Ping TCP address) = do
     res <- L.withConnection D.Tcp address $ \conn -> L.send conn M.Ping
-    pure $ case res of Right _ -> "Tcp port is available."; Left _ -> "Tcp port is not available."
+    pure $ case res of
+        Just (Right _) -> "Tcp port is available."
+        Just (Left _)  -> "Tcp disconnection."
+        _              -> "Tcp port is not available."
 
 ping (Ping RPC address) = do
     res :: Either Text M.Pong <- L.makeRpcRequest address M.Ping

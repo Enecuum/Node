@@ -39,7 +39,7 @@ startNodeTcpLikeWorker nodeLRunner nodeRt handlers mbBackConn = do
         controlReq <- atomically $ takeTMVar $ control ^. RLens.request
         case controlReq of
             T.AcceptBackConnectionReq bindedServer -> do
-                atomically $ putTMVar tBackConn (D.Connection $ bindedServer ^. RLens.address)
+                atomically $ putTMVar tBackConn (D.Connection (D.BoundAddress $ bindedServer ^. RLens.address) 0)
                 registerConnection nodeRt bindedServer
 
             T.MessageReq msg -> do

@@ -74,7 +74,7 @@ acceptKBlock' nodeData kBlock = do
     L.writeVarIO (nodeData ^. checkPendingSignal) kBlockAdded
 
 -- | Accept kBlock
-acceptKBlock :: GraphNodeData -> D.KBlock -> D.Connection D.Udp -> L.NodeL ()
+acceptKBlock :: GraphNodeData -> D.KBlock -> connection -> L.NodeL ()
 acceptKBlock nodeData kBlock _ = acceptKBlock' nodeData kBlock
 
 -- | Accept mBlock

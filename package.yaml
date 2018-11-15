@@ -1,39 +1,19 @@
 name:                Node
-version:             0.1.0.7
+version:             0.5.0.0
 github:              "Enecuum/Node"
 license:             BSD3
 author:              "Enecuum"
 maintainer:          "mail@enecuum.com"
-copyright:           "2018  Enecuum"
+copyright:           "2018 Enecuum"
 
 extra-source-files:
 - README.md
-# - ChangeLog.md
+- ChangeLog.md
 
-# Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
-
-# To avoid duplicated efforts in documentation and dealing with the
-# complications of embedding Haddock markup inside cabal files, it is
-# common to point users to the README.md file.
 description:
-    The structure of the program consists of a few channels,
-    in every channel one function related to channel executes.
-    The life cycle of such function is absolutely simple.
-    The function reads from channel and depending from content of channel and
-    # input variables execute some actions.
-    # In IT literature such entity named actor.
-
-    # There are three actors: central actor, server actor and client actor.
-
-    # The server actor responsible for receiving messages from unfamiliar nodes.
-
-    # The client actor responsible for connecting to sever actor of yet
-    # unfamiliar node.
-
-    # The central actor responsible for storing node state and manage decision,
-    # processing external commands and response for them.
+  Node is the project that allows to build network actors and blockchain protocols.
+  It contains Enecuum.Framework, test nodes and main nodes of the Enecuum blockchain.
+  Please see the README.md at <https://github.com/Enecuum/Node/blob/master/README.md>.
 
 default-extensions:
 - NoImplicitPrelude
