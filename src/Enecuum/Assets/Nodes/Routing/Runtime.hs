@@ -17,19 +17,19 @@ import           Enecuum.Assets.Nodes.Routing.Messages
 import qualified Data.Sequence as Seq
 import qualified Data.Set      as Set
 
-type BnAddress = NodeAddress
+type BnAddress = A.NodeAddress
 
 data RoutingRuntime = RoutingRuntime
     { _hostAddress :: D.StateVar (Maybe D.Host) 
-    , _nodePorts   :: NodePorts
-    , _nodeId      :: NodeId
-    , _bnAddress   :: NodeAddress
-    , _connectMap  :: D.StateVar (ChordRouteMap NodeAddress)
+    , _nodePorts   :: A.NodePorts
+    , _nodeId      :: A.NodeId
+    , _bnAddress   :: A.NodeAddress
+    , _connectMap  :: D.StateVar (ChordRouteMap A.NodeAddress)
     , _msgFilter   :: D.StateVar (Seq.Seq (Set.Set D.StringHash))
     }
 makeFieldsNoPrefix ''RoutingRuntime
 
-makeRoutingRuntimeData :: NodePorts -> NodeId -> BnAddress -> L.NodeL RoutingRuntime
+makeRoutingRuntimeData :: A.NodePorts -> A.NodeId -> BnAddress -> L.NodeL RoutingRuntime
 makeRoutingRuntimeData nodePorts' nodeId' bnAdress' = do
     myHostAddress <- L.newVarIO Nothing
     myConnectMap  <- L.newVarIO mempty
@@ -44,19 +44,19 @@ registerMsg routingRuntime messageHash =
     L.modifyVar (routingRuntime ^. msgFilter) (Seq.adjust (Set.insert messageHash) 0)
 
 
-getMyNodeAddress :: RoutingRuntime -> L.NodeL (Maybe NodeAddress)
+getMyNodeAddress :: RoutingRuntime -> L.NodeL (Maybe A.NodeAddress)
 getMyNodeAddress routingRuntime = do
     mHost <- L.readVarIO (routingRuntime ^. hostAddress)
     case mHost of
         Just host -> pure $ Just $
-            NodeAddress host (routingRuntime ^. nodePorts) (routingRuntime ^. nodeId)
+            A.NodeAddress host (routingRuntime ^. nodePorts) (routingRuntime ^. nodeId)
         Nothing   -> pure Nothing
 --
 periodic time action = L.process $ forever $ do
     L.delay time
     action
 
-getConnects :: RoutingRuntime -> L.NodeL (ChordRouteMap NodeAddress)
+getConnects :: RoutingRuntime -> L.NodeL (ChordRouteMap A.NodeAddress)
 getConnects routingRuntime = L.readVarIO (routingRuntime ^. connectMap)
 
 clearingOfConnects :: RoutingRuntime -> L.NodeL ()
@@ -74,13 +74,13 @@ successorsRequest routingRuntime = do
     whenJust myAddress $ \myNodeAddress -> do
         connectMap <- getConnects routingRuntime
         forM_ connectMap $ \(_, addr) ->
-            void $ L.notify (getUdpAddress addr) $ NextForYou $ getUdpAddress myNodeAddress
+            void $ L.notify (A.getUdpAddress addr) $ NextForYou $ A.getUdpAddress myNodeAddress
 
 
-pingConnects :: ChordRouteMap NodeAddress -> L.NodeL [NodeId]
+pingConnects :: ChordRouteMap A.NodeAddress -> L.NodeL [A.NodeId]
 pingConnects nodes = do
     deadNodes <- forM (elems nodes) $ \(nodeId, address) -> do
-        res <- L.makeRpcRequest (getRpcAddress address) M.Ping
+        res <- L.makeRpcRequest (A.getRpcAddress address) M.Ping
         pure $ case res of
             Right M.Pong -> Nothing
             Left  _      -> Just nodeId
@@ -88,7 +88,7 @@ pingConnects nodes = do
 
 routingWorker :: RoutingRuntime -> L.NodeDefinitionL ()
 routingWorker routingRuntime = do
-    let bnUdpAddress = getUdpAddress (routingRuntime^.bnAddress)
+    let bnUdpAddress = A.getUdpAddress (routingRuntime^.bnAddress)
 
     builtIntoTheNetwork routingRuntime
     periodic (1000 * 1000)  $ clearingOfConnects routingRuntime
@@ -112,7 +112,7 @@ builtIntoTheNetwork routingRuntime = do
 
 registerWithBn :: RoutingRuntime -> L.NodeDefinitionL ()
 registerWithBn routingRuntime = do
-    let bnUdpAddress =  getUdpAddress (routingRuntime^.bnAddress)
+    let bnUdpAddress =  A.getUdpAddress (routingRuntime^.bnAddress)
     let privateKey   =  True
     helloToBn        <- makeHelloToBn privateKey (routingRuntime^.nodePorts) (routingRuntime^.nodeId)
     let takeAddress  =  do
@@ -124,7 +124,7 @@ registerWithBn routingRuntime = do
 
 connecRequests :: Word64 -> RoutingRuntime -> L.NodeL ()
 connecRequests i routingRuntime = when (i > 0) $ do
-    let bnRpcAddress =  getRpcAddress (routingRuntime^.bnAddress)
+    let bnRpcAddress =  A.getRpcAddress (routingRuntime^.bnAddress)
     let myNodeId     =  routingRuntime ^. nodeId
     maybeAddress     <- L.makeRpcRequest bnRpcAddress $ M.ConnectRequest myNodeId i
     myAddress        <- getMyNodeAddress routingRuntime
@@ -136,7 +136,7 @@ connecRequests i routingRuntime = when (i > 0) $ do
 
 nextRequest :: RoutingRuntime -> L.NodeL ()
 nextRequest routingRuntime = do
-    let bnRpcAddress  =  getRpcAddress (routingRuntime^.bnAddress)
+    let bnRpcAddress  =  A.getRpcAddress (routingRuntime^.bnAddress)
     let myNodeId      =  routingRuntime ^. nodeId
     myAddress        <- getMyNodeAddress routingRuntime
     nextForMe        <- L.makeRpcRequest bnRpcAddress $ M.NextForMe myNodeId
@@ -155,7 +155,7 @@ sendHelloToPrevius routingRuntime = do
         (Just myAddress, Just (_, reciverAddress)) -> do  
             let privateKey  = True
             hello <- makeRoutingHello privateKey myAddress
-            void $ L.notify (getUdpAddress reciverAddress) hello
+            void $ L.notify (A.getUdpAddress reciverAddress) hello
         _ -> pure ()
 
 --
@@ -172,21 +172,21 @@ acceptHelloFromBn :: RoutingRuntime -> HelloToBnResponce -> D.Connection D.Udp -
 acceptHelloFromBn routingRuntime bnHello con = do
     L.close con
     when (verifyHelloToBnResponce bnHello) $
-        L.writeVarIO (routingRuntime^.hostAddress) $ Just (bnHello^.hostAddress)
+        L.writeVarIO (routingRuntime ^. hostAddress) $ Just (bnHello ^. hostAddress)
 
 acceptHello :: RoutingRuntime -> RoutingHello -> D.Connection D.Udp -> L.NodeL ()
 acceptHello routingRuntime routingHello con = do
     L.close con
-    let senderAddress :: NodeAddress
+    let senderAddress :: A.NodeAddress
         senderAddress  = routingHello ^. nodeAddress
-    let senderId       = senderAddress ^. nodeId
+    let senderId       = senderAddress ^. A.nodeId
     let myId           = routingRuntime ^. nodeId
     when (verifyRoutingHello routingHello) $ do
         connects <- getConnects routingRuntime
         let nextAddres = nextForHello myId senderId connects
         
         whenJust nextAddres $ \reciverAddress ->
-            void $ L.notify (getUdpAddress reciverAddress) routingHello
+            void $ L.notify (A.getUdpAddress reciverAddress) routingHello
         
         L.modifyVarIO
             (routingRuntime ^. connectMap)
@@ -203,11 +203,11 @@ acceptNextForYou routingRuntime (NextForYou senderAddress) conn = do
     whenJust maybeAddress $ \(nodeId, address) ->
         void $ L.notify senderAddress address
 
-acceptConnectResponse :: RoutingRuntime -> NodeAddress -> D.Connection D.Udp -> L.NodeL ()
+acceptConnectResponse :: RoutingRuntime -> A.NodeAddress -> D.Connection D.Udp -> L.NodeL ()
 acceptConnectResponse routingRuntime address con = do
     mAddress <- getMyNodeAddress routingRuntime
     whenJust mAddress $ \myAddress -> do 
-        let nId = address^.nodeId
+        let nId = address ^. A.nodeId
         when (myAddress /= address) $
             L.modifyVarIO (routingRuntime ^. connectMap) (addToMap nId address)
     L.close con
@@ -231,11 +231,11 @@ sendUdpBroadcast routingRuntime message = do
         connectsToResending <- fromChordRouteMap <$> L.readVarIO (routingRuntime ^. connectMap)
         
         forM_ connectsToResending $ \nodeAddress ->
-            void $ L.notify (getUdpAddress . snd $ nodeAddress) message
+            void $ L.notify (A.getUdpAddress . snd $ nodeAddress) message
     pure needToProcessing 
 
 udpForwardIfNeeded routingRuntime msg f = do
-    let reciverId = msg^.nodeId
+    let reciverId = msg^.nodeReciverId
     let myId      = routingRuntime^.nodeId
     let time      = msg^.timeToLive
     when (time > 0 && myId /= reciverId) $ do
@@ -243,6 +243,6 @@ udpForwardIfNeeded routingRuntime msg f = do
         connects <- L.readVarIO (routingRuntime ^. connectMap)
         let nextReciver = findNextResender reciverId connects
         whenJust nextReciver $ \(_, address) ->
-            void $ L.notify (getUdpAddress address) (msg & timeToLive .~ time - 1)
+            void $ L.notify (A.getUdpAddress address) (msg & timeToLive .~ time - 1)
         unless (isJust nextReciver) $ L.logError "Connection map is empty. Fail of resending."
     when (myId == reciverId) $ f msg

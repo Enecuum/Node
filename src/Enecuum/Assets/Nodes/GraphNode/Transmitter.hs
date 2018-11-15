@@ -3,6 +3,7 @@ module Enecuum.Assets.Nodes.GraphNode.Transmitter where
 import           Enecuum.Prelude
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
+import qualified Enecuum.Assets.Nodes.Address  as A 
 import           Enecuum.Config
 import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.GraphNode.Logic
@@ -22,28 +23,23 @@ graphNodeTransmitter nodeCfg = do
 
 graphNodeTransmitter' :: NodeConfig GraphNode -> GraphNodeData -> L.NodeDefinitionL ()
 graphNodeTransmitter' cfg nodeData = do
-    let myNodePorts = NodePorts
-            (Enecuum.Assets.Nodes.GraphNode.Config._udpPort cfg)
-            (Enecuum.Assets.Nodes.GraphNode.Config._tcpPort cfg)
-            (Enecuum.Assets.Nodes.GraphNode.Config._rpcPort cfg)
-    let D.Address bnHost bnPort = Enecuum.Assets.Nodes.GraphNode.Config._bnAddress cfg
-    let bnPorts     = makeNodePorts1000 bnPort
-    let bnId        = D.toHashGeneric bnPorts
+    let myNodePorts   = _gnNodePorts cfg
+    let bnNodeAddress = Enecuum.Assets.Nodes.GraphNode.Config._bnAddress cfg
 
     -- TODO: read from config
     let myHash      = D.toHashGeneric myNodePorts
     
-    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash (NodeAddress bnHost bnPorts bnId)
+    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash bnNodeAddress
 
     periodic (1000 * 1000) $ do
         connects <- fromChordRouteMap <$> L.readVarIO (routingData ^. connectMap)
         forM_ connects $ \(_, nodeAddress) -> do
-            let rpcAddress = getRpcAddress nodeAddress
+            let rpcAddress = A.getRpcAddress nodeAddress
             eNodeType <- L.makeRpcRequest rpcAddress M.GetNodeType
             whenRight eNodeType $ \nodeType ->
                 when (nodeType == M.TypeGraphNode) $ graphSynchro nodeData rpcAddress
 
-    L.serving D.Udp (myNodePorts ^. udpPort) $ do
+    L.serving D.Udp (myNodePorts ^. A.nodeUdpPort) $ do
         udpRoutingHandlers routingData
         -- network
         L.handler   methodPing
@@ -52,11 +48,11 @@ graphNodeTransmitter' cfg nodeData = do
         -- PoW interaction
         L.handler $ udpBroadcastRecivedMessage routingData (acceptKBlock' nodeData)
 
-    L.serving D.Tcp (myNodePorts ^. tcpPort) $
+    L.serving D.Tcp (myNodePorts ^. A.nodeTcpPort) $
         -- network
         L.handler   methodPing
 
-    L.serving D.Rpc (myNodePorts ^. rpcPort) $ do
+    L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
         rpcRoutingHandlers routingData
         -- network
         L.method  $ handleStopNode nodeData

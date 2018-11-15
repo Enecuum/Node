@@ -4,6 +4,7 @@ module Enecuum.Assets.Nodes.OldNodes.GN where
 import           Enecuum.Prelude
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
+import qualified Enecuum.Assets.Nodes.Address  as A
 import           Enecuum.Config
 import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.GraphNode.Logic
@@ -19,10 +20,10 @@ graphNodeTransmitter nodeCfg = do
 
 graphNodeTransmitter' :: NodeConfig GraphNode -> GraphNodeData -> L.NodeDefinitionL ()
 graphNodeTransmitter' cfg nodeData = do
-    case (_rpcSynco cfg) of
+    case _rpcSynco cfg of
         Nothing -> pure ()
         Just rpcSyncoAddress -> L.process $ forever $ graphSynchro nodeData rpcSyncoAddress
-    L.serving D.Udp (_udpPort cfg) $ do
+    L.serving D.Udp (_gnNodePorts cfg ^. A.nodeUdpPort) $ do
         -- network
         L.handler   methodPing
         -- PoA interaction
@@ -30,11 +31,11 @@ graphNodeTransmitter' cfg nodeData = do
         -- PoW interaction
         L.handler $ acceptKBlock nodeData
 
-    L.serving D.Tcp (_tcpPort cfg) $
+    L.serving D.Tcp (_gnNodePorts cfg ^. A.nodeTcpPort) $
         -- network
         L.handler   methodPing
 
-    L.serving D.Rpc (_rpcPort cfg) $ do
+    L.serving D.Rpc (_gnNodePorts cfg ^. A.nodeRpcPort) $ do
         -- network
         L.method    rpcPingPong
         L.method  $ handleStopNode nodeData

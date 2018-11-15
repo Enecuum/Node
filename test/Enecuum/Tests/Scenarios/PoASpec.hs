@@ -25,6 +25,8 @@ spec = slowTest $ describe "PoA" $ fromHUnitTest $ TestList
 
 testPoA :: Test
 testPoA = TestCase $ withNodesManager $ \mgr -> do
+    let transmiterRpcAddress       = A.getRpcAddress A.defaultGnNodeAddress
+
     void $ startNode Nothing mgr $ Old.graphNodeTransmitter A.defaultNodeConfig
     void $ startNode Nothing mgr Old.powNode
     void $ startNode Nothing mgr $ Old.poaNode Old.Good Old.defaultPoANodeConfig
@@ -32,32 +34,30 @@ testPoA = TestCase $ withNodesManager $ \mgr -> do
     -- Generate and send transactions to graph node
     transactions <- I.runERandomL $ replicateM A.transactionsInMicroblock $ A.genTransaction A.Generated
     _ :: [Either Text A.SuccessMsg] <- forM transactions $ \tx ->
-        makeIORpcRequest A.graphNodeTransmitterRpcAddress $ A.CreateTransaction tx
-
+        makeIORpcRequest transmiterRpcAddress $ A.CreateTransaction tx
 
     -- Check transaction pending on graph node
-    txPending :: [D.Transaction] <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
+    txPending :: [D.Transaction] <- makeRpcRequestUntilSuccess transmiterRpcAddress A.GetTransactionPending
     (sort txPending) `shouldBe` (sort transactions)
 
     -- Ask pow node to generate n kblocks
     let timeGap = 0
     let kblockCount = 1
-    _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
+    _ :: Either Text A.SuccessMsg <- makeIORpcRequest (A.getRpcAddress A.defaultPoWNodeAddress) $ A.NBlockPacketGeneration kblockCount timeGap
 
     -- Get last kblock from graph node
-    kBlock :: D.KBlock <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetLastKBlock
+    kBlock :: D.KBlock <- makeRpcRequestUntilSuccess transmiterRpcAddress A.GetLastKBlock
     let kblockHash = D.toHash kBlock
 
     -- Microblock on graph node received from poa
     (A.GetMBlocksForKBlockResponse mblock) <- do
         let request = A.GetMBlocksForKBlockRequest kblockHash
-        let address = A.graphNodeTransmitterRpcAddress
         let predicate (A.GetMBlocksForKBlockResponse mblock) = length mblock == 1
-        makeRpcRequestWithPredicate predicate address request
+        makeRpcRequestWithPredicate predicate transmiterRpcAddress request
     (length mblock) `shouldBe` 1
 
     -- Check transaction pending on graph node, it must to be empty now
     void $ do
         let predicate :: [D.Transaction] -> Bool
             predicate txPending = txPending == []
-        makeRpcRequestWithPredicate predicate A.graphNodeTransmitterRpcAddress $ A.GetTransactionPending
+        makeRpcRequestWithPredicate predicate transmiterRpcAddress A.GetTransactionPending

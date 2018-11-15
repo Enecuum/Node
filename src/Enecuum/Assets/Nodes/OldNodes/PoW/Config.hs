@@ -4,7 +4,7 @@ module Enecuum.Assets.Nodes.OldNodes.PoW.Config where
 
 import qualified Data.Aeson                           as J
 import qualified Enecuum.Assets.Blockchain.Generation as A
-import           Enecuum.Assets.Nodes.Address         (graphNodeTransmitterUdpAddress, powNodeRpcPort)
+import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Config
 import qualified Enecuum.Domain                       as D
 import           Enecuum.Prelude
@@ -30,4 +30,8 @@ instance FromJSON OldPoWNode              where parseJSON = J.genericParseJSON n
 defaultBlocksDelay :: BlocksDelay
 defaultBlocksDelay = 1000 * 1000
 
-defaultPoWNodeConfig = OldPoWNodeConfig defaultBlocksDelay A.InOrder graphNodeTransmitterUdpAddress powNodeRpcPort
+defaultPoWNodeConfig = OldPoWNodeConfig
+    defaultBlocksDelay
+    A.InOrder
+    (getUdpAddress defaultGnNodeAddress)
+    (defaultPoWNodePorts ^. nodeRpcPort)

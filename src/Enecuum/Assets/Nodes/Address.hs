@@ -1,62 +1,100 @@
+{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DeriveAnyClass         #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE UndecidableInstances   #-}
+
 module Enecuum.Assets.Nodes.Address where
 
+import           Enecuum.Prelude
 import qualified Enecuum.Domain                as D
+import           Data.HGraph.StringHashable
+
+type NodeId     = StringHash
+
+-- TODO : NodePorts & NodeAddress => to module ???
+data NodePorts = NodePorts
+    { _nodeUdpPort :: D.PortNumber
+    , _nodeTcpPort :: D.PortNumber
+    , _nodeRpcPort :: D.PortNumber
+    } deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, Serialize)
+makeFieldsNoPrefix ''NodePorts
+
+makeNodePorts1000 :: D.PortNumber -> NodePorts
+makeNodePorts1000 port = NodePorts (port - 1000) port (port + 1000)
+
+data NodeAddress = NodeAddress
+    { _nodeHost     :: D.Host
+    , _nodePorts    :: NodePorts
+    , _nodeId       :: NodeId
+    } deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
+makeFieldsNoPrefix ''NodeAddress
+
+makeNodeAddress :: D.Host -> NodePorts -> NodeId -> NodeAddress
+makeNodeAddress = NodeAddress
+
+getUdpAddress :: NodeAddress -> D.Address
+getUdpAddress nodeAddress' =
+    D.Address (nodeAddress'^.nodeHost) (nodeAddress'^.nodePorts.nodeUdpPort)
+
+getTcpAddress :: NodeAddress -> D.Address
+getTcpAddress nodeAddress' =
+    D.Address (nodeAddress'^.nodeHost) (nodeAddress'^.nodePorts.nodeTcpPort)
+
+getRpcAddress :: NodeAddress -> D.Address
+getRpcAddress nodeAddress' =
+    D.Address (nodeAddress'^.nodeHost) (nodeAddress'^.nodePorts.nodeRpcPort)
 
 localhost :: D.Host
 localhost = "127.0.0.1"
 
-graphNodeTransmitterRpcPort, graphNodeTransmitterTcpPort :: D.PortNumber
-graphNodeTransmitterRpcPort = 2008
-graphNodeTransmitterTcpPort = 3001
+makeAddressByPorts :: NodePorts -> NodeAddress 
+makeAddressByPorts ports = NodeAddress localhost ports (D.toHashGeneric ports)
 
-graphNodeTransmitterUdpPort :: D.PortNumber
-graphNodeTransmitterUdpPort = 3002
+-- List of test and default port.
+-- udp = 4000 + nodePort
+-- tcp = 5000 + nodePort
+-- rpc = 6000 + nodePort
 
-graphNodeReceiverRpcPort :: D.PortNumber
-graphNodeReceiverRpcPort    = 2009
+-- bn = [0 .. 9]
+defaultBnNodePorts :: NodePorts
+defaultBnNodePorts = makeNodePorts1000 5000
 
-graphNodeTransmitterRpcAddress, graphNodeTransmitterTcpAddress :: D.Address
-graphNodeTransmitterRpcAddress = D.Address "127.0.0.1" graphNodeTransmitterRpcPort
-graphNodeTransmitterTcpAddress = D.Address "127.0.0.1" graphNodeTransmitterTcpPort
+defaultBnNodeAddress :: NodeAddress
+defaultBnNodeAddress = makeAddressByPorts defaultBnNodePorts
 
-graphNodeTransmitterUdpAddress :: D.Address
-graphNodeTransmitterUdpAddress = D.Address "127.0.0.1" graphNodeTransmitterUdpPort
+-- client = [10 .. 19]
+defaultClientPorts :: NodePorts
+defaultClientPorts = makeNodePorts1000 5010
 
-graphNodeReceiverRpcAddress :: D.Address
-graphNodeReceiverRpcAddress = D.Address "127.0.0.1" graphNodeReceiverRpcPort
+defaultClientAddress :: NodeAddress
+defaultClientAddress = makeAddressByPorts defaultClientPorts
 
-powNodeRpcPort :: D.PortNumber
-powNodeRpcPort = 3005
+-- pow = [20 .. 49]
+defaultPoWNodePorts :: NodePorts
+defaultPoWNodePorts = makeNodePorts1000 5020
 
-powNodeRpcAddress :: D.Address
-powNodeRpcAddress = D.Address "127.0.0.1" powNodeRpcPort
+defaultPoWNodeAddress :: NodeAddress
+defaultPoWNodeAddress = makeAddressByPorts defaultPoWNodePorts
 
-poaNodePort :: D.PortNumber
-poaNodePort = 2006
+-- gn = [50 .. 199]
+-- work gn node
+defaultGnNodePorts :: NodePorts
+defaultGnNodePorts = makeNodePorts1000 5050
 
-poaNodeAddress :: D.Address
-poaNodeAddress = D.Address "127.0.0.1" poaNodePort
+defaultGnNodeAddress :: NodeAddress
+defaultGnNodeAddress = makeAddressByPorts defaultGnNodePorts
 
-poaNodeRpcPort :: D.PortNumber
-poaNodeRpcPort = 2007
+-- test reciwer node
+defaultGnReceiverNodePorts :: NodePorts
+defaultGnReceiverNodePorts = makeNodePorts1000 5051
 
-poaNodeTcpPort :: D.PortNumber
-poaNodeTcpPort = 2123
+defaultGnReceiverNodeAddress :: NodeAddress
+defaultGnReceiverNodeAddress = makeAddressByPorts defaultGnReceiverNodePorts
 
-poaNodeUdpPort :: D.PortNumber
-poaNodeUdpPort = 2124
+-- poa = [200 .. 999]
+defaultPoANodePorts :: NodePorts
+defaultPoANodePorts = makeNodePorts1000 5201
 
-poaNodeRpcAddress :: D.Address
-poaNodeRpcAddress = D.Address "127.0.0.1" poaNodeRpcPort
-
-clientAddress :: D.Address
-clientAddress = D.Address localhost clientRpcPort
-
-clientRpcPort :: D.PortNumber
-clientRpcPort = 2010
-
-bnNodePort :: D.PortNumber
-bnNodePort = 5000
-
-bnAddress :: D.Address
-bnAddress = D.Address "127.0.0.1" bnNodePort
+defaultPoANodeAddress :: NodeAddress
+defaultPoANodeAddress = makeAddressByPorts defaultPoANodePorts

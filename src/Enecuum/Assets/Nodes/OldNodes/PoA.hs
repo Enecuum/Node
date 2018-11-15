@@ -50,7 +50,8 @@ instance FromJSON (NodeConfig OldPoaNode)   where parseJSON = A.genericParseJSON
 instance ToJSON   (NodeScenario OldPoaNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario OldPoaNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
-defaultPoANodeConfig = OldPoANodeConfig 42 A.poaNodeRpcPort
+defaultPoANodeConfig :: NodeConfig OldPoaNode
+defaultPoANodeConfig = OldPoANodeConfig 42 (A.defaultPoANodePorts ^. A.nodeRpcPort)
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
@@ -83,7 +84,8 @@ sendMicroblock poaData block role = do
             Bad  -> A.generateBogusSignedMicroblock block tx
         L.logInfo
             $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
-        void $ L.withConnection D.Udp A.graphNodeTransmitterUdpAddress $
+        let gnUdpAddress = A.getUdpAddress A.defaultGnNodeAddress
+        void $ L.withConnection D.Udp gnUdpAddress $
             \conn -> L.send conn mBlock
 
 poaNode :: NodeScenario OldPoaNode -> NodeConfig OldPoaNode -> L.NodeDefinitionL ()
@@ -98,11 +100,12 @@ poaNode role cfg = do
         L.method   rpcPingPong
         L.method $ handleStopNode poaData
 
+    let gnRpcAddress = A.getRpcAddress A.defaultGnNodeAddress
     L.process $ forever $ do
         L.delay $ 100 * 1000
-        whenRightM (L.makeRpcRequest A.graphNodeTransmitterRpcAddress GetTransactionPending) $ \tx -> do
+        whenRightM (L.makeRpcRequest gnRpcAddress GetTransactionPending) $ \tx -> do
             forM_ tx (\t -> L.logInfo $ "\nAdd transaction to pending "  +| D.showTransaction t "" |+ "")
             L.atomically $ L.modifyVar (poaData ^. transactionPending) ( ++ tx )
-        whenRightM (L.makeRpcRequest A.graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> sendMicroblock poaData block role
+        whenRightM (L.makeRpcRequest gnRpcAddress GetLastKBlock) $ \block -> sendMicroblock poaData block role
 
     L.awaitNodeFinished poaData

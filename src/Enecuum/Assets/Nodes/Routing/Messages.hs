@@ -7,47 +7,15 @@ module Enecuum.Assets.Nodes.Routing.Messages where
 
 import           Enecuum.Prelude
 import qualified Enecuum.Domain                as D
+import           Enecuum.Assets.Nodes.Address
 import           Data.HGraph.StringHashable
 
-type NodeId     = StringHash
 type PrivateKay = Bool
 
--- TODO : NodePorts & NodeAddress => to module ???
-data NodePorts = NodePorts
-    { _udpPort :: D.PortNumber
-    , _tcpPort :: D.PortNumber
-    , _rpcPort :: D.PortNumber
-    } deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, Serialize)
-makeFieldsNoPrefix ''NodePorts
-
-makeNodePorts1000 :: D.PortNumber -> NodePorts
-makeNodePorts1000 port = NodePorts (port - 1000) port (port + 1000)
-
-data NodeAddress = NodeAddress
-    { _hostAddress  :: D.Host
-    , _nodePorts    :: NodePorts
-    , _nodeId       :: NodeId
-    } deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
-makeFieldsNoPrefix ''NodeAddress
-
-makeNodeAddress :: D.Host -> NodePorts -> NodeId -> NodeAddress
-makeNodeAddress = NodeAddress
-
-getUdpAddress :: NodeAddress -> D.Address
-getUdpAddress nodeAddress' =
-    D.Address (nodeAddress'^.hostAddress) (nodeAddress'^.nodePorts.udpPort)
-
-getTcpAddress :: NodeAddress -> D.Address
-getTcpAddress nodeAddress' =
-    D.Address (nodeAddress'^.hostAddress) (nodeAddress'^.nodePorts.tcpPort)
-
-getRpcAddress :: NodeAddress -> D.Address
-getRpcAddress nodeAddress' =
-    D.Address (nodeAddress'^.hostAddress) (nodeAddress'^.nodePorts.rpcPort)
 
 data HelloToBn = HelloToBn
-    { _nodePorts :: NodePorts
-    , _nodeId    :: NodeId
+    { _senderPorts :: NodePorts
+    , _senderId    :: NodeId
     , _signature :: Bool 
     } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 makeFieldsNoPrefix ''HelloToBn
@@ -86,9 +54,9 @@ newtype NextForYou = NextForYou D.Address
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data SendMsgTo = SendMsgTo
-    { _nodeId     :: NodeId
-    , _timeToLive :: Int
-    , _msg        :: Text
+    { _nodeReciverId    :: NodeId
+    , _timeToLive       :: Int
+    , _msg              :: Text
     } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 makeFieldsNoPrefix ''SendMsgTo

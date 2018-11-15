@@ -9,6 +9,7 @@ import qualified Data.Map                         as Map
 import qualified Data.Set                         as Set
 import           Data.Text                        hiding (map)
 import qualified Enecuum.Assets.Blockchain.Wallet as A
+import qualified Enecuum.Assets.Nodes.Address     as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Config
@@ -213,8 +214,8 @@ getBlock (GetBlock hash address) = do
 
 sendTo :: SendTo -> L.NodeL Text
 sendTo (SendTo (Address host port) rPort) = do
-    let receiverHash    = D.toHashGeneric $ makeNodePorts1000 rPort
-    let receiverUdpPort = makeNodePorts1000 port ^. udpPort
+    let receiverHash    = D.toHashGeneric $ A.makeNodePorts1000 rPort
+    let receiverUdpPort = A.makeNodePorts1000 port ^. A.nodeUdpPort
     void $ L.notify (D.Address host receiverUdpPort) $ SendMsgTo receiverHash 10 "!! msg !!"
     pure "Sended."
 

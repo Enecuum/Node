@@ -16,7 +16,7 @@ import           Enecuum.Assets.Nodes.Routing.Messages
 
 data BNNodeData = BNNodeData
     { _status   :: D.StateVar L.NodeStatus
-    , _netNodes :: D.StateVar (ChordRouteMap NodeAddress)
+    , _netNodes :: D.StateVar (ChordRouteMap A.NodeAddress)
     }
 makeFieldsNoPrefix ''BNNodeData
 
@@ -47,17 +47,17 @@ initBN = L.atomically (BNNodeData <$> L.newVar L.NodeActing <*> L.newVar mempty)
 acceptNewNode :: BNNodeData -> HelloToBn -> D.Connection D.Udp -> L.NodeL ()
 acceptNewNode nodeData helloToBn conn = L.close conn >> do
     let host    = D.getHostAddress conn
-    let nId     = helloToBn ^. nodeId
-    let ports   = helloToBn ^. nodePorts 
+    let nId     = helloToBn ^. senderId
+    let ports   = helloToBn ^. senderPorts 
     when (verifyHelloToBn helloToBn) $ do
-        let address = makeNodeAddress host ports nId
+        let address = A.makeNodeAddress host ports nId
         L.logInfo $ "New node is accepted. " <> show address
         helloToBnResponce <- makeHelloToBnResponce True host
         L.modifyVarIO (nodeData ^. netNodes) $ addToMap nId address
-        void $ L.notify (D.Address host (ports ^. udpPort)) helloToBnResponce
+        void $ L.notify (D.Address host (ports ^. A.nodeUdpPort)) helloToBnResponce
 
 
-findConnect :: BNNodeData -> M.ConnectRequest -> L.NodeL (Either Text (D.StringHash, NodeAddress))
+findConnect :: BNNodeData -> M.ConnectRequest -> L.NodeL (Either Text (D.StringHash, A.NodeAddress))
 findConnect nodeData (M.ConnectRequest hash i) = do
     address <- L.atomically $ do
         connectMap <- L.readVar (nodeData ^. netNodes)
@@ -68,7 +68,7 @@ findConnect nodeData (M.ConnectRequest hash i) = do
             connectMap
     pure $ maybe (Left "Connection map is empty.") Right address
 
-findNextConnectForMe :: BNNodeData -> M.NextForMe -> L.NodeL (Either Text (D.StringHash, NodeAddress))
+findNextConnectForMe :: BNNodeData -> M.NextForMe -> L.NodeL (Either Text (D.StringHash, A.NodeAddress))
 findNextConnectForMe nodeData (M.NextForMe hash) = do
     address <- L.atomically $ do
         connectMap <- L.readVar (nodeData ^. netNodes)
@@ -83,7 +83,7 @@ isDeadAccept nodeData (M.IsDead hash) connect = do
     connectMap <- L.readVarIO (nodeData ^. netNodes)
     let mDeadNodeAddress = findConnectByHash hash connectMap
     whenJust mDeadNodeAddress $ \address -> do
-        res :: Either Text M.Pong <- L.makeRpcRequest (getRpcAddress address) M.Ping
+        res :: Either Text M.Pong <- L.makeRpcRequest (A.getRpcAddress address) M.Ping
         when (isLeft res) $ L.atomically $ L.modifyVar (nodeData ^. netNodes) $ removeFromMap hash
 
 bnNode' :: NodeConfig BN -> L.NodeDefinitionL ()
@@ -92,12 +92,12 @@ bnNode' _ = do
     L.logInfo "Starting of BN node"
     nodeData <- initBN
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
-    let bnPorts = makeNodePorts1000 A.bnNodePort
-    L.serving D.Udp (bnPorts ^. udpPort) $ do
+    let bnPorts = A.defaultBnNodePorts
+    L.serving D.Udp (bnPorts ^. A.nodeUdpPort) $ do
         L.handler $ isDeadAccept  nodeData
         L.handler $ acceptNewNode nodeData
 
-    L.serving D.Rpc (bnPorts ^. rpcPort) $ do
+    L.serving D.Rpc (bnPorts ^. A.nodeRpcPort) $ do
         -- network
         L.method  $ handleStopNode       nodeData
         L.methodE $ findConnect          nodeData

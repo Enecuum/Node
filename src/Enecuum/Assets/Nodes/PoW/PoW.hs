@@ -9,6 +9,7 @@ module Enecuum.Assets.Nodes.PoW.PoW where
 import qualified Data.Aeson                           as J
 import           Data.HGraph.StringHashable           (StringHash (..), toHash)
 import qualified Enecuum.Assets.Blockchain.Generation as A
+import qualified Enecuum.Assets.Nodes.Address         as A
 import qualified Enecuum.Assets.Nodes.CLens           as CLens
 import qualified Enecuum.Assets.Nodes.Messages        as Msgs
 import           Enecuum.Assets.Nodes.Methods
@@ -71,14 +72,15 @@ nBlockPacketGenerationHandle powNodeData (Msgs.NBlockPacketGeneration i gap) = d
 
 
 powNode :: L.NodeDefinitionL ()
-powNode = powNode' $ defaultPoWNodeConfig
+powNode = powNode' defaultPoWNodeConfig
 
 powNode' :: NodeConfig PoWNode -> L.NodeDefinitionL ()
 powNode' cfg = do
     L.nodeTag "PoW node"
 
+    let myNodePorts = _powNodePorts cfg
     nodeData <- L.initialization $ powNodeInitialization cfg D.genesisHash
-    L.serving D.Rpc (_powNodeRpcPort cfg) $ do
+    L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
         -- network
         L.method    rpcPingPong
         L.method  $ handleStopNode nodeData
@@ -93,7 +95,7 @@ powNode' cfg = do
             i <- L.readVar $ nodeData ^. requiredBlockNumber
             when (i == 0) L.retry
             L.writeVar (nodeData ^. requiredBlockNumber) (i - 1)
-        kBlockProcess (_graphNodeUDPAddress cfg ) nodeData
+        --kBlockProcess (_graphNodeUDPAddress cfg ) nodeData
 
     L.awaitNodeFinished nodeData
 

@@ -10,12 +10,10 @@ data GraphNode = GraphNode
     deriving (Show, Generic)
 
 data instance NodeConfig GraphNode = GraphNodeConfig
-    { _dbConfig  :: DBConfig
-    , _udpPort   :: D.PortNumber
-    , _tcpPort   :: D.PortNumber
-    , _rpcPort   :: D.PortNumber
-    , _bnAddress :: D.Address
-    , _rpcSynco  :: Maybe D.Address
+    { _dbConfig     :: DBConfig
+    , _gnNodePorts  :: NodePorts
+    , _bnAddress    :: NodeAddress
+    , _rpcSynco     :: Maybe D.Address
     }
     deriving (Show, Generic)
 
@@ -47,9 +45,7 @@ noDBConfig' = DBConfig
 defaultNodeConfig :: NodeConfig GraphNode
 defaultNodeConfig = GraphNodeConfig
     { _dbConfig     = noDBConfig'
-    , _udpPort      = graphNodeTransmitterUdpPort
-    , _tcpPort      = graphNodeTransmitterTcpPort
-    , _rpcPort      = graphNodeTransmitterRpcPort
-    , _bnAddress    = bnAddress
+    , _gnNodePorts  = defaultGnNodePorts
+    , _bnAddress    = defaultBnNodeAddress
     , _rpcSynco     = Nothing
     }

@@ -36,11 +36,9 @@ data PoANode = PoANode
     deriving (Show, Generic)
 
 data instance NodeConfig PoANode = PoANodeConfig
-    { _dummyOption :: Int
-    , _poaRpcPort  :: D.PortNumber
-    , _poaUdpPort  :: D.PortNumber
-    , _poaTcpPort  :: D.PortNumber
-    , _poaBnAddress :: D.Address
+    { _dummyOption  :: Int
+    , _poaNodePorts :: A.NodePorts
+    , _poaBnAddress :: A.NodeAddress
     }
     deriving (Show, Generic)
 
@@ -56,7 +54,7 @@ instance FromJSON (NodeConfig PoANode)   where parseJSON = A.genericParseJSON no
 instance ToJSON   (NodeScenario PoANode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario PoANode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
-defaultPoANodeConfig = PoANodeConfig 42 A.poaNodeRpcPort A.poaNodeUdpPort A.poaNodeTcpPort A.bnAddress
+defaultPoANodeConfig = PoANodeConfig 42 A.defaultPoANodePorts A.defaultBnNodeAddress
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
@@ -99,25 +97,22 @@ poaNode :: NodeScenario PoANode -> NodeConfig PoANode -> L.NodeDefinitionL ()
 poaNode role cfg = do
     L.nodeTag "PoA node"
     L.logInfo "Starting of PoA node"
-    let myNodePorts = NodePorts (_poaUdpPort cfg) (_poaTcpPort cfg) (_poaRpcPort cfg)
-    let D.Address bnHost bnPort = _poaBnAddress cfg
-    let bnPorts     = makeNodePorts1000 bnPort
-    let bnId        = D.toHashGeneric bnPorts
+    let myNodePorts = _poaNodePorts cfg
 
     -- TODO: read from config
     let myHash      = D.toHashGeneric myNodePorts
 
-    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash (NodeAddress bnHost bnPorts bnId)
+    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash (_poaBnAddress cfg)
     poaData     <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    L.serving D.Rpc (_poaRpcPort cfg) $ do
+    L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
         rpcRoutingHandlers routingData
         L.method   rpcPingPong
         L.method $ handleStopNode poaData
 
-    L.serving D.Udp  (_poaUdpPort cfg) $ do
+    L.serving D.Udp  (myNodePorts ^. A.nodeUdpPort) $ do
         udpRoutingHandlers routingData
         L.handler $ udpBroadcastRecivedMessage routingData $
             sendMicroblock routingData poaData role
