@@ -2,6 +2,10 @@ module Enecuum.Tests.Scenarios.PoWSpec where
 
 import qualified Data.Map                             as M
 import qualified Enecuum.Assets.Blockchain.Generation as A
+import qualified Enecuum.Assets.Nodes.OldNodes.PoA      as Old
+import qualified Enecuum.Assets.Nodes.OldNodes.GN       as Old
+import qualified Enecuum.Assets.Nodes.OldNodes.PoW.PoW  as Old
+import qualified Enecuum.Assets.Nodes.OldNodes.PoW.Config  as Old
 import qualified Enecuum.Assets.Scenarios             as A
 import qualified Enecuum.Blockchain.Lens              as Lens
 import qualified Enecuum.Domain                       as D
@@ -24,9 +28,9 @@ spec = slowTest $ describe "PoW and graph node interaction" $ fromHUnitTest $ Te
 
 testAcceptKblock :: A.Ordering -> Test
 testAcceptKblock order = TestCase $ withNodesManager $ \mgr -> do
-    void $ startNode Nothing mgr $ A.graphNodeTransmitter A.defaultNodeConfig
+    void $ startNode Nothing mgr $ Old.graphNodeTransmitter A.defaultNodeConfig
     waitForNode A.graphNodeTransmitterRpcAddress
-    void $ startNode Nothing mgr $ A.powNode' $ A.defaultPoWNodeConfig { A._kblocksOrder = order}
+    void $ startNode Nothing mgr $ Old.powNode' $ Old.defaultPoWNodeConfig { Old._kblocksOrder = order}
     waitForNode A.powNodeRpcAddress
 
     -- Ask pow node to generate n kblocks
@@ -42,7 +46,7 @@ testAcceptKblock order = TestCase $ withNodesManager $ \mgr -> do
 
 testKblockPending :: Test
 testKblockPending = TestCase $ withNodesManager $ \mgr -> do
-    powNode <- startNode Nothing mgr $ A.powNode
+    powNode <- startNode Nothing mgr Old.powNode
 
     -- Ask pow node to generate n kblocks
     waitForNode A.powNodeRpcAddress
@@ -53,7 +57,7 @@ testKblockPending = TestCase $ withNodesManager $ \mgr -> do
     -- wait until pow generate kblocks
     threadDelay $ 1000 * 1000
 
-    void $ startNode Nothing mgr $ A.graphNodeTransmitter A.defaultNodeConfig
+    void $ startNode Nothing mgr $ Old.graphNodeTransmitter A.defaultNodeConfig
     -- only genesisKBlock kblock on graph node
     waitForNode A.graphNodeTransmitterRpcAddress
     Right topKBlock1 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
@@ -70,7 +74,7 @@ testKblockPending = TestCase $ withNodesManager $ \mgr -> do
 
     -- Stop pow, launch pow again, (there no data from the first pow launch now)
     stopNode mgr powNode
-    void $ startNode Nothing mgr $ A.powNode
+    void $ startNode Nothing mgr Old.powNode
 
     -- Ask pow node to generate n kblocks
     waitForNode A.powNodeRpcAddress
