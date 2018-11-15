@@ -90,32 +90,6 @@ data CLITransaction = CLITransaction
 instance ToJSON CLITransaction where toJSON = genericToJSON noLensPrefix
 instance FromJSON CLITransaction where parseJSON = genericParseJSON noLensPrefix
 
-instance J.FromJSON Ping where
-    parseJSON = J.withObject "Ping" $ \o -> Ping <$> (o J..: "protocol") <*> (o J..: "address")
-
-instance J.FromJSON GetWalletBalance where
-    parseJSON = J.withObject "GetWalletBalance" $ \o -> GetWalletBalance <$> o J..: "walletID" <*> (o J..: "address")
-
-instance J.FromJSON CreateTransaction where
-    parseJSON = J.withObject "CreateTransaction" $ \o -> CreateTransaction <$> o J..: "tx" <*> (o J..: "address")
-
-instance J.FromJSON GetLastKBlock where
-    parseJSON = J.withObject "GetLastKBlock" $ \o -> GetLastKBlock <$> (o J..: "address")
-
-instance J.FromJSON GetLengthOfChain where
-    parseJSON = J.withObject "GetLengthOfChain" $ \o -> GetLengthOfChain <$> (o J..: "address")
-
-instance J.FromJSON StartForeverChainGeneration where
-    parseJSON = J.withObject "StartForeverChainGeneration" $ \o -> StartForeverChainGeneration <$> (o J..: "address")
-
-instance J.FromJSON GenerateBlocksPacket
-
-instance J.FromJSON StopRequest where
-    parseJSON = J.withObject "StopRequest" $ \o -> StopRequest <$> (o J..: "address")
-
-instance J.FromJSON GetBlock where
-    parseJSON = J.withObject "GetBlock" $ \o -> GetBlock <$> o J..: "hash" <*> (o J..: "address")
-
 sendSuccessRequest :: forall a. (ToJSON a, Typeable a) => D.Address -> a -> L.NodeL Text
 sendSuccessRequest address request = do
     res :: Either Text M.SuccessMsg <- L.makeRpcRequest address request

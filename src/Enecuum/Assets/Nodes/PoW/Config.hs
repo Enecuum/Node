@@ -1,15 +1,10 @@
-{-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TemplateHaskell        #-}
-
 module Enecuum.Assets.Nodes.PoW.Config where
 
 import qualified Data.Aeson                           as J
 import qualified Enecuum.Assets.Blockchain.Generation as A
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Config
-import qualified Enecuum.Domain                       as D
 import           Enecuum.Prelude
 
 type BlocksDelay = Int

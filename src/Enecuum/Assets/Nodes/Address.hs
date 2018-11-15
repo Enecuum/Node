@@ -94,7 +94,7 @@ defaultGnReceiverNodeAddress = makeAddressByPorts defaultGnReceiverNodePorts
 
 -- poa = [200 .. 999]
 defaultPoANodePorts :: NodePorts
-defaultPoANodePorts = makeNodePorts1000 5201
+defaultPoANodePorts = makeNodePorts1000 5200
 
 defaultPoANodeAddress :: NodeAddress
 defaultPoANodeAddress = makeAddressByPorts defaultPoANodePorts

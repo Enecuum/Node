@@ -9,7 +9,6 @@ import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.GraphNode.Logic
 import           Enecuum.Assets.Nodes.GraphNode.Config
 import           Enecuum.Assets.Nodes.GraphNode.Database
-import           Enecuum.Assets.Nodes.Routing.Messages
 import           Enecuum.Assets.Nodes.Routing.Runtime
 import           Enecuum.Research.ChordRouteMap
 import qualified Enecuum.Assets.Nodes.Messages as M
@@ -39,7 +38,7 @@ graphNodeTransmitter' cfg nodeData = do
             whenRight eNodeType $ \nodeType ->
                 when (nodeType == M.TypeGraphNode) $ graphSynchro nodeData rpcAddress
 
-    L.serving D.Udp (myNodePorts ^. A.nodeUdpPort) $ do
+    udpServerOk <- L.serving D.Udp (myNodePorts ^. A.nodeUdpPort) $ do
         udpRoutingHandlers routingData
         -- network
         L.handler   methodPing
@@ -48,11 +47,11 @@ graphNodeTransmitter' cfg nodeData = do
         -- PoW interaction
         L.handler $ udpBroadcastRecivedMessage routingData (acceptKBlock' nodeData)
 
-    L.serving D.Tcp (myNodePorts ^. A.nodeTcpPort) $
+    tcpServerOk <- L.serving D.Tcp (myNodePorts ^. A.nodeTcpPort) $
         -- network
         L.handler   methodPing
 
-    L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
+    rpcServerOk <- L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
         rpcRoutingHandlers routingData
         -- network
         L.method  $ handleStopNode nodeData
@@ -78,20 +77,30 @@ graphNodeTransmitter' cfg nodeData = do
         L.method  $ getTransactionPending nodeData
         L.method  $ getLastKBlock nodeData
 
-    L.std $ L.stdHandler $ L.stopNodeHandler nodeData
+    if all isJust [rpcServerOk, udpServerOk, tcpServerOk] then do
+        routingWorker routingData
+        L.std $ L.stdHandler $ L.stopNodeHandler nodeData
 
-    L.process $ forever $ do
-        L.awaitSignal $ nodeData ^. dumpToDBSignal
-        dumpToDB nodeData
-
-    L.process $ forever $ do
-        L.awaitSignal $ nodeData ^. restoreFromDBSignal
-        restoreFromDB nodeData
-
-    L.process $ forever $ do
-        L.awaitSignal $ nodeData ^. checkPendingSignal
-        blockFound <- processKBlockPending' nodeData
-        when blockFound $ L.writeVarIO (nodeData ^. checkPendingSignal) True
+        L.process $ forever $ do
+            L.awaitSignal $ nodeData ^. dumpToDBSignal
+            dumpToDB nodeData
     
-    routingWorker routingData
-    L.awaitNodeFinished nodeData
+        L.process $ forever $ do
+            L.awaitSignal $ nodeData ^. restoreFromDBSignal
+            restoreFromDB nodeData
+    
+        L.process $ forever $ do
+            L.awaitSignal $ nodeData ^. checkPendingSignal
+            blockFound <- processKBlockPending' nodeData
+            when blockFound $ L.writeVarIO (nodeData ^. checkPendingSignal) True
+        
+        routingWorker routingData
+        L.awaitNodeFinished nodeData    
+    else do
+        unless (isJust rpcServerOk) $
+            L.logError $ portError (myNodePorts ^. A.nodeRpcPort) "rpc" 
+        unless (isJust udpServerOk) $
+            L.logError $ portError (myNodePorts ^. A.nodeUdpPort) "udp"
+        unless (isJust tcpServerOk) $
+            L.logError $ portError (myNodePorts ^. A.nodeTcpPort) "tcp"
+

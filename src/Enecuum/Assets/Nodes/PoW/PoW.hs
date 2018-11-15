@@ -19,6 +19,7 @@ import qualified Enecuum.Domain                       as D
 import           Enecuum.Framework.Language.Extra     (HasStatus, NodeStatus (..))
 import qualified Enecuum.Language                     as L
 import           Enecuum.Prelude
+import           Enecuum.Assets.Nodes.Routing.Runtime
 
 type IterationsCount = Int
 type EnableDelays = Bool
@@ -41,8 +42,8 @@ instance Node PoWNode where
 instance ToJSON   (NodeScenario PoWNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario PoWNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
-kBlockProcess :: D.Address -> PoWNodeData -> L.NodeL ()
-kBlockProcess graphNodeUdpAddress nodeData = do
+kBlockProcess :: RoutingRuntime -> PoWNodeData -> L.NodeL ()
+kBlockProcess routingData nodeData = do
     prevKBlockHash      <- L.readVarIO $ nodeData ^. prevHash
     prevKBlockNumber    <- L.readVarIO $ nodeData ^. prevNumber
 
@@ -53,10 +54,10 @@ kBlockProcess graphNodeUdpAddress nodeData = do
     L.writeVarIO (nodeData ^. prevNumber) $ prevKBlockNumber + fromIntegral (length kBlocks)
 
     gap <- L.readVarIO $ nodeData ^. blocksDelay
-    for_ kBlocks $ \ kBlock -> L.withConnection D.Udp graphNodeUdpAddress $ \conn -> do
-            L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-            void $ L.send conn kBlock
-            when (gap > 0) $ L.delay gap
+    for_ kBlocks $ \ kBlock -> do
+        L.logInfo $ "\nSending KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
+        sendUdpBroadcast routingData kBlock
+        when (gap > 0) $ L.delay gap
 
 foreverChainGenerationHandle :: PoWNodeData -> Msgs.ForeverChainGeneration -> L.NodeL Msgs.SuccessMsg
 foreverChainGenerationHandle powNodeData _ = do
@@ -79,8 +80,13 @@ powNode' cfg = do
     L.nodeTag "PoW node"
 
     let myNodePorts = _powNodePorts cfg
+    -- TODO: read from config
+    let myHash      = D.toHashGeneric myNodePorts
+    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash (_powNodebnAddress cfg)
+    
     nodeData <- L.initialization $ powNodeInitialization cfg D.genesisHash
-    L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
+    rpcServerOk <- L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
+        rpcRoutingHandlers routingData
         -- network
         L.method    rpcPingPong
         L.method  $ handleStopNode nodeData
@@ -89,15 +95,25 @@ powNode' cfg = do
         L.method  $ foreverChainGenerationHandle nodeData
         L.method  $ nBlockPacketGenerationHandle nodeData
 
-    L.std $ L.stdHandler $ L.stopNodeHandler nodeData
-    L.process $ forever $ do
-        L.atomically $ do
-            i <- L.readVar $ nodeData ^. requiredBlockNumber
-            when (i == 0) L.retry
-            L.writeVar (nodeData ^. requiredBlockNumber) (i - 1)
-        --kBlockProcess (_graphNodeUDPAddress cfg ) nodeData
+    udpServerOk <- L.serving D.Udp (myNodePorts ^. A.nodeUdpPort) $
+        udpRoutingHandlers routingData
+    if all isJust [rpcServerOk, udpServerOk] then do
+        routingWorker routingData
+        L.std $ L.stdHandler $ L.stopNodeHandler nodeData
+        L.process $ forever $ do
+            L.atomically $ do
+                i <- L.readVar $ nodeData ^. requiredBlockNumber
+                when (i == 0) L.retry
+                L.writeVar (nodeData ^. requiredBlockNumber) (i - 1)
+            kBlockProcess routingData nodeData
+        L.logInfo "PoW is ready to work."
+        L.awaitNodeFinished nodeData
+    else do
+        unless (isJust rpcServerOk) $
+            L.logError $ portError (myNodePorts ^. A.nodeRpcPort) "rpc" 
+        unless (isJust udpServerOk) $
+            L.logError $ portError (myNodePorts ^. A.nodeUdpPort) "udp"
 
-    L.awaitNodeFinished nodeData
 
 powNodeInitialization ::  NodeConfig PoWNode -> StringHash -> L.NodeL PoWNodeData
 powNodeInitialization cfg genesisHash = do

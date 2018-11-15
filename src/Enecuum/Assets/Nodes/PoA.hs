@@ -17,12 +17,11 @@ import qualified Enecuum.Blockchain.Lens      as Lens
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 
 import qualified Enecuum.Assets.Nodes.Address as A
-import           Enecuum.Assets.Nodes.Messages
-import           Enecuum.Assets.Nodes.Routing.Messages
 import           Enecuum.Assets.Nodes.Routing.Runtime
 
-import           Enecuum.Assets.Nodes.Methods (rpcPingPong, handleStopNode)
+import           Enecuum.Assets.Nodes.Methods (rpcPingPong, handleStopNode, portError)
 import qualified Enecuum.Assets.Blockchain.Generation as A
+
 
 data PoANodeData = PoANodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock
@@ -36,8 +35,7 @@ data PoANode = PoANode
     deriving (Show, Generic)
 
 data instance NodeConfig PoANode = PoANodeConfig
-    { _dummyOption  :: Int
-    , _poaNodePorts :: A.NodePorts
+    { _poaNodePorts :: A.NodePorts
     , _poaBnAddress :: A.NodeAddress
     }
     deriving (Show, Generic)
@@ -54,7 +52,7 @@ instance FromJSON (NodeConfig PoANode)   where parseJSON = A.genericParseJSON no
 instance ToJSON   (NodeScenario PoANode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario PoANode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
-defaultPoANodeConfig = PoANodeConfig 42 A.defaultPoANodePorts A.defaultBnNodeAddress
+defaultPoANodeConfig = PoANodeConfig A.defaultPoANodePorts A.defaultBnNodeAddress
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
@@ -107,15 +105,20 @@ poaNode role cfg = do
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
+    rpcServerOk <- L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
         rpcRoutingHandlers routingData
         L.method   rpcPingPong
         L.method $ handleStopNode poaData
 
-    L.serving D.Udp  (myNodePorts ^. A.nodeUdpPort) $ do
+    udpServerOk <- L.serving D.Udp (myNodePorts ^. A.nodeUdpPort) $ do
         udpRoutingHandlers routingData
         L.handler $ udpBroadcastRecivedMessage routingData $
             sendMicroblock routingData poaData role
-
-    routingWorker routingData
-    L.awaitNodeFinished poaData
+    if all isJust [rpcServerOk, udpServerOk] then do
+        routingWorker routingData
+        L.awaitNodeFinished poaData
+    else do
+        unless (isJust rpcServerOk) $
+            L.logError $ portError (myNodePorts ^. A.nodeRpcPort) "rpc" 
+        unless (isJust udpServerOk) $
+            L.logError $ portError (myNodePorts ^. A.nodeUdpPort) "udp"
