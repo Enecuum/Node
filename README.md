@@ -65,10 +65,24 @@ Run fast tests:
 Run slow and unreliable tests:
 `stack build --fast --test --test-arguments "-m Slow"`
 
-### Initialize
+### Node executable
 
-If you added path to your profile:
-`enq-node-haskell initialize ./configs/Client.json`
+`enq-node-haskell` is a single executable for nodes.
+`./configs` contains several configs for different nodes.
 
-Or you need to use that instead:
+# Running sample nodes
+
+* GraphNode Transmitter
+`stack exec enq-node-haskell initialize ./configs/GraphNodeTransmitter.json`
+
+* GraphNode Receiver
+`stack exec enq-node-haskell initialize ./configs/GraphNodeReceiver.json`
+
+* Fake PoW
+`stack exec enq-node-haskell initialize ./configs/pow.json`
+
+* Fake PoA
+`stack exec enq-node-haskell initialize ./configs/poa.json`
+
+* Console client
 `stack exec enq-node-haskell initialize ./configs/Client.json`
