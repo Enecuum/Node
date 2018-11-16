@@ -37,19 +37,23 @@ routingWorker routingRuntime = do
     let bnUdpAddress = A.getUdpAddress (routingRuntime^.bnAddress)
 
     builtIntoTheNetwork routingRuntime
+    -- delete connects if now exist better
     L.periodic (1000 * 1000)  $ clearingOfConnects routingRuntime
+    -- clockwise structure refinement
     L.periodic (1000 * 10000) $ successorsRequest  routingRuntime
+    -- anti-clockwise structure refinement
     L.periodic (1000 * 1000)  $ sendHelloToPrevius routingRuntime
+    -- clearing of list for familiar messages
     L.periodic (1000 * 1000)  $
         L.modifyVarIO (routingRuntime ^. msgFilter)
             (\seq -> Set.empty Seq.<| Seq.deleteAt 2 seq)
-    
+    -- deleting of deads nodes
     L.periodic (1000 * 1000)  $ do
         deadNodes <- pingConnects =<< getConnects routingRuntime
         forM_ deadNodes $ \hash -> do
             L.modifyVarIO (routingRuntime ^. connectMap) $ removeFromMap hash
             L.notify bnUdpAddress $ M.IsDead hash
-    
+
 udpRoutingHandlers :: RoutingRuntime -> L.NetworkHandlerL D.Udp L.NodeL ()
 udpRoutingHandlers routingRuntime = do
     L.handler $ acceptHello             routingRuntime
@@ -147,6 +151,8 @@ getMyNodeAddress routingRuntime = do
 getConnects :: RoutingRuntime -> L.NodeL (ChordRouteMap A.NodeAddress)
 getConnects routingRuntime = L.readVarIO (routingRuntime ^. connectMap)
 
+-- leave in the list of connections only those
+-- that satisfy the conditions of the chord algorithm
 clearingOfConnects :: RoutingRuntime -> L.NodeL ()
 clearingOfConnects routingRuntime = do
     connects <- getConnects routingRuntime
@@ -157,6 +163,8 @@ clearingOfConnects routingRuntime = do
             (routingRuntime ^. connectMap)
             (toChordRouteMap $ nextForMe <> fingerNodes)
 
+-- sending requests to the network to clarify the map of connections
+-- successors may be better connections than those that are now.
 successorsRequest :: RoutingRuntime -> L.NodeL ()
 successorsRequest routingRuntime =
     -- clarify the map of connections
@@ -167,6 +175,16 @@ successorsRequest routingRuntime =
             -- ask who for the respondent next
             void $ L.notify (A.getUdpAddress addr) $ NextForYou $ A.getUdpAddress myNodeAddress
 
+-- answer to the questioner who is successor for me
+acceptNextForYou :: RoutingRuntime -> NextForYou -> D.Connection D.Udp -> L.NodeL ()
+acceptNextForYou routingRuntime (NextForYou senderAddress) conn = do
+    L.close conn
+    connects <- getConnects routingRuntime
+    let mAddress = snd <$> findNextForHash (routingRuntime ^. myNodeId) connects
+    whenJust mAddress $ \address -> void $ L.notify senderAddress address
+
+-- check if all connections are alive
+-- return list of "dead connects"
 pingConnects :: ChordRouteMap A.NodeAddress -> L.NodeL [A.NodeId]
 pingConnects nodes = do
     deadNodes <- forM (elems nodes) $ \(nodeId, address) -> do
@@ -182,6 +200,7 @@ builtIntoTheNetwork routingRuntime = do
     registerWithBn routingRuntime
     forM_ [connecRequests 63, nextRequest, sendHelloToPrevius]
         $ \action -> L.scenario $ action routingRuntime
+
 
 registerWithBn :: RoutingRuntime -> L.NodeDefinitionL ()
 registerWithBn routingRuntime = do
@@ -253,14 +272,6 @@ acceptHello routingRuntime routingHello con = do
         L.modifyVarIO
             (routingRuntime ^. connectMap)
             (addToMap senderNodeId senderAddress)
-
-
-acceptNextForYou :: RoutingRuntime -> NextForYou -> D.Connection D.Udp -> L.NodeL ()
-acceptNextForYou routingRuntime (NextForYou senderAddress) conn = do
-    L.close conn
-    connects     <- getConnects routingRuntime
-    let mAddress =  findNextForHash (routingRuntime ^. myNodeId) connects
-    whenJust mAddress $ \(_, address) -> void $ L.notify senderAddress address
 
 acceptConnectResponse :: RoutingRuntime -> A.NodeAddress -> D.Connection D.Udp -> L.NodeL ()
 acceptConnectResponse routingRuntime address con = do
