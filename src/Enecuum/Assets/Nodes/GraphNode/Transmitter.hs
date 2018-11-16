@@ -3,11 +3,15 @@ module Enecuum.Assets.Nodes.GraphNode.Transmitter where
 import           Enecuum.Prelude
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
+import qualified Enecuum.Assets.Nodes.Address  as A
 import           Enecuum.Config
 import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.GraphNode.Logic
 import           Enecuum.Assets.Nodes.GraphNode.Config
 import           Enecuum.Assets.Nodes.GraphNode.Database
+import           Enecuum.Assets.Nodes.Routing.Runtime
+import           Enecuum.Research.ChordRouteMap
+import qualified Enecuum.Assets.Nodes.Messages as M
 
 -- | Start of graph node
 graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()
@@ -18,25 +22,40 @@ graphNodeTransmitter nodeCfg = do
 
 graphNodeTransmitter' :: NodeConfig GraphNode -> GraphNodeData -> L.NodeDefinitionL ()
 graphNodeTransmitter' cfg nodeData = do
-    case (_rpcSynco cfg) of
-        Nothing -> pure ()
-        Just rpcSyncoAddress -> L.process $ forever $ graphSynchro nodeData rpcSyncoAddress
-    L.serving D.Tcp (_tcpPort cfg) $ do
+    let myNodePorts   = _gnNodePorts cfg
+    let bnNodeAddress = Enecuum.Assets.Nodes.GraphNode.Config._bnAddress cfg
+
+    -- TODO: read from config
+    let myHash      = D.toHashGeneric myNodePorts
+
+    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash bnNodeAddress
+
+    periodic (1000 * 1000) $ do
+        connects <- fromChordRouteMap <$> L.readVarIO (routingData ^. connectMap)
+        forM_ connects $ \(_, nodeAddress) -> do
+            let rpcAddress = A.getRpcAddress nodeAddress
+            eNodeType <- L.makeRpcRequest rpcAddress M.GetNodeType
+            whenRight eNodeType $ \nodeType ->
+                when (nodeType == M.TypeGraphNode) $ graphSynchro nodeData rpcAddress
+
+    udpServerOk <- L.serving D.Udp (myNodePorts ^. A.nodeUdpPort) $ do
+        udpRoutingHandlers routingData
         -- network
         L.handler   methodPing
         -- PoA interaction
-        L.handler $ acceptMBlock nodeData
+        L.handler $ udpBroadcastRecivedMessage routingData (acceptMBlock' nodeData)
         -- PoW interaction
-        L.handler $ acceptKBlock nodeData
+        L.handler $ udpBroadcastRecivedMessage routingData (acceptKBlock' nodeData)
 
-    -- L.serving D.Udp graphNodeTransmitterUdpPort $
-    --     -- network
-    --     L.handler   methodPing
-
-    L.serving D.Rpc ((\(D.Address _ port) -> port) $ _rpc cfg) $ do
+    tcpServerOk <- L.serving D.Tcp (myNodePorts ^. A.nodeTcpPort) $
         -- network
-        L.method    rpcPingPong
+        L.handler   methodPing
+
+    rpcServerOk <- L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
+        rpcRoutingHandlers routingData
+        -- network
         L.method  $ handleStopNode nodeData
+        L.method  $ \M.GetNodeType -> pure M.TypeGraphNode
 
         -- client interaction
         L.methodE $ getBalance nodeData
@@ -59,19 +78,29 @@ graphNodeTransmitter' cfg nodeData = do
         L.method  $ getTransactionPending nodeData
         L.method  $ getLastKBlock nodeData
 
-    L.std $ L.stdHandler $ L.stopNodeHandler nodeData
+    if all isJust [rpcServerOk, udpServerOk, tcpServerOk] then do
+        routingWorker routingData
+        L.std $ L.stdHandler $ L.stopNodeHandler nodeData
 
-    L.process $ forever $ do
-        L.awaitSignal $ nodeData ^. dumpToDBSignal
-        dumpToDB nodeData
+        L.process $ forever $ do
+            L.awaitSignal $ nodeData ^. dumpToDBSignal
+            dumpToDB nodeData
 
-    L.process $ forever $ do
-        L.awaitSignal $ nodeData ^. restoreFromDBSignal
-        restoreFromDB nodeData
+        L.process $ forever $ do
+            L.awaitSignal $ nodeData ^. restoreFromDBSignal
+            restoreFromDB nodeData
 
-    L.process $ forever $ do
-        L.awaitSignal $ nodeData ^. checkPendingSignal
-        blockFound <- processKBlockPending' nodeData
-        when blockFound $ L.writeVarIO (nodeData ^. checkPendingSignal) True
+        L.process $ forever $ do
+            L.awaitSignal $ nodeData ^. checkPendingSignal
+            blockFound <- processKBlockPending' nodeData
+            when blockFound $ L.writeVarIO (nodeData ^. checkPendingSignal) True
 
-    L.awaitNodeFinished nodeData
+        routingWorker routingData
+        L.awaitNodeFinished nodeData
+    else do
+        unless (isJust rpcServerOk) $
+            L.logError $ portError (myNodePorts ^. A.nodeRpcPort) "rpc"
+        unless (isJust udpServerOk) $
+            L.logError $ portError (myNodePorts ^. A.nodeUdpPort) "udp"
+        unless (isJust tcpServerOk) $
+            L.logError $ portError (myNodePorts ^. A.nodeTcpPort) "tcp"

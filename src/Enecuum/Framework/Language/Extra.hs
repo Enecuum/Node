@@ -5,7 +5,6 @@
 module Enecuum.Framework.Language.Extra where
 
 import Enecuum.Prelude
-import qualified Data.Aeson as A
 
 import qualified Enecuum.Framework.Node.Language           as L
 import qualified Enecuum.Framework.Networking.Language     as L
@@ -32,10 +31,7 @@ class HasStatus s a | s -> a where
 data NodeStatus = NodeActing | NodeFinished
     deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data StopNode = StopNode
-
-instance A.FromJSON StopNode where
-    parseJSON _ = pure StopNode
+data StopNode = StopNode deriving Read
 
 
 -- | Evals some graph action (atomically) having a structure that contains a graph variable.
@@ -128,3 +124,14 @@ awaitSignal :: (Monad m, L.StateIO m) => D.StateVar Bool -> m ()
 awaitSignal signalVar = do
     L.atomically $ unlessM (L.readVar signalVar) L.retry
     L.writeVarIO signalVar False
+
+--
+await :: L.StateIO m => D.StateVar (Maybe a) -> m a
+await ref = L.atomically $ do
+    mValue <- L.readVar ref
+    case mValue of
+        Just value -> pure value
+        Nothing    -> L.retry
+
+--
+modifyVarIO var f = L.atomically $ L.modifyVar var f

@@ -8,7 +8,40 @@ import           Enecuum.Assets.Blockchain.Keys
 import qualified Enecuum.Domain                 as D
 import           Enecuum.Prelude
 
+-- | Common
 data SuccessMsg = SuccessMsg
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+newtype IsDead = IsDead StringHash
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+
+data GetNodeType = GetNodeType
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data NodeType = TypeGraphNode | TypeBN | TypePoA | TypePoW
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | BN, NN nodes
+data Hello = Hello StringHash D.Address
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data ConnectMapRequest = ConnectMapRequest
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | BN node
+data ConnectRequest = ConnectRequest StringHash Word64
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+newtype PreviousForMe = PreviousForMe StringHash
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+newtype NextForMe = NextForMe StringHash
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+
+
+data GetRoutingMessages = GetRoutingMessages
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | Network messages
@@ -23,7 +56,7 @@ data Stop = Stop
 
 -- | Client local
 data CreateNodeId = CreateNodeId Password
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | client - graph node interaction
 newtype CreateTransaction = CreateTransaction D.Transaction
@@ -39,6 +72,7 @@ data WalletBalanceMsg = WalletBalanceMsg
 
 newtype GetWalletBalance = GetWalletBalance { walletId :: WalletId }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
 
 -- | client - PoW interaction
 data GetKBlockPending = GetKBlockPending

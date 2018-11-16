@@ -13,7 +13,7 @@ import           System.FilePath                              as FP ((</>))
 import qualified System.FilePath                              as Dir
 
 import           Enecuum.Assets.Nodes.Client                  (ClientNode)
-import qualified Enecuum.Assets.Nodes.Messages                as A
+import qualified Enecuum.Assets.Scenarios                     as A
 import qualified Enecuum.Config                               as Cfg
 import qualified Enecuum.Core.Lens                            as Lens
 import qualified Enecuum.Core.RLens                           as RLens

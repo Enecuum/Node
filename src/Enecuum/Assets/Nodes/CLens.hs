@@ -7,7 +7,8 @@ import           Control.Lens (Getter, to)
 import           Enecuum.Config
 import qualified Enecuum.Domain as D
 import           Enecuum.Assets.Nodes.GraphNode.Config
-import           Enecuum.Assets.Nodes.PoW.Config
+import           Enecuum.Assets.Nodes.PoW.Config as PoW
+import           Enecuum.Assets.Nodes.OldNodes.PoW.Config
 
 useDatabase :: Getter (NodeConfig GraphNode) Bool
 useDatabase = to (_useDatabase . _dbConfig)
@@ -24,5 +25,5 @@ dbOptions = to (_dbOptions . _dbConfig)
 stopOnDatabaseError :: Getter (NodeConfig GraphNode) Bool
 stopOnDatabaseError = to (_stopOnDatabaseError . _dbConfig)
 
-defaultBlocksDelay :: Getter (NodeConfig PoWNode) BlocksDelay
-defaultBlocksDelay = to _defaultBlocksDelay
+defaultBlocksDelay :: Getter (NodeConfig PoWNode) PoW.BlocksDelay
+defaultBlocksDelay = to PoW._defaultBlocksDelay

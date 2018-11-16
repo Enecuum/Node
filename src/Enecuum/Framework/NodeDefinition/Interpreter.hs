@@ -168,7 +168,7 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
                 case minput of
                     Nothing      -> pure ()
                     Just    line -> do
-                        res <- liftIO $ callHandler nodeRt m' $ T.pack line
+                        res <- liftIO $ callHandler nodeRt m' line
                         outputStrLn $ T.unpack res
                         whenJust filePath $ \path -> do
                             history <- getHistory
@@ -197,16 +197,12 @@ interpretNodeDefinitionL _ (L.AwaitResult pPtr next) = do
     result <- atomically $ takeTMVar pVar
     pure $ next result
 
-callHandler :: NodeRuntime -> Map Text (Value -> L.NodeL Text) -> Text -> IO Text
+callHandler :: NodeRuntime -> Map Text (String -> L.NodeL Text) -> String -> IO Text
 callHandler nodeRt methods msg = do
-    val <- try $ pure $ A.decode $ fromString $ T.unpack msg
-    case val of
-        Right (Just jval@((^? key "method" . _String) -> Just method)) ->
-            case methods ^. at method of
-                Just justMethod -> Impl.runNodeL nodeRt $ justMethod jval
-                Nothing         -> pure $ "The method " <> method <> " isn't supported."
-        Right _                    -> pure "Error of request parsing."
-        Left  (_ :: SomeException) -> pure "Error of request parsing."
+    let tag = T.pack $ takeWhile (/= ' ') msg
+    case methods ^. at tag of
+        Just justMethod -> Impl.runNodeL nodeRt $ justMethod msg
+        Nothing         -> pure $ "The method " <> tag <> " isn't supported."
 
 type RpcMethods t = Map Text (A.Value -> Int -> t)
 

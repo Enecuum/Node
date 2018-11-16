@@ -1,15 +1,10 @@
-{-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TemplateHaskell        #-}
-
 module Enecuum.Assets.Nodes.PoW.Config where
 
 import qualified Data.Aeson                           as J
 import qualified Enecuum.Assets.Blockchain.Generation as A
-import           Enecuum.Assets.Nodes.Address         (graphNodeTransmitterUdpAddress, powNodeRpcPort)
+import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Config
-import qualified Enecuum.Domain                       as D
 import           Enecuum.Prelude
 
 type BlocksDelay = Int
@@ -20,8 +15,8 @@ data PoWNode = PoWNode
 data instance NodeConfig PoWNode = PoWNodeConfig
         { _defaultBlocksDelay  :: BlocksDelay
         , _kblocksOrder        :: A.Ordering
-        , _graphNodeUDPAddress :: D.Address
-        , _powNodeRpcPort      :: D.PortNumber
+        , _powNodebnAddress    :: NodeAddress
+        , _powNodePorts        :: NodePorts
         }
     deriving (Show, Generic)
 
@@ -33,4 +28,5 @@ instance FromJSON PoWNode              where parseJSON = J.genericParseJSON node
 defaultBlocksDelay :: BlocksDelay
 defaultBlocksDelay = 1000 * 1000
 
-defaultPoWNodeConfig = PoWNodeConfig defaultBlocksDelay A.InOrder graphNodeTransmitterUdpAddress powNodeRpcPort
+defaultPoWNodeConfig :: NodeConfig PoWNode
+defaultPoWNodeConfig = PoWNodeConfig defaultBlocksDelay A.InOrder defaultBnNodeAddress defaultPoWNodePorts

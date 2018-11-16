@@ -3,7 +3,7 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
-module Enecuum.Assets.Nodes.PoA where
+module Enecuum.Assets.Nodes.OldNodes.PoA where
 
 import           Enecuum.Prelude
 import qualified Data.Aeson as A
@@ -17,48 +17,47 @@ import qualified Enecuum.Blockchain.Lens      as Lens
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 
 import qualified Enecuum.Assets.Nodes.Address as A
-import           Enecuum.Assets.Nodes.Routing.Runtime
-
-import           Enecuum.Assets.Nodes.Methods (rpcPingPong, handleStopNode, portError)
+import           Enecuum.Assets.Nodes.Messages
+import           Enecuum.Assets.Nodes.Methods (rpcPingPong, handleStopNode)
 import qualified Enecuum.Assets.Blockchain.Generation as A
 
-
-data PoANodeData = PoANodeData
+data OldPoaNodeData = OldPoaNodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock
     , _status              :: D.StateVar NodeStatus
     , _transactionPending  :: D.StateVar [D.Transaction]
     }
 
-makeFieldsNoPrefix ''PoANodeData
+makeFieldsNoPrefix ''OldPoaNodeData
 
-data PoANode = PoANode
+data OldPoaNode = OldPoaNode
     deriving (Show, Generic)
 
-data instance NodeConfig PoANode = PoANodeConfig
-    { _poaNodePorts :: A.NodePorts
-    , _poaBnAddress :: A.NodeAddress
+data instance NodeConfig OldPoaNode = OldPoANodeConfig
+    { _dummyOption :: Int
+    , _poaRPCPort  :: D.PortNumber
     }
     deriving (Show, Generic)
 
-instance Node PoANode where
-    data NodeScenario PoANode = Good | Bad
+instance Node OldPoaNode where
+    data NodeScenario OldPoaNode = Good | Bad
         deriving (Show, Generic)
     getNodeScript = poaNode
 
-instance ToJSON   PoANode                where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON PoANode                where parseJSON = A.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeConfig PoANode)   where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeConfig PoANode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeScenario PoANode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeScenario PoANode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   OldPoaNode                where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON OldPoaNode                where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig OldPoaNode)   where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig OldPoaNode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario OldPoaNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario OldPoaNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
-defaultPoANodeConfig = PoANodeConfig A.defaultPoANodePorts A.defaultBnNodeAddress
+defaultPoANodeConfig :: NodeConfig OldPoaNode
+defaultPoANodeConfig = OldPoANodeConfig 42 (A.defaultPoANodePorts ^. A.nodeRpcPort)
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
 
-sendMicroblock :: RoutingRuntime -> PoANodeData -> NodeScenario PoANode -> D.KBlock -> L.NodeL ()
-sendMicroblock routingData poaData role block = do
+sendMicroblock :: OldPoaNodeData -> D.KBlock -> NodeScenario OldPoaNode -> L.NodeL ()
+sendMicroblock poaData block role = do
     currentBlock <- L.readVarIO (poaData ^. currentLastKeyBlock)
     when (block /= currentBlock) $ do
         L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ ")."
@@ -85,40 +84,28 @@ sendMicroblock routingData poaData role block = do
             Bad  -> A.generateBogusSignedMicroblock block tx
         L.logInfo
             $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
-        
-        void $ sendUdpBroadcast routingData mBlock
+        let gnUdpAddress = A.getUdpAddress A.defaultGnNodeAddress
+        void $ L.withConnection D.Udp gnUdpAddress $
+            \conn -> L.send conn mBlock
 
-
-
-
-poaNode :: NodeScenario PoANode -> NodeConfig PoANode -> L.NodeDefinitionL ()
+poaNode :: NodeScenario OldPoaNode -> NodeConfig OldPoaNode -> L.NodeDefinitionL ()
 poaNode role cfg = do
     L.nodeTag "PoA node"
     L.logInfo "Starting of PoA node"
-    let myNodePorts = _poaNodePorts cfg
-
-    -- TODO: read from config
-    let myHash      = D.toHashGeneric myNodePorts
-
-    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash (_poaBnAddress cfg)
-    poaData     <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
+    poaData <- L.scenario $ L.atomically (OldPoaNodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    rpcServerOk <- L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
-        rpcRoutingHandlers routingData
+    L.serving D.Rpc (_poaRPCPort cfg) $ do
         L.method   rpcPingPong
         L.method $ handleStopNode poaData
 
-    udpServerOk <- L.serving D.Udp (myNodePorts ^. A.nodeUdpPort) $ do
-        udpRoutingHandlers routingData
-        L.handler $ udpBroadcastRecivedMessage routingData $
-            sendMicroblock routingData poaData role
-    if all isJust [rpcServerOk, udpServerOk] then do
-        routingWorker routingData
-        L.awaitNodeFinished poaData
-    else do
-        unless (isJust rpcServerOk) $
-            L.logError $ portError (myNodePorts ^. A.nodeRpcPort) "rpc" 
-        unless (isJust udpServerOk) $
-            L.logError $ portError (myNodePorts ^. A.nodeUdpPort) "udp"
+    let gnRpcAddress = A.getRpcAddress A.defaultGnNodeAddress
+    L.process $ forever $ do
+        L.delay $ 100 * 1000
+        whenRightM (L.makeRpcRequest gnRpcAddress GetTransactionPending) $ \tx -> do
+            forM_ tx (\t -> L.logInfo $ "\nAdd transaction to pending "  +| D.showTransaction t "" |+ "")
+            L.atomically $ L.modifyVar (poaData ^. transactionPending) ( ++ tx )
+        whenRightM (L.makeRpcRequest gnRpcAddress GetLastKBlock) $ \block -> sendMicroblock poaData block role
+
+    L.awaitNodeFinished poaData
