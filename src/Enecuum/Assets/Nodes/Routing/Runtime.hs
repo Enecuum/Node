@@ -201,17 +201,14 @@ builtIntoTheNetwork routingRuntime = do
     forM_ [connecRequests 63, nextRequest, sendHelloToPrevius]
         $ \action -> L.scenario $ action routingRuntime
 
-
+-- TODO: Add real private key
 registerWithBn :: RoutingRuntime -> L.NodeDefinitionL ()
 registerWithBn routingRuntime = do
-    let bnUdpAddress =  A.getUdpAddress (routingRuntime^.bnAddress)
     let privateKey   =  True
-    helloToBn        <- makeHelloToBn
-        privateKey
-        (routingRuntime^.nodePorts)
-        (routingRuntime^.myNodeId)
+    -- Ask the BN for what address we are in until she answers.
+    helloToBn        <- makeHelloToBn privateKey (routingRuntime^.nodePorts) (routingRuntime^.myNodeId)
     let takeAddress  =  do
-            void $ L.notify bnUdpAddress helloToBn
+            void $ L.notify (A.getUdpAddress (routingRuntime^.bnAddress)) helloToBn
             L.delay 1000000
             unlessM (isJust <$> L.readVarIO (routingRuntime ^. hostAddress)) takeAddress
     L.process takeAddress
