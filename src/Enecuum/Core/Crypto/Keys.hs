@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Enecuum.Core.Crypto.Keys (generateNewRandomAnonymousKeyPair, getPrivateKey, showPublicKey,
+module Enecuum.Core.Crypto.Keys (generateNewRandomAnonymousKeyPair, getPrivateKey, showPublicKey, showPrivateKey,
                                         readPublicKey, readPrivateKey, compressPublicKey, decompressPublicKey,
                                         PublicKey(..), PrivateKey(..), KeyPair (..)) where
 

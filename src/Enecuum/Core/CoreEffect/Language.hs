@@ -11,7 +11,7 @@ import           Enecuum.Core.FileSystem.Language
 import           Enecuum.Core.Logger.Language      (Logger, LoggerL, logMessage)
 import           Enecuum.Core.Random.Language
 import           Language.Haskell.TH.MakeFunctor (makeFunctorInstance)
-import           Enecuum.Prelude hiding (readFile)
+import           Enecuum.Prelude hiding (readFile, writeFile)
 
 -- | Core effects container language.
 data CoreEffectF next where
@@ -39,6 +39,7 @@ evalFileSystem filepath = liftF $ EvalFileSystem filepath id
 
 instance FileSystem (Free CoreEffectF) where
   readFile filepath = evalFileSystem $ readFile filepath
+  writeFile filename text = evalFileSystem $ writeFile filename text  
   getHomeDirectory = evalFileSystem $ getHomeDirectory
   createFilePath filepath = evalFileSystem $ createFilePath filepath 
 
@@ -50,7 +51,7 @@ instance ERandom (Free CoreEffectF) where
   getRandomByteString = evalRandom . getRandomByteString
   evalCoreCrypto = evalRandom . evalCoreCrypto
   nextUUID = evalRandom $ nextUUID
-  
+
 evalControlFlow :: ControlFlowL a -> CoreEffect a
 evalControlFlow a = liftF $ EvalControlFlow a id
 

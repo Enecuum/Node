@@ -1,11 +1,12 @@
-{-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Enecuum.Assets.Nodes.Messages where
 
-import           Enecuum.Prelude
-import qualified Enecuum.Domain                as D
 import           Data.HGraph.StringHashable
+import           Enecuum.Assets.Blockchain.Keys
+import qualified Enecuum.Domain                 as D
+import           Enecuum.Prelude
 
 data SuccessMsg = SuccessMsg
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -18,6 +19,10 @@ data Pong = Pong
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data Stop = Stop
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | Client local
+data CreateNodeId = CreateNodeId Password
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | client - graph node interaction
@@ -79,7 +84,7 @@ newtype GetMBlocksForKBlockResponse = GetMBlocksForKBlockResponse { mblocks :: [
   deriving (Show, Eq, Generic, Newtype, ToJSON, FromJSON)
 
 data Synchronize  = Synchronize D.Address
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)  
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
 -- | Other graph node messages
 
 data DumpToDB = DumpToDB

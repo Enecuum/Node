@@ -15,6 +15,7 @@ import           Enecuum.Config
 import           Enecuum.Framework.Language.Extra (NodeStatus (..))
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude                  hiding (map, unpack)
+import           Enecuum.Assets.Blockchain.Keys
 
 data ClientNode = ClientNode
     deriving (Show, Generic)
@@ -222,6 +223,11 @@ GenerateBlocksPacket {blocks = 1, timeGap = 0, address = Address {_host= "127.0.
 SendTo (Address "127.0.0.1" 5001) 5002
 -}
 
+createNodeId :: M.CreateNodeId -> L.NodeL Text
+createNodeId (M.CreateNodeId password) = do
+    createNodeId' $ Manual password
+    pure "Success"
+
 clientNode :: L.NodeDefinitionL ()
 clientNode = clientNode' (ClientNodeConfig 42)
 
@@ -235,6 +241,9 @@ clientNode' _ = do
         L.stdHandler ping
         L.stdHandler stopRequest
         L.stdHandler $ L.stopNodeHandler' stateVar
+
+        -- local activity
+        L.stdHandler createNodeId
 
         -- interaction with graph node
         L.stdHandler createTransaction
