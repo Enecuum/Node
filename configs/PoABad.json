@@ -4,7 +4,8 @@
    "nodeConfig":
    {
       "tag":"PoANodeConfig",
-      "dummyOption": 1
+      "dummyOption": 1,
+      "poaRPCPort": 2007
    },
    "loggerConfig":
    {

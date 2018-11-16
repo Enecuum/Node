@@ -3,17 +3,27 @@
    "nodeScenario":"Transmitter",
    "nodeConfig":
    {
-      "tag":"GraphNodeConfig",
-      "useDatabase":true,
-      "dbModelName":"graph_node_transmitter.dbm",
-      "useEnqHomeDir":true,
-      "stopOnDatabaseError":true,
-      "dbOptions":
-      {
-          "createIfMissing":true,
-          "errorIfExists":false
-      }
+       "tag":"GraphNodeConfig",
+       "rpc":{"host":"127.0.0.1","port":2008},
+       "rpcSynco":null,
+       "udpPort":3002,
+       "tcpPort":3001,
+			 "dbConfig":
+			 {
+					 "tag":"DBConfig",
+					 "useDatabase":true,
+           "dbModelName":"graph_node_transmitter.dbm",
+           "useEnqHomeDir":true,
+           "stopOnDatabaseError":true,
+           "dbOptions":
+					 {
+							 "createIfMissing":true,
+               "errorIfExists":false
+					 }
+			 }
    },
+
+
    "loggerConfig":
    {
       "logFilePath": "/tmp/log/GraphNodeTransmitter.log",
