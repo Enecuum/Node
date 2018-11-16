@@ -72,6 +72,11 @@ fork action = liftF $ ForkProcess action id
 process :: L.NodeL () -> NodeDefinitionL ()
 process = void . fork
 
+periodic :: Int -> L.NodeL a -> NodeDefinitionL ()
+periodic time action = process $ forever $ do
+    L.delay time
+    action
+
 -- | Try get result from a process (non-blocking).
 tryGetResult :: D.ProcessPtr a -> NodeDefinitionL (Maybe a)
 tryGetResult handle = liftF $ TryGetResult handle id

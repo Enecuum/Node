@@ -30,7 +30,7 @@ graphNodeTransmitter' cfg nodeData = do
     
     routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash bnNodeAddress
 
-    periodic (1000 * 1000) $ do
+    L.periodic (1000 * 1000) $ do
         connects <- fromChordRouteMap <$> L.readVarIO (routingData ^. connectMap)
         forM_ connects $ \(_, nodeAddress) -> do
             let rpcAddress = A.getRpcAddress nodeAddress
