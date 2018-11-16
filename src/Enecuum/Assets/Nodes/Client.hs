@@ -54,7 +54,7 @@ data GetBlock                       = GetBlock D.StringHash D.Address deriving R
 data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON, Read)
 data SendTo                         = SendTo Address D.PortNumber deriving Read
 data Address                        = Address D.Host D.PortNumber deriving Read
-newtype DrawMap                     = DrawMap Address deriving Read
+newtype DrawMap                     = DrawMap D.PortNumber deriving Read
 data GenerateBlocksPacket           = GenerateBlocksPacket
     { blocks  :: D.BlockNumber
     , timeGap :: TimeGap
@@ -197,8 +197,9 @@ sendTo (SendTo (Address host port) rPort) = do
     pure "Sended."
 
 drawRouteMap :: DrawMap -> L.NodeL Text
-drawRouteMap (DrawMap (Address host port)) = do
-    routMap <- cardAssembly mempty mempty (Set.fromList [D.Address host port])
+drawRouteMap (DrawMap port) = do
+    let startAddress = A.makeAddressByPorts $ A.makeNodePorts1000 port
+    routMap <- cardAssembly mempty mempty (Set.fromList [startAddress])
     L.evalIO $ makeImage (1000, 1000) "image.png" $ \image ->
         forM_ (Map.toList routMap) $ \(hs, hf) -> do
             let startPointPhase = hashToPhase hs
@@ -209,21 +210,31 @@ drawRouteMap (DrawMap (Address host port)) = do
                 drawArrow startPoint endPoint black image
     pure "Drawed."
 
+-- | Build connection map.
 cardAssembly
     :: Map D.StringHash [D.StringHash]
-    -> Set.Set D.Address
-    -> Set.Set D.Address
+    -> Set.Set A.NodeAddress
+    -> Set.Set A.NodeAddress
     -> L.NodeL (Map D.StringHash [D.StringHash])
 cardAssembly accum passed nexts
     | Set.null nexts = pure accum
     | otherwise      = do
-        let D.Address host port = Set.elemAt 0 nexts
-        res :: Either Text [(D.StringHash, D.Address)] <-
-            L.makeRpcRequest (D.Address host (port - 1000)) M.ConnectMapRequest
-        let r = case res of Right a -> a; Left _ -> []
-        let newPassed = Set.insert (D.Address host port) passed
-        let newNexts  = Set.difference (Set.union nexts (Set.fromList $ snd <$> r)) newPassed
-        let newAccum  = Map.insert (D.toHashGeneric (D.Address host port)) (fst <$> r) accum
+        -- take the address of who will ask the next contact
+        let currentAddress = Set.elemAt 0 nexts
+        connects <- fromRight [] <$>
+            L.makeRpcRequest (A.getRpcAddress currentAddress) M.ConnectMapRequest
+        
+        -- add the address to the list of the passed
+        let newPassed :: Set.Set A.NodeAddress
+            newPassed = Set.insert currentAddress passed
+
+        -- add received addresses to the queue and remove from it those that have already visited
+        let newNexts :: Set.Set A.NodeAddress
+            newNexts  = Set.difference (Set.union nexts (Set.fromList connects)) newPassed
+
+        -- add to the accumulator addresses for the passed address
+        let newAccum :: Map.Map D.StringHash [D.StringHash]
+            newAccum  = Map.insert (currentAddress ^. A.nodeId) ((^. A.nodeId) <$> connects) accum
         cardAssembly newAccum newPassed newNexts
 
 clientNode :: L.NodeDefinitionL ()
@@ -253,6 +264,8 @@ clientNode' _ = do
 
         -- interaction with pow node
         L.stdHandler startForeverChainGenerationHandler
+
+        --  GenerateBlocksPacket {blocks = 2, timeGap = 0, address = Address {_host = "127.0.0.1", _port = 6020}}
         L.stdHandler generateBlocksPacketHandler
 
         -- routing

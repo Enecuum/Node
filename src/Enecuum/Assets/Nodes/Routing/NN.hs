@@ -27,9 +27,9 @@ data NNNodeData = NNNodeData
 makeFieldsNoPrefix ''NNNodeData
 
 initNN :: RoutingRuntime -> D.StateVar L.NodeStatus -> L.NodeDefinitionL NNNodeData
-initNN routingRuntime nodeStatus = do
+initNN routingData nodeStatus = do
     messages            <- L.newVarIO []
-    routingRuntimeData  <- L.newVarIO routingRuntime
+    routingRuntimeData  <- L.newVarIO routingData
     pure $ NNNodeData
         { _status          = nodeStatus
         , _routingRuntime  = routingRuntimeData
@@ -69,23 +69,9 @@ acceptPort portVar (Start port) = L.atomically $ do
         then "Node is already running."
         else "The port is accepted, the node is started."
 
-testPorts :: [D.PortNumber]
-testPorts = [5001..5010]
-
-nodesMap :: Map D.StringHash D.Address
-nodesMap = Map.fromList $ map (\node -> (D.toHashGeneric node, node)) nnNodes
-    where nnNodes = map (D.Address A.localhost) testPorts
-
-
-connectMapRequest :: RoutingRuntime -> M.ConnectMapRequest -> L.NodeL [(D.StringHash, A.NodeAddress)]
-connectMapRequest nodeRuntime _ = 
-    fromChordRouteMap <$> L.readVarIO (nodeRuntime ^. connectMap)
 
 getRoutingMessages :: NNNodeData -> M.GetRoutingMessages -> L.NodeL [Text]
 getRoutingMessages nodeData _ = L.readVarIO (nodeData ^. routingMessages)
-
-nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
-nnNode port = nnNode' port (NNConfig 42) 
 
 acceptSendTo :: NNNodeData -> SendMsgTo -> D.Connection D.Udp -> L.NodeL ()
 acceptSendTo nodeData message conn = do
@@ -94,6 +80,9 @@ acceptSendTo nodeData message conn = do
     udpForwardIfNeeded routingData message $ \(SendMsgTo _ _ mes) -> do
         L.atomically $ L.modifyVar (nodeData ^. routingMessages) (mes :)
         L.logInfo "I'm receiver."
+
+nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
+nnNode port = nnNode' port (NNConfig 42) 
 
 nnNode' :: Maybe D.PortNumber -> NodeConfig NN -> L.NodeDefinitionL ()
 nnNode' maybePort _ = do
@@ -105,27 +94,22 @@ nnNode' maybePort _ = do
     -- network
         L.stdHandler $ acceptPort         portVar
         L.stdHandler $ L.stopNodeHandler' nodeStatus
-    --nodeData    <- initNN maybePort
 
     -- routing
     port        <- L.await portVar
     let myNodePorts = A.makeNodePorts1000 port
     let myHash      = D.toHashGeneric myNodePorts
-    let bnPorts     = A.makeNodePorts1000 5000
-    let bnId        = D.toHashGeneric bnPorts
-    let bnAddress   = A.NodeAddress "127.0.0.1" bnPorts bnId
 
-    routingRuntime <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash bnAddress
-    nodeData       <- initNN routingRuntime nodeStatus
+    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash A.defaultBnNodeAddress
+    nodeData       <- initNN routingData nodeStatus
 
-    L.serving D.Udp (routingRuntime ^. nodePorts . A.nodeUdpPort) $ do
-        udpRoutingHandlers routingRuntime
+    void $ L.serving D.Udp (routingData ^. nodePorts . A.nodeUdpPort) $ do
+        udpRoutingHandlers routingData
         L.handler $ acceptSendTo          nodeData
 
-    L.serving D.Rpc (routingRuntime ^. nodePorts . A.nodeRpcPort) $ do
-        rpcRoutingHandlers routingRuntime
-        L.method  $  connectMapRequest    routingRuntime
+    void $ L.serving D.Rpc (routingData ^. nodePorts . A.nodeRpcPort) $ do
+        rpcRoutingHandlers routingData
         L.method  $  getRoutingMessages   nodeData
 
-    routingWorker routingRuntime
+    routingWorker routingData
     L.awaitNodeFinished nodeData

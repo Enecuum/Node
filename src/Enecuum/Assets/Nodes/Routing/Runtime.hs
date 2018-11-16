@@ -166,7 +166,9 @@ udpRoutingHandlers routingRuntime = do
     L.handler $ acceptNextForYou        routingRuntime
     L.handler $ acceptHelloFromBn       routingRuntime
 
-rpcRoutingHandlers routingRuntime = L.method rpcPingPong
+rpcRoutingHandlers routingRuntime = do
+    L.method rpcPingPong
+    L.method $ connectMapRequest routingRuntime
 
 acceptHelloFromBn :: RoutingRuntime -> HelloToBnResponce -> D.Connection D.Udp -> L.NodeL ()
 acceptHelloFromBn routingRuntime bnHello con = do
@@ -218,6 +220,11 @@ udpBroadcastRecivedMessage
 udpBroadcastRecivedMessage routingRuntime handler message conn = do
     L.close conn
     whenM (sendUdpBroadcast routingRuntime message) $ handler message
+
+--
+connectMapRequest :: RoutingRuntime -> M.ConnectMapRequest -> L.NodeL [A.NodeAddress]
+connectMapRequest nodeRuntime _ = 
+    (snd <$>) . fromChordRouteMap <$> L.readVarIO (nodeRuntime ^. connectMap)
 
 sendUdpBroadcast routingRuntime message = do
     needToProcessing <- L.atomically $ do
