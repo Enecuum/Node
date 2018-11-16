@@ -6,21 +6,21 @@
 
 module Enecuum.Assets.Nodes.GraphNode.Logic where
 
-import           Enecuum.Prelude
-import           Control.Lens                     (makeFieldsNoPrefix)
+import           Control.Lens                          (makeFieldsNoPrefix)
 import           Data.HGraph.StringHashable
-import qualified Data.Map                         as Map
-import           System.FilePath                  ((</>))
+import qualified Data.Map                              as Map
+import           Enecuum.Prelude
+import           System.FilePath                       ((</>))
 
-import qualified Enecuum.Domain                   as D
-import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
-import qualified Enecuum.Language                 as L
-import qualified Enecuum.Blockchain.Lens          as Lens
-import qualified Enecuum.Blockchain.DB            as D
-import           Enecuum.Assets.Nodes.Messages
+import qualified Enecuum.Assets.Nodes.CLens            as CLens
 import           Enecuum.Assets.Nodes.GraphNode.Config
-import qualified Enecuum.Assets.Nodes.CLens       as CLens
-import qualified Enecuum.Assets.System.Directory  as L
+import           Enecuum.Assets.Nodes.Messages
+import qualified Enecuum.Assets.System.Directory       as L
+import qualified Enecuum.Blockchain.DB                 as D
+import qualified Enecuum.Blockchain.Lens               as Lens
+import qualified Enecuum.Domain                        as D
+import           Enecuum.Framework.Language.Extra      (HasStatus, NodeStatus (..))
+import qualified Enecuum.Language                      as L
 
 data GraphNodeData = GraphNodeData
     { _blockchain          :: D.BlockchainData
@@ -93,7 +93,7 @@ acceptMBlock nodeData mBlock _ = do
             let fun :: D.Transaction -> D.TransactionPending -> D.TransactionPending
                 fun t = Map.delete (toHash t)
             forM_ tx (L.modifyVar (bData ^. Lens.transactionPending) . fun)
-    forM_ (mBlock ^. Lens.transactions) (\tx -> unless (L.verifyTransaction tx) $ do
+    forM_ (mBlock ^. Lens.transactions) (\tx -> unless (L.verifyTransaction tx) $
         L.logInfo $ "Transaction "  +|| D.showTx tx ||+ "of microblock " +|| toHash mBlock ||+ "has invalid signature.")
 
 getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL D.KBlockPending
@@ -112,10 +112,7 @@ getTransactionPending nodeData _ = do
 getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
     let bData = nodeData ^. blockchain
-    -- L.logInfo "Top KBlock requested."
     L.atomically $ L.getTopKeyBlock bData
-    -- L.logInfo $ "Top KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
-
 
 getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
 getBalance nodeData (GetWalletBalance wallet) = do
@@ -129,14 +126,13 @@ getBalance nodeData (GetWalletBalance wallet) = do
 getChainLength :: GraphNodeData -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
 getChainLength nodeData GetChainLengthRequest = do
     let bData = nodeData ^. blockchain
---    L.logInfo "Answering chain length"
     topKBlock <- L.atomically $ L.getTopKeyBlock bData
     pure $ GetChainLengthResponse $ topKBlock ^. Lens.number
 
 
 acceptChainFromTo :: GraphNodeData -> GetChainFromToRequest -> L.NodeL (Either Text GetChainFromToResponse)
 acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
-    L.logInfo $ "Answering chain from " +|| (show from :: Text) ||+ " to " +|| show to
+    L.logInfo $ "Answering chain from " +|| from ||+ " to " +|| to ||+ "."
     let bData = nodeData ^. blockchain
     if from > to
         then pure $ Left "From is greater than to"
@@ -149,13 +145,9 @@ acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
 
 getMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL (Either Text GetMBlocksForKBlockResponse)
 getMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
-    L.logInfo $ "Get microblocks for kBlock " +|| show hash
+    L.logInfo $ "Get microblocks for kBlock " +|| hash ||+ "."
     let bData = nodeData ^. blockchain
-    mBlockList <- L.atomically $ L.getMBlocksForKBlock bData hash
-    case mBlockList of
-        Nothing        -> pure $ Left "KBlock doesn't exist"
-        Just blockList -> pure $ Right $ GetMBlocksForKBlockResponse blockList
-
+    GetMBlocksForKBlockResponse <<$>> (L.atomically $ L.getMBlocksForKBlock bData hash)
 
 initDb :: forall db. D.DB db => D.DBOptions -> FilePath -> L.NodeL (D.DBResult (D.Storage db))
 initDb options dbModelPath = do
@@ -174,10 +166,18 @@ initDBModel' dbModelPath options = do
 
     eKBlocksDb     <- initDb options dbModelPath
     eKBlocksMetaDb <- initDb options dbModelPath
+    eMBlocksDb     <- initDb options dbModelPath
+    eMBlocksMetaDb <- initDb options dbModelPath
+    eTransactionsDb     <- initDb options dbModelPath
+    eTransactionsMetaDb <- initDb options dbModelPath
 
     let eModel = D.DBModel
             <$> eKBlocksDb
             <*> eKBlocksMetaDb
+            <*> eMBlocksDb
+            <*> eMBlocksMetaDb
+            <*> eTransactionsDb
+            <*> eTransactionsMetaDb
 
     when (isLeft  eModel) $ L.logError $ "Failed to initialize DB model: " +| dbModelPath |+ "."
     when (isRight eModel) $ L.logInfo  $ "DB model initialized: "          +| dbModelPath |+ "."

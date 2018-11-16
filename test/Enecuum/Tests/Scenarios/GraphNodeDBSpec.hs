@@ -1,24 +1,25 @@
 module Enecuum.Tests.Scenarios.GraphNodeDBSpec where
 
 import           Enecuum.Prelude
-import           Test.HUnit
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit ( fromHUnitTest )
+import           Test.Hspec.Contrib.HUnit                   (fromHUnitTest)
+import           Test.HUnit
 
-import qualified Enecuum.Domain                               as D
-import qualified Enecuum.Blockchain.Lens                      as Lens
+import qualified Enecuum.Blockchain.Lens                    as Lens
+import qualified Enecuum.Domain                             as D
 
-import qualified Enecuum.Assets.Nodes.GraphNode.Config       as A
-import qualified Enecuum.Assets.Nodes.GraphNode.Transmitter  as A
-import qualified Enecuum.Assets.Nodes.PoW.PoW                as A
-import qualified Enecuum.Assets.Nodes.Messages               as A
-import qualified Enecuum.Assets.Nodes.Address                as A
+import qualified Enecuum.Assets.Nodes.Address               as A
+import qualified Enecuum.Assets.Nodes.GraphNode.Config      as A
+import qualified Enecuum.Assets.Nodes.GraphNode.Transmitter as A
+import qualified Enecuum.Assets.Nodes.Messages              as A
+import qualified Enecuum.Assets.Nodes.PoA                   as A
+import qualified Enecuum.Assets.Nodes.PoW.PoW               as A
 
 import           Enecuum.Testing.Integrational
 import           Enecuum.Tests.Wrappers
 
 spec :: Spec
-spec = fastTest $ describe "Dump and restore graph test" $ fromHUnitTest $ TestList
+spec = slowTest $ describe "Dump and restore graph test" $ fromHUnitTest $ TestList
     [TestLabel "Dump and restore graph test" dumpAndRestoreGraphTest]
 
 dumpAndRestoreGraphTest :: Test
@@ -32,12 +33,12 @@ dumpAndRestoreGraphTest = do
             { A._useDatabase         = True
             , A._dbModelName         = dbPath
             , A._useEnqHomeDir       = False
-            , A._dbOptions           = dbOpts 
+            , A._dbOptions           = dbOpts
             , A._stopOnDatabaseError = True
             }
 
-    let blocksCount = 10
-    let blocksDelay = 0
+    let blocksCount = 5
+    let blocksDelay = 1000 * 1000
     let loggerCfg = Nothing
 
     TestCase $ withDbAbsence dbPath $ withNodesManager $ \mgr -> do
@@ -48,6 +49,9 @@ dumpAndRestoreGraphTest = do
         powNode <- startNode loggerCfg mgr A.powNode
         waitForNode A.powNodeRpcAddress
 
+        poaNode <- startNode loggerCfg mgr (A.poaNode A.Good (error "No config"))
+        waitForNode A.poaNodeRpcAddress
+
         -- Checking there are none blocks.
         Right topKBlock0 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
         topKBlock0 ^. Lens.number `shouldBe` 0
@@ -55,7 +59,7 @@ dumpAndRestoreGraphTest = do
         -- Generating some blocks and checking they are generated.
         _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration blocksCount blocksDelay
         waitForBlocks blocksCount A.graphNodeTransmitterRpcAddress
-        
+
         Right topKBlock1 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
         topKBlock1 ^. Lens.number `shouldBe` blocksCount
 
@@ -67,6 +71,7 @@ dumpAndRestoreGraphTest = do
         -- Stopping nodes, clearing graph.
         stopNode mgr transmitterNode1
         stopNode mgr powNode
+        stopNode mgr poaNode
 
         -- Starting node, checking there are no blocks.
         void $ startNode loggerCfg mgr $ A.graphNodeTransmitter cfg
@@ -81,4 +86,3 @@ dumpAndRestoreGraphTest = do
 
         Right topKBlock2 :: Either Text D.KBlock <- makeIORpcRequest A.graphNodeTransmitterRpcAddress A.GetLastKBlock
         topKBlock1 `shouldBe` topKBlock2
-

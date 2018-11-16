@@ -10,10 +10,10 @@ import qualified Enecuum.Language                     as L
 import           Enecuum.Prelude
 import qualified Enecuum.Runtime                      as R
 import           Enecuum.Testing.Integrational
+import           Enecuum.Tests.Wrappers
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
 import           Test.HUnit
-import           Enecuum.Tests.Wrappers
 
 spec :: Spec
 spec = slowTest $ describe "PoW and graph node interaction" $ fromHUnitTest $ TestList
@@ -30,7 +30,7 @@ testAcceptKblock order = TestCase $ withNodesManager $ \mgr -> do
     waitForNode A.powNodeRpcAddress
 
     -- Ask pow node to generate n kblocks
-    let timeGap = 0
+    let timeGap = 1000
     let kblockCount = 10
     _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
 
@@ -46,7 +46,7 @@ testKblockPending = TestCase $ withNodesManager $ \mgr -> do
 
     -- Ask pow node to generate n kblocks
     waitForNode A.powNodeRpcAddress
-    let timeGap = 0
+    let timeGap = 1000
     let kblockCount = 10
     _ :: Either Text A.SuccessMsg <- makeIORpcRequest A.powNodeRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
 
@@ -66,7 +66,7 @@ testKblockPending = TestCase $ withNodesManager $ \mgr -> do
     -- The last generated bunch of kblocks must to be in pending on graph node
     kblocks :: D.KBlockPending <- makeRpcRequestUntilSuccess A.graphNodeTransmitterRpcAddress $ A.GetKBlockPending
     let kblockNumbers = map ((^. Lens.number) . snd) (M.toList kblocks)
-    sort kblockNumbers `shouldBe` [kblockCount + 1 .. 2*kblockCount]
+    sort kblockNumbers `shouldBe` [kblockCount + 1 .. 2 * kblockCount]
 
     -- Stop pow, launch pow again, (there no data from the first pow launch now)
     stopNode mgr powNode

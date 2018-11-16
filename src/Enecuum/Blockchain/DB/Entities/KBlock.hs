@@ -8,10 +8,11 @@ import qualified Data.Aeson           as A
 import qualified Data.ByteString.Lazy as LBS
 import           Text.Printf          (printf)
 
-import qualified Enecuum.Core.Types as D
-import qualified Enecuum.Blockchain.Domain.KBlock as D
-import qualified Enecuum.Blockchain.Lens          as Lens
-import           Enecuum.Blockchain.DB.Model (KBlocksDB)
+import qualified Enecuum.Core.Types                   as D
+import qualified Enecuum.Blockchain.Domain.KBlock     as D
+import qualified Enecuum.Blockchain.Lens              as Lens
+import           Enecuum.Blockchain.DB.Model          (KBlocksDB)
+import           Enecuum.Blockchain.DB.Entities.Types (KBlockIdx)
 
 
 -- kBlocks (kBlock_idx|0 -> prev_hash, kBlock_idx|1 -> kBlock_data)
@@ -34,10 +35,10 @@ instance D.DBEntity KBlockPrevHashEntity where
         deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance D.ToDBKey KBlockPrevHashEntity D.BlockNumber where
-    toDBKey = KBlockPrevHashKey . encodeUtf8 @String . printf "%07d0"
+    toDBKey = KBlockPrevHashKey . encodeUtf8 . toKBlockPrevHashEntityKeyBase
 
 instance D.ToDBKey KBlockPrevHashEntity D.KBlock where
-    toDBKey = KBlockPrevHashKey . encodeUtf8 @String . printf "%07d0" . D._number
+    toDBKey = KBlockPrevHashKey . encodeUtf8 . toKBlockPrevHashEntityKeyBase . D._number
 
 instance D.ToDBValue KBlockPrevHashEntity D.KBlock where
     toDBValue kBlock = KBlockPrevHashValue $ kBlock ^. Lens.prevHash
@@ -57,10 +58,10 @@ instance D.DBEntity KBlockEntity where
         deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance D.ToDBKey KBlockEntity D.BlockNumber where
-    toDBKey = KBlockKey . encodeUtf8 @String . printf "%07d1"
+    toDBKey = KBlockKey . encodeUtf8 . toKBlockEntityKeyBase
 
 instance D.ToDBKey KBlockEntity D.KBlock where
-    toDBKey = KBlockKey . encodeUtf8 @String . printf "%07d1" . D._number
+    toDBKey = KBlockKey . encodeUtf8 . toKBlockEntityKeyBase . D._number
 
 instance D.ToDBValue KBlockEntity D.KBlock where
     toDBValue (D.KBlock time _ number nonce solver) = KBlockValue time number nonce solver
@@ -69,3 +70,13 @@ instance D.RawDBEntity KBlocksDB KBlockEntity where
     toRawDBKey (KBlockKey k) = k
     toRawDBValue = LBS.toStrict . A.encode
     fromRawDBValue = A.decode . LBS.fromStrict
+
+
+toKBlockIdxBase :: KBlockIdx -> String
+toKBlockIdxBase = printf "%07d"
+
+toKBlockPrevHashEntityKeyBase :: KBlockIdx -> String
+toKBlockPrevHashEntityKeyBase = (<> "0") . toKBlockIdxBase
+
+toKBlockEntityKeyBase :: KBlockIdx -> String
+toKBlockEntityKeyBase = (<> "1") . toKBlockIdxBase

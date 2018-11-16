@@ -8,7 +8,7 @@ import qualified Enecuum.Framework.Domain           as D
 import qualified Enecuum.Framework.Language         as L
 import           Enecuum.Prelude
 
-import Data.Map
+import           Data.Map
 
 -- | Get kBlock by Hash
 getKBlock :: D.BlockchainData -> D.StringHash -> L.StateL (Maybe D.KBlock)
@@ -35,8 +35,8 @@ addTopKBlock kBlockSrc bData kBlock = do
     let kBlock' = D.KBlockContent kBlock
     ref <- L.readVar (D._curNode bData)
 
-    mBlocks <- fromMaybe [] <$> getMBlocksForKBlock bData ref
-    forM_ mBlocks $ L.calculateLedger bData
+    eMblocks <- getMBlocksForKBlock bData ref
+    whenRight eMblocks $ \mBlocks -> forM_ mBlocks $ L.calculateLedger bData
 
     L.evalGraph (D._graph bData) $ do
         L.newNode kBlock'
@@ -60,18 +60,27 @@ addMBlock bData mblock@(D.Microblock hash _ _ _) = do
             L.newLink hash (D.MBlockContent mblock)
     pure $ isJust kblock
 
-getMBlocksForKBlock :: D.BlockchainData -> D.StringHash -> L.StateL (Maybe [D.Microblock])
+getMBlocksForKBlock :: D.BlockchainData -> D.StringHash -> L.StateL (Either Text [D.Microblock])
 getMBlocksForKBlock bData hash =  L.evalGraph (D._graph bData) $ do
-    node <- L.getNode hash
-    case node of
-        Nothing -> pure Nothing
-        Just (D.HNode _ _ _ links _) -> do
-            aMBlocks                       <- forM (Data.Map.keys links) $ \aNRef -> do
-                (D.HNode _ _ (D.fromContent -> block) _ _) <- fromJust <$> L.getNode aNRef
-                case block of
-                    D.MBlockContent mBlock -> pure $ Just mBlock
-                    _               -> pure Nothing
-            pure $ Just $ catMaybes aMBlocks
+    mbNode <- L.getNode hash
+    case mbNode of
+        Nothing   -> pure $ Left "KBlock doesn't exist"
+        Just node -> Right <$> getMBlocksForKBlock'' node
+
+getMBlocksForKBlock' :: D.BlockchainData -> D.StringHash -> L.StateL [D.Microblock]
+getMBlocksForKBlock' bData hash =  L.evalGraph (D._graph bData) $ do
+    mbNode <- L.getNode hash
+    case mbNode of
+        Nothing   -> pure []
+        Just node -> getMBlocksForKBlock'' node
+
+getMBlocksForKBlock'' (D.HNode _ _ _ links _) = do
+    mBlocks <- forM (Data.Map.keys links) $ \aNRef -> do
+        (D.HNode _ _ (D.fromContent -> block) _ _) <- fromJust <$> L.getNode aNRef
+        case block of
+            D.MBlockContent mBlock -> pure [mBlock]
+            _                      -> pure []
+    pure $ join mBlocks
 
 -- Return all blocks after given number as a list
 findBlocksByNumber :: D.BlockchainData -> D.BlockNumber -> D.KBlock -> L.StateL [D.KBlock]
