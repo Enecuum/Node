@@ -3,8 +3,22 @@
 
 module Enecuum.Assets.Nodes.Client (clientNode, ClientNode(..), NodeConfig (..), SendTo(..), sendTo, Protocol(..)) where
 
-import qualified Data.Aeson                            as J
-import           Data.Aeson.Extra                      (noLensPrefix)
+import qualified Data.Aeson                       as J
+import           Data.Aeson.Extra                 (noLensPrefix)
+import qualified Data.Map                         as Map
+import qualified Data.Set                         as Set
+import           Data.Set (union, (\\))
+import           Data.Text                        hiding (map)
+import qualified Enecuum.Assets.Blockchain.Wallet as A
+import qualified Enecuum.Assets.Nodes.Address     as A
+import qualified Enecuum.Assets.Nodes.Messages    as M
+import qualified Enecuum.Domain                   as D
+import           Enecuum.Config
+import           Enecuum.Framework.Language.Extra (NodeStatus (..))
+import qualified Enecuum.Language                 as L
+import           Enecuum.Prelude                  hiding (map, unpack)
+import           Graphics.GD.Extra
+import           Enecuum.Research.RouteDrawing
 import           Data.Complex
 import qualified Data.Map                              as Map
 import qualified Data.Set                              as Set
@@ -151,17 +165,17 @@ restoreFromDB (RestoreFromDB address) = do
 
 getLengthOfChain :: GetLengthOfChain -> L.NodeL Text
 getLengthOfChain (GetLengthOfChain address) = do
-    res :: Either Text D.KBlock <- L.makeRpcRequest address M.GetLastKBlock
-    case res of
-        Right kBlock -> pure $ "Length of chain is " <> show (D._number kBlock)
-        Left t       -> pure t
+    mKBlock <- L.makeRpcRequest address M.GetLastKBlock
+    pure $ case mKBlock of
+        Right kBlock       -> "Length of chain is " <> show (D._number kBlock)
+        Left  requestError -> requestError
 
 ping :: Ping -> L.NodeL Text
 ping (Ping TCP address) = do
-    res <- L.withConnection D.Tcp address $ \conn -> L.send conn M.Ping
-    pure $ case res of
+    ok <- L.withConnection D.Tcp address $ \conn -> L.send conn M.Ping
+    pure $ case ok of
         Just (Right _) -> "Tcp port is available."
-        Just (Left _)  -> "Tcp disconnection."
+        Just (Left  _) -> "Tcp disconnection."
         _              -> "Tcp port is not available."
 
 ping (Ping RPC address) = do
@@ -175,19 +189,22 @@ stopRequest (StopRequest address) = sendSuccessRequest address M.Stop
 
 getBlock :: GetBlock -> L.NodeL Text
 getBlock (GetBlock hash address) = do
-    res :: Either Text D.NodeContent <- L.makeRpcRequest address (M.GetGraphNode hash)
-    case res of
-        Right (D.KBlockContent block) -> pure $ "Key block is "   <> show block
-        Right (D.MBlockContent block) -> pure $ "Microblock is " <> show block
-        Left  text                    -> pure $ "Error: "         <> text
+    mblock <- L.makeRpcRequest address (M.GetGraphNode hash)
+    pure $ case mblock of
+        Right (D.KBlockContent block) -> "Key block is "  <> show block
+        Right (D.MBlockContent block) -> "Microblock is " <> show block
+        Left  requestError            -> "Error: "        <> requestError
 
 
 sendTo :: SendTo -> L.NodeL Text
 sendTo (SendTo (Address host port) rPort) = do
     let receiverHash    = D.toHashGeneric $ A.makeNodePorts1000 rPort
-    let receiverUdpPort = A.makeNodePorts1000 port ^. A.nodeUdpPort
-    void $ L.notify (D.Address host receiverUdpPort) $ SendMsgTo receiverHash 10 "!! msg !!"
-    pure "Sended."
+    let resenderUdpPort = A.makeNodePorts1000 port ^. A.nodeUdpPort
+    let resenderAddress = D.Address host resenderUdpPort
+    ok <- L.notify resenderAddress $ SendMsgTo receiverHash 10 "!! msg !!"
+    if isRight ok
+        then pure   "Test message is sent."
+        else pure $ "Error of sending: " <> show ok
 
 drawRouteMap :: DrawMap -> L.NodeL Text
 drawRouteMap (DrawMap port) = do
@@ -223,7 +240,7 @@ cardAssembly accum passed nexts
 
         -- add received addresses to the queue and remove from it those that have already visited
         let newNexts :: Set.Set A.NodeAddress
-            newNexts  = Set.difference (Set.union nexts (Set.fromList connects)) newPassed
+            newNexts  = (nexts `union` Set.fromList connects) \\ newPassed
 
         -- add to the accumulator addresses for the passed address
         let newAccum :: Map.Map D.StringHash [D.StringHash]
