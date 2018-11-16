@@ -7,7 +7,7 @@ import           Data.HGraph.StringHashable
 import           Enecuum.Assets.Blockchain.Keys
 import qualified Enecuum.Domain                 as D
 import           Enecuum.Prelude
-
+import Enecuum.Assets.Blockchain.Keys (WalletAlias)
 -- | Common
 data SuccessMsg = SuccessMsg
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -55,7 +55,16 @@ data Stop = Stop
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | Client local
-data CreateNodeId = CreateNodeId Password
+data CreateNodeId = CreateNodeId | CreateNodeIdManually Password
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+
+data CreateWallet = CreateWallet | CreateWalletManually Password
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+
+data CreateWalletWithAlias = CreateWalletWithAlias WalletAlias CreateWallet
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+
+data ShowMyWallets = ShowMyWallets
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | client - graph node interaction

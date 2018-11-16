@@ -122,6 +122,7 @@ instance L.ERandom NodeL where
 
 instance L.FileSystem NodeL where
     readFile         = evalCoreEffectNodeF . L.readFile
+    writeFile filename text = evalCoreEffectNodeF $ L.writeFile filename text
     getHomeDirectory = evalCoreEffectNodeF   L.getHomeDirectory
     createFilePath   = evalCoreEffectNodeF . L.createFilePath 
 

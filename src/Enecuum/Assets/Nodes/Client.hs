@@ -1,26 +1,26 @@
-{-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Enecuum.Assets.Nodes.Client (clientNode, ClientNode(..), NodeConfig (..), SendTo(..), sendTo, Protocol(..)) where
 
-import qualified Data.Aeson                       as J
-import           Data.Aeson.Extra                 (noLensPrefix)
-import qualified Data.Map                         as Map
-import qualified Data.Set                         as Set
-import           Data.Text                        hiding (map)
-import qualified Enecuum.Assets.Blockchain.Wallet as A
-import qualified Enecuum.Assets.Nodes.Address     as A
-import qualified Enecuum.Assets.Nodes.Messages    as M
-import qualified Enecuum.Domain                   as D
-import           Enecuum.Config
-import           Enecuum.Framework.Language.Extra (NodeStatus (..))
-import qualified Enecuum.Language                 as L
-import           Enecuum.Prelude                  hiding (map, unpack)
-import           Enecuum.Assets.Blockchain.Keys
-import           Graphics.GD.Extra
-import           Enecuum.Research.RouteDrawing
+import qualified Data.Aeson                            as J
+import           Data.Aeson.Extra                      (noLensPrefix)
 import           Data.Complex
+import qualified Data.Map                              as Map
+import qualified Data.Set                              as Set
+import           Data.Text                             hiding (map)
+import           Enecuum.Assets.Blockchain.Keys
+import qualified Enecuum.Assets.Blockchain.Wallet      as A
+import qualified Enecuum.Assets.Nodes.Address          as A
+import qualified Enecuum.Assets.Nodes.Messages         as M
 import           Enecuum.Assets.Nodes.Routing.Messages
+import           Enecuum.Config
+import qualified Enecuum.Domain                        as D
+import           Enecuum.Framework.Language.Extra      (NodeStatus (..))
+import qualified Enecuum.Language                      as L
+import           Enecuum.Prelude                       hiding (map, unpack)
+import           Enecuum.Research.RouteDrawing
+import           Graphics.GD.Extra
 
 data ClientNode = ClientNode
     deriving (Show, Generic)
@@ -231,9 +231,25 @@ cardAssembly accum passed nexts
         cardAssembly newAccum newPassed newNexts
 
 createNodeId :: M.CreateNodeId -> L.NodeL Text
-createNodeId (M.CreateNodeId password) = do
-    createNodeId' $ Manual password
+createNodeId (M.CreateNodeIdManually password) = do
+    createKeyPair NodeId $ User (Manual password)
     pure "Success"
+createNodeId M.CreateNodeId = do
+    createKeyPair NodeId $ User  PhraseGenerator
+    pure "Success"
+
+createWallet :: M.CreateWallet -> L.NodeL Text
+createWallet (M.CreateWalletManually password) = do
+    createWallet' "default" $ User (Manual password)
+    pure "Success"
+
+createWalletWithAlias :: M.CreateWalletWithAlias -> L.NodeL Text
+createWalletWithAlias (M.CreateWalletWithAlias alias (M.CreateWalletManually password)) = do
+    createWallet' alias $ User (Manual password)
+    pure "Success"
+
+showMyWallets :: M.ShowMyWallets -> L.NodeL Text
+showMyWallets _ = showWallets
 
 clientNode :: L.NodeDefinitionL ()
 clientNode = clientNode' (ClientNodeConfig 42)
@@ -252,6 +268,9 @@ clientNode' _ = do
 
         -- local activity
         L.stdHandler createNodeId
+        L.stdHandler createWallet
+        L.stdHandler createWalletWithAlias
+        L.stdHandler showMyWallets
 
         -- interaction with graph node
         L.stdHandler createTransaction

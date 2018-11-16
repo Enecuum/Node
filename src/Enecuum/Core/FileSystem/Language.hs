@@ -8,7 +8,7 @@ import qualified Data.ByteString.Lazy.Internal as BSI
 
 -- | Language for FileSystem.
 data FileSystemF next where
-    ReadFile :: FilePath -> (Text -> next) -> FileSystemF next
+    ReadFile :: FilePath -> (B.ByteString -> next) -> FileSystemF next
     WriteFile :: FilePath -> BSI.ByteString -> (() -> next) -> FileSystemF next
     GetHomeDirectory :: (FilePath -> next) -> FileSystemF next
     CreateFilePath :: FilePath -> (FilePath -> next) -> FileSystemF next
@@ -18,7 +18,7 @@ makeFunctorInstance ''FileSystemF
 type FileSystemL next = Free FileSystemF next
 
 class FileSystem m where
-    readFile :: FilePath -> m Text
+    readFile :: FilePath -> m B.ByteString
     writeFile :: FilePath -> BSI.ByteString -> m ()
     getHomeDirectory :: m FilePath
     createFilePath :: FilePath -> m FilePath

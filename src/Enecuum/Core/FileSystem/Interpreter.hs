@@ -9,7 +9,7 @@ import qualified Data.ByteString.Lazy as B
 -- | Interpret CryptoL language.
 interpretFileSystemL :: L.FileSystemF a -> IO a
 interpretFileSystemL (L.ReadFile filename next) = do
-    text <- readFile filename
+    text <- B.readFile filename
     pure $ next text
 interpretFileSystemL (L.WriteFile filename text next) = do
     B.writeFile filename text -- $ encodeUtf8 text
