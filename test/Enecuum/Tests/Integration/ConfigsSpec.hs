@@ -16,18 +16,19 @@ import           System.FilePath       ((</>))
 
 spec :: Spec
 spec = fastTest $ describe "Test config validity" $ fromHUnitTest $ TestList
-        -- []
         [TestLabel "Parse configs" testParseConfigs]
 
 testParseConfigs :: Test
 testParseConfigs = TestCase $ do
     configFiles <- listDirectory configDir
-    print configFiles
-    parse (configFiles !! 0)
-    -- sequence $ map parse configFiles
+    void $ sequence $ map parse configFiles
 
+parse :: FilePath -> IO ()
 parse file = do
-    configSrc <- I.runNodeL undefined $ L.readFile $ configDir </> file
+    let filename = configDir </> file
+    configSrc <- I.runNodeL undefined $ L.readFile filename
     let res = tryParseConfig @ClientNode $ LBS.toStrict configSrc
-    -- res `shouldSatisfy` isRight
-    True `shouldBe` True
+    when (isLeft res) $ do
+        print filename
+        print res
+    res `shouldSatisfy` isRight

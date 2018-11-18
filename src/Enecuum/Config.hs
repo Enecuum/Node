@@ -24,6 +24,7 @@ data Config node = Config
     }
     deriving (Generic)
 
+instance (Show node, Show (NodeScenario node), Show (NodeConfig node)) => Show (Config node)
 instance (FromJSON node, FromJSON (NodeScenario node), FromJSON (NodeConfig node)) => FromJSON (Config node)
 instance (ToJSON   node, ToJSON   (NodeScenario node), ToJSON   (NodeConfig node)) => ToJSON   (Config node)
 
