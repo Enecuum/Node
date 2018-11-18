@@ -90,6 +90,7 @@ dependencies:
 - uuid
 - gd
 - resourcet
+- yaml
 
 library:
   source-dirs: src

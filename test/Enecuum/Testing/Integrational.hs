@@ -7,11 +7,8 @@ import           Control.Concurrent                           (killThread)
 import           Data.Aeson
 import qualified Data.ByteString.Lazy                         as LBS
 import qualified Data.Map                                     as M
+import           Data.Yaml
 import qualified "rocksdb-haskell" Database.RocksDB           as Rocks
-import qualified System.Directory                             as Dir
-import           System.FilePath                              as FP ((</>))
-import qualified System.FilePath                              as Dir
-
 import           Enecuum.Assets.Nodes.Client                  (ClientNode)
 import qualified Enecuum.Assets.Scenarios                     as A
 import qualified Enecuum.Config                               as Cfg
@@ -24,6 +21,9 @@ import qualified Enecuum.Interpreters                         as I
 import qualified Enecuum.Language                             as L
 import           Enecuum.Prelude
 import qualified Enecuum.Runtime                              as R
+import qualified System.Directory                             as Dir
+import           System.FilePath                              as FP ((</>))
+import qualified System.FilePath                              as Dir
 
 testLogFilePath :: IsString a => a
 testLogFilePath = "/tmp/log/test.log"
@@ -43,13 +43,16 @@ testConfigFilePath = "./configs/testConfig.json"
 loadLoggerConfig :: FilePath -> IO D.LoggerConfig
 loadLoggerConfig configFile = do
     configSrc <- LBS.readFile configFile
-    case Cfg.tryParseConfig @ClientNode configSrc of
-        Nothing  -> error $ "Invalid test config file: " <> show configFile
-        Just cfg -> do
-            let logConf = Cfg.loggerConfig cfg
-            let dir = Dir.dropFileName $ logConf ^. Lens.logFilePath
-            Dir.createDirectoryIfMissing True dir
-            pure logConf
+    case (Cfg.tryParseConfig @ClientNode $ LBS.toStrict configSrc) of
+        Left e       -> (error . show . prettyPrintParseException) $ e
+        Right config -> doSomethingWithConfig config
+
+doSomethingWithConfig :: D.Config ClientNode -> IO D.LoggerConfig
+doSomethingWithConfig cfg = do
+        let logConf = Cfg.loggerConfig cfg
+        let dir = Dir.dropFileName $ logConf ^. Lens.logFilePath
+        Dir.createDirectoryIfMissing True dir
+        pure logConf
 
 createNodeRuntime :: R.LoggerRuntime -> IO R.NodeRuntime
 createNodeRuntime loggerRuntime = R.createCoreRuntime loggerRuntime >>= (`R.createNodeRuntime` M.empty)

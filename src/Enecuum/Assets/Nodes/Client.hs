@@ -3,24 +3,11 @@
 
 module Enecuum.Assets.Nodes.Client (clientNode, ClientNode(..), NodeConfig (..), SendTo(..), sendTo, Protocol(..)) where
 
-import qualified Data.Aeson                       as J
-import           Data.Aeson.Extra                 (noLensPrefix)
-import qualified Data.Map                         as Map
-import qualified Data.Set                         as Set
-import           Data.Set (union, (\\))
-import           Data.Text                        hiding (map)
-import qualified Enecuum.Assets.Blockchain.Wallet as A
-import qualified Enecuum.Assets.Nodes.Address     as A
-import qualified Enecuum.Assets.Nodes.Messages    as M
-import qualified Enecuum.Domain                   as D
-import           Enecuum.Config
-import           Enecuum.Framework.Language.Extra (NodeStatus (..))
-import qualified Enecuum.Language                 as L
-import           Enecuum.Prelude                  hiding (map, unpack)
-import           Graphics.GD.Extra
-import           Enecuum.Research.RouteDrawing
+import qualified Data.Aeson                            as J
+import           Data.Aeson.Extra                      (noLensPrefix)
 import           Data.Complex
 import qualified Data.Map                              as Map
+import           Data.Set                              (union, (\\))
 import qualified Data.Set                              as Set
 import           Data.Text                             hiding (map)
 import           Enecuum.Assets.Blockchain.Keys
@@ -35,6 +22,7 @@ import qualified Enecuum.Language                      as L
 import           Enecuum.Prelude                       hiding (map, unpack)
 import           Enecuum.Research.RouteDrawing
 import           Graphics.GD.Extra
+import           Enecuum.Framework.Domain.Error
 
 data ClientNode = ClientNode
     deriving (Show, Generic)
@@ -310,10 +298,4 @@ clientNode' _ = do
         L.stdHandler drawRouteMap
     L.awaitNodeFinished' stateVar
 
-eitherToText :: Show a => Either Text a -> Text
-eitherToText (Left  a) = "Server error: " <> a
-eitherToText (Right a) = show a
 
-eitherToText2 :: Either Text Text -> Text
-eitherToText2 (Left  a) = "Server error: " <> a
-eitherToText2 (Right a) = a

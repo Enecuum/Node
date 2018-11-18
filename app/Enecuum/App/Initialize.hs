@@ -3,19 +3,20 @@
 
 module App.Initialize where
 
+import qualified Data.ByteString.Lazy            as LBS
 import qualified Data.Map                        as M
-import           Enecuum.Prelude
-
+import           Data.Yaml
 import qualified Enecuum.Assets.Scenarios        as S
 import           Enecuum.Assets.System.Directory (clientStory)
 import qualified Enecuum.Config                  as Cfg
 import qualified Enecuum.Core.Lens               as Lens
+import qualified Enecuum.Domain                  as D
 import           Enecuum.Interpreters            (clearNodeRuntime, runFileSystemL, runNodeDefinitionL)
 import qualified Enecuum.Language                as L
+import           Enecuum.Prelude
+import           Enecuum.Runtime                 (clearCoreRuntime, clearLoggerRuntime, createCoreRuntime,
+                                                  createLoggerRuntime, createNodeRuntime)
 import qualified Enecuum.Runtime                 as R
-import qualified Enecuum.Domain                  as D
-import           Enecuum.Runtime                 (clearCoreRuntime, clearLoggerRuntime,
-                                                  createCoreRuntime, createLoggerRuntime, createNodeRuntime)
 
 createLoggerRuntime' :: D.LoggerConfig -> IO R.LoggerRuntime
 createLoggerRuntime' loggerConfig' = do
@@ -85,7 +86,7 @@ initialize configSrc = do
             , runNode' $ dispatchScenario @S.TestClient configSrc
             , runNode' $ dispatchScenario @S.TestServer configSrc
             ]
-            
+
     results <- sequence runners
     case catMaybes results of
         [] -> putStrLn @Text "Invalid config passed: node not found."
@@ -101,6 +102,6 @@ dispatchScenario
     => Cfg.Node node
     => LByteString
     -> Maybe (Cfg.Config node, L.NodeDefinitionL ())
-dispatchScenario configSrc = case Cfg.tryParseConfig configSrc of
-    Just cfg -> Just (cfg, getNodeScript' cfg)
-    Nothing  -> Nothing
+dispatchScenario configSrc = case Cfg.tryParseConfig (LBS.toStrict configSrc) of
+    Left e    -> (error . show . prettyPrintParseException) $ e
+    Right cfg -> Just (cfg, getNodeScript' cfg)
