@@ -54,3 +54,35 @@ tryParseConfig
     => BSI.ByteString
     -> Either ParseException (Config node)
 tryParseConfig = A.decodeEither'
+
+getNodeScript' :: Node node => Config node -> NodeDefinitionL ()
+getNodeScript' cfg = getNodeScript (nodeScenario cfg) (nodeConfig cfg)
+
+dispatchScenario
+    :: FromJSON node
+    => FromJSON (NodeScenario node)
+    => FromJSON (NodeConfig node)
+    => Node node
+    => LByteString
+    -> Maybe (Config node, NodeDefinitionL ())
+dispatchScenario configSrc = Just (cfg, getNodeScript' cfg)
+    where cfg = tryParseConfig' configSrc
+
+tryParseConfig'
+  :: (FromJSON (NodeScenario node), FromJSON (NodeConfig node),
+      FromJSON node) =>
+     L.ByteString -> Config node
+tryParseConfig' configSrc = case tryParseConfig (L.toStrict configSrc) of
+    Left e    -> (error . show . prettyPrintParseException) $ e
+    Right cfg -> cfg
+
+-- dispatchScenario
+--     :: FromJSON node
+--     => FromJSON (NodeScenario node)
+--     => FromJSON (NodeConfig node)
+--     => Node node
+--     => LByteString
+--     -> Maybe (Config node, NodeDefinitionL ())
+-- dispatchScenario configSrc = case tryParseConfig (L.toStrict configSrc) of
+--     Left e    -> (error . show . prettyPrintParseException) $ e
+--     Right cfg -> Just (cfg, getNodeScript' cfg)

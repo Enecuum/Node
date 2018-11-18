@@ -6,7 +6,7 @@ module App.Initialize where
 import qualified Data.ByteString.Lazy            as LBS
 import qualified Data.Map                        as M
 import           Data.Yaml
-import qualified Enecuum.Assets.Scenarios        as S
+import qualified Enecuum.Assets.Scenarios        as A
 import           Enecuum.Assets.System.Directory (clientStory)
 import qualified Enecuum.Config                  as Cfg
 import qualified Enecuum.Core.Lens               as Lens
@@ -74,34 +74,21 @@ runNode' (Just (cfg, node)) = do
     runNode loggerConfig' node
     pure $ Just ()
 
+
 initialize :: LByteString -> IO ()
 initialize configSrc = do
     let runners =
-            [ runNode' $ dispatchScenario @S.GraphNode  configSrc
-            , runNode' $ dispatchScenario @S.PoANode    configSrc
-            , runNode' $ dispatchScenario @S.PoWNode    configSrc
-            , runNode' $ dispatchScenario @S.ClientNode configSrc
-            , runNode' $ dispatchScenario @S.NN         configSrc
-            , runNode' $ dispatchScenario @S.BN         configSrc
-            , runNode' $ dispatchScenario @S.TestClient configSrc
-            , runNode' $ dispatchScenario @S.TestServer configSrc
+            [ runNode' $ Cfg.dispatchScenario @A.GraphNode  configSrc
+            , runNode' $ Cfg.dispatchScenario @A.PoANode    configSrc
+            , runNode' $ Cfg.dispatchScenario @A.PoWNode    configSrc
+            , runNode' $ Cfg.dispatchScenario @A.ClientNode configSrc
+            , runNode' $ Cfg.dispatchScenario @A.NN         configSrc
+            , runNode' $ Cfg.dispatchScenario @A.BN         configSrc
+            , runNode' $ Cfg.dispatchScenario @A.TestClient configSrc
+            , runNode' $ Cfg.dispatchScenario @A.TestServer configSrc
             ]
 
     results <- sequence runners
     case catMaybes results of
         [] -> putStrLn @Text "Invalid config passed: node not found."
         _  -> pure ()
-
-getNodeScript' :: Cfg.Node node => Cfg.Config node -> L.NodeDefinitionL ()
-getNodeScript' cfg = Cfg.getNodeScript (Cfg.nodeScenario cfg) (Cfg.nodeConfig cfg)
-
-dispatchScenario
-    :: FromJSON node
-    => FromJSON (Cfg.NodeScenario node)
-    => FromJSON (Cfg.NodeConfig node)
-    => Cfg.Node node
-    => LByteString
-    -> Maybe (Cfg.Config node, L.NodeDefinitionL ())
-dispatchScenario configSrc = case Cfg.tryParseConfig (LBS.toStrict configSrc) of
-    Left e    -> (error . show . prettyPrintParseException) $ e
-    Right cfg -> Just (cfg, getNodeScript' cfg)

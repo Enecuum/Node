@@ -38,7 +38,7 @@ consoleLoggerConfig = D.LoggerConfig
     }
 
 testConfigFilePath :: IsString a => a
-testConfigFilePath = "./configs/testConfig.json"
+testConfigFilePath = "./configs/ClientNode_testConfig.json"
 
 loadLoggerConfig :: FilePath -> IO D.LoggerConfig
 loadLoggerConfig configFile = do
