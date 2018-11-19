@@ -12,8 +12,6 @@ import           Enecuum.Framework.Language.Extra (HasGraph(..))
 import           Enecuum.Blockchain.Domain
 
 makeFieldsNoPrefix ''Transaction
-makeFieldsNoPrefix ''TransactionForSign
 makeFieldsNoPrefix ''Microblock
 makeFieldsNoPrefix ''KBlock
-makeFieldsNoPrefix ''MicroblockForSign 
 makeFieldsNoPrefix ''BlockchainData

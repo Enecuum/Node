@@ -5,6 +5,7 @@ import qualified Enecuum.Domain                as D
 import qualified Enecuum.Assets.Nodes.Messages as M
 import qualified Enecuum.Language              as L
 
+
 methodPing :: (L.Send con f, Functor f) => M.Ping -> con -> f ()
 methodPing  M.Ping conn = void $ L.send conn M.Pong
 
@@ -16,3 +17,6 @@ handleStopNode
     => s -> M.Stop -> Free L.NodeF M.SuccessMsg
 handleStopNode nodeData M.Stop = L.stopNode nodeData >> pure M.SuccessMsg
 
+portError :: D.PortNumber -> Text -> Text
+portError port protocol =
+    "Port " <> show port <> " (for " <> protocol <> " server) is alredy used."

@@ -17,9 +17,11 @@ import qualified Enecuum.Blockchain.Lens      as Lens
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 
 import qualified Enecuum.Assets.Nodes.Address as A
-import           Enecuum.Assets.Nodes.Messages
-import           Enecuum.Assets.Nodes.Methods (rpcPingPong, handleStopNode)
+import           Enecuum.Assets.Nodes.Routing.Runtime
+
+import           Enecuum.Assets.Nodes.Methods (rpcPingPong, handleStopNode, portError)
 import qualified Enecuum.Assets.Blockchain.Generation as A
+
 
 data PoANodeData = PoANodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock
@@ -33,7 +35,8 @@ data PoANode = PoANode
     deriving (Show, Generic)
 
 data instance NodeConfig PoANode = PoANodeConfig
-    { _dummyOption :: Int
+    { _poaNodePorts :: A.NodePorts
+    , _poaBnAddress :: A.NodeAddress
     }
     deriving (Show, Generic)
 
@@ -49,11 +52,13 @@ instance FromJSON (NodeConfig PoANode)   where parseJSON = A.genericParseJSON no
 instance ToJSON   (NodeScenario PoANode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario PoANode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
+defaultPoANodeConfig = PoANodeConfig A.defaultPoANodePorts A.defaultBnNodeAddress
+
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
 
-sendMicroblock :: PoANodeData -> D.KBlock -> NodeScenario PoANode -> L.NodeL ()
-sendMicroblock poaData block role = do
+sendMicroblock :: RoutingRuntime -> PoANodeData -> NodeScenario PoANode -> D.KBlock -> L.NodeL ()
+sendMicroblock routingData poaData role block = do
     currentBlock <- L.readVarIO (poaData ^. currentLastKeyBlock)
     when (block /= currentBlock) $ do
         L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ ")."
@@ -80,26 +85,40 @@ sendMicroblock poaData block role = do
             Bad  -> A.generateBogusSignedMicroblock block tx
         L.logInfo
             $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
-        void $ L.withConnection D.Tcp A.graphNodeTransmitterTcpAddress $
-            \conn -> L.send conn mBlock
+        
+        void $ sendUdpBroadcast routingData mBlock
+
+
+
 
 poaNode :: NodeScenario PoANode -> NodeConfig PoANode -> L.NodeDefinitionL ()
-poaNode role _ = do
+poaNode role cfg = do
     L.nodeTag "PoA node"
     L.logInfo "Starting of PoA node"
-    poaData <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
+    let myNodePorts = _poaNodePorts cfg
+
+    -- TODO: read from config
+    let myHash      = D.toHashGeneric myNodePorts
+
+    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash (_poaBnAddress cfg)
+    poaData     <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    L.serving D.Rpc A.poaNodeRpcPort $ do
+    rpcServerOk <- L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
+        rpcRoutingHandlers routingData
         L.method   rpcPingPong
         L.method $ handleStopNode poaData
 
-    L.process $ forever $ do
-        L.delay $ 100 * 1000
-        whenRightM (L.makeRpcRequest A.graphNodeTransmitterRpcAddress GetTransactionPending) $ \tx -> do
-            forM_ tx (\t -> L.logInfo $ "\nAdd transaction to pending "  +| D.showTransaction t "" |+ "")
-            L.atomically $ L.modifyVar (poaData ^. transactionPending) ( ++ tx )
-        whenRightM (L.makeRpcRequest A.graphNodeTransmitterRpcAddress GetLastKBlock) $ \block -> sendMicroblock poaData block role
-
-    L.awaitNodeFinished poaData
+    udpServerOk <- L.serving D.Udp (myNodePorts ^. A.nodeUdpPort) $ do
+        udpRoutingHandlers routingData
+        L.handler $ udpBroadcastRecivedMessage routingData $
+            sendMicroblock routingData poaData role
+    if all isJust [rpcServerOk, udpServerOk] then do
+        routingWorker routingData
+        L.awaitNodeFinished poaData
+    else do
+        unless (isJust rpcServerOk) $
+            L.logError $ portError (myNodePorts ^. A.nodeRpcPort) "rpc" 
+        unless (isJust udpServerOk) $
+            L.logError $ portError (myNodePorts ^. A.nodeUdpPort) "udp"
