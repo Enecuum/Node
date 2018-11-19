@@ -66,7 +66,7 @@ graphNodeTransmitter' cfg nodeData = do
         L.methodE $ handleRestoreFromDB nodeData
 
         -- graph node interaction
-        L.method  $ getChainLength nodeData
+        L.method  $ acceptGetChainLengthRequest nodeData
         L.methodE $ acceptChainFromTo nodeData
         L.methodE $ getMBlockForKBlocks nodeData
 
