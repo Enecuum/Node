@@ -43,9 +43,9 @@ graphNodeTransmitter' cfg nodeData = do
         -- network
         L.handler   methodPing
         -- PoA interaction
-        L.handler $ udpBroadcastRecivedMessage routingData (acceptMBlock' nodeData)
+        L.handler $ udpBroadcastReceivedMessage routingData (acceptMBlock' nodeData)
         -- PoW interaction
-        L.handler $ udpBroadcastRecivedMessage routingData (acceptKBlock' nodeData)
+        L.handler $ udpBroadcastReceivedMessage routingData (acceptKBlock' nodeData)
 
     tcpServerOk <- L.serving D.Tcp (myNodePorts ^. A.nodeTcpPort) $
         -- network
