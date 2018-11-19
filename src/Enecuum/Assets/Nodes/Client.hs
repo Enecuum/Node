@@ -203,9 +203,9 @@ drawRouteMap (DrawMap port) = do
             let startPoint      = (500 :+ 500) + mkPolar 1 startPointPhase * 400
             forM_ (hashToPhase <$> hf) $ \ph -> do
                 let endPoint = (500 :+ 500) + mkPolar 1 ph * 400
-                drawCirkle endPoint 10 black image
+                drawCircle endPoint 10 black image
                 drawArrow startPoint endPoint black image
-    pure "Drawed."
+    pure "Drawn."
 
 -- | Build connection map.
 cardAssembly
