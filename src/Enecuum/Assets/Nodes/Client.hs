@@ -62,14 +62,7 @@ data GenerateBlocksPacket           = GenerateBlocksPacket
     , address :: D.Address
     }
     deriving (Generic, Read)
--- =======
---     deriving (Generic, Show)
 
--- data Ping                           = Ping Protocol D.Address
--- newtype StopRequest                 = StopRequest D.Address
--- data GetBlock                       = GetBlock D.StringHash D.Address
--- data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON)
--- >>>>>>> feature/go
 
 data DumpToDB = DumpToDB
     { address :: D.Address

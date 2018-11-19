@@ -43,6 +43,7 @@ The framework provides such possibilities:
 ### Install libs for the client
 
 `sudo apt install libtinfo-dev`
+`sudo apt install libgd-dev`
 
 ### Clone and Build Node
 
@@ -54,7 +55,7 @@ The framework provides such possibilities:
 
 `stack build --fast`
 
-3. Run tests (optional)
+3. Run tests (optional) 
 
 Run all tests:
 `stack build --fast --test`
@@ -67,14 +68,6 @@ Run slow and unreliable tests:
 
 ### Node executable
 
-<<<<<<< HEAD
-If you added path to your profile:
-
-`enq-node-haskell initialize ./configs/Client.json`
-
-Or you need to use that instead:
-
-=======
 `enq-node-haskell` is a single executable for nodes.
 `./configs` contains several configs for different nodes.
 
@@ -93,5 +86,4 @@ Or you need to use that instead:
 `stack exec enq-node-haskell initialize ./configs/poa.json`
 
 * Console client
->>>>>>> master
 `stack exec enq-node-haskell initialize ./configs/Client.json`
