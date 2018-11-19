@@ -129,13 +129,16 @@ getBalance nodeData (GetWalletBalance wallet) = do
         Just balance -> pure $ Right $ WalletBalanceMsg wallet balance
         _            -> pure $ Left $ "Wallet " +|| D.showPublicKey wallet ||+ " does not exist in graph."
 
-getChainLength :: GraphNodeData -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
-getChainLength nodeData GetChainLengthRequest = do
+getChainLength :: GraphNodeData -> L.NodeL D.BlockNumber
+getChainLength nodeData = do
     let bData = nodeData ^. blockchain
---    L.logInfo "Answering chain length"
     topKBlock <- L.atomically $ L.getTopKeyBlock bData
-    pure $ GetChainLengthResponse $ topKBlock ^. Lens.number
+    pure $ topKBlock ^. Lens.number
 
+acceptGetChainLengthRequest
+    :: GraphNodeData -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
+acceptGetChainLengthRequest nodeData _ =
+    GetChainLengthResponse <$> getChainLength nodeData
 
 acceptChainFromTo :: GraphNodeData -> GetChainFromToRequest -> L.NodeL (Either Text GetChainFromToResponse)
 acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
@@ -234,41 +237,59 @@ graphNodeInitialization nodeConfig = L.scenario $ do
         then pure $ Left "Database error."
         else pure $ Right nodeData
 
+data ResultOfChainCompair
+    = NeedToSync (D.BlockNumber, D.BlockNumber)
+    | ErrorInRequest Text
+    | ChainsAreEqual
+    | MyChainIsLonger
+
+compareChainLength :: GraphNodeData -> D.Address -> L.NodeL ResultOfChainCompair
+compareChainLength nodeData address = do
+    eLngth <- L.makeRpcRequest address GetChainLengthRequest
+    case eLngth of
+        Right (GetChainLengthResponse otherLength)-> do
+            lengthOfMyChain <- getChainLength nodeData
+            pure $ if 
+                | otherLength > lengthOfMyChain  -> NeedToSync (lengthOfMyChain, otherLength)
+                | otherLength == lengthOfMyChain -> ChainsAreEqual
+                | otherwise                      -> MyChainIsLonger
+        Left err -> pure $ ErrorInRequest err
+
+syncCurrentMacroBlock :: GraphNodeData -> D.Address -> L.NodeL Bool
+syncCurrentMacroBlock nodeData address = do
+    let bData = nodeData ^. blockchain
+    topNodeHash <- L.readVarIO $ bData ^. Lens.curNode
+    eMBlocks <- L.makeRpcRequest address (GetMBlocksForKBlockRequest topNodeHash)
+    case eMBlocks of
+        Right (GetMBlocksForKBlockResponse mBlocks) -> do
+            L.logInfo $ "Mblocks received for kBlock " +|| topNodeHash ||+ " : " +|| mBlocks ||+ "."
+            L.atomically $ forM_ mBlocks (L.addMBlock bData)
+        Left err -> L.logError $ "Error of sync of current macroblock: " <> err
+    pure $ isRight eMBlocks
+
+getKBlockChain :: D.Address -> D.BlockNumber -> D.BlockNumber -> L.NodeL [D.KBlock]
+getKBlockChain address curChainLength otherLength = do
+    eChain <- L.makeRpcRequest address (GetChainFromToRequest (curChainLength + 1) otherLength)
+    case eChain of
+        Right (GetChainFromToResponse chainTail) -> do
+            L.logInfo $ "Chain tail received from " +|| (curChainLength + 1) ||+ " to " +|| otherLength ||+ " : " +|| chainTail ||+ "."
+            pure chainTail
+        Left err -> do
+            L.logError $ "Error in reciving of kblock chain" <> err
+            pure []
+
+tryTakeMBlockChain :: [D.KBlock] -> GraphNodeData -> D.Address -> L.NodeL ()
+tryTakeMBlockChain (kBlock:kBlocks) nodeData address = do 
+    void $ L.addKBlock (nodeData ^. blockchain) kBlock
+    whenM (syncCurrentMacroBlock nodeData address) $
+        tryTakeMBlockChain kBlocks nodeData address
+tryTakeMBlockChain _ _ _ = pure ()
 
 graphSynchro :: GraphNodeData -> D.Address -> L.NodeL ()
-graphSynchro nodeData address = do
-    let bData = nodeData ^. blockchain
-
-    GetChainLengthResponse otherLength <- L.makeRpcRequestUnsafe address GetChainLengthRequest
-
-    curChainLength <- L.atomically $ do
-        topKBlock <- L.getTopKeyBlock bData
-        pure $ topKBlock ^. Lens.number
-
-    when (curChainLength < otherLength) $ do
-
-        topNodeHash <- L.readVarIO $ bData ^. Lens.curNode
-
-        GetMBlocksForKBlockResponse mBlocks1 <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest topNodeHash)
-        L.logInfo $ "Mblocks received for kBlock " +|| topNodeHash ||+ " : " +|| mBlocks1 ||+ "."
-        L.atomically $ forM_ mBlocks1 (L.addMBlock bData)
-
-        GetChainFromToResponse chainTail <- L.makeRpcRequestUnsafe address (GetChainFromToRequest (curChainLength + 1) otherLength)
-        L.logInfo $ "Chain tail received from " +|| (curChainLength + 1) ||+ " to " +|| otherLength ||+ " : " +|| chainTail ||+ "."
-
-        -- TODO: check pending
-        forM_ chainTail (L.addKBlock bData)
-
-        for_ (init chainTail) $ \kBlock -> do
-
-            -- TODO: check pending
-            void $ L.addKBlock bData kBlock
-
-            let hash = toHash kBlock
-            GetMBlocksForKBlockResponse mBlocks2 <- L.makeRpcRequestUnsafe address (GetMBlocksForKBlockRequest hash)
-
-            L.logInfo $ "Mblocks received for kBlock " +|| hash ||+ " : " +|| mBlocks2 ||+ "."
-            L.atomically $ forM_ mBlocks2 (L.addMBlock bData)
-
-        -- TODO: check pending
-        void $ L.addKBlock bData (last chainTail)        
+graphSynchro nodeData address = compareChainLength nodeData address >>= \case
+    NeedToSync (curChainLength, otherLength) -> do
+        ok <- syncCurrentMacroBlock nodeData address
+        when ok $ do
+            chainTail <- getKBlockChain address curChainLength otherLength
+            tryTakeMBlockChain chainTail nodeData address
+    _ -> pure ()
