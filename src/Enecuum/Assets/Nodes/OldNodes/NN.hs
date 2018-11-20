@@ -1,22 +1,17 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
-module Enecuum.Assets.Nodes.Routing.NN (nnNode, NN, NodeConfig (..)) where
+module Enecuum.Assets.Nodes.OldNodes.NN (nnNode, NN, NodeConfig (..)) where
 
 import qualified Data.Aeson                       as J
-import qualified Data.Map                         as Map
 import qualified Enecuum.Assets.Nodes.Address     as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
-import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Config
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Framework.Language.Extra (HasStatus)
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude
-import           Enecuum.Research.ChordRouteMap
-import           Enecuum.Assets.Nodes.Routing.Runtime
-import           Enecuum.Assets.Nodes.Routing.Messages
+import           Enecuum.Assets.Nodes.Routing
 
-type MyNodeHash      = D.StringHash
 type SenderNodeHash  = D.StringHash
 
 data NNNodeData = NNNodeData

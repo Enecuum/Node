@@ -19,7 +19,7 @@ import qualified Enecuum.Domain                       as D
 import           Enecuum.Framework.Language.Extra     (HasStatus, NodeStatus (..))
 import qualified Enecuum.Language                     as L
 import           Enecuum.Prelude
-import           Enecuum.Assets.Nodes.Routing.Runtime
+import           Enecuum.Assets.Nodes.Routing
 
 type IterationsCount = Int
 type EnableDelays = Bool

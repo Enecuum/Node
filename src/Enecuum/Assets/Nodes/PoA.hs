@@ -17,11 +17,10 @@ import qualified Enecuum.Blockchain.Lens      as Lens
 import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
 
 import qualified Enecuum.Assets.Nodes.Address as A
-import           Enecuum.Assets.Nodes.Routing.Runtime
+import           Enecuum.Assets.Nodes.Routing
 
 import           Enecuum.Assets.Nodes.Methods (rpcPingPong, handleStopNode, portError)
 import qualified Enecuum.Assets.Blockchain.Generation as A
-
 
 data PoANodeData = PoANodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock

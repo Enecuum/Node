@@ -9,9 +9,9 @@ import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.GraphNode.Logic
 import           Enecuum.Assets.Nodes.GraphNode.Config
 import           Enecuum.Assets.Nodes.GraphNode.Database
-import           Enecuum.Assets.Nodes.Routing.Runtime
 import           Enecuum.Research.ChordRouteMap
 import qualified Enecuum.Assets.Nodes.Messages as M
+import           Enecuum.Assets.Nodes.Routing
 
 -- | Start of graph node
 graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()

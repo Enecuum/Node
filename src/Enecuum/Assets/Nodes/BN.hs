@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
-module Enecuum.Assets.Nodes.Routing.BN (bnNode, BN, NodeConfig(..)) where
+module Enecuum.Assets.Nodes.BN (bnNode, BN, NodeConfig(..)) where
 
 import           Enecuum.Prelude
 import qualified Enecuum.Domain                 as D
