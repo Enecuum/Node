@@ -3,7 +3,7 @@
 {-# LANGUAGE RecordWildCards       #-}
 module Enecuum.Blockchain.Domain.Internal (signTransaction, transactionForSign, microblockForSign, signMicroblock) where
 
-import           Data.HGraph.StringHashable            (StringHash (..), StringHashable, toHash)
+import           Data.HGraph.StringHashable            (StringHash (..))
 import           Data.UUID
 import           Enecuum.Blockchain.Domain.Microblock
 import           Enecuum.Blockchain.Domain.Transaction

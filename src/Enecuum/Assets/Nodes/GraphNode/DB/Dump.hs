@@ -33,7 +33,7 @@ saveKBlock dbModel kBlock = do
         ]
 
 saveMBlock :: D.DBModel -> D.KBlockIdx -> (D.MBlockIdx, D.Microblock) -> L.NodeL [D.DBResult ()]
-saveMBlock dbModel kBlockIdx mBlockData@(mBlockIdx, mBlock) = do
+saveMBlock dbModel kBlockIdx (mBlockIdx, mBlock) = do
     let k1 = D.toDBKey   @D.MBlockEntity (kBlockIdx, mBlockIdx)
     let v1 = D.toDBValue @D.MBlockEntity mBlock
 

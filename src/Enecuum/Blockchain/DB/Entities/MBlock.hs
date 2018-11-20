@@ -1,20 +1,20 @@
-{-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Enecuum.Blockchain.DB.Entities.MBlock where
 
+import qualified Data.Aeson                            as A
+import qualified Data.ByteString.Lazy                  as LBS
 import           Enecuum.Prelude
-import qualified Data.Aeson           as A
-import qualified Data.ByteString.Lazy as LBS
-import           Text.Printf          (printf)
+import           Text.Printf                           (printf)
 
-import qualified Enecuum.Core.Types                    as D
+import           Enecuum.Blockchain.DB.Entities.KBlock (toKBlockIdxBase)
+import           Enecuum.Blockchain.DB.Entities.Types  (KBlockIdx, MBlockIdx)
+import           Enecuum.Blockchain.DB.Model           (MBlocksDB)
 import qualified Enecuum.Blockchain.Domain.KBlock      as D
 import qualified Enecuum.Blockchain.Domain.Microblock  as D
 import qualified Enecuum.Blockchain.Lens               as Lens
-import           Enecuum.Blockchain.DB.Model           (MBlocksDB)
-import           Enecuum.Blockchain.DB.Entities.Types  (KBlockIdx, MBlockIdx)
-import           Enecuum.Blockchain.DB.Entities.KBlock (toKBlockIdxBase)
+import qualified Enecuum.Core.Types                    as D
 
 
 -- mBlocks (kBlock_idx|mBlock_idx -> mBlock_data)
@@ -28,24 +28,23 @@ data MBlockEntity
 instance D.DBModelEntity MBlocksDB MBlockEntity
 
 instance D.DBEntity MBlockEntity where
-    data DBKey MBlockEntity = MBlockKey ByteString
+    data DBKey MBlockEntity = MBlockKey (KBlockIdx, MBlockIdx)
         deriving (Show, Eq, Ord)
-    
-    -- Publisher is temporarily not an index
+
     data DBValue MBlockEntity = MBlockValue
-            { publisher :: D.PublicKey
+            { publisher :: D.PublicKey  -- Temporarily not an index
             , signature :: D.Signature
-            }    
+            }
         deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance D.ToDBKey MBlockEntity (KBlockIdx, MBlockIdx) where
-    toDBKey (kBlockIdx, mBlockIdx) = MBlockKey . encodeUtf8 $ toKBlockIdxBase kBlockIdx <> toMBlockIdxBase mBlockIdx
+    toDBKey = MBlockKey
 
 instance D.ToDBValue MBlockEntity D.Microblock where
     toDBValue mBlock = MBlockValue (mBlock ^. Lens.publisher) (mBlock ^. Lens.signature)
 
 instance D.RawDBEntity MBlocksDB MBlockEntity where
-    toRawDBKey (MBlockKey k) = k
+    toRawDBKey (MBlockKey (kBlockIdx, mBlockIdx)) = encodeUtf8 $ toKBlockIdxBase kBlockIdx <> toMBlockIdxBase mBlockIdx
     toRawDBValue = LBS.toStrict . A.encode
     fromRawDBValue = A.decode . LBS.fromStrict
 

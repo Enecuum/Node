@@ -1,44 +1,67 @@
-{-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Enecuum.Blockchain.DB.Entities.Transaction where
 
+import qualified Data.Aeson                            as A
+import qualified Data.ByteString.Lazy                  as LBS
 import           Enecuum.Prelude
-import qualified Data.Aeson           as A
-import qualified Data.ByteString.Lazy as LBS
-import           Text.Printf          (printf)
+import           Text.Printf                           (printf)
 
-import qualified Enecuum.Core.Types as D
-import qualified Enecuum.Blockchain.Domain.KBlock     as D
-import qualified Enecuum.Blockchain.Domain.Microblock as D
-import qualified Enecuum.Blockchain.Lens              as Lens
-import           Enecuum.Blockchain.DB.Model          (TransactionsDB)
-import           Enecuum.Blockchain.DB.Entities.Types (TransactionIdx)
+import           Enecuum.Blockchain.DB.Entities.KBlock (toKBlockIdxBase)
+import           Enecuum.Blockchain.DB.Entities.MBlock (toMBlockIdxBase)
+import           Enecuum.Blockchain.DB.Entities.Types  (KBlockIdx, MBlockIdx, TransactionIdx)
+import           Enecuum.Blockchain.DB.Model           (TransactionsDB)
+import qualified Enecuum.Blockchain.Domain.KBlock      as D
+import qualified Enecuum.Blockchain.Domain.Microblock  as D
+import qualified Enecuum.Blockchain.Domain.Transaction as D
+import qualified Enecuum.Blockchain.Domain.Types       as D
+import qualified Enecuum.Blockchain.Lens               as Lens
+import qualified Enecuum.Core.Types                    as D
 
 
--- txs (mBlock idx -> transaction data)
+-- txs (kBlock_idx|mBlock_idx|tx_idx -> tx_data)
 -- --------------------------------------------------------------------
--- 000000000 {owner: 1, receiver: 2, amount: 100: signature: <signature>}
--- 000000001 {owner: 2, receiver: 3, amount: 500: signature: <signature>}
--- 000000002 {owner: 1, receiver: 3, amount: 101: signature: <signature>}
+-- 0000001|001|001 {owner: 1, receiver: 2, amount: 100: signature: <signature>}
+-- 0000001|001|002 {owner: 2, receiver: 3, amount: 500: signature: <signature>}
+-- 0000002|001|001 {owner: 1, receiver: 3, amount: 101: signature: <signature>}
 
-data TransactionMetaEntity
+data TransactionEntity
 
-instance D.DBModelEntity TransactionsDB TransactionMetaEntity
+instance D.DBModelEntity TransactionsDB TransactionEntity
 
-instance D.DBEntity TransactionMetaEntity where
-    data DBKey   TransactionMetaEntity = TransactionMetaKey
+instance D.DBEntity TransactionEntity where
+    data DBKey   TransactionEntity = TransactionKey (KBlockIdx, MBlockIdx, TransactionIdx)
         deriving (Show, Eq, Ord)
-    data DBValue TransactionMetaEntity = TransactionMetaValue
+    data DBValue TransactionEntity = TransactionValue
+            { owner     :: D.PublicKey  -- Temporarily not an index
+            , receiver  :: D.PublicKey  -- Temporarily not an index
+            , amount    :: D.Amount
+            , signature :: D.Signature  -- Temporarily not an index
+            , uuid      :: D.UUID
+            }
         deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
--- instance D.ToDBKey TransactionMetaEntity D.BlockNumber where
---     toDBKey = KBlockPrevHashKey . encodeUtf8 @String . printf "%07d0"
+instance D.ToDBKey TransactionEntity (KBlockIdx, MBlockIdx, TransactionIdx) where
+    toDBKey = TransactionKey
 
--- instance D.ToDBValue TransactionMetaEntity D.Microblock where
---     toDBValue microblock = MicroblockMetaEntity ???
+instance D.ToDBValue TransactionEntity D.Transaction where
+    toDBValue tx = TransactionValue
+        { owner     = tx ^. Lens.owner
+        , receiver  = tx ^. Lens.receiver
+        , amount    = tx ^. Lens.amount
+        , signature = tx ^. Lens.signature
+        , uuid      = tx ^. Lens.uuid
+        }
 
--- instance D.RawDBEntity TransactionsDB TransactionMetaEntity where
---     toRawDBKey (KBlockPrevHashKey k) = k
---     toRawDBValue = LBS.toStrict . A.encode
---     fromRawDBValue = A.decode . LBS.fromStrict
+instance D.RawDBEntity TransactionsDB TransactionEntity where
+    toRawDBKey (TransactionKey (kBlockIdx, mBlockIdx, transactionIdx)) =
+         encodeUtf8
+            $  toKBlockIdxBase kBlockIdx
+            <> toMBlockIdxBase mBlockIdx
+            <> toTransactionIdxBase transactionIdx
+    toRawDBValue = LBS.toStrict . A.encode
+    fromRawDBValue = A.decode . LBS.fromStrict
+
+toTransactionIdxBase :: TransactionIdx -> String
+toTransactionIdxBase = printf "%03d"

@@ -77,10 +77,6 @@ acceptKBlock' nodeData kBlock = do
 acceptKBlock :: GraphNodeData -> D.KBlock -> connection -> L.NodeL ()
 acceptKBlock nodeData kBlock _ = acceptKBlock' nodeData kBlock
 
--- | Accept mBlock
-acceptMBlock :: GraphNodeData -> D.Microblock -> D.Connection D.Udp -> L.NodeL ()
-acceptMBlock nodeData mBlock _ = acceptMBlock' nodeData mBlock
-
 acceptMBlock' :: GraphNodeData -> D.Microblock -> L.NodeL ()
 acceptMBlock' nodeData mBlock = do
     let microblockValid  = L.verifyMicroblock mBlock
@@ -98,6 +94,10 @@ acceptMBlock' nodeData mBlock = do
             forM_ tx (L.modifyVar (bData ^. Lens.transactionPending) . fun)
     forM_ (mBlock ^. Lens.transactions) (\tx -> unless (L.verifyTransaction tx) $
         L.logInfo $ "Transaction "  +|| D.showTx tx ||+ "of microblock " +|| toHash mBlock ||+ "has invalid signature.")
+
+-- | Accept mBlock
+acceptMBlock :: GraphNodeData -> D.Microblock -> connection -> L.NodeL ()
+acceptMBlock nodeData mBlock _ = acceptMBlock' nodeData mBlock
 
 getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL D.KBlockPending
 getKBlockPending nodeData _ = L.readVarIO $ nodeData ^. blockchain . Lens.kBlockPending
@@ -250,7 +250,7 @@ compareChainLength nodeData address = do
     case eLngth of
         Right (GetChainLengthResponse otherLength)-> do
             lengthOfMyChain <- getChainLength nodeData
-            pure $ if 
+            pure $ if
                 | otherLength > lengthOfMyChain  -> NeedToSync (lengthOfMyChain, otherLength)
                 | otherLength == lengthOfMyChain -> ChainsAreEqual
                 | otherwise                      -> MyChainIsLonger
@@ -280,7 +280,7 @@ getKBlockChain address curChainLength otherLength = do
             pure []
 
 tryTakeMBlockChain :: [D.KBlock] -> GraphNodeData -> D.Address -> L.NodeL ()
-tryTakeMBlockChain (kBlock:kBlocks) nodeData address = do 
+tryTakeMBlockChain (kBlock:kBlocks) nodeData address = do
     void $ L.addKBlock (nodeData ^. blockchain) kBlock
     whenM (syncCurrentMacroBlock nodeData address) $
         tryTakeMBlockChain kBlocks nodeData address

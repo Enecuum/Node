@@ -1,18 +1,18 @@
-{-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Enecuum.Blockchain.DB.Entities.KBlock where
 
+import qualified Data.Aeson                           as A
+import qualified Data.ByteString.Lazy                 as LBS
 import           Enecuum.Prelude
-import qualified Data.Aeson           as A
-import qualified Data.ByteString.Lazy as LBS
-import           Text.Printf          (printf)
+import           Text.Printf                          (printf)
 
-import qualified Enecuum.Core.Types                   as D
+import           Enecuum.Blockchain.DB.Entities.Types (KBlockIdx)
+import           Enecuum.Blockchain.DB.Model          (KBlocksDB)
 import qualified Enecuum.Blockchain.Domain.KBlock     as D
 import qualified Enecuum.Blockchain.Lens              as Lens
-import           Enecuum.Blockchain.DB.Model          (KBlocksDB)
-import           Enecuum.Blockchain.DB.Entities.Types (KBlockIdx)
+import qualified Enecuum.Core.Types                   as D
 
 
 -- kBlocks (kBlock_idx|0 -> prev_hash, kBlock_idx|1 -> kBlock_data)
@@ -29,45 +29,45 @@ instance D.DBModelEntity KBlocksDB KBlockEntity
 -- KBlockPrevHash entity
 
 instance D.DBEntity KBlockPrevHashEntity where
-    data DBKey   KBlockPrevHashEntity = KBlockPrevHashKey ByteString
+    data DBKey   KBlockPrevHashEntity = KBlockPrevHashKey D.BlockNumber
         deriving (Show, Eq, Ord)
     data DBValue KBlockPrevHashEntity = KBlockPrevHashValue D.StringHash
         deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance D.ToDBKey KBlockPrevHashEntity D.BlockNumber where
-    toDBKey = KBlockPrevHashKey . encodeUtf8 . toKBlockPrevHashEntityKeyBase
+    toDBKey = KBlockPrevHashKey
 
 instance D.ToDBKey KBlockPrevHashEntity D.KBlock where
-    toDBKey = KBlockPrevHashKey . encodeUtf8 . toKBlockPrevHashEntityKeyBase . D._number
+    toDBKey = KBlockPrevHashKey . D._number
 
 instance D.ToDBValue KBlockPrevHashEntity D.KBlock where
     toDBValue kBlock = KBlockPrevHashValue $ kBlock ^. Lens.prevHash
 
 -- TODO: this can be made by default
 instance D.RawDBEntity KBlocksDB KBlockPrevHashEntity where
-    toRawDBKey (KBlockPrevHashKey k) = k
+    toRawDBKey (KBlockPrevHashKey kBlockIdx) = encodeUtf8 $ toKBlockPrevHashEntityKeyBase kBlockIdx
     toRawDBValue = LBS.toStrict . A.encode
     fromRawDBValue = A.decode . LBS.fromStrict
 
 -- KBlock entity
 
 instance D.DBEntity KBlockEntity where
-    data DBKey   KBlockEntity = KBlockKey ByteString
+    data DBKey   KBlockEntity = KBlockKey D.BlockNumber
         deriving (Show, Eq, Ord)
     data DBValue KBlockEntity = KBlockValue D.BlockTime D.BlockNumber D.Nonce D.Solver
         deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance D.ToDBKey KBlockEntity D.BlockNumber where
-    toDBKey = KBlockKey . encodeUtf8 . toKBlockEntityKeyBase
+    toDBKey = KBlockKey
 
 instance D.ToDBKey KBlockEntity D.KBlock where
-    toDBKey = KBlockKey . encodeUtf8 . toKBlockEntityKeyBase . D._number
+    toDBKey = KBlockKey . D._number
 
 instance D.ToDBValue KBlockEntity D.KBlock where
     toDBValue (D.KBlock time _ number nonce solver) = KBlockValue time number nonce solver
 
 instance D.RawDBEntity KBlocksDB KBlockEntity where
-    toRawDBKey (KBlockKey k) = k
+    toRawDBKey (KBlockKey kBlockIdx) = encodeUtf8 $ toKBlockPrevHashEntityKeyBase kBlockIdx
     toRawDBValue = LBS.toStrict . A.encode
     fromRawDBValue = A.decode . LBS.fromStrict
 
