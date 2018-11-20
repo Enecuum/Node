@@ -6,6 +6,7 @@ import qualified Enecuum.Blockchain.Domain  as D
 import qualified Enecuum.Blockchain.Lens    as Lens
 import           Enecuum.Core.Crypto.Crypto
 import           Enecuum.Prelude
+import qualified Enecuum.Blockchain.Domain.Internal as D (transactionForSign, microblockForSign)
 
 type BlockValid = Bool
 type TransactionValid = Bool

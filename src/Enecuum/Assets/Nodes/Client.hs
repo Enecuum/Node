@@ -1,20 +1,26 @@
-{-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveAnyClass         #-}
+{-# LANGUAGE DuplicateRecordFields  #-}
 
--- module Enecuum.Assets.Nodes.Client where
-module Enecuum.Assets.Nodes.Client (clientNode, ClientNode(..), NodeConfig (..), Protocol(..)) where
+module Enecuum.Assets.Nodes.Client (clientNode, ClientNode(..), NodeConfig (..), SendTo(..), sendTo, Protocol(..)) where
 
 import qualified Data.Aeson                       as J
 import           Data.Aeson.Extra                 (noLensPrefix)
 import qualified Data.Map                         as Map
+import qualified Data.Set                         as Set
+import           Data.Set (union, (\\))
 import           Data.Text                        hiding (map)
 import qualified Enecuum.Assets.Blockchain.Wallet as A
+import qualified Enecuum.Assets.Nodes.Address     as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Config
 import           Enecuum.Framework.Language.Extra (NodeStatus (..))
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude                  hiding (map, unpack)
+import           Graphics.GD.Extra
+import           Enecuum.Research.RouteDrawing
+import           Data.Complex
+import           Enecuum.Assets.Nodes.Routing.Messages
 
 data ClientNode = ClientNode
     deriving (Show, Generic)
@@ -38,31 +44,34 @@ instance FromJSON (NodeScenario ClientNode) where parseJSON = J.genericParseJSON
 
 type TimeGap = Int
 
-data CreateTransaction              = CreateTransaction CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, ToJSON)
-newtype GetLastKBlock               = GetLastKBlock D.Address
-data GetWalletBalance               = GetWalletBalance Int D.Address
-newtype GetLengthOfChain            = GetLengthOfChain D.Address
-newtype StartForeverChainGeneration = StartForeverChainGeneration D.Address
+data CreateTransaction              = CreateTransaction CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, Read, ToJSON)
+newtype GetLastKBlock               = GetLastKBlock D.Address deriving Read
+data GetWalletBalance               = GetWalletBalance Int D.Address deriving Read
+newtype GetLengthOfChain            = GetLengthOfChain D.Address deriving Read
+newtype StartForeverChainGeneration = StartForeverChainGeneration D.Address deriving Read
+data Ping                           = Ping Protocol D.Address deriving Read
+newtype StopRequest                 = StopRequest D.Address deriving Read
+data GetBlock                       = GetBlock D.StringHash D.Address deriving Read
+data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON, Read)
+data SendTo                         = SendTo Address D.PortNumber deriving Read
+data Address                        = Address D.Host D.PortNumber deriving Read
+newtype DrawMap                     = DrawMap D.PortNumber deriving Read
 data GenerateBlocksPacket           = GenerateBlocksPacket
     { blocks  :: D.BlockNumber
     , timeGap :: TimeGap
     , address :: D.Address
     }
-    deriving (Generic, Show)
+    deriving (Generic, Read)
 
-data Ping                           = Ping Protocol D.Address
-newtype StopRequest                 = StopRequest D.Address
-data GetBlock                       = GetBlock D.StringHash D.Address
-data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON)
 
 data DumpToDB = DumpToDB
     { address :: D.Address
     }
-    deriving (Generic, Show, FromJSON)
+    deriving (Generic, Show, Read, FromJSON)
 data RestoreFromDB = RestoreFromDB
     { address :: D.Address
     }
-    deriving (Generic, Show, FromJSON)
+    deriving (Generic, Show, Read, FromJSON)
 
 data CLITransaction = CLITransaction
   { _owner    :: String
@@ -74,32 +83,6 @@ data CLITransaction = CLITransaction
 
 instance ToJSON CLITransaction where toJSON = genericToJSON noLensPrefix
 instance FromJSON CLITransaction where parseJSON = genericParseJSON noLensPrefix
-
-instance J.FromJSON Ping where
-    parseJSON = J.withObject "Ping" $ \o -> Ping <$> (o J..: "protocol") <*> (o J..: "address")
-
-instance J.FromJSON GetWalletBalance where
-    parseJSON = J.withObject "GetWalletBalance" $ \o -> GetWalletBalance <$> o J..: "walletID" <*> (o J..: "address")
-
-instance J.FromJSON CreateTransaction where
-    parseJSON = J.withObject "CreateTransaction" $ \o -> CreateTransaction <$> o J..: "tx" <*> (o J..: "address")
-
-instance J.FromJSON GetLastKBlock where
-    parseJSON = J.withObject "GetLastKBlock" $ \o -> GetLastKBlock <$> (o J..: "address")
-
-instance J.FromJSON GetLengthOfChain where
-    parseJSON = J.withObject "GetLengthOfChain" $ \o -> GetLengthOfChain <$> (o J..: "address")
-
-instance J.FromJSON StartForeverChainGeneration where
-    parseJSON = J.withObject "StartForeverChainGeneration" $ \o -> StartForeverChainGeneration <$> (o J..: "address")
-
-instance J.FromJSON GenerateBlocksPacket
-
-instance J.FromJSON StopRequest where
-    parseJSON = J.withObject "StopRequest" $ \o -> StopRequest <$> (o J..: "address")
-
-instance J.FromJSON GetBlock where
-    parseJSON = J.withObject "GetBlock" $ \o -> GetBlock <$> o J..: "hash" <*> (o J..: "address")
 
 sendSuccessRequest :: forall a. (ToJSON a, Typeable a) => D.Address -> a -> L.NodeL Text
 sendSuccessRequest address request = do
@@ -169,17 +152,17 @@ restoreFromDB (RestoreFromDB address) = do
 
 getLengthOfChain :: GetLengthOfChain -> L.NodeL Text
 getLengthOfChain (GetLengthOfChain address) = do
-    res :: Either Text D.KBlock <- L.makeRpcRequest address M.GetLastKBlock
-    case res of
-        Right kBlock -> pure $ "Length of chain is " <> show (D._number kBlock)
-        Left t       -> pure t
+    mKBlock <- L.makeRpcRequest address M.GetLastKBlock
+    pure $ case mKBlock of
+        Right kBlock       -> "Length of chain is " <> show (D._number kBlock)
+        Left  requestError -> requestError
 
 ping :: Ping -> L.NodeL Text
 ping (Ping TCP address) = do
-    res <- L.withConnection D.Tcp address $ \conn -> L.send conn M.Ping
-    pure $ case res of
+    ok <- L.withConnection D.Tcp address $ \conn -> L.send conn M.Ping
+    pure $ case ok of
         Just (Right _) -> "Tcp port is available."
-        Just (Left _)  -> "Tcp disconnection."
+        Just (Left  _) -> "Tcp disconnection."
         _              -> "Tcp port is not available."
 
 ping (Ping RPC address) = do
@@ -193,34 +176,63 @@ stopRequest (StopRequest address) = sendSuccessRequest address M.Stop
 
 getBlock :: GetBlock -> L.NodeL Text
 getBlock (GetBlock hash address) = do
-    res :: Either Text D.NodeContent <- L.makeRpcRequest address (M.GetGraphNode hash)
-    case res of
-        Right (D.KBlockContent block) -> pure $ "Key block is "   <> show block
-        Right (D.MBlockContent block) -> pure $ "Microblock is " <> show block
-        Left  text                    -> pure $ "Error: "         <> text
-
-{-
-Requests JSON:
-{"method":"GetLastKBlock", "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"StartForeverChainGeneration", "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"GenerateBlocksPacket", "blocks" : 2, "timeGap":0, "address":{"host":"127.0.0.1", "port": 2005}}
-{"method":"GetWalletBalance", "walletID": 2, "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"GetWalletBalance", "walletID": 2, "address":{"host":"127.0.0.1", "port": 2009}}
-{"method":"StopNode"}
-{"method":"Ping", "protocol":"RPC", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"GetLengthOfChain", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"StopRequest", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"CreateTransaction", "tx": {"amount":15, "owner": "me", "receiver":"Alice","currency": "ENQ"}, "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"DumpToDB", "address":{"host":"127.0.0.1", "port": 2008}}
-{"method":"RestoreFromDB", "address":{"host":"127.0.0.1", "port": 2008}}
--}
+    mblock <- L.makeRpcRequest address (M.GetGraphNode hash)
+    pure $ case mblock of
+        Right (D.KBlockContent block) -> "Key block is "  <> show block
+        Right (D.MBlockContent block) -> "Microblock is " <> show block
+        Left  requestError            -> "Error: "        <> requestError
 
 
-{-
-Requests:
-GenerateBlocksPacket {blocks = 1, timeGap = 0, address = Address {_host= "127.0.0.1", _port = 2005}}
-SendTo (Address "127.0.0.1" 5001) 5002
--}
+sendTo :: SendTo -> L.NodeL Text
+sendTo (SendTo (Address host port) rPort) = do
+    let receiverHash    = D.toHashGeneric $ A.makeNodePorts1000 rPort
+    let resenderUdpPort = A.makeNodePorts1000 port ^. A.nodeUdpPort
+    let resenderAddress = D.Address host resenderUdpPort
+    ok <- L.notify resenderAddress $ SendMsgTo receiverHash 10 "!! msg !!"
+    if isRight ok
+        then pure   "Test message is sent."
+        else pure $ "Error of sending: " <> show ok
+
+drawRouteMap :: DrawMap -> L.NodeL Text
+drawRouteMap (DrawMap port) = do
+    let startAddress = A.makeAddressByPorts $ A.makeNodePorts1000 port
+    routMap <- cardAssembly mempty mempty (Set.fromList [startAddress])
+    L.evalIO $ makeImage (1000, 1000) "image.png" $ \image ->
+        forM_ (Map.toList routMap) $ \(hs, hf) -> do
+            let startPointPhase = hashToPhase hs
+            let startPoint      = (500 :+ 500) + mkPolar 1 startPointPhase * 400
+            forM_ (hashToPhase <$> hf) $ \ph -> do
+                let endPoint = (500 :+ 500) + mkPolar 1 ph * 400
+                drawCircle endPoint 10 black image
+                drawArrow startPoint endPoint black image
+    pure "Drawn."
+
+-- | Build connection map.
+cardAssembly
+    :: Map D.StringHash [D.StringHash]
+    -> Set.Set A.NodeAddress
+    -> Set.Set A.NodeAddress
+    -> L.NodeL (Map D.StringHash [D.StringHash])
+cardAssembly accum passed nexts
+    | Set.null nexts = pure accum
+    | otherwise      = do
+        -- take the address of who will ask the next contact
+        let currentAddress = Set.elemAt 0 nexts
+        connects <- fromRight [] <$>
+            L.makeRpcRequest (A.getRpcAddress currentAddress) M.ConnectMapRequest
+        
+        -- add the address to the list of the passed
+        let newPassed :: Set.Set A.NodeAddress
+            newPassed = Set.insert currentAddress passed
+
+        -- add received addresses to the queue and remove from it those that have already visited
+        let newNexts :: Set.Set A.NodeAddress
+            newNexts  = (nexts `union` Set.fromList connects) \\ newPassed
+
+        -- add to the accumulator addresses for the passed address
+        let newAccum :: Map.Map D.StringHash [D.StringHash]
+            newAccum  = Map.insert (currentAddress ^. A.nodeId) ((^. A.nodeId) <$> connects) accum
+        cardAssembly newAccum newPassed newNexts
 
 clientNode :: L.NodeDefinitionL ()
 clientNode = clientNode' (ClientNodeConfig 42)
@@ -230,8 +242,9 @@ clientNode' _ = do
     L.logInfo "Client started"
     L.nodeTag "Client"
     stateVar <- L.newVarIO NodeActing
+
     L.std $ do
-        -- interaction with any node
+        -- network
         L.stdHandler ping
         L.stdHandler stopRequest
         L.stdHandler $ L.stopNodeHandler' stateVar
@@ -246,9 +259,15 @@ clientNode' _ = do
         L.stdHandler getLengthOfChain
         L.stdHandler getBlock
 
-        -- interaction with poa node
+        -- interaction with pow node
         L.stdHandler startForeverChainGenerationHandler
+
+        --  GenerateBlocksPacket {blocks = 2, timeGap = 0, address = Address {_host = "127.0.0.1", _port = 6020}}
         L.stdHandler generateBlocksPacketHandler
+
+        -- routing
+        L.stdHandler sendTo
+        L.stdHandler drawRouteMap
     L.awaitNodeFinished' stateVar
 
 eitherToText :: Show a => Either Text a -> Text

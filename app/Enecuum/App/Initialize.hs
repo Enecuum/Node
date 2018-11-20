@@ -80,7 +80,12 @@ initialize configSrc = do
             , runNode' $ dispatchScenario @S.PoANode    configSrc
             , runNode' $ dispatchScenario @S.PoWNode    configSrc
             , runNode' $ dispatchScenario @S.ClientNode configSrc
+            , runNode' $ dispatchScenario @S.NN         configSrc
+            , runNode' $ dispatchScenario @S.BN         configSrc
+            , runNode' $ dispatchScenario @S.TestClient configSrc
+            , runNode' $ dispatchScenario @S.TestServer configSrc
             ]
+            
     results <- sequence runners
     case catMaybes results of
         [] -> putStrLn @Text "Invalid config passed: node not found."

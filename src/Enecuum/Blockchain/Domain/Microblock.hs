@@ -23,32 +23,3 @@ data Microblock = Microblock
 
 instance StringHashable Microblock where
   toHash = StringHash . Base64.encode . SHA.hash . S.encode
-
-data MicroblockForSign = MicroblockForSign
-    { _keyBlock     :: StringHash
-    , _transactions :: [Transaction]
-    , _publisher    :: PublicKey
-    }
-    deriving (Eq, Generic, Ord, Read, Show, ToJSON, FromJSON, Serialize)
-
-microblockForSign :: Microblock -> MicroblockForSign
-microblockForSign Microblock {..} = MicroblockForSign
-    { _keyBlock = _keyBlock
-    , _transactions = _transactions
-    , _publisher = _publisher
-    }
-
-signMicroblock :: (Monad m, L.ERandom m) => StringHash -> [Transaction] -> PublicKey -> PrivateKey -> m Microblock
-signMicroblock hashofKeyBlock tx publisherPubKey publisherPrivKey = do
-    let mb = MicroblockForSign
-            { _keyBlock = hashofKeyBlock
-            , _transactions = tx
-            , _publisher = publisherPubKey
-            }
-    signature <- L.evalCoreCrypto $ L.sign publisherPrivKey mb
-    pure $ Microblock
-            { _keyBlock = hashofKeyBlock
-            , _transactions = tx
-            , _publisher = publisherPubKey
-            , _signature = signature
-            }

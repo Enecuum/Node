@@ -1,6 +1,7 @@
 {-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveAnyClass         #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE StandaloneDeriving     #-}
+{-# OPTIONS_GHC -fno-warn-orphans   #-}
 
 module Enecuum.Framework.Domain.Networking where
 
@@ -12,6 +13,9 @@ import           Data.IP
 import qualified Data.Aeson as A
 import qualified Network.Socket as S hiding (recv)
 
+type MyAddress       = Address
+type SennderAddress  = Address
+type ReceiverAddress = Address
 
 data Udp = Udp
 data Tcp = Tcp
@@ -30,6 +34,9 @@ data Connection a = Connection
     }
     deriving (Show, Eq, Ord, Generic)
 
+getHostAddress :: Connection a -> Host
+getHostAddress (Connection (BoundAddress (Address host _)) _) = host
+
 type RawData = LByteString
 
 data NetworkMsg = NetworkMsg Text A.Value deriving (Generic, ToJSON, FromJSON)
@@ -47,7 +54,10 @@ sockAddrToHost sockAddr = case sockAddr of
 data Address = Address
     { _host :: Host
     , _port :: S.PortNumber
-    } deriving (Show, Eq, Ord, Generic)
+    } deriving (Show, Eq, Ord, Generic, Serialize, Read)
+
+deriving instance Generic S.PortNumber
+instance Serialize S.PortNumber
 
 instance ToJSON Address where
     toJSON (Address h p) = A.object ["host" A..= h, "port" A..= p]

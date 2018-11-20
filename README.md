@@ -43,6 +43,7 @@ The framework provides such possibilities:
 ### Install libs for the client
 
 `sudo apt install libtinfo-dev`
+`sudo apt install libgd-dev`
 
 ### Clone and Build Node
 
