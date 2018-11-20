@@ -12,7 +12,7 @@ data FileSystemF next where
     WriteFile :: FilePath -> BSI.ByteString -> (() -> next) -> FileSystemF next
     GetHomeDirectory :: (FilePath -> next) -> FileSystemF next
     CreateFilePath :: FilePath -> (FilePath -> next) -> FileSystemF next
-
+    DoesFileExist :: FilePath -> (Bool -> next) -> FileSystemF next
 makeFunctorInstance ''FileSystemF
 
 type FileSystemL next = Free FileSystemF next
@@ -22,9 +22,11 @@ class FileSystem m where
     writeFile :: FilePath -> BSI.ByteString -> m ()
     getHomeDirectory :: m FilePath
     createFilePath :: FilePath -> m FilePath
+    doesFileExist :: FilePath -> m Bool
 
 instance FileSystem (Free FileSystemF) where
     readFile filename = liftF $ ReadFile filename id
     writeFile filename text = liftF $ WriteFile filename text id
     getHomeDirectory = liftF $ GetHomeDirectory id
     createFilePath filepath = liftF $ CreateFilePath filepath id
+    doesFileExist filepath = liftF $ DoesFileExist filepath id

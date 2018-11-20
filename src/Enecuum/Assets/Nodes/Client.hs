@@ -248,25 +248,31 @@ cardAssembly accum passed nexts
         cardAssembly newAccum newPassed newNexts
 
 createNodeId :: M.CreateNodeId -> L.NodeL Text
-createNodeId (M.CreateNodeIdManually password) = do
+createNodeId (M.CreateNodeId password) = do
     createKeyPair NodeId $ User (Manual password)
-    pure "Success"
-createNodeId M.CreateNodeId = do
-    createKeyPair NodeId $ User  PhraseGenerator
     pure "Success"
 
 createWallet :: M.CreateWallet -> L.NodeL Text
-createWallet (M.CreateWalletManually password) = do
+createWallet (M.CreateWallet password) = do
     createWallet' "default" $ User (Manual password)
     pure "Success"
 
 createWalletWithAlias :: M.CreateWalletWithAlias -> L.NodeL Text
-createWalletWithAlias (M.CreateWalletWithAlias alias (M.CreateWalletManually password)) = do
+createWalletWithAlias (M.CreateWalletWithAlias alias (M.CreateWallet password)) = do
     createWallet' alias $ User (Manual password)
     pure "Success"
 
 showMyWallets :: M.ShowMyWallets -> L.NodeL Text
 showMyWallets _ = showWallets
+
+
+-- TODO change it to console help
+{- Commands for client:
+CreateNodeId "Password"
+CreateWallet "Password"
+ShowMyWallets
+CreateWalletWithAlias "alias" (CreateWallet "Password")
+-}
 
 clientNode :: L.NodeDefinitionL ()
 clientNode = clientNode' (ClientNodeConfig 42)

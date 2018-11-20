@@ -50,6 +50,7 @@ instance FileSystem (Free CoreEffectF) where
   writeFile filename text = evalFileSystem $ writeFile filename text  
   getHomeDirectory = evalFileSystem $ getHomeDirectory
   createFilePath filepath = evalFileSystem $ createFilePath filepath 
+  doesFileExist    = evalFileSystem . doesFileExist
 
 evalRandom :: ERandomL a -> CoreEffect a
 evalRandom g = liftF $ EvalRandom g id

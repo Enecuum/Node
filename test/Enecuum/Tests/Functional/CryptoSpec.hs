@@ -1,20 +1,23 @@
 module Enecuum.Tests.Functional.CryptoSpec where
 
+import           Crypto.TripleSec                     (decryptIO, encryptIO)
 import qualified Data.Aeson                           as A
+import           Data.ByteString.Char8                (pack)
 import qualified Data.Serialize                       as S
 import qualified Enecuum.Assets.Blockchain.Generation as D
+import           Enecuum.Assets.Blockchain.Keys       (decryptKey, encryptKey)
 import qualified Enecuum.Assets.Blockchain.Wallet     as D
 import qualified Enecuum.Blockchain.Domain            as D
-import           Enecuum.Core.Crypto.Crypto
 import qualified Enecuum.Blockchain.Language          as L
 import qualified Enecuum.Blockchain.Lens              as Lens
+import           Enecuum.Core.Crypto.Crypto
 import qualified Enecuum.Core.Interpreters            as I
 import qualified Enecuum.Language                     as L
-import           Enecuum.Prelude
+import           Enecuum.Prelude                      hiding (pack)
+import           Enecuum.Tests.Wrappers
 import           Test.Hspec                           (Spec, describe, shouldBe)
 import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
 import           Test.HUnit                           (Test (..))
-import           Enecuum.Tests.Wrappers
 
 wallets :: [KeyPair]
 wallets =
@@ -41,6 +44,9 @@ spec = fastTest $ do
         , TestLabel "Compress/decompess public key" testCompressPublicKey]
     describe "Private key" $ fromHUnitTest $ TestList
         [ TestLabel "Private key read/show" testReadShowPrivateKey]
+    describe "Encrypt/decrypt message" $ fromHUnitTest $ TestList
+        [ TestLabel "Encrypt/decrypt message with password" testEncryptMsgViaPassword
+        , TestLabel "Encrypt/decrypt message with password via library functions" testEncryptionWithLibraryFunctions]
 
 test :: (Eq b, Show b) => IO b -> (b -> b) -> Test
 test genFun fun = TestCase $ do
@@ -66,7 +72,7 @@ generateSignature = do
 
 generateKeys :: (KeyPair -> b) -> IO b
 generateKeys  = (<$> (I.runERandomL $ L.evalCoreCrypto L.generateKeyPair))
-    
+
 
 generatePublicKey :: IO PublicKey
 generatePublicKey = generateKeys (\(D.KeyPair pub _) -> pub)
@@ -120,4 +126,22 @@ testReadShowDemoWallets = TestCase $ do
     map (read . show) wallets `shouldBe` wallets
     map (read . show) D.hardcodedWallets `shouldBe` D.hardcodedWallets
 
+-- | Encrypt/decrypt message with password
+testEncryptMsgViaPassword :: Test
+testEncryptMsgViaPassword = TestCase $ do
+    D.KeyPair publicKey privateKey <- runCrypto L.generateKeyPair
+    let password = "secret password"
+    let message = fromString $ D.showPrivateKey privateKey
+    encryptMsg <- runCrypto $ encryptKey password message
+    decryptedMsg <- runCrypto $ decryptKey password encryptMsg
+    decryptedMsg `shouldBe` message
 
+runCrypto s = I.runCoreEffect undefined $ L.evalCoreCrypto s
+
+testEncryptionWithLibraryFunctions :: Test
+testEncryptionWithLibraryFunctions = TestCase $ do
+  let password = "secret password" :: ByteString
+  let message = "message that will be encrypted" :: ByteString
+  encryptMsg <- encryptIO password message
+  decryptMsg <- decryptIO password encryptMsg
+  decryptMsg `shouldBe` message

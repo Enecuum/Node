@@ -8,6 +8,7 @@ import           Enecuum.Assets.Blockchain.Keys
 import qualified Enecuum.Domain                 as D
 import           Enecuum.Prelude
 import Enecuum.Assets.Blockchain.Keys (WalletAlias)
+
 -- | Common
 data SuccessMsg = SuccessMsg
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -39,8 +40,6 @@ newtype PreviousForMe = PreviousForMe StringHash
 newtype NextForMe = NextForMe StringHash
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-
-
 data GetRoutingMessages = GetRoutingMessages
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -55,11 +54,11 @@ data Stop = Stop
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | Client local
-data CreateNodeId = CreateNodeId | CreateNodeIdManually Password
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+data CreateNodeId = CreateNodeId Password
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON )
 
-data CreateWallet = CreateWallet | CreateWalletManually Password
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+data CreateWallet = CreateWallet Password
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON )
 
 data CreateWalletWithAlias = CreateWalletWithAlias WalletAlias CreateWallet
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -128,8 +127,8 @@ newtype GetMBlocksForKBlockResponse = GetMBlocksForKBlockResponse { mblocks :: [
 
 data Synchronize  = Synchronize D.Address
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
--- | Other graph node messages
 
+-- | Other graph node messages
 data DumpToDB = DumpToDB
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 

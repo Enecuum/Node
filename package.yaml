@@ -90,6 +90,7 @@ dependencies:
 - uuid
 - gd
 - resourcet
+- triplesec
 
 library:
   source-dirs: src

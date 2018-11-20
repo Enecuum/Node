@@ -74,12 +74,11 @@ withConnection
 withConnection protocol address f = do
     mCon <- open protocol address $ pure ()
     case mCon of
-        Just con -> do 
+        Just con -> do
             !a <- f con
             close con
             pure $ Just a
         Nothing -> pure Nothing
-
 
 listener !f = handler (\a conn -> void (close conn) >> f a)
 
@@ -109,7 +108,7 @@ newGraph :: (Serialize c, D.StringHashable c) => NodeL (D.TGraph c)
 newGraph = liftF $ NewGraph id
 
 instance L.IOL NodeL where
-    evalIO = evalCoreEffectNodeF . L.evalIO 
+    evalIO = evalCoreEffectNodeF . L.evalIO
 
 instance L.Logger NodeL where
     logMessage level = evalCoreEffectNodeF . L.logMessage level
@@ -124,7 +123,8 @@ instance L.FileSystem NodeL where
     readFile         = evalCoreEffectNodeF . L.readFile
     writeFile filename text = evalCoreEffectNodeF $ L.writeFile filename text
     getHomeDirectory = evalCoreEffectNodeF   L.getHomeDirectory
-    createFilePath   = evalCoreEffectNodeF . L.createFilePath 
+    createFilePath   = evalCoreEffectNodeF . L.createFilePath
+    doesFileExist    = evalCoreEffectNodeF . L.doesFileExist
 
 instance L.ControlFlow NodeL where
     delay = evalCoreEffectNodeF . L.delay
