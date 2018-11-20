@@ -1,4 +1,4 @@
-module Enecuum.Assets.Nodes.Routing.MessageHandling where
+module Enecuum.Assets.Nodes.Routing.MessageProcessing where
 
 import qualified Enecuum.Assets.Nodes.Address     as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
@@ -42,21 +42,25 @@ udpForwardIfNeeded
     => Typeable message
     => HasNodeReciverId message D.StringHash
     => RoutingRuntime -> message -> (message -> L.NodeL ()) -> L.NodeL ()
-udpForwardIfNeeded routingRuntime message handler = do
-    let reciverId = message ^. nodeReciverId
+udpForwardIfNeeded routingRuntime message handler
     -- process message if I am a recipient
-    if routingRuntime^.myNodeId == reciverId
-        then handler message
+    | routingRuntime^.myNodeId == message ^. nodeReciverId = handler message
+    -- forward the message further if it is not yet old.
+    | message ^. timeToLive > 0 = 
+        udpMsgSending routingRuntime (message & timeToLive %~ (\x -> x - 1))
+    -- drop message if it is too old
+    | otherwise = pure ()
 
-        -- forward the message further if it is not yet old.
-        else when (message ^. timeToLive > 0) $ do
-            L.logInfo $ "Resending to " <> show reciverId
-            connects <- L.readVarIO (routingRuntime ^. connectMap)
-            let nextReciver = findNextResender reciverId connects
-            whenJust nextReciver $ \(_, address) ->
-                void $ L.notify (A.getUdpAddress address) (message & timeToLive %~ (\x -> x - 1))
-            
-            unless (isJust nextReciver) $ L.logError "Connection map is empty. Fail of resending."
+
+-- send usp msg to node
+udpMsgSending routingRuntime message = do
+    let reciverId = message ^. nodeReciverId
+    L.logInfo $ "Resending to " <> show reciverId
+    connects <- L.readVarIO (routingRuntime ^. connectMap)
+    let nextReciver = findNextResender reciverId connects
+    whenJust nextReciver $ \(_, address) ->
+        void $ L.notify (A.getUdpAddress address) message
+    unless (isJust nextReciver) $ L.logError "Connection map is empty. Fail of resending."
 
 -- forward and proccessing the received message if necessary
 udpBroadcastRecivedMessage
