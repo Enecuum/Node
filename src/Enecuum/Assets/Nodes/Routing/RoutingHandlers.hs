@@ -47,8 +47,8 @@ acceptHello routingRuntime routingHello con = do
         let senderAddress = routingHello ^. nodeAddress
         let senderNodeId  = senderAddress ^. A.nodeId
         let nextAddres    = nextForHello (routingRuntime ^. myNodeAddres . A.nodeId) senderNodeId connects
-        whenJust nextAddres $ \reciverAddress ->
-            void $ L.notify (A.getUdpAddress reciverAddress) routingHello
+        whenJust nextAddres $ \receiverAddress ->
+            void $ L.notify (A.getUdpAddress receiverAddress) routingHello
         
         L.modifyVarIO
             (routingRuntime ^. connectMap)

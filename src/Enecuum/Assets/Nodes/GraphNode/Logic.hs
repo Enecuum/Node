@@ -275,7 +275,7 @@ getKBlockChain address curChainLength otherLength = do
             L.logInfo $ "Chain tail received from " +|| (curChainLength + 1) ||+ " to " +|| otherLength ||+ " : " +|| chainTail ||+ "."
             pure chainTail
         Left err -> do
-            L.logError $ "Error in reciving of kblock chain" <> err
+            L.logError $ "Error in receiving of kblock chain" <> err
             pure []
 
 tryTakeMBlockChain :: [D.KBlock] -> GraphNodeData -> D.Address -> L.NodeL ()

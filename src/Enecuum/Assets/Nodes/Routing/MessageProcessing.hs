@@ -38,13 +38,13 @@ udpForwardIfNeeded
     :: HasTimeToLive message Int
     => ToJSON message
     => Typeable message
-    => HasNodeReciverId message D.StringHash
+    => HasNodeReceiverId message D.StringHash
     => RoutingRuntime -> message -> (message -> L.NodeL ()) -> L.NodeL ()
 udpForwardIfNeeded routingRuntime message handler
     -- process message if I am a recipient
-    | routingRuntime ^. myNodeAddres . A.nodeId == message ^. nodeReciverId = handler message
+    | routingRuntime ^. myNodeAddres . A.nodeId == message ^. nodeReceiverId = handler message
     -- forward the message further if it is not yet old.
-    | message ^. timeToLive > 0 = 
+    | message ^. timeToLive > 0 =
         udpMsgSending routingRuntime (message & timeToLive %~ (\x -> x - 1))
     -- drop message if it is too old
     | otherwise = pure ()
@@ -52,13 +52,13 @@ udpForwardIfNeeded routingRuntime message handler
 
 -- send usp msg to node
 udpMsgSending routingRuntime message = do
-    let reciverId = message ^. nodeReciverId
-    L.logInfo $ "Resending to " <> show reciverId
+    let receiverId = message ^. nodeReceiverId
+    L.logInfo $ "Resending to " <> show receiverId
     connects <- L.readVarIO (routingRuntime ^. connectMap)
-    let nextReciver = findNextResender reciverId connects
-    whenJust nextReciver $ \(_, address) ->
+    let nextReceiver = findNextResender receiverId connects
+    whenJust nextReceiver $ \(_, address) ->
         void $ L.notify (A.getUdpAddress address) message
-    unless (isJust nextReciver) $ L.logError "Connection map is empty. Fail of resending."
+    unless (isJust nextReceiver) $ L.logError "Connection map is empty. Fail of resending."
 
 -- forward and proccessing the received message if necessary
 udpBroadcastReceivedMessage

@@ -16,7 +16,7 @@ type PrivateKay = Bool
 data HelloToBn = HelloToBn
     { _senderPorts :: NodePorts
     , _senderId    :: NodeId
-    , _signature :: Bool 
+    , _signature :: Bool
     } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 makeFieldsNoPrefix ''HelloToBn
 
@@ -30,7 +30,7 @@ newtype AddressRequest = AddressRequest NodeId deriving (Show, Eq, Generic, ToJS
 
 data RoutingHello = RoutingHello
     { _nodeAddress  :: NodeAddress
-    , _signature    :: Bool 
+    , _signature    :: Bool
     } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 makeFieldsNoPrefix ''RoutingHello
 
@@ -44,7 +44,7 @@ newtype NextForYou = NextForYou D.Address
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data SendMsgTo = SendMsgTo
-    { _nodeReciverId    :: NodeId
+    { _nodeReceiverId    :: NodeId
     , _timeToLive       :: Int
     , _msg              :: Text
     } deriving (Show, Eq, Generic, ToJSON, FromJSON)

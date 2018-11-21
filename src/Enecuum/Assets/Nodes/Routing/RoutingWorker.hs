@@ -66,10 +66,10 @@ sendHelloToPrevius :: RoutingRuntime -> L.NodeL ()
 sendHelloToPrevius routingRuntime = do
     connects      <- getConnects      routingRuntime
     let mAddress  =  findNextForHash (routingRuntime ^. myNodeAddres . A.nodeId) connects
-    whenJust mAddress $ \(_, reciverAddress) -> do
+    whenJust mAddress $ \(_, receiverAddress) -> do
         let privateKey  = True
         hello <- makeRoutingHello privateKey (routingRuntime ^. myNodeAddres)
-        void $ L.notify (A.getUdpAddress reciverAddress) hello
+        void $ L.notify (A.getUdpAddress receiverAddress) hello
 
 -- check if all connections are alive
 -- return list of "dead connects"
@@ -105,8 +105,8 @@ connecRequests i routingRuntime = when (i > 0) $ do
     let bnRpcAddress =  A.getRpcAddress (routingRuntime^.bnAddress)
     maybeAddress <- L.makeRpcRequest bnRpcAddress $ M.ConnectRequest (routingRuntime ^. myNodeAddres . A.nodeId) i
     case maybeAddress of
-        Right (recivedNodeId, address) | routingRuntime ^. myNodeAddres /= address -> do
-            L.modifyVarIO (routingRuntime ^. connectMap) $ addToMap recivedNodeId address
+        Right (receivedNodeId, address) | routingRuntime ^. myNodeAddres /= address -> do
+            L.modifyVarIO (routingRuntime ^. connectMap) $ addToMap receivedNodeId address
             connecRequests (i - 1) routingRuntime
         _ -> pure ()
 
@@ -115,8 +115,8 @@ nextRequest routingRuntime = do
     let bnRpcAddress  =  A.getRpcAddress (routingRuntime^.bnAddress)
     nextForMe        <- L.makeRpcRequest bnRpcAddress $ M.NextForMe (routingRuntime ^. myNodeAddres . A.nodeId)
     case nextForMe of
-        Right (recivedNodeId, address) | routingRuntime ^. myNodeAddres /= address ->
-            L.modifyVarIO (routingRuntime ^. connectMap) (addToMap recivedNodeId address)
+        Right (receivedNodeId, address) | routingRuntime ^. myNodeAddres /= address ->
+            L.modifyVarIO (routingRuntime ^. connectMap) (addToMap receivedNodeId address)
         _ -> pure ()
 
 -- leave in the list of connections only those
