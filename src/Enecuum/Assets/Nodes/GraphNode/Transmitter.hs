@@ -10,7 +10,9 @@ import           Enecuum.Assets.Nodes.GraphNode.Logic
 import           Enecuum.Assets.Nodes.GraphNode.Config
 import           Enecuum.Assets.Nodes.GraphNode.DB.Dump
 import           Enecuum.Assets.Nodes.GraphNode.DB.Restore
-import           Enecuum.Assets.Nodes.Routing.Runtime
+import           Enecuum.Research.ChordRouteMap
+import qualified Enecuum.Assets.Nodes.Messages as M
+import           Enecuum.Assets.Nodes.Routing
 
 -- | Start of graph node
 graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()
@@ -26,8 +28,8 @@ graphNodeTransmitter' cfg nodeData = do
 
     -- TODO: read from config
     let myHash      = D.toHashGeneric myNodePorts
-
-    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash bnNodeAddress
+    
+    routingData <- runRouting myNodePorts myHash bnNodeAddress
 
     L.periodic (1000 * 1000) $ do
         connects <- fromChordRouteMap <$> L.readVarIO (routingData ^. connectMap)
@@ -78,7 +80,6 @@ graphNodeTransmitter' cfg nodeData = do
         L.method  $ getLastKBlock nodeData
 
     if all isJust [rpcServerOk, udpServerOk, tcpServerOk] then do
-        routingWorker routingData
         L.std $ L.stdHandler $ L.stopNodeHandler nodeData
 
         L.process $ forever $ do
@@ -93,9 +94,7 @@ graphNodeTransmitter' cfg nodeData = do
             L.awaitSignal $ nodeData ^. checkPendingSignal
             blockFound <- processKBlockPending' nodeData
             when blockFound $ L.writeVarIO (nodeData ^. checkPendingSignal) True
-
-        routingWorker routingData
-        L.awaitNodeFinished nodeData
+        L.awaitNodeFinished nodeData    
     else do
         unless (isJust rpcServerOk) $
             L.logError $ portError (myNodePorts ^. A.nodeRpcPort) "rpc"

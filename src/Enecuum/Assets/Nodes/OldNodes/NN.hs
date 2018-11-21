@@ -1,22 +1,17 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
-module Enecuum.Assets.Nodes.Routing.NN (nnNode, NN, NodeConfig (..)) where
+module Enecuum.Assets.Nodes.OldNodes.NN (nnNode, NN, NodeConfig (..)) where
 
 import qualified Data.Aeson                       as J
-import qualified Data.Map                         as Map
 import qualified Enecuum.Assets.Nodes.Address     as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
-import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Config
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Framework.Language.Extra (HasStatus)
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude
-import           Enecuum.Research.ChordRouteMap
-import           Enecuum.Assets.Nodes.Routing.Runtime
-import           Enecuum.Assets.Nodes.Routing.Messages
+import           Enecuum.Assets.Nodes.Routing
 
-type MyNodeHash      = D.StringHash
 type SenderNodeHash  = D.StringHash
 
 data NNNodeData = NNNodeData
@@ -100,16 +95,15 @@ nnNode' maybePort _ = do
     let myNodePorts = A.makeNodePorts1000 port
     let myHash      = D.toHashGeneric myNodePorts
 
-    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash A.defaultBnNodeAddress
-    nodeData       <- initNN routingData nodeStatus
+    routingData <- runRouting myNodePorts myHash A.defaultBnNodeAddress
+    nodeData    <- initNN routingData nodeStatus
 
-    void $ L.serving D.Udp (routingData ^. nodePorts . A.nodeUdpPort) $ do
+    void $ L.serving D.Udp (routingData ^. myNodeAddres . A.nodePorts . A.nodeUdpPort) $ do
         udpRoutingHandlers routingData
         L.handler $ acceptSendTo          nodeData
 
-    void $ L.serving D.Rpc (routingData ^. nodePorts . A.nodeRpcPort) $ do
+    void $ L.serving D.Rpc (routingData ^. myNodeAddres . A.nodePorts . A.nodeRpcPort) $ do
         rpcRoutingHandlers routingData
         L.method  $  getRoutingMessages   nodeData
 
-    routingWorker routingData
     L.awaitNodeFinished nodeData

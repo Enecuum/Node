@@ -2,14 +2,16 @@ module Enecuum.Research.ChordRouteMap
     ( ChordRouteMap
     , addToMap
     , removeFromMap
+    , getByHash
     , findInMap
     , findInMapNByKey
     , findNextResender
     , hashSize
+    , keySize
     , quantityOfHashes
     , toChordRouteMap
     , findNextForHash
-    , findPreviusForHash
+    , findPreviousForHash
     , fromChordRouteMap
     , nextForHello
     , findConnectByHash
@@ -29,9 +31,15 @@ toChordRouteMap s = M.fromList [(hashToWord64 k, (k, v))|(k, v) <- s]
 fromChordRouteMap :: ChordRouteMap a -> [(StringHash, a)]
 fromChordRouteMap = M.elems
 
+getByHash :: Ord a => StringHash -> ChordRouteMap a -> Maybe a
+getByHash hash routeMap = snd <$> hashToWord64 hash `M.lookup` routeMap
+
 -- | Size of hashes.
 hashSize :: Integer
 hashSize = 256
+
+keySize :: Word64
+keySize = 64
 
 -- | Quantity of hashes.
 quantityOfHashes :: Integer
@@ -62,7 +70,7 @@ findInMapByKey
     -> ChordRouteMap a
     -> [(StringHash, a)]
 findInMapByKey elemKey hash rm = mapMaybe
-    (\i -> findInMapNByKey elemKey i hash rm) [0..63]
+    (\i -> findInMapNByKey elemKey i hash rm) [0..keySize - 1]
 
 -- | Find N finger in route map by formula.
 --  counterclockwise direction
@@ -79,8 +87,8 @@ findInMapNByKey elemKey i hash rm = snd <$>
         bottomElem = M.lookupLE (elemKey hash i) rm
 
 --  clockwise direction
-findPreviusForHash :: StringHash -> ChordRouteMap b -> Maybe (StringHash, b)
-findPreviusForHash = findInMapNByKey (\hash i -> hashToWord64 hash - 2 ^ i) 0
+findPreviousForHash :: StringHash -> ChordRouteMap b -> Maybe (StringHash, b)
+findPreviousForHash = findInMapNByKey (\hash i -> hashToWord64 hash - 2 ^ i) 0
 
 --  clockwise direction
 findNextForHash :: StringHash -> ChordRouteMap b -> Maybe (StringHash, b)
