@@ -16,7 +16,7 @@ type PrivateKay = Bool
 data HelloToBn = HelloToBn
     { _senderPorts :: NodePorts
     , _senderId    :: NodeId
-    , _signature :: Bool 
+    , _signature :: Bool
     } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 makeFieldsNoPrefix ''HelloToBn
 
@@ -26,21 +26,11 @@ makeHelloToBn _ nodePorts' nodeId' = pure $ HelloToBn nodePorts' nodeId' True
 verifyHelloToBn :: HelloToBn -> Bool
 verifyHelloToBn _ = True
 
-data HelloToBnResponce = HelloToBnResponce
-    { _hostAddress :: D.Host
-    , _signature   :: Bool
-    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
-makeFieldsNoPrefix ''HelloToBnResponce
-
-makeHelloToBnResponce :: Applicative m => PrivateKay -> D.Host ->  m HelloToBnResponce
-makeHelloToBnResponce _ host' = pure $ HelloToBnResponce host' True
-
-verifyHelloToBnResponce :: HelloToBnResponce -> Bool
-verifyHelloToBnResponce _ = True
+newtype AddressRequest = AddressRequest NodeId deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data RoutingHello = RoutingHello
     { _nodeAddress  :: NodeAddress
-    , _signature    :: Bool 
+    , _signature    :: Bool
     } deriving (Show, Eq, Generic, ToJSON, FromJSON)
 makeFieldsNoPrefix ''RoutingHello
 
@@ -54,7 +44,7 @@ newtype NextForYou = NextForYou D.Address
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data SendMsgTo = SendMsgTo
-    { _nodeReciverId    :: NodeId
+    { _nodeReceiverId    :: NodeId
     , _timeToLive       :: Int
     , _msg              :: Text
     } deriving (Show, Eq, Generic, ToJSON, FromJSON)
