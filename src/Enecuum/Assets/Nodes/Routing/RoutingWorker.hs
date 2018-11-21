@@ -43,7 +43,7 @@ routingWorker routingRuntime = do
 
 builtIntoTheNetwork :: RoutingRuntime -> L.NodeDefinitionL ()
 builtIntoTheNetwork routingRuntime =
-    forM_ [connecRequests 63, nextRequest, sendHelloToPrevious]
+    forM_ [connecRequests (keySize - 1), nextRequest, sendHelloToPrevious]
         $ \action -> L.scenario $ action routingRuntime
 
 -- TODO: Add real private key
@@ -98,7 +98,7 @@ successorsRequest routingRuntime = do
                         L.modifyVarIO (routingRuntime ^. connectMap) (addToMap (address ^. A.nodeId) address)
                         when (i /= 0) $ loop (i - 1)
                 whenLeft eAddress $ \_ -> when (i /= 0) $ loop (i - 1)
-    loop 63
+    loop (keySize - 1)
 
 connecRequests :: Word64 -> RoutingRuntime -> L.NodeL ()
 connecRequests i routingRuntime = when (i > 0) $ do
