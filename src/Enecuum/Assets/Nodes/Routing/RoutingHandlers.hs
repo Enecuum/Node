@@ -18,8 +18,9 @@ udpRoutingHandlers routingRuntime = do
 
 rpcRoutingHandlers :: RoutingRuntime -> L.RpcHandlerL L.NodeL ()
 rpcRoutingHandlers routingRuntime = do
-    L.method rpcPingPong
-    L.method $ connectMapRequest routingRuntime
+    L.method    rpcPingPong
+    L.methodE $ findConnect routingRuntime
+    L.method  $ connectMapRequest routingRuntime
 
 -- answer to the questioner who is successor for me
 acceptNextForYou :: RoutingRuntime -> NextForYou -> D.Connection D.Udp -> L.NodeL ()
@@ -29,6 +30,12 @@ acceptNextForYou routingRuntime (NextForYou senderAddress) conn = do
     let mAddress = snd <$> findNextForHash (routingRuntime ^. myNodeAddres . A.nodeId) connects
     whenJust mAddress $ \address -> void $ L.notify senderAddress address
 
+--
+findConnect :: RoutingRuntime -> M.ConnectRequest -> L.NodeL (Either Text A.NodeAddress)
+findConnect routingRuntime (M.ConnectRequest hash i) = do
+    connects <- getConnects routingRuntime
+    let address = snd <$> findInMapNByKey (\h j -> D.hashToWord64 h + 2 ^ j) i hash connects
+    pure $ maybe (Left "Connection map is empty.") Right address
 
 -- | Processing of messages forwarded to maintain the integrity of the network structure
 --   clarifying the predecessor and successor relationship

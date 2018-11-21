@@ -8,10 +8,8 @@ import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude
 import           Enecuum.Research.ChordRouteMap
 import           Enecuum.Assets.Nodes.Routing.Messages
-import qualified Data.Sequence as Seq
-import qualified Data.Set      as Set
+
 import           Enecuum.Assets.Nodes.Routing.RuntimeData
-import           Enecuum.Assets.Nodes.Routing.RoutingWorker
 
 -- | Send udp broadcast if the message is new.
 sendUdpBroadcast

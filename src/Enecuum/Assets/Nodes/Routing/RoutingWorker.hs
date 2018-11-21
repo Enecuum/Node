@@ -87,10 +87,18 @@ pingConnects nodes = do
 successorsRequest :: RoutingRuntime -> L.NodeL ()
 successorsRequest routingRuntime = do
     -- clarify the map of connections
-    conects <- getConnects routingRuntime
-    forM_ conects $ \(_, addr) ->
-        -- ask who for the respondent next
-        void $ L.notify (A.getUdpAddress addr) $ NextForYou $ A.getUdpAddress (routingRuntime ^. myNodeAddres)
+    connects <- getConnects routingRuntime
+    let myNodeId = routingRuntime ^. myNodeAddres . A.nodeId
+    let loop i = do
+            let mAddress = snd <$> findInMapNByKey (\h j -> D.hashToWord64 h + 2 ^ j) i myNodeId connects
+            whenJust mAddress $ \address -> do
+                (eAddress :: Either Text A.NodeAddress) <- L.makeRpcRequest (A.getRpcAddress address) $ M.ConnectRequest myNodeId i
+                whenRight eAddress $ \(address :: A.NodeAddress) ->
+                    unless (address == routingRuntime ^. myNodeAddres) $ do
+                        L.modifyVarIO (routingRuntime ^. connectMap) (addToMap (address ^. A.nodeId) address)
+                        when (i /= 0) $ loop (i - 1)
+                whenLeft eAddress $ \_ -> when (i /= 0) $ loop (i - 1)
+    loop 63
 
 connecRequests :: Word64 -> RoutingRuntime -> L.NodeL ()
 connecRequests i routingRuntime = when (i > 0) $ do
