@@ -95,8 +95,8 @@ nnNode' maybePort _ = do
     let myNodePorts = A.makeNodePorts1000 port
     let myHash      = D.toHashGeneric myNodePorts
 
-    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash A.defaultBnNodeAddress
-    nodeData       <- initNN routingData nodeStatus
+    routingData <- runRouting myNodePorts myHash A.defaultBnNodeAddress
+    nodeData    <- initNN routingData nodeStatus
 
     void $ L.serving D.Udp (routingData ^. nodePorts . A.nodeUdpPort) $ do
         udpRoutingHandlers routingData
@@ -106,5 +106,4 @@ nnNode' maybePort _ = do
         rpcRoutingHandlers routingData
         L.method  $  getRoutingMessages   nodeData
 
-    routingWorker routingData
     L.awaitNodeFinished nodeData

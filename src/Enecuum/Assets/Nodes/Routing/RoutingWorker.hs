@@ -1,4 +1,4 @@
-module Enecuum.Assets.Nodes.Routing.RoutingWorker where
+module Enecuum.Assets.Nodes.Routing.RoutingWorker (runRouting) where
 
 import qualified Enecuum.Assets.Nodes.Address     as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
@@ -11,6 +11,12 @@ import           Enecuum.Assets.Nodes.Routing.Messages
 import qualified Data.Sequence as Seq
 import qualified Data.Set      as Set
 import           Enecuum.Assets.Nodes.Routing.RuntimeData
+
+runRouting :: A.NodePorts -> A.NodeId -> BnAddress ->  L.NodeDefinitionL RoutingRuntime
+runRouting nodePorts' nodeId' bnAdress' = do
+    routingData <- L.scenario $ makeRoutingRuntimeData nodePorts' nodeId' bnAdress'
+    routingWorker routingData
+    pure routingData
 
 routingWorker :: RoutingRuntime -> L.NodeDefinitionL ()
 routingWorker routingRuntime = do

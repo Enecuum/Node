@@ -99,7 +99,7 @@ poaNode role cfg = do
     -- TODO: read from config
     let myHash      = D.toHashGeneric myNodePorts
 
-    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash (_poaBnAddress cfg)
+    routingData <- runRouting myNodePorts myHash (_poaBnAddress cfg)
     poaData     <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
@@ -113,9 +113,7 @@ poaNode role cfg = do
         udpRoutingHandlers routingData
         L.handler $ udpBroadcastRecivedMessage routingData $
             sendMicroblock routingData poaData role
-    if all isJust [rpcServerOk, udpServerOk] then do
-        routingWorker routingData
-        L.awaitNodeFinished poaData
+    if all isJust [rpcServerOk, udpServerOk] then L.awaitNodeFinished poaData
     else do
         unless (isJust rpcServerOk) $
             L.logError $ portError (myNodePorts ^. A.nodeRpcPort) "rpc" 

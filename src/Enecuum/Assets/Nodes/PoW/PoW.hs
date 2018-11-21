@@ -82,9 +82,9 @@ powNode' cfg = do
     let myNodePorts = _powNodePorts cfg
     -- TODO: read from config
     let myHash      = D.toHashGeneric myNodePorts
-    routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash (_powNodebnAddress cfg)
+    routingData <- runRouting myNodePorts myHash (_powNodebnAddress cfg)
     
-    nodeData <- L.initialization $ powNodeInitialization cfg D.genesisHash
+    nodeData    <- L.initialization $ powNodeInitialization cfg D.genesisHash
     rpcServerOk <- L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
         rpcRoutingHandlers routingData
         -- network
@@ -98,7 +98,6 @@ powNode' cfg = do
     udpServerOk <- L.serving D.Udp (myNodePorts ^. A.nodeUdpPort) $
         udpRoutingHandlers routingData
     if all isJust [rpcServerOk, udpServerOk] then do
-        routingWorker routingData
         L.std $ L.stdHandler $ L.stopNodeHandler nodeData
         L.process $ forever $ do
             L.atomically $ do
