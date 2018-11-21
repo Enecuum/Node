@@ -98,11 +98,11 @@ nnNode' maybePort _ = do
     routingData <- runRouting myNodePorts myHash A.defaultBnNodeAddress
     nodeData    <- initNN routingData nodeStatus
 
-    void $ L.serving D.Udp (routingData ^. nodePorts . A.nodeUdpPort) $ do
+    void $ L.serving D.Udp (routingData ^. myNodeAddres . A.nodePorts . A.nodeUdpPort) $ do
         udpRoutingHandlers routingData
         L.handler $ acceptSendTo          nodeData
 
-    void $ L.serving D.Rpc (routingData ^. nodePorts . A.nodeRpcPort) $ do
+    void $ L.serving D.Rpc (routingData ^. myNodeAddres . A.nodePorts . A.nodeRpcPort) $ do
         rpcRoutingHandlers routingData
         L.method  $  getRoutingMessages   nodeData
 

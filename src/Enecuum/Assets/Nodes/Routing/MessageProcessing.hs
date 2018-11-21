@@ -44,7 +44,7 @@ udpForwardIfNeeded
     => RoutingRuntime -> message -> (message -> L.NodeL ()) -> L.NodeL ()
 udpForwardIfNeeded routingRuntime message handler
     -- process message if I am a recipient
-    | routingRuntime^.myNodeId == message ^. nodeReciverId = handler message
+    | routingRuntime ^. myNodeAddres . A.nodeId == message ^. nodeReciverId = handler message
     -- forward the message further if it is not yet old.
     | message ^. timeToLive > 0 = 
         udpMsgSending routingRuntime (message & timeToLive %~ (\x -> x - 1))

@@ -26,7 +26,7 @@ acceptNextForYou :: RoutingRuntime -> NextForYou -> D.Connection D.Udp -> L.Node
 acceptNextForYou routingRuntime (NextForYou senderAddress) conn = do
     L.close conn
     connects <- getConnects routingRuntime
-    let mAddress = snd <$> findNextForHash (routingRuntime ^. myNodeId) connects
+    let mAddress = snd <$> findNextForHash (routingRuntime ^. myNodeAddres . A.nodeId) connects
     whenJust mAddress $ \address -> void $ L.notify senderAddress address
 
 
@@ -39,7 +39,7 @@ acceptHello routingRuntime routingHello con = do
         connects <- getConnects routingRuntime
         let senderAddress = routingHello ^. nodeAddress
         let senderNodeId  = senderAddress ^. A.nodeId
-        let nextAddres    = nextForHello (routingRuntime ^. myNodeId) senderNodeId connects
+        let nextAddres    = nextForHello (routingRuntime ^. myNodeAddres . A.nodeId) senderNodeId connects
         whenJust nextAddres $ \reciverAddress ->
             void $ L.notify (A.getUdpAddress reciverAddress) routingHello
         
@@ -51,13 +51,8 @@ acceptConnectResponse :: RoutingRuntime -> A.NodeAddress -> D.Connection D.Udp -
 acceptConnectResponse routingRuntime address con = do
     L.close con
     -- if this address is not mine, then add it
-    unlessM (itIsMyAddress routingRuntime address) $
+    unless (address == routingRuntime ^. myNodeAddres) $
         L.modifyVarIO (routingRuntime ^. connectMap) (addToMap (address ^. A.nodeId) address)
-
-itIsMyAddress :: RoutingRuntime -> A.NodeAddress -> L.NodeL Bool
-itIsMyAddress routingRuntime address = do
-    myAddress <- getMyNodeAddress routingRuntime
-    pure $ Just address == myAddress
 
 connectMapRequest :: RoutingRuntime -> M.ConnectMapRequest -> L.NodeL [A.NodeAddress]
 connectMapRequest nodeRuntime _ =
