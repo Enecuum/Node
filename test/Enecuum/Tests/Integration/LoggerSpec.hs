@@ -41,7 +41,7 @@ spec =
             config      <- loadLoggerConfig testConfigFilePath
             (output, _) <- capture $ Impl.withLogger config { T._logToConsole = True, T._logToFile = False } $ \h ->
                 Impl.runLoggerL (Just h) scenario
-            output `shouldBe` (unpack standartFormattedFullText)
+            output `shouldBe` (unpack standardFormattedFullText)
 
         -- TODO: FIXME: better tests with resources cleanup
         -- it "Switch off for logging to file" $ do
@@ -50,7 +50,7 @@ spec =
 
         it "Set level, filepath, format via config" $ do
             res <- logViaConfig False True
-            res `shouldBe` standartFormattedFullText
+            res `shouldBe` standardFormattedFullText
 
         it "Set level: Debug level" $ do
             res <- logViaDefault T.Debug T.nullFormat
@@ -61,8 +61,8 @@ spec =
             res `shouldBe` "Error Msg\n"
 
         it "Set format: '$prio $loggername: $msg'" $ do
-            res <- logViaDefault T.Debug T.standartFormat
-            res `shouldBe` standartFormattedFullText
+            res <- logViaDefault T.Debug T.standardFormat
+            res `shouldBe` standardFormattedFullText
 
 logViaDefault level format = do
     logFile <- runFileSystemL $ pure testLogFilePath
@@ -78,8 +78,8 @@ runLog logFile config =
     withLogFile logFile $ Impl.withLogger config $ \h ->
         Impl.runLoggerL (Just h) scenario
 
-standartFormattedFullText :: Text
-standartFormattedFullText = "DEBUG Node.Main: Debug Msg\n\
+standardFormattedFullText :: Text
+standardFormattedFullText = "DEBUG Node.Main: Debug Msg\n\
                             \INFO Node.Main: Info Msg\n\
                             \WARNING Node.Main: Warning Msg\n\
                             \ERROR Node.Main: Error Msg\n"
