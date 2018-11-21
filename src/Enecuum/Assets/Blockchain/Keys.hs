@@ -90,7 +90,7 @@ getKeyPairNodeId = do
 getNodeId :: L.NodeL AppKeyPair
 getNodeId = do
     filepath <- keysFilePath
-    currentAppConfig <- (\text -> A.decode text :: Maybe AppConfig) <$> L.readFile filepath
+    currentAppConfig <- A.decode <$> L.readFile filepath
     case currentAppConfig of
         Nothing -> do
             createKeyPair NodeId System
@@ -124,7 +124,7 @@ getCurrentAppConfig = do
     filepath <- keysFilePath
     isFileExist <- L.doesFileExist filepath
     if isFileExist
-        then (\text -> A.decode text :: Maybe AppConfig) <$> L.readFile filepath
+        then A.decode <$> L.readFile filepath
         else pure Nothing
 
 -- | Create key pair by system or by user and write to file
