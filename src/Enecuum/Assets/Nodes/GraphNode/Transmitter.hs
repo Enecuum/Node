@@ -43,9 +43,9 @@ graphNodeTransmitter' cfg nodeData = do
         -- network
         L.handler   methodPing
         -- PoA interaction
-        L.handler $ udpBroadcastRecivedMessage routingData (acceptMBlock' nodeData)
+        L.handler $ udpBroadcastReceivedMessage routingData (acceptMBlock' nodeData)
         -- PoW interaction
-        L.handler $ udpBroadcastRecivedMessage routingData (acceptKBlock' nodeData)
+        L.handler $ udpBroadcastReceivedMessage routingData (acceptKBlock' nodeData)
 
     tcpServerOk <- L.serving D.Tcp (myNodePorts ^. A.nodeTcpPort) $
         -- network
@@ -66,7 +66,7 @@ graphNodeTransmitter' cfg nodeData = do
         L.methodE $ handleRestoreFromDB nodeData
 
         -- graph node interaction
-        L.method  $ getChainLength nodeData
+        L.method  $ acceptGetChainLengthRequest nodeData
         L.methodE $ acceptChainFromTo nodeData
         L.methodE $ getMBlockForKBlocks nodeData
 

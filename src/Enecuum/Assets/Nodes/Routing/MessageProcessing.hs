@@ -61,10 +61,10 @@ udpMsgSending routingRuntime message = do
     unless (isJust nextReciver) $ L.logError "Connection map is empty. Fail of resending."
 
 -- forward and proccessing the received message if necessary
-udpBroadcastRecivedMessage
+udpBroadcastReceivedMessage
     :: (ToJSON msg, Typeable msg, Serialize msg)
     => RoutingRuntime -> (msg -> L.NodeL ()) -> msg ->  D.Connection D.Udp -> L.NodeL ()
-udpBroadcastRecivedMessage routingRuntime handler message conn = do
+udpBroadcastReceivedMessage routingRuntime handler message conn = do
     L.close conn
     -- it is possible to forward only new messages
     -- if the message did not broadcasted, then we have already processed it

@@ -111,7 +111,7 @@ poaNode role cfg = do
 
     udpServerOk <- L.serving D.Udp (myNodePorts ^. A.nodeUdpPort) $ do
         udpRoutingHandlers routingData
-        L.handler $ udpBroadcastRecivedMessage routingData $
+        L.handler $ udpBroadcastReceivedMessage routingData $
             sendMicroblock routingData poaData role
     if all isJust [rpcServerOk, udpServerOk] then L.awaitNodeFinished poaData
     else do
