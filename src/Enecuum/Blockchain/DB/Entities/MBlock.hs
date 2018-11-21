@@ -13,6 +13,7 @@ import           Enecuum.Blockchain.DB.Entities.Types  (KBlockIdx, MBlockIdx)
 import           Enecuum.Blockchain.DB.Model           (MBlocksDB)
 import qualified Enecuum.Blockchain.Domain.KBlock      as D
 import qualified Enecuum.Blockchain.Domain.Microblock  as D
+import qualified Enecuum.Blockchain.Domain.Transaction as D
 import qualified Enecuum.Blockchain.Lens               as Lens
 import qualified Enecuum.Core.Types                    as D
 
@@ -50,3 +51,15 @@ instance D.RawDBEntity MBlocksDB MBlockEntity where
 
 toMBlockIdxBase :: MBlockIdx -> String
 toMBlockIdxBase = printf "%03d"
+
+fromDBMBlock
+  :: D.DBValue MBlockEntity
+  -> D.StringHash
+  -> [D.Transaction]
+  -> D.Microblock
+fromDBMBlock (MBlockValue publisher signature) kBlockHash txs = D.Microblock
+    { D._keyBlock     = kBlockHash
+    , D._transactions = txs
+    , D._publisher    = publisher
+    , D._signature    = signature
+    }

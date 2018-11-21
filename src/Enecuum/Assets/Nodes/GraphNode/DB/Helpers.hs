@@ -42,6 +42,22 @@ withMBlocksMetaDB
     -> L.NodeL a
 withMBlocksMetaDB dbModel = L.withDatabase (dbModel ^. Lens.mBlocksMetaDB)
 
+withTransactionsDB
+    :: forall s db a
+    .  Lens.HasTransactionsDB s (D.Storage db)
+    => s
+    -> L.DatabaseL db a
+    -> L.NodeL a
+withTransactionsDB dbModel = L.withDatabase (dbModel ^. Lens.transactionsDB)
+
+withTransactionsMetaDB
+    :: forall s db a
+    .  Lens.HasTransactionsMetaDB s (D.Storage db)
+    => s
+    -> L.DatabaseL db a
+    -> L.NodeL a
+withTransactionsMetaDB dbModel = L.withDatabase (dbModel ^. Lens.transactionsMetaDB)
+
 withDBModel :: G.GraphNodeData -> (D.DBModel -> L.NodeL ()) -> L.NodeL ()
 withDBModel nodeData act = case nodeData ^. G.db of
     Nothing      -> pure ()

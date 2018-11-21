@@ -56,12 +56,24 @@ instance D.ToDBValue TransactionEntity D.Transaction where
 
 instance D.RawDBEntity TransactionsDB TransactionEntity where
     toRawDBKey (TransactionKey (kBlockIdx, mBlockIdx, transactionIdx)) =
-         encodeUtf8
+        encodeUtf8
             $  toKBlockIdxBase kBlockIdx
             <> toMBlockIdxBase mBlockIdx
             <> toTransactionIdxBase transactionIdx
-    toRawDBValue = LBS.toStrict . A.encode
+    toRawDBValue   = LBS.toStrict . A.encode
     fromRawDBValue = A.decode . LBS.fromStrict
 
 toTransactionIdxBase :: TransactionIdx -> String
 toTransactionIdxBase = printf "%03d"
+
+fromDBTransaction
+    :: D.DBValue TransactionEntity
+    -> D.Transaction
+fromDBTransaction transValue = D.Transaction
+    { D._owner     = owner     transValue
+    , D._receiver  = receiver  transValue
+    , D._amount    = amount    transValue
+    , D._currency  = D.ENQ                  -- TODO: only ENQ currency is supported.
+    , D._signature = signature transValue
+    , D._uuid      = uuid      transValue
+    }

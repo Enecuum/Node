@@ -25,31 +25,55 @@ loadKBlock dbModel (D.KBlockMetaValue i) = do
         <*> (eKBlockEntity ^. Lens.nonce'   )
         <*> (eKBlockEntity ^. Lens.solver'  )
 
-fromDBMBlock (D.MBlockValue publisher signature) kBlockHash txs = D.Microblock
-    { D._keyBlock     = kBlockHash
-    , D._transactions = txs
-    , D._publisher    = publisher
-    , D._signature    = signature
-    }
-
 -- We don't know how many mblocks exists. We also don't know their indexes,
 -- But we know the indexes are counting from 1 to N.
 -- We will be loading them all untill the KeyNotFound is reached.
-loadMBlocks' mBlockIdx dbModel kBlockHash kBlockIdx = do
-    eDBMBlock <- withMBlocksDB dbModel $ L.getValue' @D.MBlockEntity (kBlockIdx, mBlockIdx)
+-- The same is for transactions.
+
+loadTransactions'
+    :: D.DBModel
+    -> (D.KBlockIdx, D.MBlockIdx, D.TransactionIdx)
+    -> L.NodeL [D.Transaction]
+loadTransactions' dbModel fullTxIdx@(kBlockIdx, mBlockIdx, transactionIdx) = do
+    eDBTx <- withTransactionsDB dbModel $ L.getValue' @D.TransactionEntity fullTxIdx
+    case eDBTx of
+        Right dbTx -> do
+            let tx = D.fromDBTransaction dbTx
+            txs <- loadTransactions' dbModel (kBlockIdx, mBlockIdx, transactionIdx + 1)
+            pure $ tx : txs
+        Left (D.DBError D.KeyNotFound _) -> pure []
+        Left err -> do
+            L.logError $ show err
+            pure []
+
+loadTransactions
+    :: D.DBModel
+    -> (D.KBlockIdx, D.MBlockIdx)
+    -> L.NodeL [D.Transaction]
+loadTransactions dbModel (kBlockIdx, mBlockIdx) =
+    loadTransactions' dbModel (kBlockIdx, mBlockIdx, 1)
+
+loadMBlocks'
+    :: D.DBModel
+    -> D.StringHash
+    -> (D.KBlockIdx, D.MBlockIdx)
+    -> L.NodeL [D.Microblock]
+loadMBlocks' dbModel kBlockHash fullIdx@(kBlockIdx, mBlockIdx) = do
+    eDBMBlock <- withMBlocksDB dbModel $ L.getValue' @D.MBlockEntity fullIdx
     case eDBMBlock of
         Right dbMBlock -> do
-            txs <- loadTransactions dbModel kBlockIdx mBlockIdx
-            let mBlock = fromDBMBlock dbMBlock kBlockHash txs
-            mBlocks <- loadMBlocks' (mBlockIdx + 1) dbModel kBlockHash kBlockIdx
+            txs <- loadTransactions dbModel fullIdx
+            let mBlock = D.fromDBMBlock dbMBlock kBlockHash txs
+            mBlocks <- loadMBlocks' dbModel kBlockHash (kBlockIdx, mBlockIdx + 1)
             pure $ mBlock : mBlocks
         Left (D.DBError D.KeyNotFound _) -> pure []
         Left err -> do
             L.logError $ show err
             pure []
 
-loadMBlocks :: D.DBModel -> D.StringHash -> D.BlockNumber -> L.NodeL (D.DBResult [D.Microblock])
-loadMBlocks dbModel = loadMBlocks' 1
+loadMBlocks :: D.DBModel -> D.StringHash -> D.BlockNumber -> L.NodeL [D.Microblock]
+loadMBlocks dbModel kBlockHash kBlockIdx =
+    loadMBlocks' dbModel kBlockHash (kBlockIdx, 1)
 
 loadKBlockHashMeta :: D.DBModel -> D.StringHash -> L.NodeL (D.DBResult (D.DBValue D.KBlockMetaEntity))
 loadKBlockHashMeta dbModel hash = withKBlocksMetaDB dbModel $ L.getValue' hash

@@ -1,25 +1,25 @@
 {-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell        #-}
 
 module Enecuum.Assets.Nodes.OldNodes.PoA where
 
+import qualified Data.Aeson                           as A
 import           Enecuum.Prelude
-import qualified Data.Aeson as A
 
-import           Data.HGraph.StringHashable   (toHash)
+import           Data.HGraph.StringHashable           (toHash)
 
-import qualified Enecuum.Domain               as D
+import qualified Enecuum.Blockchain.Lens              as Lens
 import           Enecuum.Config
-import qualified Enecuum.Language             as L
-import qualified Enecuum.Blockchain.Lens      as Lens
-import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
+import qualified Enecuum.Domain                       as D
+import           Enecuum.Framework.Language.Extra     (HasStatus, NodeStatus (..))
+import qualified Enecuum.Language                     as L
 
-import qualified Enecuum.Assets.Nodes.Address as A
-import           Enecuum.Assets.Nodes.Messages
-import           Enecuum.Assets.Nodes.Methods (rpcPingPong, handleStopNode)
 import qualified Enecuum.Assets.Blockchain.Generation as A
+import qualified Enecuum.Assets.Nodes.Address         as A
+import           Enecuum.Assets.Nodes.Messages
+import           Enecuum.Assets.Nodes.Methods         (handleStopNode, rpcPingPong)
 
 data OldPoaNodeData = OldPoaNodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock
@@ -33,8 +33,7 @@ data OldPoaNode = OldPoaNode
     deriving (Show, Generic)
 
 data instance NodeConfig OldPoaNode = OldPoANodeConfig
-    { _dummyOption :: Int
-    , _poaRPCPort  :: D.PortNumber
+    { _poaRPCPort  :: D.PortNumber
     }
     deriving (Show, Generic)
 
@@ -51,7 +50,7 @@ instance ToJSON   (NodeScenario OldPoaNode) where toJSON    = A.genericToJSON   
 instance FromJSON (NodeScenario OldPoaNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
 defaultPoANodeConfig :: NodeConfig OldPoaNode
-defaultPoANodeConfig = OldPoANodeConfig 42 (A.defaultPoANodePorts ^. A.nodeRpcPort)
+defaultPoANodeConfig = OldPoANodeConfig (A.defaultPoANodePorts ^. A.nodeRpcPort)
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
