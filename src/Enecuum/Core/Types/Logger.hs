@@ -25,14 +25,14 @@ instance FromJSON LoggerConfig where parseJSON = genericParseJSON noLensPrefix
 
 type Message = Text
 
-standartFormat :: String
-standartFormat = "$prio $loggername: $msg"
+standardFormat :: String
+standardFormat = "$prio $loggername: $msg"
 
 nullFormat :: String
 nullFormat = "$msg"
 
 defaultLoggerConfig = LoggerConfig
-    { _format = standartFormat
+    { _format = standardFormat
     , _level = Debug
     , _logFilePath = ""
     , _logToConsole = True
