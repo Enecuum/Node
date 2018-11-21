@@ -66,7 +66,7 @@ dumpAndRestoreGraphTest = do
         -- Generating some blocks and checking they are generated.
         _ :: Either Text A.SuccessMsg <- makeIORpcRequest (A.getRpcAddress A.defaultPoWNodeAddress) $ A.NBlockPacketGeneration blocksCount blocksDelay
         waitForBlocks blocksCount transmiterRpcAddress
-        
+
         print @Text "Requesting last KBlock"
         Right topKBlock1 :: Either Text D.KBlock <- makeIORpcRequest transmiterRpcAddress A.GetLastKBlock
         topKBlock1 ^. Lens.number `shouldBe` blocksCount

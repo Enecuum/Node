@@ -1,4 +1,4 @@
-{  
+{
    "node":"GraphNode",
    "nodeScenario":"Transmitter",
    "nodeConfig":
@@ -47,4 +47,3 @@
             "level":"Debug"
         }
 }
-

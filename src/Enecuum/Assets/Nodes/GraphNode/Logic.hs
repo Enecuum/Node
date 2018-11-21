@@ -238,6 +238,9 @@ graphNodeInitialization nodeConfig = L.scenario $ do
         then pure $ Left "Database error."
         else pure $ Right nodeData
 
+synchronize :: GraphNodeData -> Synchronize -> L.NodeL ()
+synchronize nodeData (Synchronize addressSync) = graphSynchro nodeData addressSync
+
 data ResultOfChainCompair
     = NeedToSync (D.BlockNumber, D.BlockNumber)
     | ErrorInRequest Text

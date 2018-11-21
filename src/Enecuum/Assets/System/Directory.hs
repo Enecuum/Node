@@ -8,7 +8,7 @@ getEnecuumDir :: (L.FileSystem m, Monad m) => m FilePath
 getEnecuumDir = L.createFilePath =<< (</> ".enecuum") <$> L.getHomeDirectory
 
 keysFilePath :: (L.FileSystem m, Monad m) => m FilePath
-keysFilePath = (</> "keys.txt") <$> getEnecuumDir
+keysFilePath = (</> "keys.json") <$> getEnecuumDir
 
 wrongKeysFilePath :: (L.FileSystem m, Monad m) => m FilePath
 wrongKeysFilePath = (</> "wrongKeys.txt") <$> getEnecuumDir
@@ -24,3 +24,6 @@ appFileName = L.createFilePath =<< (</> "data" </> "logs" </> "app.log") <$> get
 
 clientStory :: (L.FileSystem m, Monad m) => m FilePath
 clientStory = (</> "client.story") <$> storyFilePath
+
+configDir :: FilePath
+configDir = "configs"
