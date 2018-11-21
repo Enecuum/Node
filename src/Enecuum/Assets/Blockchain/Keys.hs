@@ -10,7 +10,7 @@ import qualified Enecuum.Language                as L
 import           Enecuum.Prelude
 
 type Password = String
-data PasswordSource = Manual Password | PhraseGenerator deriving (Show, Eq, Generic, ToJSON, FromJSON)
+data PasswordSource = Manual Password deriving (Show, Eq, Generic, ToJSON, FromJSON)
 data CreatedBy = System | User PasswordSource deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 type PublicKey = String
@@ -18,7 +18,7 @@ type PrivateKey = ByteString
 type CipheredPrivateKey = ByteString
 
 type WalletAlias = String
-data KeyType = Wallet WalletAlias | NodeId
+data KeyType = Wallet WalletAlias | NodeId deriving (Show)
 
 data WalletWithAlias = WalletWithAlias WalletAlias AppKeyPair
     deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -48,12 +48,8 @@ data AppConfig = AppConfig
     }
     deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-
-generatePassPhrase = "The quick brown fox jumps over the lazy dog"
-
 getPassword :: PasswordSource -> Password
 getPassword (Manual password) = password
-getPassword PhraseGenerator   = generatePassPhrase
 
 -- | Decrypt private key
 decryptKey :: (Monad m, L.Crypto m) => Password -> CipheredPrivateKey -> m PrivateKey
@@ -70,11 +66,14 @@ showWallets = do
     currentAppConfig <- (\text -> A.decode text :: Maybe AppConfig) <$> L.readFile filepath
     case currentAppConfig of
         Nothing     -> pure ""
-        Just config -> pure $ show $ intersperse "\n" $ map showWallet $ _wallets config
+        Just config -> pure $ foldr showWallet "" $ _wallets config
 
-showWallet :: WalletWithAlias -> Text
-showWallet (WalletWithAlias alias (Automatic keyPair) ) = "" +|| alias ||+ " " +|| _publicKey (keyPair :: AutomaticAppKeyPair) ||+ ""
-showWallet (WalletWithAlias alias (ManualGen keyPair) ) = "" +|| alias ||+ " " +|| _publicKey (keyPair :: ManualAppKeyPair)    ||+ ""
+showWallet :: WalletWithAlias -> Text -> Text
+showWallet (WalletWithAlias alias (Automatic keyPair) ) t = showWallet' (_publicKey (keyPair :: AutomaticAppKeyPair)) alias t
+showWallet (WalletWithAlias alias (ManualGen keyPair) ) t = showWallet' (_publicKey (keyPair :: ManualAppKeyPair))    alias t
+
+showWallet' :: PublicKey -> WalletAlias -> Text -> Text
+showWallet' publicKey alias t = t <> ("\nWallet: [" +|| publicKey ||+ "] : [" +|| alias ||+ "]")
 
 -- | Get public and private key of NodeId
 getKeyPairNodeId :: (ToString PrivateKey) => L.NodeL (D.PublicKey, D.PrivateKey)
@@ -87,14 +86,13 @@ getKeyPairNodeId = do
                                 publicKey  = D.readPublicKey  $ toString $ _publicKey  (keyPair :: AutomaticAppKeyPair)
                                 privateKey = D.readPrivateKey $ toString $ _privateKey (keyPair :: AutomaticAppKeyPair)
 
--- | Get NodeId key pait in stored format
+-- | Get NodeId key pair in stored format
 getNodeId :: L.NodeL AppKeyPair
 getNodeId = do
     filepath <- keysFilePath
     currentAppConfig <- (\text -> A.decode text :: Maybe AppConfig) <$> L.readFile filepath
     case currentAppConfig of
         Nothing -> do
-            -- error $ "AppConfig doesn't exist by path: " +|| filepath ||+ "."
             createKeyPair NodeId System
             getNodeId
         Just config -> pure $ _nodeId config
@@ -107,7 +105,7 @@ createKey createdBy = do
     let privateKeyS = fromString $ D.showPrivateKey privateKey
     case createdBy of
         System -> do
-            L.logInfo $ "KeyPair created automatically"
+            -- L.logInfo $ "KeyPair created automatically"
             pure $ Automatic $ AutomaticAppKeyPair
                     { _publicKey  = publicKeyS
                     , _privateKey = privateKeyS
@@ -121,24 +119,32 @@ createKey createdBy = do
                     , _privateKey = encryptedPrivateKey
                     }
 
+getCurrentAppConfig :: L.NodeL (Maybe AppConfig)
+getCurrentAppConfig = do
+    filepath <- keysFilePath
+    isFileExist <- L.doesFileExist filepath
+    if isFileExist
+        then (\text -> A.decode text :: Maybe AppConfig) <$> L.readFile filepath
+        else pure Nothing
+
 -- | Create key pair by system or by user and write to file
 createKeyPair :: KeyType -> CreatedBy -> L.NodeL ()
 createKeyPair keyType createdBy = do
     keyPair <- createKey createdBy
     filepath <- keysFilePath
-    isFileExist <- L.doesFileExist filepath
-    currentAppConfig <- if isFileExist
-        then (\text -> A.decode text :: Maybe AppConfig) <$> L.readFile filepath
-        else pure Nothing
-
-    let appConfig = case keyType of
+    currentAppConfig <- getCurrentAppConfig
+    appConfig <- case keyType of
             NodeId -> case currentAppConfig of
-                Nothing     -> AppConfig { _nodeId = keyPair, _wallets = [] }
-                Just config -> config { _nodeId = keyPair }
-            Wallet walletAlias -> case currentAppConfig of
-                Nothing -> error $ "There are no app config yet at " +|| filepath ||+ ""
-                Just config -> config { _wallets = wallets }
-                               where wallets = (WalletWithAlias walletAlias keyPair) : (_wallets config)
+                Nothing     -> pure $ AppConfig { _nodeId = keyPair, _wallets = [] }
+                Just config -> pure $ config { _nodeId = keyPair }
+            Wallet walletAlias -> do
+                config <- case currentAppConfig of
+                    Nothing -> do
+                        keyPair <- createKey System
+                        pure $ AppConfig { _nodeId = keyPair, _wallets = [] }
+                    Just config -> pure $ config
+                let wallets = (WalletWithAlias walletAlias keyPair) : (_wallets config)
+                pure config { _wallets = wallets }
 
     L.writeFile filepath $ A.encode appConfig
 
