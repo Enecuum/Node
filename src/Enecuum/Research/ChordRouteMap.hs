@@ -10,7 +10,7 @@ module Enecuum.Research.ChordRouteMap
     , quantityOfHashes
     , toChordRouteMap
     , findNextForHash
-    , findPreviusForHash
+    , findPreviousForHash
     , fromChordRouteMap
     , nextForHello
     , findConnectByHash
@@ -83,8 +83,8 @@ findInMapNByKey elemKey i hash rm = snd <$>
         bottomElem = M.lookupLE (elemKey hash i) rm
 
 --  clockwise direction
-findPreviusForHash :: StringHash -> ChordRouteMap b -> Maybe (StringHash, b)
-findPreviusForHash = findInMapNByKey (\hash i -> hashToWord64 hash - 2 ^ i) 0
+findPreviousForHash :: StringHash -> ChordRouteMap b -> Maybe (StringHash, b)
+findPreviousForHash = findInMapNByKey (\hash i -> hashToWord64 hash - 2 ^ i) 0
 
 --  clockwise direction
 findNextForHash :: StringHash -> ChordRouteMap b -> Maybe (StringHash, b)

@@ -29,7 +29,7 @@ routingWorker routingRuntime = do
     -- clockwise structure refinement
     L.periodic (1000 * 10000) $ successorsRequest  routingRuntime
     -- anti-clockwise structure refinement
-    L.periodic (1000 * 1000)  $ sendHelloToPrevius routingRuntime
+    L.periodic (1000 * 1000)  $ sendHelloToPrevious routingRuntime
     -- clearing of list for familiar messages
     L.periodic (1000 * 1000)  $
         L.modifyVarIO (routingRuntime ^. msgFilter)
@@ -43,7 +43,7 @@ routingWorker routingRuntime = do
 
 builtIntoTheNetwork :: RoutingRuntime -> L.NodeDefinitionL ()
 builtIntoTheNetwork routingRuntime =
-    forM_ [connecRequests 63, nextRequest, sendHelloToPrevius]
+    forM_ [connecRequests 63, nextRequest, sendHelloToPrevious]
         $ \action -> L.scenario $ action routingRuntime
 
 -- TODO: Add real private key
@@ -54,7 +54,7 @@ registerWithBn nodePorts' myNodeId' bnAddress' = do
     helloToBn        <- makeHelloToBn privateKey nodePorts' myNodeId'
     let takeAddress  =  do
             void $ L.notify (A.getUdpAddress bnAddress') helloToBn
-            eAddress <- L.makeRpcRequest (A.getRpcAddress bnAddress') $ AddressRequest myNodeId' 
+            eAddress <- L.makeRpcRequest (A.getRpcAddress bnAddress') $ AddressRequest myNodeId'
             case eAddress of
                 Right address -> pure address
                 Left err -> do
@@ -62,8 +62,8 @@ registerWithBn nodePorts' myNodeId' bnAddress' = do
                     takeAddress
     L.scenario takeAddress
 
-sendHelloToPrevius :: RoutingRuntime -> L.NodeL () 
-sendHelloToPrevius routingRuntime = do
+sendHelloToPrevious :: RoutingRuntime -> L.NodeL ()
+sendHelloToPrevious routingRuntime = do
     connects      <- getConnects      routingRuntime
     let mAddress  =  findNextForHash (routingRuntime ^. myNodeAddres . A.nodeId) connects
     whenJust mAddress $ \(_, receiverAddress) -> do
