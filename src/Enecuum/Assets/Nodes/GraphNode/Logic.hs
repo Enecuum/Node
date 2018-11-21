@@ -237,6 +237,9 @@ graphNodeInitialization nodeConfig = L.scenario $ do
         then pure $ Left "Database error."
         else pure $ Right nodeData
 
+synchronize :: GraphNodeData -> Synchronize -> L.NodeL ()
+synchronize nodeData (Synchronize addressSync) = graphSynchro nodeData addressSync
+
 data ResultOfChainCompair
     = NeedToSync (D.BlockNumber, D.BlockNumber)
     | ErrorInRequest Text
@@ -249,7 +252,7 @@ compareChainLength nodeData address = do
     case eLngth of
         Right (GetChainLengthResponse otherLength)-> do
             lengthOfMyChain <- getChainLength nodeData
-            pure $ if 
+            pure $ if
                 | otherLength > lengthOfMyChain  -> NeedToSync (lengthOfMyChain, otherLength)
                 | otherLength == lengthOfMyChain -> ChainsAreEqual
                 | otherwise                      -> MyChainIsLonger
@@ -279,7 +282,7 @@ getKBlockChain address curChainLength otherLength = do
             pure []
 
 tryTakeMBlockChain :: [D.KBlock] -> GraphNodeData -> D.Address -> L.NodeL ()
-tryTakeMBlockChain (kBlock:kBlocks) nodeData address = do 
+tryTakeMBlockChain (kBlock:kBlocks) nodeData address = do
     void $ L.addKBlock (nodeData ^. blockchain) kBlock
     whenM (syncCurrentMacroBlock nodeData address) $
         tryTakeMBlockChain kBlocks nodeData address

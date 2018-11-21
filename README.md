@@ -55,7 +55,7 @@ The framework provides such possibilities:
 
 `stack build --fast`
 
-3. Run tests (optional) 
+3. Run tests (optional)
 
 Run all tests:
 `stack build --fast --test`

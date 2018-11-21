@@ -109,7 +109,7 @@ powNode' cfg = do
         L.awaitNodeFinished nodeData
     else do
         unless (isJust rpcServerOk) $
-            L.logError $ portError (myNodePorts ^. A.nodeRpcPort) "rpc" 
+            L.logError $ portError (myNodePorts ^. A.nodeRpcPort) "rpc"
         unless (isJust udpServerOk) $
             L.logError $ portError (myNodePorts ^. A.nodeUdpPort) "udp"
 

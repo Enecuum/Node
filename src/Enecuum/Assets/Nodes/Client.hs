@@ -1,26 +1,28 @@
-{-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Enecuum.Assets.Nodes.Client (clientNode, ClientNode(..), NodeConfig (..), SendTo(..), sendTo, Protocol(..)) where
 
-import qualified Data.Aeson                       as J
-import           Data.Aeson.Extra                 (noLensPrefix)
-import qualified Data.Map                         as Map
-import qualified Data.Set                         as Set
-import           Data.Set (union, (\\))
-import           Data.Text                        hiding (map)
-import qualified Enecuum.Assets.Blockchain.Wallet as A
-import qualified Enecuum.Assets.Nodes.Address     as A
-import qualified Enecuum.Assets.Nodes.Messages    as M
-import qualified Enecuum.Domain                   as D
-import           Enecuum.Config
-import           Enecuum.Framework.Language.Extra (NodeStatus (..))
-import qualified Enecuum.Language                 as L
-import           Enecuum.Prelude                  hiding (map, unpack)
-import           Graphics.GD.Extra
-import           Enecuum.Research.RouteDrawing
+import qualified Data.Aeson                            as J
+import           Data.Aeson.Extra                      (noLensPrefix)
 import           Data.Complex
+import qualified Data.Map                              as Map
+import           Data.Set                              (union, (\\))
+import qualified Data.Set                              as Set
+import           Data.Text                             hiding (map)
+import           Enecuum.Assets.Blockchain.Keys
+import qualified Enecuum.Assets.Blockchain.Wallet      as A
+import qualified Enecuum.Assets.Nodes.Address          as A
+import qualified Enecuum.Assets.Nodes.Messages         as M
 import           Enecuum.Assets.Nodes.Routing.Messages
+import           Enecuum.Config
+import qualified Enecuum.Domain                        as D
+import           Enecuum.Framework.Language.Extra      (NodeStatus (..))
+import qualified Enecuum.Language                      as L
+import           Enecuum.Prelude                       hiding (map, unpack)
+import           Enecuum.Research.RouteDrawing
+import           Graphics.GD.Extra
+import           Enecuum.Framework.Domain.Error
 
 data ClientNode = ClientNode
     deriving (Show, Generic)
@@ -62,7 +64,6 @@ data GenerateBlocksPacket           = GenerateBlocksPacket
     , address :: D.Address
     }
     deriving (Generic, Read)
-
 
 data DumpToDB = DumpToDB
     { address :: D.Address
@@ -220,7 +221,7 @@ cardAssembly accum passed nexts
         let currentAddress = Set.elemAt 0 nexts
         connects <- fromRight [] <$>
             L.makeRpcRequest (A.getRpcAddress currentAddress) M.ConnectMapRequest
-        
+
         -- add the address to the list of the passed
         let newPassed :: Set.Set A.NodeAddress
             newPassed = Set.insert currentAddress passed
@@ -233,6 +234,33 @@ cardAssembly accum passed nexts
         let newAccum :: Map.Map D.StringHash [D.StringHash]
             newAccum  = Map.insert (currentAddress ^. A.nodeId) ((^. A.nodeId) <$> connects) accum
         cardAssembly newAccum newPassed newNexts
+
+createNodeId :: M.CreateNodeId -> L.NodeL Text
+createNodeId (M.CreateNodeId password) = do
+    createKeyPair NodeId $ User (Manual password)
+    pure "Success"
+
+createWallet :: M.CreateWallet -> L.NodeL Text
+createWallet (M.CreateWallet password) = do
+    createWallet' "default" $ User (Manual password)
+    pure "Success"
+
+createWalletWithAlias :: M.CreateWalletWithAlias -> L.NodeL Text
+createWalletWithAlias (M.CreateWalletWithAlias alias (M.CreateWallet password)) = do
+    createWallet' alias $ User (Manual password)
+    pure "Success"
+
+showMyWallets :: M.ShowMyWallets -> L.NodeL Text
+showMyWallets _ = showWallets
+
+
+-- TODO change it to console help
+{- Commands for client:
+CreateNodeId "Password"
+CreateWallet "Password"
+ShowMyWallets
+CreateWalletWithAlias "alias" (CreateWallet "Password")
+-}
 
 clientNode :: L.NodeDefinitionL ()
 clientNode = clientNode' (ClientNodeConfig 42)
@@ -248,6 +276,12 @@ clientNode' _ = do
         L.stdHandler ping
         L.stdHandler stopRequest
         L.stdHandler $ L.stopNodeHandler' stateVar
+
+        -- local activity
+        L.stdHandler createNodeId
+        L.stdHandler createWallet
+        L.stdHandler createWalletWithAlias
+        L.stdHandler showMyWallets
 
         -- interaction with graph node
         L.stdHandler createTransaction
@@ -269,11 +303,3 @@ clientNode' _ = do
         L.stdHandler sendTo
         L.stdHandler drawRouteMap
     L.awaitNodeFinished' stateVar
-
-eitherToText :: Show a => Either Text a -> Text
-eitherToText (Left  a) = "Server error: " <> a
-eitherToText (Right a) = show a
-
-eitherToText2 :: Either Text Text -> Text
-eitherToText2 (Left  a) = "Server error: " <> a
-eitherToText2 (Right a) = a

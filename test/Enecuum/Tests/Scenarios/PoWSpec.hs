@@ -30,7 +30,7 @@ spec = slowTest $ describe "PoW and graph node interaction" $ fromHUnitTest $ Te
 timeGap              = 0
 kblockCount          = 10
 
--- defoult addresses
+-- default addresses
 transmiterRpcAddress = A.getRpcAddress A.defaultGnNodeAddress
 powRpcAddress        = A.getRpcAddress A.defaultPoWNodeAddress
 

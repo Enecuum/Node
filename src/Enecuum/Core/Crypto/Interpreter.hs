@@ -1,23 +1,28 @@
-{-# LANGUAGE PackageImports             #-}
+{-# LANGUAGE PackageImports #-}
 module Enecuum.Core.Crypto.Interpreter where
 
-import           Enecuum.Prelude
-import qualified Enecuum.Core.Language     as L
--- import qualified Control.Monad.Random.Lazy as R
 import           "cryptonite" Crypto.Random (MonadRandom)
-import Enecuum.Core.Crypto.Crypto (generateNewRandomAnonymousKeyPair, sign)
+import           Crypto.TripleSec           (decryptIO, encryptIO)
+import           Data.ByteString.Char8      (pack)
+import           Enecuum.Core.Crypto.Crypto (generateNewRandomAnonymousKeyPair, sign)
+import           Enecuum.Core.Crypto.Crypto
+import qualified Enecuum.Core.Language      as L
+import           Enecuum.Prelude
 
-
-
--- | Interpret CryptoL language.
-interpretCryptoL :: MonadRandom m => L.CryptoF a -> m a
+interpretCryptoL :: L.CryptoF a -> IO a
 interpretCryptoL (L.GenerateKeyPair next) =
     next <$> generateNewRandomAnonymousKeyPair
 interpretCryptoL (L.Sign key msg next) = do
     signature <- sign key msg
     pure $ next signature
+interpretCryptoL (L.Encrypt key msg next) = do
+    encryptedMsg <- encryptIO key msg
+    pure $ next encryptedMsg
+interpretCryptoL (L.Decrypt key encryptedMsg next) = do
+    decryptedMsg <- decryptIO key encryptedMsg
+    pure $ next decryptedMsg
 
-runCryptoL :: MonadRandom m => L.CryptoL a -> m a
+runCryptoL :: L.CryptoL a -> IO a
 runCryptoL = foldFree interpretCryptoL
 
 

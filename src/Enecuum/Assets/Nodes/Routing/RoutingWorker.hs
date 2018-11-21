@@ -59,7 +59,7 @@ registerWithBn nodePorts' myNodeId' bnAddress' = do
                 Right address -> pure address
                 Left err -> do
                     L.logError $ "Error " <> show i <> " in address accepting: " <> err
-                    L.delay $ (i^2) * 1000 * 1000
+                    L.delay $ i * 1000 * 1000
                     takeAddress $ i + 1
     L.scenario $ takeAddress 0 
 
