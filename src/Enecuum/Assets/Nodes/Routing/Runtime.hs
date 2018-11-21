@@ -16,7 +16,7 @@ import qualified Data.Set      as Set
 type BnAddress = A.NodeAddress
 
 data RoutingRuntime = RoutingRuntime
-    { _hostAddress :: D.StateVar (Maybe D.Host) 
+    { _hostAddress :: D.StateVar (Maybe D.Host)
     , _nodePorts   :: A.NodePorts
     , _myNodeId    :: A.NodeId
     , _bnAddress   :: A.NodeAddress
@@ -108,7 +108,7 @@ udpForwardIfNeeded routingRuntime message handler = do
             let nextReciver = findNextResender receiverId connects
             whenJust nextReciver $ \(_, address) ->
                 void $ L.notify (A.getUdpAddress address) (message & timeToLive %~ (\x -> x - 1))
-            
+
             unless (isJust nextReciver) $ L.logError "Connection map is empty. Fail of resending."
 
 -- forward and proccessing the received message if necessary
@@ -235,13 +235,13 @@ nextRequest routingRuntime = do
             L.modifyVarIO (routingRuntime ^. connectMap) (addToMap receivedNodeId address)
         _ -> pure ()
 
-sendHelloToPrevius :: RoutingRuntime -> L.NodeL () 
+sendHelloToPrevius :: RoutingRuntime -> L.NodeL ()
 sendHelloToPrevius routingRuntime = do
     connects      <- getConnects      routingRuntime
     myNodeAddress <- getMyNodeAddress routingRuntime
     let mAddress  =  findNextForHash (routingRuntime ^. myNodeId) connects
     case (myNodeAddress, mAddress) of
-        (Just myAddress, Just (_, receiverAddress)) -> do  
+        (Just myAddress, Just (_, receiverAddress)) -> do
             let privateKey  = True
             hello <- makeRoutingHello privateKey myAddress
             void $ L.notify (A.getUdpAddress receiverAddress) hello
@@ -265,7 +265,7 @@ acceptHello routingRuntime routingHello con = do
         let nextAddres    = nextForHello (routingRuntime ^. myNodeId) senderNodeId connects
         whenJust nextAddres $ \receiverAddress ->
             void $ L.notify (A.getUdpAddress receiverAddress) routingHello
-        
+
         L.modifyVarIO
             (routingRuntime ^. connectMap)
             (addToMap senderNodeId senderAddress)

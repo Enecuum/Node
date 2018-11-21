@@ -143,6 +143,12 @@ instance L.ERandom NodeDefinitionL where
     getRandomByteString = evalCoreEffectNodeDefinitionF . L.getRandomByteString
     nextUUID            = evalCoreEffectNodeDefinitionF   L.nextUUID
 
+instance L.FileSystem NodeDefinitionL where
+    readFile filename       = evalCoreEffectNodeDefinitionF $ L.readFile filename
+    writeFile filename text = evalCoreEffectNodeDefinitionF $ L.writeFile filename text
+    getHomeDirectory        = evalCoreEffectNodeDefinitionF $ L.getHomeDirectory
+    createFilePath filepath = evalCoreEffectNodeDefinitionF $ L.createFilePath filepath
+
 instance L.ControlFlow NodeDefinitionL where
     delay = evalCoreEffectNodeDefinitionF . L.delay
 

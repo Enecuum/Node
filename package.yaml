@@ -90,6 +90,8 @@ dependencies:
 - uuid
 - gd
 - resourcet
+- triplesec
+- yaml
 
 library:
   source-dirs: src

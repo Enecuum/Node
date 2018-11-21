@@ -3,7 +3,7 @@ module Enecuum.Assets.Nodes.GraphNode.Transmitter where
 import           Enecuum.Prelude
 import qualified Enecuum.Domain                as D
 import qualified Enecuum.Language              as L
-import qualified Enecuum.Assets.Nodes.Address  as A 
+import qualified Enecuum.Assets.Nodes.Address  as A
 import           Enecuum.Config
 import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.GraphNode.Logic
@@ -27,7 +27,7 @@ graphNodeTransmitter' cfg nodeData = do
 
     -- TODO: read from config
     let myHash      = D.toHashGeneric myNodePorts
-    
+
     routingData <- L.scenario $ makeRoutingRuntimeData myNodePorts myHash bnNodeAddress
 
     L.periodic (1000 * 1000) $ do
@@ -69,6 +69,7 @@ graphNodeTransmitter' cfg nodeData = do
         L.method  $ acceptGetChainLengthRequest nodeData
         L.methodE $ acceptChainFromTo nodeData
         L.methodE $ getMBlockForKBlocks nodeData
+        L.method  $ synchronize nodeData
 
         -- PoW interaction
         L.method  $ getKBlockPending nodeData
@@ -84,23 +85,22 @@ graphNodeTransmitter' cfg nodeData = do
         L.process $ forever $ do
             L.awaitSignal $ nodeData ^. dumpToDBSignal
             dumpToDB nodeData
-    
+
         L.process $ forever $ do
             L.awaitSignal $ nodeData ^. restoreFromDBSignal
             restoreFromDB nodeData
-    
+
         L.process $ forever $ do
             L.awaitSignal $ nodeData ^. checkPendingSignal
             blockFound <- processKBlockPending' nodeData
             when blockFound $ L.writeVarIO (nodeData ^. checkPendingSignal) True
-        
+
         routingWorker routingData
-        L.awaitNodeFinished nodeData    
+        L.awaitNodeFinished nodeData
     else do
         unless (isJust rpcServerOk) $
-            L.logError $ portError (myNodePorts ^. A.nodeRpcPort) "rpc" 
+            L.logError $ portError (myNodePorts ^. A.nodeRpcPort) "rpc"
         unless (isJust udpServerOk) $
             L.logError $ portError (myNodePorts ^. A.nodeUdpPort) "udp"
         unless (isJust tcpServerOk) $
             L.logError $ portError (myNodePorts ^. A.nodeTcpPort) "tcp"
-
