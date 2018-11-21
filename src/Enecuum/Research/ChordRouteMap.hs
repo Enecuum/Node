@@ -2,6 +2,7 @@ module Enecuum.Research.ChordRouteMap
     ( ChordRouteMap
     , addToMap
     , removeFromMap
+    , getByHash
     , findInMap
     , findInMapNByKey
     , findNextResender
@@ -28,6 +29,9 @@ toChordRouteMap s = M.fromList [(hashToWord64 k, (k, v))|(k, v) <- s]
 
 fromChordRouteMap :: ChordRouteMap a -> [(StringHash, a)]
 fromChordRouteMap = M.elems
+
+getByHash :: Ord a => StringHash -> ChordRouteMap a -> Maybe a
+getByHash hash routeMap = snd <$> hashToWord64 hash `M.lookup` routeMap
 
 -- | Size of hashes.
 hashSize :: Integer

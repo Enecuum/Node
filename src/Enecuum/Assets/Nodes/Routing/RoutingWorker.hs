@@ -48,10 +48,11 @@ registerWithBn routingRuntime = do
     helloToBn        <- makeHelloToBn privateKey (routingRuntime^.nodePorts) (routingRuntime^.myNodeId)
     let takeAddress  =  do
             void $ L.notify (A.getUdpAddress (routingRuntime^.bnAddress)) helloToBn
-            L.delay 1000000
-            unlessM (isJust <$> L.readVarIO (routingRuntime ^. hostAddress)) takeAddress
-    L.process takeAddress
-    void $ L.await (routingRuntime^.hostAddress)
+            eAddress <- L.makeRpcRequest (A.getRpcAddress (routingRuntime^.bnAddress)) $ AddressRequest (routingRuntime^.myNodeId)
+            whenRight eAddress $ \(address :: A.NodeAddress) -> 
+                L.writeVarIO (routingRuntime ^. hostAddress) $ Just (address ^. A.nodeHost)
+            whenLeft eAddress $ \err -> L.logError $ "Error in address accepting: " <> err
+    L.scenario takeAddress
 
 sendHelloToPrevius :: RoutingRuntime -> L.NodeL () 
 sendHelloToPrevius routingRuntime = do

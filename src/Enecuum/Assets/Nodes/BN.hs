@@ -52,10 +52,7 @@ acceptNewNode nodeData helloToBn conn = L.close conn >> do
     when (verifyHelloToBn helloToBn) $ do
         let address = A.makeNodeAddress host ports nId
         L.logInfo $ "New node is accepted. " <> show address
-        helloToBnResponce <- makeHelloToBnResponce True host
         L.modifyVarIO (nodeData ^. netNodes) $ addToMap nId address
-        void $ L.notify (D.Address host (ports ^. A.nodeUdpPort)) helloToBnResponce
-
 
 findConnect :: BNNodeData -> M.ConnectRequest -> L.NodeL (Either Text (D.StringHash, A.NodeAddress))
 findConnect nodeData (M.ConnectRequest hash i) = do
@@ -80,11 +77,20 @@ bnNode = bnNode' $ BNConfig 42
 
 isDeadAccept :: BNNodeData -> M.IsDead -> D.Connection D.Udp -> L.NodeL ()
 isDeadAccept nodeData (M.IsDead hash) connect = do
+    L.close connect
     connectMap <- L.readVarIO (nodeData ^. netNodes)
     let mDeadNodeAddress = findConnectByHash hash connectMap
     whenJust mDeadNodeAddress $ \address -> do
         res :: Either Text M.Pong <- L.makeRpcRequest (A.getRpcAddress address) M.Ping
         when (isLeft res) $ L.atomically $ L.modifyVar (nodeData ^. netNodes) $ removeFromMap hash
+
+acceptAddressRequest :: BNNodeData -> AddressRequest -> L.NodeL (Either Text A.NodeAddress)
+acceptAddressRequest nodeData (AddressRequest nodeLogicAddress) = do
+    connectMap <- L.readVarIO (nodeData ^. netNodes)
+    let eAddress = getByHash nodeLogicAddress connectMap 
+    pure $ case eAddress of
+        Just address -> Right address
+        Nothing      -> Left "The node not exist in routeMap."
 
 bnNode' :: NodeConfig BN -> L.NodeDefinitionL ()
 bnNode' _ = do
@@ -93,15 +99,18 @@ bnNode' _ = do
     nodeData <- initBN
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     let bnPorts = A.defaultBnNodePorts
-    L.serving D.Udp (bnPorts ^. A.nodeUdpPort) $ do
+    -- TODO void -> to proccessing of servin error.
+    void $ L.serving D.Udp (bnPorts ^. A.nodeUdpPort) $ do
         L.handler $ isDeadAccept  nodeData
         L.handler $ acceptNewNode nodeData
 
-    L.serving D.Rpc (bnPorts ^. A.nodeRpcPort) $ do
+    void $ L.serving D.Rpc (bnPorts ^. A.nodeRpcPort) $ do
         -- network
         L.method  $ handleStopNode       nodeData
         L.methodE $ findConnect          nodeData
-          -- clockwise direction
+        L.methodE $ acceptAddressRequest nodeData
+        -- clockwise direction
         L.methodE $ findNextConnectForMe nodeData
+
 
     L.awaitNodeFinished nodeData

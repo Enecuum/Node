@@ -26,17 +26,7 @@ makeHelloToBn _ nodePorts' nodeId' = pure $ HelloToBn nodePorts' nodeId' True
 verifyHelloToBn :: HelloToBn -> Bool
 verifyHelloToBn _ = True
 
-data HelloToBnResponce = HelloToBnResponce
-    { _hostAddress :: D.Host
-    , _signature   :: Bool
-    } deriving (Show, Eq, Generic, ToJSON, FromJSON)
-makeFieldsNoPrefix ''HelloToBnResponce
-
-makeHelloToBnResponce :: Applicative m => PrivateKay -> D.Host ->  m HelloToBnResponce
-makeHelloToBnResponce _ host' = pure $ HelloToBnResponce host' True
-
-verifyHelloToBnResponce :: HelloToBnResponce -> Bool
-verifyHelloToBnResponce _ = True
+newtype AddressRequest = AddressRequest NodeId deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data RoutingHello = RoutingHello
     { _nodeAddress  :: NodeAddress

@@ -15,7 +15,6 @@ udpRoutingHandlers routingRuntime = do
     L.handler $ acceptHello             routingRuntime
     L.handler $ acceptConnectResponse   routingRuntime
     L.handler $ acceptNextForYou        routingRuntime
-    L.handler $ acceptHelloFromBn       routingRuntime
 
 rpcRoutingHandlers :: RoutingRuntime -> L.RpcHandlerL L.NodeL ()
 rpcRoutingHandlers routingRuntime = do
@@ -30,12 +29,6 @@ acceptNextForYou routingRuntime (NextForYou senderAddress) conn = do
     let mAddress = snd <$> findNextForHash (routingRuntime ^. myNodeId) connects
     whenJust mAddress $ \address -> void $ L.notify senderAddress address
 
-
-acceptHelloFromBn :: RoutingRuntime -> HelloToBnResponce -> D.Connection D.Udp -> L.NodeL ()
-acceptHelloFromBn routingRuntime bnHello con = do
-    L.close con
-    when (verifyHelloToBnResponce bnHello) $
-        L.writeVarIO (routingRuntime ^. hostAddress) $ Just (bnHello ^. hostAddress)
 
 -- | Processing of messages forwarded to maintain the integrity of the network structure
 --   clarifying the predecessor and successor relationship
