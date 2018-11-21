@@ -18,18 +18,19 @@ import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit           (fromHUnitTest)
 import           Test.HUnit
 
+instance Ord ParseException where
+    (AesonException s1 ) `compare` (AesonException s2 ) = s1 `compare` s2
+instance Eq ParseException where
+    (AesonException s1) == (AesonException s2) = s1 == s2
+
 spec :: Spec
-spec = fastTest $ describe "Test config validity" $ fromHUnitTest $ TestList
-        -- []
-        [TestLabel "Parse configs" testParseConfigs]
+spec = fastTest $ describe "Validate configs" $ do
+    configFiles <- runIO $ listDirectory configDir
+    fromHUnitTest $ TestList $ map (\file -> TestLabel ("Parse config " +|| file ||+ "") (parse file)) configFiles
 
-testParseConfigs :: Test
-testParseConfigs = TestCase $ do
-    configFiles <- listDirectory configDir
-    void $ sequence $ map parse configFiles
-
-parse :: FilePath -> IO ()
-parse file = do
+-- | Try to parse config of unknown type
+parse :: FilePath -> Test
+parse file = TestCase $ do
     let filename = configDir </> file
     configSrc <- LBS.toStrict <$> (I.runNodeL undefined $ L.readFile filename)
     let runners =
@@ -37,7 +38,6 @@ parse file = do
           , runParser $ Cfg.tryParseConfig @A.PoANode    configSrc
           , runParser $ Cfg.tryParseConfig @A.PoWNode    configSrc
           , runParser $ Cfg.tryParseConfig @A.ClientNode configSrc
-
           , runParser $ Cfg.tryParseConfig @A.NN         configSrc
           , runParser $ Cfg.tryParseConfig @A.BN         configSrc
           , runParser $ Cfg.tryParseConfig @A.TestClient configSrc
@@ -45,22 +45,31 @@ parse file = do
           ]
 
     results <- sequence runners
-    let typeConfigMatch = catMaybes results
+    let typeConfigMatch = rights results
     when (length typeConfigMatch == 0) $ do
-        print filename
+        let exceptions = lefts results
+        let exception = guessAppropriateException exceptions
+        error $ show $ prettyPrintParseException exception
     (length typeConfigMatch) `shouldNotBe` 0
 
+-- | runParser return exception (Left ParseException) or just dummy value (1) for convenience
 runParser
     :: Show node
     => Show (Cfg.NodeConfig node)
     => Show (Cfg.NodeScenario node)
     => Either ParseException (Config node)
-    -> IO (Maybe ())
--- runParser = undefined
-runParser (Left e) = pure Nothing
-runParser (Right cfg) = do
-    putStrLn @Text $
-        "Parse config..." <>
-        "\n    Node:     " +|| Cfg.node cfg         ||+
-        "\n    Scenario: " +|| Cfg.nodeScenario cfg ||+ ""
-    pure $ Just ()
+    -> IO (Either ParseException Int)
+runParser (Left e)    = pure $ Left e
+runParser (Right cfg) = pure $ Right 1
+
+-- packFrequency "aaabccaac" == [(5,'a'),(1,'b'),(3,'c')]
+packFrequency :: (Eq a, Ord a) => [a] -> [(Int, a)]
+packFrequency xs = map (\x -> (length x, head x) ) $ group $ sort xs
+
+-- chooseSingleException [(5,'a'),(1,'b'),(3,'c')] == 'b'
+chooseSingleException :: [(Int, a)] -> a
+chooseSingleException (x:xs) = if fst x == 1 then snd x else chooseSingleException xs
+
+-- | Guess exception for config of unknown type (apparently it is the most rare exception)
+guessAppropriateException :: (Eq a, Ord a) => [a] -> a
+guessAppropriateException exceptions = chooseSingleException $ packFrequency exceptions

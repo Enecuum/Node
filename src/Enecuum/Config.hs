@@ -7,8 +7,8 @@ module Enecuum.Config where
 import qualified Data.Aeson                as A
 import           Data.Aeson.Extra          (noLensPrefix)
 import qualified Data.ByteString.Internal  as BSI
-import qualified Data.ByteString.Lazy      as L
-import           Data.Yaml                 as A
+import qualified Data.ByteString.Lazy      as LBS
+import           Data.Yaml                 as A hiding (decode)
 import           Enecuum.Core.Types.Logger (LoggerConfig (..))
 import           Enecuum.Language          (NodeDefinitionL)
 import           Enecuum.Prelude
@@ -46,7 +46,7 @@ nodeConfigJsonOptions = noLensPrefix
 
 -- | Reads a config file and evals some action with the contents.
 withConfig :: FilePath -> (LByteString -> IO ()) -> IO ()
-withConfig configName act = act =<< L.readFile configName
+withConfig configName act = act =<< LBS.readFile configName
 
 -- | Tries to parse config according to the type @node@ passed.
 tryParseConfig
@@ -65,24 +65,14 @@ dispatchScenario
     => Node node
     => LByteString
     -> Maybe (Config node, NodeDefinitionL ())
-dispatchScenario configSrc = Just (cfg, getNodeScript' cfg)
-    where cfg = tryParseConfig' configSrc
+dispatchScenario configSrc = case tryParseConfig' configSrc of
+    Just cfg -> Just (cfg, getNodeScript' cfg)
+    Nothing  -> Nothing
 
 tryParseConfig'
   :: (FromJSON (NodeScenario node), FromJSON (NodeConfig node),
       FromJSON node) =>
-     L.ByteString -> Config node
-tryParseConfig' configSrc = case tryParseConfig (L.toStrict configSrc) of
-    Left e    -> (error . show . prettyPrintParseException) $ e
-    Right cfg -> cfg
-
--- dispatchScenario
---     :: FromJSON node
---     => FromJSON (NodeScenario node)
---     => FromJSON (NodeConfig node)
---     => Node node
---     => LByteString
---     -> Maybe (Config node, NodeDefinitionL ())
--- dispatchScenario configSrc = case tryParseConfig (L.toStrict configSrc) of
---     Left e    -> (error . show . prettyPrintParseException) $ e
---     Right cfg -> Just (cfg, getNodeScript' cfg)
+     LBS.ByteString -> Maybe (Config node)
+tryParseConfig' configSrc = case tryParseConfig (LBS.toStrict configSrc) of
+    Left e    -> Nothing
+    Right cfg -> Just cfg
