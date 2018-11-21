@@ -52,15 +52,16 @@ registerWithBn nodePorts' myNodeId' bnAddress' = do
     let privateKey   =  True
     -- Ask the BN for what address we are in until she answers.
     helloToBn        <- makeHelloToBn privateKey nodePorts' myNodeId'
-    let takeAddress  =  do
+    let takeAddress i =  do
             void $ L.notify (A.getUdpAddress bnAddress') helloToBn
             eAddress <- L.makeRpcRequest (A.getRpcAddress bnAddress') $ AddressRequest myNodeId'
             case eAddress of
                 Right address -> pure address
                 Left err -> do
-                    L.logError $ "Error in address accepting: " <> err
-                    takeAddress
-    L.scenario takeAddress
+                    L.logError $ "Error " <> show i <> " in address accepting: " <> err
+                    L.delay $ (i^2) * 1000 * 1000
+                    takeAddress $ i + 1
+    L.scenario $ takeAddress 0 
 
 sendHelloToPrevious :: RoutingRuntime -> L.NodeL ()
 sendHelloToPrevious routingRuntime = do
