@@ -14,6 +14,8 @@ import           Enecuum.Prelude
 -- | Checks if the kBlock valid.
 -- N.B.: it doesn't support forks.
 -- TODO: support forks.
+-- TODO: support check of "not valid k-block"
+-- TODO: support check of "already exist k-block"
 validateKBlock :: BlockchainData -> D.KBlock -> L.StateL D.KBlockValidity
 validateKBlock bData kBlock = do
     topKBlock <- L.getTopKeyBlock bData
@@ -23,13 +25,18 @@ validateKBlock bData kBlock = do
     let futureKBlock = not nextBlock && not prevBlock
 
     if  | nextBlock    -> pure D.NextKBlock
+        -- FIXME:
+        -- it is incorrectly, does this block already exist
+        -- or just from a growing branch?
         | prevBlock    -> pure D.PreviousKBlock
         | futureKBlock -> pure D.FutureKBlock
 
 data KBlockResult
     = KBlockAdded
     | KBlockPostponed
+    | KBlockAlreadyPresent
     | KBlockErrored
+    deriving Eq
 
 addTopKBlock' :: D.BlockchainData -> D.KBlock -> L.StateL KBlockResult
 addTopKBlock' bData kBlock = do
@@ -45,14 +52,17 @@ addKBlock bData kBlock = do
     res <- L.atomically $ do
         validity <- validateKBlock bData kBlock
         case validity of
-            D.NextKBlock   -> addTopKBlock' bData kBlock
-            D.FutureKBlock -> pure KBlockPostponed
-            _              -> pure KBlockErrored
+            D.NextKBlock     -> addTopKBlock' bData kBlock
+            D.FutureKBlock   -> pure KBlockPostponed
+            D.PreviousKBlock -> pure KBlockAlreadyPresent
+            _                -> pure KBlockErrored
     
     case res of
-        KBlockErrored   -> L.logError ("Error in processing KBlock: " +|| kBlock ||+ ".") >> pure False
-        KBlockAdded     -> pure True
-        KBlockPostponed -> L.atomically (addBlockToPending bData kBlock) >> pure False
+        KBlockErrored           -> L.logError $ "Error in processing KBlock: "    +|| kBlock ||+ "."
+        KBlockAlreadyPresent    -> L.logInfo  $ "KBlock aready exixst en graph: " +|| kBlock ||+ "."
+        KBlockAdded             -> pure ()
+        KBlockPostponed         -> L.atomically $ addBlockToPending bData kBlock
+    pure $ res == KBlockAdded
 
 
 -- | Move one block from pending to graph if possible and remove it from pending.

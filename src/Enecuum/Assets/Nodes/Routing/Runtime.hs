@@ -16,7 +16,7 @@ import qualified Data.Set      as Set
 type BnAddress = A.NodeAddress
 
 data RoutingRuntime = RoutingRuntime
-    { _hostAddress :: D.StateVar (Maybe D.Host) 
+    { _hostAddress :: D.StateVar (Maybe D.Host)
     , _nodePorts   :: A.NodePorts
     , _myNodeId    :: A.NodeId
     , _bnAddress   :: A.NodeAddress
@@ -96,26 +96,26 @@ udpForwardIfNeeded
     => HasNodeReciverId message D.StringHash
     => RoutingRuntime -> message -> (message -> L.NodeL ()) -> L.NodeL ()
 udpForwardIfNeeded routingRuntime message handler = do
-    let reciverId = message ^. nodeReciverId
+    let receiverId = message ^. nodeReciverId
     -- process message if I am a recipient
-    if routingRuntime^.myNodeId == reciverId
+    if routingRuntime^.myNodeId == receiverId
         then handler message
 
         -- forward the message further if it is not yet old.
         else when (message ^. timeToLive > 0) $ do
-            L.logInfo $ "Resending to " <> show reciverId
+            L.logInfo $ "Resending to " <> show receiverId
             connects <- L.readVarIO (routingRuntime ^. connectMap)
-            let nextReciver = findNextResender reciverId connects
+            let nextReciver = findNextResender receiverId connects
             whenJust nextReciver $ \(_, address) ->
                 void $ L.notify (A.getUdpAddress address) (message & timeToLive %~ (\x -> x - 1))
-            
+
             unless (isJust nextReciver) $ L.logError "Connection map is empty. Fail of resending."
 
 -- forward and proccessing the received message if necessary
-udpBroadcastRecivedMessage
+udpBroadcastReceivedMessage
     :: (ToJSON msg, Typeable msg, Serialize msg)
     => RoutingRuntime -> (msg -> L.NodeL ()) -> msg ->  D.Connection D.Udp -> L.NodeL ()
-udpBroadcastRecivedMessage routingRuntime handler message conn = do
+udpBroadcastReceivedMessage routingRuntime handler message conn = do
     L.close conn
     -- it is possible to forward only new messages
     -- if the message did not broadcasted, then we have already processed it
@@ -220,8 +220,8 @@ connecRequests i routingRuntime = when (i > 0) $ do
     maybeAddress <- L.makeRpcRequest bnRpcAddress $ M.ConnectRequest (routingRuntime ^. myNodeId) i
     myAddress    <- getMyNodeAddress routingRuntime
     case maybeAddress of
-        Right (recivedNodeId, address) | myAddress /= Just address -> do
-            L.modifyVarIO (routingRuntime ^. connectMap) $ addToMap recivedNodeId address
+        Right (receivedNodeId, address) | myAddress /= Just address -> do
+            L.modifyVarIO (routingRuntime ^. connectMap) $ addToMap receivedNodeId address
             connecRequests (i - 1) routingRuntime
         _ -> pure ()
 
@@ -231,20 +231,20 @@ nextRequest routingRuntime = do
     myAddress        <- getMyNodeAddress routingRuntime
     nextForMe        <- L.makeRpcRequest bnRpcAddress $ M.NextForMe (routingRuntime ^. myNodeId)
     case nextForMe of
-        Right (recivedNodeId, address) | myAddress /= Just address ->
-            L.modifyVarIO (routingRuntime ^. connectMap) (addToMap recivedNodeId address)
+        Right (receivedNodeId, address) | myAddress /= Just address ->
+            L.modifyVarIO (routingRuntime ^. connectMap) (addToMap receivedNodeId address)
         _ -> pure ()
 
-sendHelloToPrevius :: RoutingRuntime -> L.NodeL () 
+sendHelloToPrevius :: RoutingRuntime -> L.NodeL ()
 sendHelloToPrevius routingRuntime = do
     connects      <- getConnects      routingRuntime
     myNodeAddress <- getMyNodeAddress routingRuntime
     let mAddress  =  findNextForHash (routingRuntime ^. myNodeId) connects
     case (myNodeAddress, mAddress) of
-        (Just myAddress, Just (_, reciverAddress)) -> do  
+        (Just myAddress, Just (_, receiverAddress)) -> do
             let privateKey  = True
             hello <- makeRoutingHello privateKey myAddress
-            void $ L.notify (A.getUdpAddress reciverAddress) hello
+            void $ L.notify (A.getUdpAddress receiverAddress) hello
         _ -> pure ()
 
 acceptHelloFromBn :: RoutingRuntime -> HelloToBnResponce -> D.Connection D.Udp -> L.NodeL ()
@@ -263,9 +263,9 @@ acceptHello routingRuntime routingHello con = do
         let senderAddress = routingHello ^. nodeAddress
         let senderNodeId  = senderAddress ^. A.nodeId
         let nextAddres    = nextForHello (routingRuntime ^. myNodeId) senderNodeId connects
-        whenJust nextAddres $ \reciverAddress ->
-            void $ L.notify (A.getUdpAddress reciverAddress) routingHello
-        
+        whenJust nextAddres $ \receiverAddress ->
+            void $ L.notify (A.getUdpAddress receiverAddress) routingHello
+
         L.modifyVarIO
             (routingRuntime ^. connectMap)
             (addToMap senderNodeId senderAddress)

@@ -25,3 +25,5 @@ appFileName = L.createFilePath =<< (</> "data" </> "logs" </> "app.log") <$> get
 clientStory :: (L.FileSystem m, Monad m) => m FilePath
 clientStory = (</> "client.story") <$> storyFilePath
 
+configDir :: FilePath
+configDir = "configs"

@@ -91,6 +91,7 @@ dependencies:
 - gd
 - resourcet
 - triplesec
+- yaml
 
 library:
   source-dirs: src

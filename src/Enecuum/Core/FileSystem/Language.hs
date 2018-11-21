@@ -5,10 +5,11 @@ import           Enecuum.Prelude
 import           Language.Haskell.TH.MakeFunctor
 import qualified Data.ByteString.Lazy as B
 import qualified Data.ByteString.Lazy.Internal as BSI
+-- import qualified Data.ByteString.Internal  as BSI
 
 -- | Language for FileSystem.
 data FileSystemF next where
-    ReadFile :: FilePath -> (B.ByteString -> next) -> FileSystemF next
+    ReadFile :: FilePath -> (BSI.ByteString -> next) -> FileSystemF next
     WriteFile :: FilePath -> BSI.ByteString -> (() -> next) -> FileSystemF next
     GetHomeDirectory :: (FilePath -> next) -> FileSystemF next
     CreateFilePath :: FilePath -> (FilePath -> next) -> FileSystemF next
@@ -19,7 +20,7 @@ type FileSystemL next = Free FileSystemF next
 
 class FileSystem m where
     readFile :: FilePath -> m B.ByteString
-    writeFile :: FilePath -> BSI.ByteString -> m ()
+    writeFile :: FilePath -> B.ByteString -> m ()
     getHomeDirectory :: m FilePath
     createFilePath :: FilePath -> m FilePath
     doesFileExist :: FilePath -> m Bool

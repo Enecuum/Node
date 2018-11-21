@@ -9,7 +9,7 @@ type Point = Complex Double
 testPng :: IO ()
 testPng = makeImage (1000, 1000) "test.png" $ \image ->
     --drawArrow (100 :+ 500) (900 :+ 500) (rgb 0 0 0) image
-    mkCirkle (500 :+ 500) 300 image
+    mkCircle (500 :+ 500) 300 image
 
 
 makeImage :: GD.Size -> FilePath -> (GD.Image -> IO a) -> IO ()
@@ -19,15 +19,15 @@ makeImage size filePath f = do
     void $ f image
     GD.savePngFile filePath image
 
-drawCirkle :: Point -> Int -> GD.Color -> GD.Image -> IO ()
-drawCirkle (x :+ y ) s = GD.drawFilledEllipse (fromEnum x, fromEnum y) (s, s)
+drawCircle :: Point -> Int -> GD.Color -> GD.Image -> IO ()
+drawCircle (x :+ y ) s = GD.drawFilledEllipse (fromEnum x, fromEnum y) (s, s)
 
 rgb :: Word8 -> Word8 -> Word8 -> GD.Color
 rgb r g b = GD.rgb (fromEnum r) (fromEnum g) (fromEnum b)
 
-mkCirkle :: Point -> Point -> GD.Image -> IO ()
-mkCirkle center r image = forM_ [0..19] $ \f -> do
-    drawCirkle (center + mkPolar 1 (f*pi/10)*r) 10 black image
+mkCircle :: Point -> Point -> GD.Image -> IO ()
+mkCircle center r image = forM_ [0..19] $ \f -> do
+    drawCircle (center + mkPolar 1 (f*pi/10)*r) 10 black image
     drawArrow (center + mkPolar 1 ((f + 9)*pi/10)*r) (center + mkPolar 1 (f*pi/10)*r) black image
 
 drawArrow :: Point -> Point -> GD.Color -> GD.Image -> IO ()

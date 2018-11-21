@@ -11,9 +11,9 @@ import           System.FilePath.Posix (splitFileName)
 interpretFileSystemL :: L.FileSystemF a -> IO a
 interpretFileSystemL (L.ReadFile filename next) = do
     text <- B.readFile filename
-    pure $ next text
+    pure $ next $ text
 interpretFileSystemL (L.WriteFile filename text next) = do
-    B.writeFile filename text -- $ encodeUtf8 text
+    B.writeFile filename text
     pure $ next ()
 interpretFileSystemL (L.GetHomeDirectory next) = do
     filename <- getHomeDirectory
