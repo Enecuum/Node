@@ -3,6 +3,7 @@ module Enecuum.Tests.Integration.ConfigsSpec where
 import qualified Data.ByteString.Lazy               as LBS
 import           Data.Typeable
 import           Data.Yaml
+import qualified Enecuum.Assets.OldScenarios        as Old
 import qualified Enecuum.Assets.Scenarios           as A (BN, ClientNode, GraphNode, NN, PoANode, PoWNode, TestClient,
                                                           TestServer)
 import           Enecuum.Assets.System.Directory    (configDir)
@@ -42,6 +43,9 @@ parse file = TestCase $ do
           , runParser $ Cfg.tryParseConfig @A.BN         configSrc
           , runParser $ Cfg.tryParseConfig @A.TestClient configSrc
           , runParser $ Cfg.tryParseConfig @A.TestServer configSrc
+
+          , runParser $ Cfg.tryParseConfig @Old.OldPoWNode configSrc
+          , runParser $ Cfg.tryParseConfig @Old.OldPoaNode configSrc
           ]
 
     results <- sequence runners
