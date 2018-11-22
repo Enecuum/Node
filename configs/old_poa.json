@@ -1,0 +1,17 @@
+{
+   "node":"OldPoaNode",
+   "nodeScenario":"Good",
+   "nodeConfig":
+    {
+				"tag": "OldPoANodeConfig",
+				"poaRPCPort": 6200,
+		},
+   "loggerConfig":
+        {
+        "logFilePath": "/tmp/log/poa.log",
+        "format":"$prio $loggername: $msg",
+        "logToConsole":true,
+		    "logToFile": true,
+        "level":"Debug"
+        }
+}

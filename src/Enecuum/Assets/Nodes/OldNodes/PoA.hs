@@ -33,8 +33,7 @@ data OldPoaNode = OldPoaNode
     deriving (Show, Generic)
 
 data instance NodeConfig OldPoaNode = OldPoANodeConfig
-    { _dummyOption :: Int
-    , _poaRPCPort  :: D.PortNumber
+    { _poaRPCPort  :: D.PortNumber
     }
     deriving (Show, Generic)
 
@@ -51,7 +50,7 @@ instance ToJSON   (NodeScenario OldPoaNode) where toJSON    = A.genericToJSON   
 instance FromJSON (NodeScenario OldPoaNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
 defaultPoANodeConfig :: NodeConfig OldPoaNode
-defaultPoANodeConfig = OldPoANodeConfig 42 (A.defaultPoANodePorts ^. A.nodeRpcPort)
+defaultPoANodeConfig = OldPoANodeConfig (A.defaultPoANodePorts ^. A.nodeRpcPort)
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
