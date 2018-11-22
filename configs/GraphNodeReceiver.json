@@ -9,12 +9,12 @@
             "tag": "DBConfig",
             "dbOptions":
                 {
-                "errorIfExists":true,
+                "errorIfExists":false,
                 "createIfMissing":true
                 },
-            "dbModelName": "\\",
+            "dbModelName": "graph_node_transmitter.dbm",
             "useDatabase":false,
-            "useEnqHomeDir":false
+            "useEnqHomeDir":true
             },
         "tag": "OldGraphNodeConfig",
         "gnNodePorts":
@@ -27,7 +27,7 @@
 				},
    "loggerConfig":
         {
-            "logFilePath":"/tmp/log/app.log",
+            "logFilePath":"/tmp/log/GraphNodeReceiver.log",
             "format":"$prio $loggername: $msg",
             "logToConsole":true,
             "logToFile": true,
