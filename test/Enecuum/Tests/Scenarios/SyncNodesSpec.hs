@@ -27,9 +27,7 @@ testNodeNet = TestCase . withNodesManager $ \mgr -> do
     let poaRpcAddress              = A.getRpcAddress A.defaultPoANodeAddress
 
     let graphNodeTransmitterConfig = Old.transformConfig2 $ A.defaultNodeConfig
-    let graphNodeReceiverConfig    = Old.transformConfig2 $ A.defaultNodeConfig    
-    -- let graphNodeTransmitterConfig = A.defaultNodeConfig
-    -- let graphNodeReceiverConfig    = A.defaultNodeConfig
+    let graphNodeReceiverConfig    = Old.transformConfig2 $ A.defaultNodeConfig
             { A._gnNodePorts = A.defaultGnReceiverNodePorts
             , A._rpcSynco  = Just transmiterRpcAddress
             }

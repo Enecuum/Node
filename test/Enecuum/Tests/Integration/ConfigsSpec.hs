@@ -19,11 +19,6 @@ import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit           (fromHUnitTest)
 import           Test.HUnit
 
-instance Ord ParseException where
-    (AesonException s1 ) `compare` (AesonException s2 ) = s1 `compare` s2
-instance Eq ParseException where
-    (AesonException s1) == (AesonException s2) = s1 == s2
-
 spec :: Spec
 spec = fastTest $ describe "Validate configs" $ do
     configFiles <- runIO $ listDirectory configDir
@@ -44,16 +39,17 @@ parse file = TestCase $ do
           , runParser $ Cfg.tryParseConfig @A.TestClient configSrc
           , runParser $ Cfg.tryParseConfig @A.TestServer configSrc
 
-          , runParser $ Cfg.tryParseConfig @Old.OldPoWNode configSrc
-          , runParser $ Cfg.tryParseConfig @Old.OldPoaNode configSrc
+          , runParser $ Cfg.tryParseConfig @Old.OldGraphNode configSrc
+          , runParser $ Cfg.tryParseConfig @Old.OldPoWNode   configSrc
+          , runParser $ Cfg.tryParseConfig @Old.OldPoaNode   configSrc
           ]
 
     results <- sequence runners
     let typeConfigMatch = rights results
     when (length typeConfigMatch == 0) $ do
-        let exceptions = lefts results
+        let exceptions = map prettyPrintParseException $ lefts results
         let exception = guessAppropriateException exceptions
-        error $ show $ prettyPrintParseException exception
+        error $ show $ exception
     (length typeConfigMatch) `shouldNotBe` 0
 
 -- | runParser return exception (Left ParseException) or just dummy value (1) for convenience
@@ -72,6 +68,7 @@ packFrequency xs = map (\x -> (length x, head x) ) $ group $ sort xs
 
 -- chooseSingleException [(5,'a'),(1,'b'),(3,'c')] == 'b'
 chooseSingleException :: [(Int, a)] -> a
+chooseSingleException [x] = snd x
 chooseSingleException (x:xs) = if fst x == 1 then snd x else chooseSingleException xs
 
 -- | Guess exception for config of unknown type (apparently it is the most rare exception)

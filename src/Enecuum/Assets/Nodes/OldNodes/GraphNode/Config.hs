@@ -13,7 +13,6 @@ data OldGraphNode = OldGraphNode
 data instance NodeConfig OldGraphNode = OldGraphNodeConfig
     { _dbConfig     :: DBConfig
     , _gnNodePorts  :: NodePorts
-    , _bnAddress    :: NodeAddress
     , _rpcSynco     :: Maybe D.Address
     }
     deriving (Show, Generic)
