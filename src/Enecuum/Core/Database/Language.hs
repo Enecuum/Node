@@ -2,8 +2,8 @@
 
 module Enecuum.Core.Database.Language where
 
+import           Data.Typeable               (typeOf)
 import           Enecuum.Prelude
-import           Data.Typeable (typeOf)
 
 import qualified Enecuum.Core.Types.Database as D
 
@@ -40,9 +40,9 @@ putEntity
     -> D.DBValue entity
     -> DatabaseL db (D.DBResult ())
 putEntity dbKey dbVal = let
-    rawK = D.toRawDBKey   @db dbKey
-    rawV = D.toRawDBValue @db dbVal
-    in putValueRaw rawK rawV
+    rawKey = D.toRawDBKey   @db dbKey
+    rawVal = D.toRawDBValue @db dbVal
+    in putValueRaw rawKey rawVal
 
 -- | Puts a typed entity to the corresponding DB.
 putEntity'
@@ -53,9 +53,9 @@ putEntity'
     => src
     -> DatabaseL db (D.DBResult ())
 putEntity' src = let
-    rawK = D.toRawDBKey   @db @entity $ D.toDBKey   src
-    rawV = D.toRawDBValue @db @entity $ D.toDBValue src
-    in putValueRaw rawK rawV
+    rawKey = D.toRawDBKey   @db @entity $ D.toDBKey   src
+    rawVal = D.toRawDBValue @db @entity $ D.toDBValue src
+    in putValueRaw rawKey rawVal
 
 -- | Gets a typed entity from the corresponding DB.
 getEntity
@@ -64,13 +64,14 @@ getEntity
     => D.DBKey entity
     -> DatabaseL db (D.DBResult (D.DBE entity))
 getEntity dbKey = do
-    let rawK = D.toRawDBKey @db dbKey
-    let proxyVal = error "Don't call me" :: D.DBValue entity
-    eRawVal <- getValueRaw rawK
+    let rawKey = D.toRawDBKey @db dbKey
+    let proxyVal = error "Don't call me, I'm Proxy" :: D.DBValue entity
+    eRawVal <- getValueRaw rawKey
     case eRawVal of
         Left err       -> pure $ Left err
         Right rawVal   -> case D.fromRawDBValue @db rawVal of
-            Nothing    -> pure $ Left $ D.DBError D.InvalidType $ show $ typeOf proxyVal
+            Nothing    -> pure $ Left $ D.DBError D.InvalidType ("Expected type: " <> show (typeOf proxyVal)
+                            <> ". Raw key: <" <> decodeUtf8 rawKey <>  ">. Raw data: <" <> decodeUtf8 rawVal <> ">")
             Just dbVal -> pure $ Right (dbKey, dbVal)
 
 -- | Gets a typed value from the corresponding DB.

@@ -11,7 +11,7 @@ import qualified Enecuum.Language                          as L
 import           Enecuum.Assets.Nodes.GraphNode.DB.Helpers
 import qualified Enecuum.Assets.Nodes.GraphNode.Logic      as G
 
-saveKBlock :: D.DBModel -> D.KBlock -> L.NodeL [D.DBResult ()]
+saveKBlock :: D.DBModel -> D.KBlock -> L.NodeL (D.DBResult ())
 saveKBlock dbModel kBlock = do
     let kBlockIdx = kBlock ^. Lens.number
 
@@ -26,14 +26,15 @@ saveKBlock dbModel kBlock = do
     L.logInfo $ "[" +|| kBlockIdx ||+ "] Saving KBlock meta:"
     L.logInfo $ "    <" +|| k3 ||+ "> <" +|| v3 ||+ ">"
 
-    sequence
+    eResults <- sequence
         [ withKBlocksDB     dbModel $ L.putEntity' @D.KBlockPrevHashEntity kBlock
         , withKBlocksDB     dbModel $ L.putEntity' @D.KBlockEntity         kBlock
-        , withKBlocksMetaDB dbModel $ L.putEntity' @D.KBlockMetaEntity kBlock
+        , withKBlocksMetaDB dbModel $ L.putEntity' @D.KBlockMetaEntity     kBlock
         ]
+    pure $ fmap (const ()) $ sequence eResults
 
-saveMBlock :: D.DBModel -> D.KBlockIdx -> (D.MBlockIdx, D.Microblock) -> L.NodeL [D.DBResult ()]
-saveMBlock dbModel kBlockIdx (mBlockIdx, mBlock) = do
+saveMBlock' :: D.DBModel -> D.KBlockIdx -> (D.MBlockIdx, D.Microblock) -> L.NodeL (D.DBResult ())
+saveMBlock' dbModel kBlockIdx (mBlockIdx, mBlock) = do
     let k1 = D.toDBKey   @D.MBlockEntity (kBlockIdx, mBlockIdx)
     let v1 = D.toDBValue @D.MBlockEntity mBlock
 
@@ -46,10 +47,38 @@ saveMBlock dbModel kBlockIdx (mBlockIdx, mBlock) = do
     L.logInfo $ "[" +|| kBlockIdx ||+ "] [" +|| mBlockIdx ||+ "] Saving MBlockMeta (" +|| D.toHash mBlock ||+ "):"
     L.logInfo $ "    <" +|| k2 ||+ "> <" +|| v2 ||+ ">"
 
-    sequence
+    eResults <- sequence
         [ withMBlocksDB     dbModel $ L.putEntity k1 v1
         , withMBlocksMetaDB dbModel $ L.putEntity k2 v2
         ]
+    pure $ fmap (const ()) $ sequence eResults
+
+saveTransaction :: D.DBModel -> D.KBlockIdx -> D.MBlockIdx -> (D.TransactionIdx, D.Transaction) -> L.NodeL (D.DBResult ())
+saveTransaction dbModel kBlockIdx mBlockIdx (transactionIdx, tx) = do
+    let k1 = D.toDBKey   @D.TransactionEntity (kBlockIdx, mBlockIdx, transactionIdx)
+    let v1 = D.toDBValue @D.TransactionEntity tx
+
+    let k2 = D.toDBKey   @D.TransactionMetaEntity tx
+    let v2 = D.toDBValue @D.TransactionMetaEntity (kBlockIdx, mBlockIdx, transactionIdx)
+
+    L.logInfo $ "[" +|| kBlockIdx ||+ "] [" +|| mBlockIdx ||+ "] [" +|| transactionIdx ||+ "] Saving Transaction:"
+    L.logInfo $ "    <" +|| k1 ||+ "> <" +|| v1 ||+ ">"
+
+    L.logInfo $ "[" +|| kBlockIdx ||+ "] [" +|| mBlockIdx ||+ "] [" +|| transactionIdx ||+ "] Saving TransactionMeta:"
+    L.logInfo $ "    <" +|| k2 ||+ "> <" +|| v2 ||+ ">"
+
+    eResults <- sequence
+        [ withTransactionsDB     dbModel $ L.putEntity k1 v1
+        , withTransactionsMetaDB dbModel $ L.putEntity k2 v2
+        ]
+    pure $ fmap (const ()) $ sequence eResults
+
+saveMBlock :: D.DBModel -> D.KBlockIdx -> (D.MBlockIdx, D.Microblock) -> L.NodeL (D.DBResult ())
+saveMBlock dbModel kBlockIdx (mBlockIdx, mBlock) = do
+    let txs = mBlock ^. Lens.transactions
+    eMBlockSaved <- saveMBlock' dbModel kBlockIdx (mBlockIdx, mBlock)
+    eTransactionsSaved' <- mapM (saveTransaction dbModel kBlockIdx mBlockIdx) $ zip [1..] txs
+    pure $ fmap (const ()) $ sequence $ eMBlockSaved : eTransactionsSaved'
 
 dumpToDB' :: G.GraphNodeData -> D.KBlock -> L.NodeL ()
 dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
@@ -60,12 +89,11 @@ dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
     let genesisReached = kBlockPrevHash == D.genesisIndicationHash
 
     mBlocks         <- L.atomically $ L.getMBlocksForKBlock' (nodeData ^. G.blockchain) kBlockHash
-    eKBlockResults  <- saveKBlock dbModel kBlock
+
+    eKBlockResult   <- saveKBlock dbModel kBlock
     eMBlocksResults <- mapM (saveMBlock dbModel kBlockIdx) $ zip [1..] mBlocks
 
-    let eResults = eKBlockResults <> join eMBlocksResults
-
-    case sequence eResults of
+    case sequence (eKBlockResult : eMBlocksResults) of
         Right _ | genesisReached -> L.logInfo "Dumping done: Genesis reached."
         Left err                 -> L.logError $ show err
         _ -> do

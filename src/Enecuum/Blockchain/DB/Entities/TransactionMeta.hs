@@ -9,7 +9,7 @@ import           Enecuum.Prelude
 import           Text.Printf                           (printf)
 
 import           Enecuum.Blockchain.DB.Entities.Types  (KBlockIdx, MBlockIdx, TransactionIdx)
-import           Enecuum.Blockchain.DB.Model           (TransactionsDB)
+import           Enecuum.Blockchain.DB.Model           (TransactionsMetaDB)
 import qualified Enecuum.Blockchain.Domain.KBlock      as D
 import qualified Enecuum.Blockchain.Domain.Microblock  as D
 import qualified Enecuum.Blockchain.Domain.Transaction as D
@@ -26,7 +26,7 @@ import qualified Enecuum.Core.Types                    as D
 
 data TransactionMetaEntity
 
-instance D.DBModelEntity TransactionsDB TransactionMetaEntity
+instance D.DBModelEntity TransactionsMetaDB TransactionMetaEntity
 
 instance D.DBEntity TransactionMetaEntity where
     data DBKey   TransactionMetaEntity = TransactionMetaKey D.StringHash
@@ -40,7 +40,7 @@ instance D.ToDBKey TransactionMetaEntity D.Transaction where
 instance D.ToDBValue TransactionMetaEntity (KBlockIdx, MBlockIdx, TransactionIdx) where
     toDBValue = TransactionMetaValue
 
-instance D.RawDBEntity TransactionsDB TransactionMetaEntity where
+instance D.RawDBEntity TransactionsMetaDB TransactionMetaEntity where
     toRawDBKey (TransactionMetaKey k) = D.fromStringHash k
     toRawDBValue = LBS.toStrict . A.encode
     fromRawDBValue = A.decode . LBS.fromStrict

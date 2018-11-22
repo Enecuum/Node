@@ -39,7 +39,8 @@ dumpAndRestoreGraphTest = do
             , A._stopOnDatabaseError = True
             }
     let cfg = A.defaultNodeConfig { A._dbConfig = dbConfig }
-    let loggerCfg = Nothing
+    -- let loggerCfg = Nothing
+    let loggerCfg = Just consoleLoggerConfig
 
     let graphNodeRpcAddress        = A.getRpcAddress A.defaultGnNodeAddress
     let graphNodeUdpAddress        = A.getUdpAddress A.defaultGnNodeAddress
@@ -52,7 +53,7 @@ dumpAndRestoreGraphTest = do
           }
 
     let blocksCount = 5
-    let blocksDelay = 1000
+    let blocksDelay = 1000 * 1000
 
     TestCase $ withDbAbsence dbPath $ withNodesManager $ \mgr -> do
         -- Starting nodes.
@@ -64,6 +65,7 @@ dumpAndRestoreGraphTest = do
         powNode <- startNode loggerCfg mgr A.powNode
         waitForNode powRpcAddress
 
+        print @Text "Starting PoA"
         poaNode <- startNode loggerCfg mgr (A.poaNode A.Good poaConfig)
         waitForNode poaRpcAddress
 
@@ -77,6 +79,10 @@ dumpAndRestoreGraphTest = do
         _ :: Either Text A.SuccessMsg <- makeIORpcRequest (A.getRpcAddress A.defaultPoWNodeAddress)
               $ A.NBlockPacketGeneration blocksCount blocksDelay
         waitForBlocks blocksCount graphNodeRpcAddress
+
+        print @Text "Waiting for MBlocks"
+
+        threadDelay $ 1000 * 1000
 
         print @Text "Requesting last KBlock"
         Right topKBlock1 :: Either Text D.KBlock <- makeIORpcRequest graphNodeRpcAddress A.GetLastKBlock

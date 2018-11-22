@@ -16,7 +16,9 @@ import qualified Enecuum.Assets.Nodes.GraphNode.Logic      as G
 loadKBlock :: D.DBModel -> D.DBValue D.KBlockMetaEntity -> L.NodeL (D.DBResult D.KBlock)
 loadKBlock dbModel (D.KBlockMetaValue i) = do
     ePrevHash     <- withKBlocksDB dbModel $ L.getValue' @D.KBlockPrevHashEntity i
+    L.logInfo $ "Loading result for KBlock prev hash entity [" +|| i ||+ "]: " +|| ePrevHash ||+ "."
     eKBlockEntity <- withKBlocksDB dbModel $ L.getValue' @D.KBlockEntity i
+    L.logInfo $ "Loading result for KBlock entity [" +|| i ||+ "]: " +|| eKBlockEntity ||+ "."
 
     pure $ D.KBlock
         <$> (eKBlockEntity ^. Lens.time'    )
@@ -34,8 +36,9 @@ loadTransactions'
     :: D.DBModel
     -> (D.KBlockIdx, D.MBlockIdx, D.TransactionIdx)
     -> L.NodeL [D.Transaction]
-loadTransactions' dbModel fullTxIdx@(kBlockIdx, mBlockIdx, transactionIdx) = do
-    eDBTx <- withTransactionsDB dbModel $ L.getValue' @D.TransactionEntity fullTxIdx
+loadTransactions' dbModel fullIdx@(kBlockIdx, mBlockIdx, transactionIdx) = do
+    eDBTx <- withTransactionsDB dbModel $ L.getValue' @D.TransactionEntity fullIdx
+    L.logInfo $ "Loading result for Transaction entity [" +|| fullIdx ||+ "]: " +|| eDBTx ||+ "."
     case eDBTx of
         Right dbTx -> do
             let tx = D.fromDBTransaction dbTx
@@ -60,6 +63,7 @@ loadMBlocks'
     -> L.NodeL [D.Microblock]
 loadMBlocks' dbModel kBlockHash fullIdx@(kBlockIdx, mBlockIdx) = do
     eDBMBlock <- withMBlocksDB dbModel $ L.getValue' @D.MBlockEntity fullIdx
+    L.logInfo $ "Loading result for MBlock entity [" +|| fullIdx ||+ "]: " +|| eDBMBlock ||+ "."
     case eDBMBlock of
         Right dbMBlock -> do
             txs <- loadTransactions dbModel fullIdx
@@ -76,7 +80,10 @@ loadMBlocks dbModel kBlockHash kBlockIdx =
     loadMBlocks' dbModel kBlockHash (kBlockIdx, 1)
 
 loadKBlockHashMeta :: D.DBModel -> D.StringHash -> L.NodeL (D.DBResult (D.DBValue D.KBlockMetaEntity))
-loadKBlockHashMeta dbModel hash = withKBlocksMetaDB dbModel $ L.getValue' hash
+loadKBlockHashMeta dbModel hash = do
+    eRes <- withKBlocksMetaDB dbModel $ L.getValue' hash
+    L.logInfo $ "Loading result for KBlock hash meta <" +|| hash ||+ ">: " +|| eRes ||+ "."
+    pure eRes
 
 loadNextKBlock :: D.DBModel -> D.StringHash -> L.NodeL (D.DBResult D.KBlock)
 loadNextKBlock dbModel prevHash = do

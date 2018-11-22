@@ -18,7 +18,7 @@ import qualified Enecuum.Core.Types                   as D
 -- kBlocks (kBlock_idx|0 -> prev_hash, kBlock_idx|1 -> kBlock_data)
 -- ------------------------------------------------------------
 -- 0000000|0 AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
--- 0000000|1 {number:0, nonce: 0, solver: 1}
+-- 0000000|1 {time: 0, number:0, nonce: 0, solver: 1}
 
 data KBlockPrevHashEntity
 data KBlockEntity
@@ -67,7 +67,7 @@ instance D.ToDBValue KBlockEntity D.KBlock where
     toDBValue (D.KBlock time _ number nonce solver) = KBlockValue time number nonce solver
 
 instance D.RawDBEntity KBlocksDB KBlockEntity where
-    toRawDBKey (KBlockKey kBlockIdx) = encodeUtf8 $ toKBlockPrevHashEntityKeyBase kBlockIdx
+    toRawDBKey (KBlockKey kBlockIdx) = encodeUtf8 $ toKBlockEntityKeyBase kBlockIdx
     toRawDBValue = LBS.toStrict . A.encode
     fromRawDBValue = A.decode . LBS.fromStrict
 
