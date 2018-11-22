@@ -2,13 +2,11 @@ module Enecuum.Tests.Scenarios.PoASpec where
 
 import qualified Data.Map                             as M
 import qualified Enecuum.Assets.Blockchain.Generation as A
+import qualified Enecuum.Assets.OldScenarios          as Old
 import qualified Enecuum.Assets.Scenarios             as A
-import qualified Enecuum.Assets.Nodes.OldNodes.PoA      as Old
-import qualified Enecuum.Assets.Nodes.OldNodes.GN       as Old
-import qualified Enecuum.Assets.Nodes.OldNodes.PoW.PoW  as Old
-import qualified Enecuum.Domain                         as D
-import qualified Enecuum.Interpreters                   as I
-import qualified Enecuum.Language                       as L
+import qualified Enecuum.Domain                       as D
+import qualified Enecuum.Interpreters                 as I
+import qualified Enecuum.Language                     as L
 import           Enecuum.Prelude
 import qualified Enecuum.Runtime                      as R
 import           Enecuum.Testing.Integrational
@@ -27,7 +25,7 @@ testPoA :: Test
 testPoA = TestCase $ withNodesManager $ \mgr -> do
     let transmiterRpcAddress       = A.getRpcAddress A.defaultGnNodeAddress
 
-    void $ startNode Nothing mgr $ Old.graphNodeTransmitter A.defaultNodeConfig
+    void $ startNode Nothing mgr $ Old.graphNodeTransmitter $ Old.transformConfig2 A.defaultNodeConfig
     void $ startNode Nothing mgr Old.powNode
     void $ startNode Nothing mgr $ Old.poaNode Old.Good Old.defaultPoANodeConfig
 

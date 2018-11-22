@@ -2,10 +2,7 @@ module Enecuum.Tests.Scenarios.PoWSpec where
 
 import qualified Data.Map                             as M
 import qualified Enecuum.Assets.Blockchain.Generation as A
-import qualified Enecuum.Assets.Nodes.OldNodes.PoA      as Old
-import qualified Enecuum.Assets.Nodes.OldNodes.GN       as Old
-import qualified Enecuum.Assets.Nodes.OldNodes.PoW.PoW  as Old
-import qualified Enecuum.Assets.Nodes.OldNodes.PoW.Config  as Old
+import qualified Enecuum.Assets.OldScenarios          as Old
 import qualified Enecuum.Assets.Scenarios             as A
 import qualified Enecuum.Blockchain.Lens              as Lens
 import qualified Enecuum.Domain                       as D
@@ -14,10 +11,10 @@ import qualified Enecuum.Language                     as L
 import           Enecuum.Prelude
 import qualified Enecuum.Runtime                      as R
 import           Enecuum.Testing.Integrational
+import           Enecuum.Tests.Wrappers
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
 import           Test.HUnit
-import           Enecuum.Tests.Wrappers
 
 spec :: Spec
 spec = slowTest $ describe "PoW and graph node interaction" $ fromHUnitTest $ TestList
@@ -37,7 +34,7 @@ powRpcAddress        = A.getRpcAddress A.defaultPoWNodeAddress
 
 testAcceptKblock :: A.Ordering -> Test
 testAcceptKblock order = TestCase $ withNodesManager $ \mgr -> do
-    void $ startNode Nothing mgr $ Old.graphNodeTransmitter A.defaultNodeConfig
+    void $ startNode Nothing mgr $ Old.graphNodeTransmitter $ Old.transformConfig2 A.defaultNodeConfig
     waitForNode transmiterRpcAddress
     void $ startNode Nothing mgr $ Old.powNode' $ Old.defaultPoWNodeConfig { Old._kblocksOrder = order}
     waitForNode powRpcAddress
@@ -59,7 +56,7 @@ testKblockPending = TestCase $ withNodesManager $ \mgr -> do
     -- wait until pow generate kblocks
     threadDelay $ 1000 * 1000
 
-    void $ startNode Nothing mgr $ Old.graphNodeTransmitter A.defaultNodeConfig
+    void $ startNode Nothing mgr $ Old.graphNodeTransmitter $ Old.transformConfig2 A.defaultNodeConfig
     -- only genesisKBlock kblock on graph node
     waitForNode transmiterRpcAddress
     Right topKBlock1 :: Either Text D.KBlock <- makeIORpcRequest transmiterRpcAddress A.GetLastKBlock

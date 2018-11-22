@@ -3,18 +3,16 @@
 module Enecuum.Tests.Scenarios.SyncNodesSpec where
 
 import           Data.Aeson
+import qualified Enecuum.Assets.OldScenarios   as Old
 import qualified Enecuum.Assets.Scenarios      as A
 import qualified Enecuum.Blockchain.Lens       as Lens
-import qualified Enecuum.Assets.Nodes.OldNodes.PoA      as Old
-import qualified Enecuum.Assets.Nodes.OldNodes.GN       as Old
-import qualified Enecuum.Assets.Nodes.OldNodes.PoW.PoW  as Old
 import qualified Enecuum.Domain                as D
 import           Enecuum.Prelude
 import           Enecuum.Testing.Integrational
+import           Enecuum.Tests.Wrappers
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit      (fromHUnitTest)
 import           Test.HUnit
-import           Enecuum.Tests.Wrappers
 
 spec :: Spec
 spec = slowTest $ describe "Synchronization tests" $ fromHUnitTest $ TestList
@@ -28,8 +26,8 @@ testNodeNet = TestCase . withNodesManager $ \mgr -> do
     let powRpcAddress              = A.getRpcAddress A.defaultPoWNodeAddress
     let poaRpcAddress              = A.getRpcAddress A.defaultPoANodeAddress
 
-    let graphNodeTransmitterConfig = A.defaultNodeConfig
-    let graphNodeReceiverConfig    = A.defaultNodeConfig
+    let graphNodeTransmitterConfig = Old.transformConfig2 $ A.defaultNodeConfig
+    let graphNodeReceiverConfig    = Old.transformConfig2 $ A.defaultNodeConfig
             { A._gnNodePorts = A.defaultGnReceiverNodePorts
             , A._rpcSynco  = Just transmiterRpcAddress
             }
@@ -45,7 +43,7 @@ testNodeNet = TestCase . withNodesManager $ \mgr -> do
     waitForNode poaRpcAddress
 
     -- void $ startNode Nothing mgr $ A.graphNodeReceiver graphNodeReceiverConfig
-    void $ startNode Nothing mgr $ Old.graphNodeTransmitter graphNodeReceiverConfig
+    void $ startNode Nothing mgr $ Old.graphNodeTransmitter $ graphNodeReceiverConfig
     waitForNode receiverRpcAddress
 
     -- Ask pow node to generate n kblocks
