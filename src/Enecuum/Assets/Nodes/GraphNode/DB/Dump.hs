@@ -19,12 +19,14 @@ saveKBlock dbModel kBlock = do
     let (k2, v2) = D.toDBEntity @D.KBlockEntity         kBlock
     let (k3, v3) = D.toDBEntity @D.KBlockMetaEntity     kBlock
 
-    L.logInfo $ "[" +|| kBlockIdx ||+ "] Saving KBlock (" +|| D.toHash kBlock ||+ "):"
-    L.logInfo $ "    <" +|| k1 ||+ "> <" +|| v1 ||+ ">"
-    L.logInfo $ "    <" +|| k2 ||+ "> <" +|| v2 ||+ ">"
+    L.logDebug
+          $  "\n    [" +|| kBlockIdx ||+ "] KBlock (" +|| D.toHash kBlock ||+ ")"
+          <> "\n    <" +|| k1 ||+ "> <" +|| v1 ||+ ">"
+          <> "\n    <" +|| k2 ||+ "> <" +|| v2 ||+ ">"
 
-    L.logInfo $ "[" +|| kBlockIdx ||+ "] Saving KBlock meta:"
-    L.logInfo $ "    <" +|| k3 ||+ "> <" +|| v3 ||+ ">"
+    L.logDebug
+          $  "\n    [" +|| kBlockIdx ||+ "] KBlock meta"
+          <> "\n    <" +|| k3 ||+ "> <" +|| v3 ||+ ">"
 
     eResults <- sequence
         [ withKBlocksDB     dbModel $ L.putEntity' @D.KBlockPrevHashEntity kBlock
@@ -41,35 +43,17 @@ saveMBlock' dbModel kBlockIdx (mBlockIdx, mBlock) = do
     let k2 = D.toDBKey   @D.MBlockMetaEntity mBlock
     let v2 = D.toDBValue @D.MBlockMetaEntity (kBlockIdx, mBlockIdx)
 
-    L.logInfo $ "[" +|| kBlockIdx ||+ "] [" +|| mBlockIdx ||+ "] Saving MBlock (" +|| D.toHash mBlock ||+ "):"
-    L.logInfo $ "    <" +|| k1 ||+ "> <" +|| v1 ||+ ">"
+    L.logDebug
+        $  "\n    [" +|| kBlockIdx ||+ "] [" +|| mBlockIdx ||+ "] MBlock (" +|| D.toHash mBlock ||+ ")"
+        <> "\n    <" +|| k1 ||+ "> <" +|| v1 ||+ ">"
 
-    L.logInfo $ "[" +|| kBlockIdx ||+ "] [" +|| mBlockIdx ||+ "] Saving MBlockMeta (" +|| D.toHash mBlock ||+ "):"
-    L.logInfo $ "    <" +|| k2 ||+ "> <" +|| v2 ||+ ">"
+    L.logDebug
+        $  "\n    [" +|| kBlockIdx ||+ "] [" +|| mBlockIdx ||+ "] MBlockMeta"
+        <> "\n    <" +|| k2 ||+ "> <" +|| v2 ||+ ">"
 
     eResults <- sequence
         [ withMBlocksDB     dbModel $ L.putEntity k1 v1
         , withMBlocksMetaDB dbModel $ L.putEntity k2 v2
-        ]
-    pure $ fmap (const ()) $ sequence eResults
-
-saveTransaction :: D.DBModel -> D.KBlockIdx -> D.MBlockIdx -> (D.TransactionIdx, D.Transaction) -> L.NodeL (D.DBResult ())
-saveTransaction dbModel kBlockIdx mBlockIdx (transactionIdx, tx) = do
-    let k1 = D.toDBKey   @D.TransactionEntity (kBlockIdx, mBlockIdx, transactionIdx)
-    let v1 = D.toDBValue @D.TransactionEntity tx
-
-    let k2 = D.toDBKey   @D.TransactionMetaEntity tx
-    let v2 = D.toDBValue @D.TransactionMetaEntity (kBlockIdx, mBlockIdx, transactionIdx)
-
-    L.logInfo $ "[" +|| kBlockIdx ||+ "] [" +|| mBlockIdx ||+ "] [" +|| transactionIdx ||+ "] Saving Transaction:"
-    L.logInfo $ "    <" +|| k1 ||+ "> <" +|| v1 ||+ ">"
-
-    L.logInfo $ "[" +|| kBlockIdx ||+ "] [" +|| mBlockIdx ||+ "] [" +|| transactionIdx ||+ "] Saving TransactionMeta:"
-    L.logInfo $ "    <" +|| k2 ||+ "> <" +|| v2 ||+ ">"
-
-    eResults <- sequence
-        [ withTransactionsDB     dbModel $ L.putEntity k1 v1
-        , withTransactionsMetaDB dbModel $ L.putEntity k2 v2
         ]
     pure $ fmap (const ()) $ sequence eResults
 
@@ -79,6 +63,28 @@ saveMBlock dbModel kBlockIdx (mBlockIdx, mBlock) = do
     eMBlockSaved <- saveMBlock' dbModel kBlockIdx (mBlockIdx, mBlock)
     eTransactionsSaved' <- mapM (saveTransaction dbModel kBlockIdx mBlockIdx) $ zip [1..] txs
     pure $ fmap (const ()) $ sequence $ eMBlockSaved : eTransactionsSaved'
+
+saveTransaction :: D.DBModel -> D.KBlockIdx -> D.MBlockIdx -> (D.TransactionIdx, D.Transaction) -> L.NodeL (D.DBResult ())
+saveTransaction dbModel kBlockIdx mBlockIdx (transactionIdx, tx) = do
+    let k1 = D.toDBKey   @D.TransactionEntity (kBlockIdx, mBlockIdx, transactionIdx)
+    let v1 = D.toDBValue @D.TransactionEntity tx
+
+    let k2 = D.toDBKey   @D.TransactionMetaEntity tx
+    let v2 = D.toDBValue @D.TransactionMetaEntity (kBlockIdx, mBlockIdx, transactionIdx)
+
+    L.logDebug
+        $  "\n    [" +|| kBlockIdx ||+ "] [" +|| mBlockIdx ||+ "] [" +|| transactionIdx ||+ "] Transaction"
+        <> "\n    <" +|| k1 ||+ "> <" +|| v1 ||+ ">"
+
+    L.logDebug
+        $  "\n    [" +|| kBlockIdx ||+ "] [" +|| mBlockIdx ||+ "] [" +|| transactionIdx ||+ "] TransactionMeta"
+        <> "\n    <" +|| k2 ||+ "> <" +|| v2 ||+ ">"
+
+    eResults <- sequence
+        [ withTransactionsDB     dbModel $ L.putEntity k1 v1
+        , withTransactionsMetaDB dbModel $ L.putEntity k2 v2
+        ]
+    pure $ fmap (const ()) $ sequence eResults
 
 dumpToDB' :: G.GraphNodeData -> D.KBlock -> L.NodeL ()
 dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
