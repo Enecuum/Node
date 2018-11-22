@@ -6,7 +6,7 @@
         "defaultBlocksDelay":1000000,
         "tag": "OldPoWNodeConfig",
 				"kblocksOrder": "InOrder",
-			  "graphNodeUDPAddress":  {"host":"127.0.0.1","port":4020},
+			  "graphNodeUDPAddress":  {"host":"127.0.0.1","port":4050},
         "powNodeRpcPort": 6020
 	 },
    "loggerConfig":

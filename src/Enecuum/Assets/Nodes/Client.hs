@@ -17,12 +17,12 @@ import qualified Enecuum.Assets.Nodes.Messages         as M
 import           Enecuum.Assets.Nodes.Routing.Messages
 import           Enecuum.Config
 import qualified Enecuum.Domain                        as D
+import           Enecuum.Framework.Domain.Error
 import           Enecuum.Framework.Language.Extra      (NodeStatus (..))
 import qualified Enecuum.Language                      as L
 import           Enecuum.Prelude                       hiding (map, unpack)
 import           Enecuum.Research.RouteDrawing
 import           Graphics.GD.Extra
-import           Enecuum.Framework.Domain.Error
 
 data ClientNode = ClientNode
     deriving (Show, Generic)
@@ -46,7 +46,7 @@ instance FromJSON (NodeScenario ClientNode) where parseJSON = J.genericParseJSON
 
 type TimeGap = Int
 
-data CreateTransaction              = CreateTransaction CLITransaction D.Address deriving ( Generic, Show, Eq, Ord, Read, ToJSON)
+data CreateTransaction              = CreateTransaction CLITransaction D.Address deriving (Show, Eq, Ord, Read)
 newtype GetLastKBlock               = GetLastKBlock D.Address deriving Read
 data GetWalletBalance               = GetWalletBalance Int D.Address deriving Read
 newtype GetLengthOfChain            = GetLengthOfChain D.Address deriving Read
@@ -54,36 +54,34 @@ newtype StartForeverChainGeneration = StartForeverChainGeneration D.Address deri
 data Ping                           = Ping Protocol D.Address deriving Read
 newtype StopRequest                 = StopRequest D.Address deriving Read
 data GetBlock                       = GetBlock D.StringHash D.Address deriving Read
-data Protocol                       = UDP | TCP | RPC deriving (Generic, Show, Eq, Ord, FromJSON, Read)
+data Protocol                       = UDP | TCP | RPC deriving (Show, Eq, Ord, Read)
 data SendTo                         = SendTo Address D.PortNumber deriving Read
 data Address                        = Address D.Host D.PortNumber deriving Read
 newtype DrawMap                     = DrawMap D.PortNumber deriving Read
+
 data GenerateBlocksPacket           = GenerateBlocksPacket
     { blocks  :: D.BlockNumber
     , timeGap :: TimeGap
     , address :: D.Address
     }
-    deriving (Generic, Read)
+    deriving (Show, Read)
 
 data DumpToDB = DumpToDB
     { address :: D.Address
     }
-    deriving (Generic, Show, Read, FromJSON)
+    deriving (Show, Read)
+
 data RestoreFromDB = RestoreFromDB
     { address :: D.Address
     }
-    deriving (Generic, Show, Read, FromJSON)
+    deriving (Show, Read)
 
 data CLITransaction = CLITransaction
   { _owner    :: String
   , _receiver :: String
   , _amount   :: D.Amount
   , _currency :: D.Currency
-  } deriving ( Generic, Show, Eq, Ord, Read, Serialize)
-
-
-instance ToJSON CLITransaction where toJSON = genericToJSON noLensPrefix
-instance FromJSON CLITransaction where parseJSON = genericParseJSON noLensPrefix
+  } deriving (Show, Eq, Ord, Read)
 
 sendSuccessRequest :: forall a. (ToJSON a, Typeable a) => D.Address -> a -> L.NodeL Text
 sendSuccessRequest address request = do
