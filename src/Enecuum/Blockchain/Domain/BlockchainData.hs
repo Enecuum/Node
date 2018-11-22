@@ -17,10 +17,16 @@ type TransactionPending = Map StringHash Transaction
 -- Currently, pending allows only a single KBlock on each graph level (no forks)
 type KBlockPending = Map.Map BlockNumber KBlock
 
+data WindowedGraph = WindowedGraph
+    { _graph        :: GraphVar
+    , _windowSize   :: StateVar BlockNumber
+    , _bottomKBlock :: StateVar StringHash
+    , _topKBlock    :: StateVar StringHash
+    }
+
 data BlockchainData = BlockchainData
-    { _graph              :: GraphVar
+    { _windowedGraph      :: WindowedGraph
     , _kBlockPending      :: StateVar KBlockPending
     , _transactionPending :: StateVar TransactionPending
-    , _curNode            :: StateVar StringHash
     , _ledger             :: StateVar Ledger
     }

@@ -111,5 +111,5 @@ dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
 dumpToDB :: G.GraphNodeData -> L.NodeL ()
 dumpToDB nodeData = do
     L.logInfo "Dumping to DB..."
-    topKBlock <- L.atomically $ L.getTopKeyBlock (nodeData ^. G.blockchain)
+    topKBlock <- L.atomically $ L.getTopKBlock (nodeData ^. G.blockchain)
     dumpToDB' nodeData topKBlock

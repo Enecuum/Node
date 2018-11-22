@@ -1,16 +1,17 @@
 
 module Enecuum.Assets.Nodes.OldNodes.GN where
 
-import           Enecuum.Prelude
-import qualified Enecuum.Domain                as D
-import qualified Enecuum.Language              as L
-import qualified Enecuum.Assets.Nodes.Address  as A
-import           Enecuum.Config
-import           Enecuum.Assets.Nodes.Methods
-import           Enecuum.Assets.Nodes.GraphNode.Logic
+import qualified Enecuum.Assets.Nodes.Address              as A
 import           Enecuum.Assets.Nodes.GraphNode.Config
 import           Enecuum.Assets.Nodes.GraphNode.DB.Dump
 import           Enecuum.Assets.Nodes.GraphNode.DB.Restore
+import           Enecuum.Assets.Nodes.GraphNode.Logic
+import           Enecuum.Assets.Nodes.Methods
+import qualified Enecuum.Blockchain.Lens                   as Lens
+import           Enecuum.Config
+import qualified Enecuum.Domain                            as D
+import qualified Enecuum.Language                          as L
+import           Enecuum.Prelude
 
 -- | Start of graph node
 graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()
@@ -22,7 +23,7 @@ graphNodeTransmitter nodeCfg = do
 graphNodeTransmitter' :: NodeConfig GraphNode -> GraphNodeData -> L.NodeDefinitionL ()
 graphNodeTransmitter' cfg nodeData = do
     case _rpcSynco cfg of
-        Nothing -> pure ()
+        Nothing              -> pure ()
         Just rpcSyncoAddress -> L.process $ forever $ graphSynchro nodeData rpcSyncoAddress
     L.serving D.Udp (_gnNodePorts cfg ^. A.nodeUdpPort) $ do
         -- network
@@ -75,5 +76,15 @@ graphNodeTransmitter' cfg nodeData = do
         L.awaitSignal $ nodeData ^. checkPendingSignal
         blockFound <- processKBlockPending' nodeData
         when blockFound $ L.writeVarIO (nodeData ^. checkPendingSignal) True
+
+    L.process $ forever $ do
+        L.delay $ 1000 * 1000 * 5
+        graphWindow <- L.atomically $
+            (,,)
+            <$> L.readVar (nodeData ^. blockchain . Lens.wWindowSize)
+            <*> L.readVar (nodeData ^. blockchain . Lens.wBottomKBlock)
+            <*> L.readVar (nodeData ^. blockchain . Lens.wTopKBlock)
+        L.logInfo $ "    Current graph window:"
+                  <> "\n    " <> show graphWindow
 
     L.awaitNodeFinished nodeData

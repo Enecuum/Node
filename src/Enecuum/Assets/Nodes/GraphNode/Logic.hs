@@ -115,7 +115,7 @@ getTransactionPending nodeData _ = do
 getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ = do
     let bData = nodeData ^. blockchain
-    L.atomically $ L.getTopKeyBlock bData
+    L.atomically $ L.getTopKBlock bData
 
 getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
 getBalance nodeData (GetWalletBalance wallet) = do
@@ -129,7 +129,7 @@ getBalance nodeData (GetWalletBalance wallet) = do
 getChainLength :: GraphNodeData -> L.NodeL D.BlockNumber
 getChainLength nodeData = do
     let bData = nodeData ^. blockchain
-    topKBlock <- L.atomically $ L.getTopKeyBlock bData
+    topKBlock <- L.atomically $ L.getTopKBlock bData
     pure $ topKBlock ^. Lens.number
 
 acceptGetChainLengthRequest
@@ -145,7 +145,7 @@ acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
         then pure $ Left "From is greater than to"
         else do
             kBlockList <- L.atomically $ do
-                topKBlock <- L.getTopKeyBlock bData
+                topKBlock <- L.getTopKBlock bData
                 chain <- L.findBlocksByNumber bData from topKBlock
                 pure $ drop (fromEnum $ (topKBlock ^. Lens.number) - to) chain
             pure $ Right $ GetChainFromToResponse (reverse kBlockList)
@@ -171,10 +171,10 @@ initDBModel' :: FilePath -> D.DBOptions -> L.NodeL (Maybe D.DBModel)
 initDBModel' dbModelPath options = do
     void $ L.createFilePath dbModelPath
 
-    eKBlocksDb     <- initDb options dbModelPath
-    eKBlocksMetaDb <- initDb options dbModelPath
-    eMBlocksDb     <- initDb options dbModelPath
-    eMBlocksMetaDb <- initDb options dbModelPath
+    eKBlocksDb          <- initDb options dbModelPath
+    eKBlocksMetaDb      <- initDb options dbModelPath
+    eMBlocksDb          <- initDb options dbModelPath
+    eMBlocksMetaDb      <- initDb options dbModelPath
     eTransactionsDb     <- initDb options dbModelPath
     eTransactionsMetaDb <- initDb options dbModelPath
 
@@ -214,15 +214,31 @@ graphNodeInitialization nodeConfig = L.scenario $ do
     g <- L.newGraph
     L.evalGraphIO g $ L.newNode $ D.KBlockContent D.genesisKBlock
 
+    windowSize   <- L.newVarIO 1
+    bottomKBlock <- L.newVarIO D.genesisHash
+    topKBlock    <- L.newVarIO D.genesisHash
+
+    let windowedGraph = D.WindowedGraph
+          { D._graph        = g
+          , D._windowSize   = windowSize
+          , D._bottomKBlock = bottomKBlock
+          , D._topKBlock    = topKBlock
+          }
+
+    kBlockPending      <- L.newVarIO Map.empty
+    transactionPending <- L.newVarIO Map.empty
+    ledger             <- L.newVarIO Map.empty
+
     nodeData <- L.atomically
-        $  GraphNodeData <$>
-            ( D.BlockchainData g
-                <$> L.newVar Map.empty
-                <*> L.newVar Map.empty
-                <*> L.newVar D.genesisHash
-                <*> L.newVar Map.empty
+        $  GraphNodeData
+            ( D.BlockchainData
+                  { D._windowedGraph      = windowedGraph
+                  , D._kBlockPending      = kBlockPending
+                  , D._transactionPending = transactionPending
+                  , D._ledger             = ledger
+              }
             )
-        <*> L.newVar NodeActing
+        <$> L.newVar NodeActing
         <*> pure nodeConfig
         <*> pure mbDBModel
         <*> L.newVar False
@@ -262,7 +278,7 @@ compareChainLength nodeData address = do
 syncCurrentMacroBlock :: GraphNodeData -> D.Address -> L.NodeL Bool
 syncCurrentMacroBlock nodeData address = do
     let bData = nodeData ^. blockchain
-    topNodeHash <- L.readVarIO $ bData ^. Lens.curNode
+    topNodeHash <- L.readVarIO $ bData ^. Lens.wTopKBlock
     eMBlocks <- L.makeRpcRequest address (GetMBlocksForKBlockRequest topNodeHash)
     case eMBlocks of
         Right (GetMBlocksForKBlockResponse mBlocks) -> do

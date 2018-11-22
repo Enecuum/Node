@@ -2,6 +2,7 @@ module Enecuum.Blockchain.Language.Graph where
 
 import qualified Enecuum.Blockchain.Domain          as D
 import qualified Enecuum.Blockchain.Language.Ledger as L
+import qualified Enecuum.Blockchain.Lens            as Lens
 import qualified Enecuum.Core.Language              as L
 import qualified Enecuum.Core.Types                 as D
 import qualified Enecuum.Framework.Domain           as D
@@ -13,7 +14,7 @@ import           Data.Map
 -- | Get kBlock by Hash
 getKBlock :: D.BlockchainData -> D.StringHash -> L.StateL (Maybe D.KBlock)
 getKBlock bData hash = do
-    (res, mbMsg) <- L.evalGraph (D._graph bData) $ do
+    (res, mbMsg) <- L.evalGraph (bData ^. Lens.wGraph) $ do
         maybeKBlock <- L.getNode hash
         case maybeKBlock of
             Just (D.HNode _ _ (D.fromContent -> D.KBlockContent kBlock) _ _) -> pure (Just kBlock, Nothing)
@@ -22,28 +23,30 @@ getKBlock bData hash = do
     pure res
 
 -- Get Top kBlock
-getTopKeyBlock :: D.BlockchainData -> L.StateL D.KBlock
-getTopKeyBlock bData = do
-    topNodeHash <- L.readVar (D._curNode bData)
+getTopKBlock :: D.BlockchainData -> L.StateL D.KBlock
+getTopKBlock bData = do
+    topNodeHash <- L.readVar (bData ^. Lens.wTopKBlock)
     fromJust <$> getKBlock bData topNodeHash
 
-
--- | Add key block to the top of the graph
+-- | Add key block to the top of the graph.
+-- kBlockSrc is where the KBlock came from. For example, Network or Pending.
 addTopKBlock :: Text -> D.BlockchainData -> D.KBlock -> L.StateL Bool
 addTopKBlock kBlockSrc bData kBlock = do
     L.logInfo $ "Adding " +| kBlockSrc |+ " KBlock to the graph: " +|| kBlock ||+ "."
     let kBlock' = D.KBlockContent kBlock
-    ref <- L.readVar (D._curNode bData)
+    topKBlock <- L.readVar (bData ^. Lens.wTopKBlock)
 
-    eMblocks <- getMBlocksForKBlock bData ref
+    eMblocks <- getMBlocksForKBlock bData topKBlock
     whenRight eMblocks $ \mBlocks -> forM_ mBlocks $ L.calculateLedger bData
 
-    L.evalGraph (D._graph bData) $ do
+    L.evalGraph (bData ^. Lens.wGraph) $ do
         L.newNode kBlock'
-        L.newLink ref kBlock'
+        L.newLink topKBlock kBlock'
+
+    L.modifyVar (bData ^. Lens.wWindowSize) (+ 1)
 
     -- change of curNode.
-    L.writeVar (D._curNode bData) $ D.toHash kBlock'
+    L.writeVar (bData ^. Lens.wTopKBlock) $ D.toHash kBlock'
     pure True
 
 -- | Add microblock to graph
@@ -55,20 +58,20 @@ addMBlock bData mblock@(D.Microblock hash _ _ _) = do
 
     when (isJust kblock) $ do
         L.logInfo $ "Adding MBlock to the graph for KBlock (" +|| hash ||+ ")."
-        L.evalGraph (D._graph bData) $ do
+        L.evalGraph (bData ^. Lens.wGraph) $ do
             L.newNode (D.MBlockContent mblock)
             L.newLink hash (D.MBlockContent mblock)
     pure $ isJust kblock
 
 getMBlocksForKBlock :: D.BlockchainData -> D.StringHash -> L.StateL (Either Text [D.Microblock])
-getMBlocksForKBlock bData hash =  L.evalGraph (D._graph bData) $ do
+getMBlocksForKBlock bData hash =  L.evalGraph (bData ^. Lens.wGraph) $ do
     mbNode <- L.getNode hash
     case mbNode of
         Nothing   -> pure $ Left "KBlock doesn't exist"
         Just node -> Right <$> getMBlocksForKBlock'' node
 
 getMBlocksForKBlock' :: D.BlockchainData -> D.StringHash -> L.StateL [D.Microblock]
-getMBlocksForKBlock' bData hash =  L.evalGraph (D._graph bData) $ do
+getMBlocksForKBlock' bData hash =  L.evalGraph (bData ^. Lens.wGraph) $ do
     mbNode <- L.getNode hash
     case mbNode of
         Nothing   -> pure []
