@@ -48,7 +48,7 @@ acceptNewNode :: BNNodeData -> HelloToBn -> D.Connection D.Udp -> L.NodeL ()
 acceptNewNode nodeData helloToBn conn = L.close conn >> do
     let host    = D.getHostAddress conn
     let nId     = helloToBn ^. senderId
-    let ports   = helloToBn ^. senderPorts 
+    let ports   = helloToBn ^. senderPorts
     when (verifyHelloToBn helloToBn) $ do
         let address = A.makeNodeAddress host ports nId
         L.logInfo $ "New node is accepted. " <> show address
@@ -87,10 +87,10 @@ isDeadAccept nodeData (M.IsDead hash) connect = do
 acceptAddressRequest :: BNNodeData -> AddressRequest -> L.NodeL (Either Text A.NodeAddress)
 acceptAddressRequest nodeData (AddressRequest nodeLogicAddress) = do
     connectMap <- L.readVarIO (nodeData ^. netNodes)
-    let eAddress = getByHash nodeLogicAddress connectMap 
+    let eAddress = getByHash nodeLogicAddress connectMap
     pure $ case eAddress of
         Just address -> Right address
-        Nothing      -> Left "The node not exist in routeMap."
+        Nothing      -> Left "The node doesn't exist in route map."
 
 bnNode' :: NodeConfig BN -> L.NodeDefinitionL ()
 bnNode' _ = do
@@ -99,7 +99,7 @@ bnNode' _ = do
     nodeData <- initBN
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     let bnPorts = A.defaultBnNodePorts
-    -- TODO void -> to proccessing of servin error.
+    -- TODO  Process serving error (it's ignored now).
     void $ L.serving D.Udp (bnPorts ^. A.nodeUdpPort) $ do
         L.handler $ isDeadAccept  nodeData
         L.handler $ acceptNewNode nodeData
