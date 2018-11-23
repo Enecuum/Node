@@ -1,28 +1,52 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE RecordWildCards       #-}
+{-# LANGUAGE TypeInType            #-}
+module Enecuum.Assets.Nodes.OldNodes.GraphNode.GN where
 
-module Enecuum.Assets.Nodes.OldNodes.GN where
-
-import qualified Enecuum.Assets.Nodes.Address              as A
-import           Enecuum.Assets.Nodes.GraphNode.Config
+import qualified Data.Aeson                                     as A
+import qualified Data.Map                                       as Map
+import qualified Enecuum.Assets.Nodes.Address                   as A
+import qualified Enecuum.Assets.Nodes.CLens                     as CLens
+import qualified Enecuum.Assets.Nodes.GraphNode.Config          as New
 import           Enecuum.Assets.Nodes.GraphNode.DB.Dump
 import           Enecuum.Assets.Nodes.GraphNode.DB.Restore
 import           Enecuum.Assets.Nodes.GraphNode.Logic
 import           Enecuum.Assets.Nodes.Methods
-import qualified Enecuum.Blockchain.Lens                   as Lens
+import           Enecuum.Assets.Nodes.OldNodes.GraphNode.Config
+import qualified Enecuum.Blockchain.Lens                        as Lens
 import           Enecuum.Config
-import qualified Enecuum.Domain                            as D
-import qualified Enecuum.Language                          as L
+import qualified Enecuum.Domain                                 as D
+import qualified Enecuum.Language                               as L
 import           Enecuum.Prelude
 
+instance Node OldGraphNode where
+    data NodeScenario OldGraphNode = Transmitter | Receiver
+        deriving (Show, Generic)
+    getNodeScript Transmitter = graphNodeTransmitter
+    getNodeScript Receiver    = graphNodeTransmitter
+
+instance ToJSON   (NodeScenario OldGraphNode) where toJSON    = A.genericToJSON nodeConfigJsonOptions
+instance FromJSON (NodeScenario OldGraphNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+
+transformConfig :: NodeConfig OldGraphNode -> NodeConfig New.GraphNode
+transformConfig OldGraphNodeConfig{..} = New.GraphNodeConfig _dbConfig _gnNodePorts A.defaultBnNodeAddress _rpcSynco
+-- transformConfig OldGraphNodeConfig{..} = New.GraphNodeConfig _dbConfig _gnNodePorts  _rpcSynco
+
+transformConfig2 :: NodeConfig New.GraphNode -> NodeConfig OldGraphNode
+transformConfig2 New.GraphNodeConfig{..} = OldGraphNodeConfig _dbConfig _gnNodePorts _rpcSynco
+-- transformConfig2 New.GraphNodeConfig{..} = OldGraphNodeConfig _dbConfig _gnNodePorts _rpcSynco
+
 -- | Start of graph node
-graphNodeTransmitter :: NodeConfig GraphNode -> L.NodeDefinitionL ()
-graphNodeTransmitter nodeCfg = do
+graphNodeTransmitter :: NodeConfig OldGraphNode -> L.NodeDefinitionL ()
+graphNodeTransmitter cfg = do
+    let nodeCfg = transformConfig cfg
     L.nodeTag "graphNodeTransmitter"
     eNodeData <- graphNodeInitialization nodeCfg
-    either L.logError (graphNodeTransmitter' nodeCfg) eNodeData
+    either L.logError (graphNodeTransmitter' cfg) eNodeData
 
-graphNodeTransmitter' :: NodeConfig GraphNode -> GraphNodeData -> L.NodeDefinitionL ()
+graphNodeTransmitter' :: NodeConfig OldGraphNode -> GraphNodeData -> L.NodeDefinitionL ()
 graphNodeTransmitter' cfg nodeData = do
-    case _rpcSynco cfg of
+    case _rpcSynco cfg  of
         Nothing              -> pure ()
         Just rpcSyncoAddress -> L.process $ forever $ graphSynchro nodeData rpcSyncoAddress
     L.serving D.Udp (_gnNodePorts cfg ^. A.nodeUdpPort) $ do

@@ -1,6 +1,6 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
-module Enecuum.Assets.Nodes.OldNodes.NN (nnNode, NN, NodeConfig (..)) where
+module Enecuum.Assets.Nodes.OldNodes.GraphNode.NN (nnNode, NN, NodeConfig (..)) where
 
 import qualified Data.Aeson                       as J
 import qualified Enecuum.Assets.Nodes.Address     as A

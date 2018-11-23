@@ -28,7 +28,7 @@
         "logFilePath": "/tmp/log/poa.log",
         "format":"$prio $loggername: $msg",
         "logToConsole":true,
-		"logToFile": true,
+		    "logToFile": true,
         "level":"Debug"
         }
 }

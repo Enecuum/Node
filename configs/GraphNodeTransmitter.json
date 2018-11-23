@@ -1,0 +1,36 @@
+{
+   "node":"OldGraphNode",
+   "nodeScenario":"Transmitter",
+   "nodeConfig":
+        {
+        "dbConfig":
+            {
+            "stopOnDatabaseError": true,
+            "tag": "DBConfig",
+            "dbOptions":
+                {
+                "errorIfExists":false,
+                "createIfMissing":true
+                },
+            "dbModelName": "graph_node_transmitter.dbm",
+            "useDatabase":true,
+            "useEnqHomeDir":true
+            },
+        "tag": "OldGraphNodeConfig",
+        "gnNodePorts":
+            {
+            "_nodeTcpPort": 5050,
+            "_nodeUdpPort": 4050,
+            "_nodeRpcPort": 6050
+            },
+						"rpcSynco": null,
+				},
+   "loggerConfig":
+        {
+            "logFilePath":"/tmp/log/GraphNodeTransmitter.log",
+            "format":"$prio $loggername: $msg",
+            "logToConsole":true,
+            "logToFile": true,
+            "level":"Debug"
+        }
+}
