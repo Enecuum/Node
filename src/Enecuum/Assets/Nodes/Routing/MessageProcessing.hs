@@ -51,6 +51,11 @@ udpForwardIfNeeded routingRuntime message handler
 
 
 -- send usp msg to node
+udpMsgSending :: (ToJSON a, Typeable a, L.SendUdp m,
+                HasConnectMap s (D.StateVar (ChordRouteMap A.NodeAddress)),
+                L.StateIO m, L.Logger m, Monad m,
+                HasNodeReceiverId a D.StringHash) =>
+                s -> a -> m ()
 udpMsgSending routingRuntime message = do
     let receiverId = message ^. nodeReceiverId
     L.logInfo $ "Resending to " <> show receiverId

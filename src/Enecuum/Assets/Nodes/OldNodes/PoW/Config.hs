@@ -30,6 +30,7 @@ instance FromJSON OldPoWNode              where parseJSON = J.genericParseJSON n
 defaultBlocksDelay :: BlocksDelay
 defaultBlocksDelay = 1000 * 1000
 
+defaultPoWNodeConfig :: NodeConfig OldPoWNode
 defaultPoWNodeConfig = OldPoWNodeConfig
     defaultBlocksDelay
     A.InOrder

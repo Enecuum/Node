@@ -2,7 +2,7 @@ module Enecuum.Assets.Nodes.Routing.RoutingWorker (runRouting) where
 
 import qualified Enecuum.Assets.Nodes.Address     as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
-import           Enecuum.Assets.Nodes.Methods
+-- import           Enecuum.Assets.Nodes.Methods
 import qualified Enecuum.Domain                   as D
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude

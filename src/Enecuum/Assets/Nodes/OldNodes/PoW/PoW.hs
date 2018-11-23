@@ -9,7 +9,6 @@ module Enecuum.Assets.Nodes.OldNodes.PoW.PoW where
 import qualified Data.Aeson                           as J
 import           Data.HGraph.StringHashable           (StringHash (..), toHash)
 import qualified Enecuum.Assets.Blockchain.Generation as A
-import qualified Enecuum.Assets.Nodes.CLens           as CLens
 import qualified Enecuum.Assets.Nodes.Messages        as Msgs
 import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.OldNodes.PoW.Config as Old
@@ -18,7 +17,7 @@ import qualified Enecuum.Domain                       as D
 import           Enecuum.Framework.Language.Extra     (HasStatus, NodeStatus (..))
 import qualified Enecuum.Language                     as L
 import           Enecuum.Prelude
-import           Control.Lens (Getter, to)
+import           Control.Lens (to)
 
 type IterationsCount = Int
 type EnableDelays = Bool

@@ -3,7 +3,6 @@ module Enecuum.Assets.Nodes.OldNodes.GraphNode.Config where
 
 import qualified Data.Aeson                            as A
 import           Enecuum.Assets.Nodes.Address
--- import           Enecuum.Assets.Nodes.GraphNode.Config
 import qualified Enecuum.Assets.Nodes.GraphNode.Config as Prd
 import           Enecuum.Config
 import qualified Enecuum.Domain                        as D
@@ -45,8 +44,9 @@ noDBConfig' = Prd.DBConfig
     }
 
 defaultNodeConfig :: NodeConfig OldGraphNode
-defaultNodeConfig = OldGraphNodeConfig
-    { _dbConfig     = noDBConfig'
-    , _gnNodePorts  = defaultGnNodePorts
-    , _rpcSynco     = Nothing
-    }
+defaultNodeConfig = OldGraphNodeConfig noDBConfig' defaultGnNodePorts Nothing
+
+    -- { _dbConfig     = noDBConfig'
+    -- , _gnNodePorts  = defaultGnNodePorts
+    -- , _rpcSynco     = Nothing
+    -- }
