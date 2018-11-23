@@ -86,8 +86,9 @@ acceptMBlock' nodeData mBlock = do
     when microblockValid $ do
         L.logInfo $ "Microblock " +|| toHash mBlock ||+ " is accepted."
         let bData = nodeData ^. blockchain
+        let wndGraph = bData ^. Lens.windowedGraph
         void $ L.atomically $ do
-            void $ L.addMBlock bData mBlock
+            void $ L.addMBlock wndGraph mBlock
             let tx = mBlock ^. Lens.transactions
             let fun :: D.Transaction -> D.TransactionPending -> D.TransactionPending
                 fun t = Map.delete (toHash t)
@@ -113,14 +114,14 @@ getTransactionPending nodeData _ = do
         pure $ map snd $ take transactionsToTransfer $ Map.toList trans
 
 getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
-getLastKBlock nodeData _ = do
-    let bData = nodeData ^. blockchain
-    L.atomically $ L.getTopKBlock bData
+getLastKBlock nodeData _ =
+    L.atomically $ L.getTopKBlock $ nodeData ^. blockchain . Lens.windowedGraph
 
 getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
 getBalance nodeData (GetWalletBalance wallet) = do
     L.logInfo $ "Requested balance for wallet " +|| D.showPublicKey wallet ||+ "."
     let bData = nodeData ^. blockchain
+
     curLedger <- L.readVarIO $ bData ^. Lens.ledger
     case curLedger ^. at wallet of
         Just balance -> pure $ Right $ WalletBalanceMsg wallet balance
@@ -128,8 +129,7 @@ getBalance nodeData (GetWalletBalance wallet) = do
 
 getChainLength :: GraphNodeData -> L.NodeL D.BlockNumber
 getChainLength nodeData = do
-    let bData = nodeData ^. blockchain
-    topKBlock <- L.atomically $ L.getTopKBlock bData
+    topKBlock <- L.atomically $ L.getTopKBlock $ nodeData ^. blockchain . Lens.windowedGraph
     pure $ topKBlock ^. Lens.number
 
 acceptGetChainLengthRequest
@@ -141,12 +141,14 @@ acceptChainFromTo :: GraphNodeData -> GetChainFromToRequest -> L.NodeL (Either T
 acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
     L.logInfo $ "Answering chain from " +|| from ||+ " to " +|| to ||+ "."
     let bData = nodeData ^. blockchain
+    let wndGraph = bData ^. Lens.windowedGraph
+
     if from > to
         then pure $ Left "From is greater than to"
         else do
             kBlockList <- L.atomically $ do
-                topKBlock <- L.getTopKBlock bData
-                chain <- L.findBlocksByNumber bData from topKBlock
+                topKBlock <- L.getTopKBlock wndGraph
+                chain <- L.findBlocksByNumber wndGraph from topKBlock
                 pure $ drop (fromEnum $ (topKBlock ^. Lens.number) - to) chain
             pure $ Right $ GetChainFromToResponse (reverse kBlockList)
 
@@ -154,7 +156,7 @@ getMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL (E
 getMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
     L.logInfo $ "Get microblocks for kBlock " +|| hash ||+ "."
     let bData = nodeData ^. blockchain
-    GetMBlocksForKBlockResponse <<$>> (L.atomically $ L.getMBlocksForKBlock bData hash)
+    GetMBlocksForKBlockResponse <<$>> (L.atomically $ L.getMBlocksForKBlock (bData ^. Lens.windowedGraph) hash)
 
 initDb :: forall db. D.DB db => D.DBOptions -> FilePath -> L.NodeL (D.DBResult (D.Storage db))
 initDb options dbModelPath = do
@@ -278,12 +280,13 @@ compareChainLength nodeData address = do
 syncCurrentMacroBlock :: GraphNodeData -> D.Address -> L.NodeL Bool
 syncCurrentMacroBlock nodeData address = do
     let bData = nodeData ^. blockchain
+    let wndGraph = bData ^. Lens.windowedGraph
     topNodeHash <- L.readVarIO $ bData ^. Lens.wTopKBlock
     eMBlocks <- L.makeRpcRequest address (GetMBlocksForKBlockRequest topNodeHash)
     case eMBlocks of
         Right (GetMBlocksForKBlockResponse mBlocks) -> do
             L.logInfo $ "Mblocks received for kBlock " +|| topNodeHash ||+ " : " +|| mBlocks ||+ "."
-            L.atomically $ forM_ mBlocks (L.addMBlock bData)
+            L.atomically $ forM_ mBlocks (L.addMBlock wndGraph)
         Left err -> L.logError $ "Error of sync of current macroblock: " <> err
     pure $ isRight eMBlocks
 
@@ -313,3 +316,28 @@ graphSynchro nodeData address = compareChainLength nodeData address >>= \case
             chainTail <- getKBlockChain address curChainLength otherLength
             tryTakeMBlockChain chainTail nodeData address
     _ -> pure ()
+
+
+shrinkGraphWindow :: GraphNodeData -> D.BlockNumber -> L.NodeL ()
+shrinkGraphWindow nodeData wndSizeThreshold = L.atomically $ do
+    let bData = nodeData ^. blockchain
+    let wndGraph = bData ^. Lens.windowedGraph
+
+    graphWindow@(wndSize, bottomKBlockHash, topKBlockHash) <- (,,)
+        <$> L.readVar (wndGraph ^. Lens.windowSize)
+        <*> L.readVar (wndGraph ^. Lens.bottomKBlock)
+        <*> L.readVar (wndGraph ^. Lens.topKBlock)
+
+    mbTopKBlock <- L.getKBlock wndGraph topKBlockHash
+
+    when (isNothing mbTopKBlock) $ L.logError "Chain is broken."
+    whenJust mbTopKBlock $ \topKBlock -> do
+
+        when (wndSize <= wndSizeThreshold) $ L.logInfo "Shrink not needed."
+        when (wndSize >  wndSizeThreshold) $ do
+
+            let newBottomKBlockNumber = 1 + (topKBlock ^. Lens.number) - wndSizeThreshold
+            L.logInfo $ "New bottomKBlock number: " <> show newBottomKBlockNumber
+
+            L.shrinkGraph bData newBottomKBlockNumber topKBlock
+            --L.logInfo $ "Shrinked. New bottomKBlock: " <> show newBottomKBlockHash

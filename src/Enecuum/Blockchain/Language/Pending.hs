@@ -18,7 +18,7 @@ import           Enecuum.Prelude
 -- TODO: support check of "already exist k-block"
 validateKBlock :: BlockchainData -> D.KBlock -> L.StateL D.KBlockValidity
 validateKBlock bData kBlock = do
-    topKBlock <- L.getTopKBlock bData
+    topKBlock <- L.getTopKBlock $ bData ^. Lens.windowedGraph
 
     let nextBlock    = L.kBlockIsNext kBlock topKBlock
     let prevBlock    = L.kBlockExists kBlock topKBlock
@@ -69,7 +69,7 @@ addKBlock bData kBlock = do
 --   Return true if function had effect.
 processKBlockPending :: BlockchainData -> L.NodeL Bool
 processKBlockPending bData = L.atomically $ do
-    topKBlock <- L.getTopKBlock bData
+    topKBlock <- L.getTopKBlock $ bData ^. Lens.windowedGraph
     pending   <- L.readVar (_kBlockPending bData)
 
     let nextKBlockNumber = topKBlock ^. Lens.number + 1

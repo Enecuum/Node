@@ -1,3 +1,5 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Enecuum.Blockchain.Domain.BlockchainData where
 
 import           Data.HGraph.StringHashable            (StringHash)

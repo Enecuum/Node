@@ -94,7 +94,10 @@ dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
     let kBlockHash     = D.toHash kBlock
     let genesisReached = kBlockPrevHash == D.genesisIndicationHash
 
-    mBlocks         <- L.atomically $ L.getMBlocksForKBlock' (nodeData ^. G.blockchain) kBlockHash
+    let bData = nodeData ^. G.blockchain
+    let wndGraph = bData ^. Lens.windowedGraph
+
+    mBlocks         <- L.atomically $ L.getMBlocksForKBlock' wndGraph kBlockHash
 
     eKBlockResult   <- saveKBlock dbModel kBlock
     eMBlocksResults <- mapM (saveMBlock dbModel kBlockIdx) $ zip [1..] mBlocks
@@ -103,7 +106,7 @@ dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
         Right _ | genesisReached -> L.logInfo "Dumping done: Genesis reached."
         Left err                 -> L.logError $ show err
         _ -> do
-            mbPrevKBlock <- L.atomically $ L.getKBlock (nodeData ^. G.blockchain) kBlockPrevHash
+            mbPrevKBlock <- L.atomically $ L.getKBlock wndGraph kBlockPrevHash
             case mbPrevKBlock of
                 Nothing         -> L.logError $ "Prev KBlock not found in graph: " +|| kBlockPrevHash ||+ "."
                 Just prevKBlock -> dumpToDB' nodeData prevKBlock
@@ -111,5 +114,5 @@ dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
 dumpToDB :: G.GraphNodeData -> L.NodeL ()
 dumpToDB nodeData = do
     L.logInfo "Dumping to DB..."
-    topKBlock <- L.atomically $ L.getTopKBlock (nodeData ^. G.blockchain)
+    topKBlock <- L.atomically $ L.getTopKBlock $ nodeData ^. G.blockchain . Lens.windowedGraph
     dumpToDB' nodeData topKBlock

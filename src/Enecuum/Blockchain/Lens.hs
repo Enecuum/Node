@@ -21,8 +21,8 @@ makeFieldsNoPrefix ''KBlock
 makeFieldsNoPrefix ''WindowedGraph
 makeFieldsNoPrefix ''BlockchainData
 
-
--- Short lenses: BlockchainData -> WindowedGraph
+--
+-- -- Short lenses: BlockchainData -> WindowedGraph
 
 wGraph :: Lens' BlockchainData GraphVar
 wGraph = windowedGraph . graph
