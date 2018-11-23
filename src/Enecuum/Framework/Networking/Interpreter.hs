@@ -20,6 +20,9 @@ import           Enecuum.Framework.Networking.Internal.Client
 import qualified Network.Socket as S hiding (recv, send)
 
 
+deleteConnection :: (Ord k,
+                    RLens.HasTcpConnects s (TMVar (Map k a)), MonadIO m) =>
+                    s -> k -> m ()
 deleteConnection nodeRt conn = do
     connects <- atomically $ takeTMVar $ nodeRt ^. RLens.tcpConnects
     let newConnects = M.delete conn connects 

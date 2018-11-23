@@ -80,6 +80,9 @@ withConnection protocol address f = do
             pure $ Just a
         Nothing -> pure Nothing
 
+listener :: (Connection m con, Typeable con, Typeable t,
+            Typeable m, Monad m, FromJSON t) =>
+            (t -> m ()) -> NetworkHandlerL con m ()        
 listener !f = handler (\a conn -> void (close conn) >> f a)
 
 class Connection a con where

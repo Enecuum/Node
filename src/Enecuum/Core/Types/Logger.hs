@@ -31,6 +31,7 @@ standardFormat = "$prio $loggername: $msg"
 nullFormat :: String
 nullFormat = "$msg"
 
+defaultLoggerConfig :: LoggerConfig
 defaultLoggerConfig = LoggerConfig
     { _format = standardFormat
     , _level = Debug

@@ -1,5 +1,5 @@
 {
-   "node":"OldGraphNode",
+   "node":"TstGraphNode",
    "nodeScenario":"Transmitter",
    "nodeConfig":
         {
@@ -16,7 +16,7 @@
             "useDatabase":false,
             "useEnqHomeDir":true
             },
-        "tag": "OldGraphNodeConfig",
+        "tag": "TstGraphNodeConfig",
         "gnNodePorts":
             {
             "_nodeTcpPort": 5040,

@@ -51,6 +51,7 @@ instance FromJSON (NodeConfig PoANode)   where parseJSON = A.genericParseJSON no
 instance ToJSON   (NodeScenario PoANode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario PoANode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
+defaultPoANodeConfig :: NodeConfig PoANode
 defaultPoANodeConfig = PoANodeConfig A.defaultPoANodePorts A.defaultBnNodeAddress
 
 showTransactions :: D.Microblock -> Text

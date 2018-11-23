@@ -3,7 +3,7 @@
 module Enecuum.Tests.Scenarios.SyncNodesSpec where
 
 import           Data.Aeson
-import qualified Enecuum.Assets.OldScenarios   as Old
+import qualified Enecuum.Assets.TstScenarios   as Tst
 import qualified Enecuum.Assets.Scenarios      as A
 import qualified Enecuum.Blockchain.Lens       as Lens
 import qualified Enecuum.Domain                as D
@@ -26,24 +26,24 @@ testNodeNet = TestCase . withNodesManager $ \mgr -> do
     let powRpcAddress              = A.getRpcAddress A.defaultPoWNodeAddress
     let poaRpcAddress              = A.getRpcAddress A.defaultPoANodeAddress
 
-    let graphNodeTransmitterConfig = Old.transformConfig2 $ A.defaultNodeConfig
-    let graphNodeReceiverConfig    = Old.transformConfig2 $ A.defaultNodeConfig
-            { A._gnNodePorts = A.defaultGnReceiverNodePorts
-            , A._rpcSynco  = Just transmiterRpcAddress
-            }
+    let graphNodeTransmitterConfig = Tst.defaultNodeConfig
+    let graphNodeReceiverConfig    = Tst.defaultNodeConfig
+                    { Tst._gnNodePorts = A.defaultGnReceiverNodePorts
+                    , Tst._rpcSynco  = Just transmiterRpcAddress
+                    }
 
     -- Start nodes
-    void $ startNode Nothing mgr $ Old.graphNodeTransmitter graphNodeTransmitterConfig
+    void $ startNode Nothing mgr $ Tst.graphNodeTransmitter graphNodeTransmitterConfig
     waitForNode transmiterRpcAddress
 
-    void $ startNode Nothing mgr Old.powNode
+    void $ startNode Nothing mgr Tst.powNode
     waitForNode powRpcAddress
 
-    void $ startNode Nothing mgr $ Old.poaNode Old.Good Old.defaultPoANodeConfig
+    void $ startNode Nothing mgr $ Tst.poaNode Tst.Good Tst.defaultPoANodeConfig
     waitForNode poaRpcAddress
 
     -- void $ startNode Nothing mgr $ A.graphNodeReceiver graphNodeReceiverConfig
-    void $ startNode Nothing mgr $ Old.graphNodeTransmitter $ graphNodeReceiverConfig
+    void $ startNode Nothing mgr $ Tst.graphNodeTransmitter graphNodeReceiverConfig
     waitForNode receiverRpcAddress
 
     -- Ask pow node to generate n kblocks

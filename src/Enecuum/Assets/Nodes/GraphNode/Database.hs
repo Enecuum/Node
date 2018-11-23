@@ -107,12 +107,12 @@ saveKBlockMeta dbModel kBlock = do
 
 -- Interface
 
-withDBModel :: G.GraphNodeData -> (D.DBModel -> L.NodeL ()) -> L.NodeL ()
+withDBModel :: (G.GraphNodeData' node) -> (D.DBModel -> L.NodeL ()) -> L.NodeL ()
 withDBModel nodeData act = case nodeData ^. G.db of
     Nothing      -> pure ()
     Just dbModel -> act dbModel
 
-restoreFromDB' :: G.GraphNodeData -> D.StringHash -> L.NodeL ()
+restoreFromDB' :: (G.GraphNodeData' node) -> D.StringHash -> L.NodeL ()
 restoreFromDB' nodeData kBlockHash = withDBModel nodeData $ \dbModel -> do
     eKBlock <- loadNextKBlock dbModel kBlockHash
     case eKBlock of
@@ -123,12 +123,12 @@ restoreFromDB' nodeData kBlockHash = withDBModel nodeData $ \dbModel -> do
             G.acceptKBlock' nodeData kBlock
             restoreFromDB' nodeData $ D.toHash kBlock
 
-restoreFromDB :: G.GraphNodeData -> L.NodeL ()
+restoreFromDB :: (G.GraphNodeData' node) -> L.NodeL ()
 restoreFromDB nodeData = do
     L.logInfo "Trying to restore from DB..."
     restoreFromDB' nodeData D.genesisHash
 
-dumpToDB' :: G.GraphNodeData -> D.KBlock -> L.NodeL ()
+dumpToDB' :: (G.GraphNodeData' node) -> D.KBlock -> L.NodeL ()
 dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
 
     eResults <- sequence
@@ -148,7 +148,7 @@ dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
                 Nothing         -> L.logError $ "Prev KBlock not found in graph: " +|| kBlock ^. Lens.prevHash ||+ "."
                 Just prevKBlock -> dumpToDB' nodeData prevKBlock
 
-dumpToDB :: G.GraphNodeData -> L.NodeL ()
+dumpToDB :: (G.GraphNodeData' node) -> L.NodeL ()
 dumpToDB nodeData = do
     L.logInfo "Dumping to DB..."
     topKBlock <- L.atomically $ L.getTopKeyBlock (nodeData ^. G.blockchain)
