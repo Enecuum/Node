@@ -9,7 +9,7 @@ import           Enecuum.Config
 import qualified Enecuum.Domain as D
 import           Enecuum.Assets.Nodes.GraphNode.Config
 import           Enecuum.Assets.Nodes.PoW.Config as PoW
-import           Enecuum.Assets.Nodes.OldNodes.PoW.Config
+import           Enecuum.Assets.Nodes.TstNodes.PoW.Config
 
 useDatabase :: Getter (NodeConfig GraphNode) Bool
 useDatabase = to (_useDatabase . _dbConfig)

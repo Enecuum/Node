@@ -1,5 +1,5 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-module Enecuum.Assets.Nodes.OldNodes.GraphNode.Config where
+module Enecuum.Assets.Nodes.TstNodes.GraphNode.Config where
 
 import qualified Data.Aeson                            as A
 import           Enecuum.Assets.Nodes.Address
@@ -8,22 +8,22 @@ import           Enecuum.Config
 import qualified Enecuum.Domain                        as D
 import           Enecuum.Prelude
 
-data OldGraphNode = OldGraphNode
+data TstGraphNode = TstGraphNode
     deriving (Show, Generic)
 
-data instance NodeConfig OldGraphNode = OldGraphNodeConfig
+data instance NodeConfig TstGraphNode = TstGraphNodeConfig
     { _dbConfig     :: Prd.DBConfig
     , _gnNodePorts  :: NodePorts
     , _rpcSynco     :: Maybe D.Address
     }
     deriving (Show, Generic)
 
-instance ToJSON   OldGraphNode              where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON OldGraphNode              where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   TstGraphNode              where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON TstGraphNode              where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 -- instance ToJSON   DBConfig                  where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 -- instance FromJSON DBConfig                  where parseJSON = A.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeConfig OldGraphNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeConfig OldGraphNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig TstGraphNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig TstGraphNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
 -- data DBConfig = DBConfig
 --     { _useDatabase         :: Bool        -- ^ If True, DB will be used to restore the state on the start and dump the state during work.
@@ -43,8 +43,8 @@ noDBConfig' = Prd.DBConfig
     , Prd._stopOnDatabaseError = True
     }
 
-defaultNodeConfig :: NodeConfig OldGraphNode
-defaultNodeConfig = OldGraphNodeConfig noDBConfig' defaultGnNodePorts Nothing
+defaultNodeConfig :: NodeConfig TstGraphNode
+defaultNodeConfig = TstGraphNodeConfig noDBConfig' defaultGnNodePorts Nothing
 
     -- { _dbConfig     = noDBConfig'
     -- , _gnNodePorts  = defaultGnNodePorts

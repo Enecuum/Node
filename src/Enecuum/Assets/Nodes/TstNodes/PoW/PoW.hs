@@ -4,14 +4,14 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
 
-module Enecuum.Assets.Nodes.OldNodes.PoW.PoW where
+module Enecuum.Assets.Nodes.TstNodes.PoW.PoW where
 
 import qualified Data.Aeson                           as J
 import           Data.HGraph.StringHashable           (StringHash (..), toHash)
 import qualified Enecuum.Assets.Blockchain.Generation as A
 import qualified Enecuum.Assets.Nodes.Messages        as Msgs
 import           Enecuum.Assets.Nodes.Methods
-import           Enecuum.Assets.Nodes.OldNodes.PoW.Config as Old
+import           Enecuum.Assets.Nodes.TstNodes.PoW.Config as Tst
 import           Enecuum.Config
 import qualified Enecuum.Domain                       as D
 import           Enecuum.Framework.Language.Extra     (HasStatus, NodeStatus (..))
@@ -22,7 +22,7 @@ import           Control.Lens (to)
 type IterationsCount = Int
 type EnableDelays = Bool
 
-data OldPoWNodeData = OldPoWNodeData
+data TstPoWNodeData = TstPoWNodeData
     { _prevHash            :: D.StateVar StringHash
     , _prevNumber          :: D.StateVar D.BlockNumber
     , _requiredBlockNumber :: D.StateVar D.BlockNumber
@@ -30,17 +30,17 @@ data OldPoWNodeData = OldPoWNodeData
     , _status              :: D.StateVar NodeStatus
     }
 
-makeFieldsNoPrefix ''OldPoWNodeData
+makeFieldsNoPrefix ''TstPoWNodeData
 
-instance Node OldPoWNode where
-    data NodeScenario OldPoWNode = PoW
+instance Node TstPoWNode where
+    data NodeScenario TstPoWNode = PoW
         deriving (Show, Generic)
     getNodeScript _ = powNode'
 
-instance ToJSON   (NodeScenario OldPoWNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeScenario OldPoWNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario TstPoWNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario TstPoWNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
-kBlockProcess :: D.Address -> OldPoWNodeData -> L.NodeL ()
+kBlockProcess :: D.Address -> TstPoWNodeData -> L.NodeL ()
 kBlockProcess graphNodeUdpAddress nodeData = do
     prevKBlockHash      <- L.readVarIO $ nodeData ^. prevHash
     prevKBlockNumber    <- L.readVarIO $ nodeData ^. prevNumber
@@ -57,12 +57,12 @@ kBlockProcess graphNodeUdpAddress nodeData = do
             void $ L.send conn kBlock
             when (gap > 0) $ L.delay gap
 
-foreverChainGenerationHandle :: OldPoWNodeData -> Msgs.ForeverChainGeneration -> L.NodeL Msgs.SuccessMsg
+foreverChainGenerationHandle :: TstPoWNodeData -> Msgs.ForeverChainGeneration -> L.NodeL Msgs.SuccessMsg
 foreverChainGenerationHandle powNodeData _ = do
     L.writeVarIO (powNodeData ^. requiredBlockNumber) (10 ^ (6 :: Int))
     pure Msgs.SuccessMsg
 
-nBlockPacketGenerationHandle :: OldPoWNodeData -> Msgs.NBlockPacketGeneration -> L.NodeL Msgs.SuccessMsg
+nBlockPacketGenerationHandle :: TstPoWNodeData -> Msgs.NBlockPacketGeneration -> L.NodeL Msgs.SuccessMsg
 nBlockPacketGenerationHandle powNodeData (Msgs.NBlockPacketGeneration i gap) = do
     L.atomically $ do
         L.modifyVar (powNodeData ^. requiredBlockNumber) (+ i)
@@ -73,7 +73,7 @@ nBlockPacketGenerationHandle powNodeData (Msgs.NBlockPacketGeneration i gap) = d
 powNode :: L.NodeDefinitionL ()
 powNode = powNode' defaultPoWNodeConfig
 
-powNode' :: NodeConfig OldPoWNode -> L.NodeDefinitionL ()
+powNode' :: NodeConfig TstPoWNode -> L.NodeDefinitionL ()
 powNode' cfg = do
     L.nodeTag "PoW node"
 
@@ -97,14 +97,14 @@ powNode' cfg = do
 
     L.awaitNodeFinished nodeData
 
-powNodeInitialization ::  NodeConfig OldPoWNode -> StringHash -> L.NodeL OldPoWNodeData
+powNodeInitialization ::  NodeConfig TstPoWNode -> StringHash -> L.NodeL TstPoWNodeData
 powNodeInitialization cfg genesisHash = do
     h <- L.newVarIO genesisHash
     n <- L.newVarIO 1
     b <- L.newVarIO 0
-    g <- L.newVarIO $ cfg ^. (to Old._defaultBlocksDelay)
+    g <- L.newVarIO $ cfg ^. (to Tst._defaultBlocksDelay)
     f <- L.newVarIO NodeActing
-    pure $ OldPoWNodeData
+    pure $ TstPoWNodeData
         { _prevHash = h
         , _prevNumber= n
         , _requiredBlockNumber = b

@@ -4,7 +4,7 @@
 module App.Initialize where
 
 import qualified Data.Map                        as M
-import qualified Enecuum.Assets.OldScenarios     as Old
+import qualified Enecuum.Assets.TstScenarios     as Tst
 import qualified Enecuum.Assets.Scenarios        as A
 import           Enecuum.Assets.System.Directory (clientStory)
 import qualified Enecuum.Config                  as Cfg
@@ -86,9 +86,9 @@ initialize configSrc = do
             , runNode' $ Cfg.dispatchScenario @A.TestClient configSrc
             , runNode' $ Cfg.dispatchScenario @A.TestServer configSrc
 
-            , runNode' $ Cfg.dispatchScenario @Old.OldGraphNode configSrc
-            , runNode' $ Cfg.dispatchScenario @Old.OldPoWNode   configSrc
-            , runNode' $ Cfg.dispatchScenario @Old.OldPoaNode   configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.TstGraphNode configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.TstPoWNode   configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.TstPoaNode   configSrc
             ]
 
     results <- sequence runners

@@ -1,4 +1,4 @@
-module Enecuum.Assets.Nodes.OldNodes.GraphNode.Initialization where
+module Enecuum.Assets.Nodes.TstNodes.GraphNode.Initialization where
 
 import qualified Data.Aeson                                     as A
 import qualified Data.Map                                       as Map
@@ -7,8 +7,8 @@ import qualified Enecuum.Assets.Nodes.GraphNode.Config          as Prd
 import qualified Enecuum.Assets.Nodes.GraphNode.Database        as Prd
 import           Enecuum.Assets.Nodes.GraphNode.Logic
 import           Enecuum.Assets.Nodes.Methods
-import qualified Enecuum.Assets.Nodes.OldNodes.GraphNode.CLens  as CLens
-import           Enecuum.Assets.Nodes.OldNodes.GraphNode.Config
+import qualified Enecuum.Assets.Nodes.TstNodes.GraphNode.CLens  as CLens
+import           Enecuum.Assets.Nodes.TstNodes.GraphNode.Config
 import           Enecuum.Config
 import qualified Enecuum.Domain                                 as D
 import qualified Enecuum.Language                               as L
@@ -18,10 +18,10 @@ import qualified Enecuum.Assets.System.Directory  as L
 import qualified Enecuum.Blockchain.DB            as D
 import           System.FilePath                  ((</>))
 
-type OldGraphNodeData = GraphNodeData' OldGraphNode
+type TstGraphNodeData = GraphNodeData' TstGraphNode
 
-initOldDBModel :: NodeConfig OldGraphNode -> L.NodeL (Maybe D.DBModel)
-initOldDBModel nodeConfig = do
+initTstDBModel :: NodeConfig TstGraphNode -> L.NodeL (Maybe D.DBModel)
+initTstDBModel nodeConfig = do
 
     parentDir <- if nodeConfig ^. CLens.useEnqHomeDir
         then L.getEnecuumDir
@@ -31,14 +31,13 @@ initOldDBModel nodeConfig = do
     initDBModel' dbModelPath $ nodeConfig ^. CLens.dbOptions
 
 -- | Initialization of graph node
-graphNodeOldInitialization :: NodeConfig OldGraphNode -> L.NodeDefinitionL (Either Text OldGraphNodeData)
--- graphNodeOldInitialization nodeConfig = undefined
-graphNodeOldInitialization nodeConfig = L.scenario $ do
+graphNodeTstInitialization :: NodeConfig TstGraphNode -> L.NodeDefinitionL (Either Text TstGraphNodeData)
+graphNodeTstInitialization nodeConfig = L.scenario $ do
     let useDb       = nodeConfig ^. CLens.useDatabase
     let stopOnDbErr = nodeConfig ^. CLens.stopOnDatabaseError
 
     mbDBModel <- if useDb
-        then initOldDBModel nodeConfig
+        then initTstDBModel nodeConfig
         else pure Nothing
 
     g <- L.newGraph
