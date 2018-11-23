@@ -3,19 +3,20 @@
 
 module App.Initialize where
 
-import qualified Data.Map                        as M
-import qualified Enecuum.Assets.TstScenarios     as Tst
-import qualified Enecuum.Assets.Scenarios        as A
-import           Enecuum.Assets.System.Directory (clientStory)
-import qualified Enecuum.Config                  as Cfg
-import qualified Enecuum.Core.Lens               as Lens
-import qualified Enecuum.Domain                  as D
-import           Enecuum.Interpreters            (clearNodeRuntime, runFileSystemL, runNodeDefinitionL)
-import qualified Enecuum.Language                as L
+import qualified Data.Map                         as M
+import           Enecuum.Assets.Nodes.ParseConfig (parseConfig)
+import qualified Enecuum.Assets.Scenarios         as A
+import           Enecuum.Assets.System.Directory  (clientStory)
+import qualified Enecuum.Assets.TstScenarios      as Tst
+import qualified Enecuum.Config                   as Cfg
+import qualified Enecuum.Core.Lens                as Lens
+import qualified Enecuum.Domain                   as D
+import           Enecuum.Interpreters             (clearNodeRuntime, runFileSystemL, runNodeDefinitionL)
+import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude
-import           Enecuum.Runtime                 (clearCoreRuntime, clearLoggerRuntime, createCoreRuntime,
-                                                  createLoggerRuntime, createNodeRuntime)
-import qualified Enecuum.Runtime                 as R
+import           Enecuum.Runtime                  (clearCoreRuntime, clearLoggerRuntime, createCoreRuntime,
+                                                   createLoggerRuntime, createNodeRuntime)
+import qualified Enecuum.Runtime                  as R
 
 createLoggerRuntime' :: D.LoggerConfig -> IO R.LoggerRuntime
 createLoggerRuntime' loggerConfig' = do
@@ -76,6 +77,9 @@ runNode' (Just (cfg, node)) = do
 
 initialize :: LByteString -> IO ()
 initialize configSrc = do
+    -- Try to parse config of unknown type (parseConfig failure invoke error)
+    parseConfig configSrc
+    -- Figure out type of node and run appropriate script
     let runners =
             [ runNode' $ Cfg.dispatchScenario @A.GraphNode  configSrc
             , runNode' $ Cfg.dispatchScenario @A.PoANode    configSrc
@@ -90,8 +94,4 @@ initialize configSrc = do
             , runNode' $ Cfg.dispatchScenario @Tst.TstPoWNode   configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstPoaNode   configSrc
             ]
-
-    results <- sequence runners
-    case catMaybes results of
-        [] -> putStrLn @Text "Invalid config passed: node not found."
-        _  -> pure ()
+    void $ sequence runners
