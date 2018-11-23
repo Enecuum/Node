@@ -25,7 +25,7 @@ testPoA :: Test
 testPoA = TestCase $ withNodesManager $ \mgr -> do
     let transmiterRpcAddress       = A.getRpcAddress A.defaultGnNodeAddress
 
-    void $ startNode Nothing mgr $ Old.graphNodeTransmitter $ Old.transformConfig2 A.defaultNodeConfig
+    void $ startNode Nothing mgr $ Old.graphNodeTransmitter $ Old.defaultNodeConfig
     void $ startNode Nothing mgr Old.powNode
     void $ startNode Nothing mgr $ Old.poaNode Old.Good Old.defaultPoANodeConfig
 

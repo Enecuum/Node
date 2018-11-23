@@ -24,7 +24,7 @@ spec = slowTest $ describe "Test invalid signature" $ fromHUnitTest $ TestList
 
 testInvalidTransaction :: Test
 testInvalidTransaction = TestCase $ withNodesManager $ \mgr -> do
-    void $ startNode Nothing mgr $ Old.graphNodeTransmitter $ Old.transformConfig2 A.defaultNodeConfig
+    void $ startNode Nothing mgr $ Old.graphNodeTransmitter $ Old.defaultNodeConfig
     void $ startNode Nothing mgr Old.powNode
     void $ startNode Nothing mgr $ Old.poaNode Old.Good Old.defaultPoANodeConfig
     let transmiterRpcAddress       = A.getRpcAddress A.defaultGnNodeAddress
@@ -50,7 +50,7 @@ testInvalidTransaction = TestCase $ withNodesManager $ \mgr -> do
 
 testInvalidMicroblock :: Test
 testInvalidMicroblock = TestCase $ withNodesManager $ \mgr -> do
-    void $ startNode Nothing mgr $ Old.graphNodeTransmitter $ Old.transformConfig2 A.defaultNodeConfig
+    void $ startNode Nothing mgr $ Old.graphNodeTransmitter $ Old.defaultNodeConfig
     void $ startNode Nothing mgr Old.powNode
     void $ startNode Nothing mgr $ Old.poaNode Old.Bad Old.defaultPoANodeConfig
     let transmiterRpcAddress    = A.getRpcAddress A.defaultGnNodeAddress

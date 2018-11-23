@@ -32,7 +32,7 @@ dumpAndRestoreGraphTest = do
             , A._dbOptions           = dbOpts
             , A._stopOnDatabaseError = True
             }
-    let cfg = A.defaultNodeConfig { A._dbConfig = dbConfig }
+    let cfg = Old.defaultNodeConfig { Old._dbConfig = dbConfig }
     let blocksCount = 10
     let blocksDelay = 0
     let loggerCfg = Nothing
@@ -44,7 +44,7 @@ dumpAndRestoreGraphTest = do
     TestCase $ withDbAbsence dbPath $ withNodesManager $ \mgr -> do
         -- Starting nodes.
         print @Text "Starting GraphNodeTransmitter"
-        transmitterNode1 <- startNode loggerCfg mgr $ Old.graphNodeTransmitter $ Old.transformConfig2 cfg
+        transmitterNode1 <- startNode loggerCfg mgr $ Old.graphNodeTransmitter cfg
         waitForNode transmiterRpcAddress
 
         print @Text "Starting PoW"
@@ -79,7 +79,7 @@ dumpAndRestoreGraphTest = do
 
         print @Text "Starting node, checking there are no blocks."
         -- Starting node, checking there are no blocks.
-        void $ startNode loggerCfg mgr $ Old.graphNodeTransmitter $ Old.transformConfig2 cfg
+        void $ startNode loggerCfg mgr $ Old.graphNodeTransmitter cfg
         waitForNode transmiterRpcAddress
 
         Right genesisKBlock :: Either Text D.KBlock <- makeIORpcRequest transmiterRpcAddress A.GetLastKBlock

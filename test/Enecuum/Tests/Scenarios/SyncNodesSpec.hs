@@ -26,11 +26,11 @@ testNodeNet = TestCase . withNodesManager $ \mgr -> do
     let powRpcAddress              = A.getRpcAddress A.defaultPoWNodeAddress
     let poaRpcAddress              = A.getRpcAddress A.defaultPoANodeAddress
 
-    let graphNodeTransmitterConfig = Old.transformConfig2 $ A.defaultNodeConfig
-    let graphNodeReceiverConfig    = Old.transformConfig2 $ A.defaultNodeConfig
-            { A._gnNodePorts = A.defaultGnReceiverNodePorts
-            , A._rpcSynco  = Just transmiterRpcAddress
-            }
+    let graphNodeTransmitterConfig = Old.defaultNodeConfig
+    let graphNodeReceiverConfig    = Old.defaultNodeConfig
+                    { Old._gnNodePorts = A.defaultGnReceiverNodePorts
+                    , Old._rpcSynco  = Just transmiterRpcAddress
+                    }
 
     -- Start nodes
     void $ startNode Nothing mgr $ Old.graphNodeTransmitter graphNodeTransmitterConfig
@@ -43,7 +43,7 @@ testNodeNet = TestCase . withNodesManager $ \mgr -> do
     waitForNode poaRpcAddress
 
     -- void $ startNode Nothing mgr $ A.graphNodeReceiver graphNodeReceiverConfig
-    void $ startNode Nothing mgr $ Old.graphNodeTransmitter $ graphNodeReceiverConfig
+    void $ startNode Nothing mgr $ Old.graphNodeTransmitter graphNodeReceiverConfig
     waitForNode receiverRpcAddress
 
     -- Ask pow node to generate n kblocks

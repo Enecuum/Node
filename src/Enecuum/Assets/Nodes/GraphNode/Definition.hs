@@ -2,12 +2,12 @@
 
 module Enecuum.Assets.Nodes.GraphNode.Definition where
 
+import qualified Data.Aeson                                 as A
 import           Enecuum.Prelude
-import qualified Data.Aeson as A
 
-import           Enecuum.Config
-import           Enecuum.Assets.Nodes.GraphNode.Transmitter (graphNodeTransmitter)
 import           Enecuum.Assets.Nodes.GraphNode.Config
+import           Enecuum.Assets.Nodes.GraphNode.Transmitter (graphNodeTransmitter)
+import           Enecuum.Config
 
 instance Node GraphNode where
     data NodeScenario GraphNode = Transmitter

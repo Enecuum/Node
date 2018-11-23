@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 -- | Lenses for node configs.
 module Enecuum.Assets.Nodes.CLens where
 
