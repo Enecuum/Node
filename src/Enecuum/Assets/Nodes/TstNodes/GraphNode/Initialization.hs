@@ -1,22 +1,15 @@
 module Enecuum.Assets.Nodes.TstNodes.GraphNode.Initialization where
 
-import qualified Data.Aeson                                     as A
 import qualified Data.Map                                       as Map
-import qualified Enecuum.Assets.Nodes.Address                   as A
-import qualified Enecuum.Assets.Nodes.GraphNode.Config          as Prd
-import qualified Enecuum.Assets.Nodes.GraphNode.Database        as Prd
 import           Enecuum.Assets.Nodes.GraphNode.Logic
-import           Enecuum.Assets.Nodes.Methods
 import qualified Enecuum.Assets.Nodes.TstNodes.GraphNode.CLens  as CLens
 import           Enecuum.Assets.Nodes.TstNodes.GraphNode.Config
-import           Enecuum.Config
+import qualified Enecuum.Assets.System.Directory                as L
+import qualified Enecuum.Blockchain.DB                          as D
 import qualified Enecuum.Domain                                 as D
 import qualified Enecuum.Language                               as L
 import           Enecuum.Prelude
-import qualified Enecuum.Language                 as L
-import qualified Enecuum.Assets.System.Directory  as L
-import qualified Enecuum.Blockchain.DB            as D
-import           System.FilePath                  ((</>))
+import           System.FilePath                                ((</>))
 
 type TstGraphNodeData = GraphNodeData' TstGraphNode
 
