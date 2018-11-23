@@ -26,15 +26,15 @@ routingWorker routingRuntime = do
     builtIntoTheNetwork routingRuntime
     -- delete connects if now exist better
     L.periodic (1000 * 1000)  $ clearingOfConnects routingRuntime
-    -- clockwise structure refinement
+    -- refine structure with clockwise direction
     L.periodic (1000 * 10000) $ successorsRequest  routingRuntime
-    -- anti-clockwise structure refinement
+    -- refine structure with anti-clockwise direction
     L.periodic (1000 * 1000)  $ sendHelloToPrevious routingRuntime
-    -- clearing of list for familiar messages
+    -- cleare list of "familiar" messages
     L.periodic (1000 * 1000)  $
         L.modifyVarIO (routingRuntime ^. msgFilter)
             (\seq -> Set.empty Seq.<| Seq.deleteAt 2 seq)
-    -- deleting of deads nodes
+    -- delete dead nodes
     L.periodic (1000 * 1000)  $ do
         deadNodes <- pingConnects =<< getConnects routingRuntime
         forM_ deadNodes $ \hash -> do
@@ -50,7 +50,7 @@ builtIntoTheNetwork routingRuntime =
 registerWithBn :: A.NodePorts -> A.NodeId -> BnAddress -> L.NodeDefinitionL A.NodeAddress
 registerWithBn nodePorts' myNodeId' bnAddress' = do
     let privateKey   =  True
-    -- Ask the BN for what address we are in until she answers.
+    -- Ask boot node about our current node address (until we get the answer).
     helloToBn        <- makeHelloToBn privateKey nodePorts' myNodeId'
     let takeAddress i =  do
             void $ L.notify (A.getUdpAddress bnAddress') helloToBn
@@ -61,7 +61,7 @@ registerWithBn nodePorts' myNodeId' bnAddress' = do
                     L.logError $ "Error " <> show i <> " in address accepting: " <> err
                     L.delay $ i * 1000 * 1000
                     takeAddress $ i + 1
-    L.scenario $ takeAddress 0 
+    L.scenario $ takeAddress 0
 
 sendHelloToPrevious :: RoutingRuntime -> L.NodeL ()
 sendHelloToPrevious routingRuntime = do
@@ -84,7 +84,7 @@ pingConnects nodes = do
     pure $ catMaybes deadNodes
 
 -- sending requests to the network to clarify the map of connections
--- successors may be better connections than those that are now.
+-- successors can be "better" connects than current connects.
 successorsRequest :: RoutingRuntime -> L.NodeL ()
 successorsRequest routingRuntime = do
     -- clarify the map of connections
@@ -120,8 +120,7 @@ nextRequest routingRuntime = do
             L.modifyVarIO (routingRuntime ^. connectMap) (addToMap receivedNodeId address)
         _ -> pure ()
 
--- leave in the list of connections only those
--- that satisfy the conditions of the chord algorithm
+-- clear list of connects ( connect must satisfy the prerequisites of the chord algorithm )
 clearingOfConnects :: RoutingRuntime -> L.NodeL ()
 clearingOfConnects routingRuntime = do
     connects <- getConnects routingRuntime
