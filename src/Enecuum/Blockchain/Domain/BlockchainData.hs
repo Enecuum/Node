@@ -20,10 +20,10 @@ type TransactionPending = Map StringHash Transaction
 type KBlockPending = Map.Map BlockNumber KBlock
 
 data WindowedGraph = WindowedGraph
-    { _graph        :: GraphVar
-    , _windowSize   :: StateVar BlockNumber
-    , _bottomKBlock :: StateVar StringHash
-    , _topKBlock    :: StateVar StringHash
+    { _graph            :: GraphVar
+    , _windowSize       :: StateVar BlockNumber
+    , _bottomKBlockHash :: StateVar StringHash
+    , _topKBlockHash    :: StateVar StringHash
     }
 
 data BlockchainData = BlockchainData

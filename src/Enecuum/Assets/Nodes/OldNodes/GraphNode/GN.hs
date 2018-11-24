@@ -102,18 +102,9 @@ graphNodeTransmitter' cfg nodeData = do
         when blockFound $ L.writeVarIO (nodeData ^. checkPendingSignal) True
 
     -- TODO: configs
-    let wndSizeThreshold = 10
+    let wndSizeThreshold = 100
     L.process $ forever $ do
-        L.delay $ 1000 * 1000 * 5
-        graphWindow@(wndSize, _, _) <- L.atomically $
-            (,,)
-            <$> L.readVar (nodeData ^. blockchain . Lens.wWindowSize)
-            <*> L.readVar (nodeData ^. blockchain . Lens.wBottomKBlock)
-            <*> L.readVar (nodeData ^. blockchain . Lens.wTopKBlock)
-        L.logInfo $ "    Current graph window:"
-                  <> "\n    " <> show graphWindow
-        when (wndSize > wndSizeThreshold) $ do
-            L.logInfo "    Window is too big, making cut..."
-            shrinkGraphWindow nodeData wndSizeThreshold
+        L.delay $ 1000 * 1000
+        shrinkGraphWindow nodeData wndSizeThreshold
 
     L.awaitNodeFinished nodeData

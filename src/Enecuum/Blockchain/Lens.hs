@@ -30,8 +30,8 @@ wGraph = windowedGraph . graph
 wWindowSize :: Lens' BlockchainData (StateVar BlockNumber)
 wWindowSize = windowedGraph . windowSize
 
-wBottomKBlock :: Lens' BlockchainData (StateVar StringHash)
-wBottomKBlock = windowedGraph . bottomKBlock
+wBottomKBlockHash :: Lens' BlockchainData (StateVar StringHash)
+wBottomKBlockHash = windowedGraph . bottomKBlockHash
 
-wTopKBlock :: Lens' BlockchainData (StateVar StringHash)
-wTopKBlock = windowedGraph . topKBlock
+wTopKBlockHash :: Lens' BlockchainData (StateVar StringHash)
+wTopKBlockHash = windowedGraph . topKBlockHash
