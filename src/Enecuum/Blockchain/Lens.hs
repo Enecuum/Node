@@ -27,8 +27,8 @@ makeFieldsNoPrefix ''BlockchainData
 wGraph :: Lens' BlockchainData GraphVar
 wGraph = windowedGraph . graph
 
-wWindowSize :: Lens' BlockchainData (StateVar BlockNumber)
-wWindowSize = windowedGraph . windowSize
+-- wWindowSize :: Lens' BlockchainData (StateVar BlockNumber)
+-- wWindowSize = windowedGraph . windowSize
 
 wBottomKBlockHash :: Lens' BlockchainData (StateVar StringHash)
 wBottomKBlockHash = windowedGraph . bottomKBlockHash

@@ -216,13 +216,11 @@ graphNodeInitialization nodeConfig = L.scenario $ do
     g <- L.newGraph
     L.evalGraphIO g $ L.newNode $ D.KBlockContent D.genesisKBlock
 
-    windowSize       <- L.newVarIO 1
     bottomKBlockHash <- L.newVarIO D.genesisHash
     topKBlockHash    <- L.newVarIO D.genesisHash
 
     let windowedGraph = D.WindowedGraph
           { D._graph        = g
-          , D._windowSize   = windowSize
           , D._bottomKBlockHash = bottomKBlockHash
           , D._topKBlockHash    = topKBlockHash
           }
@@ -320,30 +318,38 @@ graphSynchro nodeData address = compareChainLength nodeData address >>= \case
 
 shrinkGraphWindow :: GraphNodeData -> D.BlockNumber -> L.NodeL ()
 shrinkGraphWindow nodeData wndSizeThreshold = do
-    -- Separate atomic block to see if the cut is needed.
-    -- It might be the cutting process is very long and can happen to rare,
-    -- so logs from it can be seen very rare too. But we need to know the process
-    -- is going.
-    wndSize <- L.readVarIO (nodeData ^. blockchain . Lens.wWindowSize)
-    when (wndSize > wndSizeThreshold) $ L.logInfo
-        $  "Current graph window: " <> show wndSize
-        <> " exceeds wndSizeThreshold: " <> show wndSizeThreshold
+    let bData    = nodeData ^. blockchain
+    let wndGraph = bData    ^. Lens.windowedGraph
 
-    L.atomically $ do
-      let bData = nodeData ^. blockchain
-      let wndGraph = bData ^. Lens.windowedGraph
+    (bottomKBlockHash, topKBlockHash) <- (,)
+        <$> L.readVarIO (wndGraph ^. Lens.bottomKBlockHash)
+        <*> L.readVarIO (wndGraph ^. Lens.topKBlockHash)
 
-      -- Double check is needed here.
-      (wndSize, topKBlockHash) <- (,)
-          <$> L.readVar (wndGraph ^. Lens.windowSize)
-          <*> L.readVar (wndGraph ^. Lens.topKBlockHash)
+    (mbBottomKNode, mbTopKNode) <- (,)
+        <$> (L.atomically $ L.getKBlockNode wndGraph bottomKBlockHash)
+        <*> (L.atomically $ L.getKBlockNode wndGraph topKBlockHash)
 
-      mbKNode <- L.getKBlockNode wndGraph topKBlockHash
+    case (mbBottomKNode, mbTopKNode) of
+        (Nothing, _) -> L.logError $ "Node not found: " <> show bottomKBlockHash
+        (_, Nothing) -> L.logError $ "Node not found: " <> show topKBlockHash
+        (Just bottomKNode, Just topKNode) -> do
+            let bottomNumber    = L.getKNodeNumber bottomKNode
+            let topNumber       = L.getKNodeNumber topKNode
+            let newBottomNumber = 1 + topNumber - wndSizeThreshold
+            let wndSize         = 1 + topNumber - bottomNumber
 
-      case (wndSize > wndSizeThreshold, mbKNode) of
-          (False, _)                     -> pure ()
-          (_, Nothing)                   -> L.logError $ "Node not found: " <> show topKBlockHash
-          (True, Just kNode@(kBlock, _)) -> do
-              let bottomKBlockNumber = 1 + (kBlock ^. Lens.number) - wndSizeThreshold
-              L.logInfo $ "Making cut. New bottom KBlock number: " <> show bottomKBlockNumber
-              L.shrinkGraph bData wndSizeThreshold bottomKBlockNumber kNode
+            when (wndSize > wndSizeThreshold) $ do
+                L.logInfo $  "Current graph window: " <> show wndSize
+                          <> " exceeds wndSizeThreshold: " <> show wndSizeThreshold
+
+                mbNewBottomKNode <- L.atomically $
+                    L.findKBlockNodeDownward' wndGraph (L.FindByNumber newBottomNumber) (Just topKNode)
+
+                whenJust mbNewBottomKNode $ \newBottomKNode -> do
+                    let newBottomKBlockHash = L.getKNodeHash newBottomKNode
+
+                    L.logInfo $ "New bottom kBlock [" +|| newBottomNumber ||+ "]: " <> show newBottomKBlockHash
+                    L.atomically $ L.writeVar (wndGraph ^. Lens.bottomKBlockHash) newBottomKBlockHash
+
+                    L.logInfo "Making cut."
+                    L.atomically $ L.shrinkGraphDownFrom wndGraph (snd newBottomKNode)

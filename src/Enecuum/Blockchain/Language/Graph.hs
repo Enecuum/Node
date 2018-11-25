@@ -125,6 +125,13 @@ kBlockIsNext kBlock topKBlock =
 kBlockExists :: D.KBlock -> D.KBlock -> Bool
 kBlockExists kBlock topKBlock = D._number kBlock <= D._number topKBlock
 
+-- TODO: make this lenses
+getKNodeNumber :: KNode -> D.BlockNumber
+getKNodeNumber (kBlock, _) = kBlock ^. Lens.number
+
+getKNodeHash :: KNode -> D.StringHash
+getKNodeHash (_, node) = node ^. Lens.hash
+
 -- Graph scenarios
 
 -- | Add key block to the top of the graph.
@@ -142,9 +149,6 @@ addTopKBlock kBlockSrc bData kBlock = do
         L.newNode kBlock'
         L.newLink topKBlockHash kBlock'
 
-    L.modifyVar (bData ^. Lens.wWindowSize) (+ 1)
-
-    -- change of curNode.
     L.writeVar (bData ^. Lens.wTopKBlockHash) $ D.toHash kBlock'
     pure True
 
@@ -168,18 +172,9 @@ shrinkGraphDownFrom wndGraph node = do
     case preds of
         ([], []) -> pure ()
         (nodes, rLinks) -> do
-            L.logInfo $ "Deleting predecessor links, nodes: " <> show (length rLinks)
-                <> foldr (\rLink s -> "\n    " <> show rLink <> s) "" rLinks
+            -- L.logInfo $ "Deleting predecessor links, nodes: " <> show (length rLinks)
+            --     <> foldr (\rLink s -> "\n    " <> show rLink <> s) "" rLinks
             L.evalGraph (D._graph wndGraph) $ do
                 mapM_ (L.deleteLink (node ^. Lens.hash)) rLinks
                 mapM_ (L.deleteNode . view Lens.hash) nodes
             mapM_ (shrinkGraphDownFrom wndGraph) nodes
-
-shrinkGraph :: D.BlockchainData -> D.BlockNumber -> D.BlockNumber -> KNode -> L.StateL ()
-shrinkGraph bData wndSizeThreshold bottomKBlockNumber kNode@(kBlock, _) = do
-    let wndGraph = bData ^. Lens.windowedGraph
-    mbKNode <- findKBlockNodeDownward' wndGraph (FindByNumber bottomKBlockNumber) (Just kNode)
-    whenJust mbKNode $ \(_, node) -> do
-        shrinkGraphDownFrom wndGraph node
-        L.writeVar (wndGraph ^. Lens.bottomKBlockHash) $ node ^. Lens.hash
-        L.writeVar (wndGraph ^. Lens.windowSize) wndSizeThreshold
