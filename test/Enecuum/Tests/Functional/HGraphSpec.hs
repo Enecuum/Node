@@ -1,30 +1,30 @@
 
+{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE DeriveAnyClass      #-}
 
 module Enecuum.Tests.Functional.HGraphSpec where
 
-import qualified Data.Map as M
+import qualified Data.Aeson                          as A
+import qualified Data.Map                            as M
 import           Data.Maybe
 import           Test.HUnit
-import qualified Data.Aeson as A
 
+import           Enecuum.Domain                      as D
 import           Enecuum.Prelude
-import           Enecuum.Domain as D
 
-import           Enecuum.Core.HGraph.Interpreters.IO ( runHGraphIO )
-import           Enecuum.Core.HGraph.Internal.Impl ( initHGraph )
+import           Enecuum.Core.HGraph.Internal.Impl   (initHGraph)
+import           Enecuum.Core.HGraph.Interpreters.IO (runHGraphIO)
 import           Enecuum.Core.HGraph.Language
 
-import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit (fromHUnitTest)
-import           Test.QuickCheck (property)
 import           Enecuum.Tests.Wrappers
+import           Test.Hspec
+import           Test.Hspec.Contrib.HUnit            (fromHUnitTest)
+import           Test.QuickCheck                     (property)
 
 data SomeStructure = SomeStructure
     { someData :: String
-    , someInt :: Int
+    , someInt  :: Int
     }
   deriving (Generic, Serialize)
 
@@ -94,8 +94,8 @@ testDeleteNodeByContent = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
     ok                         <- runHGraphIO newGraph $ do
         newNode (123 :: Int64)
-        deleteNode (123 :: Int64)
-        isNothing <$> getNode (toHash @Int64 123)
+        deleted <- deleteNode' (123 :: Int64)
+        (&& deleted) . isNothing <$> getNode (toHash @Int64 123)
     assertBool "" ok
 
 testDeleteNodeByHash :: Test
@@ -103,8 +103,8 @@ testDeleteNodeByHash = TestCase $ do
     newGraph :: D.TGraph Int64 <- initHGraph
     ok                         <- runHGraphIO newGraph $ do
         newNode (123 :: Int64)
-        deleteNode $ toHash (123 :: Int64)
-        isNothing <$> getNode (toHash @Int64 123)
+        deleted <- deleteNode' $ toHash (123 :: Int64)
+        (&& deleted) . isNothing <$> getNode (toHash @Int64 123)
     assertBool "" ok
 
 testDeleteNodeByRef :: Test
@@ -113,8 +113,8 @@ testDeleteNodeByRef = TestCase $ do
     ok                         <- runHGraphIO newGraph $ do
         newNode (123 :: Int64)
         (HNode _ ref _ _ _) <- fromJust <$> getNode (toHash @Int64 123)
-        deleteNode ref
-        isNothing <$> getNode (123 :: Int64)
+        deleted <- deleteNode' ref
+        (&& deleted) . isNothing <$> getNode (123 :: Int64)
     assertBool "" ok
 
 testNewLinkByContent :: Test
@@ -159,9 +159,9 @@ testDeleteLinkByContent = TestCase $ do
         newNode 123
         newNode 125
         newLink    (123 :: Int64) (125 :: Int64)
-        deleteLink (123 :: Int64) (125 :: Int64)
+        deleted <- deleteLink' (123 :: Int64) (125 :: Int64)
         (HNode _ _ _ l _) <- fromJust <$> getNode (toHash @Int64 123)
-        pure $ M.notMember (toHash @Int64 125) l
+        pure $ deleted && M.notMember (toHash @Int64 125) l
     assertBool "" ok
 
 testDeleteLinkByHash :: Test
@@ -171,9 +171,9 @@ testDeleteLinkByHash = TestCase $ do
         newNode 123
         newNode 125
         newLink    (123 :: Int64)      (125 :: Int64)
-        deleteLink (toHash @Int64 123) (toHash @Int64 125)
+        deleted <- deleteLink' (toHash @Int64 123) (toHash @Int64 125)
         (HNode _ _ _ l _) <- fromJust <$> getNode (toHash @Int64 123)
-        pure $ M.notMember (toHash @Int64 125) l
+        pure $ deleted && M.notMember (toHash @Int64 125) l
     assertBool "" ok
 
 testDeleteLinkByRef :: Test
@@ -185,9 +185,9 @@ testDeleteLinkByRef = TestCase $ do
         newLink (123 :: Int64) (125 :: Int64)
         (HNode _ r1 _ _ _) <- fromJust <$> getNode (toHash @Int64 123)
         (HNode _ r2 _ _ _) <- fromJust <$> getNode (toHash @Int64 125)
-        deleteLink r1 r2
+        deleted <- deleteLink' r1 r2
         (HNode _ _ _ l _) <- fromJust <$> getNode (toHash @Int64 123)
-        pure $ M.notMember (toHash @Int64 125) l
+        pure $ deleted && M.notMember (toHash @Int64 125) l
     assertBool "" ok
 
 testListLikeGraph :: Test
@@ -208,4 +208,3 @@ testListLikeGraph = TestCase $ do
             , not (M.member (toHash @Int64 127) l1)
             ]
     assertBool "" ok
-

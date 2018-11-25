@@ -168,13 +168,8 @@ addMBlock wndGraph mblock@(D.Microblock hash _ _ _) = do
 
 shrinkGraphDownFrom :: D.WindowedGraph -> D.GraphNode -> L.StateL ()
 shrinkGraphDownFrom wndGraph node = do
-    preds <- getPredecessors wndGraph node
-    case preds of
-        ([], []) -> pure ()
-        (nodes, rLinks) -> do
-            -- L.logInfo $ "Deleting predecessor links, nodes: " <> show (length rLinks)
-            --     <> foldr (\rLink s -> "\n    " <> show rLink <> s) "" rLinks
-            L.evalGraph (D._graph wndGraph) $ do
-                mapM_ (L.deleteLink (node ^. Lens.hash)) rLinks
-                mapM_ (L.deleteNode . view Lens.hash) nodes
-            mapM_ (shrinkGraphDownFrom wndGraph) nodes
+    (nodes, rLinks) <- getPredecessors wndGraph node
+    L.evalGraph (D._graph wndGraph) $ do
+        mapM_ (\l -> L.deleteLink' l (node ^. Lens.hash)) rLinks
+        mapM_ (L.deleteNode' . view Lens.hash) nodes
+    mapM_ (shrinkGraphDownFrom wndGraph) nodes

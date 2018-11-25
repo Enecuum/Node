@@ -315,7 +315,9 @@ graphSynchro nodeData address = compareChainLength nodeData address >>= \case
             tryTakeMBlockChain chainTail nodeData address
     _ -> pure ()
 
-
+-- | Shrinking graph beside the window.
+-- N.B. All these functions are living in separate transactions
+-- Becase the transactions should be small as possible.
 shrinkGraphWindow :: GraphNodeData -> D.BlockNumber -> L.NodeL ()
 shrinkGraphWindow nodeData wndSizeThreshold = do
     let bData    = nodeData ^. blockchain
@@ -325,9 +327,9 @@ shrinkGraphWindow nodeData wndSizeThreshold = do
         <$> L.readVarIO (wndGraph ^. Lens.bottomKBlockHash)
         <*> L.readVarIO (wndGraph ^. Lens.topKBlockHash)
 
-    (mbBottomKNode, mbTopKNode) <- (,)
-        <$> (L.atomically $ L.getKBlockNode wndGraph bottomKBlockHash)
-        <*> (L.atomically $ L.getKBlockNode wndGraph topKBlockHash)
+    (mbBottomKNode, mbTopKNode) <- L.atomically $ (,)
+        <$> (L.getKBlockNode wndGraph bottomKBlockHash)
+        <*> (L.getKBlockNode wndGraph topKBlockHash)
 
     case (mbBottomKNode, mbTopKNode) of
         (Nothing, _) -> L.logError $ "Node not found: " <> show bottomKBlockHash
@@ -348,8 +350,9 @@ shrinkGraphWindow nodeData wndSizeThreshold = do
                 whenJust mbNewBottomKNode $ \newBottomKNode -> do
                     let newBottomKBlockHash = L.getKNodeHash newBottomKNode
 
-                    L.logInfo $ "New bottom kBlock [" +|| newBottomNumber ||+ "]: " <> show newBottomKBlockHash
+                    L.logInfo $ "New bottom kBlock [" +|| newBottomNumber ||+ "]: "
+                            <> show newBottomKBlockHash
+                            <> "\n    Making cut."
+                    -- Do not merge these distinct atomic blocks.
                     L.atomically $ L.writeVar (wndGraph ^. Lens.bottomKBlockHash) newBottomKBlockHash
-
-                    L.logInfo "Making cut."
                     L.atomically $ L.shrinkGraphDownFrom wndGraph (snd newBottomKNode)
