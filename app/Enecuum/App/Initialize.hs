@@ -103,20 +103,24 @@ runMultiNode configSrc = case Cfg.dispatchScenario @A.MultiNode configSrc of
         startPoWNodes (A._powPorts $ Cfg.nodeConfig cfg) A.defaultPoWNodeConfig
         startPoANodes (A._poaPorts $ Cfg.nodeConfig cfg) A.defaultPoANodeConfig
         startNNNodes  (A._nnPorts $ Cfg.nodeConfig cfg)  A.defaultNodeConfig
+        forever $ threadDelay 50000000
 
     Nothing -> putTextLn "Parse error of multi node config."
 
 startPoWNodes range cfg = do
     forM_ (A.rangeToList range) $ \nPort -> do
+        threadDelay 100000
         let nodeCfg = cfg {A._powNodePorts = A.makeNodePorts1000 nPort}
-        void $ forkIO $ void $ runNode D.defaultLoggerConfig (A.powNode' nodeCfg)
+        void $ forkIO $ void $ runNode D.nullLoger (A.powNode' nodeCfg)
 
 startPoANodes range cfg = do
     forM_ (A.rangeToList range) $ \nPort -> do
+        threadDelay 100000
         let nodeCfg = cfg {A._poaNodePorts = A.makeNodePorts1000 nPort}
-        void $ forkIO $ void $ runNode D.defaultLoggerConfig (A.poaNode A.Good nodeCfg)
+        void $ forkIO $ void $ runNode D.nullLoger (A.poaNode A.Good nodeCfg)
 
 startNNNodes range cfg = do
     forM_ (A.rangeToList range) $ \nPort -> do
+        threadDelay 100000
         let nodeCfg = cfg {A._gnNodePorts = A.makeNodePorts1000 nPort}
-        void $ forkIO $ void $ runNode D.defaultLoggerConfig (A.graphNodeTransmitter nodeCfg)
+        void $ forkIO $ void $ runNode D.nullLoger (A.graphNodeTransmitter nodeCfg)

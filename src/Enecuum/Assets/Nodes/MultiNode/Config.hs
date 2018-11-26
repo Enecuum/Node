@@ -29,6 +29,9 @@ instance Node MultiNode where
 instance ToJSON   (NodeScenario MultiNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario MultiNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
+defaultMultiNodeConfig = MultiNodeConfig (newRange 5050 5070) newEmptyRange newEmptyRange
+
+
 data Range a
     = Range
     { _minValue :: a
