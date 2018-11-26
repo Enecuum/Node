@@ -21,34 +21,34 @@ import qualified Enecuum.Runtime                  as R
 createLoggerRuntime' :: D.LoggerConfig -> IO R.LoggerRuntime
 createLoggerRuntime' loggerConfig' = do
     let logFile = loggerConfig' ^. Lens.logFilePath
-    putStrLn @Text $ "Log file: " +| logFile |+ "."
-    putStrLn @Text "Creating logger runtime..."
+    putTextLn $ "Log file: " +| logFile |+ "."
+    putTextLn "Creating logger runtime..."
     createLoggerRuntime loggerConfig'
 
 clearLoggerRuntime' :: R.LoggerRuntime -> IO ()
 clearLoggerRuntime' loggerRt = do
-    putStrLn @Text "Clearing logger runtime..."
+    putTextLn "Clearing logger runtime..."
     clearLoggerRuntime loggerRt
 
 createCoreRuntime' :: R.LoggerRuntime -> IO R.CoreRuntime
 createCoreRuntime' loggerRt = do
-    putStrLn @Text "Creating core runtime..."
+    putTextLn "Creating core runtime..."
     createCoreRuntime loggerRt
 
 clearCoreRuntime' :: R.CoreRuntime -> IO ()
 clearCoreRuntime' coreRt = do
-    putStrLn @Text "Clearing core runtime..."
+    putTextLn "Clearing core runtime..."
     clearCoreRuntime coreRt
 
 createNodeRuntime' :: R.CoreRuntime -> IO R.NodeRuntime
 createNodeRuntime' coreRt = do
     story <- runFileSystemL clientStory
-    putStrLn @Text "Creating node runtime..."
+    putTextLn "Creating node runtime..."
     createNodeRuntime coreRt (M.singleton "Client" story)
 
 clearNodeRuntime' :: R.NodeRuntime -> IO ()
 clearNodeRuntime' nodeRt = do
-    putStrLn @Text "Clearing node runtime..."
+    putTextLn "Clearing node runtime..."
     clearNodeRuntime nodeRt
 
 runNode :: D.LoggerConfig -> L.NodeDefinitionL () -> IO ()
@@ -66,7 +66,7 @@ runNode'
     -> IO (Maybe ())
 runNode' Nothing = pure Nothing
 runNode' (Just (cfg, node)) = do
-    putStrLn @Text $
+    putTextLn $
         "Starting node..." <>
         "\n    Node:     " +|| Cfg.node cfg         ||+
         "\n    Scenario: " +|| Cfg.nodeScenario cfg ||+ ""
@@ -94,4 +94,29 @@ initialize configSrc = do
             , runNode' $ Cfg.dispatchScenario @Tst.TstPoWNode   configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstPoaNode   configSrc
             ]
-    void $ sequence runners
+    sequence_ runners
+
+
+runMultiNode :: LByteString -> IO ()
+runMultiNode configSrc = case Cfg.dispatchScenario @A.MultiNode configSrc of
+    Just (cfg, _) -> do
+        startPoWNodes (A._powPorts $ Cfg.nodeConfig cfg) A.defaultPoWNodeConfig
+        startPoANodes (A._poaPorts $ Cfg.nodeConfig cfg) A.defaultPoANodeConfig
+        startNNNodes  (A._nnPorts $ Cfg.nodeConfig cfg)  A.defaultNodeConfig
+
+    Nothing -> putTextLn "Parse error of multi node config."
+
+startPoWNodes range cfg = do
+    forM_ (A.rangeToList range) $ \nPort -> do
+        let nodeCfg = cfg {A._powNodePorts = A.makeNodePorts1000 nPort}
+        void $ forkIO $ void $ runNode D.defaultLoggerConfig (A.powNode' nodeCfg)
+
+startPoANodes range cfg = do
+    forM_ (A.rangeToList range) $ \nPort -> do
+        let nodeCfg = cfg {A._poaNodePorts = A.makeNodePorts1000 nPort}
+        void $ forkIO $ void $ runNode D.defaultLoggerConfig (A.poaNode A.Good nodeCfg)
+
+startNNNodes range cfg = do
+    forM_ (A.rangeToList range) $ \nPort -> do
+        let nodeCfg = cfg {A._gnNodePorts = A.makeNodePorts1000 nPort}
+        void $ forkIO $ void $ runNode D.defaultLoggerConfig (A.graphNodeTransmitter nodeCfg)
