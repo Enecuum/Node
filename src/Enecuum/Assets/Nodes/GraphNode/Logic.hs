@@ -22,35 +22,37 @@ import qualified Enecuum.Domain                        as D
 import           Enecuum.Framework.Language.Extra      (HasStatus, NodeStatus (..))
 import qualified Enecuum.Language                      as L
 
-data GraphNodeData = GraphNodeData
+data GraphNodeData' node = GraphNodeData'
     { _blockchain          :: D.BlockchainData
     , _status              :: D.StateVar NodeStatus
-    , _config              :: NodeConfig GraphNode
+    , _config              :: NodeConfig node 
     , _db                  :: Maybe D.DBModel
     , _dumpToDBSignal      :: D.StateVar Bool
     , _restoreFromDBSignal :: D.StateVar Bool
     , _checkPendingSignal  :: D.StateVar Bool
     }
 
-makeFieldsNoPrefix ''GraphNodeData
+makeFieldsNoPrefix ''GraphNodeData'
+
+type GraphNodeData = GraphNodeData' GraphNode
 
 transactionsToTransfer :: Int
 transactionsToTransfer = 20
 
 -- | DumpToDB command.
-handleDumpToDB :: GraphNodeData -> DumpToDB -> L.NodeL (Either Text SuccessMsg)
+handleDumpToDB :: (GraphNodeData' node) -> DumpToDB -> L.NodeL (Either Text SuccessMsg)
 handleDumpToDB nodeData _ = do
     L.writeVarIO (nodeData ^. dumpToDBSignal) True
     pure $ Right SuccessMsg
 
 -- | RestoreFromDB command.
-handleRestoreFromDB :: GraphNodeData -> RestoreFromDB -> L.NodeL (Either Text SuccessMsg)
+handleRestoreFromDB :: (GraphNodeData' node) -> RestoreFromDB -> L.NodeL (Either Text SuccessMsg)
 handleRestoreFromDB nodeData _ = do
     L.writeVarIO (nodeData ^. restoreFromDBSignal) True
     pure $ Right SuccessMsg
 
 -- | Accept transaction
-acceptTransaction :: GraphNodeData -> CreateTransaction -> L.NodeL (Either Text SuccessMsg)
+acceptTransaction :: (GraphNodeData' node) -> CreateTransaction -> L.NodeL (Either Text SuccessMsg)
 acceptTransaction nodeData (CreateTransaction tx) = do
     L.logInfo $ "Got transaction " +| D.showTransaction tx "" |+ ""
     if L.verifyTransaction tx
@@ -61,12 +63,12 @@ acceptTransaction nodeData (CreateTransaction tx) = do
             L.atomically $ L.modifyVar (bData ^. Lens.transactionPending) (Map.insert (toHash tx ) tx)
             pure $ Right SuccessMsg
         else do
-            L.logInfo "Transaction signature is not genuine"
-            L.logInfo "Transaction is not accepted"
-            pure $ Left "Transaction signature is not genuine. Transaction is not accepted."
+            let msg = "Transaction signature is not genuine.\nTransaction is not accepted"
+            L.logInfo msg
+            pure $ Left msg
 
 -- | Accept kBlock
-acceptKBlock' :: GraphNodeData -> D.KBlock -> L.NodeL ()
+acceptKBlock' :: (GraphNodeData' node) -> D.KBlock -> L.NodeL ()
 acceptKBlock' nodeData kBlock = do
     L.logInfo $ "Accepting KBlock (" +|| toHash kBlock ||+ "): " +|| kBlock ||+ "."
     let bData = nodeData ^. blockchain
@@ -74,10 +76,10 @@ acceptKBlock' nodeData kBlock = do
     L.writeVarIO (nodeData ^. checkPendingSignal) kBlockAdded
 
 -- | Accept kBlock
-acceptKBlock :: GraphNodeData -> D.KBlock -> connection -> L.NodeL ()
+acceptKBlock :: (GraphNodeData' node) -> D.KBlock -> connection -> L.NodeL ()
 acceptKBlock nodeData kBlock _ = acceptKBlock' nodeData kBlock
 
-acceptMBlock' :: GraphNodeData -> D.Microblock -> L.NodeL ()
+acceptMBlock' :: (GraphNodeData' node) -> D.Microblock -> L.NodeL ()
 acceptMBlock' nodeData mBlock = do
     let microblockValid  = L.verifyMicroblock mBlock
     unless microblockValid $ do
@@ -100,24 +102,24 @@ acceptMBlock' nodeData mBlock = do
 acceptMBlock :: GraphNodeData -> D.Microblock -> connection -> L.NodeL ()
 acceptMBlock nodeData mBlock _ = acceptMBlock' nodeData mBlock
 
-getKBlockPending :: GraphNodeData -> GetKBlockPending -> L.NodeL D.KBlockPending
+getKBlockPending :: (GraphNodeData' node) -> GetKBlockPending -> L.NodeL D.KBlockPending
 getKBlockPending nodeData _ = L.readVarIO $ nodeData ^. blockchain . Lens.kBlockPending
 
-processKBlockPending' :: GraphNodeData -> L.NodeL Bool
+processKBlockPending' :: (GraphNodeData' node) -> L.NodeL Bool
 processKBlockPending' nodeData = L.processKBlockPending $ nodeData ^. blockchain
 
-getTransactionPending :: GraphNodeData -> GetTransactionPending -> L.NodeL [D.Transaction]
+getTransactionPending :: (GraphNodeData' node) -> GetTransactionPending -> L.NodeL [D.Transaction]
 getTransactionPending nodeData _ = do
     let bData = nodeData ^. blockchain
     L.atomically $ do
         trans <- L.readVar $ bData ^. Lens.transactionPending
         pure $ map snd $ take transactionsToTransfer $ Map.toList trans
 
-getLastKBlock :: GraphNodeData -> GetLastKBlock -> L.NodeL D.KBlock
+getLastKBlock :: (GraphNodeData' node) -> GetLastKBlock -> L.NodeL D.KBlock
 getLastKBlock nodeData _ =
     L.atomically $ L.getTopKBlock $ nodeData ^. blockchain . Lens.windowedGraph
 
-getBalance :: GraphNodeData -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
+getBalance :: (GraphNodeData' node) -> GetWalletBalance -> L.NodeL (Either Text WalletBalanceMsg)
 getBalance nodeData (GetWalletBalance wallet) = do
     L.logInfo $ "Requested balance for wallet " +|| D.showPublicKey wallet ||+ "."
     let bData = nodeData ^. blockchain
@@ -127,17 +129,17 @@ getBalance nodeData (GetWalletBalance wallet) = do
         Just balance -> pure $ Right $ WalletBalanceMsg wallet balance
         _            -> pure $ Left $ "Wallet " +|| D.showPublicKey wallet ||+ " does not exist in graph."
 
-getChainLength :: GraphNodeData -> L.NodeL D.BlockNumber
+getChainLength :: (GraphNodeData' node) -> L.NodeL D.BlockNumber
 getChainLength nodeData = do
     topKBlock <- L.atomically $ L.getTopKBlock $ nodeData ^. blockchain . Lens.windowedGraph
     pure $ topKBlock ^. Lens.number
 
 acceptGetChainLengthRequest
-    :: GraphNodeData -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
+    :: (GraphNodeData' node) -> GetChainLengthRequest -> L.NodeL GetChainLengthResponse
 acceptGetChainLengthRequest nodeData _ =
     GetChainLengthResponse <$> getChainLength nodeData
 
-acceptChainFromTo :: GraphNodeData -> GetChainFromToRequest -> L.NodeL (Either Text GetChainFromToResponse)
+acceptChainFromTo :: (GraphNodeData' node) -> GetChainFromToRequest -> L.NodeL (Either Text GetChainFromToResponse)
 acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
     L.logInfo $ "Answering chain from " +|| from ||+ " to " +|| to ||+ "."
     let bData = nodeData ^. blockchain
@@ -152,7 +154,7 @@ acceptChainFromTo nodeData (GetChainFromToRequest from to) = do
                 pure $ drop (fromEnum $ (topKBlock ^. Lens.number) - to) chain
             pure $ Right $ GetChainFromToResponse (reverse kBlockList)
 
-getMBlockForKBlocks :: GraphNodeData -> GetMBlocksForKBlockRequest -> L.NodeL (Either Text GetMBlocksForKBlockResponse)
+getMBlockForKBlocks :: (GraphNodeData' node) -> GetMBlocksForKBlockRequest -> L.NodeL (Either Text GetMBlocksForKBlockResponse)
 getMBlockForKBlocks nodeData (GetMBlocksForKBlockRequest hash) = do
     L.logInfo $ "Get microblocks for kBlock " +|| hash ||+ "."
     let bData = nodeData ^. blockchain
@@ -263,7 +265,7 @@ data ResultOfChainCompair
     | ChainsAreEqual
     | MyChainIsLonger
 
-compareChainLength :: GraphNodeData -> D.Address -> L.NodeL ResultOfChainCompair
+compareChainLength :: (GraphNodeData' node) -> D.Address -> L.NodeL ResultOfChainCompair
 compareChainLength nodeData address = do
     eLngth <- L.makeRpcRequest address GetChainLengthRequest
     case eLngth of
@@ -275,7 +277,7 @@ compareChainLength nodeData address = do
                 | otherwise                      -> MyChainIsLonger
         Left err -> pure $ ErrorInRequest err
 
-syncCurrentMacroBlock :: GraphNodeData -> D.Address -> L.NodeL Bool
+syncCurrentMacroBlock :: (GraphNodeData' node) -> D.Address -> L.NodeL Bool
 syncCurrentMacroBlock nodeData address = do
     let bData = nodeData ^. blockchain
     let wndGraph = bData ^. Lens.windowedGraph
@@ -299,14 +301,14 @@ getKBlockChain address curChainLength otherLength = do
             L.logError $ "Error in receiving of kblock chain" <> err
             pure []
 
-tryTakeMBlockChain :: [D.KBlock] -> GraphNodeData -> D.Address -> L.NodeL ()
+tryTakeMBlockChain :: [D.KBlock] -> (GraphNodeData' node) -> D.Address -> L.NodeL ()
 tryTakeMBlockChain (kBlock:kBlocks) nodeData address = do
     void $ L.addKBlock (nodeData ^. blockchain) kBlock
     whenM (syncCurrentMacroBlock nodeData address) $
         tryTakeMBlockChain kBlocks nodeData address
 tryTakeMBlockChain _ _ _ = pure ()
 
-graphSynchro :: GraphNodeData -> D.Address -> L.NodeL ()
+graphSynchro :: (GraphNodeData' node) -> D.Address -> L.NodeL ()
 graphSynchro nodeData address = compareChainLength nodeData address >>= \case
     NeedToSync (curChainLength, otherLength) -> do
         ok <- syncCurrentMacroBlock nodeData address

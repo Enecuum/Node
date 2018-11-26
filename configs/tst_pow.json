@@ -1,10 +1,10 @@
 {
-   "node":"OldPoWNode",
+   "node":"TstPoWNode",
    "nodeScenario":"PoW",
 	 "nodeConfig":
 	 {
         "defaultBlocksDelay":1000000,
-        "tag": "OldPoWNodeConfig",
+        "tag": "TstPoWNodeConfig",
 				"kblocksOrder": "InOrder",
 			  "graphNodeUDPAddress":  {"host":"127.0.0.1","port":4050},
         "powNodeRpcPort": 6020

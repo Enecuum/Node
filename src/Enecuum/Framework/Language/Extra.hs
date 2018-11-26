@@ -134,4 +134,5 @@ await ref = L.atomically $ do
         Nothing    -> L.retry
 
 --
+modifyVarIO :: L.StateIO m => D.StateVar a -> (a -> a) -> m ()
 modifyVarIO var f = L.atomically $ L.modifyVar var f

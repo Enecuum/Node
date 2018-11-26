@@ -6,7 +6,7 @@ module Enecuum.Config where
 
 import qualified Data.Aeson                as A
 import           Data.Aeson.Extra          (noLensPrefix)
-import qualified Data.ByteString.Internal  as BSI
+-- import qualified Data.ByteString.Internal  as BSI
 import qualified Data.ByteString.Lazy      as LBS
 import           Data.Yaml                 as A hiding (decode)
 import           Enecuum.Core.Types.Logger (LoggerConfig (..))
@@ -51,9 +51,9 @@ withConfig configName act = act =<< LBS.readFile configName
 -- | Tries to parse config according to the type @node@ passed.
 tryParseConfig
     :: (FromJSON node, FromJSON (NodeScenario node), FromJSON (NodeConfig node))
-    => BSI.ByteString
+    => LByteString
     -> Either ParseException (Config node)
-tryParseConfig = A.decodeEither'
+tryParseConfig = A.decodeEither' . LBS.toStrict
 
 getNodeScript' :: Node node => Config node -> NodeDefinitionL ()
 getNodeScript' cfg = getNodeScript (nodeScenario cfg) (nodeConfig cfg)
@@ -72,7 +72,7 @@ dispatchScenario configSrc = case tryParseConfig' configSrc of
 tryParseConfig'
   :: (FromJSON (NodeScenario node), FromJSON (NodeConfig node),
       FromJSON node) =>
-     LBS.ByteString -> Maybe (Config node)
-tryParseConfig' configSrc = case tryParseConfig (LBS.toStrict configSrc) of
-    Left e    -> Nothing
+      LByteString -> Maybe (Config node)
+tryParseConfig' configSrc = case tryParseConfig configSrc of
+    Left _    -> Nothing
     Right cfg -> Just cfg

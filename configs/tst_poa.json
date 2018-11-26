@@ -1,9 +1,9 @@
 {
-   "node":"OldPoaNode",
+   "node":"TstPoaNode",
    "nodeScenario":"Good",
    "nodeConfig":
     {
-				"tag": "OldPoANodeConfig",
+				"tag": "TstPoANodeConfig",
 				"poaRPCPort": 6200,
 		},
    "loggerConfig":

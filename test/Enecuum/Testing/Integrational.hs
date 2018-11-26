@@ -43,7 +43,7 @@ testConfigFilePath = "./configs/ClientNode_testConfig.json"
 loadLoggerConfig :: FilePath -> IO D.LoggerConfig
 loadLoggerConfig configFile = do
     configSrc <- LBS.readFile configFile
-    case (Cfg.tryParseConfig @ClientNode $ LBS.toStrict configSrc) of
+    case (Cfg.tryParseConfig @ClientNode $ configSrc) of
         Left e       -> (error . show . prettyPrintParseException) $ e
         Right config -> doSomethingWithConfig config
 

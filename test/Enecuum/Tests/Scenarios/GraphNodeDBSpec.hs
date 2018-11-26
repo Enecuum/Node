@@ -8,7 +8,7 @@ import           Test.HUnit
 import qualified Enecuum.Assets.Nodes.Address          as A
 import qualified Enecuum.Assets.Nodes.GraphNode.Config as A
 import qualified Enecuum.Assets.Nodes.Messages         as A
-import qualified Enecuum.Assets.OldScenarios           as Old
+import qualified Enecuum.Assets.TstScenarios           as Tst
 import qualified Enecuum.Blockchain.Lens               as Lens
 import qualified Enecuum.Domain                        as D
 import           Enecuum.Testing.Integrational
@@ -32,7 +32,7 @@ dumpAndRestoreGraphTest = do
             , A._dbOptions           = dbOpts
             , A._stopOnDatabaseError = True
             }
-    let cfg = A.defaultNodeConfig { A._dbConfig = dbConfig }
+    let cfg = Tst.defaultNodeConfig { Tst._dbConfig = dbConfig }
     let loggerCfg = Nothing
 
     let graphNodeRpcAddress        = A.getRpcAddress A.defaultGnNodeAddress
@@ -50,10 +50,10 @@ dumpAndRestoreGraphTest = do
 
     TestCase $ withDbAbsence dbPath $ withNodesManager $ \mgr -> do
         -- Starting nodes.
-        transmitterNode1 <- startNode loggerCfg mgr $ Old.graphNodeTransmitter $ Old.transformConfig2 cfg
+        transmitterNode1 <- startNode loggerCfg mgr $ Tst.graphNodeTransmitter cfg
         waitForNode transmiterRpcAddress
 
-        powNode <- startNode loggerCfg mgr Old.powNode
+        powNode <- startNode loggerCfg mgr Tst.powNode
         waitForNode powRpcAddress
 
         poaNode <- startNode loggerCfg mgr (Old.poaNode Old.Good poaConfig)
@@ -94,7 +94,7 @@ dumpAndRestoreGraphTest = do
         stopNode mgr poaNode
 
         -- Starting node, checking there are no blocks.
-        void $ startNode loggerCfg mgr $ Old.graphNodeTransmitter $ Old.transformConfig2 cfg
+        void $ startNode loggerCfg mgr $ Tst.graphNodeTransmitter cfg
         waitForNode transmiterRpcAddress
 
         Right genesisKBlock :: Either Text D.KBlock <- makeIORpcRequest graphNodeRpcAddress A.GetLastKBlock

@@ -3,7 +3,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
 
-module Enecuum.Assets.Nodes.OldNodes.PoA where
+module Enecuum.Assets.Nodes.TstNodes.PoA where
 
 import qualified Data.Aeson                           as A
 import           Enecuum.Prelude
@@ -21,41 +21,41 @@ import qualified Enecuum.Assets.Nodes.Address         as A
 import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Assets.Nodes.Methods         (handleStopNode, rpcPingPong)
 
-data OldPoaNodeData = OldPoaNodeData
+data TstPoaNodeData = TstPoaNodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock
     , _status              :: D.StateVar NodeStatus
     , _transactionPending  :: D.StateVar [D.Transaction]
     }
 
-makeFieldsNoPrefix ''OldPoaNodeData
+makeFieldsNoPrefix ''TstPoaNodeData
 
-data OldPoaNode = OldPoaNode
+data TstPoaNode = TstPoaNode
     deriving (Show, Generic)
 
-data instance NodeConfig OldPoaNode = OldPoANodeConfig
+data instance NodeConfig TstPoaNode = TstPoANodeConfig
     { _poaRPCPort  :: D.PortNumber
     }
     deriving (Show, Generic)
 
-instance Node OldPoaNode where
-    data NodeScenario OldPoaNode = Good | Bad
+instance Node TstPoaNode where
+    data NodeScenario TstPoaNode = Good | Bad
         deriving (Show, Generic)
     getNodeScript = poaNode
 
-instance ToJSON   OldPoaNode                where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON OldPoaNode                where parseJSON = A.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeConfig OldPoaNode)   where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeConfig OldPoaNode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeScenario OldPoaNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeScenario OldPoaNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   TstPoaNode                where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON TstPoaNode                where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig TstPoaNode)   where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig TstPoaNode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario TstPoaNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario TstPoaNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
-defaultPoANodeConfig :: NodeConfig OldPoaNode
-defaultPoANodeConfig = OldPoANodeConfig (A.defaultPoANodePorts ^. A.nodeRpcPort)
+defaultPoANodeConfig :: NodeConfig TstPoaNode
+defaultPoANodeConfig = TstPoANodeConfig (A.defaultPoANodePorts ^. A.nodeRpcPort)
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
 
-sendMicroblock :: OldPoaNodeData -> D.KBlock -> NodeScenario OldPoaNode -> L.NodeL ()
+sendMicroblock :: TstPoaNodeData -> D.KBlock -> NodeScenario TstPoaNode -> L.NodeL ()
 sendMicroblock poaData block role = do
     currentBlock <- L.readVarIO (poaData ^. currentLastKeyBlock)
     when (block /= currentBlock) $ do
@@ -87,11 +87,11 @@ sendMicroblock poaData block role = do
         void $ L.withConnection D.Udp gnUdpAddress $
             \conn -> L.send conn mBlock
 
-poaNode :: NodeScenario OldPoaNode -> NodeConfig OldPoaNode -> L.NodeDefinitionL ()
+poaNode :: NodeScenario TstPoaNode -> NodeConfig TstPoaNode -> L.NodeDefinitionL ()
 poaNode role cfg = do
     L.nodeTag "PoA node"
     L.logInfo "Starting of PoA node"
-    poaData <- L.scenario $ L.atomically (OldPoaNodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
+    poaData <- L.scenario $ L.atomically (TstPoaNodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 

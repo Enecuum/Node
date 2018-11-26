@@ -38,6 +38,7 @@ instance FromJSON (NodeConfig TestClient)   where parseJSON = J.genericParseJSON
 instance ToJSON   (NodeScenario TestClient) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario TestClient) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
+testClient :: p -> Free L.NodeDefinitionF ()
 testClient _ = do
     L.nodeTag "Client node"
     L.logInfo "Starting of test client node"
@@ -48,6 +49,7 @@ testClient _ = do
     whenJust conn $ \jConn -> tester jConn 0
     L.logInfo "Connect closed."
 
+tester :: (L.Logger m, L.Send t m, L.ControlFlow m, Monad m) => t -> Int -> m ()    
 tester conn i = do
     L.delay i
     res <- L.send conn M.Ping
