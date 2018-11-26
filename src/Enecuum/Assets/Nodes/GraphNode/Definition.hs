@@ -2,17 +2,21 @@
 
 module Enecuum.Assets.Nodes.GraphNode.Definition where
 
-import qualified Data.Aeson                                 as A
+import qualified Data.Aeson      as A
 import           Enecuum.Prelude
 
-import           Enecuum.Assets.Nodes.GraphNode.Config
-import           Enecuum.Assets.Nodes.GraphNode.Transmitter (graphNodeTransmitter)
+-- import           Enecuum.Assets.Nodes.GraphNode.GN (graphNode)
 import           Enecuum.Config
 
-instance Node GraphNode where
-    data NodeScenario GraphNode = Transmitter
-        deriving (Show, Generic)
-    getNodeScript Transmitter = graphNodeTransmitter
-
-instance ToJSON   (NodeScenario GraphNode) where toJSON    = A.genericToJSON nodeConfigJsonOptions
-instance FromJSON (NodeScenario GraphNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+-- data GraphNode = GraphNode
+--     deriving (Show, Generic)
+--
+-- instance Node GraphNode where
+--     data NodeScenario GraphNode = GN
+--         deriving (Show, Generic)
+--     getNodeScript GN = graphNode
+--
+-- instance ToJSON   GraphNode               where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+-- instance FromJSON GraphNode               where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+-- instance ToJSON   (NodeScenario GraphNode) where toJSON    = A.genericToJSON nodeConfigJsonOptions
+-- instance FromJSON (NodeScenario GraphNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions

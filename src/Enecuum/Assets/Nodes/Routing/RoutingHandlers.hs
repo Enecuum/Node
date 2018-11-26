@@ -1,14 +1,15 @@
 module Enecuum.Assets.Nodes.Routing.RoutingHandlers where
 
-import qualified Enecuum.Assets.Nodes.Address     as A
-import qualified Enecuum.Assets.Nodes.Messages    as M
+import qualified Enecuum.Assets.Nodes.Address             as A
+import qualified Enecuum.Assets.Nodes.Messages            as M
 import           Enecuum.Assets.Nodes.Methods
-import qualified Enecuum.Domain                   as D
-import qualified Enecuum.Language                 as L
-import           Enecuum.Prelude
-import           Enecuum.Research.ChordRouteMap
 import           Enecuum.Assets.Nodes.Routing.Messages
 import           Enecuum.Assets.Nodes.Routing.RuntimeData
+import qualified Enecuum.Domain                           as D
+import qualified Enecuum.Framework.Lens                   as Lens
+import qualified Enecuum.Language                         as L
+import           Enecuum.Prelude
+import           Enecuum.Research.ChordRouteMap
 
 udpRoutingHandlers :: RoutingRuntime -> L.NetworkHandlerL D.Udp L.NodeL ()
 udpRoutingHandlers routingRuntime = do
@@ -27,11 +28,11 @@ acceptNextForYou :: RoutingRuntime -> NextForYou -> D.Connection D.Udp -> L.Node
 acceptNextForYou routingRuntime (NextForYou senderAddress) conn = do
     L.close conn
     connects <- getConnects routingRuntime
-    let mAddress = snd <$> findNextForHash (routingRuntime ^. myNodeAddres . A.nodeId) connects
+    let mAddress = snd <$> findNextForHash (routingRuntime ^. myNodeAddres . Lens.nodeId) connects
     whenJust mAddress $ \address -> void $ L.notify senderAddress address
 
 --
-findConnect :: RoutingRuntime -> M.ConnectRequest -> L.NodeL (Either Text A.NodeAddress)
+findConnect :: RoutingRuntime -> M.ConnectRequest -> L.NodeL (Either Text D.NodeAddress)
 findConnect routingRuntime (M.ConnectRequest hash i) = do
     connects <- getConnects routingRuntime
     let address = snd <$> findInMapNByKey (\h j -> D.hashToWord64 h + 2 ^ j) i hash connects
@@ -45,23 +46,23 @@ acceptHello routingRuntime routingHello con = do
     when (verifyRoutingHello routingHello) $ do
         connects <- getConnects routingRuntime
         let senderAddress = routingHello ^. nodeAddress
-        let senderNodeId  = senderAddress ^. A.nodeId
-        let nextAddres    = nextForHello (routingRuntime ^. myNodeAddres . A.nodeId) senderNodeId connects
+        let senderNodeId  = senderAddress ^. Lens.nodeId
+        let nextAddres    = nextForHello (routingRuntime ^. myNodeAddres . Lens.nodeId) senderNodeId connects
         whenJust nextAddres $ \receiverAddress ->
             void $ L.notify (A.getUdpAddress receiverAddress) routingHello
-        
+
         L.modifyVarIO
             (routingRuntime ^. connectMap)
             (addToMap senderNodeId senderAddress)
 
-acceptConnectResponse :: RoutingRuntime -> A.NodeAddress -> D.Connection D.Udp -> L.NodeL ()
+acceptConnectResponse :: RoutingRuntime -> D.NodeAddress -> D.Connection D.Udp -> L.NodeL ()
 acceptConnectResponse routingRuntime address con = do
     L.close con
     -- if this address is not mine, then add it
     unless (address == routingRuntime ^. myNodeAddres) $
-        L.modifyVarIO (routingRuntime ^. connectMap) (addToMap (address ^. A.nodeId) address)
+        L.modifyVarIO (routingRuntime ^. connectMap) (addToMap (address ^. Lens.nodeId) address)
 
-connectMapRequest :: RoutingRuntime -> M.ConnectMapRequest -> L.NodeL [A.NodeAddress]
+connectMapRequest :: RoutingRuntime -> M.ConnectMapRequest -> L.NodeL [D.NodeAddress]
 connectMapRequest nodeRuntime _ =
     -- return all known connections
     (snd <$>) . fromChordRouteMap <$> L.readVarIO (nodeRuntime ^. connectMap)

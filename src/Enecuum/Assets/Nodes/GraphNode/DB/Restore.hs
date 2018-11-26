@@ -4,14 +4,15 @@ module Enecuum.Assets.Nodes.GraphNode.DB.Restore where
 
 import           Enecuum.Prelude
 
-import qualified Enecuum.Blockchain.DB                     as D
-import qualified Enecuum.Blockchain.DB.Lens                as Lens
-import qualified Enecuum.Blockchain.Lens                   as Lens
-import qualified Enecuum.Domain                            as D
-import qualified Enecuum.Language                          as L
+import qualified Enecuum.Blockchain.DB                           as D
+import qualified Enecuum.Blockchain.DB.Lens                      as Lens
+import qualified Enecuum.Blockchain.Lens                         as Lens
+import qualified Enecuum.Domain                                  as D
+import qualified Enecuum.Language                                as L
 
 import           Enecuum.Assets.Nodes.GraphNode.DB.Helpers
-import qualified Enecuum.Assets.Nodes.GraphNode.Logic      as G
+import qualified Enecuum.Assets.Nodes.GraphNode.GraphServiceData as G
+import qualified Enecuum.Assets.Nodes.GraphNode.Logic            as G
 
 loadKBlockMeta :: D.DBModel -> D.StringHash -> L.NodeL (D.DBResult (D.DBValue D.KBlockMetaEntity))
 loadKBlockMeta dbModel hash = do
@@ -103,7 +104,7 @@ loadNextKBlock dbModel prevHash = do
     eMbKBlockMeta <- loadKBlockMeta dbModel prevHash
     withResult eMbKBlockMeta $ loadKBlock dbModel
 
-restoreFromDB' :: G.GraphNodeData -> D.StringHash -> L.NodeL ()
+restoreFromDB' :: G.GraphServiceData -> D.StringHash -> L.NodeL ()
 restoreFromDB' nodeData kBlockPrevHash = withDBModel nodeData $ \dbModel -> do
     eKBlock <- loadNextKBlock dbModel kBlockPrevHash
     case eKBlock of
@@ -118,7 +119,7 @@ restoreFromDB' nodeData kBlockPrevHash = withDBModel nodeData $ \dbModel -> do
             mapM_ (G.acceptMBlock' nodeData) mBlocks
             restoreFromDB' nodeData kBlockHash
 
-restoreFromDB :: G.GraphNodeData -> L.NodeL ()
+restoreFromDB :: G.GraphServiceData -> L.NodeL ()
 restoreFromDB nodeData = do
     L.logInfo "Trying to restore from DB..."
     restoreFromDB' nodeData D.genesisHash

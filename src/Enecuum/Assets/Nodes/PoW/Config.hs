@@ -1,10 +1,11 @@
-{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 module Enecuum.Assets.Nodes.PoW.Config where
 
 import qualified Data.Aeson                           as J
 import qualified Enecuum.Assets.Blockchain.Generation as A
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Config
+import           Enecuum.Domain                       (NodeAddress (..), NodeId (..), NodePorts (..))
 import           Enecuum.Prelude
 
 type BlocksDelay = Int

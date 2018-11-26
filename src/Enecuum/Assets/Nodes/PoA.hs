@@ -1,30 +1,31 @@
 {-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell        #-}
 
 module Enecuum.Assets.Nodes.PoA where
 
+import qualified Data.Aeson                           as A
 import           Enecuum.Prelude
-import qualified Data.Aeson as A
 
-import           Data.HGraph.StringHashable   (toHash)
+import           Data.HGraph.StringHashable           (toHash)
 
-import qualified Enecuum.Domain               as D
+import qualified Enecuum.Blockchain.Lens              as Lens
 import           Enecuum.Config
-import qualified Enecuum.Language             as L
-import qualified Enecuum.Blockchain.Lens      as Lens
-import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
+import qualified Enecuum.Domain                       as D
+import           Enecuum.Framework.Language.Extra     (HasStatus)
+import qualified Enecuum.Framework.Lens               as Lens
+import qualified Enecuum.Language                     as L
 
-import qualified Enecuum.Assets.Nodes.Address as A
+import qualified Enecuum.Assets.Nodes.Address         as A
 import           Enecuum.Assets.Nodes.Routing
 
-import           Enecuum.Assets.Nodes.Methods (rpcPingPong, handleStopNode, portError)
 import qualified Enecuum.Assets.Blockchain.Generation as A
+import           Enecuum.Assets.Nodes.Methods         (handleStopNode, portError, rpcPingPong)
 
 data PoANodeData = PoANodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock
-    , _status              :: D.StateVar NodeStatus
+    , _status              :: D.StateVar D.NodeStatus
     , _transactionPending  :: D.StateVar [D.Transaction]
     }
 
@@ -34,8 +35,8 @@ data PoANode = PoANode
     deriving (Show, Generic)
 
 data instance NodeConfig PoANode = PoANodeConfig
-    { _poaNodePorts :: A.NodePorts
-    , _poaBnAddress :: A.NodeAddress
+    { _poaNodePorts :: D.NodePorts
+    , _poaBnAddress :: D.NodeAddress
     }
     deriving (Show, Generic)
 
@@ -85,7 +86,7 @@ sendMicroblock routingData poaData role block = do
             Bad  -> A.generateBogusSignedMicroblock block tx
         L.logInfo
             $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
-        
+
         void $ sendUdpBroadcast routingData mBlock
 
 
@@ -101,22 +102,26 @@ poaNode role cfg = do
     let myHash      = D.toHashGeneric myNodePorts
 
     routingData <- runRouting myNodePorts myHash (_poaBnAddress cfg)
-    poaData     <- L.scenario $ L.atomically (PoANodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
+    poaData     <- L.atomically $
+        PoANodeData
+          <$> L.newVar D.genesisKBlock
+          <*> L.newVar D.NodeActing
+          <*> L.newVar []
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    rpcServerOk <- L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
+    rpcServerOk <- L.serving D.Rpc (myNodePorts ^. Lens.nodeRpcPort) $ do
         rpcRoutingHandlers routingData
         L.method   rpcPingPong
         L.method $ handleStopNode poaData
 
-    udpServerOk <- L.serving D.Udp (myNodePorts ^. A.nodeUdpPort) $ do
+    udpServerOk <- L.serving D.Udp (myNodePorts ^. Lens.nodeUdpPort) $ do
         udpRoutingHandlers routingData
         L.handler $ udpBroadcastReceivedMessage routingData $
             sendMicroblock routingData poaData role
     if all isJust [rpcServerOk, udpServerOk] then L.awaitNodeFinished poaData
     else do
         unless (isJust rpcServerOk) $
-            L.logError $ portError (myNodePorts ^. A.nodeRpcPort) "rpc" 
+            L.logError $ portError (myNodePorts ^. Lens.nodeRpcPort) "rpc"
         unless (isJust udpServerOk) $
-            L.logError $ portError (myNodePorts ^. A.nodeUdpPort) "udp"
+            L.logError $ portError (myNodePorts ^. Lens.nodeUdpPort) "udp"

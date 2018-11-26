@@ -31,8 +31,8 @@ testRouting = TestCase $ withNodesManager $ \mgr -> do
     void $ startNode Nothing mgr A.bnNode
     let ports                 = [5001..5010]
     let receiverIds           = [D.toHashGeneric $ A.makeNodePorts1000 x| x <- [5002..5010]]
-    let receiverRpcAddresses  = [D.Address A.localhost (A.makeNodePorts1000 x ^. A.nodeRpcPort)| x <- [5002..5010]]
-    let transmitterUdpAddress = D.Address A.localhost (A.makeNodePorts1000 5001 ^. A.nodeUdpPort)
+    let receiverRpcAddresses  = [D.Address A.localhost (A.makeNodePorts1000 x ^. Lens.nodeRpcPort)| x <- [5002..5010]]
+    let transmitterUdpAddress = D.Address A.localhost (A.makeNodePorts1000 5001 ^. Lens.nodeUdpPort)
     forM_ ports $ \port -> do
         threadDelay $ 1000 * 10
         startNode Nothing mgr . A.nnNode . Just $ port

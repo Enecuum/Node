@@ -6,17 +6,6 @@ import           Enecuum.Config
 import qualified Enecuum.Domain               as D
 import           Enecuum.Prelude
 
-data GraphNode = GraphNode
-    deriving (Show, Generic)
-
-data instance NodeConfig GraphNode = GraphNodeConfig
-    { _dbConfig     :: DBConfig
-    , _gnNodePorts  :: NodePorts
-    , _bnAddress    :: NodeAddress
-    , _rpcSynco     :: Maybe D.Address
-    }
-    deriving (Show, Generic)
-
 data DBConfig = DBConfig
     { _useDatabase         :: Bool        -- ^ If True, DB will be used to restore the state on the start and dump the state during work.
     , _dbModelName         :: String      -- ^ DB model name. Can be a full path if useEnqHomeDir == False.
@@ -26,26 +15,22 @@ data DBConfig = DBConfig
     }
     deriving (Show, Generic)
 
-instance ToJSON   GraphNode              where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON GraphNode              where parseJSON = A.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   DBConfig               where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON DBConfig               where parseJSON = A.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeConfig GraphNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeConfig GraphNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+data GraphServiceConfig = GraphServiceConfig
+    { _dbConfig :: DBConfig
+    , _rpcSynco :: Maybe D.Address
+    }
+    deriving (Show, Generic)
 
-noDBConfig' :: DBConfig
-noDBConfig' = DBConfig
+instance ToJSON   DBConfig           where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON DBConfig           where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   GraphServiceConfig where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON GraphServiceConfig where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+
+noDBConfig :: DBConfig
+noDBConfig = DBConfig
     { _useDatabase         = False
     , _dbModelName         = ""
     , _useEnqHomeDir       = False
     , _dbOptions           = D.DBOptions True True
     , _stopOnDatabaseError = True
-    }
-
-defaultNodeConfig :: NodeConfig GraphNode
-defaultNodeConfig = GraphNodeConfig
-    { _dbConfig     = noDBConfig'
-    , _gnNodePorts  = defaultGnNodePorts
-    , _bnAddress    = defaultBnNodeAddress
-    , _rpcSynco     = Nothing
     }

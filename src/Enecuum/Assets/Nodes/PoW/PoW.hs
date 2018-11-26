@@ -14,12 +14,13 @@ import qualified Enecuum.Assets.Nodes.CLens           as CLens
 import qualified Enecuum.Assets.Nodes.Messages        as Msgs
 import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.PoW.Config
+import           Enecuum.Assets.Nodes.Routing
 import           Enecuum.Config
 import qualified Enecuum.Domain                       as D
-import           Enecuum.Framework.Language.Extra     (HasStatus, NodeStatus (..))
+import           Enecuum.Framework.Language.Extra     (HasStatus)
+import qualified Enecuum.Framework.Lens               as Lens
 import qualified Enecuum.Language                     as L
 import           Enecuum.Prelude
-import           Enecuum.Assets.Nodes.Routing
 
 type IterationsCount = Int
 type EnableDelays = Bool
@@ -29,7 +30,7 @@ data PoWNodeData = PoWNodeData
     , _prevNumber          :: D.StateVar D.BlockNumber
     , _requiredBlockNumber :: D.StateVar D.BlockNumber
     , _blocksDelay         :: D.StateVar Int        -- ^ delay between blocks, microseconds
-    , _status              :: D.StateVar NodeStatus
+    , _status              :: D.StateVar D.NodeStatus
     }
 
 makeFieldsNoPrefix ''PoWNodeData
@@ -83,9 +84,9 @@ powNode' cfg = do
     -- TODO: read from config
     let myHash      = D.toHashGeneric myNodePorts
     routingData <- runRouting myNodePorts myHash (_powNodebnAddress cfg)
-    
+
     nodeData    <- L.initialization $ powNodeInitialization cfg D.genesisHash
-    rpcServerOk <- L.serving D.Rpc (myNodePorts ^. A.nodeRpcPort) $ do
+    rpcServerOk <- L.serving D.Rpc (myNodePorts ^. Lens.nodeRpcPort) $ do
         rpcRoutingHandlers routingData
         -- network
         L.method    rpcPingPong
@@ -95,7 +96,7 @@ powNode' cfg = do
         L.method  $ foreverChainGenerationHandle nodeData
         L.method  $ nBlockPacketGenerationHandle nodeData
 
-    udpServerOk <- L.serving D.Udp (myNodePorts ^. A.nodeUdpPort) $
+    udpServerOk <- L.serving D.Udp (myNodePorts ^. Lens.nodeUdpPort) $
         udpRoutingHandlers routingData
     if all isJust [rpcServerOk, udpServerOk] then do
         L.std $ L.stdHandler $ L.stopNodeHandler nodeData
@@ -109,9 +110,9 @@ powNode' cfg = do
         L.awaitNodeFinished nodeData
     else do
         unless (isJust rpcServerOk) $
-            L.logError $ portError (myNodePorts ^. A.nodeRpcPort) "rpc"
+            L.logError $ portError (myNodePorts ^. Lens.nodeRpcPort) "rpc"
         unless (isJust udpServerOk) $
-            L.logError $ portError (myNodePorts ^. A.nodeUdpPort) "udp"
+            L.logError $ portError (myNodePorts ^. Lens.nodeUdpPort) "udp"
 
 
 powNodeInitialization ::  NodeConfig PoWNode -> StringHash -> L.NodeL PoWNodeData
@@ -119,9 +120,9 @@ powNodeInitialization cfg genesisHash = do
     h <- L.newVarIO genesisHash
     n <- L.newVarIO 1
     b <- L.newVarIO 0
-    g <- L.newVarIO $ cfg ^. CLens.defaultBlocksDelay
-    f <- L.newVarIO NodeActing
-    pure $ PoWNodeData
+    g <- L.newVarIO $ _defaultBlocksDelay cfg
+    f <- L.newVarIO D.NodeActing
+    pure PoWNodeData
         { _prevHash = h
         , _prevNumber= n
         , _requiredBlockNumber = b

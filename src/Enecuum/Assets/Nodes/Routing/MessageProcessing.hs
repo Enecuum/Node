@@ -1,13 +1,14 @@
 module Enecuum.Assets.Nodes.Routing.MessageProcessing where
 
-import qualified Enecuum.Assets.Nodes.Address     as A
-import qualified Enecuum.Assets.Nodes.Messages    as M
+import qualified Enecuum.Assets.Nodes.Address             as A
+import qualified Enecuum.Assets.Nodes.Messages            as M
 import           Enecuum.Assets.Nodes.Methods
-import qualified Enecuum.Domain                   as D
-import qualified Enecuum.Language                 as L
+import           Enecuum.Assets.Nodes.Routing.Messages
+import qualified Enecuum.Domain                           as D
+import qualified Enecuum.Framework.Lens                   as Lens
+import qualified Enecuum.Language                         as L
 import           Enecuum.Prelude
 import           Enecuum.Research.ChordRouteMap
-import           Enecuum.Assets.Nodes.Routing.Messages
 
 import           Enecuum.Assets.Nodes.Routing.RuntimeData
 
@@ -42,7 +43,7 @@ udpForwardIfNeeded
     => RoutingRuntime -> message -> (message -> L.NodeL ()) -> L.NodeL ()
 udpForwardIfNeeded routingRuntime message handler
     -- process message if I am a recipient
-    | routingRuntime ^. myNodeAddres . A.nodeId == message ^. nodeReceiverId = handler message
+    | routingRuntime ^. myNodeAddres . Lens.nodeId == message ^. nodeReceiverId = handler message
     -- forward the message further if it is not yet old.
     | message ^. timeToLive > 0 =
         udpMsgSending routingRuntime (message & timeToLive %~ (\x -> x - 1))
@@ -52,7 +53,7 @@ udpForwardIfNeeded routingRuntime message handler
 
 -- send usp msg to node
 udpMsgSending :: (ToJSON a, Typeable a, L.SendUdp m,
-                HasConnectMap s (D.StateVar (ChordRouteMap A.NodeAddress)),
+                HasConnectMap s (D.StateVar (ChordRouteMap D.NodeAddress)),
                 L.StateIO m, L.Logger m, Monad m,
                 HasNodeReceiverId a D.StringHash) =>
                 s -> a -> m ()

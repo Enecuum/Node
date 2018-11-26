@@ -13,7 +13,8 @@ import           Data.HGraph.StringHashable           (toHash)
 import qualified Enecuum.Blockchain.Lens              as Lens
 import           Enecuum.Config
 import qualified Enecuum.Domain                       as D
-import           Enecuum.Framework.Language.Extra     (HasStatus, NodeStatus (..))
+import           Enecuum.Framework.Language.Extra     (HasStatus)
+import qualified Enecuum.Framework.Lens               as Lens
 import qualified Enecuum.Language                     as L
 
 import qualified Enecuum.Assets.Blockchain.Generation as A
@@ -23,7 +24,7 @@ import           Enecuum.Assets.Nodes.Methods         (handleStopNode, rpcPingPo
 
 data TstPoaNodeData = TstPoaNodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock
-    , _status              :: D.StateVar NodeStatus
+    , _status              :: D.StateVar D.NodeStatus
     , _transactionPending  :: D.StateVar [D.Transaction]
     }
 
@@ -50,7 +51,7 @@ instance ToJSON   (NodeScenario TstPoaNode) where toJSON    = A.genericToJSON   
 instance FromJSON (NodeScenario TstPoaNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
 defaultPoANodeConfig :: NodeConfig TstPoaNode
-defaultPoANodeConfig = TstPoANodeConfig (A.defaultPoANodePorts ^. A.nodeRpcPort)
+defaultPoANodeConfig = TstPoANodeConfig (A.defaultPoANodePorts ^. Lens.nodeRpcPort)
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
@@ -91,11 +92,15 @@ poaNode :: NodeScenario TstPoaNode -> NodeConfig TstPoaNode -> L.NodeDefinitionL
 poaNode role cfg = do
     L.nodeTag "PoA node"
     L.logInfo "Starting of PoA node"
-    poaData <- L.scenario $ L.atomically (TstPoaNodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
+    poaData <- L.atomically
+        $ TstPoaNodeData
+            <$> L.newVar D.genesisKBlock
+            <*> L.newVar D.NodeActing
+            <*> L.newVar []
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    L.serving D.Rpc (_poaRPCPort cfg) $ do
+    void $ L.serving D.Rpc (_poaRPCPort cfg) $ do
         L.method   rpcPingPong
         L.method $ handleStopNode poaData
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Enecuum.Assets.Nodes.TstNodes.PoW.Config where
 
@@ -7,6 +7,7 @@ import qualified Enecuum.Assets.Blockchain.Generation as A
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Config
 import qualified Enecuum.Domain                       as D
+import qualified Enecuum.Framework.Lens               as Lens
 import           Enecuum.Prelude
 
 type BlocksDelay = Int
@@ -35,4 +36,4 @@ defaultPoWNodeConfig = TstPoWNodeConfig
     defaultBlocksDelay
     A.InOrder
     (getUdpAddress defaultGnNodeAddress)
-    (defaultPoWNodePorts ^. nodeRpcPort)
+    (defaultPoWNodePorts ^. Lens.nodeRpcPort)

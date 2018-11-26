@@ -2,14 +2,15 @@ module Enecuum.Assets.Nodes.GraphNode.DB.Dump where
 
 import           Enecuum.Prelude
 
-import qualified Enecuum.Blockchain.DB                     as D
-import qualified Enecuum.Blockchain.DB.Lens                as Lens
-import qualified Enecuum.Blockchain.Lens                   as Lens
-import qualified Enecuum.Domain                            as D
-import qualified Enecuum.Language                          as L
+import qualified Enecuum.Blockchain.DB                           as D
+import qualified Enecuum.Blockchain.DB.Lens                      as Lens
+import qualified Enecuum.Blockchain.Lens                         as Lens
+import qualified Enecuum.Domain                                  as D
+import qualified Enecuum.Language                                as L
 
 import           Enecuum.Assets.Nodes.GraphNode.DB.Helpers
-import qualified Enecuum.Assets.Nodes.GraphNode.Logic      as G
+import qualified Enecuum.Assets.Nodes.GraphNode.GraphServiceData as G
+import qualified Enecuum.Assets.Nodes.GraphNode.Logic            as G
 
 saveKBlock :: D.DBModel -> D.KBlock -> L.NodeL (D.DBResult ())
 saveKBlock dbModel kBlock = do
@@ -86,7 +87,7 @@ saveTransaction dbModel kBlockIdx mBlockIdx (transactionIdx, tx) = do
         ]
     pure $ fmap (const ()) $ sequence eResults
 
-dumpToDB' :: G.GraphNodeData -> D.KBlock -> L.NodeL ()
+dumpToDB' :: G.GraphServiceData -> D.KBlock -> L.NodeL ()
 dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
 
     let kBlockPrevHash = kBlock ^. Lens.prevHash
@@ -111,7 +112,7 @@ dumpToDB' nodeData kBlock = withDBModel nodeData $ \dbModel -> do
                 Nothing         -> L.logError $ "Prev KBlock not found in graph: " +|| kBlockPrevHash ||+ "."
                 Just prevKBlock -> dumpToDB' nodeData prevKBlock
 
-dumpToDB :: G.GraphNodeData -> L.NodeL ()
+dumpToDB :: G.GraphServiceData -> L.NodeL ()
 dumpToDB nodeData = do
     L.logInfo "Dumping to DB..."
     topKBlock <- L.atomically $ L.getTopKBlock $ nodeData ^. G.blockchain . Lens.windowedGraph

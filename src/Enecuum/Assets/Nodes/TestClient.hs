@@ -1,20 +1,20 @@
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell        #-}
 module Enecuum.Assets.Nodes.TestClient (testClient, TestClient, TestClientData, NodeConfig(..)) where
 
-import           Enecuum.Prelude
-import qualified Enecuum.Domain                 as D
-import qualified Enecuum.Language               as L
-import qualified Enecuum.Assets.Nodes.Address   as A
-import qualified Enecuum.Assets.Nodes.Messages  as M
-import           Enecuum.Research.ChordRouteMap
-import           Enecuum.Framework.Language.Extra (HasStatus)
-import           Enecuum.Config
 import qualified Data.Aeson                       as J
+import qualified Enecuum.Assets.Nodes.Address     as A
+import qualified Enecuum.Assets.Nodes.Messages    as M
 import           Enecuum.Assets.Nodes.Methods
+import           Enecuum.Config
+import qualified Enecuum.Domain                   as D
+import           Enecuum.Framework.Language.Extra (HasStatus)
+import qualified Enecuum.Language                 as L
+import           Enecuum.Prelude
+import           Enecuum.Research.ChordRouteMap
 
 newtype TestClientData = TestClientData
-    { _status   :: D.StateVar L.NodeStatus
+    { _status   :: D.StateVar D.NodeStatus
     }
 makeFieldsNoPrefix ''TestClientData
 
@@ -43,13 +43,13 @@ testClient _ = do
     L.nodeTag "Client node"
     L.logInfo "Starting of test client node"
     let serverAddress = D.Address "127.0.0.1" 5000
-    nodeData <- L.scenario $ L.atomically (TestClientData <$> L.newVar L.NodeActing)
+    nodeData <- L.atomically (TestClientData <$> L.newVar D.NodeActing)
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     conn <- L.open D.Tcp serverAddress $ pure ()
     whenJust conn $ \jConn -> tester jConn 0
     L.logInfo "Connect closed."
 
-tester :: (L.Logger m, L.Send t m, L.ControlFlow m, Monad m) => t -> Int -> m ()    
+tester :: (L.Logger m, L.Send t m, L.ControlFlow m, Monad m) => t -> Int -> m ()
 tester conn i = do
     L.delay i
     res <- L.send conn M.Ping
