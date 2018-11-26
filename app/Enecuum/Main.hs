@@ -11,6 +11,6 @@ main :: IO ()
 main = do
     args <- getArgs
     case args of
-        ["initialize", configFile] -> withConfig configFile initialize
-        ["m", configFile]          -> withConfig configFile runMultiNode
+        ["singlenode", configFile] -> withConfig configFile initialize
+        ["multinode", configFile]  -> withConfig configFile runMultiNode
         _                          -> withConfig defaultConfig initialize

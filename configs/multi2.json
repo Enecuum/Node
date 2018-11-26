@@ -9,9 +9,9 @@
             { "tag":"EmptyRange"
             }
     ,   "nnPorts":
-            {   "maxValue":5250
+            {   "maxValue":5450
             ,   "tag":"Range"
-            ,   "minValue":5050
+            ,   "minValue":5251
             }
     }
 ,   "loggerConfig":

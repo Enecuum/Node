@@ -109,15 +109,18 @@ runMultiNode configSrc = case Cfg.dispatchScenario @A.MultiNode configSrc of
 
 startPoWNodes range cfg = do
     forM_ (A.rangeToList range) $ \nPort -> do
+        threadDelay 3000
         let nodeCfg = cfg {A._powNodePorts = A.makeNodePorts1000 nPort}
         void $ forkIO $ void $ runNode D.nullLoger (A.powNode' nodeCfg)
 
 startPoANodes range cfg = do
     forM_ (A.rangeToList range) $ \nPort -> do
+        threadDelay 3000
         let nodeCfg = cfg {A._poaNodePorts = A.makeNodePorts1000 nPort}
         void $ forkIO $ void $ runNode D.nullLoger (A.poaNode A.Good nodeCfg)
 
 startNNNodes range cfg = do
     forM_ (A.rangeToList range) $ \nPort -> do
+        threadDelay 3000
         let nodeCfg = cfg {A._gnNodePorts = A.makeNodePorts1000 nPort}
         void $ forkIO $ void $ runNode D.nullLoger (A.graphNodeTransmitter nodeCfg)

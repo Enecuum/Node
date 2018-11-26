@@ -1,0 +1,24 @@
+{   "node":"MultiNode"
+    ,   "nodeScenario":"MultiNodeS"
+    ,   "nodeConfig":
+        {   "tag":"MultiNodeConfig"
+        ,   "poaPorts":
+                { "tag":"EmptyRange"
+                }
+        ,   "powPorts":
+                { "tag":"EmptyRange"
+                }
+        ,   "nnPorts":
+                {   "maxValue":5650
+                ,   "tag":"Range"
+                ,   "minValue":5451
+                }
+        }
+    ,   "loggerConfig":
+            {   "logFilePath": "/tmp/log/poa.log"
+            ,   "format":"$prio $loggername: $msg"
+            ,   "logToConsole":true
+            ,   "logToFile": true
+            ,   "level":"Debug"
+            }
+    }
