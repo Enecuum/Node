@@ -42,7 +42,7 @@
     },
     "node": "GraphNode",
     "loggerConfig": {
-        "logFilePath": "/tmp/log/gn.log",
+        "logFilePath": "",
         "format": "$prio $loggername: $msg",
         "logToFile": false,
         "logToConsole": true,

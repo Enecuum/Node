@@ -23,9 +23,9 @@
     },
     "node": "PoWNode",
     "loggerConfig": {
-        "logFilePath": "",
+        "logFilePath": "/tmp/log/PoW.log",
         "format": "$prio $loggername: $msg",
-        "logToFile": false,
+        "logToFile": true,
         "logToConsole": true,
         "level": "Debug"
     },

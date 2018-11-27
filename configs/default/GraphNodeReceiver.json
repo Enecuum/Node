@@ -1,6 +1,6 @@
 {
     "nodeConfig": {
-        "tag": "GraphNodeConfig",
+        "tag": "TstGraphNodeConfig",
         "graphServiceConfig": {
             "dbConfig": {
                 "stopOnDatabaseError": true,
@@ -20,33 +20,25 @@
                 "shrinkingDelay": 1000000
             },
             "tag": "GraphServiceConfig",
-            "rpcSynco": null
-        },
-        "bnAddress": {
-            "tag": "NodeAddress",
-            "nodePorts": {
-                "tag": "NodePorts",
-                "nodeRpcPort": 6000,
-                "nodeUdpPort": 4000,
-                "nodeTcpPort": 5000
-            },
-            "nodeId": "kR2/PidrIMfsI6u6WZvyx3JOwQOlW+z7WG+k2QO+sDQ=",
-            "nodeHost": "127.0.0.1"
+            "rpcSynco": {
+                "host": "127.0.0.1",
+                "port": 6050
+            }
         },
         "nodePorts": {
             "tag": "NodePorts",
-            "nodeRpcPort": 6050,
-            "nodeUdpPort": 4050,
-            "nodeTcpPort": 5050
+            "nodeRpcPort": 6051,
+            "nodeUdpPort": 4051,
+            "nodeTcpPort": 5051
         }
     },
-    "node": "GraphNode",
+    "node": "TstGraphNode",
     "loggerConfig": {
-        "logFilePath": "/tmp/log/gn.log",
+        "logFilePath": "",
         "format": "$prio $loggername: $msg",
         "logToFile": false,
         "logToConsole": true,
         "level": "Debug"
     },
-    "nodeScenario": "GN"
+    "nodeScenario": "TstGN"
 }
