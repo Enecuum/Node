@@ -28,12 +28,10 @@ instance FromJSON (NodeConfig TstPoWNode) where parseJSON = J.genericParseJSON n
 instance ToJSON   TstPoWNode              where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON TstPoWNode              where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
-defaultBlocksDelay :: BlocksDelay
-defaultBlocksDelay = 1000 * 1000
-
 defaultPoWNodeConfig :: NodeConfig TstPoWNode
 defaultPoWNodeConfig = TstPoWNodeConfig
-    defaultBlocksDelay
-    A.InOrder
-    (getUdpAddress defaultGnNodeAddress)
-    (defaultPoWNodePorts ^. Lens.nodeRpcPort)
+    { _defaultBlocksDelay  = 1000 * 1000
+    , _kblocksOrder        = A.InOrder
+    , _graphNodeUDPAddress = getUdpAddress defaultGnNodeAddress
+    , _powNodeRpcPort      = defaultPoWNodePorts ^. Lens.nodeRpcPort
+    }

@@ -189,10 +189,18 @@ withDbPresence dbPath act = do
     mkDb dbPath
     void act `finally` rmDb dbPath
 
+noGraphShrinking :: Cfg.GraphWindowConfig
+noGraphShrinking = Cfg.GraphWindowConfig
+    { Cfg._shrinkingEnabled = False
+    , Cfg._shrinkingDelay = 1000 * 1000
+    , Cfg._windowSize = 10
+    }
+
 graphNodeTransmitterConfig :: D.NodeConfig Tst.TstGraphNode
 graphNodeTransmitterConfig = Tst.TstGraphNodeConfig
   { Tst._graphServiceConfig = Cfg.GraphServiceConfig
-      { Cfg._dbConfig = Cfg.noDBConfig
+      { Cfg._graphWindowConfig = noGraphShrinking
+      , Cfg._dbConfig = Cfg.noDBConfig
       , Cfg._rpcSynco = Nothing
       }
   , Tst._nodePorts = A.defaultGnNodePorts
@@ -201,7 +209,8 @@ graphNodeTransmitterConfig = Tst.TstGraphNodeConfig
 graphNodeReceiverConfig :: D.NodeConfig Tst.TstGraphNode
 graphNodeReceiverConfig = Tst.TstGraphNodeConfig
   { Tst._graphServiceConfig = Cfg.GraphServiceConfig
-      { Cfg._dbConfig = Cfg.noDBConfig
+      { Cfg._graphWindowConfig = noGraphShrinking
+      , Cfg._dbConfig = Cfg.noDBConfig
       , Cfg._rpcSynco = Just $ A.getRpcAddress A.defaultGnNodeAddress
       }
   , Tst._nodePorts = A.defaultGnReceiverNodePorts
