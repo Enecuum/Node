@@ -26,3 +26,8 @@ data NodeStatus = NodeActing | NodeFinished
     deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data StopNode = StopNode deriving Read
+
+-- This is used in tests only.
+-- TODO: get rid of it.
+newtype NodeID = NodeID Text
+    deriving (Show, Eq)

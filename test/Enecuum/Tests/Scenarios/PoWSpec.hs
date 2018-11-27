@@ -2,8 +2,8 @@ module Enecuum.Tests.Scenarios.PoWSpec where
 
 import qualified Data.Map                             as M
 import qualified Enecuum.Assets.Blockchain.Generation as A
-import qualified Enecuum.Assets.TstScenarios          as Tst
 import qualified Enecuum.Assets.Scenarios             as A
+import qualified Enecuum.Assets.TstScenarios          as Tst
 import qualified Enecuum.Blockchain.Lens              as Lens
 import qualified Enecuum.Domain                       as D
 import qualified Enecuum.Interpreters                 as I
@@ -34,7 +34,7 @@ powRpcAddress        = A.getRpcAddress A.defaultPoWNodeAddress
 
 testAcceptKblock :: A.Ordering -> Test
 testAcceptKblock order = TestCase $ withNodesManager $ \mgr -> do
-    void $ startNode Nothing mgr $ Tst.graphNodeTransmitter Tst.defaultNodeConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode graphNodeTransmitterConfig
     waitForNode transmiterRpcAddress
     void $ startNode Nothing mgr $ Tst.powNode' $ Tst.defaultPoWNodeConfig { Tst._kblocksOrder = order}
     waitForNode powRpcAddress
@@ -56,7 +56,7 @@ testKblockPending = TestCase $ withNodesManager $ \mgr -> do
     -- wait until pow generate kblocks
     threadDelay $ 1000 * 1000
 
-    void $ startNode Nothing mgr $ Tst.graphNodeTransmitter Tst.defaultNodeConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode graphNodeTransmitterConfig
     -- only genesisKBlock kblock on graph node
     waitForNode transmiterRpcAddress
     Right topKBlock1 :: Either Text D.KBlock <- makeIORpcRequest transmiterRpcAddress A.GetLastKBlock

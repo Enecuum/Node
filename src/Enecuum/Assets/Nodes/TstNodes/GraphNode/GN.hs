@@ -29,7 +29,7 @@ instance Node TstGraphNode where
         deriving (Show, Generic)
     getNodeScript TstGN = tstGraphNode
 
-instance ToJSON   (NodeScenario TstGraphNode) where toJSON    = A.genericToJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario TstGraphNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario TstGraphNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
 data TstGraphNodeData = TstGraphNodeData
