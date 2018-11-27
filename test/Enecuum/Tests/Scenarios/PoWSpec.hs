@@ -34,7 +34,7 @@ powRpcAddress        = A.getRpcAddress A.defaultPoWNodeAddress
 
 testAcceptKblock :: A.Ordering -> Test
 testAcceptKblock order = TestCase $ withNodesManager $ \mgr -> do
-    void $ startNode Nothing mgr $ Tst.tstGraphNode graphNodeTransmitterConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.graphNodeTransmitterConfig
     waitForNode transmiterRpcAddress
     void $ startNode Nothing mgr $ Tst.powNode' $ Tst.defaultPoWNodeConfig { Tst._kblocksOrder = order}
     waitForNode powRpcAddress
@@ -56,7 +56,7 @@ testKblockPending = TestCase $ withNodesManager $ \mgr -> do
     -- wait until pow generate kblocks
     threadDelay $ 1000 * 1000
 
-    void $ startNode Nothing mgr $ Tst.tstGraphNode graphNodeTransmitterConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.graphNodeTransmitterConfig
     -- only genesisKBlock kblock on graph node
     waitForNode transmiterRpcAddress
     Right topKBlock1 :: Either Text D.KBlock <- makeIORpcRequest transmiterRpcAddress A.GetLastKBlock

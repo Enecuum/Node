@@ -39,6 +39,7 @@ instance Node PoWNode where
     data NodeScenario PoWNode = PoW
         deriving (Show, Generic)
     getNodeScript _ = powNode'
+    getNodeTag _ = PoWNode
 
 instance ToJSON   (NodeScenario PoWNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario PoWNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions

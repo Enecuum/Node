@@ -39,6 +39,7 @@ instance Node GraphNode where
     data NodeScenario GraphNode = GN
         deriving (Show, Generic)
     getNodeScript GN = graphNode
+    getNodeTag _ = GraphNode
 
 instance ToJSON   GraphNode                where toJSON     = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON GraphNode                where parseJSON  = A.genericParseJSON nodeConfigJsonOptions

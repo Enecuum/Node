@@ -47,7 +47,7 @@ instance Node NN where
     data NodeScenario NN = NNS
         deriving (Show, Generic)
     getNodeScript NNS = nnNode' Nothing
-
+    getNodeTag _ = NN
 
 instance ToJSON   NN                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON NN                where parseJSON = J.genericParseJSON nodeConfigJsonOptions

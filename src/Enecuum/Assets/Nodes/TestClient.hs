@@ -30,6 +30,7 @@ instance Node TestClient where
     data NodeScenario TestClient = TestClientS
         deriving (Show, Generic)
     getNodeScript TestClientS = testClient
+    getNodeTag _ = TestClient 
 
 instance ToJSON   TestClient                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON TestClient                where parseJSON = J.genericParseJSON nodeConfigJsonOptions

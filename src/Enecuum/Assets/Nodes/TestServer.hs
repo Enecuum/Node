@@ -27,6 +27,7 @@ instance Node TestServer where
     data NodeScenario TestServer = TestServerS
         deriving (Show, Generic)
     getNodeScript TestServerS = testServer
+    getNodeTag _ = TestServer
 
 instance ToJSON   TestServer                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON TestServer                where parseJSON = J.genericParseJSON nodeConfigJsonOptions

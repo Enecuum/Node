@@ -28,6 +28,7 @@ instance Node TstGraphNode where
     data NodeScenario TstGraphNode = TstGN
         deriving (Show, Generic)
     getNodeScript TstGN = tstGraphNode
+    getNodeTag _ = TstGraphNode
 
 instance ToJSON   (NodeScenario TstGraphNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario TstGraphNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions

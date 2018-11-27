@@ -44,6 +44,7 @@ instance Node PoANode where
     data NodeScenario PoANode = Good | Bad
         deriving (Show, Generic)
     getNodeScript = poaNode
+    getNodeTag _ = PoANode
 
 instance ToJSON   PoANode                where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON PoANode                where parseJSON = A.genericParseJSON nodeConfigJsonOptions

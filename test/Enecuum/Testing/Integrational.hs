@@ -188,21 +188,3 @@ withDbPresence :: FilePath -> IO a -> IO ()
 withDbPresence dbPath act = do
     mkDb dbPath
     void act `finally` rmDb dbPath
-
-graphNodeTransmitterConfig :: D.NodeConfig Tst.TstGraphNode
-graphNodeTransmitterConfig = Tst.TstGraphNodeConfig
-  { Tst._graphServiceConfig = Cfg.GraphServiceConfig
-      { Cfg._dbConfig = Cfg.noDBConfig
-      , Cfg._rpcSynco = Nothing
-      }
-  , Tst._nodePorts = A.defaultGnNodePorts
-  }
-
-graphNodeReceiverConfig :: D.NodeConfig Tst.TstGraphNode
-graphNodeReceiverConfig = Tst.TstGraphNodeConfig
-  { Tst._graphServiceConfig = Cfg.GraphServiceConfig
-      { Cfg._dbConfig = Cfg.noDBConfig
-      , Cfg._rpcSynco = Just $ A.getRpcAddress A.defaultGnNodeAddress
-      }
-  , Tst._nodePorts = A.defaultGnReceiverNodePorts
-  }

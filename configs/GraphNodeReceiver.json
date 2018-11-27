@@ -24,9 +24,9 @@
             },
         "nodePorts":
             {
-              "_nodeTcpPort": 5040,
-              "_nodeUdpPort": 4040,
-              "_nodeRpcPort": 6040
+              "nodeTcpPort": 5040,
+              "nodeUdpPort": 4040,
+              "nodeRpcPort": 6040
             },
       },
    "loggerConfig":

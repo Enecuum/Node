@@ -36,6 +36,7 @@ instance Node ClientNode where
     data NodeScenario ClientNode = CLI
         deriving (Show, Generic)
     getNodeScript CLI = clientNode'
+    getNodeTag _ = ClientNode
 
 instance ToJSON   ClientNode                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON ClientNode                where parseJSON = J.genericParseJSON nodeConfigJsonOptions

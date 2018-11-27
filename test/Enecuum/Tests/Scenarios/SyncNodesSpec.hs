@@ -28,7 +28,7 @@ testNodeNet = TestCase . withNodesManager $ \mgr -> do
     let poaRpcAddress              = A.getRpcAddress A.defaultPoANodeAddress
 
     -- Start nodes
-    void $ startNode Nothing mgr $ Tst.tstGraphNode graphNodeTransmitterConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.graphNodeTransmitterConfig
     waitForNode transmiterRpcAddress
 
     void $ startNode Nothing mgr Tst.powNode
@@ -37,7 +37,7 @@ testNodeNet = TestCase . withNodesManager $ \mgr -> do
     void $ startNode Nothing mgr $ Tst.poaNode Tst.Good Tst.defaultPoANodeConfig
     waitForNode poaRpcAddress
 
-    void $ startNode Nothing mgr $ Tst.tstGraphNode graphNodeReceiverConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.graphNodeReceiverConfig
     waitForNode receiverRpcAddress
 
     -- Ask pow node to generate n kblocks
