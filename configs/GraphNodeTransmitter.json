@@ -1,41 +1,35 @@
-{  
-    "node":"TstGraphNode",
-    "nodeScenario":"TstGN",
-    "nodeConfig":
-    {
-        "tag":"TstGraphNodeConfig",
-        "graphServiceConfig":
-        {
-            "dbConfig":
-            {
-                "stopOnDatabaseError":true,
-                "tag":"DBConfig",
-                "dbOptions":
-                {
-                    "errorIfExists":true,
-                    "createIfMissing":true
+{
+    "nodeConfig": {
+        "tag": "TstGraphNodeConfig",
+        "graphServiceConfig": {
+            "dbConfig": {
+                "stopOnDatabaseError": true,
+                "tag": "DBConfig",
+                "dbOptions": {
+                    "errorIfExists": true,
+                    "createIfMissing": true
                 },
-                "dbModelName":"\\",
-                "useDatabase":false,
-                "useEnqHomeDir":false
+                "dbModelName": "",
+                "useDatabase": false,
+                "useEnqHomeDir": false
             },
             "tag": "GraphServiceConfig",
-            "rpcSynco":null
+            "rpcSynco": null
         },
-        "nodePorts":
-        {
-            "tag":"NodePorts",
-            "nodeRpcPort":6050,
-            "nodeUdpPort":4050,
-            "nodeTcpPort":5050
+        "nodePorts": {
+            "tag": "NodePorts",
+            "nodeRpcPort": 6050,
+            "nodeUdpPort": 4050,
+            "nodeTcpPort": 5050
         }
     },
-    "loggerConfig":
-    {
-        "logFilePath":"/tmp/log/GraphNodeTransmitter.log",
-        "format":"$prio $loggername: $msg",
-        "logToConsole":true,
-        "logToFile": true,
-        "level":"Debug"
-    }
+    "node": "TstGraphNode",
+    "loggerConfig": {
+        "logFilePath": "",
+        "format": "$prio $loggername: $msg",
+        "logToFile": false,
+        "logToConsole": true,
+        "level": "Debug"
+    },
+    "nodeScenario": "TstGN"
 }

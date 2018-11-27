@@ -1,49 +1,93 @@
 {
-   "node":"GraphNode",
-   "nodeScenario":"Transmitter",
-   "nodeConfig":
-        {
-        "dbConfig":
-            {
-            "stopOnDatabaseError": true,
-            "tag": "DBConfig",
-            "dbOptions":
-                {
-                "errorIfExists":true,
-                "createIfMissing":true
-                },
-            "dbModelName": "\\",
-            "useDatabase":false,
-            "useEnqHomeDir":false
-            },
+    "nodeConfig": {
         "tag": "GraphNodeConfig",
-        "gnNodePorts":
-            {
-            "_nodeTcpPort": 5053,
-            "_nodeUdpPort": 4053,
-            "_nodeRpcPort": 6053
+        "graphServiceConfig": {
+            "dbConfig": {
+                "stopOnDatabaseError": true,
+                "tag": "DBConfig",
+                "dbOptions": {
+                    "errorIfExists": true,
+                    "createIfMissing": true
+                },
+                "dbModelName": "",
+                "useDatabase": false,
+                "useEnqHomeDir": false
             },
-        "rpcSynco": null,
-        "bnAddress":
-            {
-            "_nodeHost":"127.0.0.1",
-            "_nodeId": {
-                "bytes":[107,82,50,47,80,105,100,114,73,77,102,115,73,54,117,54,87,90,118,121,120,51,74,79,119,81,79,108,87,43,122,55,87,71,43,107,50,81,79,43,115,68,81,61]
+            "tag": "GraphServiceConfig",
+            "rpcSynco": null
+        },
+        "bnAddress": {
+            "tag": "NodeAddress",
+            "nodePorts": {
+                "tag": "NodePorts",
+                "nodeRpcPort": 6000,
+                "nodeUdpPort": 4000,
+                "nodeTcpPort": 5000
             },
-        "_nodePorts":
-            {
-            "_nodeTcpPort": 5000,
-            "_nodeUdpPort": 4000,
-            "_nodeRpcPort": 6000
-            }
+            "nodeId": {
+                "bytes": [
+                    107,
+                    82,
+                    50,
+                    47,
+                    80,
+                    105,
+                    100,
+                    114,
+                    73,
+                    77,
+                    102,
+                    115,
+                    73,
+                    54,
+                    117,
+                    54,
+                    87,
+                    91,
+                    118,
+                    121,
+                    120,
+                    51,
+                    74,
+                    79,
+                    119,
+                    81,
+                    79,
+                    108,
+                    87,
+                    43,
+                    122,
+                    55,
+                    87,
+                    71,
+                    43,
+                    107,
+                    50,
+                    81,
+                    79,
+                    43,
+                    115,
+                    68,
+                    81,
+                    61
+                ]
+            },
+            "nodeHost": "127.0.0.1"
+        },
+        "nodePorts": {
+            "tag": "NodePorts",
+            "nodeRpcPort": 6053,
+            "nodeUdpPort": 4053,
+            "nodeTcpPort": 5053
         }
     },
-   "loggerConfig":
-        {
-            "logFilePath":"/tmp/log/app.log",
-            "format":"$prio $loggername: $msg",
-            "logToConsole":true,
-            "logToFile": true,
-            "level":"Debug"
-        }
+    "node": "GraphNode",
+    "loggerConfig": {
+        "logFilePath": "",
+        "format": "$prio $loggername: $msg",
+        "logToFile": false,
+        "logToConsole": true,
+        "level": "Debug"
+    },
+    "nodeScenario": "GN"
 }

@@ -1,40 +1,38 @@
 {
-   "node":"TstGraphNode",
-   "nodeScenario":"TstGN",
-   "nodeConfig":
-      {
+    "nodeConfig": {
         "tag": "TstGraphNodeConfig",
-        "graphServiceConfig":
-            {
-                "tag": "GraphServiceConfig",
-                "dbConfig":
-                    {
-                    "stopOnDatabaseError": true,
-                    "tag": "DBConfig",
-                    "dbOptions":
-                        {
-                        "errorIfExists":false,
-                        "createIfMissing":true
-                        },
-                    "dbModelName": "graph_node_transmitter.dbm",
-                    "useDatabase":true,
-                    "useEnqHomeDir":true
-                  },
-                "rpcSynco": {"host":"127.0.0.1","port":5050},
+        "graphServiceConfig": {
+            "dbConfig": {
+                "stopOnDatabaseError": true,
+                "tag": "DBConfig",
+                "dbOptions": {
+                    "errorIfExists": true,
+                    "createIfMissing": true
+                },
+                "dbModelName": "",
+                "useDatabase": false,
+                "useEnqHomeDir": false
             },
-        "nodePorts":
-            {
-              "nodeTcpPort": 5040,
-              "nodeUdpPort": 4040,
-              "nodeRpcPort": 6040
-            },
-      },
-   "loggerConfig":
-      {
-          "logFilePath":"/tmp/log/GraphNodeReceiver.log",
-          "format":"$prio $loggername: $msg",
-          "logToConsole":true,
-          "logToFile": true,
-          "level":"Debug"
-      }
+            "tag": "GraphServiceConfig",
+            "rpcSynco": {
+                "host": "127.0.0.1",
+                "port": 6050
+            }
+        },
+        "nodePorts": {
+            "tag": "NodePorts",
+            "nodeRpcPort": 6051,
+            "nodeUdpPort": 4051,
+            "nodeTcpPort": 5051
+        }
+    },
+    "node": "TstGraphNode",
+    "loggerConfig": {
+        "logFilePath": "",
+        "format": "$prio $loggername: $msg",
+        "logToFile": false,
+        "logToConsole": true,
+        "level": "Debug"
+    },
+    "nodeScenario": "TstGN"
 }
