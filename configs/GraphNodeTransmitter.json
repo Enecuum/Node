@@ -1,36 +1,41 @@
 {
-   "node":"TstGraphNode",
-   "nodeScenario":"Transmitter",
-   "nodeConfig":
-        {
-        "dbConfig":
-            {
-            "stopOnDatabaseError": true,
-            "tag": "DBConfig",
-            "dbOptions":
-                {
-                "errorIfExists":false,
-                "createIfMissing":true
-                },
-            "dbModelName": "graph_node_transmitter.dbm",
-            "useDatabase":true,
-            "useEnqHomeDir":true
-            },
+    "nodeConfig": {
         "tag": "TstGraphNodeConfig",
-        "gnNodePorts":
-            {
-            "_nodeTcpPort": 5050,
-            "_nodeUdpPort": 4050,
-            "_nodeRpcPort": 6050
+        "graphServiceConfig": {
+            "dbConfig": {
+                "stopOnDatabaseError": true,
+                "tag": "DBConfig",
+                "dbOptions": {
+                    "errorIfExists": true,
+                    "createIfMissing": true
+                },
+                "dbModelName": "",
+                "useDatabase": false,
+                "useEnqHomeDir": false
             },
-						"rpcSynco": null,
-				},
-   "loggerConfig":
-        {
-            "logFilePath":"/tmp/log/GraphNodeTransmitter.log",
-            "format":"$prio $loggername: $msg",
-            "logToConsole":true,
-            "logToFile": true,
-            "level":"Debug"
+            "graphWindowConfig": {
+                "tag": "GraphWindowConfig",
+                "shrinkingEnabled": false,
+                "windowSize": 10,
+                "shrinkingDelay": 1000000
+            },
+            "tag": "GraphServiceConfig",
+            "rpcSynco": null
+        },
+        "nodePorts": {
+            "tag": "NodePorts",
+            "nodeRpcPort": 6050,
+            "nodeUdpPort": 4050,
+            "nodeTcpPort": 5050
         }
+    },
+    "node": "TstGraphNode",
+    "loggerConfig": {
+        "logFilePath": "",
+        "format": "$prio $loggername: $msg",
+        "logToFile": false,
+        "logToConsole": true,
+        "level": "Debug"
+    },
+    "nodeScenario": "TstGN"
 }

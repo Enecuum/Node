@@ -2,8 +2,8 @@ module Enecuum.Tests.Scenarios.PoWSpec where
 
 import qualified Data.Map                             as M
 import qualified Enecuum.Assets.Blockchain.Generation as A
-import qualified Enecuum.Assets.TstScenarios          as Tst
 import qualified Enecuum.Assets.Scenarios             as A
+import qualified Enecuum.Assets.TstScenarios          as Tst
 import qualified Enecuum.Blockchain.Lens              as Lens
 import qualified Enecuum.Domain                       as D
 import qualified Enecuum.Interpreters                 as I
@@ -24,7 +24,7 @@ spec = slowTest $ describe "PoW and graph node interaction" $ fromHUnitTest $ Te
     ]
 
 -- Ask pow node to generate n kblocks
-timeGap              = 0
+timeGap              = 1000
 kblockCount          = 10
 
 -- default addresses
@@ -34,7 +34,7 @@ powRpcAddress        = A.getRpcAddress A.defaultPoWNodeAddress
 
 testAcceptKblock :: A.Ordering -> Test
 testAcceptKblock order = TestCase $ withNodesManager $ \mgr -> do
-    void $ startNode Nothing mgr $ Tst.graphNodeTransmitter Tst.defaultNodeConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.graphNodeTransmitterConfig
     waitForNode transmiterRpcAddress
     void $ startNode Nothing mgr $ Tst.powNode' $ Tst.defaultPoWNodeConfig { Tst._kblocksOrder = order}
     waitForNode powRpcAddress
@@ -56,7 +56,7 @@ testKblockPending = TestCase $ withNodesManager $ \mgr -> do
     -- wait until pow generate kblocks
     threadDelay $ 1000 * 1000
 
-    void $ startNode Nothing mgr $ Tst.graphNodeTransmitter Tst.defaultNodeConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.graphNodeTransmitterConfig
     -- only genesisKBlock kblock on graph node
     waitForNode transmiterRpcAddress
     Right topKBlock1 :: Either Text D.KBlock <- makeIORpcRequest transmiterRpcAddress A.GetLastKBlock
@@ -69,7 +69,7 @@ testKblockPending = TestCase $ withNodesManager $ \mgr -> do
     -- The last generated bunch of kblocks must to be in pending on graph node
     kblocks :: D.KBlockPending <- makeRpcRequestUntilSuccess transmiterRpcAddress A.GetKBlockPending
     let kblockNumbers = map ((^. Lens.number) . snd) (M.toList kblocks)
-    sort kblockNumbers `shouldBe` [kblockCount + 1 .. 2*kblockCount]
+    sort kblockNumbers `shouldBe` [kblockCount + 1 .. 2 * kblockCount]
 
     -- Stop pow, launch pow again, (there no data from the first pow launch now)
     stopNode mgr powNode

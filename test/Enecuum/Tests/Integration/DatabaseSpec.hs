@@ -1,19 +1,19 @@
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE PackageImports         #-}
+{-# LANGUAGE TemplateHaskell        #-}
 
 module Enecuum.Tests.Integration.DatabaseSpec where
 
 import           Enecuum.Prelude
 
-import qualified Enecuum.Domain                               as D
-import qualified Enecuum.Language                             as L
-import qualified Enecuum.Blockchain.Lens                      as Lens
 import           Enecuum.Blockchain.DB
+import qualified Enecuum.Blockchain.Lens       as Lens
+import qualified Enecuum.Domain                as D
+import qualified Enecuum.Language              as L
 
-import           Test.Hspec
 import           Enecuum.Testing.Integrational
 import           Enecuum.Tests.Wrappers
+import           Test.Hspec
 
 data NodeData = NodeData
     { _kBlocksDB     :: D.Storage KBlocksDB
@@ -122,11 +122,11 @@ spec = fastTest $ describe "Database functional tests" $ do
 
     describe "DB Entities tests" $ do
         it "ToDBKey test" $
-            kBlock1MetaKey   `shouldBe` KBlockMetaKey (D.fromStringHash $ kBlock1 ^. Lens.prevHash)
-        
+            kBlock1MetaKey   `shouldBe` KBlockMetaKey (kBlock1 ^. Lens.prevHash)
+
         it "ToDBValue test" $
             kBlock1MetaValue `shouldBe` KBlockMetaValue 1
-        
+
         it "RawDBEntity test" $
             D.toRawDBKey @KBlocksMetaDB kBlock1MetaKey `shouldBe` D.fromStringHash (kBlock1 ^. Lens.prevHash)
 

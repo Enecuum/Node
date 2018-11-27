@@ -5,8 +5,8 @@ import qualified Enecuum.Blockchain.Domain                as D
 import           Enecuum.Blockchain.Domain.BlockchainData (BlockchainData (..))
 import qualified Enecuum.Blockchain.Language.Graph        as L
 import qualified Enecuum.Blockchain.Lens                  as Lens
-import qualified Enecuum.Core.Types                       as D
 import qualified Enecuum.Core.Language                    as L
+import qualified Enecuum.Core.Types                       as D
 import qualified Enecuum.Framework.Domain                 as D
 import qualified Enecuum.Framework.Language               as L
 import           Enecuum.Prelude
@@ -18,7 +18,7 @@ import           Enecuum.Prelude
 -- TODO: support check of "already exist k-block"
 validateKBlock :: BlockchainData -> D.KBlock -> L.StateL D.KBlockValidity
 validateKBlock bData kBlock = do
-    topKBlock <- L.getTopKeyBlock bData
+    topKBlock <- L.getTopKBlock $ bData ^. Lens.windowedGraph
 
     let nextBlock    = L.kBlockIsNext kBlock topKBlock
     let prevBlock    = L.kBlockExists kBlock topKBlock
@@ -48,7 +48,7 @@ addTopKBlock' bData kBlock = do
 -- Returns True if Pending needs to be processed.
 addKBlock :: BlockchainData -> D.KBlock -> L.NodeL Bool
 addKBlock bData kBlock = do
-    
+
     res <- L.atomically $ do
         validity <- validateKBlock bData kBlock
         case validity of
@@ -56,12 +56,12 @@ addKBlock bData kBlock = do
             D.FutureKBlock   -> pure KBlockPostponed
             D.PreviousKBlock -> pure KBlockAlreadyPresent
             _                -> pure KBlockErrored
-    
+
     case res of
-        KBlockErrored           -> L.logError $ "Error in processing KBlock: "    +|| kBlock ||+ "."
-        KBlockAlreadyPresent    -> L.logInfo  $ "KBlock aready exixst en graph: " +|| kBlock ||+ "."
-        KBlockAdded             -> pure ()
-        KBlockPostponed         -> L.atomically $ addBlockToPending bData kBlock
+        KBlockErrored        -> L.logError $ "Error in processing KBlock: "    +|| kBlock ||+ "."
+        KBlockAlreadyPresent -> L.logInfo  $ "KBlock aready exixst en graph: " +|| kBlock ||+ "."
+        KBlockAdded          -> pure ()
+        KBlockPostponed      -> L.atomically $ addBlockToPending bData kBlock
     pure $ res == KBlockAdded
 
 
@@ -69,7 +69,7 @@ addKBlock bData kBlock = do
 --   Return true if function had effect.
 processKBlockPending :: BlockchainData -> L.NodeL Bool
 processKBlockPending bData = L.atomically $ do
-    topKBlock <- L.getTopKeyBlock bData
+    topKBlock <- L.getTopKBlock $ bData ^. Lens.windowedGraph
     pending   <- L.readVar (_kBlockPending bData)
 
     let nextKBlockNumber = topKBlock ^. Lens.number + 1

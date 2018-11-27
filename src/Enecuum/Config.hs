@@ -5,11 +5,11 @@
 module Enecuum.Config where
 
 import qualified Data.Aeson                as A
-import           Data.Aeson.Extra          (noLensPrefix)
+import           Data.Aeson.Extra          (noLensPrefixJsonConfig)
 -- import qualified Data.ByteString.Internal  as BSI
 import qualified Data.ByteString.Lazy      as LBS
 import           Data.Yaml                 as A hiding (decode)
-import           Enecuum.Core.Types.Logger (LoggerConfig (..))
+import           Enecuum.Core.Types.Logger (LoggerConfig (..), defaultLoggerConfig)
 import           Enecuum.Language          (NodeDefinitionL)
 import           Enecuum.Prelude
 
@@ -35,14 +35,20 @@ data family NodeConfig node :: *
 class Node node where
     data NodeScenario node :: *
     getNodeScript :: NodeScenario node -> NodeConfig node -> NodeDefinitionL ()
+    getNodeTag    :: NodeConfig node -> node
+
+defConfig :: Node node => NodeScenario node -> NodeConfig node -> Config node
+defConfig scenario cfg = Config
+    { node         = getNodeTag cfg
+    , nodeScenario = scenario
+    , nodeConfig   = cfg
+    , loggerConfig = defaultLoggerConfig
+    }
 
 -- | Options for ToJSON / FromJSON instances for configs.
 -- These options take care about correct parsing of enum and data types.
 nodeConfigJsonOptions :: A.Options
-nodeConfigJsonOptions = noLensPrefix
-    { A.unwrapUnaryRecords    = False
-    , A.tagSingleConstructors = True
-    }
+nodeConfigJsonOptions = noLensPrefixJsonConfig
 
 -- | Reads a config file and evals some action with the contents.
 withConfig :: FilePath -> (LByteString -> IO ()) -> IO ()

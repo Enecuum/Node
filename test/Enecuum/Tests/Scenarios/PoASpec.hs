@@ -2,8 +2,8 @@ module Enecuum.Tests.Scenarios.PoASpec where
 
 import qualified Data.Map                             as M
 import qualified Enecuum.Assets.Blockchain.Generation as A
-import qualified Enecuum.Assets.TstScenarios          as Tst
 import qualified Enecuum.Assets.Scenarios             as A
+import qualified Enecuum.Assets.TstScenarios          as Tst
 import qualified Enecuum.Domain                       as D
 import qualified Enecuum.Interpreters                 as I
 import qualified Enecuum.Language                     as L
@@ -25,7 +25,7 @@ testPoA :: Test
 testPoA = TestCase $ withNodesManager $ \mgr -> do
     let transmiterRpcAddress       = A.getRpcAddress A.defaultGnNodeAddress
 
-    void $ startNode Nothing mgr $ Tst.graphNodeTransmitter $ Tst.defaultNodeConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.graphNodeTransmitterConfig
     void $ startNode Nothing mgr Tst.powNode
     void $ startNode Nothing mgr $ Tst.poaNode Tst.Good Tst.defaultPoANodeConfig
 

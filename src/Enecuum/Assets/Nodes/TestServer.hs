@@ -1,17 +1,17 @@
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell        #-}
 module Enecuum.Assets.Nodes.TestServer (testServer, TestServer, NodeConfig(..)) where
 
-import           Enecuum.Prelude
-import qualified Enecuum.Domain                 as D
-import qualified Enecuum.Language               as L
-import           Enecuum.Framework.Language.Extra (HasStatus)
-import           Enecuum.Config
 import qualified Data.Aeson                       as J
+import           Enecuum.Config
+import qualified Enecuum.Domain                   as D
+import           Enecuum.Framework.Language.Extra (HasStatus)
+import qualified Enecuum.Language                 as L
+import           Enecuum.Prelude
 
 
 newtype TestServerData = TestServerData
-    { _status   :: D.StateVar L.NodeStatus
+    { _status   :: D.StateVar D.NodeStatus
     }
 makeFieldsNoPrefix ''TestServerData
 
@@ -27,6 +27,7 @@ instance Node TestServer where
     data NodeScenario TestServer = TestServerS
         deriving (Show, Generic)
     getNodeScript TestServerS = testServer
+    getNodeTag _ = TestServer
 
 instance ToJSON   TestServer                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON TestServer                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
@@ -39,7 +40,7 @@ testServer :: p -> L.NodeDefinitionL ()
 testServer _ = do
     L.nodeTag "Server node"
     L.logInfo "Starting of test server node"
-    nodeData <- L.scenario $ L.atomically (TestServerData <$> L.newVar L.NodeActing)
+    nodeData <- L.scenario $ L.atomically (TestServerData <$> L.newVar D.NodeActing)
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
     L.serving D.Tcp 5000 $ pure ()
     L.awaitNodeFinished nodeData

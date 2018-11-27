@@ -1,54 +1,39 @@
-{-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE DeriveAnyClass         #-}
+{-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
 module Enecuum.Assets.Nodes.Address where
 
-import           Enecuum.Prelude
-import qualified Enecuum.Domain                as D
 import           Data.HGraph.StringHashable
-
-type NodeId     = StringHash
-
--- TODO : NodePorts & NodeAddress => to module ???
-data NodePorts = NodePorts
-    { _nodeUdpPort :: D.PortNumber
-    , _nodeTcpPort :: D.PortNumber
-    , _nodeRpcPort :: D.PortNumber
-    } deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, Serialize)
-makeFieldsNoPrefix ''NodePorts
+import           Enecuum.Domain             (Address (..), NodeAddress (..), NodeId, NodePorts (..))
+import qualified Enecuum.Domain             as D
+import qualified Enecuum.Framework.Lens     as Lens
+import           Enecuum.Prelude
 
 makeNodePorts1000 :: D.PortNumber -> NodePorts
 makeNodePorts1000 port = NodePorts (port - 1000) port (port + 1000)
 
-data NodeAddress = NodeAddress
-    { _nodeHost     :: D.Host
-    , _nodePorts    :: NodePorts
-    , _nodeId       :: NodeId
-    } deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
-makeFieldsNoPrefix ''NodeAddress
-
 makeNodeAddress :: D.Host -> NodePorts -> NodeId -> NodeAddress
 makeNodeAddress = NodeAddress
 
-getUdpAddress :: NodeAddress -> D.Address
+getUdpAddress :: NodeAddress -> Address
 getUdpAddress nodeAddress' =
-    D.Address (nodeAddress'^.nodeHost) (nodeAddress'^.nodePorts.nodeUdpPort)
+    D.Address (nodeAddress' ^. Lens.nodeHost) (nodeAddress' ^. Lens.nodePorts . Lens.nodeUdpPort)
 
-getTcpAddress :: NodeAddress -> D.Address
+getTcpAddress :: NodeAddress -> Address
 getTcpAddress nodeAddress' =
-    D.Address (nodeAddress'^.nodeHost) (nodeAddress'^.nodePorts.nodeTcpPort)
+    D.Address (nodeAddress' ^. Lens.nodeHost) (nodeAddress' ^. Lens.nodePorts . Lens.nodeTcpPort)
 
-getRpcAddress :: NodeAddress -> D.Address
+getRpcAddress :: NodeAddress -> Address
 getRpcAddress nodeAddress' =
-    D.Address (nodeAddress'^.nodeHost) (nodeAddress'^.nodePorts.nodeRpcPort)
+    D.Address (nodeAddress' ^. Lens.nodeHost) (nodeAddress' ^. Lens.nodePorts . Lens.nodeRpcPort)
 
 localhost :: D.Host
 localhost = "127.0.0.1"
 
-makeAddressByPorts :: NodePorts -> NodeAddress 
+makeAddressByPorts :: NodePorts -> NodeAddress
 makeAddressByPorts ports = NodeAddress localhost ports (D.toHashGeneric ports)
 
 -- List of test and default port.

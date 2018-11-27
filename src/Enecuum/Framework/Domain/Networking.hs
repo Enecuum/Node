@@ -1,17 +1,25 @@
-{-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE StandaloneDeriving     #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE StandaloneDeriving    #-}
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
 
 module Enecuum.Framework.Domain.Networking where
 
+import qualified Data.Text       as T
 import           Enecuum.Prelude
-import qualified Data.Text as T
 
-import           Data.Scientific
+import qualified Data.Aeson      as A
 import           Data.IP
-import qualified Data.Aeson as A
-import qualified Network.Socket as S hiding (recv)
+import           Data.Scientific
+import qualified Network.Socket  as S hiding (recv)
+
+type Host = String
+
+-- | Node address (like IP)
+data Address = Address
+    { _host :: Host
+    , _port :: S.PortNumber
+    } deriving (Show, Eq, Ord, Generic, Serialize, Read)
 
 type MyAddress       = Address
 type SennderAddress  = Address
@@ -29,8 +37,8 @@ newtype BoundAddress = BoundAddress Address
 type ConnectId      = Int
 
 data Connection a = Connection
-    { _address      :: BoundAddress
-    , _connectId    :: ConnectId
+    { _address   :: BoundAddress
+    , _connectId :: ConnectId
     }
     deriving (Show, Eq, Ord, Generic)
 
@@ -41,20 +49,12 @@ type RawData = LByteString
 
 data NetworkMsg = NetworkMsg Text A.Value deriving (Generic, ToJSON, FromJSON)
 
-type Host = String
-
 sockAddrToHost :: S.SockAddr -> Host
 sockAddrToHost sockAddr = case sockAddr of
     S.SockAddrInet _ hostAddress      -> show $ fromHostAddress hostAddress
     S.SockAddrInet6 _ _ hostAddress _ -> show $ fromHostAddress6 hostAddress
     S.SockAddrUnix string             -> string
     _                                 -> error "Error"
-
--- | Node address (like IP)
-data Address = Address
-    { _host :: Host
-    , _port :: S.PortNumber
-    } deriving (Show, Eq, Ord, Generic, Serialize, Read)
 
 deriving instance Generic S.PortNumber
 instance Serialize S.PortNumber

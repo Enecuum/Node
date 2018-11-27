@@ -1,18 +1,18 @@
-{-# LANGUAGE DeriveAnyClass  #-}
+{-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
 module Enecuum.Framework.Language.Extra where
 
-import Enecuum.Prelude
+import           Enecuum.Prelude
 
-import qualified Enecuum.Framework.Node.Language           as L
-import qualified Enecuum.Framework.Networking.Language     as L
-import qualified Enecuum.Framework.NodeDefinition.Language as L
+import           Data.HGraph.StringHashable                (StringHashable)
 import qualified Enecuum.Core.Language                     as L
 import qualified Enecuum.Core.Types                        as D
 import qualified Enecuum.Framework.Domain                  as D
-import           Data.HGraph.StringHashable                (StringHashable)
+import qualified Enecuum.Framework.Networking.Language     as L
+import qualified Enecuum.Framework.Node.Language           as L
+import qualified Enecuum.Framework.NodeDefinition.Language as L
 
 -- | Allows to extract graph variable from any structure.
 -- To use it, you need to export it unqualified in scope of your data type lenses
@@ -27,12 +27,6 @@ class HasGraph s a | s -> a where
 -- import Enecuum.Language (HasFinished)
 class HasStatus s a | s -> a where
     status :: Lens' s a
-
-data NodeStatus = NodeActing | NodeFinished
-    deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data StopNode = StopNode deriving Read
-
 
 -- | Evals some graph action (atomically) having a structure that contains a graph variable.
 -- To use it, you need to export HasGraph type class unqualified to the scope of your data type lenses
@@ -69,44 +63,43 @@ makeRpcRequestUnsafe connectCfg arg = makeRpcRequest connectCfg arg >>= \case
     Left  err -> error err
     Right a   -> pure a
 
-
-stopNode :: HasStatus s (D.StateVar NodeStatus) => s -> L.NodeL ()
+stopNode :: HasStatus s (D.StateVar D.NodeStatus) => s -> L.NodeL ()
 stopNode nodeData   = stopNode' (nodeData ^. status)
 
-stopNode' :: D.StateVar NodeStatus -> L.NodeL ()
-stopNode' statusVar = L.atomically $ L.writeVar statusVar NodeFinished
+stopNode' :: D.StateVar D.NodeStatus -> L.NodeL ()
+stopNode' statusVar = L.atomically $ L.writeVar statusVar D.NodeFinished
 
 -- | Forces node to stop (actually just fills the `status` field in the data structure. Use `nodeFinishPending` to await `status`.)
 -- To use it, you need to export HasStatus type class unqualified to the scope of your data type lenses
 -- (made by `makeFieldsNoPrefix`):
 -- import Enecuum.Language (HasStatus)
-stopNodeHandler :: HasStatus s (D.StateVar NodeStatus) => s -> StopNode -> L.NodeL Text
+stopNodeHandler :: HasStatus s (D.StateVar D.NodeStatus) => s -> D.StopNode -> L.NodeL Text
 stopNodeHandler nodeData     = stopNodeHandler' (nodeData ^. status)
 
 -- | Forces node to stop (actually just fills the variable)
-stopNodeHandler' :: D.StateVar NodeStatus -> StopNode -> L.NodeL Text
+stopNodeHandler' :: D.StateVar D.NodeStatus -> D.StopNode -> L.NodeL Text
 stopNodeHandler' statusVar _ = stopNode' statusVar >> pure "Finished."
 
 -- | Makes node awaiting for finishing.
 -- To use it, you need to export HasStatus type class unqualified to the scope of your data type lenses
 -- (made by `makeFieldsNoPrefix`):
 -- import Enecuum.Language (HasStatus)
-awaitNodeFinished :: HasStatus s (D.StateVar NodeStatus) => s -> L.NodeDefinitionL ()
+awaitNodeFinished :: HasStatus s (D.StateVar D.NodeStatus) => s -> L.NodeDefinitionL ()
 awaitNodeFinished nodeData = L.scenario $ L.atomically $ unlessM isNodeFinished L.retry
     where
         isNodeFinished = do
             s <- L.readVar $ nodeData ^. status
-            pure $ s == NodeFinished
+            pure $ s == D.NodeFinished
 
 -- | Makes node awaiting for finishing.
 awaitNodeFinished'
-    :: D.StateVar NodeStatus
+    :: D.StateVar D.NodeStatus
     -> L.NodeDefinitionL ()
 awaitNodeFinished' statusVar = L.scenario $ L.atomically $ unlessM isNodeFinished L.retry
     where
         isNodeFinished = do
             s <- L.readVar statusVar
-            pure $ s == NodeFinished
+            pure $ s == D.NodeFinished
 
 -- | Makes node awaiting forever.
 awaitNodeForever :: L.NodeDefinitionL ()
@@ -125,7 +118,6 @@ awaitSignal signalVar = do
     L.atomically $ unlessM (L.readVar signalVar) L.retry
     L.writeVarIO signalVar False
 
---
 await :: L.StateIO m => D.StateVar (Maybe a) -> m a
 await ref = L.atomically $ do
     mValue <- L.readVar ref
@@ -133,6 +125,5 @@ await ref = L.atomically $ do
         Just value -> pure value
         Nothing    -> L.retry
 
---
 modifyVarIO :: L.StateIO m => D.StateVar a -> (a -> a) -> m ()
 modifyVarIO var f = L.atomically $ L.modifyVar var f

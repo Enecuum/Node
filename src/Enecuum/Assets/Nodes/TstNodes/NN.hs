@@ -1,31 +1,34 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
-module Enecuum.Assets.Nodes.TstNodes.GraphNode.NN (nnNode, NN, NodeConfig (..)) where
+
+-- TODO: What is this node???
+module Enecuum.Assets.Nodes.TstNodes.NN (nnNode, NN, NodeConfig (..)) where
 
 import qualified Data.Aeson                       as J
 import qualified Enecuum.Assets.Nodes.Address     as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
+import           Enecuum.Assets.Nodes.Routing
 import           Enecuum.Config
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Framework.Language.Extra (HasStatus)
+import qualified Enecuum.Framework.Lens           as Lens
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude
-import           Enecuum.Assets.Nodes.Routing
 
 type SenderNodeHash  = D.StringHash
 
 data NNNodeData = NNNodeData
-    { _status          :: D.StateVar L.NodeStatus
+    { _status          :: D.StateVar D.NodeStatus
     , _routingRuntime  :: D.StateVar RoutingRuntime
     , _routingMessages :: D.StateVar [Text]
     }
 makeFieldsNoPrefix ''NNNodeData
 
-initNN :: RoutingRuntime -> D.StateVar L.NodeStatus -> L.NodeDefinitionL NNNodeData
+initNN :: RoutingRuntime -> D.StateVar D.NodeStatus -> L.NodeDefinitionL NNNodeData
 initNN routingData nodeStatus = do
     messages            <- L.newVarIO []
     routingRuntimeData  <- L.newVarIO routingData
-    pure $ NNNodeData
+    pure NNNodeData
         { _status          = nodeStatus
         , _routingRuntime  = routingRuntimeData
         , _routingMessages = messages
@@ -44,7 +47,7 @@ instance Node NN where
     data NodeScenario NN = NNS
         deriving (Show, Generic)
     getNodeScript NNS = nnNode' Nothing
-
+    getNodeTag _ = NN
 
 instance ToJSON   NN                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON NN                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
@@ -77,14 +80,14 @@ acceptSendTo nodeData message conn = do
         L.logInfo "I'm receiver."
 
 nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
-nnNode port = nnNode' port (NNConfig 42) 
+nnNode port = nnNode' port (NNConfig 42)
 
 nnNode' :: Maybe D.PortNumber -> NodeConfig NN -> L.NodeDefinitionL ()
 nnNode' maybePort _ = do
     L.nodeTag "NN node"
     L.logInfo "Starting of NN node"
     portVar    <- L.newVarIO maybePort
-    nodeStatus <- L.newVarIO L.NodeActing
+    nodeStatus <- L.newVarIO D.NodeActing
     L.std $ do
     -- network
         L.stdHandler $ acceptPort         portVar
@@ -98,11 +101,11 @@ nnNode' maybePort _ = do
     routingData <- runRouting myNodePorts myHash A.defaultBnNodeAddress
     nodeData    <- initNN routingData nodeStatus
 
-    void $ L.serving D.Udp (routingData ^. myNodeAddres . A.nodePorts . A.nodeUdpPort) $ do
+    void $ L.serving D.Udp (routingData ^. myNodeAddres . Lens.nodePorts . Lens.nodeUdpPort) $ do
         udpRoutingHandlers routingData
         L.handler $ acceptSendTo          nodeData
 
-    void $ L.serving D.Rpc (routingData ^. myNodeAddres . A.nodePorts . A.nodeRpcPort) $ do
+    void $ L.serving D.Rpc (routingData ^. myNodeAddres . Lens.nodePorts . Lens.nodeRpcPort) $ do
         rpcRoutingHandlers routingData
         L.method  $  getRoutingMessages   nodeData
 

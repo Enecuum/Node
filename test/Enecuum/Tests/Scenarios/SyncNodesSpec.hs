@@ -3,8 +3,9 @@
 module Enecuum.Tests.Scenarios.SyncNodesSpec where
 
 import           Data.Aeson
-import qualified Enecuum.Assets.TstScenarios   as Tst
+import qualified Enecuum.Assets.Nodes.CLens    as CLens
 import qualified Enecuum.Assets.Scenarios      as A
+import qualified Enecuum.Assets.TstScenarios   as Tst
 import qualified Enecuum.Blockchain.Lens       as Lens
 import qualified Enecuum.Domain                as D
 import           Enecuum.Prelude
@@ -26,14 +27,8 @@ testNodeNet = TestCase . withNodesManager $ \mgr -> do
     let powRpcAddress              = A.getRpcAddress A.defaultPoWNodeAddress
     let poaRpcAddress              = A.getRpcAddress A.defaultPoANodeAddress
 
-    let graphNodeTransmitterConfig = Tst.defaultNodeConfig
-    let graphNodeReceiverConfig    = Tst.defaultNodeConfig
-                    { Tst._gnNodePorts = A.defaultGnReceiverNodePorts
-                    , Tst._rpcSynco  = Just transmiterRpcAddress
-                    }
-
     -- Start nodes
-    void $ startNode Nothing mgr $ Tst.graphNodeTransmitter graphNodeTransmitterConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.graphNodeTransmitterConfig
     waitForNode transmiterRpcAddress
 
     void $ startNode Nothing mgr Tst.powNode
@@ -42,8 +37,7 @@ testNodeNet = TestCase . withNodesManager $ \mgr -> do
     void $ startNode Nothing mgr $ Tst.poaNode Tst.Good Tst.defaultPoANodeConfig
     waitForNode poaRpcAddress
 
-    -- void $ startNode Nothing mgr $ A.graphNodeReceiver graphNodeReceiverConfig
-    void $ startNode Nothing mgr $ Tst.graphNodeTransmitter graphNodeReceiverConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.graphNodeReceiverConfig
     waitForNode receiverRpcAddress
 
     -- Ask pow node to generate n kblocks

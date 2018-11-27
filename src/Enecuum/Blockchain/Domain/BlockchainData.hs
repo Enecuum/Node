@@ -1,3 +1,5 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Enecuum.Blockchain.Domain.BlockchainData where
 
 import           Data.HGraph.StringHashable            (StringHash)
@@ -17,10 +19,15 @@ type TransactionPending = Map StringHash Transaction
 -- Currently, pending allows only a single KBlock on each graph level (no forks)
 type KBlockPending = Map.Map BlockNumber KBlock
 
+data WindowedGraph = WindowedGraph
+    { _graph            :: GraphVar
+    , _bottomKBlockHash :: StateVar StringHash
+    , _topKBlockHash    :: StateVar StringHash
+    }
+
 data BlockchainData = BlockchainData
-    { _graph              :: GraphVar
+    { _windowedGraph      :: WindowedGraph
     , _kBlockPending      :: StateVar KBlockPending
     , _transactionPending :: StateVar TransactionPending
-    , _curNode            :: StateVar StringHash
     , _ledger             :: StateVar Ledger
     }
