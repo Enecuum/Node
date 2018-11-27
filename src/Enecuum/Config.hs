@@ -5,7 +5,7 @@
 module Enecuum.Config where
 
 import qualified Data.Aeson                as A
-import           Data.Aeson.Extra          (noLensPrefix)
+import           Data.Aeson.Extra          (noLensPrefixJsonConfig)
 -- import qualified Data.ByteString.Internal  as BSI
 import qualified Data.ByteString.Lazy      as LBS
 import           Data.Yaml                 as A hiding (decode)
@@ -39,10 +39,7 @@ class Node node where
 -- | Options for ToJSON / FromJSON instances for configs.
 -- These options take care about correct parsing of enum and data types.
 nodeConfigJsonOptions :: A.Options
-nodeConfigJsonOptions = noLensPrefix
-    { A.unwrapUnaryRecords    = False
-    , A.tagSingleConstructors = True
-    }
+nodeConfigJsonOptions = noLensPrefixJsonConfig
 
 -- | Reads a config file and evals some action with the contents.
 withConfig :: FilePath -> (LByteString -> IO ()) -> IO ()
