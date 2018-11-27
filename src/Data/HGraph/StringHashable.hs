@@ -11,7 +11,9 @@ import qualified Data.Aeson.Types as A
 import qualified Data.ByteString as BS
 import           Data.Bits
 import qualified Data.ByteString.Base64     as Base64
+import qualified Data.ByteString.Lazy.Char8 as BLC
 import qualified Crypto.Hash.SHA256         as SHA
+import qualified Data.Text.Encoding         as T
 
 newtype StringHash = StringHash ByteString
     deriving (Eq, Ord, Show, Read, Generic, Serialize)
@@ -46,17 +48,12 @@ fromStringHash :: StringHash -> ByteString
 fromStringHash (StringHash sh) = sh
 
 
-newtype StringHashSerializable = StringHashSerializable
-    { bytes :: [Word8]
-    }
-    deriving (Generic, ToJSON, FromJSON)
-
 instance ToJSON StringHash where
-    toJSON (StringHash bytes) = toJSON $ StringHashSerializable $ BS.unpack bytes
+    toJSON (StringHash bytes) = toJSON $ T.decodeUtf8 bytes
 
 instance FromJSON StringHash where
-    parseJSON = A.withObject "StringHashSerializable" $ \v ->
-        StringHash . BS.pack <$> ((v A..: "bytes") :: A.Parser [Word8])
+    parseJSON (A.String v) = pure $ StringHash (T.encodeUtf8 v)
+    parseJSON _ = mzero
 
 
 -- | integerToHash . hashToInteger === id
