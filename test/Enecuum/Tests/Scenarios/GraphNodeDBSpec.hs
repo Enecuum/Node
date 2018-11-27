@@ -36,8 +36,9 @@ dumpAndRestoreGraphTest = do
 
     let cfg = Tst.TstGraphNodeConfig
           { Tst._graphServiceConfig = Cfg.GraphServiceConfig
-              { Cfg._dbConfig = dbConfig
-              , Cfg._rpcSynco = Nothing
+              { Cfg._graphWindowConfig = Cfg.noGraphShrinking
+              , Cfg._dbConfig          = dbConfig
+              , Cfg._rpcSynco          = Nothing
               }
           , Tst._nodePorts = A.defaultGnNodePorts
           }

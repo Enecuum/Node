@@ -13,6 +13,12 @@
                 "useDatabase": false,
                 "useEnqHomeDir": false
             },
+            "graphWindowConfig": {
+                "tag": "GraphWindowConfig",
+                "shrinkingEnabled": false,
+                "windowSize": 10,
+                "shrinkingDelay": 1000000
+            },
             "tag": "GraphServiceConfig",
             "rpcSynco": {
                 "host": "127.0.0.1",

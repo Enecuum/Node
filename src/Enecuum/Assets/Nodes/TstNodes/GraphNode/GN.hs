@@ -9,6 +9,7 @@ module Enecuum.Assets.Nodes.TstNodes.GraphNode.GN where
 import qualified Data.Aeson                                         as A
 import qualified Data.Map                                           as Map
 import qualified Enecuum.Assets.Nodes.Address                       as A
+import qualified Enecuum.Assets.Nodes.CLens                         as CLens
 import           Enecuum.Assets.Nodes.GraphService.Config
 import           Enecuum.Assets.Nodes.GraphService.DB.Dump          (dumpToDB)
 import           Enecuum.Assets.Nodes.GraphService.DB.Restore       (restoreFromDB)
@@ -111,11 +112,12 @@ tstGraphNode' cfg nodeData@(TstGraphNodeData graphServiceData _) = do
         blockFound <- processKBlockPending' graphServiceData
         when blockFound $ L.writeVarIO (graphServiceData ^. checkPendingSignal) True
 
-    -- TODO: configs
-    let wndSizeThreshold = 100
-    L.process $ forever $ do
-        L.delay $ 1000 * 1000
-        shrinkGraphWindow graphServiceData wndSizeThreshold
+    when (graphServiceConfig ^. CLens.graphWindowConfig . CLens.shrinkingEnabled) $ do
+        let windowSize     = graphServiceConfig ^. CLens.graphWindowConfig . CLens.windowSize
+        let shrinkingDelay = graphServiceConfig ^. CLens.graphWindowConfig . CLens.shrinkingDelay
+        L.process $ forever $ do
+            L.delay shrinkingDelay
+            shrinkGraphWindow graphServiceData windowSize
 
     L.awaitNodeFinished nodeData
 

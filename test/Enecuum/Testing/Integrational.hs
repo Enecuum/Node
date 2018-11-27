@@ -188,3 +188,4 @@ withDbPresence :: FilePath -> IO a -> IO ()
 withDbPresence dbPath act = do
     mkDb dbPath
     void act `finally` rmDb dbPath
+

@@ -13,6 +13,12 @@
                 "useDatabase": false,
                 "useEnqHomeDir": false
             },
+            "graphWindowConfig": {
+                "tag": "GraphWindowConfig",
+                "shrinkingEnabled": false,
+                "windowSize": 10,
+                "shrinkingDelay": 1000000
+            },
             "tag": "GraphServiceConfig",
             "rpcSynco": null
         },
@@ -33,7 +39,7 @@
                     80,
                     105,
                     100,
-                    115,
+                    114,
                     73,
                     77,
                     102,
@@ -51,7 +57,7 @@
                     74,
                     79,
                     119,
-                    81,
+                    82,
                     79,
                     108,
                     87,

@@ -153,6 +153,7 @@ defaultGraphNodeConfig :: NodeConfig GraphNode
 defaultGraphNodeConfig = GraphNodeConfig
     { _graphServiceConfig = GraphServiceConfig
         { _dbConfig = noDBConfig
+        , _graphWindowConfig = noGraphShrinking
         , _rpcSynco = Nothing
         }
     , _nodePorts  = A.defaultGnNodePorts

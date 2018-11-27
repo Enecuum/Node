@@ -6,6 +6,13 @@ import           Enecuum.Config
 import qualified Enecuum.Domain               as D
 import           Enecuum.Prelude
 
+data GraphWindowConfig = GraphWindowConfig
+    { _shrinkingEnabled :: Bool
+    , _shrinkingDelay   :: Int
+    , _windowSize       :: D.BlockNumber
+    }
+    deriving (Show, Generic)
+
 data DBConfig = DBConfig
     { _useDatabase         :: Bool
         -- ^ If True, DB will be used to restore the state on the start and dump the state during work.
@@ -21,13 +28,16 @@ data DBConfig = DBConfig
     deriving (Show, Generic)
 
 data GraphServiceConfig = GraphServiceConfig
-    { _dbConfig :: DBConfig
-    , _rpcSynco :: Maybe D.Address
+    { _graphWindowConfig :: GraphWindowConfig
+    , _dbConfig          :: DBConfig
+    , _rpcSynco          :: Maybe D.Address
     }
     deriving (Show, Generic)
 
 instance ToJSON   DBConfig           where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON DBConfig           where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   GraphWindowConfig  where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON GraphWindowConfig  where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 instance ToJSON   GraphServiceConfig where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON GraphServiceConfig where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
@@ -38,4 +48,11 @@ noDBConfig = DBConfig
     , _useEnqHomeDir       = False
     , _dbOptions           = D.DBOptions True True
     , _stopOnDatabaseError = True
+    }
+
+noGraphShrinking :: GraphWindowConfig
+noGraphShrinking = GraphWindowConfig
+    { _shrinkingEnabled = False
+    , _shrinkingDelay = 1000 * 1000
+    , _windowSize = 10
     }

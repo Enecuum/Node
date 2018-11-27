@@ -169,7 +169,6 @@ addMBlock wndGraph mblock@(D.Microblock hash _ _ _) = do
 shrinkGraphDownFrom :: D.WindowedGraph -> D.GraphNode -> L.StateL ()
 shrinkGraphDownFrom wndGraph node = do
     (nodes, rLinks) <- getPredecessors wndGraph node
-    L.evalGraph (D._graph wndGraph) $ do
-        mapM_ (\l -> L.deleteLink' l (node ^. Lens.hash)) rLinks
+    L.evalGraph (D._graph wndGraph) $
         mapM_ (L.deleteNode' . view Lens.hash) nodes
     mapM_ (shrinkGraphDownFrom wndGraph) nodes
