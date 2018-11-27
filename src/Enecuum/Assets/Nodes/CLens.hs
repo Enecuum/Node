@@ -13,4 +13,5 @@ import           Enecuum.Config
 import qualified Enecuum.Domain                           as D
 
 makeFieldsNoPrefix ''DBConfig
+makeFieldsNoPrefix ''GraphWindowConfig
 makeFieldsNoPrefix ''GraphServiceConfig

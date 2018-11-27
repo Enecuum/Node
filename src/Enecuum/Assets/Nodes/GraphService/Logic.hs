@@ -210,7 +210,7 @@ graphSynchro nodeData address = compareChainLength nodeData address >>= \case
 -- N.B. All these functions are living in separate transactions
 -- Becase the transactions should be small as possible.
 shrinkGraphWindow :: GraphServiceData -> D.BlockNumber -> L.NodeL ()
-shrinkGraphWindow nodeData wndSizeThreshold = do
+shrinkGraphWindow nodeData windowSize = do
     let bData    = nodeData ^. blockchain
     let wndGraph = bData    ^. Lens.windowedGraph
 
@@ -228,12 +228,12 @@ shrinkGraphWindow nodeData wndSizeThreshold = do
         (Just bottomKNode, Just topKNode) -> do
             let bottomNumber    = L.getKNodeNumber bottomKNode
             let topNumber       = L.getKNodeNumber topKNode
-            let newBottomNumber = 1 + topNumber - wndSizeThreshold
+            let newBottomNumber = 1 + topNumber - windowSize
             let wndSize         = 1 + topNumber - bottomNumber
 
-            when (wndSize > wndSizeThreshold) $ do
+            when (wndSize > windowSize) $ do
                 L.logInfo $  "Current graph window: " <> show wndSize
-                          <> " exceeds wndSizeThreshold: " <> show wndSizeThreshold
+                          <> " exceeds windowSize: " <> show windowSize
 
                 mbNewBottomKNode <- L.atomically $
                     L.findKBlockNodeDownward' wndGraph (L.FindByNumber newBottomNumber) (Just topKNode)

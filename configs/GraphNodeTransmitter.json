@@ -7,6 +7,13 @@
         "graphServiceConfig":
             {
                 "tag": "GraphServiceConfig",
+                "graphWindowConfig":
+                {
+                  "tag": "GraphWindowConfig",
+                  "shrinkingEnabled": true,
+                  "shrinkingDelay": 1000000,
+                  "windowSize": 100
+                },
                 "dbConfig":
                     {
                     "stopOnDatabaseError": true,
