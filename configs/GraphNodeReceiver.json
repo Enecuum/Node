@@ -1,36 +1,40 @@
 {
    "node":"TstGraphNode",
-   "nodeScenario":"Transmitter",
+   "nodeScenario":"TstGN",
    "nodeConfig":
-        {
-        "dbConfig":
-            {
-            "stopOnDatabaseError": true,
-            "tag": "DBConfig",
-            "dbOptions":
-                {
-                "errorIfExists":false,
-                "createIfMissing":true
-                },
-            "dbModelName": "graph_node_transmitter.dbm",
-            "useDatabase":false,
-            "useEnqHomeDir":true
-            },
+      {
         "tag": "TstGraphNodeConfig",
-        "gnNodePorts":
+        "graphServiceConfig":
             {
-            "_nodeTcpPort": 5040,
-            "_nodeUdpPort": 4040,
-            "_nodeRpcPort": 6040
+                "tag": "GraphServiceConfig",
+                "dbConfig":
+                    {
+                    "stopOnDatabaseError": true,
+                    "tag": "DBConfig",
+                    "dbOptions":
+                        {
+                        "errorIfExists":false,
+                        "createIfMissing":true
+                        },
+                    "dbModelName": "graph_node_transmitter.dbm",
+                    "useDatabase":true,
+                    "useEnqHomeDir":true
+                  },
+                "rpcSynco": {"host":"127.0.0.1","port":5050},
             },
-						"rpcSynco": {"host":"127.0.0.1","port":5050},
-				},
+        "nodePorts":
+            {
+              "_nodeTcpPort": 5040,
+              "_nodeUdpPort": 4040,
+              "_nodeRpcPort": 6040
+            },
+      },
    "loggerConfig":
-        {
-            "logFilePath":"/tmp/log/GraphNodeReceiver.log",
-            "format":"$prio $loggername: $msg",
-            "logToConsole":true,
-            "logToFile": true,
-            "level":"Debug"
-        }
+      {
+          "logFilePath":"/tmp/log/GraphNodeReceiver.log",
+          "format":"$prio $loggername: $msg",
+          "logToConsole":true,
+          "logToFile": true,
+          "level":"Debug"
+      }
 }

@@ -1,12 +1,12 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Enecuum.Assets.Nodes.TstNodes.GraphNode.Config where
 
-import qualified Data.Aeson                            as A
+import qualified Data.Aeson                               as A
 import           Enecuum.Assets.Nodes.Address
-import           Enecuum.Assets.Nodes.GraphNode.Config
+import           Enecuum.Assets.Nodes.GraphService.Config
 import           Enecuum.Config
-import           Enecuum.Domain                        (NodePorts (..))
-import qualified Enecuum.Domain                        as D
+import           Enecuum.Domain                           (NodePorts (..))
+import qualified Enecuum.Domain                           as D
 import           Enecuum.Prelude
 
 data TstGraphNode = TstGraphNode
@@ -14,7 +14,7 @@ data TstGraphNode = TstGraphNode
 
 data instance NodeConfig TstGraphNode = TstGraphNodeConfig
     { _graphServiceConfig :: GraphServiceConfig
-    , _gnNodePorts        :: NodePorts
+    , _nodePorts          :: NodePorts
     }
     deriving (Show, Generic)
 

@@ -1,4 +1,4 @@
-module Enecuum.Assets.Nodes.GraphNode.Config where
+module Enecuum.Assets.Nodes.GraphService.Config where
 
 import qualified Data.Aeson                   as A
 import           Enecuum.Assets.Nodes.Address
@@ -7,11 +7,16 @@ import qualified Enecuum.Domain               as D
 import           Enecuum.Prelude
 
 data DBConfig = DBConfig
-    { _useDatabase         :: Bool        -- ^ If True, DB will be used to restore the state on the start and dump the state during work.
-    , _dbModelName         :: String      -- ^ DB model name. Can be a full path if useEnqHomeDir == False.
-    , _useEnqHomeDir       :: Bool        -- ^ When True, ~/.enecuum/<dbModelName> path will be used.
-    , _dbOptions           :: D.DBOptions -- ^ DB options.
-    , _stopOnDatabaseError :: Bool  -- ^ The node will stop if something wrong with DB model.
+    { _useDatabase         :: Bool
+        -- ^ If True, DB will be used to restore the state on the start and dump the state during work.
+    , _dbModelName         :: String
+        -- ^ DB model name. Can be a full path if useEnqHomeDir == False.
+    , _useEnqHomeDir       :: Bool
+        -- ^ When True, ~/.enecuum/<dbModelName> path will be used.
+    , _dbOptions           :: D.DBOptions
+        -- ^ DB options.
+    , _stopOnDatabaseError :: Bool
+        -- ^ The node will stop if something wrong with DB model.
     }
     deriving (Show, Generic)
 

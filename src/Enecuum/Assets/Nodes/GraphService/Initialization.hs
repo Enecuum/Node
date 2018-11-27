@@ -5,22 +5,22 @@
 {-# LANGUAGE TemplateHaskell        #-}
 
 -- Initialization specific to graph service.
-module Enecuum.Assets.Nodes.GraphNode.Initialization where
+module Enecuum.Assets.Nodes.GraphService.Initialization where
 
-import           Control.Lens                                    (makeFieldsNoPrefix)
+import           Control.Lens                                       (makeFieldsNoPrefix)
 import           Data.HGraph.StringHashable
-import qualified Data.Map                                        as Map
+import qualified Data.Map                                           as Map
 import           Enecuum.Prelude
-import           System.FilePath                                 ((</>))
+import           System.FilePath                                    ((</>))
 
-import qualified Enecuum.Assets.Nodes.CLens                      as CLens
-import           Enecuum.Assets.Nodes.GraphNode.Config
-import           Enecuum.Assets.Nodes.GraphNode.GraphServiceData
-import qualified Enecuum.Assets.System.Directory                 as L
-import qualified Enecuum.Blockchain.DB                           as D
-import qualified Enecuum.Blockchain.Lens                         as Lens
-import qualified Enecuum.Domain                                  as D
-import qualified Enecuum.Language                                as L
+import qualified Enecuum.Assets.Nodes.CLens                         as CLens
+import           Enecuum.Assets.Nodes.GraphService.Config
+import           Enecuum.Assets.Nodes.GraphService.GraphServiceData
+import qualified Enecuum.Assets.System.Directory                    as L
+import qualified Enecuum.Blockchain.DB                              as D
+import qualified Enecuum.Blockchain.Lens                            as Lens
+import qualified Enecuum.Domain                                     as D
+import qualified Enecuum.Language                                   as L
 
 initDb :: forall db. D.DB db => D.DBOptions -> FilePath -> L.NodeL (D.DBResult (D.Storage db))
 initDb options dbModelPath = do

@@ -4,13 +4,13 @@
 {-# LANGUAGE MultiWayIf             #-}
 {-# LANGUAGE TemplateHaskell        #-}
 
-module Enecuum.Assets.Nodes.GraphNode.GraphServiceData where
+module Enecuum.Assets.Nodes.GraphService.GraphServiceData where
 
 import           Enecuum.Prelude
 
-import           Enecuum.Assets.Nodes.GraphNode.Config
-import qualified Enecuum.Blockchain.DB                 as D
-import qualified Enecuum.Domain                        as D
+import           Enecuum.Assets.Nodes.GraphService.Config
+import qualified Enecuum.Blockchain.DB                    as D
+import qualified Enecuum.Domain                           as D
 
 data GraphServiceData = GraphServiceData
     { _blockchain          :: D.BlockchainData

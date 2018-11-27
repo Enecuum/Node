@@ -4,24 +4,24 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE TypeInType             #-}
 
-module Enecuum.Assets.Nodes.GraphNode.GN where
+module Enecuum.Assets.Nodes.GN where
 
-import qualified Data.Aeson                                      as A
-import qualified Enecuum.Assets.Nodes.Address                    as A
-import           Enecuum.Assets.Nodes.GraphNode.Config
-import           Enecuum.Assets.Nodes.GraphNode.DB.Dump
-import           Enecuum.Assets.Nodes.GraphNode.DB.Restore
-import           Enecuum.Assets.Nodes.GraphNode.GraphServiceData
-import           Enecuum.Assets.Nodes.GraphNode.Initialization
-import           Enecuum.Assets.Nodes.GraphNode.Logic
-import qualified Enecuum.Assets.Nodes.Messages                   as M
+import qualified Data.Aeson                                         as A
+import qualified Enecuum.Assets.Nodes.Address                       as A
+import           Enecuum.Assets.Nodes.GraphService.Config
+import           Enecuum.Assets.Nodes.GraphService.DB.Dump
+import           Enecuum.Assets.Nodes.GraphService.DB.Restore
+import           Enecuum.Assets.Nodes.GraphService.GraphServiceData
+import           Enecuum.Assets.Nodes.GraphService.Initialization
+import           Enecuum.Assets.Nodes.GraphService.Logic
+import qualified Enecuum.Assets.Nodes.Messages                      as M
 import           Enecuum.Assets.Nodes.Methods
-import qualified Enecuum.Assets.Nodes.Routing                    as R
+import qualified Enecuum.Assets.Nodes.Routing                       as R
 import           Enecuum.Config
-import qualified Enecuum.Domain                                  as D
-import           Enecuum.Framework.Language.Extra                (HasStatus)
-import qualified Enecuum.Framework.Lens                          as Lens
-import qualified Enecuum.Language                                as L
+import qualified Enecuum.Domain                                     as D
+import           Enecuum.Framework.Language.Extra                   (HasStatus)
+import qualified Enecuum.Framework.Lens                             as Lens
+import qualified Enecuum.Language                                   as L
 import           Enecuum.Prelude
 import           Enecuum.Research.ChordRouteMap
 
@@ -40,12 +40,12 @@ instance Node GraphNode where
         deriving (Show, Generic)
     getNodeScript GN = graphNode
 
-instance ToJSON   GraphNode               where toJSON     = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON GraphNode               where parseJSON  = A.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeConfig GraphNode)  where toJSON     = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeConfig GraphNode)  where parseJSON  = A.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeScenario GraphNode) where toJSON    = A.genericToJSON nodeConfigJsonOptions
-instance FromJSON (NodeScenario GraphNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   GraphNode                where toJSON     = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON GraphNode                where parseJSON  = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig GraphNode)   where toJSON     = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig GraphNode)   where parseJSON  = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario GraphNode) where toJSON     = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario GraphNode) where parseJSON  = A.genericParseJSON nodeConfigJsonOptions
 
 data GraphNodeData = GraphNodeData
     { _graphServiceData :: GraphServiceData

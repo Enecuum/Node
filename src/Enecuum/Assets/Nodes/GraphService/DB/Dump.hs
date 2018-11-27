@@ -1,16 +1,16 @@
-module Enecuum.Assets.Nodes.GraphNode.DB.Dump where
+module Enecuum.Assets.Nodes.GraphService.DB.Dump where
 
 import           Enecuum.Prelude
 
-import qualified Enecuum.Blockchain.DB                           as D
-import qualified Enecuum.Blockchain.DB.Lens                      as Lens
-import qualified Enecuum.Blockchain.Lens                         as Lens
-import qualified Enecuum.Domain                                  as D
-import qualified Enecuum.Language                                as L
+import qualified Enecuum.Blockchain.DB                              as D
+import qualified Enecuum.Blockchain.DB.Lens                         as Lens
+import qualified Enecuum.Blockchain.Lens                            as Lens
+import qualified Enecuum.Domain                                     as D
+import qualified Enecuum.Language                                   as L
 
-import           Enecuum.Assets.Nodes.GraphNode.DB.Helpers
-import qualified Enecuum.Assets.Nodes.GraphNode.GraphServiceData as G
-import qualified Enecuum.Assets.Nodes.GraphNode.Logic            as G
+import           Enecuum.Assets.Nodes.GraphService.DB.Helpers
+import qualified Enecuum.Assets.Nodes.GraphService.GraphServiceData as G
+import qualified Enecuum.Assets.Nodes.GraphService.Logic            as G
 
 saveKBlock :: D.DBModel -> D.KBlock -> L.NodeL (D.DBResult ())
 saveKBlock dbModel kBlock = do

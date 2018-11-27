@@ -4,22 +4,22 @@
 {-# LANGUAGE MultiWayIf             #-}
 {-# LANGUAGE TemplateHaskell        #-}
 
-module Enecuum.Assets.Nodes.GraphNode.Logic where
+module Enecuum.Assets.Nodes.GraphService.Logic where
 
-import           Control.Lens                                    (makeFieldsNoPrefix)
+import           Control.Lens                                       (makeFieldsNoPrefix)
 import           Data.HGraph.StringHashable
-import qualified Data.Map                                        as Map
+import qualified Data.Map                                           as Map
 import           Enecuum.Prelude
-import           System.FilePath                                 ((</>))
+import           System.FilePath                                    ((</>))
 
-import           Enecuum.Assets.Nodes.GraphNode.GraphServiceData
+import           Enecuum.Assets.Nodes.GraphService.GraphServiceData
 import           Enecuum.Assets.Nodes.Messages
-import qualified Enecuum.Assets.System.Directory                 as L
-import qualified Enecuum.Blockchain.DB                           as D
-import qualified Enecuum.Blockchain.Lens                         as Lens
-import qualified Enecuum.Domain                                  as D
-import           Enecuum.Framework.Language.Extra                (HasStatus)
-import qualified Enecuum.Language                                as L
+import qualified Enecuum.Assets.System.Directory                    as L
+import qualified Enecuum.Blockchain.DB                              as D
+import qualified Enecuum.Blockchain.Lens                            as Lens
+import qualified Enecuum.Domain                                     as D
+import           Enecuum.Framework.Language.Extra                   (HasStatus)
+import qualified Enecuum.Language                                   as L
 
 transactionsToTransfer :: Int
 transactionsToTransfer = 20

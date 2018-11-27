@@ -6,22 +6,22 @@
 
 module Enecuum.Assets.Nodes.TstNodes.GraphNode.GN where
 
-import qualified Data.Aeson                                      as A
-import qualified Data.Map                                        as Map
-import qualified Enecuum.Assets.Nodes.Address                    as A
-import           Enecuum.Assets.Nodes.GraphNode.Config
-import           Enecuum.Assets.Nodes.GraphNode.DB.Dump          (dumpToDB)
-import           Enecuum.Assets.Nodes.GraphNode.DB.Restore       (restoreFromDB)
-import           Enecuum.Assets.Nodes.GraphNode.GraphServiceData
-import           Enecuum.Assets.Nodes.GraphNode.Initialization
-import           Enecuum.Assets.Nodes.GraphNode.Logic
+import qualified Data.Aeson                                         as A
+import qualified Data.Map                                           as Map
+import qualified Enecuum.Assets.Nodes.Address                       as A
+import           Enecuum.Assets.Nodes.GraphService.Config
+import           Enecuum.Assets.Nodes.GraphService.DB.Dump          (dumpToDB)
+import           Enecuum.Assets.Nodes.GraphService.DB.Restore       (restoreFromDB)
+import           Enecuum.Assets.Nodes.GraphService.GraphServiceData
+import           Enecuum.Assets.Nodes.GraphService.Initialization
+import           Enecuum.Assets.Nodes.GraphService.Logic
 import           Enecuum.Assets.Nodes.Methods
 import           Enecuum.Assets.Nodes.TstNodes.GraphNode.Config
 import           Enecuum.Config
-import qualified Enecuum.Domain                                  as D
-import           Enecuum.Framework.Language.Extra                (HasStatus)
-import qualified Enecuum.Framework.Lens                          as Lens
-import qualified Enecuum.Language                                as L
+import qualified Enecuum.Domain                                     as D
+import           Enecuum.Framework.Language.Extra                   (HasStatus)
+import qualified Enecuum.Framework.Lens                             as Lens
+import qualified Enecuum.Language                                   as L
 import           Enecuum.Prelude
 
 instance Node TstGraphNode where
@@ -58,7 +58,7 @@ tstGraphNode' cfg nodeData@(TstGraphNodeData graphServiceData _) = do
         Nothing              -> pure ()
         Just rpcSyncoAddress -> L.process $ forever $ graphSynchro graphServiceData rpcSyncoAddress
 
-    L.serving D.Udp (_gnNodePorts cfg ^. Lens.nodeUdpPort) $ do
+    L.serving D.Udp (_nodePorts cfg ^. Lens.nodeUdpPort) $ do
         -- network
         L.handler   methodPing
         -- PoA interaction
@@ -66,11 +66,11 @@ tstGraphNode' cfg nodeData@(TstGraphNodeData graphServiceData _) = do
         -- PoW interaction
         L.handler $ acceptKBlock graphServiceData
 
-    L.serving D.Tcp (_gnNodePorts cfg ^. Lens.nodeTcpPort) $
+    L.serving D.Tcp (_nodePorts cfg ^. Lens.nodeTcpPort) $
         -- network
         L.handler   methodPing
 
-    L.serving D.Rpc (_gnNodePorts cfg ^. Lens.nodeRpcPort) $ do
+    L.serving D.Rpc (_nodePorts cfg ^. Lens.nodeRpcPort) $ do
         -- network
         L.method    rpcPingPong
         L.method  $ handleStopNode nodeData

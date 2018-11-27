@@ -1,5 +1,7 @@
+{-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
+
 module Enecuum.Assets.Nodes.BN (bnNode, BN, NodeConfig(..)) where
 
 import qualified Data.Aeson                            as J

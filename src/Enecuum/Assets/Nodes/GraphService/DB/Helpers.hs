@@ -1,14 +1,14 @@
-module Enecuum.Assets.Nodes.GraphNode.DB.Helpers where
+module Enecuum.Assets.Nodes.GraphService.DB.Helpers where
 
 import           Enecuum.Prelude
 
-import qualified Enecuum.Blockchain.DB                           as D
-import qualified Enecuum.Blockchain.DB.Lens                      as Lens
-import qualified Enecuum.Blockchain.Lens                         as Lens
-import qualified Enecuum.Domain                                  as D
-import qualified Enecuum.Language                                as L
+import qualified Enecuum.Blockchain.DB                              as D
+import qualified Enecuum.Blockchain.DB.Lens                         as Lens
+import qualified Enecuum.Blockchain.Lens                            as Lens
+import qualified Enecuum.Domain                                     as D
+import qualified Enecuum.Language                                   as L
 
-import           Enecuum.Assets.Nodes.GraphNode.GraphServiceData (GraphServiceData (..))
+import           Enecuum.Assets.Nodes.GraphService.GraphServiceData (GraphServiceData (..))
 
 withKBlocksDB
     :: forall s db a
