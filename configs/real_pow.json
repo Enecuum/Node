@@ -1,0 +1,15 @@
+{
+    "nodeConfig": {
+        "tag": "TstRealPoWNodeConfig",
+        "dummyOption": 0
+    },
+    "node": "TstRealPoWNode",
+    "loggerConfig": {
+        "logFilePath": "",
+        "format": "$prio $loggername: $msg",
+        "logToFile": false,
+        "logToConsole": true,
+        "level": "Debug"
+    },
+    "nodeScenario": "TstRealPoW"
+}

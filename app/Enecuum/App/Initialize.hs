@@ -75,11 +75,14 @@ runNode' (Just (cfg, node)) = do
     pure $ Just ()
 
 
+-- TODO: FIXME: nodes list is duplicating here and in ConfigParsing.
 initialize :: LByteString -> IO ()
 initialize configSrc = do
     -- Try to parse config of unknown type (parseConfig failure invoke error)
     parseConfig configSrc
     -- Figure out type of node and run appropriate script
+
+    -- Don't forget to update the list in ConfigParsing!
     let runners =
             [ runNode' $ Cfg.dispatchScenario @A.GraphNode  configSrc
             , runNode' $ Cfg.dispatchScenario @A.PoANode    configSrc
@@ -94,5 +97,6 @@ initialize configSrc = do
             , runNode' $ Cfg.dispatchScenario @Tst.TstGraphNode configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstPoWNode   configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstPoaNode   configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.TstRealPoWNode configSrc
             ]
     void $ sequence runners

@@ -32,6 +32,7 @@ parseConfig configSrc = do
             , runParser $ Cfg.tryParseConfig @Tst.TstGraphNode configSrc
             , runParser $ Cfg.tryParseConfig @Tst.TstPoWNode   configSrc
             , runParser $ Cfg.tryParseConfig @Tst.TstPoaNode   configSrc
+            , runParser $ Cfg.tryParseConfig @Tst.TstRealPoWNode   configSrc
             ]
 
     results <- sequence runners

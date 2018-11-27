@@ -8,3 +8,5 @@ import           Enecuum.Assets.Nodes.TstNodes.NN               as X
 import           Enecuum.Assets.Nodes.TstNodes.PoA              as X
 import           Enecuum.Assets.Nodes.TstNodes.PoW.Config       as X
 import           Enecuum.Assets.Nodes.TstNodes.PoW.PoW          as X
+import           Enecuum.Assets.Nodes.TstNodes.RealPoW.Config   as X
+import           Enecuum.Assets.Nodes.TstNodes.RealPoW.PoW      as X
