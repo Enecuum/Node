@@ -2,8 +2,8 @@ module Enecuum.Tests.Scenarios.MaliciousCryptoSpec where
 
 import qualified Data.Map                             as M
 import qualified Enecuum.Assets.Blockchain.Generation as A
-import qualified Enecuum.Assets.TstScenarios          as Tst
 import qualified Enecuum.Assets.Scenarios             as A
+import qualified Enecuum.Assets.TstScenarios          as Tst
 import qualified Enecuum.Domain                       as D
 import qualified Enecuum.Interpreters                 as I
 import qualified Enecuum.Language                     as L
@@ -24,7 +24,7 @@ spec = slowTest $ describe "Test invalid signature" $ fromHUnitTest $ TestList
 
 testInvalidTransaction :: Test
 testInvalidTransaction = TestCase $ withNodesManager $ \mgr -> do
-    void $ startNode Nothing mgr $ Tst.graphNodeTransmitter $ Tst.defaultNodeConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode graphNodeTransmitterConfig
     void $ startNode Nothing mgr Tst.powNode
     void $ startNode Nothing mgr $ Tst.poaNode Tst.Good Tst.defaultPoANodeConfig
     let transmiterRpcAddress       = A.getRpcAddress A.defaultGnNodeAddress
@@ -50,7 +50,7 @@ testInvalidTransaction = TestCase $ withNodesManager $ \mgr -> do
 
 testInvalidMicroblock :: Test
 testInvalidMicroblock = TestCase $ withNodesManager $ \mgr -> do
-    void $ startNode Nothing mgr $ Tst.graphNodeTransmitter $ Tst.defaultNodeConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode $ graphNodeTransmitterConfig
     void $ startNode Nothing mgr Tst.powNode
     void $ startNode Nothing mgr $ Tst.poaNode Tst.Bad Tst.defaultPoANodeConfig
     let transmiterRpcAddress    = A.getRpcAddress A.defaultGnNodeAddress

@@ -2,15 +2,16 @@ module Enecuum.Tests.Scenarios.GraphNodeDBSpec where
 
 import           Enecuum.Prelude
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit              (fromHUnitTest)
+import           Test.Hspec.Contrib.HUnit                 (fromHUnitTest)
 import           Test.HUnit
 
-import qualified Enecuum.Assets.Nodes.Address          as A
-import qualified Enecuum.Assets.Nodes.GraphNode.Config as A
-import qualified Enecuum.Assets.Nodes.Messages         as A
-import qualified Enecuum.Assets.TstScenarios           as Tst
-import qualified Enecuum.Blockchain.Lens               as Lens
-import qualified Enecuum.Domain                        as D
+import qualified Enecuum.Assets.Nodes.Address             as A
+import qualified Enecuum.Assets.Nodes.GraphService.Config as A
+import qualified Enecuum.Assets.Nodes.GraphService.Config as Cfg
+import qualified Enecuum.Assets.Nodes.Messages            as A
+import qualified Enecuum.Assets.TstScenarios              as Tst
+import qualified Enecuum.Blockchain.Lens                  as Lens
+import qualified Enecuum.Domain                           as D
 import           Enecuum.Testing.Integrational
 import           Enecuum.Tests.Wrappers
 
@@ -32,7 +33,14 @@ dumpAndRestoreGraphTest = do
             , A._dbOptions           = dbOpts
             , A._stopOnDatabaseError = True
             }
-    let cfg = Tst.defaultNodeConfig { Tst._dbConfig = dbConfig }
+
+    let cfg = Tst.TstGraphNodeConfig
+          { Tst._graphServiceConfig = Cfg.GraphServiceConfig
+              { Cfg._dbConfig = dbConfig
+              , Cfg._rpcSynco = Nothing
+              }
+          , Tst._nodePorts = A.defaultGnNodePorts
+          }
     let loggerCfg = Nothing
 
     let graphNodeRpcAddress        = A.getRpcAddress A.defaultGnNodeAddress
@@ -41,8 +49,8 @@ dumpAndRestoreGraphTest = do
     let powRpcAddress              = A.getRpcAddress A.defaultPoWNodeAddress
     let poaRpcAddress              = A.getRpcAddress A.defaultPoANodeAddress
 
-    let poaConfig = Old.OldPoANodeConfig
-          { Old._poaRPCPort = D._port poaRpcAddress
+    let poaConfig = Tst.TstPoANodeConfig
+          { Tst._poaRPCPort = D._port poaRpcAddress
           }
 
     let blocksCount = 3
@@ -50,13 +58,13 @@ dumpAndRestoreGraphTest = do
 
     TestCase $ withDbAbsence dbPath $ withNodesManager $ \mgr -> do
         -- Starting nodes.
-        transmitterNode1 <- startNode loggerCfg mgr $ Tst.graphNodeTransmitter cfg
+        transmitterNode1 <- startNode loggerCfg mgr $ Tst.tstGraphNode cfg
         waitForNode transmiterRpcAddress
 
         powNode <- startNode loggerCfg mgr Tst.powNode
         waitForNode powRpcAddress
 
-        poaNode <- startNode loggerCfg mgr (Old.poaNode Old.Good poaConfig)
+        poaNode <- startNode loggerCfg mgr (Tst.poaNode Tst.Good poaConfig)
         waitForNode poaRpcAddress
 
         -- Checking there are none blocks.
@@ -94,7 +102,7 @@ dumpAndRestoreGraphTest = do
         stopNode mgr poaNode
 
         -- Starting node, checking there are no blocks.
-        void $ startNode loggerCfg mgr $ Tst.graphNodeTransmitter cfg
+        void $ startNode loggerCfg mgr $ Tst.tstGraphNode cfg
         waitForNode transmiterRpcAddress
 
         Right genesisKBlock :: Either Text D.KBlock <- makeIORpcRequest graphNodeRpcAddress A.GetLastKBlock

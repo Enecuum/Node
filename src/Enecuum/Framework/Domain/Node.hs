@@ -33,3 +33,8 @@ instance ToJSON   NodePorts   where toJSON    = J.genericToJSON    noLensPrefixJ
 instance FromJSON NodePorts   where parseJSON = J.genericParseJSON noLensPrefixJsonConfig
 instance ToJSON   NodeAddress where toJSON    = J.genericToJSON    noLensPrefixJsonConfig
 instance FromJSON NodeAddress where parseJSON = J.genericParseJSON noLensPrefixJsonConfig
+
+-- This is used in tests only.
+-- TODO: get rid of it.
+newtype NodeID = NodeID Text
+    deriving (Show, Eq)
