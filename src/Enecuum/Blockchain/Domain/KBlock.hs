@@ -23,7 +23,7 @@ type Nonce       = Word32
 type Solver      = StringHash
 type PrevHash    = StringHash
 type NonceRange  = (Nonce, Nonce)
-type Difficulty  = Word32
+type Difficulty  = Int
 
 data KBlock = KBlock
     { _time     :: BlockTime
@@ -99,7 +99,7 @@ calcKBlockHashRaw time number nonce prevHash solver = SHA.hash bstr
           P.putByteString prevHash
           P.putByteString solver
 
-calcHashDifficulty :: ByteString -> Int
+calcHashDifficulty :: ByteString -> Difficulty
 calcHashDifficulty = countZeros . countedBytes
   where
     countZeros []     = 0

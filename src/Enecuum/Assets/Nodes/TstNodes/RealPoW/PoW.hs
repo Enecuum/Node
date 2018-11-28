@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
 {-# LANGUAGE DeriveAnyClass         #-}
+{-# LANGUAGE BangPatterns  #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE RecordWildCards        #-}
@@ -29,8 +30,25 @@ import           Enecuum.Framework.Language.Extra             (HasStatus)
 import qualified Enecuum.Language                             as L
 import           Enecuum.Prelude
 
+data KBlockTemplate = KBlockTemplate
+    { _time     :: D.BlockTime
+    , _number   :: D.BlockNumber
+    , _nonce    :: D.Nonce
+    , _prevHash :: ByteString       -- Not in base64
+    , _solver   :: ByteString       -- Not in base64
+    }
+
+data KBlockDef = KBlockDef
+    { _template   :: KBlockTemplate
+    , _hash       :: ByteString
+    , _difficulty :: D.Difficulty
+    }
+
 data TstRealPoWNodeData = TstRealPoWNodeData
-    { _status :: D.StateVar D.NodeStatus
+    { _currentDifficulty :: D.StateVar D.Difficulty
+    , _prevKBlock        :: D.StateVar KBlockTemplate
+    , _genProcessData    :: D.StateVar (Maybe KBlockDef)
+    , _status            :: D.StateVar D.NodeStatus
     }
 
 makeFieldsNoPrefix ''TstRealPoWNodeData
@@ -44,23 +62,23 @@ instance Node TstRealPoWNode where
 instance ToJSON   (NodeScenario TstRealPoWNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario TstRealPoWNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
-data KBlockTemplate = KBlockTemplate
-    { _time     :: D.BlockTime
-    , _number   :: D.BlockNumber
-    , _nonce    :: D.Nonce
-    , _prevHash :: ByteString       -- Not in base64
-    , _solver   :: ByteString       -- Not in base64
+fromKBlockTempalte :: KBlockTemplate -> D.KBlock
+fromKBlockTempalte KBlockTemplate {..} = D.KBlock
+    { D._time     = _time
+    , D._number   = _number
+    , D._nonce    = _nonce
+    , D._prevHash = _prevHash
+    , D._solver   = _solver
     }
 
 calcHash :: KBlockTemplate -> ByteString
 calcHash KBlockTemplate {..} = D.calcKBlockHashRaw _time _number _nonce _prevHash _solver
 
 generateHash
-    :: TstRealPoWNodeData
-    -> D.Difficulty
+    :: D.Difficulty
     -> D.NonceRange
-    -> L.NodeDefinitionL ()
-generateHash nodeData (fromIntegral -> difficulty) (from, to) = do
+    -> Maybe KBlockDef
+generateHash difficulty (from, to) = do
     let kBlockTemplate n = KBlockTemplate
           { _time     = 0
           , _number   = 1
@@ -68,13 +86,44 @@ generateHash nodeData (fromIntegral -> difficulty) (from, to) = do
           , _prevHash = fromRight "" $ Base64.decode $ D.fromStringHash D.genesisHash
           , _solver   = fromRight "" $ Base64.decode D.genesisSolverStr
           }
-    let hashes = [ calcHash h | h <- map kBlockTemplate [from..to]]
-    let difficulties = zip hashes $ map D.calcHashDifficulty hashes
 
-    mapM_ (L.logInfo . show) $ take 10 $ filter (\(_, b) -> b == difficulty) difficulties
+    let difficulties = do
+            kBlock' <- map kBlockTemplate [from..to]
+            let hash = calcHash kBlock'
+            pure (kBlock', hash, D.calcHashDifficulty hash)
 
+    let found = filter (\(_, _, dif) -> dif > difficulty) difficulties
+    case found of
+      []      -> Nothing
+      (res:_) -> Just res
+
+
+processKBlock nodeData = do
+    (kBlockTemplate, hash, difficulty) <- L.takeVar $ nodeData ^. kBlockDef
+
+    let kBlock = fromKBlockTempalte kBlockTemplate
+    L.logInfo $ "Generated block (difficulty: " +|| difficulty ||+ "): " <> show hash
+    L.withConnection D.Udp graphNodeUdpAddress $ \conn ->
+        void $ L.send conn kBlock
+
+generateKBlock nodeData range = do
+    difficulty <- L.readVarIO $ nodeData ^. currentDifficulty
+    case generateHash difficulty range of
+        Nothing     -> pure Nothing
+        Just !found -> L.atomically $ do
+            mbFoundByOthers <- L.readVar $ nodeData ^.
+
+
+            let (KBlockDef kBlockTemplate _ _) = found
+            L.writeVar (nodeData ^. prevKBlock) kBlockTemplate
+            L.writeVar
+
+kBlockGeneration nodeData ranges = do
+    L.logInfo "Generating next KBlock..."
+
+    generators <- mapM (L.fork . generateKBlock nodeData) ranges
+    mapM_ L.awaitResult generators
     pure ()
-
 
 powNode' :: NodeConfig TstRealPoWNode -> L.NodeDefinitionL ()
 powNode' cfg = do
@@ -84,9 +133,11 @@ powNode' cfg = do
 
     let workersCount = 4
     let difficulty = 8
-    let range = (maxBound :: D.Nonce) `div` workersCount
-    let ranges = [(i * range, (i + 1) * range) | i <- [0..workersCount - 1]]
+    let window = (maxBound :: D.Nonce) `div` workersCount
+    let ranges = [(i * window, (i + 1) * window) | i <- [0..workersCount - 1]]
 
-    mapM_ (generateHash nodeData difficulty) ranges
+    L.process $ forever $ processKBlock nodeData
+
+    kBlockGeneration nodeData ranges
 
     L.awaitNodeFinished nodeData
