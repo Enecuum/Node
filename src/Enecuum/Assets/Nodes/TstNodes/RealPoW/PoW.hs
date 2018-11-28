@@ -63,23 +63,6 @@ calcHash KBlockTemplate {..} = SHA.hash bstr
           P.putByteString _prevHash
           P.putByteString _solver
 
-calcDifficulty hash = countZeros countedBytes
-    where
-        countZeros []     = 0
-        countZeros (8:bs) = 8 + countZeros bs
-        countZeros (n:_)  = n
-
-        bytes = B.unpack hash
-        countedBytes = map zerosCount bytes
-
-        zerosCount :: Word8 -> Int
-        zerosCount (Bit.complement -> n) = snd $ foldr (checkBit n) (True, 0) [7..0]
-        checkBit n i (True, cnt) =
-            if Bit.testBit n i
-            then (True,  cnt + 1)
-            else (False, cnt)
-        checkBit n i res = res
-
 
 generateHash
     :: TstRealPoWNodeData
@@ -95,7 +78,7 @@ generateHash nodeData (fromIntegral -> difficulty) (from, to) = do
           , _solver   = fromRight "" $ Base64.decode D.genesisSolverStr
           }
     let hashes = [ calcHash h | h <- map kBlockTemplate [from..to]]
-    let difficulties = map calcDifficulty hashes
+    let difficulties = map D.calcHashDifficulty hashes
 
     mapM_ (L.logInfo . show) $ zip hashes $ take 10 $ filter (>= difficulty) difficulties
 

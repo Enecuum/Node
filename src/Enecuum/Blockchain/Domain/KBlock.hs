@@ -5,11 +5,13 @@
 module Enecuum.Blockchain.Domain.KBlock where
 
 import qualified Crypto.Hash.SHA256         as SHA
+import qualified Data.Bits                  as Bit
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Base64     as Base64
 import qualified Data.ByteString.Internal   as BSI
 import           Data.HGraph.StringHashable (StringHash (..), StringHashable, fromStringHash, toHash)
 import           Data.Serialize.Put         (putWord32le, putWord8, runPut)
+import qualified Data.Serialize.Put         as P
 import           Enecuum.Prelude
 
 -- TODO: Base64 encoded newtype wrapper
@@ -73,15 +75,27 @@ genesisKBlock = KBlock
     }
 
 calculateKeyBlockHash :: KBlock -> BSI.ByteString
-calculateKeyBlockHash KBlock {..} = Base64.encode . SHA.hash . B.concat $ bstr
+calculateKeyBlockHash KBlock {..} = Base64.encode . SHA.hash $ bstr
+    where
+    bstr = P.runPut $ do
+          P.putWord8 (toEnum kBlockType)
+          P.putWord32le   _number
+          P.putWord32le   _time
+          P.putWord32le   _nonce
+          P.putByteString $ fromRight "" $ Base64.decode $ fromStringHash _prevHash
+          P.putByteString $ fromRight "" $ Base64.decode $ fromStringHash _solver
+
+calcHashDifficulty :: ByteString -> Int
+calcHashDifficulty = countZeros . countedBytes
   where
-    bstr = map runPut
-            [ putWord8 (toEnum kBlockType)
-            , putWord32le _number
-            , putWord32le _time
-            , putWord32le _nonce
-            ]
-            ++
-            [ fromRight "" $ Base64.decode $ fromStringHash _prevHash
-            , fromRight "" $ Base64.decode $ fromStringHash _solver
-            ]
+    countZeros []     = 0
+    countZeros (8:bs) = 8 + countZeros bs
+    countZeros (n:_)  = n
+    countedBytes hash = map leadingZeroBitsCount (B.unpack hash)
+
+leadingZeroBitsCount :: Word8 -> Int
+leadingZeroBitsCount (Bit.complement -> n) = snd $ foldr (checkBit n) (True, 0) [7, 6..0]
+  where
+    checkBit n i (True, cnt) | Bit.testBit n i = (True, cnt + 1)
+    checkBit n i (True, cnt) = (False, cnt)
+    checkBit n i res         = res
