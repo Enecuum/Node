@@ -53,16 +53,7 @@ data KBlockTemplate = KBlockTemplate
     }
 
 calcHash :: KBlockTemplate -> ByteString
-calcHash KBlockTemplate {..} = SHA.hash bstr
-  where
-    bstr = P.runPut $ do
-          P.putWord8 (toEnum D.kBlockType)
-          P.putWord32le   _number
-          P.putWord32le   _time
-          P.putWord32le   _nonce
-          P.putByteString _prevHash
-          P.putByteString _solver
-
+calcHash KBlockTemplate {..} = D.calcKBlockHashRaw _time _number _nonce _prevHash _solver
 
 generateHash
     :: TstRealPoWNodeData
@@ -78,9 +69,9 @@ generateHash nodeData (fromIntegral -> difficulty) (from, to) = do
           , _solver   = fromRight "" $ Base64.decode D.genesisSolverStr
           }
     let hashes = [ calcHash h | h <- map kBlockTemplate [from..to]]
-    let difficulties = map D.calcHashDifficulty hashes
+    let difficulties = zip hashes $ map D.calcHashDifficulty hashes
 
-    mapM_ (L.logInfo . show) $ zip hashes $ take 10 $ filter (>= difficulty) difficulties
+    mapM_ (L.logInfo . show) $ take 10 $ filter (\(_, b) -> b == difficulty) difficulties
 
     pure ()
 
@@ -92,7 +83,7 @@ powNode' cfg = do
     nodeData <- TstRealPoWNodeData <$> L.newVarIO D.NodeActing
 
     let workersCount = 4
-    let difficulty = 2
+    let difficulty = 8
     let range = (maxBound :: D.Nonce) `div` workersCount
     let ranges = [(i * range, (i + 1) * range) | i <- [0..workersCount - 1]]
 

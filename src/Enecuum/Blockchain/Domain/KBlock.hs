@@ -35,7 +35,7 @@ data KBlock = KBlock
     } deriving (Eq, Generic, Ord, Read, Show, ToJSON, FromJSON, Serialize)
 
 instance StringHashable KBlock where
-  toHash = StringHash . calculateKeyBlockHash
+  toHash = StringHash . calcKBlockHashBase64
 
 data KBlockValidity
     = NextKBlock      -- ^ KBlock is good, and it's next to the current top
@@ -74,16 +74,30 @@ genesisKBlock = KBlock
     , _solver    = genesisSolverHash
     }
 
-calculateKeyBlockHash :: KBlock -> BSI.ByteString
-calculateKeyBlockHash KBlock {..} = Base64.encode . SHA.hash $ bstr
+calcKBlockHashBase64 :: KBlock -> ByteString
+calcKBlockHashBase64 KBlock {..} = Base64.encode $ calcKBlockHashRaw
+    _time
+    _number
+    _nonce
+    (fromRight "" $ Base64.decode $ fromStringHash _prevHash)
+    (fromRight "" $ Base64.decode $ fromStringHash _solver)
+
+calcKBlockHashRaw
+  :: BlockTime
+  -> BlockNumber
+  -> Nonce
+  -> ByteString
+  -> ByteString
+  -> ByteString
+calcKBlockHashRaw time number nonce prevHash solver = SHA.hash bstr
     where
     bstr = P.runPut $ do
           P.putWord8 (toEnum kBlockType)
-          P.putWord32le   _number
-          P.putWord32le   _time
-          P.putWord32le   _nonce
-          P.putByteString $ fromRight "" $ Base64.decode $ fromStringHash _prevHash
-          P.putByteString $ fromRight "" $ Base64.decode $ fromStringHash _solver
+          P.putWord32le   number
+          P.putWord32le   time
+          P.putWord32le   nonce
+          P.putByteString prevHash
+          P.putByteString solver
 
 calcHashDifficulty :: ByteString -> Int
 calcHashDifficulty = countZeros . countedBytes
@@ -94,8 +108,9 @@ calcHashDifficulty = countZeros . countedBytes
     countedBytes hash = map leadingZeroBitsCount (B.unpack hash)
 
 leadingZeroBitsCount :: Word8 -> Int
-leadingZeroBitsCount (Bit.complement -> n) = snd $ foldr (checkBit n) (True, 0) [7, 6..0]
+leadingZeroBitsCount (Bit.complement -> number) = snd $ checkBit' number (True, 0) [7, 6..0]
   where
-    checkBit n i (True, cnt) | Bit.testBit n i = (True, cnt + 1)
-    checkBit n i (True, cnt) = (False, cnt)
-    checkBit n i res         = res
+    checkBit' _ res []                 = res
+    checkBit' n (True, cnt) (bit:bits) | Bit.testBit n bit = checkBit' n (True, cnt + 1) bits
+    checkBit' _ (True, cnt) _          = (False, cnt)
+    checkBit' _ res _                  = res

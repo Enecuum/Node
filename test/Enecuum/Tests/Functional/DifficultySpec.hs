@@ -8,27 +8,22 @@ import qualified Enecuum.Domain         as D
 import           Enecuum.Tests.Wrappers
 import           Test.Hspec
 
-leadingZeroBits' n = foldr (checkBit' (Bit.complement n)) (True, 0) [7, 6..0]
-
-checkBit' n i (True, cnt) | Bit.testBit n i = (True, cnt + 1)
-checkBit' n i (True, cnt) = (False, cnt)
-checkBit' n i res         = res
-
-
 spec :: Spec
-spec = fastTest $ describe "Difficulty test" $
+spec = fastTest $ describe "Difficulty test" $ do
     it "leadingZeroBitsCount" $ do
-        let n = 17 :: Word8
+        D.leadingZeroBitsCount 0  `shouldBe` 8
+        D.leadingZeroBitsCount 1  `shouldBe` 7
+        D.leadingZeroBitsCount 16 `shouldBe` 3
+        D.leadingZeroBitsCount 17 `shouldBe` 3
 
-        print $ Bit.testBit (Bit.complement n) 0
-        print $ Bit.testBit (Bit.complement n) 1
-        print $ Bit.testBit (Bit.complement n) 2
-        print $ Bit.testBit (Bit.complement n) 3
-        print $ Bit.testBit (Bit.complement n) 4
-        print $ Bit.testBit (Bit.complement n) 5
-        print $ Bit.testBit (Bit.complement n) 6
-        print $ Bit.testBit (Bit.complement n) 7
+        map D.leadingZeroBitsCount [(2 ^ i) :: Word8 | i <- [0..7]]
+          `shouldBe` [7,6..0]
 
-        print $ leadingZeroBits' n
+    it "calcHashDifficulty" $ do
+        D.calcHashDifficulty (B.pack [1, 121]) `shouldBe` 7
+        D.calcHashDifficulty (B.pack [0, 1]) `shouldBe` 15
 
-        1 `shouldBe` 1
+    it "Some hashes difficulty" $ do
+        D.calcHashDifficulty (B.pack [246,2,161,0,0])   `shouldBe` 0
+        D.calcHashDifficulty (B.pack [0,246,2,161,0,0]) `shouldBe` 8
+        D.calcHashDifficulty (B.pack [0,0,0,0,0,0])     `shouldBe` 48
