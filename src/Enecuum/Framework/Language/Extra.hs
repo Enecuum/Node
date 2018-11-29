@@ -63,9 +63,11 @@ makeRpcRequestUnsafe connectCfg arg = makeRpcRequest connectCfg arg >>= \case
     Left  err -> error err
     Right a   -> pure a
 
+-- | Sets the NodeFinished status.
 stopNode :: HasStatus s (D.StateVar D.NodeStatus) => s -> L.NodeL ()
-stopNode nodeData   = stopNode' (nodeData ^. status)
+stopNode nodeData = stopNode' (nodeData ^. status)
 
+-- | Sets the NodeFinished status.
 stopNode' :: D.StateVar D.NodeStatus -> L.NodeL ()
 stopNode' statusVar = L.atomically $ L.writeVar statusVar D.NodeFinished
 
