@@ -23,9 +23,9 @@
     "loggerConfig": {
         "logFilePath": "",
         "format": "$prio $loggername: $msg",
-        "logToFile": true,
+        "logToFile": false,
         "logToConsole": true,
         "level": "Debug"
     },
-    "nodeScenario": "Good"
+    "nodeScenario": "Bad"
 }

@@ -1,6 +1,6 @@
 {
     "nodeConfig": {
-        "tag": "TstGraphNodeConfig",
+        "tag": "GraphNodeConfig",
         "graphServiceConfig": {
             "dbConfig": {
                 "stopOnDatabaseError": true,
@@ -15,30 +15,38 @@
             },
             "graphWindowConfig": {
                 "tag": "GraphWindowConfig",
-                "shrinkingEnabled": true,
+                "shrinkingEnabled": false,
                 "windowSize": 100,
                 "shrinkingDelay": 1000000
             },
             "tag": "GraphServiceConfig",
-            "rpcSynco": {
-                "host": "127.0.0.1",
-                "port": 6050
-            }
+            "rpcSynco": null
+        },
+        "bnAddress": {
+            "tag": "NodeAddress",
+            "nodePorts": {
+                "tag": "NodePorts",
+                "nodeRpcPort": 6000,
+                "nodeUdpPort": 4000,
+                "nodeTcpPort": 5000
+            },
+            "nodeId": "kR2/PidrIMfsI6u6WZvyx3JOwQOlW+z7WG+k2QO+sDQ=",
+            "nodeHost": "127.0.0.1"
         },
         "nodePorts": {
             "tag": "NodePorts",
-            "nodeRpcPort": 6040,
-            "nodeUdpPort": 4040,
-            "nodeTcpPort": 5040
+            "nodeRpcPort": 6050,
+            "nodeUdpPort": 4050,
+            "nodeTcpPort": 5050
         }
     },
-    "node": "TstGraphNode",
+    "node": "GraphNode",
     "loggerConfig": {
-        "logFilePath": "/tmp/log/GraphNodeReceiver.log",
+        "logFilePath": "",
         "format": "$prio $loggername: $msg",
-        "logToFile": true,
+        "logToFile": false,
         "logToConsole": true,
         "level": "Debug"
     },
-    "nodeScenario": "TstGN"
+    "nodeScenario": "GN"
 }

@@ -23,7 +23,7 @@
     "loggerConfig": {
         "logFilePath": "",
         "format": "$prio $loggername: $msg",
-        "logToFile": false,
+        "logToFile": true,
         "logToConsole": true,
         "level": "Debug"
     },

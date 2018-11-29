@@ -6,17 +6,17 @@
                 "stopOnDatabaseError": true,
                 "tag": "DBConfig",
                 "dbOptions": {
-                    "errorIfExists": true,
+                    "errorIfExists": false,
                     "createIfMissing": true
                 },
-                "dbModelName": "",
-                "useDatabase": false,
-                "useEnqHomeDir": false
+                "dbModelName": "graph_node_transmitter.dbm",
+                "useDatabase": true,
+                "useEnqHomeDir": true
             },
             "graphWindowConfig": {
                 "tag": "GraphWindowConfig",
-                "shrinkingEnabled": false,
-                "windowSize": 10,
+                "shrinkingEnabled": true,
+                "windowSize": 100,
                 "shrinkingDelay": 1000000
             },
             "tag": "GraphServiceConfig",
@@ -31,9 +31,9 @@
     },
     "node": "TstGraphNode",
     "loggerConfig": {
-        "logFilePath": "",
+        "logFilePath": "/tmp/log/GraphNodeTransmitter.log",
         "format": "$prio $loggername: $msg",
-        "logToFile": false,
+        "logToFile": true,
         "logToConsole": true,
         "level": "Debug"
     },
