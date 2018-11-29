@@ -39,3 +39,9 @@ defaultLoggerConfig = LoggerConfig
     , _logToConsole = True
     , _logToFile = False
     }
+
+nullLoger :: LoggerConfig
+nullLoger = defaultLoggerConfig
+    {   _logFilePath = "null"
+    ,   _logToConsole = False
+    }

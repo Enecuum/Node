@@ -20,4 +20,5 @@ configs =
     , ("configs/default/GN_0.json",                 encodePretty $ D.defConfig A.GN         A.defaultGraphNodeConfig)
     , ("configs/default/GraphNodeReceiver.json",    encodePretty $ D.defConfig Tst.TstGN    Tst.graphNodeReceiverConfig)
     , ("configs/default/GraphNodeTransmitter.json", encodePretty $ D.defConfig Tst.TstGN    Tst.graphNodeTransmitterConfig)
+    , ("configs/default/MultiNode.json",            encodePretty $ D.defConfig A.MultiNodeS A.defaultMultiNodeConfig)
     ]

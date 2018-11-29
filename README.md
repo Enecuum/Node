@@ -74,16 +74,22 @@ Run slow and unreliable tests:
 # Running sample nodes
 
 * GraphNode Transmitter
-`stack exec enq-node-haskell initialize ./configs/GraphNodeTransmitter.json`
+`stack exec enq-node-haskell singlenode ./configs/GraphNodeTransmitter.json`
 
 * GraphNode Receiver
-`stack exec enq-node-haskell initialize ./configs/GraphNodeReceiver.json`
+`stack exec enq-node-haskell singlenode ./configs/GraphNodeReceiver.json`
 
 * Fake PoW
-`stack exec enq-node-haskell initialize ./configs/pow.json`
+`stack exec enq-node-haskell singlenode ./configs/pow.json`
 
 * Fake PoA
-`stack exec enq-node-haskell initialize ./configs/poa.json`
+`stack exec enq-node-haskell singlenode ./configs/poa.json`
 
 * Console client
-`stack exec enq-node-haskell initialize ./configs/Client.json`
+`stack exec enq-node-haskell singlenode ./configs/Client.json`
+
+# Generation of default configs
+`stack exec enq-node-haskell genConfigs`
+
+# Running Multinode
+`stack exec enq-node-haskell multinode ./configs/default/MultiNode.json`

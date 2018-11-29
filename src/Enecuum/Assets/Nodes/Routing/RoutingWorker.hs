@@ -25,17 +25,17 @@ routingWorker routingRuntime = do
 
     builtIntoTheNetwork routingRuntime
     -- delete connects if now exist better
-    L.periodic (1000 * 1000)  $ clearingOfConnects routingRuntime
+    L.periodic (1000 * 10000)  $ clearingOfConnects routingRuntime
     -- refine structure with clockwise direction
-    L.periodic (1000 * 10000) $ successorsRequest  routingRuntime
+    L.periodic (1000 * 100000) $ successorsRequest  routingRuntime
     -- refine structure with anti-clockwise direction
-    L.periodic (1000 * 1000)  $ sendHelloToPrevious routingRuntime
+    L.periodic (1000 * 10000)  $ sendHelloToPrevious routingRuntime
     -- cleare list of "familiar" messages
-    L.periodic (1000 * 1000)  $
+    L.periodic (1000 * 10000)  $
         L.modifyVarIO (routingRuntime ^. msgFilter)
             (\seq -> Set.empty Seq.<| Seq.deleteAt 2 seq)
     -- delete dead nodes
-    L.periodic (1000 * 1000)  $ do
+    L.periodic (1000 * 10000)  $ do
         deadNodes <- pingConnects =<< getConnects routingRuntime
         forM_ deadNodes $ \hash -> do
             L.modifyVarIO (routingRuntime ^. connectMap) $ removeFromMap hash
