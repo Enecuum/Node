@@ -25,6 +25,9 @@ type PrevHash    = StringHash
 type NonceRange  = (Nonce, Nonce)
 type Difficulty  = Int
 
+-- | Hash in raw byte string (not encoded as base64)
+newtype RawHash = RawHash { unRawHash :: ByteString }
+
 data KBlock = KBlock
     { _time     :: BlockTime
     , _prevHash :: PrevHash
@@ -35,7 +38,7 @@ data KBlock = KBlock
     } deriving (Eq, Generic, Ord, Read, Show, ToJSON, FromJSON, Serialize)
 
 instance StringHashable KBlock where
-  toHash = StringHash . calcKBlockHashBase64
+  toHash = calcKBlockHashBase64
 
 data KBlockValidity
     = NextKBlock      -- ^ KBlock is good, and it's next to the current top
@@ -74,22 +77,28 @@ genesisKBlock = KBlock
     , _solver    = genesisSolverHash
     }
 
-calcKBlockHashBase64 :: KBlock -> ByteString
-calcKBlockHashBase64 KBlock {..} = Base64.encode $ calcKBlockHashRaw
+toRawHash :: StringHash -> RawHash
+toRawHash = RawHash . fromRight (error "Decoding hash from base64 failed.") . Base64.decode . fromStringHash
+
+fromRawHash :: RawHash -> StringHash
+fromRawHash = StringHash . Base64.encode . unRawHash
+
+calcKBlockHashBase64 :: KBlock -> StringHash
+calcKBlockHashBase64 KBlock {..} = fromRawHash $ calcKBlockHashRaw
     _time
     _number
     _nonce
-    (fromRight "" $ Base64.decode $ fromStringHash _prevHash)
-    (fromRight "" $ Base64.decode $ fromStringHash _solver)
+    (toRawHash _prevHash)
+    (toRawHash _solver)
 
 calcKBlockHashRaw
   :: BlockTime
   -> BlockNumber
   -> Nonce
-  -> ByteString
-  -> ByteString
-  -> ByteString
-calcKBlockHashRaw time number nonce prevHash solver = SHA.hash bstr
+  -> RawHash
+  -> RawHash
+  -> RawHash
+calcKBlockHashRaw time number nonce (RawHash prevHash) (RawHash solver) = RawHash $ SHA.hash bstr
     where
     bstr = P.runPut $ do
           P.putWord8 (toEnum kBlockType)
@@ -99,8 +108,8 @@ calcKBlockHashRaw time number nonce prevHash solver = SHA.hash bstr
           P.putByteString prevHash
           P.putByteString solver
 
-calcHashDifficulty :: ByteString -> Difficulty
-calcHashDifficulty = countZeros . countedBytes
+calcHashDifficulty :: RawHash -> Difficulty
+calcHashDifficulty = countZeros . countedBytes . unRawHash
   where
     countZeros []     = 0
     countZeros (8:bs) = 8 + countZeros bs

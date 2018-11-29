@@ -14,7 +14,10 @@ data TstRealPoWNode = TstRealPoWNode
     deriving (Show, Generic)
 
 data instance NodeConfig TstRealPoWNode = TstRealPoWNodeConfig
-        { _dummyOption :: Int
+        { _controlRpcPort      :: D.PortNumber
+        , _graphNodeUDPAddress :: D.Address
+        , _baseDifficulty      :: D.Difficulty
+        , _workersCount        :: Word32
         }
     deriving (Show, Generic)
 
