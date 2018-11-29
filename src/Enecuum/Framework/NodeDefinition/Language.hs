@@ -40,6 +40,8 @@ data NodeDefinitionF next where
     -- Process interface. TODO: It's probably wise to move it to own language.
     -- | Fork a process for node.
     ForkProcess :: L.NodeL a -> (D.ProcessPtr a -> next) -> NodeDefinitionF next
+    -- | Hardly kill the thread.
+    KillProcess :: D.ProcessPtr a -> (() -> next) -> NodeDefinitionF next
     -- | Try get result (non-blocking).
     TryGetResult :: D.ProcessPtr a -> (Maybe a -> next) -> NodeDefinitionF next
     -- | Await for result (blocking).
@@ -71,6 +73,10 @@ fork action = liftF $ ForkProcess action id
 -- | Fork a process for node.
 process :: L.NodeL () -> NodeDefinitionL ()
 process = void . fork
+
+-- | Hardly kill a process.
+killProcess :: D.ProcessPtr a -> NodeDefinitionL ()
+killProcess processPtr = liftF $ KillProcess processPtr id
 
 periodic :: Int -> L.NodeL a -> NodeDefinitionL ()
 periodic time action = process $ forever $ do

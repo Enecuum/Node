@@ -120,7 +120,7 @@ awaitSignal signalVar = do
     L.atomically $ unlessM (L.readVar signalVar) L.retry
     L.writeVarIO signalVar False
 
-takeVar :: L.StateIO m => D.StateVar (Maybe a) -> m a
+takeVar :: D.StateVar (Maybe a) -> L.StateL a
 takeVar var = do
     mbVal <- L.readVar var
     case mbVal of
