@@ -1,20 +1,20 @@
 {-# LANGUAGE ConstraintKinds        #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE UndecidableInstances   #-}
-{-# LANGUAGE FunctionalDependencies #-}
 
 module Enecuum.Framework.NodeDefinition.Language where
 
-import           Enecuum.Prelude
-import qualified Enecuum.Core.Language                 as L
-import qualified Enecuum.Framework.Domain              as D
-import qualified Enecuum.Framework.Node.Language       as L
-import qualified Enecuum.Framework.Networking.Language as L
-import           Enecuum.Framework.Handler.Rpc.Language  (RpcHandlerL)
-import           Enecuum.Framework.Handler.Network.Language
+import qualified Enecuum.Core.Language                      as L
+import qualified Enecuum.Framework.Domain                   as D
 import           Enecuum.Framework.Handler.Cmd.Language
-import           Language.Haskell.TH.MakeFunctor (makeFunctorInstance)
+import           Enecuum.Framework.Handler.Network.Language
+import           Enecuum.Framework.Handler.Rpc.Language     (RpcHandlerL)
+import qualified Enecuum.Framework.Networking.Language      as L
+import qualified Enecuum.Framework.Node.Language            as L
+import           Enecuum.Prelude
+import           Language.Haskell.TH.MakeFunctor            (makeFunctorInstance)
 
 -- TODO: it's possible to make these steps evaluating step-by-step, in order.
 -- Think about if this really needed.
@@ -152,7 +152,7 @@ instance L.ERandom NodeDefinitionL where
 instance L.FileSystem NodeDefinitionL where
     readFile filename       = evalCoreEffectNodeDefinitionF $ L.readFile filename
     writeFile filename text = evalCoreEffectNodeDefinitionF $ L.writeFile filename text
-    getHomeDirectory        = evalCoreEffectNodeDefinitionF $ L.getHomeDirectory
+    getHomeDirectory        = evalCoreEffectNodeDefinitionF   L.getHomeDirectory
     createFilePath filepath = evalCoreEffectNodeDefinitionF $ L.createFilePath filepath
 
 instance L.ControlFlow NodeDefinitionL where
@@ -163,3 +163,7 @@ instance L.StateIO NodeDefinitionL where
     newVarIO       = scenario . L.newVarIO
     readVarIO      = scenario . L.readVarIO
     writeVarIO var = scenario . L.writeVarIO var
+
+instance L.Time NodeDefinitionL where
+    getUTCTime   = evalCoreEffectNodeDefinitionF L.getUTCTime
+    getPosixTime = evalCoreEffectNodeDefinitionF L.getPosixTime

@@ -1,19 +1,19 @@
+{-# LANGUAGE BangPatterns           #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE TypeInType             #-}
-{-# LANGUAGE BangPatterns           #-}
+{-# LANGUAGE UndecidableInstances   #-}
 
 
 module Enecuum.Framework.Node.Language where
 
-import           Enecuum.Prelude
-import qualified Enecuum.Core.Language                    as L
-import qualified Enecuum.Framework.Networking.Language    as L
-import qualified Enecuum.Framework.Domain.Networking      as D
-import qualified Enecuum.Core.Types                       as D
+import qualified Enecuum.Core.Language                      as L
+import qualified Enecuum.Core.Types                         as D
+import qualified Enecuum.Framework.Domain.Networking        as D
 import           Enecuum.Framework.Handler.Network.Language
+import qualified Enecuum.Framework.Networking.Language      as L
+import           Enecuum.Prelude
 import           Language.Haskell.TH.MakeFunctor
 
 -- | Node language.
@@ -82,7 +82,7 @@ withConnection protocol address f = do
 
 listener :: (Connection m con, Typeable con, Typeable t,
             Typeable m, Monad m, FromJSON t) =>
-            (t -> m ()) -> NetworkHandlerL con m ()        
+            (t -> m ()) -> NetworkHandlerL con m ()
 listener !f = handler (\a conn -> void (close conn) >> f a)
 
 class Connection a con where
@@ -137,3 +137,7 @@ instance L.StateIO NodeL where
     newVarIO       = evalStateAtomically . L.newVar
     readVarIO      = evalStateAtomically . L.readVar
     writeVarIO var = evalStateAtomically . L.writeVar var
+
+instance L.Time NodeL where
+    getUTCTime   = evalCoreEffectNodeF L.getUTCTime
+    getPosixTime = evalCoreEffectNodeF L.getPosixTime

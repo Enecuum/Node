@@ -125,7 +125,7 @@ kBlockGeneration nodeData ranges = do
         <$> L.readVar (nodeData ^. currentDifficulty)
         <*> L.readVar (nodeData ^. prevBlockDef     )
 
-    let time' = 0
+    time' :: D.BlockTime <- round <$> L.getPosixTime
     let nextNumber = 1 + prevBlockDef' ^. template . number
     let kBlockTemplateF n = KBlockTemplate
           { _time     = time'
@@ -191,11 +191,11 @@ initializeNode difficulty = do
         , _status            = status
         }
 
--- TODO:
--- * Time
+-- TODO: https://task.enecuum.com/issues/2935
 -- * Solver id
 -- * Synchro
 -- * What if no one found hash for this time && nonce?
+-- * Difficulty func
 
 powNode' :: NodeConfig TstRealPoWNode -> L.NodeDefinitionL ()
 powNode' cfg = do

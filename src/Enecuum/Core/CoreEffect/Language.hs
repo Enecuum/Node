@@ -11,8 +11,9 @@ import           Enecuum.Core.ControlFlow.Language (ControlFlow (..), ControlFlo
 import           Enecuum.Core.FileSystem.Language
 import           Enecuum.Core.Logger.Language      (Logger, LoggerL, logMessage)
 import           Enecuum.Core.Random.Language
-import           Language.Haskell.TH.MakeFunctor (makeFunctorInstance)
-import           Enecuum.Prelude hiding (readFile, writeFile)
+import           Enecuum.Core.Time.Language        (Time (..), TimeL)
+import           Enecuum.Prelude                   hiding (readFile, writeFile)
+import           Language.Haskell.TH.MakeFunctor   (makeFunctorInstance)
 
 -- | Core effects container language.
 data CoreEffectF next where
@@ -24,7 +25,10 @@ data CoreEffectF next where
   EvalFileSystem  :: FileSystemL a  -> (a -> next) -> CoreEffectF next
   -- | ControlFlow effect
   EvalControlFlow :: ControlFlowL a -> (a  -> next) -> CoreEffectF next
-  EvalIO          :: IO a -> (a -> next) -> CoreEffectF next
+  -- | Time effect
+  EvalTime        :: TimeL a        -> (a  -> next) -> CoreEffectF next
+  -- | Impure effect. Avoid using it in production code (it's not testable).
+  EvalIO          :: IO a           -> (a  -> next) -> CoreEffectF next
 
 makeFunctorInstance ''CoreEffectF
 
@@ -47,22 +51,29 @@ evalFileSystem filepath = liftF $ EvalFileSystem filepath id
 
 instance FileSystem (Free CoreEffectF) where
   readFile filepath = evalFileSystem $ readFile filepath
-  writeFile filename text = evalFileSystem $ writeFile filename text  
-  getHomeDirectory = evalFileSystem $ getHomeDirectory
-  createFilePath filepath = evalFileSystem $ createFilePath filepath 
+  writeFile filename text = evalFileSystem $ writeFile filename text
+  getHomeDirectory = evalFileSystem getHomeDirectory
+  createFilePath filepath = evalFileSystem $ createFilePath filepath
   doesFileExist    = evalFileSystem . doesFileExist
 
 evalRandom :: ERandomL a -> CoreEffect a
 evalRandom g = liftF $ EvalRandom g id
 
-instance ERandom (Free CoreEffectF) where
+instance ERandom CoreEffect where
   getRandomInt = evalRandom . getRandomInt
   getRandomByteString = evalRandom . getRandomByteString
   evalCoreCrypto = evalRandom . evalCoreCrypto
-  nextUUID = evalRandom $ nextUUID
+  nextUUID = evalRandom nextUUID
 
 evalControlFlow :: ControlFlowL a -> CoreEffect a
 evalControlFlow a = liftF $ EvalControlFlow a id
 
-instance ControlFlow (Free CoreEffectF) where
+instance ControlFlow CoreEffect where
   delay i = evalControlFlow $ delay i
+
+evalTime :: TimeL a -> CoreEffect a
+evalTime action = liftF $ EvalTime action id
+
+instance Time CoreEffect where
+    getUTCTime   = evalTime getUTCTime
+    getPosixTime = evalTime getPosixTime

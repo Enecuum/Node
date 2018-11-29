@@ -1,15 +1,15 @@
-{-# LANGUAGE GADTs          #-}
-{-# LANGUAGE TypeFamilies   #-}
+{-# LANGUAGE GADTs           #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies    #-}
 
 module Enecuum.Framework.Networking.Language where
 
 import           Enecuum.Prelude
 
-import qualified Data.Aeson                           as A
-import qualified Enecuum.Core.Language                as L
-import qualified Data.Text                            as Text
-import qualified Enecuum.Framework.Domain             as D
+import qualified Data.Aeson                      as A
+import qualified Data.Text                       as Text
+import qualified Enecuum.Core.Language           as L
+import qualified Enecuum.Framework.Domain        as D
 import           Language.Haskell.TH.MakeFunctor
 
 -- | Allows to work with network: open and close connections, send requests.
@@ -74,3 +74,7 @@ responseValidation res = case res of
     Right (D.RpcResponseResult val            _) -> case A.fromJSON val of
         A.Error   txt  -> pure $ Left (Text.pack txt)
         A.Success resp -> pure $ Right resp
+
+instance L.Time NetworkingL where
+    getUTCTime   = evalCoreEffectNetworkingF L.getUTCTime
+    getPosixTime = evalCoreEffectNetworkingF L.getPosixTime

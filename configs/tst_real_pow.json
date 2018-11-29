@@ -3,7 +3,6 @@
         "tag": "TstRealPoWNodeConfig",
         "controlRpcPort": 6200,
         "graphNodeUDPAddress":  {"host":"127.0.0.1","port":4050},
-
         "baseDifficulty": 20,
         "workersCount": 4
     },
