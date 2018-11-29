@@ -6,7 +6,6 @@ module Enecuum.Framework.Domain.Range where
 import           Enecuum.Prelude hiding (foldMap)
 import           Data.Foldable (Foldable (..))
 import qualified Data.Aeson                           as J
-import           Data.Aeson.Extra          (noLensPrefix)
 
 data Range a where
     Range      :: (Eq a, Enum a, Ord a) => a -> a -> Range a
@@ -18,6 +17,14 @@ newRange :: (Eq a, Enum a, Ord a) => a -> a -> Range a
 newRange a b
     | a <= b    = Range a b
     | otherwise = EmptyRange
+
+bottomBound :: Range a -> Maybe a
+bottomBound (Range a _) = Just a
+bottomBound _           = Nothing
+
+topBound :: Range a -> Maybe a
+topBound (Range _ a) = Just a
+topBound _           = Nothing
 
 instance Foldable Range where
     foldMap f (Range a b)

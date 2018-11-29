@@ -101,26 +101,29 @@ initialize configSrc = do
 runMultiNode :: LByteString -> IO ()
 runMultiNode configSrc = case Cfg.dispatchScenario @A.MultiNode configSrc of
     Just (cfg, _) -> do
-        startPoWNodes (A._powPorts $ Cfg.nodeConfig cfg) A.defaultPoWNodeConfig
-        startPoANodes (A._poaPorts $ Cfg.nodeConfig cfg) A.defaultPoANodeConfig
-        startNNNodes  (A._nnPorts $ Cfg.nodeConfig cfg)  A.defaultGraphNodeConfig
+        startPoWNodes (A._powPorts $ Cfg.nodeConfig cfg) (A._powConfig $ Cfg.nodeConfig cfg)
+        startPoANodes (A._poaPorts $ Cfg.nodeConfig cfg) (A._poaConfig $ Cfg.nodeConfig cfg)
+        startNNNodes  (A._gnPorts $ Cfg.nodeConfig cfg)  (A._gnConfig $ Cfg.nodeConfig cfg)
         forever $ threadDelay 50000000
 
     Nothing -> putTextLn "Parse error of multi node config."
 
-startPoWNodes range cfg =
+startPoWNodes range cfg = do
+    putTextLn $ "Start pow in range from " <> show (D.bottomBound range) <> " to " <> show (D.topBound range)
     forM_ (D.rangeToList range) $ \nPort -> do
         threadDelay 3000
         let nodeCfg = cfg {A._powNodePorts = A.makeNodePorts1000 nPort}
         void $ forkIO $ void $ runNode D.nullLoger (A.powNode' nodeCfg)
 
-startPoANodes range cfg =
+startPoANodes range cfg = do
+    putTextLn $ "Start poa in range from " <> show (D.bottomBound range) <> " to " <> show (D.topBound range)
     forM_ (D.rangeToList range) $ \nPort -> do
         threadDelay 3000
         let nodeCfg = cfg {A._poaNodePorts = A.makeNodePorts1000 nPort}
         void $ forkIO $ void $ runNode D.nullLoger (A.poaNode A.Good nodeCfg)
 
-startNNNodes range cfg =
+startNNNodes range cfg = do
+    putTextLn $ "Start gn in range from " <> show (D.bottomBound range) <> " to " <> show (D.topBound range)
     forM_ (D.rangeToList range) $ \nPort -> do
         threadDelay 3000
         let nodeCfg = cfg {A._nodePorts = A.makeNodePorts1000 nPort}
