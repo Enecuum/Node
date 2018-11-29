@@ -1,29 +1,30 @@
 {-# LANGUAGE DeriveAnyClass         #-}
 {-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell        #-}
 
 module Enecuum.Assets.Nodes.TstNodes.PoA where
 
+import qualified Data.Aeson                           as A
 import           Enecuum.Prelude
-import qualified Data.Aeson as A
 
-import           Data.HGraph.StringHashable   (toHash)
+import           Data.HGraph.StringHashable           (toHash)
 
-import qualified Enecuum.Domain               as D
+import qualified Enecuum.Blockchain.Lens              as Lens
 import           Enecuum.Config
-import qualified Enecuum.Language             as L
-import qualified Enecuum.Blockchain.Lens      as Lens
-import           Enecuum.Framework.Language.Extra (HasStatus, NodeStatus (..))
+import qualified Enecuum.Domain                       as D
+import           Enecuum.Framework.Language.Extra     (HasStatus)
+import qualified Enecuum.Framework.Lens               as Lens
+import qualified Enecuum.Language                     as L
 
-import qualified Enecuum.Assets.Nodes.Address as A
-import           Enecuum.Assets.Nodes.Messages
-import           Enecuum.Assets.Nodes.Methods (rpcPingPong, handleStopNode)
 import qualified Enecuum.Assets.Blockchain.Generation as A
+import qualified Enecuum.Assets.Nodes.Address         as A
+import           Enecuum.Assets.Nodes.Messages
+import           Enecuum.Assets.Nodes.Methods         (handleStopNode, rpcPingPong)
 
 data TstPoaNodeData = TstPoaNodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock
-    , _status              :: D.StateVar NodeStatus
+    , _status              :: D.StateVar D.NodeStatus
     , _transactionPending  :: D.StateVar [D.Transaction]
     }
 
@@ -41,6 +42,7 @@ instance Node TstPoaNode where
     data NodeScenario TstPoaNode = Good | Bad
         deriving (Show, Generic)
     getNodeScript = poaNode
+    getNodeTag _ = TstPoaNode
 
 instance ToJSON   TstPoaNode                where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON TstPoaNode                where parseJSON = A.genericParseJSON nodeConfigJsonOptions
@@ -50,7 +52,7 @@ instance ToJSON   (NodeScenario TstPoaNode) where toJSON    = A.genericToJSON   
 instance FromJSON (NodeScenario TstPoaNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
 defaultPoANodeConfig :: NodeConfig TstPoaNode
-defaultPoANodeConfig = TstPoANodeConfig (A.defaultPoANodePorts ^. A.nodeRpcPort)
+defaultPoANodeConfig = TstPoANodeConfig (A.defaultPoANodePorts ^. Lens.nodeRpcPort)
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
@@ -91,11 +93,15 @@ poaNode :: NodeScenario TstPoaNode -> NodeConfig TstPoaNode -> L.NodeDefinitionL
 poaNode role cfg = do
     L.nodeTag "PoA node"
     L.logInfo "Starting of PoA node"
-    poaData <- L.scenario $ L.atomically (TstPoaNodeData <$> L.newVar D.genesisKBlock <*> L.newVar NodeActing <*> L.newVar [])
+    poaData <- L.atomically
+        $ TstPoaNodeData
+            <$> L.newVar D.genesisKBlock
+            <*> L.newVar D.NodeActing
+            <*> L.newVar []
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    L.serving D.Rpc (_poaRPCPort cfg) $ do
+    void $ L.serving D.Rpc (_poaRPCPort cfg) $ do
         L.method   rpcPingPong
         L.method $ handleStopNode poaData
 

@@ -8,11 +8,13 @@ module Enecuum.Core.HGraph.Types
     , ToContent (..)
     , ToNodeRef (..)
     , TGraph (..)
+    , hashLinks
     ) where
 
+import           Data.HGraph.StringHashable (StringHash, StringHashable)
+import           Data.HGraph.THGraph        as G
+import qualified Data.Map                   as Map
 import           Enecuum.Prelude
-import           Data.HGraph.StringHashable (StringHashable, StringHash)
-import           Data.HGraph.THGraph as G
 
 data family HNodeContent a
 
@@ -34,3 +36,6 @@ class StringHashable (HNodeContent config) => ToContent config b | config -> b w
 
 class ToNodeRef config b where
     toNodeRef   :: b -> HNodeRef config
+
+hashLinks :: Map StringHash (HNodeRef (HNode ref content)) -> [StringHash]
+hashLinks = Map.keys

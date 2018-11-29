@@ -1,13 +1,13 @@
-{-# LANGUAGE NoImplicitPrelude      #-}
-{-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE RankNTypes             #-}
-{-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE MultiParamTypeClasses  #-}
+{-# LANGUAGE NoImplicitPrelude      #-}
+{-# LANGUAGE RankNTypes             #-}
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TypeOperators          #-}
 
 module Enecuum.Core.HGraph.Language (
     -- * Language
@@ -21,19 +21,14 @@ module Enecuum.Core.HGraph.Language (
     , newLink
     , deleteLink
     , deleteNode
+    , deleteLink'
+    , deleteNode'
     ) where
 
-import           Universum
 import           Control.Monad.Free
 import           Enecuum.Core.HGraph.Internal.Types (TNodeL)
-import           Enecuum.Core.HGraph.Types
-    ( HNodeContent
-    , HNodeRef
-    , ToContent
-    , ToNodeRef
-    , toNodeRef
-    , toContent
-    )
+import           Enecuum.Core.HGraph.Types          (HNodeContent, HNodeRef, ToContent, ToNodeRef, toContent, toNodeRef)
+import           Universum
 
 data HGraphF node a where
     NewNode     :: HNodeContent node -> (Bool -> a) -> HGraphF node a

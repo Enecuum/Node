@@ -1,6 +1,7 @@
 module Main where
 
 import           App.Initialize  (initialize, runMultiNode)
+import           App.GenConfigs  (genConfigs)
 import           Enecuum.Config  (withConfig)
 import           Enecuum.Prelude
 
@@ -13,4 +14,5 @@ main = do
     case args of
         ["singlenode", configFile] -> withConfig configFile initialize
         ["multinode", configFile]  -> withConfig configFile runMultiNode
+        ["genConfigs"]             -> genConfigs
         _                          -> withConfig defaultConfig initialize

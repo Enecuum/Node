@@ -6,28 +6,30 @@ module Enecuum.Prelude
   , trace_
   ) where
 
-import           Universum                                as X hiding ( All, Option, Set, Type, head, last, set, tail, init, trace)
-import           Universum.Unsafe                         as X ( head, last, tail, init, (!!) )
-import           Universum.Functor.Fmap                   as X ( (<<$>>) )
-import           Data.TypeLevel                           as X ( type (++) )
-import           Data.Serialize                           as X ( Serialize )
-import           Data.Aeson                               as X ( ToJSON, FromJSON, toJSON, parseJSON, genericToJSON, genericParseJSON )
-import           Data.Maybe                               as X (fromJust, fromMaybe)
-import           Control.Lens                             as X ( (.=), at )
-import           Control.Lens.TH                          as X ( makeLenses, makeFieldsNoPrefix )
-import           Control.Monad                            as X ( void, when, unless, liftM)
-import           Control.Exception                        as X ( SomeException (..) )
-import           GHC.Generics                             as X ( Generic )
-import           Control.Newtype.Generics                 as X ( Newtype, O, pack, unpack )
-import           Control.Concurrent                       as X ( ThreadId, threadDelay, forkIO, killThread )
-import           Control.Concurrent.STM                   as X ( retry )
-import           Control.Concurrent.STM.TVar              as X ( modifyTVar )
-import           Control.Concurrent.STM.TMVar             as X ( TMVar, readTMVar, newTMVar, newTMVarIO, newEmptyTMVar, newEmptyTMVarIO, takeTMVar, putTMVar, tryReadTMVar )
-import           Text.Read                                as X ( read, readsPrec )
-import           GHC.Base                                 as X ( until )
-import           Fmt                                      as X ( (+|), (+||), (|+), (||+) )
-import           Control.Monad.Free                       as X ( Free (..), liftF, foldFree )
-import qualified Universum                                as U
+import           Control.Concurrent           as X (ThreadId, forkIO, killThread, threadDelay)
+import           Control.Concurrent.STM       as X (retry)
+import           Control.Concurrent.STM.TMVar as X (TMVar, newEmptyTMVar, newEmptyTMVarIO, newTMVar, newTMVarIO,
+                                                    putTMVar, readTMVar, takeTMVar, tryReadTMVar)
+import           Control.Concurrent.STM.TVar  as X (modifyTVar)
+import           Control.Exception            as X (SomeException (..))
+import           Control.Lens                 as X (at, (.=))
+import           Control.Lens.TH              as X (makeFieldsNoPrefix, makeLenses)
+import           Control.Monad                as X (liftM, unless, void, when)
+import           Control.Monad.Free           as X (Free (..), foldFree, liftF)
+import           Control.Newtype.Generics     as X (Newtype, O, pack, unpack)
+import           Data.Aeson                   as X (FromJSON, ToJSON, genericParseJSON, genericToJSON, parseJSON,
+                                                    toJSON)
+import           Data.Maybe                   as X (fromJust, fromMaybe)
+import           Data.Serialize               as X (Serialize)
+import           Data.TypeLevel               as X (type (++))
+import           Fmt                          as X ((+|), (+||), (|+), (||+))
+import           GHC.Base                     as X (until)
+import           GHC.Generics                 as X (Generic)
+import           Text.Read                    as X (read, readsPrec)
+import           Universum                    as X hiding (All, Option, Set, Type, head, init, last, set, tail, trace)
+import qualified Universum                    as U
+import           Universum.Functor.Fmap       as X ((<<$>>))
+import           Universum.Unsafe             as X (head, init, last, tail, (!!))
 
 
 trace :: Text -> m a -> m a

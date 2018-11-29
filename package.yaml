@@ -47,6 +47,7 @@ dependencies:
 - time-units
 - network
 - aeson
+- aeson-pretty
 - cereal
 - mtl
 - cryptonite

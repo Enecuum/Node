@@ -1,14 +1,15 @@
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE RecordWildCards       #-}
+
 module Enecuum.Blockchain.Domain.Microblock where
 
 import qualified Crypto.Hash.SHA256                    as SHA
 import qualified Data.ByteString.Base64                as Base64
 import           Data.HGraph.StringHashable            (StringHash (..), StringHashable, toHash)
 import qualified Data.Serialize                        as S
-import           Enecuum.Core.Crypto.Crypto
 import           Enecuum.Blockchain.Domain.Transaction (Transaction)
+import           Enecuum.Core.Crypto.Crypto
 import qualified Enecuum.Core.Language                 as L
 import           Enecuum.Prelude
 

@@ -1,17 +1,19 @@
-module Enecuum.Tests.Scenarios.RoutingSpec where
+module Enecuum.Tests.Integration.RoutingSpec where
 
-import qualified Data.IORef                         as O
-import qualified Data.Map                           as M
-import qualified Enecuum.Assets.Scenarios           as A
-import qualified Enecuum.Domain                     as D
-import qualified Enecuum.Framework.Node.Interpreter as I
-import qualified Enecuum.Language                   as L
+import qualified Data.IORef                            as O
+import qualified Data.Map                              as M
+import           Enecuum.Assets.Nodes.Routing.Messages
+import qualified Enecuum.Assets.Nodes.TstNodes.NN      as A
+import qualified Enecuum.Assets.Scenarios              as A
+import qualified Enecuum.Domain                        as D
+import qualified Enecuum.Framework.Lens                as Lens
+import qualified Enecuum.Framework.Node.Interpreter    as I
+import qualified Enecuum.Language                      as L
 import           Enecuum.Prelude
 import           Enecuum.Testing.Integrational
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit           (fromHUnitTest)
+import           Test.Hspec.Contrib.HUnit              (fromHUnitTest)
 import           Test.HUnit
-import           Enecuum.Assets.Nodes.Routing.Messages
 
 spec :: Spec
 spec = describe "Routing tests" $ fromHUnitTest $ TestList
@@ -31,8 +33,8 @@ testRouting = TestCase $ withNodesManager $ \mgr -> do
     void $ startNode Nothing mgr A.bnNode
     let ports                 = [5001..5010]
     let receiverIds           = [D.toHashGeneric $ A.makeNodePorts1000 x| x <- [5002..5010]]
-    let receiverRpcAddresses  = [D.Address A.localhost (A.makeNodePorts1000 x ^. A.nodeRpcPort)| x <- [5002..5010]]
-    let transmitterUdpAddress = D.Address A.localhost (A.makeNodePorts1000 5001 ^. A.nodeUdpPort)
+    let receiverRpcAddresses  = [D.Address A.localhost (A.makeNodePorts1000 x ^. Lens.nodeRpcPort)| x <- [5002..5010]]
+    let transmitterUdpAddress = D.Address A.localhost (A.makeNodePorts1000 5001 ^. Lens.nodeUdpPort)
     forM_ ports $ \port -> do
         threadDelay $ 1000 * 10
         startNode Nothing mgr . A.nnNode . Just $ port

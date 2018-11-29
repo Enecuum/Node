@@ -18,7 +18,7 @@ import           Enecuum.Assets.Nodes.Routing.Messages
 import           Enecuum.Config
 import qualified Enecuum.Domain                        as D
 import           Enecuum.Framework.Domain.Error
-import           Enecuum.Framework.Language.Extra      (NodeStatus (..))
+import qualified Enecuum.Framework.Lens                as Lens
 import qualified Enecuum.Language                      as L
 import           Enecuum.Prelude                       hiding (map, unpack)
 import           Enecuum.Research.RouteDrawing
@@ -36,6 +36,7 @@ instance Node ClientNode where
     data NodeScenario ClientNode = CLI
         deriving (Show, Generic)
     getNodeScript CLI = clientNode'
+    getNodeTag _ = ClientNode
 
 instance ToJSON   ClientNode                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON ClientNode                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
@@ -185,7 +186,7 @@ getBlock (GetBlock hash address) = do
 sendTo :: SendTo -> L.NodeL Text
 sendTo (SendTo (Address host port) rPort) = do
     let receiverHash    = D.toHashGeneric $ A.makeNodePorts1000 rPort
-    let resenderUdpPort = A.makeNodePorts1000 port ^. A.nodeUdpPort
+    let resenderUdpPort = A.makeNodePorts1000 port ^. Lens.nodeUdpPort
     let resenderAddress = D.Address host resenderUdpPort
     ok <- L.notify resenderAddress $ SendMsgTo receiverHash 10 "!! msg !!"
     if isRight ok
@@ -209,8 +210,8 @@ drawRouteMap (DrawMap port) = do
 -- | Build connection map.
 cardAssembly
     :: Map D.StringHash [D.StringHash]
-    -> Set.Set A.NodeAddress
-    -> Set.Set A.NodeAddress
+    -> Set.Set D.NodeAddress
+    -> Set.Set D.NodeAddress
     -> L.NodeL (Map D.StringHash [D.StringHash])
 cardAssembly accum passed nexts
     | Set.null nexts = pure accum
@@ -221,16 +222,16 @@ cardAssembly accum passed nexts
             L.makeRpcRequest (A.getRpcAddress currentAddress) M.ConnectMapRequest
 
         -- add the address to the list of the passed
-        let newPassed :: Set.Set A.NodeAddress
+        let newPassed :: Set.Set D.NodeAddress
             newPassed = Set.insert currentAddress passed
 
         -- add received addresses to the queue and remove from it those that have already visited
-        let newNexts :: Set.Set A.NodeAddress
+        let newNexts :: Set.Set D.NodeAddress
             newNexts  = (nexts `union` Set.fromList connects) \\ newPassed
 
         -- add to the accumulator addresses for the passed address
         let newAccum :: Map.Map D.StringHash [D.StringHash]
-            newAccum  = Map.insert (currentAddress ^. A.nodeId) ((^. A.nodeId) <$> connects) accum
+            newAccum  = Map.insert (currentAddress ^. Lens.nodeId) ((^. Lens.nodeId) <$> connects) accum
         cardAssembly newAccum newPassed newNexts
 
 createNodeId :: M.CreateNodeId -> L.NodeL Text
@@ -267,7 +268,7 @@ clientNode' :: NodeConfig ClientNode -> L.NodeDefinitionL ()
 clientNode' _ = do
     L.logInfo "Client started"
     L.nodeTag "Client"
-    stateVar <- L.newVarIO NodeActing
+    stateVar <- L.newVarIO D.NodeActing
 
     L.std $ do
         -- network

@@ -1,0 +1,31 @@
+{
+    "nodeConfig": {
+        "tag": "PoANodeConfig",
+        "poaBnAddress": {
+            "tag": "NodeAddress",
+            "nodePorts": {
+                "tag": "NodePorts",
+                "nodeRpcPort": 6000,
+                "nodeUdpPort": 4000,
+                "nodeTcpPort": 5000
+            },
+            "nodeId": "kR2/PidrIMfsI6u6WZvyx3JOwQOlW+z7WG+k2QO+sDQ=",
+            "nodeHost": "127.0.0.1"
+        },
+        "poaNodePorts": {
+            "tag": "NodePorts",
+            "nodeRpcPort": 6200,
+            "nodeUdpPort": 4200,
+            "nodeTcpPort": 5200
+        }
+    },
+    "node": "PoANode",
+    "loggerConfig": {
+        "logFilePath": "",
+        "format": "$prio $loggername: $msg",
+        "logToFile": false,
+        "logToConsole": true,
+        "level": "Debug"
+    },
+    "nodeScenario": "Good"
+}

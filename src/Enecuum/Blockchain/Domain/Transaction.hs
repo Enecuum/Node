@@ -13,7 +13,6 @@ import           Data.UUID
 import           Enecuum.Blockchain.Domain.Types
 import           Enecuum.Blockchain.Domain.UUID     ()
 import           Enecuum.Core.Crypto.Crypto
-import qualified Enecuum.Core.Language              as L
 import           Enecuum.Prelude                    hiding (show, unpack)
 
 type OwnerPubKey = PublicKey

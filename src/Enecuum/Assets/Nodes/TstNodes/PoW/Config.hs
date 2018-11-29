@@ -1,4 +1,4 @@
-{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Enecuum.Assets.Nodes.TstNodes.PoW.Config where
 
@@ -7,6 +7,7 @@ import qualified Enecuum.Assets.Blockchain.Generation as A
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Config
 import qualified Enecuum.Domain                       as D
+import qualified Enecuum.Framework.Lens               as Lens
 import           Enecuum.Prelude
 
 type BlocksDelay = Int
@@ -27,12 +28,10 @@ instance FromJSON (NodeConfig TstPoWNode) where parseJSON = J.genericParseJSON n
 instance ToJSON   TstPoWNode              where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON TstPoWNode              where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
-defaultBlocksDelay :: BlocksDelay
-defaultBlocksDelay = 1000 * 1000
-
 defaultPoWNodeConfig :: NodeConfig TstPoWNode
 defaultPoWNodeConfig = TstPoWNodeConfig
-    defaultBlocksDelay
-    A.InOrder
-    (getUdpAddress defaultGnNodeAddress)
-    (defaultPoWNodePorts ^. nodeRpcPort)
+    { _defaultBlocksDelay  = 1000 * 1000
+    , _kblocksOrder        = A.InOrder
+    , _graphNodeUDPAddress = getUdpAddress defaultGnNodeAddress
+    , _powNodeRpcPort      = defaultPoWNodePorts ^. Lens.nodeRpcPort
+    }

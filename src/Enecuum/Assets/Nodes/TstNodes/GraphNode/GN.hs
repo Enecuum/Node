@@ -1,94 +1,124 @@
-{-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE TypeInType            #-}
+{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE RecordWildCards        #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE TypeInType             #-}
+
 module Enecuum.Assets.Nodes.TstNodes.GraphNode.GN where
 
-import qualified Data.Aeson                                             as A
-import qualified Data.Map                                               as Map
-import qualified Enecuum.Assets.Nodes.Address                           as A
-import qualified Enecuum.Assets.Nodes.GraphNode.Config                  as Prd
-import qualified Enecuum.Assets.Nodes.GraphNode.Database                as Prd
-import           Enecuum.Assets.Nodes.GraphNode.Logic
+import qualified Data.Aeson                                         as A
+import qualified Data.Map                                           as Map
+import qualified Enecuum.Assets.Nodes.Address                       as A
+import qualified Enecuum.Assets.Nodes.CLens                         as CLens
+import           Enecuum.Assets.Nodes.GraphService.Config
+import           Enecuum.Assets.Nodes.GraphService.DB.Dump          (dumpToDB)
+import           Enecuum.Assets.Nodes.GraphService.DB.Restore       (restoreFromDB)
+import           Enecuum.Assets.Nodes.GraphService.GraphServiceData
+import           Enecuum.Assets.Nodes.GraphService.Initialization
+import           Enecuum.Assets.Nodes.GraphService.Logic
 import           Enecuum.Assets.Nodes.Methods
-import qualified Enecuum.Assets.Nodes.TstNodes.GraphNode.CLens          as CLens
 import           Enecuum.Assets.Nodes.TstNodes.GraphNode.Config
-import           Enecuum.Assets.Nodes.TstNodes.GraphNode.Initialization
 import           Enecuum.Config
-import qualified Enecuum.Domain                                         as D
-import qualified Enecuum.Language                                       as L
+import qualified Enecuum.Domain                                     as D
+import           Enecuum.Framework.Language.Extra                   (HasStatus)
+import qualified Enecuum.Framework.Lens                             as Lens
+import qualified Enecuum.Language                                   as L
 import           Enecuum.Prelude
 
 instance Node TstGraphNode where
-    data NodeScenario TstGraphNode = Transmitter | Receiver
+    data NodeScenario TstGraphNode = TstGN
         deriving (Show, Generic)
-    getNodeScript Transmitter = graphNodeTransmitter
-    getNodeScript Receiver    = graphNodeTransmitter
+    getNodeScript TstGN = tstGraphNode
+    getNodeTag _ = TstGraphNode
 
-instance ToJSON   (NodeScenario TstGraphNode) where toJSON    = A.genericToJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario TstGraphNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario TstGraphNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
--- | Start of graph node
-graphNodeTransmitter :: NodeConfig TstGraphNode -> L.NodeDefinitionL ()
-graphNodeTransmitter cfg = do
-    L.nodeTag "graphNodeTransmitter"
-    eNodeData <- graphNodeTstInitialization cfg
-    either L.logError (graphNodeTransmitter' cfg) eNodeData
+data TstGraphNodeData = TstGraphNodeData
+    { _graphServiceData :: GraphServiceData
+    , _status           :: D.StateVar D.NodeStatus
+    }
 
-graphNodeTransmitter' :: NodeConfig TstGraphNode -> TstGraphNodeData -> L.NodeDefinitionL ()
-graphNodeTransmitter' cfg nodeData = do
-    case _rpcSynco cfg  of
+-- | Start of graph node
+tstGraphNode :: NodeConfig TstGraphNode -> L.NodeDefinitionL ()
+tstGraphNode cfg@(TstGraphNodeConfig graphServiceCfg _) = do
+    L.nodeTag "Test Graph Node"
+
+    status <- L.newVarIO D.NodeActing
+    eGraphServiceData <- graphServiceInitialization graphServiceCfg
+    case eGraphServiceData of
+        Left err               -> L.logError err
+        Right graphServiceData -> do
+            let nodeData = TstGraphNodeData graphServiceData status
+            tstGraphNode' cfg nodeData
+
+tstGraphNode' :: NodeConfig TstGraphNode -> TstGraphNodeData -> L.NodeDefinitionL ()
+tstGraphNode' cfg nodeData@(TstGraphNodeData graphServiceData _) = do
+    let graphServiceConfig = _graphServiceConfig cfg
+
+    case _rpcSynco graphServiceConfig  of
         Nothing              -> pure ()
-        Just rpcSyncoAddress -> L.process $ forever $ graphSynchro nodeData rpcSyncoAddress
-    L.serving D.Udp (_gnNodePorts cfg ^. A.nodeUdpPort) $ do
+        Just rpcSyncoAddress -> L.process $ forever $ graphSynchro graphServiceData rpcSyncoAddress
+
+    L.serving D.Udp (_nodePorts cfg ^. Lens.nodeUdpPort) $ do
         -- network
         L.handler   methodPing
         -- PoA interaction
-        L.handler $ acceptMBlock nodeData
+        L.handler $ acceptMBlock graphServiceData
         -- PoW interaction
-        L.handler $ acceptKBlock nodeData
+        L.handler $ acceptKBlock graphServiceData
 
-    L.serving D.Tcp (_gnNodePorts cfg ^. A.nodeTcpPort) $
+    L.serving D.Tcp (_nodePorts cfg ^. Lens.nodeTcpPort) $
         -- network
         L.handler   methodPing
 
-    L.serving D.Rpc (_gnNodePorts cfg ^. A.nodeRpcPort) $ do
+    L.serving D.Rpc (_nodePorts cfg ^. Lens.nodeRpcPort) $ do
         -- network
         L.method    rpcPingPong
         L.method  $ handleStopNode nodeData
 
         -- client interaction
-        L.methodE $ getBalance nodeData
-        L.methodE $ acceptTransaction nodeData
+        L.methodE $ getBalance graphServiceData
+        L.methodE $ acceptTransaction graphServiceData
 
         -- db
-        L.methodE $ handleDumpToDB nodeData
-        L.methodE $ handleRestoreFromDB nodeData
+        L.methodE $ handleDumpToDB graphServiceData
+        L.methodE $ handleRestoreFromDB graphServiceData
 
         -- graph node interaction
-        L.method  $ acceptGetChainLengthRequest nodeData
-        L.methodE $ acceptChainFromTo nodeData
-        L.methodE $ getMBlockForKBlocks nodeData
+        L.method  $ acceptGetChainLengthRequest graphServiceData
+        L.methodE $ acceptChainFromTo graphServiceData
+        L.methodE $ getMBlockForKBlocks graphServiceData
 
         -- PoW interaction
-        L.method  $ getKBlockPending nodeData
+        L.method  $ getKBlockPending graphServiceData
 
         -- PoA interaction
-        L.method  $ getTransactionPending nodeData
-        L.method  $ getLastKBlock nodeData
+        L.method  $ getTransactionPending graphServiceData
+        L.method  $ getLastKBlock graphServiceData
 
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData
 
     L.process $ forever $ do
-        L.awaitSignal $ nodeData ^. dumpToDBSignal
-        Prd.dumpToDB nodeData
+        L.awaitSignal $ graphServiceData ^. dumpToDBSignal
+        dumpToDB graphServiceData
 
     L.process $ forever $ do
-        L.awaitSignal $ nodeData ^. restoreFromDBSignal
-        Prd.restoreFromDB nodeData
+        L.awaitSignal $ graphServiceData ^. restoreFromDBSignal
+        restoreFromDB graphServiceData
 
     L.process $ forever $ do
-        L.awaitSignal $ nodeData ^. checkPendingSignal
-        blockFound <- processKBlockPending' nodeData
-        when blockFound $ L.writeVarIO (nodeData ^. checkPendingSignal) True
+        L.awaitSignal $ graphServiceData ^. checkPendingSignal
+        blockFound <- processKBlockPending' graphServiceData
+        when blockFound $ L.writeVarIO (graphServiceData ^. checkPendingSignal) True
+
+    when (graphServiceConfig ^. CLens.graphWindowConfig . CLens.shrinkingEnabled) $ do
+        let windowSize     = graphServiceConfig ^. CLens.graphWindowConfig . CLens.windowSize
+        let shrinkingDelay = graphServiceConfig ^. CLens.graphWindowConfig . CLens.shrinkingDelay
+        L.process $ forever $ do
+            L.delay shrinkingDelay
+            shrinkGraphWindow graphServiceData windowSize
 
     L.awaitNodeFinished nodeData
+
+makeFieldsNoPrefix ''TstGraphNodeData

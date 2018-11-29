@@ -3,20 +3,20 @@
 
 module App.Initialize where
 
-import qualified Data.Map                         as M
-import           Enecuum.Assets.Nodes.ParseConfig (parseConfig)
-import qualified Enecuum.Assets.Scenarios         as A
-import           Enecuum.Assets.System.Directory  (clientStory)
-import qualified Enecuum.Assets.TstScenarios      as Tst
-import qualified Enecuum.Config                   as Cfg
-import qualified Enecuum.Core.Lens                as Lens
-import qualified Enecuum.Domain                   as D
-import           Enecuum.Interpreters             (clearNodeRuntime, runFileSystemL, runNodeDefinitionL)
-import qualified Enecuum.Language                 as L
+import qualified Data.Map                           as M
+import           Enecuum.Assets.Nodes.ConfigParsing (parseConfig)
+import qualified Enecuum.Assets.Scenarios           as A
+import           Enecuum.Assets.System.Directory    (clientStory)
+import qualified Enecuum.Assets.TstScenarios        as Tst
+import qualified Enecuum.Config                     as Cfg
+import qualified Enecuum.Core.Lens                  as Lens
+import qualified Enecuum.Domain                     as D
+import           Enecuum.Interpreters               (clearNodeRuntime, runFileSystemL, runNodeDefinitionL)
+import qualified Enecuum.Language                   as L
 import           Enecuum.Prelude
-import           Enecuum.Runtime                  (clearCoreRuntime, clearLoggerRuntime, createCoreRuntime,
-                                                   createLoggerRuntime, createNodeRuntime)
-import qualified Enecuum.Runtime                  as R
+import           Enecuum.Runtime                    (clearCoreRuntime, clearLoggerRuntime, createCoreRuntime,
+                                                     createLoggerRuntime, createNodeRuntime)
+import qualified Enecuum.Runtime                    as R
 
 createLoggerRuntime' :: D.LoggerConfig -> IO R.LoggerRuntime
 createLoggerRuntime' loggerConfig' = do
@@ -85,11 +85,12 @@ initialize configSrc = do
             , runNode' $ Cfg.dispatchScenario @A.PoANode    configSrc
             , runNode' $ Cfg.dispatchScenario @A.PoWNode    configSrc
             , runNode' $ Cfg.dispatchScenario @A.ClientNode configSrc
-            , runNode' $ Cfg.dispatchScenario @A.NN         configSrc
             , runNode' $ Cfg.dispatchScenario @A.BN         configSrc
+
             , runNode' $ Cfg.dispatchScenario @A.TestClient configSrc
             , runNode' $ Cfg.dispatchScenario @A.TestServer configSrc
 
+            , runNode' $ Cfg.dispatchScenario @Tst.NN           configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstGraphNode configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstPoWNode   configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstPoaNode   configSrc
@@ -102,7 +103,7 @@ runMultiNode configSrc = case Cfg.dispatchScenario @A.MultiNode configSrc of
     Just (cfg, _) -> do
         startPoWNodes (A._powPorts $ Cfg.nodeConfig cfg) A.defaultPoWNodeConfig
         startPoANodes (A._poaPorts $ Cfg.nodeConfig cfg) A.defaultPoANodeConfig
-        startNNNodes  (A._nnPorts $ Cfg.nodeConfig cfg)  A.defaultNodeConfig
+        startNNNodes  (A._nnPorts $ Cfg.nodeConfig cfg)  A.defaultGraphNodeConfig
         forever $ threadDelay 50000000
 
     Nothing -> putTextLn "Parse error of multi node config."
@@ -122,5 +123,5 @@ startPoANodes range cfg =
 startNNNodes range cfg =
     forM_ (D.rangeToList range) $ \nPort -> do
         threadDelay 3000
-        let nodeCfg = cfg {A._gnNodePorts = A.makeNodePorts1000 nPort}
-        void $ forkIO $ void $ runNode D.nullLoger (A.graphNodeTransmitter nodeCfg)
+        let nodeCfg = cfg {A._nodePorts = A.makeNodePorts1000 nPort}
+        void $ forkIO $ void $ runNode D.nullLoger (A.graphNode nodeCfg)
