@@ -16,7 +16,7 @@
             "graphWindowConfig": {
                 "tag": "GraphWindowConfig",
                 "shrinkingEnabled": true,
-                "windowSize": 10,
+                "windowSize": 100,
                 "shrinkingDelay": 1000000
             },
             "tag": "GraphServiceConfig",
