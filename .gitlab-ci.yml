@@ -1,0 +1,24 @@
+image: fpco/stack-build:latest
+
+variables:
+  STACK_ROOT: "${CI_PROJECT_DIR}/.stack-root"
+
+cache:
+  paths:
+    - .stack-work/
+    - .stack-root/
+
+stages:
+    - build
+stack-build:
+    stage: build
+    script:
+      - stack build --test
+      - stack install --local-bin-path binaries
+    artifacts:
+      paths:
+        - binaries/
+
+before_script: 
+  - apt update -qq && apt install -y -qq  librocksdb-dev libtinfo-dev libgd-dev
+  - mkdir binaries
