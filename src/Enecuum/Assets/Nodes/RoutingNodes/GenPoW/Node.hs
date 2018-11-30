@@ -4,28 +4,28 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
 
-module Enecuum.Assets.Nodes.PoW.PoW where
+module Enecuum.Assets.Nodes.RoutingNodes.GenPoW.Node where
 
-import qualified Data.Aeson                           as J
-import           Data.HGraph.StringHashable           (StringHash (..), toHash)
-import qualified Enecuum.Assets.Blockchain.Generation as A
-import qualified Enecuum.Assets.Nodes.Address         as A
-import qualified Enecuum.Assets.Nodes.CLens           as CLens
-import qualified Enecuum.Assets.Nodes.Messages        as Msgs
+import qualified Data.Aeson                                      as J
+import           Data.HGraph.StringHashable                      (StringHash (..), toHash)
+import qualified Enecuum.Assets.Blockchain.Generation            as A
+import qualified Enecuum.Assets.Nodes.Address                    as A
+import qualified Enecuum.Assets.Nodes.CLens                      as CLens
+import qualified Enecuum.Assets.Nodes.Messages                   as Msgs
 import           Enecuum.Assets.Nodes.Methods
-import           Enecuum.Assets.Nodes.PoW.Config
 import           Enecuum.Assets.Nodes.Routing
+import           Enecuum.Assets.Nodes.RoutingNodes.GenPoW.Config
 import           Enecuum.Config
-import qualified Enecuum.Domain                       as D
-import           Enecuum.Framework.Language.Extra     (HasStatus)
-import qualified Enecuum.Framework.Lens               as Lens
-import qualified Enecuum.Language                     as L
+import qualified Enecuum.Domain                                  as D
+import           Enecuum.Framework.Language.Extra                (HasStatus)
+import qualified Enecuum.Framework.Lens                          as Lens
+import qualified Enecuum.Language                                as L
 import           Enecuum.Prelude
 
 type IterationsCount = Int
 type EnableDelays = Bool
 
-data PoWNodeData = PoWNodeData
+data GenPoWNodeData = GenPoWNodeData
     { _prevHash            :: D.StateVar StringHash
     , _prevNumber          :: D.StateVar D.BlockNumber
     , _requiredBlockNumber :: D.StateVar D.BlockNumber
@@ -33,18 +33,18 @@ data PoWNodeData = PoWNodeData
     , _status              :: D.StateVar D.NodeStatus
     }
 
-makeFieldsNoPrefix ''PoWNodeData
+makeFieldsNoPrefix ''GenPoWNodeData
 
-instance Node PoWNode where
-    data NodeScenario PoWNode = PoW
+instance Node GenPoWNode where
+    data NodeScenario GenPoWNode = PoW
         deriving (Show, Generic)
     getNodeScript _ = powNode'
-    getNodeTag _ = PoWNode
+    getNodeTag _ = GenPoWNode
 
-instance ToJSON   (NodeScenario PoWNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeScenario PoWNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario GenPoWNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario GenPoWNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
-kBlockProcess :: RoutingRuntime -> PoWNodeData -> L.NodeL ()
+kBlockProcess :: RoutingRuntime -> GenPoWNodeData -> L.NodeL ()
 kBlockProcess routingData nodeData = do
     prevKBlockHash      <- L.readVarIO $ nodeData ^. prevHash
     prevKBlockNumber    <- L.readVarIO $ nodeData ^. prevNumber
@@ -61,12 +61,12 @@ kBlockProcess routingData nodeData = do
         sendUdpBroadcast routingData kBlock
         when (gap > 0) $ L.delay gap
 
-foreverChainGenerationHandle :: PoWNodeData -> Msgs.ForeverChainGeneration -> L.NodeL Msgs.SuccessMsg
+foreverChainGenerationHandle :: GenPoWNodeData -> Msgs.ForeverChainGeneration -> L.NodeL Msgs.SuccessMsg
 foreverChainGenerationHandle powNodeData _ = do
     L.writeVarIO (powNodeData ^. requiredBlockNumber) (10 ^ (6 :: Int))
     pure Msgs.SuccessMsg
 
-nBlockPacketGenerationHandle :: PoWNodeData -> Msgs.NBlockPacketGeneration -> L.NodeL Msgs.SuccessMsg
+nBlockPacketGenerationHandle :: GenPoWNodeData -> Msgs.NBlockPacketGeneration -> L.NodeL Msgs.SuccessMsg
 nBlockPacketGenerationHandle powNodeData (Msgs.NBlockPacketGeneration i gap) = do
     L.atomically $ do
         L.modifyVar (powNodeData ^. requiredBlockNumber) (+ i)
@@ -75,11 +75,11 @@ nBlockPacketGenerationHandle powNodeData (Msgs.NBlockPacketGeneration i gap) = d
 
 
 powNode :: L.NodeDefinitionL ()
-powNode = powNode' defaultPoWNodeConfig
+powNode = powNode' routingGenPoWNodeConfig
 
-powNode' :: NodeConfig PoWNode -> L.NodeDefinitionL ()
+powNode' :: NodeConfig GenPoWNode -> L.NodeDefinitionL ()
 powNode' cfg = do
-    L.nodeTag "PoW node"
+    L.nodeTag "GenPoW node"
 
     let myNodePorts = _powNodePorts cfg
     -- TODO: read from config
@@ -107,7 +107,7 @@ powNode' cfg = do
                 when (i == 0) L.retry
                 L.writeVar (nodeData ^. requiredBlockNumber) (i - 1)
             kBlockProcess routingData nodeData
-        L.logInfo "PoW is ready to work."
+        L.logInfo "GenPoW is ready to work."
         L.awaitNodeFinished nodeData
     else do
         unless (isJust rpcServerOk) $
@@ -116,14 +116,14 @@ powNode' cfg = do
             L.logError $ portError (myNodePorts ^. Lens.nodeUdpPort) "udp"
 
 
-powNodeInitialization ::  NodeConfig PoWNode -> StringHash -> L.NodeL PoWNodeData
+powNodeInitialization ::  NodeConfig GenPoWNode -> StringHash -> L.NodeL GenPoWNodeData
 powNodeInitialization cfg genesisHash = do
     h <- L.newVarIO genesisHash
     n <- L.newVarIO 1
     b <- L.newVarIO 0
     g <- L.newVarIO $ _defaultBlocksDelay cfg
     f <- L.newVarIO D.NodeActing
-    pure PoWNodeData
+    pure GenPoWNodeData
         { _prevHash = h
         , _prevNumber= n
         , _requiredBlockNumber = b

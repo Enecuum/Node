@@ -4,7 +4,7 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE TypeInType             #-}
 
-module Enecuum.Assets.Nodes.TstNodes.GraphNode.GN where
+module Enecuum.Assets.Nodes.TstNodes.GraphNode.Node where
 
 import qualified Data.Aeson                                         as A
 import qualified Data.Map                                           as Map
@@ -26,9 +26,9 @@ import qualified Enecuum.Language                                   as L
 import           Enecuum.Prelude
 
 instance Node TstGraphNode where
-    data NodeScenario TstGraphNode = TstGN
+    data NodeScenario TstGraphNode = GN
         deriving (Show, Generic)
-    getNodeScript TstGN = tstGraphNode
+    getNodeScript GN = tstGraphNode
     getNodeTag _ = TstGraphNode
 
 instance ToJSON   (NodeScenario TstGraphNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions

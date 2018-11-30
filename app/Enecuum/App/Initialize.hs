@@ -4,8 +4,9 @@
 module App.Initialize where
 
 import qualified Data.Map                           as M
+import qualified Enecuum.Assets.Nodes.Address       as A
 import           Enecuum.Assets.Nodes.ConfigParsing (parseConfig)
-import qualified Enecuum.Assets.Scenarios           as A
+import qualified Enecuum.Assets.Scenarios           as Prd
 import           Enecuum.Assets.System.Directory    (clientStory)
 import qualified Enecuum.Assets.TstScenarios        as Tst
 import qualified Enecuum.Config                     as Cfg
@@ -84,16 +85,17 @@ initialize configSrc = do
 
     -- Don't forget to update the list in ConfigParsing!
     let runners =
-            [ runNode' $ Cfg.dispatchScenario @A.GraphNode  configSrc
-            , runNode' $ Cfg.dispatchScenario @A.PoANode    configSrc
-            , runNode' $ Cfg.dispatchScenario @A.PoWNode    configSrc
-            , runNode' $ Cfg.dispatchScenario @A.ClientNode configSrc
-            , runNode' $ Cfg.dispatchScenario @A.BN         configSrc
+            [ runNode' $ Cfg.dispatchScenario @Prd.GraphNode  configSrc
+            , runNode' $ Cfg.dispatchScenario @Prd.GenPoANode configSrc
+            , runNode' $ Cfg.dispatchScenario @Prd.GenPoWNode configSrc
+            , runNode' $ Cfg.dispatchScenario @Prd.BootNode   configSrc
 
-            , runNode' $ Cfg.dispatchScenario @A.TestClient configSrc
-            , runNode' $ Cfg.dispatchScenario @A.TestServer configSrc
+            , runNode' $ Cfg.dispatchScenario @Prd.ClientNode configSrc
 
-            , runNode' $ Cfg.dispatchScenario @Tst.NN             configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.TestClient configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.TestServer configSrc
+
+            , runNode' $ Cfg.dispatchScenario @Tst.TstNetworkNode configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstGraphNode   configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstGenPoWNode  configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstGenPoANode  configSrc
@@ -101,34 +103,37 @@ initialize configSrc = do
             ]
     sequence_ runners
 
-
 runMultiNode :: LByteString -> IO ()
-runMultiNode configSrc = case Cfg.dispatchScenario @A.MultiNode configSrc of
-    Just (cfg, _) -> do
-        startPoWNodes (A._powPorts $ Cfg.nodeConfig cfg) (A._powConfig $ Cfg.nodeConfig cfg)
-        startPoANodes (A._poaPorts $ Cfg.nodeConfig cfg) (A._poaConfig $ Cfg.nodeConfig cfg)
-        startNNNodes  (A._gnPorts $ Cfg.nodeConfig cfg)  (A._gnConfig $ Cfg.nodeConfig cfg)
-        forever $ threadDelay 50000000
+runMultiNode = error "Not working"
 
-    Nothing -> putTextLn "Parse error of multi node config."
-
-startPoWNodes range cfg = do
-    putTextLn $ "Start pow in range from " <> show (D.bottomBound range) <> " to " <> show (D.topBound range)
-    forM_ (D.rangeToList range) $ \nPort -> do
-        threadDelay 3000
-        let nodeCfg = cfg {A._powNodePorts = A.makeNodePorts1000 nPort}
-        void $ forkIO $ void $ runNode D.nullLoger (A.powNode' nodeCfg)
-
-startPoANodes range cfg = do
-    putTextLn $ "Start poa in range from " <> show (D.bottomBound range) <> " to " <> show (D.topBound range)
-    forM_ (D.rangeToList range) $ \nPort -> do
-        threadDelay 3000
-        let nodeCfg = cfg {A._poaNodePorts = A.makeNodePorts1000 nPort}
-        void $ forkIO $ void $ runNode D.nullLoger (A.poaNode A.Good nodeCfg)
-
-startNNNodes range cfg = do
-    putTextLn $ "Start gn in range from " <> show (D.bottomBound range) <> " to " <> show (D.topBound range)
-    forM_ (D.rangeToList range) $ \nPort -> do
-        threadDelay 3000
-        let nodeCfg = cfg {A._nodePorts = A.makeNodePorts1000 nPort}
-        void $ forkIO $ void $ runNode D.nullLoger (A.graphNode nodeCfg)
+--
+-- runMultiNode :: LByteString -> IO ()
+-- runMultiNode configSrc = case Cfg.dispatchScenario @A.MultiNode configSrc of
+--     Just (cfg, _) -> do
+--         startPoWNodes (A._powPorts $ Cfg.nodeConfig cfg) (A._powConfig $ Cfg.nodeConfig cfg)
+--         startPoANodes (A._poaPorts $ Cfg.nodeConfig cfg) (A._poaConfig $ Cfg.nodeConfig cfg)
+--         startNNNodes  (A._gnPorts $ Cfg.nodeConfig cfg)  (A._gnConfig $ Cfg.nodeConfig cfg)
+--         forever $ threadDelay 50000000
+--
+--     Nothing -> putTextLn "Parse error of multi node config."
+--
+-- startPoWNodes range cfg = do
+--     putTextLn $ "Start pow in range from " <> show (D.bottomBound range) <> " to " <> show (D.topBound range)
+--     forM_ (D.rangeToList range) $ \nPort -> do
+--         threadDelay 3000
+--         let nodeCfg = cfg {A._powNodePorts = A.makeNodePorts1000 nPort}
+--         void $ forkIO $ void $ runNode D.nullLoger (A.powNode' nodeCfg)
+--
+-- startPoANodes range cfg = do
+--     putTextLn $ "Start poa in range from " <> show (D.bottomBound range) <> " to " <> show (D.topBound range)
+--     forM_ (D.rangeToList range) $ \nPort -> do
+--         threadDelay 3000
+--         let nodeCfg = cfg {A._poaNodePorts = A.makeNodePorts1000 nPort}
+--         void $ forkIO $ void $ runNode D.nullLoger (A.poaNode A.Good nodeCfg)
+--
+-- startNNNodes range cfg = do
+--     putTextLn $ "Start gn in range from " <> show (D.bottomBound range) <> " to " <> show (D.topBound range)
+--     forM_ (D.rangeToList range) $ \nPort -> do
+--         threadDelay 3000
+--         let nodeCfg = cfg {A._nodePorts = A.makeNodePorts1000 nPort}
+--         void $ forkIO $ void $ runNode D.nullLoger (A.graphNode nodeCfg)

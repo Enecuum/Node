@@ -4,7 +4,7 @@
    "nodeConfig":
     {
         "tag": "TstGenPoANodeConfig",
-        "poaRPCPort": 6200,
+        "controlRpcPort": 6200,
 		},
    "loggerConfig":
         {

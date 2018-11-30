@@ -1,14 +1,14 @@
 {  
-   "node":"BN",
-   "nodeScenario":"BNS",
+   "node":"ClientNode",
+   "nodeScenario":"CLI",
    "nodeConfig":
    {
-      "tag":"BNConfig",
-      "dummyOptionBN":0
+      "tag":"ClientNodeConfig",
+      "dummyOption":0
    },
    "loggerConfig":
    {
-      "logFilePath":"/tmp/log/app.log",
+      "logFilePath":"/tmp/log/test.log",
       "format":"$prio $loggername: $msg",
       "logToConsole":true,
       "logToFile": true,

@@ -41,7 +41,7 @@ consoleLoggerConfig = D.LoggerConfig
     }
 
 testConfigFilePath :: IsString a => a
-testConfigFilePath = "./configs/ClientNode_testConfig.json"
+testConfigFilePath = "./configs/tst_client_test_config.json"
 
 loadLoggerConfig :: FilePath -> IO D.LoggerConfig
 loadLoggerConfig configFile = do
@@ -188,4 +188,3 @@ withDbPresence :: FilePath -> IO a -> IO ()
 withDbPresence dbPath act = do
     mkDb dbPath
     void act `finally` rmDb dbPath
-

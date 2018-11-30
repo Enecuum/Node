@@ -7,7 +7,7 @@
         "tag": "TstGenPoWNodeConfig",
         "kblocksOrder": "InOrder",
         "graphNodeUDPAddress":  {"host":"127.0.0.1","port":4050},
-        "powNodeRpcPort": 6020
+        "controlRpcPort": 6020
    },
    "loggerConfig":
         {

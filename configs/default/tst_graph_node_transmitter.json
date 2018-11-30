@@ -16,20 +16,17 @@
             "graphWindowConfig": {
                 "tag": "GraphWindowConfig",
                 "shrinkingEnabled": false,
-                "windowSize": 100,
+                "windowSize": 10,
                 "shrinkingDelay": 1000000
             },
             "tag": "GraphServiceConfig",
-            "rpcSynco": {
-                "host": "127.0.0.1",
-                "port": 6050
-            }
+            "rpcSynco": null
         },
         "nodePorts": {
             "tag": "NodePorts",
-            "nodeRpcPort": 6051,
-            "nodeUdpPort": 4051,
-            "nodeTcpPort": 5051
+            "nodeRpcPort": 6050,
+            "nodeUdpPort": 4050,
+            "nodeTcpPort": 5050
         }
     },
     "node": "TstGraphNode",
@@ -40,5 +37,5 @@
         "logToConsole": true,
         "level": "Debug"
     },
-    "nodeScenario": "TstGN"
+    "nodeScenario": "GN"
 }

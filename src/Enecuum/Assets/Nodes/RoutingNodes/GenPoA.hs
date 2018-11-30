@@ -3,7 +3,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
 
-module Enecuum.Assets.Nodes.PoA where
+module Enecuum.Assets.Nodes.RoutingNodes.GenPoA where
 
 import qualified Data.Aeson                           as A
 import           Enecuum.Prelude
@@ -23,43 +23,43 @@ import           Enecuum.Assets.Nodes.Routing
 import qualified Enecuum.Assets.Blockchain.Generation as A
 import           Enecuum.Assets.Nodes.Methods         (handleStopNode, portError, rpcPingPong)
 
-data PoANodeData = PoANodeData
+data GenPoANodeData = GenPoANodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock
     , _status              :: D.StateVar D.NodeStatus
     , _transactionPending  :: D.StateVar [D.Transaction]
     }
 
-makeFieldsNoPrefix ''PoANodeData
+makeFieldsNoPrefix ''GenPoANodeData
 
-data PoANode = PoANode
+data GenPoANode = GenPoANode
     deriving (Show, Generic)
 
-data instance NodeConfig PoANode = PoANodeConfig
+data instance NodeConfig GenPoANode = GenPoANodeConfig
     { _poaNodePorts :: D.NodePorts
     , _poaBnAddress :: D.NodeAddress
     }
     deriving (Show, Generic)
 
-instance Node PoANode where
-    data NodeScenario PoANode = Good | Bad
+instance Node GenPoANode where
+    data NodeScenario GenPoANode = Good | Bad
         deriving (Show, Generic)
     getNodeScript = poaNode
-    getNodeTag _ = PoANode
+    getNodeTag _ = GenPoANode
 
-instance ToJSON   PoANode                where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON PoANode                where parseJSON = A.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeConfig PoANode)   where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeConfig PoANode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeScenario PoANode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeScenario PoANode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   GenPoANode                where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON GenPoANode                where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig GenPoANode)   where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig GenPoANode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario GenPoANode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario GenPoANode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
-defaultPoANodeConfig :: NodeConfig PoANode
-defaultPoANodeConfig = PoANodeConfig A.defaultPoANodePorts A.defaultBnNodeAddress
+routingGenPoANodeConfig :: NodeConfig GenPoANode
+routingGenPoANodeConfig = GenPoANodeConfig A.routingGenPoANodePorts A.routingBootNodeAddress
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
 
-sendMicroblock :: RoutingRuntime -> PoANodeData -> NodeScenario PoANode -> D.KBlock -> L.NodeL ()
+sendMicroblock :: RoutingRuntime -> GenPoANodeData -> NodeScenario GenPoANode -> D.KBlock -> L.NodeL ()
 sendMicroblock routingData poaData role block = do
     currentBlock <- L.readVarIO (poaData ^. currentLastKeyBlock)
     when (block /= currentBlock) $ do
@@ -93,10 +93,10 @@ sendMicroblock routingData poaData role block = do
 
 
 
-poaNode :: NodeScenario PoANode -> NodeConfig PoANode -> L.NodeDefinitionL ()
+poaNode :: NodeScenario GenPoANode -> NodeConfig GenPoANode -> L.NodeDefinitionL ()
 poaNode role cfg = do
-    L.nodeTag "PoA node"
-    L.logInfo "Starting of PoA node"
+    L.nodeTag "GenPoA node"
+    L.logInfo "Starting of GenPoA node"
     let myNodePorts = _poaNodePorts cfg
 
     -- TODO: read from config
@@ -104,7 +104,7 @@ poaNode role cfg = do
 
     routingData <- runRouting myNodePorts myHash (_poaBnAddress cfg)
     poaData     <- L.atomically $
-        PoANodeData
+        GenPoANodeData
           <$> L.newVar D.genesisKBlock
           <*> L.newVar D.NodeActing
           <*> L.newVar []

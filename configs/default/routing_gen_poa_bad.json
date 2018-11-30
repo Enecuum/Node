@@ -1,9 +1,7 @@
 {
     "nodeConfig": {
-        "defaultBlocksDelay": 1000000,
-        "tag": "PoWNodeConfig",
-        "kblocksOrder": "InOrder",
-        "powNodebnAddress": {
+        "tag": "GenPoANodeConfig",
+        "poaBnAddress": {
             "tag": "NodeAddress",
             "nodePorts": {
                 "tag": "NodePorts",
@@ -14,20 +12,20 @@
             "nodeId": "kR2/PidrIMfsI6u6WZvyx3JOwQOlW+z7WG+k2QO+sDQ=",
             "nodeHost": "127.0.0.1"
         },
-        "powNodePorts": {
+        "poaNodePorts": {
             "tag": "NodePorts",
-            "nodeRpcPort": 6020,
-            "nodeUdpPort": 4020,
-            "nodeTcpPort": 5020
+            "nodeRpcPort": 6200,
+            "nodeUdpPort": 4200,
+            "nodeTcpPort": 5200
         }
     },
-    "node": "PoWNode",
+    "node": "GenPoANode",
     "loggerConfig": {
-        "logFilePath": "/tmp/log/PoW.log",
+        "logFilePath": "",
         "format": "$prio $loggername: $msg",
-        "logToFile": true,
+        "logToFile": false,
         "logToConsole": true,
         "level": "Debug"
     },
-    "nodeScenario": "PoW"
+    "nodeScenario": "Bad"
 }

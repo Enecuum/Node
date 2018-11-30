@@ -1,9 +1,9 @@
-{  
-   "node":"NN",
-   "nodeScenario":"NNS",
+{
+   "node":"TstNetworkNode",
+   "nodeScenario":"TstNetworkNodeS",
    "nodeConfig":
    {
-      "tag":"NNConfig",
+      "tag":"TstNetworkNodeConfig",
       "dummyOption":0
    },
    "loggerConfig":

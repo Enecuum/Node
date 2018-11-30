@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell        #-}
 
 -- TODO: What is this node???
-module Enecuum.Assets.Nodes.TstNodes.NN (nnNode, NN, NodeConfig (..)) where
+module Enecuum.Assets.Nodes.TstNodes.NetworkNode (nnNode, TstNetworkNode, NodeConfig (..)) where
 
 import qualified Data.Aeson                       as J
 import qualified Enecuum.Assets.Nodes.Address     as A
@@ -17,44 +17,44 @@ import           Enecuum.Prelude
 
 type SenderNodeHash  = D.StringHash
 
-data NNNodeData = NNNodeData
+data TstNetworkNodeData = TstNetworkNodeData
     { _status          :: D.StateVar D.NodeStatus
     , _routingRuntime  :: D.StateVar RoutingRuntime
     , _routingMessages :: D.StateVar [Text]
     }
-makeFieldsNoPrefix ''NNNodeData
+makeFieldsNoPrefix ''TstNetworkNodeData
 
-initNN :: RoutingRuntime -> D.StateVar D.NodeStatus -> L.NodeDefinitionL NNNodeData
-initNN routingData nodeStatus = do
+initTstNetworkNode :: RoutingRuntime -> D.StateVar D.NodeStatus -> L.NodeDefinitionL TstNetworkNodeData
+initTstNetworkNode routingData nodeStatus = do
     messages            <- L.newVarIO []
     routingRuntimeData  <- L.newVarIO routingData
-    pure NNNodeData
+    pure TstNetworkNodeData
         { _status          = nodeStatus
         , _routingRuntime  = routingRuntimeData
         , _routingMessages = messages
         }
 
 
-data NN = NN
+data TstNetworkNode = TstNetworkNode
     deriving (Show, Generic)
 
-data instance NodeConfig NN = NNConfig
+data instance NodeConfig TstNetworkNode = TstNetworkNodeConfig
     { _dummyOption :: Int
     }
     deriving (Show, Generic)
 
-instance Node NN where
-    data NodeScenario NN = NNS
+instance Node TstNetworkNode where
+    data NodeScenario TstNetworkNode = TstNetworkNodeS
         deriving (Show, Generic)
-    getNodeScript NNS = nnNode' Nothing
-    getNodeTag _ = NN
+    getNodeScript TstNetworkNodeS = nnNode' Nothing
+    getNodeTag _ = TstNetworkNode
 
-instance ToJSON   NN                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
-instance FromJSON NN                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeConfig NN)   where toJSON    = J.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeConfig NN)   where parseJSON = J.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeScenario NN) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeScenario NN) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   TstNetworkNode                where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON TstNetworkNode                where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig TstNetworkNode)   where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig TstNetworkNode)   where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario TstNetworkNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario TstNetworkNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
 
 newtype Start = Start D.PortNumber deriving (Read)
@@ -68,10 +68,10 @@ acceptPort portVar (Start port) = L.atomically $ do
         else "The port is accepted, the node is started."
 
 
-getRoutingMessages :: NNNodeData -> M.GetRoutingMessages -> L.NodeL [Text]
+getRoutingMessages :: TstNetworkNodeData -> M.GetRoutingMessages -> L.NodeL [Text]
 getRoutingMessages nodeData _ = L.readVarIO (nodeData ^. routingMessages)
 
-acceptSendTo :: NNNodeData -> SendMsgTo -> D.Connection D.Udp -> L.NodeL ()
+acceptSendTo :: TstNetworkNodeData -> SendMsgTo -> D.Connection D.Udp -> L.NodeL ()
 acceptSendTo nodeData message conn = do
     L.close conn
     routingData <- L.readVarIO (nodeData^.routingRuntime)
@@ -80,12 +80,12 @@ acceptSendTo nodeData message conn = do
         L.logInfo "I'm receiver."
 
 nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
-nnNode port = nnNode' port (NNConfig 42)
+nnNode port = nnNode' port (TstNetworkNodeConfig 42)
 
-nnNode' :: Maybe D.PortNumber -> NodeConfig NN -> L.NodeDefinitionL ()
+nnNode' :: Maybe D.PortNumber -> NodeConfig TstNetworkNode -> L.NodeDefinitionL ()
 nnNode' maybePort _ = do
-    L.nodeTag "NN node"
-    L.logInfo "Starting of NN node"
+    L.nodeTag "TstNetworkNode node"
+    L.logInfo "Starting of TstNetworkNode node"
     portVar    <- L.newVarIO maybePort
     nodeStatus <- L.newVarIO D.NodeActing
     L.std $ do
@@ -98,8 +98,8 @@ nnNode' maybePort _ = do
     let myNodePorts = A.makeNodePorts1000 port
     let myHash      = D.toHashGeneric myNodePorts
 
-    routingData <- runRouting myNodePorts myHash A.defaultBnNodeAddress
-    nodeData    <- initNN routingData nodeStatus
+    routingData <- runRouting myNodePorts myHash A.routingBootNodeAddress
+    nodeData    <- initTstNetworkNode routingData nodeStatus
 
     void $ L.serving D.Udp (routingData ^. myNodeAddres . Lens.nodePorts . Lens.nodeUdpPort) $ do
         udpRoutingHandlers routingData

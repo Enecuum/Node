@@ -20,10 +20,10 @@ spec = fastTest $ describe "Difficulty test" $ do
           `shouldBe` [7,6..0]
 
     it "calcHashDifficulty" $ do
-        D.calcHashDifficulty (B.pack [1, 121]) `shouldBe` 7
-        D.calcHashDifficulty (B.pack [0, 1]) `shouldBe` 15
+        D.calcHashDifficulty (D.RawHash $ B.pack [1, 121]) `shouldBe` 7
+        D.calcHashDifficulty (D.RawHash $ B.pack [0, 1]) `shouldBe` 15
 
     it "Some hashes difficulty" $ do
-        D.calcHashDifficulty (B.pack [246,2,161,0,0])   `shouldBe` 0
-        D.calcHashDifficulty (B.pack [0,246,2,161,0,0]) `shouldBe` 8
-        D.calcHashDifficulty (B.pack [0,0,0,0,0,0])     `shouldBe` 48
+        D.calcHashDifficulty (D.RawHash $ B.pack [246,2,161,0,0])   `shouldBe` 0
+        D.calcHashDifficulty (D.RawHash $ B.pack [0,246,2,161,0,0]) `shouldBe` 8
+        D.calcHashDifficulty (D.RawHash $ B.pack [0,0,0,0,0,0])     `shouldBe` 48

@@ -1,24 +1,24 @@
-{-# LANGUAGE DuplicateRecordFields  #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 module Enecuum.Assets.Nodes.MultiNode.Config where
 
-import qualified Data.Aeson                           as J
+import qualified Data.Aeson                                      as J
+import           Enecuum.Assets.Nodes.RoutingNodes.GenPoA
+import           Enecuum.Assets.Nodes.RoutingNodes.GenPoW.Config
+import           Enecuum.Assets.Nodes.RoutingNodes.GraphNode
 import           Enecuum.Config
+import qualified Enecuum.Domain                                  as D
 import           Enecuum.Prelude
-import qualified Enecuum.Domain                       as D
-import           Enecuum.Assets.Nodes.GN
-import           Enecuum.Assets.Nodes.PoA
-import           Enecuum.Assets.Nodes.PoW.Config 
 
 data MultiNode = MultiNode
     deriving (Show, Generic)
 
 data instance NodeConfig MultiNode = MultiNodeConfig
-        { _gnPorts   :: D.Range D.PortNumber
-        , _gnConfig  :: NodeConfig GraphNode
-        , _poaPorts  :: D.Range D.PortNumber
-        , _poaConfig :: NodeConfig PoANode
-        , _powPorts  :: D.Range D.PortNumber
-        , _powConfig :: NodeConfig PoWNode
+        { _routingGraphNodePorts   :: D.Range D.PortNumber
+        , _routingGraphNodeConfig  :: NodeConfig GraphNode
+        , _routingGenPoAPorts      :: D.Range D.PortNumber
+        , _routingGenPoAConfig     :: NodeConfig GenPoANode
+        , _routingGenPoWPorts      :: D.Range D.PortNumber
+        , _routingGenPoWConfig     :: NodeConfig GenPoWNode
         }
     deriving (Show, Generic)
 
@@ -30,17 +30,16 @@ instance FromJSON MultiNode              where parseJSON = J.genericParseJSON no
 instance Node MultiNode where
     data NodeScenario MultiNode = MultiNodeS
         deriving (Show, Generic)
-    getNodeScript _ = error "it not impemented"
+    getNodeScript _ = error "Multinode script not supported."
 
 instance ToJSON   (NodeScenario MultiNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario MultiNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
 
-defaultMultiNodeConfig :: NodeConfig MultiNode
-defaultMultiNodeConfig = MultiNodeConfig
+routingMultiNodeConfig :: NodeConfig MultiNode
+routingMultiNodeConfig = MultiNodeConfig
     (D.newRange 5050 5070)
-    defaultGraphNodeConfig
+    routingGraphNodeConfig
     D.newEmptyRange
-    defaultPoANodeConfig
+    routingGenPoANodeConfig
     D.newEmptyRange
-    defaultPoWNodeConfig
-
+    routingGenPoWNodeConfig

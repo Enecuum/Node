@@ -40,9 +40,6 @@ instance Node TstGenPoANode where
 instance ToJSON   (NodeScenario TstGenPoANode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
 instance FromJSON (NodeScenario TstGenPoANode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
-defaultPoANodeConfig :: NodeConfig TstGenPoANode
-defaultPoANodeConfig = TstGenPoANodeConfig (A.defaultPoANodePorts ^. Lens.nodeRpcPort)
-
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
 
@@ -74,7 +71,7 @@ sendMicroblock poaData block role = do
             Bad  -> A.generateBogusSignedMicroblock block tx
         L.logInfo
             $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
-        let gnUdpAddress = A.getUdpAddress A.defaultGnNodeAddress
+        let gnUdpAddress = A.getUdpAddress A.tstGraphNodeTransmitterAddress
         void $ L.withConnection D.Udp gnUdpAddress $
             \conn -> L.send conn mBlock
 
@@ -90,11 +87,11 @@ poaNode role cfg = do
 
     L.std $ L.stdHandler $ L.stopNodeHandler poaData
 
-    void $ L.serving D.Rpc (_poaRPCPort cfg) $ do
+    void $ L.serving D.Rpc (_controlRpcPort cfg) $ do
         L.method   rpcPingPong
         L.method $ handleStopNode poaData
 
-    let gnRpcAddress = A.getRpcAddress A.defaultGnNodeAddress
+    let gnRpcAddress = A.getRpcAddress A.tstGraphNodeTransmitterAddress
     L.process $ forever $ do
         L.delay $ 100 * 1000
         whenRightM (L.makeRpcRequest gnRpcAddress GetTransactionPending) $ \tx -> do

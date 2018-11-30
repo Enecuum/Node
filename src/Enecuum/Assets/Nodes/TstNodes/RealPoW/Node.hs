@@ -6,9 +6,7 @@
 {-# LANGUAGE RecordWildCards        #-}
 {-# LANGUAGE TemplateHaskell        #-}
 
-module Enecuum.Assets.Nodes.TstNodes.RealPoW.Node
-  ( TstRealPoWNode
-  ) where
+module Enecuum.Assets.Nodes.TstNodes.RealPoW.Node where
 
 import           Control.Lens                                 (to)
 import qualified Crypto.Hash.SHA256                           as SHA
@@ -62,7 +60,7 @@ makeFieldsNoPrefix ''KBlockDef
 instance Node TstRealPoWNode where
     data NodeScenario TstRealPoWNode = TstRealPoW
         deriving (Show, Generic)
-    getNodeScript _ = powNode'
+    getNodeScript _ = tstRealPoWNode
     getNodeTag _ = TstRealPoWNode
 
 instance ToJSON   (NodeScenario TstRealPoWNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
@@ -165,8 +163,8 @@ kBlockSending nodeData graphNodeUdpAddress = do
     void $ L.withConnection D.Udp graphNodeUdpAddress $ \conn ->
         void $ L.send conn kBlock
 
-initializeNode :: D.Difficulty -> L.NodeDefinitionL TstRealPoWNodeData
-initializeNode difficulty = do
+initializeTstRealPoWNode :: D.Difficulty -> L.NodeDefinitionL TstRealPoWNodeData
+initializeTstRealPoWNode difficulty = do
     let initialBlock = toKBlockTemplate D.genesisKBlock
     let initialBlockDef = KBlockDef
           { _template   = initialBlock
@@ -197,8 +195,8 @@ initializeNode difficulty = do
 -- * What if no one found hash for this time && nonce?
 -- * Difficulty func
 
-powNode' :: NodeConfig TstRealPoWNode -> L.NodeDefinitionL ()
-powNode' cfg = do
+tstRealPoWNode :: NodeConfig TstRealPoWNode -> L.NodeDefinitionL ()
+tstRealPoWNode cfg = do
     L.nodeTag "Tst Real PoW node"
 
     let workersCount = _workersCount cfg
@@ -206,7 +204,7 @@ powNode' cfg = do
     let window = (maxBound :: D.Nonce) `div` workersCount
     let ranges = [(i * window, (i + 1) * window) | i <- [0..workersCount - 1]]
 
-    nodeData <- initializeNode difficulty
+    nodeData <- initializeTstRealPoWNode difficulty
 
     L.serving D.Rpc (_controlRpcPort cfg) $ do
         L.method    rpcPingPong

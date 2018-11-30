@@ -4,7 +4,7 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE TypeInType             #-}
 
-module Enecuum.Assets.Nodes.GN where
+module Enecuum.Assets.Nodes.RoutingNodes.GraphNode where
 
 import qualified Data.Aeson                                         as A
 import qualified Enecuum.Assets.Nodes.Address                       as A
@@ -149,15 +149,15 @@ graphNode' cfg nodeData@(GraphNodeData graphServiceData _) = do
         unless (isJust tcpServerOk) $
             L.logError $ portError (myNodePorts ^. Lens.nodeTcpPort) "tcp"
 
-defaultGraphNodeConfig :: NodeConfig GraphNode
-defaultGraphNodeConfig = GraphNodeConfig
+routingGraphNodeConfig :: NodeConfig GraphNode
+routingGraphNodeConfig = GraphNodeConfig
     { _graphServiceConfig = GraphServiceConfig
         { _dbConfig = noDBConfig
         , _graphWindowConfig = noGraphShrinking
         , _rpcSynco = Nothing
         }
-    , _nodePorts  = A.defaultGnNodePorts
-    , _bnAddress  = A.defaultBnNodeAddress
+    , _nodePorts  = A.routingGraphNodePorts
+    , _bnAddress  = A.routingBootNodeAddress
     }
 
 makeFieldsNoPrefix ''GraphNodeData

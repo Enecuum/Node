@@ -1,7 +1,7 @@
 {
     "nodeConfig": {
-        "poaConfig": {
-            "tag": "PoANodeConfig",
+        "routingGenPoAConfig": {
+            "tag": "GenPoANodeConfig",
             "poaBnAddress": {
                 "tag": "NodeAddress",
                 "nodePorts": {
@@ -20,9 +20,9 @@
                 "nodeTcpPort": 5200
             }
         },
-        "powConfig": {
+        "routingGenPoWConfig": {
             "defaultBlocksDelay": 1000000,
-            "tag": "PoWNodeConfig",
+            "tag": "GenPoWNodeConfig",
             "kblocksOrder": "InOrder",
             "powNodebnAddress": {
                 "tag": "NodeAddress",
@@ -42,13 +42,16 @@
                 "nodeTcpPort": 5020
             }
         },
-        "tag": "MultiNodeConfig",
-        "gnPorts": {
+        "routingGraphNodePorts": {
             "maxValue": 5070,
             "tag": "Range",
             "minValue": 5050
         },
-        "gnConfig": {
+        "tag": "MultiNodeConfig",
+        "routingGenPoAPorts": {
+            "tag": "EmptyRange"
+        },
+        "routingGraphNodeConfig": {
             "tag": "GraphNodeConfig",
             "graphServiceConfig": {
                 "dbConfig": {
@@ -65,7 +68,7 @@
                 "graphWindowConfig": {
                     "tag": "GraphWindowConfig",
                     "shrinkingEnabled": false,
-                    "windowSize": 100,
+                    "windowSize": 10,
                     "shrinkingDelay": 1000000
                 },
                 "tag": "GraphServiceConfig",
@@ -89,10 +92,7 @@
                 "nodeTcpPort": 5050
             }
         },
-        "poaPorts": {
-            "tag": "EmptyRange"
-        },
-        "powPorts": {
+        "routingGenPoWPorts": {
             "tag": "EmptyRange"
         }
     },

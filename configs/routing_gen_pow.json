@@ -1,7 +1,7 @@
 {
     "nodeConfig": {
         "defaultBlocksDelay": 1000000,
-        "tag": "PoWNodeConfig",
+        "tag": "GenPoWNodeConfig",
         "kblocksOrder": "InOrder",
         "powNodebnAddress": {
             "tag": "NodeAddress",
@@ -21,11 +21,11 @@
             "nodeTcpPort": 5020
         }
     },
-    "node": "PoWNode",
+    "node": "GenPoWNode",
     "loggerConfig": {
-        "logFilePath": "",
+        "logFilePath": "/tmp/log/PoW.log",
         "format": "$prio $loggername: $msg",
-        "logToFile": false,
+        "logToFile": true,
         "logToConsole": true,
         "level": "Debug"
     },

@@ -1,6 +1,6 @@
 {
     "nodeConfig": {
-        "tag": "PoANodeConfig",
+        "tag": "GenPoANodeConfig",
         "poaBnAddress": {
             "tag": "NodeAddress",
             "nodePorts": {
@@ -19,13 +19,13 @@
             "nodeTcpPort": 5200
         }
     },
-    "node": "PoANode",
+    "node": "GenPoANode",
     "loggerConfig": {
         "logFilePath": "",
         "format": "$prio $loggername: $msg",
-        "logToFile": true,
+        "logToFile": false,
         "logToConsole": true,
         "level": "Debug"
     },
-    "nodeScenario": "Bad"
+    "nodeScenario": "Good"
 }

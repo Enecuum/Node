@@ -36,50 +36,73 @@ localhost = "127.0.0.1"
 makeAddressByPorts :: NodePorts -> NodeAddress
 makeAddressByPorts ports = NodeAddress localhost ports (D.toHashGeneric ports)
 
--- List of test and default port.
+-- Aggreement:
+-- udp ports from 4000 to 4999
+-- tcp ports from 5000 to 5999
+-- rpc ports from 6000 to 6999
+
 -- udp = nodePort - 1000
 -- tcp = nodePort
 -- rpc = nodePort + 1000
 
--- bn = [0 .. 9]
-defaultBnNodePorts :: NodePorts
-defaultBnNodePorts = makeNodePorts1000 5000
-
-defaultBnNodeAddress :: NodeAddress
-defaultBnNodeAddress = makeAddressByPorts defaultBnNodePorts
-
 -- client = [10 .. 19]
-defaultClientPorts :: NodePorts
-defaultClientPorts = makeNodePorts1000 5010
+clientPorts :: NodePorts
+clientPorts = makeNodePorts1000 5010
 
-defaultClientAddress :: NodeAddress
-defaultClientAddress = makeAddressByPorts defaultClientPorts
+clientAddress :: NodeAddress
+clientAddress = makeAddressByPorts clientPorts
+
+-- Routing nodes
+
+-- boot node = [0 .. 9]
+routingBootNodePorts :: NodePorts
+routingBootNodePorts = makeNodePorts1000 5000
+
+routingBootNodeAddress :: NodeAddress
+routingBootNodeAddress = makeAddressByPorts routingBootNodePorts
 
 -- pow = [20 .. 49]
-defaultPoWNodePorts :: NodePorts
-defaultPoWNodePorts = makeNodePorts1000 5020
+routingGenPoWNodePorts :: NodePorts
+routingGenPoWNodePorts = makeNodePorts1000 5020
 
-defaultPoWNodeAddress :: NodeAddress
-defaultPoWNodeAddress = makeAddressByPorts defaultPoWNodePorts
+routingGenPoWNodeAddress :: NodeAddress
+routingGenPoWNodeAddress = makeAddressByPorts routingGenPoWNodePorts
 
--- gn = [50 .. 199]
--- work gn node
-defaultGnNodePorts :: NodePorts
-defaultGnNodePorts = makeNodePorts1000 5050
+-- graph node = [50 .. 199]
+routingGraphNodePorts :: NodePorts
+routingGraphNodePorts = makeNodePorts1000 5050
 
-defaultGnNodeAddress :: NodeAddress
-defaultGnNodeAddress = makeAddressByPorts defaultGnNodePorts
-
--- test receiver node
-defaultGnReceiverNodePorts :: NodePorts
-defaultGnReceiverNodePorts = makeNodePorts1000 5051
-
-defaultGnReceiverNodeAddress :: NodeAddress
-defaultGnReceiverNodeAddress = makeAddressByPorts defaultGnReceiverNodePorts
+routingGraphNodeAddress :: NodeAddress
+routingGraphNodeAddress = makeAddressByPorts routingGraphNodePorts
 
 -- poa = [200 .. 999]
-defaultPoANodePorts :: NodePorts
-defaultPoANodePorts = makeNodePorts1000 5200
+routingGenPoANodePorts :: NodePorts
+routingGenPoANodePorts = makeNodePorts1000 5200
 
-defaultPoANodeAddress :: NodeAddress
-defaultPoANodeAddress = makeAddressByPorts defaultPoANodePorts
+routingGenPoANodeAddress :: NodeAddress
+routingGenPoANodeAddress = makeAddressByPorts routingGenPoANodePorts
+
+-- Test nodes
+tstGenPoANodePorts :: NodePorts
+tstGenPoANodePorts = makeNodePorts1000 5200
+
+tstGenPoANodeAddress :: NodeAddress
+tstGenPoANodeAddress = makeAddressByPorts tstGenPoANodePorts
+
+tstGenPoWNodePorts :: NodePorts
+tstGenPoWNodePorts = makeNodePorts1000 5020
+
+tstGenPoWNodeAddress :: NodeAddress
+tstGenPoWNodeAddress = makeAddressByPorts tstGenPoWNodePorts
+
+tstGraphNodeTransmitterPorts :: NodePorts
+tstGraphNodeTransmitterPorts = makeNodePorts1000 5050
+
+tstGraphNodeTransmitterAddress :: NodeAddress
+tstGraphNodeTransmitterAddress = makeAddressByPorts tstGraphNodeTransmitterPorts
+
+tstGraphNodeReceiverPorts :: NodePorts
+tstGraphNodeReceiverPorts = makeNodePorts1000 5051
+
+tstGraphNodeReceiverAddress :: NodeAddress
+tstGraphNodeReceiverAddress = makeAddressByPorts tstGraphNodeReceiverPorts

@@ -1,18 +1,17 @@
-{  
-   "node":"ClientNode",
-   "nodeScenario":"CLI",
+{
+   "node":"BootNode",
+   "nodeScenario":"BootNodeS",
    "nodeConfig":
    {
-      "tag":"ClientNodeConfig",
-      "dummyOption":0
+      "tag":"BootNodeConfig",
+      "dummyOptionBootNode":0
    },
    "loggerConfig":
    {
-      "logFilePath":"/tmp/log/test.log",
+      "logFilePath":"/tmp/log/app.log",
       "format":"$prio $loggername: $msg",
       "logToConsole":true,
       "logToFile": true,
       "level":"Debug"
    }
 }
-
