@@ -82,8 +82,7 @@ powNode' cfg = do
     L.nodeTag "GenPoW node"
 
     let myNodePorts = _powNodePorts cfg
-    -- TODO: read from config
-    let myHash      = D.toHashGeneric myNodePorts
+    let myHash      = _powNodeId cfg
     routingData <- runRouting myNodePorts myHash (_powNodebnAddress cfg)
 
     nodeData    <- L.initialization $ powNodeInitialization cfg D.genesisHash

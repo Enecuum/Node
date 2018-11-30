@@ -19,7 +19,8 @@
             "nodeRpcPort": 6020,
             "nodeUdpPort": 4020,
             "nodeTcpPort": 5020
-        }
+        },
+        "powNodeId": "2AuRn8+XVmHpVev4yUSpQwFYF3RGkDdWJv9TLWg9u0o="
     },
     "node": "GenPoWNode",
     "loggerConfig": {

@@ -3,6 +3,7 @@ module Enecuum.Assets.Nodes.RoutingNodes.GenPoW.Config where
 
 import qualified Data.Aeson                           as J
 import qualified Enecuum.Assets.Blockchain.Generation as A
+import qualified Enecuum.Domain                                     as D
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Config
 import           Enecuum.Domain                       (NodeAddress (..), NodeId (..), NodePorts (..))
@@ -18,6 +19,7 @@ data instance NodeConfig GenPoWNode = GenPoWNodeConfig
         , _kblocksOrder        :: A.Ordering
         , _powNodebnAddress    :: NodeAddress
         , _powNodePorts        :: NodePorts
+        , _powNodeId           :: D.NodeId
         }
     deriving (Show, Generic)
 
@@ -30,4 +32,4 @@ defaultBlocksDelay :: BlocksDelay
 defaultBlocksDelay = 1000 * 1000
 
 routingGenPoWNodeConfig :: NodeConfig GenPoWNode
-routingGenPoWNodeConfig = GenPoWNodeConfig defaultBlocksDelay A.InOrder routingBootNodeAddress routingGenPoWNodePorts
+routingGenPoWNodeConfig = GenPoWNodeConfig defaultBlocksDelay A.InOrder routingBootNodeAddress routingGenPoWNodePorts (D.toHashGeneric routingGenPoWNodePorts)

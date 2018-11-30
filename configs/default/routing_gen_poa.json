@@ -17,7 +17,8 @@
             "nodeRpcPort": 6200,
             "nodeUdpPort": 4200,
             "nodeTcpPort": 5200
-        }
+        },
+        "poaNodeId": "QC2p/Kogb+DGPPuMDCOCSAFwdzLBzboFcIASRwgR+eI="
     },
     "node": "GenPoANode",
     "loggerConfig": {

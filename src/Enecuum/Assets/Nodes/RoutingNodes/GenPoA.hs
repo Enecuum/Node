@@ -37,6 +37,7 @@ data GenPoANode = GenPoANode
 data instance NodeConfig GenPoANode = GenPoANodeConfig
     { _poaNodePorts :: D.NodePorts
     , _poaBnAddress :: D.NodeAddress
+    , _poaNodeId    :: D.NodeId
     }
     deriving (Show, Generic)
 
@@ -54,7 +55,7 @@ instance ToJSON   (NodeScenario GenPoANode) where toJSON    = A.genericToJSON   
 instance FromJSON (NodeScenario GenPoANode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
 routingGenPoANodeConfig :: NodeConfig GenPoANode
-routingGenPoANodeConfig = GenPoANodeConfig A.routingGenPoANodePorts A.routingBootNodeAddress
+routingGenPoANodeConfig = GenPoANodeConfig A.routingGenPoANodePorts A.routingBootNodeAddress (D.toHashGeneric A.routingGenPoANodePorts)
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
@@ -91,16 +92,12 @@ sendMicroblock routingData poaData role block = do
         void $ sendUdpBroadcast routingData mBlock
 
 
-
-
 poaNode :: NodeScenario GenPoANode -> NodeConfig GenPoANode -> L.NodeDefinitionL ()
 poaNode role cfg = do
     L.nodeTag "GenPoA node"
     L.logInfo "Starting of GenPoA node"
     let myNodePorts = _poaNodePorts cfg
-
-    -- TODO: read from config
-    let myHash      = D.toHashGeneric myNodePorts
+    let myHash      = _poaNodeId cfg
 
     routingData <- runRouting myNodePorts myHash (_poaBnAddress cfg)
     poaData     <- L.atomically $
