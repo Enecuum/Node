@@ -7,6 +7,7 @@ import qualified Enecuum.Domain                                             as D
 import qualified Enecuum.Language                                           as L
 
 import           Enecuum.Assets.Services.Pos.RuntimeData
+import           Enecuum.Assets.Services.Pos.Messages
 
-signMicroBlock :: PosServiceRuntimeData -> D.UnsignedMicroblock -> L.NodeL (Maybe D.Microblock)
-signMicroBlock _ (D.UnsignedMicroblock mBlock) = pure $ Just mBlock
+signMicroBlock :: PosServiceRuntimeData -> UnsignedMicroblock -> L.NodeL (Maybe D.Microblock)
+signMicroBlock _ (UnsignedMicroblock _ _ mBlock) = pure $ Just mBlock

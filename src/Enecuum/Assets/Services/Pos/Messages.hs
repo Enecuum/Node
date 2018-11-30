@@ -7,6 +7,7 @@ module Enecuum.Assets.Services.Pos.Messages where
 import           Enecuum.Prelude
 import qualified Enecuum.Framework.Domain                                   as D
 import qualified Data.HGraph.StringHashable                                 as D
+import qualified Enecuum.Blockchain.Domain.Microblock                       as D
 import           Enecuum.Assets.Services.Pos.Types
 import           Enecuum.Assets.Services.Routing
 
@@ -34,7 +35,16 @@ data ShadowResponce = ShadowResponce
     , _msg            :: D.NodeId
     } deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialize)
 
+--
+data UnsignedMicroblock = UnsignedMicroblock
+    { _nodeReceiverId :: D.NodeId
+    , _timeToLive     :: Int
+    , _msg            :: D.Microblock
+    }
+    deriving (Eq, Generic, Ord, Read, Show, ToJSON, FromJSON, Serialize)
+
 makeFieldsNoPrefix ''ShadowResponce
+makeFieldsNoPrefix ''UnsignedMicroblock
 
 data LeaderBeacon = LeaderBeacon D.StringHash D.NodeId
     deriving (Show, Eq, Generic, ToJSON, FromJSON, Serialize)

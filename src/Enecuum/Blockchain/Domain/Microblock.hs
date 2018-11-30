@@ -11,8 +11,6 @@ import           Enecuum.Blockchain.Domain.Transaction (Transaction)
 import           Enecuum.Core.Crypto.Crypto
 import           Enecuum.Prelude
 
-newtype UnsignedMicroblock = UnsignedMicroblock Microblock
-    deriving (Eq, Generic, Ord, Read, Show, ToJSON, FromJSON, Serialize)
 
 data Microblock = Microblock
     { _keyBlock     :: StringHash
