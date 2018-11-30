@@ -28,10 +28,10 @@ parseConfig configSrc = do
             , runParser $ Cfg.tryParseConfig @A.TestClient configSrc
             , runParser $ Cfg.tryParseConfig @A.TestServer configSrc
 
-            , runParser $ Cfg.tryParseConfig @Tst.NN         configSrc
-            , runParser $ Cfg.tryParseConfig @Tst.TstGraphNode configSrc
-            , runParser $ Cfg.tryParseConfig @Tst.TstPoWNode   configSrc
-            , runParser $ Cfg.tryParseConfig @Tst.TstPoaNode   configSrc
+            , runParser $ Cfg.tryParseConfig @Tst.NN               configSrc
+            , runParser $ Cfg.tryParseConfig @Tst.TstGraphNode     configSrc
+            , runParser $ Cfg.tryParseConfig @Tst.TstGenPoWNode    configSrc
+            , runParser $ Cfg.tryParseConfig @Tst.TstGenPoANode    configSrc
             , runParser $ Cfg.tryParseConfig @Tst.TstRealPoWNode   configSrc
             ]
 

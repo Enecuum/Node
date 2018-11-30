@@ -8,7 +8,7 @@
     },
     "node": "TstRealPoWNode",
     "loggerConfig": {
-        "logFilePath": "",
+        "logFilePath": "/tmp/log/tst_real_pow.log",
         "format": "$prio $loggername: $msg",
         "logToFile": false,
         "logToConsole": true,

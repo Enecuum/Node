@@ -6,7 +6,7 @@
 {-# LANGUAGE RecordWildCards        #-}
 {-# LANGUAGE TemplateHaskell        #-}
 
-module Enecuum.Assets.Nodes.TstNodes.RealPoW.PoW
+module Enecuum.Assets.Nodes.TstNodes.RealPoW.Node
   ( TstRealPoWNode
   ) where
 

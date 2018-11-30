@@ -3,61 +3,50 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
 
-module Enecuum.Assets.Nodes.TstNodes.PoA where
+module Enecuum.Assets.Nodes.TstNodes.GenPoA.Node where
 
-import qualified Data.Aeson                           as A
+import qualified Data.Aeson                                  as A
 import           Enecuum.Prelude
 
-import           Data.HGraph.StringHashable           (toHash)
+import           Data.HGraph.StringHashable                  (toHash)
 
-import qualified Enecuum.Blockchain.Lens              as Lens
+import qualified Enecuum.Blockchain.Lens                     as Lens
 import           Enecuum.Config
-import qualified Enecuum.Domain                       as D
-import           Enecuum.Framework.Language.Extra     (HasStatus)
-import qualified Enecuum.Framework.Lens               as Lens
-import qualified Enecuum.Language                     as L
+import qualified Enecuum.Domain                              as D
+import           Enecuum.Framework.Language.Extra            (HasStatus)
+import qualified Enecuum.Framework.Lens                      as Lens
+import qualified Enecuum.Language                            as L
 
-import qualified Enecuum.Assets.Blockchain.Generation as A
-import qualified Enecuum.Assets.Nodes.Address         as A
+import qualified Enecuum.Assets.Blockchain.Generation        as A
+import qualified Enecuum.Assets.Nodes.Address                as A
 import           Enecuum.Assets.Nodes.Messages
-import           Enecuum.Assets.Nodes.Methods         (handleStopNode, rpcPingPong)
+import           Enecuum.Assets.Nodes.Methods                (handleStopNode, rpcPingPong)
+import           Enecuum.Assets.Nodes.TstNodes.GenPoA.Config
 
-data TstPoaNodeData = TstPoaNodeData
+data TstGenPoANodeData = TstGenPoANodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock
     , _status              :: D.StateVar D.NodeStatus
     , _transactionPending  :: D.StateVar [D.Transaction]
     }
 
-makeFieldsNoPrefix ''TstPoaNodeData
+makeFieldsNoPrefix ''TstGenPoANodeData
 
-data TstPoaNode = TstPoaNode
-    deriving (Show, Generic)
-
-data instance NodeConfig TstPoaNode = TstPoANodeConfig
-    { _poaRPCPort  :: D.PortNumber
-    }
-    deriving (Show, Generic)
-
-instance Node TstPoaNode where
-    data NodeScenario TstPoaNode = Good | Bad
+instance Node TstGenPoANode where
+    data NodeScenario TstGenPoANode = Good | Bad
         deriving (Show, Generic)
     getNodeScript = poaNode
-    getNodeTag _ = TstPoaNode
+    getNodeTag _ = TstGenPoANode
 
-instance ToJSON   TstPoaNode                where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON TstPoaNode                where parseJSON = A.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeConfig TstPoaNode)   where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeConfig TstPoaNode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
-instance ToJSON   (NodeScenario TstPoaNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeScenario TstPoaNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario TstGenPoANode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario TstGenPoANode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
-defaultPoANodeConfig :: NodeConfig TstPoaNode
-defaultPoANodeConfig = TstPoANodeConfig (A.defaultPoANodePorts ^. Lens.nodeRpcPort)
+defaultPoANodeConfig :: NodeConfig TstGenPoANode
+defaultPoANodeConfig = TstGenPoANodeConfig (A.defaultPoANodePorts ^. Lens.nodeRpcPort)
 
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
 
-sendMicroblock :: TstPoaNodeData -> D.KBlock -> NodeScenario TstPoaNode -> L.NodeL ()
+sendMicroblock :: TstGenPoANodeData -> D.KBlock -> NodeScenario TstGenPoANode -> L.NodeL ()
 sendMicroblock poaData block role = do
     currentBlock <- L.readVarIO (poaData ^. currentLastKeyBlock)
     when (block /= currentBlock) $ do
@@ -89,12 +78,12 @@ sendMicroblock poaData block role = do
         void $ L.withConnection D.Udp gnUdpAddress $
             \conn -> L.send conn mBlock
 
-poaNode :: NodeScenario TstPoaNode -> NodeConfig TstPoaNode -> L.NodeDefinitionL ()
+poaNode :: NodeScenario TstGenPoANode -> NodeConfig TstGenPoANode -> L.NodeDefinitionL ()
 poaNode role cfg = do
     L.nodeTag "PoA node"
     L.logInfo "Starting of PoA node"
     poaData <- L.atomically
-        $ TstPoaNodeData
+        $ TstGenPoANodeData
             <$> L.newVar D.genesisKBlock
             <*> L.newVar D.NodeActing
             <*> L.newVar []

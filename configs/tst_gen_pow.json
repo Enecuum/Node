@@ -1,17 +1,17 @@
 {
-   "node":"TstPoWNode",
+   "node":"TstGenPoWNode",
    "nodeScenario":"PoW",
-	 "nodeConfig":
-	 {
+   "nodeConfig":
+   {
         "defaultBlocksDelay":1000000,
-        "tag": "TstPoWNodeConfig",
-				"kblocksOrder": "InOrder",
-			  "graphNodeUDPAddress":  {"host":"127.0.0.1","port":4050},
+        "tag": "TstGenPoWNodeConfig",
+        "kblocksOrder": "InOrder",
+        "graphNodeUDPAddress":  {"host":"127.0.0.1","port":4050},
         "powNodeRpcPort": 6020
-	 },
+   },
    "loggerConfig":
         {
-        "logFilePath": "/tmp/log/PoW.log",
+        "logFilePath": "/tmp/log/tst_pow.log",
         "format":"$prio $loggername: $msg",
         "logToConsole":true,
         "logToFile": true,

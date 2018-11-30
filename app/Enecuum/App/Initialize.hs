@@ -93,10 +93,10 @@ initialize configSrc = do
             , runNode' $ Cfg.dispatchScenario @A.TestClient configSrc
             , runNode' $ Cfg.dispatchScenario @A.TestServer configSrc
 
-            , runNode' $ Cfg.dispatchScenario @Tst.NN           configSrc
-            , runNode' $ Cfg.dispatchScenario @Tst.TstGraphNode configSrc
-            , runNode' $ Cfg.dispatchScenario @Tst.TstPoWNode   configSrc
-            , runNode' $ Cfg.dispatchScenario @Tst.TstPoaNode   configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.NN             configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.TstGraphNode   configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.TstGenPoWNode  configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.TstGenPoANode  configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstRealPoWNode configSrc
             ]
     void $ sequence runners
