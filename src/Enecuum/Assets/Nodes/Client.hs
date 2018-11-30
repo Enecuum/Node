@@ -14,7 +14,7 @@ import           Enecuum.Assets.Blockchain.Keys
 import qualified Enecuum.Assets.Blockchain.Wallet      as A
 import qualified Enecuum.Assets.Nodes.Address          as A
 import qualified Enecuum.Assets.Nodes.Messages         as M
-import           Enecuum.Assets.Nodes.Routing.Messages
+import           Enecuum.Assets.Services.Routing.Messages
 import           Enecuum.Config
 import qualified Enecuum.Domain                        as D
 import           Enecuum.Framework.Domain.Error

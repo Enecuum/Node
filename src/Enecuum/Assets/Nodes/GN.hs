@@ -16,7 +16,7 @@ import           Enecuum.Assets.Nodes.GraphService.Initialization
 import           Enecuum.Assets.Nodes.GraphService.Logic
 import qualified Enecuum.Assets.Nodes.Messages                      as M
 import           Enecuum.Assets.Nodes.Methods
-import qualified Enecuum.Assets.Nodes.Routing                       as R
+import qualified Enecuum.Assets.Services.Routing              as R
 import           Enecuum.Config
 import qualified Enecuum.Domain                                     as D
 import           Enecuum.Framework.Language.Extra                   (HasStatus)

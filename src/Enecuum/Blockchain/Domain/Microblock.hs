@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE RecordWildCards       #-}
 
 module Enecuum.Blockchain.Domain.Microblock where
 
@@ -10,8 +9,10 @@ import           Data.HGraph.StringHashable            (StringHash (..), StringH
 import qualified Data.Serialize                        as S
 import           Enecuum.Blockchain.Domain.Transaction (Transaction)
 import           Enecuum.Core.Crypto.Crypto
-import qualified Enecuum.Core.Language                 as L
 import           Enecuum.Prelude
+
+newtype UnsignedMicroblock = UnsignedMicroblock Microblock
+    deriving (Eq, Generic, Ord, Read, Show, ToJSON, FromJSON, Serialize)
 
 data Microblock = Microblock
     { _keyBlock     :: StringHash

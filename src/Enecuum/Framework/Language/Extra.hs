@@ -125,5 +125,14 @@ await ref = L.atomically $ do
         Just value -> pure value
         Nothing    -> L.retry
 
+takeVar :: D.StateVar (Maybe var) -> L.StateL var
+takeVar varRef = do
+    mVar <- L.readVar varRef
+    case mVar of
+        Just var -> do
+            L.writeVar varRef Nothing
+            pure var
+        Nothing  -> L.retry
+
 modifyVarIO :: L.StateIO m => D.StateVar a -> (a -> a) -> m ()
 modifyVarIO var f = L.atomically $ L.modifyVar var f

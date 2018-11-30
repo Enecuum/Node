@@ -1,11 +1,11 @@
-module Enecuum.Assets.Nodes.Routing.RoutingWorker (runRouting) where
+module Enecuum.Assets.Services.Routing.RoutingWorker (runRouting) where
 
 import qualified Data.Sequence                            as Seq
 import qualified Data.Set                                 as Set
 import qualified Enecuum.Assets.Nodes.Address             as A
 import qualified Enecuum.Assets.Nodes.Messages            as M
-import           Enecuum.Assets.Nodes.Routing.Messages
-import           Enecuum.Assets.Nodes.Routing.RuntimeData
+import           Enecuum.Assets.Services.Routing.Messages
+import           Enecuum.Assets.Services.Routing.RuntimeData
 import qualified Enecuum.Domain                           as D
 import qualified Enecuum.Framework.Lens                   as Lens
 import qualified Enecuum.Language                         as L
@@ -66,7 +66,7 @@ registerWithBn nodePorts' myNodeId' bnAddress' = do
 sendHelloToPrevious :: RoutingRuntime -> L.NodeL ()
 sendHelloToPrevious routingRuntime = do
     connects      <- getConnects      routingRuntime
-    let mAddress  =  findNextForHash (routingRuntime ^. myNodeAddres . Lens.nodeId) connects
+    let mAddress  =  findNextForHash (getMyNodeId routingRuntime) connects
     whenJust mAddress $ \(_, receiverAddress) -> do
         let privateKey  = True
         hello <- makeRoutingHello privateKey (routingRuntime ^. myNodeAddres)
@@ -89,7 +89,7 @@ successorsRequest :: RoutingRuntime -> L.NodeL ()
 successorsRequest routingRuntime = do
     -- clarify the map of connections
     connects <- getConnects routingRuntime
-    let myNodeId = routingRuntime ^. myNodeAddres . Lens.nodeId
+    let myNodeId = getMyNodeId routingRuntime
     let loop i = do
             let mAddress = snd <$> findInMapNByKey (\h j -> D.hashToWord64 h + 2 ^ j) i myNodeId connects
             whenJust mAddress $ \address -> do
@@ -114,7 +114,7 @@ connecRequests i routingRuntime = when (i > 0) $ do
 nextRequest :: RoutingRuntime -> L.NodeL ()
 nextRequest routingRuntime = do
     let bnRpcAddress  =  A.getRpcAddress (routingRuntime^.bnAddress)
-    nextForMe        <- L.makeRpcRequest bnRpcAddress $ M.NextForMe (routingRuntime ^. myNodeAddres . Lens.nodeId)
+    nextForMe        <- L.makeRpcRequest bnRpcAddress $ M.NextForMe (getMyNodeId routingRuntime)
     case nextForMe of
         Right (receivedNodeId, address) | routingRuntime ^. myNodeAddres /= address ->
             L.modifyVarIO (routingRuntime ^. connectMap) (addToMap receivedNodeId address)
@@ -125,8 +125,8 @@ clearingOfConnects :: RoutingRuntime -> L.NodeL ()
 clearingOfConnects routingRuntime = do
     connects <- getConnects routingRuntime
     L.atomically $ do
-        let nextForMe   = maybeToList $ findNextForHash (routingRuntime ^. myNodeAddres . Lens.nodeId) connects
-        let fingerNodes = findInMap (routingRuntime ^. myNodeAddres . Lens.nodeId) connects
+        let nextForMe   = maybeToList $ findNextForHash (getMyNodeId routingRuntime) connects
+        let fingerNodes = findInMap (getMyNodeId routingRuntime) connects
         L.writeVar
             (routingRuntime ^. connectMap)
             (toChordRouteMap $ nextForMe <> fingerNodes)

@@ -18,7 +18,7 @@ import qualified Enecuum.Framework.Lens               as Lens
 import qualified Enecuum.Language                     as L
 
 import qualified Enecuum.Assets.Nodes.Address         as A
-import           Enecuum.Assets.Nodes.Routing
+import           Enecuum.Assets.Services.Routing
 
 import qualified Enecuum.Assets.Blockchain.Generation as A
 import           Enecuum.Assets.Nodes.Methods         (handleStopNode, portError, rpcPingPong)

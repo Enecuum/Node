@@ -1,10 +1,10 @@
-module Enecuum.Assets.Nodes.Routing.RoutingHandlers where
+module Enecuum.Assets.Services.Routing.RoutingHandlers where
 
 import qualified Enecuum.Assets.Nodes.Address             as A
 import qualified Enecuum.Assets.Nodes.Messages            as M
 import           Enecuum.Assets.Nodes.Methods
-import           Enecuum.Assets.Nodes.Routing.Messages
-import           Enecuum.Assets.Nodes.Routing.RuntimeData
+import           Enecuum.Assets.Services.Routing.Messages
+import           Enecuum.Assets.Services.Routing.RuntimeData
 import qualified Enecuum.Domain                           as D
 import qualified Enecuum.Framework.Lens                   as Lens
 import qualified Enecuum.Language                         as L
@@ -28,7 +28,7 @@ acceptNextForYou :: RoutingRuntime -> NextForYou -> D.Connection D.Udp -> L.Node
 acceptNextForYou routingRuntime (NextForYou senderAddress) conn = do
     L.close conn
     connects <- getConnects routingRuntime
-    let mAddress = snd <$> findNextForHash (routingRuntime ^. myNodeAddres . Lens.nodeId) connects
+    let mAddress = snd <$> findNextForHash (getMyNodeId routingRuntime) connects
     whenJust mAddress $ \address -> void $ L.notify senderAddress address
 
 --
@@ -47,7 +47,7 @@ acceptHello routingRuntime routingHello con = do
         connects <- getConnects routingRuntime
         let senderAddress = routingHello ^. nodeAddress
         let senderNodeId  = senderAddress ^. Lens.nodeId
-        let nextAddres    = nextForHello (routingRuntime ^. myNodeAddres . Lens.nodeId) senderNodeId connects
+        let nextAddres    = nextForHello (getMyNodeId routingRuntime) senderNodeId connects
         whenJust nextAddres $ \receiverAddress ->
             void $ L.notify (A.getUdpAddress receiverAddress) routingHello
 

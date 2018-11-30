@@ -8,7 +8,7 @@ import qualified Data.Aeson                            as J
 import qualified Enecuum.Assets.Nodes.Address          as A
 import qualified Enecuum.Assets.Nodes.Messages         as M
 import           Enecuum.Assets.Nodes.Methods
-import           Enecuum.Assets.Nodes.Routing.Messages
+import           Enecuum.Assets.Services.Routing.Messages
 import           Enecuum.Config
 import qualified Enecuum.Domain                        as D
 import           Enecuum.Framework.Language.Extra      (HasStatus)

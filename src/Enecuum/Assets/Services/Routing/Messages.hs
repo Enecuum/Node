@@ -3,7 +3,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE UndecidableInstances   #-}
-module Enecuum.Assets.Nodes.Routing.Messages where
+module Enecuum.Assets.Services.Routing.Messages where
 
 import           Data.HGraph.StringHashable
 import           Enecuum.Assets.Nodes.Address
