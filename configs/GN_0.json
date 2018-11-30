@@ -16,7 +16,7 @@
             "graphWindowConfig": {
                 "tag": "GraphWindowConfig",
                 "shrinkingEnabled": false,
-                "windowSize": 10,
+                "windowSize": 100,
                 "shrinkingDelay": 1000000
             },
             "tag": "GraphServiceConfig",
@@ -42,7 +42,7 @@
     },
     "node": "GraphNode",
     "loggerConfig": {
-        "logFilePath": "",
+        "logFilePath": "/tmp/log/gn.log",
         "format": "$prio $loggername: $msg",
         "logToFile": false,
         "logToConsole": true,

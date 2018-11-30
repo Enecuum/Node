@@ -14,10 +14,11 @@ import           Data.Aeson.Encode.Pretty           (encodePretty)
 genConfigs = forM_ configs (uncurry B.writeFile)
 
 configs =
-    [ ("configs/poa.json",                  encodePretty $ D.defConfig A.Good       A.defaultPoANodeConfig)
-    , ("configs/PoANode_Bad.json",          encodePretty $ D.defConfig A.Bad        A.defaultPoANodeConfig)
-    , ("configs/pow.json",                  encodePretty $ D.defConfig A.PoW        A.defaultPoWNodeConfig)
-    , ("configs/GN_0.json",                 encodePretty $ D.defConfig A.GN         A.defaultGraphNodeConfig)
-    , ("configs/GraphNodeReceiver.json",    encodePretty $ D.defConfig Tst.TstGN    Tst.graphNodeReceiverConfig)
-    , ("configs/GraphNodeTransmitter.json", encodePretty $ D.defConfig Tst.TstGN    Tst.graphNodeTransmitterConfig)
+    [ ("configs/default/poa.json",                  encodePretty $ D.defConfig A.Good       A.defaultPoANodeConfig)
+    , ("configs/default/PoANode_Bad.json",          encodePretty $ D.defConfig A.Bad        A.defaultPoANodeConfig)
+    , ("configs/default/pow.json",                  encodePretty $ D.defConfig A.PoW        A.defaultPoWNodeConfig)
+    , ("configs/default/GN_0.json",                 encodePretty $ D.defConfig A.GN         A.defaultGraphNodeConfig)
+    , ("configs/default/GraphNodeReceiver.json",    encodePretty $ D.defConfig Tst.TstGN    Tst.graphNodeReceiverConfig)
+    , ("configs/default/GraphNodeTransmitter.json", encodePretty $ D.defConfig Tst.TstGN    Tst.graphNodeTransmitterConfig)
+    , ("configs/default/MultiNode.json",            encodePretty $ D.defConfig A.MultiNodeS A.defaultMultiNodeConfig)
     ]
