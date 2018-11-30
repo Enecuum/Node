@@ -18,6 +18,7 @@ import           Enecuum.Prelude
 import           Enecuum.Runtime                    (clearCoreRuntime, clearLoggerRuntime, createCoreRuntime,
                                                      createLoggerRuntime, createNodeRuntime)
 import qualified Enecuum.Runtime                    as R
+import           System.Random
 
 createLoggerRuntime' :: D.LoggerConfig -> IO R.LoggerRuntime
 createLoggerRuntime' loggerConfig' = do
@@ -104,36 +105,50 @@ initialize configSrc = do
     sequence_ runners
 
 runMultiNode :: LByteString -> IO ()
-runMultiNode = error "Not working"
+runMultiNode configSrc = case Cfg.dispatchScenario @Prd.MultiNode configSrc of
+    Just (cfg, _) -> do
+        startNodes "pow" startGenPoWNode
+            (Prd._routingGenPoWPorts $ Cfg.nodeConfig cfg)
+            (Prd._routingGenPoWConfig $ Cfg.nodeConfig cfg)
+        
+        startNodes "poa" startGenPoaNode
+            (Prd._routingGenPoAPorts $ Cfg.nodeConfig cfg)
+            (Prd._routingGenPoAConfig $ Cfg.nodeConfig cfg)
+        
+        startNodes "gn" startGrapNode
+            (Prd._routingGraphNodePorts $ Cfg.nodeConfig cfg)
+            (Prd._routingGraphNodeConfig $ Cfg.nodeConfig cfg)
+        forever $ threadDelay 50000000
 
---
--- runMultiNode :: LByteString -> IO ()
--- runMultiNode configSrc = case Cfg.dispatchScenario @A.MultiNode configSrc of
---     Just (cfg, _) -> do
---         startPoWNodes (A._powPorts $ Cfg.nodeConfig cfg) (A._powConfig $ Cfg.nodeConfig cfg)
---         startPoANodes (A._poaPorts $ Cfg.nodeConfig cfg) (A._poaConfig $ Cfg.nodeConfig cfg)
---         startNNNodes  (A._gnPorts $ Cfg.nodeConfig cfg)  (A._gnConfig $ Cfg.nodeConfig cfg)
---         forever $ threadDelay 50000000
---
---     Nothing -> putTextLn "Parse error of multi node config."
---
--- startPoWNodes range cfg = do
---     putTextLn $ "Start pow in range from " <> show (D.bottomBound range) <> " to " <> show (D.topBound range)
---     forM_ (D.rangeToList range) $ \nPort -> do
---         threadDelay 3000
---         let nodeCfg = cfg {A._powNodePorts = A.makeNodePorts1000 nPort}
---         void $ forkIO $ void $ runNode D.nullLoger (A.powNode' nodeCfg)
---
--- startPoANodes range cfg = do
---     putTextLn $ "Start poa in range from " <> show (D.bottomBound range) <> " to " <> show (D.topBound range)
---     forM_ (D.rangeToList range) $ \nPort -> do
---         threadDelay 3000
---         let nodeCfg = cfg {A._poaNodePorts = A.makeNodePorts1000 nPort}
---         void $ forkIO $ void $ runNode D.nullLoger (A.poaNode A.Good nodeCfg)
---
--- startNNNodes range cfg = do
---     putTextLn $ "Start gn in range from " <> show (D.bottomBound range) <> " to " <> show (D.topBound range)
---     forM_ (D.rangeToList range) $ \nPort -> do
---         threadDelay 3000
---         let nodeCfg = cfg {A._nodePorts = A.makeNodePorts1000 nPort}
---         void $ forkIO $ void $ runNode D.nullLoger (A.graphNode nodeCfg)
+    Nothing -> putTextLn "Parse error of multi node config."
+
+startNodes tag act range cfg = do
+    putTextLn $ "Start " <> tag <> " in range from " <> show (D.bottomBound range) <> " to " <> show (D.topBound range)
+    forM_ (D.rangeToList range) $ \port -> do
+        threadDelay 3000
+        rand :: Int <- randomIO
+        void $ forkIO $ void $ act cfg (D.toHashGeneric rand) port
+
+startGenPoWNode :: Cfg.NodeConfig Prd.GenPoWNode -> D.NodeId -> D.PortNumber -> IO ()
+startGenPoWNode cfg rand port = do
+    let nodeCfg = cfg
+            { Prd._powNodePorts = A.makeNodePorts1000 port
+            , Prd._powNodeId    = rand
+            }
+    runNode D.nullLoger (Prd.powNode' nodeCfg)
+
+startGenPoaNode :: Cfg.NodeConfig Prd.GenPoANode -> D.NodeId -> D.PortNumber -> IO ()
+startGenPoaNode cfg rand port = do
+    let nodeCfg = cfg
+            { Prd._poaNodePorts = A.makeNodePorts1000 port
+            , Prd._poaNodeId = rand
+            }
+    runNode D.nullLoger (Prd.poaNode Prd.Good nodeCfg)
+
+startGrapNode :: Cfg.NodeConfig Prd.GraphNode -> D.NodeId -> D.PortNumber ->  IO ()
+startGrapNode cfg rand port = do
+    let nodeCfg = cfg
+            { Prd._nodePorts   = A.makeNodePorts1000 port
+            , Prd._graphNodeId = rand
+            }
+    runNode D.nullLoger (Prd.graphNode nodeCfg)

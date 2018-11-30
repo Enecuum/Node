@@ -32,6 +32,7 @@ data instance NodeConfig GraphNode = GraphNodeConfig
     { _graphServiceConfig :: GraphServiceConfig
     , _nodePorts          :: D.NodePorts
     , _bnAddress          :: D.NodeAddress
+    , _graphNodeId        :: D.NodeId
     }
     deriving (Show, Generic)
 
@@ -55,7 +56,7 @@ data GraphNodeData = GraphNodeData
 
 -- | Start of graph node
 graphNode :: NodeConfig GraphNode -> L.NodeDefinitionL ()
-graphNode cfg@(GraphNodeConfig graphServiceCfg _ _)  = do
+graphNode cfg@(GraphNodeConfig graphServiceCfg _ _ _)  = do
     L.nodeTag "Routing Graph Node"
 
     status <- L.newVarIO D.NodeActing
@@ -70,8 +71,7 @@ graphNode' :: NodeConfig GraphNode -> GraphNodeData -> L.NodeDefinitionL ()
 graphNode' cfg nodeData@(GraphNodeData graphServiceData _) = do
     let myNodePorts = _nodePorts cfg
     let bnAddress   = _bnAddress cfg
-    -- TODO: read from config
-    let myHash      = D.toHashGeneric myNodePorts
+    let myHash      = _graphNodeId cfg
 
     routingData <- R.runRouting myNodePorts myHash bnAddress
 
@@ -158,6 +158,7 @@ routingGraphNodeConfig = GraphNodeConfig
         }
     , _nodePorts  = A.routingGraphNodePorts
     , _bnAddress  = A.routingBootNodeAddress
+    , _graphNodeId = D.toHashGeneric A.routingGraphNodePorts
     }
 
 makeFieldsNoPrefix ''GraphNodeData

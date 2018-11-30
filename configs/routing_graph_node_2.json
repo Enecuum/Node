@@ -38,7 +38,8 @@
             "nodeRpcPort": 6052,
             "nodeUdpPort": 4052,
             "nodeTcpPort": 5052
-        }
+        },
+        "graphNodeId": "j40vUF0uAA9lN9QDDe13zmLwObxhe+QGBlEG3t0fBww="
     },
     "node": "GraphNode",
     "loggerConfig": {
