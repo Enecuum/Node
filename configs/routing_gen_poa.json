@@ -21,7 +21,7 @@
     },
     "node": "GenPoANode",
     "loggerConfig": {
-        "logFilePath": "",
+        "logFilePath": "/tmp/log/routing_gen_poa.log",
         "format": "$prio $loggername: $msg",
         "logToFile": true,
         "logToConsole": true,
