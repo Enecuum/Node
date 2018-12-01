@@ -1,63 +1,82 @@
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
-{-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Enecuum.Assets.Nodes.TstNodes.PingPong.PongClient where
 
-import           Enecuum.Config
-import qualified Enecuum.Domain                              as D
-import           Enecuum.Framework.Language.Extra            (HasStatus)
-import qualified Enecuum.Language                            as L
-import           Enecuum.Prelude
+import qualified Data.Aeson                                      as A
 import           Enecuum.Assets.Nodes.TstNodes.PingPong.Messages
+import           Enecuum.Config
+import qualified Enecuum.Domain                                  as D
+import           Enecuum.Framework.Language.Extra                (HasStatus)
+import qualified Enecuum.Language                                as L
+import           Enecuum.Prelude
 
-data PongClientData = PongClientData
-    { _pingsCount :: D.StateVar Int
-    }
+data PongClientNode = PongClientNode
+    deriving (Show, Generic)
 
-makeFieldsNoPrefix ''PongClientData
-
-data instance NodeConfig PongClientNode = PongClientNode
-    { _clientName :: Text
+data instance NodeConfig PongClientNode = PongClientNodeConfig
+    { _clientName        :: Text
+    , _pingDelay         :: Int
+    , _pingServerAddress :: D.Address
     }
     deriving (Show, Generic)
 
 instance Node PongClientNode where
     data NodeScenario PongClientNode = PongClient
         deriving (Show, Generic)
-    getNodeScript _ = PongClientNode
+    getNodeScript _ = pongClientNode'
     getNodeTag _ = PongClientNode
 
-instance ToJSON   (NodeScenario PongClientNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeScenario PongClientNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   PongClientNode                where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON PongClientNode                where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig PongClientNode)   where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig PongClientNode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario PongClientNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario PongClientNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
-acceptPing :: PongClientNodeData -> Ping -> connection -> L.NodeL ()
-acceptPing nodeData (Ping clientName) conn = do
-    pings <- L.atomically $ do
-        pings <- L.readVar $ nodeData ^. pingsCount
-        let newPings = pings + 1
-        L.writeVar (nodeData ^. pingsCount) newPings
-        pure newPings
-    L.send conn (Pong pings)
-    L.close conn
-    L.logInfo $ "Ping #" +|| pings ||+ " accepted from " <> clientName <> "."
+acceptPong :: Pong -> connection -> L.NodeL ()
+acceptPong (Pong pingsCount) _ =
+    L.logInfo $ "Pong accepted from server. Pings count: " <> show pingsCount
 
-PongClientNode :: NodeConfig PongClientNode -> L.NodeDefinitionL ()
-PongClientNode cfg = do
-    nodeData <- initializePongClientNode
+pingSending' :: NodeConfig PongClientNode -> D.Connection D.Udp -> L.NodeL ()
+pingSending' cfg conn = do
+    L.delay $ _pingDelay cfg
+    L.logInfo "Sending Ping to the server."
+    eSent <- L.send conn (Ping $ _clientName cfg)
+    case eSent of
+        Right () -> pingSending' cfg conn
+        Left _   -> do
+            L.logInfo "Server is gone."
+            L.close conn
 
-    L.serving D.Udp 3000 $ do
-        L.method $ acceptPing nodeData
 
-    L.atomically $ do
-        pings <- readVar $ nodeData ^. pingsCount
-        when (pings < _stopOnPing cfg) L.retry
+pongClientNode' :: NodeConfig PongClientNode -> L.NodeDefinitionL ()
+pongClientNode' cfg = do
 
-initializePongClientNode ::  NodeConfig PongClientNode -> L.NodeL PongClientNodeData
-initializePongClientNode cfg = do
-    pingsCount <- L.newVarIO 0
-    pure PongClientNodeData
-        { _pingsCount = pingsCount
-        }
+    mbConn <- L.open D.Udp (_pingServerAddress cfg) $
+        L.handler acceptPong
+
+    case mbConn of
+        Nothing -> L.logError "Ping Server not found"
+        Just conn -> do
+            L.process (pingSending' cfg conn)
+            L.awaitNodeForever
+
+pingSending :: Text -> D.Connection D.Udp -> L.NodeL ()
+pingSending clientName conn = do
+    L.delay 1000000
+    L.logInfo "Sending Ping to the server."
+    eSent <- L.send conn (Ping clientName)
+    when (isLeft eSent) $ L.close conn
+    when (isRight eSent) $ pingSending clientName conn
+
+pongClientNode :: Text -> D.Address -> L.NodeDefinitionL ()
+pongClientNode clientName serverAddress = do
+
+    mbConn <- L.open D.Udp serverAddress $
+        L.handler acceptPong
+
+    when (isNothing mbConn) $ L.logError "Ping Server not found"
+    whenJust mbConn $ \conn -> do
+        L.process $ pingSending clientName conn
+        L.awaitNodeForever

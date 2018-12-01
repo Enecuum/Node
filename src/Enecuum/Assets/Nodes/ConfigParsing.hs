@@ -35,6 +35,9 @@ parseConfig configSrc = do
             , runParser $ Cfg.tryParseConfig @Tst.TstGenPoWNode    configSrc
             , runParser $ Cfg.tryParseConfig @Tst.TstGenPoANode    configSrc
             , runParser $ Cfg.tryParseConfig @Tst.TstRealPoWNode   configSrc
+
+            , runParser $ Cfg.tryParseConfig @Tst.PingServerNode   configSrc
+            , runParser $ Cfg.tryParseConfig @Tst.PongClientNode   configSrc
             ]
 
     results <- sequence runners

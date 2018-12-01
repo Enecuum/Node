@@ -101,6 +101,9 @@ initialize configSrc = do
             , runNode' $ Cfg.dispatchScenario @Tst.TstGenPoWNode  configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstGenPoANode  configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstRealPoWNode configSrc
+
+            , runNode' $ Cfg.dispatchScenario @Tst.PingServerNode configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.PongClientNode configSrc
             ]
     sequence_ runners
 
@@ -110,11 +113,11 @@ runMultiNode configSrc = case Cfg.dispatchScenario @Prd.MultiNode configSrc of
         startNodes "pow" startGenPoWNode
             (Prd._routingGenPoWPorts $ Cfg.nodeConfig cfg)
             (Prd._routingGenPoWConfig $ Cfg.nodeConfig cfg)
-        
+
         startNodes "poa" startGenPoaNode
             (Prd._routingGenPoAPorts $ Cfg.nodeConfig cfg)
             (Prd._routingGenPoAConfig $ Cfg.nodeConfig cfg)
-        
+
         startNodes "gn" startGrapNode
             (Prd._routingGraphNodePorts $ Cfg.nodeConfig cfg)
             (Prd._routingGraphNodeConfig $ Cfg.nodeConfig cfg)

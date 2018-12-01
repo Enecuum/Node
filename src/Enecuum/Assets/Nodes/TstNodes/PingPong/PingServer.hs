@@ -1,62 +1,55 @@
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
-{-# LANGUAGE DeriveAnyClass         #-}
-{-# LANGUAGE DuplicateRecordFields  #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module Enecuum.Assets.Nodes.TstNodes.PingPong.PingServer where
 
-import           Enecuum.Config
-import qualified Enecuum.Domain                              as D
-import qualified Enecuum.Language                            as L
-import           Enecuum.Prelude
+import qualified Data.Aeson                                      as A
 import           Enecuum.Assets.Nodes.TstNodes.PingPong.Messages
+import           Enecuum.Config
+import qualified Enecuum.Domain                                  as D
+import qualified Enecuum.Language                                as L
+import           Enecuum.Prelude
 
-data PingServerData = PingServerData
-    { _pingsCount :: D.StateVar Int
-    }
+data PingServerNode = PingServerNode
+    deriving (Show, Generic)
 
-makeFieldsNoPrefix ''PingServerData
-
-data instance NodeConfig PingServerNode = PingServerNode
-    { _stopOnPing :: Int
+data instance NodeConfig PingServerNode = PingServerNodeConfig
+    { _stopOnPing  :: Int
+    , _servingPort :: D.PortNumber
     }
     deriving (Show, Generic)
 
 instance Node PingServerNode where
     data NodeScenario PingServerNode = PingServer
         deriving (Show, Generic)
-    getNodeScript _ = pingServerNode
+    getNodeScript _ = pingServerNode'
     getNodeTag _ = PingServerNode
 
-instance ToJSON   (NodeScenario PingServerNode) where toJSON    = J.genericToJSON    nodeConfigJsonOptions
-instance FromJSON (NodeScenario PingServerNode) where parseJSON = J.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   PingServerNode                where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON PingServerNode                where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeConfig PingServerNode)   where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeConfig PingServerNode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
+instance ToJSON   (NodeScenario PingServerNode) where toJSON    = A.genericToJSON    nodeConfigJsonOptions
+instance FromJSON (NodeScenario PingServerNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
-acceptPing :: PingServerNodeData -> Ping -> connection -> L.NodeL ()
-acceptPing nodeData (Ping clientName) conn = do
+acceptPing :: D.StateVar Int -> Ping -> D.Connection D.Udp -> L.NodeL ()
+acceptPing pingsCount (Ping clientName) conn = do
     pings <- L.atomically $ do
-        pings <- L.readVar $ nodeData ^. pingsCount
-        let newPings = pings + 1
-        L.writeVar (nodeData ^. pingsCount) newPings
-        pure newPings
+        L.modifyVar pingsCount (+1)
+        L.readVar pingsCount
     L.send conn (Pong pings)
-    L.close conn
-    L.logInfo $ "Ping #" +|| pings ||+ " accepted from " <> clientName <> "."
+    L.logInfo $ "Ping #" +|| pings ||+ " accepted from " +|| clientName ||+ "."
 
-pingServerNode :: NodeConfig PingServerNode -> L.NodeDefinitionL ()
-pingServerNode cfg = do
-    nodeData <- initializePingServerNode
+pingServerNode :: Int -> D.PortNumber -> L.NodeDefinitionL ()
+pingServerNode threshold port = do
+    pingsCount <- L.newVarIO 0
 
-    L.serving D.Udp 3000 $ do
-        L.method $ acceptPing nodeData
+    L.serving D.Udp port $
+        L.handler $ acceptPing pingsCount
 
     L.atomically $ do
-        pings <- readVar $ nodeData ^. pingsCount
-        when (pings < _stopOnPing cfg) L.retry
+        pings <- L.readVar pingsCount
+        when (pings < threshold) L.retry
 
-initializePingServerNode ::  NodeConfig PingServerNode -> L.NodeL PingServerNodeData
-initializePingServerNode cfg = do
-    pingsCount <- L.newVarIO 0
-    pure PingServerNodeData
-        { _pingsCount = pingsCount
-        }
+pingServerNode' :: NodeConfig PingServerNode -> L.NodeDefinitionL ()
+pingServerNode' cfg = pingServerNode (_stopOnPing cfg) (_servingPort cfg)
