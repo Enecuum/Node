@@ -14,6 +14,8 @@ import qualified Enecuum.Framework.Networking.Language     as L
 import qualified Enecuum.Framework.Node.Language           as L
 import qualified Enecuum.Framework.NodeDefinition.Language as L
 
+-- TODO: move all possible functions to Core.Language.Extra.
+
 -- | Allows to extract graph variable from any structure.
 -- To use it, you need to export it unqualified in scope of your data type lenses
 -- (made by `makeFieldsNoPrefix`):
@@ -126,6 +128,15 @@ await ref = L.atomically $ do
     case mValue of
         Just value -> pure value
         Nothing    -> L.retry
+
+takeVar :: D.StateVar (Maybe a) -> L.StateL a
+takeVar var = do
+    mbVal <- L.readVar var
+    case mbVal of
+        Just val -> do
+            L.writeVar var Nothing
+            pure val
+        Nothing  -> L.retry
 
 modifyVarIO :: L.StateIO m => D.StateVar a -> (a -> a) -> m ()
 modifyVarIO var f = L.atomically $ L.modifyVar var f

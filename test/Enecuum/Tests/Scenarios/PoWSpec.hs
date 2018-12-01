@@ -2,7 +2,9 @@ module Enecuum.Tests.Scenarios.PoWSpec where
 
 import qualified Data.Map                             as M
 import qualified Enecuum.Assets.Blockchain.Generation as A
-import qualified Enecuum.Assets.Scenarios             as A
+import qualified Enecuum.Assets.Nodes.Address         as A
+import qualified Enecuum.Assets.Nodes.Messages        as D
+import qualified Enecuum.Assets.Scenarios             as Prd
 import qualified Enecuum.Assets.TstScenarios          as Tst
 import qualified Enecuum.Blockchain.Lens              as Lens
 import qualified Enecuum.Domain                       as D
@@ -28,46 +30,46 @@ timeGap              = 1000
 kblockCount          = 10
 
 -- default addresses
-transmiterRpcAddress = A.getRpcAddress A.defaultGnNodeAddress
-powRpcAddress        = A.getRpcAddress A.defaultPoWNodeAddress
+transmiterRpcAddress = A.getRpcAddress A.tstGraphNodeTransmitterAddress
+powRpcAddress        = A.getRpcAddress A.tstGenPoWNodeAddress
 
 
 testAcceptKblock :: A.Ordering -> Test
 testAcceptKblock order = TestCase $ withNodesManager $ \mgr -> do
-    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.graphNodeTransmitterConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.tstGraphNodeTransmitterConfig
     waitForNode transmiterRpcAddress
-    void $ startNode Nothing mgr $ Tst.powNode' $ Tst.defaultPoWNodeConfig { Tst._kblocksOrder = order}
+    void $ startNode Nothing mgr $ Tst.powNode' $ Tst.tstGenPoWNodeConfig { Tst._kblocksOrder = order}
     waitForNode powRpcAddress
 
-    _ :: Either Text A.SuccessMsg <- makeIORpcRequest powRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
+    _ :: Either Text D.SuccessMsg <- makeIORpcRequest powRpcAddress $ D.NBlockPacketGeneration kblockCount timeGap
 
     -- Check that last kblock exists and it's number = kblockCount
     let predicate :: D.KBlock -> Bool
         predicate kBlock = kBlock ^. Lens.number == fromIntegral kblockCount
-    void $ makeRpcRequestWithPredicate predicate transmiterRpcAddress A.GetLastKBlock
+    void $ makeRpcRequestWithPredicate predicate transmiterRpcAddress D.GetLastKBlock
 
 testKblockPending :: Test
 testKblockPending = TestCase $ withNodesManager $ \mgr -> do
     powNode <- startNode Nothing mgr Tst.powNode
 
-    waitForNode (A.getRpcAddress A.defaultPoWNodeAddress)
-    _ :: Either Text A.SuccessMsg <- makeIORpcRequest powRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
+    waitForNode (A.getRpcAddress A.tstGenPoWNodeAddress)
+    _ :: Either Text D.SuccessMsg <- makeIORpcRequest powRpcAddress $ D.NBlockPacketGeneration kblockCount timeGap
 
     -- wait until pow generate kblocks
     threadDelay $ 1000 * 1000
 
-    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.graphNodeTransmitterConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.tstGraphNodeTransmitterConfig
     -- only genesisKBlock kblock on graph node
     waitForNode transmiterRpcAddress
-    Right topKBlock1 :: Either Text D.KBlock <- makeIORpcRequest transmiterRpcAddress A.GetLastKBlock
+    Right topKBlock1 :: Either Text D.KBlock <- makeIORpcRequest transmiterRpcAddress D.GetLastKBlock
     topKBlock1 `shouldBe` D.genesisKBlock
 
     -- Ask pow node to generate n kblocks
     waitForNode powRpcAddress
-    _ :: Either Text A.SuccessMsg <- makeIORpcRequest powRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
+    _ :: Either Text D.SuccessMsg <- makeIORpcRequest powRpcAddress $ D.NBlockPacketGeneration kblockCount timeGap
 
     -- The last generated bunch of kblocks must to be in pending on graph node
-    kblocks :: D.KBlockPending <- makeRpcRequestUntilSuccess transmiterRpcAddress A.GetKBlockPending
+    kblocks :: D.KBlockPending <- makeRpcRequestUntilSuccess transmiterRpcAddress D.GetKBlockPending
     let kblockNumbers = map ((^. Lens.number) . snd) (M.toList kblocks)
     sort kblockNumbers `shouldBe` [kblockCount + 1 .. 2 * kblockCount]
 
@@ -77,12 +79,12 @@ testKblockPending = TestCase $ withNodesManager $ \mgr -> do
 
     -- Ask pow node to generate n kblocks
     waitForNode powRpcAddress
-    _ :: Either Text A.SuccessMsg <- makeIORpcRequest powRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
+    _ :: Either Text D.SuccessMsg <- makeIORpcRequest powRpcAddress $ D.NBlockPacketGeneration kblockCount timeGap
 
     topKBlock2 :: D.KBlock <- do
         let predicate topKBlock = (topKBlock ^. Lens.number) == 2*kblockCount
-        makeRpcRequestWithPredicate predicate transmiterRpcAddress A.GetLastKBlock
+        makeRpcRequestWithPredicate predicate transmiterRpcAddress D.GetLastKBlock
 
     -- Pending on graph node must be empty now
-    Right kblocks :: Either Text D.KBlockPending <- makeIORpcRequest transmiterRpcAddress A.GetKBlockPending
-    (M.toList kblocks) `shouldBe` []
+    Right kblocks :: Either Text D.KBlockPending <- makeIORpcRequest transmiterRpcAddress D.GetKBlockPending
+    M.toList kblocks `shouldBe` []

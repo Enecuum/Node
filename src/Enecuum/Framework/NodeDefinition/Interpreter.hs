@@ -43,6 +43,15 @@ addProcess nodeRt pPtr threadId = do
     let newPs = M.insert pId threadId ps
     atomically $ writeTVar (nodeRt ^. RLens.processes) newPs
 
+popProcess :: NodeRuntime -> D.ProcessPtr a -> IO (Maybe ThreadId)
+popProcess nodeRt pPtr = do
+    pId <- D.getProcessId pPtr
+    ps <- readTVarIO $ nodeRt ^. RLens.processes
+    let mbThreadId = M.lookup pId ps
+    let newPs = M.delete pId ps
+    atomically $ writeTVar (nodeRt ^. RLens.processes) newPs
+    pure mbThreadId
+
 registerConnection
     :: R.AsNativeConnection protocol
     => R.ConnectionsVar protocol
@@ -91,7 +100,7 @@ startServer nodeRt connectionsVar port handlersScript = do
             port
             ((\f a' b -> Impl.runNodeL nodeRt $ f a' b) <$> handlers)
             (mkRegister connectionsVar)
-    atomically $ do 
+    atomically $ do
         whenJust res $ \servHandl ->
             putTMVar serversVar $ M.insert port servHandl servers
         unless (isJust res) $
@@ -145,8 +154,8 @@ interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
     res <- if M.member port servers
         then pure Nothing
         else runRpcServer logger port (runNodeL nodeRt) handlerMap
-    
-    atomically $ do 
+
+    atomically $ do
         whenJust res $ \servHandl ->
             putTMVar serversVar $ M.insert port servHandl servers
         unless (isJust res) $
@@ -186,6 +195,11 @@ interpretNodeDefinitionL nodeRt (L.ForkProcess action next) = do
         atomically $ putTMVar pVar res
     addProcess nodeRt pPtr threadId
     pure $ next pPtr
+
+interpretNodeDefinitionL nodeRt (L.KillProcess pId next) = do
+    mbThreadId <- popProcess nodeRt pId
+    whenJust mbThreadId killThread
+    pure $ next ()
 
 interpretNodeDefinitionL _ (L.TryGetResult pPtr next) = do
     pVar <- D.getProcessVar pPtr

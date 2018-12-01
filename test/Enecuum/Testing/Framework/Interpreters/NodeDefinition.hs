@@ -16,7 +16,7 @@ import qualified Enecuum.Testing.Framework.Internal.RpcServer as Impl (startNode
 import qualified Enecuum.Testing.Framework.Internal.TcpLikeServer as Impl (startNodeTcpLikeServer, stopNodeTcpLikeServer)
 
 import qualified Enecuum.Framework.Handler.Rpc.Interpreter as Impl (runRpcHandlerL)
-import qualified Enecuum.Framework.Handler.Network.Interpreter as Impl 
+import qualified Enecuum.Framework.Handler.Network.Interpreter as Impl
 
 addProcess :: T.NodeRuntime -> D.ProcessPtr a -> ThreadId -> IO ()
 addProcess nodeRt pPtr threadId = do
@@ -63,6 +63,8 @@ interpretNodeDefinitionL nodeRt (L.ForkProcess action next) = do
         atomically $ putTMVar pVar res
     addProcess nodeRt pPtr threadId
     pure $ next pPtr
+
+interpretNodeDefinitionL nodeRt (L.KillProcess _ _) = error "KillProcess not implemented."
 
 interpretNodeDefinitionL _ (L.TryGetResult pPtr next) = do
     pVar <- D.getProcessVar pPtr

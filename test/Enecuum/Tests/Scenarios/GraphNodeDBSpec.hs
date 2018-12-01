@@ -1,3 +1,5 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Enecuum.Tests.Scenarios.GraphNodeDBSpec where
 
 import           Enecuum.Prelude
@@ -40,19 +42,17 @@ dumpAndRestoreGraphTest = do
               , Cfg._dbConfig          = dbConfig
               , Cfg._rpcSynco          = Nothing
               }
-          , Tst._nodePorts = A.defaultGnNodePorts
+          , Tst._nodePorts = A.tstGraphNodeTransmitterPorts
           }
     let loggerCfg = Nothing
 
-    let graphNodeRpcAddress        = A.getRpcAddress A.defaultGnNodeAddress
-    let graphNodeUdpAddress        = A.getUdpAddress A.defaultGnNodeAddress
-    let transmiterRpcAddress       = A.getRpcAddress A.defaultGnNodeAddress
-    let powRpcAddress              = A.getRpcAddress A.defaultPoWNodeAddress
-    let poaRpcAddress              = A.getRpcAddress A.defaultPoANodeAddress
+    let graphNodeRpcAddress        = A.getRpcAddress A.tstGraphNodeTransmitterAddress
+    let graphNodeUdpAddress        = A.getUdpAddress A.tstGraphNodeTransmitterAddress
+    let transmiterRpcAddress       = A.getRpcAddress A.tstGraphNodeTransmitterAddress
+    let powRpcAddress              = A.getRpcAddress A.tstGenPoWNodeAddress
+    let poaRpcAddress              = A.getRpcAddress A.tstGenPoANodeAddress
 
-    let poaConfig = Tst.TstPoANodeConfig
-          { Tst._poaRPCPort = D._port poaRpcAddress
-          }
+    let poaConfig = Tst.TstGenPoANodeConfig (D._port poaRpcAddress)
 
     let blocksCount = 3
     let blocksDelay = 1000 * 1000
@@ -73,7 +73,7 @@ dumpAndRestoreGraphTest = do
         topKBlock0 ^. Lens.number `shouldBe` 0
 
         -- Generating some blocks and checking they are generated.
-        _ :: Either Text A.SuccessMsg <- makeIORpcRequest (A.getRpcAddress A.defaultPoWNodeAddress)
+        _ :: Either Text A.SuccessMsg <- makeIORpcRequest (A.getRpcAddress A.tstGenPoWNodeAddress)
               $ A.NBlockPacketGeneration blocksCount blocksDelay
         waitForBlocks blocksCount graphNodeRpcAddress
 

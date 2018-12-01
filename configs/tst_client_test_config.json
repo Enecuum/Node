@@ -1,0 +1,17 @@
+{  
+   "node":"ClientNode",
+   "nodeScenario":"CLI",
+   "nodeConfig":
+   {
+      "tag":"ClientNodeConfig",
+      "dummyOption":0
+   },
+   "loggerConfig":
+   {
+      "logFilePath":"/tmp/log/test.log",
+      "format":"$prio $loggername: $msg",
+      "logToConsole":true,
+      "logToFile": true,
+      "level":"Debug"
+   }
+}

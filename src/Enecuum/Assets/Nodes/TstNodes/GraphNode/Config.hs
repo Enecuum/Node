@@ -24,22 +24,22 @@ instance ToJSON   (NodeConfig TstGraphNode) where toJSON    = A.genericToJSON   
 instance FromJSON (NodeConfig TstGraphNode) where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
 
-graphNodeTransmitterConfig :: D.NodeConfig TstGraphNode
-graphNodeTransmitterConfig = TstGraphNodeConfig
+tstGraphNodeTransmitterConfig :: D.NodeConfig TstGraphNode
+tstGraphNodeTransmitterConfig = TstGraphNodeConfig
   { _graphServiceConfig = GraphServiceConfig
       { _graphWindowConfig = noGraphShrinking
       , _dbConfig = noDBConfig
       , _rpcSynco = Nothing
       }
-  , _nodePorts = defaultGnNodePorts
+  , _nodePorts = tstGraphNodeTransmitterPorts
   }
 
-graphNodeReceiverConfig :: D.NodeConfig TstGraphNode
-graphNodeReceiverConfig = TstGraphNodeConfig
+tstGraphNodeReceiverConfig :: D.NodeConfig TstGraphNode
+tstGraphNodeReceiverConfig = TstGraphNodeConfig
   { _graphServiceConfig = GraphServiceConfig
       { _graphWindowConfig = noGraphShrinking
       , _dbConfig = noDBConfig
-      , _rpcSynco = Just $ getRpcAddress defaultGnNodeAddress
+      , _rpcSynco = Just $ getRpcAddress tstGraphNodeTransmitterAddress
       }
-  , _nodePorts = defaultGnReceiverNodePorts
+  , _nodePorts = tstGraphNodeReceiverPorts
   }

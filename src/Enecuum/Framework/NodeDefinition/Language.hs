@@ -1,20 +1,20 @@
 {-# LANGUAGE ConstraintKinds        #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE UndecidableInstances   #-}
-{-# LANGUAGE FunctionalDependencies #-}
 
 module Enecuum.Framework.NodeDefinition.Language where
 
-import           Enecuum.Prelude
-import qualified Enecuum.Core.Language                 as L
-import qualified Enecuum.Framework.Domain              as D
-import qualified Enecuum.Framework.Node.Language       as L
-import qualified Enecuum.Framework.Networking.Language as L
-import           Enecuum.Framework.Handler.Rpc.Language  (RpcHandlerL)
-import           Enecuum.Framework.Handler.Network.Language
+import qualified Enecuum.Core.Language                      as L
+import qualified Enecuum.Framework.Domain                   as D
 import           Enecuum.Framework.Handler.Cmd.Language
-import           Language.Haskell.TH.MakeFunctor (makeFunctorInstance)
+import           Enecuum.Framework.Handler.Network.Language
+import           Enecuum.Framework.Handler.Rpc.Language     (RpcHandlerL)
+import qualified Enecuum.Framework.Networking.Language      as L
+import qualified Enecuum.Framework.Node.Language            as L
+import           Enecuum.Prelude
+import           Language.Haskell.TH.MakeFunctor            (makeFunctorInstance)
 
 -- TODO: it's possible to make these steps evaluating step-by-step, in order.
 -- Think about if this really needed.
@@ -40,6 +40,8 @@ data NodeDefinitionF next where
     -- Process interface. TODO: It's probably wise to move it to own language.
     -- | Fork a process for node.
     ForkProcess :: L.NodeL a -> (D.ProcessPtr a -> next) -> NodeDefinitionF next
+    -- | Hardly kill the thread.
+    KillProcess :: D.ProcessPtr a -> (() -> next) -> NodeDefinitionF next
     -- | Try get result (non-blocking).
     TryGetResult :: D.ProcessPtr a -> (Maybe a -> next) -> NodeDefinitionF next
     -- | Await for result (blocking).
@@ -71,6 +73,10 @@ fork action = liftF $ ForkProcess action id
 -- | Fork a process for node.
 process :: L.NodeL () -> NodeDefinitionL ()
 process = void . fork
+
+-- | Hardly kill a process.
+killProcess :: D.ProcessPtr a -> NodeDefinitionL ()
+killProcess processPtr = liftF $ KillProcess processPtr id
 
 periodic :: Int -> L.NodeL a -> NodeDefinitionL ()
 periodic time action = process $ forever $ do
@@ -146,7 +152,7 @@ instance L.ERandom NodeDefinitionL where
 instance L.FileSystem NodeDefinitionL where
     readFile filename       = evalCoreEffectNodeDefinitionF $ L.readFile filename
     writeFile filename text = evalCoreEffectNodeDefinitionF $ L.writeFile filename text
-    getHomeDirectory        = evalCoreEffectNodeDefinitionF $ L.getHomeDirectory
+    getHomeDirectory        = evalCoreEffectNodeDefinitionF   L.getHomeDirectory
     createFilePath filepath = evalCoreEffectNodeDefinitionF $ L.createFilePath filepath
 
 instance L.ControlFlow NodeDefinitionL where
@@ -157,3 +163,7 @@ instance L.StateIO NodeDefinitionL where
     newVarIO       = scenario . L.newVarIO
     readVarIO      = scenario . L.readVarIO
     writeVarIO var = scenario . L.writeVarIO var
+
+instance L.Time NodeDefinitionL where
+    getUTCTime   = evalCoreEffectNodeDefinitionF L.getUTCTime
+    getPosixTime = evalCoreEffectNodeDefinitionF L.getPosixTime

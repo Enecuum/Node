@@ -4,6 +4,8 @@ module Enecuum.Core.Types
 
 import           Crypto.PubKey.ECC.ECDSA            as X (Signature)
 import           Data.HGraph.StringHashable         as X
+import           Data.Time                          as X (UTCTime)
+import           Data.Time.Clock.POSIX              as X (POSIXTime)
 import           Data.UUID                          as X
 import           Enecuum.Core.Crypto.Crypto         as X (KeyPair (..), PrivateKey (..), PublicKey (..))
 import           Enecuum.Core.HGraph.Internal.Types as X

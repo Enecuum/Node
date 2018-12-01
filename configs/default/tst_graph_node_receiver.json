@@ -1,0 +1,44 @@
+{
+    "nodeConfig": {
+        "tag": "TstGraphNodeConfig",
+        "graphServiceConfig": {
+            "dbConfig": {
+                "stopOnDatabaseError": true,
+                "tag": "DBConfig",
+                "dbOptions": {
+                    "errorIfExists": true,
+                    "createIfMissing": true
+                },
+                "dbModelName": "",
+                "useDatabase": false,
+                "useEnqHomeDir": false
+            },
+            "graphWindowConfig": {
+                "tag": "GraphWindowConfig",
+                "shrinkingEnabled": false,
+                "windowSize": 10,
+                "shrinkingDelay": 1000000
+            },
+            "tag": "GraphServiceConfig",
+            "rpcSynco": {
+                "host": "127.0.0.1",
+                "port": 6050
+            }
+        },
+        "nodePorts": {
+            "tag": "NodePorts",
+            "nodeRpcPort": 6051,
+            "nodeUdpPort": 4051,
+            "nodeTcpPort": 5051
+        }
+    },
+    "node": "TstGraphNode",
+    "loggerConfig": {
+        "logFilePath": "",
+        "format": "$prio $loggername: $msg",
+        "logToFile": false,
+        "logToConsole": true,
+        "level": "Debug"
+    },
+    "nodeScenario": "GN"
+}

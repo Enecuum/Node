@@ -1,18 +1,18 @@
 module Enecuum.Tests.Integration.RoutingSpec where
 
-import qualified Data.IORef                            as O
-import qualified Data.Map                              as M
+import qualified Data.IORef                                as O
+import qualified Data.Map                                  as M
 import           Enecuum.Assets.Nodes.Routing.Messages
-import qualified Enecuum.Assets.Nodes.TstNodes.NN      as A
-import qualified Enecuum.Assets.Scenarios              as A
-import qualified Enecuum.Domain                        as D
-import qualified Enecuum.Framework.Lens                as Lens
-import qualified Enecuum.Framework.Node.Interpreter    as I
-import qualified Enecuum.Language                      as L
+import qualified Enecuum.Assets.Nodes.TstNodes.NetworkNode as A
+import qualified Enecuum.Assets.Scenarios                  as A
+import qualified Enecuum.Domain                            as D
+import qualified Enecuum.Framework.Lens                    as Lens
+import qualified Enecuum.Framework.Node.Interpreter        as I
+import qualified Enecuum.Language                          as L
 import           Enecuum.Prelude
 import           Enecuum.Testing.Integrational
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit              (fromHUnitTest)
+import           Test.Hspec.Contrib.HUnit                  (fromHUnitTest)
 import           Test.HUnit
 
 spec :: Spec

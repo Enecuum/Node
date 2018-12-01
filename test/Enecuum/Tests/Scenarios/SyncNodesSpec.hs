@@ -3,8 +3,10 @@
 module Enecuum.Tests.Scenarios.SyncNodesSpec where
 
 import           Data.Aeson
+import qualified Enecuum.Assets.Nodes.Address  as A
 import qualified Enecuum.Assets.Nodes.CLens    as CLens
-import qualified Enecuum.Assets.Scenarios      as A
+import qualified Enecuum.Assets.Nodes.Messages as D
+import qualified Enecuum.Assets.Scenarios      as Prd
 import qualified Enecuum.Assets.TstScenarios   as Tst
 import qualified Enecuum.Blockchain.Lens       as Lens
 import qualified Enecuum.Domain                as D
@@ -22,50 +24,50 @@ spec = slowTest $ describe "Synchronization tests" $ fromHUnitTest $ TestList
 testNodeNet :: Test
 testNodeNet = TestCase . withNodesManager $ \mgr -> do
     -- assign config
-    let transmiterRpcAddress       = A.getRpcAddress A.defaultGnNodeAddress
-    let receiverRpcAddress         = A.getRpcAddress A.defaultGnReceiverNodeAddress
-    let powRpcAddress              = A.getRpcAddress A.defaultPoWNodeAddress
-    let poaRpcAddress              = A.getRpcAddress A.defaultPoANodeAddress
+    let transmiterRpcAddress       = A.getRpcAddress A.tstGraphNodeTransmitterAddress
+    let receiverRpcAddress         = A.getRpcAddress A.tstGraphNodeReceiverAddress
+    let powRpcAddress              = A.getRpcAddress A.tstGenPoWNodeAddress
+    let poaRpcAddress              = A.getRpcAddress A.tstGenPoANodeAddress
 
     -- Start nodes
-    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.graphNodeTransmitterConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.tstGraphNodeTransmitterConfig
     waitForNode transmiterRpcAddress
 
     void $ startNode Nothing mgr Tst.powNode
     waitForNode powRpcAddress
 
-    void $ startNode Nothing mgr $ Tst.poaNode Tst.Good Tst.defaultPoANodeConfig
+    void $ startNode Nothing mgr $ Tst.poaNode Tst.Good Tst.tstGenPoANodeConfig
     waitForNode poaRpcAddress
 
-    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.graphNodeReceiverConfig
+    void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.tstGraphNodeReceiverConfig
     waitForNode receiverRpcAddress
 
     -- Ask pow node to generate n kblocks
     let timeGap     = 1000 * 500
     let kblockCount = 2
-    _ :: Either Text A.SuccessMsg <- makeIORpcRequest powRpcAddress $ A.NBlockPacketGeneration kblockCount timeGap
+    _ :: Either Text D.SuccessMsg <- makeIORpcRequest powRpcAddress $ D.NBlockPacketGeneration kblockCount timeGap
 
     waitForBlocks 2 transmiterRpcAddress
     waitForBlocks 2 receiverRpcAddress
 
     threadDelay $ 1000 * 1000
     -- Check kblock synchronization
-    kBlock1 :: D.KBlock <- makeRpcRequestUntilSuccess transmiterRpcAddress A.GetLastKBlock
-    kBlock2 :: D.KBlock <- makeRpcRequestUntilSuccess receiverRpcAddress    A.GetLastKBlock
+    kBlock1 :: D.KBlock <- makeRpcRequestUntilSuccess transmiterRpcAddress D.GetLastKBlock
+    kBlock2 :: D.KBlock <- makeRpcRequestUntilSuccess receiverRpcAddress   D.GetLastKBlock
 
     kBlock1 `shouldBe` kBlock2
 
     -- Check ledger synchronization
-    Right (A.GetMBlocksForKBlockResponse mblocksPrev1) <- makeIORpcRequest transmiterRpcAddress
-        $ A.GetMBlocksForKBlockRequest (kBlock1 ^. Lens.prevHash)
-    Right (A.GetMBlocksForKBlockResponse mblocksPrev2) <- makeIORpcRequest receiverRpcAddress
-        $ A.GetMBlocksForKBlockRequest (kBlock2 ^. Lens.prevHash)
+    Right (D.GetMBlocksForKBlockResponse mblocksPrev1) <- makeIORpcRequest transmiterRpcAddress
+        $ D.GetMBlocksForKBlockRequest (kBlock1 ^. Lens.prevHash)
+    Right (D.GetMBlocksForKBlockResponse mblocksPrev2) <- makeIORpcRequest receiverRpcAddress
+        $ D.GetMBlocksForKBlockRequest (kBlock2 ^. Lens.prevHash)
 
-    eWalletBalances1 :: [Either Text A.WalletBalanceMsg] <- forM (concat $ toKeys <$> mblocksPrev1) $ \i ->
-        makeIORpcRequest transmiterRpcAddress $ A.GetWalletBalance i
+    eWalletBalances1 :: [Either Text D.WalletBalanceMsg] <- forM (concat $ toKeys <$> mblocksPrev1) $ \i ->
+        makeIORpcRequest transmiterRpcAddress $ D.GetWalletBalance i
 
-    eWalletBalances2 :: [Either Text A.WalletBalanceMsg] <- forM (concat $ toKeys <$> mblocksPrev2) $ \i ->
-        makeIORpcRequest receiverRpcAddress    $ A.GetWalletBalance i
+    eWalletBalances2 :: [Either Text D.WalletBalanceMsg] <- forM (concat $ toKeys <$> mblocksPrev2) $ \i ->
+        makeIORpcRequest receiverRpcAddress   $ D.GetWalletBalance i
 
     rights eWalletBalances1 `shouldBe` rights eWalletBalances2
     length (rights eWalletBalances1) `shouldSatisfy` (> 0)

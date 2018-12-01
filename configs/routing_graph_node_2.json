@@ -1,0 +1,53 @@
+{
+    "nodeConfig": {
+        "tag": "GraphNodeConfig",
+        "graphServiceConfig": {
+            "dbConfig": {
+                "stopOnDatabaseError": true,
+                "tag": "DBConfig",
+                "dbOptions": {
+                    "errorIfExists": true,
+                    "createIfMissing": true
+                },
+                "dbModelName": "",
+                "useDatabase": false,
+                "useEnqHomeDir": false
+            },
+            "graphWindowConfig": {
+                "tag": "GraphWindowConfig",
+                "shrinkingEnabled": false,
+                "windowSize": 100,
+                "shrinkingDelay": 1000000
+            },
+            "tag": "GraphServiceConfig",
+            "rpcSynco": null
+        },
+        "bnAddress": {
+            "tag": "NodeAddress",
+            "nodePorts": {
+                "tag": "NodePorts",
+                "nodeRpcPort": 6000,
+                "nodeUdpPort": 4000,
+                "nodeTcpPort": 5000
+            },
+            "nodeId": "kR2/PidRIMfsI6u6WZvyx3JOWQOlW+z7WG+k2QO+sDQ=",
+            "nodeHost": "127.0.0.1"
+        },
+        "nodePorts": {
+            "tag": "NodePorts",
+            "nodeRpcPort": 6052,
+            "nodeUdpPort": 4052,
+            "nodeTcpPort": 5052
+        },
+        "graphNodeId": "j40vUF0uAA9lN9QDDe13zmLwObxhe+QGBlEG3t0fBww="
+    },
+    "node": "GraphNode",
+    "loggerConfig": {
+        "logFilePath": "",
+        "format": "$prio $loggername: $msg",
+        "logToFile": false,
+        "logToConsole": true,
+        "level": "Debug"
+    },
+    "nodeScenario": "GN"
+}

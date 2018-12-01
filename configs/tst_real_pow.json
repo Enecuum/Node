@@ -1,0 +1,18 @@
+{
+    "nodeConfig": {
+        "tag": "TstRealPoWNodeConfig",
+        "controlRpcPort": 6200,
+        "graphNodeUDPAddress":  {"host":"127.0.0.1","port":4050},
+        "baseDifficulty": 23,
+        "workersCount": 1
+    },
+    "node": "TstRealPoWNode",
+    "loggerConfig": {
+        "logFilePath": "/tmp/log/tst_real_pow.log",
+        "format": "$prio $loggername: $msg",
+        "logToFile": false,
+        "logToConsole": true,
+        "level": "Debug"
+    },
+    "nodeScenario": "TstRealPoW"
+}

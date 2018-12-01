@@ -1,0 +1,17 @@
+{
+   "node":"TstGenPoANode",
+   "nodeScenario":"Good",
+   "nodeConfig":
+    {
+        "tag": "TstGenPoANodeConfig",
+        "controlRpcPort": 6200,
+		},
+   "loggerConfig":
+        {
+        "logFilePath": "/tmp/log/tst_poa.log",
+        "format":"$prio $loggername: $msg",
+        "logToConsole":true,
+        "logToFile": true,
+        "level":"Debug"
+        }
+}
