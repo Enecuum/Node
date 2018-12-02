@@ -45,7 +45,7 @@ simpleBootNodeDiscovery = pure bootNodeAddr
 
 bootNode :: L.NodeDefinitionL ()
 bootNode = do
-    L.nodeTag bootNodeTag
+    L.setNodeTag bootNodeTag
     void $ L.initialization $ pure $ D.NodeID "abc"
     void $ L.serving D.Rpc 2000 $ do
         L.method acceptHello1
@@ -59,7 +59,7 @@ masterNodeInitialization = do
 
 masterNode :: L.NodeDefinitionL ()
 masterNode = do
-    L.nodeTag masterNodeTag
+    L.setNodeTag masterNodeTag
     nodeId <- D.withSuccess $ L.initialization masterNodeInitialization
     L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
     void $ L.serving D.Rpc 2000 $ do
@@ -118,7 +118,7 @@ newtorkNode1Initialization g = L.evalGraphIO g $ L.getNode TG.nilTransactionHash
 
 networkNode1 :: TG.TestGraphVar -> L.NodeDefinitionL ()
 networkNode1 g = do
-    L.nodeTag "networkNode1"
+    L.setNodeTag "networkNode1"
     nodeData <- L.initialization $ newtorkNode1Initialization g
     void $ L.serving D.Rpc 2000 $ do
         L.method $ acceptGetBalanceTraversing nodeData
@@ -144,14 +144,14 @@ networkNode2Scenario = do
 
 networkNode2 :: L.NodeDefinitionL ()
 networkNode2 = do
-    L.nodeTag "networkNode2"
+    L.setNodeTag "networkNode2"
     L.scenario networkNode2Scenario
 
   -- Scenario 3: boot node can validate data  recieved from master node
 
 bootNodeValidation :: L.NodeDefinitionL ()
 bootNodeValidation = do
-    L.nodeTag bootNodeTag
+    L.setNodeTag bootNodeTag
     void $ L.initialization $ pure $ D.NodeID "abc"
     void $ L.serving D.Rpc 2000 $ do
         L.method acceptGetHashId
@@ -169,7 +169,7 @@ masterNodeInitializeWithValidation = do
 
 masterNodeValidation :: L.NodeDefinitionL ()
 masterNodeValidation = do
-    L.nodeTag masterNodeTag
+    L.setNodeTag masterNodeTag
     nodeId <- D.withSuccess $ L.initialization masterNodeInitializeWithValidation
     L.logInfo $ "Master node got id: " +|| nodeId ||+ "."
 
@@ -213,7 +213,7 @@ newtorkNode3Initialization g = do
 
 networkNode3 :: TG.TestGraphVar -> L.NodeDefinitionL ()
 networkNode3 g = do
-    L.nodeTag "networkNode3"
+    L.setNodeTag "networkNode3"
     nodeData <- L.initialization $ newtorkNode3Initialization g
     void $ L.serving D.Rpc 2000 $ do
         L.method (acceptGetBalance nodeData)
@@ -230,5 +230,5 @@ networkNode4Scenario = do
 
 networkNode4 :: L.NodeDefinitionL ()
 networkNode4 = do
-    L.nodeTag "networkNode4"
+    L.setNodeTag "networkNode4"
     L.scenario networkNode4Scenario

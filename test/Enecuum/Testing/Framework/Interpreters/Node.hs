@@ -1,23 +1,24 @@
 module Enecuum.Testing.Framework.Interpreters.Node where
 
-import Enecuum.Prelude
+import           Enecuum.Prelude
 
 
-import qualified Enecuum.Domain                                    as D
-import qualified Enecuum.Language                                  as L
-import qualified Enecuum.Framework.Lens                            as Lens
+import qualified Enecuum.Domain                                          as D
+import qualified Enecuum.Framework.Lens                                  as Lens
+import qualified Enecuum.Language                                        as L
 
-import qualified Enecuum.Testing.RLens                             as RLens
-import qualified Enecuum.Testing.Types                             as T
-import qualified Enecuum.Testing.Core.Interpreters                 as Impl
-import qualified Enecuum.Testing.Framework.Interpreters.Networking as Impl
-import qualified Enecuum.Testing.Framework.Interpreters.State      as Impl
-import           Enecuum.Core.HGraph.Interpreters.IO               (runHGraphIO)
+import           Enecuum.Core.HGraph.Interpreters.IO                     (runHGraphIO)
+import qualified Enecuum.Testing.Core.Interpreters                       as Impl
+import           Enecuum.Testing.Framework.Internal.TcpLikeServerBinding (bindServer, closeConnection,
+                                                                          registerConnection)
 import           Enecuum.Testing.Framework.Internal.TcpLikeServerWorker  (startNodeTcpLikeWorker)
-import           Enecuum.Testing.Framework.Internal.TcpLikeServerBinding (bindServer, registerConnection, closeConnection)
+import qualified Enecuum.Testing.Framework.Interpreters.Networking       as Impl
+import qualified Enecuum.Testing.Framework.Interpreters.State            as Impl
+import qualified Enecuum.Testing.RLens                                   as RLens
 import           Enecuum.Testing.TestRuntime                             (controlRequest)
+import qualified Enecuum.Testing.Types                                   as T
 
-import qualified Enecuum.Framework.Handler.Network.Interpreter as Net
+import qualified Enecuum.Framework.Handler.Network.Interpreter           as Net
 
 
 -- | Establish connection with the server through test environment.
@@ -28,8 +29,8 @@ establishConnection nodeRt toAddress = do
     controlResponse <- atomically $ takeTMVar (nodeRt ^. RLens.networkControl . RLens.response)
     case controlResponse of
         T.AsConnectionAccepted bindedServer -> pure $ Right bindedServer
-        T.AsErrorResp          msg -> pure $ Left $ "Failed to establish connection: " <> msg
-        _ -> error "Invalid network control result."
+        T.AsErrorResp          msg          -> pure $ Left $ "Failed to establish connection: " <> msg
+        _                                   -> error "Invalid network control result."
 
 -- | Send client connection to the binded server.
 sendClientConnection :: T.BindedServer -> T.BindedServer -> IO (Either Text ())
@@ -41,19 +42,19 @@ sendClientConnection bindedServer bindedClientsideServer = do
         _               -> pure $ Left "Unknown control response."
 
 -- | Interpret NodeL.
-interpretNodeL :: T.NodeRuntime -> L.NodeF a -> IO a
+interpretNodeF :: T.NodeRuntime -> L.NodeF a -> IO a
 
-interpretNodeL nodeRt (L.EvalStateAtomically statefulAction next) =
+interpretNodeF nodeRt (L.EvalStateAtomically statefulAction next) =
     next <$> atomically (Impl.runStateL nodeRt statefulAction)
 
-interpretNodeL _      (L.EvalGraphIO gr act next             ) = next <$> runHGraphIO gr act
+interpretNodeF _      (L.EvalGraphIO gr act next             ) = next <$> runHGraphIO gr act
 
-interpretNodeL nodeRt (L.EvalNetworking networkingAction next) = next <$> Impl.runNetworkingL nodeRt networkingAction
+interpretNodeF nodeRt (L.EvalNetworking networkingAction next) = next <$> Impl.runNetworkingL nodeRt networkingAction
 
-interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffect next) =
-    next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
+interpretNodeF nodeRt (L.EvalCoreEffect coreEffect next) =
+    next <$> Impl.runCoreEffectL (nodeRt ^. RLens.loggerRuntime) coreEffect
 
-interpretNodeL nodeRt (L.OpenTcpConnection serverAddress handlersF next) = do
+interpretNodeF nodeRt (L.OpenTcpConnection serverAddress handlersF next) = do
   -- Asking the server to accept connection
     eBindedServer <- establishConnection nodeRt serverAddress
     case eBindedServer of
@@ -83,10 +84,10 @@ interpretNodeL nodeRt (L.OpenTcpConnection serverAddress handlersF next) = do
                     registerConnection nodeRt bindedServer
                     pure $ next $ Just bindedServerConnection
 
-interpretNodeL nodeRt (L.CloseTcpConnection conn next) = next <$> closeConnection nodeRt conn
+interpretNodeF nodeRt (L.CloseTcpConnection conn next) = next <$> closeConnection nodeRt conn
 
-interpretNodeL _      _                             = error "not implemented."
+interpretNodeF _      _                             = error "not implemented."
 
 -- | Runs node language.
 runNodeL :: T.NodeRuntime -> L.NodeL a -> IO a
-runNodeL nodeRt = foldFree (interpretNodeL nodeRt)
+runNodeL nodeRt = foldFree (interpretNodeF nodeRt)

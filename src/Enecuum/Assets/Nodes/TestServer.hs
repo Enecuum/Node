@@ -38,7 +38,7 @@ instance FromJSON (NodeScenario TestServer) where parseJSON = J.genericParseJSON
 
 testServer :: p -> L.NodeDefinitionL ()
 testServer _ = do
-    L.nodeTag "Server node"
+    L.setNodeTag "Server node"
     L.logInfo "Starting of test server node"
     nodeData <- L.scenario $ L.atomically (TestServerData <$> L.newVar D.NodeActing)
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData

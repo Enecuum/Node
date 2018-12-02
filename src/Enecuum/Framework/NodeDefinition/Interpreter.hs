@@ -2,35 +2,35 @@
 
 module Enecuum.Framework.NodeDefinition.Interpreter where
 
-import Enecuum.Prelude hiding (fromJust)
-import qualified Data.Map                                  as M
-import           Data.Aeson                                as A
+import           Data.Aeson                                       as A
 import           Data.Aeson.Lens
-import qualified Data.Text as T
-import qualified "rocksdb-haskell" Database.RocksDB        as Rocks
-import qualified Network.Socket.ByteString.Lazy            as S
-import qualified Network.Socket                            as S hiding (recv)
+import qualified Data.Map                                         as M
+import qualified Data.Text                                        as T
+import qualified "rocksdb-haskell" Database.RocksDB               as Rocks
+import           Enecuum.Prelude                                  hiding (fromJust)
+import qualified Network.Socket                                   as S hiding (recv)
+import qualified Network.Socket.ByteString.Lazy                   as S
 import           System.Console.Haskeline
 import           System.Console.Haskeline.History
 
-import qualified Enecuum.Core.Interpreters                 as Impl
-import qualified Enecuum.Core.Runtime                      as Impl (getNextId)
-import qualified Enecuum.Core.RLens                        as RLens
-import qualified Enecuum.Core.Runtime                      as R
-import           Enecuum.Framework.Networking.Internal.Tcp.Server
-import           Enecuum.Framework.Node.Interpreter        (runNodeL)
-import           Enecuum.Framework.Runtime                 (NodeRuntime, DBHandle, Connections)
-import qualified Enecuum.Framework.Language                as L
-import qualified Enecuum.Framework.RLens                   as RLens
-import qualified Enecuum.Framework.Node.Interpreter        as Impl
-import qualified Enecuum.Framework.Domain.RPC              as D
-import qualified Enecuum.Framework.Domain.Networking       as D
-import qualified Enecuum.Framework.Domain.Process          as D
-import qualified Enecuum.Framework.Runtime                 as R
-import           Enecuum.Framework.Handler.Rpc.Interpreter
-import qualified Enecuum.Framework.Handler.Network.Interpreter    as Net
-import qualified Enecuum.Framework.Networking.Internal.Connection as Conn
+import qualified Enecuum.Core.Interpreters                        as Impl
+import qualified Enecuum.Core.RLens                               as RLens
+import qualified Enecuum.Core.Runtime                             as Impl (getNextId)
+import qualified Enecuum.Core.Runtime                             as R
+import qualified Enecuum.Framework.Domain.Networking              as D
+import qualified Enecuum.Framework.Domain.Process                 as D
+import qualified Enecuum.Framework.Domain.RPC                     as D
 import           Enecuum.Framework.Handler.Cmd.Interpreter        as Cmd
+import qualified Enecuum.Framework.Handler.Network.Interpreter    as Net
+import           Enecuum.Framework.Handler.Rpc.Interpreter
+import qualified Enecuum.Framework.Language                       as L
+import qualified Enecuum.Framework.Networking.Internal.Connection as Conn
+import           Enecuum.Framework.Networking.Internal.Tcp.Server
+import           Enecuum.Framework.Node.Interpreter               (runNodeL)
+import qualified Enecuum.Framework.Node.Interpreter               as Impl
+import qualified Enecuum.Framework.RLens                          as RLens
+import           Enecuum.Framework.Runtime                        (Connections, DBHandle, NodeRuntime)
+import qualified Enecuum.Framework.Runtime                        as R
 
 
 getNextId :: NodeRuntime -> IO Int
@@ -115,14 +115,11 @@ stopServer (R.ServerHandle sockVar acceptWorkerId) = do
     atomically (putTMVar sockVar sock)
 
 interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF a -> IO a
-interpretNodeDefinitionL nodeRt (L.NodeTag tag next) = do
+interpretNodeDefinitionL nodeRt (L.SetNodeTag tag next) = do
     atomically $ writeTVar (nodeRt ^. RLens.nodeTag) tag
     pure $ next ()
 
-interpretNodeDefinitionL nodeRt (L.EvalNodeL action next) = next <$> Impl.runNodeL nodeRt action
-
-interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
-    next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffect
+interpretNodeDefinitionL nodeRt (L.EvalNode action next) = next <$> Impl.runNodeL nodeRt action
 
 interpretNodeDefinitionL nodeRt (L.ServingTcp port action next) = do
     let tcpConnectionsVar = nodeRt ^. RLens.tcpConnects

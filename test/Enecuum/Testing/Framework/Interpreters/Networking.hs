@@ -1,18 +1,18 @@
 module Enecuum.Testing.Framework.Interpreters.Networking where
 
-import Enecuum.Prelude
+import           Enecuum.Prelude
 
-import qualified Data.Map as Map
+import qualified Data.Map                                                as Map
 
-import qualified Enecuum.Domain         as D
-import qualified Enecuum.Language       as L
-import qualified Enecuum.Framework.Lens as Lens
+import qualified Enecuum.Domain                                          as D
+import qualified Enecuum.Framework.Lens                                  as Lens
+import qualified Enecuum.Language                                        as L
 
-import qualified Enecuum.Testing.RLens                          as RLens
-import qualified Enecuum.Testing.Types                          as T
-import qualified Enecuum.Testing.Core.Interpreters              as Impl
-import           Enecuum.Testing.TestRuntime                    (controlRequest)
+import qualified Enecuum.Testing.Core.Interpreters                       as Impl
 import           Enecuum.Testing.Framework.Internal.TcpLikeServerBinding (closeConnection)
+import qualified Enecuum.Testing.RLens                                   as RLens
+import           Enecuum.Testing.TestRuntime                             (controlRequest)
+import qualified Enecuum.Testing.Types                                   as T
 
 -- | Relay request from this node to the network environment for target server node.
 relayRequest' :: T.NodeRuntime -> D.Address -> D.RpcRequest -> IO (Either Text D.RpcResponse)
@@ -46,22 +46,18 @@ sendMessageToConnection nodeRt connection@(D.Connection (D.BoundAddress address)
 
 
 -- | Interpret NetworkingL language.
-interpretNetworkingL :: T.NodeRuntime -> L.NetworkingF a -> IO a
+interpretNetworkingF :: T.NodeRuntime -> L.NetworkingF a -> IO a
 
-interpretNetworkingL nodeRt (L.SendRpcRequest toAddr req next) = next <$> relayRequest' nodeRt toAddr req
+interpretNetworkingF nodeRt (L.SendRpcRequest toAddr req next) = next <$> relayRequest' nodeRt toAddr req
 
-interpretNetworkingL nodeRt (L.SendTcpMsgByConnection conn msg next) = do
+interpretNetworkingF nodeRt (L.SendTcpMsgByConnection conn msg next) = do
     void $ sendMessageToConnection nodeRt conn msg
     pure $ next $ Right ()
 
-interpretNetworkingL nodeRt (L.EvalCoreEffectNetworkingF coreEffect next) =
-    next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
-
---
-interpretNetworkingL _ L.SendUdpMsgByConnection{} = error "SendUdpMsgByConnection not implemented"
-interpretNetworkingL _ L.SendUdpMsgByAddress{}    = error "SendUdpMsgByAddress not implemented"
+interpretNetworkingF _ L.SendUdpMsgByConnection{} = error "SendUdpMsgByConnection not implemented"
+interpretNetworkingF _ L.SendUdpMsgByAddress{}    = error "SendUdpMsgByAddress not implemented"
 
 
 -- | Runs networking language.
 runNetworkingL :: T.NodeRuntime -> L.NetworkingL a -> IO a
-runNetworkingL nodeRt = foldFree (interpretNetworkingL nodeRt)
+runNetworkingL nodeRt = foldFree (interpretNetworkingF nodeRt)

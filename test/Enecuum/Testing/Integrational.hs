@@ -103,7 +103,7 @@ makeIORpcRequest ::
     (FromJSON b, ToJSON a, Typeable a) => D.Address -> a -> IO (Either Text b)
 makeIORpcRequest address msg = do
     nodeRt <- R.createVoidLoggerRuntime >>= createNodeRuntime
-    I.runNodeDefinitionL nodeRt $ L.evalNodeL $ L.makeRpcRequest address msg
+    I.runNodeDefinitionL nodeRt $ L.evalNode $ L.makeRpcRequest address msg
 
 -- Make rpc requests to address until:
 -- 1) attempts burn out or

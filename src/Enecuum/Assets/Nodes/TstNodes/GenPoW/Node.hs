@@ -76,7 +76,7 @@ powNode = powNode' tstGenPoWNodeConfig
 
 powNode' :: NodeConfig TstGenPoWNode -> L.NodeDefinitionL ()
 powNode' cfg = do
-    L.nodeTag "Tst Gen PoW node"
+    L.setNodeTag "Tst Gen PoW node"
 
     nodeData <- L.initialization $ powNodeInitialization cfg D.genesisHash
     L.serving D.Rpc (_controlRpcPort cfg) $ do

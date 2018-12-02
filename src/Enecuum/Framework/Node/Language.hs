@@ -23,7 +23,7 @@ data NodeF next where
     -- | Eval networking.
     EvalNetworking :: L.NetworkingL a -> (a -> next) -> NodeF next
     -- | Eval core effect.
-    EvalCoreEffectNodeF :: L.CoreEffect a -> (a -> next) -> NodeF next
+    EvalCoreEffect :: L.CoreEffectL a -> (a -> next) -> NodeF next
     -- | Eval graph non-atomically (parts of script are evaluated atomically but separated from each other).
     EvalGraphIO :: (Serialize c, D.StringHashable c) => D.TGraph c -> Free (L.HGraphF (D.TNodeL c)) x -> (x -> next) -> NodeF next
     -- | Create new graph instance.
@@ -53,8 +53,8 @@ evalNetworking :: L.NetworkingL a -> NodeL a
 evalNetworking newtorking = liftF $ EvalNetworking newtorking id
 
 -- | Eval core effect.
-evalCoreEffectNodeF :: L.CoreEffect a -> NodeL a
-evalCoreEffectNodeF coreEffect = liftF $ EvalCoreEffectNodeF coreEffect id
+evalCoreEffect :: L.CoreEffectL a -> NodeL a
+evalCoreEffect coreEffect = liftF $ EvalCoreEffect coreEffect id
 
 -- | Init database with the options passed for the specific storage type.
 initDatabase :: D.DBConfig db -> NodeL (D.DBResult (D.Storage db))
@@ -111,26 +111,26 @@ newGraph :: (Serialize c, D.StringHashable c) => NodeL (D.TGraph c)
 newGraph = liftF $ NewGraph id
 
 instance L.IOL NodeL where
-    evalIO = evalCoreEffectNodeF . L.evalIO
+    evalIO = evalCoreEffect . L.evalIO
 
 instance L.Logger NodeL where
-    logMessage level = evalCoreEffectNodeF . L.logMessage level
+    logMessage level = evalCoreEffect . L.logMessage level
 
 instance L.ERandom NodeL where
-    evalCoreCrypto      = evalCoreEffectNodeF . L.evalCoreCrypto
-    getRandomInt        = evalCoreEffectNodeF . L.getRandomInt
-    getRandomByteString = evalCoreEffectNodeF . L.getRandomByteString
-    nextUUID            = evalCoreEffectNodeF   L.nextUUID
+    evalCoreCrypto      = evalCoreEffect . L.evalCoreCrypto
+    getRandomInt        = evalCoreEffect . L.getRandomInt
+    getRandomByteString = evalCoreEffect . L.getRandomByteString
+    nextUUID            = evalCoreEffect   L.nextUUID
 
 instance L.FileSystem NodeL where
-    readFile         = evalCoreEffectNodeF . L.readFile
-    writeFile filename text = evalCoreEffectNodeF $ L.writeFile filename text
-    getHomeDirectory = evalCoreEffectNodeF   L.getHomeDirectory
-    createFilePath   = evalCoreEffectNodeF . L.createFilePath
-    doesFileExist    = evalCoreEffectNodeF . L.doesFileExist
+    readFile         = evalCoreEffect . L.readFile
+    writeFile filename text = evalCoreEffect $ L.writeFile filename text
+    getHomeDirectory = evalCoreEffect   L.getHomeDirectory
+    createFilePath   = evalCoreEffect . L.createFilePath
+    doesFileExist    = evalCoreEffect . L.doesFileExist
 
 instance L.ControlFlow NodeL where
-    delay = evalCoreEffectNodeF . L.delay
+    delay = evalCoreEffect . L.delay
 
 instance L.StateIO NodeL where
     atomically     = evalStateAtomically
@@ -139,5 +139,5 @@ instance L.StateIO NodeL where
     writeVarIO var = evalStateAtomically . L.writeVar var
 
 instance L.Time NodeL where
-    getUTCTime   = evalCoreEffectNodeF L.getUTCTime
-    getPosixTime = evalCoreEffectNodeF L.getPosixTime
+    getUTCTime   = evalCoreEffect L.getUTCTime
+    getPosixTime = evalCoreEffect L.getPosixTime

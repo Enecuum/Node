@@ -267,7 +267,7 @@ clientNode = clientNode' (ClientNodeConfig 42)
 clientNode' :: NodeConfig ClientNode -> L.NodeDefinitionL ()
 clientNode' _ = do
     L.logInfo "Client started"
-    L.nodeTag "Client"
+    L.setNodeTag "Client"
     stateVar <- L.newVarIO D.NodeActing
 
     L.std $ do

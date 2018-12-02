@@ -42,7 +42,7 @@ data TstGraphNodeData = TstGraphNodeData
 -- | Start of graph node
 tstGraphNode :: NodeConfig TstGraphNode -> L.NodeDefinitionL ()
 tstGraphNode cfg@(TstGraphNodeConfig graphServiceCfg _) = do
-    L.nodeTag "Test Graph Node"
+    L.setNodeTag "Test Graph Node"
 
     status <- L.newVarIO D.NodeActing
     eGraphServiceData <- graphServiceInitialization graphServiceCfg

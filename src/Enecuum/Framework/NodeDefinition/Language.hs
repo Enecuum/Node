@@ -23,11 +23,9 @@ import           Language.Haskell.TH.MakeFunctor            (makeFunctorInstance
 -- Allows to specify what actions should be done when node starts.
 data NodeDefinitionF next where
     -- | Set node tag. For example, "boot node".
-    NodeTag        :: D.NodeTag -> (() -> next) -> NodeDefinitionF next
+    SetNodeTag     :: D.NodeTag -> (() -> next) -> NodeDefinitionF next
     -- | Evaluate some node model.
-    EvalNodeL      :: L.NodeL  a -> (a -> next) -> NodeDefinitionF next
-    -- | Eval core effect.
-    EvalCoreEffectNodeDefinitionF :: L.CoreEffect a -> (a -> next) -> NodeDefinitionF next
+    EvalNode       :: L.NodeL  a -> (a -> next) -> NodeDefinitionF next
     -- | Start serving of RPC requests.
     ServingRpc     :: D.PortNumber -> RpcHandlerL L.NodeL () -> (Maybe () -> next) -> NodeDefinitionF next
     -- | Stop serving of Rpc server.
@@ -59,12 +57,12 @@ getBoundedPorts :: NodeDefinitionL [D.PortNumber]
 getBoundedPorts = liftF $ GetBoundedPorts id
 
 -- | Sets tag for node.
-nodeTag :: D.NodeTag -> NodeDefinitionL ()
-nodeTag tag = liftF $ NodeTag tag id
+setNodeTag :: D.NodeTag -> NodeDefinitionL ()
+setNodeTag tag = liftF $ SetNodeTag tag id
 
 -- | Runs node scenario.
-evalNodeL :: L.NodeL a -> NodeDefinitionL a
-evalNodeL action = liftF $ EvalNodeL action id
+evalNode :: L.NodeL a -> NodeDefinitionL a
+evalNode action = liftF $ EvalNode action id
 
 -- | Fork a process for node.
 fork :: L.NodeL a -> NodeDefinitionL (D.ProcessPtr a)
@@ -92,16 +90,16 @@ awaitResult :: D.ProcessPtr a -> NodeDefinitionL a
 awaitResult handle = liftF $ AwaitResult handle id
 
 -- | Eval core effect.
-evalCoreEffectNodeDefinitionF :: L.CoreEffect a -> NodeDefinitionL a
-evalCoreEffectNodeDefinitionF coreEffect = liftF $ EvalCoreEffectNodeDefinitionF coreEffect id
+evalCoreEffectNodeDefinitionF :: L.CoreEffectL a -> NodeDefinitionL a
+evalCoreEffectNodeDefinitionF = scenario . L.evalCoreEffect
 
 -- | Runs scenario as initialization.
 initialization :: L.NodeL a -> NodeDefinitionL a
-initialization = evalNodeL
+initialization = evalNode
 
 -- | Runs scenario.
 scenario :: L.NodeL a -> NodeDefinitionL a
-scenario = evalNodeL
+scenario = evalNode
 
 class Serving c a | c -> a where
     serving :: c -> D.PortNumber -> a -> NodeDefinitionL (Maybe ())
@@ -116,14 +114,14 @@ instance Serving D.Udp (NetworkHandlerL D.Udp L.NodeL ()) where
     serving _ port handlersF = liftF $ ServingUdp port handlersF id
 
 instance L.Connection L.NodeL a => L.Connection NodeDefinitionL a where
-    close   conn       = evalNodeL $ L.close conn
-    open  t addr handl = evalNodeL $ L.open t addr handl
+    close   conn       = evalNode $ L.close conn
+    open  t addr handl = evalNode $ L.open t addr handl
 
 instance L.Send a L.NodeL => L.Send a NodeDefinitionL where
-    send conn msg = evalNodeL $ L.send conn msg
+    send conn msg = evalNode $ L.send conn msg
 
 instance L.SendUdp NodeDefinitionL where
-    notify conn msg = evalNodeL $ L.notify conn msg
+    notify conn msg = evalNode $ L.notify conn msg
 
 -- | Starts RPC server.
 {-# DEPRECATED servingRpc "Use L.serving" #-}

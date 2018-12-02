@@ -14,7 +14,7 @@ import qualified Enecuum.Runtime                      as Rt
 -- | Interprets core effect.
 interpretCoreEffectF :: Rt.CoreRuntime -> L.CoreEffectF a -> IO a
 interpretCoreEffectF coreRt (L.EvalLogger msg next) =
-    next <$> (runLoggerL (coreRt ^. RLens.loggerRuntime . RLens.hsLoggerHandle)) msg
+    next <$> runLoggerL (coreRt ^. RLens.loggerRuntime . RLens.hsLoggerHandle) msg
 interpretCoreEffectF _      (L.EvalFileSystem s next)     = next <$> runFileSystemL s
 interpretCoreEffectF _      (L.EvalRandom  s next)        = next <$> runERandomL s
 interpretCoreEffectF coreRt (L.EvalControlFlow f    next) = next <$> runControlFlow coreRt f
@@ -22,5 +22,5 @@ interpretCoreEffectF coreRt (L.EvalTime f    next)        = next <$> runTimeL f
 interpretCoreEffectF _      (L.EvalIO f next)             = next <$> f
 
 -- | Runs core effect language.
-runCoreEffect :: Rt.CoreRuntime -> L.CoreEffect a -> IO a
-runCoreEffect coreRt = foldFree (interpretCoreEffectF coreRt)
+runCoreEffectL :: Rt.CoreRuntime -> L.CoreEffectL a -> IO a
+runCoreEffectL coreRt = foldFree (interpretCoreEffectF coreRt)

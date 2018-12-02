@@ -136,7 +136,7 @@ testEncryptMsgViaPassword = TestCase $ do
     decryptedMsg <- runCrypto $ decryptKey password encryptMsg
     decryptedMsg `shouldBe` message
 
-runCrypto s = I.runCoreEffect undefined $ L.evalCoreCrypto s
+runCrypto s = I.runCoreEffectL undefined $ L.evalCoreCrypto s
 
 testEncryptionWithLibraryFunctions :: Test
 testEncryptionWithLibraryFunctions = TestCase $ do

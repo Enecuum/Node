@@ -94,7 +94,7 @@ sendMicroblock routingData poaData role block = do
 
 poaNode :: NodeScenario GenPoANode -> NodeConfig GenPoANode -> L.NodeDefinitionL ()
 poaNode role cfg = do
-    L.nodeTag "GenPoA node"
+    L.setNodeTag "GenPoA node"
     L.logInfo "Starting of GenPoA node"
     let myNodePorts = _poaNodePorts cfg
     let myHash      = _poaNodeId cfg

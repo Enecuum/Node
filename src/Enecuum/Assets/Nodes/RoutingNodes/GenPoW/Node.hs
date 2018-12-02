@@ -79,7 +79,7 @@ powNode = powNode' routingGenPoWNodeConfig
 
 powNode' :: NodeConfig GenPoWNode -> L.NodeDefinitionL ()
 powNode' cfg = do
-    L.nodeTag "GenPoW node"
+    L.setNodeTag "GenPoW node"
 
     let myNodePorts = _powNodePorts cfg
     let myHash      = _powNodeId cfg

@@ -57,7 +57,7 @@ newtorkNode3Initialization g = do
 
 networkNode3 :: TG.TestGraphVar -> L.NodeDefinitionL ()
 networkNode3 g = do
-    L.nodeTag "networkNode3"
+    L.setNodeTag "networkNode3"
     nodeData <- L.initialization $ newtorkNode3Initialization g
     void $ L.serving D.Rpc 2000 $ do
         L.method (acceptGetBalance nodeData)
@@ -74,5 +74,5 @@ networkNode4Scenario = do
 
 networkNode4 :: L.NodeDefinitionL ()
 networkNode4 = do
-    L.nodeTag "networkNode4"
+    L.setNodeTag "networkNode4"
     L.scenario networkNode4Scenario

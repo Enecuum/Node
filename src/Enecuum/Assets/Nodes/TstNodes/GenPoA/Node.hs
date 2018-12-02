@@ -77,7 +77,7 @@ sendMicroblock poaData block role = do
 
 poaNode :: NodeScenario TstGenPoANode -> NodeConfig TstGenPoANode -> L.NodeDefinitionL ()
 poaNode role cfg = do
-    L.nodeTag "PoA node"
+    L.setNodeTag "PoA node"
     L.logInfo "Starting of PoA node"
     poaData <- L.atomically
         $ TstGenPoANodeData

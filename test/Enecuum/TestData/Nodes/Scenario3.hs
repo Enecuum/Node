@@ -15,7 +15,7 @@ import           Enecuum.TestData.Validation
 
 bootNodeValidation :: L.NodeDefinitionL ()
 bootNodeValidation = do
-    L.nodeTag bootNodeTag
+    L.setNodeTag bootNodeTag
     void $ L.initialization $ pure $ D.NodeID "abc"
     void $ L.serving D.Rpc 2000 $ do
         L.method acceptGetHashId
@@ -32,6 +32,6 @@ masterNodeInitializeWithValidation = do
 
 masterNodeValidation :: L.NodeDefinitionL ()
 masterNodeValidation = do
-    L.nodeTag masterNodeTag
+    L.setNodeTag masterNodeTag
     nodeId <- D.withSuccess $ L.initialization masterNodeInitializeWithValidation
     L.logInfo $ "Master node got id: " +|| nodeId ||+ "."

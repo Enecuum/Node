@@ -41,7 +41,7 @@ instance FromJSON (NodeScenario TestClient) where parseJSON = J.genericParseJSON
 
 testClient :: p -> Free L.NodeDefinitionF ()
 testClient _ = do
-    L.nodeTag "Client node"
+    L.setNodeTag "Client node"
     L.logInfo "Starting of test client node"
     let serverAddress = D.Address "127.0.0.1" 5000
     nodeData <- L.atomically (TestClientData <$> L.newVar D.NodeActing)

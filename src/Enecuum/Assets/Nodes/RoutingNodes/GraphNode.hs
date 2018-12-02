@@ -57,7 +57,7 @@ data GraphNodeData = GraphNodeData
 -- | Start of graph node
 graphNode :: NodeConfig GraphNode -> L.NodeDefinitionL ()
 graphNode cfg@(GraphNodeConfig graphServiceCfg _ _ _)  = do
-    L.nodeTag "Routing Graph Node"
+    L.setNodeTag "Routing Graph Node"
 
     status <- L.newVarIO D.NodeActing
     eGraphServiceData <- graphServiceInitialization graphServiceCfg

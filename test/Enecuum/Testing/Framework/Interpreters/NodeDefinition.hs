@@ -1,22 +1,23 @@
 module Enecuum.Testing.Framework.Interpreters.NodeDefinition where
 
-import Enecuum.Prelude
-import qualified Data.Map as M
+import qualified Data.Map                                         as M
+import           Enecuum.Prelude
 
-import qualified Enecuum.Language as L
-import qualified Enecuum.Domain as D
-import qualified Enecuum.Framework.Lens as Lens
+import qualified Enecuum.Domain                                   as D
+import qualified Enecuum.Framework.Lens                           as Lens
+import qualified Enecuum.Language                                 as L
 
-import qualified Enecuum.Testing.RLens                        as RLens
-import qualified Enecuum.Testing.Types                        as T
-import qualified Enecuum.Testing.Core.Interpreters            as Impl
-import qualified Enecuum.Testing.Framework.Interpreters.Node  as Impl
+import qualified Enecuum.Testing.Core.Interpreters                as Impl
+import qualified Enecuum.Testing.Framework.Interpreters.Node      as Impl
+import qualified Enecuum.Testing.RLens                            as RLens
+import qualified Enecuum.Testing.Types                            as T
 
-import qualified Enecuum.Testing.Framework.Internal.RpcServer as Impl (startNodeRpcServer)
-import qualified Enecuum.Testing.Framework.Internal.TcpLikeServer as Impl (startNodeTcpLikeServer, stopNodeTcpLikeServer)
+import qualified Enecuum.Testing.Framework.Internal.RpcServer     as Impl (startNodeRpcServer)
+import qualified Enecuum.Testing.Framework.Internal.TcpLikeServer as Impl (startNodeTcpLikeServer,
+                                                                           stopNodeTcpLikeServer)
 
-import qualified Enecuum.Framework.Handler.Rpc.Interpreter as Impl (runRpcHandlerL)
-import qualified Enecuum.Framework.Handler.Network.Interpreter as Impl
+import qualified Enecuum.Framework.Handler.Network.Interpreter    as Impl
+import qualified Enecuum.Framework.Handler.Rpc.Interpreter        as Impl (runRpcHandlerL)
 
 addProcess :: T.NodeRuntime -> D.ProcessPtr a -> ThreadId -> IO ()
 addProcess nodeRt pPtr threadId = do
@@ -31,10 +32,10 @@ mkAddress nodeRt port = (nodeRt ^. RLens.address) & Lens.port .~ port
 -- | Interpret NodeDefinitionL.
 interpretNodeDefinitionL :: T.NodeRuntime -> L.NodeDefinitionF a -> IO a
 
-interpretNodeDefinitionL nodeRt (L.NodeTag tag next) =
+interpretNodeDefinitionL nodeRt (L.SetNodeTag tag next) =
     next <$> atomically (writeTVar (nodeRt ^. RLens.tag) tag)
 
-interpretNodeDefinitionL nodeRt (L.EvalNodeL nodeScript next) =
+interpretNodeDefinitionL nodeRt (L.EvalNode nodeScript next) =
     next <$> Impl.runNodeL nodeRt nodeScript
 
 interpretNodeDefinitionL nodeRt (L.ServingRpc port handlersF next) = do
@@ -52,9 +53,6 @@ interpretNodeDefinitionL nodeRt (L.ServingTcp port handlersF next) = do
 interpretNodeDefinitionL nodeRt (L.StopServing port next) = do
     Impl.stopNodeTcpLikeServer nodeRt port
     pure $ next ()
-
-interpretNodeDefinitionL nodeRt (L.EvalCoreEffectNodeDefinitionF coreEffect next) =
-    next <$> Impl.runCoreEffect (nodeRt ^. RLens.loggerRuntime) coreEffect
 
 interpretNodeDefinitionL nodeRt (L.ForkProcess action next) = do
     (pPtr, pVar) <- atomically (T.getNextId nodeRt) >>= D.createProcessPtr

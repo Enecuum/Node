@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Enecuum.Core.CoreEffect.Language
   ( CoreEffectF (..)
-  , CoreEffect
+  , CoreEffectL
   , evalLogger
   , evalRandom
   , IOL(..)
@@ -32,48 +32,48 @@ data CoreEffectF next where
 
 makeFunctorInstance ''CoreEffectF
 
+type CoreEffectL = Free CoreEffectF
+
 class IOL m where
   evalIO :: IO a -> m a
 
-instance IOL CoreEffect where
+instance IOL CoreEffectL where
   evalIO io = liftF $ EvalIO io id
 
-type CoreEffect = Free CoreEffectF
-
-evalLogger :: LoggerL () -> CoreEffect ()
+evalLogger :: LoggerL () -> CoreEffectL ()
 evalLogger logger = liftF $ EvalLogger logger id
 
-instance Logger (Free CoreEffectF) where
+instance Logger CoreEffectL where
   logMessage level msg = evalLogger $ logMessage level msg
 
-evalFileSystem :: FileSystemL a -> CoreEffect a
+evalFileSystem :: FileSystemL a -> CoreEffectL a
 evalFileSystem filepath = liftF $ EvalFileSystem filepath id
 
-instance FileSystem (Free CoreEffectF) where
+instance FileSystem CoreEffectL where
   readFile filepath = evalFileSystem $ readFile filepath
   writeFile filename text = evalFileSystem $ writeFile filename text
   getHomeDirectory = evalFileSystem getHomeDirectory
   createFilePath filepath = evalFileSystem $ createFilePath filepath
   doesFileExist    = evalFileSystem . doesFileExist
 
-evalRandom :: ERandomL a -> CoreEffect a
+evalRandom :: ERandomL a -> CoreEffectL a
 evalRandom g = liftF $ EvalRandom g id
 
-instance ERandom CoreEffect where
+instance ERandom CoreEffectL where
   getRandomInt = evalRandom . getRandomInt
   getRandomByteString = evalRandom . getRandomByteString
   evalCoreCrypto = evalRandom . evalCoreCrypto
   nextUUID = evalRandom nextUUID
 
-evalControlFlow :: ControlFlowL a -> CoreEffect a
+evalControlFlow :: ControlFlowL a -> CoreEffectL a
 evalControlFlow a = liftF $ EvalControlFlow a id
 
-instance ControlFlow CoreEffect where
+instance ControlFlow CoreEffectL where
   delay i = evalControlFlow $ delay i
 
-evalTime :: TimeL a -> CoreEffect a
+evalTime :: TimeL a -> CoreEffectL a
 evalTime action = liftF $ EvalTime action id
 
-instance Time CoreEffect where
+instance Time CoreEffectL where
     getUTCTime   = evalTime getUTCTime
     getPosixTime = evalTime getPosixTime

@@ -197,7 +197,7 @@ initializeTstRealPoWNode difficulty = do
 
 tstRealPoWNode :: NodeConfig TstRealPoWNode -> L.NodeDefinitionL ()
 tstRealPoWNode cfg = do
-    L.nodeTag "Tst Real PoW node"
+    L.setNodeTag "Tst Real PoW node"
 
     let workersCount = _workersCount cfg
     let difficulty   = _baseDifficulty cfg

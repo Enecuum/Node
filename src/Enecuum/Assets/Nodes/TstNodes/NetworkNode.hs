@@ -84,7 +84,7 @@ nnNode port = nnNode' port (TstNetworkNodeConfig 42)
 
 nnNode' :: Maybe D.PortNumber -> NodeConfig TstNetworkNode -> L.NodeDefinitionL ()
 nnNode' maybePort _ = do
-    L.nodeTag "TstNetworkNode node"
+    L.setNodeTag "TstNetworkNode node"
     L.logInfo "Starting of TstNetworkNode node"
     portVar    <- L.newVarIO maybePort
     nodeStatus <- L.newVarIO D.NodeActing

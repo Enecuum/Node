@@ -97,7 +97,7 @@ acceptAddressRequest nodeData (AddressRequest nodeLogicAddress) = do
 
 bnNode' :: NodeConfig BootNode -> L.NodeDefinitionL ()
 bnNode' _ = do
-    L.nodeTag "BootNode node"
+    L.setNodeTag "BootNode node"
     L.logInfo "Starting of BootNode node"
     nodeData <- initBootNode
     L.std $ L.stdHandler $ L.stopNodeHandler nodeData

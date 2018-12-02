@@ -1,28 +1,28 @@
-{-# LANGUAGE TypeInType #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE TypeInType     #-}
 
 module Enecuum.Framework.Node.Interpreter where
 
+import qualified "rocksdb-haskell" Database.RocksDB               as Rocks
 import           Enecuum.Prelude
-import qualified "rocksdb-haskell" Database.RocksDB       as Rocks
 
 import qualified Data.Map                                         as M
 import           Enecuum.Core.HGraph.Internal.Impl
-import qualified Enecuum.Core.Types                               as D
-import qualified Enecuum.Core.Lens                                as Lens
 import           Enecuum.Core.HGraph.Interpreters.IO
 import qualified Enecuum.Core.Interpreters                        as Impl
-import qualified Enecuum.Core.Runtime                             as R
 import qualified Enecuum.Core.Language                            as L
+import qualified Enecuum.Core.Lens                                as Lens
 import qualified Enecuum.Core.RLens                               as RLens
+import qualified Enecuum.Core.Runtime                             as R
+import qualified Enecuum.Core.Types                               as D
 import qualified Enecuum.Framework.Domain.Networking              as D
 import qualified Enecuum.Framework.Handler.Network.Interpreter    as Net
+import qualified Enecuum.Framework.Language                       as L
 import qualified Enecuum.Framework.Networking.Internal.Connection as Conn
 import qualified Enecuum.Framework.Networking.Interpreter         as Impl
-import qualified Enecuum.Framework.Language                       as L
 import qualified Enecuum.Framework.RLens                          as RLens
-import qualified Enecuum.Framework.Runtime                        as R
 import           Enecuum.Framework.Runtime                        (NodeRuntime)
+import qualified Enecuum.Framework.Runtime                        as R
 
 runDatabase :: R.DBHandle -> L.DatabaseL db a -> IO a
 runDatabase dbHandle action = do
@@ -44,8 +44,8 @@ interpretNodeL _      (L.EvalGraphIO gr act next       ) = next <$> runHGraphIO 
 
 interpretNodeL nodeRt (L.EvalNetworking networking next) = next <$> Impl.runNetworkingL nodeRt networking
 
-interpretNodeL nodeRt (L.EvalCoreEffectNodeF coreEffects next) =
-    next <$> Impl.runCoreEffect (nodeRt ^. RLens.coreRuntime) coreEffects
+interpretNodeL nodeRt (L.EvalCoreEffect coreEffects next) =
+    next <$> Impl.runCoreEffectL (nodeRt ^. RLens.coreRuntime) coreEffects
 
 interpretNodeL nodeRt (L.OpenTcpConnection serverAddr handlersScript next) =
     next <$> openConnection nodeRt (nodeRt ^. RLens.tcpConnects) serverAddr handlersScript
