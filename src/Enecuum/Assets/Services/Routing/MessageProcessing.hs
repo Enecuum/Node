@@ -1,16 +1,16 @@
-module Enecuum.Assets.Nodes.Routing.MessageProcessing where
+module Enecuum.Assets.Services.Routing.MessageProcessing where
 
 import qualified Enecuum.Assets.Nodes.Address             as A
 import qualified Enecuum.Assets.Nodes.Messages            as M
 import           Enecuum.Assets.Nodes.Methods
-import           Enecuum.Assets.Nodes.Routing.Messages
+import           Enecuum.Assets.Services.Routing.Messages
 import qualified Enecuum.Domain                           as D
 import qualified Enecuum.Framework.Lens                   as Lens
 import qualified Enecuum.Language                         as L
 import           Enecuum.Prelude
 import           Enecuum.Research.ChordRouteMap
 
-import           Enecuum.Assets.Nodes.Routing.RuntimeData
+import           Enecuum.Assets.Services.Routing.RuntimeData
 
 -- | Send udp broadcast if the message is new.
 sendUdpBroadcast
@@ -40,15 +40,18 @@ udpForwardIfNeeded
     => ToJSON message
     => Typeable message
     => HasNodeReceiverId message D.StringHash
-    => RoutingRuntime -> message -> (message -> L.NodeL ()) -> L.NodeL ()
-udpForwardIfNeeded routingRuntime message handler
+    => RoutingRuntime -> (message -> L.NodeL ()) -> message -> D.Connection D.Udp -> L.NodeL ()
+udpForwardIfNeeded routingRuntime handler message connection
     -- process message if I am a recipient
-    | routingRuntime ^. myNodeAddres . Lens.nodeId == message ^. nodeReceiverId = handler message
+    | getMyNodeId routingRuntime == message ^. nodeReceiverId = do
+        L.close connection
+        handler message
     -- forward the message further if it is not yet old.
-    | message ^. timeToLive > 0 =
+    | message ^. timeToLive > 0 = do
+        L.close connection
         udpMsgSending routingRuntime (message & timeToLive %~ (\x -> x - 1))
     -- drop message if it is too old
-    | otherwise = pure ()
+    | otherwise = L.close connection
 
 
 -- send usp msg to node
@@ -69,7 +72,7 @@ udpMsgSending routingRuntime message = do
 -- forward and proccessing the received message if necessary
 udpBroadcastReceivedMessage
     :: (ToJSON msg, Typeable msg, Serialize msg)
-    => RoutingRuntime -> (msg -> L.NodeL ()) -> msg ->  D.Connection D.Udp -> L.NodeL ()
+    => RoutingRuntime -> (msg -> L.NodeL ()) -> msg -> D.Connection D.Udp -> L.NodeL ()
 udpBroadcastReceivedMessage routingRuntime handler message conn = do
     L.close conn
     -- it is possible to forward only new messages

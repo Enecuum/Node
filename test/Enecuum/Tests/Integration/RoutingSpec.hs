@@ -2,7 +2,7 @@ module Enecuum.Tests.Integration.RoutingSpec where
 
 import qualified Data.IORef                                as O
 import qualified Data.Map                                  as M
-import           Enecuum.Assets.Nodes.Routing.Messages
+import           Enecuum.Assets.Services.Routing
 import qualified Enecuum.Assets.Nodes.TstNodes.NetworkNode as A
 import qualified Enecuum.Assets.Scenarios                  as A
 import qualified Enecuum.Domain                            as D

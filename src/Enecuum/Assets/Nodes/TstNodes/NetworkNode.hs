@@ -7,7 +7,7 @@ module Enecuum.Assets.Nodes.TstNodes.NetworkNode (nnNode, TstNetworkNode, NodeCo
 import qualified Data.Aeson                       as J
 import qualified Enecuum.Assets.Nodes.Address     as A
 import qualified Enecuum.Assets.Nodes.Messages    as M
-import           Enecuum.Assets.Nodes.Routing
+import           Enecuum.Assets.Services.Routing
 import           Enecuum.Config
 import qualified Enecuum.Domain                   as D
 import           Enecuum.Framework.Language.Extra (HasStatus)
@@ -73,11 +73,13 @@ getRoutingMessages nodeData _ = L.readVarIO (nodeData ^. routingMessages)
 
 acceptSendTo :: TstNetworkNodeData -> SendMsgTo -> D.Connection D.Udp -> L.NodeL ()
 acceptSendTo nodeData message conn = do
-    L.close conn
     routingData <- L.readVarIO (nodeData^.routingRuntime)
-    udpForwardIfNeeded routingData message $ \(SendMsgTo _ _ mes) -> do
-        L.atomically $ L.modifyVar (nodeData ^. routingMessages) (mes :)
-        L.logInfo "I'm receiver."
+    udpForwardIfNeeded routingData (acceptSendTo' nodeData) message conn
+
+acceptSendTo' :: TstNetworkNodeData -> SendMsgTo -> L.NodeL ()
+acceptSendTo' nodeData (SendMsgTo _ _ mes) = do
+    L.atomically $ L.modifyVar (nodeData ^. routingMessages) (mes :)
+    L.logInfo "I'm receiver."
 
 nnNode :: Maybe D.PortNumber -> L.NodeDefinitionL ()
 nnNode port = nnNode' port (TstNetworkNodeConfig 42)

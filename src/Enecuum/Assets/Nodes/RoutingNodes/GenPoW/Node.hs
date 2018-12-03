@@ -13,7 +13,7 @@ import qualified Enecuum.Assets.Nodes.Address                    as A
 import qualified Enecuum.Assets.Nodes.CLens                      as CLens
 import qualified Enecuum.Assets.Nodes.Messages                   as Msgs
 import           Enecuum.Assets.Nodes.Methods
-import           Enecuum.Assets.Nodes.Routing
+import           Enecuum.Assets.Services.Routing
 import           Enecuum.Assets.Nodes.RoutingNodes.GenPoW.Config
 import           Enecuum.Config
 import qualified Enecuum.Domain                                  as D
