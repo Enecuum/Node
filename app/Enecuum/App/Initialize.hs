@@ -6,7 +6,6 @@ module App.Initialize where
 import qualified Data.Map                           as M
 import qualified Enecuum.Assets.Nodes.Address       as A
 import           Enecuum.Assets.Nodes.ConfigParsing (parseConfig)
-import qualified Enecuum.Assets.Scenarios           as Prd
 import           Enecuum.Assets.System.Directory    (clientStory)
 import qualified Enecuum.Assets.TstScenarios        as Tst
 import qualified Enecuum.Config                     as Cfg
@@ -86,17 +85,11 @@ initialize configSrc = do
 
     -- Don't forget to update the list in ConfigParsing!
     let runners =
-            [ runNode' $ Cfg.dispatchScenario @Prd.GraphNode  configSrc
-            , runNode' $ Cfg.dispatchScenario @Prd.GenPoANode configSrc
-            , runNode' $ Cfg.dispatchScenario @Prd.GenPoWNode configSrc
-            , runNode' $ Cfg.dispatchScenario @Prd.BootNode   configSrc
-
-            , runNode' $ Cfg.dispatchScenario @Prd.ClientNode configSrc
-
-            , runNode' $ Cfg.dispatchScenario @Tst.TestClient configSrc
+            [ runNode' $ Cfg.dispatchScenario @Tst.TestClient configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TestServer configSrc
 
-            , runNode' $ Cfg.dispatchScenario @Tst.TstNetworkNode configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.ClientNode configSrc
+
             , runNode' $ Cfg.dispatchScenario @Tst.TstGraphNode   configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstGenPoWNode  configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstGenPoANode  configSrc
@@ -104,51 +97,9 @@ initialize configSrc = do
             ]
     sequence_ runners
 
-runMultiNode :: LByteString -> IO ()
-runMultiNode configSrc = case Cfg.dispatchScenario @Prd.MultiNode configSrc of
-    Just (cfg, _) -> do
-        startNodes "pow" startGenPoWNode
-            (Prd._routingGenPoWPorts $ Cfg.nodeConfig cfg)
-            (Prd._routingGenPoWConfig $ Cfg.nodeConfig cfg)
-        
-        startNodes "poa" startGenPoaNode
-            (Prd._routingGenPoAPorts $ Cfg.nodeConfig cfg)
-            (Prd._routingGenPoAConfig $ Cfg.nodeConfig cfg)
-        
-        startNodes "gn" startGrapNode
-            (Prd._routingGraphNodePorts $ Cfg.nodeConfig cfg)
-            (Prd._routingGraphNodeConfig $ Cfg.nodeConfig cfg)
-        forever $ threadDelay 50000000
-
-    Nothing -> putTextLn "Parse error of multi node config."
-
 startNodes tag act range cfg = do
     putTextLn $ "Start " <> tag <> " in range from " <> show (D.bottomBound range) <> " to " <> show (D.topBound range)
     forM_ (D.rangeToList range) $ \port -> do
         threadDelay 3000
         rand :: Int <- randomIO
         void $ forkIO $ void $ act cfg (D.toHashGeneric rand) port
-
-startGenPoWNode :: Cfg.NodeConfig Prd.GenPoWNode -> D.NodeId -> D.PortNumber -> IO ()
-startGenPoWNode cfg rand port = do
-    let nodeCfg = cfg
-            { Prd._powNodePorts = A.makeNodePorts1000 port
-            , Prd._powNodeId    = rand
-            }
-    runNode D.nullLoger (Prd.powNode' nodeCfg)
-
-startGenPoaNode :: Cfg.NodeConfig Prd.GenPoANode -> D.NodeId -> D.PortNumber -> IO ()
-startGenPoaNode cfg rand port = do
-    let nodeCfg = cfg
-            { Prd._poaNodePorts = A.makeNodePorts1000 port
-            , Prd._poaNodeId = rand
-            }
-    runNode D.nullLoger (Prd.poaNode Prd.Good nodeCfg)
-
-startGrapNode :: Cfg.NodeConfig Prd.GraphNode -> D.NodeId -> D.PortNumber ->  IO ()
-startGrapNode cfg rand port = do
-    let nodeCfg = cfg
-            { Prd._nodePorts   = A.makeNodePorts1000 port
-            , Prd._graphNodeId = rand
-            }
-    runNode D.nullLoger (Prd.graphNode nodeCfg)

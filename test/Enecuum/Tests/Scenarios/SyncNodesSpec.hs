@@ -6,7 +6,6 @@ import           Data.Aeson
 import qualified Enecuum.Assets.Nodes.Address  as A
 import qualified Enecuum.Assets.Nodes.CLens    as CLens
 import qualified Enecuum.Assets.Nodes.Messages as D
-import qualified Enecuum.Assets.Scenarios      as Prd
 import qualified Enecuum.Assets.TstScenarios   as Tst
 import qualified Enecuum.Blockchain.Lens       as Lens
 import qualified Enecuum.Domain                as D

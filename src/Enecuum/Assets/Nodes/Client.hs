@@ -1,26 +1,31 @@
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Enecuum.Assets.Nodes.Client (clientNode, ClientNode(..), NodeConfig (..), SendTo(..), sendTo, Protocol(..)) where
+module Enecuum.Assets.Nodes.Client
+  ( clientNode
+  , ClientNode(..)
+  , NodeConfig (..)
+  , SendTo(..)
+  , Protocol(..)
+  ) where
 
-import qualified Data.Aeson                            as J
-import           Data.Aeson.Extra                      (noLensPrefix)
+import qualified Data.Aeson                       as J
+import           Data.Aeson.Extra                 (noLensPrefix)
 import           Data.Complex
-import qualified Data.Map                              as Map
-import           Data.Set                              (union, (\\))
-import qualified Data.Set                              as Set
-import           Data.Text                             hiding (map)
+import qualified Data.Map                         as Map
+import           Data.Set                         (union, (\\))
+import qualified Data.Set                         as Set
+import           Data.Text                        hiding (map)
 import           Enecuum.Assets.Blockchain.Keys
-import qualified Enecuum.Assets.Blockchain.Wallet      as A
-import qualified Enecuum.Assets.Nodes.Address          as A
-import qualified Enecuum.Assets.Nodes.Messages         as M
-import           Enecuum.Assets.Services.Routing.Messages
+import qualified Enecuum.Assets.Blockchain.Wallet as A
+import qualified Enecuum.Assets.Nodes.Address     as A
+import qualified Enecuum.Assets.Nodes.Messages    as M
 import           Enecuum.Config
-import qualified Enecuum.Domain                        as D
+import qualified Enecuum.Domain                   as D
 import           Enecuum.Framework.Domain.Error
-import qualified Enecuum.Framework.Lens                as Lens
-import qualified Enecuum.Language                      as L
-import           Enecuum.Prelude                       hiding (map, unpack)
+import qualified Enecuum.Framework.Lens           as Lens
+import qualified Enecuum.Language                 as L
+import           Enecuum.Prelude                  hiding (map, unpack)
 import           Enecuum.Research.RouteDrawing
 import           Graphics.GD.Extra
 
@@ -182,31 +187,6 @@ getBlock (GetBlock hash address) = do
         Right (D.MBlockContent block) -> "Microblock is " <> show block
         Left  requestError            -> "Error: "        <> requestError
 
-
-sendTo :: SendTo -> L.NodeL Text
-sendTo (SendTo (Address host port) rPort) = do
-    let receiverHash    = D.toHashGeneric $ A.makeNodePorts1000 rPort
-    let resenderUdpPort = A.makeNodePorts1000 port ^. Lens.nodeUdpPort
-    let resenderAddress = D.Address host resenderUdpPort
-    ok <- L.notify resenderAddress $ SendMsgTo receiverHash 10 "!! msg !!"
-    if isRight ok
-        then pure   "Test message is sent."
-        else pure $ "Error of sending: " <> show ok
-
-drawRouteMap :: DrawMap -> L.NodeL Text
-drawRouteMap (DrawMap port) = do
-    let startAddress = A.makeAddressByPorts $ A.makeNodePorts1000 port
-    routMap <- cardAssembly mempty mempty (Set.fromList [startAddress])
-    L.evalIO $ makeImage (1000, 1000) "image.png" $ \image ->
-        forM_ (Map.toList routMap) $ \(hs, hf) -> do
-            let startPointPhase = hashToPhase hs
-            let startPoint      = (500 :+ 500) + mkPolar 1 startPointPhase * 400
-            forM_ (hashToPhase <$> hf) $ \ph -> do
-                let endPoint = (500 :+ 500) + mkPolar 1 ph * 400
-                drawCircle endPoint 10 black image
-                drawArrow startPoint endPoint black image
-    pure "Drawn."
-
 -- | Build connection map.
 cardAssembly
     :: Map D.StringHash [D.StringHash]
@@ -298,7 +278,4 @@ clientNode' _ = do
         --  GenerateBlocksPacket {blocks = 2, timeGap = 0, address = Address {_host = "127.0.0.1", _port = 6020}}
         L.stdHandler generateBlocksPacketHandler
 
-        -- routing
-        L.stdHandler sendTo
-        L.stdHandler drawRouteMap
     L.awaitNodeFinished' stateVar
