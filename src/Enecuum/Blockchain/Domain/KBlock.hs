@@ -27,6 +27,7 @@ type Difficulty  = Int
 
 -- | Hash in raw byte string (not encoded as base64)
 newtype RawHash = RawHash { unRawHash :: ByteString }
+    deriving (Show, Eq, Generic)
 
 data KBlock = KBlock
     { _time     :: BlockTime
