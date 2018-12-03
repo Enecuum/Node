@@ -12,7 +12,7 @@ import qualified "rocksdb-haskell" Database.RocksDB           as Rocks
 import           Enecuum.Assets.Nodes.Address                 as A
 import           Enecuum.Assets.Nodes.Client                  (ClientNode)
 import qualified Enecuum.Assets.Nodes.GraphService.Config     as Cfg
-import qualified Enecuum.Assets.Scenarios                     as A
+import           Enecuum.Assets.Nodes.Messages                as D
 import qualified Enecuum.Assets.TstScenarios                  as Tst
 import qualified Enecuum.Config                               as Cfg
 import qualified Enecuum.Core.Lens                            as Lens
@@ -46,7 +46,7 @@ testConfigFilePath = "./configs/tst_client_test_config.json"
 loadLoggerConfig :: FilePath -> IO D.LoggerConfig
 loadLoggerConfig configFile = do
     configSrc <- LBS.readFile configFile
-    case (Cfg.tryParseConfig @ClientNode $ configSrc) of
+    case (Cfg.tryParseConfig @ClientNode configSrc) of
         Left e       -> (error . show . prettyPrintParseException) $ e
         Right config -> doSomethingWithConfig config
 
@@ -137,14 +137,14 @@ makeRpcRequestUntilSuccess = makeRpcRequestWithPredicate ( \_ -> True )
 -- It tries to reach node with n attempts via ping message
 waitForNode :: D.Address -> IO ()
 waitForNode address = void $ makeRpcRequestUntilSuccess' 50 "Node is not ready." predicate address request
-    where request = A.Ping
-          predicate = ( \(A.Pong) -> True )
+    where request = D.Ping
+          predicate = ( \(D.Pong) -> True )
 
 waitForBlocks2 :: D.BlockNumber -> D.Address -> IO ()
 waitForBlocks2 number address = do
     void $ makeRpcRequestWithPredicate predicate address request
-    where request = A.GetChainLengthRequest
-          predicate = \(A.GetChainLengthResponse count) -> count < (fromIntegral number)
+    where request = D.GetChainLengthRequest
+          predicate = \(D.GetChainLengthResponse count) -> count < (fromIntegral number)
 
 waitForBlocks' :: Word32 -> D.BlockNumber -> D.Address -> IO ()
 waitForBlocks' attempts number address = go 0
@@ -153,7 +153,7 @@ waitForBlocks' attempts number address = go 0
         go n | n == attempts = error "No valid results from node."
         go n = do
             threadDelay $ 1000 * 100
-            A.GetChainLengthResponse count <- D.withSuccess $ makeIORpcRequest address A.GetChainLengthRequest
+            D.GetChainLengthResponse count <- D.withSuccess $ makeIORpcRequest address D.GetChainLengthRequest
             when (count < number) $ go (n + 1)
 
 waitForBlocks :: D.BlockNumber -> D.Address -> IO ()

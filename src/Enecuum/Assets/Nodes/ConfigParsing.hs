@@ -1,7 +1,6 @@
 module Enecuum.Assets.Nodes.ConfigParsing where
 
 import           Data.Yaml                   (ParseException, prettyPrintParseException)
-import qualified Enecuum.Assets.Scenarios    as Prd
 import qualified Enecuum.Assets.TstScenarios as Tst
 import qualified Enecuum.Config              as Cfg
 import           Enecuum.Prelude
@@ -20,17 +19,11 @@ runParser (Right _) = pure $ Right 1
 parseConfig :: LByteString -> IO ()
 parseConfig configSrc = do
     let runners =
-            [ runParser $ Cfg.tryParseConfig @Prd.GraphNode  configSrc
-            , runParser $ Cfg.tryParseConfig @Prd.GenPoANode configSrc
-            , runParser $ Cfg.tryParseConfig @Prd.GenPoWNode configSrc
-            , runParser $ Cfg.tryParseConfig @Prd.BootNode   configSrc
-
-            , runParser $ Cfg.tryParseConfig @Prd.ClientNode configSrc
-
-            , runParser $ Cfg.tryParseConfig @Tst.TestClient configSrc
+            [ runParser $ Cfg.tryParseConfig @Tst.TestClient configSrc
             , runParser $ Cfg.tryParseConfig @Tst.TestServer configSrc
 
-            , runParser $ Cfg.tryParseConfig @Tst.TstNetworkNode   configSrc
+            , runParser $ Cfg.tryParseConfig @Tst.ClientNode configSrc
+
             , runParser $ Cfg.tryParseConfig @Tst.TstGraphNode     configSrc
             , runParser $ Cfg.tryParseConfig @Tst.TstGenPoWNode    configSrc
             , runParser $ Cfg.tryParseConfig @Tst.TstGenPoANode    configSrc
