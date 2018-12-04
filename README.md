@@ -144,11 +144,15 @@ In this sample, two nodes interact via network sending UDP messages.
     - Listens UDP port for `Ping` messages.
     - Sends `Pons` message back to the client.
     - Manages a concurrent internal state (counter of pings).
+    
     `stack exec enq-test-node-haskell singlenode ./configs/tst_ping_server.json`
+    
   * Pong client node
     - Sends `Ping` messages to the server periodically.
     - Accepts `Pong` messages from the server.
+    
     `stack exec enq-test-node-haskell singlenode ./configs/tst_pong_client1.json`
+    
     `stack exec enq-test-node-haskell singlenode ./configs/tst_pong_client2.json`
 
 ### Network messages
