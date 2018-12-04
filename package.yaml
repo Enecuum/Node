@@ -100,7 +100,7 @@ library:
 
 
 executables:
-  enq-node-haskell:
+  enq-test-node-haskell:
     main:                Main.hs
     source-dirs:         app/Enecuum
     ghc-options:

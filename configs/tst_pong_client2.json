@@ -4,7 +4,7 @@
     "nodeConfig": {
         "tag": "PongClientNodeConfig",
         "clientName": "Pong client #2",
-        "pingDelay": 1000000,
+        "pingDelay": 100000,
         "pingServerAddress": {"host":"127.0.0.1","port":3000}
     },
     "loggerConfig": {

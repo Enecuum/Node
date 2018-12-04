@@ -3,20 +3,20 @@
 
 module Enecuum.Assets.Initialization where
 
-import qualified Data.Map                           as M
-import qualified Enecuum.Assets.Nodes.Address       as A
-import           Enecuum.Assets.ConfigParsing       (parseConfig)
-import           Enecuum.Assets.System.Directory    (clientStory)
-import qualified Enecuum.Assets.TstScenarios        as Tst
-import qualified Enecuum.Config                     as Cfg
-import qualified Enecuum.Core.Lens                  as Lens
-import qualified Enecuum.Domain                     as D
-import           Enecuum.Interpreters               (clearNodeRuntime, runFileSystemL, runNodeDefinitionL)
-import qualified Enecuum.Language                   as L
+import qualified Data.Map                        as M
+import           Enecuum.Assets.ConfigParsing    (parseConfig)
+import qualified Enecuum.Assets.Nodes.Address    as A
+import           Enecuum.Assets.System.Directory (clientStory)
+import qualified Enecuum.Assets.TstScenarios     as Tst
+import qualified Enecuum.Config                  as Cfg
+import qualified Enecuum.Core.Lens               as Lens
+import qualified Enecuum.Domain                  as D
+import           Enecuum.Interpreters            (clearNodeRuntime, runFileSystemL, runNodeDefinitionL)
+import qualified Enecuum.Language                as L
 import           Enecuum.Prelude
-import           Enecuum.Runtime                    (clearCoreRuntime, clearLoggerRuntime, createCoreRuntime,
-                                                     createLoggerRuntime, createNodeRuntime)
-import qualified Enecuum.Runtime                    as R
+import           Enecuum.Runtime                 (clearCoreRuntime, clearLoggerRuntime, createCoreRuntime,
+                                                  createLoggerRuntime, createNodeRuntime)
+import qualified Enecuum.Runtime                 as R
 import           System.Random
 
 createLoggerRuntime' :: D.LoggerConfig -> IO R.LoggerRuntime
@@ -85,11 +85,14 @@ initialize configSrc = do
 
     -- Don't forget to update the list in ConfigParsing!
     let runners =
-            [ runNode' $ Cfg.dispatchScenario @Tst.ClientNode configSrc
+            [ runNode' $ Cfg.dispatchScenario @Tst.ClientNode      configSrc
 
-            , runNode' $ Cfg.dispatchScenario @Tst.TstGraphNode   configSrc
-            , runNode' $ Cfg.dispatchScenario @Tst.TstGenPoWNode  configSrc
-            , runNode' $ Cfg.dispatchScenario @Tst.TstGenPoANode  configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.TstGraphNode    configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.TstGenPoWNode   configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.TstGenPoANode   configSrc
+
+            , runNode' $ Cfg.dispatchScenario @Tst.PingServerNode  configSrc
+            , runNode' $ Cfg.dispatchScenario @Tst.PongClientNode  configSrc
             ]
     sequence_ runners
 
