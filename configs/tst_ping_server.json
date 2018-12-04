@@ -1,0 +1,16 @@
+{
+    "node": "PingServerNode",
+    "nodeScenario": "PingServer",
+    "nodeConfig": {
+        "tag": "PingServerNodeConfig",
+        "stopOnPing": 200,
+        "servingPort": 3000
+    },
+    "loggerConfig": {
+        "logFilePath": "",
+        "format": "$prio $loggername: $msg",
+        "logToFile": false,
+        "logToConsole": true,
+        "level": "Debug"
+    }
+}

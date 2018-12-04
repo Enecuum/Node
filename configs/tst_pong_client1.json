@@ -1,0 +1,17 @@
+{
+    "node": "PongClientNode",
+    "nodeScenario": "PongClient",
+    "nodeConfig": {
+        "tag": "PongClientNodeConfig",
+        "clientName": "Pong client #1",
+        "pingDelay": 1000000,
+        "pingServerAddress": {"host":"127.0.0.1","port":3000}
+    },
+    "loggerConfig": {
+        "logFilePath": "",
+        "format": "$prio $loggername: $msg",
+        "logToFile": false,
+        "logToConsole": true,
+        "level": "Debug"
+    }
+}
