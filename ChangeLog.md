@@ -1,6 +1,26 @@
 # Node project changelog
 
-## Changes in 0.5.0
+## Changes in v0.6.0
+  - Framework updates:
+    * Framework structure improvements (renamings, movings)
+    * New languages (TimeL)
+    * Some languages updated (FileSystemL, DatabaseL, CryptoL)
+    * Configs parsing improved, errors made more friendly
+    * TCP and UDP implementation reworked, several bugs fixed
+  - Blockchain algorithms:
+    * Database model update (entities for microblocks & transactions added)
+    * Wallet & keys logic updated
+  - Sample nodes updates:
+    * Logic of sample nodes updated
+    * Full restore and dump of graph to DB
+    * Windowed graph processing added
+    * New sample nodes: tst_ping_server.json, tst_pong_client1.json, , tst_pong_client2.json
+    * More options for sample nodes added
+  - Misc:
+      * Documentation updates
+      * More integrational tests
+
+## Changes in v0.5.0
   - New architecture, design and approaches to build network nodes and blockchain protocols.
     The architecture is now based on Free monads, STM and eDSLs.
     Nodes are the interpretable monadic scripts.
