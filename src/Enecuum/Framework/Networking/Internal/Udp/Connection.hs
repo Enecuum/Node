@@ -6,17 +6,17 @@ module Enecuum.Framework.Networking.Internal.Udp.Connection
 import           Enecuum.Prelude
 
 import           Control.Monad.Extra
-import qualified Data.Map as M
 import           Data.Aeson
-import           Data.ByteString.Lazy      as B (fromStrict, toStrict)
-import qualified Network.Socket            as S hiding (recv, send, sendTo, sendAll, recvFrom)
-import qualified Network.Socket.ByteString as S
+import           Data.ByteString.Lazy                             as B (fromStrict, toStrict)
+import qualified Data.Map                                         as M
+import qualified Network.Socket                                   as S hiding (recv, recvFrom, send, sendAll, sendTo)
+import qualified Network.Socket.ByteString                        as S
 
-import qualified Enecuum.Framework.Networking.Internal.Connection as Conn
-import           Enecuum.Framework.Runtime as R
-import qualified Enecuum.Core.Runtime      as R
-import qualified Enecuum.Framework.Domain.Networking as D
+import qualified Enecuum.Core.Runtime                             as R
+import qualified Enecuum.Framework.Domain.Networking              as D
 import           Enecuum.Framework.Networking.Internal.Client
+import qualified Enecuum.Framework.Networking.Internal.Connection as Conn
+import           Enecuum.Framework.Runtime                        as R
 
 sendMsg
     :: (Conn.NetworkConnection protocol, Show a)
@@ -31,10 +31,9 @@ sendMsg logger sendFunc conn = do
     atomically (putTMVar sockVar sock)
     case err of
         Right _                     -> pure $ Right ()
-        Left  (_ :: SomeException)  -> do
-            R.logError' logger (show err)
+        Left  (err :: SomeException)  -> do
             Conn.close logger conn
-            pure $ Left D.ConnectionClosed
+            pure $ Left $ D.ConnectionClosed $ show err
 
 -- TODO: what is the behavior when the message > packetSize? What's happening with its rest?
 -- Will it garbage the next message?
@@ -61,10 +60,11 @@ readingWorker logger handlers conn sock = do
         withWorkerAction logger action $ readingWorker logger handlers conn sock
 
 sendUdpMsg :: D.Address -> LByteString -> IO (Either D.NetworkError ())
-sendUdpMsg _    msg | length msg > D.packetSize = pure $ Left D.TooBigMessage
+sendUdpMsg _    msg | length msg > D.packetSize =
+    pure $ Left $ D.TooBigMessage $ "Packet size: " +|| length msg ||+ ", limit: " +|| D.packetSize ||+ ""
 sendUdpMsg addr msg = tryM
     (runClient S.Datagram addr $ \sock -> S.sendAll sock $ B.toStrict msg)
-    (pure $ Left D.AddressNotExist)
+    (pure $ Left $ D.AddressNotExist $ show addr)
     (\_ -> pure $ Right ())
 
 serverWorker
@@ -108,18 +108,17 @@ instance Conn.NetworkConnection D.Udp where
                 listenSockVar  <- newTMVarIO listenSock
                 let worker = serverWorker connectCounter register handlers listenSockVar
                         `finally` Conn.closeSocket listenSock
-                serverWorkerId <- forkIO worker 
+                serverWorkerId <- forkIO worker
                 pure $ Just $ R.ServerHandle listenSockVar serverWorkerId
 
-    send logger _ msg | length msg > D.packetSize = do
-        R.logError' logger $ "Message too big (> " <> show D.packetSize <> "): " <> show msg
-        pure $ Left D.TooBigMessage
+    send logger _ msg | length msg > D.packetSize =
+        pure $ Left $ D.TooBigMessage $ "Packet size: " +|| length msg ||+ ", limit: " +|| D.packetSize ||+ ""
     send logger conn@(Conn.ServerUdpConnection sockAddr _ _) msg =
         sendMsg logger (\sock -> S.sendTo sock (B.toStrict msg) sockAddr) conn
     send logger conn msg = sendMsg logger (\sock -> S.sendAll sock (B.toStrict msg)) conn
 
     close _ conn@Conn.ClientUdpConnection{} = Conn.closeConnection conn
-    close _ _  = pure ()
+    close _ _                               = pure ()
 
     open logger counter (D.Address host port) handlers = do
         address    <- head <$> S.getAddrInfo Nothing (Just host) (Just $ show port)
@@ -139,4 +138,3 @@ instance Conn.NetworkConnection D.Udp where
                 let worker = readingWorker logger handlers conn sock `finally` S.close sock
                 readerId <- forkIO worker
                 pure $ Just $ Conn.ClientUdpConnection readerId sockVar conn
-

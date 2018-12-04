@@ -5,17 +5,17 @@ module Enecuum.Framework.Networking.Internal.Tcp.Connection where
 import           Enecuum.Prelude
 
 import           Data.Aeson
-import qualified Data.Map as M
-import           Network.Socket hiding (recvFrom)
-import           Network (PortID (..), listenOn)
+import qualified Data.Map                                         as M
+import           Network                                          (PortID (..), listenOn)
+import           Network.Socket                                   hiding (recvFrom)
 
-import           Enecuum.Framework.Domain  as D
-import           Enecuum.Framework.Runtime as R
-import qualified Enecuum.Core.Runtime      as R
-import           Enecuum.Framework.Runtime (WorkerState (..), WorkerAction, withWorkerAction)
+import qualified Enecuum.Core.Runtime                             as R
+import           Enecuum.Framework.Domain                         as D
 import qualified Enecuum.Framework.Networking.Internal.Connection as Conn
-import qualified Network.Socket.ByteString.Lazy as S
-import qualified Network.Socket as S hiding (recv)
+import           Enecuum.Framework.Runtime                        as R
+import           Enecuum.Framework.Runtime                        (WorkerAction, WorkerState (..), withWorkerAction)
+import qualified Network.Socket                                   as S hiding (recv)
+import qualified Network.Socket.ByteString.Lazy                   as S
 
 analyzeReadingResult
     :: R.Handlers D.Tcp
@@ -110,15 +110,16 @@ instance Conn.NetworkConnection D.Tcp where
     close _ = Conn.closeConnection
 
     send logger (Conn.TcpConnection sockVar readerId _) msg
-        | length msg > D.packetSize = pure $ Left D.TooBigMessage
+        | length msg > D.packetSize =
+            pure $ Left $ TooBigMessage $ "Packet size: " +|| length msg ||+ ", limit: " +|| D.packetSize ||+ ""
         | otherwise                 = do
             sock <- atomically $ takeTMVar sockVar
             eRes <- try $ S.sendAll sock msg
             res <- case eRes of
                 Right _                     -> pure $ Right ()
                 Left  (err :: SomeException)  -> do
-                    R.logError' logger (show err)
+                    -- R.logError' logger (show err)
                     Conn.closeConnection' sock readerId
-                    pure $ Left D.ConnectionClosed
+                    pure $ Left $ D.ConnectionClosed $ show err
             atomically (putTMVar sockVar sock)
             pure res

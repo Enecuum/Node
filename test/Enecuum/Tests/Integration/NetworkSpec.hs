@@ -1,22 +1,22 @@
-{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 module Enecuum.Tests.Integration.NetworkSpec where
 
 --
 
 import           Enecuum.Prelude
 
-import           Test.HUnit
+import qualified Enecuum.Language                                 as L
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
-import qualified Enecuum.Language              as L
+import           Test.Hspec.Contrib.HUnit                         (fromHUnitTest)
+import           Test.HUnit
 
-import qualified Enecuum.Testing.Integrational as I
-import           Enecuum.Interpreters
-import qualified Enecuum.Runtime as Rt
-import qualified Enecuum.Domain                as D
-import qualified Data.Map as M
+import qualified Data.Map                                         as M
+import qualified Enecuum.Domain                                   as D
 import qualified Enecuum.Framework.Networking.Internal.Connection as Con
+import           Enecuum.Interpreters
+import qualified Enecuum.Runtime                                  as Rt
+import qualified Enecuum.Testing.Integrational                    as I
 import           Enecuum.Tests.Wrappers
 
 -- Tests disabled
@@ -54,7 +54,11 @@ bigMsg = BigMsg [1..5000]
 createNodeRuntime :: IO Rt.NodeRuntime
 createNodeRuntime = Rt.createVoidLoggerRuntime >>= Rt.createCoreRuntime >>= (\a -> Rt.createNodeRuntime a M.empty)
 
- --
+ensureNetworkError (D.AddressNotExist _)  (Left (D.AddressNotExist _))  = True
+ensureNetworkError (D.TooBigMessage _)    (Left (D.TooBigMessage _))    = True
+ensureNetworkError (D.ConnectionClosed _) (Left (D.ConnectionClosed _)) = True
+ensureNetworkError _ _                                                  = False
+
 testReleaseOfResources :: (Applicative f, L.Serving c (f ())) =>
                                  c -> D.PortNumber -> D.PortNumber -> Test
 testReleaseOfResources protocol serverPort succPort =
@@ -79,7 +83,7 @@ testConnectFromTo prot1 prot2 serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
         runNodeDefinitionL nodeRt1 $
             L.serving prot1 serverPort $ pure ()
-        
+
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
             conn <- L.open prot2 serverAddr $ pure ()
@@ -101,7 +105,7 @@ testSendingMsgToNonexistentAddress succPort =
     runServingScenarion succPort succPort $ \_ succAddr nodeRt1 _ ->
         runNodeDefinitionL nodeRt1 $ do
             res <- L.notify (D.Address "127.0.0.1" 300) Success
-            when (Left D.AddressNotExist == res) $
+            when (ensureNetworkError (D.AddressNotExist "") res) $
                 void $ L.notify succAddr Success
 
 testSendingMsgToClosedConnection :: (L.Send
@@ -114,13 +118,13 @@ testSendingMsgToClosedConnection protocol serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
         runNodeDefinitionL nodeRt1 $
             L.serving protocol serverPort $ pure ()
-        
+
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
             Just conn <- L.open protocol serverAddr $ pure ()
             L.close conn
             res  <- L.send conn Success
-            when (Left D.ConnectionClosed == res) $
+            when (ensureNetworkError (D.ConnectionClosed "") res) $
                 void $ L.notify succAddr Success
 
 testSendingBigMsgByConnect :: (L.Send
@@ -132,12 +136,12 @@ testSendingBigMsgByConnect protocol serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
         runNodeDefinitionL nodeRt1 $
             L.serving protocol serverPort $ pure ()
-        
+
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
             Just conn <- L.open protocol serverAddr $ pure ()
             res  <- L.send conn bigMsg
-            when (Left D.TooBigMessage == res) $
+            when (ensureNetworkError (D.TooBigMessage "") res) $
                 void $ L.notify succAddr Success
 
 testSendingBigUdpMsgByAddress :: D.PortNumber -> D.PortNumber -> Test
@@ -145,11 +149,11 @@ testSendingBigUdpMsgByAddress serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
         runNodeDefinitionL nodeRt1 $
             L.serving D.Tcp serverPort $ pure ()
-        
+
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
             res <- L.notify serverAddr bigMsg
-            when (Left D.TooBigMessage == res) $
+            when (ensureNetworkError (D.TooBigMessage "") res) $
                 void $ L.notify succAddr Success
 
 pingPongTest :: (L.Send (D.Connection con1) (Free L.NetworkingF),
@@ -159,13 +163,13 @@ pingPongTest :: (L.Send (D.Connection con1) (Free L.NetworkingF),
                 L.Serving con1 (Free (L.NetworkHandlerF con2 m) ())) =>
                con1 -> D.PortNumber -> D.PortNumber -> Test
 
-pingPongTest protocol serverPort succPort = 
+pingPongTest protocol serverPort succPort =
     runServingScenarion serverPort succPort $ \serverAddr succAddr nodeRt1 nodeRt2 -> do
         runNodeDefinitionL nodeRt1 $
             L.serving protocol serverPort $ do
                 L.handler (pingHandle succAddr)
                 L.handler (pongHandle succAddr)
-        
+
         threadDelay 5000
         runNodeDefinitionL nodeRt2 $ do
             Just conn <- L.open protocol serverAddr $ do
@@ -181,7 +185,7 @@ oneMessageTest protocol serverPort succPort =
         runNodeDefinitionL nodeRt2 $ do
             Just conn <- L.open protocol serverAddr $ pure ()
             res <- L.send conn Success
-            case res of 
+            case res of
                 Left err -> L.logInfo $ "Error: " <> show err
                 Right _  -> L.logInfo   "Sending ok."
 accessSuccess succAddr Success conn = do
@@ -201,7 +205,7 @@ runServingScenarion serverPort succPort f = TestCase $ do
     void $ forkIO $ f serverAddr succAddr nodeRt1 nodeRt2
     ok <- succesServer succPort
     runNodeDefinitionL nodeRt1 $ L.stopServing serverPort
-    assertBool "" ok    
+    assertBool "" ok
 
 pingHandle
     :: (L.Connection m con, L.SendUdp m, L.Send (D.Connection con) m, Monad m)

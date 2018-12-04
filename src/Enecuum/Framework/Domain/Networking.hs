@@ -29,7 +29,8 @@ data Udp = Udp
 data Tcp = Tcp
 data Rpc = Rpc
 
-data NetworkError = ConnectionClosed | TooBigMessage | AddressNotExist deriving (Eq, Show)
+data NetworkError = ConnectionClosed Text | TooBigMessage Text | AddressNotExist Text
+    deriving (Eq, Show)
 
 newtype BoundAddress = BoundAddress Address
     deriving (Show, Eq, Ord, Generic)
