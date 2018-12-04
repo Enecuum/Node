@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeInType   #-}
 
-module App.GenConfigs where
+module Enecuum.Assets.GenConfigs where
 
 import           Data.Aeson.Encode.Pretty    (encodePretty)
 import qualified Data.ByteString.Lazy        as B

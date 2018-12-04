@@ -52,36 +52,6 @@ clientPorts = makeNodePorts1000 5010
 clientAddress :: NodeAddress
 clientAddress = makeAddressByPorts clientPorts
 
--- Routing nodes
-
--- boot node = [0 .. 9]
-routingBootNodePorts :: NodePorts
-routingBootNodePorts = makeNodePorts1000 5000
-
-routingBootNodeAddress :: NodeAddress
-routingBootNodeAddress = makeAddressByPorts routingBootNodePorts
-
--- pow = [20 .. 49]
-routingGenPoWNodePorts :: NodePorts
-routingGenPoWNodePorts = makeNodePorts1000 5020
-
-routingGenPoWNodeAddress :: NodeAddress
-routingGenPoWNodeAddress = makeAddressByPorts routingGenPoWNodePorts
-
--- graph node = [50 .. 199]
-routingGraphNodePorts :: NodePorts
-routingGraphNodePorts = makeNodePorts1000 5050
-
-routingGraphNodeAddress :: NodeAddress
-routingGraphNodeAddress = makeAddressByPorts routingGraphNodePorts
-
--- poa = [200 .. 999]
-routingGenPoANodePorts :: NodePorts
-routingGenPoANodePorts = makeNodePorts1000 5200
-
-routingGenPoANodeAddress :: NodeAddress
-routingGenPoANodeAddress = makeAddressByPorts routingGenPoANodePorts
-
 -- Test nodes
 tstGenPoANodePorts :: NodePorts
 tstGenPoANodePorts = makeNodePorts1000 5200

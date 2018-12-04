@@ -1,11 +1,11 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeInType   #-}
 
-module App.Initialize where
+module Enecuum.Assets.Initialization where
 
 import qualified Data.Map                           as M
 import qualified Enecuum.Assets.Nodes.Address       as A
-import           Enecuum.Assets.Nodes.ConfigParsing (parseConfig)
+import           Enecuum.Assets.ConfigParsing       (parseConfig)
 import           Enecuum.Assets.System.Directory    (clientStory)
 import qualified Enecuum.Assets.TstScenarios        as Tst
 import qualified Enecuum.Config                     as Cfg
@@ -85,15 +85,11 @@ initialize configSrc = do
 
     -- Don't forget to update the list in ConfigParsing!
     let runners =
-            [ runNode' $ Cfg.dispatchScenario @Tst.TestClient configSrc
-            , runNode' $ Cfg.dispatchScenario @Tst.TestServer configSrc
-
-            , runNode' $ Cfg.dispatchScenario @Tst.ClientNode configSrc
+            [ runNode' $ Cfg.dispatchScenario @Tst.ClientNode configSrc
 
             , runNode' $ Cfg.dispatchScenario @Tst.TstGraphNode   configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstGenPoWNode  configSrc
             , runNode' $ Cfg.dispatchScenario @Tst.TstGenPoANode  configSrc
-            , runNode' $ Cfg.dispatchScenario @Tst.TstRealPoWNode configSrc
             ]
     sequence_ runners
 

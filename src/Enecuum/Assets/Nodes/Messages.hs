@@ -16,33 +16,6 @@ data SuccessMsg = SuccessMsg
 newtype IsDead = IsDead StringHash
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-
-data GetNodeType = GetNodeType
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data NodeType = TypeGraphNode | TypeBN | TypePoA | TypePoW
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
--- | BN, NN nodes
-data Hello = Hello StringHash D.Address
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data ConnectMapRequest = ConnectMapRequest
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
--- | BN node
-data ConnectRequest = ConnectRequest StringHash Word64
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-newtype PreviousForMe = PreviousForMe StringHash
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-newtype NextForMe = NextForMe StringHash
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
-data GetRoutingMessages = GetRoutingMessages
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
-
 -- | Network messages
 data Ping = Ping
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

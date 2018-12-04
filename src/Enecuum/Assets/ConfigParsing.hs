@@ -1,4 +1,4 @@
-module Enecuum.Assets.Nodes.ConfigParsing where
+module Enecuum.Assets.ConfigParsing where
 
 import           Data.Yaml                   (ParseException, prettyPrintParseException)
 import qualified Enecuum.Assets.TstScenarios as Tst
@@ -19,15 +19,11 @@ runParser (Right _) = pure $ Right 1
 parseConfig :: LByteString -> IO ()
 parseConfig configSrc = do
     let runners =
-            [ runParser $ Cfg.tryParseConfig @Tst.TestClient configSrc
-            , runParser $ Cfg.tryParseConfig @Tst.TestServer configSrc
-
-            , runParser $ Cfg.tryParseConfig @Tst.ClientNode configSrc
+            [ runParser $ Cfg.tryParseConfig @Tst.ClientNode configSrc
 
             , runParser $ Cfg.tryParseConfig @Tst.TstGraphNode     configSrc
             , runParser $ Cfg.tryParseConfig @Tst.TstGenPoWNode    configSrc
             , runParser $ Cfg.tryParseConfig @Tst.TstGenPoANode    configSrc
-            , runParser $ Cfg.tryParseConfig @Tst.TstRealPoWNode   configSrc
             ]
 
     results <- sequence runners

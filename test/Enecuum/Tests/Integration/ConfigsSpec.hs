@@ -1,6 +1,6 @@
 module Enecuum.Tests.Integration.ConfigsSpec where
 
-import           Enecuum.Assets.Nodes.ConfigParsing (parseConfig)
+import           Enecuum.Assets.ConfigParsing (parseConfig)
 import           Enecuum.Assets.System.Directory    (configDir)
 import qualified Enecuum.Framework.Node.Interpreter as I
 import qualified Enecuum.Language                   as L

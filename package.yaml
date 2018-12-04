@@ -89,7 +89,6 @@ dependencies:
 - validation
 - silently
 - uuid
-- gd
 - resourcet
 - triplesec
 - yaml
