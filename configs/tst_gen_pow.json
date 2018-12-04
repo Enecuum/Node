@@ -6,12 +6,12 @@
         "defaultBlocksDelay":1000000,
         "tag": "TstGenPoWNodeConfig",
         "kblocksOrder": "InOrder",
-        "graphNodeUDPAddress":  {"host":"127.0.0.1","port":4050},
-        "controlRpcPort": 6201
+        "genPowGraphNodeUDPAddress": {"host":"127.0.0.1","port":4050},
+        "controlRpcPort": 6300
    },
    "loggerConfig":
         {
-        "logFilePath": "/tmp/log/tst_pow.log",
+        "logFilePath": "/tmp/log/tst_gen_pow.log",
         "format":"$prio $loggername: $msg",
         "logToConsole":true,
         "logToFile": true,

@@ -102,39 +102,39 @@ Run slow and unreliable tests:
     - Answers for balance requests.
     - Has a wide API, can answer to many different requests.
 
-    `stack exec enq-test-node-haskell singlenode ./configs/GraphNodeTransmitter.json`
+    `stack exec enq-test-node-haskell singlenode ./configs/tst_graph_node_transmitter.json`
 
   * GraphNode Receiver
     - Works with blockchain graph and ledger.
     - Polls the Transmitter node to synchronize with it. Implements a basic synchronisation scenario.
 
-    `stack exec enq-test-node-haskell singlenode ./configs/GraphNodeReceiver.json`
+    `stack exec enq-test-node-haskell singlenode ./configs/tst_graph_node_receiver.json`
 
   * Gen PoW
     - Controllable from the Client node.
     - By the command from Client, generates KBlocks organized in a chain, but without hash complexity (does not do any mining).
     - Sends KBlocks to GraphNode Transmitter.
 
-    `stack exec enq-test-node-haskell singlenode ./configs/pow.json`
+    `stack exec enq-test-node-haskell singlenode ./configs/tst_gen_pow.json`
 
   * Gen PoA
      - Polls the Transmitter and generates a microblock for an empty KBlock found.
      - Fills the microblock by random transactions for random wallets (5 wallets are hardcoded).
 
-    `stack exec enq-test-node-haskell singlenode ./configs/poa.json`
+    `stack exec enq-test-node-haskell singlenode ./configs/tst_gen_poa.json`
 
   * Console client
     - Has console API.
     - Allows to create wallets, send transactions, ask balance.
     - Sends commands to nodes.
 
-    `stack exec enq-test-node-haskell singlenode ./configs/Client.json`
+    `stack exec enq-test-node-haskell singlenode ./configs/tst_client.json`
 
 # Node code sample
 
-- Server logic: [Enecuum.Assets.Nodes.TstNodes.PingPong.PingServer](./src/Enecuum/Assets/Nodes/TstNodes/PingPong/PingServer.hs)
-- Client logic: [Enecuum.Assets.Nodes.TstNodes.PingPong.PongClient](./src/Enecuum/Assets/Nodes/TstNodes/PingPong/PongClient.hs)
-- Configs:
+  * Server logic: [Enecuum.Assets.Nodes.TstNodes.PingPong.PingServer](./src/Enecuum/Assets/Nodes/TstNodes/PingPong/PingServer.hs)
+  * Client logic: [Enecuum.Assets.Nodes.TstNodes.PingPong.PongClient](./src/Enecuum/Assets/Nodes/TstNodes/PingPong/PongClient.hs)
+  * Configs:
     - [./configs/tst_ping_server.json](./configs/tst_ping_server.json)
     - [./configs/tst_pong_client1.json](./configs/tst_pong_client1.json)
     - [./configs/tst_pong_client2.json](./configs/tst_pong_client2.json)

@@ -52,7 +52,10 @@ dumpAndRestoreGraphTest = do
     let powRpcAddress              = A.getRpcAddress A.tstGenPoWNodeAddress
     let poaRpcAddress              = A.getRpcAddress A.tstGenPoANodeAddress
 
-    let poaConfig = Tst.TstGenPoANodeConfig (D._port poaRpcAddress)
+    let poaConfig = Tst.TstGenPoANodeConfig
+          (D._port poaRpcAddress)
+          (A.getUdpAddress A.tstGraphNodeTransmitterAddress)
+          (A.getRpcAddress A.tstGraphNodeTransmitterAddress)
 
     let blocksCount = 3
     let blocksDelay = 1000 * 1000

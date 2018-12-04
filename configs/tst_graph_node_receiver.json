@@ -15,7 +15,7 @@
             },
             "graphWindowConfig": {
                 "tag": "GraphWindowConfig",
-                "shrinkingEnabled": true,
+                "shrinkingEnabled": false,
                 "windowSize": 100,
                 "shrinkingDelay": 1000000
             },
@@ -34,7 +34,7 @@
     },
     "node": "TstGraphNode",
     "loggerConfig": {
-        "logFilePath": "/tmp/log/GraphNodeReceiver.log",
+        "logFilePath": "/tmp/log/tst_graph_node_receiver.log",
         "format": "$prio $loggername: $msg",
         "logToFile": true,
         "logToConsole": true,

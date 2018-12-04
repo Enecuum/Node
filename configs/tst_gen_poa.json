@@ -5,10 +5,12 @@
     {
         "tag": "TstGenPoANodeConfig",
         "controlRpcPort": 6200,
+        "genPoaGraphNodeUDPAddress": {"host":"127.0.0.1","port":4050},
+        "genPoaGraphNodeRPCAddress": {"host":"127.0.0.1","port":6050}
 		},
    "loggerConfig":
         {
-        "logFilePath": "/tmp/log/tst_poa.log",
+        "logFilePath": "/tmp/log/tst_gen_poa.log",
         "format":"$prio $loggername: $msg",
         "logToConsole":true,
         "logToFile": true,

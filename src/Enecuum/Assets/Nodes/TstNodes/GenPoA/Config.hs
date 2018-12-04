@@ -15,6 +15,8 @@ data TstGenPoANode = TstGenPoANode
 
 data instance NodeConfig TstGenPoANode = TstGenPoANodeConfig
     { _controlRpcPort :: D.PortNumber
+    , _genPoaGraphNodeUDPAddress :: D.Address
+    , _genPoaGraphNodeRPCAddress :: D.Address
     }
     deriving (Show, Generic)
 
@@ -24,4 +26,7 @@ instance ToJSON   (NodeConfig TstGenPoANode)   where toJSON    = A.genericToJSON
 instance FromJSON (NodeConfig TstGenPoANode)   where parseJSON = A.genericParseJSON nodeConfigJsonOptions
 
 tstGenPoANodeConfig :: NodeConfig TstGenPoANode
-tstGenPoANodeConfig = TstGenPoANodeConfig (tstGenPoANodePorts ^. Lens.nodeRpcPort)
+tstGenPoANodeConfig = TstGenPoANodeConfig
+    (tstGenPoANodePorts ^. Lens.nodeRpcPort)
+    (getUdpAddress tstGraphNodeTransmitterAddress)
+    (getRpcAddress tstGraphNodeTransmitterAddress)

@@ -43,8 +43,8 @@ instance FromJSON (NodeScenario TstGenPoANode) where parseJSON = A.genericParseJ
 showTransactions :: D.Microblock -> Text
 showTransactions mBlock = foldr D.showTransaction "" $ mBlock ^. Lens.transactions
 
-sendMicroblock :: TstGenPoANodeData -> D.KBlock -> NodeScenario TstGenPoANode -> L.NodeL ()
-sendMicroblock poaData block role = do
+sendMicroblock :: D.Address -> TstGenPoANodeData -> D.KBlock -> NodeScenario TstGenPoANode -> L.NodeL ()
+sendMicroblock gnUdpAddress poaData block role = do
     currentBlock <- L.readVarIO (poaData ^. currentLastKeyBlock)
     when (block /= currentBlock) $ do
         L.logInfo $ "Empty KBlock found (" +|| toHash block ||+ ")."
@@ -71,7 +71,6 @@ sendMicroblock poaData block role = do
             Bad  -> A.generateBogusSignedMicroblock block tx
         L.logInfo
             $ "MBlock generated (" +|| toHash mBlock ||+ ". Transactions:" +| showTransactions mBlock |+ ""
-        let gnUdpAddress = A.getUdpAddress A.tstGraphNodeTransmitterAddress
         void $ L.withConnection D.Udp gnUdpAddress $
             \conn -> L.send conn mBlock
 
@@ -91,12 +90,13 @@ poaNode role cfg = do
         L.method   rpcPingPong
         L.method $ handleStopNode poaData
 
-    let gnRpcAddress = A.getRpcAddress A.tstGraphNodeTransmitterAddress
+    let gnRpcAddress = _genPoaGraphNodeRPCAddress cfg
+    let gnUdpAddress = _genPoaGraphNodeUDPAddress cfg
     L.process $ forever $ do
         L.delay $ 100 * 1000
         whenRightM (L.makeRpcRequest gnRpcAddress GetTransactionPending) $ \tx -> do
             forM_ tx (\t -> L.logInfo $ "\nAdd transaction to pending "  +| D.showTransaction t "" |+ "")
             L.atomically $ L.modifyVar (poaData ^. transactionPending) ( ++ tx )
-        whenRightM (L.makeRpcRequest gnRpcAddress GetLastKBlock) $ \block -> sendMicroblock poaData block role
+        whenRightM (L.makeRpcRequest gnRpcAddress GetLastKBlock) $ \block -> sendMicroblock gnUdpAddress poaData block role
 
     L.awaitNodeFinished poaData

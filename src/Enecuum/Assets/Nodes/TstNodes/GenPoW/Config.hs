@@ -16,10 +16,10 @@ data TstGenPoWNode = TstGenPoWNode
     deriving (Show, Generic)
 
 data instance NodeConfig TstGenPoWNode = TstGenPoWNodeConfig
-        { _defaultBlocksDelay  :: BlocksDelay
-        , _kblocksOrder        :: A.Ordering
-        , _graphNodeUDPAddress :: D.Address
-        , _controlRpcPort      :: D.PortNumber
+        { _defaultBlocksDelay        :: BlocksDelay
+        , _kblocksOrder              :: A.Ordering
+        , _genPowGraphNodeUDPAddress :: D.Address
+        , _controlRpcPort            :: D.PortNumber
         }
     deriving (Show, Generic)
 
@@ -30,8 +30,8 @@ instance FromJSON TstGenPoWNode              where parseJSON = J.genericParseJSO
 
 tstGenPoWNodeConfig :: NodeConfig TstGenPoWNode
 tstGenPoWNodeConfig = TstGenPoWNodeConfig
-    { _defaultBlocksDelay  = 1000 * 1000
-    , _kblocksOrder        = A.InOrder
-    , _graphNodeUDPAddress = getUdpAddress tstGraphNodeTransmitterAddress
-    , _controlRpcPort      = tstGenPoWNodePorts ^. Lens.nodeRpcPort
+    { _defaultBlocksDelay        = 1000 * 1000
+    , _kblocksOrder              = A.InOrder
+    , _genPowGraphNodeUDPAddress = getUdpAddress tstGraphNodeTransmitterAddress
+    , _controlRpcPort            = tstGenPoWNodePorts ^. Lens.nodeRpcPort
     }

@@ -94,7 +94,7 @@ powNode' cfg = do
             i <- L.readVar $ nodeData ^. requiredBlockNumber
             when (i == 0) L.retry
             L.writeVar (nodeData ^. requiredBlockNumber) (i - 1)
-        kBlockProcess (_graphNodeUDPAddress cfg) nodeData
+        kBlockProcess (_genPowGraphNodeUDPAddress cfg) nodeData
 
     L.awaitNodeFinished nodeData
 
