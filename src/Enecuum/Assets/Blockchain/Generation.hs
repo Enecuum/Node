@@ -12,6 +12,7 @@ import qualified Enecuum.Blockchain.Lens          as Lens
 import qualified Enecuum.Domain                   as D
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude                  hiding (Ordering)
+import           Enecuum.Blockchain.Domain          as D
 
 -- | Order for key blocks
 data Ordering = InOrder | RandomOrder

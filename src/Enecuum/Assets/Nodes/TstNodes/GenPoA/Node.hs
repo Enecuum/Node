@@ -22,6 +22,7 @@ import qualified Enecuum.Assets.Nodes.Address                as A
 import           Enecuum.Assets.Nodes.Messages
 import           Enecuum.Assets.Nodes.Methods                (handleStopNode, rpcPingPong)
 import           Enecuum.Assets.Nodes.TstNodes.GenPoA.Config
+import qualified Enecuum.Blockchain.Domain          as D
 
 data TstGenPoANodeData = TstGenPoANodeData
     { _currentLastKeyBlock :: D.StateVar D.KBlock

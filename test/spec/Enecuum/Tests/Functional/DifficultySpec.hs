@@ -8,6 +8,9 @@ import qualified Enecuum.Domain         as D
 import           Enecuum.Tests.Wrappers
 import           Test.Hspec
 
+import qualified Enecuum.Blockchain.Language                        as L
+import qualified Enecuum.Blockchain.Domain                          as D
+
 spec :: Spec
 spec = fastTest $ describe "Difficulty test" $ do
     it "leadingZeroBitsCount" $ do

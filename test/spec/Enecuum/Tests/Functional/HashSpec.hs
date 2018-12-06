@@ -7,6 +7,8 @@ import           Enecuum.Domain
 import           Enecuum.Tests.Wrappers
 import           Test.Hspec
 
+import qualified Enecuum.Blockchain.Language                        as L
+import           Enecuum.Blockchain.Domain                          
 spec :: Spec
 spec = fastTest $ describe "Nodes test" $
     it "Hash of genesis block is" $

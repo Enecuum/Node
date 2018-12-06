@@ -8,6 +8,7 @@ import           Enecuum.Assets.System.Directory (keysFilePath)
 import qualified Enecuum.Domain                  as D
 import qualified Enecuum.Language                as L
 import           Enecuum.Prelude
+import qualified Enecuum.Blockchain.Domain          as D
 
 type Password = String
 data PasswordSource = Manual Password deriving (Show, Eq, Generic, ToJSON, FromJSON)

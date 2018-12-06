@@ -26,6 +26,8 @@ import           Enecuum.Framework.Domain.Error
 import qualified Enecuum.Framework.Lens           as Lens
 import qualified Enecuum.Language                 as L
 import           Enecuum.Prelude                  hiding (map, unpack)
+import qualified Enecuum.Blockchain.Language                        as L
+import qualified Enecuum.Blockchain.Domain                          as D
 
 data ClientNode = ClientNode
     deriving (Show, Generic)

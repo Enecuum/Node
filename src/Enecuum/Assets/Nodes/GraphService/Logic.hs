@@ -12,7 +12,8 @@ import           Enecuum.Assets.Nodes.Messages
 import qualified Enecuum.Blockchain.Lens                            as Lens
 import qualified Enecuum.Domain                                     as D
 import qualified Enecuum.Language                                   as L
-
+import qualified Enecuum.Blockchain.Language                        as L
+import qualified Enecuum.Blockchain.Domain                          as D
 transactionsToTransfer :: Int
 transactionsToTransfer = 20
 

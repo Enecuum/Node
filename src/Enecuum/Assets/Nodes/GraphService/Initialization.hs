@@ -21,6 +21,7 @@ import qualified Enecuum.Blockchain.DB                              as D
 import qualified Enecuum.Blockchain.Lens                            as Lens
 import qualified Enecuum.Domain                                     as D
 import qualified Enecuum.Language                                   as L
+import           Enecuum.Blockchain.Domain          as D
 
 initDb :: forall db. D.DB db => D.DBOptions -> FilePath -> L.NodeL (D.DBResult (D.Storage db))
 initDb options dbModelPath = do

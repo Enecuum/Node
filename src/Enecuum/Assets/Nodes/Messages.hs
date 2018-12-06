@@ -8,7 +8,7 @@ import           Enecuum.Assets.Blockchain.Keys
 import qualified Enecuum.Domain                 as D
 import           Enecuum.Prelude
 import Enecuum.Assets.Blockchain.Keys (WalletAlias)
-
+import qualified Enecuum.Blockchain.Domain          as D
 -- | Common
 data SuccessMsg = SuccessMsg
   deriving (Show, Eq, Generic, ToJSON, FromJSON)

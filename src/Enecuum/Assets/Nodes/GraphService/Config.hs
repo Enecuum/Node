@@ -4,6 +4,7 @@ import qualified Data.Aeson                   as A
 import           Enecuum.Assets.Nodes.Address
 import           Enecuum.Config
 import qualified Enecuum.Domain               as D
+import           Enecuum.Blockchain.Domain          as D
 import           Enecuum.Prelude
 
 data GraphWindowConfig = GraphWindowConfig

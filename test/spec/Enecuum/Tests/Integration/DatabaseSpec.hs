@@ -15,6 +15,9 @@ import           Enecuum.Testing.Integrational
 import           Enecuum.Tests.Wrappers
 import           Test.Hspec
 
+import qualified Enecuum.Blockchain.Language                        as L
+import qualified Enecuum.Blockchain.Domain                          as D
+
 data NodeData = NodeData
     { _kBlocksDB     :: D.Storage KBlocksDB
     , _kBlocksMetaDB :: D.Storage KBlocksMetaDB

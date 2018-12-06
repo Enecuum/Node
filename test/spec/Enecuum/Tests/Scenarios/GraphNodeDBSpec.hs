@@ -16,6 +16,8 @@ import qualified Enecuum.Blockchain.Lens                  as Lens
 import qualified Enecuum.Domain                           as D
 import           Enecuum.Testing.Integrational
 import           Enecuum.Tests.Wrappers
+import qualified Enecuum.Blockchain.Language                        as L
+import qualified Enecuum.Blockchain.Domain                          as D
 
 spec :: Spec
 spec = slowTest $ describe "Dump and restore graph test" $ fromHUnitTest $ TestList

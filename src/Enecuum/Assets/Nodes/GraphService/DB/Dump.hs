@@ -11,6 +11,8 @@ import qualified Enecuum.Language                                   as L
 import           Enecuum.Assets.Nodes.GraphService.DB.Helpers
 import qualified Enecuum.Assets.Nodes.GraphService.GraphServiceData as G
 import qualified Enecuum.Assets.Nodes.GraphService.Logic            as G
+import qualified Enecuum.Blockchain.Language                        as L
+import qualified Enecuum.Blockchain.Domain                          as D
 
 saveKBlock :: D.DBModel -> D.KBlock -> L.NodeL (D.DBResult ())
 saveKBlock dbModel kBlock = do

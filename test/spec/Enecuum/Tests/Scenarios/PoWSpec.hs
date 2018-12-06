@@ -16,6 +16,8 @@ import           Enecuum.Tests.Wrappers
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
 import           Test.HUnit
+import qualified Enecuum.Blockchain.Language                        as L
+import qualified Enecuum.Blockchain.Domain                          as D
 
 spec :: Spec
 spec = slowTest $ describe "PoW and graph node interaction" $ fromHUnitTest $ TestList

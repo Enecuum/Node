@@ -17,6 +17,8 @@ import           Test.HUnit
 
 import           Data.Typeable
 import           Enecuum.Tests.Wrappers
+import qualified Enecuum.Blockchain.Language                        as L
+import qualified Enecuum.Blockchain.Domain                          as D
 
 spec :: Spec
 spec = slowTest $ describe "PoA" $ fromHUnitTest $ TestList

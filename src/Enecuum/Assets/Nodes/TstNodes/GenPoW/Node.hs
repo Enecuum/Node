@@ -18,6 +18,7 @@ import qualified Enecuum.Domain                              as D
 import           Enecuum.Framework.Language.Extra            (HasStatus)
 import qualified Enecuum.Language                            as L
 import           Enecuum.Prelude
+import qualified Enecuum.Blockchain.Domain          as D
 
 type IterationsCount = Int
 type EnableDelays = Bool

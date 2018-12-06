@@ -13,6 +13,7 @@ import qualified Enecuum.Language                                   as L
 import           Enecuum.Assets.Nodes.GraphService.DB.Helpers
 import qualified Enecuum.Assets.Nodes.GraphService.GraphServiceData as G
 import qualified Enecuum.Assets.Nodes.GraphService.Logic            as G
+import qualified Enecuum.Blockchain.Domain                          as D
 
 loadKBlockMeta :: D.DBModel -> D.StringHash -> L.NodeL (D.DBResult (D.DBValue D.KBlockMetaEntity))
 loadKBlockMeta dbModel hash = do

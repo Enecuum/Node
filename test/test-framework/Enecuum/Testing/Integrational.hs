@@ -27,6 +27,8 @@ import qualified Enecuum.Runtime                              as R
 import qualified System.Directory                             as Dir
 import           System.FilePath                              as FP ((</>))
 import qualified System.FilePath                              as Dir
+import qualified Enecuum.Blockchain.Language                        as L
+import qualified Enecuum.Blockchain.Domain                          as D
 
 testLogFilePath :: IsString a => a
 testLogFilePath = "/tmp/log/test.log"

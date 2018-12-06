@@ -11,6 +11,7 @@ import           Enecuum.Prelude
 import           Enecuum.Assets.Nodes.GraphService.Config
 import qualified Enecuum.Blockchain.DB                    as D
 import qualified Enecuum.Domain                           as D
+import           Enecuum.Blockchain.Domain          as D
 
 data GraphServiceData = GraphServiceData
     { _blockchain          :: D.BlockchainData
