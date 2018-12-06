@@ -79,7 +79,7 @@ formatAddress :: Address -> Text
 formatAddress (Address addr port) = T.pack addr <> ":" <> show port
 
 packetSize :: Int
-packetSize = 1024*4
+packetSize = 1024*400
 
 
 -- | Tries to parse address of the form "0.0.0.0:0000."

@@ -34,7 +34,7 @@ interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
     var <- newEmptyMVar
     ok  <- try $ runClient S.Stream addr $ \connect -> do
         S.sendAll connect $ A.encode request
-        msg <- S.recv connect (1024 * 4)
+        msg <- S.recv connect (toEnum D.packetSize)
         putMVar var (transformEither T.pack id $ A.eitherDecode msg)
     case ok of
         Right _                    -> pure ()

@@ -224,7 +224,7 @@ runRpcServer
     -> RpcMethods t
     -> IO (Maybe R.ServerHandle)
 runRpcServer logger port runner methods = runTCPServer logger port $ \sock -> do
-    msg      <- S.recv sock (1024 * 4)
+    msg      <- S.recv sock (toEnum D.packetSize)
     response <- callRpc runner methods msg
     S.sendAll sock $ A.encode response
 
