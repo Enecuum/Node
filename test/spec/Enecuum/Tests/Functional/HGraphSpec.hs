@@ -17,7 +17,7 @@ import           Enecuum.Core.HGraph.Internal.Impl   (initHGraph)
 import           Enecuum.Core.HGraph.Interpreters.IO (runHGraphIO)
 import           Enecuum.Core.HGraph.Language
 
-import           Enecuum.Tests.Wrappers
+import           Enecuum.Testing.Wrappers
 import           Test.Hspec
 import           Test.Hspec.Contrib.HUnit            (fromHUnitTest)
 import           Test.QuickCheck                     (property)

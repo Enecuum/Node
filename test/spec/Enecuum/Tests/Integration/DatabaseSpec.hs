@@ -6,17 +6,16 @@ module Enecuum.Tests.Integration.DatabaseSpec where
 
 import           Enecuum.Prelude
 
-import           Enecuum.Blockchain.DB
-import qualified Enecuum.Blockchain.Lens       as Lens
-import qualified Enecuum.Domain                as D
-import qualified Enecuum.Language              as L
-
+import qualified Enecuum.Domain                      as D
+import qualified Enecuum.Language                    as L
+import           Enecuum.Samples.Blockchain.DB
+import qualified Enecuum.Samples.Blockchain.Domain   as D
+import qualified Enecuum.Samples.Blockchain.Language as L
+import qualified Enecuum.Samples.Blockchain.Lens     as Lens
 import           Enecuum.Testing.Integrational
-import           Enecuum.Tests.Wrappers
+import           Enecuum.Tests.Helpers
+import           Enecuum.Testing.Wrappers
 import           Test.Hspec
-
-import qualified Enecuum.Blockchain.Language                        as L
-import qualified Enecuum.Blockchain.Domain                          as D
 
 data NodeData = NodeData
     { _kBlocksDB     :: D.Storage KBlocksDB

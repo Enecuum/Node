@@ -1,23 +1,24 @@
 module Enecuum.Tests.Scenarios.PoWSpec where
 
-import qualified Data.Map                             as M
-import qualified Enecuum.Assets.Blockchain.Generation as A
-import qualified Enecuum.Assets.Nodes.Address         as A
-import qualified Enecuum.Assets.Nodes.Messages        as D
-import qualified Enecuum.Assets.TstScenarios          as Tst
-import qualified Enecuum.Blockchain.Lens              as Lens
-import qualified Enecuum.Domain                       as D
-import qualified Enecuum.Interpreters                 as I
-import qualified Enecuum.Language                     as L
+import qualified Data.Map                                     as M
+import qualified Enecuum.Domain                               as D
+import qualified Enecuum.Interpreters                         as I
+import qualified Enecuum.Language                             as L
 import           Enecuum.Prelude
-import qualified Enecuum.Runtime                      as R
+import qualified Enecuum.Runtime                              as R
+import qualified Enecuum.Samples.Assets.Blockchain.Generation as A
+import qualified Enecuum.Samples.Assets.Nodes.Address         as A
+import qualified Enecuum.Samples.Assets.Nodes.Messages        as D
+import qualified Enecuum.Samples.Assets.TstScenarios          as Tst
+import qualified Enecuum.Samples.Blockchain.Domain            as D
+import qualified Enecuum.Samples.Blockchain.Language          as L
+import qualified Enecuum.Samples.Blockchain.Lens              as Lens
 import           Enecuum.Testing.Integrational
-import           Enecuum.Tests.Wrappers
+import           Enecuum.Tests.Helpers
+import           Enecuum.Testing.Wrappers
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
+import           Test.Hspec.Contrib.HUnit                     (fromHUnitTest)
 import           Test.HUnit
-import qualified Enecuum.Blockchain.Language                        as L
-import qualified Enecuum.Blockchain.Domain                          as D
 
 spec :: Spec
 spec = slowTest $ describe "PoW and graph node interaction" $ fromHUnitTest $ TestList

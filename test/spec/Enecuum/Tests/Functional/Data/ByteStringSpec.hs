@@ -9,7 +9,7 @@ import           Data.ByteString.Extra()
 import           Enecuum.Prelude
 import           Test.Hspec                   (Spec, describe, it)
 import           Test.QuickCheck
-import           Enecuum.Tests.Wrappers
+import           Enecuum.Testing.Wrappers
 
 instance Arbitrary ByteString where
     arbitrary = fmap BS.pack $ arbitrary

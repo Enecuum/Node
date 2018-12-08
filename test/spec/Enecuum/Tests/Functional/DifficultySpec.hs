@@ -5,11 +5,11 @@ import           Enecuum.Prelude
 import qualified Data.Bits              as Bit
 import qualified Data.ByteString        as B
 import qualified Enecuum.Domain         as D
-import           Enecuum.Tests.Wrappers
+import           Enecuum.Testing.Wrappers
 import           Test.Hspec
 
-import qualified Enecuum.Blockchain.Language                        as L
-import qualified Enecuum.Blockchain.Domain                          as D
+import qualified Enecuum.Samples.Blockchain.Language                        as L
+import qualified Enecuum.Samples.Blockchain.Domain                          as D
 
 spec :: Spec
 spec = fastTest $ describe "Difficulty test" $ do
