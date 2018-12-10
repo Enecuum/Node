@@ -9,7 +9,7 @@ import qualified Enecuum.Language as L
 import qualified Enecuum.Domain as D
 
 import           Enecuum.Testing
-import           Enecuum.Tests.Wrappers
+import           Enecuum.Testing.Wrappers
 
 nodeAddress :: D.Address
 nodeAddress = D.Address "0.0.0.4" 1000

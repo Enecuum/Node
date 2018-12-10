@@ -4,9 +4,11 @@ import           Enecuum.Prelude
 
 import           Data.HGraph.StringHashable
 import           Enecuum.Domain
-import           Enecuum.Tests.Wrappers
+import           Enecuum.Testing.Wrappers
 import           Test.Hspec
 
+import qualified Enecuum.Samples.Blockchain.Language                        as L
+import           Enecuum.Samples.Blockchain.Domain                          
 spec :: Spec
 spec = fastTest $ describe "Nodes test" $
     it "Hash of genesis block is" $

@@ -4,18 +4,21 @@ module Enecuum.Tests.Scenarios.GraphNodeDBSpec where
 
 import           Enecuum.Prelude
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit                 (fromHUnitTest)
+import           Test.Hspec.Contrib.HUnit                         (fromHUnitTest)
 import           Test.HUnit
 
-import qualified Enecuum.Assets.Nodes.Address             as A
-import qualified Enecuum.Assets.Nodes.GraphService.Config as A
-import qualified Enecuum.Assets.Nodes.GraphService.Config as Cfg
-import qualified Enecuum.Assets.Nodes.Messages            as A
-import qualified Enecuum.Assets.TstScenarios              as Tst
-import qualified Enecuum.Blockchain.Lens                  as Lens
-import qualified Enecuum.Domain                           as D
+import qualified Enecuum.Domain                                   as D
+import qualified Enecuum.Samples.Assets.Nodes.Address             as A
+import qualified Enecuum.Samples.Assets.Nodes.GraphService.Config as A
+import qualified Enecuum.Samples.Assets.Nodes.GraphService.Config as Cfg
+import qualified Enecuum.Samples.Assets.Nodes.Messages            as A
+import qualified Enecuum.Samples.Assets.TstScenarios              as Tst
+import qualified Enecuum.Samples.Blockchain.Domain                as D
+import qualified Enecuum.Samples.Blockchain.Language              as L
+import qualified Enecuum.Samples.Blockchain.Lens                  as Lens
 import           Enecuum.Testing.Integrational
-import           Enecuum.Tests.Wrappers
+import           Enecuum.Tests.Helpers
+import           Enecuum.Testing.Wrappers
 
 spec :: Spec
 spec = slowTest $ describe "Dump and restore graph test" $ fromHUnitTest $ TestList
@@ -76,7 +79,7 @@ dumpAndRestoreGraphTest = do
         topKBlock0 ^. Lens.number `shouldBe` 0
 
         -- Generating some blocks and checking they are generated.
-        _ :: Either Text A.SuccessMsg <- makeIORpcRequest (A.getRpcAddress A.tstGenPoWNodeAddress)
+        _ :: Either Text D.SuccessMsg <- makeIORpcRequest (A.getRpcAddress A.tstGenPoWNodeAddress)
               $ A.NBlockPacketGeneration blocksCount blocksDelay
         waitForBlocks blocksCount graphNodeRpcAddress
 
@@ -95,7 +98,7 @@ dumpAndRestoreGraphTest = do
         null txs1 `shouldBe` False
 
         -- Requesting to dump blocks.
-        _ :: Either Text A.SuccessMsg <-  makeIORpcRequest graphNodeRpcAddress A.DumpToDB
+        _ :: Either Text D.SuccessMsg <-  makeIORpcRequest graphNodeRpcAddress A.DumpToDB
 
         -- Waiting for dumping.
         threadDelay $ 1000 * 1000
@@ -113,7 +116,7 @@ dumpAndRestoreGraphTest = do
         genesisKBlock `shouldBe` D.genesisKBlock
 
         -- Requesting to restore blocks from DB and checking they are restored.
-        _ :: Either Text A.SuccessMsg <- makeIORpcRequest graphNodeRpcAddress A.RestoreFromDB
+        _ :: Either Text D.SuccessMsg <- makeIORpcRequest graphNodeRpcAddress A.RestoreFromDB
         waitForBlocks blocksCount graphNodeRpcAddress
 
         -- Requesting last KBlock and its mblocks.

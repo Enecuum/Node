@@ -11,7 +11,7 @@ import qualified Network.Socket                     as S
 import qualified Enecuum.Domain                     as D
 import           Enecuum.Prelude
 import qualified Enecuum.Core.Runtime               as R
-
+import           Enecuum.Samples.Blockchain.Domain          as D
 
 class AsNativeConnection a where
     data family NativeConnection a

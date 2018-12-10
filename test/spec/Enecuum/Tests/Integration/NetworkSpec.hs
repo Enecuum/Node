@@ -17,7 +17,8 @@ import qualified Enecuum.Framework.Networking.Internal.Connection as Con
 import           Enecuum.Interpreters
 import qualified Enecuum.Runtime                                  as Rt
 import qualified Enecuum.Testing.Integrational                    as I
-import           Enecuum.Tests.Wrappers
+import           Enecuum.Tests.Helpers
+import           Enecuum.Testing.Wrappers
 
 -- Tests disabled
 spec :: Spec

@@ -1,7 +1,7 @@
 module Main where
 
-import           Enecuum.Assets.GenConfigs     (genConfigs)
-import           Enecuum.Assets.Initialization (initialize)
+import           Enecuum.Samples.Assets.GenConfigs     (genConfigs)
+import           Enecuum.Samples.Assets.Initialization (initialize)
 import           Enecuum.Config                (withConfig)
 import           Enecuum.Prelude
 

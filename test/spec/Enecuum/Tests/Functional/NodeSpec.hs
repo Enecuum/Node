@@ -7,7 +7,7 @@ import           Test.Hspec
 import           Enecuum.TestData.Nodes.Scenarios
 import           Enecuum.Testing
 import qualified Enecuum.Testing.RLens as RLens
-import           Enecuum.Tests.Wrappers
+import           Enecuum.Testing.Wrappers
 
 spec :: Spec
 spec = fastTest $ describe "Nodes test" $ do

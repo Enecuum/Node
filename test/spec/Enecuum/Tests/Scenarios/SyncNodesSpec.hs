@@ -3,17 +3,20 @@
 module Enecuum.Tests.Scenarios.SyncNodesSpec where
 
 import           Data.Aeson
-import qualified Enecuum.Assets.Nodes.Address  as A
-import qualified Enecuum.Assets.Nodes.CLens    as CLens
-import qualified Enecuum.Assets.Nodes.Messages as D
-import qualified Enecuum.Assets.TstScenarios   as Tst
-import qualified Enecuum.Blockchain.Lens       as Lens
-import qualified Enecuum.Domain                as D
+import qualified Enecuum.Domain                        as D
 import           Enecuum.Prelude
+import qualified Enecuum.Samples.Assets.Nodes.Address  as A
+import qualified Enecuum.Samples.Assets.Nodes.CLens    as CLens
+import qualified Enecuum.Samples.Assets.Nodes.Messages as D
+import qualified Enecuum.Samples.Assets.TstScenarios   as Tst
+import qualified Enecuum.Samples.Blockchain.Domain     as D
+import qualified Enecuum.Samples.Blockchain.Language   as L
+import qualified Enecuum.Samples.Blockchain.Lens       as Lens
 import           Enecuum.Testing.Integrational
-import           Enecuum.Tests.Wrappers
+import           Enecuum.Tests.Helpers
+import           Enecuum.Testing.Wrappers
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit      (fromHUnitTest)
+import           Test.Hspec.Contrib.HUnit              (fromHUnitTest)
 import           Test.HUnit
 
 spec :: Spec
