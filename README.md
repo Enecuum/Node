@@ -21,7 +21,6 @@ Enecuum Node Framework allows to build network actors and blockchain protocols, 
 The Node project contains:
 
   - Enecuum Node Framework
-  - Blockchain algorithms and data structures
   - Sample nodes with configs
   - Testing environment
   - Tests (functional, integration)
@@ -29,7 +28,7 @@ The Node project contains:
 ## Framework structure
 
   - Source code located in [./src/](./src/)
-  - Configs for test nodes located in [./configs/](./configs/)
+  - Configs for sample nodes located in [./configs/](./configs/)
   - Test code located in [./test/](./test/)
 
 The framework represents a set of embedded monadic languages organized hierarchically. The languages are divided to core languages responsible for common subsystems and framework languages responsible for network and actors behavior.
@@ -280,6 +279,7 @@ pongClientNode cfg = do
 
 # Additional materials
 
+  * [Building network actors with Enecuum Node Framework (tutorial)](https://gist.github.com/graninas/9beb8df5d88dda5fa21c47ce9bcb0e16)
   * [Why Haskell?](https://medium.com/@ENQBlockchain/why-haskell-eacb087f3adb)
   * [Enecuum. Framework possibilities](https://medium.com/@ENQBlockchain/enecuum-framework-possibilities-d4fa49c3ea40)
   * [Enecuum.Framework Possibilities, Part 2](https://medium.com/@ENQBlockchain/enecuum-framework-possibilities-part-2-7c8ff65c1c4e)

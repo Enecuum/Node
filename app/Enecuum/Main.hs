@@ -1,15 +1,15 @@
 module Main where
 
+import           Enecuum.Config                        (withConfig)
+import           Enecuum.Prelude
 import           Enecuum.Samples.Assets.GenConfigs     (genConfigs)
 import           Enecuum.Samples.Assets.Initialization (initialize)
-import           Enecuum.Config                (withConfig)
-import           Enecuum.Prelude
 
 help :: IO ()
 help = putStrLn @Text $ "Please, specify node config:"
-    <> "\n\n$ enq-node-haskell singlenode configs/tst_graph_node_transmitter.json"
+    <> "\n\n$ enq-test-node-haskell singlenode configs/tst_graph_node_transmitter.json"
     <> "\n\nOr generate default configs (they will be placed to ./configs/default):"
-    <> "\n\n$ enq-node-haskell generate-configs"
+    <> "\n\n$ enq-test-node-haskell generate-configs"
 
 main :: IO ()
 main = do
