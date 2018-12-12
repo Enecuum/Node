@@ -35,6 +35,8 @@ data NodeDefinitionF next where
     ServingUdp     :: D.PortNumber -> NetworkHandlerL D.Udp L.NodeL () -> (Maybe () -> next)-> NodeDefinitionF  next
     GetBoundedPorts :: ([D.PortNumber] -> next) -> NodeDefinitionF  next
     Std            :: CmdHandlerL () -> (() -> next) -> NodeDefinitionF  next
+    -- Std with command completion
+    StdF           :: [CLICommand] -> CmdHandlerL () -> (() -> next) -> NodeDefinitionF  next
     -- Process interface. TODO: It's probably wise to move it to own language.
     -- | Fork a process for node.
     ForkProcess :: L.NodeL a -> (D.ProcessPtr a -> next) -> NodeDefinitionF next
@@ -49,6 +51,9 @@ data NodeDefinitionF next where
 makeFunctorInstance ''NodeDefinitionF
 
 type NodeDefinitionL = Free NodeDefinitionF
+
+stdF :: [CLICommand] -> CmdHandlerL () -> NodeDefinitionL ()
+stdF commands handlers = liftF $ StdF commands handlers id
 
 std :: CmdHandlerL () -> NodeDefinitionL ()
 std handlers = liftF $ Std handlers id

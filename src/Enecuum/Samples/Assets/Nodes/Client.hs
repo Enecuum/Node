@@ -213,6 +213,14 @@ ShowMyWallets
 CreateWalletWithAlias "alias" (CreateWallet "Password")
 -}
 
+-- For CLI completion
+-- local activity
+data CmdLocal = CreateNodeId | CreateWallet | CreateWalletWithAlias | ShowMyWallets deriving (Show, Enum, Bounded)
+cliCommandsLocal = fmap show localCmds
+    where localCmds = [minBound..maxBound] :: [CmdLocal]
+cliCommands = cliCommandsLocal
+
+
 clientNode :: L.NodeDefinitionL ()
 clientNode = clientNode' (ClientNodeConfig 42)
 
@@ -222,7 +230,7 @@ clientNode' _ = do
     L.setNodeTag "Client"
     stateVar <- L.newVarIO D.NodeActing
 
-    L.std $ do
+    L.stdF cliCommands $ do
         -- network
         L.stdHandler ping
         L.stdHandler stopRequest

@@ -97,6 +97,7 @@ dependencies:
 - QuickCheck
 - hspec-contrib
 - newtype-generics
+- regex-posix
 
 library:
   source-dirs:

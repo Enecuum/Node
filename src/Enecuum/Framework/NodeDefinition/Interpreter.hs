@@ -31,7 +31,7 @@ import qualified Enecuum.Framework.Node.Interpreter               as Impl
 import qualified Enecuum.Framework.RLens                          as RLens
 import           Enecuum.Framework.Runtime                        (Connections, DBHandle, NodeRuntime)
 import qualified Enecuum.Framework.Runtime                        as R
-
+import Text.Regex.Posix ((=~))
 
 getNextId :: NodeRuntime -> IO Int
 getNextId nodeRt = atomically $ Impl.getNextId $ nodeRt ^. RLens.coreRuntime . RLens.stateRuntime
@@ -114,6 +114,12 @@ stopServer (R.ServerHandle sockVar acceptWorkerId) = do
     Conn.closeConnection' sock acceptWorkerId
     atomically (putTMVar sockVar sock)
 
+completeWith :: [L.CLICommand] -> String -> [Completion]
+completeWith possibles left = case filter (=~ left) possibles of
+  [] -> []
+  [x] -> [Completion x x False]
+  xs -> map (\str -> Completion left str False) xs
+
 interpretNodeDefinitionL :: NodeRuntime -> L.NodeDefinitionF a -> IO a
 interpretNodeDefinitionL nodeRt (L.SetNodeTag tag next) = do
     atomically $ writeTVar (nodeRt ^. RLens.nodeTag) tag
@@ -160,7 +166,8 @@ interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
 
     pure $ if isJust res then next $ Just () else next Nothing
 
-interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
+interpretNodeDefinitionL nodeRt (L.Std handlers next) = interpretNodeDefinitionL nodeRt $ L.StdF [] handlers next
+interpretNodeDefinitionL nodeRt (L.StdF commands handlers next) = do
     m <- atomically $ newTVar mempty
     _ <- runCmdHandlerL m handlers
     void $ forkIO $ do
@@ -180,8 +187,8 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
                             history <- getHistory
                             liftIO $ writeHistory path history
                         loop
-
-        runInputT defaultSettings{historyFile = filePath} loop
+        let completionfunc = completeWord Nothing " \t" $ pure . completeWith commands
+        runInputT (setComplete completionfunc $ defaultSettings{historyFile = filePath}) loop
     pure $ next ()
 
 -- TODO: make a separate language and use its interpreter in test runtime too.
