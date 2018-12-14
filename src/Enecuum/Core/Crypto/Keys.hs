@@ -6,8 +6,8 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Enecuum.Core.Crypto.Keys (generateNewRandomAnonymousKeyPair, getPrivateKey, showPublicKey, showPrivateKey,
-                                        readPublicKey, readPrivateKey, compressPublicKey, decompressPublicKey,
+module Enecuum.Core.Crypto.Keys (generateNewRandomAnonymousKeyPair, getPrivateKey, showPublicKey, showPublicKeyB, showPrivateKey,
+                                        readPublicKey, readPublicKeyB, readPrivateKey, compressPublicKey, decompressPublicKey,
                                         PublicKey(..), PrivateKey(..), KeyPair (..)) where
 
 import           "cryptonite" Crypto.Hash                (SHA3_256 (..))
@@ -75,11 +75,17 @@ data KeyPair    = KeyPair { getPub :: PublicKey, getPriv :: PrivateKey }
 readPublicKey :: String -> PublicKey
 readPublicKey value = publicKey256k1 $ base58ToInteger value
 
+readPublicKeyB :: ByteString -> PublicKey
+readPublicKeyB value = publicKey256k1 $ fromJust . decodeBase58I bitcoinAlphabet $ value
+
 readPrivateKey :: String -> PrivateKey
 readPrivateKey value = PrivateKey256k1 $ base58ToInteger value
 
 showPublicKey :: PublicKey -> String
 showPublicKey  a = integerToBase58 $ fromPublicKey256k1 a
+
+showPublicKeyB :: PublicKey -> ByteString
+showPublicKeyB  a = encodeBase58I bitcoinAlphabet $ fromPublicKey256k1 a
 
 showPrivateKey :: PrivateKey -> String
 showPrivateKey (PrivateKey256k1 a) = integerToBase58 a
