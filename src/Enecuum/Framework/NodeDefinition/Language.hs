@@ -15,6 +15,7 @@ import qualified Enecuum.Framework.Networking.Language      as L
 import qualified Enecuum.Framework.Node.Language            as L
 import           Enecuum.Prelude
 import           Language.Haskell.TH.MakeFunctor            (makeFunctorInstance)
+import           System.Console.Haskeline
 
 -- TODO: it's possible to make these steps evaluating step-by-step, in order.
 -- Think about if this really needed.
@@ -36,7 +37,7 @@ data NodeDefinitionF next where
     GetBoundedPorts :: ([D.PortNumber] -> next) -> NodeDefinitionF  next
     Std            :: CmdHandlerL () -> (() -> next) -> NodeDefinitionF  next
     -- Std with command completion
-    StdF           :: [CLICommand] -> CmdHandlerL () -> (() -> next) -> NodeDefinitionF  next
+    StdF           :: (String -> [Completion]) -> CmdHandlerL () -> (() -> next) -> NodeDefinitionF  next
     -- Process interface. TODO: It's probably wise to move it to own language.
     -- | Fork a process for node.
     ForkProcess :: L.NodeL a -> (D.ProcessPtr a -> next) -> NodeDefinitionF next
@@ -52,8 +53,8 @@ makeFunctorInstance ''NodeDefinitionF
 
 type NodeDefinitionL = Free NodeDefinitionF
 
-stdF :: [CLICommand] -> CmdHandlerL () -> NodeDefinitionL ()
-stdF commands handlers = liftF $ StdF commands handlers id
+stdF :: (String -> [Completion]) -> CmdHandlerL () -> NodeDefinitionL ()
+stdF completionFunc handlers = liftF $ StdF completionFunc handlers id
 
 std :: CmdHandlerL () -> NodeDefinitionL ()
 std handlers = liftF $ Std handlers id
