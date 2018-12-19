@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-
+{-# LANGUAGE QuasiQuotes           #-}
 module Enecuum.Samples.Assets.Nodes.Client
   ( clientNode
   , ClientNode(..)
@@ -9,25 +9,27 @@ module Enecuum.Samples.Assets.Nodes.Client
   , Protocol(..)
   ) where
 
-import qualified Data.Aeson                       as J
-import           Data.Aeson.Extra                 (noLensPrefix)
+import qualified Data.Aeson                               as J
+import           Data.Aeson.Extra                         (noLensPrefix)
 import           Data.Complex
-import qualified Data.Map                         as Map
-import           Data.Set                         (union, (\\))
-import qualified Data.Set                         as Set
-import           Data.Text                        hiding (map)
+import qualified Data.Map                                 as Map
+import           Data.Set                                 (union, (\\))
+import qualified Data.Set                                 as Set
+import           Data.Text                                hiding (filter, map)
+import           Enecuum.Config
+import qualified Enecuum.Domain                           as D
+import           Enecuum.Framework.Domain.Error
+import qualified Enecuum.Framework.Lens                   as Lens
+import qualified Enecuum.Language                         as L
+import           Enecuum.Prelude                          hiding (unpack)
 import           Enecuum.Samples.Assets.Blockchain.Keys
 import qualified Enecuum.Samples.Assets.Blockchain.Wallet as A
 import qualified Enecuum.Samples.Assets.Nodes.Address     as A
 import qualified Enecuum.Samples.Assets.Nodes.Messages    as M
-import           Enecuum.Config
-import qualified Enecuum.Domain                   as D
-import           Enecuum.Framework.Domain.Error
-import qualified Enecuum.Framework.Lens           as Lens
-import qualified Enecuum.Language                 as L
-import           Enecuum.Prelude                  hiding (map, unpack)
-import qualified Enecuum.Samples.Blockchain.Language                        as L
-import qualified Enecuum.Samples.Blockchain.Domain                          as D
+import qualified Enecuum.Samples.Blockchain.Domain        as D
+import qualified Enecuum.Samples.Blockchain.Language      as L
+import           System.Console.Haskeline
+import           Text.Regex.Posix                         ((=~))
 
 data ClientNode = ClientNode
     deriving (Show, Generic)
@@ -206,12 +208,30 @@ showMyWallets _ = showWallets
 
 
 -- TODO change it to console help
+help :: Help -> L.NodeL Text
+help Help = pure "TODO change it to console help"
 {- Commands for client:
-CreateNodeId "Password"
-CreateWallet "Password"
+CreateNodeId  'Password'
+CreateWallet  'Password'
 ShowMyWallets
 CreateWalletWithAlias "alias" (CreateWallet "Password")
 -}
+
+-- For CLI completion
+completeWith :: [L.CLICommand] -> String -> [Completion]
+completeWith possibles left = case filter (=~ left) possibles of
+  []  -> []
+  [x] -> [Completion x x False]
+  xs  -> map (\str -> Completion left str False) xs
+
+-- local activity
+data Help = Help deriving (Show, Read)
+data CmdLocal = CreateNodeId | CreateWallet | CreateWalletWithAlias | ShowMyWallets deriving (Show, Enum, Bounded)
+cliCommandsLocal = fmap show localCmds
+    where localCmds = [minBound..maxBound] :: [CmdLocal]
+
+cliCommands = "Help" : cliCommandsLocal
+
 
 clientNode :: L.NodeDefinitionL ()
 clientNode = clientNode' (ClientNodeConfig 42)
@@ -222,7 +242,7 @@ clientNode' _ = do
     L.setNodeTag "Client"
     stateVar <- L.newVarIO D.NodeActing
 
-    L.std $ do
+    L.stdF (completeWith cliCommands) $ do
         -- network
         L.stdHandler ping
         L.stdHandler stopRequest
@@ -233,6 +253,7 @@ clientNode' _ = do
         L.stdHandler createWallet
         L.stdHandler createWalletWithAlias
         L.stdHandler showMyWallets
+        L.stdHandler help
 
         -- interaction with graph node
         L.stdHandler createTransaction

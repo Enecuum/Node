@@ -159,8 +159,9 @@ interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
             putTMVar serversVar servers
 
     pure $ if isJust res then next $ Just () else next Nothing
-
-interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
+  
+interpretNodeDefinitionL nodeRt (L.Std handlers next) = interpretNodeDefinitionL nodeRt $ L.StdF (\_ -> []) handlers next
+interpretNodeDefinitionL nodeRt (L.StdF completeFunc handlers next) = do
     m <- atomically $ newTVar mempty
     _ <- runCmdHandlerL m handlers
     void $ forkIO $ do
@@ -180,8 +181,8 @@ interpretNodeDefinitionL nodeRt (L.Std handlers next) = do
                             history <- getHistory
                             liftIO $ writeHistory path history
                         loop
-
-        runInputT defaultSettings{historyFile = filePath} loop
+        let completionfunc = completeWord Nothing " \t" $ pure . completeFunc
+        runInputT (setComplete completionfunc $ defaultSettings{historyFile = filePath}) loop
     pure $ next ()
 
 -- TODO: make a separate language and use its interpreter in test runtime too.
