@@ -6,8 +6,9 @@
 {-# LANGUAGE TypeSynonymInstances       #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Enecuum.Core.Crypto.Keys (generateNewRandomAnonymousKeyPair, getPrivateKey, showPublicKey, showPrivateKey,
-                                        readPublicKey, readPrivateKey, compressPublicKey, decompressPublicKey,
+module Enecuum.Core.Crypto.Keys (generateNewRandomAnonymousKeyPair, getPrivateKey, showPublicKey, showPublicKeyB, showPrivateKey,
+                                        readPublicKey, readPublicKeyB, readPrivateKey, compressPublicKey, decompressPublicKey,
+                                        readPrivateKeyB, showPrivateKeyB,
                                         PublicKey(..), PrivateKey(..), KeyPair (..)) where
 
 import           "cryptonite" Crypto.Hash                (SHA3_256 (..))
@@ -75,17 +76,29 @@ data KeyPair    = KeyPair { getPub :: PublicKey, getPriv :: PrivateKey }
 readPublicKey :: String -> PublicKey
 readPublicKey value = publicKey256k1 $ base58ToInteger value
 
+readPublicKeyB :: ByteString -> PublicKey
+readPublicKeyB value = publicKey256k1 . fromJust . decodeBase58I bitcoinAlphabet $ value
+
 readPrivateKey :: String -> PrivateKey
 readPrivateKey value = PrivateKey256k1 $ base58ToInteger value
 
+readPrivateKeyB :: ByteString -> PrivateKey
+readPrivateKeyB value = PrivateKey256k1 . fromJust . decodeBase58I bitcoinAlphabet $ value
+
 showPublicKey :: PublicKey -> String
-showPublicKey  a = integerToBase58 $ fromPublicKey256k1 a
+showPublicKey  a = BC.unpack . integerToBase58 $ fromPublicKey256k1 a
+
+showPublicKeyB :: PublicKey -> ByteString
+showPublicKeyB  a = integerToBase58 $ fromPublicKey256k1 a
 
 showPrivateKey :: PrivateKey -> String
-showPrivateKey (PrivateKey256k1 a) = integerToBase58 a
+showPrivateKey (PrivateKey256k1 a) = BC.unpack . integerToBase58 $ a
 
-integerToBase58 :: Integer -> String
-integerToBase58 = BC.unpack . encodeBase58I bitcoinAlphabet
+showPrivateKeyB :: PrivateKey -> ByteString
+showPrivateKeyB (PrivateKey256k1 a) = integerToBase58 a
+
+integerToBase58 :: Integer -> ByteString
+integerToBase58 = encodeBase58I bitcoinAlphabet
 
 base58ToInteger :: String -> Integer
 base58ToInteger = fromJust . decodeBase58I bitcoinAlphabet . BC.pack
