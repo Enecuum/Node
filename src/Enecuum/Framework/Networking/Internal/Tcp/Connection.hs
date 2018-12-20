@@ -109,6 +109,7 @@ instance Conn.NetworkConnection D.Tcp where
                 pure $ Just $ Conn.TcpConnection sockVar readerId conn
 
     close logger conn  = do
+        threadDelay 10000
         Conn.send logger conn "#End#"
         Conn.closeConnection conn
 
