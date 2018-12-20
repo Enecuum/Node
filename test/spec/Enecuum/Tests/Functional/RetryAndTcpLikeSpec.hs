@@ -10,7 +10,7 @@ import           Test.Hspec.Contrib.HUnit                 ( fromHUnitTest )
 import           Enecuum.TestData.Nodes.Scenarios
 import           Enecuum.Testing
 import qualified Enecuum.Testing.RLens as RLens
-import           Enecuum.Tests.Wrappers
+import           Enecuum.Testing.Wrappers
 
 -- Tests disabled
 spec :: Spec

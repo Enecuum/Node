@@ -8,11 +8,12 @@ import qualified Enecuum.Core.Logger.Language      as L
 import qualified Enecuum.Core.Types                as T
 import           Enecuum.Interpreters              (runFileSystemL)
 import           Enecuum.Prelude                   hiding (unpack)
-import           Enecuum.Testing.Integrational     (loadLoggerConfig, testConfigFilePath, testLogFilePath)
+import           Enecuum.Testing.Integrational
+import           Enecuum.Testing.Wrappers
+import           Enecuum.Tests.Helpers
 import           System.Directory
 import           System.IO.Silently                (capture)
 import           Test.Hspec
-import           Enecuum.Tests.Wrappers
 
 scenario :: L.LoggerL ()
 scenario = do

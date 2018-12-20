@@ -1,5 +1,5 @@
 name:                Node
-version:             0.6.0.0
+version:             0.7.0.0
 github:              "Enecuum/Node"
 license:             BSD3
 author:              "Enecuum"
@@ -12,7 +12,7 @@ extra-source-files:
 
 description:
   Node is the project that allows to build network actors and blockchain protocols.
-  It contains Enecuum.Framework, test nodes and main nodes of the Enecuum blockchain.
+  It contains Enecuum.Framework and sample nodes performing some blockchain-like activity.
   Please see the README.md at <https://github.com/Enecuum/Node/blob/master/README.md>.
 
 default-extensions:
@@ -97,6 +97,7 @@ dependencies:
 - QuickCheck
 - hspec-contrib
 - newtype-generics
+- regex-posix
 
 library:
   source-dirs:
@@ -126,6 +127,7 @@ tests:
     
     dependencies:
     - Node               
+
     source-dirs:
     - test/spec
     ghc-options:

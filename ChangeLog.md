@@ -1,5 +1,11 @@
 # Node project changelog
 
+## Changes in v0.7.0
+  - Repository now contains framework, sample nodes and tests.
+    It is cleared from company-specific business logic.
+    It is now suitable to build your own applications.
+  - Executable is now `enq-test-node-haskell`.
+
 ## Changes in v0.6.0
   - Framework updates:
     * Framework structure improvements (renamings, movings)

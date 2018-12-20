@@ -1,22 +1,22 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE DeriveAnyClass #-}
 
 module Enecuum.Tests.Integration.RpcServerSpec where
 
 import           Enecuum.Prelude
 
-
-import           Test.HUnit
+import qualified Data.Map                 as M
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit ( fromHUnitTest )
-import qualified Data.Map             as M
+import           Test.Hspec.Contrib.HUnit (fromHUnitTest)
+import           Test.HUnit
 
-import qualified Enecuum.Language     as L
-import qualified Enecuum.Domain       as D
-import qualified Enecuum.Runtime      as R
+import qualified Enecuum.Domain           as D
 import           Enecuum.Interpreters
-import           Enecuum.Tests.Wrappers
+import qualified Enecuum.Language         as L
+import qualified Enecuum.Runtime          as R
+import           Enecuum.Tests.Helpers
+import           Enecuum.Testing.Wrappers
 
 createNodeRuntime :: IO R.NodeRuntime
 createNodeRuntime = R.createVoidLoggerRuntime >>= R.createCoreRuntime >>= (`R.createNodeRuntime` M.empty)

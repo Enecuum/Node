@@ -6,6 +6,7 @@ module Enecuum.Framework.Handler.Cmd.Language
   , stdHandler
   , CmdHandler
   , CmdHandlerL
+  , CLICommand
   ) where
 
 import           Enecuum.Framework.Domain.Tags   as D
@@ -28,3 +29,5 @@ makeStdHandler :: Read a => (a -> L.NodeL Text) -> String -> L.NodeL Text
 makeStdHandler f raw = case readMaybe raw of
     Just req -> f req
     Nothing  -> pure "Error of request parsing"
+
+type CLICommand = String

@@ -23,6 +23,7 @@ analyzeReadingResult
     -> Either SomeException LByteString
     -> IO WorkerAction
 analyzeReadingResult _        _    (Left err)             = pure (WFinish, WError $ show err)
+analyzeReadingResult _        _    (Right "#End#")        = pure (WFinish, WOk)
 analyzeReadingResult _        _    (Right msg) | null msg = pure (WFinish, WOk)
 analyzeReadingResult handlers conn (Right msg) = case decode msg of
     Nothing                     -> pure (WContinue, WWarning $ "Decoding error: " <> show msg)
@@ -107,7 +108,9 @@ instance Conn.NetworkConnection D.Tcp where
                 readerId <- forkIO worker
                 pure $ Just $ Conn.TcpConnection sockVar readerId conn
 
-    close _ = Conn.closeConnection
+    close logger conn  = do
+        Conn.send logger conn "#End#"
+        Conn.closeConnection conn
 
     send logger (Conn.TcpConnection sockVar readerId _) msg
         | length msg > D.packetSize =

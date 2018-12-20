@@ -21,7 +21,6 @@ Enecuum Node Framework allows to build network actors and blockchain protocols, 
 The Node project contains:
 
   - Enecuum Node Framework
-  - Blockchain algorithms and data structures
   - Sample nodes with configs
   - Testing environment
   - Tests (functional, integration)
@@ -29,7 +28,7 @@ The Node project contains:
 ## Framework structure
 
   - Source code located in [./src/](./src/)
-  - Configs for test nodes located in [./configs/](./configs/)
+  - Configs for sample nodes located in [./configs/](./configs/)
   - Test code located in [./test/](./test/)
 
 The framework represents a set of embedded monadic languages organized hierarchically. The languages are divided to core languages responsible for common subsystems and framework languages responsible for network and actors behavior.
@@ -132,8 +131,8 @@ Run slow and unreliable tests:
 
 # Node code sample
 
-  * Server logic: [Enecuum.Assets.Nodes.TstNodes.PingPong.PingServer](./src/Enecuum/Assets/Nodes/TstNodes/PingPong/PingServer.hs)
-  * Client logic: [Enecuum.Assets.Nodes.TstNodes.PingPong.PongClient](./src/Enecuum/Assets/Nodes/TstNodes/PingPong/PongClient.hs)
+  * Server logic: [Enecuum.Samples.Assets.Nodes.TstNodes.PingPong.PingServer](./src/Enecuum/Samples/Assets/Nodes/TstNodes/PingPong/PingServer.hs)
+  * Client logic: [Enecuum.Samples.Assets.Nodes.TstNodes.PingPong.PongClient](./src/Enecuum/Samples/Assets/Nodes/TstNodes/PingPong/PongClient.hs)
   * Configs:
     - [./configs/tst_ping_server.json](./configs/tst_ping_server.json)
     - [./configs/tst_pong_client1.json](./configs/tst_pong_client1.json)
@@ -144,15 +143,15 @@ In this sample, two nodes interact via network sending UDP messages.
     - Listens UDP port for `Ping` messages.
     - Sends `Pons` message back to the client.
     - Manages a concurrent internal state (counter of pings).
-    
+
     `stack exec enq-test-node-haskell singlenode ./configs/tst_ping_server.json`
-    
+
   * Pong client node
     - Sends `Ping` messages to the server periodically.
     - Accepts `Pong` messages from the server.
-    
+
     `stack exec enq-test-node-haskell singlenode ./configs/tst_pong_client1.json`
-    
+
     `stack exec enq-test-node-haskell singlenode ./configs/tst_pong_client2.json`
 
 ### Network messages
@@ -280,6 +279,7 @@ pongClientNode cfg = do
 
 # Additional materials
 
+  * [Building network actors with Enecuum Node Framework (tutorial)](https://gist.github.com/graninas/9beb8df5d88dda5fa21c47ce9bcb0e16)
   * [Why Haskell?](https://medium.com/@ENQBlockchain/why-haskell-eacb087f3adb)
   * [Enecuum. Framework possibilities](https://medium.com/@ENQBlockchain/enecuum-framework-possibilities-d4fa49c3ea40)
   * [Enecuum.Framework Possibilities, Part 2](https://medium.com/@ENQBlockchain/enecuum-framework-possibilities-part-2-7c8ff65c1c4e)

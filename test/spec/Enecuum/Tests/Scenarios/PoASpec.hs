@@ -1,22 +1,24 @@
 module Enecuum.Tests.Scenarios.PoASpec where
 
-import qualified Data.Map                             as M
-import qualified Enecuum.Assets.Blockchain.Generation as A
-import qualified Enecuum.Assets.Nodes.Address         as A
-import qualified Enecuum.Assets.Nodes.Messages        as D
-import qualified Enecuum.Assets.TstScenarios          as Tst
-import qualified Enecuum.Domain                       as D
-import qualified Enecuum.Interpreters                 as I
-import qualified Enecuum.Language                     as L
-import           Enecuum.Prelude
-import qualified Enecuum.Runtime                      as R
-import           Enecuum.Testing.Integrational
-import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
-import           Test.HUnit
-
+import qualified Data.Map                                     as M
 import           Data.Typeable
-import           Enecuum.Tests.Wrappers
+import qualified Enecuum.Domain                               as D
+import qualified Enecuum.Interpreters                         as I
+import qualified Enecuum.Language                             as L
+import           Enecuum.Prelude
+import qualified Enecuum.Runtime                              as R
+import qualified Enecuum.Samples.Assets.Blockchain.Generation as A
+import qualified Enecuum.Samples.Assets.Nodes.Address         as A
+import qualified Enecuum.Samples.Assets.Nodes.Messages        as D
+import qualified Enecuum.Samples.Assets.TstScenarios          as Tst
+import qualified Enecuum.Samples.Blockchain.Domain            as D
+import qualified Enecuum.Samples.Blockchain.Language          as L
+import           Enecuum.Testing.Integrational
+import           Enecuum.Tests.Helpers
+import           Enecuum.Testing.Wrappers
+import           Test.Hspec
+import           Test.Hspec.Contrib.HUnit                     (fromHUnitTest)
+import           Test.HUnit
 
 spec :: Spec
 spec = slowTest $ describe "PoA" $ fromHUnitTest $ TestList

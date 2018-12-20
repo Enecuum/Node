@@ -1,23 +1,23 @@
 module Enecuum.Tests.Functional.CryptoSpec where
 
-import           Crypto.TripleSec                     (decryptIO, encryptIO)
-import qualified Data.Aeson                           as A
-import           Data.ByteString.Char8                (pack)
-import qualified Data.Serialize                       as S
-import qualified Enecuum.Assets.Blockchain.Generation as D
-import           Enecuum.Assets.Blockchain.Keys       (decryptKey, encryptKey)
-import qualified Enecuum.Assets.Blockchain.Wallet     as D
-import qualified Enecuum.Blockchain.Domain            as D
-import qualified Enecuum.Blockchain.Language          as L
-import qualified Enecuum.Blockchain.Lens              as Lens
+import           Crypto.TripleSec                             (decryptIO, encryptIO)
+import qualified Data.Aeson                                   as A
+import           Data.ByteString.Char8                        (pack)
+import qualified Data.Serialize                               as S
 import           Enecuum.Core.Crypto.Crypto
-import qualified Enecuum.Core.Interpreters            as I
-import qualified Enecuum.Language                     as L
-import           Enecuum.Prelude                      hiding (pack)
-import           Enecuum.Tests.Wrappers
-import           Test.Hspec                           (Spec, describe, shouldBe)
-import           Test.Hspec.Contrib.HUnit             (fromHUnitTest)
-import           Test.HUnit                           (Test (..))
+import qualified Enecuum.Core.Interpreters                    as I
+import qualified Enecuum.Language                             as L
+import           Enecuum.Prelude                              hiding (pack)
+import qualified Enecuum.Samples.Assets.Blockchain.Generation as D
+import           Enecuum.Samples.Assets.Blockchain.Keys       (decryptKey, encryptKey)
+import qualified Enecuum.Samples.Assets.Blockchain.Wallet     as D
+import qualified Enecuum.Samples.Blockchain.Domain            as D
+import qualified Enecuum.Samples.Blockchain.Language          as L
+import qualified Enecuum.Samples.Blockchain.Lens              as Lens
+import           Enecuum.Testing.Wrappers
+import           Test.Hspec                                   (Spec, describe, shouldBe)
+import           Test.Hspec.Contrib.HUnit                     (fromHUnitTest)
+import           Test.HUnit                                   (Test (..))
 
 wallets :: [KeyPair]
 wallets =

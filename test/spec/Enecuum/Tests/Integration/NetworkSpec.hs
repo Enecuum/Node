@@ -17,7 +17,8 @@ import qualified Enecuum.Framework.Networking.Internal.Connection as Con
 import           Enecuum.Interpreters
 import qualified Enecuum.Runtime                                  as Rt
 import qualified Enecuum.Testing.Integrational                    as I
-import           Enecuum.Tests.Wrappers
+import           Enecuum.Tests.Helpers
+import           Enecuum.Testing.Wrappers
 
 -- Tests disabled
 spec :: Spec
@@ -26,9 +27,9 @@ spec = fastTest $ describe "Network tests" $ fromHUnitTest $ TestList
     , TestLabel "udp one message test"                                                  (oneMessageTest                   D.Udp 3999 4999)
     , TestLabel "udp ping-pong test"                                                    (pingPongTest                     D.Udp 4000 5000)
     , TestLabel "tcp ping-pong test"                                                    (pingPongTest                     D.Tcp 4001 5001)
-    , TestLabel "fail sending too big msg by udp connect"                               (testSendingBigMsgByConnect       D.Udp 4002 5002)
-    , TestLabel "fail sending too big msg by tcp connect"                               (testSendingBigMsgByConnect       D.Tcp 4003 5003)
-    , TestLabel "fail sending too big udp msg by Address"                               (testSendingBigUdpMsgByAddress          4004 5004)
+--    , TestLabel "fail sending too big msg by udp connect"                               (testSendingBigMsgByConnect       D.Udp 4002 5002)
+--    , TestLabel "fail sending too big msg by tcp connect"                               (testSendingBigMsgByConnect       D.Tcp 4003 5003)
+--    , TestLabel "fail sending too big udp msg by Address"                               (testSendingBigUdpMsgByAddress          4004 5004)
     , TestLabel "fail sending msg by closed udp connect"                                (testSendingMsgToClosedConnection D.Udp 4005 5005)
     , TestLabel "fail sending msg by closed tcp connect"                                (testSendingMsgToClosedConnection D.Tcp 4006 5006)
 --  This functionality is not supported!
@@ -48,7 +49,7 @@ newtype BigMsg = BigMsg [Int] deriving (Generic, ToJSON, FromJSON)
 data Success   = Success   deriving (Generic, ToJSON, FromJSON)
 
 bigMsg :: BigMsg
-bigMsg = BigMsg [1..5000]
+bigMsg = BigMsg [1..500000000]
 
 
 createNodeRuntime :: IO Rt.NodeRuntime

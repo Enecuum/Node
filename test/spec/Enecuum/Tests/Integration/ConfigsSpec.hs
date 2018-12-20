@@ -1,15 +1,16 @@
 module Enecuum.Tests.Integration.ConfigsSpec where
 
-import           Enecuum.Assets.ConfigParsing (parseConfig)
-import           Enecuum.Assets.System.Directory    (configDir)
-import qualified Enecuum.Framework.Node.Interpreter as I
-import qualified Enecuum.Language                   as L
+import qualified Enecuum.Framework.Node.Interpreter      as I
+import qualified Enecuum.Language                        as L
 import           Enecuum.Prelude
-import           Enecuum.Tests.Wrappers
+import           Enecuum.Samples.Assets.ConfigParsing    (parseConfig)
+import           Enecuum.Samples.Assets.System.Directory (configDir)
+import           Enecuum.Tests.Helpers
+import           Enecuum.Testing.Wrappers
 import           System.Directory
-import           System.FilePath                    ((</>))
+import           System.FilePath                         ((</>))
 import           Test.Hspec
-import           Test.Hspec.Contrib.HUnit           (fromHUnitTest)
+import           Test.Hspec.Contrib.HUnit                (fromHUnitTest)
 import           Test.HUnit
 
 spec :: Spec
