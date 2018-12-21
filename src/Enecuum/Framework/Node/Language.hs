@@ -125,6 +125,7 @@ instance L.ERandom NodeL where
 instance L.FileSystem NodeL where
     readFile         = evalCoreEffect . L.readFile
     writeFile filename text = evalCoreEffect $ L.writeFile filename text
+    appendFile filename text = evalCoreEffect $ L.appendFile filename text
     getHomeDirectory = evalCoreEffect   L.getHomeDirectory
     createFilePath   = evalCoreEffect . L.createFilePath
     doesFileExist    = evalCoreEffect . L.doesFileExist
