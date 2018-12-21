@@ -15,6 +15,9 @@ interpretFileSystemL (L.ReadFile filename next) = do
 interpretFileSystemL (L.WriteFile filename text next) = do
     B.writeFile filename text
     pure $ next ()
+interpretFileSystemL (L.AppendFile filename text next) = do
+    B.appendFile filename text
+    pure $ next ()
 interpretFileSystemL (L.GetHomeDirectory next) = do
     filename <- getHomeDirectory
     pure $ next filename
