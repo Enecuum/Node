@@ -52,6 +52,7 @@ evalFileSystem filepath = liftF $ EvalFileSystem filepath id
 instance FileSystem CoreEffectL where
   readFile filepath = evalFileSystem $ readFile filepath
   writeFile filename text = evalFileSystem $ writeFile filename text
+  appendFile filename text = evalFileSystem $ writeFile filename text
   getHomeDirectory = evalFileSystem getHomeDirectory
   createFilePath filepath = evalFileSystem $ createFilePath filepath
   doesFileExist    = evalFileSystem . doesFileExist
