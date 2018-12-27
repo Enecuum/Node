@@ -2,7 +2,7 @@
 module Enecuum.Core.Crypto.Interpreter where
 
 import           "cryptonite" Crypto.Random (MonadRandom)
-import           Crypto.TripleSec           (decryptIO, encryptIO)
+import           Crypto.TripleSec           --(decryptIO, encryptIO)
 import           Data.ByteString.Char8      (pack)
 import           Enecuum.Core.Crypto.Crypto (generateNewRandomAnonymousKeyPair, sign)
 import           Enecuum.Core.Crypto.Crypto
@@ -19,13 +19,11 @@ interpretCryptoL (L.Encrypt key msg next) = do
     encryptedMsg <- encryptIO key msg
     pure $ next encryptedMsg
 interpretCryptoL (L.Decrypt key encryptedMsg next) = do
-    decryptedMsg <- decryptIO key encryptedMsg
+    eDecryptedMsg :: Either SomeException L.Key <- try $ decryptIO key encryptedMsg
+    let decryptedMsg = case eDecryptedMsg of
+            Left e -> Nothing
+            Right decryptedMsg -> Just decryptedMsg
     pure $ next decryptedMsg
 
 runCryptoL :: L.CryptoL a -> IO a
 runCryptoL = foldFree interpretCryptoL
-
-
-
-
-

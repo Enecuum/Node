@@ -54,7 +54,11 @@ getPassword (Manual password) = password
 
 -- | Decrypt private key
 decryptKey :: (Monad m, L.Crypto m) => Password -> CipheredPrivateKey -> m PrivateKey
-decryptKey password cipheredKey = L.decrypt (fromString password) cipheredKey
+decryptKey password cipheredKey = do
+    mPrivateKey <- (L.decrypt (fromString password) cipheredKey)
+    case mPrivateKey of
+        Nothing -> error $ "Password is wrong : " +|| password ||+ " . Can not decrypt private key."
+        Just privateKey -> pure privateKey
 
 -- | Encrypt private key
 encryptKey :: (Monad m, L.Crypto m) => Password -> PrivateKey -> m CipheredPrivateKey
