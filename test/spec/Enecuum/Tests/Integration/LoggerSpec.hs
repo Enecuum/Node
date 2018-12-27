@@ -80,7 +80,7 @@ runLog logFile config =
         Impl.runLoggerL (Just h) scenario
 
 standardFormattedFullText :: Text
-standardFormattedFullText = "DEBUG Node.Main: Debug Msg\n\
-                            \INFO Node.Main: Info Msg\n\
-                            \WARNING Node.Main: Warning Msg\n\
-                            \ERROR Node.Main: Error Msg\n"
+standardFormattedFullText = "DEBUG : Debug Msg\n\
+                            \INFO : Info Msg\n\
+                            \WARNING : Warning Msg\n\
+                            \ERROR : Error Msg\n"

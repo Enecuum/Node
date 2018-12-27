@@ -18,7 +18,7 @@ data HsLoggerHandle = HsLoggerHandle
   }
 
 component :: String
-component = "Node.Main"
+component = ""
 
 -- | Bracket an IO action which denotes the whole scope where the loggers of
 -- the application are needed to installed. Sets them up before running the action
