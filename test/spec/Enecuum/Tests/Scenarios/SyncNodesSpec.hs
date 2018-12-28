@@ -26,14 +26,14 @@ spec = unstableTest $ slowTest $ describe "Synchronization tests" $ fromHUnitTes
 testNodeNet :: Test
 testNodeNet = TestCase . withNodesManager $ \mgr -> do
     -- assign config
-    let transmiterRpcAddress       = A.getRpcAddress A.tstGraphNodeTransmitterAddress
+    let transmitterRpcAddress       = A.getRpcAddress A.tstGraphNodeTransmitterAddress
     let receiverRpcAddress         = A.getRpcAddress A.tstGraphNodeReceiverAddress
     let powRpcAddress              = A.getRpcAddress A.tstGenPoWNodeAddress
     let poaRpcAddress              = A.getRpcAddress A.tstGenPoANodeAddress
 
     -- Start nodes
     void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.tstGraphNodeTransmitterConfig
-    waitForNode transmiterRpcAddress
+    waitForNode transmitterRpcAddress
 
     void $ startNode Nothing mgr Tst.powNode
     waitForNode powRpcAddress
@@ -49,24 +49,24 @@ testNodeNet = TestCase . withNodesManager $ \mgr -> do
     let kblockCount = 2
     _ :: Either Text D.SuccessMsg <- makeIORpcRequest powRpcAddress $ D.NBlockPacketGeneration kblockCount timeGap
 
-    waitForBlocks 2 transmiterRpcAddress
+    waitForBlocks 2 transmitterRpcAddress
     waitForBlocks 2 receiverRpcAddress
 
     threadDelay $ 1000 * 1000
     -- Check kblock synchronization
-    kBlock1 :: D.KBlock <- makeRpcRequestUntilSuccess transmiterRpcAddress D.GetLastKBlock
+    kBlock1 :: D.KBlock <- makeRpcRequestUntilSuccess transmitterRpcAddress D.GetLastKBlock
     kBlock2 :: D.KBlock <- makeRpcRequestUntilSuccess receiverRpcAddress   D.GetLastKBlock
 
     kBlock1 `shouldBe` kBlock2
 
     -- Check ledger synchronization
-    Right (D.GetMBlocksForKBlockResponse mblocksPrev1) <- makeIORpcRequest transmiterRpcAddress
+    Right (D.GetMBlocksForKBlockResponse mblocksPrev1) <- makeIORpcRequest transmitterRpcAddress
         $ D.GetMBlocksForKBlockRequest (kBlock1 ^. Lens.prevHash)
     Right (D.GetMBlocksForKBlockResponse mblocksPrev2) <- makeIORpcRequest receiverRpcAddress
         $ D.GetMBlocksForKBlockRequest (kBlock2 ^. Lens.prevHash)
 
     eWalletBalances1 :: [Either Text D.WalletBalanceMsg] <- forM (concat $ toKeys <$> mblocksPrev1) $ \i ->
-        makeIORpcRequest transmiterRpcAddress $ D.GetWalletBalance i
+        makeIORpcRequest transmitterRpcAddress $ D.GetWalletBalance i
 
     eWalletBalances2 :: [Either Text D.WalletBalanceMsg] <- forM (concat $ toKeys <$> mblocksPrev2) $ \i ->
         makeIORpcRequest receiverRpcAddress   $ D.GetWalletBalance i

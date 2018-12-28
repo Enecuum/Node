@@ -35,10 +35,10 @@ testPoA = TestCase $ withNodesManager $ \mgr -> do
     -- Generate and send transactions to graph node
     transactions <- I.runERandomL $ replicateM A.transactionsInMicroblock $ A.genTransaction A.Generated
     _ :: [Either Text D.SuccessMsg] <- forM transactions $ \tx ->
-        makeIORpcRequest transmiterRpcAddress $ D.CreateTransaction tx
+        makeIORpcRequest transmitterRpcAddress $ D.CreateTransaction tx
 
     -- Check transaction pending on graph node
-    txPending :: [D.Transaction] <- makeRpcRequestUntilSuccess transmiterRpcAddress D.GetTransactionPending
+    txPending :: [D.Transaction] <- makeRpcRequestUntilSuccess transmitterRpcAddress D.GetTransactionPending
     (sort txPending) `shouldBe` (sort transactions)
 
     -- Ask pow node to generate n kblocks
@@ -47,18 +47,18 @@ testPoA = TestCase $ withNodesManager $ \mgr -> do
     _ :: Either Text D.SuccessMsg <- makeIORpcRequest (A.getRpcAddress A.tstGenPoWNodeAddress) $ D.NBlockPacketGeneration kblockCount timeGap
 
     -- Get last kblock from graph node
-    kBlock :: D.KBlock <- makeRpcRequestUntilSuccess transmiterRpcAddress D.GetLastKBlock
+    kBlock :: D.KBlock <- makeRpcRequestUntilSuccess transmitterRpcAddress D.GetLastKBlock
     let kblockHash = D.toHash kBlock
 
     -- Microblock on graph node received from poa
     (D.GetMBlocksForKBlockResponse mblock) <- do
         let request = D.GetMBlocksForKBlockRequest kblockHash
         let predicate (D.GetMBlocksForKBlockResponse mblock) = length mblock == 1
-        makeRpcRequestWithPredicate predicate transmiterRpcAddress request
+        makeRpcRequestWithPredicate predicate transmitterRpcAddress request
     (length mblock) `shouldBe` 1
 
     -- Check transaction pending on graph node, it must to be empty now
     void $ do
         let predicate :: [D.Transaction] -> Bool
             predicate txPending = txPending == []
-        makeRpcRequestWithPredicate predicate transmiterRpcAddress D.GetTransactionPending
+        makeRpcRequestWithPredicate predicate transmitterRpcAddress D.GetTransactionPending
