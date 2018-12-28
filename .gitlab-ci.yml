@@ -13,7 +13,7 @@ stages:
 stack-build:
     stage: build
     script:
-      - stack build --test
+      - stack build --test --test-arguments "-m Stable"
       - stack install --local-bin-path binaries
     artifacts:
       paths:
