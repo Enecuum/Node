@@ -22,7 +22,7 @@ import           Enecuum.Testing.Wrappers
 
 -- Tests disabled
 spec :: Spec
-spec = fastTest $ describe "Network tests" $ fromHUnitTest $ TestList
+spec = stableTest $ fastTest $ describe "Network tests" $ fromHUnitTest $ TestList
     [ TestLabel "tcp one message test"                                                  (oneMessageTest                   D.Tcp 3998 4998)
     , TestLabel "udp one message test"                                                  (oneMessageTest                   D.Udp 3999 4999)
     , TestLabel "udp ping-pong test"                                                    (pingPongTest                     D.Udp 4000 5000)

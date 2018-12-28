@@ -20,7 +20,7 @@ import           Test.Hspec.Contrib.HUnit              (fromHUnitTest)
 import           Test.HUnit
 
 spec :: Spec
-spec = slowTest $ describe "Synchronization tests" $ fromHUnitTest $ TestList
+spec = unstableTest $ slowTest $ describe "Synchronization tests" $ fromHUnitTest $ TestList
     [TestLabel "test net sync" testNodeNet]
 
 testNodeNet :: Test

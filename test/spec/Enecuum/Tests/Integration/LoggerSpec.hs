@@ -37,7 +37,7 @@ withLogFile logFile action = do
 
 spec :: Spec
 spec =
-    fastTest $ describe "Logger tests" $ do
+    stableTest $ fastTest $ describe "Logger tests" $ do
         it "Test output to console with capture" $ do
             config      <- loadLoggerConfig testConfigFilePath
             (output, _) <- capture $ Impl.withLogger config { T._logToConsole = True, T._logToFile = False } $ \h ->

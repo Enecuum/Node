@@ -16,7 +16,7 @@ instance Arbitrary ByteString where
     shrink = map BS.pack . shrink . BS.unpack
 
 spec :: Spec
-spec = fastTest $
+spec = stableTest $ fastTest $
     describe "Bytestring property test" $ do
         it "Verify bytestring json serialization" $ property prop_JsonEncoding
         it "Verify bytestring Base64 serialization" $ property prop_Base64Encoding

@@ -14,7 +14,7 @@ import           Enecuum.Testing
 import           Enecuum.Testing.Wrappers
 
 spec :: Spec
-spec = fastTest $ describe "Random spec" $
+spec = stableTest $ fastTest $ describe "Random spec" $
     it "Get 100 random numbers in range" $ do
         loggerRuntime <- createLoggerRuntime
 

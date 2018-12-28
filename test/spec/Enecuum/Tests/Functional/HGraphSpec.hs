@@ -32,7 +32,7 @@ instance StringHashable SomeStructure where
     toHash = toHashGeneric
 
 spec :: Spec
-spec = fastTest $ do
+spec = stableTest $ fastTest $ do
     describe "HGraph eDSL tests" $ fromHUnitTest $ TestList
         [ TestLabel "Addition of new node / getting node by content" testNewNode
         , TestLabel "Getting node by hash"                           testGetNodeByHash

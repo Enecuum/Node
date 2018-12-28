@@ -21,7 +21,7 @@ import           Enecuum.Tests.Helpers
 import           Enecuum.Testing.Wrappers
 
 spec :: Spec
-spec = slowTest $ describe "Dump and restore graph test" $ fromHUnitTest $ TestList
+spec = unstableTest $ slowTest $ describe "Dump and restore graph test" $ fromHUnitTest $ TestList
     [TestLabel "Dump and restore graph test" dumpAndRestoreGraphTest]
 
 dumpAndRestoreGraphTest :: Test
@@ -51,7 +51,7 @@ dumpAndRestoreGraphTest = do
 
     let graphNodeRpcAddress        = A.getRpcAddress A.tstGraphNodeTransmitterAddress
     let graphNodeUdpAddress        = A.getUdpAddress A.tstGraphNodeTransmitterAddress
-    let transmiterRpcAddress       = A.getRpcAddress A.tstGraphNodeTransmitterAddress
+    let transmitterRpcAddress       = A.getRpcAddress A.tstGraphNodeTransmitterAddress
     let powRpcAddress              = A.getRpcAddress A.tstGenPoWNodeAddress
     let poaRpcAddress              = A.getRpcAddress A.tstGenPoANodeAddress
 
@@ -66,7 +66,7 @@ dumpAndRestoreGraphTest = do
     TestCase $ withDbAbsence dbPath $ withNodesManager $ \mgr -> do
         -- Starting nodes.
         transmitterNode1 <- startNode loggerCfg mgr $ Tst.tstGraphNode cfg
-        waitForNode transmiterRpcAddress
+        waitForNode transmitterRpcAddress
 
         powNode <- startNode loggerCfg mgr Tst.powNode
         waitForNode powRpcAddress
@@ -110,7 +110,7 @@ dumpAndRestoreGraphTest = do
 
         -- Starting node, checking there are no blocks.
         void $ startNode loggerCfg mgr $ Tst.tstGraphNode cfg
-        waitForNode transmiterRpcAddress
+        waitForNode transmitterRpcAddress
 
         Right genesisKBlock :: Either Text D.KBlock <- makeIORpcRequest graphNodeRpcAddress A.GetLastKBlock
         genesisKBlock `shouldBe` D.genesisKBlock

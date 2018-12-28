@@ -29,7 +29,7 @@ wallets =
     ]
 
 spec :: Spec
-spec = fastTest $ do
+spec = stableTest $ fastTest $ do
     describe "Signature" $ fromHUnitTest $ TestList
         [ TestLabel "Verify transaction signature" testVerifySignedTransaction
         , TestLabel "Verify microblock signature" testVerifySignedMicroblock
@@ -41,7 +41,7 @@ spec = fastTest $ do
         , TestLabel "Public key binary serialization" testPublicKeyBinarySerialization
         , TestLabel "Public key read/show" testReadShowPublicKey
         , TestLabel "Wallets demo read/show" testReadShowDemoWallets
-        , TestLabel "Compress/decompess public key" testCompressPublicKey]
+        , TestLabel "Compress/decompress public key" testCompressPublicKey]
     describe "Private key" $ fromHUnitTest $ TestList
         [ TestLabel "Private key read/show" testReadShowPrivateKey]
     describe "Encrypt/decrypt message" $ fromHUnitTest $ TestList

@@ -12,8 +12,8 @@ import qualified Enecuum.Samples.Blockchain.Language                        as L
 import qualified Enecuum.Samples.Blockchain.Domain                          as D
 
 spec :: Spec
-spec = fastTest $ describe "Difficulty test" $ do
-    it "leadingZeroBitsCount" $ do
+spec = stableTest $ fastTest $ describe "Difficulty test" $ do
+    it "Count leading Zero Bits" $ do
         D.leadingZeroBitsCount 0  `shouldBe` 8
         D.leadingZeroBitsCount 1  `shouldBe` 7
         D.leadingZeroBitsCount 16 `shouldBe` 3
@@ -22,11 +22,11 @@ spec = fastTest $ describe "Difficulty test" $ do
         map D.leadingZeroBitsCount [(2 ^ i) :: Word8 | i <- [0..7]]
           `shouldBe` [7,6..0]
 
-    it "calcHashDifficulty" $ do
+    it "Calculate hash difficulty" $ do
         D.calcHashDifficulty (D.RawHash $ B.pack [1, 121]) `shouldBe` 7
         D.calcHashDifficulty (D.RawHash $ B.pack [0, 1]) `shouldBe` 15
 
-    it "Some hashes difficulty" $ do
+    it "Calculate some hashes difficulty" $ do
         D.calcHashDifficulty (D.RawHash $ B.pack [246,2,161,0,0])   `shouldBe` 0
         D.calcHashDifficulty (D.RawHash $ B.pack [0,246,2,161,0,0]) `shouldBe` 8
         D.calcHashDifficulty (D.RawHash $ B.pack [0,0,0,0,0,0])     `shouldBe` 48
