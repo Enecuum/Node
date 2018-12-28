@@ -14,7 +14,7 @@ import           Test.Hspec.Contrib.HUnit                (fromHUnitTest)
 import           Test.HUnit
 
 spec :: Spec
-spec = fastTest $ describe "Validate configs" $ do
+spec = stableTest $ fastTest $ describe "Validate configs" $ do
     configFiles <- runIO getConfigNames
     fromHUnitTest $ TestList $ map (\file -> TestLabel ("Parse config " +|| file ||+ "") (parse file)) configFiles
 

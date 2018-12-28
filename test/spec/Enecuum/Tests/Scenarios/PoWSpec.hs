@@ -21,7 +21,7 @@ import           Test.Hspec.Contrib.HUnit                     (fromHUnitTest)
 import           Test.HUnit
 
 spec :: Spec
-spec = slowTest $ describe "PoW and graph node interaction" $ fromHUnitTest $ TestList
+spec = unstableTest $ slowTest $ describe "PoW and graph node interaction" $ fromHUnitTest $ TestList
     [ TestLabel "Accept kblocks produced in order"        $ testAcceptKblock A.InOrder
     , TestLabel "Accept kblocks produced in random order" $ testAcceptKblock A.RandomOrder
     , TestLabel "Test kblock pending on graph node"         testKblockPending

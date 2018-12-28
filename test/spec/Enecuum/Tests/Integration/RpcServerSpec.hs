@@ -29,7 +29,7 @@ data ErrResponse = ErrResponse deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- Tests disabled
 spec :: Spec
-spec = fastTest $ describe "RpcServer" $ fromHUnitTest $ TestList
+spec = stableTest $ fastTest $ describe "RpcServer" $ fromHUnitTest $ TestList
     [ TestLabel "Test of rpc server/ok" rpcServerTestOk
     , TestLabel "Test of rpc server/err" rpcServerTestErr
     ]

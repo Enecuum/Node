@@ -111,7 +111,7 @@ dbInitNode cfg = do
     pure $ eDb >> Right ()
 
 spec :: Spec
-spec = fastTest $ describe "Database functional tests" $ do
+spec = stableTest $ fastTest $ describe "Database functional tests" $ do
     dbPath <- runIO $ mkDbPath "test.db"
     let cfg1 = D.DBConfig dbPath $ D.defaultDbOptions
                 { D._createIfMissing = True

@@ -15,7 +15,7 @@ nodeAddress :: D.Address
 nodeAddress = D.Address "0.0.0.4" 1000
 
 spec :: Spec
-spec = fastTest $ describe "State spec" $ do
+spec = stableTest $ fastTest $ describe "State spec" $ do
 
     it "Create & read var non-atomically" $ do
         loggerRuntime <- createLoggerRuntime

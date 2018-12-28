@@ -14,7 +14,7 @@ import           Enecuum.Testing.Wrappers
 
 -- Tests disabled
 spec :: Spec
-spec = fastTest $ describe "Retry & TCP-like connections test" $ fromHUnitTest $ TestList
+spec = stableTest $ fastTest $ describe "Retry & TCP-like connections test" $ fromHUnitTest $ TestList
     [TestLabel "Retry & TCP-like connections test (Ping-Pong 2)" pingPong2]
 
 pingPong2 :: Test

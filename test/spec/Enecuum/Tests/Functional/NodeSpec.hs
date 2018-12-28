@@ -10,7 +10,7 @@ import qualified Enecuum.Testing.RLens as RLens
 import           Enecuum.Testing.Wrappers
 
 spec :: Spec
-spec = fastTest $ describe "Nodes test" $ do
+spec = unstableTest $ fastTest $ describe "Nodes test" $ do
     it "Master node interacts with boot node" $ do
 
         runtime                          <- createTestRuntime

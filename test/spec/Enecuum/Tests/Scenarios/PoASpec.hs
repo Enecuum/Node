@@ -21,12 +21,12 @@ import           Test.Hspec.Contrib.HUnit                     (fromHUnitTest)
 import           Test.HUnit
 
 spec :: Spec
-spec = slowTest $ describe "PoA" $ fromHUnitTest $ TestList
+spec = unstableTest $ slowTest $ describe "PoA" $ fromHUnitTest $ TestList
     [TestLabel "Check microblock generation" testPoA]
 
 testPoA :: Test
 testPoA = TestCase $ withNodesManager $ \mgr -> do
-    let transmiterRpcAddress       = A.getRpcAddress A.tstGraphNodeTransmitterAddress
+    let transmitterRpcAddress       = A.getRpcAddress A.tstGraphNodeTransmitterAddress
 
     void $ startNode Nothing mgr $ Tst.tstGraphNode Tst.tstGraphNodeTransmitterConfig
     void $ startNode Nothing mgr Tst.powNode
