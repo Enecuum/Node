@@ -64,9 +64,7 @@ The framework represents a set of embedded monadic languages organized hierarchi
 
 ### Install External dependencies
 
-`sudo apt install librocksdb-dev`
-`sudo apt install libgd-dev`
-`sudo apt install libtinfo-dev`
+`sudo apt update && sudo apt install librocksdb-dev libgd-dev libtinfo-dev -y`
 
 ### Build Node
 
