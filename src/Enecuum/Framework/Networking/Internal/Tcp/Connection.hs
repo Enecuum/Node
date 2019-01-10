@@ -16,6 +16,7 @@ import           Enecuum.Framework.Runtime                        as R
 import           Enecuum.Framework.Runtime                        (WorkerAction, WorkerState (..), withWorkerAction)
 import qualified Network.Socket                                   as S hiding (recv)
 import qualified Network.Socket.ByteString.Lazy                   as S
+import           Enecuum.Framework.Networking.Internal.Datagram
 
 analyzeReadingResult
     :: R.Handlers D.Tcp
@@ -36,7 +37,7 @@ readingWorker :: R.RuntimeLogger -> R.Handlers D.Tcp -> D.Connection D.Tcp -> S.
 readingWorker logger handlers conn sock = do
     isDead <- Conn.isSocketClosed sock
     unless isDead $ do
-        eRead  <- try $ S.recv sock $ toEnum D.packetSize
+        eRead  <- try $ receiveDatagram sock
         action <- analyzeReadingResult handlers conn eRead
         withWorkerAction logger action $ readingWorker logger handlers conn sock
 
@@ -114,7 +115,7 @@ instance Conn.NetworkConnection D.Tcp where
             pure $ Left $ TooBigMessage $ "Packet size: " +|| length msg ||+ ", limit: " +|| D.packetSize ||+ ""
         | otherwise                 = do
             sock <- atomically $ takeTMVar sockVar
-            eRes <- try $ S.sendAll sock msg
+            eRes <- try $ sendDatagram sock msg
             res <- case eRes of
                 Right _                     -> pure $ Right ()
                 Left  (err :: SomeException)  -> do
