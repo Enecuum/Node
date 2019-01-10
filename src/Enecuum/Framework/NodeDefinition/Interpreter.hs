@@ -33,7 +33,7 @@ import qualified Enecuum.Framework.Node.Interpreter               as Impl
 import qualified Enecuum.Framework.RLens                          as RLens
 import           Enecuum.Framework.Runtime                        (Connections, DBHandle, NodeRuntime)
 import qualified Enecuum.Framework.Runtime                        as R
-
+import           Enecuum.Framework.Networking.Internal.Datagram
 
 getNextId :: NodeRuntime -> IO Int
 getNextId nodeRt = atomically $ Impl.getNextId $ nodeRt ^. RLens.coreRuntime . RLens.stateRuntime
@@ -154,9 +154,9 @@ interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
                 (connSock, _) <- S.accept listenSock
                 void $ forkFinally
                     (do
-                        msg      <- S.recv connSock (toEnum D.packetSize)
+                        msg      <- receiveDatagram connSock
                         response <- callRpc (runNodeL nodeRt) handlerMap msg
-                        S.sendAll connSock $ A.encode response
+                        sendDatagram connSock $ A.encode response
                     ) (\_ -> S.close connSock)
 
             -- add serwer handler to server map

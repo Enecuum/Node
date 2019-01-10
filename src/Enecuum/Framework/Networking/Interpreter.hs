@@ -18,6 +18,7 @@ import           Enecuum.Framework.Runtime
 import qualified Enecuum.Language                                     as L
 import qualified Network.Socket                                       as S hiding (recv, send)
 import qualified Network.Socket.ByteString.Lazy                       as S
+import           Enecuum.Framework.Networking.Internal.Datagram
 
 
 deleteConnection :: (Ord k,
@@ -38,9 +39,9 @@ interpretNetworkingL _ (L.SendRpcRequest (D.Address host port) request next) =
         finally (do
             S.connect sock $ S.addrAddress address
             -- send a message
-            S.sendAll sock $ A.encode request
+            sendDatagram sock $ A.encode request
             -- read the answer
-            msg <- S.recv sock (toEnum D.packetSize)
+            msg <- receiveDatagram sock
             -- return the result
             pure $ transformEither T.pack id $ A.eitherDecode msg
             -- close the connection
