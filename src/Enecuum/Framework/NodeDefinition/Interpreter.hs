@@ -149,6 +149,7 @@ interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
         (do
             when (M.member port servers) $ Safe.throwString $ "Port " <> show port <> " is used"
             listenSock     <- listenOn (PortNumber port)
+            -- run rpc-worker
             acceptWorkerId <- forkIO $ forever $ do
                 (connSock, _) <- S.accept listenSock
                 void $ forkFinally
@@ -158,8 +159,8 @@ interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
                         S.sendAll connSock $ A.encode response
                     ) (\_ -> S.close connSock)
 
+            -- add serwer handler to server map
             listenSockVar  <- newTMVarIO listenSock
-
             atomically $ putTMVar (nodeRt ^. RLens.servers) $
                 M.insert port (R.ServerHandle listenSockVar acceptWorkerId) servers
             pure $ Just ()
