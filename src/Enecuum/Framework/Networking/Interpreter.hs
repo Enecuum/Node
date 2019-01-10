@@ -30,17 +30,22 @@ deleteConnection nodeRt conn = do
 
 -- | Interpret NetworkingL language.
 interpretNetworkingL :: NodeRuntime -> L.NetworkingF a -> IO a
-interpretNetworkingL _ (L.SendRpcRequest addr request next) = do
-    var <- newEmptyMVar
-    ok  <- try $ runClient S.Stream addr $ \connect -> do
-        S.sendAll connect $ A.encode request
-        msg <- S.recv connect (toEnum D.packetSize)
-        putMVar var (transformEither T.pack id $ A.eitherDecode msg)
-    case ok of
-        Right _                    -> pure ()
-        Left  (e :: SomeException) -> putMVar var $ Left $ "Server does not exist: " +|| e ||+ " " +|| addr ||+ "."
-    res <- takeMVar var
-    pure $ next res
+interpretNetworkingL _ (L.SendRpcRequest (D.Address host port) request next) =
+    next <$> catchAny (do
+        -- create a connection
+        address <- head <$> S.getAddrInfo Nothing (Just host) (Just $ show port)
+        sock    <- S.socket (S.addrFamily address) S.Stream S.defaultProtocol
+        finally (do
+            S.connect sock $ S.addrAddress address
+            -- send a message
+            S.sendAll sock $ A.encode request
+            -- read the answer
+            msg <- S.recv sock (toEnum D.packetSize)
+            -- return the result
+            pure $ transformEither T.pack id $ A.eitherDecode msg
+            -- close the connection
+            ) (S.close sock)
+    ) (pure . Left . show)
 
 interpretNetworkingL nodeRt (L.SendTcpMsgByConnection conn msg next) = do
     let logger = R.mkRuntimeLogger $ nodeRt ^. RLens.coreRuntime . RLens.loggerRuntime
