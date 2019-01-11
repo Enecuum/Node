@@ -19,7 +19,7 @@ sendDatagram sock msg =
 
 receiveDatagram :: S.Socket -> IO LByteString
 receiveDatagram sock = do
-    datagramLength <- S.recv sock 4
+    datagramLength <- mconcat <$> replicateM 4 (S.recv sock 1)
     rawMsg <- readMsg sock $ decodeLazy datagramLength
     pure $ mconcat $ reverse rawMsg
 
