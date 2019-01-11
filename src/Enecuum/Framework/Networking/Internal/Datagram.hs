@@ -24,7 +24,7 @@ receiveDatagram sock = do
     pure $ mconcat $ reverse rawMsg
 
 readMsg :: S.Socket -> Either String Word32 -> IO [LByteString]
-readMsg _    (Left err)  = error $ "Decoding error " <> toText err
+readMsg _    (Left  _  ) = pure []
 readMsg sock (Right len) =
     loopM (\(elemsOfMsg, restOfMsg) -> do
         msg <- S.recv sock ((toEnum.fromEnum) restOfMsg)
