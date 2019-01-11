@@ -16,6 +16,7 @@ import           Enecuum.Framework.Runtime                        as R
 import           Enecuum.Framework.Runtime                        (WorkerAction, WorkerState (..), withWorkerAction)
 import qualified Network.Socket                                   as S hiding (recv)
 import qualified Network.Socket.ByteString.Lazy                   as S
+import           Enecuum.Framework.Networking.Internal.Datagram
 
 analyzeReadingResult
     :: R.Handlers D.Tcp
@@ -23,7 +24,8 @@ analyzeReadingResult
     -> Either SomeException LByteString
     -> IO WorkerAction
 analyzeReadingResult _        _    (Left err)             = pure (WFinish, WError $ show err)
-analyzeReadingResult _        _    (Right msg) | null msg = pure (WFinish, WOk)
+analyzeReadingResult _        _    (Right msg)   | null msg = pure (WFinish, WOk)
+analyzeReadingResult _        _    (Right "end") = pure (WFinish, WOk)
 analyzeReadingResult handlers conn (Right msg) = case decode msg of
     Nothing                     -> pure (WContinue, WWarning $ "Decoding error: " <> show msg)
     Just (D.NetworkMsg tag val) -> case tag `M.lookup` handlers of
@@ -36,7 +38,7 @@ readingWorker :: R.RuntimeLogger -> R.Handlers D.Tcp -> D.Connection D.Tcp -> S.
 readingWorker logger handlers conn sock = do
     isDead <- Conn.isSocketClosed sock
     unless isDead $ do
-        eRead  <- try $ S.recv sock $ toEnum D.packetSize
+        eRead  <- try $ receiveDatagram sock
         action <- analyzeReadingResult handlers conn eRead
         withWorkerAction logger action $ readingWorker logger handlers conn sock
 
@@ -107,14 +109,16 @@ instance Conn.NetworkConnection D.Tcp where
                 readerId <- forkIO worker
                 pure $ Just $ Conn.TcpConnection sockVar readerId conn
 
-    close _ = Conn.closeConnection
+    close logger conn = do
+        Conn.send logger conn "end"
+        Conn.closeConnection conn
 
     send logger (Conn.TcpConnection sockVar readerId _) msg
         | length msg > D.packetSize =
             pure $ Left $ TooBigMessage $ "Packet size: " +|| length msg ||+ ", limit: " +|| D.packetSize ||+ ""
         | otherwise                 = do
             sock <- atomically $ takeTMVar sockVar
-            eRes <- try $ S.sendAll sock msg
+            eRes <- try $ sendDatagram sock msg
             res <- case eRes of
                 Right _                     -> pure $ Right ()
                 Left  (err :: SomeException)  -> do

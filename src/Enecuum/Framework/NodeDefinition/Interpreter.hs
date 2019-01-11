@@ -10,8 +10,11 @@ import qualified "rocksdb-haskell" Database.RocksDB               as Rocks
 import           Enecuum.Prelude                                  hiding (fromJust)
 import qualified Network.Socket                                   as S hiding (recv)
 import qualified Network.Socket.ByteString.Lazy                   as S
+import           Network  (PortID(..), listenOn)
 import           System.Console.Haskeline
 import           System.Console.Haskeline.History
+import           Control.Concurrent (forkFinally)
+import qualified Control.Exception.Safe                           as Safe
 
 import qualified Enecuum.Core.Interpreters                        as Impl
 import qualified Enecuum.Core.RLens                               as RLens
@@ -25,13 +28,12 @@ import qualified Enecuum.Framework.Handler.Network.Interpreter    as Net
 import           Enecuum.Framework.Handler.Rpc.Interpreter
 import qualified Enecuum.Framework.Language                       as L
 import qualified Enecuum.Framework.Networking.Internal.Connection as Conn
-import           Enecuum.Framework.Networking.Internal.Tcp.Server
 import           Enecuum.Framework.Node.Interpreter               (runNodeL)
 import qualified Enecuum.Framework.Node.Interpreter               as Impl
 import qualified Enecuum.Framework.RLens                          as RLens
 import           Enecuum.Framework.Runtime                        (Connections, DBHandle, NodeRuntime)
 import qualified Enecuum.Framework.Runtime                        as R
-
+import           Enecuum.Framework.Networking.Internal.Datagram
 
 getNextId :: NodeRuntime -> IO Int
 getNextId nodeRt = atomically $ Impl.getNextId $ nodeRt ^. RLens.coreRuntime . RLens.stateRuntime
@@ -141,25 +143,33 @@ interpretNodeDefinitionL nodeRt (L.GetBoundedPorts next) = do
 
 interpretNodeDefinitionL nodeRt (L.ServingRpc port action next) = do
     let logger = R.mkRuntimeLogger $ nodeRt ^. RLens.coreRuntime . RLens.loggerRuntime
+    handlerMap <- readRpcHandler action
+    servers    <- atomically $ takeTMVar (nodeRt ^. RLens.servers)
+    next <$> catchAny
+        (do
+            when (M.member port servers) $ Safe.throwString $ "Port " <> show port <> " is used"
+            listenSock     <- listenOn (PortNumber port)
+            -- run rpc-worker
+            acceptWorkerId <- forkIO $ forever $ do
+                (connSock, _) <- S.accept listenSock
+                void $ forkFinally
+                    (do
+                        msg      <- receiveDatagram connSock
+                        response <- callRpc (runNodeL nodeRt) handlerMap msg
+                        sendDatagram connSock $ A.encode response
+                    ) (\_ -> S.close connSock)
 
-    m <- atomically $ newTVar mempty
-    a <- runRpcHandlerL m action
-    handlerMap <- readTVarIO m
+            -- add serwer handler to server map
+            listenSockVar  <- newTMVarIO listenSock
+            atomically $ putTMVar (nodeRt ^. RLens.servers) $
+                M.insert port (R.ServerHandle listenSockVar acceptWorkerId) servers
+            pure $ Just ()
+        ) (\err -> do
+            R.logError' logger (show err) 
+            atomically $ putTMVar (nodeRt ^. RLens.servers) servers
+            pure Nothing
+        )
 
-    let serversVar = nodeRt ^. RLens.servers
-    servers <- atomically $ takeTMVar serversVar
-    res <- if M.member port servers
-        then pure Nothing
-        else runRpcServer logger port (runNodeL nodeRt) handlerMap
-
-    atomically $ do
-        whenJust res $ \servHandl ->
-            putTMVar serversVar $ M.insert port servHandl servers
-        unless (isJust res) $
-            putTMVar serversVar servers
-
-    pure $ if isJust res then next $ Just () else next Nothing
-  
 interpretNodeDefinitionL nodeRt (L.Std handlers next) = interpretNodeDefinitionL nodeRt $ L.StdF (\_ -> []) handlers next
 interpretNodeDefinitionL nodeRt (L.StdF completeFunc handlers next) = do
     m <- atomically $ newTVar mempty
@@ -209,6 +219,12 @@ interpretNodeDefinitionL _ (L.AwaitResult pPtr next) = do
     result <- atomically $ takeTMVar pVar
     pure $ next result
 
+readRpcHandler action = do
+    m <- atomically $ newTVar mempty
+    void $ runRpcHandlerL m action
+    readTVarIO m
+    
+
 callHandler :: NodeRuntime -> Map Text (String -> L.NodeL Text) -> String -> IO Text
 callHandler nodeRt methods msg = do
     let tag = T.pack $ takeWhile (/= ' ') msg
@@ -217,17 +233,6 @@ callHandler nodeRt methods msg = do
         Nothing         -> pure $ "The method " <> tag <> " isn't supported."
 
 type RpcMethods t = Map Text (A.Value -> Int -> t)
-
-runRpcServer
-    :: R.RuntimeLogger
-    -> S.PortNumber
-    -> (t -> IO D.RpcResponse)
-    -> RpcMethods t
-    -> IO (Maybe R.ServerHandle)
-runRpcServer logger port runner methods = runTCPServer logger port $ \sock -> do
-    msg      <- S.recv sock (toEnum D.packetSize)
-    response <- callRpc runner methods msg
-    S.sendAll sock $ A.encode response
 
 callRpc :: Monad m => (t -> m D.RpcResponse) -> RpcMethods t -> LByteString -> m D.RpcResponse
 callRpc runner methods msg = case A.decode msg of
