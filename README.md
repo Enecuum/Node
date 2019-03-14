@@ -1,7 +1,5 @@
 # Enecuum Node Framework
 
-[![buddy pipeline](https://buddy.enecuum.com/enecuum/node/pipelines/pipeline/19/badge.svg?token=c35be458f2d393a30001acf59f086401a00713eb057ab070050e9855280788bf "buddy pipeline")](https://buddy.enecuum.com/enecuum/node/pipelines/pipeline/19)
-
 Enecuum Node Framework allows to build network actors and blockchain protocols, console applications, work with KV database and cryptography. Current features include:
 
   - Framework to build stateful multithreaded applications
